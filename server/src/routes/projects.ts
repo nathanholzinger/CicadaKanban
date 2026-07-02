@@ -61,19 +61,17 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Delete a project — cascade through workflows → columns → items
-router.delete('/:id', (req, res) => {
-  const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
+function deleteProjectById(id: string) {
+  // Recursively delete children first (satisfies the parent_id FK constraint)
+  const children = db.select().from(projects).where(eq(projects.parentId, id)).all();
+  for (const child of children) {
+    deleteProjectById(child.id);
   }
 
-  const projectWorkflows = db.select().from(workflows).where(eq(workflows.projectId, req.params.id)).all();
+  const projectWorkflows = db.select().from(workflows).where(eq(workflows.projectId, id)).all();
 
   for (const workflow of projectWorkflows) {
-    // Delete items belonging to this project (includes all columned + uncolumned items)
-    const projectItems = db.select().from(items).where(eq(items.projectId, req.params.id)).all();
+    const projectItems = db.select().from(items).where(eq(items.projectId, id)).all();
     for (const item of projectItems) {
       db.delete(notifications).where(eq(notifications.itemId, item.id)).run();
       db.delete(activityLog).where(eq(activityLog.itemId, item.id)).run();
@@ -81,17 +79,24 @@ router.delete('/:id', (req, res) => {
       db.delete(chatThreads).where(eq(chatThreads.itemId, item.id)).run();
       db.delete(attachments).where(eq(attachments.itemId, item.id)).run();
     }
-    db.delete(items).where(eq(items.projectId, req.params.id)).run();
-
-    // Delete notifications scoped to this workflow
+    db.delete(items).where(eq(items.projectId, id)).run();
     db.delete(notifications).where(eq(notifications.workflowId, workflow.id)).run();
-
     db.delete(columns).where(eq(columns.workflowId, workflow.id)).run();
   }
 
-  db.delete(workflows).where(eq(workflows.projectId, req.params.id)).run();
-  db.delete(projects).where(eq(projects.id, req.params.id)).run();
+  db.delete(workflows).where(eq(workflows.projectId, id)).run();
+  db.delete(projects).where(eq(projects.id, id)).run();
+}
 
+// Delete a project — recursively cascades through descendants → workflows → columns → items
+router.delete('/:id', (req, res) => {
+  const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
+  if (!project) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+
+  deleteProjectById(req.params.id);
   res.status(204).send();
 });
 

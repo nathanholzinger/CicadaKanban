@@ -62,6 +62,24 @@ test('delete shows red deleting state then removes the project', async ({ page, 
   await expect(projectSidebar.projectName('To Be Deleted')).not.toBeVisible();
 });
 
+test('collapses and expands subprojects via the chevron', async ({ page, projectSidebar, request }) => {
+  const parent = await request.post(`${API}/projects`, { data: { name: 'Collapsible Parent' } });
+  const { id: parentId } = await parent.json();
+  await request.post(`${API}/projects`, { data: { name: 'Hidden Child', parentId } });
+  await page.reload();
+
+  // Child is visible by default (expanded)
+  await expect(projectSidebar.projectName('Hidden Child')).toBeVisible();
+
+  // Collapse — child disappears
+  await projectSidebar.toggle('Collapsible Parent');
+  await expect(projectSidebar.projectName('Hidden Child')).not.toBeVisible();
+
+  // Expand — child reappears
+  await projectSidebar.toggle('Collapsible Parent');
+  await expect(projectSidebar.projectName('Hidden Child')).toBeVisible();
+});
+
 test('created project persists after page refresh', async ({ page, projectSidebar }) => {
   await projectSidebar.newProjectButton.click();
   await page.getByPlaceholder('Project name').fill('Persisted Project');

@@ -63,6 +63,7 @@ function TreeNode({ node, depth, selectedProjectId, onSelectProject, onCreateSub
         {/* Expand/collapse chevron */}
         <button
           onClick={() => setExpanded(e => !e)}
+          title={expanded ? 'Collapse' : 'Expand'}
           className={`w-4 h-4 shrink-0 flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors ${!hasChildren ? 'invisible' : ''}`}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

@@ -2,21 +2,16 @@ import { expect, test } from '../fixtures';
 
 const API = 'http://localhost:3002/api';
 
-let parentId: string;
-let childId: string;
-
 test.beforeAll(async ({ request }) => {
   await request.post(`${API}/test/reset`);
 
   const parent = await (await request.post(`${API}/projects`, {
     data: { name: 'Parent Project', description: 'A top-level project' },
   })).json();
-  parentId = parent.id;
 
   const child = await (await request.post(`${API}/projects`, {
     data: { name: 'Child Project', parentId: parent.id },
   })).json();
-  childId = child.id;
 
   await request.post(`${API}/projects`, {
     data: { name: 'Grandchild Project', parentId: child.id },
@@ -58,6 +53,7 @@ test('selected project persists after page refresh', async ({ page, projectSideb
 
 test('deleting the selected project returns to the placeholder', async ({ page, projectSidebar, request }) => {
   await request.post(`${API}/projects`, { data: { name: 'Doomed Project' } });
+  await page.reload();
   await projectSidebar.select('Doomed Project');
   await expect(page.getByRole('heading', { level: 1, name: 'Doomed Project' })).toBeVisible();
 
@@ -68,4 +64,98 @@ test('deleting the selected project returns to the placeholder', async ({ page, 
   await row.getByRole('button', { name: 'Yes' }).click();
 
   await expect(page.getByText('Select a project to get started.')).toBeVisible();
+});
+
+test('project name can be edited inline', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'Rename Me' } });
+  await page.reload();
+  await projectSidebar.select('Rename Me');
+
+  await page.getByRole('heading', { level: 1, name: 'Rename Me' }).click();
+  await page.locator('main input').fill('Renamed Project');
+  await page.locator('main input').press('Enter');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Renamed Project' })).toBeVisible();
+  await expect(projectSidebar.projectName('Renamed Project')).toBeVisible();
+});
+
+test('project name cannot be saved as empty', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'Keep My Name' } });
+  await page.reload();
+  await projectSidebar.select('Keep My Name');
+
+  await page.getByRole('heading', { level: 1, name: 'Keep My Name' }).click();
+  await page.locator('main input').fill('');
+  await page.locator('main input').press('Enter');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Keep My Name' })).toBeVisible();
+});
+
+test('description can be added when previously empty', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'No Description Yet' } });
+  await page.reload();
+  await projectSidebar.select('No Description Yet');
+
+  await page.getByRole('button', { name: 'Add description' }).click();
+  await page.locator('main textarea').fill('Brand new description');
+  await page.locator('main textarea').blur();
+
+  await expect(page.getByText('Brand new description')).toBeVisible();
+});
+
+test('description can be updated', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, {
+    data: { name: 'Update Description', description: 'Original description' },
+  });
+  await page.reload();
+  await projectSidebar.select('Update Description');
+
+  await page.getByText('Original description').click();
+  await page.locator('main textarea').fill('Updated description');
+  await page.locator('main textarea').blur();
+
+  await expect(page.getByText('Updated description')).toBeVisible();
+  await expect(page.getByText('Original description')).not.toBeVisible();
+});
+
+test('description can be cleared', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, {
+    data: { name: 'Clear Description', description: 'Remove me' },
+  });
+  await page.reload();
+  await projectSidebar.select('Clear Description');
+
+  await page.getByText('Remove me').click();
+  await page.locator('main textarea').fill('');
+  await page.locator('main textarea').blur();
+
+  await expect(page.getByRole('button', { name: 'Add description' })).toBeVisible();
+  await expect(page.getByText('Remove me')).not.toBeVisible();
+});
+
+test('a subproject can be added from the details page', async ({ page, projectSidebar }) => {
+  await projectSidebar.select('Parent Project');
+
+  await page.locator('main').getByTitle('Add subproject').click();
+  await expect(page.getByRole('heading', { name: 'New subproject' })).toBeVisible();
+  await page.getByPlaceholder('Subproject name').fill('Details Page Child');
+  await page.getByRole('button', { name: 'Create subproject' }).click();
+
+  await expect(page.locator('main').getByRole('button', { name: 'Details Page Child' })).toBeVisible();
+  await expect(projectSidebar.projectName('Details Page Child')).toBeVisible();
+});
+
+test('a subproject can be deleted from the details page', async ({ page, projectSidebar, request }) => {
+  const parentRes = await request.post(`${API}/projects`, { data: { name: 'Delete Test Parent' } });
+  const { id: parentId } = await parentRes.json();
+  await request.post(`${API}/projects`, { data: { name: 'Delete Test Child', parentId } });
+  await page.reload();
+  await projectSidebar.select('Delete Test Parent');
+
+  const childRow = page.locator('main li').filter({ hasText: 'Delete Test Child' });
+  await childRow.hover();
+  await childRow.getByTitle('Delete subproject').click();
+  await childRow.getByRole('button', { name: 'Yes' }).click();
+
+  await expect(page.locator('main').getByRole('button', { name: 'Delete Test Child' })).not.toBeVisible();
 });

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Board, Notification, Project } from './types';
-import { fetchBoards, createBoard, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, deleteProject } from './api';
+import { fetchBoards, createBoard, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject } from './api';
 import CreateBoardModal from './components/CreateBoardModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
@@ -117,6 +117,11 @@ export default function App() {
 
   function handleSelectProject(id: string) {
     setSelectedProjectId(id);
+  }
+
+  async function handleUpdateProject(id: string, data: { name?: string; description?: string | null }) {
+    const updated = await updateProject(id, data);
+    setProjects(prev => prev.map(p => p.id === id ? updated : p));
   }
 
   async function handleDeleteProject(id: string) {
@@ -274,6 +279,9 @@ export default function App() {
               ancestors={projectAncestors}
               subprojects={projectSubprojects}
               onSelectProject={handleSelectProject}
+              onUpdate={handleUpdateProject}
+              onCreateSubproject={handleOpenCreateProject}
+              onDeleteSubproject={handleDeleteProject}
             />
           ) : (
             <div className="flex items-center justify-center h-64">

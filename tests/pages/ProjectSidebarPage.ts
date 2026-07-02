@@ -20,4 +20,8 @@ export class ProjectSidebarPage {
   async select(name: string) {
     await this.locator.getByText(name, { exact: true }).click();
   }
+
+  async toggle(name: string) {
+    await this.row(name).getByTitle(/Collapse|Expand/).click();
+  }
 }
