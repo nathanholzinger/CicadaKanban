@@ -1,30 +1,55 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Board, ItemType, Notification } from './types';
-import { fetchBoards, createBoard, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchItemTypes } from './api';
-import BoardView from './components/BoardView';
+import type { Board, Notification, Project } from './types';
+import { fetchBoards, createBoard, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, deleteProject } from './api';
 import CreateBoardModal from './components/CreateBoardModal';
+import CreateProjectModal from './components/CreateProjectModal';
+import ProjectPage from './components/ProjectPage';
+import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
+
+function getAncestors(project: Project, projects: Project[]): Project[] {
+  const map = new Map(projects.map(p => [p.id, p]));
+  const ancestors: Project[] = [];
+  let current: Project | undefined = project;
+  while (current?.parentId) {
+    const parent = map.get(current.parentId);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    current = parent;
+  }
+  return ancestors;
+}
 
 export default function App() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAgentsModal, setShowAgentsModal] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+    () => localStorage.getItem('activeProjectId'),
+  );
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
+
   useEffect(() => {
-    Promise.all([fetchBoards(), fetchItemTypes()])
-      .then(([boardData, typeData]) => {
+    const boards = fetchBoards()
+      .then(boardData => {
         setBoards(boardData);
         setSelectedBoardId(prev => prev ?? (boardData.length > 0 ? boardData[0].id : null));
-        setItemTypes(typeData);
       })
-      .catch(err => console.error('Failed to load initial data:', err))
-      .finally(() => setLoading(false));
+      .catch(err => console.error('Failed to load boards:', err));
+
+    const projects = fetchProjects()
+      .then(setProjects)
+      .catch(err => console.error('Failed to load projects:', err));
+
+    Promise.all([boards, projects]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -68,6 +93,46 @@ export default function App() {
     setSelectedBoardId(board.id);
   }
 
+  function handleOpenCreateProject(parentId?: string) {
+    setCreateProjectParentId(parentId);
+    setShowCreateProjectModal(true);
+  }
+
+  async function handleCreateProject(name: string, description: string) {
+    const project = await createProject({
+      name,
+      description: description || undefined,
+      parentId: createProjectParentId,
+    });
+    setProjects(prev => [...prev, project]);
+  }
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      localStorage.setItem('activeProjectId', selectedProjectId);
+    } else {
+      localStorage.removeItem('activeProjectId');
+    }
+  }, [selectedProjectId]);
+
+  function handleSelectProject(id: string) {
+    setSelectedProjectId(id);
+  }
+
+  async function handleDeleteProject(id: string) {
+    await deleteProject(id);
+    setSelectedProjectId(prev => (prev === id ? null : prev));
+    fetchProjects().then(setProjects).catch(() => {});
+  }
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null;
+  const projectSubprojects = projects.filter(p => p.parentId === selectedProjectId);
+  const projectAncestors = selectedProject ? getAncestors(selectedProject, projects) : [];
+
+  const createProjectParentName = createProjectParentId
+    ? projects.find(p => p.id === createProjectParentId)?.name
+    : undefined;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
@@ -77,10 +142,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-zinc-100">
+    <div className="min-h-screen bg-zinc-900 text-zinc-100 flex flex-col">
       {/* Top nav bar */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-400">
               Kanban
@@ -192,6 +257,40 @@ export default function App() {
         </div>
       </header>
 
+      {/* Body: sidebar + main */}
+      <div className="flex flex-1 overflow-hidden">
+        <ProjectSidebar
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelectProject={handleSelectProject}
+          onCreateProject={handleOpenCreateProject}
+          onDeleteProject={handleDeleteProject}
+        />
+
+        <main className="flex-1 overflow-auto px-6 py-6">
+          {selectedProject ? (
+            <ProjectPage
+              project={selectedProject}
+              ancestors={projectAncestors}
+              subprojects={projectSubprojects}
+              onSelectProject={handleSelectProject}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-zinc-500">Select a project to get started.</p>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {showCreateProjectModal && (
+        <CreateProjectModal
+          parentName={createProjectParentName}
+          onClose={() => setShowCreateProjectModal(false)}
+          onCreate={handleCreateProject}
+        />
+      )}
+
       {showCreateModal && (
         <CreateBoardModal
           onClose={() => setShowCreateModal(false)}
@@ -202,21 +301,6 @@ export default function App() {
       {showAgentsModal && (
         <AgentsModal onClose={() => setShowAgentsModal(false)} />
       )}
-
-      {/* Board content */}
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
-        {selectedBoardId ? (
-          <BoardView boardId={selectedBoardId} itemTypes={itemTypes} />
-        ) : (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-zinc-500">
-              {boards.length === 0
-                ? 'No boards yet. Create one to get started.'
-                : 'Select a board to get started.'}
-            </p>
-          </div>
-        )}
-      </main>
     </div>
   );
 }

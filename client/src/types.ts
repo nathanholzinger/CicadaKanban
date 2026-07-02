@@ -1,3 +1,12 @@
+export interface Project {
+  id: string;
+  parentId: string | null;
+  name: string;
+  description: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface ItemType {
   id: string;
   name: string;

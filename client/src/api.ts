@@ -1,6 +1,35 @@
-import type { Agent, Attachment, Board, BoardWithDetails, Column, ItemType, Label, Notification, WorkItem, WorkItemDetail } from './types';
+import type { Agent, Attachment, Board, BoardWithDetails, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
 
 const API = '/api';
+
+// ============================================================
+// Projects
+// ============================================================
+
+export async function fetchProjects(): Promise<Project[]> {
+  const res = await fetch(`${API}/projects`);
+  if (!res.ok) throw new Error('Failed to fetch projects');
+  return res.json();
+}
+
+export async function createProject(data: {
+  name: string;
+  description?: string;
+  parentId?: string;
+}): Promise<Project> {
+  const res = await fetch(`${API}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create project');
+  return res.json();
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const res = await fetch(`${API}/projects/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete project');
+}
 
 // ============================================================
 // Boards
