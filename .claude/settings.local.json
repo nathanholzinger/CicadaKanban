@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "mcp__kanban__get_board",
+      "mcp__kanban__get_card",
+      "mcp__kanban__list_boards",
+      "mcp__kanban__create_card",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "mcp__kanban__move_card",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)"
+    ]
+  }
+}

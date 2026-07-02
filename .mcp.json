@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kanban": {
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
+      "args": ["tsx", "C:\\Users\\natha\\Dev\\KanbanApp\\server\\src\\mcp.ts"],
+      "env": {}
+    }
+  }
+}
