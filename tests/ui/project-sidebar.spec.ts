@@ -3,17 +3,25 @@ import { resetAndSeedDb } from '../helpers/db';
 
 const API = 'http://localhost:3002/api';
 
-test.beforeAll(() => {
-  resetAndSeedDb();
+test.beforeAll(async () => {
+  await resetAndSeedDb();
 });
 
-test('seeded project appears in projectSidebar on load', async ({ page, projectSidebar }) => {
+test.beforeEach(async ({ page }) => {
   await page.goto('/');
+});
+
+test('sidebar shows no projects in zero state', async ({ projectSidebar }) => {
+  await expect(projectSidebar.locator.getByText('No projects yet.')).toBeVisible();
+});
+
+test('project created via api appears in sidebar after refresh', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'My First Project' } });
+  await page.reload();
   await expect(projectSidebar.projectName('My First Project')).toBeVisible();
 });
 
-test('creates a top-level project via the projectSidebar', async ({ page, projectSidebar }) => {
-  await page.goto('/');
+test('creates a top-level project via the sidebar', async ({ page, projectSidebar }) => {
   await projectSidebar.newProjectButton.click();
   await expect(page.getByRole('heading', { name: 'New project' })).toBeVisible();
   await page.getByPlaceholder('Project name').fill('Test Project Alpha');
@@ -22,7 +30,6 @@ test('creates a top-level project via the projectSidebar', async ({ page, projec
 });
 
 test('creates a subproject nested under a parent', async ({ page, projectSidebar }) => {
-  await page.goto('/');
   const row = projectSidebar.row('My First Project');
   await row.hover();
   await expect(row.getByTitle('Add subproject')).toBeVisible();
@@ -36,7 +43,7 @@ test('creates a subproject nested under a parent', async ({ page, projectSidebar
 
 test('delete shows red deleting state then removes the project', async ({ page, projectSidebar, request }) => {
   await request.post(`${API}/projects`, { data: { name: 'To Be Deleted' } });
-  await page.goto('/');
+  await page.reload();
 
   await page.route('**/api/projects/*', async route => {
     if (route.request().method() === 'DELETE') {
@@ -51,12 +58,11 @@ test('delete shows red deleting state then removes the project', async ({ page, 
   await row.getByTitle('Delete project').click();
   await row.getByRole('button', { name: 'Yes' }).click();
 
-  await expect(page.getByText('Deleting…')).toBeVisible();
+  await expect(projectSidebar.locator.getByText('Deleting…')).toBeVisible();
   await expect(projectSidebar.projectName('To Be Deleted')).not.toBeVisible();
 });
 
 test('created project persists after page refresh', async ({ page, projectSidebar }) => {
-  await page.goto('/');
   await projectSidebar.newProjectButton.click();
   await page.getByPlaceholder('Project name').fill('Persisted Project');
   await page.getByRole('button', { name: 'Create project' }).click();

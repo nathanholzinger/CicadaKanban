@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
 
-test.beforeAll(() => {
-  resetAndSeedDb();
+test.beforeAll(async () => {
+  await resetAndSeedDb();
 });
 
 // UI tests below require Story 2 (frontend update) — client still calls /api/boards

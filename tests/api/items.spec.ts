@@ -3,8 +3,8 @@ import { resetAndSeedDb } from '../helpers/db';
 
 const BASE = 'http://localhost:3002/api';
 
-test.beforeAll(() => {
-  resetAndSeedDb();
+test.beforeAll(async () => {
+  await resetAndSeedDb();
 });
 
 test('POST /api/items creates item with projectId; GET returns derived workflowId', async ({ request }) => {

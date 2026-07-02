@@ -1,6 +1,6 @@
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
-import { projects, workflows, workflowTemplates, workflowTemplateColumns, columns, items } from './schema.js';
+import { projects, workflows, workflowTemplates, workflowTemplateColumns, columns } from './schema.js';
 import { isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
@@ -68,13 +68,8 @@ export function runMigrations() {
 
   // ── Phase 1: Seed workflow templates if not yet seeded ──────────────────────
   const existingTemplates = db.select().from(workflowTemplates).all();
-  let flowTemplateId: string;
   if (existingTemplates.length === 0) {
-    const ids = seedWorkflowTemplates(now);
-    flowTemplateId = ids.flowId;
-  } else {
-    const flow = existingTemplates.find(t => t.name === 'flow');
-    flowTemplateId = flow?.id ?? existingTemplates[0].id;
+    seedWorkflowTemplates(now);
   }
 
   // ── Phase 2: Migrate existing data (workflows without a project_id) ─────────
@@ -101,31 +96,4 @@ export function runMigrations() {
     console.log(`Migrated ${unassignedWorkflows.length} existing workflow(s) into "Default Project"`);
   }
 
-  // ── Phase 3: Fresh install — seed "My First Project" with flow workflow ──────
-  const existingProjects = db.select().from(projects).all();
-  if (existingProjects.length === 0) {
-    const projectId = randomUUID();
-    db.insert(projects).values({
-      id: projectId,
-      parentId: null,
-      name: 'My First Project',
-      description: 'Default project to get started',
-      createdAt: now,
-      updatedAt: now,
-    }).run();
-
-    const workflowId = randomUUID();
-    db.insert(workflows).values({
-      id: workflowId,
-      projectId,
-      name: 'My First Workflow',
-      description: null,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
-
-    applyTemplateToWorkflow(workflowId, flowTemplateId, now);
-
-    console.log('Seeded "My First Project" with "My First Workflow" (flow template)');
-  }
 }
