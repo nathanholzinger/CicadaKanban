@@ -16,4 +16,8 @@ export class ProjectSidebarPage {
   projectName(name: string) {
     return this.locator.getByText(name);
   }
+
+  async select(name: string) {
+    await this.locator.getByText(name, { exact: true }).click();
+  }
 }
