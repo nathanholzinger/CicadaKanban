@@ -1,0 +1,11 @@
+meta {
+  name: Get Workflow Template
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/workflow-templates/{{templateId}}
+  body: none
+  auth: none
+}

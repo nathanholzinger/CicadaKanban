@@ -1,0 +1,20 @@
+meta {
+  name: Create Item
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "My Item",
+    "projectId": "{{projectId}}",
+    "columnId": "{{columnId}}",
+    "parentId": null
+  }
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Delete Column
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/columns/{{columnId}}
+  body: none
+  auth: none
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Create Project
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/projects
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Some New Project",
+    "description": "Optional description",
+    "parentId": null
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3001
+}
