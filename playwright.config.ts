@@ -1,12 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: 'html',
+  outputDir: './tests/output/artifacts',
+  reporter: [['html', { outputFolder: './tests/output/report' }]],
   use: {
     baseURL: 'http://localhost:5174',
     trace: 'on-first-retry',
@@ -17,8 +18,8 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  globalSetup: './e2e/global-setup.ts',
-  globalTeardown: './e2e/global-teardown.ts',
+  globalSetup: './tests/global-setup.ts',
+  globalTeardown: './tests/global-teardown.ts',
   webServer: [
     {
       command: 'npm run dev',

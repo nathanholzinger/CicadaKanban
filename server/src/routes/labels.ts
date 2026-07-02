@@ -1,61 +1,61 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { labels, workItemLabels } from '../db/schema.js';
+import { labels, itemLabels } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const router = Router();
 
 router.get('/', (req, res) => {
-  const { boardId } = req.query;
-  const rows = boardId
-    ? db.select().from(labels).where(eq(labels.boardId, String(boardId))).all()
+  const { workflowId } = req.query;
+  const rows = workflowId
+    ? db.select().from(labels).where(eq(labels.workflowId, String(workflowId))).all()
     : db.select().from(labels).all();
   res.json(rows);
 });
 
 router.post('/', (req, res) => {
-  const { boardId, name, color } = req.body;
+  const { workflowId, name, color } = req.body;
   if (!name || !color) { res.status(400).json({ error: 'name and color are required' }); return; }
   const id = randomUUID();
-  db.insert(labels).values({ id, boardId: boardId || null, name, color, createdAt: Date.now() }).run();
+  db.insert(labels).values({ id, workflowId: workflowId || null, name, color, createdAt: Date.now() }).run();
   const created = db.select().from(labels).where(eq(labels.id, id)).get();
   res.status(201).json(created);
 });
 
 router.delete('/:id', (req, res) => {
-  db.delete(workItemLabels).where(eq(workItemLabels.labelId, req.params.id)).run();
+  db.delete(itemLabels).where(eq(itemLabels.labelId, req.params.id)).run();
   db.delete(labels).where(eq(labels.id, req.params.id)).run();
   res.status(204).send();
 });
 
-// Work-item label assignments
-router.get('/work-item/:workItemId', (req, res) => {
+// Item label assignments
+router.get('/item/:itemId', (req, res) => {
   const rows = db.select({ label: labels })
-    .from(workItemLabels)
-    .innerJoin(labels, eq(workItemLabels.labelId, labels.id))
-    .where(eq(workItemLabels.workItemId, req.params.workItemId))
+    .from(itemLabels)
+    .innerJoin(labels, eq(itemLabels.labelId, labels.id))
+    .where(eq(itemLabels.itemId, req.params.itemId))
     .all()
     .map(r => r.label);
   res.json(rows);
 });
 
-router.post('/work-item/:workItemId', (req, res) => {
+router.post('/item/:itemId', (req, res) => {
   const { labelId } = req.body;
   if (!labelId) { res.status(400).json({ error: 'labelId is required' }); return; }
   try {
-    db.insert(workItemLabels).values({ workItemId: req.params.workItemId, labelId }).run();
+    db.insert(itemLabels).values({ itemId: req.params.itemId, labelId }).run();
   } catch {
     // already assigned — ignore duplicate
   }
   res.status(201).json({ success: true });
 });
 
-router.delete('/work-item/:workItemId/:labelId', (req, res) => {
-  db.delete(workItemLabels)
+router.delete('/item/:itemId/:labelId', (req, res) => {
+  db.delete(itemLabels)
     .where(and(
-      eq(workItemLabels.workItemId, req.params.workItemId),
-      eq(workItemLabels.labelId, req.params.labelId),
+      eq(itemLabels.itemId, req.params.itemId),
+      eq(itemLabels.labelId, req.params.labelId),
     ))
     .run();
   res.status(204).send();

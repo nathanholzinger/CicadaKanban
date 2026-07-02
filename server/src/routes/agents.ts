@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { agents, workItems, columns } from '../db/schema.js';
+import { agents, items, columns } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -78,11 +78,11 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  const referencedByItem = db.select().from(workItems).where(eq(workItems.agentId, req.params.id)).get();
+  const referencedByItem = db.select().from(items).where(eq(items.agentId, req.params.id)).get();
   const referencedByColumn = db.select().from(columns).where(eq(columns.agentId, req.params.id)).get();
 
   if (referencedByItem || referencedByColumn) {
-    res.status(409).json({ error: 'Agent is referenced by work items or columns and cannot be deleted.' });
+    res.status(409).json({ error: 'Agent is referenced by items or columns and cannot be deleted.' });
     return;
   }
 

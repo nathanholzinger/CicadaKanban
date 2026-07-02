@@ -1,23 +1,22 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { columns, workItems } from '../db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { columns, items } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const router = Router();
 
-// Create a column on a board
+// Create a column on a workflow
 router.post('/', (req, res) => {
-  const { boardId, name, agentId, triggersNotification, isTerminal } = req.body;
+  const { workflowId, name, agentId, triggersNotification, isTerminal } = req.body;
 
-  if (!boardId || !name) {
-    res.status(400).json({ error: 'boardId and name are required' });
+  if (!workflowId || !name) {
+    res.status(400).json({ error: 'workflowId and name are required' });
     return;
   }
 
-  // Find the highest position in this board's columns to append at the end
   const existing = db.select().from(columns)
-    .where(eq(columns.boardId, boardId))
+    .where(eq(columns.workflowId, workflowId))
     .orderBy(columns.position)
     .all();
 
@@ -29,7 +28,7 @@ router.post('/', (req, res) => {
 
   db.insert(columns).values({
     id,
-    boardId,
+    workflowId,
     agentId: agentId || null,
     name,
     position: maxPosition + 1.0,
@@ -80,10 +79,7 @@ router.patch('/reorder', (req, res) => {
   }
 
   for (const { id, position } of columnOrders) {
-    db.update(columns)
-      .set({ position })
-      .where(eq(columns.id, id))
-      .run();
+    db.update(columns).set({ position }).where(eq(columns.id, id)).run();
   }
 
   res.json({ success: true });
@@ -97,15 +93,11 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  // Check for work items in this column
-  const itemsInColumn = db.select().from(workItems)
-    .where(eq(workItems.columnId, req.params.id))
-    .all();
-
+  const itemsInColumn = db.select().from(items).where(eq(items.columnId, req.params.id)).all();
   if (itemsInColumn.length > 0) {
     res.status(409).json({
-      error: 'Column has work items. Move or delete them first.',
-      workItemCount: itemsInColumn.length,
+      error: 'Column has items. Move or delete them first.',
+      itemCount: itemsInColumn.length,
     });
     return;
   }

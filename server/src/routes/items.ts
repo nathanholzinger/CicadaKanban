@@ -1,21 +1,20 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workItems, columns, activityLog, notifications } from '../db/schema.js';
+import { items, columns, activityLog, notifications } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const router = Router();
 
-// Helper: log an activity entry for a work item
 function logActivity(
-  workItemId: string,
+  itemId: string,
   type: string,
   content: string,
   metadata?: Record<string, unknown>
 ) {
   db.insert(activityLog).values({
     id: randomUUID(),
-    workItemId,
+    itemId,
     type,
     content,
     metadata: metadata ? JSON.stringify(metadata) : null,
@@ -25,43 +24,50 @@ function logActivity(
 
 function computeDepth(itemId: string): number {
   let depth = 0;
-  let current = db.select({ parentId: workItems.parentId }).from(workItems).where(eq(workItems.id, itemId)).get();
+  let current = db.select({ parentId: items.parentId }).from(items).where(eq(items.id, itemId)).get();
   while (current?.parentId) {
     depth++;
-    current = db.select({ parentId: workItems.parentId }).from(workItems).where(eq(workItems.id, current.parentId)).get();
+    current = db.select({ parentId: items.parentId }).from(items).where(eq(items.id, current.parentId)).get();
   }
   return depth;
 }
 
-// Get a single work item with its children
+// Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
-  const item = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
-    res.status(404).json({ error: 'Work item not found' });
+    res.status(404).json({ error: 'Item not found' });
     return;
   }
 
   const depth = computeDepth(req.params.id);
 
-  const children = db.select().from(workItems)
-    .where(eq(workItems.parentId, req.params.id))
+  const children = db.select().from(items)
+    .where(eq(items.parentId, req.params.id))
     .all()
     .map(child => ({ ...child, depth: depth + 1 }));
 
   const activity = db.select().from(activityLog)
-    .where(eq(activityLog.workItemId, req.params.id))
+    .where(eq(activityLog.itemId, req.params.id))
     .orderBy(activityLog.createdAt)
     .all();
 
-  res.json({ ...item, depth, children, activity });
+  // Derive workflowId from the item's column for MCP tool convenience
+  let workflowId: string | null = null;
+  if (item.columnId) {
+    const col = db.select({ workflowId: columns.workflowId }).from(columns).where(eq(columns.id, item.columnId)).get();
+    workflowId = col?.workflowId ?? null;
+  }
+
+  res.json({ ...item, workflowId, depth, children, activity });
 });
 
-// Create a work item
+// Create an item
 router.post('/', (req, res) => {
   const {
     type,
     parentId,
-    boardId,
+    projectId,
     columnId,
     title,
     description,
@@ -74,37 +80,36 @@ router.post('/', (req, res) => {
     return;
   }
 
-  // If a columnId is provided, calculate position at the end of that column
+  // Resolve projectId from parent if not provided
+  let resolvedProjectId = projectId;
+  if (parentId && !projectId) {
+    const parent = db.select({ projectId: items.projectId }).from(items).where(eq(items.id, parentId)).get();
+    if (parent) resolvedProjectId = parent.projectId;
+  }
+
+  if (!resolvedProjectId) {
+    res.status(400).json({ error: 'projectId is required (or provide a parentId to inherit it)' });
+    return;
+  }
+
+  // Calculate position at end of column if columnId provided
   let position: number | null = null;
   if (columnId) {
-    const itemsInColumn = db.select().from(workItems)
-      .where(eq(workItems.columnId, columnId))
-      .all();
-
+    const itemsInColumn = db.select().from(items).where(eq(items.columnId, columnId)).all();
     const maxPos = itemsInColumn.length > 0
       ? Math.max(...itemsInColumn.map(i => i.position ?? 0))
       : 0;
-
     position = maxPos + 1.0;
-  }
-
-  // If parentId is provided, inherit boardId from parent
-  let resolvedBoardId = boardId;
-  if (parentId && !boardId) {
-    const parent = db.select().from(workItems).where(eq(workItems.id, parentId)).get();
-    if (parent) {
-      resolvedBoardId = parent.boardId;
-    }
   }
 
   const now = Date.now();
   const id = randomUUID();
 
-  db.insert(workItems).values({
+  db.insert(items).values({
     id,
     type: type ?? null,
     parentId: parentId || null,
-    boardId: resolvedBoardId || null,
+    projectId: resolvedProjectId,
     columnId: columnId || null,
     title,
     description: description || null,
@@ -119,15 +124,15 @@ router.post('/', (req, res) => {
     columnId: columnId || null,
   });
 
-  const created = db.select().from(workItems).where(eq(workItems.id, id)).get();
+  const created = db.select().from(items).where(eq(items.id, id)).get();
   res.status(201).json(created);
 });
 
-// Update a work item's details (not position/column — use move for that)
+// Update an item's details (not position/column — use move for that)
 router.put('/:id', (req, res) => {
-  const item = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
-    res.status(404).json({ error: 'Work item not found' });
+    res.status(404).json({ error: 'Item not found' });
     return;
   }
 
@@ -140,12 +145,8 @@ router.put('/:id', (req, res) => {
   if (agentId !== undefined) updates.agentId = agentId;
   if (parentId !== undefined) updates.parentId = parentId;
 
-  db.update(workItems)
-    .set(updates)
-    .where(eq(workItems.id, req.params.id))
-    .run();
+  db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  // Log if assignment changed
   if (assigneeType !== undefined || agentId !== undefined) {
     logActivity(req.params.id, 'assignment', `Assigned to ${assigneeType || 'unassigned'}`, {
       assigneeType: assigneeType || null,
@@ -153,16 +154,15 @@ router.put('/:id', (req, res) => {
     });
   }
 
-  const updated = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
   res.json(updated);
 });
 
-// Move a work item to a different column and/or reorder within a column
-// This is the drag-and-drop endpoint
+// Move an item to a different column and/or reorder within a column
 router.patch('/:id/move', (req, res) => {
-  const item = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
-    res.status(404).json({ error: 'Work item not found' });
+    res.status(404).json({ error: 'Item not found' });
     return;
   }
 
@@ -179,14 +179,9 @@ router.patch('/:id/move', (req, res) => {
   if (columnId !== undefined) updates.columnId = columnId;
   if (position !== undefined) updates.position = position;
 
-  db.update(workItems)
-    .set(updates)
-    .where(eq(workItems.id, req.params.id))
-    .run();
+  db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  // Log column change if it actually changed
   if (columnId !== undefined && columnId !== oldColumnId) {
-    // Look up column names for the log
     const oldCol = oldColumnId
       ? db.select().from(columns).where(eq(columns.id, oldColumnId)).get()
       : null;
@@ -201,21 +196,21 @@ router.patch('/:id/move', (req, res) => {
     if (newCol?.triggersNotification) {
       db.insert(notifications).values({
         id: randomUUID(),
-        workItemId: req.params.id,
-        boardId: item.boardId ?? null,
+        itemId: req.params.id,
+        workflowId: newCol.workflowId,
         message: `"${item.title}" moved to "${newCol.name}"`,
-        type: 'card_in_column',
+        type: 'item_in_column',
         isRead: 0,
         createdAt: Date.now(),
       }).run();
     }
   }
 
-  const updated = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
   res.json(updated);
 });
 
-// Reorder work items within a column — accepts array of { id, position }
+// Reorder items within a column
 router.patch('/reorder', (req, res) => {
   const { itemOrders } = req.body;
 
@@ -225,20 +220,20 @@ router.patch('/reorder', (req, res) => {
   }
 
   for (const { id, position } of itemOrders) {
-    db.update(workItems)
+    db.update(items)
       .set({ position, updatedAt: Date.now() })
-      .where(eq(workItems.id, id))
+      .where(eq(items.id, id))
       .run();
   }
 
   res.json({ success: true });
 });
 
-// Add a comment to a work item's activity log
+// Add a comment to an item's activity log
 router.post('/:id/comments', (req, res) => {
-  const item = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
-    res.status(404).json({ error: 'Work item not found' });
+    res.status(404).json({ error: 'Item not found' });
     return;
   }
 
@@ -252,30 +247,22 @@ router.post('/:id/comments', (req, res) => {
   res.status(201).json({ success: true });
 });
 
-// Delete a work item and its children
+// Delete an item and its children
 router.delete('/:id', (req, res) => {
-  const item = db.select().from(workItems).where(eq(workItems.id, req.params.id)).get();
+  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
-    res.status(404).json({ error: 'Work item not found' });
+    res.status(404).json({ error: 'Item not found' });
     return;
   }
 
-  // Delete children first (tasks under a story, stories under an epic)
-  const children = db.select().from(workItems)
-    .where(eq(workItems.parentId, req.params.id))
-    .all();
-
+  const children = db.select().from(items).where(eq(items.parentId, req.params.id)).all();
   for (const child of children) {
-    // Recursively delete grandchildren
-    db.delete(activityLog).where(eq(activityLog.workItemId, child.id)).run();
-    db.delete(workItems).where(eq(workItems.id, child.id)).run();
+    db.delete(activityLog).where(eq(activityLog.itemId, child.id)).run();
+    db.delete(items).where(eq(items.id, child.id)).run();
   }
 
-  // Delete activity log for this item
-  db.delete(activityLog).where(eq(activityLog.workItemId, req.params.id)).run();
-
-  // Delete the item itself
-  db.delete(workItems).where(eq(workItems.id, req.params.id)).run();
+  db.delete(activityLog).where(eq(activityLog.itemId, req.params.id)).run();
+  db.delete(items).where(eq(items.id, req.params.id)).run();
 
   res.status(204).send();
 });

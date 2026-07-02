@@ -6,20 +6,20 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
-router.get('/work-item/:workItemId', (req, res) => {
+router.get('/item/:itemId', (req, res) => {
   const rows = db.select().from(attachments)
-    .where(eq(attachments.workItemId, req.params.workItemId))
+    .where(eq(attachments.itemId, req.params.itemId))
     .all();
   res.json(rows);
 });
 
-router.post('/work-item/:workItemId', (req, res) => {
+router.post('/item/:itemId', (req, res) => {
   const { type, label, externalUrl, filePath, metadata } = req.body;
   if (!type || !label) { res.status(400).json({ error: 'type and label are required' }); return; }
   const id = randomUUID();
   db.insert(attachments).values({
     id,
-    workItemId: req.params.workItemId,
+    itemId: req.params.itemId,
     type,
     label,
     externalUrl: externalUrl || null,

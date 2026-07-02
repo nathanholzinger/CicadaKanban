@@ -12,11 +12,42 @@ export const itemTypes = sqliteTable('item_types', {
 });
 
 // ============================================================
+// Workflow Templates (system-seeded blueprints, not project-scoped)
+// ============================================================
+
+export const workflowTemplates = sqliteTable('workflow_templates', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const workflowTemplateColumns = sqliteTable('workflow_template_columns', {
+  id: text('id').primaryKey(),
+  templateId: text('template_id').notNull().references(() => workflowTemplates.id),
+  name: text('name').notNull(),
+  position: real('position').notNull(),
+  triggersNotification: integer('triggers_notification').notNull().default(0),
+  isTerminal: integer('is_terminal').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+});
+
+// ============================================================
 // Core Tables
 // ============================================================
 
-export const boards = sqliteTable('boards', {
+export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
+  parentId: text('parent_id'),  // self-referential FK to projects.id
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const workflows = sqliteTable('workflows', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').references(() => projects.id),
   name: text('name').notNull(),
   description: text('description'),
   createdAt: integer('created_at').notNull(),
@@ -36,7 +67,7 @@ export const agents = sqliteTable('agents', {
 
 export const columns = sqliteTable('columns', {
   id: text('id').primaryKey(),
-  boardId: text('board_id').notNull().references(() => boards.id),
+  workflowId: text('workflow_id').notNull().references(() => workflows.id),
   agentId: text('agent_id').references(() => agents.id),
   name: text('name').notNull(),
   position: real('position').notNull(),
@@ -45,11 +76,11 @@ export const columns = sqliteTable('columns', {
   createdAt: integer('created_at').notNull(),
 });
 
-export const workItems = sqliteTable('work_items', {
+export const items = sqliteTable('items', {
   id: text('id').primaryKey(),
   type: text('type').references(() => itemTypes.id),
-  parentId: text('parent_id'),  // self-referential FK to work_items.id
-  boardId: text('board_id').references(() => boards.id),
+  parentId: text('parent_id'),  // self-referential FK to items.id
+  projectId: text('project_id').references(() => projects.id),
   columnId: text('column_id').references(() => columns.id),
   title: text('title').notNull(),
   description: text('description'),
@@ -61,22 +92,22 @@ export const workItems = sqliteTable('work_items', {
 });
 
 // ============================================================
-// Labels (many-to-many with work items)
+// Labels (many-to-many with items)
 // ============================================================
 
 export const labels = sqliteTable('labels', {
   id: text('id').primaryKey(),
-  boardId: text('board_id').references(() => boards.id),
+  workflowId: text('workflow_id').references(() => workflows.id),
   name: text('name').notNull(),
   color: text('color').notNull(),
   createdAt: integer('created_at').notNull(),
 });
 
-export const workItemLabels = sqliteTable('work_item_labels', {
-  workItemId: text('work_item_id').notNull().references(() => workItems.id),
+export const itemLabels = sqliteTable('item_labels', {
+  itemId: text('item_id').notNull().references(() => items.id),
   labelId: text('label_id').notNull().references(() => labels.id),
 }, (table) => [
-  primaryKey({ columns: [table.workItemId, table.labelId] }),
+  primaryKey({ columns: [table.itemId, table.labelId] }),
 ]);
 
 // ============================================================
@@ -85,7 +116,7 @@ export const workItemLabels = sqliteTable('work_item_labels', {
 
 export const chatThreads = sqliteTable('chat_threads', {
   id: text('id').primaryKey(),
-  workItemId: text('work_item_id').notNull().references(() => workItems.id),
+  itemId: text('item_id').notNull().references(() => items.id),
   agentId: text('agent_id').references(() => agents.id),
   label: text('label'),
   createdAt: integer('created_at').notNull(),
@@ -105,7 +136,7 @@ export const chatMessages = sqliteTable('chat_messages', {
 
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
-  workItemId: text('work_item_id').notNull().references(() => workItems.id),
+  itemId: text('item_id').notNull().references(() => items.id),
   type: text('type').notNull(), // app-level: 'google_doc' | 'github_file' | 'local_file' | 'export'
   label: text('label').notNull(),
   externalUrl: text('external_url'),
@@ -115,12 +146,12 @@ export const attachments = sqliteTable('attachments', {
 });
 
 // ============================================================
-// Activity Log (system-generated audit trail on work items)
+// Activity Log (system-generated audit trail on items)
 // ============================================================
 
 export const activityLog = sqliteTable('activity_log', {
   id: text('id').primaryKey(),
-  workItemId: text('work_item_id').notNull().references(() => workItems.id),
+  itemId: text('item_id').notNull().references(() => items.id),
   type: text('type').notNull(), // app-level: 'status_change' | 'assignment' | 'attachment_added' | 'comment' | 'action_triggered'
   content: text('content').notNull(),
   metadata: text('metadata'), // JSON string
@@ -133,8 +164,8 @@ export const activityLog = sqliteTable('activity_log', {
 
 export const notifications = sqliteTable('notifications', {
   id: text('id').primaryKey(),
-  workItemId: text('work_item_id').references(() => workItems.id),
-  boardId: text('board_id').references(() => boards.id),
+  itemId: text('item_id').references(() => items.id),
+  workflowId: text('workflow_id').references(() => workflows.id),
   message: text('message').notNull(),
   type: text('type').notNull(), // app-level enum
   isRead: integer('is_read').notNull().default(0),

@@ -1,9 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import boardRoutes from './routes/boards.js';
+import projectRoutes from './routes/projects.js';
+import workflowRoutes from './routes/workflows.js';
+import workflowTemplateRoutes from './routes/workflowTemplates.js';
 import columnRoutes from './routes/columns.js';
-import workItemRoutes from './routes/workItems.js';
+import itemRoutes from './routes/items.js';
 import agentRoutes from './routes/agents.js';
 import notificationRoutes from './routes/notifications.js';
 import labelRoutes from './routes/labels.js';
@@ -25,9 +27,11 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-app.use('/api/boards', boardRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/workflows', workflowRoutes);
+app.use('/api/workflow-templates', workflowTemplateRoutes);
 app.use('/api/columns', columnRoutes);
-app.use('/api/work-items', workItemRoutes);
+app.use('/api/items', itemRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/labels', labelRoutes);

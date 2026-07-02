@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { itemTypes, workItems } from '../db/schema.js';
+import { itemTypes, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -66,9 +66,9 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  const inUse = db.select().from(workItems).where(eq(workItems.type, req.params.id)).get();
+  const inUse = db.select().from(items).where(eq(items.type, req.params.id)).get();
   if (inUse) {
-    res.status(409).json({ error: 'Cannot delete item type that is in use by work items' });
+    res.status(409).json({ error: 'Cannot delete item type that is in use by items' });
     return;
   }
 
