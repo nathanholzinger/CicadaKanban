@@ -12,8 +12,8 @@ interface KanbanColumnProps {
   isCardBeingDragged: boolean;
   onCreateCard: (columnId: string, title: string, type: string | null) => void;
   onCardClick: (id: string) => void;
-  onRename: (id: string, name: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onRename?: (id: string, name: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export default function KanbanColumn({
@@ -54,11 +54,12 @@ export default function KanbanColumn({
   async function handleRenameBlur() {
     const trimmed = renameDraft.trim();
     setIsRenaming(false);
-    if (!trimmed || trimmed === column.name) return;
+    if (!trimmed || trimmed === column.name || !onRename) return;
     await onRename(column.id, trimmed);
   }
 
   async function handleDelete() {
+    if (!onDelete) return;
     setDeleteError('');
     try {
       await onDelete(column.id);
@@ -110,9 +111,9 @@ export default function KanbanColumn({
             />
           ) : (
             <h3
-              onClick={() => { setRenameDraft(column.name); setIsRenaming(true); setConfirmDelete(false); }}
-              className="text-sm font-semibold text-zinc-300 tracking-wide cursor-text hover:text-zinc-100 truncate"
-              title="Click to rename"
+              onClick={() => { if (!onRename) return; setRenameDraft(column.name); setIsRenaming(true); setConfirmDelete(false); }}
+              className={`text-sm font-semibold text-zinc-300 tracking-wide truncate ${onRename ? 'cursor-text hover:text-zinc-100' : ''}`}
+              title={onRename ? 'Click to rename' : undefined}
             >
               {column.name}
             </h3>
@@ -129,8 +130,8 @@ export default function KanbanColumn({
           </span>
         )}
 
-        {/* Delete */}
-        {confirmDelete ? (
+        {/* Delete — hidden when onDelete not provided (read-only mode) */}
+        {onDelete && confirmDelete ? (
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={handleDelete}
@@ -145,7 +146,7 @@ export default function KanbanColumn({
               Cancel
             </button>
           </div>
-        ) : (
+        ) : onDelete ? (
           <button
             onClick={() => setConfirmDelete(true)}
             className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors p-0.5 rounded"
@@ -155,7 +156,7 @@ export default function KanbanColumn({
               <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />
             </svg>
           </button>
-        )}
+        ) : null}
       </div>
 
       {deleteError && (
@@ -181,7 +182,7 @@ export default function KanbanColumn({
         )}
       </div>
 
-      {/* Add card form */}
+      {/* Add item form */}
       <div className="mt-2 px-1">
         {isAdding ? (
           <form onSubmit={handleCardSubmit} className="space-y-2">
@@ -216,7 +217,7 @@ export default function KanbanColumn({
             onClick={() => { setIsAdding(true); setNewType(itemTypes[0]?.id ?? ''); }}
             className="w-full py-1.5 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-lg transition-colors"
           >
-            + Add card
+            + Add item
           </button>
         )}
       </div>

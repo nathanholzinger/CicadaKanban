@@ -45,19 +45,17 @@ router.get('/:id', (req, res) => {
     .orderBy(columns.position)
     .all();
 
-  // Items whose column belongs to this workflow
+  // All items in any column of this workflow (across all projects that inherit it)
   const columnIds = new Set(workflowColumns.map(c => c.id));
-  const allProjectItems = workflow.projectId
-    ? db.select().from(items).where(eq(items.projectId, workflow.projectId)).all()
-    : [];
-  const workflowItems = allProjectItems.filter(i => i.columnId && columnIds.has(i.columnId));
+  const allItems = db.select().from(items).all();
+  const workflowItems = allItems.filter(i => i.columnId && columnIds.has(i.columnId));
 
   res.json({ ...workflow, columns: workflowColumns, items: addDepths(workflowItems) });
 });
 
 // Create a workflow
 router.post('/', (req, res) => {
-  const { name, description, projectId, templateId } = req.body;
+  const { name, description, projectId, templateId, sourceWorkflowId } = req.body;
 
   if (!name) {
     res.status(400).json({ error: 'name is required' });
@@ -80,7 +78,6 @@ router.post('/', (req, res) => {
     updatedAt: now,
   }).run();
 
-  // Apply template columns if a templateId was provided
   if (templateId) {
     const templateCols = db.select().from(workflowTemplateColumns)
       .where(eq(workflowTemplateColumns.templateId, templateId))
@@ -88,6 +85,23 @@ router.post('/', (req, res) => {
       .all();
 
     for (const col of templateCols) {
+      db.insert(columns).values({
+        id: randomUUID(),
+        workflowId,
+        name: col.name,
+        position: col.position,
+        triggersNotification: col.triggersNotification,
+        isTerminal: col.isTerminal,
+        createdAt: now,
+      }).run();
+    }
+  } else if (sourceWorkflowId) {
+    const sourceCols = db.select().from(columns)
+      .where(eq(columns.workflowId, sourceWorkflowId))
+      .orderBy(columns.position)
+      .all();
+
+    for (const col of sourceCols) {
       db.insert(columns).values({
         id: randomUUID(),
         workflowId,

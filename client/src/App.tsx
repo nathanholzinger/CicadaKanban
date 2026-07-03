@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Workflow, Notification, Project } from './types';
+import type { Workflow } from './types';
+import type { Notification, Project } from './types';
 import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject } from './api';
-import CreateWorkflowModal from './components/CreateWorkflowModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
@@ -22,9 +22,7 @@ function getAncestors(project: Project, projects: Project[]): Project[] {
 
 export default function App() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showCreateWorkflowModal, setShowCreateWorkflowModal] = useState(false);
   const [showAgentsModal, setShowAgentsModal] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -39,10 +37,7 @@ export default function App() {
 
   useEffect(() => {
     const workflowsLoad = fetchWorkflows()
-      .then(workflowData => {
-        setWorkflows(workflowData);
-        setSelectedWorkflowId(prev => prev ?? (workflowData.length > 0 ? workflowData[0].id : null));
-      })
+      .then(setWorkflows)
       .catch(err => console.error('Failed to load workflows:', err));
 
     const projects = fetchProjects()
@@ -87,10 +82,9 @@ export default function App() {
     return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
-  async function handleCreateWorkflow(name: string, description: string, includeDefaultColumns: boolean) {
-    const workflow = await createWorkflow(name, description || undefined, includeDefaultColumns);
-    setWorkflows(prev => [...prev, workflow]);
-    setSelectedWorkflowId(workflow.id);
+  async function handleCreateWorkflow(data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) {
+    const created = await createWorkflow(data);
+    setWorkflows(prev => [...prev, created]);
   }
 
   function handleOpenCreateProject(parentId?: string) {
@@ -134,6 +128,18 @@ export default function App() {
   const projectSubprojects = projects.filter(p => p.parentId === selectedProjectId);
   const projectAncestors = selectedProject ? getAncestors(selectedProject, projects) : [];
 
+  const effectiveWorkflow = (() => {
+    if (!selectedProject) return null;
+    const own = workflows.find(w => w.projectId === selectedProject.id);
+    if (own) return { workflow: own, isInherited: false, ownerProject: selectedProject };
+    const ancestors = getAncestors(selectedProject, projects);
+    for (let i = ancestors.length - 1; i >= 0; i--) {
+      const inherited = workflows.find(w => w.projectId === ancestors[i].id);
+      if (inherited) return { workflow: inherited, isInherited: true, ownerProject: ancestors[i] };
+    }
+    return null;
+  })();
+
   const createProjectParentName = createProjectParentId
     ? projects.find(p => p.id === createProjectParentId)?.name
     : undefined;
@@ -155,36 +161,6 @@ export default function App() {
             <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-400">
               Kanban
             </h1>
-
-            {/* Workflow selector */}
-            {workflows.length > 0 && (
-              <select
-                value={selectedWorkflowId ?? ''}
-                onChange={e => setSelectedWorkflowId(e.target.value)}
-                className="
-                  px-3 py-1.5 rounded-lg text-sm
-                  bg-zinc-800 border border-zinc-700 text-zinc-200
-                  focus:outline-none focus:border-blue-500/50
-                  cursor-pointer
-                "
-              >
-                {workflows.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
-            )}
-
-            <button
-              onClick={() => setShowCreateWorkflowModal(true)}
-              className="
-                px-3 py-1.5 rounded-lg text-sm font-medium
-                bg-zinc-800 border border-zinc-700 text-zinc-300
-                hover:text-zinc-100 hover:border-zinc-600
-                transition-colors
-              "
-            >
-              + New workflow
-            </button>
 
             <button
               onClick={() => setShowAgentsModal(true)}
@@ -279,10 +255,13 @@ export default function App() {
               ancestors={projectAncestors}
               subprojects={projectSubprojects}
               allProjects={projects}
+              allWorkflows={workflows}
+              effectiveWorkflow={effectiveWorkflow}
               onSelectProject={handleSelectProject}
               onUpdate={handleUpdateProject}
               onCreateSubproject={handleOpenCreateProject}
               onDeleteSubproject={handleDeleteProject}
+              onCreateWorkflow={handleCreateWorkflow}
             />
           ) : (
             <div className="flex items-center justify-center h-64">
@@ -297,13 +276,6 @@ export default function App() {
           parentName={createProjectParentName}
           onClose={() => setShowCreateProjectModal(false)}
           onCreate={handleCreateProject}
-        />
-      )}
-
-      {showCreateWorkflowModal && (
-        <CreateWorkflowModal
-          onClose={() => setShowCreateWorkflowModal(false)}
-          onCreate={handleCreateWorkflow}
         />
       )}
 

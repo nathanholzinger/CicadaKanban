@@ -18,6 +18,7 @@ import {
 import type { WorkflowWithDetails, Column, ItemType, WorkItem } from '../types';
 import {
   fetchWorkflow,
+  fetchItemTypes,
   createWorkItem,
   moveWorkItem,
   reorderWorkItems,
@@ -32,10 +33,13 @@ import CardDetailPanel from './CardDetailPanel';
 
 interface WorkflowViewProps {
   workflowId: string;
-  itemTypes: ItemType[];
+  projectId?: string;        // project context for new cards
+  filterProjectId?: string;  // when set, only show items for this project (inherited view)
+  readOnly?: boolean;        // when true, hides column management controls
 }
 
-export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProps) {
+export default function WorkflowView({ workflowId, projectId, filterProjectId, readOnly }: WorkflowViewProps) {
+  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [workflow, setWorkflow] = useState<WorkflowWithDetails | null>(null);
   const [columns, setColumns] = useState<Column[]>([]);
   const [items, setItems] = useState<WorkItem[]>([]);
@@ -61,6 +65,10 @@ export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProp
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
+  useEffect(() => {
+    fetchItemTypes().then(setItemTypes).catch(() => {});
+  }, []);
+
   const loadWorkflow = useCallback(async () => {
     setLoading(true);
     try {
@@ -68,7 +76,7 @@ export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProp
       setWorkflow(data);
       const sorted = [...data.columns].sort((a, b) => a.position - b.position);
       setColumns(sorted);
-      setItems(data.workItems);
+      setItems(data.items);
 
       const stored = localStorage.getItem(`kanban_child_col_${workflowId}`);
       if (!stored) {
@@ -88,7 +96,7 @@ export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProp
 
   function getColumnItems(columnId: string): WorkItem[] {
     return items
-      .filter(item => item.columnId === columnId)
+      .filter(item => item.columnId === columnId && (!filterProjectId || item.projectId === filterProjectId))
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
 
@@ -255,7 +263,7 @@ export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProp
 
   async function handleCreateCard(columnId: string, title: string, type: string | null) {
     try {
-      const newItem = await createWorkItem({ type: type ?? undefined, title, columnId });
+      const newItem = await createWorkItem({ type: type ?? undefined, title, projectId, columnId });
       setItems(prev => [...prev, newItem]);
     } catch (err) {
       console.error('Failed to create card:', err);
@@ -338,50 +346,52 @@ export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProp
                 isCardBeingDragged={activeItem !== null}
                 onCreateCard={handleCreateCard}
                 onCardClick={setSelectedItemId}
-                onRename={handleRenameColumn}
-                onDelete={handleDeleteColumn}
+                onRename={readOnly ? undefined : handleRenameColumn}
+                onDelete={readOnly ? undefined : handleDeleteColumn}
               />
             ))}
 
-            {/* Add column */}
-            <div className="shrink-0 w-72">
-              {addingColumn ? (
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 space-y-2">
-                  <input
-                    autoFocus
-                    value={newColumnName}
-                    onChange={e => setNewColumnName(e.target.value)}
-                    placeholder="Column name..."
-                    className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleCreateColumn();
-                      if (e.key === 'Escape') { setAddingColumn(false); setNewColumnName(''); }
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleCreateColumn}
-                      className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
-                    >
-                      Add column
-                    </button>
-                    <button
-                      onClick={() => { setAddingColumn(false); setNewColumnName(''); }}
-                      className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
-                    >
-                      Cancel
-                    </button>
+            {/* Add column — hidden in read-only (inherited) mode */}
+            {!readOnly && (
+              <div className="shrink-0 w-72">
+                {addingColumn ? (
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 space-y-2">
+                    <input
+                      autoFocus
+                      value={newColumnName}
+                      onChange={e => setNewColumnName(e.target.value)}
+                      placeholder="Column name..."
+                      className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleCreateColumn();
+                        if (e.key === 'Escape') { setAddingColumn(false); setNewColumnName(''); }
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCreateColumn}
+                        className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+                      >
+                        Add column
+                      </button>
+                      <button
+                        onClick={() => { setAddingColumn(false); setNewColumnName(''); }}
+                        className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setAddingColumn(true)}
-                  className="w-full py-2.5 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40 border border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl transition-colors"
-                >
-                  + Add column
-                </button>
-              )}
-            </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingColumn(true)}
+                    className="w-full py-2.5 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40 border border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl transition-colors"
+                  >
+                    + Add column
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </SortableContext>
 

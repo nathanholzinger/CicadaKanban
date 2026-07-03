@@ -1,4 +1,4 @@
-import type { Agent, Attachment, Workflow, WorkflowWithDetails, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
+import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
 
 const API = '/api';
 
@@ -57,17 +57,24 @@ export async function fetchWorkflow(id: string): Promise<WorkflowWithDetails> {
   return res.json();
 }
 
-export async function createWorkflow(
-  name: string,
-  description?: string,
-  includeDefaultColumns = true,
-): Promise<Workflow> {
+export async function createWorkflow(data: {
+  projectId: string;
+  name: string;
+  templateId?: string;
+  sourceWorkflowId?: string;
+}): Promise<WorkflowWithDetails> {
   const res = await fetch(`${API}/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, description, includeDefaultColumns }),
+    body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error('Failed to create workflow');
+  return res.json();
+}
+
+export async function fetchWorkflowTemplates(): Promise<WorkflowTemplate[]> {
+  const res = await fetch(`${API}/workflow-templates`);
+  if (!res.ok) throw new Error('Failed to fetch workflow templates');
   return res.json();
 }
 
@@ -131,7 +138,7 @@ export async function reorderColumns(columnOrders: { id: string; position: numbe
 // ============================================================
 
 export async function fetchWorkItem(id: string): Promise<WorkItemDetail> {
-  const res = await fetch(`${API}/work-items/${id}`);
+  const res = await fetch(`${API}/items/${id}`);
   if (!res.ok) throw new Error('Failed to fetch work item');
   return res.json();
 }
@@ -139,14 +146,14 @@ export async function fetchWorkItem(id: string): Promise<WorkItemDetail> {
 export async function createWorkItem(data: {
   type?: string | null;
   title: string;
-  boardId?: string;
+  projectId?: string;
   columnId?: string;
   parentId?: string;
   description?: string;
   assigneeType?: string;
   agentId?: string;
 }): Promise<WorkItem> {
-  const res = await fetch(`${API}/work-items`, {
+  const res = await fetch(`${API}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -159,7 +166,7 @@ export async function updateWorkItem(
   id: string,
   data: Partial<Pick<WorkItem, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>>,
 ): Promise<WorkItem> {
-  const res = await fetch(`${API}/work-items/${id}`, {
+  const res = await fetch(`${API}/items/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -173,7 +180,7 @@ export async function moveWorkItem(
   columnId: string,
   position: number,
 ): Promise<WorkItem> {
-  const res = await fetch(`${API}/work-items/${id}/move`, {
+  const res = await fetch(`${API}/items/${id}/move`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ columnId, position }),
@@ -183,7 +190,7 @@ export async function moveWorkItem(
 }
 
 export async function reorderWorkItems(itemOrders: { id: string; position: number }[]): Promise<void> {
-  const res = await fetch(`${API}/work-items/reorder`, {
+  const res = await fetch(`${API}/items/reorder`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ itemOrders }),
@@ -192,7 +199,7 @@ export async function reorderWorkItems(itemOrders: { id: string; position: numbe
 }
 
 export async function deleteWorkItem(id: string): Promise<void> {
-  const res = await fetch(`${API}/work-items/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API}/items/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete work item');
 }
 

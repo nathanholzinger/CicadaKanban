@@ -52,7 +52,23 @@ export interface WorkItem {
 
 export interface WorkflowWithDetails extends Workflow {
   columns: Column[];
-  workItems: WorkItem[];
+  items: WorkItem[];
+}
+
+export interface WorkflowTemplateColumn {
+  id: string;
+  templateId: string;
+  name: string;
+  position: number;
+  triggersNotification: number;
+  isTerminal: number;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  columns: WorkflowTemplateColumn[];
 }
 
 export interface Agent {
