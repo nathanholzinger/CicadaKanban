@@ -10,7 +10,9 @@
       "Bash(Select-Object FullName)",
       "mcp__kanban__move_card",
       "Bash(npm install *)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "mcp__kanban__move_item",
+      "mcp__kanban__get_workflow"
     ]
   }
 }
