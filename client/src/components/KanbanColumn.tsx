@@ -165,7 +165,7 @@ export default function KanbanColumn({
 
       {/* Card drop zone */}
       <div className={`
-        flex-1 flex flex-col gap-2 p-2 rounded-xl min-h-[120px]
+        flex-1 flex flex-col gap-2 p-2 rounded-xl min-h-[120px] overflow-y-auto
         transition-colors duration-200
         ${isOver && isCardBeingDragged ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}
       `}>

@@ -310,8 +310,8 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
   }
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="mb-4 shrink-0">
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[11px] text-zinc-500">New child cards go to:</span>
           <select
@@ -335,7 +335,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+          <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4 items-stretch">
             {columns.map(col => (
               <KanbanColumn
                 key={col.id}
@@ -353,7 +353,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
             {/* Add column — hidden in read-only (inherited) mode */}
             {!readOnly && (
-              <div className="shrink-0 w-72">
+              <div className="shrink-0 w-72 self-start">
                 {addingColumn ? (
                   <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 space-y-2">
                     <input

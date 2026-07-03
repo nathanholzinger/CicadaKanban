@@ -137,8 +137,8 @@ export default function ProjectPage({
 
     if (effectiveWorkflow.isInherited) {
       return (
-        <div>
-          <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-xs text-zinc-500">
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-xs text-zinc-500 shrink-0">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M8 2v10M4 8l4 4 4-4" />
             </svg>
@@ -172,7 +172,7 @@ export default function ProjectPage({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-4xl">
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Breadcrumb */}
       {ancestors.length > 0 && (
         <nav className="flex items-center gap-1.5 text-xs text-zinc-500 mb-4">
@@ -269,11 +269,11 @@ export default function ProjectPage({
 
       {/* Tab content */}
       {activeTab === 'board' ? (
-        <div className="pt-6">
+        <div className="pt-6 flex-1 min-h-0 flex flex-col">
           {renderBoard()}
         </div>
       ) : (
-        <div className="pt-5 max-w-2xl">
+        <div className="pt-5 max-w-2xl overflow-y-auto">
           {/* Description */}
           {editingField === 'description' ? (
             <textarea

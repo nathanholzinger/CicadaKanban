@@ -26,14 +26,14 @@ export default defineConfig({
       cwd: './server',
       port: 3002,
       env: { ...process.env, PORT: '3002', DB_PATH: './data/test.db', ENABLE_TEST_ROUTES: 'true' },
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
     },
     {
       command: 'npm run dev',
       cwd: './client',
       port: 5174,
       env: { ...process.env, VITE_PORT: '5174', VITE_API_TARGET: 'http://localhost:3002' },
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
     },
   ],
 });

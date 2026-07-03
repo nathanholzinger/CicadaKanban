@@ -153,7 +153,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-zinc-100 flex flex-col">
+    <div className="h-screen bg-zinc-900 text-zinc-100 flex flex-col">
       {/* Top nav bar */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="px-6 h-14 flex items-center justify-between">
@@ -239,7 +239,7 @@ export default function App() {
       </header>
 
       {/* Body: sidebar + main */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         <ProjectSidebar
           projects={projects}
           selectedProjectId={selectedProjectId}
@@ -248,7 +248,7 @@ export default function App() {
           onDeleteProject={handleDeleteProject}
         />
 
-        <main className="flex-1 overflow-auto px-6 py-6">
+        <main className="flex-1 overflow-hidden flex flex-col px-6 py-6">
           {selectedProject ? (
             <ProjectPage
               project={selectedProject}
