@@ -44,6 +44,14 @@ router.post('/', (req, res) => {
   res.status(201).json(created);
 });
 
+function isDescendant(ofId: string, candidateId: string): boolean {
+  const children = db.select({ id: projects.id }).from(projects).where(eq(projects.parentId, ofId)).all();
+  for (const child of children) {
+    if (child.id === candidateId || isDescendant(child.id, candidateId)) return true;
+  }
+  return false;
+}
+
 // Update a project
 router.put('/:id', (req, res) => {
   const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
@@ -51,10 +59,24 @@ router.put('/:id', (req, res) => {
     res.status(404).json({ error: 'Project not found' });
     return;
   }
-  const { name, description } = req.body;
+
+  const { name, description, parentId } = req.body;
+
+  if (parentId !== undefined && parentId !== null) {
+    if (parentId === req.params.id) {
+      res.status(400).json({ error: 'A project cannot be its own parent' });
+      return;
+    }
+    if (isDescendant(req.params.id, parentId)) {
+      res.status(400).json({ error: 'Cannot reparent to a descendant' });
+      return;
+    }
+  }
+
   db.update(projects).set({
     name: name ?? project.name,
     description: description !== undefined ? description : project.description,
+    parentId: 'parentId' in req.body ? (parentId ?? null) : project.parentId,
     updatedAt: Date.now(),
   }).where(eq(projects.id, req.params.id)).run();
   const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();

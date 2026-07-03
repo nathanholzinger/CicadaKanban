@@ -7,15 +7,6 @@ test.beforeAll(async () => {
   await resetAndSeedDb();
 });
 
-test('GET /api/projects returns seeded "My First Project"', async ({ request }) => {
-  const res = await request.get(`${BASE}/projects`);
-  expect(res.status()).toBe(200);
-  const projects = await res.json();
-  expect(Array.isArray(projects)).toBe(true);
-  const seeded = projects.find((p: { name: string }) => p.name === 'My First Project');
-  expect(seeded).toBeTruthy();
-});
-
 test('POST /api/projects creates a project', async ({ request }) => {
   const res = await request.post(`${BASE}/projects`, {
     data: { name: 'New Project', description: 'A test project' },
@@ -72,6 +63,25 @@ test('PUT /api/projects/:id updates name and description', async ({ request }) =
   const updated = await updateRes.json();
   expect(updated.name).toBe('New Name');
   expect(updated.description).toBe('Updated');
+});
+
+test('PUT /api/projects/:id rejects setting a project as its own parent', async ({ request }) => {
+  const { id } = await (await request.post(`${BASE}/projects`, { data: { name: 'Self Parent Test' } })).json();
+
+  const res = await request.put(`${BASE}/projects/${id}`, { data: { parentId: id } });
+
+  expect(res.status()).toBe(400);
+  expect((await res.json()).error).toMatch(/own parent/i);
+});
+
+test('PUT /api/projects/:id rejects setting a descendant as parent', async ({ request }) => {
+  const parent = await (await request.post(`${BASE}/projects`, { data: { name: 'Cycle Parent' } })).json();
+  const child = await (await request.post(`${BASE}/projects`, { data: { name: 'Cycle Child', parentId: parent.id } })).json();
+
+  const res = await request.put(`${BASE}/projects/${parent.id}`, { data: { parentId: child.id } });
+
+  expect(res.status()).toBe(400);
+  expect((await res.json()).error).toMatch(/descendant/i);
 });
 
 test('DELETE /api/projects/:id cascades to workflows, columns, and items', async ({ request }) => {

@@ -26,7 +26,7 @@ export async function createProject(data: {
   return res.json();
 }
 
-export async function updateProject(id: string, data: { name?: string; description?: string | null }): Promise<Project> {
+export async function updateProject(id: string, data: { name?: string; description?: string | null; parentId?: string | null }): Promise<Project> {
   const res = await fetch(`${API}/projects/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

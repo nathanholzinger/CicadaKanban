@@ -5,13 +5,41 @@ interface ProjectPageProps {
   project: Project;
   ancestors: Project[];
   subprojects: Project[];
+  allProjects: Project[];
   onSelectProject: (id: string) => void;
-  onUpdate: (id: string, data: { name?: string; description?: string | null }) => Promise<void>;
+  onUpdate: (id: string, data: { name?: string; description?: string | null; parentId?: string | null }) => Promise<void>;
   onCreateSubproject: (parentId: string) => void;
   onDeleteSubproject: (id: string) => Promise<void>;
 }
 
-export default function ProjectPage({ project, ancestors, subprojects, onSelectProject, onUpdate, onCreateSubproject, onDeleteSubproject }: ProjectPageProps) {
+function buildParentOptions(allProjects: Project[], currentId: string): Array<{ value: string; label: string }> {
+  const map = new Map<string, { project: Project; children: string[] }>();
+  for (const p of allProjects) map.set(p.id, { project: p, children: [] });
+  const roots: string[] = [];
+  for (const p of allProjects) {
+    if (p.parentId && map.has(p.parentId)) map.get(p.parentId)!.children.push(p.id);
+    else roots.push(p.id);
+  }
+
+  function collectDescendants(id: string, out: Set<string>) {
+    map.get(id)?.children.forEach(c => { out.add(c); collectDescendants(c, out); });
+  }
+  const excluded = new Set<string>([currentId]);
+  collectDescendants(currentId, excluded);
+
+  const options: Array<{ value: string; label: string }> = [{ value: '', label: 'Root' }];
+  function traverse(id: string, depth: number) {
+    if (excluded.has(id)) return;
+    const entry = map.get(id);
+    if (!entry) return;
+    options.push({ value: id, label: '·'.repeat(depth) + (depth > 0 ? ' ' : '') + entry.project.name });
+    entry.children.forEach(c => traverse(c, depth + 1));
+  }
+  roots.forEach(r => traverse(r, 0));
+  return options;
+}
+
+export default function ProjectPage({ project, ancestors, subprojects, allProjects, onSelectProject, onUpdate, onCreateSubproject, onDeleteSubproject }: ProjectPageProps) {
   const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
   const [nameValue, setNameValue] = useState(project.name);
   const [descValue, setDescValue] = useState(project.description ?? '');
@@ -20,11 +48,13 @@ export default function ProjectPage({ project, ancestors, subprojects, onSelectP
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+  const [savingParent, setSavingParent] = useState(false);
 
   useEffect(() => {
     setNameValue(project.name);
     setDescValue(project.description ?? '');
     setEditingField(null);
+    setSavingParent(false);
   }, [project.id]);
 
   async function handleSave(field: 'name' | 'description') {
@@ -166,6 +196,31 @@ export default function ProjectPage({ project, ancestors, subprojects, onSelectP
           Add description
         </button>
       )}
+
+      {/* Parent project */}
+      <div className="flex items-center gap-3 mt-4 mb-6">
+        <span className="text-xs font-semibold uppercase tracking-widest text-zinc-600 w-14 shrink-0">
+          Parent
+        </span>
+        <select
+          value={project.parentId ?? ''}
+          disabled={savingParent}
+          onChange={async (e) => {
+            const newParentId = e.target.value || null;
+            setSavingParent(true);
+            try {
+              await onUpdate(project.id, { parentId: newParentId });
+            } finally {
+              setSavingParent(false);
+            }
+          }}
+          className="text-sm bg-zinc-800 border border-zinc-700 text-zinc-400 rounded-lg px-2 py-1.5 focus:outline-none focus:border-zinc-600 cursor-pointer disabled:opacity-50 transition-opacity"
+        >
+          {buildParentOptions(allProjects, project.id).map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Subprojects */}
       <section className="mt-6">

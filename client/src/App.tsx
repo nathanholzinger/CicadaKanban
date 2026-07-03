@@ -119,7 +119,7 @@ export default function App() {
     setSelectedProjectId(id);
   }
 
-  async function handleUpdateProject(id: string, data: { name?: string; description?: string | null }) {
+  async function handleUpdateProject(id: string, data: { name?: string; description?: string | null; parentId?: string | null }) {
     const updated = await updateProject(id, data);
     setProjects(prev => prev.map(p => p.id === id ? updated : p));
   }
@@ -278,6 +278,7 @@ export default function App() {
               project={selectedProject}
               ancestors={projectAncestors}
               subprojects={projectSubprojects}
+              allProjects={projects}
               onSelectProject={handleSelectProject}
               onUpdate={handleUpdateProject}
               onCreateSubproject={handleOpenCreateProject}
