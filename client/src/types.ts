@@ -14,8 +14,9 @@ export interface ItemType {
   createdAt: number;
 }
 
-export interface Board {
+export interface Workflow {
   id: string;
+  projectId: string | null;
   name: string;
   description: string | null;
   createdAt: number;
@@ -24,7 +25,7 @@ export interface Board {
 
 export interface Column {
   id: string;
-  boardId: string;
+  workflowId: string;
   agentId: string | null;
   name: string;
   position: number;
@@ -38,7 +39,7 @@ export interface WorkItem {
   type: string | null;
   parentId: string | null;
   depth?: number;
-  boardId: string | null;
+  projectId: string | null;
   columnId: string | null;
   title: string;
   description: string | null;
@@ -49,7 +50,7 @@ export interface WorkItem {
   updatedAt: number;
 }
 
-export interface BoardWithDetails extends Board {
+export interface WorkflowWithDetails extends Workflow {
   columns: Column[];
   workItems: WorkItem[];
 }
@@ -92,7 +93,7 @@ export interface Attachment {
 
 export interface Label {
   id: string;
-  boardId: string | null;
+  workflowId: string | null;
   name: string;
   color: string;
   createdAt: number;
@@ -101,7 +102,7 @@ export interface Label {
 export interface Notification {
   id: string;
   workItemId: string | null;
-  boardId: string | null;
+  workflowId: string | null;
   message: string;
   type: string;
   isRead: number;

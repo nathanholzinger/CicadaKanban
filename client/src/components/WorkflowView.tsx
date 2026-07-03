@@ -15,9 +15,9 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import type { BoardWithDetails, Column, ItemType, WorkItem } from '../types';
+import type { WorkflowWithDetails, Column, ItemType, WorkItem } from '../types';
 import {
-  fetchBoard,
+  fetchWorkflow,
   createWorkItem,
   moveWorkItem,
   reorderWorkItems,
@@ -30,13 +30,13 @@ import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 import CardDetailPanel from './CardDetailPanel';
 
-interface BoardViewProps {
-  boardId: string;
+interface WorkflowViewProps {
+  workflowId: string;
   itemTypes: ItemType[];
 }
 
-export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
-  const [board, setBoard] = useState<BoardWithDetails | null>(null);
+export default function WorkflowView({ workflowId, itemTypes }: WorkflowViewProps) {
+  const [workflow, setWorkflow] = useState<WorkflowWithDetails | null>(null);
   const [columns, setColumns] = useState<Column[]>([]);
   const [items, setItems] = useState<WorkItem[]>([]);
   const [activeItem, setActiveItem] = useState<WorkItem | null>(null);
@@ -45,16 +45,15 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
   const [addingColumn, setAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [childDefaultColumnId, setChildDefaultColumnId] = useState<string | null>(
-    () => localStorage.getItem(`kanban_child_col_${boardId}`) ?? null,
+    () => localStorage.getItem(`kanban_child_col_${workflowId}`) ?? null,
   );
-
 
   function handleChildColumnChange(columnId: string | null) {
     setChildDefaultColumnId(columnId);
     if (columnId) {
-      localStorage.setItem(`kanban_child_col_${boardId}`, columnId);
+      localStorage.setItem(`kanban_child_col_${workflowId}`, columnId);
     } else {
-      localStorage.removeItem(`kanban_child_col_${boardId}`);
+      localStorage.removeItem(`kanban_child_col_${workflowId}`);
     }
   }
 
@@ -62,31 +61,30 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  const loadBoard = useCallback(async () => {
+  const loadWorkflow = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchBoard(boardId);
-      setBoard(data);
+      const data = await fetchWorkflow(workflowId);
+      setWorkflow(data);
       const sorted = [...data.columns].sort((a, b) => a.position - b.position);
       setColumns(sorted);
       setItems(data.workItems);
 
-      // Default child column to Backlog if no preference is stored
-      const stored = localStorage.getItem(`kanban_child_col_${boardId}`);
+      const stored = localStorage.getItem(`kanban_child_col_${workflowId}`);
       if (!stored) {
         const backlog = sorted.find(c => c.name.toLowerCase() === 'backlog');
         if (backlog) setChildDefaultColumnId(backlog.id);
       }
     } catch (err) {
-      console.error('Failed to load board:', err);
+      console.error('Failed to load workflow:', err);
     } finally {
       setLoading(false);
     }
-  }, [boardId]);
+  }, [workflowId]);
 
   useEffect(() => {
-    loadBoard(); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [loadBoard]);
+    loadWorkflow();
+  }, [loadWorkflow]);
 
   function getColumnItems(columnId: string): WorkItem[] {
     return items
@@ -152,7 +150,7 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
         await reorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
       } catch (err) {
         console.error('Failed to reorder columns:', err);
-        loadBoard();
+        loadWorkflow();
       }
       return;
     }
@@ -181,7 +179,7 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
         await reorderWorkItems(updatedPositions);
       } catch (err) {
         console.error('Failed to reorder items:', err);
-        loadBoard();
+        loadWorkflow();
       }
       return;
     }
@@ -217,7 +215,7 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
       await moveWorkItem(activeId, targetColumnId, newPosition);
     } catch (err) {
       console.error('Failed to move item:', err);
-      loadBoard();
+      loadWorkflow();
     }
   }
 
@@ -226,9 +224,9 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
   // ============================================================
 
   async function handleCreateColumn() {
-    if (!board || !newColumnName.trim()) return;
+    if (!workflow || !newColumnName.trim()) return;
     try {
-      const col = await createColumn({ boardId: board.id, name: newColumnName.trim() });
+      const col = await createColumn({ workflowId: workflow.id, name: newColumnName.trim() });
       setColumns(prev => [...prev, col]);
       setNewColumnName('');
       setAddingColumn(false);
@@ -247,7 +245,7 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
   }
 
   async function handleDeleteColumn(id: string) {
-    await deleteColumn(id); // throws on 409 — KanbanColumn shows the error
+    await deleteColumn(id);
     setColumns(prev => prev.filter(c => c.id !== id));
   }
 
@@ -257,7 +255,7 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
 
   async function handleCreateCard(columnId: string, title: string, type: string | null) {
     try {
-      const newItem = await createWorkItem({ type: type ?? undefined, title, boardId, columnId });
+      const newItem = await createWorkItem({ type: type ?? undefined, title, columnId });
       setItems(prev => [...prev, newItem]);
     } catch (err) {
       console.error('Failed to create card:', err);
@@ -276,7 +274,6 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
     setItems(prev => [...prev, item]);
   }
 
-  // Precompute child counts from the flat items list
   const childCounts: Record<string, number> = {};
   for (const item of items) {
     if (item.parentId) {
@@ -291,15 +288,15 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-500">Loading board...</p>
+        <p className="text-zinc-500">Loading workflow…</p>
       </div>
     );
   }
 
-  if (!board) {
+  if (!workflow) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-zinc-400">Board not found</p>
+        <p className="text-zinc-400">Workflow not found</p>
       </div>
     );
   }
@@ -307,10 +304,6 @@ export default function BoardView({ boardId, itemTypes }: BoardViewProps) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-100">{board.name}</h1>
-        {board.description && (
-          <p className="text-sm text-zinc-400 mt-1">{board.description}</p>
-        )}
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[11px] text-zinc-500">New child cards go to:</span>
           <select

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Board, Notification, Project } from './types';
-import { fetchBoards, createBoard, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject } from './api';
-import CreateBoardModal from './components/CreateBoardModal';
+import type { Workflow, Notification, Project } from './types';
+import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject } from './api';
+import CreateWorkflowModal from './components/CreateWorkflowModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
@@ -21,10 +21,10 @@ function getAncestors(project: Project, projects: Project[]): Project[] {
 }
 
 export default function App() {
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateWorkflowModal, setShowCreateWorkflowModal] = useState(false);
   const [showAgentsModal, setShowAgentsModal] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -38,18 +38,18 @@ export default function App() {
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const boards = fetchBoards()
-      .then(boardData => {
-        setBoards(boardData);
-        setSelectedBoardId(prev => prev ?? (boardData.length > 0 ? boardData[0].id : null));
+    const workflowsLoad = fetchWorkflows()
+      .then(workflowData => {
+        setWorkflows(workflowData);
+        setSelectedWorkflowId(prev => prev ?? (workflowData.length > 0 ? workflowData[0].id : null));
       })
-      .catch(err => console.error('Failed to load boards:', err));
+      .catch(err => console.error('Failed to load workflows:', err));
 
     const projects = fetchProjects()
       .then(setProjects)
       .catch(err => console.error('Failed to load projects:', err));
 
-    Promise.all([boards, projects]).finally(() => setLoading(false));
+    Promise.all([workflowsLoad, projects]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -87,10 +87,10 @@ export default function App() {
     return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
-  async function handleCreateBoard(name: string, description: string, includeDefaultColumns: boolean) {
-    const board = await createBoard(name, description || undefined, includeDefaultColumns);
-    setBoards(prev => [...prev, board]);
-    setSelectedBoardId(board.id);
+  async function handleCreateWorkflow(name: string, description: string, includeDefaultColumns: boolean) {
+    const workflow = await createWorkflow(name, description || undefined, includeDefaultColumns);
+    setWorkflows(prev => [...prev, workflow]);
+    setSelectedWorkflowId(workflow.id);
   }
 
   function handleOpenCreateProject(parentId?: string) {
@@ -156,11 +156,11 @@ export default function App() {
               Kanban
             </h1>
 
-            {/* Board selector */}
-            {boards.length > 0 && (
+            {/* Workflow selector */}
+            {workflows.length > 0 && (
               <select
-                value={selectedBoardId ?? ''}
-                onChange={e => setSelectedBoardId(e.target.value)}
+                value={selectedWorkflowId ?? ''}
+                onChange={e => setSelectedWorkflowId(e.target.value)}
                 className="
                   px-3 py-1.5 rounded-lg text-sm
                   bg-zinc-800 border border-zinc-700 text-zinc-200
@@ -168,14 +168,14 @@ export default function App() {
                   cursor-pointer
                 "
               >
-                {boards.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                {workflows.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
             )}
 
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowCreateWorkflowModal(true)}
               className="
                 px-3 py-1.5 rounded-lg text-sm font-medium
                 bg-zinc-800 border border-zinc-700 text-zinc-300
@@ -183,7 +183,7 @@ export default function App() {
                 transition-colors
               "
             >
-              + New board
+              + New workflow
             </button>
 
             <button
@@ -300,10 +300,10 @@ export default function App() {
         />
       )}
 
-      {showCreateModal && (
-        <CreateBoardModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateBoard}
+      {showCreateWorkflowModal && (
+        <CreateWorkflowModal
+          onClose={() => setShowCreateWorkflowModal(false)}
+          onCreate={handleCreateWorkflow}
         />
       )}
 

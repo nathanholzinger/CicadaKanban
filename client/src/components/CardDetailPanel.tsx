@@ -58,7 +58,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
   const [savingAgent, setSavingAgent] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const [boardLabels, setBoardLabels] = useState<Label[]>([]);
+  const [workflowLabels, setWorkflowLabels] = useState<Label[]>([]);
   const [itemLabelIds, setItemLabelIds] = useState<Set<string>>(new Set());
   const [addingLabel, setAddingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
@@ -89,9 +89,9 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
         setTitleDraft(d.title);
         setDescDraft(d.description ?? '');
         setAgents(agentList);
-        if (d.boardId) {
-          Promise.all([fetchLabels(d.boardId), fetchWorkItemLabels(d.id)]).then(([bl, il]) => {
-            setBoardLabels(bl);
+        if (d.projectId) {
+          Promise.all([fetchLabels(), fetchWorkItemLabels(d.id)]).then(([wl, il]) => {
+            setWorkflowLabels(wl);
             setItemLabelIds(new Set(il.map(l => l.id)));
           }).catch(() => {});
         }
@@ -177,7 +177,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
         type: childType || null,
         title: childTitle.trim(),
         parentId: detail.id,
-        boardId: detail.boardId ?? undefined,
+        projectId: detail.projectId ?? undefined,
         columnId: childDefaultColumnId ?? detail.columnId ?? undefined,
       });
       setDetail(prev => prev ? { ...prev, children: [...prev.children, child] } : prev);
@@ -223,8 +223,8 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
   async function handleCreateLabel(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!detail || !newLabelName.trim()) return;
-    const label = await createLabel({ boardId: detail.boardId ?? undefined, name: newLabelName.trim(), color: newLabelColor });
-    setBoardLabels(prev => [...prev, label]);
+    const label = await createLabel({ name: newLabelName.trim(), color: newLabelColor });
+    setWorkflowLabels(prev => [...prev, label]);
     await addLabelToWorkItem(detail.id, label.id);
     setItemLabelIds(prev => new Set([...prev, label.id]));
     setNewLabelName('');
@@ -392,7 +392,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {boardLabels.map(label => (
+                  {workflowLabels.map(label => (
                     <button
                       key={label.id}
                       onClick={() => handleToggleLabel(label.id)}
@@ -402,7 +402,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
                       {label.name}
                     </button>
                   ))}
-                  {boardLabels.length === 0 && !addingLabel && (
+                  {workflowLabels.length === 0 && !addingLabel && (
                     <p className="text-xs text-zinc-600">No labels yet.</p>
                   )}
                 </div>

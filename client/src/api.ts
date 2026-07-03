@@ -1,4 +1,4 @@
-import type { Agent, Attachment, Board, BoardWithDetails, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
+import type { Agent, Attachment, Workflow, WorkflowWithDetails, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
 
 const API = '/api';
 
@@ -42,38 +42,38 @@ export async function deleteProject(id: string): Promise<void> {
 }
 
 // ============================================================
-// Boards
+// Workflows
 // ============================================================
 
-export async function fetchBoards(): Promise<Board[]> {
-  const res = await fetch(`${API}/boards`);
-  if (!res.ok) throw new Error('Failed to fetch boards');
+export async function fetchWorkflows(): Promise<Workflow[]> {
+  const res = await fetch(`${API}/workflows`);
+  if (!res.ok) throw new Error('Failed to fetch workflows');
   return res.json();
 }
 
-export async function fetchBoard(id: string): Promise<BoardWithDetails> {
-  const res = await fetch(`${API}/boards/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch board');
+export async function fetchWorkflow(id: string): Promise<WorkflowWithDetails> {
+  const res = await fetch(`${API}/workflows/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch workflow');
   return res.json();
 }
 
-export async function createBoard(
+export async function createWorkflow(
   name: string,
   description?: string,
   includeDefaultColumns = true,
-): Promise<Board> {
-  const res = await fetch(`${API}/boards`, {
+): Promise<Workflow> {
+  const res = await fetch(`${API}/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, description, includeDefaultColumns }),
   });
-  if (!res.ok) throw new Error('Failed to create board');
+  if (!res.ok) throw new Error('Failed to create workflow');
   return res.json();
 }
 
-export async function deleteBoard(id: string): Promise<void> {
-  const res = await fetch(`${API}/boards/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete board');
+export async function deleteWorkflow(id: string): Promise<void> {
+  const res = await fetch(`${API}/workflows/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete workflow');
 }
 
 // ============================================================
@@ -85,7 +85,7 @@ export async function deleteBoard(id: string): Promise<void> {
 // ============================================================
 
 export async function createColumn(data: {
-  boardId: string;
+  workflowId: string;
   name: string;
   triggersNotification?: boolean;
   isTerminal?: boolean;
@@ -227,14 +227,14 @@ export async function deleteAttachment(id: string): Promise<void> {
 // Labels
 // ============================================================
 
-export async function fetchLabels(boardId?: string): Promise<Label[]> {
-  const url = boardId ? `${API}/labels?boardId=${boardId}` : `${API}/labels`;
+export async function fetchLabels(workflowId?: string): Promise<Label[]> {
+  const url = workflowId ? `${API}/labels?boardId=${workflowId}` : `${API}/labels`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch labels');
   return res.json();
 }
 
-export async function createLabel(data: { boardId?: string; name: string; color: string }): Promise<Label> {
+export async function createLabel(data: { workflowId?: string; name: string; color: string }): Promise<Label> {
   const res = await fetch(`${API}/labels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

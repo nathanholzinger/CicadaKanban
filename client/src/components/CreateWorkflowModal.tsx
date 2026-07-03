@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-interface CreateBoardModalProps {
+interface CreateWorkflowModalProps {
   onClose: () => void;
   onCreate: (name: string, description: string, includeDefaultColumns: boolean) => Promise<void>;
 }
 
-export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModalProps) {
+export default function CreateWorkflowModal({ onClose, onCreate }: CreateWorkflowModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [includeDefaultColumns, setIncludeDefaultColumns] = useState(true);
@@ -27,14 +27,14 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!name.trim()) { setError('Board name is required.'); return; }
+    if (!name.trim()) { setError('Workflow name is required.'); return; }
     setSaving(true);
     setError('');
     try {
       await onCreate(name.trim(), description.trim(), includeDefaultColumns);
       onClose();
     } catch {
-      setError('Failed to create board. Please try again.');
+      setError('Failed to create workflow. Please try again.');
       setSaving(false);
     }
   }
@@ -47,7 +47,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
       {/* Dialog */}
       <div className="relative z-10 w-full max-w-md mx-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl">
         <div className="px-6 pt-6 pb-2">
-          <h2 className="text-base font-semibold text-zinc-100">New board</h2>
+          <h2 className="text-base font-semibold text-zinc-100">New workflow</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4 pt-4">
@@ -57,7 +57,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               ref={nameInputRef}
               value={name}
               onChange={e => { setName(e.target.value); setError(''); }}
-              placeholder="My project"
+              placeholder="My workflow"
               className="
                 w-full px-3 py-2 rounded-lg text-sm
                 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500
@@ -71,7 +71,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
             <input
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="What is this board for?"
+              placeholder="What is this workflow for?"
               className="
                 w-full px-3 py-2 rounded-lg text-sm
                 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500
@@ -87,7 +87,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               onChange={e => setIncludeDefaultColumns(e.target.checked)}
               className="w-4 h-4 rounded accent-blue-500"
             />
-            <span className="text-sm text-zinc-300">Start with default columns (Backlog, In Progress, Done)</span>
+            <span className="text-sm text-zinc-300">Start with default columns</span>
           </label>
 
           {error && <p className="text-xs text-red-400">{error}</p>}
@@ -105,7 +105,7 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
               disabled={saving}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg disabled:opacity-50 transition-colors"
             >
-              {saving ? 'Creating…' : 'Create board'}
+              {saving ? 'Creating…' : 'Create workflow'}
             </button>
           </div>
         </form>
