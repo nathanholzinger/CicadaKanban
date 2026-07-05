@@ -41,6 +41,7 @@ export const projects = sqliteTable('projects', {
   parentId: text('parent_id'),  // self-referential FK to projects.id
   name: text('name').notNull(),
   description: text('description'),
+  position: real('position'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });

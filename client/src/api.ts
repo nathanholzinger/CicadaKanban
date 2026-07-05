@@ -41,6 +41,17 @@ export async function deleteProject(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete project');
 }
 
+export async function reorderProjects(
+  projectOrders: { id: string; parentId: string | null; position: number }[]
+): Promise<void> {
+  const res = await fetch(`${API}/projects/reorder`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectOrders }),
+  });
+  if (!res.ok) throw new Error('Failed to reorder projects');
+}
+
 // ============================================================
 // Workflows
 // ============================================================

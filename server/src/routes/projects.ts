@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { projects, workflows, columns, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels } from '../db/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const router = Router();
 
-// List all projects (flat; parentId allows client to build tree)
+// List all projects ordered by position (NULLS LAST) then createdAt
 router.get('/', (_req, res) => {
-  const allProjects = db.select().from(projects).all();
+  const allProjects = db.select().from(projects).orderBy(asc(projects.position), asc(projects.createdAt)).all();
   res.json(allProjects);
 });
 
@@ -37,6 +37,7 @@ router.post('/', (req, res) => {
     parentId: parentId || null,
     name,
     description: description || null,
+    position: now, // Date.now() places new projects at the end of their sibling group
     createdAt: now,
     updatedAt: now,
   }).run();
@@ -60,7 +61,7 @@ router.put('/:id', (req, res) => {
     return;
   }
 
-  const { name, description, parentId } = req.body;
+  const { name, description, parentId, position } = req.body;
 
   if (parentId !== undefined && parentId !== null) {
     if (parentId === req.params.id) {
@@ -77,6 +78,7 @@ router.put('/:id', (req, res) => {
     name: name ?? project.name,
     description: description !== undefined ? description : project.description,
     parentId: 'parentId' in req.body ? (parentId ?? null) : project.parentId,
+    position: position !== undefined ? position : project.position,
     updatedAt: Date.now(),
   }).where(eq(projects.id, req.params.id)).run();
   const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
@@ -144,6 +146,35 @@ function deleteProjectById(id: string) {
   db.delete(workflows).where(eq(workflows.projectId, id)).run();
   db.delete(projects).where(eq(projects.id, id)).run();
 }
+
+// Reorder projects — atomically set parentId + position for one or more projects
+router.patch('/reorder', (req, res) => {
+  const { projectOrders } = req.body;
+  if (!Array.isArray(projectOrders)) {
+    res.status(400).json({ error: 'projectOrders array is required' });
+    return;
+  }
+
+  for (const { id, parentId, position } of projectOrders) {
+    if (parentId != null) {
+      if (parentId === id) {
+        res.status(400).json({ error: 'A project cannot be its own parent' });
+        return;
+      }
+      if (isDescendant(id, parentId)) {
+        res.status(400).json({ error: 'Cannot reparent to a descendant' });
+        return;
+      }
+    }
+    db.update(projects).set({
+      parentId: parentId ?? null,
+      position,
+      updatedAt: Date.now(),
+    }).where(eq(projects.id, id)).run();
+  }
+
+  res.json({ success: true });
+});
 
 // Delete a project — recursively cascades through descendants → workflows → columns → items
 router.delete('/:id', (req, res) => {

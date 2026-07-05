@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Workflow } from './types';
 import type { Notification, Project } from './types';
-import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject } from './api';
+import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject, reorderProjects } from './api';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
@@ -122,6 +122,15 @@ export default function App() {
     await deleteProject(id);
     setSelectedProjectId(prev => (prev === id ? null : prev));
     fetchProjects().then(setProjects).catch(() => {});
+  }
+
+  async function handleReorderProject(id: string, parentId: string | null, position: number) {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, parentId, position } : p));
+    try {
+      await reorderProjects([{ id, parentId, position }]);
+    } catch {
+      fetchProjects().then(setProjects).catch(() => {});
+    }
   }
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null;
@@ -246,6 +255,7 @@ export default function App() {
           onSelectProject={handleSelectProject}
           onCreateProject={handleOpenCreateProject}
           onDeleteProject={handleDeleteProject}
+          onReorderProject={handleReorderProject}
         />
 
         <main className="flex-1 overflow-hidden flex flex-col px-6 py-6">

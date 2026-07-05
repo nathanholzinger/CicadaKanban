@@ -3,6 +3,7 @@ export interface Project {
   parentId: string | null;
   name: string;
   description: string | null;
+  position: number | null;
   createdAt: number;
   updatedAt: number;
 }

@@ -96,4 +96,12 @@ export function runMigrations() {
     console.log(`Migrated ${unassignedWorkflows.length} existing workflow(s) into "Default Project"`);
   }
 
+  // ── Phase 3: Initialize project positions from created_at for any without one ─
+  const updated = sqlite.prepare(
+    `UPDATE projects SET position = created_at WHERE position IS NULL`
+  ).run();
+  if (updated.changes > 0) {
+    console.log(`Initialized position for ${updated.changes} project(s)`);
+  }
+
 }
