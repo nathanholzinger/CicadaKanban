@@ -15,13 +15,13 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import type { WorkflowWithDetails, Column, ItemType, WorkItem } from '../types';
+import type { WorkflowWithDetails, Column, Item, ItemType } from '../types';
 import {
   fetchWorkflow,
   fetchItemTypes,
-  createWorkItem,
-  moveWorkItem,
-  reorderWorkItems,
+  createItem,
+  moveItem,
+  reorderItems,
   createColumn,
   updateColumn,
   deleteColumn,
@@ -42,8 +42,8 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [workflow, setWorkflow] = useState<WorkflowWithDetails | null>(null);
   const [columns, setColumns] = useState<Column[]>([]);
-  const [items, setItems] = useState<WorkItem[]>([]);
-  const [activeItem, setActiveItem] = useState<WorkItem | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [addingColumn, setAddingColumn] = useState(false);
@@ -94,7 +94,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     loadWorkflow();
   }, [loadWorkflow]);
 
-  function getColumnItems(columnId: string): WorkItem[] {
+  function getColumnItems(columnId: string): Item[] {
     return items
       .filter(item => item.columnId === columnId && (!filterProjectId || item.projectId === filterProjectId))
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -184,7 +184,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
       }));
 
       try {
-        await reorderWorkItems(updatedPositions);
+        await reorderItems(updatedPositions);
       } catch (err) {
         console.error('Failed to reorder items:', err);
         loadWorkflow();
@@ -220,7 +220,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     );
 
     try {
-      await moveWorkItem(activeId, targetColumnId, newPosition);
+      await moveItem(activeId, targetColumnId, newPosition);
     } catch (err) {
       console.error('Failed to move item:', err);
       loadWorkflow();
@@ -263,14 +263,14 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
   async function handleCreateItem(columnId: string, title: string, type: string | null) {
     try {
-      const newItem = await createWorkItem({ type: type ?? undefined, title, projectId, columnId });
+      const newItem = await createItem({ type: type ?? undefined, title, projectId, columnId });
       setItems(prev => [...prev, newItem]);
     } catch (err) {
       console.error('Failed to create item:', err);
     }
   }
 
-  function handleItemUpdated(updated: WorkItem) {
+  function handleItemUpdated(updated: Item) {
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
   }
 
@@ -278,7 +278,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     setItems(prev => prev.filter(i => i.id !== id));
   }
 
-  function handleChildCreated(item: WorkItem) {
+  function handleChildCreated(item: Item) {
     setItems(prev => [...prev, item]);
   }
 

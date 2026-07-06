@@ -35,7 +35,7 @@ export interface Column {
   createdAt: number;
 }
 
-export interface WorkItem {
+export interface Item {
   id: string;
   type: string | null;
   parentId: string | null;
@@ -53,7 +53,7 @@ export interface WorkItem {
 
 export interface WorkflowWithDetails extends Workflow {
   columns: Column[];
-  items: WorkItem[];
+  items: Item[];
 }
 
 export interface WorkflowTemplateColumn {
@@ -92,8 +92,8 @@ export interface ActivityLogEntry {
   createdAt: number;
 }
 
-export interface WorkItemDetail extends WorkItem {
-  children: WorkItem[];
+export interface ItemDetail extends Item {
+  children: Item[];
   activity: ActivityLogEntry[];
 }
 

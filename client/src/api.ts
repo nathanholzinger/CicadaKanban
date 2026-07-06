@@ -1,4 +1,4 @@
-import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, Column, ItemType, Label, Notification, Project, WorkItem, WorkItemDetail } from './types';
+import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, Column, ItemType, Label, Notification, Project, Item, ItemDetail } from './types';
 
 const API = '/api';
 
@@ -95,10 +95,6 @@ export async function deleteWorkflow(id: string): Promise<void> {
 }
 
 // ============================================================
-// Work Items
-// ============================================================
-
-// ============================================================
 // Columns
 // ============================================================
 
@@ -145,16 +141,16 @@ export async function reorderColumns(columnOrders: { id: string; position: numbe
 }
 
 // ============================================================
-// Work Items
+// Items
 // ============================================================
 
-export async function fetchWorkItem(id: string): Promise<WorkItemDetail> {
+export async function fetchItem(id: string): Promise<ItemDetail> {
   const res = await fetch(`${API}/items/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch work item');
+  if (!res.ok) throw new Error('Failed to fetch item');
   return res.json();
 }
 
-export async function createWorkItem(data: {
+export async function createItem(data: {
   type?: string | null;
   title: string;
   projectId?: string;
@@ -163,71 +159,71 @@ export async function createWorkItem(data: {
   description?: string;
   assigneeType?: string;
   agentId?: string;
-}): Promise<WorkItem> {
+}): Promise<Item> {
   const res = await fetch(`${API}/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create work item');
+  if (!res.ok) throw new Error('Failed to create item');
   return res.json();
 }
 
-export async function updateWorkItem(
+export async function updateItem(
   id: string,
-  data: Partial<Pick<WorkItem, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>>,
-): Promise<WorkItem> {
+  data: Partial<Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>>,
+): Promise<Item> {
   const res = await fetch(`${API}/items/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update work item');
+  if (!res.ok) throw new Error('Failed to update item');
   return res.json();
 }
 
-export async function moveWorkItem(
+export async function moveItem(
   id: string,
   columnId: string,
   position: number,
-): Promise<WorkItem> {
+): Promise<Item> {
   const res = await fetch(`${API}/items/${id}/move`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ columnId, position }),
   });
-  if (!res.ok) throw new Error('Failed to move work item');
+  if (!res.ok) throw new Error('Failed to move item');
   return res.json();
 }
 
-export async function reorderWorkItems(itemOrders: { id: string; position: number }[]): Promise<void> {
+export async function reorderItems(itemOrders: { id: string; position: number }[]): Promise<void> {
   const res = await fetch(`${API}/items/reorder`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ itemOrders }),
   });
-  if (!res.ok) throw new Error('Failed to reorder work items');
+  if (!res.ok) throw new Error('Failed to reorder items');
 }
 
-export async function deleteWorkItem(id: string): Promise<void> {
+export async function deleteItem(id: string): Promise<void> {
   const res = await fetch(`${API}/items/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete work item');
+  if (!res.ok) throw new Error('Failed to delete item');
 }
 
 // ============================================================
 // Attachments
 // ============================================================
 
-export async function fetchAttachments(workItemId: string): Promise<Attachment[]> {
-  const res = await fetch(`${API}/attachments/work-item/${workItemId}`);
+export async function fetchAttachments(itemId: string): Promise<Attachment[]> {
+  const res = await fetch(`${API}/attachments/item/${itemId}`);
   if (!res.ok) throw new Error('Failed to fetch attachments');
   return res.json();
 }
 
-export async function createAttachment(workItemId: string, data: {
+export async function createAttachment(itemId: string, data: {
   type: string; label: string; externalUrl?: string; filePath?: string;
 }): Promise<Attachment> {
-  const res = await fetch(`${API}/attachments/work-item/${workItemId}`, {
+  const res = await fetch(`${API}/attachments/item/${itemId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -267,14 +263,14 @@ export async function deleteLabel(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete label');
 }
 
-export async function fetchWorkItemLabels(workItemId: string): Promise<Label[]> {
-  const res = await fetch(`${API}/labels/work-item/${workItemId}`);
-  if (!res.ok) throw new Error('Failed to fetch work item labels');
+export async function fetchItemLabels(itemId: string): Promise<Label[]> {
+  const res = await fetch(`${API}/labels/item/${itemId}`);
+  if (!res.ok) throw new Error('Failed to fetch item labels');
   return res.json();
 }
 
-export async function addLabelToWorkItem(workItemId: string, labelId: string): Promise<void> {
-  const res = await fetch(`${API}/labels/work-item/${workItemId}`, {
+export async function addLabelToItem(itemId: string, labelId: string): Promise<void> {
+  const res = await fetch(`${API}/labels/item/${itemId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ labelId }),
@@ -282,8 +278,8 @@ export async function addLabelToWorkItem(workItemId: string, labelId: string): P
   if (!res.ok) throw new Error('Failed to add label');
 }
 
-export async function removeLabelFromWorkItem(workItemId: string, labelId: string): Promise<void> {
-  const res = await fetch(`${API}/labels/work-item/${workItemId}/${labelId}`, { method: 'DELETE' });
+export async function removeLabelFromItem(itemId: string, labelId: string): Promise<void> {
+  const res = await fetch(`${API}/labels/item/${itemId}/${labelId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to remove label');
 }
 

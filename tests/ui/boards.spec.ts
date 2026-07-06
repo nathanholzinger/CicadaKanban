@@ -65,7 +65,7 @@ test.describe('board basics', () => {
   test('adds an item to a column via the inline form', async ({ page }) => {
     const todoColumn = page.getByRole('group', { name: 'Todo' });
     await todoColumn.getByRole('button', { name: '+ Add item' }).click();
-    await todoColumn.getByPlaceholder('Card title...').fill('My first E2E task');
+    await todoColumn.getByPlaceholder('Item title...').fill('My first E2E task');
     await todoColumn.getByRole('button', { name: 'Add' }).click();
     await expect(todoColumn.getByText('My first E2E task')).toBeVisible();
   });

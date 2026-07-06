@@ -1,12 +1,12 @@
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRef, useState } from 'react';
-import type { Column, ItemType, WorkItem } from '../types';
+import type { Column, Item, ItemType } from '../types';
 import KanbanCard from './KanbanCard';
 
 interface KanbanColumnProps {
   column: Column;
-  items: WorkItem[];
+  items: Item[];
   childCounts: Record<string, number>;
   itemTypes: ItemType[];
   isCardBeingDragged: boolean;

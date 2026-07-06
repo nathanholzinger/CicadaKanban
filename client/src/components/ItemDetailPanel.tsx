@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Agent, Attachment, ItemType, Label, WorkItem, WorkItemDetail } from '../types';
+import type { Agent, Attachment, Item, ItemDetail, ItemType, Label } from '../types';
 import {
-  fetchWorkItem, updateWorkItem, deleteWorkItem, createWorkItem, fetchAgents,
-  fetchLabels, fetchWorkItemLabels, createLabel, addLabelToWorkItem, removeLabelFromWorkItem,
+  fetchItem, updateItem, deleteItem, createItem, fetchAgents,
+  fetchLabels, fetchItemLabels, createLabel, addLabelToItem, removeLabelFromItem,
   fetchAttachments, createAttachment, deleteAttachment,
 } from '../api';
 
@@ -41,7 +41,7 @@ interface ItemDetailPanelProps {
 }
 
 export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
-  const [detail, setDetail] = useState<WorkItemDetail | null>(null);
+  const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -83,21 +83,21 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     setAddingChild(false);
     setChildTitle('');
     /* eslint-enable react-hooks/set-state-in-effect */
-    Promise.all([fetchWorkItem(itemId), fetchAgents()])
+    Promise.all([fetchItem(itemId), fetchAgents()])
       .then(([d, agentList]) => {
         setDetail(d);
         setTitleDraft(d.title);
         setDescDraft(d.description ?? '');
         setAgents(agentList);
         if (d.projectId) {
-          Promise.all([fetchLabels(), fetchWorkItemLabels(d.id)]).then(([wl, il]) => {
+          Promise.all([fetchLabels(), fetchItemLabels(d.id)]).then(([wl, il]) => {
             setWorkflowLabels(wl);
             setItemLabelIds(new Set(il.map(l => l.id)));
           }).catch(() => {});
         }
         fetchAttachments(d.id).then(setItemAttachments).catch(() => {});
       })
-      .catch(err => console.error('Failed to load work item:', err))
+      .catch(err => console.error('Failed to load item:', err))
       .finally(() => setLoading(false));
   }, [itemId]);
 
@@ -126,7 +126,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     if (!detail || titleDraft.trim() === detail.title) { setEditingTitle(false); return; }
     setSaving(true);
     try {
-      const updated = await updateWorkItem(detail.id, { title: titleDraft.trim() });
+      const updated = await updateItem(detail.id, { title: titleDraft.trim() });
       setDetail(prev => prev ? { ...prev, title: updated.title, updatedAt: updated.updatedAt } : prev);
       onUpdate(updated);
     } catch (err) {
@@ -143,7 +143,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     if (newDesc === detail.description) { setEditingDesc(false); return; }
     setSaving(true);
     try {
-      const updated = await updateWorkItem(detail.id, { description: newDesc ?? undefined });
+      const updated = await updateItem(detail.id, { description: newDesc ?? undefined });
       setDetail(prev => prev ? { ...prev, description: updated.description, updatedAt: updated.updatedAt } : prev);
       onUpdate(updated);
     } catch (err) {
@@ -158,7 +158,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     if (!detail) return;
     setSaving(true);
     try {
-      await deleteWorkItem(detail.id);
+      await deleteItem(detail.id);
       onDelete(detail.id);
       onClose();
     } catch (err) {
@@ -173,7 +173,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     if (!detail || !childTitle.trim()) return;
     setSaving(true);
     try {
-      const child = await createWorkItem({
+      const child = await createItem({
         type: childType || null,
         title: childTitle.trim(),
         parentId: detail.id,
@@ -196,7 +196,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     const agentId = e.target.value || null;
     setSavingAgent(true);
     try {
-      const updated = await updateWorkItem(detail.id, {
+      const updated = await updateItem(detail.id, {
         agentId,
         assigneeType: agentId ? 'agent' : null,
       });
@@ -212,10 +212,10 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
   async function handleToggleLabel(labelId: string) {
     if (!detail) return;
     if (itemLabelIds.has(labelId)) {
-      await removeLabelFromWorkItem(detail.id, labelId);
+      await removeLabelFromItem(detail.id, labelId);
       setItemLabelIds(prev => { const s = new Set(prev); s.delete(labelId); return s; });
     } else {
-      await addLabelToWorkItem(detail.id, labelId);
+      await addLabelToItem(detail.id, labelId);
       setItemLabelIds(prev => new Set([...prev, labelId]));
     }
   }
@@ -225,7 +225,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
     if (!detail || !newLabelName.trim()) return;
     const label = await createLabel({ name: newLabelName.trim(), color: newLabelColor });
     setWorkflowLabels(prev => [...prev, label]);
-    await addLabelToWorkItem(detail.id, label.id);
+    await addLabelToItem(detail.id, label.id);
     setItemLabelIds(prev => new Set([...prev, label.id]));
     setNewLabelName('');
     setAddingLabel(false);

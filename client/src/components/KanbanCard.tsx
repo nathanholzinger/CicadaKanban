@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { ItemType, WorkItem } from '../types';
+import type { Item, ItemType } from '../types';
 
 const PILL_BASE = 'inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border';
 
@@ -26,7 +26,7 @@ function typePillProps(typeId: string | null, itemTypes: ItemType[]): { classNam
 }
 
 interface KanbanCardProps {
-  item: WorkItem;
+  item: Item;
   itemTypes?: ItemType[];
   childCount?: number;
   isOverlay?: boolean;

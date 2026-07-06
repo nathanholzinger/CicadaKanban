@@ -161,9 +161,6 @@ npm run dev
 
 - `items.ts` delete route only recurses one level (grandchildren become orphaned). Fix
   planned before Epic 2.
-- `client/src/types.ts` — `ActivityLogEntry.workItemId`, `Attachment.workItemId`, and
-  `Notification.workItemId` should be `itemId` (stale from pre-rename era). Dormant
-  bug — fix before any code accesses these fields.
 - `workflows.projectId` is nullable — query `SELECT * FROM workflows WHERE project_id
   IS NULL` to check for orphaned workflows.
 - No WebSocket/SSE — notifications polled every 15s. Fine for single-user local use.

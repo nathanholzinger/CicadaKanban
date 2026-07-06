@@ -12,16 +12,19 @@ if (!fs.existsSync(dbPath)) {
 const db = new Database(dbPath);
 db.pragma('foreign_keys = OFF');
 db.exec(`
-  DROP TABLE IF EXISTS work_item_labels;
+  DROP TABLE IF EXISTS item_labels;
   DROP TABLE IF EXISTS attachments;
   DROP TABLE IF EXISTS activity_log;
   DROP TABLE IF EXISTS notifications;
   DROP TABLE IF EXISTS chat_messages;
   DROP TABLE IF EXISTS chat_threads;
-  DROP TABLE IF EXISTS work_items;
+  DROP TABLE IF EXISTS items;
   DROP TABLE IF EXISTS columns;
   DROP TABLE IF EXISTS labels;
-  DROP TABLE IF EXISTS boards;
+  DROP TABLE IF EXISTS workflow_template_columns;
+  DROP TABLE IF EXISTS workflow_templates;
+  DROP TABLE IF EXISTS workflows;
+  DROP TABLE IF EXISTS projects;
   DROP TABLE IF EXISTS agents;
   DROP TABLE IF EXISTS item_types;
   DROP TABLE IF EXISTS __drizzle_migrations;
