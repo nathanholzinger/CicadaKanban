@@ -85,7 +85,7 @@ export interface Agent {
 
 export interface ActivityLogEntry {
   id: string;
-  workItemId: string;
+  itemId: string;
   type: string;
   content: string;
   metadata: string | null;
@@ -99,7 +99,7 @@ export interface WorkItemDetail extends WorkItem {
 
 export interface Attachment {
   id: string;
-  workItemId: string;
+  itemId: string;
   type: 'google_doc' | 'github_file' | 'local_file' | 'export';
   label: string;
   externalUrl: string | null;
@@ -118,7 +118,7 @@ export interface Label {
 
 export interface Notification {
   id: string;
-  workItemId: string | null;
+  itemId: string | null;
   workflowId: string | null;
   message: string;
   type: string;
