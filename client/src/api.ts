@@ -242,7 +242,7 @@ export async function deleteAttachment(id: string): Promise<void> {
 // ============================================================
 
 export async function fetchLabels(workflowId?: string): Promise<Label[]> {
-  const url = workflowId ? `${API}/labels?boardId=${workflowId}` : `${API}/labels`;
+  const url = workflowId ? `${API}/labels?workflowId=${workflowId}` : `${API}/labels`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch labels');
   return res.json();
