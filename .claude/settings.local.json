@@ -20,7 +20,8 @@
       "Bash(npx tsx -e ' *)",
       "Bash(npx tsx *)",
       "Bash(node -e ' *)",
-      "PowerShell(Rename-Item -Path \"C:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\client\\\\src\\\\components\\\\CardDetailPanel.tsx\" -NewName \"ItemDetailPanel.tsx\")"
+      "PowerShell(Rename-Item -Path \"C:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\client\\\\src\\\\components\\\\CardDetailPanel.tsx\" -NewName \"ItemDetailPanel.tsx\")",
+      "Bash(npx tsc *)"
     ]
   }
 }
