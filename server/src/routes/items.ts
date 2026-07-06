@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { items, columns, activityLog, notifications } from '../db/schema.js';
+import { items, columns, activityLog, notifications, itemLabels, chatThreads, chatMessages, attachments } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -247,7 +247,32 @@ router.post('/:id/comments', (req, res) => {
   res.status(201).json({ success: true });
 });
 
-// Delete an item and its children
+function collectDescendantIds(rootId: string): string[] {
+  const ids: string[] = [];
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    ids.push(id);
+    const children = db.select({ id: items.id }).from(items).where(eq(items.parentId, id)).all();
+    for (const child of children) queue.push(child.id);
+  }
+  return ids;
+}
+
+function deleteItemById(id: string): void {
+  db.delete(itemLabels).where(eq(itemLabels.itemId, id)).run();
+  db.delete(activityLog).where(eq(activityLog.itemId, id)).run();
+  db.delete(notifications).where(eq(notifications.itemId, id)).run();
+  db.delete(attachments).where(eq(attachments.itemId, id)).run();
+  const threads = db.select({ id: chatThreads.id }).from(chatThreads).where(eq(chatThreads.itemId, id)).all();
+  for (const thread of threads) {
+    db.delete(chatMessages).where(eq(chatMessages.threadId, thread.id)).run();
+  }
+  db.delete(chatThreads).where(eq(chatThreads.itemId, id)).run();
+  db.delete(items).where(eq(items.id, id)).run();
+}
+
+// Delete an item and all its descendants
 router.delete('/:id', (req, res) => {
   const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
@@ -255,14 +280,11 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  const children = db.select().from(items).where(eq(items.parentId, req.params.id)).all();
-  for (const child of children) {
-    db.delete(activityLog).where(eq(activityLog.itemId, child.id)).run();
-    db.delete(items).where(eq(items.id, child.id)).run();
+  // BFS collects root-first; reversing gives leaves-first, satisfying the self-ref FK
+  const allIds = collectDescendantIds(req.params.id);
+  for (const id of [...allIds].reverse()) {
+    deleteItemById(id);
   }
-
-  db.delete(activityLog).where(eq(activityLog.itemId, req.params.id)).run();
-  db.delete(items).where(eq(items.id, req.params.id)).run();
 
   res.status(204).send();
 });
