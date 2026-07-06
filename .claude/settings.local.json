@@ -13,7 +13,13 @@
       "Bash(npx playwright *)",
       "mcp__kanban__move_item",
       "mcp__kanban__get_workflow",
-      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\server\\\\drizzle\")"
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\server\\\\drizzle\")",
+      "Bash(npm audit *)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Root vulnerabilities:', d.metadata?.vulnerabilities\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Server vulnerabilities:', d.metadata?.vulnerabilities\\)\")",
+      "Bash(npx tsx -e ' *)",
+      "Bash(npx tsx *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

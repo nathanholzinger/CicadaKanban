@@ -1,30 +1,34 @@
 # Kanban App — Project Context
 
 ## What This Is
-A personal single-user Kanban board with Claude agent integration. Built for one human user (Nathan) to track personal projects and optionally assign tasks to Claude agents via deep links into Claude Desktop/Code projects. All Claude usage stays within the native claude.ai interface — no API billing.
+
+A personal single-user Kanban board with Claude agent integration. Built for one human
+user (Nathan) to track personal projects and optionally assign tasks to Claude agents
+via deep links into Claude Desktop/Code projects. All Claude usage stays within the
+native claude.ai interface — no Anthropic API billing.
 
 ---
 
-## Architecture Decisions
+## Architecture
 
 ### Stack
 - **Backend:** Node.js + Express + TypeScript (`server/`)
-- **Frontend:** React + Vite + TypeScript + Tailwind CSS v4 (`client/`)
+- **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS v4 (`client/`)
 - **Database:** SQLite via Drizzle ORM (`server/data/kanban.db`)
 - **Drag and drop:** @dnd-kit/core + @dnd-kit/sortable
+- **MCP:** Model Context Protocol server (`server/src/mcp.ts`) — 8 tools wrapping the
+  REST API, used by external Claude agents
 
-### Key Decisions Made
-- **SQLite** chosen over Postgres for simplicity. Migration path to Postgres is clean (Drizzle handles it). Use `PRAGMA foreign_keys = ON` — enabled in `server/src/db/index.ts`.
-- **Type enums:** `work_items.type` uses a **lookup table** (`work_item_types`) with a FK reference for DB-level enforcement. Other type fields (`attachments.type`, `activity_log.type`, etc.) are **application-level only** — TypeScript union types, no DB constraint.
-- **Column behavior** driven by boolean flags (`is_terminal`, `triggers_notification`) rather than a type enum. Columns can also have an optional `agent_id` FK for "agent column" workflows.
-- **No API billing:** The app does not make Anthropic API calls. Agent integration works via `claude://` deep links into Claude Desktop projects. MCP server (not yet built) will allow Claude to write back to the board.
+### Key Decisions
+- **SQLite** chosen for local simplicity. Drizzle ORM makes a future Postgres migration
+  clean. Foreign keys enabled via `PRAGMA foreign_keys = ON` in `server/src/db/index.ts`.
+- **Projects are the root entity.** Workflows belong to projects. Items derive their
+  workflow through `column → workflow` — there is no `board_id` on items.
+- **Workflow inheritance:** A project with no workflow inherits from its nearest ancestor
+  that has one. Computed at runtime in `client/src/App.tsx`.
 - **Single user:** No auth system. App runs locally on `localhost`.
-
-### Claude Integration Design (not yet built)
-- Cards/columns can be associated with an **Agent** record, which stores a `claude_project_id` (UUID from the claude.ai project URL) and `surface` (chat | code | cowork).
-- Action buttons on cards will construct deep links: `claude://claude.ai/project/{claude_project_id}` or `claude://code/new?q=...&folder={repo_path}`
-- A **local MCP server** (to be built) will expose tools like `update_card_status`, `add_artifact`, `move_to_review` so Claude can write back to the board without API calls.
-- Outbound: deep links from the Kanban app → Claude. Inbound: MCP tools from Claude → the Kanban board.
+- **No API billing:** Claude integration uses deep links (`claude://...`) and the local
+  MCP server — no calls to the Anthropic API.
 
 ---
 
@@ -32,24 +36,38 @@ A personal single-user Kanban board with Claude agent integration. Built for one
 
 All tables defined in `server/src/db/schema.ts`.
 
-### Lookup Tables (DB-enforced via FK)
-- **work_item_types** — `type TEXT PK`. Seeded with `epic`, `story`, `task`.
+### Core Hierarchy
+```
+projects (tree — unlimited depth via parent_id self-ref)
+  └── workflows  (one per project, or inherited from parent)
+        └── columns  (stages — position REAL NOT NULL)
+              └── items  (cards — also a tree via parent_id; position REAL nullable)
+```
 
-### Core Tables
-- **boards** — `id, name, description?, created_at, updated_at`
-- **columns** — `id, board_id→boards, agent_id?→agents, name, position (float), triggers_notification (0|1), is_terminal (0|1), created_at`
-- **work_items** — `id, type→work_item_types, parent_id?→work_items (self-ref), board_id?→boards, column_id?→columns, title, description?, position (float), assignee_type? (human|agent), agent_id?→agents, created_at, updated_at`
-- **agents** — `id, name, notes?, claude_project_id, surface (chat|code|cowork), repo_path?, created_at, updated_at`
-- **labels** — `id, board_id?→boards, name, color, created_at`
-- **work_item_labels** — `work_item_id→work_items, label_id→labels` (composite PK)
-- **chat_threads** — `id, work_item_id→work_items, agent_id?→agents, label?, created_at`
-- **chat_messages** — `id, thread_id→chat_threads, role (user|assistant), content, created_at`
-- **attachments** — `id, work_item_id→work_items, type (app-level: google_doc|github_file|local_file|export), label, external_url?, file_path?, metadata? JSON, created_at`
-- **activity_log** — `id, work_item_id→work_items, type (app-level: status_change|assignment|attachment_added|comment|action_triggered), content, metadata? JSON, created_at`
-- **notifications** — `id, work_item_id?→work_items, board_id?→boards, message, type, is_read (0|1), created_at`
+### Full Table List
+
+| Table | Purpose |
+|---|---|
+| `projects` | Hierarchical folders — `id, parent_id, name, description, position, created_at, updated_at` |
+| `workflows` | Kanban stage sets — `id, project_id, name, description, created_at, updated_at` |
+| `workflow_templates` | System-seeded blueprints ("quick", "flow") — read-only in MVP |
+| `workflow_template_columns` | Columns for each template |
+| `columns` | Workflow stages — `id, workflow_id, agent_id?, name, position, triggers_notification, is_terminal, created_at` |
+| `items` | Kanban cards — `id, type?, parent_id?, project_id, column_id?, title, description?, position?, assignee_type?, agent_id?, created_at, updated_at` |
+| `item_types` | Descriptive labels: Epic, Story, Task (seeded). FK target for `items.type`. |
+| `agents` | Claude agent registrations — `claude_project_id`, `surface` (chat/code/cowork), `repo_path` |
+| `labels` | Flat tags scoped to a workflow (will be replaced by tag buckets in Epic 5) |
+| `item_labels` | Many-to-many join: item ↔ label |
+| `chat_threads` | Agent conversation threads per item (schema only — no API/UI yet) |
+| `chat_messages` | Messages within a thread (schema only — no API/UI yet) |
+| `attachments` | External file links per item (schema only — no UI yet) |
+| `activity_log` | Audit trail on items: status changes, assignments, comments |
+| `notifications` | Created when item moves to a `triggers_notification` column; polled by frontend |
 
 ### Position Field Pattern
-Columns and work_items use a `position REAL` field for drag-and-drop ordering. Inserting between two items uses the midpoint (e.g. between 1.0 and 2.0 → 1.5), avoiding full reindexes.
+`columns.position` is `REAL NOT NULL`. `items.position` and `projects.position` are
+`REAL` (nullable — null means unordered). Ordering uses the midpoint strategy:
+inserting between 2.0 and 3.0 → 1.5. New items go at `max(existing) + 1.0`.
 
 ---
 
@@ -57,26 +75,20 @@ Columns and work_items use a `position REAL` field for drag-and-drop ordering. I
 
 Base URL: `http://localhost:3001`
 
-### Boards (`/api/boards`)
-- `GET /` — list all boards
-- `GET /:id` — board with columns and work items
-- `POST /` — create board (body: `{ name, description?, includeDefaultColumns? }`)
-- `PUT /:id` — update name/description
-- `DELETE /:id` — delete board and all contents
-
-### Columns (`/api/columns`)
-- `POST /` — create column (body: `{ boardId, name, agentId?, triggersNotification?, isTerminal? }`)
-- `PUT /:id` — update column
-- `PATCH /reorder` — batch reorder (body: `{ columnOrders: [{ id, position }] }`)
-- `DELETE /:id` — delete (blocked if column has items)
-
-### Work Items (`/api/work-items`)
-- `GET /:id` — item with children + activity log
-- `POST /` — create (body: `{ type, title, boardId?, columnId?, parentId?, description?, assigneeType?, agentId? }`)
-- `PUT /:id` — update details
-- `PATCH /:id/move` — drag-and-drop move (body: `{ columnId, position }`)
-- `PATCH /reorder` — batch reorder (body: `{ itemOrders: [{ id, position }] }`)
-- `DELETE /:id` — delete with children
+| Prefix | Owns |
+|---|---|
+| `GET /api/health` | Health check |
+| `/api/projects` | Project CRUD + hierarchy reorder (`PATCH /reorder`) |
+| `/api/workflows` | Workflow CRUD + full detail (`GET /:id` returns columns + items) |
+| `/api/workflow-templates` | Read-only system templates |
+| `/api/columns` | Column CRUD + reorder |
+| `/api/items` | Item CRUD + move (`PATCH /:id/move`) + reorder + comments (`POST /:id/comments`) |
+| `/api/agents` | Agent CRUD |
+| `/api/notifications` | Mark read (`PATCH /:id/read`), mark all read (`PATCH /read-all`) |
+| `/api/labels` | Label CRUD (workflow-scoped) |
+| `/api/attachments` | Attachment CRUD |
+| `/api/item-types` | Item type CRUD |
+| `/api/test` | Reset + seed DB — only when `ENABLE_TEST_ROUTES=true` |
 
 ---
 
@@ -84,38 +96,44 @@ Base URL: `http://localhost:3001`
 
 ```
 KanbanApp/
-├── CLAUDE.md                        ← you are here
+├── .mcp.json                    ← MCP server config (points to server/src/mcp.ts)
+├── .claude/
+│   ├── guides/                  ← codebase-walkthrough.md, audit docs
+│   ├── personas/                ← architect.md, coder.md, test-planner.md, auditor.md
+│   └── checklists/              ← epic-done.md
 ├── server/
-│   ├── .env                         ← HOST, PORT, DB_PATH
-│   ├── package.json                 ← "type": "module", tsx dev script
-│   ├── tsconfig.json
-│   ├── drizzle.config.ts
-│   ├── drizzle/                     ← generated migration SQL files
-│   ├── data/
-│   │   └── kanban.db                ← SQLite database file
+│   ├── .env                     ← HOST, PORT, DB_PATH
+│   ├── drizzle/                 ← generated migration SQL files (0000–0004)
+│   ├── data/kanban.db           ← SQLite database
 │   └── src/
-│       ├── index.ts                 ← Express entry point
+│       ├── index.ts             ← Express entry point, route mounting
+│       ├── mcp.ts               ← MCP server (8 tools, calls :3001 API)
 │       ├── db/
-│       │   ├── schema.ts            ← Drizzle table definitions
-│       │   ├── index.ts             ← DB connection (foreign keys enabled)
-│       │   └── migrate.ts           ← migration runner + seed
-│       └── routes/
-│           ├── boards.ts
-│           ├── columns.ts
-│           └── workItems.ts
-└── client/
-    ├── package.json
-    ├── vite.config.ts               ← Tailwind plugin + /api proxy to :3001
-    └── src/
-        ├── index.css                ← @import "tailwindcss" only
-        ├── main.tsx
-        ├── App.tsx                  ← board selector + top nav
-        ├── types.ts                 ← shared TypeScript interfaces
-        ├── api.ts                   ← fetch wrappers for all endpoints
-        └── components/
-            ├── BoardView.tsx        ← DndContext + column layout
-            ├── KanbanColumn.tsx     ← droppable column + inline card creation
-            └── KanbanCard.tsx       ← draggable card with type badge
+│       │   ├── schema.ts        ← Drizzle table definitions (source of truth)
+│       │   ├── index.ts         ← DB connection (foreign keys enabled)
+│       │   └── runMigrations.ts ← migration runner + seed
+│       └── routes/              ← one file per route prefix
+├── client/
+│   ├── CLAUDE.md                ← you are here
+│   ├── vite.config.ts           ← Tailwind plugin + /api proxy to :3001
+│   └── src/
+│       ├── App.tsx              ← state root, layout, workflow inheritance
+│       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
+│       ├── api.ts               ← fetch wrappers for all endpoints
+│       └── components/
+│           ├── ProjectSidebar.tsx    ← project tree + dnd-kit drag reorder
+│           ├── ProjectPage.tsx       ← project detail (overview + board tabs)
+│           ├── WorkflowView.tsx      ← kanban board (columns + cards)
+│           ├── KanbanColumn.tsx      ← droppable column
+│           ├── KanbanCard.tsx        ← draggable card
+│           ├── CardDetailPanel.tsx   ← slide-in item detail
+│           ├── SetupWorkflowModal.tsx
+│           ├── CreateProjectModal.tsx
+│           └── AgentsModal.tsx
+├── tests/                       ← Playwright E2E (7 spec files, ~45 tests)
+│   ├── api/                     ← REST endpoint tests via Playwright request fixture
+│   └── ui/                      ← browser interaction tests
+└── bruno/                       ← saved HTTP requests (manual API testing)
 ```
 
 ---
@@ -132,15 +150,20 @@ cd client
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
-API: `http://localhost:3001`
-Drizzle Studio (DB browser): `cd server && npm run db:studio`
+- Frontend: `http://localhost:5174`
+- API: `http://localhost:3001`
+- Drizzle Studio (DB browser): `cd server && npm run db:studio`
+- E2E tests: `npm run test:e2e` (from project root)
 
 ---
 
-## Known Issues / TODOs in Code
+## Known Issues / Open Items
 
-- `workItems.ts` route has a `// TODO: check if the new column triggers a notification` comment in `PATCH /:id/move` — notification creation is not yet wired up.
-- Card delete in `routes/workItems.ts` only goes one level deep (deletes children but not grandchildren recursively).
-- No error boundary in React — unhandled fetch failures will silently fail.
-- `parent_id` on `work_items` is not enforced as a FK by Drizzle due to SQLite self-referential FK limitations — enforced at application level only.
+- `items.ts` delete route only recurses one level (grandchildren become orphaned). Fix
+  planned before Epic 2.
+- `client/src/types.ts` — `ActivityLogEntry.workItemId`, `Attachment.workItemId`, and
+  `Notification.workItemId` should be `itemId` (stale from pre-rename era). Dormant
+  bug — fix before any code accesses these fields.
+- `workflows.projectId` is nullable — query `SELECT * FROM workflows WHERE project_id
+  IS NULL` to check for orphaned workflows.
+- No WebSocket/SSE — notifications polled every 15s. Fine for single-user local use.
