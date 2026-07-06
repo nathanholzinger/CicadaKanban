@@ -19,7 +19,8 @@
       "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('Server vulnerabilities:', d.metadata?.vulnerabilities\\)\")",
       "Bash(npx tsx -e ' *)",
       "Bash(npx tsx *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "PowerShell(Rename-Item -Path \"C:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\client\\\\src\\\\components\\\\CardDetailPanel.tsx\" -NewName \"ItemDetailPanel.tsx\")"
     ]
   }
 }

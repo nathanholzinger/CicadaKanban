@@ -10,7 +10,7 @@ interface KanbanColumnProps {
   childCounts: Record<string, number>;
   itemTypes: ItemType[];
   isCardBeingDragged: boolean;
-  onCreateCard: (columnId: string, title: string, type: string | null) => void;
+  onCreateItem: (columnId: string, title: string, type: string | null) => void;
   onCardClick: (id: string) => void;
   onRename?: (id: string, name: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -18,7 +18,7 @@ interface KanbanColumnProps {
 
 export default function KanbanColumn({
   column, items, childCounts, itemTypes, isCardBeingDragged,
-  onCreateCard, onCardClick, onRename, onDelete,
+  onCreateItem, onCardClick, onRename, onDelete,
 }: KanbanColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -43,10 +43,10 @@ export default function KanbanColumn({
 
   const sortedItems = [...items].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
-  function handleCardSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+  function handleItemSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    onCreateCard(column.id, newTitle.trim(), newType || null);
+    onCreateItem(column.id, newTitle.trim(), newType || null);
     setNewTitle('');
     setIsAdding(false);
   }
@@ -185,12 +185,12 @@ export default function KanbanColumn({
       {/* Add item form */}
       <div className="mt-2 px-1">
         {isAdding ? (
-          <form onSubmit={handleCardSubmit} className="space-y-2">
+          <form onSubmit={handleItemSubmit} className="space-y-2">
             <input
               autoFocus
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
-              placeholder="Card title..."
+              placeholder="Item title..."
               className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
               onKeyDown={e => { if (e.key === 'Escape') { setIsAdding(false); setNewTitle(''); } }}
             />

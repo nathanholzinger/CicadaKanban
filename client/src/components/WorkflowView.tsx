@@ -29,11 +29,11 @@ import {
 } from '../api';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
-import CardDetailPanel from './CardDetailPanel';
+import ItemDetailPanel from './ItemDetailPanel';
 
 interface WorkflowViewProps {
   workflowId: string;
-  projectId?: string;        // project context for new cards
+  projectId?: string;        // project context for new items
   filterProjectId?: string;  // when set, only show items for this project (inherited view)
   readOnly?: boolean;        // when true, hides column management controls
 }
@@ -163,7 +163,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
       return;
     }
 
-    // ── Card move ──
+    // ── Item move ──
     const isOverColumn = columns.some(c => c.id === overId);
     const targetColumnId = isOverColumn ? overId : findColumnForItem(overId);
     if (!targetColumnId) return;
@@ -258,23 +258,23 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
   }
 
   // ============================================================
-  // Card handlers
+  // Item handlers
   // ============================================================
 
-  async function handleCreateCard(columnId: string, title: string, type: string | null) {
+  async function handleCreateItem(columnId: string, title: string, type: string | null) {
     try {
       const newItem = await createWorkItem({ type: type ?? undefined, title, projectId, columnId });
       setItems(prev => [...prev, newItem]);
     } catch (err) {
-      console.error('Failed to create card:', err);
+      console.error('Failed to create item:', err);
     }
   }
 
-  function handleCardUpdated(updated: WorkItem) {
+  function handleItemUpdated(updated: WorkItem) {
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
   }
 
-  function handleCardDeleted(id: string) {
+  function handleItemDeleted(id: string) {
     setItems(prev => prev.filter(i => i.id !== id));
   }
 
@@ -313,7 +313,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     <div className="flex flex-col flex-1 min-h-0">
       <div className="mb-4 shrink-0">
         <div className="mt-2 flex items-center gap-2">
-          <span className="text-[11px] text-zinc-500">New child cards go to:</span>
+          <span className="text-[11px] text-zinc-500">New child items go to:</span>
           <select
             value={childDefaultColumnId ?? ''}
             onChange={e => handleChildColumnChange(e.target.value || null)}
@@ -344,7 +344,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
                 childCounts={childCounts}
                 itemTypes={itemTypes}
                 isCardBeingDragged={activeItem !== null}
-                onCreateCard={handleCreateCard}
+                onCreateItem={handleCreateItem}
                 onCardClick={setSelectedItemId}
                 onRename={readOnly ? undefined : handleRenameColumn}
                 onDelete={readOnly ? undefined : handleDeleteColumn}
@@ -400,13 +400,13 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
         </DragOverlay>
       </DndContext>
 
-      <CardDetailPanel
+      <ItemDetailPanel
         itemId={selectedItemId}
         childDefaultColumnId={childDefaultColumnId}
         itemTypes={itemTypes}
         onClose={() => setSelectedItemId(null)}
-        onUpdate={handleCardUpdated}
-        onDelete={handleCardDeleted}
+        onUpdate={handleItemUpdated}
+        onDelete={handleItemDeleted}
         onNavigate={setSelectedItemId}
         onChildCreated={handleChildCreated}
       />

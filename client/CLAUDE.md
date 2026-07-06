@@ -126,7 +126,7 @@ KanbanApp/
 │           ├── WorkflowView.tsx      ← kanban board (columns + cards)
 │           ├── KanbanColumn.tsx      ← droppable column
 │           ├── KanbanCard.tsx        ← draggable card
-│           ├── CardDetailPanel.tsx   ← slide-in item detail
+│           ├── ItemDetailPanel.tsx   ← slide-in item detail
 │           ├── SetupWorkflowModal.tsx
 │           ├── CreateProjectModal.tsx
 │           └── AgentsModal.tsx

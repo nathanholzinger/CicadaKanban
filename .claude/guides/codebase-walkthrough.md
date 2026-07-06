@@ -254,7 +254,7 @@ App.tsx  (state + layout)
         ├── Board tab → WorkflowView.tsx
         │   ├── KanbanColumn.tsx  (one per column, droppable)
         │   │   └── KanbanCard.tsx  (one per item, draggable)
-        │   └── CardDetailPanel.tsx  (slide-in on card click)
+        │   └── ItemDetailPanel.tsx  (slide-in on item click)
         └── SetupWorkflowModal.tsx  (template / copy / custom)
 
 CreateProjectModal.tsx  (modal, rendered from App.tsx)

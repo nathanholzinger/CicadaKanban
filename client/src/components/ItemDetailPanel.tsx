@@ -29,7 +29,7 @@ function typePillClass(typeId: string | null, itemTypes: ItemType[], mini = fals
   return t?.color ? base : neutral;
 }
 
-interface CardDetailPanelProps {
+interface ItemDetailPanelProps {
   itemId: string | null;
   childDefaultColumnId?: string | null;
   itemTypes: ItemType[];
@@ -40,7 +40,7 @@ interface CardDetailPanelProps {
   onChildCreated: (item: WorkItem) => void;
 }
 
-export default function CardDetailPanel({ itemId, childDefaultColumnId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: CardDetailPanelProps) {
+export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
   const [detail, setDetail] = useState<WorkItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -617,7 +617,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
             <div className="px-5 py-4 border-t border-zinc-800">
               {confirmDelete ? (
                 <div className="flex items-center gap-3">
-                  <p className="text-xs text-zinc-400 flex-1">Delete this card and all its children?</p>
+                  <p className="text-xs text-zinc-400 flex-1">Delete this item and all its children?</p>
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="text-xs text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded hover:bg-zinc-800"
@@ -637,7 +637,7 @@ export default function CardDetailPanel({ itemId, childDefaultColumnId, itemType
                   onClick={() => setConfirmDelete(true)}
                   className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
                 >
-                  Delete card
+                  Delete item
                 </button>
               )}
             </div>
