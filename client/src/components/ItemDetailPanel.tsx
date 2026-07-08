@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../types';
 import { fetchItem, updateItem, deleteItem } from '../api';
-import { PILL_DEPTH, typePillClass, typePillStyle, depthLabel, formatTime } from './item-detail/pillUtils';
+import { PILL_DEPTH, typePillClass, typePillStyle, depthLabel, formatTime, SECTION_LABEL } from './item-detail/pillUtils';
 import { LabelsSection } from './item-detail/LabelsSection';
 import { AgentSection } from './item-detail/AgentSection';
 import { AttachmentsSection } from './item-detail/AttachmentsSection';
@@ -175,7 +175,9 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
                 ) : (
                   <h2
                     onClick={() => { setTitleDraft(detail.title); setEditingTitle(true); }}
-                    className="text-sm font-semibold text-zinc-100 cursor-text hover:text-white leading-snug"
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setTitleDraft(detail.title); setEditingTitle(true); } }}
+                    tabIndex={0}
+                    className="text-sm font-semibold text-zinc-100 cursor-text hover:text-white leading-snug focus:outline-none focus-visible:underline"
                     title="Click to edit"
                   >
                     {detail.title}
@@ -186,6 +188,7 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
 
               <button
                 onClick={onClose}
+                aria-label="Close panel"
                 className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded hover:bg-zinc-800"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -198,7 +201,7 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
               {/* Description */}
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Description</p>
+                <p className={`${SECTION_LABEL} mb-1.5`}>Description</p>
                 {editingDesc ? (
                   <textarea
                     ref={descTextareaRef}
@@ -211,8 +214,11 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
                   />
                 ) : (
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => { setDescDraft(detail.description ?? ''); setEditingDesc(true); }}
-                    className={`min-h-[72px] rounded px-3 py-2 cursor-text border border-transparent hover:border-zinc-700 hover:bg-zinc-800/50 text-sm leading-relaxed transition-colors ${detail.description ? 'text-zinc-300' : 'text-zinc-600'}`}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setDescDraft(detail.description ?? ''); setEditingDesc(true); } }}
+                    className={`min-h-[72px] rounded px-3 py-2 cursor-text border border-transparent hover:border-zinc-700 hover:bg-zinc-800/50 text-sm leading-relaxed transition-colors focus:outline-none focus-visible:border-zinc-600 ${detail.description ? 'text-zinc-300' : 'text-zinc-600'}`}
                   >
                     {detail.description || 'Click to add a description…'}
                   </div>

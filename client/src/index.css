@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+@theme {
+  --text-2xs: 0.5625rem;  /* 9px  — replaces text-[9px]  */
+  --text-micro: 0.625rem; /* 10px — replaces text-[10px] */
+}

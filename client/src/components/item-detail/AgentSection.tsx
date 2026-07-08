@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Agent, Item, ItemDetail } from '../../types';
 import { fetchAgents, updateItem } from '../../api';
+import { SECTION_LABEL } from './pillUtils';
 
 interface AgentSectionProps {
   item: ItemDetail;
@@ -52,12 +53,12 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
 
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Agent</p>
+      <p className={`${SECTION_LABEL} mb-1.5`}>Agent</p>
       <select
         value={item.agentId ?? ''}
         onChange={handleAgentChange}
         disabled={saving}
-        className="w-full px-2 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/60 disabled:opacity-50"
+        className="w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:outline-none focus:border-blue-500/60 disabled:opacity-50"
       >
         <option value="">None</option>
         {agents.map(a => (
@@ -69,7 +70,7 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
       {assignedAgent && (
         <button
           onClick={() => handleOpenInClaude(assignedAgent)}
-          className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-500 transition-colors"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-600 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-500"
         >
           {copied ? 'Copied to clipboard!' : assignedAgent.surface === 'code' ? 'Copy Story to Clipboard' : 'Open in Claude'}
           {!copied && (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
 import { createItem } from '../../api';
-import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle } from './pillUtils';
+import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, SECTION_LABEL, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
@@ -41,24 +41,24 @@ export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNa
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+      <div className="mb-1.5 flex items-center justify-between">
+        <p className={SECTION_LABEL}>
           Children {item.children.length > 0 && `(${item.children.length})`}
         </p>
         {!adding && (
-          <button onClick={() => setAdding(true)} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+          <button onClick={() => setAdding(true)} className={BTN_ADD_TRIGGER}>
             + Add
           </button>
         )}
       </div>
 
       {item.children.length > 0 && (
-        <div className="space-y-1 mb-2">
+        <div className="mb-2 space-y-1">
           {item.children.map(child => (
             <button
               key={child.id}
               onClick={() => onNavigate(child.id)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-left"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-zinc-800"
             >
               <span className={MINI_DEPTH}>{depthLabel(child.depth ?? (item.depth ?? 0) + 1)}</span>
               {child.type && (
@@ -66,7 +66,7 @@ export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNa
                   {itemTypes.find(x => x.id === child.type)?.name ?? child.type}
                 </span>
               )}
-              <span className="text-xs text-zinc-300 truncate">{child.title}</span>
+              <span className="truncate text-xs text-zinc-300">{child.title}</span>
             </button>
           ))}
         </div>
@@ -79,24 +79,24 @@ export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNa
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Child title..."
-            className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60"
             onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setTitle(''); } }}
           />
           <div className="flex items-center gap-2">
             <select
               value={type}
               onChange={e => setType(e.target.value)}
-              className="px-2 py-1 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none"
+              className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:outline-none"
             >
               <option value="">No Type</option>
               {itemTypes.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
-            <button type="submit" disabled={saving} className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50">
+            <button type="submit" disabled={saving} className={`${BTN_PRIMARY} disabled:opacity-50`}>
               Add
             </button>
-            <button type="button" onClick={() => { setAdding(false); setTitle(''); }} className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">
+            <button type="button" onClick={() => { setAdding(false); setTitle(''); }} className={BTN_CANCEL}>
               Cancel
             </button>
           </div>
@@ -104,7 +104,7 @@ export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNa
       )}
 
       {item.children.length === 0 && !adding && (
-        <p className="text-xs text-zinc-600">No children yet.</p>
+        <p className={EMPTY_STATE}>No children yet.</p>
       )}
     </div>
   );

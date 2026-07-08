@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Label } from '../../types';
 import { fetchLabels, fetchItemLabels, addLabelToItem, removeLabelFromItem, createLabel } from '../../api';
+import { SECTION_LABEL, INPUT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface LabelsSectionProps {
   itemId: string;
@@ -45,28 +46,28 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Labels</p>
+      <div className="mb-1.5 flex items-center justify-between">
+        <p className={SECTION_LABEL}>Labels</p>
         {!addingLabel && (
-          <button onClick={() => setAddingLabel(true)} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+          <button onClick={() => setAddingLabel(true)} className={BTN_ADD_TRIGGER}>
             + New
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-2">
+      <div className="mb-2 flex flex-wrap gap-1.5">
         {labels.map(label => (
           <button
             key={label.id}
             onClick={() => handleToggle(label.id)}
-            className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-opacity ${itemLabelIds.has(label.id) ? 'opacity-100' : 'opacity-35 hover:opacity-60'}`}
+            className={`border px-2 py-0.5 rounded-full text-[11px] font-medium transition-opacity ${itemLabelIds.has(label.id) ? 'opacity-100' : 'opacity-35 hover:opacity-60'}`}
             style={{ backgroundColor: label.color + '33', borderColor: label.color + '66', color: label.color }}
           >
             {label.name}
           </button>
         ))}
         {labels.length === 0 && !addingLabel && (
-          <p className="text-xs text-zinc-600">No labels yet.</p>
+          <p className={EMPTY_STATE}>No labels yet.</p>
         )}
       </div>
 
@@ -78,19 +79,19 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
               value={newLabelName}
               onChange={e => setNewLabelName(e.target.value)}
               placeholder="Label name..."
-              className="flex-1 px-2 py-1 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60"
+              className={`flex-1 ${INPUT_BASE}`}
               onKeyDown={e => { if (e.key === 'Escape') { setAddingLabel(false); setNewLabelName(''); } }}
             />
             <input
               type="color"
               value={newLabelColor}
               onChange={e => setNewLabelColor(e.target.value)}
-              className="w-8 h-7 rounded cursor-pointer bg-zinc-800 border border-zinc-700 p-0.5"
+              className="h-7 w-8 cursor-pointer rounded border border-zinc-700 bg-zinc-800 p-0.5"
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500">Create</button>
-            <button type="button" onClick={() => { setAddingLabel(false); setNewLabelName(''); }} className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">Cancel</button>
+            <button type="submit" className={BTN_PRIMARY}>Create</button>
+            <button type="button" onClick={() => { setAddingLabel(false); setNewLabelName(''); }} className={BTN_CANCEL}>Cancel</button>
           </div>
         </form>
       )}
