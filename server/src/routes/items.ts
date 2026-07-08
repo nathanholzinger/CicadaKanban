@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { items, columns, activityLog, notifications, itemLabels, chatThreads, chatMessages, attachments } from '../db/schema.js';
+import { items, workphases, activityLog, notifications, itemLabels, chatThreads, chatMessages, attachments } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -52,11 +52,11 @@ router.get('/:id', (req, res) => {
     .orderBy(activityLog.createdAt)
     .all();
 
-  // Derive workflowId from the item's column for MCP tool convenience
+  // Derive workflowId from the item's workphase for MCP tool convenience
   let workflowId: string | null = null;
-  if (item.columnId) {
-    const col = db.select({ workflowId: columns.workflowId }).from(columns).where(eq(columns.id, item.columnId)).get();
-    workflowId = col?.workflowId ?? null;
+  if (item.workphaseId) {
+    const workphase = db.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, item.workphaseId)).get();
+    workflowId = workphase?.workflowId ?? null;
   }
 
   res.json({ ...item, workflowId, depth, children, activity });
@@ -68,7 +68,7 @@ router.post('/', (req, res) => {
     type,
     parentId,
     projectId,
-    columnId,
+    workphaseId,
     title,
     description,
     assigneeType,
@@ -92,12 +92,12 @@ router.post('/', (req, res) => {
     return;
   }
 
-  // Calculate position at end of column if columnId provided
+  // Calculate position at end of workphase if workphaseId provided
   let position: number | null = null;
-  if (columnId) {
-    const itemsInColumn = db.select().from(items).where(eq(items.columnId, columnId)).all();
-    const maxPos = itemsInColumn.length > 0
-      ? Math.max(...itemsInColumn.map(i => i.position ?? 0))
+  if (workphaseId) {
+    const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, workphaseId)).all();
+    const maxPos = itemsInWorkphase.length > 0
+      ? Math.max(...itemsInWorkphase.map(i => i.position ?? 0))
       : 0;
     position = maxPos + 1.0;
   }
@@ -110,7 +110,7 @@ router.post('/', (req, res) => {
     type: type ?? null,
     parentId: parentId || null,
     projectId: resolvedProjectId,
-    columnId: columnId || null,
+    workphaseId: workphaseId,
     title,
     description: description || null,
     position,
@@ -121,14 +121,14 @@ router.post('/', (req, res) => {
   }).run();
 
   logActivity(id, 'status_change', type ? `Created as ${type}` : 'Created', {
-    columnId: columnId || null,
+    workphaseId: workphaseId,
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
   res.status(201).json(created);
 });
 
-// Update an item's details (not position/column — use move for that)
+// Update an item's details (not position/workphase — use move for that)
 router.put('/:id', (req, res) => {
   const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
@@ -158,7 +158,7 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Move an item to a different column and/or reorder within a column
+// Move an item to a different workphase and/or reorder within a workphase
 router.patch('/:id/move', (req, res) => {
   const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
   if (!item) {
@@ -166,40 +166,41 @@ router.patch('/:id/move', (req, res) => {
     return;
   }
 
-  const { columnId, position } = req.body;
+  const { workphaseId } = req.body;
+  const { position } = req.body;
 
-  if (columnId === undefined && position === undefined) {
-    res.status(400).json({ error: 'columnId and/or position required' });
+  if (workphaseId === undefined && position === undefined) {
+    res.status(400).json({ error: 'workphaseId and/or position required' });
     return;
   }
 
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
-  const oldColumnId = item.columnId;
+  const oldWorkphaseId = item.workphaseId;
 
-  if (columnId !== undefined) updates.columnId = columnId;
+  if (workphaseId !== undefined) updates.workphaseId = workphaseId;
   if (position !== undefined) updates.position = position;
 
   db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  if (columnId !== undefined && columnId !== oldColumnId) {
-    const oldCol = oldColumnId
-      ? db.select().from(columns).where(eq(columns.id, oldColumnId)).get()
+  if (workphaseId !== undefined && workphaseId !== oldWorkphaseId) {
+    const oldWorkphase = oldWorkphaseId
+      ? db.select().from(workphases).where(eq(workphases.id, oldWorkphaseId)).get()
       : null;
-    const newCol = db.select().from(columns).where(eq(columns.id, columnId)).get();
+    const newWorkphase = db.select().from(workphases).where(eq(workphases.id, workphaseId)).get();
 
     logActivity(req.params.id, 'status_change',
-      `Moved from "${oldCol?.name || 'none'}" to "${newCol?.name || 'unknown'}"`, {
-        fromColumnId: oldColumnId,
-        toColumnId: columnId,
+      `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`, {
+        fromWorkphaseId: oldWorkphaseId,
+        toWorkphaseId: workphaseId,
       });
 
-    if (newCol?.triggersNotification) {
+    if (newWorkphase?.triggersNotification) {
       db.insert(notifications).values({
         id: randomUUID(),
         itemId: req.params.id,
-        workflowId: newCol.workflowId,
-        message: `"${item.title}" moved to "${newCol.name}"`,
-        type: 'item_in_column',
+        workflowId: newWorkphase.workflowId,
+        message: `"${item.title}" moved to "${newWorkphase.name}"`,
+        type: 'item_in_workphase',
         isRead: 0,
         createdAt: Date.now(),
       }).run();
@@ -210,7 +211,7 @@ router.patch('/:id/move', (req, res) => {
   res.json(updated);
 });
 
-// Reorder items within a column
+// Reorder items within a workphase
 router.patch('/reorder', (req, res) => {
   const { itemOrders } = req.body;
 

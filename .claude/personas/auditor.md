@@ -24,6 +24,12 @@ quality, consistency, and correctness — independent of what was planned or int
 - Route shape: does this return the updated record on success like other routes do?
 - TypeScript: are client-side interfaces in sync with what the server actually returns?
 
+**File responsibility:**
+- Files over ~200 lines are candidates for a thoughtful audit on whether responsibilities
+  could be split — not an automatic violation, but a prompt to ask: does this file own
+  more than one concept?
+- A short file with mixed concerns is still worth flagging; length is a signal, not the rule
+
 **Dead code / drift:**
 - Comments that reference old names or superseded behavior
 - Types that don't match the current schema

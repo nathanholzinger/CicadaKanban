@@ -15,17 +15,17 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import type { WorkflowWithDetails, Column, Item, ItemType } from '../types';
+import type { WorkflowWithDetails, WorkPhase, Item, ItemType } from '../types';
 import {
   fetchWorkflow,
   fetchItemTypes,
   createItem,
   moveItem,
   reorderItems,
-  createColumn,
-  updateColumn,
-  deleteColumn,
-  reorderColumns,
+  createWorkPhase,
+  updateWorkPhase,
+  deleteWorkPhase,
+  reorderWorkPhases,
 } from '../api';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
@@ -35,27 +35,27 @@ interface WorkflowViewProps {
   workflowId: string;
   projectId?: string;        // project context for new items
   filterProjectId?: string;  // when set, only show items for this project (inherited view)
-  readOnly?: boolean;        // when true, hides column management controls
+  readOnly?: boolean;        // when true, hides workphase management controls
 }
 
 export default function WorkflowView({ workflowId, projectId, filterProjectId, readOnly }: WorkflowViewProps) {
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [workflow, setWorkflow] = useState<WorkflowWithDetails | null>(null);
-  const [columns, setColumns] = useState<Column[]>([]);
+  const [workphases, setWorkphases] = useState<WorkPhase[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [addingColumn, setAddingColumn] = useState(false);
-  const [newColumnName, setNewColumnName] = useState('');
-  const [childDefaultColumnId, setChildDefaultColumnId] = useState<string | null>(
+  const [addingWorkphase, setAddingWorkphase] = useState(false);
+  const [newWorkphaseName, setNewWorkphaseName] = useState('');
+  const [childDefaultWorkphaseId, setChildDefaultWorkphaseId] = useState<string | null>(
     () => localStorage.getItem(`kanban_child_col_${workflowId}`) ?? null,
   );
 
-  function handleChildColumnChange(columnId: string | null) {
-    setChildDefaultColumnId(columnId);
-    if (columnId) {
-      localStorage.setItem(`kanban_child_col_${workflowId}`, columnId);
+  function handleChildWorkphaseChange(workphaseId: string | null) {
+    setChildDefaultWorkphaseId(workphaseId);
+    if (workphaseId) {
+      localStorage.setItem(`kanban_child_col_${workflowId}`, workphaseId);
     } else {
       localStorage.removeItem(`kanban_child_col_${workflowId}`);
     }
@@ -74,14 +74,14 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     try {
       const data = await fetchWorkflow(workflowId);
       setWorkflow(data);
-      const sorted = [...data.columns].sort((a, b) => a.position - b.position);
-      setColumns(sorted);
+      const sorted = [...data.workphases].sort((a, b) => a.position - b.position);
+      setWorkphases(sorted);
       setItems(data.items);
 
       const stored = localStorage.getItem(`kanban_child_col_${workflowId}`);
       if (!stored) {
-        const backlog = sorted.find(c => c.name.toLowerCase() === 'backlog');
-        if (backlog) setChildDefaultColumnId(backlog.id);
+        const backlog = sorted.find(w => w.name.toLowerCase() === 'backlog');
+        if (backlog) setChildDefaultWorkphaseId(backlog.id);
       }
     } catch (err) {
       console.error('Failed to load workflow:', err);
@@ -94,14 +94,14 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     loadWorkflow();
   }, [loadWorkflow]);
 
-  function getColumnItems(columnId: string): Item[] {
+  function getWorkphaseItems(workphaseId: string): Item[] {
     return items
-      .filter(item => item.columnId === columnId && (!filterProjectId || item.projectId === filterProjectId))
+      .filter(item => item.workphaseId === workphaseId && (!filterProjectId || item.projectId === filterProjectId))
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   }
 
-  function findColumnForItem(itemId: string): string | null {
-    return items.find(i => i.id === itemId)?.columnId ?? null;
+  function findWorkphaseForItem(itemId: string): string | null {
+    return items.find(i => i.id === itemId)?.workphaseId ?? null;
   }
 
   // ============================================================
@@ -110,32 +110,32 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
   function handleDragStart(event: DragStartEvent) {
     const type = event.active.data.current?.type;
-    if (type !== 'column') {
+    if (type !== 'workphase') {
       setActiveItem(items.find(i => i.id === String(event.active.id)) ?? null);
     }
   }
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
-    if (!over || active.data.current?.type === 'column') return;
+    if (!over || active.data.current?.type === 'workphase') return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const activeColumnId = findColumnForItem(activeId);
-    const isOverColumn = columns.some(c => c.id === overId);
-    const overColumnId = isOverColumn ? overId : findColumnForItem(overId);
+    const activeWorkphaseId = findWorkphaseForItem(activeId);
+    const isOverWorkphase = workphases.some(w => w.id === overId);
+    const overWorkphaseId = isOverWorkphase ? overId : findWorkphaseForItem(overId);
 
-    if (!activeColumnId || !overColumnId || activeColumnId === overColumnId) return;
+    if (!activeWorkphaseId || !overWorkphaseId || activeWorkphaseId === overWorkphaseId) return;
 
     setItems(prev =>
-      prev.map(item => item.id === activeId ? { ...item, columnId: overColumnId } : item),
+      prev.map(item => item.id === activeId ? { ...item, workphaseId: overWorkphaseId } : item),
     );
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     const type = active.data.current?.type;
-    const originalColumnId = activeItem?.columnId ?? null;
+    const originalWorkphaseId = activeItem?.workphaseId ?? null;
 
     setActiveItem(null);
 
@@ -144,38 +144,38 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // ── Column reorder ──
-    if (type === 'column') {
+    // ── Workphase reorder ──
+    if (type === 'workphase') {
       if (activeId === overId) return;
-      const oldIndex = columns.findIndex(c => c.id === activeId);
-      const newIndex = columns.findIndex(c => c.id === overId);
+      const oldIndex = workphases.findIndex(w => w.id === activeId);
+      const newIndex = workphases.findIndex(w => w.id === overId);
       if (oldIndex === -1 || newIndex === -1) return;
 
-      const reordered = arrayMove(columns, oldIndex, newIndex);
-      setColumns(reordered);
+      const reordered = arrayMove(workphases, oldIndex, newIndex);
+      setWorkphases(reordered);
 
       try {
-        await reorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
+        await reorderWorkPhases(reordered.map((w, i) => ({ id: w.id, position: i + 1 })));
       } catch (err) {
-        console.error('Failed to reorder columns:', err);
+        console.error('Failed to reorder workphases:', err);
         loadWorkflow();
       }
       return;
     }
 
     // ── Item move ──
-    const isOverColumn = columns.some(c => c.id === overId);
-    const targetColumnId = isOverColumn ? overId : findColumnForItem(overId);
-    if (!targetColumnId) return;
+    const isOverWorkphase = workphases.some(w => w.id === overId);
+    const targetWorkphaseId = isOverWorkphase ? overId : findWorkphaseForItem(overId);
+    if (!targetWorkphaseId) return;
 
-    // ── Same-column reorder ──
-    if (!isOverColumn && originalColumnId === targetColumnId) {
-      const colItems = getColumnItems(targetColumnId);
-      const oldIndex = colItems.findIndex(i => i.id === activeId);
-      const newIndex = colItems.findIndex(i => i.id === overId);
+    // ── Same-workphase reorder ──
+    if (!isOverWorkphase && originalWorkphaseId === targetWorkphaseId) {
+      const workphaseItems = getWorkphaseItems(targetWorkphaseId);
+      const oldIndex = workphaseItems.findIndex(i => i.id === activeId);
+      const newIndex = workphaseItems.findIndex(i => i.id === overId);
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
-      const reordered = arrayMove(colItems, oldIndex, newIndex);
+      const reordered = arrayMove(workphaseItems, oldIndex, newIndex);
       const updatedPositions = reordered.map((item, idx) => ({ id: item.id, position: idx + 1 }));
 
       setItems(prev => prev.map(item => {
@@ -192,18 +192,18 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
       return;
     }
 
-    // ── Cross-column move ──
-    const columnItems = getColumnItems(targetColumnId).filter(i => i.id !== activeId);
+    // ── Cross-workphase move ──
+    const workphaseItems = getWorkphaseItems(targetWorkphaseId).filter(i => i.id !== activeId);
     let newPosition: number;
 
-    if (isOverColumn || columnItems.length === 0) {
-      newPosition = columnItems.length > 0
-        ? Math.max(...columnItems.map(i => i.position ?? 0)) + 1.0
+    if (isOverWorkphase || workphaseItems.length === 0) {
+      newPosition = workphaseItems.length > 0
+        ? Math.max(...workphaseItems.map(i => i.position ?? 0)) + 1.0
         : 1.0;
     } else {
-      const overIndex = columnItems.findIndex(i => i.id === overId);
-      const prev = columnItems[overIndex - 1];
-      const next = columnItems[overIndex];
+      const overIndex = workphaseItems.findIndex(i => i.id === overId);
+      const prev = workphaseItems[overIndex - 1];
+      const next = workphaseItems[overIndex];
       if (prev && next) {
         newPosition = ((prev.position ?? overIndex) + (next.position ?? overIndex + 1)) / 2;
       } else if (prev) {
@@ -215,12 +215,12 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
     setItems(prev =>
       prev.map(item =>
-        item.id === activeId ? { ...item, columnId: targetColumnId, position: newPosition } : item,
+        item.id === activeId ? { ...item, workphaseId: targetWorkphaseId, position: newPosition } : item,
       ),
     );
 
     try {
-      await moveItem(activeId, targetColumnId, newPosition);
+      await moveItem(activeId, targetWorkphaseId, newPosition);
     } catch (err) {
       console.error('Failed to move item:', err);
       loadWorkflow();
@@ -228,42 +228,42 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
   }
 
   // ============================================================
-  // Column handlers
+  // Workphase handlers
   // ============================================================
 
-  async function handleCreateColumn() {
-    if (!workflow || !newColumnName.trim()) return;
+  async function handleCreateWorkphase() {
+    if (!workflow || !newWorkphaseName.trim()) return;
     try {
-      const col = await createColumn({ workflowId: workflow.id, name: newColumnName.trim() });
-      setColumns(prev => [...prev, col]);
-      setNewColumnName('');
-      setAddingColumn(false);
+      const workphase = await createWorkPhase({ workflowId: workflow.id, name: newWorkphaseName.trim() });
+      setWorkphases(prev => [...prev, workphase]);
+      setNewWorkphaseName('');
+      setAddingWorkphase(false);
     } catch (err) {
-      console.error('Failed to create column:', err);
+      console.error('Failed to create workphase:', err);
     }
   }
 
-  async function handleRenameColumn(id: string, name: string) {
+  async function handleRenameWorkphase(id: string, name: string) {
     try {
-      const updated = await updateColumn(id, { name });
-      setColumns(prev => prev.map(c => c.id === id ? { ...c, name: updated.name } : c));
+      const updated = await updateWorkPhase(id, { name });
+      setWorkphases(prev => prev.map(w => w.id === id ? { ...w, name: updated.name } : w));
     } catch (err) {
-      console.error('Failed to rename column:', err);
+      console.error('Failed to rename workphase:', err);
     }
   }
 
-  async function handleDeleteColumn(id: string) {
-    await deleteColumn(id);
-    setColumns(prev => prev.filter(c => c.id !== id));
+  async function handleDeleteWorkphase(id: string) {
+    await deleteWorkPhase(id);
+    setWorkphases(prev => prev.filter(w => w.id !== id));
   }
 
   // ============================================================
   // Item handlers
   // ============================================================
 
-  async function handleCreateItem(columnId: string, title: string, type: string | null) {
+  async function handleCreateItem(workphaseId: string, title: string, type: string | null) {
     try {
-      const newItem = await createItem({ type: type ?? undefined, title, projectId, columnId });
+      const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
       setItems(prev => [...prev, newItem]);
     } catch (err) {
       console.error('Failed to create item:', err);
@@ -315,13 +315,13 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[11px] text-zinc-500">New child items go to:</span>
           <select
-            value={childDefaultColumnId ?? ''}
-            onChange={e => handleChildColumnChange(e.target.value || null)}
+            value={childDefaultWorkphaseId ?? ''}
+            onChange={e => handleChildWorkphaseChange(e.target.value || null)}
             className="px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/50"
           >
-            <option value="">Same column as parent</option>
-            {columns.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            <option value="">Same workphase as parent</option>
+            {workphases.map(w => (
+              <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>
         </div>
@@ -334,48 +334,48 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={workphases.map(w => w.id)} strategy={horizontalListSortingStrategy}>
           <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4 items-stretch">
-            {columns.map(col => (
+            {workphases.map(workphase => (
               <KanbanColumn
-                key={col.id}
-                column={col}
-                items={getColumnItems(col.id)}
+                key={workphase.id}
+                column={workphase}
+                items={getWorkphaseItems(workphase.id)}
                 childCounts={childCounts}
                 itemTypes={itemTypes}
                 isCardBeingDragged={activeItem !== null}
                 onCreateItem={handleCreateItem}
                 onCardClick={setSelectedItemId}
-                onRename={readOnly ? undefined : handleRenameColumn}
-                onDelete={readOnly ? undefined : handleDeleteColumn}
+                onRename={readOnly ? undefined : handleRenameWorkphase}
+                onDelete={readOnly ? undefined : handleDeleteWorkphase}
               />
             ))}
 
-            {/* Add column — hidden in read-only (inherited) mode */}
+            {/* Add workphase — hidden in read-only (inherited) mode */}
             {!readOnly && (
               <div className="shrink-0 w-72 self-start">
-                {addingColumn ? (
+                {addingWorkphase ? (
                   <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-3 space-y-2">
                     <input
                       autoFocus
-                      value={newColumnName}
-                      onChange={e => setNewColumnName(e.target.value)}
-                      placeholder="Column name..."
+                      value={newWorkphaseName}
+                      onChange={e => setNewWorkphaseName(e.target.value)}
+                      placeholder="Workphase name..."
                       className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
                       onKeyDown={e => {
-                        if (e.key === 'Enter') handleCreateColumn();
-                        if (e.key === 'Escape') { setAddingColumn(false); setNewColumnName(''); }
+                        if (e.key === 'Enter') handleCreateWorkphase();
+                        if (e.key === 'Escape') { setAddingWorkphase(false); setNewWorkphaseName(''); }
                       }}
                     />
                     <div className="flex gap-2">
                       <button
-                        onClick={handleCreateColumn}
+                        onClick={handleCreateWorkphase}
                         className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
                       >
-                        Add column
+                        Add workphase
                       </button>
                       <button
-                        onClick={() => { setAddingColumn(false); setNewColumnName(''); }}
+                        onClick={() => { setAddingWorkphase(false); setNewWorkphaseName(''); }}
                         className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
                       >
                         Cancel
@@ -384,10 +384,10 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
                   </div>
                 ) : (
                   <button
-                    onClick={() => setAddingColumn(true)}
+                    onClick={() => setAddingWorkphase(true)}
                     className="w-full py-2.5 text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/40 border border-dashed border-zinc-700 hover:border-zinc-600 rounded-xl transition-colors"
                   >
-                    + Add column
+                    + Add workphase
                   </button>
                 )}
               </div>
@@ -402,7 +402,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
       <ItemDetailPanel
         itemId={selectedItemId}
-        childDefaultColumnId={childDefaultColumnId}
+        childDefaultWorkphaseId={childDefaultWorkphaseId}
         itemTypes={itemTypes}
         onClose={() => setSelectedItemId(null)}
         onUpdate={handleItemUpdated}

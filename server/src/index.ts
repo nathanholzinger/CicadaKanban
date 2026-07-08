@@ -4,7 +4,7 @@ import cors from 'cors';
 import projectRoutes from './routes/projects.js';
 import workflowRoutes from './routes/workflows.js';
 import workflowTemplateRoutes from './routes/workflowTemplates.js';
-import columnRoutes from './routes/columns.js';
+import workphaseRoutes from './routes/workphases.js';
 import itemRoutes from './routes/items.js';
 import agentRoutes from './routes/agents.js';
 import notificationRoutes from './routes/notifications.js';
@@ -30,7 +30,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/projects', projectRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/workflow-templates', workflowTemplateRoutes);
-app.use('/api/columns', columnRoutes);
+app.use('/api/workphases', workphaseRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/notifications', notificationRoutes);

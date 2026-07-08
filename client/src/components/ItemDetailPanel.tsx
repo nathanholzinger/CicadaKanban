@@ -10,7 +10,7 @@ import { ActivityLog } from './item-detail/ActivityLog';
 
 interface ItemDetailPanelProps {
   itemId: string | null;
-  childDefaultColumnId?: string | null;
+  childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
   onUpdate: (item: Item) => void;
@@ -19,7 +19,7 @@ interface ItemDetailPanelProps {
   onChildCreated: (item: Item) => void;
 }
 
-export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
+export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -224,7 +224,7 @@ export default function ItemDetailPanel({ itemId, childDefaultColumnId, itemType
               <AttachmentsSection itemId={detail.id} />
               <ChildrenSection
                 item={detail}
-                childDefaultColumnId={childDefaultColumnId}
+                childDefaultWorkphaseId={childDefaultWorkphaseId}
                 itemTypes={itemTypes}
                 onNavigate={onNavigate}
                 onChildCreated={handleChildCreated}

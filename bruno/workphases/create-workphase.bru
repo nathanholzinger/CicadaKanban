@@ -1,11 +1,11 @@
 meta {
-  name: Create Column
+  name: Create Workphase
   type: http
   seq: 1
 }
 
 post {
-  url: {{baseUrl}}/api/columns
+  url: {{baseUrl}}/api/workphases
   body: json
   auth: none
 }
@@ -13,7 +13,7 @@ post {
 body:json {
   {
     "workflowId": "{{workflowId}}",
-    "name": "My Column",
+    "name": "My Workphase",
     "triggersNotification": false,
     "isTerminal": false
   }

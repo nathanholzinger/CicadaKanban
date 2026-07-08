@@ -1,0 +1,11 @@
+meta {
+  name: Delete Workphase
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/workphases/{{workphaseId}}
+  body: none
+  auth: none
+}

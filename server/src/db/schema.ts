@@ -22,7 +22,7 @@ export const workflowTemplates = sqliteTable('workflow_templates', {
   createdAt: integer('created_at').notNull(),
 });
 
-export const workflowTemplateColumns = sqliteTable('workflow_template_columns', {
+export const workflowTemplatePhases = sqliteTable('workflow_template_phases', {
   id: text('id').primaryKey(),
   templateId: text('template_id').notNull().references(() => workflowTemplates.id),
   name: text('name').notNull(),
@@ -66,7 +66,7 @@ export const agents = sqliteTable('agents', {
   updatedAt: integer('updated_at').notNull(),
 });
 
-export const columns = sqliteTable('columns', {
+export const workphases = sqliteTable('workphases', {
   id: text('id').primaryKey(),
   workflowId: text('workflow_id').notNull().references(() => workflows.id),
   agentId: text('agent_id').references(() => agents.id),
@@ -82,7 +82,7 @@ export const items = sqliteTable('items', {
   type: text('type').references(() => itemTypes.id),
   parentId: text('parent_id'),  // self-referential FK to items.id
   projectId: text('project_id').references(() => projects.id),
-  columnId: text('column_id').references(() => columns.id),
+  workphaseId: text('workphase_id').references(() => workphases.id),
   title: text('title').notNull(),
   description: text('description'),
   position: real('position'),

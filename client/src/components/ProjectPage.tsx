@@ -149,7 +149,7 @@ export default function ProjectPage({
             >
               {effectiveWorkflow.ownerProject.name}
             </button>
-            . Column management is only available from that project.
+            . Workphase management is only available from that project.
           </div>
           <WorkflowView
             workflowId={effectiveWorkflow.workflow.id}

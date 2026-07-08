@@ -5,13 +5,13 @@ import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle } from './pillUtil
 
 interface ChildrenSectionProps {
   item: ItemDetail;
-  childDefaultColumnId: string | null | undefined;
+  childDefaultWorkphaseId: string | null | undefined;
   itemTypes: ItemType[];
   onNavigate: (id: string) => void;
   onChildCreated: (child: Item) => void;
 }
 
-export function ChildrenSection({ item, childDefaultColumnId, itemTypes, onNavigate, onChildCreated }: ChildrenSectionProps) {
+export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNavigate, onChildCreated }: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('');
@@ -27,7 +27,7 @@ export function ChildrenSection({ item, childDefaultColumnId, itemTypes, onNavig
         title: title.trim(),
         parentId: item.id,
         projectId: item.projectId ?? undefined,
-        columnId: childDefaultColumnId ?? item.columnId ?? undefined,
+        workphaseId: childDefaultWorkphaseId ?? item.workphaseId ?? undefined,
       });
       onChildCreated(child);
       setTitle('');

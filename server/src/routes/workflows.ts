@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workflows, columns, items, workflowTemplateColumns } from '../db/schema.js';
+import { workflows, workphases, items, workflowTemplatePhases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
   res.json(allWorkflows);
 });
 
-// Get a single workflow with columns and items
+// Get a single workflow with workphases and items
 router.get('/:id', (req, res) => {
   const workflow = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
   if (!workflow) {
@@ -40,17 +40,17 @@ router.get('/:id', (req, res) => {
     return;
   }
 
-  const workflowColumns = db.select().from(columns)
-    .where(eq(columns.workflowId, workflow.id))
-    .orderBy(columns.position)
+  const workflowWorkphases = db.select().from(workphases)
+    .where(eq(workphases.workflowId, workflow.id))
+    .orderBy(workphases.position)
     .all();
 
-  // All items in any column of this workflow (across all projects that inherit it)
-  const columnIds = new Set(workflowColumns.map(c => c.id));
+  // All items in any workphase of this workflow (across all projects that inherit it)
+  const workphaseIds = new Set(workflowWorkphases.map(w => w.id));
   const allItems = db.select().from(items).all();
-  const workflowItems = allItems.filter(i => i.columnId && columnIds.has(i.columnId));
+  const workflowItems = allItems.filter(i => i.workphaseId && workphaseIds.has(i.workphaseId));
 
-  res.json({ ...workflow, columns: workflowColumns, items: addDepths(workflowItems) });
+  res.json({ ...workflow, workphases: workflowWorkphases, items: addDepths(workflowItems) });
 });
 
 // Create a workflow
@@ -79,44 +79,44 @@ router.post('/', (req, res) => {
   }).run();
 
   if (templateId) {
-    const templateCols = db.select().from(workflowTemplateColumns)
-      .where(eq(workflowTemplateColumns.templateId, templateId))
-      .orderBy(workflowTemplateColumns.position)
+    const templatePhases = db.select().from(workflowTemplatePhases)
+      .where(eq(workflowTemplatePhases.templateId, templateId))
+      .orderBy(workflowTemplatePhases.position)
       .all();
 
-    for (const col of templateCols) {
-      db.insert(columns).values({
+    for (const phase of templatePhases) {
+      db.insert(workphases).values({
         id: randomUUID(),
         workflowId,
-        name: col.name,
-        position: col.position,
-        triggersNotification: col.triggersNotification,
-        isTerminal: col.isTerminal,
+        name: phase.name,
+        position: phase.position,
+        triggersNotification: phase.triggersNotification,
+        isTerminal: phase.isTerminal,
         createdAt: now,
       }).run();
     }
   } else if (sourceWorkflowId) {
-    const sourceCols = db.select().from(columns)
-      .where(eq(columns.workflowId, sourceWorkflowId))
-      .orderBy(columns.position)
+    const sourcePhases = db.select().from(workphases)
+      .where(eq(workphases.workflowId, sourceWorkflowId))
+      .orderBy(workphases.position)
       .all();
 
-    for (const col of sourceCols) {
-      db.insert(columns).values({
+    for (const phase of sourcePhases) {
+      db.insert(workphases).values({
         id: randomUUID(),
         workflowId,
-        name: col.name,
-        position: col.position,
-        triggersNotification: col.triggersNotification,
-        isTerminal: col.isTerminal,
+        name: phase.name,
+        position: phase.position,
+        triggersNotification: phase.triggersNotification,
+        isTerminal: phase.isTerminal,
         createdAt: now,
       }).run();
     }
   }
 
   const created = db.select().from(workflows).where(eq(workflows.id, workflowId)).get();
-  const createdColumns = db.select().from(columns).where(eq(columns.workflowId, workflowId)).all();
-  res.status(201).json({ ...created, columns: createdColumns });
+  const createdWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
+  res.status(201).json({ ...created, workphases: createdWorkphases });
 });
 
 // Update a workflow
@@ -139,7 +139,7 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Delete a workflow and its columns and items
+// Delete a workflow and its workphases and items
 router.delete('/:id', (req, res) => {
   const workflow = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
   if (!workflow) {
@@ -147,18 +147,18 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  const workflowColumns = db.select().from(columns).where(eq(columns.workflowId, req.params.id)).all();
-  const columnIds = new Set(workflowColumns.map(c => c.id));
+  const workflowWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, req.params.id)).all();
+  const workphaseIds = new Set(workflowWorkphases.map(w => w.id));
 
   if (workflow.projectId) {
     const projectItems = db.select().from(items).where(eq(items.projectId, workflow.projectId)).all();
-    const workflowItems = projectItems.filter(i => i.columnId && columnIds.has(i.columnId));
+    const workflowItems = projectItems.filter(i => i.workphaseId && workphaseIds.has(i.workphaseId));
     for (const item of workflowItems) {
       db.delete(items).where(eq(items.id, item.id)).run();
     }
   }
 
-  db.delete(columns).where(eq(columns.workflowId, req.params.id)).run();
+  db.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
   db.delete(workflows).where(eq(workflows.id, req.params.id)).run();
 
   res.status(204).send();

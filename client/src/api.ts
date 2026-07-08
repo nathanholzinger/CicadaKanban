@@ -1,4 +1,4 @@
-import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, Column, ItemType, Label, Notification, Project, Item, ItemDetail } from './types';
+import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, WorkPhase, ItemType, Label, Notification, Project, Item, ItemDetail } from './types';
 
 const API = '/api';
 
@@ -95,49 +95,49 @@ export async function deleteWorkflow(id: string): Promise<void> {
 }
 
 // ============================================================
-// Columns
+// WorkPhases
 // ============================================================
 
-export async function createColumn(data: {
+export async function createWorkPhase(data: {
   workflowId: string;
   name: string;
   triggersNotification?: boolean;
   isTerminal?: boolean;
-}): Promise<Column> {
-  const res = await fetch(`${API}/columns`, {
+}): Promise<WorkPhase> {
+  const res = await fetch(`${API}/workphases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to create column');
+  if (!res.ok) throw new Error('Failed to create workphase');
   return res.json();
 }
 
-export async function updateColumn(id: string, data: { name?: string }): Promise<Column> {
-  const res = await fetch(`${API}/columns/${id}`, {
+export async function updateWorkPhase(id: string, data: { name?: string }): Promise<WorkPhase> {
+  const res = await fetch(`${API}/workphases/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update column');
+  if (!res.ok) throw new Error('Failed to update workphase');
   return res.json();
 }
 
-export async function deleteColumn(id: string): Promise<void> {
-  const res = await fetch(`${API}/columns/${id}`, { method: 'DELETE' });
+export async function deleteWorkPhase(id: string): Promise<void> {
+  const res = await fetch(`${API}/workphases/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Failed to delete column');
+    throw new Error(body.error ?? 'Failed to delete workphase');
   }
 }
 
-export async function reorderColumns(columnOrders: { id: string; position: number }[]): Promise<void> {
-  const res = await fetch(`${API}/columns/reorder`, {
+export async function reorderWorkPhases(workphaseOrders: { id: string; position: number }[]): Promise<void> {
+  const res = await fetch(`${API}/workphases/reorder`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ columnOrders }),
+    body: JSON.stringify({ workphaseOrders }),
   });
-  if (!res.ok) throw new Error('Failed to reorder columns');
+  if (!res.ok) throw new Error('Failed to reorder workphases');
 }
 
 // ============================================================
@@ -154,7 +154,7 @@ export async function createItem(data: {
   type?: string | null;
   title: string;
   projectId?: string;
-  columnId?: string;
+  workphaseId?: string;
   parentId?: string;
   description?: string;
   assigneeType?: string;
@@ -184,13 +184,13 @@ export async function updateItem(
 
 export async function moveItem(
   id: string,
-  columnId: string,
+  workphaseId: string,
   position: number,
 ): Promise<Item> {
   const res = await fetch(`${API}/items/${id}/move`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ columnId, position }),
+    body: JSON.stringify({ workphaseId, position }),
   });
   if (!res.ok) throw new Error('Failed to move item');
   return res.json();

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { projects, workflows, columns, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels } from '../db/schema.js';
+import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels } from '../db/schema.js';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -89,21 +89,21 @@ function deleteProjectById(id: string) {
   const children = db.select().from(projects).where(eq(projects.parentId, id)).all();
   for (const child of children) deleteProjectById(child.id);
 
-  // Gather all workflow/column ids for this project upfront
+  // Gather all workflow/workphase ids for this project upfront
   const workflowIds = db.select({ id: workflows.id })
     .from(workflows).where(eq(workflows.projectId, id)).all().map(w => w.id);
 
-  const columnIds = workflowIds.length > 0
-    ? db.select({ id: columns.id }).from(columns).where(inArray(columns.workflowId, workflowIds)).all().map(c => c.id)
+  const workphaseIds = workflowIds.length > 0
+    ? db.select({ id: workphases.id }).from(workphases).where(inArray(workphases.workflowId, workflowIds)).all().map(w => w.id)
     : [];
 
-  // All items to clean up: owned by this project OR sitting in this project's columns
+  // All items to clean up: owned by this project OR sitting in this project's workphases
   const ownedItemIds = db.select({ id: items.id })
     .from(items).where(eq(items.projectId, id)).all().map(i => i.id);
-  const columnItemIds = columnIds.length > 0
-    ? db.select({ id: items.id }).from(items).where(inArray(items.columnId, columnIds)).all().map(i => i.id)
+  const workphaseItemIds = workphaseIds.length > 0
+    ? db.select({ id: items.id }).from(items).where(inArray(items.workphaseId, workphaseIds)).all().map(i => i.id)
     : [];
-  const allItemIds = [...new Set([...ownedItemIds, ...columnItemIds])];
+  const allItemIds = [...new Set([...ownedItemIds, ...workphaseItemIds])];
 
   // Per-item cleanup (chatMessages must come before chatThreads)
   for (const itemId of allItemIds) {
@@ -134,12 +134,12 @@ function deleteProjectById(id: string) {
     db.delete(items).where(inArray(items.id, allItemIds)).run();
   }
 
-  // Workflow-level cleanup before removing columns/workflows
+  // Workflow-level cleanup before removing workphases/workflows
   if (workflowIds.length > 0) {
     db.delete(labels).where(inArray(labels.workflowId, workflowIds)).run();
     db.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
-    if (columnIds.length > 0) {
-      db.delete(columns).where(inArray(columns.workflowId, workflowIds)).run();
+    if (workphaseIds.length > 0) {
+      db.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
     }
   }
 
@@ -176,7 +176,7 @@ router.patch('/reorder', (req, res) => {
   res.json({ success: true });
 });
 
-// Delete a project — recursively cascades through descendants → workflows → columns → items
+// Delete a project — recursively cascades through descendants → workflows → workphases → items
 router.delete('/:id', (req, res) => {
   const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
   if (!project) {

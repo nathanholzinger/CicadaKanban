@@ -9,7 +9,7 @@ const API = 'http://localhost:3002/api';
 
 test.describe('board basics', () => {
   let projectId: string;
-  let todoColumnId: string;
+  let todoWorkphaseId: string;
 
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
@@ -26,8 +26,8 @@ test.describe('board basics', () => {
       data: { name: 'My First Project', projectId: project.id, templateId: flow.id },
     })).json();
 
-    const todo = workflow.columns.find((c: { name: string }) => c.name === 'Todo');
-    todoColumnId = todo.id;
+    const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
+    todoWorkphaseId = todo.id;
   });
 
   test.beforeEach(async ({ page, projectSidebar }) => {
@@ -36,21 +36,21 @@ test.describe('board basics', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
   });
 
-  test('loads the board with workflow columns', async ({ page }) => {
+  test('loads the board with workflow workphases', async ({ page }) => {
     await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
   });
 
-  test('adds a column to a workflow', async ({ page }) => {
-    await page.getByRole('button', { name: '+ Add column' }).click();
-    await page.getByPlaceholder('Column name...').fill('Sprint 1');
-    await page.getByRole('button', { name: 'Add column' }).click();
+  test('adds a workphase to a workflow', async ({ page }) => {
+    await page.getByRole('button', { name: '+ Add workphase' }).click();
+    await page.getByPlaceholder('Workphase name...').fill('Sprint 1');
+    await page.getByRole('button', { name: 'Add workphase' }).click();
     await expect(page.getByRole('group', { name: 'Sprint 1' })).toBeVisible();
   });
 
-  test('typeless item created via API renders in the Todo column', async ({ page, request, projectSidebar }) => {
+  test('typeless item created via API renders in the Todo workphase', async ({ page, request, projectSidebar }) => {
     await request.post(`${API}/items`, {
-      data: { title: 'Typeless API item', projectId, columnId: todoColumnId },
+      data: { title: 'Typeless API item', projectId, workphaseId: todoWorkphaseId },
     });
 
     await page.goto('/');
@@ -62,7 +62,7 @@ test.describe('board basics', () => {
     ).toBeVisible();
   });
 
-  test('adds an item to a column via the inline form', async ({ page }) => {
+  test('adds an item to a workphase via the inline form', async ({ page }) => {
     const todoColumn = page.getByRole('group', { name: 'Todo' });
     await todoColumn.getByRole('button', { name: '+ Add item' }).click();
     await todoColumn.getByPlaceholder('Item title...').fill('My first E2E task');
@@ -77,8 +77,8 @@ test.describe('board basics', () => {
 
 test.describe('items visibility with inherited workflow', () => {
   let parentId: string;
-  let todoColumnId: string;
-  let inProgressColumnId: string;
+  let todoWorkphaseId: string;
+  let inProgressWorkphaseId: string;
 
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
@@ -99,17 +99,17 @@ test.describe('items visibility with inherited workflow', () => {
       data: { name: 'Parent Project', projectId: parent.id, templateId: flow.id },
     })).json();
 
-    const todo = workflow.columns.find((c: { name: string }) => c.name === 'Todo');
-    const inProgress = workflow.columns.find((c: { name: string }) => c.name === 'In Progress');
-    todoColumnId = todo.id;
-    inProgressColumnId = inProgress.id;
+    const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
+    const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
+    todoWorkphaseId = todo.id;
+    inProgressWorkphaseId = inProgress.id;
 
     // Seed a parent-owned item and a child-owned item into the parent's workflow
     await request.post(`${API}/items`, {
-      data: { title: 'Parent-owned item', projectId: parent.id, columnId: todoColumnId },
+      data: { title: 'Parent-owned item', projectId: parent.id, workphaseId: todoWorkphaseId },
     });
     await request.post(`${API}/items`, {
-      data: { title: 'Child-owned item', projectId: child.id, columnId: todoColumnId },
+      data: { title: 'Child-owned item', projectId: child.id, workphaseId: todoWorkphaseId },
     });
   });
 
@@ -162,7 +162,7 @@ test.describe('items visibility with inherited workflow', () => {
 
     // Move it to In Progress via API
     await request.patch(`${API}/items/${childItem.id}/move`, {
-      data: { columnId: inProgressColumnId, position: 1 },
+      data: { workphaseId: inProgressWorkphaseId, position: 1 },
     });
 
     // Verify on parent board
@@ -223,19 +223,19 @@ test.describe('inherited workflow is read-only', () => {
     await expect(inheritedBannerLink(page)).toBeVisible();
   });
 
-  test('columns in the inherited view have no delete button', async ({ page }) => {
+  test('workphases in the inherited view have no delete button', async ({ page }) => {
     const todoColumn = page.getByRole('group', { name: 'Todo' });
     await expect(todoColumn).toBeVisible();
     // The delete (×) button appears only when onDelete is provided — it's absent in read-only mode
-    await expect(todoColumn.locator('[title="Delete column"]')).not.toBeVisible();
+    await expect(todoColumn.locator('[title="Delete workphase"]')).not.toBeVisible();
   });
 
   test('clicking the banner link navigates to the owning project board', async ({ page }) => {
     await inheritedBannerLink(page).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Owning Project' })).toBeVisible();
-    // The owning project's board has the Add column button (editable)
+    // The owning project's board has the Add workphase button (editable)
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
-    await expect(page.getByRole('button', { name: '+ Add column' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '+ Add workphase' })).toBeVisible();
   });
 });
 
@@ -244,7 +244,7 @@ test.describe('inherited workflow is read-only', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('child project with own workflow', () => {
-  let childTodoColumnId: string;
+  let childTodoWorkphaseId: string;
 
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
@@ -269,12 +269,12 @@ test.describe('child project with own workflow', () => {
       data: { name: 'Child With Own Workflow', projectId: child.id, templateId: quick.id },
     })).json();
 
-    const childTodo = childWorkflow.columns.find((c: { name: string }) => c.name === 'Todo');
-    childTodoColumnId = childTodo.id;
+    const childTodo = childWorkflow.workphases.find((p: { name: string }) => p.name === 'Todo');
+    childTodoWorkphaseId = childTodo.id;
 
     // Create an item in the child's own workflow
     await request.post(`${API}/items`, {
-      data: { title: 'Child-only item', projectId: child.id, columnId: childTodoColumnId },
+      data: { title: 'Child-only item', projectId: child.id, workphaseId: childTodoWorkphaseId },
     });
   });
 
@@ -319,8 +319,8 @@ test.describe('workflow creation', () => {
     await page.getByRole('button', { name: /Set up a Workflow/ }).click();
     await page.getByRole('button', { name: 'Custom' }).click();
 
-    // Empty workflow — no columns yet, only the Add column button
-    await expect(page.getByRole('button', { name: '+ Add column' })).toBeVisible();
+    // Empty workflow — no workphases yet, only the Add workphase button
+    await expect(page.getByRole('button', { name: '+ Add workphase' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Todo' })).not.toBeVisible();
   });
 
@@ -352,7 +352,7 @@ test.describe('workflow creation', () => {
     // The copy section shows "Source Project" as a copyable workflow
     await page.getByRole('button', { name: /Source Project/ }).click();
 
-    // Should get the same columns as Source Project's flow workflow
+    // Should get the same workphases as Source Project's flow workflow
     await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
   });

@@ -45,7 +45,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'get_workflow',
-      description: 'Get a workflow with all its columns and items',
+      description: 'Get a workflow with all its workphases and items',
       inputSchema: {
         type: 'object',
         properties: {
@@ -67,18 +67,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'create_item',
-      description: 'Create a new item and place it in a workflow column',
+      description: 'Create a new item and place it in a workflow workphase',
       inputSchema: {
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Item title' },
           project_id: { type: 'string', description: 'Project this item belongs to' },
-          column_id: { type: 'string', description: 'Column to place the item in' },
+          workphase_id: { type: 'string', description: 'Workphase to place the item in' },
           type: { type: 'string', description: 'Item type name (e.g. "Epic", "Story", "Task") or UUID. Optional.' },
           description: { type: 'string', description: 'Optional item description' },
           parent_id: { type: 'string', description: 'Optional parent item ID' },
         },
-        required: ['title', 'project_id', 'column_id'],
+        required: ['title', 'project_id', 'workphase_id'],
       },
     },
     {
@@ -96,14 +96,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'move_item',
-      description: 'Move an item to a different column in its workflow',
+      description: 'Move an item to a different workphase in its workflow',
       inputSchema: {
         type: 'object',
         properties: {
           item_id: { type: 'string', description: 'The item ID' },
-          column_id: { type: 'string', description: 'Target column ID' },
+          workphase_id: { type: 'string', description: 'Target workphase ID' },
         },
-        required: ['item_id', 'column_id'],
+        required: ['item_id', 'workphase_id'],
       },
     },
     {
@@ -171,7 +171,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             title: args!.title,
             type: resolvedType,
             projectId: args!.project_id,
-            columnId: args!.column_id,
+            workphaseId: args!.workphase_id,
             description: args!.description,
             parentId: args!.parent_id,
           }),
@@ -195,21 +195,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'move_item': {
-        // workflowId is returned on the item response (derived from item's column)
+        // workflowId is returned on the item response (derived from item's workphase)
         const item = await api(`/items/${args!.item_id}`);
         const workflow = await api(`/workflows/${item.workflowId}`);
-        const columnItems = (workflow.items as Array<{ columnId: string; position: number }>)
-          .filter((i: { columnId: string }) => i.columnId === args!.column_id);
-        const position = columnItems.length > 0
-          ? Math.max(...columnItems.map((i: { position: number }) => i.position ?? 0)) + 1
+        const workphaseItems = (workflow.items as Array<{ workphaseId: string; position: number }>)
+          .filter((i: { workphaseId: string }) => i.workphaseId === args!.workphase_id);
+        const position = workphaseItems.length > 0
+          ? Math.max(...workphaseItems.map((i: { position: number }) => i.position ?? 0)) + 1
           : 1;
 
         await api(`/items/${args!.item_id}/move`, {
           method: 'PATCH',
-          body: JSON.stringify({ columnId: args!.column_id, position }),
+          body: JSON.stringify({ workphaseId: args!.workphase_id, position }),
         });
         return {
-          content: [{ type: 'text', text: `Moved item "${item.title}" to column ${args!.column_id}` }],
+          content: [{ type: 'text', text: `Moved item "${item.title}" to workphase ${args!.workphase_id}` }],
         };
       }
 

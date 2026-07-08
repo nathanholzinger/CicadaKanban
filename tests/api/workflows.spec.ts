@@ -7,7 +7,7 @@ test.beforeAll(async () => {
   await resetAndSeedDb();
 });
 
-test('POST /api/workflows with templateId creates workflow with template columns', async ({ request }) => {
+test('POST /api/workflows with templateId creates workflow with template workphases', async ({ request }) => {
   const projectRes = await request.post(`${BASE}/projects`, { data: { name: 'Template Test Project' } });
   const project = await projectRes.json();
 
@@ -20,10 +20,10 @@ test('POST /api/workflows with templateId creates workflow with template columns
   });
   expect(workflowRes.status()).toBe(201);
   const workflow = await workflowRes.json();
-  expect(workflow.columns).toHaveLength(2);
-  expect(workflow.columns[0].name).toBe('Todo');
-  expect(workflow.columns[1].name).toBe('Done');
-  expect(workflow.columns[1].isTerminal).toBe(1);
+  expect(workflow.workphases).toHaveLength(2);
+  expect(workflow.workphases[0].name).toBe('Todo');
+  expect(workflow.workphases[1].name).toBe('Done');
+  expect(workflow.workphases[1].isTerminal).toBe(1);
 });
 
 test('GET /api/workflows?projectId filters by project', async ({ request }) => {

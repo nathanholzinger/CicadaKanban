@@ -62,7 +62,7 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
             className="w-full text-left px-4 py-3 rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/60 transition-colors disabled:opacity-50"
           >
             <span className="text-sm font-medium text-zinc-200">Custom</span>
-            <span className="block text-xs text-zinc-500 mt-0.5">Empty workflow — add your own columns</span>
+            <span className="block text-xs text-zinc-500 mt-0.5">Empty workflow — add your own workphases</span>
           </button>
 
           {/* Templates */}
@@ -78,7 +78,7 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
                 >
                   <span className="text-sm font-medium text-zinc-200 capitalize">{t.name}</span>
                   <span className="block text-xs text-zinc-500 mt-0.5">
-                    {t.columns.map(c => c.name).join(' → ')}
+                    {t.workphases.map(p => p.name).join(' → ')}
                   </span>
                 </button>
               ))}
@@ -97,7 +97,7 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
                   className="w-full text-left px-4 py-3 rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/60 transition-colors disabled:opacity-50"
                 >
                   <span className="text-sm font-medium text-zinc-200">{projectName}</span>
-                  <span className="block text-xs text-zinc-500 mt-0.5">Copy column structure</span>
+                  <span className="block text-xs text-zinc-500 mt-0.5">Copy workphase structure</span>
                 </button>
               ))}
             </>

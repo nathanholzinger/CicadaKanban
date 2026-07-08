@@ -1,16 +1,16 @@
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useRef, useState } from 'react';
-import type { Column, Item, ItemType } from '../types';
+import type { WorkPhase, Item, ItemType } from '../types';
 import KanbanCard from './KanbanCard';
 
 interface KanbanColumnProps {
-  column: Column;
+  column: WorkPhase;
   items: Item[];
   childCounts: Record<string, number>;
   itemTypes: ItemType[];
   isCardBeingDragged: boolean;
-  onCreateItem: (columnId: string, title: string, type: string | null) => void;
+  onCreateItem: (workphaseId: string, title: string, type: string | null) => void;
   onCardClick: (id: string) => void;
   onRename?: (id: string, name: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
@@ -37,7 +37,7 @@ export default function KanbanColumn({
     isOver,
     attributes,
     listeners,
-  } = useSortable({ id: column.id, data: { type: 'column' } });
+  } = useSortable({ id: column.id, data: { type: 'workphase' } });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
 
@@ -64,7 +64,7 @@ export default function KanbanColumn({
     try {
       await onDelete(column.id);
     } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete column.');
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete workphase.');
       setConfirmDelete(false);
     }
   }
@@ -150,7 +150,7 @@ export default function KanbanColumn({
           <button
             onClick={() => setConfirmDelete(true)}
             className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors p-0.5 rounded"
-            title="Delete column"
+            title="Delete workphase"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />

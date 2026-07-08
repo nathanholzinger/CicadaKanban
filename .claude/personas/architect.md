@@ -33,7 +33,7 @@ is written.
 
 ## Planned Epics (do not design around things already planned)
 
-- Epic 2: Sub-workflows & bucketed columns
+- Epic 2: Boards layer (flat ordered workflow statuses; boards are range-based views; board_columns cover a contiguous range of statuses with merged/expanded display modes; unsorted column for uncovered statuses)
 - Epic 3: Work item attached/detached behavior
 - Epic 4: Quick items
 - Epic 5: Tags & type system (replaces current flat labels)

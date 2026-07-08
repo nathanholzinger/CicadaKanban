@@ -1,6 +1,6 @@
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
-import { projects, workflows, workflowTemplates, workflowTemplateColumns, columns } from './schema.js';
+import { projects, workflows, workflowTemplates, workflowTemplatePhases, workphases } from './schema.js';
 import { isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
@@ -19,7 +19,7 @@ function seedWorkflowTemplates(now: number) {
     description: 'Simple two-step workflow for quick tasks',
     createdAt: now,
   }).run();
-  db.insert(workflowTemplateColumns).values([
+  db.insert(workflowTemplatePhases).values([
     { id: randomUUID(), templateId: quickId, name: 'Todo',  position: 1.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
     { id: randomUUID(), templateId: quickId, name: 'Done',  position: 2.0, triggersNotification: 0, isTerminal: 1, createdAt: now },
   ]).run();
@@ -31,7 +31,7 @@ function seedWorkflowTemplates(now: number) {
     description: 'Standard development workflow',
     createdAt: now,
   }).run();
-  db.insert(workflowTemplateColumns).values([
+  db.insert(workflowTemplatePhases).values([
     { id: randomUUID(), templateId: flowId, name: 'Todo',        position: 1.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
     { id: randomUUID(), templateId: flowId, name: 'In Progress', position: 2.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
     { id: randomUUID(), templateId: flowId, name: 'Review',      position: 3.0, triggersNotification: 1, isTerminal: 0, createdAt: now },
@@ -43,17 +43,17 @@ function seedWorkflowTemplates(now: number) {
 }
 
 function applyTemplateToWorkflow(workflowId: string, templateId: string, now: number) {
-  const templateCols = db.select().from(workflowTemplateColumns).all()
-    .filter(c => c.templateId === templateId);
+  const templatePhases = db.select().from(workflowTemplatePhases).all()
+    .filter(p => p.templateId === templateId);
 
-  for (const col of templateCols) {
-    db.insert(columns).values({
+  for (const phase of templatePhases) {
+    db.insert(workphases).values({
       id: randomUUID(),
       workflowId,
-      name: col.name,
-      position: col.position,
-      triggersNotification: col.triggersNotification,
-      isTerminal: col.isTerminal,
+      name: phase.name,
+      position: phase.position,
+      triggersNotification: phase.triggersNotification,
+      isTerminal: phase.isTerminal,
       createdAt: now,
     }).run();
   }

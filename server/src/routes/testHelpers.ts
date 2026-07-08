@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { db, sqlite } from '../db/index.js';
 import {
-  projects, workflows, workflowTemplates, workflowTemplateColumns,
-  columns, items, itemLabels, labels, attachments, activityLog,
+  projects, workflows, workflowTemplates, workflowTemplatePhases,
+  workphases, items, itemLabels, labels, attachments, activityLog,
   notifications, chatThreads, chatMessages, agents,
 } from '../db/schema.js';
 import { runMigrations } from '../db/runMigrations.js';
@@ -21,11 +21,11 @@ router.post('/reset', (_req, res) => {
   db.delete(chatMessages).run();
   db.delete(chatThreads).run();
   db.delete(items).run();
-  db.delete(columns).run();
+  db.delete(workphases).run();
   db.delete(labels).run();
   db.delete(workflows).run();
   db.delete(projects).run();
-  db.delete(workflowTemplateColumns).run();
+  db.delete(workflowTemplatePhases).run();
   db.delete(workflowTemplates).run();
   db.delete(agents).run();
 

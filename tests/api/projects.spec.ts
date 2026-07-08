@@ -84,7 +84,7 @@ test('PUT /api/projects/:id rejects setting a descendant as parent', async ({ re
   expect((await res.json()).error).toMatch(/descendant/i);
 });
 
-test('DELETE /api/projects/:id cascades to workflows, columns, and items', async ({ request }) => {
+test('DELETE /api/projects/:id cascades to workflows, workphases, and items', async ({ request }) => {
   const projectRes = await request.post(`${BASE}/projects`, { data: { name: 'Doomed Project' } });
   const project = await projectRes.json();
 
@@ -96,10 +96,10 @@ test('DELETE /api/projects/:id cascades to workflows, columns, and items', async
     data: { name: 'Doomed Workflow', projectId: project.id, templateId: quick.id },
   });
   const workflow = await workflowRes.json();
-  const todoCol = workflow.columns.find((c: { name: string }) => c.name === 'Todo');
+  const todoPhase = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
 
   await request.post(`${BASE}/items`, {
-    data: { title: 'Doomed Item', projectId: project.id, columnId: todoCol.id },
+    data: { title: 'Doomed Item', projectId: project.id, workphaseId: todoPhase.id },
   });
 
   const deleteRes = await request.delete(`${BASE}/projects/${project.id}`);

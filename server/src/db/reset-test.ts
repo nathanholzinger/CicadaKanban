@@ -19,9 +19,9 @@ db.exec(`
   DROP TABLE IF EXISTS chat_messages;
   DROP TABLE IF EXISTS chat_threads;
   DROP TABLE IF EXISTS items;
-  DROP TABLE IF EXISTS columns;
+  DROP TABLE IF EXISTS workphases;
   DROP TABLE IF EXISTS labels;
-  DROP TABLE IF EXISTS workflow_template_columns;
+  DROP TABLE IF EXISTS workflow_template_phases;
   DROP TABLE IF EXISTS workflow_templates;
   DROP TABLE IF EXISTS workflows;
   DROP TABLE IF EXISTS projects;

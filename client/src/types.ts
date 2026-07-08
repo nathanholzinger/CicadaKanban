@@ -24,7 +24,7 @@ export interface Workflow {
   updatedAt: number;
 }
 
-export interface Column {
+export interface WorkPhase {
   id: string;
   workflowId: string;
   agentId: string | null;
@@ -41,7 +41,7 @@ export interface Item {
   parentId: string | null;
   depth?: number;
   projectId: string | null;
-  columnId: string | null;
+  workphaseId: string | null;
   title: string;
   description: string | null;
   position: number | null;
@@ -52,11 +52,11 @@ export interface Item {
 }
 
 export interface WorkflowWithDetails extends Workflow {
-  columns: Column[];
+  workphases: WorkPhase[];
   items: Item[];
 }
 
-export interface WorkflowTemplateColumn {
+export interface WorkflowTemplatePhase {
   id: string;
   templateId: string;
   name: string;
@@ -69,7 +69,7 @@ export interface WorkflowTemplate {
   id: string;
   name: string;
   description: string | null;
-  columns: WorkflowTemplateColumn[];
+  workphases: WorkflowTemplatePhase[];
 }
 
 export interface Agent {

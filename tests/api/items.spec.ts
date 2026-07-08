@@ -19,10 +19,10 @@ test('POST /api/items creates item with projectId; GET returns derived workflowI
     data: { name: 'Item Workflow', projectId: project.id, templateId: quick.id },
   });
   const workflow = await workflowRes.json();
-  const todoCol = workflow.columns.find((c: { name: string }) => c.name === 'Todo');
+  const todoPhase = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
 
   const itemRes = await request.post(`${BASE}/items`, {
-    data: { title: 'Test Item', projectId: project.id, columnId: todoCol.id },
+    data: { title: 'Test Item', projectId: project.id, workphaseId: todoPhase.id },
   });
   expect(itemRes.status()).toBe(201);
   const item = await itemRes.json();
