@@ -25,6 +25,10 @@ Reference for auditing `.tsx`/`.css` files in this project (Tailwind v4, CSS-fir
 
 ## 2. Extract Patterns into Components / Constants
 
+> Owned by the **Duplication & Abstraction** audit pass
+> (`.claude/personas/auditor-duplication-abstraction.md`), alongside logic and
+> hook duplication — not just a Tailwind-specific concern anymore.
+
 **v4 pattern:** Exported string constants (like `pillUtils.ts`), not `@apply`.
 
 - [ ] Same class string used in 2+ places → extract to a named constant
