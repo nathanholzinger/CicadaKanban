@@ -43,6 +43,6 @@ except deletes (204) and batch reorders.
 
 - Change the DB schema without a migration file
 - Add a new route without updating `server/src/index.ts`
-- Change the `reorderProjects` / `reorderColumns` / `reorderItems` API shape
-- Remove a column from the DB (it will break existing data)
+- Change the `reorderProjects` / `reorderWorkPhases` / `reorderItems` API shape
+- Remove a workphase from the DB (it will break existing data)
 - Touch `server/src/mcp.ts` without checking if MCP tool schemas need updating

@@ -24,25 +24,31 @@ coverage strategy for a feature or epic before implementation begins (or during 
 
 ## Testing Framework Context
 
-**Playwright (E2E)** — currently the only test framework.
+**Playwright (E2E)** — full-stack browser + API tests.
 - `tests/api/*.spec.ts` — use `request` fixture to call REST endpoints directly
 - `tests/ui/*.spec.ts` — full browser, use page objects where patterns repeat
 - `tests/helpers/db.ts` — `resetAndSeedDb()` before each test file
 - `tests/pages/ProjectSidebarPage.ts` — page object to extend for new UI areas
 - Config: `playwright.config.ts` — Chromium only, test server on port 3002
+- Run: `npm run test:e2e` from project root
 
-**Vitest (planned, not yet set up)** — for pure function unit tests once configured.
+**Vitest (unit)** — set up for both client and server as of Epic 1.5.
+- `server/tests/routes/*.test.ts` — server-side route/logic unit tests, backed by
+  `server/src/db/resetTestDb.ts` and `server/tests/fixtures.ts`
+- `client/src/**/*.test.ts` — pure function unit tests colocated with the code they
+  test (e.g. `item-detail/pillUtils.test.ts`, `sidebar/projectTreeUtils.test.ts`)
+- Run: `npm run test:unit` from project root (or `test:server` / `test:client`)
 
-## Known Coverage Gaps (as of Epic 1)
+## Known Coverage Gaps (as of Epic 1.5)
 
 These areas have zero tests — mention them if adjacent to the feature being planned:
-labels, notifications display, attachments, agents modal, card detail panel editing,
+labels, notifications display, attachments, agents modal, item detail panel editing,
 browser drag-and-drop gestures.
 
 ## Planned Features That Are Out of Scope
 
 Do not design tests around functionality planned for future epics:
-- Epic 2: Sub-workflows (sub-columns, bucketed views)
+- Epic 2: Boards layer (board columns spanning workphase ranges, bucketed views)
 - Epic 3: Attached/detached item behavior
 - Epic 4: Quick items
 - Epic 5: Tag buckets (current labels are a temporary system)

@@ -1,7 +1,7 @@
 # Codebase Walkthrough — Cicada Kanban
 
 > Living document. Updated at each epic orientation.
-> Last updated: Epic 1 complete (2026-07-05).
+> Last updated: Epic 1.5 complete (2026-07-08).
 
 ## How to Run
 
@@ -17,6 +17,7 @@ cd client; npm run dev
 - API: http://localhost:3001
 - DB browser: `cd server; npm run db:studio`
 - E2E tests: `npm run test:e2e` (from project root)
+- Unit tests: `npm run test:unit` (from project root)
 
 ---
 
@@ -84,7 +85,7 @@ table stores and how they relate is the foundation for understanding everything 
 ```
 projects (tree — unlimited depth)
   └── workflows  (one per project, or inherited from parent)
-        └── columns  (ordered stages: Todo → In Progress → Done)
+        └── workphases  (ordered stages: Todo → In Progress → Done)
               └── items  (cards — also a tree, unlimited depth)
 ```
 
@@ -101,20 +102,20 @@ one from its nearest ancestor. `project_id` links back to `projects` (nullable �
 allowing workflows not yet associated with a project, though this case isn't surfaced
 in the current UI).
 
-**`columns`**
+**`workphases`**
 The stages within a workflow (e.g., "Todo", "In Progress", "Done"). Key flags:
 - `triggers_notification` (0|1): moving an item here creates a `notifications` row
 - `is_terminal` (0|1): marks a "done" state — UI applies distinct styling
 - `agent_id` (nullable FK): reserved for future "auto-assign to agent" behavior
-- `position REAL NOT NULL`: ordering is mandatory for columns (unlike items/projects)
+- `position REAL NOT NULL`: ordering is mandatory for workphases (unlike items/projects)
 
 **`items`**
 The kanban cards. Can be nested (child items via `parent_id` self-reference). Key fields:
-- `column_id` (nullable): which stage this item is in — null means "in project, not on board"
+- `workphase_id` (nullable): which stage this item is in — null means "in project, not on board"
 - `project_id`: which project owns this item
 - `type` (nullable FK → `item_types`): Epic, Story, Task — purely descriptive, no behavior
 - `assignee_type` / `agent_id`: human or Claude agent assignment
-- `position REAL` (nullable): float ordering within a column
+- `position REAL` (nullable): float ordering within a workphase
 
 **`item_types`**
 User-defined descriptive labels (Epic, Story, Task seeded on startup). Just name +
@@ -126,7 +127,7 @@ project URL) and `surface` (chat | code | cowork). The app uses these to build d
 links that open Claude directly to the right project. `repo_path` is for Claude Code
 agents. Does not make any Anthropic API calls — deep links only.
 
-**`workflow_templates`** + **`workflow_template_columns`**
+**`workflow_templates`** + **`workflow_template_phases`**
 System-seeded read-only blueprints: "quick" (Todo → Done) and "flow"
 (Todo → In Progress → Review → Done). Used when creating a new workflow.
 
@@ -145,10 +146,10 @@ in Epic 7.
 **`activity_log`**
 System-generated audit trail. Every status change, assignment, and comment writes a row
 here. Types: `status_change`, `assignment`, `attachment_added`, `comment`,
-`action_triggered`. The card detail panel surfaces this as a timeline.
+`action_triggered`. The item detail panel surfaces this as a timeline.
 
 **`notifications`**
-Created automatically when an item moves into a column with `triggers_notification = 1`.
+Created automatically when an item moves into a workphase with `triggers_notification = 1`.
 The frontend polls for unread notifications every 15 seconds and shows them in the
 header bell icon.
 
@@ -165,10 +166,10 @@ API base: `http://localhost:3001/api`
 | Prefix | File | Owns |
 |---|---|---|
 | `/projects` | `routes/projects.ts` | Project CRUD, hierarchy, position reorder |
-| `/workflows` | `routes/workflows.ts` | Workflow CRUD, fetch with columns+items |
+| `/workflows` | `routes/workflows.ts` | Workflow CRUD, fetch with workphases+items |
 | `/workflow-templates` | `routes/workflowTemplates.ts` | Read-only system templates |
-| `/columns` | `routes/columns.ts` | Column CRUD, position reorder |
-| `/items` | `routes/items.ts` | Item CRUD, move (column change), reorder, comments |
+| `/workphases` | `routes/workphases.ts` | Workphase CRUD, position reorder |
+| `/items` | `routes/items.ts` | Item CRUD, move (workphase change), reorder, comments |
 | `/agents` | `routes/agents.ts` | Agent CRUD |
 | `/notifications` | `routes/notifications.ts` | Mark read, mark all read |
 | `/labels` | `routes/labels.ts` | Label CRUD (scoped to workflow) |
@@ -178,7 +179,7 @@ API base: `http://localhost:3001/api`
 
 ### Shared Patterns
 
-**Position ordering** — Items, columns, and projects are ordered by a `position REAL`
+**Position ordering** — Items, workphases, and projects are ordered by a `position REAL`
 float. The midpoint strategy: inserting between 2.0 and 3.0 gives 2.5, avoiding a full
 reindex on every drag. New items go at `max(existing) + 1.0`. Batch reorders arrive as
 `PATCH /reorder` with `[{ id, position }]`. Queries sort by `position ASC`.
@@ -187,15 +188,15 @@ reindex on every drag. New items go at `max(existing) + 1.0`. Batch reorders arr
 metadata?)` helper (lines 9–23) called from create, update, move, and comment
 operations. Writes synchronously to `activity_log` — SQLite is fast enough locally.
 
-**Notification creation** — When an item moves into a column with
-`triggers_notification = 1`, the items route inserts a `notifications` row inline
-(see `routes/items.ts` lines 196–205). No background job — synchronous SQLite insert.
+**Notification creation** — When an item moves into a workphase with
+`triggers_notification = 1`, the items route inserts a `notifications` row inline.
+No background job — synchronous SQLite insert.
 
 **MCP server** (`server/src/mcp.ts`) — A separate process, not part of Express. It has
 no direct DB access; it calls the same Express API endpoints the browser does. 8 tools:
 `list_projects`, `list_workflows`, `get_workflow`, `get_item`, `create_item`,
 `update_item`, `move_item`, `add_item_comment`. The `move_item` tool is the most complex:
-it fetches the item, fetches the workflow to get existing column items, then calculates
+it fetches the item, fetches the workflow to get existing workphase items, then calculates
 a position before calling `PATCH /items/:id/move`.
 
 ---
@@ -252,7 +253,7 @@ App.tsx  (state + layout)
     └── ProjectPage.tsx  (when a project is selected)
         ├── Overview tab: project name, description, subproject list
         ├── Board tab → WorkflowView.tsx
-        │   ├── KanbanColumn.tsx  (one per column, droppable)
+        │   ├── KanbanColumn.tsx  (one per workphase, droppable)
         │   │   └── KanbanCard.tsx  (one per item, draggable)
         │   └── ItemDetailPanel.tsx  (slide-in on item click)
         └── SetupWorkflowModal.tsx  (template / copy / custom)
@@ -305,7 +306,7 @@ up its own.
 ### Real-number position ordering
 All ordered lists use a float `position` field. Inserting between A and B:
 `(A.position + B.position) / 2`. New items: `max(existing) + 1.0`. No reindexing.
-Columns use `REAL NOT NULL`; items and projects allow `NULL` (meaning "unordered").
+Workphases use `REAL NOT NULL`; items and projects allow `NULL` (meaning "unordered").
 
 ### Optimistic updates on drag-and-drop
 `handleReorderProject` in App.tsx updates local state immediately, then calls the API.

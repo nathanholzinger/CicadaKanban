@@ -1,24 +1,24 @@
 # Testing Strategy — Cicada Kanban
 
-> Last updated: Epic 1 complete (2026-07-05).
+> Last updated: Epic 1.5 complete (2026-07-08).
 
 ---
 
 ## Current State
 
-**Framework:** Playwright only. No unit or component test framework configured.
+**Frameworks:** Playwright (E2E) + Vitest (unit), both configured and running.
 
-**7 test files, ~45 test cases — all E2E (browser + full stack):**
+**Playwright — 7 spec files, 50 test cases, all E2E (browser + full stack):**
 
 | File | What it covers |
 |---|---|
 | `tests/api/projects.spec.ts` | Project CRUD, nested subprojects, cascade delete, parent validation |
 | `tests/api/workflows.spec.ts` | Workflow creation, template use, project filtering |
 | `tests/api/items.spec.ts` | Item creation, projectId inheritance, derived workflowId |
-| `tests/api/workflowTemplates.spec.ts` | Template retrieval (quick: 2 cols, flow: 4 cols) |
+| `tests/api/workflowTemplates.spec.ts` | Template retrieval (quick: 2 phases, flow: 4 phases) |
 | `tests/ui/project-sidebar.spec.ts` | Sidebar zero state, project CRUD, nesting, collapse/expand, persistence |
 | `tests/ui/project-page.spec.ts` | Project detail, subproject navigation, breadcrumbs, inline edit, reparenting |
-| `tests/ui/boards.spec.ts` | Board loading, column/item creation, workflow visibility across projects, inherited read-only, workflow creation modes |
+| `tests/ui/boards.spec.ts` | Board loading, workphase/item creation, workflow visibility across projects, inherited read-only, workflow creation modes |
 
 **Test infrastructure:**
 - `tests/helpers/db.ts` — `resetAndSeedDb()` hits `POST /api/test/reset`
@@ -26,18 +26,37 @@
 - `tests/fixtures.ts` — custom Playwright fixture wrapping sidebar page object
 - `tests/global-teardown.ts` — deletes test.db files after suite
 - `playwright.config.ts` — Chromium only, no parallel execution, test server on port 3002
+- Run: `npm run test:e2e` from project root
+
+**Vitest — 5 server test files (72 tests) + 3 client test files (29 tests):**
+
+| File | What it covers |
+|---|---|
+| `server/tests/routes/items.test.ts` | Item CRUD, recursive cascade delete |
+| `server/tests/routes/projects.test.ts` | Project CRUD, hierarchy |
+| `server/tests/routes/workflows.test.ts` | Workflow CRUD |
+| `server/tests/routes/workflowTemplates.test.ts` | Template retrieval |
+| `client/src/App.test.ts` | App-level logic |
+| `client/src/components/item-detail/pillUtils.test.ts` | Item detail pill/label formatting utilities |
+| `client/src/components/sidebar/projectTreeUtils.test.ts` | Project sidebar tree flattening/ordering utilities |
+
+**Test infrastructure:**
+- `server/src/db/resetTestDb.ts` — in-memory/test DB reset helper for server unit tests
+- `server/tests/fixtures.ts` — shared test fixtures
+- `client/src/test-setup.ts` — jsdom + testing-library setup
+- Run: `npm run test:unit` from project root (or `test:server` / `test:client` individually)
 
 **No CI configured.** Tests run locally only.
 
 ---
 
-## Coverage Gaps (Epic 1 scope)
+## Coverage Gaps (as of Epic 1.5)
 
 Features that exist in the API and/or UI but have zero test coverage:
 
 | Area | Type | Gap |
 |---|---|---|
-| **Card detail panel** | UI | Editing title/description, viewing activity log, viewing children |
+| **Item detail panel** | UI | Editing title/description, viewing activity log, viewing children |
 | **Drag-and-drop within the board** | UI | Items moved via `PATCH /move` in tests, not via browser drag gesture |
 | **Labels** | API + UI | CRUD exists in `routes/labels.ts`, zero tests |
 | **Notifications** | API + UI | `notifications` route exists, bell UI exists, zero tests |
@@ -50,7 +69,7 @@ Features that exist in the API and/or UI but have zero test coverage:
 
 ## Recommended Testing Strategy
 
-### Layer 1: Keep Playwright for UI + API flows
+### Layer 1: Playwright for UI + API flows
 
 Playwright is working well. The API tests (using Playwright's `request` fixture
 directly against the running server) are a pragmatic middle ground — they're not unit
@@ -59,71 +78,42 @@ pattern for route-level coverage.
 
 **Priority new Playwright tests (tackle before Epic 2):**
 
-1. **Card detail panel** — open a card, edit title, verify saved; view activity log
+1. **Item detail panel** — open an item, edit title, verify saved; view activity log
    after a move
-2. **Labels** — create a label, assign to item, verify it shows on card, remove it
-3. **Notifications** — move an item to a `triggersNotification` column, verify bell badge
+2. **Labels** — create a label, assign to item, verify it shows on the item's card, remove it
+3. **Notifications** — move an item to a `triggersNotification` workphase, verify bell badge
    appears within the polling interval (or mock the poll)
 
 **Eventually (not blocking Epic 2):**
 
-4. Browser drag-and-drop for item reorder within a column
+4. Browser drag-and-drop for item reorder within a workphase
 5. Browser drag-and-drop for project sidebar reorder
 6. Agents modal CRUD
 
-### Layer 2: Add Vitest for unit and integration tests
+### Layer 2: Vitest for unit tests
 
 **Why Vitest:** Vite is already used in the client. Vitest reuses the same config with
 zero extra setup, has native TypeScript support, and runs much faster than Playwright
-for pure logic tests. It's the lowest-friction choice for both client and server.
+for pure logic tests. Set up for both client and server as of Epic 1.5.
 
-**Server unit tests** (`server/src/**/*.test.ts`):
+**Server unit tests** (`server/tests/routes/*.test.ts`) currently cover item CRUD +
+recursive cascade delete, project hierarchy, workflow CRUD, and template retrieval.
 
-Focus on logic that's easy to test in isolation:
+**Client unit tests** (`client/src/**/*.test.ts`) currently cover `App.tsx` logic,
+item-detail pill formatting (`pillUtils.ts`), and the sidebar tree flattening algorithm
+(`projectTreeUtils.ts`).
+
+**Not yet covered, worth adding as extracted:**
 - The position calculation in item create (`max + 1.0`, midpoint for reorder)
 - `computeDepth()` in `routes/items.ts` — the recursive depth walker
-- The recursive delete fix (once implemented — see quality audit finding #2)
-- Any utility extracted from `App.tsx`'s inheritance traversal if it moves server-side
-
-**Client unit tests** (`client/src/**/*.test.ts`):
-
-Focus on pure functions and isolated logic:
-- `getAncestors()` in `App.tsx` (pure function, easy to unit test)
-- `flattenTree()` in `ProjectSidebar.tsx` (the dnd-kit tree flattening algorithm)
-- The `effectiveWorkflow` inheritance logic if extracted to a utility
+- The `effectiveWorkflow` inheritance logic in `App.tsx`, if extracted to a utility
 
 **Component tests** (if/when warranted):
 
-Use `@testing-library/react` + `vitest` for components with non-trivial rendering logic.
-Not a priority right now — the Playwright suite covers the critical UI paths. Consider
-adding component tests when a component becomes complex enough that E2E is too slow
-to iterate on.
-
-### Vitest Setup (when ready)
-
-**Server:**
-```jsonc
-// server/package.json — add to devDependencies
-"vitest": "^3.x"
-```
-```typescript
-// server/vitest.config.ts
-import { defineConfig } from 'vitest/config';
-export default defineConfig({ test: { environment: 'node' } });
-```
-
-**Client:**
-```jsonc
-// client/package.json — add to devDependencies
-"vitest": "^3.x",
-"@testing-library/react": "^16.x",
-"@testing-library/user-event": "^14.x",
-"jsdom": "^26.x"
-```
-```typescript
-// client/vite.config.ts — add to existing config
-test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test-setup.ts'] }
-```
+`@testing-library/react` is already wired up (`client/src/test-setup.ts`) for
+components with non-trivial rendering logic. Not a priority right now — the
+Playwright suite covers the critical UI paths. Consider adding component tests when
+a component becomes complex enough that E2E is too slow to iterate on.
 
 ---
 
