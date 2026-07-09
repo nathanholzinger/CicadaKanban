@@ -260,7 +260,7 @@ function collectDescendantIds(rootId: string): string[] {
   return ids;
 }
 
-function deleteItemById(id: string): void {
+export function deleteItemById(id: string): void {
   db.delete(itemLabels).where(eq(itemLabels.itemId, id)).run();
   db.delete(activityLog).where(eq(activityLog.itemId, id)).run();
   db.delete(notifications).where(eq(notifications.itemId, id)).run();

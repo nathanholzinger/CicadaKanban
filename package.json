@@ -6,7 +6,11 @@
   "scripts": {
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "test:server": "npm --prefix server run test",
+    "test:client": "npm --prefix client run test",
+    "test:unit": "npm run test:server && npm run test:client",
+    "test:coverage": "npm --prefix server run test:coverage"
   },
   "keywords": [],
   "author": "",

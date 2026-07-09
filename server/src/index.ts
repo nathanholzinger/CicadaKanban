@@ -16,7 +16,7 @@ import { runMigrations } from './db/runMigrations.js';
 
 runMigrations();
 
-const app = express();
+export const app = express();
 const HOST = process.env.HOST || 'localhost';
 const PORT = parseInt(process.env.PORT || '3001');
 
@@ -43,6 +43,10 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
   console.log('Test helper routes enabled.');
 }
 
-app.listen(PORT, HOST, () => {
-  console.log(`Server running at http://${HOST}:${PORT}`);
-});
+// Vitest sets process.env.VITEST = 'true' for every test run. Skip binding a
+// port so the exported `app` can be driven in-process via supertest instead.
+if (!process.env.VITEST) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running at http://${HOST}:${PORT}`);
+  });
+}

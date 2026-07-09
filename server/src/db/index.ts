@@ -4,6 +4,11 @@ import path from 'path';
 import fs from 'fs';
 import * as schema from './schema.js';
 
+// Read once at import time. Vitest sets DB_PATH via its `test.env` config
+// before any app code runs, and dotenv/config (loaded in index.ts) never
+// overwrites an already-set env var — so this correctly picks up the test
+// DB path during test runs. Breaks if dotenv is ever called with
+// `{ override: true }` anywhere in the import graph.
 const dbPath = process.env.DB_PATH || './data/kanban.db';
 
 // Ensure the data directory exists

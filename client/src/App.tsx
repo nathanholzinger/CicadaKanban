@@ -7,7 +7,7 @@ import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 
-function getAncestors(project: Project, projects: Project[]): Project[] {
+export function getAncestors(project: Project, projects: Project[]): Project[] {
   const map = new Map(projects.map(p => [p.id, p]));
   const ancestors: Project[] = [];
   let current: Project | undefined = project;

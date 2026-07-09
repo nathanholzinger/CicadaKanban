@@ -1,0 +1,149 @@
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { randomUUID } from 'crypto';
+import { app } from '../../src/index.js';
+import { db } from '../../src/db/index.js';
+import { workflows } from '../../src/db/schema.js';
+import { createProject, createWorkflow, createWorkphase, createItem, findTemplateByName } from '../fixtures.js';
+
+describe('GET /api/workflows', () => {
+  it('returns all workflows when no projectId filter is given', async () => {
+    const p1 = await createProject();
+    const p2 = await createProject();
+    await createWorkflow(p1.id);
+    await createWorkflow(p2.id);
+    const res = await request(app).get('/api/workflows');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+  });
+
+  it('filters by projectId when given', async () => {
+    const p1 = await createProject();
+    const p2 = await createProject();
+    const w1 = await createWorkflow(p1.id);
+    await createWorkflow(p2.id);
+    const res = await request(app).get(`/api/workflows?projectId=${p1.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe(w1.id);
+  });
+});
+
+describe('GET /api/workflows/:id', () => {
+  it('returns 404 for a non-existent id', async () => {
+    const res = await request(app).get('/api/workflows/does-not-exist');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns workphases ordered by position and items with computed depth', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const workphase = await createWorkphase(workflow.id);
+    const root = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'Root' });
+    const child = await createItem({ projectId: project.id, workphaseId: workphase.id, parentId: root.id, title: 'Child' });
+
+    const res = await request(app).get(`/api/workflows/${workflow.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.workphases).toHaveLength(1);
+
+    const items = res.body.items as Array<{ id: string; depth: number }>;
+    expect(items.find(i => i.id === root.id)?.depth).toBe(0);
+    expect(items.find(i => i.id === child.id)?.depth).toBe(1);
+  });
+});
+
+describe('POST /api/workflows', () => {
+  it('returns 400 when name is missing', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/workflows').send({ projectId: project.id });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when projectId is missing', async () => {
+    const res = await request(app).post('/api/workflows').send({ name: 'W' });
+    expect(res.status).toBe(400);
+  });
+
+  it('clones phases from a template when templateId is given', async () => {
+    const project = await createProject();
+    const flow = await findTemplateByName('flow');
+    const res = await request(app).post('/api/workflows').send({
+      name: 'From Template', projectId: project.id, templateId: flow.id,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual([
+      'Todo', 'In Progress', 'Review', 'Done',
+    ]);
+    expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
+  });
+
+  it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
+    const project = await createProject();
+    const source = await createWorkflow(project.id);
+    await createWorkphase(source.id, { name: 'Backlog' });
+    await createWorkphase(source.id, { name: 'Done' });
+
+    const res = await request(app).post('/api/workflows').send({
+      name: 'Cloned', projectId: project.id, sourceWorkflowId: source.id,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
+  });
+
+  it('creates a bare workflow with no phases when neither templateId nor sourceWorkflowId is given', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/workflows').send({ name: 'Bare', projectId: project.id });
+    expect(res.status).toBe(201);
+    expect(res.body.workphases).toEqual([]);
+  });
+});
+
+describe('PUT /api/workflows/:id', () => {
+  it('updates name and description', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id, { description: 'old' });
+    const res = await request(app).put(`/api/workflows/${workflow.id}`).send({ name: 'Renamed', description: 'new' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Renamed');
+    expect(res.body.description).toBe('new');
+  });
+
+  it('returns 404 for a non-existent id', async () => {
+    const res = await request(app).put('/api/workflows/does-not-exist').send({ name: 'X' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/workflows/:id', () => {
+  it('returns 404 for a non-existent id', async () => {
+    const res = await request(app).delete('/api/workflows/does-not-exist');
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes the workflow, its workphases, and items sitting in those workphases', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const workphase = await createWorkphase(workflow.id);
+    const item = await createItem({ projectId: project.id, workphaseId: workphase.id });
+
+    const res = await request(app).delete(`/api/workflows/${workflow.id}`);
+    expect(res.status).toBe(204);
+
+    expect((await request(app).get(`/api/workflows/${workflow.id}`)).status).toBe(404);
+    expect((await request(app).get(`/api/items/${item.id}`)).status).toBe(404);
+  });
+
+  it('deletes a workflow with a null projectId without touching any project\'s items', async () => {
+    // workflow.projectId is only reachable as null by seeding directly — the
+    // POST route requires projectId, so the API can never produce this state.
+    const orphanId = randomUUID();
+    const now = Date.now();
+    db.insert(workflows).values({
+      id: orphanId, projectId: null, name: 'Orphan', createdAt: now, updatedAt: now,
+    }).run();
+
+    const res = await request(app).delete(`/api/workflows/${orphanId}`);
+    expect(res.status).toBe(204);
+    expect((await request(app).get(`/api/workflows/${orphanId}`)).status).toBe(404);
+  });
+});

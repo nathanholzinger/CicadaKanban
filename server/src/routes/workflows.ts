@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { workflows, workphases, items, workflowTemplatePhases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { deleteItemById } from './items.js';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -154,7 +155,7 @@ router.delete('/:id', (req, res) => {
     const projectItems = db.select().from(items).where(eq(items.projectId, workflow.projectId)).all();
     const workflowItems = projectItems.filter(i => i.workphaseId && workphaseIds.has(i.workphaseId));
     for (const item of workflowItems) {
-      db.delete(items).where(eq(items.id, item.id)).run();
+      deleteItemById(item.id);
     }
   }
 
