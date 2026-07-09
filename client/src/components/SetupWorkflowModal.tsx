@@ -47,7 +47,7 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative z-10 w-full max-w-md mx-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
+      <div role="dialog" aria-label="Set up a Workflow" className="relative z-10 w-full max-w-md mx-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden">
         <div className="px-6 pt-6 pb-4 border-b border-zinc-800">
           <h2 className="text-base font-semibold text-zinc-100">Set up a Workflow</h2>
           <p className="text-xs text-zinc-500 mt-1">Choose how to configure the workflow for <span className="text-zinc-400">{project.name}</span>.</p>

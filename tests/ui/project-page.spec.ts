@@ -28,12 +28,12 @@ test('clicking a project shows its detail page', async ({ page, projectSidebar }
   await expect(page.getByRole('heading', { level: 1, name: 'Parent Project' })).toBeVisible();
   await expect(page.getByText('A top-level project')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Subprojects' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Child Project' })).toBeVisible();
+  await expect(page.locator('main').getByRole('button', { name: 'Child Project', exact: true })).toBeVisible();
 });
 
 test('clicking a subproject in the list navigates to it', async ({ page, projectSidebar }) => {
   await projectSidebar.select('Parent Project');
-  await page.getByRole('button', { name: 'Child Project' }).click();
+  await page.locator('main').getByRole('button', { name: 'Child Project', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Child Project' })).toBeVisible();
 });
 

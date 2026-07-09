@@ -15,21 +15,20 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import type { WorkflowWithDetails, WorkPhase, Item, ItemType } from '../types';
+import type { WorkflowWithDetails, Item, ItemType } from '../types';
 import {
   fetchWorkflow,
   fetchItemTypes,
-  createItem,
-  moveItem,
-  reorderItems,
-  createWorkPhase,
-  updateWorkPhase,
-  deleteWorkPhase,
   reorderWorkPhases,
+  reorderItems,
+  moveItem,
 } from '../api';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 import ItemDetailPanel from './ItemDetailPanel';
+import { useWorkphaseManagement } from './workflow/useWorkphaseManagement';
+import { useItemManagement } from './workflow/useItemManagement';
+import { BTN_PRIMARY, BTN_CANCEL } from './item-detail/pillUtils';
 
 interface WorkflowViewProps {
   workflowId: string;
@@ -41,25 +40,25 @@ interface WorkflowViewProps {
 export default function WorkflowView({ workflowId, projectId, filterProjectId, readOnly }: WorkflowViewProps) {
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [workflow, setWorkflow] = useState<WorkflowWithDetails | null>(null);
-  const [workphases, setWorkphases] = useState<WorkPhase[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [addingWorkphase, setAddingWorkphase] = useState(false);
-  const [newWorkphaseName, setNewWorkphaseName] = useState('');
+  const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [childDefaultWorkphaseId, setChildDefaultWorkphaseId] = useState<string | null>(
     () => localStorage.getItem(`kanban_child_col_${workflowId}`) ?? null,
   );
 
-  function handleChildWorkphaseChange(workphaseId: string | null) {
-    setChildDefaultWorkphaseId(workphaseId);
-    if (workphaseId) {
-      localStorage.setItem(`kanban_child_col_${workflowId}`, workphaseId);
-    } else {
-      localStorage.removeItem(`kanban_child_col_${workflowId}`);
-    }
-  }
+  const {
+    workphases, setWorkphases,
+    addingWorkphase, setAddingWorkphase,
+    newWorkphaseName, setNewWorkphaseName,
+    handleCreateWorkphase, handleRenameWorkphase, handleDeleteWorkphase,
+  } = useWorkphaseManagement(workflowId);
+
+  const {
+    items, setItems, childCounts,
+    getWorkphaseItems, findWorkphaseForItem,
+    handleCreateItem, handleItemUpdated, handleItemDeleted, handleChildCreated,
+  } = useItemManagement(projectId, filterProjectId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -88,29 +87,25 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     } finally {
       setLoading(false);
     }
-  }, [workflowId]);
+  }, [workflowId, setWorkphases, setItems]);
 
   useEffect(() => {
     loadWorkflow();
   }, [loadWorkflow]);
 
-  function getWorkphaseItems(workphaseId: string): Item[] {
-    return items
-      .filter(item => item.workphaseId === workphaseId && (!filterProjectId || item.projectId === filterProjectId))
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  function handleChildWorkphaseChange(workphaseId: string | null) {
+    setChildDefaultWorkphaseId(workphaseId);
+    if (workphaseId) {
+      localStorage.setItem(`kanban_child_col_${workflowId}`, workphaseId);
+    } else {
+      localStorage.removeItem(`kanban_child_col_${workflowId}`);
+    }
   }
 
-  function findWorkphaseForItem(itemId: string): string | null {
-    return items.find(i => i.id === itemId)?.workphaseId ?? null;
-  }
-
-  // ============================================================
-  // Drag handlers
-  // ============================================================
+  // ── Drag handlers ──────────────────────────────────────────────────────────
 
   function handleDragStart(event: DragStartEvent) {
-    const type = event.active.data.current?.type;
-    if (type !== 'workphase') {
+    if (event.active.data.current?.type !== 'workphase') {
       setActiveItem(items.find(i => i.id === String(event.active.id)) ?? null);
     }
   }
@@ -138,7 +133,6 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     const originalWorkphaseId = activeItem?.workphaseId ?? null;
 
     setActiveItem(null);
-
     if (!over) return;
 
     const activeId = String(active.id);
@@ -153,7 +147,6 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
       const reordered = arrayMove(workphases, oldIndex, newIndex);
       setWorkphases(reordered);
-
       try {
         await reorderWorkPhases(reordered.map((w, i) => ({ id: w.id, position: i + 1 })));
       } catch (err) {
@@ -163,12 +156,12 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
       return;
     }
 
-    // ── Item move ──
+    // ── Item reorder / move ──
     const isOverWorkphase = workphases.some(w => w.id === overId);
     const targetWorkphaseId = isOverWorkphase ? overId : findWorkphaseForItem(overId);
     if (!targetWorkphaseId) return;
 
-    // ── Same-workphase reorder ──
+    // Same-workphase reorder
     if (!isOverWorkphase && originalWorkphaseId === targetWorkphaseId) {
       const workphaseItems = getWorkphaseItems(targetWorkphaseId);
       const oldIndex = workphaseItems.findIndex(i => i.id === activeId);
@@ -177,12 +170,10 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
 
       const reordered = arrayMove(workphaseItems, oldIndex, newIndex);
       const updatedPositions = reordered.map((item, idx) => ({ id: item.id, position: idx + 1 }));
-
       setItems(prev => prev.map(item => {
         const u = updatedPositions.find(p => p.id === item.id);
         return u ? { ...item, position: u.position } : item;
       }));
-
       try {
         await reorderItems(updatedPositions);
       } catch (err) {
@@ -192,7 +183,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
       return;
     }
 
-    // ── Cross-workphase move ──
+    // Cross-workphase move
     const workphaseItems = getWorkphaseItems(targetWorkphaseId).filter(i => i.id !== activeId);
     let newPosition: number;
 
@@ -218,7 +209,6 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
         item.id === activeId ? { ...item, workphaseId: targetWorkphaseId, position: newPosition } : item,
       ),
     );
-
     try {
       await moveItem(activeId, targetWorkphaseId, newPosition);
     } catch (err) {
@@ -227,71 +217,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
     }
   }
 
-  // ============================================================
-  // Workphase handlers
-  // ============================================================
-
-  async function handleCreateWorkphase() {
-    if (!workflow || !newWorkphaseName.trim()) return;
-    try {
-      const workphase = await createWorkPhase({ workflowId: workflow.id, name: newWorkphaseName.trim() });
-      setWorkphases(prev => [...prev, workphase]);
-      setNewWorkphaseName('');
-      setAddingWorkphase(false);
-    } catch (err) {
-      console.error('Failed to create workphase:', err);
-    }
-  }
-
-  async function handleRenameWorkphase(id: string, name: string) {
-    try {
-      const updated = await updateWorkPhase(id, { name });
-      setWorkphases(prev => prev.map(w => w.id === id ? { ...w, name: updated.name } : w));
-    } catch (err) {
-      console.error('Failed to rename workphase:', err);
-    }
-  }
-
-  async function handleDeleteWorkphase(id: string) {
-    await deleteWorkPhase(id);
-    setWorkphases(prev => prev.filter(w => w.id !== id));
-  }
-
-  // ============================================================
-  // Item handlers
-  // ============================================================
-
-  async function handleCreateItem(workphaseId: string, title: string, type: string | null) {
-    try {
-      const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
-      setItems(prev => [...prev, newItem]);
-    } catch (err) {
-      console.error('Failed to create item:', err);
-    }
-  }
-
-  function handleItemUpdated(updated: Item) {
-    setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
-  }
-
-  function handleItemDeleted(id: string) {
-    setItems(prev => prev.filter(i => i.id !== id));
-  }
-
-  function handleChildCreated(item: Item) {
-    setItems(prev => [...prev, item]);
-  }
-
-  const childCounts: Record<string, number> = {};
-  for (const item of items) {
-    if (item.parentId) {
-      childCounts[item.parentId] = (childCounts[item.parentId] ?? 0) + 1;
-    }
-  }
-
-  // ============================================================
-  // Render
-  // ============================================================
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -317,6 +243,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
           <select
             value={childDefaultWorkphaseId ?? ''}
             onChange={e => handleChildWorkphaseChange(e.target.value || null)}
+            aria-label="Default workphase for new child items"
             className="px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/50"
           >
             <option value="">Same workphase as parent</option>
@@ -361,6 +288,7 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
                       value={newWorkphaseName}
                       onChange={e => setNewWorkphaseName(e.target.value)}
                       placeholder="Workphase name..."
+                      aria-label="Workphase name"
                       className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
                       onKeyDown={e => {
                         if (e.key === 'Enter') handleCreateWorkphase();
@@ -370,13 +298,13 @@ export default function WorkflowView({ workflowId, projectId, filterProjectId, r
                     <div className="flex gap-2">
                       <button
                         onClick={handleCreateWorkphase}
-                        className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+                        className={`${BTN_PRIMARY} transition-colors`}
                       >
                         Add workphase
                       </button>
                       <button
                         onClick={() => { setAddingWorkphase(false); setNewWorkphaseName(''); }}
-                        className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
+                        className={BTN_CANCEL}
                       >
                         Cancel
                       </button>

@@ -350,7 +350,7 @@ test.describe('workflow creation', () => {
 
     await page.getByRole('button', { name: /Set up a Workflow/ }).click();
     // The copy section shows "Source Project" as a copyable workflow
-    await page.getByRole('button', { name: /Source Project/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /Source Project/ }).click();
 
     // Should get the same workphases as Source Project's flow workflow
     await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();

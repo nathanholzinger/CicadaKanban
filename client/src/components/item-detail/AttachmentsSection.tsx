@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Attachment } from '../../types';
 import { fetchAttachments, createAttachment, deleteAttachment } from '../../api';
-import { SECTION_LABEL, INPUT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
+import { SECTION_LABEL, INPUT_BASE, SELECT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface AttachmentsSectionProps {
   itemId: string;
@@ -46,13 +46,13 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
         <div className="mb-2 space-y-1">
           {attachments.map(att => (
             <div key={att.id} className="group flex items-center gap-2 rounded-lg bg-zinc-800/50 px-2 py-1.5">
-              <span className="shrink-0 uppercase text-[10px] text-zinc-500">{att.type.replace('_', ' ')}</span>
+              <span className="shrink-0 uppercase text-micro text-zinc-500">{att.type.replace('_', ' ')}</span>
               {att.externalUrl ? (
                 <a href={att.externalUrl} target="_blank" rel="noreferrer" className="flex-1 truncate text-xs text-blue-400 hover:text-blue-300">{att.label}</a>
               ) : (
                 <span className="flex-1 truncate text-xs text-zinc-300">{att.label}</span>
               )}
-              <button onClick={() => handleDelete(att.id)} className="shrink-0 text-zinc-600 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100">
+              <button onClick={() => handleDelete(att.id)} aria-label="Delete attachment" className="shrink-0 text-zinc-600 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100">
                 <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" /></svg>
               </button>
             </div>
@@ -80,7 +80,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
             <select
               value={type}
               onChange={e => setType(e.target.value as Attachment['type'])}
-              className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:outline-none"
+              className={SELECT_BASE}
             >
               <option value="google_doc">Google Doc</option>
               <option value="github_file">GitHub File</option>

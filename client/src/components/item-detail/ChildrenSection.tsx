@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
 import { createItem } from '../../api';
-import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, SECTION_LABEL, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
+import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, SECTION_LABEL, SELECT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
@@ -86,7 +86,7 @@ export function ChildrenSection({ item, childDefaultWorkphaseId, itemTypes, onNa
             <select
               value={type}
               onChange={e => setType(e.target.value)}
-              className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:outline-none"
+              className={SELECT_BASE}
             >
               <option value="">No Type</option>
               {itemTypes.map(t => (
