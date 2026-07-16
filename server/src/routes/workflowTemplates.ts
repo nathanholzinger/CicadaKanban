@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index.js';
 import { workflowTemplates, workflowTemplatePhases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -20,11 +21,8 @@ router.get('/', (_req, res) => {
 
 // Get a single template with its workphases
 router.get('/:id', (req, res) => {
-  const template = db.select().from(workflowTemplates).where(eq(workflowTemplates.id, req.params.id)).get();
-  if (!template) {
-    res.status(404).json({ error: 'Workflow template not found' });
-    return;
-  }
+  const template = getOrNotFound(db.select().from(workflowTemplates).where(eq(workflowTemplates.id, req.params.id)).get(), res, 'Workflow template not found');
+  if (!template) return;
   const templatePhases = db.select().from(workflowTemplatePhases)
     .where(eq(workflowTemplatePhases.templateId, req.params.id))
     .orderBy(workflowTemplatePhases.position)

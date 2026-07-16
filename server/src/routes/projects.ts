@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels } from '../db/schema.js';
+import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels, boards } from '../db/schema.js';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { deleteBoardsById } from '../lib/boardCascade.js';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -14,11 +16,8 @@ router.get('/', (_req, res) => {
 
 // Get a single project with its workflows
 router.get('/:id', (req, res) => {
-  const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
+  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  if (!project) return;
   const projectWorkflows = db.select().from(workflows).where(eq(workflows.projectId, req.params.id)).all();
   res.json({ ...project, workflows: projectWorkflows });
 });
@@ -55,11 +54,8 @@ function isDescendant(ofId: string, candidateId: string): boolean {
 
 // Update a project
 router.put('/:id', (req, res) => {
-  const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
+  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  if (!project) return;
 
   const { name, description, parentId, position } = req.body;
 
@@ -138,6 +134,11 @@ function deleteProjectById(id: string) {
   if (workflowIds.length > 0) {
     db.delete(labels).where(inArray(labels.workflowId, workflowIds)).run();
     db.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
+
+    const workflowBoardIds = db.select({ id: boards.id })
+      .from(boards).where(inArray(boards.workflowId, workflowIds)).all().map(b => b.id);
+    deleteBoardsById(workflowBoardIds);
+
     if (workphaseIds.length > 0) {
       db.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
     }
@@ -178,11 +179,8 @@ router.patch('/reorder', (req, res) => {
 
 // Delete a project — recursively cascades through descendants → workflows → workphases → items
 router.delete('/:id', (req, res) => {
-  const project = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  if (!project) {
-    res.status(404).json({ error: 'Project not found' });
-    return;
-  }
+  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  if (!project) return;
 
   try {
     deleteProjectById(req.params.id);

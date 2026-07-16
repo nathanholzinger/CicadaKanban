@@ -2,7 +2,7 @@ import { db, sqlite } from './index.js';
 import {
   projects, workflows, workflowTemplates, workflowTemplatePhases,
   workphases, items, itemLabels, labels, attachments, activityLog,
-  notifications, chatThreads, chatMessages, agents,
+  notifications, chatThreads, chatMessages, agents, boards, columns,
 } from './schema.js';
 import { runMigrations } from './runMigrations.js';
 
@@ -19,6 +19,8 @@ export function resetTestDb(): void {
   db.delete(chatMessages).run();
   db.delete(chatThreads).run();
   db.delete(items).run();
+  db.delete(columns).run();
+  db.delete(boards).run();
   db.delete(workphases).run();
   db.delete(labels).run();
   db.delete(workflows).run();

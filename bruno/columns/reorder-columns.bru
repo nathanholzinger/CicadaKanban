@@ -1,0 +1,19 @@
+meta {
+  name: Reorder Columns
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/columns/reorder
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "columnOrders": [
+      { "id": "{{columnId}}", "position": 1 }
+    ]
+  }
+}

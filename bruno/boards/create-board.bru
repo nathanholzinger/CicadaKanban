@@ -1,0 +1,18 @@
+meta {
+  name: Create Board
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/boards
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "workflowId": "{{workflowId}}",
+    "name": "My Board"
+  }
+}

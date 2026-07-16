@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { agents, items, workphases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -42,11 +43,8 @@ router.post('/', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  const agent = db.select().from(agents).where(eq(agents.id, req.params.id)).get();
-  if (!agent) {
-    res.status(404).json({ error: 'Agent not found' });
-    return;
-  }
+  const agent = getOrNotFound(db.select().from(agents).where(eq(agents.id, req.params.id)).get(), res, 'Agent not found');
+  if (!agent) return;
 
   const { name, claudeProjectId, surface, repoPath, notes } = req.body;
 
@@ -72,11 +70,8 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  const agent = db.select().from(agents).where(eq(agents.id, req.params.id)).get();
-  if (!agent) {
-    res.status(404).json({ error: 'Agent not found' });
-    return;
-  }
+  const agent = getOrNotFound(db.select().from(agents).where(eq(agents.id, req.params.id)).get(), res, 'Agent not found');
+  if (!agent) return;
 
   const referencedByItem = db.select().from(items).where(eq(items.agentId, req.params.id)).get();
   const referencedByWorkphase = db.select().from(workphases).where(eq(workphases.agentId, req.params.id)).get();

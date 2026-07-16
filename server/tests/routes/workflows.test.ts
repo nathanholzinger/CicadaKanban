@@ -75,6 +75,14 @@ describe('POST /api/workflows', () => {
       'Todo', 'In Progress', 'Review', 'Done',
     ]);
     expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
+
+    // A default board is bootstrapped 1:1 with the just-created workphases
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
+    expect(boardsRes.body).toHaveLength(1);
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual([
+      'Todo', 'In Progress', 'Review', 'Done',
+    ]);
   });
 
   it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
@@ -88,6 +96,10 @@ describe('POST /api/workflows', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
+
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual(['Backlog', 'Done']);
   });
 
   it('creates a bare workflow with no phases when neither templateId nor sourceWorkflowId is given', async () => {
@@ -95,6 +107,12 @@ describe('POST /api/workflows', () => {
     const res = await request(app).post('/api/workflows').send({ name: 'Bare', projectId: project.id });
     expect(res.status).toBe(201);
     expect(res.body.workphases).toEqual([]);
+
+    // Still gets a default board (with zero columns, since there are no phases yet)
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
+    expect(boardsRes.body).toHaveLength(1);
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(detail.body.columns).toEqual([]);
   });
 });
 
@@ -120,17 +138,20 @@ describe('DELETE /api/workflows/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('deletes the workflow, its workphases, and items sitting in those workphases', async () => {
+  it('deletes the workflow, its workphases, boards/columns, and items sitting in those workphases', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
     const item = await createItem({ projectId: project.id, workphaseId: workphase.id });
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const boardId = boardsRes.body[0].id;
 
     const res = await request(app).delete(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(204);
 
     expect((await request(app).get(`/api/workflows/${workflow.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${item.id}`)).status).toBe(404);
+    expect((await request(app).get(`/api/boards/${boardId}`)).status).toBe(404);
   });
 
   it('deletes a workflow with a null projectId without touching any project\'s items', async () => {

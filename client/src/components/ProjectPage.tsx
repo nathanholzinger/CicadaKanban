@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
-import WorkflowView from './WorkflowView';
+import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 
 interface EffectiveWorkflow {
@@ -149,9 +149,9 @@ export default function ProjectPage({
             >
               {effectiveWorkflow.ownerProject.name}
             </button>
-            . Workphase management is only available from that project.
+            . Workphase and board management is only available from that project.
           </div>
-          <WorkflowView
+          <BoardView
             workflowId={effectiveWorkflow.workflow.id}
             projectId={project.id}
             filterProjectId={project.id}
@@ -162,7 +162,7 @@ export default function ProjectPage({
     }
 
     return (
-      <WorkflowView
+      <BoardView
         workflowId={effectiveWorkflow.workflow.id}
         projectId={project.id}
       />

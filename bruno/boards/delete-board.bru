@@ -1,0 +1,11 @@
+meta {
+  name: Delete Board
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/boards/{{boardId}}
+  body: none
+  auth: none
+}

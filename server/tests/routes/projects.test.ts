@@ -4,10 +4,10 @@ import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import {
-  labels, itemLabels, attachments, notifications, chatThreads, chatMessages,
+  labels, itemLabels, attachments, notifications, chatThreads, chatMessages, boards, columns,
 } from '../../src/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
+import { createProject, createWorkflow, createWorkphase, createItem, createColumn } from '../fixtures.js';
 
 describe('GET /api/projects', () => {
   it('returns an empty list when no projects exist', async () => {
@@ -179,6 +179,10 @@ describe('DELETE /api/projects/:id', () => {
     const item = await createItem({ projectId: parent.id, workphaseId: workphase.id });
     await request(app).post(`/api/items/${item.id}/comments`).send({ content: 'a comment' });
 
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const boardId = boardsRes.body[0].id;
+    const column = await createColumn(boardId, workphase.id, workphase.id);
+
     // Seed directly to exercise the label/attachment/notification/chat cascade
     // branches inside deleteProjectById that aren't reachable via a POST route.
     const label = { id: randomUUID(), workflowId: workflow.id, name: 'bug', color: '#f00', createdAt: Date.now() };
@@ -210,5 +214,7 @@ describe('DELETE /api/projects/:id', () => {
     expect(db.select().from(notifications).where(eq(notifications.itemId, item.id)).all()).toHaveLength(0);
     expect(db.select().from(chatThreads).where(eq(chatThreads.itemId, item.id)).all()).toHaveLength(0);
     expect(db.select().from(chatMessages).where(eq(chatMessages.threadId, thread.id)).all()).toHaveLength(0);
+    expect(db.select().from(boards).where(eq(boards.id, boardId)).all()).toHaveLength(0);
+    expect(db.select().from(columns).where(eq(columns.id, column.id)).all()).toHaveLength(0);
   });
 });

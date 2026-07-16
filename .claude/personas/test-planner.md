@@ -39,16 +39,16 @@ coverage strategy for a feature or epic before implementation begins (or during 
   test (e.g. `item-detail/pillUtils.test.ts`, `sidebar/projectTreeUtils.test.ts`)
 - Run: `npm run test:unit` from project root (or `test:server` / `test:client`)
 
-## Known Coverage Gaps (as of Epic 1.5)
+## Known Coverage Gaps (as of Epic 2)
 
 These areas have zero tests — mention them if adjacent to the feature being planned:
 labels, notifications display, attachments, agents modal, item detail panel editing,
-browser drag-and-drop gestures.
+browser drag-and-drop gestures (boards/columns E2E tests set up state via API and assert
+on rendering rather than simulating real drag gestures, matching the existing convention).
 
 ## Planned Features That Are Out of Scope
 
 Do not design tests around functionality planned for future epics:
-- Epic 2: Boards layer (board columns spanning workphase ranges, bucketed views)
 - Epic 3: Attached/detached item behavior
 - Epic 4: Quick items
 - Epic 5: Tag buckets (current labels are a temporary system)

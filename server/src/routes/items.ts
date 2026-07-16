@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { items, workphases, activityLog, notifications, itemLabels, chatThreads, chatMessages, attachments } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -34,11 +35,8 @@ function computeDepth(itemId: string): number {
 
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
-  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  if (!item) {
-    res.status(404).json({ error: 'Item not found' });
-    return;
-  }
+  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  if (!item) return;
 
   const depth = computeDepth(req.params.id);
 
@@ -130,11 +128,8 @@ router.post('/', (req, res) => {
 
 // Update an item's details (not position/workphase — use move for that)
 router.put('/:id', (req, res) => {
-  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  if (!item) {
-    res.status(404).json({ error: 'Item not found' });
-    return;
-  }
+  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  if (!item) return;
 
   const { title, description, assigneeType, agentId, parentId } = req.body;
 
@@ -160,11 +155,8 @@ router.put('/:id', (req, res) => {
 
 // Move an item to a different workphase and/or reorder within a workphase
 router.patch('/:id/move', (req, res) => {
-  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  if (!item) {
-    res.status(404).json({ error: 'Item not found' });
-    return;
-  }
+  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  if (!item) return;
 
   const { workphaseId } = req.body;
   const { position } = req.body;
@@ -232,11 +224,8 @@ router.patch('/reorder', (req, res) => {
 
 // Add a comment to an item's activity log
 router.post('/:id/comments', (req, res) => {
-  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  if (!item) {
-    res.status(404).json({ error: 'Item not found' });
-    return;
-  }
+  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  if (!item) return;
 
   const { content } = req.body;
   if (!content?.trim()) {
@@ -275,11 +264,8 @@ export function deleteItemById(id: string): void {
 
 // Delete an item and all its descendants
 router.delete('/:id', (req, res) => {
-  const item = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  if (!item) {
-    res.status(404).json({ error: 'Item not found' });
-    return;
-  }
+  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  if (!item) return;
 
   // BFS collects root-first; reversing gives leaves-first, satisfying the self-ref FK
   const allIds = collectDescendantIds(req.params.id);

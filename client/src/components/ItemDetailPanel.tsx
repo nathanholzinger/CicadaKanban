@@ -38,6 +38,7 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
     setEditingTitle(false);
     setEditingDesc(false);
     setConfirmDelete(false);
+    setSaving(false);
     fetchItem(itemId)
       .then(d => {
         setDetail(d);
@@ -110,8 +111,9 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
       onClose();
     } catch (err) {
       console.error('Failed to delete item:', err);
-      setSaving(false);
       setConfirmDelete(false);
+    } finally {
+      setSaving(false);
     }
   }
 

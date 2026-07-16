@@ -1,10 +1,11 @@
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
-import { projects, workflows, workflowTemplates, workflowTemplatePhases, workphases } from './schema.js';
-import { isNull } from 'drizzle-orm';
+import { projects, workflows, workflowTemplates, workflowTemplatePhases, workphases, boards } from './schema.js';
+import { isNull, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { createDefaultBoard } from '../routes/boards.js';
 
 const migrationsFolder = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -104,4 +105,18 @@ export function runMigrations() {
     console.log(`Initialized position for ${updated.changes} project(s)`);
   }
 
+  // ── Phase 4: Bootstrap a default board for any workflow that has none ───────
+  const allWorkflows = db.select().from(workflows).all();
+  let boardsCreated = 0;
+  for (const workflow of allWorkflows) {
+    const existingBoards = db.select().from(boards).where(eq(boards.workflowId, workflow.id)).all();
+    if (existingBoards.length > 0) continue;
+
+    const workflowWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, workflow.id)).all();
+    createDefaultBoard(workflow.id, 'Default Board', workflowWorkphases, now);
+    boardsCreated++;
+  }
+  if (boardsCreated > 0) {
+    console.log(`Backfilled a default board for ${boardsCreated} workflow(s)`);
+  }
 }

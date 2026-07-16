@@ -42,6 +42,8 @@ export default defineConfig({
         'src/routes/projects.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
         'src/routes/workflows.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
         'src/routes/workflowTemplates.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
+        'src/routes/boards.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
+        'src/routes/columns.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
       },
     },
   },

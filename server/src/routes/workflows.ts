@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workflows, workphases, items, workflowTemplatePhases } from '../db/schema.js';
+import { workflows, workphases, items, workflowTemplatePhases, boards } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteItemById } from './items.js';
+import { createDefaultBoard } from './boards.js';
+import { getOrderedWorkphases } from '../lib/columnRanges.js';
+import { getWorkflowItems } from '../lib/workflowItems.js';
+import { deleteBoardsById } from '../lib/boardCascade.js';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -35,21 +40,13 @@ router.get('/', (req, res) => {
 
 // Get a single workflow with workphases and items
 router.get('/:id', (req, res) => {
-  const workflow = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
-  if (!workflow) {
-    res.status(404).json({ error: 'Workflow not found' });
-    return;
-  }
+  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  if (!workflow) return;
 
-  const workflowWorkphases = db.select().from(workphases)
-    .where(eq(workphases.workflowId, workflow.id))
-    .orderBy(workphases.position)
-    .all();
+  const { workphases: workflowWorkphases } = getOrderedWorkphases(workflow.id);
 
   // All items in any workphase of this workflow (across all projects that inherit it)
-  const workphaseIds = new Set(workflowWorkphases.map(w => w.id));
-  const allItems = db.select().from(items).all();
-  const workflowItems = allItems.filter(i => i.workphaseId && workphaseIds.has(i.workphaseId));
+  const workflowItems = getWorkflowItems(workflowWorkphases);
 
   res.json({ ...workflow, workphases: workflowWorkphases, items: addDepths(workflowItems) });
 });
@@ -115,18 +112,21 @@ router.post('/', (req, res) => {
     }
   }
 
-  const created = db.select().from(workflows).where(eq(workflows.id, workflowId)).get();
   const createdWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
+
+  // Every workflow needs at least one valid board to be usable — bootstrap a
+  // default one with 1:1 columns matching whatever workphases now exist
+  // (possibly none, for the "Custom" no-template/no-source path).
+  createDefaultBoard(workflowId, 'Default Board', createdWorkphases, now);
+
+  const created = db.select().from(workflows).where(eq(workflows.id, workflowId)).get();
   res.status(201).json({ ...created, workphases: createdWorkphases });
 });
 
 // Update a workflow
 router.put('/:id', (req, res) => {
-  const workflow = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
-  if (!workflow) {
-    res.status(404).json({ error: 'Workflow not found' });
-    return;
-  }
+  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  if (!workflow) return;
 
   const { name, description } = req.body;
 
@@ -142,13 +142,10 @@ router.put('/:id', (req, res) => {
 
 // Delete a workflow and its workphases and items
 router.delete('/:id', (req, res) => {
-  const workflow = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
-  if (!workflow) {
-    res.status(404).json({ error: 'Workflow not found' });
-    return;
-  }
+  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  if (!workflow) return;
 
-  const workflowWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, req.params.id)).all();
+  const { workphases: workflowWorkphases } = getOrderedWorkphases(req.params.id);
   const workphaseIds = new Set(workflowWorkphases.map(w => w.id));
 
   if (workflow.projectId) {
@@ -158,6 +155,9 @@ router.delete('/:id', (req, res) => {
       deleteItemById(item.id);
     }
   }
+
+  const workflowBoardIds = db.select({ id: boards.id }).from(boards).where(eq(boards.workflowId, req.params.id)).all().map(b => b.id);
+  deleteBoardsById(workflowBoardIds);
 
   db.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
   db.delete(workflows).where(eq(workflows.id, req.params.id)).run();

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
-import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
+import { createProject, createWorkflow, createWorkphase, createItem, createColumn } from '../fixtures.js';
 
 describe('POST /api/workphases', () => {
   it('returns 400 when workflowId or name is missing', async () => {
@@ -100,5 +100,58 @@ describe('DELETE /api/workphases/:id', () => {
     const res = await request(app).delete(`/api/workphases/${phase.id}`);
     expect(res.status).toBe(409);
     expect(res.body.itemCount).toBe(1);
+  });
+
+  it('deleting an interior workphase leaves a covering column untouched (204, no shrink reported)', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+    const done = await createWorkphase(workflow.id, { name: 'Done' });
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const col = await createColumn(boardsRes.body[0].id, todo.id, done.id);
+
+    const res = await request(app).delete(`/api/workphases/${inProgress.id}`);
+    expect(res.status).toBe(204);
+
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const resolved = detail.body.columns.find((c: { id: string }) => c.id === col.id);
+    expect(resolved.startWorkphaseId).toBe(todo.id);
+    expect(resolved.endWorkphaseId).toBe(done.id);
+    expect(resolved.subRows.map((r: { workphase: { id: string } }) => r.workphase.id)).toEqual([todo.id, done.id]);
+  });
+
+  it('deleting a boundary workphase repoints the column and reports it as shrunk (200)', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+    const done = await createWorkphase(workflow.id, { name: 'Done' });
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const col = await createColumn(boardsRes.body[0].id, todo.id, done.id);
+
+    const res = await request(app).delete(`/api/workphases/${todo.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.shrunkColumns.map((c: { id: string }) => c.id)).toEqual([col.id]);
+
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const resolved = detail.body.columns.find((c: { id: string }) => c.id === col.id);
+    expect(resolved.startWorkphaseId).toBe(inProgress.id);
+    expect(resolved.endWorkphaseId).toBe(done.id);
+  });
+
+  it('deleting a column\'s sole covered workphase deletes the column and reports it (200)', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const col = await createColumn(boardsRes.body[0].id, todo.id, todo.id);
+
+    const res = await request(app).delete(`/api/workphases/${todo.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.deletedColumns.map((c: { id: string }) => c.id)).toEqual([col.id]);
+
+    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(detail.body.columns.find((c: { id: string }) => c.id === col.id)).toBeUndefined();
   });
 });

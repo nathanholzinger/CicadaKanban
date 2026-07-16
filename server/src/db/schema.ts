@@ -77,6 +77,30 @@ export const workphases = sqliteTable('workphases', {
   createdAt: integer('created_at').notNull(),
 });
 
+// ============================================================
+// Boards & Columns (UI-layer views over a workflow's workphases)
+// ============================================================
+
+export const boards = sqliteTable('boards', {
+  id: text('id').primaryKey(),
+  workflowId: text('workflow_id').notNull().references(() => workflows.id),
+  name: text('name').notNull(),
+  position: real('position').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export const columns = sqliteTable('columns', {
+  id: text('id').primaryKey(),
+  boardId: text('board_id').notNull().references(() => boards.id),
+  name: text('name'), // nullable — falls back to a computed displayName from covered workphase(s)
+  startWorkphaseId: text('start_workphase_id').notNull().references(() => workphases.id),
+  endWorkphaseId: text('end_workphase_id').notNull().references(() => workphases.id),
+  displayMode: text('display_mode').notNull().default('merged'), // app-level: 'merged' | 'expanded'
+  position: real('position').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
 export const items = sqliteTable('items', {
   id: text('id').primaryKey(),
   type: text('type').references(() => itemTypes.id),

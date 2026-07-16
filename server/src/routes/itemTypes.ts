@@ -3,6 +3,7 @@ import { db } from '../db/index.js';
 import { itemTypes, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -36,11 +37,8 @@ router.post('/', (req, res) => {
 
 // Update an item type
 router.put('/:id', (req, res) => {
-  const existing = db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get();
-  if (!existing) {
-    res.status(404).json({ error: 'Item type not found' });
-    return;
-  }
+  const existing = getOrNotFound(db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get(), res, 'Item type not found');
+  if (!existing) return;
 
   const { name, color } = req.body;
   const updates: Record<string, unknown> = {};
@@ -60,11 +58,8 @@ router.put('/:id', (req, res) => {
 
 // Delete an item type (blocked if any work items use it)
 router.delete('/:id', (req, res) => {
-  const existing = db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get();
-  if (!existing) {
-    res.status(404).json({ error: 'Item type not found' });
-    return;
-  }
+  const existing = getOrNotFound(db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get(), res, 'Item type not found');
+  if (!existing) return;
 
   const inUse = db.select().from(items).where(eq(items.type, req.params.id)).get();
   if (inUse) {

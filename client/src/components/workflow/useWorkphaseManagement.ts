@@ -29,8 +29,9 @@ export function useWorkphaseManagement(workflowId: string) {
   }
 
   async function handleDeleteWorkphase(id: string) {
-    await deleteWorkPhase(id);
+    const result = await deleteWorkPhase(id);
     setWorkphases(prev => prev.filter(w => w.id !== id));
+    return result;
   }
 
   return {

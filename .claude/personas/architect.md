@@ -28,12 +28,19 @@ is written.
 
 - **Backend:** Node.js + Express + TypeScript, Drizzle ORM, SQLite
 - **Frontend:** React 19, Vite, Tailwind CSS v4, dnd-kit
-- **Tests:** Playwright E2E (no unit tests yet; Vitest is planned)
+- **Tests:** Playwright E2E + Vitest (client + server unit tests)
 - **MCP:** 8 tools wrapping the REST API — no direct DB access
+
+## Completed Epics
+
+- Epic 2: Boards layer. `workphases` (data layer, unchanged) stay a flat ordered list per
+  workflow; `boards`/`columns` are a new UI layer — each column covers a contiguous range
+  of workphases (by position) with a `merged`/`expanded` display mode. Unsorted is a
+  computed bucket for uncovered workphases, never stored. See `client/CLAUDE.md` for the
+  full data model.
 
 ## Planned Epics (do not design around things already planned)
 
-- Epic 2: Boards layer (flat ordered workflow statuses; boards are range-based views; board_columns cover a contiguous range of statuses with merged/expanded display modes; unsorted column for uncovered statuses)
 - Epic 3: Work item attached/detached behavior
 - Epic 4: Quick items
 - Epic 5: Tags & type system (replaces current flat labels)
@@ -44,7 +51,8 @@ is written.
 ## Key Architectural Decisions Already Made
 
 - Projects are the root entity; workflows belong to projects (not the other way around)
-- Items derive their workflow through `column → workflow`; there is no `board_id` on items
+- Items derive their workflow through `workphase → workflow`; there is no `board_id` or
+  `column_id` on items — boards/columns are a pure presentation layer
 - Position ordering uses real-number midpoints (no full reindexes)
 - No API billing — Claude integration uses deep links and MCP, not the Anthropic API
 - Single user, local SQLite — no auth, no multi-tenancy required for MVP

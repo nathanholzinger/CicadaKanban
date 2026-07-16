@@ -5,6 +5,8 @@ import projectRoutes from './routes/projects.js';
 import workflowRoutes from './routes/workflows.js';
 import workflowTemplateRoutes from './routes/workflowTemplates.js';
 import workphaseRoutes from './routes/workphases.js';
+import boardRoutes from './routes/boards.js';
+import columnRoutes from './routes/columns.js';
 import itemRoutes from './routes/items.js';
 import agentRoutes from './routes/agents.js';
 import notificationRoutes from './routes/notifications.js';
@@ -31,6 +33,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/workflow-templates', workflowTemplateRoutes);
 app.use('/api/workphases', workphaseRoutes);
+app.use('/api/boards', boardRoutes);
+app.use('/api/columns', columnRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/notifications', notificationRoutes);
@@ -42,6 +46,15 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
   app.use('/api/test', testHelperRoutes);
   console.log('Test helper routes enabled.');
 }
+
+// Backstop for every route: Express 5 auto-forwards rejected promises here,
+// and any route that throws synchronously without its own try/catch ends up
+// here too. Registered last so it only ever sees errors the routes above
+// didn't already handle.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // Vitest sets process.env.VITEST = 'true' for every test run. Skip binding a
 // port so the exported `app` can be driven in-process via supertest instead.

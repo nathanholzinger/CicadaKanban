@@ -1,4 +1,4 @@
-import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, WorkPhase, ItemType, Label, Notification, Project, Item, ItemDetail } from './types';
+import type { Agent, Attachment, Workflow, WorkflowWithDetails, WorkflowTemplate, WorkPhase, ItemType, Label, Notification, Project, Item, ItemDetail, Board, BoardWithDetails, ColumnDisplayMode, ColumnRow } from './types';
 
 const API = '/api';
 
@@ -123,12 +123,16 @@ export async function updateWorkPhase(id: string, data: { name?: string }): Prom
   return res.json();
 }
 
-export async function deleteWorkPhase(id: string): Promise<void> {
+// Deleting a workphase can shrink or remove board columns that covered it —
+// returns that report (200) or null when nothing needed adjusting (204).
+export async function deleteWorkPhase(id: string): Promise<{ shrunkColumns: ColumnRow[]; deletedColumns: ColumnRow[] } | null> {
   const res = await fetch(`${API}/workphases/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? 'Failed to delete workphase');
   }
+  if (res.status === 204) return null;
+  return res.json();
 }
 
 export async function reorderWorkPhases(workphaseOrders: { id: string; position: number }[]): Promise<void> {
@@ -138,6 +142,105 @@ export async function reorderWorkPhases(workphaseOrders: { id: string; position:
     body: JSON.stringify({ workphaseOrders }),
   });
   if (!res.ok) throw new Error('Failed to reorder workphases');
+}
+
+// ============================================================
+// Boards
+// ============================================================
+
+export async function fetchBoards(workflowId: string): Promise<Board[]> {
+  const res = await fetch(`${API}/boards?workflowId=${workflowId}`);
+  if (!res.ok) throw new Error('Failed to fetch boards');
+  return res.json();
+}
+
+export async function fetchBoard(id: string): Promise<BoardWithDetails> {
+  const res = await fetch(`${API}/boards/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch board');
+  return res.json();
+}
+
+export async function createBoard(data: { workflowId: string; name: string }): Promise<Board> {
+  const res = await fetch(`${API}/boards`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create board');
+  return res.json();
+}
+
+export async function updateBoard(id: string, data: { name?: string }): Promise<Board> {
+  const res = await fetch(`${API}/boards/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update board');
+  return res.json();
+}
+
+export async function deleteBoard(id: string): Promise<void> {
+  const res = await fetch(`${API}/boards/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to delete board');
+  }
+}
+
+// ============================================================
+// Columns
+// ============================================================
+
+export async function createColumn(data: {
+  boardId: string;
+  startWorkphaseId: string;
+  endWorkphaseId: string;
+  displayMode?: ColumnDisplayMode;
+  name?: string | null;
+}): Promise<ColumnRow> {
+  const res = await fetch(`${API}/columns`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to create column');
+  }
+  return res.json();
+}
+
+export async function updateColumn(id: string, data: {
+  startWorkphaseId?: string;
+  endWorkphaseId?: string;
+  displayMode?: ColumnDisplayMode;
+  name?: string | null;
+}): Promise<ColumnRow> {
+  const res = await fetch(`${API}/columns/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to update column');
+  }
+  return res.json();
+}
+
+export async function reorderColumns(columnOrders: { id: string; position: number }[]): Promise<void> {
+  const res = await fetch(`${API}/columns/reorder`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ columnOrders }),
+  });
+  if (!res.ok) throw new Error('Failed to reorder columns');
+}
+
+export async function deleteColumn(id: string): Promise<void> {
+  const res = await fetch(`${API}/columns/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete column');
 }
 
 // ============================================================

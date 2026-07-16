@@ -56,6 +56,52 @@ export interface WorkflowWithDetails extends Workflow {
   items: Item[];
 }
 
+export interface Board {
+  id: string;
+  workflowId: string;
+  name: string;
+  position: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ColumnDisplayMode = 'merged' | 'expanded';
+
+export interface ColumnSubRow {
+  workphase: WorkPhase;
+  items: Item[];
+}
+
+// Raw DB row shape — what POST /api/columns and PUT /api/columns/:id return.
+// Mirrors ColumnRow in server/src/routes/columns.ts.
+export interface ColumnRow {
+  id: string;
+  boardId: string;
+  name: string | null;
+  startWorkphaseId: string;
+  endWorkphaseId: string;
+  displayMode: ColumnDisplayMode;
+  position: number;
+  createdAt: number;
+}
+
+// Resolved shape — only GET /api/boards/:id produces the extra fields below.
+export interface Column extends ColumnRow {
+  displayName: string;
+  broken: boolean;
+  entryWorkphaseId: string;
+  subRows: ColumnSubRow[];
+}
+
+export interface BoardWithDetails extends Board {
+  columns: Column[];
+  unsorted: {
+    uncovered: ColumnSubRow[];
+    invalidItems: Item[];
+    needsAttention: boolean;
+  };
+}
+
 export interface WorkflowTemplatePhase {
   id: string;
   templateId: string;

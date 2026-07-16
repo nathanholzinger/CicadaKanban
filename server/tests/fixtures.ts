@@ -16,6 +16,21 @@ export async function createWorkphase(workflowId: string, overrides: Record<stri
   return res.body;
 }
 
+export async function createBoard(workflowId: string, overrides: Record<string, unknown> = {}) {
+  const res = await request(app).post('/api/boards').send({ workflowId, name: 'Test Board', ...overrides });
+  return res.body;
+}
+
+export async function createColumn(
+  boardId: string,
+  startWorkphaseId: string,
+  endWorkphaseId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  const res = await request(app).post('/api/columns').send({ boardId, startWorkphaseId, endWorkphaseId, ...overrides });
+  return res.body;
+}
+
 export async function createItem(overrides: Record<string, unknown> = {}) {
   const res = await request(app).post('/api/items').send({ title: 'Test Item', ...overrides });
   return res.body;

@@ -43,6 +43,13 @@
       "when": 1783200000000,
       "tag": "0005_rename_columns_to_workphases",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783600000000,
+      "tag": "0006_boards_and_columns",
+      "breakpoints": true
     }
   ]
 }

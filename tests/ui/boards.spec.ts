@@ -41,11 +41,19 @@ test.describe('board basics', () => {
     await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
   });
 
-  test('adds a workphase to a workflow', async ({ page }) => {
+  test('adds a workphase to a workflow — lands in Unsorted, not its own column', async ({ page }) => {
+    await page.getByRole('button', { name: 'Manage workphases' }).click();
     await page.getByRole('button', { name: '+ Add workphase' }).click();
     await page.getByPlaceholder('Workphase name...').fill('Sprint 1');
     await page.getByRole('button', { name: 'Add workphase' }).click();
-    await expect(page.getByRole('group', { name: 'Sprint 1' })).toBeVisible();
+
+    // No column is auto-created for it — it's uncovered until a board admin
+    // extends a column's range (or adds a new one) to include it.
+    await expect(page.getByRole('group', { name: 'Sprint 1' })).not.toBeVisible();
+    const unsorted = page.getByRole('group', { name: 'Unsorted' });
+    await expect(unsorted).toBeVisible();
+    await expect(unsorted.getByText('needs attention')).toBeVisible();
+    await expect(unsorted.getByText('Sprint 1')).toBeVisible();
   });
 
   test('typeless item created via API renders in the Todo workphase', async ({ page, request, projectSidebar }) => {
@@ -223,19 +231,23 @@ test.describe('inherited workflow is read-only', () => {
     await expect(inheritedBannerLink(page)).toBeVisible();
   });
 
-  test('workphases in the inherited view have no delete button', async ({ page }) => {
+  test('board and workphase management controls are hidden in the inherited (read-only) view', async ({ page }) => {
     const todoColumn = page.getByRole('group', { name: 'Todo' });
     await expect(todoColumn).toBeVisible();
-    // The delete (×) button appears only when onDelete is provided — it's absent in read-only mode
-    await expect(todoColumn.locator('[title="Delete workphase"]')).not.toBeVisible();
+    // Column edit/delete, board create/rename/delete, and workphase management
+    // are all gated behind `readOnly` — none should be reachable here.
+    await expect(todoColumn.locator('[title="Delete column"]')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Manage workphases' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '+ New board' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '+ Add column' })).not.toBeVisible();
   });
 
   test('clicking the banner link navigates to the owning project board', async ({ page }) => {
     await inheritedBannerLink(page).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Owning Project' })).toBeVisible();
-    // The owning project's board has the Add workphase button (editable)
+    // The owning project's board is editable — workphase management is reachable
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
-    await expect(page.getByRole('button', { name: '+ Add workphase' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Manage workphases' })).toBeVisible();
   });
 });
 
@@ -319,8 +331,8 @@ test.describe('workflow creation', () => {
     await page.getByRole('button', { name: /Set up a Workflow/ }).click();
     await page.getByRole('button', { name: 'Custom' }).click();
 
-    // Empty workflow — no workphases yet, only the Add workphase button
-    await expect(page.getByRole('button', { name: '+ Add workphase' })).toBeVisible();
+    // Empty workflow — no workphases yet, board is editable but has no columns
+    await expect(page.getByRole('button', { name: 'Manage workphases' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Todo' })).not.toBeVisible();
   });
 

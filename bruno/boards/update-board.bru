@@ -1,0 +1,17 @@
+meta {
+  name: Update Board
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/boards/{{boardId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Renamed Board"
+  }
+}

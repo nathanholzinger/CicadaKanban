@@ -1,7 +1,7 @@
 # Codebase Walkthrough — Cicada Kanban
 
 > Living document. Updated at each epic orientation.
-> Last updated: Epic 1.5 complete (2026-07-08).
+> Last updated: Epic 2 complete (2026-07-15) — boards layer + post-epic audit fixes.
 
 ## How to Run
 
@@ -36,7 +36,7 @@ cd client; npm run dev
 ┌────────────────────────────────┐
 │  Express Server                │  :3001
 │  server/src/index.ts           │
-│  11 route files                │
+│  13 route files + src/lib/     │
 └──────────────┬─────────────────┘
                │  Drizzle ORM (better-sqlite3)
                ▼
@@ -85,8 +85,10 @@ table stores and how they relate is the foundation for understanding everything 
 ```
 projects (tree — unlimited depth)
   └── workflows  (one per project, or inherited from parent)
-        └── workphases  (ordered stages: Todo → In Progress → Done)
-              └── items  (cards — also a tree, unlimited depth)
+        ├── workphases  (data layer — ordered stages: Todo → In Progress → Done)
+        │     └── items  (cards — also a tree, unlimited depth)
+        └── boards      (UI layer — named views of the workflow)
+              └── columns  (each covers a contiguous range of workphases)
 ```
 
 ### Table Reference
@@ -108,6 +110,23 @@ The stages within a workflow (e.g., "Todo", "In Progress", "Done"). Key flags:
 - `is_terminal` (0|1): marks a "done" state — UI applies distinct styling
 - `agent_id` (nullable FK): reserved for future "auto-assign to agent" behavior
 - `position REAL NOT NULL`: ordering is mandatory for workphases (unlike items/projects)
+
+**`boards`** *(Epic 2)*
+Named views of a workflow — the UI layer over the workphase data layer. Every workflow
+always has at least one board (auto-bootstrapped 1:1 with its workphases on creation,
+backfilled for pre-existing workflows by `runMigrations.ts`). Items never reference a
+board — boards are pure presentation over `items.workphase_id`, which is why the MCP
+tools are unaffected by this layer.
+
+**`columns`** *(Epic 2)*
+A board's columns. Each covers a **contiguous range** of workphases via
+`start_workphase_id` / `end_workphase_id` — the covered set is computed at read time
+from current workphase *positions* (ranks), never stored, so reordering workphases never
+requires a column migration. `display_mode`: `merged` (one swimlane) or `expanded` (one
+sub-row per covered workphase). `name` is nullable — falls back to the covered
+workphases' names. Two derived-at-read concepts: **broken** (a reorder inverted the
+range — shown but rejects drops until fixed) and **Unsorted** (any workphase not covered
+by any column, plus items with null/dangling `workphase_id` — a computed bucket, not a row).
 
 **`items`**
 The kanban cards. Can be nested (child items via `parent_id` self-reference). Key fields:
@@ -158,8 +177,11 @@ header bell icon.
 ## Server Tour
 
 **Entry point:** `server/src/index.ts`
-Runs migrations on startup, mounts 11 route files, guards test routes behind the
-`ENABLE_TEST_ROUTES=true` env var.
+Runs migrations on startup, mounts 13 route files, guards test routes behind the
+`ENABLE_TEST_ROUTES=true` env var, and registers a **global error-handling middleware
+last** — the backstop for any route that throws or rejects (logs the real error, returns
+`500 { error: 'Internal server error' }`). Route-level try/catch survives only where it
+adds a more specific message (e.g. project delete).
 
 API base: `http://localhost:3001/api`
 
@@ -169,6 +191,8 @@ API base: `http://localhost:3001/api`
 | `/workflows` | `routes/workflows.ts` | Workflow CRUD, fetch with workphases+items |
 | `/workflow-templates` | `routes/workflowTemplates.ts` | Read-only system templates |
 | `/workphases` | `routes/workphases.ts` | Workphase CRUD, position reorder |
+| `/boards` | `routes/boards.ts` | Board CRUD; `GET /:id` resolves columns + Unsorted |
+| `/columns` | `routes/columns.ts` | Column CRUD, reorder (validated: string ids, finite positions, all ids must exist), range validation |
 | `/items` | `routes/items.ts` | Item CRUD, move (workphase change), reorder, comments |
 | `/agents` | `routes/agents.ts` | Agent CRUD |
 | `/notifications` | `routes/notifications.ts` | Mark read, mark all read |
@@ -176,6 +200,18 @@ API base: `http://localhost:3001/api`
 | `/attachments` | `routes/attachments.ts` | Attachment CRUD |
 | `/item-types` | `routes/itemTypes.ts` | Item type CRUD |
 | `/test` | `routes/testHelpers.ts` | Reset + seed DB (test env only) |
+
+### Shared Domain Logic: `server/src/lib/`
+
+Extracted after the Epic 2 audit so route files stop importing from each other. Routes
+import from `lib/`; `lib/` never imports from routes.
+
+| File | Owns |
+|---|---|
+| `lib/columnRanges.ts` | Column-range domain logic: `buildRankMap`, `computeColumnRange`, `isColumnBroken`, `getCoveredWorkphases`, `columnsOverlap`, `computeUnsorted` (pure — unit-tested directly), plus `getOrderedWorkphases(workflowId)` (fetch + rank map in one call) and `shrinkColumnsForDeletedWorkphase` (repoints/deletes column ranges when a workphase is deleted; accepts a `tx` handle) |
+| `lib/workflowItems.ts` | `getWorkflowItems(workphases)` — all items sitting in any of a workflow's workphases (shared by boards + workflows `GET /:id`) |
+| `lib/boardCascade.ts` | `deleteBoardsById(ids)` — transactional columns-then-boards delete, shared by the boards, workflows, and projects delete paths |
+| `lib/getOrNotFound.ts` | `getOrNotFound(row, res, msg)` — the fetch-single-entity-or-404 idiom, used across every route file |
 
 ### Shared Patterns
 
@@ -191,6 +227,16 @@ operations. Writes synchronously to `activity_log` — SQLite is fast enough loc
 **Notification creation** — When an item moves into a workphase with
 `triggers_notification = 1`, the items route inserts a `notifications` row inline.
 No background job — synchronous SQLite insert.
+
+**Transactions** — Multi-step mutations are wrapped in `db.transaction()` (free with
+better-sqlite3's synchronous driver): board bootstrap (`createDefaultBoard`), the
+board+columns delete cascade (`deleteBoardsById`), and workphase delete + column shrink.
+A failure mid-sequence rolls back rather than leaving partial state.
+
+**Workphase delete reports column fallout** — `DELETE /api/workphases/:id` is the one
+DELETE that doesn't always return a bare 204: if removing the workphase shrank or
+deleted board columns, it returns `200 { shrunkColumns, deletedColumns }`, which the
+client surfaces as a notice in the workphase manager panel.
 
 **MCP server** (`server/src/mcp.ts`) — A separate process, not part of Express. It has
 no direct DB access; it calls the same Express API endpoints the browser does. 8 tools:
@@ -252,15 +298,29 @@ App.tsx  (state + layout)
     │
     └── ProjectPage.tsx  (when a project is selected)
         ├── Overview tab: project name, description, subproject list
-        ├── Board tab → WorkflowView.tsx
-        │   ├── KanbanColumn.tsx  (one per workphase, droppable)
+        ├── Board tab → BoardView.tsx  (orchestration only — loads the active board, composes the hooks below)
+        │   ├── BoardToolbar.tsx  (board switcher + board create/rename/delete, add-column & manage-workphases entry points)
+        │   ├── WorkphaseManagerPanel.tsx  (workphase rename/delete/add rows + column-shrink notices)
+        │   ├── BoardColumn.tsx  (one per board column — merged: flat list; expanded: one sub-row per covered workphase)
         │   │   └── KanbanCard.tsx  (one per item, draggable)
+        │   ├── UnsortedBucket.tsx  (uncovered workphases + invalid items; drag-source only)
+        │   ├── ColumnEditorModal.tsx  (range picker: start/end workphase, merged/expanded)
         │   └── ItemDetailPanel.tsx  (slide-in on item click)
         └── SetupWorkflowModal.tsx  (template / copy / custom)
 
+ModalShell.tsx          (shared modal chrome: backdrop, dialog frame, header, optional
+                         footer/close button, Escape-to-close — wraps ColumnEditorModal,
+                         SetupWorkflowModal, CreateProjectModal, and AgentsModal)
 CreateProjectModal.tsx  (modal, rendered from App.tsx)
 AgentsModal.tsx         (modal, rendered from App.tsx)
 ```
+
+**BoardView's hooks** (`components/workflow/`): `useBoardManagement` (board list +
+active board, persisted per-workflow in localStorage), `useWorkphaseManagement`,
+`useColumnManagement`, `useItemManagement` (items + per-workphase lookups), and
+`useBoardDnd` — all drag-and-drop logic: sensors, drop-target resolution (merged column
+vs. expanded sub-row vs. Unsorted vs. broken), column reorder, same-workphase reorder,
+and cross-workphase moves with midpoint positioning.
 
 **Data flow** — App.tsx passes state down as props and passes mutation handlers down as
 callback props. When a component needs to update something (rename a project, move an
@@ -295,9 +355,13 @@ const effectiveWorkflow = (() => {
 Map of all projects. This is O(depth) per call and runs on every render — fine now,
 candidate for `useMemo` if the project tree grows deep.
 
-When `isInherited: true`, `WorkflowView` receives `readOnly=true` — you can't create
-or move items on an inherited board. The project must "claim" the workflow by setting
-up its own.
+When `isInherited: true`, `BoardView` receives `readOnly=true` — board, column, and
+workphase **management** controls are hidden (the structure belongs to the owner project;
+a banner links there). Items still work: creating an item on an inherited board scopes it
+to the *viewing* project, and the board filters to that project's items.
+
+*(Note: per the 2026-07-15 decision, boards become project-owned in Epic 7 — after that,
+`readOnly` narrows to workphase management only, and every project manages its own boards.)*
 
 ---
 
@@ -327,3 +391,11 @@ spinning up the test server. The dev server never sets it — dev data is safe.
 ### MCP is a wrapper, not a data store
 `mcp.ts` has no DB access — it calls the same Express API the browser uses. Changes to
 the API are automatically reflected in what Claude agents can do, with no extra wiring.
+The Epic 2 boards layer required **no MCP changes** — boards are pure presentation over
+`items.workphase_id`, and MCP operates at the workphase level.
+
+### Shared modal chrome
+All centered modals render through `ModalShell` (backdrop, dialog frame, header,
+optional footer/close button, Escape-to-close). Modals needing native form semantics
+(Enter-to-submit) wrap their own `<form>` around body+footer inside `children`; others
+use the `footer` prop. New modals should start from `ModalShell`, not copy dialog markup.

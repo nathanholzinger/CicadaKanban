@@ -1,0 +1,15 @@
+meta {
+  name: List Boards
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/boards
+  body: none
+  auth: none
+}
+
+params:query {
+  workflowId: {{workflowId}}
+}

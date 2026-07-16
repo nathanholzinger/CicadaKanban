@@ -3,6 +3,8 @@ import { db } from '../db/index.js';
 import { workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
+import { getOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -43,11 +45,8 @@ router.post('/', (req, res) => {
 
 // Update a workphase (name, agent, notification/terminal flags)
 router.put('/:id', (req, res) => {
-  const workphase = db.select().from(workphases).where(eq(workphases.id, req.params.id)).get();
-  if (!workphase) {
-    res.status(404).json({ error: 'Workphase not found' });
-    return;
-  }
+  const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
+  if (!workphase) return;
 
   const { name, agentId, triggersNotification, isTerminal } = req.body;
 
@@ -87,11 +86,8 @@ router.patch('/reorder', (req, res) => {
 
 // Delete a workphase
 router.delete('/:id', (req, res) => {
-  const workphase = db.select().from(workphases).where(eq(workphases.id, req.params.id)).get();
-  if (!workphase) {
-    res.status(404).json({ error: 'Workphase not found' });
-    return;
-  }
+  const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
+  if (!workphase) return;
 
   const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, req.params.id)).all();
   if (itemsInWorkphase.length > 0) {
@@ -102,7 +98,16 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  db.delete(workphases).where(eq(workphases.id, req.params.id)).run();
+  const { shrunkColumns, deletedColumns } = db.transaction(tx => {
+    const result = shrinkColumnsForDeletedWorkphase(tx, req.params.id, workphase.workflowId);
+    tx.delete(workphases).where(eq(workphases.id, req.params.id)).run();
+    return result;
+  });
+
+  if (shrunkColumns.length > 0 || deletedColumns.length > 0) {
+    res.status(200).json({ shrunkColumns, deletedColumns });
+    return;
+  }
   res.status(204).send();
 });
 
