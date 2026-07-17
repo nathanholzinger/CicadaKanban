@@ -51,20 +51,10 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
   return result;
 }
 
-export function getDescendantIds(id: string, projects: Project[]): Set<string> {
-  const result = new Set<string>();
-  const queue = [id];
-  while (queue.length > 0) {
-    const current = queue.pop()!;
-    for (const p of projects) {
-      if (p.parentId === current) {
-        result.add(p.id);
-        queue.push(p.id);
-      }
-    }
-  }
-  return result;
-}
+// Descendant collection is generic tree math — shared with the item
+// hierarchy via lib/hierarchy; re-exported here to keep this module the
+// sidebar's single import surface.
+export { getDescendantIds } from '../../lib/hierarchy';
 
 export function computeProjection(
   sortableItems: FlatItem[],

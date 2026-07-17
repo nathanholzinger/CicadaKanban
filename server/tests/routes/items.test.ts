@@ -14,6 +14,7 @@ describe('GET /api/items/:id', () => {
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
     const root = await createItem({ projectId: project.id, workphaseId: phase.id, title: 'Root' });
+    // Attached by default — inherits the parent's current workphase.
     const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child' });
 
     const rootRes = await request(app).get(`/api/items/${root.id}`);
@@ -22,7 +23,20 @@ describe('GET /api/items/:id', () => {
 
     const childRes = await request(app).get(`/api/items/${child.id}`);
     expect(childRes.body.depth).toBe(1);
-    expect(childRes.body.workflowId).toBeNull(); // child has no workphaseId
+    expect(childRes.body.workphaseId).toBe(phase.id);
+    expect(childRes.body.workflowId).toBe(workflow.id);
+  });
+
+  it('a detached child does not inherit the parent workphase', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const phase = await createWorkphase(workflow.id);
+    const root = await createItem({ projectId: project.id, workphaseId: phase.id, title: 'Root' });
+    const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child', isAttached: false });
+
+    const childRes = await request(app).get(`/api/items/${child.id}`);
+    expect(childRes.body.workphaseId).toBeNull();
+    expect(childRes.body.workflowId).toBeNull();
   });
 });
 
@@ -216,5 +230,114 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${parent.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${child.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
+  });
+});
+
+describe('attached children', () => {
+  async function setupTwoPhases() {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+    return { project, workflow, todo, inProgress };
+  }
+
+  it('moving a parent cascades through attached children and grandchildren', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
+
+    const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: inProgress.id });
+    expect(res.status).toBe(200);
+
+    expect((await request(app).get(`/api/items/${child.id}`)).body.workphaseId).toBe(inProgress.id);
+    expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
+  });
+
+  it('a detached child halts the cascade for its whole branch', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const root = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Root' });
+    const detached = await createItem({
+      projectId: project.id, parentId: root.id, title: 'Detached', isAttached: false, workphaseId: todo.id,
+    });
+    // Attached under the detached child — inherits its phase, but must not follow the root.
+    const branchChild = await createItem({ projectId: project.id, parentId: detached.id, title: 'Branch Child' });
+
+    await request(app).patch(`/api/items/${root.id}/move`).send({ workphaseId: inProgress.id });
+
+    expect((await request(app).get(`/api/items/${detached.id}`)).body.workphaseId).toBe(todo.id);
+    expect((await request(app).get(`/api/items/${branchChild.id}`)).body.workphaseId).toBe(todo.id);
+  });
+
+  it('reattaching snaps to the parent workphase and cascades to own attached descendants', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'Parent' });
+    const child = await createItem({
+      projectId: project.id, parentId: parent.id, title: 'Child', isAttached: false, workphaseId: todo.id,
+    });
+    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
+    expect(grandchild.workphaseId).toBe(todo.id);
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ isAttached: true });
+    expect(res.status).toBe(200);
+    expect(res.body.workphaseId).toBe(inProgress.id);
+
+    expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
+  });
+
+  it('reparenting an attached item shifts it and its attached descendants to the new parent workphase', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent 1' });
+    const parent2 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'Parent 2' });
+    const item = await createItem({ projectId: project.id, parentId: parent1.id, title: 'Item' });
+    const itemChild = await createItem({ projectId: project.id, parentId: item.id, title: 'Item Child' });
+
+    const res = await request(app).put(`/api/items/${item.id}`).send({ parentId: parent2.id });
+    expect(res.status).toBe(200);
+    expect(res.body.workphaseId).toBe(inProgress.id);
+
+    expect((await request(app).get(`/api/items/${itemChild.id}`)).body.workphaseId).toBe(inProgress.id);
+  });
+
+  it('rejects an item becoming its own parent or reparenting to a descendant', async () => {
+    const project = await createProject();
+    const root = await createItem({ projectId: project.id, title: 'Root' });
+    const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child' });
+    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
+
+    const selfRes = await request(app).put(`/api/items/${root.id}`).send({ parentId: root.id });
+    expect(selfRes.status).toBe(400);
+    expect(selfRes.body.error).toMatch(/own parent/i);
+
+    const cycleRes = await request(app).put(`/api/items/${root.id}`).send({ parentId: grandchild.id });
+    expect(cycleRes.status).toBe(400);
+    expect(cycleRes.body.error).toMatch(/descendant/i);
+  });
+
+  it('an attached child inherits the parent workphase even when a different one is passed', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+
+    const child = await createItem({ projectId: project.id, parentId: parent.id, workphaseId: inProgress.id, title: 'Child' });
+    expect(child.workphaseId).toBe(todo.id);
+  });
+
+  it('an attached child of a parent with no workphase gets a null workphase', async () => {
+    const project = await createProject();
+    const parent = await createItem({ projectId: project.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    expect(child.workphaseId).toBeNull();
+  });
+
+  it('a detached child keeps its explicitly passed workphase', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+
+    const child = await createItem({
+      projectId: project.id, parentId: parent.id, title: 'Child', isAttached: false, workphaseId: inProgress.id,
+    });
+    expect(child.workphaseId).toBe(inProgress.id);
+    expect(child.isAttached).toBe(0);
   });
 });

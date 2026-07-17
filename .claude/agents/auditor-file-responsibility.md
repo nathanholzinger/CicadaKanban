@@ -1,3 +1,10 @@
+---
+name: auditor-file-responsibility
+description: Audit pass skimming file structure to flag modules that own more than one concept and identify natural split seams. Reads file shape and imports, not logic. One of four parallel passes in the Cicada code quality audit.
+tools: Read, Grep, Glob
+model: sonnet
+---
+
 # Auditor Pass: File Responsibility
 
 Read `.claude/personas/auditor.md` first for shared context, output format, and

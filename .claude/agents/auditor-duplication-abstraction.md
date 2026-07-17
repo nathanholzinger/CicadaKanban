@@ -1,3 +1,10 @@
+---
+name: auditor-duplication-abstraction
+description: Audit pass reading across files for near-duplicate business logic, repeated query patterns, repeated JSX structure, and duplicated Tailwind class strings that would benefit from consolidation. One of four parallel passes in the Cicada code quality audit.
+tools: Read, Grep, Glob
+model: opus
+---
+
 # Auditor Pass: Duplication & Abstraction
 
 Read `.claude/personas/auditor.md` first for shared context, output format, and

@@ -23,6 +23,7 @@ import {
   findNextSibling,
 } from './sidebar/projectTreeUtils';
 import type { Projection } from './sidebar/projectTreeUtils';
+import { positionBetween } from '../lib/positions';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 
 interface ProjectSidebarProps {
@@ -116,19 +117,11 @@ export default function ProjectSidebar({
     const prevSibling = findPrevSibling(sortableItems, overIndex, projected);
     const nextSibling = findNextSibling(sortableItems, overIndex, projected);
 
-    const prevPos = prevSibling?.project.position ?? null;
-    const nextPos = nextSibling?.project.position ?? null;
-
-    let newPosition: number;
-    if (prevPos !== null && nextPos !== null) {
-      newPosition = (prevPos + nextPos) / 2;
-    } else if (prevPos !== null) {
-      newPosition = prevPos + 1.0;
-    } else if (nextPos !== null) {
-      newPosition = nextPos / 2;
-    } else {
-      newPosition = Date.now();
-    }
+    const newPosition = positionBetween(
+      prevSibling?.project.position ?? null,
+      nextSibling?.project.position ?? null,
+      () => Date.now(),
+    );
 
     // Auto-expand collapsed parent
     if (projected.parentId) {

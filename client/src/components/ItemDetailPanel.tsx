@@ -10,6 +10,7 @@ import { ActivityLog } from './item-detail/ActivityLog';
 
 interface ItemDetailPanelProps {
   itemId: string | null;
+  items: Item[];
   childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
@@ -19,7 +20,7 @@ interface ItemDetailPanelProps {
   onChildCreated: (item: Item) => void;
 }
 
-export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
+export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -129,6 +130,12 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
     onChildCreated(child);
   }
 
+  // Called by ChildrenSection when a child's attach state changes.
+  function handleChildUpdated(updated: Item) {
+    setDetail(prev => prev ? { ...prev, children: prev.children.map(c => c.id === updated.id ? { ...c, ...updated } : c) } : prev);
+    onUpdate(updated);
+  }
+
   const isOpen = itemId !== null;
 
   return (
@@ -232,10 +239,13 @@ export default function ItemDetailPanel({ itemId, childDefaultWorkphaseId, itemT
               <AttachmentsSection itemId={detail.id} />
               <ChildrenSection
                 item={detail}
+                allItems={items}
                 childDefaultWorkphaseId={childDefaultWorkphaseId}
                 itemTypes={itemTypes}
                 onNavigate={onNavigate}
                 onChildCreated={handleChildCreated}
+                onSelfUpdated={handleItemUpdated}
+                onChildUpdated={handleChildUpdated}
               />
               <ActivityLog activity={detail.activity} />
             </div>

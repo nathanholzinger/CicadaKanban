@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
+import { db } from '../../src/db/index.js';
+import { columns } from '../../src/db/schema.js';
+import { eq } from 'drizzle-orm';
 import { createProject, createWorkflow, createWorkphase, createBoard, createColumn, createItem } from '../fixtures.js';
 
 describe('workflow creation bootstraps a default board', () => {
@@ -82,6 +85,21 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.unsorted.uncovered[0].items.map((i: { id: string }) => i.id)).toEqual([item2.id]);
   });
 
+  it('uses an explicit column name as the displayName override', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const board = boardsRes.body[0];
+    const named = await createColumn(board.id, todo.id, inProgress.id, { name: 'Active Work' });
+
+    const res = await request(app).get(`/api/boards/${board.id}`);
+    const col = res.body.columns.find((c: { id: string }) => c.id === named.id);
+    expect(col.displayName).toBe('Active Work');
+  });
+
   it('flags a column as broken after an out-of-band workphase reorder inverts its range', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -146,6 +164,24 @@ describe('PUT /api/boards/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Renamed');
   });
+
+  it('persists the showAttachedChildren toggle, which defaults to on', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const board = await createBoard(workflow.id, { name: 'Toggle Board' });
+    expect(board.showAttachedChildren).toBe(1);
+
+    const off = await request(app).put(`/api/boards/${board.id}`).send({ showAttachedChildren: false });
+    expect(off.status).toBe(200);
+    expect(off.body.showAttachedChildren).toBe(0);
+
+    // A rename-only update must not reset the toggle.
+    const renamed = await request(app).put(`/api/boards/${board.id}`).send({ name: 'Still Off' });
+    expect(renamed.body.showAttachedChildren).toBe(0);
+
+    const on = await request(app).put(`/api/boards/${board.id}`).send({ showAttachedChildren: true });
+    expect(on.body.showAttachedChildren).toBe(1);
+  });
 });
 
 describe('DELETE /api/boards/:id', () => {
@@ -175,5 +211,8 @@ describe('DELETE /api/boards/:id', () => {
 
     const remaining = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
     expect(remaining.body.map((b: { id: string }) => b.id)).not.toContain(secondBoard.id);
+
+    const orphanedColumns = db.select().from(columns).where(eq(columns.boardId, secondBoard.id)).all();
+    expect(orphanedColumns).toEqual([]);
   });
 });

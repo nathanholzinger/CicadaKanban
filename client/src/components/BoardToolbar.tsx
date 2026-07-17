@@ -10,6 +10,7 @@ interface BoardToolbarProps {
   handleCreateBoard: (name: string) => Promise<Board>;
   handleRenameBoard: (id: string, name: string) => Promise<void>;
   handleDeleteBoard: (id: string) => Promise<void>;
+  handleToggleShowAttachedChildren: (id: string, show: boolean) => Promise<Board>;
   onAddColumn: () => void;
   onToggleWorkphaseManager: () => void;
   childDefaultWorkphaseId: string | null;
@@ -23,7 +24,7 @@ interface BoardToolbarProps {
 // underlying API handlers.
 export default function BoardToolbar({
   boards, activeBoardId, setActiveBoardId, readOnly,
-  handleCreateBoard, handleRenameBoard, handleDeleteBoard,
+  handleCreateBoard, handleRenameBoard, handleDeleteBoard, handleToggleShowAttachedChildren,
   onAddColumn, onToggleWorkphaseManager,
   childDefaultWorkphaseId, onChildWorkphaseChange, workphases,
 }: BoardToolbarProps) {
@@ -32,6 +33,17 @@ export default function BoardToolbar({
   const [boardActionError, setBoardActionError] = useState('');
   const [renamingBoard, setRenamingBoard] = useState(false);
   const [boardNameDraft, setBoardNameDraft] = useState('');
+  const activeBoard = boards.find(b => b.id === activeBoardId);
+
+  async function submitToggleShowAttachedChildren(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!activeBoardId) return;
+    setBoardActionError('');
+    try {
+      await handleToggleShowAttachedChildren(activeBoardId, e.target.checked);
+    } catch (err) {
+      setBoardActionError(err instanceof Error ? err.message : 'Failed to update board setting');
+    }
+  }
 
   async function submitCreateBoard(e: React.FormEvent) {
     e.preventDefault();
@@ -113,6 +125,18 @@ export default function BoardToolbar({
               Manage workphases
             </button>
           </>
+        )}
+
+        {activeBoard && (
+          <label className="flex items-center gap-1 text-[11px] text-zinc-500 ml-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={Boolean(activeBoard.showAttachedChildren)}
+              onChange={submitToggleShowAttachedChildren}
+              className="accent-blue-500"
+            />
+            Show attached children by default
+          </label>
         )}
 
         <span className="text-[11px] text-zinc-500 ml-2">New child items go to:</span>

@@ -9,11 +9,14 @@ interface UnsortedBucketProps {
   needsAttention: boolean;
   itemTypes: ItemType[];
   childCounts: Record<string, number>;
+  getAttachedChildren: (parentId: string) => Item[];
+  defaultExpanded: boolean;
   onCardClick: (id: string) => void;
 }
 
 export default function UnsortedBucket({
-  uncoveredWorkphases, invalidItems, getWorkphaseItems, needsAttention, itemTypes, childCounts, onCardClick,
+  uncoveredWorkphases, invalidItems, getWorkphaseItems, needsAttention, itemTypes, childCounts,
+  getAttachedChildren, defaultExpanded, onCardClick,
 }: UnsortedBucketProps) {
   const groups = uncoveredWorkphases.map(w => ({ workphase: w, items: getWorkphaseItems(w.id) }));
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + invalidItems.length;
@@ -45,7 +48,15 @@ export default function UnsortedBucket({
             <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
               <div className="flex flex-col gap-1.5">
                 {items.map(item => (
-                  <KanbanCard key={item.id} item={item} itemTypes={itemTypes} childCount={childCounts[item.id] ?? 0} onCardClick={onCardClick} />
+                  <KanbanCard
+                    key={item.id}
+                    item={item}
+                    itemTypes={itemTypes}
+                    childCount={childCounts[item.id] ?? 0}
+                    getAttachedChildren={getAttachedChildren}
+                    defaultExpanded={defaultExpanded}
+                    onCardClick={onCardClick}
+                  />
                 ))}
               </div>
             </SortableContext>

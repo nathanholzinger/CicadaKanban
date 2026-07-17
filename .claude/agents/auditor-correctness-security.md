@@ -1,3 +1,10 @@
+---
+name: auditor-correctness-security
+description: Audit pass tracing logic line by line for bugs, unsafe DB mutations, unenforced FK constraints, swallowed errors, and unconsidered failure paths. One of four parallel passes in the Cicada code quality audit.
+tools: Read, Grep, Glob
+model: opus
+---
+
 # Auditor Pass: Correctness & Security
 
 Read `.claude/personas/auditor.md` first for shared context, output format, and

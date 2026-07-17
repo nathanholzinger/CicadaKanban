@@ -4,6 +4,7 @@ import { items, workphases, activityLog, notifications, itemLabels, chatThreads,
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 
 const router = Router();
 
@@ -71,6 +72,7 @@ router.post('/', (req, res) => {
     description,
     assigneeType,
     agentId,
+    isAttached,
   } = req.body;
 
   if (!title) {
@@ -80,20 +82,24 @@ router.post('/', (req, res) => {
 
   // Resolve projectId from parent if not provided
   let resolvedProjectId = projectId;
-  if (parentId && !projectId) {
-    const parent = db.select({ projectId: items.projectId }).from(items).where(eq(items.id, parentId)).get();
-    if (parent) resolvedProjectId = parent.projectId;
-  }
+  const parent = parentId
+    ? db.select({ projectId: items.projectId, workphaseId: items.workphaseId }).from(items).where(eq(items.id, parentId)).get()
+    : null;
+  if (parentId && !projectId && parent) resolvedProjectId = parent.projectId;
 
   if (!resolvedProjectId) {
     res.status(400).json({ error: 'projectId is required (or provide a parentId to inherit it)' });
     return;
   }
 
+  const attached = isAttached !== undefined ? Boolean(isAttached) : true;
+  // Attached children (the default) mirror the parent's current workphase.
+  const resolvedWorkphaseId = attached && parent ? parent.workphaseId : workphaseId;
+
   // Calculate position at end of workphase if workphaseId provided
   let position: number | null = null;
-  if (workphaseId) {
-    const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, workphaseId)).all();
+  if (resolvedWorkphaseId) {
+    const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, resolvedWorkphaseId)).all();
     const maxPos = itemsInWorkphase.length > 0
       ? Math.max(...itemsInWorkphase.map(i => i.position ?? 0))
       : 0;
@@ -108,30 +114,51 @@ router.post('/', (req, res) => {
     type: type ?? null,
     parentId: parentId || null,
     projectId: resolvedProjectId,
-    workphaseId: workphaseId,
+    workphaseId: resolvedWorkphaseId,
     title,
     description: description || null,
     position,
     assigneeType: assigneeType || null,
     agentId: agentId || null,
+    isAttached: attached ? 1 : 0,
     createdAt: now,
     updatedAt: now,
   }).run();
 
   logActivity(id, 'status_change', type ? `Created as ${type}` : 'Created', {
-    workphaseId: workphaseId,
+    workphaseId: resolvedWorkphaseId,
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
   res.status(201).json(created);
 });
 
-// Update an item's details (not position/workphase — use move for that)
+function isItemDescendant(ofId: string, candidateId: string): boolean {
+  const children = db.select({ id: items.id }).from(items).where(eq(items.parentId, ofId)).all();
+  for (const child of children) {
+    if (child.id === candidateId || isItemDescendant(child.id, candidateId)) return true;
+  }
+  return false;
+}
+
+// Update an item's details (not position/workphase directly — use move for that,
+// though reparenting/attaching here can still shift workphaseId to follow the parent)
 router.put('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
   if (!item) return;
 
-  const { title, description, assigneeType, agentId, parentId } = req.body;
+  const { title, description, assigneeType, agentId, parentId, isAttached } = req.body;
+
+  if (parentId !== undefined && parentId !== null) {
+    if (parentId === req.params.id) {
+      res.status(400).json({ error: 'An item cannot be its own parent' });
+      return;
+    }
+    if (isItemDescendant(req.params.id, parentId)) {
+      res.status(400).json({ error: 'Cannot reparent to a descendant' });
+      return;
+    }
+  }
 
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
   if (title !== undefined) updates.title = title;
@@ -139,8 +166,21 @@ router.put('/:id', (req, res) => {
   if (assigneeType !== undefined) updates.assigneeType = assigneeType;
   if (agentId !== undefined) updates.agentId = agentId;
   if (parentId !== undefined) updates.parentId = parentId;
+  if (isAttached !== undefined) updates.isAttached = isAttached ? 1 : 0;
 
   db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
+
+  // If the item ends up attached with a parent, sync its workphase to match —
+  // covers both "just attached" and "reparented while already attached".
+  const resultingParentId = parentId !== undefined ? parentId : item.parentId;
+  const resultingAttached = isAttached !== undefined ? Boolean(isAttached) : Boolean(item.isAttached);
+  if (resultingAttached && resultingParentId) {
+    const newParent = db.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId)).get();
+    if (newParent) {
+      db.update(items).set({ workphaseId: newParent.workphaseId, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
+      cascadeWorkphaseToAttachedDescendants(req.params.id);
+    }
+  }
 
   if (assigneeType !== undefined || agentId !== undefined) {
     logActivity(req.params.id, 'assignment', `Assigned to ${assigneeType || 'unassigned'}`, {
@@ -175,6 +215,8 @@ router.patch('/:id/move', (req, res) => {
   db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
   if (workphaseId !== undefined && workphaseId !== oldWorkphaseId) {
+    cascadeWorkphaseToAttachedDescendants(req.params.id);
+
     const oldWorkphase = oldWorkphaseId
       ? db.select().from(workphases).where(eq(workphases.id, oldWorkphaseId)).get()
       : null;

@@ -39,6 +39,12 @@ export function useBoardManagement(workflowId: string) {
     setBoards(prev => prev.map(b => (b.id === id ? updated : b)));
   }
 
+  async function handleToggleShowAttachedChildren(id: string, show: boolean) {
+    const updated = await updateBoard(id, { showAttachedChildren: show });
+    setBoards(prev => prev.map(b => (b.id === id ? updated : b)));
+    return updated;
+  }
+
   async function handleDeleteBoard(id: string) {
     await deleteBoard(id);
     const next = boards.filter(b => b.id !== id);
@@ -56,6 +62,7 @@ export function useBoardManagement(workflowId: string) {
     handleCreateBoard,
     handleRenameBoard,
     handleDeleteBoard,
+    handleToggleShowAttachedChildren,
     reloadBoards: loadBoards,
   };
 }

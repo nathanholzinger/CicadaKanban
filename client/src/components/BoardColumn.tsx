@@ -13,6 +13,8 @@ interface BoardColumnProps {
   column: Column;
   getWorkphaseItems: (workphaseId: string) => Item[];
   childCounts: Record<string, number>;
+  getAttachedChildren: (parentId: string) => Item[];
+  defaultExpanded: boolean;
   itemTypes: ItemType[];
   isCardBeingDragged: boolean;
   onCreateItem: (workphaseId: string, title: string, type: string | null) => void;
@@ -22,7 +24,7 @@ interface BoardColumnProps {
 }
 
 export default function BoardColumn({
-  column, getWorkphaseItems, childCounts, itemTypes, isCardBeingDragged,
+  column, getWorkphaseItems, childCounts, getAttachedChildren, defaultExpanded, itemTypes, isCardBeingDragged,
   onCreateItem, onCardClick, onEdit, onDelete,
 }: BoardColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
@@ -145,6 +147,8 @@ export default function BoardColumn({
               items={getWorkphaseItems(row.workphase.id)}
               itemTypes={itemTypes}
               childCounts={childCounts}
+              getAttachedChildren={getAttachedChildren}
+              defaultExpanded={defaultExpanded}
               isCardBeingDragged={isCardBeingDragged && !column.broken}
               onCardClick={onCardClick}
             />
@@ -153,7 +157,15 @@ export default function BoardColumn({
           <>
             <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
               {mergedItems.map(item => (
-                <KanbanCard key={item.id} item={item} itemTypes={itemTypes} childCount={childCounts[item.id] ?? 0} onCardClick={onCardClick} />
+                <KanbanCard
+                  key={item.id}
+                  item={item}
+                  itemTypes={itemTypes}
+                  childCount={childCounts[item.id] ?? 0}
+                  getAttachedChildren={getAttachedChildren}
+                  defaultExpanded={defaultExpanded}
+                  onCardClick={onCardClick}
+                />
               ))}
             </SortableContext>
             {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && (
@@ -214,11 +226,15 @@ interface ExpandedSubRowProps {
   items: Item[];
   itemTypes: ItemType[];
   childCounts: Record<string, number>;
+  getAttachedChildren: (parentId: string) => Item[];
+  defaultExpanded: boolean;
   isCardBeingDragged: boolean;
   onCardClick: (id: string) => void;
 }
 
-function ExpandedSubRow({ columnId, workphase, items, itemTypes, childCounts, isCardBeingDragged, onCardClick }: ExpandedSubRowProps) {
+function ExpandedSubRow({
+  columnId, workphase, items, itemTypes, childCounts, getAttachedChildren, defaultExpanded, isCardBeingDragged, onCardClick,
+}: ExpandedSubRowProps) {
   const { setNodeRef, isOver } = useDroppable({ id: subrowContainerId(columnId, workphase.id) });
 
   return (
@@ -235,7 +251,15 @@ function ExpandedSubRow({ columnId, workphase, items, itemTypes, childCounts, is
       >
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(item => (
-            <KanbanCard key={item.id} item={item} itemTypes={itemTypes} childCount={childCounts[item.id] ?? 0} onCardClick={onCardClick} />
+            <KanbanCard
+              key={item.id}
+              item={item}
+              itemTypes={itemTypes}
+              childCount={childCounts[item.id] ?? 0}
+              getAttachedChildren={getAttachedChildren}
+              defaultExpanded={defaultExpanded}
+              onCardClick={onCardClick}
+            />
           ))}
         </SortableContext>
       </div>

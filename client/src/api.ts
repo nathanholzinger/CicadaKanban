@@ -170,7 +170,7 @@ export async function createBoard(data: { workflowId: string; name: string }): P
   return res.json();
 }
 
-export async function updateBoard(id: string, data: { name?: string }): Promise<Board> {
+export async function updateBoard(id: string, data: { name?: string; showAttachedChildren?: boolean }): Promise<Board> {
   const res = await fetch(`${API}/boards/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -262,6 +262,7 @@ export async function createItem(data: {
   description?: string;
   assigneeType?: string;
   agentId?: string;
+  isAttached?: boolean;
 }): Promise<Item> {
   const res = await fetch(`${API}/items`, {
     method: 'POST',
@@ -274,14 +275,17 @@ export async function createItem(data: {
 
 export async function updateItem(
   id: string,
-  data: Partial<Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>>,
+  data: Partial<Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>> & { isAttached?: boolean },
 ): Promise<Item> {
   const res = await fetch(`${API}/items/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update item');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to update item');
+  }
   return res.json();
 }
 

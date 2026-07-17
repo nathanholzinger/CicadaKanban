@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
+import { getDescendantIds } from '../lib/hierarchy';
 
 interface EffectiveWorkflow {
   workflow: Workflow;
@@ -32,11 +33,8 @@ function buildParentOptions(allProjects: Project[], currentId: string): Array<{ 
     else roots.push(p.id);
   }
 
-  function collectDescendants(id: string, out: Set<string>) {
-    map.get(id)?.children.forEach(c => { out.add(c); collectDescendants(c, out); });
-  }
-  const excluded = new Set<string>([currentId]);
-  collectDescendants(currentId, excluded);
+  const excluded = getDescendantIds(currentId, allProjects);
+  excluded.add(currentId);
 
   const options: Array<{ value: string; label: string }> = [{ value: '', label: 'Root' }];
   function traverse(id: string, depth: number) {

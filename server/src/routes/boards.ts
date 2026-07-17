@@ -140,15 +140,16 @@ router.post('/', (req, res) => {
   res.status(201).json(board);
 });
 
-// Rename a board
+// Rename a board and/or update its display settings
 router.put('/:id', (req, res) => {
   const board = getOrNotFound(db.select().from(boards).where(eq(boards.id, req.params.id)).get(), res, 'Board not found');
   if (!board) return;
 
-  const { name } = req.body;
+  const { name, showAttachedChildren } = req.body;
 
   db.update(boards).set({
     name: name ?? board.name,
+    showAttachedChildren: showAttachedChildren !== undefined ? (showAttachedChildren ? 1 : 0) : board.showAttachedChildren,
     updatedAt: Date.now(),
   }).where(eq(boards.id, req.params.id)).run();
 

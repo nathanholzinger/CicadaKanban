@@ -49,7 +49,6 @@ on rendering rather than simulating real drag gestures, matching the existing co
 ## Planned Features That Are Out of Scope
 
 Do not design tests around functionality planned for future epics:
-- Epic 3: Attached/detached item behavior
 - Epic 4: Quick items
 - Epic 5: Tag buckets (current labels are a temporary system)
 - Epic 6: Inbox

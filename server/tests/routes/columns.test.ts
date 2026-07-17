@@ -52,6 +52,13 @@ describe('pure range helpers', () => {
     expect(columnsOverlap(rangeA, rangeC, rankMap)).toBe(false);
   });
 
+  it('treats unknown workphase ids as unresolvable: null range, broken column, no overlap', () => {
+    const withUnknown = { startWorkphaseId: 'a', endWorkphaseId: 'zz' };
+    expect(computeColumnRange(withUnknown, rankMap)).toBeNull();
+    expect(isColumnBroken(withUnknown, rankMap)).toBe(true);
+    expect(columnsOverlap(withUnknown, { startWorkphaseId: 'a', endWorkphaseId: 'b' }, rankMap)).toBe(false);
+  });
+
   it('computeUnsorted reports uncovered workphases and invalid item references', () => {
     const columnsForBoard = [{ startWorkphaseId: 'a', endWorkphaseId: 'b' }];
     const workflowItems = [
@@ -172,6 +179,41 @@ describe('PUT /api/columns/:id', () => {
     expect(renamed.status).toBe(200);
     expect(renamed.body.name).toBe('Later Stages');
   });
+
+  it('rejects an inverted range and a foreign workphase on update', async () => {
+    const { board, todo, done } = await setupCleanBoard();
+    const col = await createColumn(board.id, todo.id, todo.id);
+
+    // nextStart=done outranks the kept nextEnd=todo
+    const inverted = await request(app).put(`/api/columns/${col.id}`).send({ startWorkphaseId: done.id });
+    expect(inverted.status).toBe(400);
+    expect(inverted.body.error).toMatch(/must not come after/i);
+
+    const otherWorkflow = await createWorkflow((await createProject()).id);
+    const foreignPhase = await createWorkphase(otherWorkflow.id, { name: 'Foreign' });
+    const foreign = await request(app).put(`/api/columns/${col.id}`).send({ endWorkphaseId: foreignPhase.id });
+    expect(foreign.status).toBe(400);
+    expect(foreign.body.error).toMatch(/belong to this board's workflow/i);
+  });
+
+  it('updates displayMode only when explicitly set, and sets/clears the name override', async () => {
+    const { board, todo } = await setupCleanBoard();
+    const col = await createColumn(board.id, todo.id, todo.id); // defaults to merged
+
+    const expanded = await request(app).put(`/api/columns/${col.id}`).send({ displayMode: 'expanded' });
+    expect(expanded.body.displayMode).toBe('expanded');
+
+    // A name-only update must not silently flip displayMode back to merged.
+    const named = await request(app).put(`/api/columns/${col.id}`).send({ name: 'Focus' });
+    expect(named.body.displayMode).toBe('expanded');
+    expect(named.body.name).toBe('Focus');
+
+    const cleared = await request(app).put(`/api/columns/${col.id}`).send({ name: null });
+    expect(cleared.body.name).toBeNull();
+
+    const merged = await request(app).put(`/api/columns/${col.id}`).send({ displayMode: 'merged' });
+    expect(merged.body.displayMode).toBe('merged');
+  });
 });
 
 describe('PATCH /api/columns/reorder', () => {
@@ -180,7 +222,28 @@ describe('PATCH /api/columns/reorder', () => {
     expect(res.status).toBe(400);
   });
 
-  it('reorders columns', async () => {
+  it('rejects an entry without a string id and finite numeric position', async () => {
+    const { board, todo } = await setupCleanBoard();
+    const col = await createColumn(board.id, todo.id, todo.id);
+
+    const res = await request(app).patch('/api/columns/reorder').send({
+      columnOrders: [{ id: col.id, position: 'first' }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 with missingIds when any column does not exist', async () => {
+    const { board, todo } = await setupCleanBoard();
+    const col = await createColumn(board.id, todo.id, todo.id);
+
+    const res = await request(app).patch('/api/columns/reorder').send({
+      columnOrders: [{ id: col.id, position: 1 }, { id: 'ghost', position: 2 }],
+    });
+    expect(res.status).toBe(404);
+    expect(res.body.missingIds).toEqual(['ghost']);
+  });
+
+  it('reorders columns and the board reflects the new order', async () => {
     const { board, todo, done } = await setupCleanBoard();
     const colA = await createColumn(board.id, todo.id, todo.id);
     const colB = await createColumn(board.id, done.id, done.id);
@@ -189,6 +252,9 @@ describe('PATCH /api/columns/reorder', () => {
       columnOrders: [{ id: colA.id, position: 5 }, { id: colB.id, position: 1 }],
     });
     expect(res.status).toBe(200);
+
+    const detail = await request(app).get(`/api/boards/${board.id}`);
+    expect(detail.body.columns.map((c: { id: string }) => c.id)).toEqual([colB.id, colA.id]);
   });
 });
 

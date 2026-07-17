@@ -1,3 +1,10 @@
+---
+name: auditor-consistency-drift
+description: Audit pass comparing code against established project conventions — naming, route shape, client/server type sync — and flagging stale comments, dead TODOs, and types that no longer match the schema. One of four parallel passes in the Cicada code quality audit.
+tools: Read, Grep, Glob
+model: sonnet
+---
+
 # Auditor Pass: Consistency & Drift
 
 Read `.claude/personas/auditor.md` first for shared context, output format, and

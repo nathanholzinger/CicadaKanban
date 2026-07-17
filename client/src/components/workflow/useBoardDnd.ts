@@ -10,6 +10,12 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
 import { reorderItems, moveItem } from '../../api';
+import {
+  buildColumnForWorkphaseMap,
+  resolveDropWorkphaseId as resolveDropTarget,
+  computeSameWorkphaseReorder,
+  computeDropPosition,
+} from './boardDndUtils';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
@@ -32,37 +38,13 @@ export function useBoardDnd(
 
   // Maps every covered workphase id -> the column that covers it, for
   // resolving drop targets and hover-derived lookups.
-  const columnForWorkphase = useMemo(() => {
-    const map = new Map<string, Column>();
-    if (!board) return map;
-    for (const col of board.columns) {
-      for (const row of col.subRows) map.set(row.workphase.id, col);
-    }
-    return map;
-  }, [board]);
+  const columnForWorkphase = useMemo(
+    () => buildColumnForWorkphaseMap<Column>(board?.columns ?? []),
+    [board],
+  );
 
-  // Resolves a dnd-kit `over.id` to the workphase an item should be assigned
-  // to if dropped there, or null if it's not a valid drop target (Unsorted,
-  // a broken column, or an expanded column's outer wrapper — expanded mode
-  // requires dropping on a specific sub-row for precision).
   function resolveDropWorkphaseId(overId: string): string | null {
-    if (overId.startsWith('subrow::')) {
-      const workphaseId = overId.split('::')[2];
-      const col = columnForWorkphase.get(workphaseId);
-      return col && !col.broken ? workphaseId : null;
-    }
-
-    const hoveredColumn = board?.columns.find(c => c.id === overId);
-    if (hoveredColumn) {
-      if (hoveredColumn.broken) return null;
-      return hoveredColumn.displayMode === 'merged' ? hoveredColumn.entryWorkphaseId : null;
-    }
-
-    const hoverWorkphaseId = findWorkphaseForItem(overId);
-    if (!hoverWorkphaseId) return null;
-    const col = columnForWorkphase.get(hoverWorkphaseId);
-    if (!col || col.broken) return null;
-    return col.displayMode === 'expanded' ? hoverWorkphaseId : col.entryWorkphaseId;
+    return resolveDropTarget(overId, board?.columns ?? [], columnForWorkphase, findWorkphaseForItem);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -124,13 +106,9 @@ export function useBoardDnd(
 
     // Same-workphase reorder
     if (!isOverContainer && originalWorkphaseId === targetWorkphaseId) {
-      const workphaseItems = getWorkphaseItems(targetWorkphaseId);
-      const oldIndex = workphaseItems.findIndex(i => i.id === activeId);
-      const newIndex = workphaseItems.findIndex(i => i.id === overId);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+      const updatedPositions = computeSameWorkphaseReorder(getWorkphaseItems(targetWorkphaseId), activeId, overId);
+      if (!updatedPositions) return;
 
-      const reordered = arrayMove(workphaseItems, oldIndex, newIndex);
-      const updatedPositions = reordered.map((item, idx) => ({ id: item.id, position: idx + 1 }));
       setItems(prev => prev.map(item => {
         const u = updatedPositions.find(p => p.id === item.id);
         return u ? { ...item, position: u.position } : item;
@@ -146,24 +124,7 @@ export function useBoardDnd(
 
     // Cross-workphase move
     const workphaseItems = getWorkphaseItems(targetWorkphaseId).filter(i => i.id !== activeId);
-    let newPosition: number;
-
-    if (isOverContainer || workphaseItems.length === 0) {
-      newPosition = workphaseItems.length > 0
-        ? Math.max(...workphaseItems.map(i => i.position ?? 0)) + 1.0
-        : 1.0;
-    } else {
-      const overIndex = workphaseItems.findIndex(i => i.id === overId);
-      const prevItem = workphaseItems[overIndex - 1];
-      const nextItem = workphaseItems[overIndex];
-      if (prevItem && nextItem) {
-        newPosition = ((prevItem.position ?? overIndex) + (nextItem.position ?? overIndex + 1)) / 2;
-      } else if (prevItem) {
-        newPosition = (prevItem.position ?? overIndex) + 1.0;
-      } else {
-        newPosition = (nextItem?.position ?? 1.0) / 2;
-      }
-    }
+    const newPosition = computeDropPosition(workphaseItems, overId, isOverContainer);
 
     setItems(prev =>
       prev.map(item =>

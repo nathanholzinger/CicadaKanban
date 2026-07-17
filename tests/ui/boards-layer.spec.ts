@@ -249,3 +249,120 @@ test.describe('workphase delete notice', () => {
     await expect(page.getByText('1 column removed')).toBeVisible();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// Board and column lifecycle (delete completion, edit, reorder)
+// ─────────────────────────────────────────────────────────────────
+
+test.describe('board and column lifecycle', () => {
+  test.beforeAll(async ({ request }) => {
+    await request.post(`${API}/test/reset`);
+  });
+
+  test('deletes a board and falls back to the remaining board', async ({ page, request, projectSidebar }) => {
+    const { workflow } = await createTemplatedWorkflow(request, 'Board Delete UI Project');
+    await request.post(`${API}/boards`, { data: { workflowId: workflow.id, name: 'Doomed Board' } });
+
+    await page.goto('/');
+    await projectSidebar.select('Board Delete UI Project');
+    const main = page.locator('main');
+    await main.getByRole('button', { name: 'Board' }).click();
+
+    const switcher = main.locator('select[aria-label="Active board"]');
+    await switcher.selectOption({ label: 'Doomed Board' });
+    await main.getByRole('button', { name: 'Delete board' }).click();
+
+    // The deleted board leaves the switcher, and with one board left the
+    // delete control disappears again.
+    await expect(switcher.locator('option', { hasText: 'Doomed Board' })).toHaveCount(0);
+    await expect(switcher).toContainText('Default Board');
+    await expect(main.getByRole('button', { name: 'Delete board' })).not.toBeVisible();
+  });
+
+  test("editing a column's range via the modal pulls a workphase out of Unsorted", async ({ page, request, projectSidebar }) => {
+    const { project, workflow } = await createBareWorkflow(request, 'Column Edit Project');
+    const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
+    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
+    await request.post(`${API}/columns`, {
+      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
+    });
+    await request.post(`${API}/items`, {
+      data: { title: 'Edit range item', projectId: project.id, workphaseId: inProgress.id },
+    });
+
+    await page.goto('/');
+    await projectSidebar.select('Column Edit Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    // 'In Progress' is uncovered, so its item sits in Unsorted.
+    await expect(
+      page.getByRole('group', { name: 'Unsorted' }).getByRole('article', { name: 'Edit range item' }),
+    ).toBeVisible();
+
+    // Extend the column's range to Todo – In Progress via the edit modal.
+    await page.getByRole('group', { name: 'Todo' }).getByTitle('Click to edit column').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('select').nth(1).selectOption({ label: 'In Progress' });
+    await dialog.getByRole('button', { name: 'Save' }).click();
+
+    const widened = page.getByRole('group', { name: 'Todo – In Progress' });
+    await expect(widened).toBeVisible();
+    await expect(widened.getByRole('article', { name: 'Edit range item' })).toBeVisible();
+    // Everything is covered now — the Unsorted bucket disappears entirely.
+    await expect(page.getByRole('group', { name: 'Unsorted' })).not.toBeVisible();
+  });
+
+  test('deleting a column returns its workphases to Unsorted with their items', async ({ page, request, projectSidebar }) => {
+    const { project, workflow } = await createBareWorkflow(request, 'Column Delete Project');
+    const [todo] = await addWorkphases(request, workflow.id, ['Todo']);
+    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
+    await request.post(`${API}/columns`, {
+      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
+    });
+    await request.post(`${API}/items`, {
+      data: { title: 'Orphaned by delete', projectId: project.id, workphaseId: todo.id },
+    });
+
+    await page.goto('/');
+    await projectSidebar.select('Column Delete Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    const column = page.getByRole('group', { name: 'Todo' });
+    await expect(column.getByRole('article', { name: 'Orphaned by delete' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Unsorted' })).not.toBeVisible();
+
+    // Two-step delete confirm on the column header.
+    await column.getByTitle('Delete column').click();
+    await column.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    const unsorted = page.getByRole('group', { name: 'Unsorted' });
+    await expect(unsorted).toBeVisible();
+    await expect(unsorted.getByText('needs attention')).toBeVisible();
+    await expect(unsorted.getByRole('article', { name: 'Orphaned by delete' })).toBeVisible();
+  });
+
+  test('a column reorder via the API is reflected in the rendered order', async ({ page, request, projectSidebar }) => {
+    const { workflow } = await createBareWorkflow(request, 'Column Reorder UI Project');
+    const [todo, done] = await addWorkphases(request, workflow.id, ['Todo', 'Done']);
+    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
+    const colA = await (await request.post(`${API}/columns`, {
+      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
+    })).json();
+    const colB = await (await request.post(`${API}/columns`, {
+      data: { boardId: boards[0].id, startWorkphaseId: done.id, endWorkphaseId: done.id },
+    })).json();
+
+    await request.patch(`${API}/columns/reorder`, {
+      data: { columnOrders: [{ id: colA.id, position: 2 }, { id: colB.id, position: 1 }] },
+    });
+
+    await page.goto('/');
+    await projectSidebar.select('Column Reorder UI Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    const groups = page.locator('main [role="group"]');
+    await expect(groups).toHaveCount(2);
+    await expect(groups.nth(0)).toHaveAttribute('aria-label', 'Done');
+    await expect(groups.nth(1)).toHaveAttribute('aria-label', 'Todo');
+  });
+});

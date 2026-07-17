@@ -86,6 +86,7 @@ export const boards = sqliteTable('boards', {
   workflowId: text('workflow_id').notNull().references(() => workflows.id),
   name: text('name').notNull(),
   position: real('position').notNull(),
+  showAttachedChildren: integer('show_attached_children').notNull().default(1),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
@@ -110,6 +111,7 @@ export const items = sqliteTable('items', {
   title: text('title').notNull(),
   description: text('description'),
   position: real('position'),
+  isAttached: integer('is_attached').notNull().default(1),
   assigneeType: text('assignee_type'), // app-level: 'human' | 'agent'
   agentId: text('agent_id').references(() => agents.id),
   createdAt: integer('created_at').notNull(),

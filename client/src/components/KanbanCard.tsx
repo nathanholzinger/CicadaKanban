@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 
 const PILL_BASE = 'inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border';
@@ -29,11 +30,16 @@ interface KanbanCardProps {
   item: Item;
   itemTypes?: ItemType[];
   childCount?: number;
+  getAttachedChildren?: (parentId: string) => Item[];
+  defaultExpanded?: boolean;
   isOverlay?: boolean;
   onCardClick?: (id: string) => void;
 }
 
-export default function KanbanCard({ item, itemTypes = [], childCount = 0, isOverlay = false, onCardClick }: KanbanCardProps) {
+export default function KanbanCard({
+  item, itemTypes = [], childCount = 0, getAttachedChildren, defaultExpanded = true, isOverlay = false, onCardClick,
+}: KanbanCardProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const {
     attributes,
     listeners,
@@ -97,9 +103,15 @@ export default function KanbanCard({ item, itemTypes = [], childCount = 0, isOve
       {(item.assigneeType || childCount > 0) && (
         <div className="mt-2 flex items-center gap-2">
           {childCount > 0 && (
-            <span className="text-[11px] text-zinc-500 flex items-center gap-0.5">
-              ↳ {childCount}
-            </span>
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+              onPointerDown={e => e.stopPropagation()}
+              className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-0.5"
+              title={expanded ? 'Hide attached children' : 'Show attached children'}
+            >
+              {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
+            </button>
           )}
           {item.assigneeType && (
             <div className="flex items-center gap-1">
@@ -117,6 +129,64 @@ export default function KanbanCard({ item, itemTypes = [], childCount = 0, isOve
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Attached children, indented — read-only rows, click opens that child */}
+      {expanded && childCount > 0 && getAttachedChildren && (
+        <div className="mt-2 pl-3 border-l border-zinc-700/50 space-y-1">
+          {getAttachedChildren(item.id).map(child => (
+            <AttachedChildRow
+              key={child.id}
+              item={child}
+              itemTypes={itemTypes}
+              getAttachedChildren={getAttachedChildren}
+              onCardClick={onCardClick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface AttachedChildRowProps {
+  item: Item;
+  itemTypes: ItemType[];
+  getAttachedChildren: (parentId: string) => Item[];
+  onCardClick?: (id: string) => void;
+}
+
+function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }: AttachedChildRowProps) {
+  const typePill = typePillProps(item.type, itemTypes);
+  const grandchildren = getAttachedChildren(item.id);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); onCardClick?.(item.id); }}
+        onPointerDown={e => e.stopPropagation()}
+        className="w-full flex items-center gap-1.5 text-left px-1.5 py-1 rounded hover:bg-zinc-700/40 transition-colors"
+      >
+        {typePill && (
+          <span className={typePill.className} style={typePill.style}>
+            {typePill.label}
+          </span>
+        )}
+        <span className="text-xs text-zinc-300 truncate">{item.title}</span>
+      </button>
+      {grandchildren.length > 0 && (
+        <div className="pl-3 border-l border-zinc-700/50 space-y-1">
+          {grandchildren.map(child => (
+            <AttachedChildRow
+              key={child.id}
+              item={child}
+              itemTypes={itemTypes}
+              getAttachedChildren={getAttachedChildren}
+              onCardClick={onCardClick}
+            />
+          ))}
         </div>
       )}
     </div>

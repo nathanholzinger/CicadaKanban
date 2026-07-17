@@ -47,6 +47,7 @@ export interface Item {
   position: number | null;
   assigneeType: string | null;
   agentId: string | null;
+  isAttached: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -61,6 +62,7 @@ export interface Board {
   workflowId: string;
   name: string;
   position: number;
+  showAttachedChildren: number;
   createdAt: number;
   updatedAt: number;
 }

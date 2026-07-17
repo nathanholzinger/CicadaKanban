@@ -77,19 +77,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           type: { type: 'string', description: 'Item type name (e.g. "Epic", "Story", "Task") or UUID. Optional.' },
           description: { type: 'string', description: 'Optional item description' },
           parent_id: { type: 'string', description: 'Optional parent item ID' },
+          is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases. Defaults to true. When true and parent_id is set, the item is placed in the parent\'s current workphase regardless of workphase_id.' },
         },
         required: ['title', 'project_id', 'workphase_id'],
       },
     },
     {
       name: 'update_item',
-      description: "Update an item's title and/or description",
+      description: "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase.",
       inputSchema: {
         type: 'object',
         properties: {
           item_id: { type: 'string', description: 'The item ID' },
           title: { type: 'string', description: 'New title' },
           description: { type: 'string', description: 'New description' },
+          parent_id: { type: 'string', description: 'New parent item ID, or null to make it top-level. Rejected if it would create a cycle.' },
+          is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases.' },
         },
         required: ['item_id'],
       },
@@ -174,6 +177,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             workphaseId: args!.workphase_id,
             description: args!.description,
             parentId: args!.parent_id,
+            isAttached: args!.is_attached,
           }),
         });
         return {
@@ -185,6 +189,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const updates: Record<string, unknown> = {};
         if (args!.title !== undefined) updates.title = args!.title;
         if (args!.description !== undefined) updates.description = args!.description;
+        if (args!.parent_id !== undefined) updates.parentId = args!.parent_id;
+        if (args!.is_attached !== undefined) updates.isAttached = args!.is_attached;
         const item = await api(`/items/${args!.item_id}`, {
           method: 'PUT',
           body: JSON.stringify(updates),

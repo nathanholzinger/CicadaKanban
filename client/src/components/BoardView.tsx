@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import type { BoardWithDetails, Item, ItemType, Column } from '../types';
+import type { BoardWithDetails, ItemType, Column } from '../types';
 import { fetchBoard, fetchItemTypes } from '../api';
 import BoardColumn from './BoardColumn';
 import UnsortedBucket from './UnsortedBucket';
@@ -37,8 +37,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   const {
     boards, activeBoardId, setActiveBoardId,
-    handleCreateBoard, handleRenameBoard, handleDeleteBoard,
+    handleCreateBoard, handleRenameBoard, handleDeleteBoard, handleToggleShowAttachedChildren,
   } = useBoardManagement(workflowId);
+
+  const showAttachedChildrenDefault = Boolean(boards.find(b => b.id === activeBoardId)?.showAttachedChildren);
 
   const {
     workphases, setWorkphases,
@@ -51,7 +53,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   const {
     items, setItems, childCounts,
-    getWorkphaseItems, findWorkphaseForItem,
+    getWorkphaseItems, getAttachedChildren, findWorkphaseForItem,
     handleCreateItem, handleItemUpdated, handleItemDeleted, handleChildCreated,
   } = useItemManagement(projectId, filterProjectId);
 
@@ -173,6 +175,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           handleCreateBoard={handleCreateBoard}
           handleRenameBoard={handleRenameBoard}
           handleDeleteBoard={handleDeleteBoard}
+          handleToggleShowAttachedChildren={handleToggleShowAttachedChildren}
           onAddColumn={() => setEditingColumn('new')}
           onToggleWorkphaseManager={() => { setShowWorkphaseManager(v => !v); setWorkphaseNotice(''); }}
           childDefaultWorkphaseId={childDefaultWorkphaseId}
@@ -210,6 +213,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                 column={column}
                 getWorkphaseItems={getWorkphaseItems}
                 childCounts={childCounts}
+                getAttachedChildren={getAttachedChildren}
+                defaultExpanded={showAttachedChildrenDefault}
                 itemTypes={itemTypes}
                 isCardBeingDragged={activeItem !== null}
                 onCreateItem={handleCreateItem}
@@ -226,6 +231,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
               needsAttention={board.unsorted.needsAttention}
               itemTypes={itemTypes}
               childCounts={childCounts}
+              getAttachedChildren={getAttachedChildren}
+              defaultExpanded={Boolean(board.showAttachedChildren)}
               onCardClick={setSelectedItemId}
             />
           </div>
@@ -248,6 +255,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
       <ItemDetailPanel
         itemId={selectedItemId}
+        items={items}
         childDefaultWorkphaseId={childDefaultWorkphaseId}
         itemTypes={itemTypes}
         onClose={() => setSelectedItemId(null)}
