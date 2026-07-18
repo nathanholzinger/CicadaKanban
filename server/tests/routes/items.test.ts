@@ -74,6 +74,14 @@ describe('POST /api/items', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/items')
+      .send({ title: 'Child', projectId: project.id, parentId: 'no-such-parent' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/parentId/i);
+  });
+
   it('positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -327,6 +335,15 @@ describe('attached children', () => {
     const cycleRes = await request(app).put(`/api/items/${root.id}`).send({ parentId: grandchild.id });
     expect(cycleRes.status).toBe(400);
     expect(cycleRes.body.error).toMatch(/descendant/i);
+  });
+
+  it('rejects reparenting to a non-existent parentId', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id, title: 'Item' });
+
+    const res = await request(app).put(`/api/items/${item.id}`).send({ parentId: 'no-such-parent' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/parentId/i);
   });
 
   it('an attached child inherits the parent workphase even when a different one is passed', async () => {

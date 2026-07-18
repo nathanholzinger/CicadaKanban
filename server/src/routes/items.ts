@@ -38,6 +38,10 @@ function workphaseExists(id: string): boolean {
   return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
 }
 
+function itemExists(id: string): boolean {
+  return !!db.select({ id: items.id }).from(items).where(eq(items.id, id)).get();
+}
+
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
@@ -89,6 +93,12 @@ router.post('/', (req, res) => {
   const parent = parentId
     ? db.select({ projectId: items.projectId, workphaseId: items.workphaseId }).from(items).where(eq(items.id, parentId)).get()
     : null;
+  // A non-existent parentId would otherwise be stored silently, leaving an
+  // attached child invisible on every board (no parent card to nest under).
+  if (parentId && !parent) {
+    res.status(400).json({ error: 'parentId does not reference an existing item' });
+    return;
+  }
   if (parentId && !projectId && parent) resolvedProjectId = parent.projectId;
 
   if (!resolvedProjectId) {
@@ -162,6 +172,10 @@ router.put('/:id', (req, res) => {
   if (parentId !== undefined && parentId !== null) {
     if (parentId === req.params.id) {
       res.status(400).json({ error: 'An item cannot be its own parent' });
+      return;
+    }
+    if (!itemExists(parentId)) {
+      res.status(400).json({ error: 'parentId does not reference an existing item' });
       return;
     }
     if (isItemDescendant(req.params.id, parentId)) {
