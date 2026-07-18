@@ -6,6 +6,7 @@ import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
+import { XIcon } from './components/icons';
 
 export function getAncestors(project: Project, projects: Project[]): Project[] {
   const map = new Map(projects.map(p => [p.id, p]));
@@ -233,9 +234,7 @@ export default function App() {
                           className="shrink-0 text-zinc-600 hover:text-zinc-300 mt-0.5"
                           title="Dismiss"
                         >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />
-                          </svg>
+                          <XIcon strokeWidth={2} />
                         </button>
                       </li>
                     ))}

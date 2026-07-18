@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Column, Item, ItemType, WorkPhase } from '../types';
 import KanbanCard from './KanbanCard';
+import ConfirmDeleteButton from './ConfirmDeleteButton';
 
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;
@@ -30,7 +31,6 @@ export default function BoardColumn({
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<string>('');
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
   const { setNodeRef, transform, transition, isDragging, isOver, attributes, listeners } = useSortable({
@@ -48,17 +48,6 @@ export default function BoardColumn({
     onCreateItem(column.entryWorkphaseId, newTitle.trim(), newType || null);
     setNewTitle('');
     setIsAdding(false);
-  }
-
-  async function handleDelete() {
-    if (!onDelete) return;
-    setDeleteError('');
-    try {
-      await onDelete(column.id);
-    } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete column.');
-      setConfirmDelete(false);
-    }
   }
 
   return (
@@ -108,26 +97,15 @@ export default function BoardColumn({
           </span>
         )}
 
-        {onDelete && confirmDelete ? (
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={handleDelete} className="text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10">
-              Delete
-            </button>
-            <button onClick={() => { setConfirmDelete(false); setDeleteError(''); }} className="text-[10px] text-zinc-500 hover:text-zinc-300">
-              Cancel
-            </button>
-          </div>
-        ) : onDelete ? (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="shrink-0 text-zinc-600 hover:text-red-400 transition-colors p-0.5 rounded"
+        {onDelete && (
+          <ConfirmDeleteButton
+            onDelete={() => onDelete(column.id)}
             title="Delete column"
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />
-            </svg>
-          </button>
-        ) : null}
+            errorFallback="Failed to delete column."
+            onError={setDeleteError}
+            triggerClassName="shrink-0 p-0.5 rounded"
+          />
+        )}
       </div>
 
       {deleteError && <p className="text-[11px] text-red-400 px-1 mb-2">{deleteError}</p>}

@@ -8,7 +8,8 @@
       "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts||require\\('./server/package.json'\\).scripts,null,1\\)\\)\")",
       "Bash(npm --prefix server run test)",
       "Bash(npm --prefix server run db:migrate)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(echo \"tsc exit: $?\")"
     ]
   }
 }

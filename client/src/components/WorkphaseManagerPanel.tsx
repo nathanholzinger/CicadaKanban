@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { WorkPhase } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG } from './item-detail/pillUtils';
+import ConfirmDeleteButton from './ConfirmDeleteButton';
 
 interface WorkphaseManagerPanelProps {
   workphases: WorkPhase[];
@@ -70,24 +71,12 @@ function WorkphaseManagerRow({
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draft, setDraft] = useState(workphase.name);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [error, setError] = useState('');
 
   async function handleBlur() {
     const trimmed = draft.trim();
     setIsRenaming(false);
     if (!trimmed || trimmed === workphase.name) return;
     await onRename(workphase.id, trimmed);
-  }
-
-  async function handleDelete() {
-    setError('');
-    try {
-      await onDelete(workphase.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete workphase.');
-      setConfirmDelete(false);
-    }
   }
 
   return (
@@ -113,19 +102,11 @@ function WorkphaseManagerRow({
         </span>
       )}
 
-      {confirmDelete ? (
-        <>
-          <button onClick={handleDelete} className="text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10">Delete</button>
-          <button onClick={() => setConfirmDelete(false)} className="text-[10px] text-zinc-500 hover:text-zinc-300">Cancel</button>
-        </>
-      ) : (
-        <button onClick={() => setConfirmDelete(true)} className="text-zinc-600 hover:text-red-400 transition-colors" title="Delete workphase">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />
-          </svg>
-        </button>
-      )}
-      {error && <p className="text-[10px] text-red-400 basis-full">{error}</p>}
+      <ConfirmDeleteButton
+        onDelete={() => onDelete(workphase.id)}
+        title="Delete workphase"
+        errorFallback="Failed to delete workphase."
+      />
     </li>
   );
 }

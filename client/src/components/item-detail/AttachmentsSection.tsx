@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Attachment } from '../../types';
 import { fetchAttachments, createAttachment, deleteAttachment } from '../../api';
 import { SECTION_LABEL, INPUT_BASE, SELECT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
+import { XIcon } from '../icons';
 
 interface AttachmentsSectionProps {
   itemId: string;
@@ -53,7 +54,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
                 <span className="flex-1 truncate text-xs text-zinc-300">{att.label}</span>
               )}
               <button onClick={() => handleDelete(att.id)} aria-label="Delete attachment" className="shrink-0 text-zinc-600 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100">
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" /></svg>
+                <XIcon size={10} strokeWidth={2} />
               </button>
             </div>
           ))}

@@ -3,6 +3,7 @@ import type { Project, Workflow } from '../types';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 import { getDescendantIds } from '../lib/hierarchy';
+import { TrashIcon } from './icons';
 
 interface EffectiveWorkflow {
   workflow: Workflow;
@@ -232,9 +233,7 @@ export default function ProjectPage({
             className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-all"
             title="Delete project"
           >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" />
-            </svg>
+            <TrashIcon size={13} />
           </button>
         </div>
       )}
@@ -387,9 +386,7 @@ export default function ProjectPage({
                           className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-all"
                           title="Delete subproject"
                         >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" />
-                          </svg>
+                          <TrashIcon />
                         </button>
                       </>
                     )}

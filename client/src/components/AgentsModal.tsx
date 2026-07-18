@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Agent } from '../types';
 import { fetchAgents, createAgent, updateAgent, deleteAgent } from '../api';
 import ModalShell from './ModalShell';
+import ConfirmDeleteButton from './ConfirmDeleteButton';
 
 const surfaceLabels: Record<string, string> = {
   chat: 'Claude.ai Chat',
@@ -33,7 +34,6 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(emptyForm);
 
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,7 +80,6 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
       repoPath: agent.repoPath ?? '',
       notes: agent.notes ?? '',
     });
-    setConfirmDeleteId(null);
     setAddingNew(false);
   }
 
@@ -108,15 +107,11 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
 
   async function handleDelete(id: string) {
     setSaving(true);
-    setError('');
     try {
       await deleteAgent(id);
       setAgents(prev => prev.filter(a => a.id !== id));
-      setConfirmDeleteId(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete agent.');
-      setConfirmDeleteId(null);
     } finally {
+      // Errors bubble to ConfirmDeleteButton, which reports them via onError → setError.
       setSaving(false);
     }
   }
@@ -135,7 +130,7 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
           {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
           {!addingNew && editingId === null && (
             <button
-              onClick={() => { setAddingNew(true); setEditingId(null); setConfirmDeleteId(null); }}
+              onClick={() => { setAddingNew(true); setEditingId(null); }}
               className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
             >
               + New agent
@@ -178,43 +173,22 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
                       <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{agent.notes}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {confirmDeleteId === agent.id ? (
-                      <>
-                        <button
-                          onClick={() => handleDelete(agent.id)}
-                          disabled={saving}
-                          className="text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10 disabled:opacity-50"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-[10px] text-zinc-500 hover:text-zinc-300"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => startEdit(agent)}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-200 px-1.5 py-0.5 rounded hover:bg-zinc-700 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(agent.id)}
-                          className="text-zinc-600 hover:text-red-400 p-0.5 rounded transition-colors"
-                          title="Delete agent"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" d="M4 4l8 8M12 4l-8 8" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <ConfirmDeleteButton
+                    onDelete={() => handleDelete(agent.id)}
+                    title="Delete agent"
+                    errorFallback="Failed to delete agent."
+                    disabled={saving}
+                    onError={setError}
+                    triggerClassName="p-0.5 rounded"
+                    beforeTrigger={
+                      <button
+                        onClick={() => startEdit(agent)}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-200 px-1.5 py-0.5 rounded hover:bg-zinc-700 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    }
+                  />
                 </div>
               )}
             </div>

@@ -164,3 +164,18 @@ confirmed vestigial and low-risk — but the current call is defer.)
   like chat message authorship. Related interim state: `chat_threads.agentId`
   landed as `ON DELETE SET NULL` on 2026-07-17 (keeps agents deletable while chat
   has no UI); replace it with an author snapshot when chat is actually built.
+
+---
+
+## Deferred (cross-cutting, not events-specific): system-wide UI consistency pass
+
+Parked here for visibility; **not** an events decision. Epic 8 reworks the notification
+UI, which makes it a natural window to do a **system-wide front-end consistency pass**
+rather than continuing to fix duplication one component at a time.
+
+The point of the pass is to make deliberate, holistic decisions about **what gets
+promoted to shared constants/components vs. what we're content leaving as intentional
+one-offs** — inputs/selects, buttons, badges, icons, repeated JSX. (The Epic 3 audit's
+individual *Duplication & Abstraction* findings are being addressed now; this note is
+about the later once-over across the whole app, not that backlog.) No dependency on the
+events work — if Epic 8 slips, spin it out as its own tech-debt ticket.
