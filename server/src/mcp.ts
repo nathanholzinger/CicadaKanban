@@ -67,19 +67,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'create_item',
-      description: 'Create a new item and place it in a workflow workphase',
+      description: 'Create a new item, optionally placing it in a workflow workphase',
       inputSchema: {
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Item title' },
-          project_id: { type: 'string', description: 'Project this item belongs to' },
-          workphase_id: { type: 'string', description: 'Workphase to place the item in' },
+          project_id: { type: 'string', description: 'Project this item belongs to. Optional if parent_id is given (the parent\'s project is inherited).' },
+          workphase_id: { type: 'string', description: 'Workphase to place the item in. Optional — omit to leave the item unsorted. Ignored for an attached item with a parent (it takes the parent\'s current workphase).' },
           type: { type: 'string', description: 'Item type name (e.g. "Epic", "Story", "Task") or UUID. Optional.' },
           description: { type: 'string', description: 'Optional item description' },
           parent_id: { type: 'string', description: 'Optional parent item ID' },
           is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases. Defaults to true. When true and parent_id is set, the item is placed in the parent\'s current workphase regardless of workphase_id.' },
         },
-        required: ['title', 'project_id', 'workphase_id'],
+        required: ['title'],
       },
     },
     {

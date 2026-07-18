@@ -3,7 +3,8 @@
     "allow": [
       "Bash(node -e \"const Database=require\\('better-sqlite3'\\); const db=new Database\\('./data/kanban.db',{readonly:true}\\); for \\(const t of ['items','workphases','labels','chat_threads']\\) { const r=db.prepare\\('SELECT sql FROM sqlite_master WHERE type=\\\\'table\\\\' AND name=?'\\).get\\(t\\); console.log\\('=== '+t+' ==='\\); console.log\\(r?r.sql:'\\(missing\\)'\\); }\")",
       "Bash(NODE_PATH=__TRACKED_VAR__/node_modules node C:/Users/natha/AppData/Local/Temp/claude/c--Users-natha-Dev-KanbanApp/a98533ad-0333-4c1b-85b6-fcd4cbe4d0c1/scratchpad/verify_mig.cjs)",
-      "Bash(node -e \"const D=require\\('better-sqlite3'\\); const db=new D\\('./data/kanban.db',{readonly:true}\\); console.log\\('ORIGINAL DB \\(pre-migration\\):'\\); console.log\\('  activity_log total:', db.prepare\\('SELECT count\\(*\\) c FROM activity_log'\\).get\\(\\).c\\); console.log\\('  activity_log orphaned \\(item_id not in items\\):', db.prepare\\('SELECT count\\(*\\) c FROM activity_log WHERE item_id NOT IN \\(SELECT id FROM items\\)'\\).get\\(\\).c\\); console.log\\('  foreign_key_check\\(activity_log\\) count:', db.pragma\\('foreign_key_check\\(activity_log\\)'\\).length\\);\")"
+      "Bash(node -e \"const D=require\\('better-sqlite3'\\); const db=new D\\('./data/kanban.db',{readonly:true}\\); console.log\\('ORIGINAL DB \\(pre-migration\\):'\\); console.log\\('  activity_log total:', db.prepare\\('SELECT count\\(*\\) c FROM activity_log'\\).get\\(\\).c\\); console.log\\('  activity_log orphaned \\(item_id not in items\\):', db.prepare\\('SELECT count\\(*\\) c FROM activity_log WHERE item_id NOT IN \\(SELECT id FROM items\\)'\\).get\\(\\).c\\); console.log\\('  foreign_key_check\\(activity_log\\) count:', db.pragma\\('foreign_key_check\\(activity_log\\)'\\).length\\);\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
