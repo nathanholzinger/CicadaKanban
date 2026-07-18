@@ -19,6 +19,8 @@ export function useBoardManagement(workflowId: string) {
   }, [workflowId]);
 
   useEffect(() => {
+    // setState calls are behind an await in loadBoards — async, not a sync cascade
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBoards();
   }, [loadBoards]);
 
@@ -63,6 +65,5 @@ export function useBoardManagement(workflowId: string) {
     handleRenameBoard,
     handleDeleteBoard,
     handleToggleShowAttachedChildren,
-    reloadBoards: loadBoards,
   };
 }

@@ -74,7 +74,7 @@ export interface ColumnSubRow {
 }
 
 // Raw DB row shape — what POST /api/columns and PUT /api/columns/:id return.
-// Mirrors ColumnRow in server/src/routes/columns.ts.
+// Mirrors ColumnRow in server/src/routes/columnRanges.ts
 export interface ColumnRow {
   id: string;
   boardId: string;
