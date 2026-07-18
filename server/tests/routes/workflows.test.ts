@@ -138,7 +138,7 @@ describe('DELETE /api/workflows/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('deletes the workflow, its workphases, boards/columns, and items sitting in those workphases', async () => {
+  it('deletes the workflow, its workphases, and boards/columns, but items survive with a null workphase', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
@@ -150,8 +150,31 @@ describe('DELETE /api/workflows/:id', () => {
     expect(res.status).toBe(204);
 
     expect((await request(app).get(`/api/workflows/${workflow.id}`)).status).toBe(404);
-    expect((await request(app).get(`/api/items/${item.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/boards/${boardId}`)).status).toBe(404);
+
+    // The item is NOT deleted — deleting the workphases nulls its workphaseId
+    // (ON DELETE SET NULL), so it survives and surfaces as "Unknown status".
+    const itemRes = await request(app).get(`/api/items/${item.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.workphaseId).toBeNull();
+  });
+
+  it('does not fail on cross-project items inheriting the workflow (finding #1 regression)', async () => {
+    // A child project with no workflow of its own inherits the parent's; an item
+    // in the child sits in one of the (parent) workflow's workphases.
+    const parent = await createProject();
+    const workflow = await createWorkflow(parent.id);
+    const workphase = await createWorkphase(workflow.id);
+    const child = await createProject({ parentId: parent.id });
+    const crossProjectItem = await createItem({ projectId: child.id, workphaseId: workphase.id });
+
+    // Previously this threw an FK-violation 500 and left the DB half-torn-down.
+    const res = await request(app).delete(`/api/workflows/${workflow.id}`);
+    expect(res.status).toBe(204);
+
+    const itemRes = await request(app).get(`/api/items/${crossProjectItem.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.workphaseId).toBeNull();
   });
 
   it('deletes a workflow with a null projectId without touching any project\'s items', async () => {

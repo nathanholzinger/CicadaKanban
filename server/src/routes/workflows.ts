@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workflows, workphases, items, workflowTemplatePhases, boards } from '../db/schema.js';
+import { workflows, workphases, items, workflowTemplatePhases, boards, notifications } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { deleteItemById } from './items.js';
 import { createDefaultBoard } from './boards.js';
 import { getOrderedWorkphases } from '../lib/columnRanges.js';
 import { getWorkflowItems } from '../lib/workflowItems.js';
@@ -140,27 +139,26 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Delete a workflow and its workphases and items
+// Delete a workflow. Its boards/columns and workphases are removed in one
+// transaction; items are NOT deleted — removing the workphases nulls their
+// workphaseId (ON DELETE SET NULL), so items survive (across every project that
+// inherited this workflow) and surface as "Unknown status" on whatever board
+// their project now resolves to.
 router.delete('/:id', (req, res) => {
   const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
   if (!workflow) return;
 
-  const { workphases: workflowWorkphases } = getOrderedWorkphases(req.params.id);
-  const workphaseIds = new Set(workflowWorkphases.map(w => w.id));
+  db.transaction(tx => {
+    // Columns FK-reference workphases (no cascade), so boards/columns must go
+    // before the workphases.
+    const workflowBoardIds = tx.select({ id: boards.id }).from(boards).where(eq(boards.workflowId, req.params.id)).all().map(b => b.id);
+    deleteBoardsById(workflowBoardIds, tx);
 
-  if (workflow.projectId) {
-    const projectItems = db.select().from(items).where(eq(items.projectId, workflow.projectId)).all();
-    const workflowItems = projectItems.filter(i => i.workphaseId && workphaseIds.has(i.workphaseId));
-    for (const item of workflowItems) {
-      deleteItemById(item.id);
-    }
-  }
-
-  const workflowBoardIds = db.select({ id: boards.id }).from(boards).where(eq(boards.workflowId, req.params.id)).all().map(b => b.id);
-  deleteBoardsById(workflowBoardIds);
-
-  db.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
-  db.delete(workflows).where(eq(workflows.id, req.params.id)).run();
+    // Interim until the Epic 8 events rework: notifications carry a workflowId FK.
+    tx.delete(notifications).where(eq(notifications.workflowId, req.params.id)).run();
+    tx.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
+    tx.delete(workflows).where(eq(workflows.id, req.params.id)).run();
+  });
 
   res.status(204).send();
 });

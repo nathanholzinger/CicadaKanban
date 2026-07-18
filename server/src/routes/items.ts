@@ -34,6 +34,10 @@ function computeDepth(itemId: string): number {
   return depth;
 }
 
+function workphaseExists(id: string): boolean {
+  return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
+}
+
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
@@ -95,6 +99,12 @@ router.post('/', (req, res) => {
   const attached = isAttached !== undefined ? Boolean(isAttached) : true;
   // Attached children (the default) mirror the parent's current workphase.
   const resolvedWorkphaseId = attached && parent ? parent.workphaseId : workphaseId;
+
+  // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
+  if (resolvedWorkphaseId && !workphaseExists(resolvedWorkphaseId)) {
+    res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
+    return;
+  }
 
   // Calculate position at end of workphase if workphaseId provided
   let position: number | null = null;
@@ -203,6 +213,11 @@ router.patch('/:id/move', (req, res) => {
 
   if (workphaseId === undefined && position === undefined) {
     res.status(400).json({ error: 'workphaseId and/or position required' });
+    return;
+  }
+
+  if (workphaseId !== undefined && workphaseId !== null && !workphaseExists(workphaseId)) {
+    res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
     return;
   }
 

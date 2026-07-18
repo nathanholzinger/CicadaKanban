@@ -69,7 +69,6 @@ export const agents = sqliteTable('agents', {
 export const workphases = sqliteTable('workphases', {
   id: text('id').primaryKey(),
   workflowId: text('workflow_id').notNull().references(() => workflows.id),
-  agentId: text('agent_id').references(() => agents.id),
   name: text('name').notNull(),
   position: real('position').notNull(),
   triggersNotification: integer('triggers_notification').notNull().default(0),
@@ -104,16 +103,18 @@ export const columns = sqliteTable('columns', {
 
 export const items = sqliteTable('items', {
   id: text('id').primaryKey(),
-  type: text('type').references(() => itemTypes.id),
+  // An item outlives the descriptive/positional things it points at: deleting a
+  // type, workphase, or assigned agent nulls the reference rather than the item.
+  type: text('type').references(() => itemTypes.id, { onDelete: 'set null' }),
   parentId: text('parent_id'),  // self-referential FK to items.id
   projectId: text('project_id').references(() => projects.id),
-  workphaseId: text('workphase_id').references(() => workphases.id),
+  workphaseId: text('workphase_id').references(() => workphases.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
   position: real('position'),
   isAttached: integer('is_attached').notNull().default(1),
   assigneeType: text('assignee_type'), // app-level: 'human' | 'agent'
-  agentId: text('agent_id').references(() => agents.id),
+  agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 });
@@ -122,9 +123,10 @@ export const items = sqliteTable('items', {
 // Labels (many-to-many with items)
 // ============================================================
 
+// Labels are global (not scoped to a workflow) — a single reusable set shared
+// across every project and workflow. See .claude/plans/epic-5-decisions.md.
 export const labels = sqliteTable('labels', {
   id: text('id').primaryKey(),
-  workflowId: text('workflow_id').references(() => workflows.id),
   name: text('name').notNull(),
   color: text('color').notNull(),
   createdAt: integer('created_at').notNull(),
@@ -144,7 +146,9 @@ export const itemLabels = sqliteTable('item_labels', {
 export const chatThreads = sqliteTable('chat_threads', {
   id: text('id').primaryKey(),
   itemId: text('item_id').notNull().references(() => items.id),
-  agentId: text('agent_id').references(() => agents.id),
+  // Interim: nulls on agent delete so agents stay deletable. Authorship should
+  // eventually be a snapshot (see .claude/plans/epic-8-decisions.md).
+  agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
   label: text('label'),
   createdAt: integer('created_at').notNull(),
 });

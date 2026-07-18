@@ -67,6 +67,13 @@ describe('POST /api/items', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 for a non-existent workphaseId rather than an opaque FK 500', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/items')
+      .send({ title: 'Task', projectId: project.id, workphaseId: 'no-such-workphase' });
+    expect(res.status).toBe(400);
+  });
+
   it('positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -127,6 +134,13 @@ describe('PATCH /api/items/:id/move', () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
     const res = await request(app).patch(`/api/items/${item.id}/move`).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when moving to a non-existent workphaseId', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id });
+    const res = await request(app).patch(`/api/items/${item.id}/move`).send({ workphaseId: 'no-such-workphase' });
     expect(res.status).toBe(400);
   });
 
@@ -339,5 +353,34 @@ describe('attached children', () => {
     });
     expect(child.workphaseId).toBe(inProgress.id);
     expect(child.isAttached).toBe(0);
+  });
+});
+
+describe('deleting a referenced entity nulls the item FK (SET NULL, not blocked)', () => {
+  it('deleting an item type leaves referencing items typeless', async () => {
+    const project = await createProject();
+    const type = (await request(app).post('/api/item-types').send({ name: 'Bug' })).body;
+    const item = await createItem({ projectId: project.id, type: type.id });
+
+    const del = await request(app).delete(`/api/item-types/${type.id}`);
+    expect(del.status).toBe(204);
+
+    const itemRes = await request(app).get(`/api/items/${item.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.type).toBeNull();
+  });
+
+  it('deleting an agent unassigns referencing items', async () => {
+    const project = await createProject();
+    const agent = (await request(app).post('/api/agents')
+      .send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })).body;
+    const item = await createItem({ projectId: project.id, assigneeType: 'agent', agentId: agent.id });
+
+    const del = await request(app).delete(`/api/agents/${agent.id}`);
+    expect(del.status).toBe(204);
+
+    const itemRes = await request(app).get(`/api/items/${item.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.agentId).toBeNull();
   });
 });

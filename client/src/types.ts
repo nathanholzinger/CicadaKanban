@@ -27,7 +27,6 @@ export interface Workflow {
 export interface WorkPhase {
   id: string;
   workflowId: string;
-  agentId: string | null;
   name: string;
   position: number;
   triggersNotification: number;
@@ -156,9 +155,9 @@ export interface Attachment {
   createdAt: number;
 }
 
+// Labels are global — not scoped to a workflow.
 export interface Label {
   id: string;
-  workflowId: string | null;
   name: string;
   color: string;
   createdAt: number;

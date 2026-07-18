@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, labels, boards } from '../db/schema.js';
+import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, boards } from '../db/schema.js';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
@@ -115,24 +115,15 @@ function deleteProjectById(id: string) {
     db.delete(attachments).where(eq(attachments.itemId, itemId)).run();
   }
 
-  // Delete itemLabels that reference this project's labels regardless of which item
-  // holds them — covers cross-project label assignments (itemLabels.labelId → labels.id)
-  if (workflowIds.length > 0) {
-    const labelIds = db.select({ id: labels.id })
-      .from(labels).where(inArray(labels.workflowId, workflowIds)).all().map(l => l.id);
-    if (labelIds.length > 0) {
-      db.delete(itemLabels).where(inArray(itemLabels.labelId, labelIds)).run();
-    }
-  }
-
   // Delete items
   if (allItemIds.length > 0) {
     db.delete(items).where(inArray(items.id, allItemIds)).run();
   }
 
-  // Workflow-level cleanup before removing workphases/workflows
+  // Workflow-level cleanup before removing workphases/workflows.
+  // Labels are global — they are NOT deleted with a project. Items' own itemLabels
+  // rows are cleaned per-item above.
   if (workflowIds.length > 0) {
-    db.delete(labels).where(inArray(labels.workflowId, workflowIds)).run();
     db.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
 
     const workflowBoardIds = db.select({ id: boards.id })

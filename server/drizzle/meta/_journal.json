@@ -57,6 +57,13 @@
       "when": 1784000000000,
       "tag": "0007_attached_children",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784500000000,
+      "tag": "0008_global_labels_and_set_null_fks",
+      "breakpoints": true
     }
   ]
 }

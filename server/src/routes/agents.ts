@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { agents, items, workphases } from '../db/schema.js';
+import { agents } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
@@ -73,14 +73,8 @@ router.delete('/:id', (req, res) => {
   const agent = getOrNotFound(db.select().from(agents).where(eq(agents.id, req.params.id)).get(), res, 'Agent not found');
   if (!agent) return;
 
-  const referencedByItem = db.select().from(items).where(eq(items.agentId, req.params.id)).get();
-  const referencedByWorkphase = db.select().from(workphases).where(eq(workphases.agentId, req.params.id)).get();
-
-  if (referencedByItem || referencedByWorkphase) {
-    res.status(409).json({ error: 'Agent is referenced by items or workphases and cannot be deleted.' });
-    return;
-  }
-
+  // Items and chat threads referencing this agent are not blocked — their FK
+  // nulls the agentId (ON DELETE SET NULL), unassigning them.
   db.delete(agents).where(eq(agents.id, req.params.id)).run();
   res.status(204).send();
 });

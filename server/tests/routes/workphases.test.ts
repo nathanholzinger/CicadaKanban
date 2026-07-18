@@ -91,15 +91,19 @@ describe('DELETE /api/workphases/:id', () => {
     expect(res.status).toBe(204);
   });
 
-  it('returns 409 with itemCount when items still reference it', async () => {
+  it('deletes a workphase that still has items — the items survive with a null workphase', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
-    await createItem({ projectId: project.id, workphaseId: phase.id });
+    const item = await createItem({ projectId: project.id, workphaseId: phase.id });
 
     const res = await request(app).delete(`/api/workphases/${phase.id}`);
-    expect(res.status).toBe(409);
-    expect(res.body.itemCount).toBe(1);
+    expect(res.status).toBe(204);
+
+    // Not blocked or deleted — the FK nulls the item's workphaseId.
+    const itemRes = await request(app).get(`/api/items/${item.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.workphaseId).toBeNull();
   });
 
   it('deleting an interior workphase leaves a covering column untouched (204, no shrink reported)', async () => {

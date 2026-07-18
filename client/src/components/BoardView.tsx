@@ -233,6 +233,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
               childCounts={childCounts}
               getAttachedChildren={getAttachedChildren}
               defaultExpanded={Boolean(board.showAttachedChildren)}
+              filterProjectId={filterProjectId}
               onCardClick={setSelectedItemId}
             />
           </div>

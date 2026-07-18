@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { itemTypes, items } from '../db/schema.js';
+import { itemTypes } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
@@ -56,16 +56,11 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Delete an item type (blocked if any work items use it)
+// Delete an item type. Items using it are not blocked — the FK nulls their
+// `type` (ON DELETE SET NULL), leaving them typeless.
 router.delete('/:id', (req, res) => {
   const existing = getOrNotFound(db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get(), res, 'Item type not found');
   if (!existing) return;
-
-  const inUse = db.select().from(items).where(eq(items.type, req.params.id)).get();
-  if (inUse) {
-    res.status(409).json({ error: 'Cannot delete item type that is in use by items' });
-    return;
-  }
 
   db.delete(itemTypes).where(eq(itemTypes.id, req.params.id)).run();
   res.status(204).send();

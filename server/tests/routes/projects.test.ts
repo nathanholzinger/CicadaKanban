@@ -185,7 +185,7 @@ describe('DELETE /api/projects/:id', () => {
 
     // Seed directly to exercise the label/attachment/notification/chat cascade
     // branches inside deleteProjectById that aren't reachable via a POST route.
-    const label = { id: randomUUID(), workflowId: workflow.id, name: 'bug', color: '#f00', createdAt: Date.now() };
+    const label = { id: randomUUID(), name: 'bug', color: '#f00', createdAt: Date.now() };
     db.insert(labels).values(label).run();
     db.insert(itemLabels).values({ itemId: item.id, labelId: label.id }).run();
     db.insert(attachments).values({
@@ -208,7 +208,9 @@ describe('DELETE /api/projects/:id', () => {
     expect((await request(app).get(`/api/workflows/${workflow.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${item.id}`)).status).toBe(404);
 
-    expect(db.select().from(labels).where(eq(labels.id, label.id)).all()).toHaveLength(0);
+    // Labels are global — they survive project deletion; only the item's own
+    // itemLabels join rows are removed.
+    expect(db.select().from(labels).where(eq(labels.id, label.id)).all()).toHaveLength(1);
     expect(db.select().from(itemLabels).where(eq(itemLabels.itemId, item.id)).all()).toHaveLength(0);
     expect(db.select().from(attachments).where(eq(attachments.itemId, item.id)).all()).toHaveLength(0);
     expect(db.select().from(notifications).where(eq(notifications.itemId, item.id)).all()).toHaveLength(0);

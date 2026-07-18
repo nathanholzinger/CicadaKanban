@@ -85,6 +85,27 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.unsorted.uncovered[0].items.map((i: { id: string }) => i.id)).toEqual([item2.id]);
   });
 
+  it('surfaces items whose workphase was deleted as invalidItems (Unknown status)', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const keep = await createWorkphase(workflow.id, { name: 'Keep' });
+    const stranded = await createItem({ projectId: project.id, workphaseId: todo.id });
+
+    // Deleting the workphase nulls the item's workphaseId (SET NULL) rather than
+    // deleting it — the board must still surface it instead of dropping it.
+    await request(app).delete(`/api/workphases/${todo.id}`);
+
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const res = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(res.status).toBe(200);
+
+    const invalidIds = res.body.unsorted.invalidItems.map((i: { id: string }) => i.id);
+    expect(invalidIds).toContain(stranded.id);
+    expect(res.body.unsorted.needsAttention).toBe(true);
+    void keep;
+  });
+
   it('uses an explicit column name as the displayName override', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);

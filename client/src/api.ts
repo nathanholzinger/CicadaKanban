@@ -348,14 +348,13 @@ export async function deleteAttachment(id: string): Promise<void> {
 // Labels
 // ============================================================
 
-export async function fetchLabels(workflowId?: string): Promise<Label[]> {
-  const url = workflowId ? `${API}/labels?workflowId=${workflowId}` : `${API}/labels`;
-  const res = await fetch(url);
+export async function fetchLabels(): Promise<Label[]> {
+  const res = await fetch(`${API}/labels`);
   if (!res.ok) throw new Error('Failed to fetch labels');
   return res.json();
 }
 
-export async function createLabel(data: { workflowId?: string; name: string; color: string }): Promise<Label> {
+export async function createLabel(data: { name: string; color: string }): Promise<Label> {
   const res = await fetch(`${API}/labels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

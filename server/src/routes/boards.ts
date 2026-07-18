@@ -4,7 +4,7 @@ import { boards, columns, workflows, workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
-import { getWorkflowItems } from '../lib/workflowItems.js';
+import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 
@@ -87,16 +87,20 @@ router.get('/:id', (req, res) => {
     .orderBy(columns.position)
     .all();
 
-  // All items in any workphase of this workflow — filtering by project (for
-  // inherited/read-only views) is left to the client, matching how
-  // GET /api/workflows/:id already returns the full item set today.
-  const workflowItems = getWorkflowItems(workflowWorkphases);
+  // Every item whose project's effective workflow is this one — scoped by
+  // project (not by workphase membership) so that items with a null/misaligned
+  // workphase are surfaced as "Unknown status" instead of silently dropped.
+  // Per-project narrowing for inherited/read-only views is left to the client.
+  const scopeItems = getBoardScopeItems(board.workflowId);
 
+  const workphaseIdSet = new Set(workflowWorkphases.map(w => w.id));
   const itemsByWorkphase = new Map<string, ItemRow[]>();
-  for (const item of workflowItems) {
-    const list = itemsByWorkphase.get(item.workphaseId!) ?? [];
-    list.push(item);
-    itemsByWorkphase.set(item.workphaseId!, list);
+  for (const item of scopeItems) {
+    if (item.workphaseId && workphaseIdSet.has(item.workphaseId)) {
+      const list = itemsByWorkphase.get(item.workphaseId) ?? [];
+      list.push(item);
+      itemsByWorkphase.set(item.workphaseId, list);
+    }
   }
 
   const resolvedColumns = boardColumns.map(col => {
@@ -110,7 +114,7 @@ router.get('/:id', (req, res) => {
     };
   });
 
-  const { uncovered, invalidItems } = computeUnsorted(workflowWorkphases, boardColumns, rankMap, workflowItems);
+  const { uncovered, invalidItems } = computeUnsorted(workflowWorkphases, boardColumns, rankMap, scopeItems);
 
   res.json({
     ...board,

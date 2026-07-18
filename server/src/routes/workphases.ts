@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workphases, items } from '../db/schema.js';
+import { workphases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
@@ -10,7 +10,7 @@ const router = Router();
 
 // Create a workphase on a workflow
 router.post('/', (req, res) => {
-  const { workflowId, name, agentId, triggersNotification, isTerminal } = req.body;
+  const { workflowId, name, triggersNotification, isTerminal } = req.body;
 
   if (!workflowId || !name) {
     res.status(400).json({ error: 'workflowId and name are required' });
@@ -31,7 +31,6 @@ router.post('/', (req, res) => {
   db.insert(workphases).values({
     id,
     workflowId,
-    agentId: agentId || null,
     name,
     position: maxPosition + 1.0,
     triggersNotification: triggersNotification ? 1 : 0,
@@ -48,12 +47,11 @@ router.put('/:id', (req, res) => {
   const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
   if (!workphase) return;
 
-  const { name, agentId, triggersNotification, isTerminal } = req.body;
+  const { name, triggersNotification, isTerminal } = req.body;
 
   db.update(workphases)
     .set({
       name: name ?? workphase.name,
-      agentId: agentId !== undefined ? agentId : workphase.agentId,
       triggersNotification: triggersNotification !== undefined
         ? (triggersNotification ? 1 : 0)
         : workphase.triggersNotification,
@@ -84,19 +82,12 @@ router.patch('/reorder', (req, res) => {
   res.json({ success: true });
 });
 
-// Delete a workphase
+// Delete a workphase. Items in it are not blocked or deleted — the FK nulls
+// their workphaseId (ON DELETE SET NULL), so they survive and surface as
+// "Unknown status" in the board's unsorted bucket until re-filed.
 router.delete('/:id', (req, res) => {
   const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
   if (!workphase) return;
-
-  const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, req.params.id)).all();
-  if (itemsInWorkphase.length > 0) {
-    res.status(409).json({
-      error: 'Workphase has items. Move or delete them first.',
-      itemCount: itemsInWorkphase.length,
-    });
-    return;
-  }
 
   const { shrunkColumns, deletedColumns } = db.transaction(tx => {
     const result = shrinkColumnsForDeletedWorkphase(tx, req.params.id, workphase.workflowId);

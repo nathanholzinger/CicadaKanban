@@ -6,19 +6,16 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
-router.get('/', (req, res) => {
-  const { workflowId } = req.query;
-  const rows = workflowId
-    ? db.select().from(labels).where(eq(labels.workflowId, String(workflowId))).all()
-    : db.select().from(labels).all();
+router.get('/', (_req, res) => {
+  const rows = db.select().from(labels).all();
   res.json(rows);
 });
 
 router.post('/', (req, res) => {
-  const { workflowId, name, color } = req.body;
+  const { name, color } = req.body;
   if (!name || !color) { res.status(400).json({ error: 'name and color are required' }); return; }
   const id = randomUUID();
-  db.insert(labels).values({ id, workflowId: workflowId || null, name, color, createdAt: Date.now() }).run();
+  db.insert(labels).values({ id, name, color, createdAt: Date.now() }).run();
   const created = db.select().from(labels).where(eq(labels.id, id)).get();
   res.status(201).json(created);
 });

@@ -68,13 +68,13 @@ projects (tree — unlimited depth via parent_id self-ref)
 | `workflows` | Kanban stage sets — `id, project_id, name, description, created_at, updated_at` |
 | `workflow_templates` | System-seeded blueprints ("quick", "flow") — read-only in MVP |
 | `workflow_template_phases` | Phases for each template |
-| `workphases` | Workflow stages (data layer) — `id, workflow_id, agent_id?, name, position, triggers_notification, is_terminal, created_at` |
+| `workphases` | Workflow stages (data layer) — `id, workflow_id, name, position, triggers_notification, is_terminal, created_at` |
 | `boards` | Named views of a workflow (UI layer) — `id, workflow_id, name, position, created_at, updated_at` |
 | `columns` | A board's columns — `id, board_id, name?, start_workphase_id, end_workphase_id, display_mode, position, created_at`. `name` is nullable and falls back to the covered workphase(s)' own name(s) |
 | `items` | Kanban cards — `id, type?, parent_id?, project_id, workphase_id?, title, description?, position?, assignee_type?, agent_id?, created_at, updated_at` |
 | `item_types` | Descriptive labels: Epic, Story, Task (seeded). FK target for `items.type`. |
 | `agents` | Claude agent registrations — `claude_project_id`, `surface` (chat/code/cowork), `repo_path` |
-| `labels` | Flat tags scoped to a workflow (will be replaced by tag buckets in Epic 5) |
+| `labels` | Flat global tags — a single reusable set shared across all projects/workflows (will be replaced by tag buckets in Epic 5) |
 | `item_labels` | Many-to-many join: item ↔ label |
 | `chat_threads` | Agent conversation threads per item (schema only — no API/UI yet) |
 | `chat_messages` | Messages within a thread (schema only — no API/UI yet) |
@@ -125,7 +125,7 @@ Base URL: `http://localhost:3001`
 | `/api/items` | Item CRUD + move (`PATCH /:id/move`) + reorder + comments (`POST /:id/comments`) |
 | `/api/agents` | Agent CRUD |
 | `/api/notifications` | Mark read (`PATCH /:id/read`), mark all read (`PATCH /read-all`) |
-| `/api/labels` | Label CRUD (workflow-scoped) |
+| `/api/labels` | Label CRUD (global) |
 | `/api/attachments` | Attachment CRUD |
 | `/api/item-types` | Item type CRUD |
 | `/api/test` | Reset + seed DB — only when `ENABLE_TEST_ROUTES=true` |

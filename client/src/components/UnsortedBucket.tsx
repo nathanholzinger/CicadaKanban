@@ -11,15 +11,21 @@ interface UnsortedBucketProps {
   childCounts: Record<string, number>;
   getAttachedChildren: (parentId: string) => Item[];
   defaultExpanded: boolean;
+  filterProjectId?: string;
   onCardClick: (id: string) => void;
 }
 
 export default function UnsortedBucket({
   uncoveredWorkphases, invalidItems, getWorkphaseItems, needsAttention, itemTypes, childCounts,
-  getAttachedChildren, defaultExpanded, onCardClick,
+  getAttachedChildren, defaultExpanded, filterProjectId, onCardClick,
 }: UnsortedBucketProps) {
   const groups = uncoveredWorkphases.map(w => ({ workphase: w, items: getWorkphaseItems(w.id) }));
-  const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + invalidItems.length;
+  // Items whose workphase is null or outside this workflow. Attached children
+  // nest under their (also-Unknown) parent rather than showing top-level.
+  const unknownItems = invalidItems.filter(
+    i => !(i.isAttached && i.parentId) && (!filterProjectId || i.projectId === filterProjectId),
+  );
+  const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + unknownItems.length;
 
   if (totalItems === 0 && !needsAttention) return null;
 
@@ -63,15 +69,29 @@ export default function UnsortedBucket({
           </div>
         ))}
 
-        {invalidItems.length > 0 && (
+        {unknownItems.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 px-1 mb-1">
-              <span className="text-[11px] font-medium text-zinc-500">No valid status</span>
+              <span
+                className="text-[11px] font-medium text-amber-400/80"
+                title="These items' workphase no longer belongs to this workflow — reassign a status to file them"
+              >
+                Unknown status
+              </span>
+              <span className="text-[10px] text-zinc-600">{unknownItems.length}</span>
             </div>
-            <SortableContext items={invalidItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={unknownItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
               <div className="flex flex-col gap-1.5">
-                {invalidItems.map(item => (
-                  <KanbanCard key={item.id} item={item} itemTypes={itemTypes} childCount={childCounts[item.id] ?? 0} onCardClick={onCardClick} />
+                {unknownItems.map(item => (
+                  <KanbanCard
+                    key={item.id}
+                    item={item}
+                    itemTypes={itemTypes}
+                    childCount={childCounts[item.id] ?? 0}
+                    getAttachedChildren={getAttachedChildren}
+                    defaultExpanded={defaultExpanded}
+                    onCardClick={onCardClick}
+                  />
                 ))}
               </div>
             </SortableContext>
