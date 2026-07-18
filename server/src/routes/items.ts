@@ -194,15 +194,20 @@ router.put('/:id', (req, res) => {
 
   db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  // If the item ends up attached with a parent, sync its workphase to match —
-  // covers both "just attached" and "reparented while already attached".
-  const resultingParentId = parentId !== undefined ? parentId : item.parentId;
-  const resultingAttached = isAttached !== undefined ? Boolean(isAttached) : Boolean(item.isAttached);
-  if (resultingAttached && resultingParentId) {
-    const newParent = db.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId)).get();
-    if (newParent) {
-      db.update(items).set({ workphaseId: newParent.workphaseId, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
-      cascadeWorkphaseToAttachedDescendants(req.params.id);
+  // Re-sync workphase to the parent only when the parent link or attach flag
+  // actually changed in this request — covers "just attached" and "reparented
+  // while already attached". A title/description-only PUT must NOT run this: it
+  // would silently relocate an attached child whose workphase has diverged from
+  // its parent's, dragging its subtree along (finding #10).
+  if (parentId !== undefined || isAttached !== undefined) {
+    const resultingParentId = parentId !== undefined ? parentId : item.parentId;
+    const resultingAttached = isAttached !== undefined ? Boolean(isAttached) : Boolean(item.isAttached);
+    if (resultingAttached && resultingParentId) {
+      const newParent = db.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId)).get();
+      if (newParent) {
+        db.update(items).set({ workphaseId: newParent.workphaseId, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
+        cascadeWorkphaseToAttachedDescendants(req.params.id);
+      }
     }
   }
 

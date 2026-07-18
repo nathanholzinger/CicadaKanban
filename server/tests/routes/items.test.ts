@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
-import { activityLog, attachments, notifications, itemLabels, labels, chatThreads, chatMessages } from '../../src/db/schema.js';
+import { items, activityLog, attachments, notifications, itemLabels, labels, chatThreads, chatMessages } from '../../src/db/schema.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
 describe('GET /api/items/:id', () => {
@@ -357,6 +357,22 @@ describe('attached children', () => {
     expect(res.body.workphaseId).toBe(inProgress.id);
 
     expect((await request(app).get(`/api/items/${itemChild.id}`)).body.workphaseId).toBe(inProgress.id);
+  });
+
+  it('a title-only PUT does not re-sync or relocate an attached child, even if its workphase diverged (finding #10)', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
+    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
+    // Force divergence: the attached child sits in a different workphase than its parent.
+    db.update(items).set({ workphaseId: inProgress.id }).where(eq(items.id, child.id)).run();
+    db.update(items).set({ workphaseId: inProgress.id }).where(eq(items.id, grandchild.id)).run();
+
+    // A title-only edit must leave workphaseId untouched (no snap back to the parent's Todo).
+    const res = await request(app).put(`/api/items/${child.id}`).send({ title: 'Renamed' });
+    expect(res.status).toBe(200);
+    expect(res.body.workphaseId).toBe(inProgress.id);
+    expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
   });
 
   it('rejects an item becoming its own parent or reparenting to a descendant', async () => {
