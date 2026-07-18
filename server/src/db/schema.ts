@@ -133,8 +133,8 @@ export const labels = sqliteTable('labels', {
 });
 
 export const itemLabels = sqliteTable('item_labels', {
-  itemId: text('item_id').notNull().references(() => items.id),
-  labelId: text('label_id').notNull().references(() => labels.id),
+  itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
+  labelId: text('label_id').notNull().references(() => labels.id, { onDelete: 'cascade' }),
 }, (table) => [
   primaryKey({ columns: [table.itemId, table.labelId] }),
 ]);
@@ -145,7 +145,7 @@ export const itemLabels = sqliteTable('item_labels', {
 
 export const chatThreads = sqliteTable('chat_threads', {
   id: text('id').primaryKey(),
-  itemId: text('item_id').notNull().references(() => items.id),
+  itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   // Interim: nulls on agent delete so agents stay deletable. Authorship should
   // eventually be a snapshot (see .claude/plans/epic-8-decisions.md).
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
@@ -155,7 +155,7 @@ export const chatThreads = sqliteTable('chat_threads', {
 
 export const chatMessages = sqliteTable('chat_messages', {
   id: text('id').primaryKey(),
-  threadId: text('thread_id').notNull().references(() => chatThreads.id),
+  threadId: text('thread_id').notNull().references(() => chatThreads.id, { onDelete: 'cascade' }),
   role: text('role').notNull(), // app-level: 'user' | 'assistant'
   content: text('content').notNull(),
   createdAt: integer('created_at').notNull(),
@@ -167,7 +167,7 @@ export const chatMessages = sqliteTable('chat_messages', {
 
 export const attachments = sqliteTable('attachments', {
   id: text('id').primaryKey(),
-  itemId: text('item_id').notNull().references(() => items.id),
+  itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   type: text('type').notNull(), // app-level: 'google_doc' | 'github_file' | 'local_file' | 'export'
   label: text('label').notNull(),
   externalUrl: text('external_url'),
@@ -182,7 +182,7 @@ export const attachments = sqliteTable('attachments', {
 
 export const activityLog = sqliteTable('activity_log', {
   id: text('id').primaryKey(),
-  itemId: text('item_id').notNull().references(() => items.id),
+  itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   type: text('type').notNull(), // app-level: 'status_change' | 'assignment' | 'attachment_added' | 'comment' | 'action_triggered'
   content: text('content').notNull(),
   metadata: text('metadata'), // JSON string
@@ -195,7 +195,7 @@ export const activityLog = sqliteTable('activity_log', {
 
 export const notifications = sqliteTable('notifications', {
   id: text('id').primaryKey(),
-  itemId: text('item_id').references(() => items.id),
+  itemId: text('item_id').references(() => items.id, { onDelete: 'cascade' }),
   workflowId: text('workflow_id').references(() => workflows.id),
   message: text('message').notNull(),
   type: text('type').notNull(), // app-level enum

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { projects, workflows, workphases, items, activityLog, itemLabels, chatThreads, chatMessages, attachments, notifications, boards } from '../db/schema.js';
+import { projects, workflows, workphases, items, notifications, boards } from '../db/schema.js';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
@@ -93,7 +93,10 @@ function deleteProjectById(id: string) {
     ? db.select({ id: workphases.id }).from(workphases).where(inArray(workphases.workflowId, workflowIds)).all().map(w => w.id)
     : [];
 
-  // All items to clean up: owned by this project OR sitting in this project's workphases
+  // All items to remove: owned by this project OR sitting in this project's
+  // workphases. Each item's dependent rows (itemLabels, activityLog,
+  // notifications, attachments, chat threads/messages) are removed by ON DELETE
+  // CASCADE, so deleting the items is enough.
   const ownedItemIds = db.select({ id: items.id })
     .from(items).where(eq(items.projectId, id)).all().map(i => i.id);
   const workphaseItemIds = workphaseIds.length > 0
@@ -101,28 +104,13 @@ function deleteProjectById(id: string) {
     : [];
   const allItemIds = [...new Set([...ownedItemIds, ...workphaseItemIds])];
 
-  // Per-item cleanup (chatMessages must come before chatThreads)
-  for (const itemId of allItemIds) {
-    const threadIds = db.select({ id: chatThreads.id })
-      .from(chatThreads).where(eq(chatThreads.itemId, itemId)).all().map(t => t.id);
-    if (threadIds.length > 0) {
-      db.delete(chatMessages).where(inArray(chatMessages.threadId, threadIds)).run();
-    }
-    db.delete(notifications).where(eq(notifications.itemId, itemId)).run();
-    db.delete(activityLog).where(eq(activityLog.itemId, itemId)).run();
-    db.delete(itemLabels).where(eq(itemLabels.itemId, itemId)).run();
-    db.delete(chatThreads).where(eq(chatThreads.itemId, itemId)).run();
-    db.delete(attachments).where(eq(attachments.itemId, itemId)).run();
-  }
-
-  // Delete items
   if (allItemIds.length > 0) {
     db.delete(items).where(inArray(items.id, allItemIds)).run();
   }
 
-  // Workflow-level cleanup before removing workphases/workflows.
-  // Labels are global — they are NOT deleted with a project. Items' own itemLabels
-  // rows are cleaned per-item above.
+  // Workflow-level cleanup before removing workphases/workflows. Labels are
+  // global — NOT deleted with a project. Workflow-scoped notifications aren't
+  // item-anchored, so they are cleared explicitly here.
   if (workflowIds.length > 0) {
     db.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
 

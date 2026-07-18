@@ -213,11 +213,14 @@ npm run dev
 - `workflows.projectId` is nullable — query `SELECT * FROM workflows WHERE project_id
   IS NULL` to check for orphaned workflows.
 - No WebSocket/SSE — notifications polled every 15s. Fine for single-user local use.
-- Cascade-deleting a workflow/project still has two independent hand-rolled
-  implementations (`routes/workflows.ts` DELETE and `routes/projects.ts`'s
-  `deleteProjectById`). The **board+columns portion** now goes through the shared
-  `lib/boardCascade.ts`, but the item/workphase cleanup order is still duplicated —
-  a change to one (e.g. adding a new dependent table) must be mirrored in the other.
+- An item's **dependent-row cleanup is DB-owned** (migration `0009`): itemLabels,
+  activityLog, notifications-by-item, attachments, chatThreads/chatMessages all
+  `ON DELETE CASCADE`, so deleting an item (or a project's items) auto-clears them —
+  adding a new item-dependent table means one CASCADE FK in `schema.ts`, not mirrored
+  loops. Still hand-rolled: the **board+columns** cascade (`lib/boardCascade.ts`) and
+  the workflow-delete chain (boards, workphases, notifications-by-`workflowId`) — the
+  next DB-CASCADE conversion candidates. The `parent_id` subtree walk stays app-side
+  by design (soft ref, "are you sure" delete).
 - `npm audit` in `server/`: 4 moderate findings (esbuild dev-server advisories reached
   via drizzle-kit's bundled loader). Accepted, not fixed — `npm audit fix --force`
   would downgrade drizzle-kit to 0.18.1. Dev-tooling only; no production exposure for

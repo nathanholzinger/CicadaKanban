@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { items, workphases, activityLog, notifications, itemLabels, chatThreads, chatMessages, attachments } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { items, workphases, activityLog, notifications } from '../db/schema.js';
+import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
@@ -320,29 +320,16 @@ function collectDescendantIds(rootId: string): string[] {
   return ids;
 }
 
-export function deleteItemById(id: string): void {
-  db.delete(itemLabels).where(eq(itemLabels.itemId, id)).run();
-  db.delete(activityLog).where(eq(activityLog.itemId, id)).run();
-  db.delete(notifications).where(eq(notifications.itemId, id)).run();
-  db.delete(attachments).where(eq(attachments.itemId, id)).run();
-  const threads = db.select({ id: chatThreads.id }).from(chatThreads).where(eq(chatThreads.itemId, id)).all();
-  for (const thread of threads) {
-    db.delete(chatMessages).where(eq(chatMessages.threadId, thread.id)).run();
-  }
-  db.delete(chatThreads).where(eq(chatThreads.itemId, id)).run();
-  db.delete(items).where(eq(items.id, id)).run();
-}
-
-// Delete an item and all its descendants
+// Delete an item and all its descendants. Each item's dependent rows (itemLabels,
+// activityLog, notifications, attachments, chat threads/messages) are removed by
+// ON DELETE CASCADE; parentId is a soft reference with no FK, so the subtree is
+// still collected in app code and deleted in one statement.
 router.delete('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
   if (!item) return;
 
-  // BFS collects root-first; reversing gives leaves-first, satisfying the self-ref FK
   const allIds = collectDescendantIds(req.params.id);
-  for (const id of [...allIds].reverse()) {
-    deleteItemById(id);
-  }
+  db.delete(items).where(inArray(items.id, allIds)).run();
 
   res.status(204).send();
 });

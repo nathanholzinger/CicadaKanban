@@ -21,7 +21,7 @@ router.post('/', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  db.delete(itemLabels).where(eq(itemLabels.labelId, req.params.id)).run();
+  // itemLabels join rows cascade on label delete (FK ON DELETE CASCADE)
   db.delete(labels).where(eq(labels.id, req.params.id)).run();
   res.status(204).send();
 });

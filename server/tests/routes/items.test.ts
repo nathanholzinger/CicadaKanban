@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
+import { db } from '../../src/db/index.js';
+import { activityLog, attachments, notifications, itemLabels, labels, chatThreads, chatMessages } from '../../src/db/schema.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
 describe('GET /api/items/:id', () => {
@@ -252,6 +256,39 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${parent.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${child.id}`)).status).toBe(404);
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
+  });
+
+  it('cascades an item\'s dependent rows (labels, activity, notifications, attachments, chat) via ON DELETE CASCADE', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id, title: 'Item' });
+    await request(app).post(`/api/items/${item.id}/comments`).send({ content: 'a comment' }); // seeds activityLog
+
+    // Seed the tables without a POST route directly, then assert the DB cascade.
+    const label = { id: randomUUID(), name: 'bug', color: '#f00', createdAt: Date.now() };
+    db.insert(labels).values(label).run();
+    db.insert(itemLabels).values({ itemId: item.id, labelId: label.id }).run();
+    db.insert(attachments).values({
+      id: randomUUID(), itemId: item.id, type: 'local_file', label: 'notes.txt', createdAt: Date.now(),
+    }).run();
+    db.insert(notifications).values({
+      id: randomUUID(), itemId: item.id, message: 'hi', type: 'item_in_workphase', createdAt: Date.now(),
+    }).run();
+    const thread = { id: randomUUID(), itemId: item.id, createdAt: Date.now() };
+    db.insert(chatThreads).values(thread).run();
+    db.insert(chatMessages).values({
+      id: randomUUID(), threadId: thread.id, role: 'user', content: 'hello', createdAt: Date.now(),
+    }).run();
+
+    expect((await request(app).delete(`/api/items/${item.id}`)).status).toBe(204);
+
+    // Item's own dependent rows are gone; the global label survives.
+    expect(db.select().from(activityLog).where(eq(activityLog.itemId, item.id)).all()).toHaveLength(0);
+    expect(db.select().from(itemLabels).where(eq(itemLabels.itemId, item.id)).all()).toHaveLength(0);
+    expect(db.select().from(attachments).where(eq(attachments.itemId, item.id)).all()).toHaveLength(0);
+    expect(db.select().from(notifications).where(eq(notifications.itemId, item.id)).all()).toHaveLength(0);
+    expect(db.select().from(chatThreads).where(eq(chatThreads.itemId, item.id)).all()).toHaveLength(0);
+    expect(db.select().from(chatMessages).where(eq(chatMessages.threadId, thread.id)).all()).toHaveLength(0);
+    expect(db.select().from(labels).where(eq(labels.id, label.id)).all()).toHaveLength(1);
   });
 });
 

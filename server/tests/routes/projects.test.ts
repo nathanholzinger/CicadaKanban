@@ -183,8 +183,8 @@ describe('DELETE /api/projects/:id', () => {
     const boardId = boardsRes.body[0].id;
     const column = await createColumn(boardId, workphase.id, workphase.id);
 
-    // Seed directly to exercise the label/attachment/notification/chat cascade
-    // branches inside deleteProjectById that aren't reachable via a POST route.
+    // Seed directly (these tables have no POST route) to exercise the ON DELETE
+    // CASCADE that removes an item's dependent rows when the project's items go.
     const label = { id: randomUUID(), name: 'bug', color: '#f00', createdAt: Date.now() };
     db.insert(labels).values(label).run();
     db.insert(itemLabels).values({ itemId: item.id, labelId: label.id }).run();
