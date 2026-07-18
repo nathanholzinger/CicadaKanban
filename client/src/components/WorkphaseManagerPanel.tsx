@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { WorkPhase } from '../types';
-import { BTN_PRIMARY, BTN_CANCEL } from './item-detail/pillUtils';
+import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG } from './item-detail/pillUtils';
 
 interface WorkphaseManagerPanelProps {
   workphases: WorkPhase[];
@@ -40,7 +40,7 @@ export default function WorkphaseManagerPanel({
             onChange={e => setNewWorkphaseName(e.target.value)}
             placeholder="Workphase name..."
             aria-label="Workphase name"
-            className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
+            className={INPUT_LG}
             onKeyDown={e => {
               if (e.key === 'Enter') onCreate();
               if (e.key === 'Escape') { setAddingWorkphase(false); setNewWorkphaseName(''); }

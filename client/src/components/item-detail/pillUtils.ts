@@ -15,6 +15,10 @@ export const MINI_DEPTH = `${MINI} bg-zinc-500/20 text-zinc-400 border-zinc-500/
 export const SECTION_LABEL = 'text-[11px] font-semibold uppercase tracking-wider text-zinc-500';
 export const INPUT_BASE = 'px-2 py-1 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60';
 export const SELECT_BASE = 'rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:outline-none';
+// Larger board-form variants (text-sm, rounded-lg) used by the board toolbar,
+// column editor, and workphase manager. Prefix with `w-full ` where needed.
+export const INPUT_LG = 'px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60';
+export const SELECT_SM = 'px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/60';
 export const BTN_PRIMARY = 'px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500';
 export const BTN_CANCEL = 'px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200';
 export const BTN_ADD_TRIGGER = 'text-[11px] text-zinc-500 hover:text-blue-400 transition-colors';

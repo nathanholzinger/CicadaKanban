@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Board, WorkPhase } from '../types';
-import { BTN_PRIMARY, BTN_CANCEL } from './item-detail/pillUtils';
+import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';
 
 interface BoardToolbarProps {
   boards: Board[];
@@ -87,7 +87,7 @@ export default function BoardToolbar({
           value={activeBoardId ?? ''}
           onChange={e => setActiveBoardId(e.target.value)}
           aria-label="Active board"
-          className="px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/50"
+          className={SELECT_SM}
         >
           {boards.map(b => (
             <option key={b.id} value={b.id}>{b.name}</option>
@@ -144,7 +144,7 @@ export default function BoardToolbar({
           value={childDefaultWorkphaseId ?? ''}
           onChange={e => onChildWorkphaseChange(e.target.value || null)}
           aria-label="Default workphase for new child items"
-          className="px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/50"
+          className={SELECT_SM}
         >
           <option value="">Same workphase as parent</option>
           {workphases.map(w => (
@@ -160,7 +160,7 @@ export default function BoardToolbar({
             value={boardNameDraft}
             onChange={e => setBoardNameDraft(e.target.value)}
             aria-label="Board name"
-            className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
+            className={INPUT_LG}
             onKeyDown={e => { if (e.key === 'Escape') setRenamingBoard(false); }}
           />
           <button type="submit" className={BTN_PRIMARY}>Save</button>
@@ -176,7 +176,7 @@ export default function BoardToolbar({
             onChange={e => setNewBoardName(e.target.value)}
             placeholder="Board name..."
             aria-label="Board name"
-            className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
+            className={INPUT_LG}
             onKeyDown={e => { if (e.key === 'Escape') { setCreatingBoard(false); setNewBoardName(''); } }}
           />
           <button type="submit" className={BTN_PRIMARY}>Create board</button>

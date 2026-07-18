@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { WorkPhase, Column, ColumnDisplayMode } from '../types';
 import ModalShell from './ModalShell';
+import { INPUT_LG } from './item-detail/pillUtils';
 
 interface ColumnEditorModalProps {
   workphases: WorkPhase[]; // ordered by position
@@ -127,7 +128,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={covered.length === 1 ? covered[0].name : covered.map(w => w.name).join(' – ')}
-              className="w-full px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50"
+              className={`w-full ${INPUT_LG}`}
             />
           </div>
 
