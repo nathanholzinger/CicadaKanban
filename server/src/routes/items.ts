@@ -38,10 +38,6 @@ function workphaseExists(id: string): boolean {
   return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
 }
 
-function itemExists(id: string): boolean {
-  return !!db.select({ id: items.id }).from(items).where(eq(items.id, id)).get();
-}
-
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
@@ -103,6 +99,14 @@ router.post('/', (req, res) => {
 
   if (!resolvedProjectId) {
     res.status(400).json({ error: 'projectId is required (or provide a parentId to inherit it)' });
+    return;
+  }
+
+  // A child must share its parent's project (the UI only offers same-project
+  // parents; a cross-project parent would leave projectId and the parent's board
+  // disagreeing — finding #11). Only triggers when projectId is passed explicitly.
+  if (parent && resolvedProjectId !== parent.projectId) {
+    res.status(400).json({ error: 'parentId belongs to a different project' });
     return;
   }
 
@@ -174,8 +178,14 @@ router.put('/:id', (req, res) => {
       res.status(400).json({ error: 'An item cannot be its own parent' });
       return;
     }
-    if (!itemExists(parentId)) {
+    const parent = db.select({ projectId: items.projectId }).from(items).where(eq(items.id, parentId)).get();
+    if (!parent) {
       res.status(400).json({ error: 'parentId does not reference an existing item' });
+      return;
+    }
+    // Parent and child must live in the same project (finding #11).
+    if (parent.projectId !== item.projectId) {
+      res.status(400).json({ error: 'parentId belongs to a different project' });
       return;
     }
     if (isItemDescendant(req.params.id, parentId)) {

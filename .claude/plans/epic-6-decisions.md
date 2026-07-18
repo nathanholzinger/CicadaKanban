@@ -39,6 +39,22 @@ Attention is just a saved filter." Falls out of Epic 6's inbox model for free. A
 orphan has no project → no effective workflow → its `workphaseId` reads Unknown
 everywhere; it lives only in that inbox.
 
+### 4. "Move item to a new project" is an explicit, subtree-aware action
+The sanctioned way to relocate an item across projects (contrast finding #11,
+which *rejects* cross-project parenting via reparent — `parentId` can never cross
+a project boundary implicitly). When a user explicitly moves an item to a new
+project:
+- **The whole descendant subtree moves with it** — every descendant's `projectId`
+  is reassigned to the new project, so the subtree stays wholly within one project
+  (upholds the finding #11 invariant that parent and child share a project).
+- **The moved item breaks from its old parent** — its old `parentId` clears (the
+  old parent stays behind in the old project), so it lands as a root in the new
+  project (or under a chosen new parent there, subject to the same-project rule).
+
+So cross-project movement is always a deliberate, whole-subtree operation, never a
+side effect of an edit. This is the counterpart to finding #11's guard: reparent
+stays within a project; changing projects is its own action that re-parents.
+
 ## Why deferred (not done with finding #1)
 
 Changing project-delete to orphan-instead-of-delete without the inbox would make

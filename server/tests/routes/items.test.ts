@@ -86,6 +86,16 @@ describe('POST /api/items', () => {
     expect(res.body.error).toMatch(/parentId/i);
   });
 
+  it('rejects creating a child whose projectId differs from its parent (finding #11)', async () => {
+    const projectA = await createProject();
+    const projectB = await createProject();
+    const parent = await createItem({ projectId: projectA.id, title: 'Parent A' });
+    const res = await request(app).post('/api/items')
+      .send({ title: 'Child', projectId: projectB.id, parentId: parent.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/different project/i);
+  });
+
   it('positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -397,6 +407,17 @@ describe('attached children', () => {
     const res = await request(app).put(`/api/items/${item.id}`).send({ parentId: 'no-such-parent' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/parentId/i);
+  });
+
+  it('rejects reparenting an item under a parent in a different project (finding #11)', async () => {
+    const projectA = await createProject();
+    const projectB = await createProject();
+    const itemA = await createItem({ projectId: projectA.id, title: 'Item A' });
+    const parentB = await createItem({ projectId: projectB.id, title: 'Parent B' });
+
+    const res = await request(app).put(`/api/items/${itemA.id}`).send({ parentId: parentB.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/different project/i);
   });
 
   it('an attached child inherits the parent workphase even when a different one is passed', async () => {
