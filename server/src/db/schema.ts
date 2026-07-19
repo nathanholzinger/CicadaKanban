@@ -112,6 +112,9 @@ export const items = sqliteTable('items', {
   title: text('title').notNull(),
   description: text('description'),
   position: real('position'),
+  // Attached-by-default is the intentional system-wide default: a new child moves
+  // with its parent (nested render, follows the parent's workphase). A per-user
+  // setting to choose the default may come later. Meaningless without a parent_id.
   isAttached: integer('is_attached').notNull().default(1),
   assigneeType: text('assignee_type'), // app-level: 'human' | 'agent'
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
