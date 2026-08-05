@@ -55,6 +55,48 @@ test.describe('attached children on the board', () => {
     await expect(page.getByRole('article', { name: 'Detached Kid' })).toBeVisible();
   });
 
+  test('an attached child whose own workphaseId goes invalid still renders only nested, never duplicated in Unknown status', async ({ page, request, projectSidebar }) => {
+    // The attach cascade only re-syncs a child's workphaseId when its PARENT
+    // moves — it never fires just because a workphase disappears out from
+    // under the child directly. Reproduce that divergence: bypass the normal
+    // attach semantics with a direct move (as a stale historical row or an
+    // out-of-band API/MCP call could), then delete that workphase so only the
+    // child's own reference goes invalid (null), leaving the parent's intact.
+    const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Invalid Workphase Child Project');
+    const parent = await (await request.post(`${API}/items`, {
+      data: { title: 'Diverged Parent', projectId: project.id, workphaseId: todo.id },
+    })).json();
+    const child = await (await request.post(`${API}/items`, {
+      data: { title: 'Diverged Attached Kid', parentId: parent.id },
+    })).json();
+
+    const temp = await (await request.post(`${API}/workphases`, {
+      data: { workflowId: workflow.id, name: 'Temp' },
+    })).json();
+    await request.patch(`${API}/items/${child.id}/move`, { data: { workphaseId: temp.id } });
+    await request.delete(`${API}/workphases/${temp.id}`);
+
+    const reloaded = await (await request.get(`${API}/items/${child.id}`)).json();
+    expect(reloaded.workphaseId).toBeNull(); // confirms the divergence actually landed
+
+    await page.goto('/');
+    await projectSidebar.select('Invalid Workphase Child Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    // Unsorted still flags needsAttention (server-side invalidItems is genuinely
+    // non-empty here) — but the client excludes attached+parented rows from the
+    // "Unknown status" list, so the card never doubles up (audit finding #26).
+    const unsorted = page.getByRole('group', { name: 'Unsorted' });
+    await expect(unsorted).toBeVisible();
+    await expect(unsorted.getByText('needs attention')).toBeVisible();
+    await expect(unsorted.getByText('Unknown status')).not.toBeVisible();
+
+    const card = page.getByRole('article', { name: 'Diverged Parent' });
+    await expect(card).toBeVisible();
+    await expect(card.getByText('Diverged Attached Kid')).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Diverged Attached Kid' })).not.toBeVisible();
+  });
+
   test('unchecking "Show attached children by default" collapses cards on the next load', async ({ page, request, projectSidebar }) => {
     const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Board Toggle Project');
     const parent = await (await request.post(`${API}/items`, {
@@ -120,6 +162,57 @@ test.describe('attached children on the board', () => {
 
     await expect(page.getByRole('article', { name: 'Detached One' })).toBeVisible();
     await expect(page.getByRole('article', { name: 'Attached One' })).not.toBeVisible();
+  });
+
+  test('dragging a parent card across columns cascades its attached child (audit test-coverage-gap #2)', async ({ page, request, projectSidebar }) => {
+    const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Drag Cascade Project');
+    const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
+    const parent = await (await request.post(`${API}/items`, {
+      data: { title: 'Draggable Parent', projectId: project.id, workphaseId: todo.id },
+    })).json();
+    const child = await (await request.post(`${API}/items`, {
+      data: { title: 'Cascading Kid', parentId: parent.id },
+    })).json();
+
+    await page.goto('/');
+    await projectSidebar.select('Drag Cascade Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    const card = page.getByRole('article', { name: 'Draggable Parent' });
+    await expect(card).toBeVisible();
+
+    const sourceBox = await card.boundingBox();
+    const targetColumn = page.getByRole('group', { name: 'In Progress' });
+    const targetBox = await targetColumn.boundingBox();
+    if (!sourceBox || !targetBox) throw new Error('Could not measure source/target elements');
+
+    const startX = sourceBox.x + sourceBox.width / 2;
+    const startY = sourceBox.y + sourceBox.height / 2;
+    const endX = targetBox.x + targetBox.width / 2;
+    const endY = targetBox.y + targetBox.height / 2;
+
+    // dnd-kit's PointerSensor (activationConstraint: { distance: 5 }) needs a
+    // real pointerdown, movement past that 5px threshold to activate the drag,
+    // several intermediate pointermoves so its rect/collision recalculation
+    // keeps up, then pointerup to drop. Playwright's `dragTo()`/`dragAndDrop()`
+    // helpers simulate native HTML5 DnD instead and don't trigger dnd-kit at all.
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 10, startY + 10, { steps: 5 });
+    await page.mouse.move(endX, endY, { steps: 15 });
+    await page.mouse.move(endX, endY, { steps: 2 }); // settle, let collision detection catch up
+    await page.mouse.up();
+
+    // UI: parent lands under "In Progress", child still nested under it.
+    const movedCard = page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Draggable Parent' });
+    await expect(movedCard).toBeVisible();
+    await expect(movedCard.getByText('Cascading Kid')).toBeVisible();
+
+    // Server: the cascade actually ran, not just optimistic client state.
+    await expect.poll(async () => {
+      const updated = await (await request.get(`${API}/items/${child.id}`)).json();
+      return updated.workphaseId;
+    }).toBe(inProgress.id);
   });
 });
 

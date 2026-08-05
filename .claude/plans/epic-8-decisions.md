@@ -146,6 +146,29 @@ a new field plus a decision on how it interacts with per-workphase `position`.
 Not acted on now — flagged for whichever epic ends up owning cross-cutting
 item lists.
 
+### Q5. Is it worth testing the MCP layer?
+Raised during the Epic 3 test-coverage-gaps discussion (MCP paths currently
+have zero coverage). Confirmed architecturally: `server/src/mcp.ts` is a thin
+HTTP client over the same REST API the browser uses (`fetch` against
+`http://localhost:3001/api`) — not a separate code path — so route tests
+already cover the business logic MCP calls into. What tests would uniquely
+catch: argument-mapping bugs, `create_item`'s bespoke type-name-resolution
+logic (its one piece of real logic), and schema-vs-route contradictions like
+the already-found finding #3 (a tool's `inputSchema` requiring something the
+route didn't actually enforce).
+
+Not free to add as-is — three prerequisite refactors first: `API`'s base URL
+is hardcoded (`http://localhost:3001/api`), not configurable like the routes'
+`DB_PATH` pattern; the tool-dispatch switch-case lives inline in the anonymous
+`CallToolRequestSchema` handler, not exported/directly callable; and importing
+the module unconditionally calls `await server.connect(transport)` with no
+`!process.env.VITEST`-style guard (unlike `index.ts`'s `.listen()`). Lower
+stakes than usual too: single-user personal tool, and MCP already needs a
+manual Claude-session restart to pick up server changes, so a broken tool
+tends to surface immediately on next use rather than silently in production.
+Decide whether the translation-layer risk is worth the refactor-then-test
+cost, or whether this stays an accepted gap.
+
 ---
 
 ## Now vs. Epic 8 (what NOT to do now)
