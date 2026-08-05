@@ -1,7 +1,6 @@
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType, WorkPhase } from '../types';
-import KanbanCard from './KanbanCard';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
+import WorkphaseCardList from './WorkphaseCardList';
 
 interface UnsortedBucketProps {
   uncoveredWorkphases: WorkPhase[];
@@ -44,56 +43,30 @@ export default function UnsortedBucket({
 
       <div className="flex-1 flex flex-col gap-2 p-2 min-h-[120px] overflow-y-auto">
         {groups.map(({ workphase, items }) => (
-          <div key={workphase.id}>
-            <div className="flex items-center gap-1.5 px-1 mb-1">
-              <span className="text-[11px] font-medium text-zinc-500 truncate">{workphase.name}</span>
-              <span className="text-[10px] text-zinc-600">{items.length}</span>
-            </div>
-            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              <div className="flex flex-col gap-1.5">
-                {items.map(item => (
-                  <KanbanCard
-                    key={item.id}
-                    item={item}
-                    itemTypes={itemTypes}
-                    childCount={childCounts[item.id] ?? 0}
-                    getAttachedChildren={getAttachedChildren}
-                    defaultExpanded={defaultExpanded}
-                    onCardClick={onCardClick}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
+          <WorkphaseCardList
+            key={workphase.id}
+            label={workphase.name}
+            items={items}
+            itemTypes={itemTypes}
+            childCounts={childCounts}
+            getAttachedChildren={getAttachedChildren}
+            defaultExpanded={defaultExpanded}
+            onCardClick={onCardClick}
+          />
         ))}
 
         {unknownItems.length > 0 && (
-          <div>
-            <div className="flex items-center gap-1.5 px-1 mb-1">
-              <span
-                className="text-[11px] font-medium text-amber-400/80"
-                title="These items' workphase no longer belongs to this workflow — reassign a status to file them"
-              >
-                Unknown status
-              </span>
-              <span className="text-[10px] text-zinc-600">{unknownItems.length}</span>
-            </div>
-            <SortableContext items={unknownItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              <div className="flex flex-col gap-1.5">
-                {unknownItems.map(item => (
-                  <KanbanCard
-                    key={item.id}
-                    item={item}
-                    itemTypes={itemTypes}
-                    childCount={childCounts[item.id] ?? 0}
-                    getAttachedChildren={getAttachedChildren}
-                    defaultExpanded={defaultExpanded}
-                    onCardClick={onCardClick}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </div>
+          <WorkphaseCardList
+            label="Unknown status"
+            labelClassName="text-[11px] font-medium text-amber-400/80"
+            labelTitle="These items' workphase no longer belongs to this workflow — reassign a status to file them"
+            items={unknownItems}
+            itemTypes={itemTypes}
+            childCounts={childCounts}
+            getAttachedChildren={getAttachedChildren}
+            defaultExpanded={defaultExpanded}
+            onCardClick={onCardClick}
+          />
         )}
 
         {totalItems === 0 && (

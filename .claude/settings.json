@@ -9,7 +9,9 @@
       "Bash(npm --prefix server run test)",
       "Bash(npm --prefix server run db:migrate)",
       "Bash(node -e ' *)",
-      "Bash(echo \"tsc exit: $?\")"
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(xargs grep -l \"function useDroppable\")",
+      "Bash(npx eslint *)"
     ]
   }
 }

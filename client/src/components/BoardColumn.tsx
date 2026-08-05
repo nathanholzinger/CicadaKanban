@@ -6,6 +6,7 @@ import type { Column, Item, ItemType, WorkPhase } from '../types';
 import KanbanCard from './KanbanCard';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
+import WorkphaseCardList from './WorkphaseCardList';
 
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;
@@ -214,31 +215,18 @@ function ExpandedSubRow({
   const { setNodeRef, isOver } = useDroppable({ id: subrowContainerId(columnId, workphase.id) });
 
   return (
-    <div>
-      <div className="flex items-center gap-1.5 px-1 mb-1">
-        <span className="text-[11px] font-medium text-zinc-500 truncate">{workphase.name}</span>
-        <span className="text-[10px] text-zinc-600">{items.length}</span>
-      </div>
-      <div
-        ref={setNodeRef}
-        className={`flex flex-col gap-1.5 p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${
-          isOver && isCardBeingDragged ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20'
-        }`}
-      >
-        <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-          {items.map(item => (
-            <KanbanCard
-              key={item.id}
-              item={item}
-              itemTypes={itemTypes}
-              childCount={childCounts[item.id] ?? 0}
-              getAttachedChildren={getAttachedChildren}
-              defaultExpanded={defaultExpanded}
-              onCardClick={onCardClick}
-            />
-          ))}
-        </SortableContext>
-      </div>
-    </div>
+    <WorkphaseCardList
+      label={workphase.name}
+      items={items}
+      itemTypes={itemTypes}
+      childCounts={childCounts}
+      getAttachedChildren={getAttachedChildren}
+      defaultExpanded={defaultExpanded}
+      onCardClick={onCardClick}
+      droppable
+      containerRef={setNodeRef}
+      isOver={isOver}
+      isCardBeingDragged={isCardBeingDragged}
+    />
   );
 }
