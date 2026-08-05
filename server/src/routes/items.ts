@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, activityLog, notifications } from '../db/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
+import { nextPosition } from '../lib/positions.js';
 
 const router = Router();
 
@@ -127,10 +128,7 @@ router.post('/', (req, res) => {
   let position: number | null = null;
   if (resolvedWorkphaseId) {
     const itemsInWorkphase = db.select().from(items).where(eq(items.workphaseId, resolvedWorkphaseId)).all();
-    const maxPos = itemsInWorkphase.length > 0
-      ? Math.max(...itemsInWorkphase.map(i => i.position ?? 0))
-      : 0;
-    position = maxPos + 1.0;
+    position = nextPosition(itemsInWorkphase);
   }
 
   const now = Date.now();
@@ -250,7 +248,16 @@ router.patch('/:id/move', (req, res) => {
   const oldWorkphaseId = item.workphaseId;
 
   if (workphaseId !== undefined) updates.workphaseId = workphaseId;
-  if (position !== undefined) updates.position = position;
+  if (position !== undefined) {
+    updates.position = position;
+  } else if (workphaseId) {
+    // No explicit position: default to the end of the target workphase's
+    // list — the same "append" rule every create endpoint uses (finding #25).
+    const itemsInTarget = db.select({ position: items.position }).from(items)
+      .where(and(eq(items.workphaseId, workphaseId), ne(items.id, req.params.id)))
+      .all();
+    updates.position = nextPosition(itemsInTarget);
+  }
 
   // The move, the attached-descendant cascade, the activity log, and the
   // notification insert commit together — a partial failure must not leave the

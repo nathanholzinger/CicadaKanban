@@ -7,6 +7,7 @@ import { getOrderedWorkphases, isColumnBroken, getCoveredWorkphases, computeUnso
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { nextPosition } from '../lib/positions.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ItemRow = typeof items.$inferSelect;
@@ -23,14 +24,13 @@ export function createDefaultBoard(
 ) {
   return db.transaction(tx => {
     const existingBoards = tx.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
-    const maxPosition = existingBoards.length > 0 ? Math.max(...existingBoards.map(b => b.position)) : 0;
 
     const boardId = randomUUID();
     tx.insert(boards).values({
       id: boardId,
       workflowId,
       name,
-      position: maxPosition + 1.0,
+      position: nextPosition(existingBoards),
       createdAt: now,
       updatedAt: now,
     }).run();

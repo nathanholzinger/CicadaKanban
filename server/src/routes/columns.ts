@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, validateColumnRange } from '../lib/columnRanges.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
+import { nextPosition } from '../lib/positions.js';
 
 const router = Router();
 
@@ -31,7 +32,6 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const maxPosition = siblingColumns.length > 0 ? Math.max(...siblingColumns.map(c => c.position)) : 0;
   const id = randomUUID();
 
   db.insert(columns).values({
@@ -41,7 +41,7 @@ router.post('/', (req, res) => {
     startWorkphaseId,
     endWorkphaseId,
     displayMode: displayMode === 'expanded' ? 'expanded' : 'merged',
-    position: maxPosition + 1.0,
+    position: nextPosition(siblingColumns),
     createdAt: Date.now(),
   }).run();
 

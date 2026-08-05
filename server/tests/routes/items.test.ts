@@ -197,6 +197,32 @@ describe('PATCH /api/items/:id/move', () => {
     const notifications = await request(app).get('/api/notifications');
     expect(notifications.body.some((n: { itemId: string }) => n.itemId === item.id)).toBe(true);
   });
+
+  it('a workphaseId-only move (no position given) defaults to the end of the target workphase', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const done = await createWorkphase(workflow.id, { name: 'Done' });
+    const existing = await createItem({ projectId: project.id, workphaseId: done.id, title: 'Already done' });
+    const moving = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Moving' });
+
+    const res = await request(app).patch(`/api/items/${moving.id}/move`).send({ workphaseId: done.id });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBeGreaterThan(existing.position);
+  });
+
+  it('an explicit position on a move is respected as-is, not overridden by the default', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const done = await createWorkphase(workflow.id, { name: 'Done' });
+    await createItem({ projectId: project.id, workphaseId: done.id, title: 'Already done' });
+    const moving = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Moving' });
+
+    const res = await request(app).patch(`/api/items/${moving.id}/move`).send({ workphaseId: done.id, position: 0.5 });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBe(0.5);
+  });
 });
 
 describe('PATCH /api/items/reorder', () => {

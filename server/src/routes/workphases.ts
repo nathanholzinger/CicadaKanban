@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
+import { nextPosition } from '../lib/positions.js';
 
 const router = Router();
 
@@ -23,17 +24,13 @@ router.post('/', (req, res) => {
     .orderBy(workphases.position)
     .all();
 
-  const maxPosition = existing.length > 0
-    ? Math.max(...existing.map(w => w.position))
-    : 0;
-
   const id = randomUUID();
 
   db.insert(workphases).values({
     id,
     workflowId,
     name,
-    position: maxPosition + 1.0,
+    position: nextPosition(existing),
     triggersNotification: triggersNotification ? 1 : 0,
     isTerminal: isTerminal ? 1 : 0,
     createdAt: Date.now(),

@@ -201,21 +201,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'move_item': {
-        // workflowId is returned on the item response (derived from item's workphase)
-        const item = await api(`/items/${args!.item_id}`);
-        const workflow = await api(`/workflows/${item.workflowId}`);
-        const workphaseItems = (workflow.items as Array<{ workphaseId: string; position: number }>)
-          .filter((i: { workphaseId: string }) => i.workphaseId === args!.workphase_id);
-        const position = workphaseItems.length > 0
-          ? Math.max(...workphaseItems.map((i: { position: number }) => i.position ?? 0)) + 1
-          : 1;
-
+        // No position given: the move endpoint defaults to the end of the
+        // target workphase's list, so MCP no longer needs to fetch the item
+        // and its workflow just to compute an append position itself.
         await api(`/items/${args!.item_id}/move`, {
           method: 'PATCH',
-          body: JSON.stringify({ workphaseId: args!.workphase_id, position }),
+          body: JSON.stringify({ workphaseId: args!.workphase_id }),
         });
         return {
-          content: [{ type: 'text', text: `Moved item "${item.title}" to workphase ${args!.workphase_id}` }],
+          content: [{ type: 'text', text: `Moved item ${args!.item_id} to workphase ${args!.workphase_id}` }],
         };
       }
 

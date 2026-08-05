@@ -129,6 +129,23 @@ to querying events by `item_id`. The memory separates *priority-unread* (badge)
 from *non-priority activity* (a distinct counter). Decide whether the item badge
 counts only priority alerts or all unread activity. Lean: priority-only.
 
+### Q4. Do items need a global (cross-workphase) order, independent of `position`?
+`items.position` is scoped to whatever workphase an item currently sits in — a
+cross-workphase move (drag, or `PATCH /:id/move`) recomputes it from scratch
+against the *target* workphase's neighbors, discarding any relative order the
+item held in its previous column entirely. `createdAt` is immutable and
+workphase-independent but isn't wired into any ordering today; nothing
+persists "the user cared about this item's rank" once it changes workphase.
+Raised while discussing audit finding #25 (the position-append-math helper):
+would a global/cross-column rank be worth adding — `createdAt` as the default
+order, with a manual reorder establishing a sticky override — so an item
+lands somewhere consistent with its rank among peers when it's dragged into a
+new column, or when it's listed in a cross-project/cross-workflow surface
+(dashboard tiles, Inbox)? No schema support for this exists today; would need
+a new field plus a decision on how it interacts with per-workphase `position`.
+Not acted on now — flagged for whichever epic ends up owning cross-cutting
+item lists.
+
 ---
 
 ## Now vs. Epic 8 (what NOT to do now)
