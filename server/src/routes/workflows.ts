@@ -66,59 +66,67 @@ router.post('/', (req, res) => {
   const now = Date.now();
   const workflowId = randomUUID();
 
-  db.insert(workflows).values({
-    id: workflowId,
-    projectId,
-    name,
-    description: description || null,
-    createdAt: now,
-    updatedAt: now,
-  }).run();
+  // The workflow row, its seeded workphases (template/copy), and the default
+  // board bootstrap commit together — a mid-sequence failure must not leave a
+  // workflow with only some of its intended workphases, or a workflow with no
+  // usable board at all.
+  const { created, createdWorkphases } = db.transaction((tx) => {
+    tx.insert(workflows).values({
+      id: workflowId,
+      projectId,
+      name,
+      description: description || null,
+      createdAt: now,
+      updatedAt: now,
+    }).run();
 
-  if (templateId) {
-    const templatePhases = db.select().from(workflowTemplatePhases)
-      .where(eq(workflowTemplatePhases.templateId, templateId))
-      .orderBy(workflowTemplatePhases.position)
-      .all();
+    if (templateId) {
+      const templatePhases = tx.select().from(workflowTemplatePhases)
+        .where(eq(workflowTemplatePhases.templateId, templateId))
+        .orderBy(workflowTemplatePhases.position)
+        .all();
 
-    for (const phase of templatePhases) {
-      db.insert(workphases).values({
-        id: randomUUID(),
-        workflowId,
-        name: phase.name,
-        position: phase.position,
-        triggersNotification: phase.triggersNotification,
-        isTerminal: phase.isTerminal,
-        createdAt: now,
-      }).run();
+      for (const phase of templatePhases) {
+        tx.insert(workphases).values({
+          id: randomUUID(),
+          workflowId,
+          name: phase.name,
+          position: phase.position,
+          triggersNotification: phase.triggersNotification,
+          isTerminal: phase.isTerminal,
+          createdAt: now,
+        }).run();
+      }
+    } else if (sourceWorkflowId) {
+      const sourcePhases = tx.select().from(workphases)
+        .where(eq(workphases.workflowId, sourceWorkflowId))
+        .orderBy(workphases.position)
+        .all();
+
+      for (const phase of sourcePhases) {
+        tx.insert(workphases).values({
+          id: randomUUID(),
+          workflowId,
+          name: phase.name,
+          position: phase.position,
+          triggersNotification: phase.triggersNotification,
+          isTerminal: phase.isTerminal,
+          createdAt: now,
+        }).run();
+      }
     }
-  } else if (sourceWorkflowId) {
-    const sourcePhases = db.select().from(workphases)
-      .where(eq(workphases.workflowId, sourceWorkflowId))
-      .orderBy(workphases.position)
-      .all();
 
-    for (const phase of sourcePhases) {
-      db.insert(workphases).values({
-        id: randomUUID(),
-        workflowId,
-        name: phase.name,
-        position: phase.position,
-        triggersNotification: phase.triggersNotification,
-        isTerminal: phase.isTerminal,
-        createdAt: now,
-      }).run();
-    }
-  }
+    const createdWorkphases = tx.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
 
-  const createdWorkphases = db.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
+    // Every workflow needs at least one valid board to be usable — bootstrap a
+    // default one with 1:1 columns matching whatever workphases now exist
+    // (possibly none, for the "Custom" no-template/no-source path).
+    createDefaultBoard(workflowId, 'Default Board', createdWorkphases, now, tx);
 
-  // Every workflow needs at least one valid board to be usable — bootstrap a
-  // default one with 1:1 columns matching whatever workphases now exist
-  // (possibly none, for the "Custom" no-template/no-source path).
-  createDefaultBoard(workflowId, 'Default Board', createdWorkphases, now);
+    const created = tx.select().from(workflows).where(eq(workflows.id, workflowId)).get()!;
+    return { created, createdWorkphases };
+  });
 
-  const created = db.select().from(workflows).where(eq(workflows.id, workflowId)).get();
   res.status(201).json({ ...created, workphases: createdWorkphases });
 });
 

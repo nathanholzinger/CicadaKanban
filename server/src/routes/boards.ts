@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { boards, columns, workflows, workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -16,17 +16,21 @@ type ItemRow = typeof items.$inferSelect;
 // workflow. Shared by POST /api/workflows (new-workflow bootstrap), POST
 // /api/boards (additional boards), and runMigrations' backfill phase — every
 // new board starts immediately usable rather than an all-Unsorted blank slate.
+// Pass `tx` to fold this into a caller's transaction (e.g. workflow creation,
+// where the workflow row + its seeded workphases + this bootstrap must commit
+// together); omit it to run standalone in its own transaction.
 export function createDefaultBoard(
   workflowId: string,
   name: string,
   workflowWorkphases: Workphase[],
   now: number,
+  tx?: Tx,
 ) {
-  return db.transaction(tx => {
-    const existingBoards = tx.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
+  const run = (e: Tx) => {
+    const existingBoards = e.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
 
     const boardId = randomUUID();
-    tx.insert(boards).values({
+    e.insert(boards).values({
       id: boardId,
       workflowId,
       name,
@@ -37,7 +41,7 @@ export function createDefaultBoard(
 
     const sorted = [...workflowWorkphases].sort((a, b) => a.position - b.position);
     sorted.forEach((phase, i) => {
-      tx.insert(columns).values({
+      e.insert(columns).values({
         id: randomUUID(),
         boardId,
         name: null,
@@ -49,8 +53,9 @@ export function createDefaultBoard(
       }).run();
     });
 
-    return tx.select().from(boards).where(eq(boards.id, boardId)).get()!;
-  });
+    return e.select().from(boards).where(eq(boards.id, boardId)).get()!;
+  };
+  return tx ? run(tx) : db.transaction(run);
 }
 
 function displayNameFor(name: string | null, covered: Workphase[]): string {
