@@ -25,3 +25,8 @@ sqlite.pragma('foreign_keys = ON');
 
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
+
+// A drizzle transaction handle — the argument better-sqlite3 passes to the
+// `db.transaction(tx => …)` callback. Helpers that need to run inside a caller's
+// transaction accept this so their writes join the same atomic unit.
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];

@@ -75,9 +75,11 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  for (const { id, position } of workphaseOrders) {
-    db.update(workphases).set({ position }).where(eq(workphases.id, id)).run();
-  }
+  db.transaction((tx) => {
+    for (const { id, position } of workphaseOrders) {
+      tx.update(workphases).set({ position }).where(eq(workphases.id, id)).run();
+    }
+  });
 
   res.json({ success: true });
 });

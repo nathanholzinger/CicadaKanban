@@ -49,7 +49,14 @@ A workflow is a flat ordered list of statuses (columns). Boards are configurable
 ### Epic 3 — Work Item Behaviors (Attached & Detached)
 **Why third:** Once the project/workflow structure exists and columns are properly hierarchical, the rules for how work items move through that structure need to be defined. Attached vs. detached determines whether children follow parents — this affects drag-and-drop, column moves, and board display in every subsequent feature.
 
-Work items gain an `is_attached` flag. Attached children move with their parent when the parent changes columns. Detached children keep their independent column assignment. Board display toggles: show attached children as indented list, or collapse/hide them. Drag-and-drop gesture to attach/detach.
+Work items gain an `is_attached` flag. Attached children move with their parent when the parent changes columns. Detached children keep their independent column assignment. Board display toggles: show attached children as indented list, or collapse/hide them. Attach/detach is driven from the item detail panel (checkbox) and the child badge; the board-level **drag-and-drop gesture** for it is split out to Epic 3.5 and is **not** required to close Epic 3.
+
+---
+
+### Epic 3.5 — Drag-and-Drop Attach/Detach Gesture
+**Why here:** The attach/detach *state* and all its behaviors shipped in Epic 3 (detail-panel checkbox + child-badge controls, cascade on parent move, nested render, cycle prevention). What's left is only the ergonomic **board gesture** for it. It's split out because it touches the dnd-kit board-interaction layer deeply and isn't required for the attached/detached model to be correct and usable — so Epic 3 closes without it (audit finding #13).
+
+A drag gesture to attach/detach directly on the board: dropping a card onto another card attaches it as a child; dragging an attached child out of its parent detaches it. Builds on the existing dnd-kit layer (`useBoardDnd`) and the attach/detach endpoints already in place. Attached children currently render as non-draggable read-only rows, so this epic also makes them draggable for the detach direction. Guard the gesture with the same-project and cycle rules already enforced on the API (findings #11, cycle checks).
 
 ---
 

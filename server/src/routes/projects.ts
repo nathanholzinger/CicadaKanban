@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { projects, workflows, workphases, items, notifications, boards } from '../db/schema.js';
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -81,50 +81,53 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-function deleteProjectById(id: string) {
-  const children = db.select().from(projects).where(eq(projects.parentId, id)).all();
-  for (const child of children) deleteProjectById(child.id);
+// Recursively deletes a project subtree. Runs inside a caller-supplied
+// transaction (tx) so the whole cascade — descendant projects, items, workflow
+// artifacts — commits atomically; a mid-cascade failure rolls the lot back.
+function deleteProjectById(id: string, tx: Tx) {
+  const children = tx.select().from(projects).where(eq(projects.parentId, id)).all();
+  for (const child of children) deleteProjectById(child.id, tx);
 
   // Gather all workflow/workphase ids for this project upfront
-  const workflowIds = db.select({ id: workflows.id })
+  const workflowIds = tx.select({ id: workflows.id })
     .from(workflows).where(eq(workflows.projectId, id)).all().map(w => w.id);
 
   const workphaseIds = workflowIds.length > 0
-    ? db.select({ id: workphases.id }).from(workphases).where(inArray(workphases.workflowId, workflowIds)).all().map(w => w.id)
+    ? tx.select({ id: workphases.id }).from(workphases).where(inArray(workphases.workflowId, workflowIds)).all().map(w => w.id)
     : [];
 
   // All items to remove: owned by this project OR sitting in this project's
   // workphases. Each item's dependent rows (itemLabels, activityLog,
   // notifications, attachments, chat threads/messages) are removed by ON DELETE
   // CASCADE, so deleting the items is enough.
-  const ownedItemIds = db.select({ id: items.id })
+  const ownedItemIds = tx.select({ id: items.id })
     .from(items).where(eq(items.projectId, id)).all().map(i => i.id);
   const workphaseItemIds = workphaseIds.length > 0
-    ? db.select({ id: items.id }).from(items).where(inArray(items.workphaseId, workphaseIds)).all().map(i => i.id)
+    ? tx.select({ id: items.id }).from(items).where(inArray(items.workphaseId, workphaseIds)).all().map(i => i.id)
     : [];
   const allItemIds = [...new Set([...ownedItemIds, ...workphaseItemIds])];
 
   if (allItemIds.length > 0) {
-    db.delete(items).where(inArray(items.id, allItemIds)).run();
+    tx.delete(items).where(inArray(items.id, allItemIds)).run();
   }
 
   // Workflow-level cleanup before removing workphases/workflows. Labels are
   // global — NOT deleted with a project. Workflow-scoped notifications aren't
   // item-anchored, so they are cleared explicitly here.
   if (workflowIds.length > 0) {
-    db.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
+    tx.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
 
-    const workflowBoardIds = db.select({ id: boards.id })
+    const workflowBoardIds = tx.select({ id: boards.id })
       .from(boards).where(inArray(boards.workflowId, workflowIds)).all().map(b => b.id);
-    deleteBoardsById(workflowBoardIds);
+    deleteBoardsById(workflowBoardIds, tx);
 
     if (workphaseIds.length > 0) {
-      db.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
+      tx.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
     }
   }
 
-  db.delete(workflows).where(eq(workflows.projectId, id)).run();
-  db.delete(projects).where(eq(projects.id, id)).run();
+  tx.delete(workflows).where(eq(workflows.projectId, id)).run();
+  tx.delete(projects).where(eq(projects.id, id)).run();
 }
 
 // Reorder projects — atomically set parentId + position for one or more projects
@@ -135,7 +138,9 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  for (const { id, parentId, position } of projectOrders) {
+  // Validate every entry before writing any — otherwise a mid-loop reject would
+  // leave earlier rows already updated (the loop used to interleave the two).
+  for (const { id, parentId } of projectOrders) {
     if (parentId != null) {
       if (parentId === id) {
         res.status(400).json({ error: 'A project cannot be its own parent' });
@@ -146,12 +151,17 @@ router.patch('/reorder', (req, res) => {
         return;
       }
     }
-    db.update(projects).set({
-      parentId: parentId ?? null,
-      position,
-      updatedAt: Date.now(),
-    }).where(eq(projects.id, id)).run();
   }
+
+  db.transaction((tx) => {
+    for (const { id, parentId, position } of projectOrders) {
+      tx.update(projects).set({
+        parentId: parentId ?? null,
+        position,
+        updatedAt: Date.now(),
+      }).where(eq(projects.id, id)).run();
+    }
+  });
 
   res.json({ success: true });
 });
@@ -162,7 +172,7 @@ router.delete('/:id', (req, res) => {
   if (!project) return;
 
   try {
-    deleteProjectById(req.params.id);
+    db.transaction((tx) => deleteProjectById(req.params.id, tx));
     res.status(204).send();
   } catch (err) {
     console.error('Failed to delete project:', err);

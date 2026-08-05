@@ -129,9 +129,11 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  for (const { id, position } of columnOrders) {
-    db.update(columns).set({ position }).where(eq(columns.id, id)).run();
-  }
+  db.transaction((tx) => {
+    for (const { id, position } of columnOrders) {
+      tx.update(columns).set({ position }).where(eq(columns.id, id)).run();
+    }
+  });
 
   res.json({ success: true });
 });

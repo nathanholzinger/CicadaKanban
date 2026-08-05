@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { items, workphases, activityLog, notifications } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -12,9 +12,10 @@ function logActivity(
   itemId: string,
   type: string,
   content: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  tx?: Tx,
 ) {
-  db.insert(activityLog).values({
+  (tx ?? db).insert(activityLog).values({
     id: randomUUID(),
     itemId,
     type,
@@ -202,31 +203,35 @@ router.put('/:id', (req, res) => {
   if (parentId !== undefined) updates.parentId = parentId;
   if (isAttached !== undefined) updates.isAttached = isAttached ? 1 : 0;
 
-  db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
+  // The base update, the parent-sync, its cascade, and the activity log form one
+  // atomic unit — a mid-sequence failure must not leave a half-reparented subtree.
+  db.transaction((tx) => {
+    tx.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  // Re-sync workphase to the parent only when the parent link or attach flag
-  // actually changed in this request — covers "just attached" and "reparented
-  // while already attached". A title/description-only PUT must NOT run this: it
-  // would silently relocate an attached child whose workphase has diverged from
-  // its parent's, dragging its subtree along (finding #10).
-  if (parentId !== undefined || isAttached !== undefined) {
-    const resultingParentId = parentId !== undefined ? parentId : item.parentId;
-    const resultingAttached = isAttached !== undefined ? Boolean(isAttached) : Boolean(item.isAttached);
-    if (resultingAttached && resultingParentId) {
-      const newParent = db.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId)).get();
-      if (newParent) {
-        db.update(items).set({ workphaseId: newParent.workphaseId, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
-        cascadeWorkphaseToAttachedDescendants(req.params.id);
+    // Re-sync workphase to the parent only when the parent link or attach flag
+    // actually changed in this request — covers "just attached" and "reparented
+    // while already attached". A title/description-only PUT must NOT run this: it
+    // would silently relocate an attached child whose workphase has diverged from
+    // its parent's, dragging its subtree along (finding #10).
+    if (parentId !== undefined || isAttached !== undefined) {
+      const resultingParentId = parentId !== undefined ? parentId : item.parentId;
+      const resultingAttached = isAttached !== undefined ? Boolean(isAttached) : Boolean(item.isAttached);
+      if (resultingAttached && resultingParentId) {
+        const newParent = tx.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId)).get();
+        if (newParent) {
+          tx.update(items).set({ workphaseId: newParent.workphaseId, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
+          cascadeWorkphaseToAttachedDescendants(req.params.id, tx);
+        }
       }
     }
-  }
 
-  if (assigneeType !== undefined || agentId !== undefined) {
-    logActivity(req.params.id, 'assignment', `Assigned to ${assigneeType || 'unassigned'}`, {
-      assigneeType: assigneeType || null,
-      agentId: agentId || null,
-    });
-  }
+    if (assigneeType !== undefined || agentId !== undefined) {
+      logActivity(req.params.id, 'assignment', `Assigned to ${assigneeType || 'unassigned'}`, {
+        assigneeType: assigneeType || null,
+        agentId: agentId || null,
+      }, tx);
+    }
+  });
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
   res.json(updated);
@@ -256,34 +261,39 @@ router.patch('/:id/move', (req, res) => {
   if (workphaseId !== undefined) updates.workphaseId = workphaseId;
   if (position !== undefined) updates.position = position;
 
-  db.update(items).set(updates).where(eq(items.id, req.params.id)).run();
+  // The move, the attached-descendant cascade, the activity log, and the
+  // notification insert commit together — a partial failure must not leave the
+  // item moved but its children stranded (or vice versa).
+  db.transaction((tx) => {
+    tx.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
-  if (workphaseId !== undefined && workphaseId !== oldWorkphaseId) {
-    cascadeWorkphaseToAttachedDescendants(req.params.id);
+    if (workphaseId !== undefined && workphaseId !== oldWorkphaseId) {
+      cascadeWorkphaseToAttachedDescendants(req.params.id, tx);
 
-    const oldWorkphase = oldWorkphaseId
-      ? db.select().from(workphases).where(eq(workphases.id, oldWorkphaseId)).get()
-      : null;
-    const newWorkphase = db.select().from(workphases).where(eq(workphases.id, workphaseId)).get();
+      const oldWorkphase = oldWorkphaseId
+        ? tx.select().from(workphases).where(eq(workphases.id, oldWorkphaseId)).get()
+        : null;
+      const newWorkphase = tx.select().from(workphases).where(eq(workphases.id, workphaseId)).get();
 
-    logActivity(req.params.id, 'status_change',
-      `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`, {
-        fromWorkphaseId: oldWorkphaseId,
-        toWorkphaseId: workphaseId,
-      });
+      logActivity(req.params.id, 'status_change',
+        `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`, {
+          fromWorkphaseId: oldWorkphaseId,
+          toWorkphaseId: workphaseId,
+        }, tx);
 
-    if (newWorkphase?.triggersNotification) {
-      db.insert(notifications).values({
-        id: randomUUID(),
-        itemId: req.params.id,
-        workflowId: newWorkphase.workflowId,
-        message: `"${item.title}" moved to "${newWorkphase.name}"`,
-        type: 'item_in_workphase',
-        isRead: 0,
-        createdAt: Date.now(),
-      }).run();
+      if (newWorkphase?.triggersNotification) {
+        tx.insert(notifications).values({
+          id: randomUUID(),
+          itemId: req.params.id,
+          workflowId: newWorkphase.workflowId,
+          message: `"${item.title}" moved to "${newWorkphase.name}"`,
+          type: 'item_in_workphase',
+          isRead: 0,
+          createdAt: Date.now(),
+        }).run();
+      }
     }
-  }
+  });
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
   res.json(updated);
@@ -298,12 +308,14 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  for (const { id, position } of itemOrders) {
-    db.update(items)
-      .set({ position, updatedAt: Date.now() })
-      .where(eq(items.id, id))
-      .run();
-  }
+  db.transaction((tx) => {
+    for (const { id, position } of itemOrders) {
+      tx.update(items)
+        .set({ position, updatedAt: Date.now() })
+        .where(eq(items.id, id))
+        .run();
+    }
+  });
 
   res.json({ success: true });
 });
