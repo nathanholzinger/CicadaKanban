@@ -2,28 +2,14 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Item, ItemType } from '../types';
+import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 
-const PILL_BASE = 'inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border';
-
-function depthLabel(depth: number): string {
-  return depth === 0 ? 'TOP' : `SUB${depth}`;
-}
-
-function typePillProps(typeId: string | null, itemTypes: ItemType[]): { className: string; style?: React.CSSProperties; label: string } | null {
-  if (!typeId) return null;
-  const t = itemTypes.find(x => x.id === typeId);
-  if (!t) return null;
-  if (t.color) {
-    return {
-      className: PILL_BASE,
-      style: { backgroundColor: t.color + '33', borderColor: t.color + '66', color: t.color },
-      label: t.name,
-    };
-  }
-  return {
-    className: `${PILL_BASE} bg-zinc-500/20 text-zinc-300 border-zinc-500/30`,
-    label: t.name,
-  };
+// A card's type pill only renders when `item.type` resolves to a known
+// ItemType — an orphaned/unknown type reference hides the pill rather than
+// showing a raw id (unlike the item-detail sections, which fall back to the
+// raw id as label text).
+function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | null {
+  return typeId ? itemTypes.find(t => t.id === typeId) ?? null : null;
 }
 
 interface KanbanCardProps {
@@ -55,7 +41,7 @@ export default function KanbanCard({
   };
 
   const depth = item.depth ?? 0;
-  const typePill = typePillProps(item.type, itemTypes);
+  const resolvedType = resolveType(item.type, itemTypes);
 
   return (
     <div
@@ -77,12 +63,12 @@ export default function KanbanCard({
     >
       {/* Depth + type pills */}
       <div className="flex items-center gap-1 mb-2">
-        <span className={`${PILL_BASE} bg-zinc-500/20 text-zinc-400 border-zinc-500/30`}>
+        <span className={PILL_DEPTH}>
           {depthLabel(depth)}
         </span>
-        {typePill && (
-          <span className={typePill.className} style={typePill.style}>
-            {typePill.label}
+        {resolvedType && (
+          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
+            {resolvedType.name}
           </span>
         )}
       </div>
@@ -158,7 +144,7 @@ interface AttachedChildRowProps {
 }
 
 function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }: AttachedChildRowProps) {
-  const typePill = typePillProps(item.type, itemTypes);
+  const resolvedType = resolveType(item.type, itemTypes);
   const grandchildren = getAttachedChildren(item.id);
 
   return (
@@ -169,9 +155,9 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
         onPointerDown={e => e.stopPropagation()}
         className="w-full flex items-center gap-1.5 text-left px-1.5 py-1 rounded hover:bg-zinc-700/40 transition-colors"
       >
-        {typePill && (
-          <span className={typePill.className} style={typePill.style}>
-            {typePill.label}
+        {resolvedType && (
+          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
+            {resolvedType.name}
           </span>
         )}
         <span className="text-xs text-zinc-300 truncate">{item.title}</span>
