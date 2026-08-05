@@ -5,6 +5,7 @@ import { PILL_DEPTH, typePillClass, typePillStyle, depthLabel, formatTime, SECTI
 import { LabelsSection } from './item-detail/LabelsSection';
 import { AgentSection } from './item-detail/AgentSection';
 import { AttachmentsSection } from './item-detail/AttachmentsSection';
+import { ParentSection } from './item-detail/ParentSection';
 import { ChildrenSection } from './item-detail/ChildrenSection';
 import { ActivityLog } from './item-detail/ActivityLog';
 
@@ -237,14 +238,17 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
               <LabelsSection itemId={detail.id} projectId={detail.projectId} />
               <AgentSection item={detail} onUpdate={handleItemUpdated} />
               <AttachmentsSection itemId={detail.id} />
-              <ChildrenSection
+              <ParentSection
                 item={detail}
                 allItems={items}
+                onSelfUpdated={handleItemUpdated}
+              />
+              <ChildrenSection
+                item={detail}
                 childDefaultWorkphaseId={childDefaultWorkphaseId}
                 itemTypes={itemTypes}
                 onNavigate={onNavigate}
                 onChildCreated={handleChildCreated}
-                onSelfUpdated={handleItemUpdated}
                 onChildUpdated={handleChildUpdated}
               />
               <ActivityLog activity={detail.activity} />

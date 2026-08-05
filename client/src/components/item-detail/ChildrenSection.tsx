@@ -1,71 +1,37 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
 import { createItem, updateItem } from '../../api';
-import { buildParentOptions as buildTreeParentOptions } from '../../lib/hierarchy';
 import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, SECTION_LABEL, SELECT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
-  allItems: Item[];
   childDefaultWorkphaseId: string | null | undefined;
   itemTypes: ItemType[];
   onNavigate: (id: string) => void;
   onChildCreated: (child: Item) => void;
-  onSelfUpdated: (updated: Item) => void;
   onChildUpdated: (updated: Item) => void;
 }
 
-// Candidate reparent targets: items in the same project, excluding the item
-// itself and any of its own descendants — shared cycle-prevention math with
-// the project hierarchy via lib/hierarchy.
-function buildParentOptions(allItems: Item[], currentId: string, projectId: string | null): Array<{ value: string; label: string }> {
-  const scoped = allItems.filter(i => i.projectId === projectId);
-  return buildTreeParentOptions(scoped, currentId, i => i.title, '(none — top level)');
-}
-
+// Lists this item's children and handles creating new ones plus toggling
+// each child's attach state. Editing the current item's *own* parent link
+// lives in the sibling ParentSection — a different concern with no shared
+// state.
 export function ChildrenSection({
-  item, allItems, childDefaultWorkphaseId, itemTypes, onNavigate, onChildCreated, onSelfUpdated, onChildUpdated,
+  item, childDefaultWorkphaseId, itemTypes, onNavigate, onChildCreated, onChildUpdated,
 }: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('');
   const [saving, setSaving] = useState(false);
-  const [savingParent, setSavingParent] = useState(false);
-  const [parentError, setParentError] = useState('');
-
-  async function handleParentChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const parentId = e.target.value || null;
-    setSavingParent(true);
-    setParentError('');
-    try {
-      const updated = await updateItem(item.id, { parentId });
-      onSelfUpdated(updated);
-    } catch (err) {
-      setParentError(err instanceof Error ? err.message : 'Failed to reparent item');
-    } finally {
-      setSavingParent(false);
-    }
-  }
-
-  async function handleAttachedToggle(e: React.ChangeEvent<HTMLInputElement>) {
-    setSavingParent(true);
-    setParentError('');
-    try {
-      const updated = await updateItem(item.id, { isAttached: e.target.checked });
-      onSelfUpdated(updated);
-    } catch (err) {
-      setParentError(err instanceof Error ? err.message : 'Failed to update attach state');
-    } finally {
-      setSavingParent(false);
-    }
-  }
+  const [childError, setChildError] = useState('');
 
   async function handleChildAttachedToggle(child: Item, attached: boolean) {
+    setChildError('');
     try {
       const updated = await updateItem(child.id, { isAttached: attached });
       onChildUpdated(updated);
     } catch (err) {
-      console.error('Failed to update child attach state:', err);
+      setChildError(err instanceof Error ? err.message : 'Failed to update attach state');
     }
   }
 
@@ -91,40 +57,8 @@ export function ChildrenSection({
     }
   }
 
-  const parentOptions = buildParentOptions(allItems, item.id, item.projectId);
-
   return (
     <div>
-      <div className="mb-3">
-        <p className={`${SECTION_LABEL} mb-1.5`}>Parent</p>
-        <div className="flex items-center gap-2">
-          <select
-            value={item.parentId ?? ''}
-            onChange={handleParentChange}
-            disabled={savingParent}
-            aria-label="Parent item"
-            className={`${SELECT_BASE} flex-1`}
-          >
-            {parentOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          {item.parentId && (
-            <label className="flex items-center gap-1 text-xs text-zinc-400 cursor-pointer shrink-0">
-              <input
-                type="checkbox"
-                checked={Boolean(item.isAttached)}
-                onChange={handleAttachedToggle}
-                disabled={savingParent}
-                className="accent-blue-500"
-              />
-              Attached
-            </label>
-          )}
-        </div>
-        {parentError && <p className="mt-1 text-xs text-red-400">{parentError}</p>}
-      </div>
-
       <div className="mb-1.5 flex items-center justify-between">
         <p className={SECTION_LABEL}>
           Children {item.children.length > 0 && `(${item.children.length})`}
@@ -170,6 +104,7 @@ export function ChildrenSection({
           ))}
         </div>
       )}
+      {childError && <p className="mb-2 text-xs text-red-400">{childError}</p>}
 
       {adding && (
         <form onSubmit={handleCreate} className="space-y-2">
