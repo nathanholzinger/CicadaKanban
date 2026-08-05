@@ -140,3 +140,27 @@ an Epic 5 structural decision — don't pre-commit.
   deletion will no longer delete labels at all (they survive), so that
   cross-project cleanup block goes away. Update/remove that memory when the
   decouple lands.
+
+---
+
+## Non-decision note: `client/src/api.ts` file-split watch (audit finding #18)
+
+Epic 3 audit finding #18 flagged `client/src/api.ts` (one `// ====` section per
+API domain, ~500 lines as of 2026-08-05) as a natural split candidate — one
+module per domain (`client/src/api/boards.ts` etc.) with a barrel
+`api/index.ts` — once it "crosses ~700 lines or the next epic's endpoints
+land."
+
+Checked against the roadmap while closing out finding #18: **Epic 4 (Quick
+Items) is unlikely to be that trigger** — it adds a `kind` field and
+bucket-aggregation behavior on top of the existing Items domain, not a new API
+surface of its own. **This epic is the more likely trigger**: Decision 8's
+Global Label Management surface (create/rename/recolor/**merge**/delete for
+both labels and buckets) replaces the current ~45-line `Labels` section with
+something substantially larger. Epic 6 (Inbox) compounds it further with a
+genuinely new domain (saved filter configs) landing right after.
+
+**When Epic 5 is actually implemented:** re-check `api.ts`'s line count once
+its endpoints are drafted, and do the `api/` split then rather than deferring
+again — don't pre-build the split's shape now, before Epic 5's actual bucket
+API is designed.
