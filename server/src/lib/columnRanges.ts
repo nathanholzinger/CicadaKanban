@@ -68,6 +68,47 @@ export function columnsOverlap(a: ColumnRange, b: ColumnRange, rankMap: Map<stri
   return rangeA[0] <= rangeB[1] && rangeB[0] <= rangeA[1];
 }
 
+type ColumnRangeValidation =
+  | { ok: true }
+  | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
+
+// The three-step range check (both endpoints belong to this workflow, start
+// doesn't come after end, doesn't overlap a sibling column) — was hand-copied
+// identically into columns.ts POST and PUT (audit finding #24). Callers pass
+// only the sibling columns the new/updated range should be checked against
+// (PUT excludes the column being updated); on failure, `status`/`body` are
+// ready to hand straight to `res`.
+export function validateColumnRange(
+  range: ColumnRange,
+  rankMap: Map<string, number>,
+  siblingColumns: { id: string; name: string | null; startWorkphaseId: string; endWorkphaseId: string }[],
+): ColumnRangeValidation {
+  if (!rankMap.has(range.startWorkphaseId) || !rankMap.has(range.endWorkphaseId)) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: "startWorkphaseId and endWorkphaseId must belong to this board's workflow" },
+    };
+  }
+  if (rankMap.get(range.startWorkphaseId)! > rankMap.get(range.endWorkphaseId)!) {
+    return { ok: false, status: 400, body: { error: 'startWorkphaseId must not come after endWorkphaseId' } };
+  }
+
+  const conflict = siblingColumns.find(c => columnsOverlap(range, c, rankMap));
+  if (conflict) {
+    return {
+      ok: false,
+      status: 400,
+      body: {
+        error: `Range overlaps existing column "${conflict.name ?? conflict.id}"`,
+        conflictingColumnId: conflict.id,
+      },
+    };
+  }
+
+  return { ok: true };
+}
+
 export function computeUnsorted<T extends ItemRow>(
   orderedWorkphases: Workphase[],
   boardColumns: ColumnRange[],

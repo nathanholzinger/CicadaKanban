@@ -3,7 +3,7 @@ import { db } from '../db/index.js';
 import { boards, columns } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getOrderedWorkphases, columnsOverlap } from '../lib/columnRanges.js';
+import { getOrderedWorkphases, validateColumnRange } from '../lib/columnRanges.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
 
@@ -23,23 +23,11 @@ router.post('/', (req, res) => {
 
   const { rankMap } = getOrderedWorkphases(board.workflowId);
 
-  if (!rankMap.has(startWorkphaseId) || !rankMap.has(endWorkphaseId)) {
-    res.status(400).json({ error: "startWorkphaseId and endWorkphaseId must belong to this board's workflow" });
-    return;
-  }
-  if (rankMap.get(startWorkphaseId)! > rankMap.get(endWorkphaseId)!) {
-    res.status(400).json({ error: 'startWorkphaseId must not come after endWorkphaseId' });
-    return;
-  }
-
   const siblingColumns = db.select().from(columns).where(eq(columns.boardId, boardId)).all();
   const range = { startWorkphaseId, endWorkphaseId };
-  const conflict = siblingColumns.find(c => columnsOverlap(range, c, rankMap));
-  if (conflict) {
-    res.status(400).json({
-      error: `Range overlaps existing column "${conflict.name ?? conflict.id}"`,
-      conflictingColumnId: conflict.id,
-    });
+  const validation = validateColumnRange(range, rankMap, siblingColumns);
+  if (!validation.ok) {
+    res.status(validation.status).json(validation.body);
     return;
   }
 
@@ -73,24 +61,12 @@ router.put('/:id', (req, res) => {
   const board = db.select().from(boards).where(eq(boards.id, column.boardId)).get()!;
   const { rankMap } = getOrderedWorkphases(board.workflowId);
 
-  if (!rankMap.has(nextStart) || !rankMap.has(nextEnd)) {
-    res.status(400).json({ error: "startWorkphaseId and endWorkphaseId must belong to this board's workflow" });
-    return;
-  }
-  if (rankMap.get(nextStart)! > rankMap.get(nextEnd)!) {
-    res.status(400).json({ error: 'startWorkphaseId must not come after endWorkphaseId' });
-    return;
-  }
-
   const siblingColumns = db.select().from(columns).where(eq(columns.boardId, column.boardId)).all()
     .filter(c => c.id !== column.id);
   const range = { startWorkphaseId: nextStart, endWorkphaseId: nextEnd };
-  const conflict = siblingColumns.find(c => columnsOverlap(range, c, rankMap));
-  if (conflict) {
-    res.status(400).json({
-      error: `Range overlaps existing column "${conflict.name ?? conflict.id}"`,
-      conflictingColumnId: conflict.id,
-    });
+  const validation = validateColumnRange(range, rankMap, siblingColumns);
+  if (!validation.ok) {
+    res.status(validation.status).json(validation.body);
     return;
   }
 
