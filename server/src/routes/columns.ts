@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
 import { boards, columns } from '../db/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, columnsOverlap } from '../lib/columnRanges.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { applyReorder } from '../lib/reorder.js';
 
 const router = Router();
 
@@ -108,32 +109,8 @@ router.put('/:id', (req, res) => {
 router.patch('/reorder', (req, res) => {
   const { columnOrders } = req.body;
 
-  if (!Array.isArray(columnOrders)) {
-    res.status(400).json({ error: 'columnOrders array is required' });
-    return;
-  }
-  const invalidEntry = columnOrders.find(
-    (o) => typeof o?.id !== 'string' || typeof o?.position !== 'number' || !Number.isFinite(o.position),
-  );
-  if (invalidEntry) {
-    res.status(400).json({ error: 'Each entry must have a string id and a finite numeric position' });
-    return;
-  }
-
-  const existingIds = new Set(
-    db.select({ id: columns.id }).from(columns).where(inArray(columns.id, columnOrders.map(o => o.id))).all().map(c => c.id),
-  );
-  const missingIds = columnOrders.map(o => o.id).filter(id => !existingIds.has(id));
-  if (missingIds.length > 0) {
-    res.status(404).json({ error: 'One or more columns not found', missingIds });
-    return;
-  }
-
-  db.transaction((tx) => {
-    for (const { id, position } of columnOrders) {
-      tx.update(columns).set({ position }).where(eq(columns.id, id)).run();
-    }
-  });
+  const ok = db.transaction((tx) => applyReorder(columns, columnOrders, tx, res, 'column'));
+  if (!ok) return;
 
   res.json({ success: true });
 });

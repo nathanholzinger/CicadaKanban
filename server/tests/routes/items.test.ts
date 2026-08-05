@@ -214,6 +214,25 @@ describe('PATCH /api/items/reorder', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it('rejects an entry without a string id and finite numeric position', async () => {
+    const project = await createProject();
+    const a = await createItem({ projectId: project.id });
+    const res = await request(app).patch('/api/items/reorder').send({
+      itemOrders: [{ id: a.id, position: 'first' }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 with missingIds when any item does not exist', async () => {
+    const project = await createProject();
+    const a = await createItem({ projectId: project.id });
+    const res = await request(app).patch('/api/items/reorder').send({
+      itemOrders: [{ id: a.id, position: 1 }, { id: 'ghost', position: 2 }],
+    });
+    expect(res.status).toBe(404);
+    expect(res.body.missingIds).toEqual(['ghost']);
+  });
 });
 
 describe('POST /api/items/:id/comments', () => {

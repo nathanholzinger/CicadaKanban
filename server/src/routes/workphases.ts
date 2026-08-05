@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { applyReorder } from '../lib/reorder.js';
 
 const router = Router();
 
@@ -70,16 +71,8 @@ router.put('/:id', (req, res) => {
 router.patch('/reorder', (req, res) => {
   const { workphaseOrders } = req.body;
 
-  if (!Array.isArray(workphaseOrders)) {
-    res.status(400).json({ error: 'workphaseOrders array is required' });
-    return;
-  }
-
-  db.transaction((tx) => {
-    for (const { id, position } of workphaseOrders) {
-      tx.update(workphases).set({ position }).where(eq(workphases.id, id)).run();
-    }
-  });
+  const ok = db.transaction((tx) => applyReorder(workphases, workphaseOrders, tx, res, 'workphase'));
+  if (!ok) return;
 
   res.json({ success: true });
 });

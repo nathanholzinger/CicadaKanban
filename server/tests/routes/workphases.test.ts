@@ -74,6 +74,29 @@ describe('PATCH /api/workphases/reorder', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it('rejects an entry without a string id and finite numeric position', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const a = await createWorkphase(workflow.id, { name: 'A' });
+
+    const res = await request(app).patch('/api/workphases/reorder').send({
+      workphaseOrders: [{ id: a.id, position: 'first' }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 with missingIds when any workphase does not exist', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const a = await createWorkphase(workflow.id, { name: 'A' });
+
+    const res = await request(app).patch('/api/workphases/reorder').send({
+      workphaseOrders: [{ id: a.id, position: 1 }, { id: 'ghost', position: 2 }],
+    });
+    expect(res.status).toBe(404);
+    expect(res.body.missingIds).toEqual(['ghost']);
+  });
 });
 
 describe('DELETE /api/workphases/:id', () => {

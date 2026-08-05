@@ -5,6 +5,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
+import { applyReorder } from '../lib/reorder.js';
 
 const router = Router();
 
@@ -303,19 +304,8 @@ router.patch('/:id/move', (req, res) => {
 router.patch('/reorder', (req, res) => {
   const { itemOrders } = req.body;
 
-  if (!Array.isArray(itemOrders)) {
-    res.status(400).json({ error: 'itemOrders array is required' });
-    return;
-  }
-
-  db.transaction((tx) => {
-    for (const { id, position } of itemOrders) {
-      tx.update(items)
-        .set({ position, updatedAt: Date.now() })
-        .where(eq(items.id, id))
-        .run();
-    }
-  });
+  const ok = db.transaction((tx) => applyReorder(items, itemOrders, tx, res, 'item', { updatedAt: Date.now() }));
+  if (!ok) return;
 
   res.json({ success: true });
 });
