@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Column, Item, ItemType, WorkPhase } from '../types';
 import KanbanCard from './KanbanCard';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
+import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;
@@ -84,17 +85,14 @@ export default function BoardColumn({
           </h3>
         </div>
 
-        <span className="text-xs text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full shrink-0">
+        <span className={COUNT_BADGE}>
           {totalItems}
         </span>
 
         {column.broken && (
-          <span
-            className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded shrink-0"
-            title="This column's range no longer resolves cleanly after a workphase reorder — move items out, then fix its range."
-          >
+          <AttentionBadge title="This column's range no longer resolves cleanly after a workphase reorder — move items out, then fix its range.">
             broken
-          </span>
+          </AttentionBadge>
         )}
 
         {onDelete && (

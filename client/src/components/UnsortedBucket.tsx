@@ -1,6 +1,7 @@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType, WorkPhase } from '../types';
 import KanbanCard from './KanbanCard';
+import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 
 interface UnsortedBucketProps {
   uncoveredWorkphases: WorkPhase[];
@@ -33,14 +34,11 @@ export default function UnsortedBucket({
     <div role="group" aria-label="Unsorted" className="flex flex-col w-72 shrink-0 border-2 border-dashed border-zinc-700/60 rounded-xl">
       <div className="flex items-center gap-1.5 px-2 pt-3 pb-2">
         <h3 className="text-sm font-semibold text-zinc-400 tracking-wide">Unsorted</h3>
-        <span className="text-xs text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full">{totalItems}</span>
+        <span className={COUNT_BADGE}>{totalItems}</span>
         {needsAttention && (
-          <span
-            className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded"
-            title="Some workphases in this workflow aren't covered by any column on this board yet"
-          >
+          <AttentionBadge title="Some workphases in this workflow aren't covered by any column on this board yet">
             needs attention
-          </span>
+          </AttentionBadge>
         )}
       </div>
 
