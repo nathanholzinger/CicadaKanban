@@ -1,25 +1,12 @@
 import { db, type Tx } from '../db/index.js';
 import { items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { walkItemDescendants } from './itemTree.js';
 
 // BFS over an item's children, only descending through attached children —
 // a detached child stops its branch (it doesn't move, so neither do its own children).
 export function getAttachedDescendantIds(rootId: string, tx?: Tx): string[] {
-  const e = tx ?? db;
-  const ids: string[] = [];
-  const queue = [rootId];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    const children = e.select({ id: items.id, isAttached: items.isAttached })
-      .from(items).where(eq(items.parentId, id)).all();
-    for (const child of children) {
-      if (child.isAttached) {
-        ids.push(child.id);
-        queue.push(child.id);
-      }
-    }
-  }
-  return ids;
+  return walkItemDescendants(rootId, { predicate: (child) => Boolean(child.isAttached), tx });
 }
 
 // Moves an item's attached descendants to match its current workphaseId. Pass

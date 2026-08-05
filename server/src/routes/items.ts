@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
+import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
 
 const router = Router();
 
@@ -159,14 +160,6 @@ router.post('/', (req, res) => {
   res.status(201).json(created);
 });
 
-function isItemDescendant(ofId: string, candidateId: string): boolean {
-  const children = db.select({ id: items.id }).from(items).where(eq(items.parentId, ofId)).all();
-  for (const child of children) {
-    if (child.id === candidateId || isItemDescendant(child.id, candidateId)) return true;
-  }
-  return false;
-}
-
 // Update an item's details (not position/workphase directly — use move for that,
 // though reparenting/attaching here can still shift workphaseId to follow the parent)
 router.put('/:id', (req, res) => {
@@ -176,8 +169,9 @@ router.put('/:id', (req, res) => {
   const { title, description, assigneeType, agentId, parentId, isAttached } = req.body;
 
   if (parentId !== undefined && parentId !== null) {
-    if (parentId === req.params.id) {
-      res.status(400).json({ error: 'An item cannot be its own parent' });
+    const reparentError = assertValidReparent(items, req.params.id, parentId, 'item');
+    if (reparentError) {
+      res.status(400).json({ error: reparentError });
       return;
     }
     const parent = db.select({ projectId: items.projectId }).from(items).where(eq(items.id, parentId)).get();
@@ -188,10 +182,6 @@ router.put('/:id', (req, res) => {
     // Parent and child must live in the same project (finding #11).
     if (parent.projectId !== item.projectId) {
       res.status(400).json({ error: 'parentId belongs to a different project' });
-      return;
-    }
-    if (isItemDescendant(req.params.id, parentId)) {
-      res.status(400).json({ error: 'Cannot reparent to a descendant' });
       return;
     }
   }
@@ -325,18 +315,6 @@ router.post('/:id/comments', (req, res) => {
   res.status(201).json({ success: true });
 });
 
-function collectDescendantIds(rootId: string): string[] {
-  const ids: string[] = [];
-  const queue = [rootId];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    ids.push(id);
-    const children = db.select({ id: items.id }).from(items).where(eq(items.parentId, id)).all();
-    for (const child of children) queue.push(child.id);
-  }
-  return ids;
-}
-
 // Delete an item and all its descendants. Each item's dependent rows (itemLabels,
 // activityLog, notifications, attachments, chat threads/messages) are removed by
 // ON DELETE CASCADE; parentId is a soft reference with no FK, so the subtree is
@@ -345,7 +323,7 @@ router.delete('/:id', (req, res) => {
   const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
   if (!item) return;
 
-  const allIds = collectDescendantIds(req.params.id);
+  const allIds = walkItemDescendants(req.params.id, { includeRoot: true });
   db.delete(items).where(inArray(items.id, allIds)).run();
 
   res.status(204).send();

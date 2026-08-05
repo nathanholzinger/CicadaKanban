@@ -5,6 +5,7 @@ import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { assertValidReparent } from '../lib/itemTree.js';
 
 const router = Router();
 
@@ -44,14 +45,6 @@ router.post('/', (req, res) => {
   res.status(201).json(created);
 });
 
-function isDescendant(ofId: string, candidateId: string): boolean {
-  const children = db.select({ id: projects.id }).from(projects).where(eq(projects.parentId, ofId)).all();
-  for (const child of children) {
-    if (child.id === candidateId || isDescendant(child.id, candidateId)) return true;
-  }
-  return false;
-}
-
 // Update a project
 router.put('/:id', (req, res) => {
   const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
@@ -60,12 +53,9 @@ router.put('/:id', (req, res) => {
   const { name, description, parentId, position } = req.body;
 
   if (parentId !== undefined && parentId !== null) {
-    if (parentId === req.params.id) {
-      res.status(400).json({ error: 'A project cannot be its own parent' });
-      return;
-    }
-    if (isDescendant(req.params.id, parentId)) {
-      res.status(400).json({ error: 'Cannot reparent to a descendant' });
+    const reparentError = assertValidReparent(projects, req.params.id, parentId, 'project');
+    if (reparentError) {
+      res.status(400).json({ error: reparentError });
       return;
     }
   }
@@ -142,12 +132,9 @@ router.patch('/reorder', (req, res) => {
   // leave earlier rows already updated (the loop used to interleave the two).
   for (const { id, parentId } of projectOrders) {
     if (parentId != null) {
-      if (parentId === id) {
-        res.status(400).json({ error: 'A project cannot be its own parent' });
-        return;
-      }
-      if (isDescendant(id, parentId)) {
-        res.status(400).json({ error: 'Cannot reparent to a descendant' });
+      const reparentError = assertValidReparent(projects, id, parentId, 'project');
+      if (reparentError) {
+        res.status(400).json({ error: reparentError });
         return;
       }
     }
