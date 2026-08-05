@@ -313,6 +313,21 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
   });
 
+  it('deleting a parent also deletes its detached descendants (finding #27 — whole-subtree delete regardless of attach state)', async () => {
+    const project = await createProject();
+    const parent = await createItem({ projectId: project.id, title: 'Parent' });
+    const detachedChild = await createItem({
+      projectId: project.id, parentId: parent.id, title: 'Detached Child', isAttached: false,
+    });
+    const grandchild = await createItem({ projectId: project.id, parentId: detachedChild.id, title: 'Grandchild' });
+
+    const res = await request(app).delete(`/api/items/${parent.id}`);
+    expect(res.status).toBe(204);
+
+    expect((await request(app).get(`/api/items/${detachedChild.id}`)).status).toBe(404);
+    expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
+  });
+
   it('cascades an item\'s dependent rows (labels, activity, notifications, attachments, chat) via ON DELETE CASCADE', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id, title: 'Item' });
@@ -489,6 +504,31 @@ describe('attached children', () => {
     });
     expect(child.workphaseId).toBe(inProgress.id);
     expect(child.isAttached).toBe(0);
+  });
+
+  it('creates a parentless item with isAttached true (the default) and respects its explicit workphaseId', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const res = await request(app).post('/api/items').send({
+      title: 'Solo Root', projectId: project.id, workphaseId: todo.id, isAttached: true,
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.parentId).toBeNull();
+    expect(res.body.isAttached).toBe(1);
+    // No parent to override it — the given workphaseId is used as-is.
+    expect(res.body.workphaseId).toBe(todo.id);
+  });
+
+  it('reparenting to null while attached leaves isAttached flagged, not cleared (finding #27 stored-state note)', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
+    expect(child.isAttached).toBe(1);
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: null });
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBeNull();
+    expect(res.body.isAttached).toBe(1); // flag stays set even though there's no parent to attach to
+    expect(res.body.workphaseId).toBe(todo.id); // no resync attempted — nothing to snap to
   });
 });
 
