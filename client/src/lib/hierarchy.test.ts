@@ -63,3 +63,41 @@ describe('buildParentOptions', () => {
     expect(options.map(o => o.value)).toEqual(['', 'root', 'a', 'sibling']);
   });
 });
+
+describe('buildParentOptions with indent', () => {
+  // Deliberately out of tree order, to prove grouping (not flat input order)
+  // drives output — a node always lands under its parent even when the
+  // parent appears later in `nodes`. Sibling order within a group still
+  // follows input order.
+  const nodes = [
+    node('a1', 'a'),
+    node('sibling', 'root'),
+    node('root'),
+    node('a', 'root'),
+    node('a1x', 'a1'),
+  ];
+
+  it('groups each node directly under its parent, depth-first', () => {
+    const options = buildParentOptions(nodes, 'ghost', n => n.name, '(none)', true);
+    expect(options.map(o => o.value)).toEqual(['', 'root', 'sibling', 'a', 'a1', 'a1x']);
+  });
+
+  it('prefixes labels with a · per depth level, root unprefixed', () => {
+    const options = buildParentOptions(nodes, 'ghost', n => n.name, '(none)', true);
+    expect(options.find(o => o.value === 'root')?.label).toBe('Node root');
+    expect(options.find(o => o.value === 'a')?.label).toBe('· Node a');
+    expect(options.find(o => o.value === 'a1')?.label).toBe('·· Node a1');
+    expect(options.find(o => o.value === 'a1x')?.label).toBe('··· Node a1x');
+  });
+
+  it('excludes the current node and its descendants, and their subtree is skipped entirely', () => {
+    const options = buildParentOptions(nodes, 'a', n => n.name, '(none)', true);
+    expect(options.map(o => o.value)).toEqual(['', 'root', 'sibling']);
+  });
+
+  it('treats a node with a dangling parentId as a root', () => {
+    const orphan = [...nodes, node('orphan', 'does-not-exist')];
+    const options = buildParentOptions(orphan, 'ghost', n => n.name, '(none)', true);
+    expect(options.map(o => o.value)).toEqual(['', 'root', 'sibling', 'a', 'a1', 'a1x', 'orphan']);
+  });
+});

@@ -25,17 +25,47 @@ export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<st
 
 // Reparent dropdown options: every node except the current one and its
 // descendants (either would create a cycle), preceded by a "none" entry.
-// Preserves the input order of `nodes`.
+//
+// Default (`indent: false`) preserves the input order of `nodes` — cheap and
+// enough for a same-parent-scoped list (e.g. an item's sibling candidates).
+// `indent: true` instead walks the tree depth-first, grouping each node
+// under its parent and prefixing deeper nodes with `·` per level — used for
+// dropdowns spanning multiple tree levels (e.g. the full project tree) where
+// flat input order wouldn't read as a hierarchy. A node whose `parentId`
+// isn't present in `nodes` is treated as a root.
 export function buildParentOptions<T extends TreeNode>(
   nodes: readonly T[],
   currentId: string,
   labelOf: (node: T) => string,
   noneLabel: string,
+  indent = false,
 ): Array<{ value: string; label: string }> {
   const excluded = getDescendantIds(currentId, nodes);
   excluded.add(currentId);
-  return [
-    { value: '', label: noneLabel },
-    ...nodes.filter(n => !excluded.has(n.id)).map(n => ({ value: n.id, label: labelOf(n) })),
-  ];
+
+  if (!indent) {
+    return [
+      { value: '', label: noneLabel },
+      ...nodes.filter(n => !excluded.has(n.id)).map(n => ({ value: n.id, label: labelOf(n) })),
+    ];
+  }
+
+  const ids = new Set(nodes.map(n => n.id));
+  const byParent = new Map<string | null, T[]>();
+  for (const n of nodes) {
+    const key = n.parentId !== null && ids.has(n.parentId) ? n.parentId : null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(n);
+  }
+
+  const options: Array<{ value: string; label: string }> = [{ value: '', label: noneLabel }];
+  function traverse(parentId: string | null, depth: number) {
+    for (const n of byParent.get(parentId) ?? []) {
+      if (excluded.has(n.id)) continue;
+      options.push({ value: n.id, label: '·'.repeat(depth) + (depth > 0 ? ' ' : '') + labelOf(n) });
+      traverse(n.id, depth + 1);
+    }
+  }
+  traverse(null, 0);
+  return options;
 }

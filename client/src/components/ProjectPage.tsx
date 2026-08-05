@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
-import { getDescendantIds } from '../lib/hierarchy';
+import { buildParentOptions } from '../lib/hierarchy';
 import { TrashIcon } from './icons';
 
 interface EffectiveWorkflow {
@@ -23,30 +23,6 @@ interface ProjectPageProps {
   onCreateSubproject: (parentId: string) => void;
   onDeleteSubproject: (id: string) => Promise<void>;
   onCreateWorkflow: (data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) => Promise<void>;
-}
-
-function buildParentOptions(allProjects: Project[], currentId: string): Array<{ value: string; label: string }> {
-  const map = new Map<string, { project: Project; children: string[] }>();
-  for (const p of allProjects) map.set(p.id, { project: p, children: [] });
-  const roots: string[] = [];
-  for (const p of allProjects) {
-    if (p.parentId && map.has(p.parentId)) map.get(p.parentId)!.children.push(p.id);
-    else roots.push(p.id);
-  }
-
-  const excluded = getDescendantIds(currentId, allProjects);
-  excluded.add(currentId);
-
-  const options: Array<{ value: string; label: string }> = [{ value: '', label: 'Root' }];
-  function traverse(id: string, depth: number) {
-    if (excluded.has(id)) return;
-    const entry = map.get(id);
-    if (!entry) return;
-    options.push({ value: id, label: '·'.repeat(depth) + (depth > 0 ? ' ' : '') + entry.project.name });
-    entry.children.forEach(c => traverse(c, depth + 1));
-  }
-  roots.forEach(r => traverse(r, 0));
-  return options;
 }
 
 export default function ProjectPage({
@@ -317,7 +293,7 @@ export default function ProjectPage({
               }}
               className="text-sm bg-zinc-800 border border-zinc-700 text-zinc-400 rounded-lg px-2 py-1.5 focus:outline-none focus:border-zinc-600 cursor-pointer disabled:opacity-50 transition-opacity"
             >
-              {buildParentOptions(allProjects, project.id).map(o => (
+              {buildParentOptions(allProjects, project.id, p => p.name, 'Root', true).map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
