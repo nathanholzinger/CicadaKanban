@@ -43,6 +43,9 @@ export default function KanbanCard({
   const depth = item.depth ?? 0;
   const resolvedType = resolveType(item.type, itemTypes);
 
+  let avatarBadgeClass = 'bg-cyan-500/20 text-cyan-300';
+  if (item.assigneeType === 'agent') avatarBadgeClass = 'bg-amber-500/20 text-amber-300';
+
   return (
     <div
       ref={setNodeRef}
@@ -101,13 +104,7 @@ export default function KanbanCard({
           )}
           {item.assigneeType && (
             <div className="flex items-center gap-1">
-              <span className={`
-                w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold
-                ${item.assigneeType === 'agent'
-                  ? 'bg-amber-500/20 text-amber-300'
-                  : 'bg-cyan-500/20 text-cyan-300'
-                }
-              `}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${avatarBadgeClass}`}>
                 {item.assigneeType === 'agent' ? 'A' : 'H'}
               </span>
               <span className="text-[11px] text-zinc-500">

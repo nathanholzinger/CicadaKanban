@@ -16,6 +16,12 @@ interface ColumnEditorModalProps {
   error: string;
 }
 
+function displayModeButtonClass(active: boolean): string {
+  const base = 'flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors';
+  if (active) return `${base} border-blue-500/60 bg-blue-500/10 text-blue-300`;
+  return `${base} border-zinc-700 text-zinc-400 hover:border-zinc-600`;
+}
+
 export default function ColumnEditorModal({ workphases, column, onSubmit, onClose, error }: ColumnEditorModalProps) {
   const [startWorkphaseId, setStartWorkphaseId] = useState(column?.startWorkphaseId ?? workphases[0]?.id ?? '');
   const [endWorkphaseId, setEndWorkphaseId] = useState(column?.endWorkphaseId ?? workphases[0]?.id ?? '');
@@ -100,22 +106,14 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
               <button
                 type="button"
                 onClick={() => setDisplayMode('merged')}
-                className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  displayMode === 'merged'
-                    ? 'border-blue-500/60 bg-blue-500/10 text-blue-300'
-                    : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                }`}
+                className={displayModeButtonClass(displayMode === 'merged')}
               >
                 Merged
               </button>
               <button
                 type="button"
                 onClick={() => setDisplayMode('expanded')}
-                className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  displayMode === 'expanded'
-                    ? 'border-blue-500/60 bg-blue-500/10 text-blue-300'
-                    : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
-                }`}
+                className={displayModeButtonClass(displayMode === 'expanded')}
               >
                 Expanded
               </button>

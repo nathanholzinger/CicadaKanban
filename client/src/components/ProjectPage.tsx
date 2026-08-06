@@ -26,6 +26,12 @@ interface ProjectPageProps {
   onCreateWorkflow: (data: CreateWorkflowInput) => Promise<void>;
 }
 
+function tabButtonClass(active: boolean): string {
+  const base = 'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px';
+  if (active) return `${base} text-zinc-100 border-blue-500`;
+  return `${base} text-zinc-500 hover:text-zinc-300 border-transparent`;
+}
+
 export default function ProjectPage({
   project, ancestors, subprojects, allProjects, allWorkflows, effectiveWorkflow,
   onSelectProject, onUpdate, onCreateSubproject, onDeleteSubproject, onCreateWorkflow,
@@ -233,11 +239,7 @@ export default function ProjectPage({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as 'overview' | 'board')}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab.id
-                  ? 'text-zinc-100 border-blue-500'
-                  : 'text-zinc-500 hover:text-zinc-300 border-transparent'
-              }`}
+              className={tabButtonClass(activeTab === tab.id)}
             >
               {tab.label}
             </button>

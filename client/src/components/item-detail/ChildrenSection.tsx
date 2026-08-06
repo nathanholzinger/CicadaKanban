@@ -12,6 +12,12 @@ interface ChildrenSectionProps {
   onChildUpdated: (updated: Item) => void;
 }
 
+function attachToggleClass(isAttached: boolean): string {
+  const base = 'shrink-0 text-2xs px-1.5 py-0.5 rounded border transition-colors';
+  if (isAttached) return `${base} text-blue-300 border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20`;
+  return `${base} text-zinc-500 border-zinc-700 hover:text-zinc-300`;
+}
+
 // Lists this item's children and handles creating new ones plus toggling
 // each child's attach state. Editing the current item's *own* parent link
 // lives in the sibling ParentSection — a different concern with no shared
@@ -91,11 +97,7 @@ export function ChildrenSection({
               </button>
               <button
                 onClick={() => handleChildAttachedToggle(child, !child.isAttached)}
-                className={`shrink-0 text-2xs px-1.5 py-0.5 rounded border transition-colors ${
-                  child.isAttached
-                    ? 'text-blue-300 border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20'
-                    : 'text-zinc-500 border-zinc-700 hover:text-zinc-300'
-                }`}
+                className={attachToggleClass(Boolean(child.isAttached))}
                 title={child.isAttached ? 'Attached — moves with this item. Click to detach.' : 'Detached — stays put. Click to attach.'}
               >
                 {child.isAttached ? 'Attached' : 'Detached'}

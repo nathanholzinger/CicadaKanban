@@ -55,6 +55,18 @@ export function SortableProjectRow({
     return 'cursor-pointer text-zinc-300 hover:text-zinc-100';
   }
 
+  function rowOpacityClass(): string {
+    if (isActive) return 'opacity-40';
+    if (isDescendantOfActive) return 'opacity-40 pointer-events-none';
+    return '';
+  }
+
+  function rowBackgroundClass(): string {
+    if (deleting) return 'bg-red-950/60';
+    if (isSelected) return 'bg-zinc-700/60';
+    return 'hover:bg-zinc-800/50';
+  }
+
   async function handleConfirmDelete() {
     setDeleting(true);
     try {
@@ -76,19 +88,7 @@ export function SortableProjectRow({
       )}
 
       <div
-        className={`group flex items-center gap-1 rounded-lg select-none transition-colors ${
-          isActive
-            ? 'opacity-40'
-            : isDescendantOfActive
-            ? 'opacity-40 pointer-events-none'
-            : ''
-        } ${
-          deleting
-            ? 'bg-red-950/60'
-            : isSelected
-            ? 'bg-zinc-700/60'
-            : 'hover:bg-zinc-800/50'
-        }`}
+        className={`group flex items-center gap-1 rounded-lg select-none transition-colors ${rowOpacityClass()} ${rowBackgroundClass()}`}
         style={{ padding: `6px 12px 6px ${12 + item.depth * INDENT_WIDTH}px` }}
       >
         {/* Drag handle */}
