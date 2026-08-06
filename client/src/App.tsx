@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Workflow } from './types';
 import type { Notification, Project } from './types';
 import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject, reorderProjects } from './api';
+import type { CreateWorkflowInput, UpdateProjectInput } from './api';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
@@ -68,7 +69,7 @@ export default function App() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }
 
-  async function handleCreateWorkflow(data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) {
+  async function handleCreateWorkflow(data: CreateWorkflowInput) {
     const created = await createWorkflow(data);
     setWorkflows(prev => [...prev, created]);
   }
@@ -99,7 +100,7 @@ export default function App() {
     setSelectedProjectId(id);
   }
 
-  async function handleUpdateProject(id: string, data: { name?: string; description?: string | null; parentId?: string | null }) {
+  async function handleUpdateProject(id: string, data: UpdateProjectInput) {
     const updated = await updateProject(id, data);
     setProjects(prev => prev.map(p => p.id === id ? updated : p));
   }

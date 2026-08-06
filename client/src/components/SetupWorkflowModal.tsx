@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Project, Workflow, WorkflowTemplate } from '../types';
 import { fetchWorkflowTemplates } from '../api';
+import type { CreateWorkflowInput } from '../api';
 import ModalShell from './ModalShell';
 
 interface SetupWorkflowModalProps {
@@ -8,7 +9,7 @@ interface SetupWorkflowModalProps {
   allWorkflows: Workflow[];
   allProjects: Project[];
   onClose: () => void;
-  onCreate: (data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) => Promise<void>;
+  onCreate: (data: CreateWorkflowInput) => Promise<void>;
 }
 
 export default function SetupWorkflowModal({ project, allWorkflows, allProjects, onClose, onCreate }: SetupWorkflowModalProps) {

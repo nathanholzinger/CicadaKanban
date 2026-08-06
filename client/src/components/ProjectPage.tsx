@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
+import type { CreateWorkflowInput, UpdateProjectInput } from '../api';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 import { buildParentOptions } from '../lib/hierarchy';
@@ -19,10 +20,10 @@ interface ProjectPageProps {
   allWorkflows: Workflow[];
   effectiveWorkflow: EffectiveWorkflow | null;
   onSelectProject: (id: string) => void;
-  onUpdate: (id: string, data: { name?: string; description?: string | null; parentId?: string | null }) => Promise<void>;
+  onUpdate: (id: string, data: UpdateProjectInput) => Promise<void>;
   onCreateSubproject: (parentId: string) => void;
   onDeleteSubproject: (id: string) => Promise<void>;
-  onCreateWorkflow: (data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) => Promise<void>;
+  onCreateWorkflow: (data: CreateWorkflowInput) => Promise<void>;
 }
 
 export default function ProjectPage({

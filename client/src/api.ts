@@ -26,7 +26,13 @@ export async function createProject(data: {
   return res.json();
 }
 
-export async function updateProject(id: string, data: { name?: string; description?: string | null; parentId?: string | null }): Promise<Project> {
+export type UpdateProjectInput = {
+  name?: string;
+  description?: string | null;
+  parentId?: string | null;
+};
+
+export async function updateProject(id: string, data: UpdateProjectInput): Promise<Project> {
   const res = await fetch(`${API}/projects/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -68,12 +74,14 @@ export async function fetchWorkflow(id: string): Promise<WorkflowWithDetails> {
   return res.json();
 }
 
-export async function createWorkflow(data: {
+export type CreateWorkflowInput = {
   projectId: string;
   name: string;
   templateId?: string;
   sourceWorkflowId?: string;
-}): Promise<WorkflowWithDetails> {
+};
+
+export async function createWorkflow(data: CreateWorkflowInput): Promise<WorkflowWithDetails> {
   const res = await fetch(`${API}/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -123,9 +131,14 @@ export async function updateWorkPhase(id: string, data: { name?: string }): Prom
   return res.json();
 }
 
+export type WorkphaseDeleteReport = {
+  shrunkColumns: ColumnRow[];
+  deletedColumns: ColumnRow[];
+};
+
 // Deleting a workphase can shrink or remove board columns that covered it —
 // returns that report (200) or null when nothing needed adjusting (204).
-export async function deleteWorkPhase(id: string): Promise<{ shrunkColumns: ColumnRow[]; deletedColumns: ColumnRow[] } | null> {
+export async function deleteWorkPhase(id: string): Promise<WorkphaseDeleteReport | null> {
   const res = await fetch(`${API}/workphases/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -273,10 +286,11 @@ export async function createItem(data: {
   return res.json();
 }
 
-export async function updateItem(
-  id: string,
-  data: Partial<Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>> & { isAttached?: boolean },
-): Promise<Item> {
+export type UpdateItemInput = Partial<
+  Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>
+> & { isAttached?: boolean };
+
+export async function updateItem(id: string, data: UpdateItemInput): Promise<Item> {
   const res = await fetch(`${API}/items/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

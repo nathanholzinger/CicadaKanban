@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Item, ItemDetail } from '../../types';
 import { updateItem } from '../../api';
 import { buildParentOptions as buildTreeParentOptions } from '../../lib/hierarchy';
+import type { SelectOption } from '../../lib/hierarchy';
 import { SECTION_LABEL, SELECT_BASE } from './pillUtils';
 
 interface ParentSectionProps {
@@ -13,7 +14,7 @@ interface ParentSectionProps {
 // Candidate reparent targets: items in the same project, excluding the item
 // itself and any of its own descendants — shared cycle-prevention math with
 // the project hierarchy via lib/hierarchy.
-function buildParentOptions(allItems: Item[], currentId: string, projectId: string | null): Array<{ value: string; label: string }> {
+function buildParentOptions(allItems: Item[], currentId: string, projectId: string | null): SelectOption[] {
   const scoped = allItems.filter(i => i.projectId === projectId);
   return buildTreeParentOptions(scoped, currentId, i => i.title, '(none — top level)');
 }

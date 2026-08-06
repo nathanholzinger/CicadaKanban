@@ -7,6 +7,13 @@ export interface TreeNode {
   parentId: string | null;
 }
 
+// A single <select> option — the shape buildParentOptions (below) and any
+// other dropdown-option builder returns.
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
 // Collects every descendant of `id`, walking the parentId references.
 export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<string> {
   const result = new Set<string>();
@@ -55,7 +62,7 @@ export function buildParentOptions<T extends TreeNode>(
   labelOf: (node: T) => string,
   noneLabel: string,
   indent = false,
-): Array<{ value: string; label: string }> {
+): SelectOption[] {
   const excluded = getDescendantIds(currentId, nodes);
   excluded.add(currentId);
 
@@ -74,7 +81,7 @@ export function buildParentOptions<T extends TreeNode>(
     byParent.get(key)!.push(n);
   }
 
-  const options: Array<{ value: string; label: string }> = [{ value: '', label: noneLabel }];
+  const options: SelectOption[] = [{ value: '', label: noneLabel }];
   function traverse(parentId: string | null, depth: number) {
     for (const n of byParent.get(parentId) ?? []) {
       if (excluded.has(n.id)) continue;
