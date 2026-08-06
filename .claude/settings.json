@@ -13,7 +13,11 @@
       "Bash(xargs grep -l \"function useDroppable\")",
       "Bash(npx eslint *)",
       "Bash(git log *)",
-      "Bash(xargs -I{} echo {})"
+      "Bash(xargs -I{} echo {})",
+      "Bash(awk -F: '{ n=length\\($0\\); print FILENAME\": \"n\" chars: \"$0 }')",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(awk 'length\\($0\\) > 120 { print NR\": \"length\\($0\\) }' server/src/routes/items.ts)",
+      "Bash(awk '{print length}')"
     ]
   }
 }
