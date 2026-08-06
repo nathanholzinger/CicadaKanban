@@ -156,9 +156,12 @@ router.put('/:id', (req, res) => {
 
   const { name, showAttachedChildren } = req.body;
 
+  let nextShowAttachedChildren = board.showAttachedChildren;
+  if (showAttachedChildren !== undefined) nextShowAttachedChildren = showAttachedChildren ? 1 : 0;
+
   db.update(boards).set({
     name: name ?? board.name,
-    showAttachedChildren: showAttachedChildren !== undefined ? (showAttachedChildren ? 1 : 0) : board.showAttachedChildren,
+    showAttachedChildren: nextShowAttachedChildren,
     updatedAt: Date.now(),
   }).where(eq(boards.id, req.params.id)).run();
 

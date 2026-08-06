@@ -134,7 +134,11 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
 
   // Called by ChildrenSection when a child's attach state changes.
   function handleChildUpdated(updated: Item) {
-    setDetail(prev => prev ? { ...prev, children: prev.children.map(c => c.id === updated.id ? { ...c, ...updated } : c) } : prev);
+    function replaceChild(c: Item): Item {
+      if (c.id === updated.id) return { ...c, ...updated };
+      return c;
+    }
+    setDetail(prev => prev ? { ...prev, children: prev.children.map(replaceChild) } : prev);
     onUpdate(updated);
   }
 

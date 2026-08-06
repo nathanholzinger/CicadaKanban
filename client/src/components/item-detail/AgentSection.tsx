@@ -51,6 +51,13 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
 
   const assignedAgent = item.agentId ? agents.find(a => a.id === item.agentId) : null;
 
+  let claudeButtonLabel = 'Open in Claude';
+  if (copied) {
+    claudeButtonLabel = 'Copied to clipboard!';
+  } else if (assignedAgent?.surface === 'code') {
+    claudeButtonLabel = 'Copy Story to Clipboard';
+  }
+
   return (
     <div>
       <p className={`${SECTION_LABEL} mb-1.5`}>Agent</p>
@@ -72,7 +79,7 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
           onClick={() => handleOpenInClaude(assignedAgent)}
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-600 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-500"
         >
-          {copied ? 'Copied to clipboard!' : assignedAgent.surface === 'code' ? 'Copy Story to Clipboard' : 'Open in Claude'}
+          {claudeButtonLabel}
           {!copied && (
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8h10M9 4l4 4-4 4" />

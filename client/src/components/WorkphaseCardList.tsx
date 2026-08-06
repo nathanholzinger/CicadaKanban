@@ -39,6 +39,8 @@ export default function WorkphaseCardList({
   items, itemTypes, childCounts, getAttachedChildren, defaultExpanded, onCardClick,
   droppable = false, containerRef, isOver, isCardBeingDragged,
 }: WorkphaseCardListProps) {
+  const showDropHighlight = droppable && isOver && isCardBeingDragged;
+
   return (
     <div>
       <div className="flex items-center gap-1.5 px-1 mb-1">
@@ -48,9 +50,7 @@ export default function WorkphaseCardList({
       <div
         ref={containerRef}
         className={droppable
-          ? `flex flex-col gap-1.5 p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${
-              isOver && isCardBeingDragged ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20'
-            }`
+          ? `flex flex-col gap-1.5 p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20'}`
           : 'flex flex-col gap-1.5'}
       >
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>

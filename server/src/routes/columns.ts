@@ -70,11 +70,15 @@ router.put('/:id', (req, res) => {
     return;
   }
 
+  let nextDisplayMode = column.displayMode;
+  if (displayMode === 'expanded') nextDisplayMode = 'expanded';
+  else if (displayMode === 'merged') nextDisplayMode = 'merged';
+
   db.update(columns).set({
     name: name !== undefined ? name : column.name,
     startWorkphaseId: nextStart,
     endWorkphaseId: nextEnd,
-    displayMode: displayMode === 'expanded' ? 'expanded' : displayMode === 'merged' ? 'merged' : column.displayMode,
+    displayMode: nextDisplayMode,
   }).where(eq(columns.id, req.params.id)).run();
 
   const updated = db.select().from(columns).where(eq(columns.id, req.params.id)).get();

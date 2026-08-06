@@ -43,6 +43,9 @@ export default function BoardColumn({
   const style = { transform: CSS.Transform.toString(transform), transition };
   const totalItems = column.subRows.reduce((n, r) => n + getWorkphaseItems(r.workphase.id).length, 0);
   const mergedItems = column.subRows.flatMap(r => getWorkphaseItems(r.workphase.id));
+  // A merged (not broken) column highlights as a drop target only while a card
+  // is actively being dragged over it — expanded columns highlight per sub-row instead.
+  const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
 
   function handleItemSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -113,7 +116,7 @@ export default function BoardColumn({
       <div className={`
         flex-1 flex flex-col gap-2 p-2 rounded-xl min-h-[120px] overflow-y-auto
         transition-colors duration-200
-        ${!column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}
+        ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}
       `}>
         {column.displayMode === 'expanded' ? (
           column.subRows.map(row => (

@@ -49,6 +49,12 @@ export function SortableProjectRow({
   const isExpanded = expandedIds.has(item.id);
   const isSelected = selectedProjectId === item.id;
 
+  function nameButtonClass(): string {
+    if (deleting) return 'cursor-default text-red-400';
+    if (isSelected) return 'cursor-pointer text-zinc-100';
+    return 'cursor-pointer text-zinc-300 hover:text-zinc-100';
+  }
+
   async function handleConfirmDelete() {
     setDeleting(true);
     try {
@@ -117,9 +123,7 @@ export function SortableProjectRow({
         <button
           onClick={() => onSelectProject(item.id)}
           disabled={deleting}
-          className={`flex-1 min-w-0 truncate p-0 text-left text-sm transition-colors ${
-            deleting ? 'cursor-default text-red-400' : isSelected ? 'cursor-pointer text-zinc-100' : 'cursor-pointer text-zinc-300 hover:text-zinc-100'
-          }`}
+          className={`flex-1 min-w-0 truncate p-0 text-left text-sm transition-colors ${nameButtonClass()}`}
         >
           {item.project.name}
         </button>

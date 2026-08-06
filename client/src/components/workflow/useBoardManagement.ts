@@ -12,7 +12,8 @@ export function useBoardManagement(workflowId: string) {
     setBoards(sorted);
 
     const stored = localStorage.getItem(`kanban_active_board_${workflowId}`);
-    const resolved = stored && sorted.some(b => b.id === stored) ? stored : (sorted[0]?.id ?? null);
+    let resolved: string | null = sorted[0]?.id ?? null;
+    if (stored && sorted.some(b => b.id === stored)) resolved = stored;
     setActiveBoardIdState(resolved);
 
     return sorted;
