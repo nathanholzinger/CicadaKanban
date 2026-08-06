@@ -77,3 +77,24 @@ prompt didn't stay in its lane:
 A little overlap at real boundaries (e.g. a large file that's large *because*
 of duplicated logic) is expected and fine — cross-tag it. Findings entirely
 outside a pass's stated lens mean the prompt needs tightening next time.
+
+## 5. Track Resolution (ongoing, not a one-time step)
+
+Findings don't stop being tracked once the report is written. As each finding
+actually gets addressed — in the same session or a much later one — add a
+terse `**Status:**` line directly under it in the audit doc itself:
+resolved/deferred/superseded in one clause, where the real fix lives (file,
+or a memory/`.claude/plans/` doc for anything with real design rationale
+behind it), and the one non-obvious insight if the original investigation
+turned one up. Skip routine verification detail ("tsc clean, 12 tests
+added") — that's what CI and git history are for.
+
+**Verify against current code/config, not against memory of having worked
+nearby.** A finding can get fixed as a side effect of unrelated work, or
+simply never get logged anywhere — check the actual file before writing its
+status line, every time, even when fairly sure. Don't transcribe a status
+from a memory file's prose without checking it against the code first.
+
+This is why status lives in the audit doc itself and not a separate
+progress-tracking memory file: one place per finding, version-controlled
+next to the thing it describes, self-evident to anyone who opens the doc.

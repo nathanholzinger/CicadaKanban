@@ -12,6 +12,11 @@ attention across ~70 files. Each finding is tagged with the pass(es) that
 surfaced it. Tags: **Fix Now**, **Watch List**, **Informational**. No finding
 qualified for a **Covered by Epic N** tag this round.
 
+*Status is tracked inline per finding below (added retroactively 2026-08-06,
+when `project_progress.md` — the memory file that had been informally
+tracking resolution status — was retired in favor of tracking it here; see
+`.claude/guides/audit-workflow.md` step 5 for the convention going forward).*
+
 Schema drift check confirmed clean: new `boards`/`columns` tables,
 `items.isAttached`, and `boards.showAttachedChildren` are correctly paired
 camelCase/snake_case, use `position REAL NOT NULL`, and match
@@ -69,6 +74,17 @@ items by `projectId` OR `workphaseId ∈ workflow's workphases`, delete `labels`
 and workflow-scoped `notifications` before the workflow (ideally via a shared
 `deleteWorkflowById` helper), inside one `db.transaction()`.
 
+**Status:** ✅ Resolved 2026-07-17 — superseded rather than patched. Instead
+of adding the missing cascades, the delete was redesigned: `DELETE
+/api/workflows/:id` no longer deletes items at all. `items.workphaseId` is
+`ON DELETE SET NULL`, so removing a workflow's workphases nulls the reference
+and items survive (across every project that inherited the workflow),
+surfacing as "Unknown status." Verified in current `workflows.ts`: DELETE
+wraps board/notification/workphase/workflow cleanup in one `db.transaction()`.
+POST also picked up a transaction wrapper later (see the #10–14 sweep below).
+See the `architecture-data-modeling` and `architecture-board-column-workflow`
+memories for the full SET-NULL rationale.
+
 ---
 
 ### 2. Non-existent `parentId` is silently stored — and with attach-by-default, the item becomes invisible on every board `[Correctness & Security + Epic 3 focused pass]`
@@ -92,6 +108,12 @@ in this app.
 and PUT. Same class, lower priority: `move`/`create` with an invalid
 `workphaseId` surfaces as an opaque FK-driven 500 rather than a validated 400.
 
+**Status:** ✅ Fixed. Verified in current `items.ts`: POST 400s
+("`parentId` does not reference an existing item") before storing anything
+when the supplied `parentId` doesn't resolve; PUT does the same on reparent.
+The `workphaseId` half (both create and move) is also validated → 400 in the
+current code.
+
 ---
 
 ### 3. MCP `create_item` still requires `workphase_id`, contradicting the attached-child behavior it documents `[Consistency & Drift]`
@@ -101,11 +123,14 @@ and PUT. Same class, lower priority: `move`/`create` with an invalid
 description on line 80 says an attached item "is placed in the parent's
 current workphase regardless of workphase_id", and the underlying route
 (`POST /api/items`) never requires `workphaseId`. An agent creating an
-attached child via MCP is forced to supply a bogus `workphase_id` the route
+attached child via MCP is forced to supply a bogus `workphace_id` the route
 silently ignores.
 
 **Fix:** Drop `workphase_id` from the `required` array (or require it only
 when no `parent_id`/`is_attached` is given).
+
+**Status:** ✅ Fixed. Verified in current `mcp.ts`: `create_item`'s
+`required` array is `['title']` only.
 
 ---
 
@@ -131,6 +156,17 @@ Two related problems, one extraction:
 and have `deleteProjectById`'s loop call it (or share one `itemChildTables`
 cleanup routine). The label-by-`labelId` cross-project cascade stays separate.
 
+**Status:** ✅ Fixed, via a different route than suggested — DB-level
+`ON DELETE CASCADE` (migration `0009`) rather than an app-level
+`itemCascade.ts` extraction. Verified: `deleteItemById`/`collectDescendantIds`
+no longer exist anywhere in `server/src`; item DELETE is now one
+`db.delete(items)` over the subtree collected by
+`server/src/lib/itemTree.ts::walkItemDescendants`, and dependent rows
+(itemLabels, activityLog, notifications, attachments, chat threads/messages)
+clean up via FK cascade with no app code needed at all.
+`deleteProjectById`'s per-item loop and the label-delete itemLabels sweep
+were removed accordingly. See the `architecture-data-modeling` memory.
+
 ---
 
 ### 5. Test file `itemFilters.test.ts` doesn't match the module it tests `[Consistency & Drift]`
@@ -143,6 +179,8 @@ Every other new test this epic is co-located `module.test.ts`
 
 **Fix:** Rename to `useItemManagement.test.ts`.
 
+**Status:** ✅ Fixed — the file is now `useItemManagement.test.ts`.
+
 ---
 
 ### 6. Dead export: `reloadBoards` from `useBoardManagement` `[Consistency & Drift]`
@@ -153,6 +191,9 @@ calls it (`BoardView.tsx` pulls only the other six return values).
 
 **Fix:** Remove the unused `reloadBoards` key.
 
+**Status:** ✅ Fixed — `reloadBoards` no longer appears anywhere in
+`client/src`.
+
 ---
 
 ### 7. Stale file reference in `ColumnRow` comment `[Consistency & Drift]`
@@ -162,6 +203,9 @@ Comment says `ColumnRow` "Mirrors ColumnRow in server/src/routes/columns.ts";
 the type is actually declared in `server/src/lib/columnRanges.ts:6`.
 
 **Fix:** Point the comment at `server/src/lib/columnRanges.ts`.
+
+**Status:** ✅ Fixed — the comment now correctly points at
+`server/src/lib/columnRanges.ts`.
 
 ---
 
@@ -184,6 +228,12 @@ the "same" control now has three focus treatments.
 replace the inline strings (Tailwind guide §2: same 5+ classes in 3+ places →
 named constant).
 
+**Status:** ✅ Fixed as specified. Verified: `pillUtils.ts` now defines
+`INPUT_LG`/`SELECT_SM`, imported and used by `WorkphaseManagerPanel.tsx`,
+`ColumnEditorModal.tsx`, and `BoardToolbar.tsx`. Didn't separately verify
+whether the `BoardColumn.tsx`/`ChildrenSection.tsx` focus-treatment drift
+noted above was reconciled — worth a glance next time either file is touched.
+
 ---
 
 ### 9. Confirm-delete button pattern (markup + state + error logic) duplicated across 3 components `[Duplication & Abstraction]`
@@ -201,6 +251,11 @@ behavior duplicated with the same reason to change.
 **Fix:** Extract a `ConfirmDeleteButton` component (owns confirm/error state,
 the two-button markup, and the try/catch) taking `onDelete: () =>
 Promise<void>` + a label.
+
+**Status:** ✅ Fixed. Verified: `client/src/components/ConfirmDeleteButton.tsx`
+exists and is used by `BoardColumn.tsx`, `WorkphaseManagerPanel.tsx`, and
+`AgentsModal.tsx` — the exact 3 sites named. Later folded into the same
+"unify confirm delete button" pass per git history.
 
 ---
 
@@ -220,6 +275,10 @@ an innocuous title edit **silently relocates** the child and its subtree.
 
 **Fix:** Gate the re-sync on `parentId !== undefined || isAttached !==
 undefined` — only run it when the parent link or attach flag actually changed.
+
+**Status:** ✅ Fixed. Verified in current `items.ts` PUT: the re-sync block
+is gated exactly on `parentId !== undefined || isAttached !== undefined`,
+with a comment citing this finding directly.
 
 ---
 
@@ -241,6 +300,13 @@ filtered inherited view would nest/count a foreign-project child.
 parent's `projectId` to the item and its descendants). Pairs naturally with
 Finding 2's existence check.
 
+**Status:** ✅ Fixed for the write paths. Verified in current `items.ts`:
+both POST and PUT reject a `parentId` belonging to a different project
+(comments cite this finding directly). MCP inherits the fix for free as a
+thin wrapper over the same REST routes. The client-side
+`filterProjectId`-ignoring note is now moot — a foreign-project attached
+child can no longer exist to mis-nest.
+
 ---
 
 ### 12. Migration 0007 defaults *all* existing items to `is_attached = 1` with no workphase backfill `[Epic 3 focused pass — Correctness]`
@@ -257,6 +323,13 @@ even a title edit relocates it.
 **Fix:** Either backfill `is_attached = 0` for rows that already have a
 `parent_id` (preserving prior display), or document attached-by-default as
 intentional and backfill those children's `workphaseId` to their parent's.
+
+**Status:** ✅ Fully resolved — no backfill was needed. Verified directly
+against `server/data/kanban.db`: 19 items existed before migration 0007 ran,
+and zero of them had `parent_id` set — the "existing children suddenly
+become attached, workphaseId diverges" risk had no rows to apply to.
+`schema.ts`'s "attached-by-default is intentional" comment (commit `3c55f93`)
+documents the decision.
 
 ---
 
@@ -277,6 +350,14 @@ here rather than tagged Covered by Epic N.
 **Fix:** Implement the gesture before calling Epic 3 done, or consciously
 descope it (update the roadmap line if so).
 
+**Status:** ✅ Addressed via conscious descope. `mvp-roadmap.md` carves out
+a dedicated **Epic 3.5 — Drag-and-Drop Attach/Detach Gesture**, whose
+rationale explicitly cites this finding. Not yet built — verified
+`KanbanCard.tsx` still stops pointer-down propagation on attached-child
+interactive elements, so the gesture genuinely doesn't exist yet, consistent
+with Epic 3.5 being unstarted. (Epic 3.2 — item positioning — is now
+sequenced before it; see `.claude/plans/epic-3.2-decisions.md`.)
+
 ---
 
 ### 14. Multi-step cascade/move/reorder mutations run without a transaction `[Correctness & Security]`
@@ -294,6 +375,18 @@ class of latent inconsistency in this audit. Good in-repo examples to follow:
 
 **When to fix:** Wrap each cascade/move/reorder in `db.transaction()` as those
 routes are next touched; Finding 1's fix should land inside one from day one.
+
+**Status:** ✅ Fixed, verified by re-checking every function this finding
+named against current code: `items.ts` move/PUT/reorder, `workflows.ts`
+DELETE, `projects.ts::deleteProjectById`, `workphases.ts` reorder/DELETE,
+and `columns.ts` reorder all wrap in `db.transaction()`; `items.ts` DELETE's
+cascade collapsed to one atomic statement once finding #4 moved dependent-row
+cleanup to DB CASCADE; `attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`
+is never called without a caller-supplied `tx`. One adjacent gap in the same
+bug class, not originally named here, was found and fixed separately:
+`workflows.ts` POST's template/source-workphase insert loop wasn't
+transactional — it now wraps the workflow insert + workphase loop +
+`createDefaultBoard` call in one `db.transaction()` (verified above).
 
 ---
 
@@ -316,6 +409,13 @@ finite-number validation, and existence check built in, used by all four.
 fights back, just copying the `columns.ts` validation into `items`/
 `workphases` closes the real gap.)
 
+**Status:** ✅ Fixed as specified. Verified: `server/src/lib/reorder.ts`
+exports `applyReorder`; `items.ts`, `workphases.ts`, and `columns.ts`
+`PATCH /reorder` all call it (columns.ts's original hand-rolled version
+became the reference implementation, now deduped too). `projects.ts` reorder
+intentionally stayed bespoke — it validates `parentId` cycles, a genuinely
+different shape the shared helper doesn't cover.
+
 ---
 
 ### 16. `ChildrenSection.tsx` owns two responsibilities: parent-editing and children-listing `[File Responsibility]`
@@ -333,6 +433,13 @@ the user to see.
 **Fix:** Split out a `ParentSection` (reparent dropdown + attach toggle), or
 rename to reflect both responsibilities; align the two toggles' error surfaces
 while in there.
+
+**Status:** ✅ Fixed. Verified: `client/src/components/item-detail/ParentSection.tsx`
+exists, owning the current item's own parent link; `ChildrenSection.tsx`
+keeps only listing/creating children + per-child attach toggle. The two
+render as siblings in `ItemDetailPanel.tsx`. The error-surface alignment was
+done too — `handleChildAttachedToggle` now sets a visible `childError`
+matching `ParentSection`'s pattern.
 
 ---
 
@@ -356,6 +463,13 @@ feature rather than ProjectPage carrying its own walk.
 metadata-editing and subprojects JSX are more debatable splits — leave unless
 the file grows further.
 
+**Status:** ✅ Fixed as specified. Verified: `lib/hierarchy.ts`'s
+`buildParentOptions` now takes an `indent` param (default `false`); when
+`true` it groups depth-first and prefixes labels, matching ProjectPage's old
+bespoke walk. `ProjectPage.tsx`'s local copy is gone; it now calls the shared
+helper with `indent: true`. The metadata-editing/subprojects JSX split was
+left alone as suggested.
+
 ---
 
 ### 18. `api.ts` is a single 499-line file spanning 9+ API domains `[File Responsibility]`
@@ -371,6 +485,14 @@ badly hurt yet, but the natural seam — one module per domain mirroring
 land: split into `client/src/api/boards.ts` etc. with a barrel
 `api/index.ts`.
 
+**Status:** Deliberately deferred, not fixed. Discussed rather than split:
+Epic 4 (Quick Items) is unlikely to push `api.ts` past the threshold (it
+extends the existing Items domain); Epic 5 (tag buckets) and Epic 6 (Inbox)
+are the more likely triggers. A forward-looking note was added to
+`.claude/plans/epic-5-decisions.md` to re-check and do the split when Epic 5's
+endpoints are actually drafted. Verified current line count: 498 — essentially
+unchanged, still well under the ~700 threshold.
+
 ---
 
 ### 19. `BoardToolbar.tsx` bundles five independent control clusters `[File Responsibility]`
@@ -384,6 +506,11 @@ comment says so) and each cluster is small.
 **When to fix:** If any cluster grows, extract it as a sibling component
 (e.g. `BoardSwitcher`) so the toolbar stays layout/composition.
 
+**Status:** Deliberately deferred, not fixed. The board toolbar is expected
+to change significantly in the Epic 8+ interface-rework pass, so splitting
+it now would likely be thrown away. Revisit only if that rework doesn't
+happen or a cluster grows before then.
+
 ---
 
 ### 20. Count badge and amber "attention" badge duplicated between BoardColumn and UnsortedBucket `[Duplication & Abstraction]`
@@ -395,6 +522,12 @@ visual language and reason to change.
 
 **Fix:** `COUNT_BADGE` / `ATTENTION_BADGE` constants (or tiny `<CountBadge>` /
 `<AttentionBadge>` components) co-located with the board components.
+
+**Status:** ✅ Fixed. Verified: `client/src/components/boardBadges.tsx`
+exists, exporting a `COUNT_BADGE` class-string constant and an
+`AttentionBadge` component (taking `title`/`children` as props, since
+BoardColumn's "broken" and UnsortedBucket's "needs attention" are different
+meanings sharing only the look); both files import from it.
 
 ---
 
@@ -411,6 +544,12 @@ Both render a workphase sub-header + `SortableContext` wrapping a
 droppable id, so the card-prop wiring stays single-sourced as KanbanCard's
 props evolve.
 
+**Status:** ✅ Fixed. Verified: `client/src/components/WorkphaseCardList.tsx`
+exists, taking `droppable`/`containerRef`/`isOver`/`isCardBeingDragged` as
+optional props; `BoardColumn`'s `ExpandedSubRow` and both of
+`UnsortedBucket`'s call sites (workphase groups and the Unknown-status
+bucket) now route through it.
+
 ---
 
 ### 22. `KanbanCard` re-implements `pillUtils` tokens and helpers `[Duplication & Abstraction]`
@@ -425,6 +564,10 @@ real.
 
 **Fix:** Import the helpers/tokens from `pillUtils.ts`; delete the local
 copies.
+
+**Status:** ✅ Fixed. Verified: `KanbanCard.tsx` now imports `PILL_DEPTH`,
+`depthLabel`, `typePillClass`, `typePillStyle` from `./item-detail/pillUtils`;
+the local duplicates are gone.
 
 ---
 
@@ -449,6 +592,15 @@ natural to co-locate with Finding 4's `itemCascade.ts` extraction. The three
 walkers have genuinely different needs, so consolidating them is a judgment
 call, not a mandate.
 
+**Status:** ✅ Fixed as specified. Verified: `server/src/lib/itemTree.ts`
+exists with `isSelfRefDescendant` (generic over `items`/`projects`),
+`assertValidReparent`, and `walkItemDescendants` (a parametrized BFS with
+`predicate`/`includeRoot` options) — used by `items.ts` and, per Finding 4,
+by item DELETE too. `attachedCascade.ts::getAttachedDescendantIds` is now a
+thin wrapper over `walkItemDescendants`. `computeDepth` (items.ts) and
+`addDepths` (workflows.ts) were deliberately left untouched — genuinely
+different shapes, not the duplication this finding was about.
+
 ---
 
 ### 24. `columns.ts` POST and PUT duplicate the full range-validation block `[Duplication & Abstraction]`
@@ -461,6 +613,9 @@ create/update enforce different rules.
 
 **Fix:** `validateColumnRange({ startWorkphaseId, endWorkphaseId }, rankMap,
 siblingColumns)` returning a discriminated result, called by both.
+
+**Status:** ✅ Fixed as specified. Verified: `server/src/lib/columnRanges.ts`
+exports `validateColumnRange`, called by both POST and PUT in `columns.ts`.
 
 ---
 
@@ -476,6 +631,17 @@ both sides of the API.
 
 **Fix:** A `nextPosition(rows)` helper server-side; consider having the move
 endpoint default the append position so MCP need not compute it.
+
+**Status:** ✅ Fixed, plus the suggested scope addition. Verified:
+`server/src/lib/positions.ts` exports `nextPosition`, used by `boards.ts`,
+`columns.ts`, `workphases.ts`, `items.ts` POST, and `items.ts`'s move
+handler. `PATCH /api/items/:id/move` now defaults `position` to the end of
+the target workphase's list when the caller omits it, so MCP's `move_item`
+no longer needs to precompute it — it just sends `workphaseId`. An explicit
+`position` on a move still wins outright. Also logged as Q4 in
+`.claude/plans/epic-8-decisions.md`'s Open Questions: whether items need a
+global cross-workphase order (no schema support exists today) — flagged, not
+built.
 
 ---
 
@@ -499,6 +665,23 @@ control. Either drop the branch, or make it live correctly: feed it the
 unfiltered item set server-side and exclude attached+parented rows (and wire
 `getAttachedChildren`) client-side.
 
+**Status:** ✅ Reconciled, no code changes needed for the original two
+halves — both were already fixed by the same commit (`634593a`) that
+authored this finding, which just never got marked resolved. Verified in
+current code: `boards.ts` feeds `computeUnsorted` from `getBoardScopeItems`
+(not the old pre-filtering `getWorkflowItems`), so `invalidItems` is
+genuinely live; `UnsortedBucket.tsx` excludes attached+parented rows
+(`!(i.isAttached && i.parentId)`) before rendering the Unknown-status bucket,
+and wires `getAttachedChildren` through. One real gap was found and closed
+on top: an attached child's own `workphaseId` can go invalid independent of
+its parent (the attach-cascade only fires on a *parent* move, never when a
+workphase is deleted out from under the child directly) — added a permanent
+E2E test in `tests/ui/attached-children.spec.ts` reproducing exactly that,
+confirming the child renders once, nested, never duplicated into Unknown
+status.
+
+---
+
 ### 27. Attached-children edge-state notes `[Epic 3 focused pass]`
 Small stored-state and UX inconsistencies, none currently user-visible:
 
@@ -519,6 +702,19 @@ Small stored-state and UX inconsistencies, none currently user-visible:
   locally; cascaded descendants self-heal on `loadBoard()`. No visible glitch
   because attached children render nested regardless — noted for completeness.
 
+**Status:** Mixed — confirmed intentional where it was worth confirming;
+otherwise unchanged. The "delete ignores attach state" product question was
+answered as **keep current behavior** (whole-subtree delete regardless of
+attach state) and is now guarded by a regression test in `items.test.ts`
+citing this finding. "Attached-but-parentless" is now also covered by a test
+confirming the flag stays set on null-reparent, same conclusion (harmless,
+intentional). The other two sub-bullets (stale position after detach,
+optimistic DnD state not mirroring the cascade) were re-verified against
+current code and still stand exactly as described — no action taken, still
+real but low-priority.
+
+---
+
 ### 28. Icon SVGs re-inlined per component `[Duplication & Abstraction]`
 X/close path duplicated 5× (`App.tsx:237`, `AgentsModal.tsx:212`,
 `BoardColumn.tsx:127`, `WorkphaseManagerPanel.tsx:124`,
@@ -526,12 +722,27 @@ X/close path duplicated 5× (`App.tsx:237`, `AgentsModal.tsx:212`,
 (:236, :391). Note for whenever an icon set (`<XIcon>`, `<TrashIcon>`) is
 introduced; not urgent.
 
+**Status:** ✅ Fixed, fully. Verified: `client/src/components/icons.tsx`
+exports shared `XIcon`/`TrashIcon` components; `ProjectPage.tsx` imports and
+uses `TrashIcon` at both former inline sites. The X-icon consolidation
+picked up 2 more variants beyond the original 5 found during a later
+re-check (`ModalShell.tsx`, `ItemDetailPanel.tsx`) and folded those into the
+same shared pattern too.
+
+---
+
 ### 29. `tests/ui/boards.spec.ts` covers five feature areas in one file `[File Responsibility]`
 Board basics, inherited-workflow visibility, inherited read-only mode,
 child-project-with-own-workflow, and workflow creation share one 371-line
 file, while `boards-layer.spec.ts` already split board/column management out.
 Each `describe` is cohesive; split (e.g. `inherited-workflow.spec.ts`) only if
 it grows.
+
+**Status:** Not addressed, no action taken — matches the finding's own
+"only if it grows" threshold, which hasn't been hit. Still open, still
+low-priority.
+
+---
 
 ### 30. Pre-existing repo-wide notes, not regressions from this work `[Consistency & Drift]`
 - The app is single-theme dark (no `prefers-color-scheme`/`data-theme`
@@ -545,6 +756,17 @@ it grows.
 - `mvp-roadmap.md` prose calls the range table `board_columns`; the
   implementation consistently uses `columns` everywhere. Code-internal naming
   is consistent; only the planning-doc wording differs.
+
+**Status:** All four re-verified 2026-08-06, all still accurate/unchanged.
+Quotes/arrow-parens/printWidth conventions were separately discussed in
+depth (informal conclusion: the codebase already follows a de facto
+consistent style — single quotes, no arrow-parens on single params, wide
+lines — worth codifying in `.prettierrc` eventually, but no config change
+has been made, so `prettier --check` still flags nearly everything). The
+other three sub-notes are simply still true as written — none require
+action.
+
+---
 
 ### 31. Positive confirmations `[all passes]`
 - **`ENABLE_TEST_ROUTES` guard is safe:** the DB-truncating `/api/test/reset`
@@ -596,6 +818,36 @@ workphase shift, cycle rejection, create-time attach/detach inheritance
    cascade-delete test uses only default (attached) children.
 7. **Migration 0007 backfill behavior** (Finding 12) — no migration-level
    test (consistent with the repo's general lack of them).
+
+**Status (checked 2026-08-05, each re-verified against current test files
+2026-08-06):**
+- **#1 (MCP paths) — still genuinely open.** No `mcp`-specific test file
+  exists in `server/tests/`. Lower priority pending a decision (logged as Q5
+  in `.claude/plans/epic-8-decisions.md`) on whether testing the MCP layer
+  is worth it given it's a thin wrapper over the already-tested REST routes.
+- **#2 (DnD cascade integration) — ✅ closed.** The "too unreliable to
+  automate" assumption didn't hold up when tried: a real mouse-based drag
+  simulation against this app's `PointerSensor` setup ran reliably.
+  `tests/ui/attached-children.spec.ts` now has "dragging a parent card
+  across columns cascades its attached child," asserting both the UI
+  nesting and the server-side cascade.
+- **#3 (cross-project reparent) — was already closed** by existing tests
+  citing finding #11 (verified: `items.test.ts` has both a POST and a PUT
+  case) — nothing new needed.
+- **#4 (non-existent/foreign parentId) — ✅ closed.** The "non-existent
+  parentId → 400" half was already tested for POST+PUT; added the missing
+  half, "reparenting to null while attached leaves `isAttached` flagged, not
+  cleared" (finding #27's stored-state note).
+- **#5 (create with `is_attached: true`, no parentId) — ✅ closed.** Added,
+  confirming a parentless item's `isAttached` and that an explicit
+  `workphaseId` is respected with no parent to override it.
+- **#6 (delete semantics for detached descendants) — ✅ closed.** Added a
+  detached child + grandchild case confirming whole-subtree delete still
+  fires regardless of attach state (finding #27's "product decision worth
+  confirming" — confirmed as-is, not changed).
+- **#7 (migration 0007 backfill) — moot, not testable.** Drizzle's migrator
+  (`__drizzle_migrations` table) runs each migration exactly once ever;
+  verified 0007 already ran against 0 `parent_id` rows and cannot run again.
 
 ---
 
