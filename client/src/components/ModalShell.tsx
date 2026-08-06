@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { XIcon } from './icons';
 
 interface ModalShellProps {
   onClose: () => void;
@@ -49,9 +50,7 @@ export default function ModalShell({
               aria-label="Close"
               className="shrink-0 text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-800 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XIcon size={16} strokeWidth={2} />
             </button>
           )}
         </div>

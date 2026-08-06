@@ -8,6 +8,7 @@ import { AttachmentsSection } from './item-detail/AttachmentsSection';
 import { ParentSection } from './item-detail/ParentSection';
 import { ChildrenSection } from './item-detail/ChildrenSection';
 import { ActivityLog } from './item-detail/ActivityLog';
+import { XIcon } from './icons';
 
 interface ItemDetailPanelProps {
   itemId: string | null;
@@ -201,9 +202,7 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
                 aria-label="Close panel"
                 className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded hover:bg-zinc-800"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XIcon size={16} strokeWidth={2} />
               </button>
             </div>
 
