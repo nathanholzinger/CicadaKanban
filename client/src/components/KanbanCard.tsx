@@ -9,7 +9,7 @@ import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-det
 // showing a raw id (unlike the item-detail sections, which fall back to the
 // raw id as label text).
 function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | null {
-  return typeId ? itemTypes.find(t => t.id === typeId) ?? null : null;
+  return typeId ? (itemTypes.find(t => t.id === typeId) ?? null) : null;
 }
 
 interface KanbanCardProps {
@@ -23,17 +23,19 @@ interface KanbanCardProps {
 }
 
 export default function KanbanCard({
-  item, itemTypes = [], childCount = 0, getAttachedChildren, defaultExpanded = true, isOverlay = false, onCardClick,
+  item,
+  itemTypes = [],
+  childCount = 0,
+  getAttachedChildren,
+  defaultExpanded = true,
+  isOverlay = false,
+  onCardClick,
 }: KanbanCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id, data: { type: 'card' } });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    data: { type: 'card' },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -55,20 +57,11 @@ export default function KanbanCard({
       role="article"
       aria-label={item.title}
       onClick={() => !isDragging && onCardClick?.(item.id)}
-      className={`
-        rounded-lg border border-zinc-700/50 bg-zinc-800 p-3
-        cursor-grab active:cursor-grabbing
-        hover:border-zinc-600 hover:bg-zinc-750
-        transition-colors duration-150
-        ${isDragging ? 'opacity-30' : ''}
-        ${isOverlay ? 'shadow-2xl shadow-black/50 rotate-2' : ''}
-      `}
+      className={`hover:bg-zinc-750 cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} `}
     >
       {/* Depth + type pills */}
-      <div className="flex items-center gap-1 mb-2">
-        <span className={PILL_DEPTH}>
-          {depthLabel(depth)}
-        </span>
+      <div className="mb-2 flex items-center gap-1">
+        <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
         {resolvedType && (
           <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
             {resolvedType.name}
@@ -77,15 +70,11 @@ export default function KanbanCard({
       </div>
 
       {/* Title */}
-      <p className="text-sm font-medium text-zinc-100 leading-snug">
-        {item.title}
-      </p>
+      <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
 
       {/* Description preview */}
       {item.description && (
-        <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">
-          {item.description}
-        </p>
+        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
       )}
 
       {/* Footer */}
@@ -94,9 +83,12 @@ export default function KanbanCard({
           {childCount > 0 && (
             <button
               type="button"
-              onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+              onClick={e => {
+                e.stopPropagation();
+                setExpanded(v => !v);
+              }}
               onPointerDown={e => e.stopPropagation()}
-              className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-0.5"
+              className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
               title={expanded ? 'Hide attached children' : 'Show attached children'}
             >
               {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
@@ -104,12 +96,12 @@ export default function KanbanCard({
           )}
           {item.assigneeType && (
             <div className="flex items-center gap-1">
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${avatarBadgeClass}`}>
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${avatarBadgeClass}`}
+              >
                 {item.assigneeType === 'agent' ? 'A' : 'H'}
               </span>
-              <span className="text-[11px] text-zinc-500">
-                {item.assigneeType === 'agent' ? 'Agent' : 'Human'}
-              </span>
+              <span className="text-[11px] text-zinc-500">{item.assigneeType === 'agent' ? 'Agent' : 'Human'}</span>
             </div>
           )}
         </div>
@@ -117,7 +109,7 @@ export default function KanbanCard({
 
       {/* Attached children, indented — read-only rows, click opens that child */}
       {expanded && childCount > 0 && getAttachedChildren && (
-        <div className="mt-2 pl-3 border-l border-zinc-700/50 space-y-1">
+        <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
           {getAttachedChildren(item.id).map(child => (
             <AttachedChildRow
               key={child.id}
@@ -148,19 +140,22 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
     <div>
       <button
         type="button"
-        onClick={e => { e.stopPropagation(); onCardClick?.(item.id); }}
+        onClick={e => {
+          e.stopPropagation();
+          onCardClick?.(item.id);
+        }}
         onPointerDown={e => e.stopPropagation()}
-        className="w-full flex items-center gap-1.5 text-left px-1.5 py-1 rounded hover:bg-zinc-700/40 transition-colors"
+        className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40"
       >
         {resolvedType && (
           <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
             {resolvedType.name}
           </span>
         )}
-        <span className="text-xs text-zinc-300 truncate">{item.title}</span>
+        <span className="truncate text-xs text-zinc-300">{item.title}</span>
       </button>
       {grandchildren.length > 0 && (
-        <div className="pl-3 border-l border-zinc-700/50 space-y-1">
+        <div className="space-y-1 border-l border-zinc-700/50 pl-3">
           {grandchildren.map(child => (
             <AttachedChildRow
               key={child.id}

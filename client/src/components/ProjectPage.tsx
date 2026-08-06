@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
-import type { CreateWorkflowInput, UpdateProjectInput } from '../api';
+import type { CreateWorkflowInput } from '../api/workflows';
+import type { UpdateProjectInput } from '../api/projects';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 import { buildParentOptions } from '../lib/hierarchy';
@@ -33,8 +34,17 @@ function tabButtonClass(active: boolean): string {
 }
 
 export default function ProjectPage({
-  project, ancestors, subprojects, allProjects, allWorkflows, effectiveWorkflow,
-  onSelectProject, onUpdate, onCreateSubproject, onDeleteSubproject, onCreateWorkflow,
+  project,
+  ancestors,
+  subprojects,
+  allProjects,
+  allWorkflows,
+  effectiveWorkflow,
+  onSelectProject,
+  onUpdate,
+  onCreateSubproject,
+  onDeleteSubproject,
+  onCreateWorkflow,
 }: ProjectPageProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'board'>('overview');
   const [showSetupModal, setShowSetupModal] = useState(false);
@@ -87,12 +97,18 @@ export default function ProjectPage({
   }
 
   function handleBlur(field: 'name' | 'description') {
-    if (cancelRef.current) { cancelRef.current = false; return; }
+    if (cancelRef.current) {
+      cancelRef.current = false;
+      return;
+    }
     handleSave(field);
   }
 
   function handleKeyDown(e: React.KeyboardEvent, field: 'name' | 'description') {
-    if (e.key === 'Escape') { cancel(); return; }
+    if (e.key === 'Escape') {
+      cancel();
+      return;
+    }
     if (e.key === 'Enter' && field === 'name') handleSave(field);
   }
 
@@ -109,11 +125,11 @@ export default function ProjectPage({
   function renderBoard() {
     if (!effectiveWorkflow) {
       return (
-        <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <p className="text-zinc-500 text-sm">No workflow defined yet.</p>
+        <div className="flex h-64 flex-col items-center justify-center gap-3">
+          <p className="text-sm text-zinc-500">No workflow defined yet.</p>
           <button
             onClick={() => setShowSetupModal(true)}
-            className="px-4 py-2 text-sm font-medium text-blue-400 hover:text-blue-300 border border-blue-500/30 hover:border-blue-400/50 rounded-lg transition-colors"
+            className="rounded-lg border border-blue-500/30 px-4 py-2 text-sm font-medium text-blue-400 transition-colors hover:border-blue-400/50 hover:text-blue-300"
           >
             Set up a Workflow →
           </button>
@@ -123,15 +139,23 @@ export default function ProjectPage({
 
     if (effectiveWorkflow.isInherited) {
       return (
-        <div className="flex flex-col flex-1 min-h-0">
-          <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-xs text-zinc-500 shrink-0">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="mb-5 flex shrink-0 items-center gap-2 rounded-lg border border-zinc-700/50 bg-zinc-800/50 px-3 py-2 text-xs text-zinc-500">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            >
               <path d="M8 2v10M4 8l4 4 4-4" />
             </svg>
             Inherited from{' '}
             <button
               onClick={() => onSelectProject(effectiveWorkflow.ownerProject.id)}
-              className="text-zinc-400 hover:text-zinc-200 underline underline-offset-2 transition-colors"
+              className="text-zinc-400 underline underline-offset-2 transition-colors hover:text-zinc-200"
             >
               {effectiveWorkflow.ownerProject.name}
             </button>
@@ -147,24 +171,19 @@ export default function ProjectPage({
       );
     }
 
-    return (
-      <BoardView
-        workflowId={effectiveWorkflow.workflow.id}
-        projectId={project.id}
-      />
-    );
+    return <BoardView workflowId={effectiveWorkflow.workflow.id} projectId={project.id} />;
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Breadcrumb */}
       {ancestors.length > 0 && (
-        <nav className="flex items-center gap-1.5 text-xs text-zinc-500 mb-4">
+        <nav className="mb-4 flex items-center gap-1.5 text-xs text-zinc-500">
           {ancestors.map(a => (
             <Fragment key={a.id}>
-              <button onClick={() => onSelectProject(a.id)} className="hover:text-zinc-300 transition-colors">
+              <button onClick={() => onSelectProject(a.id)} className="transition-colors hover:text-zinc-300">
                 {a.name}
               </button>
               <span>/</span>
@@ -182,12 +201,12 @@ export default function ProjectPage({
           onChange={e => setNameValue(e.target.value)}
           onBlur={() => handleBlur('name')}
           onKeyDown={e => handleKeyDown(e, 'name')}
-          className="w-full text-2xl font-semibold text-zinc-100 bg-transparent mb-1 border-b border-zinc-600 focus:outline-none focus:border-blue-500/60"
+          className="mb-1 w-full border-b border-zinc-600 bg-transparent text-2xl font-semibold text-zinc-100 focus:border-blue-500/60 focus:outline-none"
         />
       ) : deletingProject ? (
-        <div className="text-2xl font-semibold text-red-400 mb-1">Deleting…</div>
+        <div className="mb-1 text-2xl font-semibold text-red-400">Deleting…</div>
       ) : confirmDeleteProject ? (
-        <div className="flex items-center gap-3 mb-1">
+        <div className="mb-1 flex items-center gap-3">
           <span className="text-2xl font-semibold text-zinc-100">{project.name}</span>
           <span className="text-sm text-zinc-400">Delete this project?</span>
           <button
@@ -196,28 +215,28 @@ export default function ProjectPage({
               setDeletingProject(true);
               await onDeleteSubproject(project.id);
             }}
-            className="px-2 py-0.5 rounded text-xs font-medium bg-red-900/60 text-red-300 hover:bg-red-800/60 transition-colors"
+            className="rounded bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-800/60"
           >
             Yes
           </button>
           <button
             onClick={() => setConfirmDeleteProject(false)}
-            className="px-2 py-0.5 rounded text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
           >
             No
           </button>
         </div>
       ) : (
-        <div className="group flex items-center gap-2 mb-1">
+        <div className="group mb-1 flex items-center gap-2">
           <h1
             onClick={() => setEditingField('name')}
-            className="text-2xl font-semibold text-zinc-100 cursor-text hover:text-zinc-200 transition-colors"
+            className="cursor-text text-2xl font-semibold text-zinc-100 transition-colors hover:text-zinc-200"
           >
             {project.name}
           </h1>
           <button
             onClick={() => setConfirmDeleteProject(true)}
-            className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-all"
+            className="flex h-7 w-7 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
             title="Delete project"
           >
             <TrashIcon size={13} />
@@ -226,13 +245,10 @@ export default function ProjectPage({
       )}
 
       {/* Tabs */}
-      <div className="flex gap-0 mt-4 mb-0 border-b border-zinc-800">
-        {tabs.map(tab => (
+      <div className="mt-4 mb-0 flex gap-0 border-b border-zinc-800">
+        {tabs.map(tab =>
           tab.disabled ? (
-            <span
-              key={tab.id}
-              className="px-4 py-2.5 text-sm font-medium text-zinc-700 cursor-not-allowed select-none"
-            >
+            <span key={tab.id} className="cursor-not-allowed px-4 py-2.5 text-sm font-medium text-zinc-700 select-none">
               {tab.label}
             </span>
           ) : (
@@ -243,17 +259,15 @@ export default function ProjectPage({
             >
               {tab.label}
             </button>
-          )
-        ))}
+          ),
+        )}
       </div>
 
       {/* Tab content */}
       {activeTab === 'board' ? (
-        <div className="pt-6 flex-1 min-h-0 flex flex-col">
-          {renderBoard()}
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col pt-6">{renderBoard()}</div>
       ) : (
-        <div className="pt-5 max-w-2xl overflow-y-auto">
+        <div className="max-w-2xl overflow-y-auto pt-5">
           {/* Description */}
           {editingField === 'description' ? (
             <textarea
@@ -263,33 +277,31 @@ export default function ProjectPage({
               onBlur={() => handleBlur('description')}
               onKeyDown={e => handleKeyDown(e, 'description')}
               rows={3}
-              className="w-full text-sm text-zinc-400 bg-transparent mb-6 resize-none border-b border-zinc-600 focus:outline-none focus:border-blue-500/60"
+              className="mb-6 w-full resize-none border-b border-zinc-600 bg-transparent text-sm text-zinc-400 focus:border-blue-500/60 focus:outline-none"
             />
           ) : project.description ? (
             <p
               onClick={() => setEditingField('description')}
-              className="text-sm text-zinc-400 mb-6 cursor-text hover:text-zinc-300 transition-colors whitespace-pre-wrap"
+              className="mb-6 cursor-text text-sm whitespace-pre-wrap text-zinc-400 transition-colors hover:text-zinc-300"
             >
               {project.description}
             </p>
           ) : (
             <button
               onClick={() => setEditingField('description')}
-              className="text-sm text-zinc-600 hover:text-zinc-400 mb-6 block transition-colors"
+              className="mb-6 block text-sm text-zinc-600 transition-colors hover:text-zinc-400"
             >
               Add description
             </button>
           )}
 
           {/* Parent project */}
-          <div className="flex items-center gap-3 mt-4 mb-6">
-            <span className="text-xs font-semibold uppercase tracking-widest text-zinc-600 w-14 shrink-0">
-              Parent
-            </span>
+          <div className="mt-4 mb-6 flex items-center gap-3">
+            <span className="w-14 shrink-0 text-xs font-semibold tracking-widest text-zinc-600 uppercase">Parent</span>
             <select
               value={project.parentId ?? ''}
               disabled={savingParent}
-              onChange={async (e) => {
+              onChange={async e => {
                 const newParentId = e.target.value || null;
                 setSavingParent(true);
                 try {
@@ -298,26 +310,34 @@ export default function ProjectPage({
                   setSavingParent(false);
                 }
               }}
-              className="text-sm bg-zinc-800 border border-zinc-700 text-zinc-400 rounded-lg px-2 py-1.5 focus:outline-none focus:border-zinc-600 cursor-pointer disabled:opacity-50 transition-opacity"
+              className="cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-400 transition-opacity focus:border-zinc-600 focus:outline-none disabled:opacity-50"
             >
               {buildParentOptions(allProjects, project.id, p => p.name, 'Root', true).map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Subprojects */}
           <section className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
-                Subprojects
-              </h2>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Subprojects</h2>
               <button
                 onClick={() => onCreateSubproject(project.id)}
-                className="w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+                className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
                 title="Add subproject"
               >
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 11 11"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                >
                   <path d="M5.5 1.5v8M1.5 5.5h8" />
                 </svg>
               </button>
@@ -329,12 +349,10 @@ export default function ProjectPage({
                 return (
                   <li key={child.id} className="group flex items-center gap-1">
                     {isDeleting ? (
-                      <div className="flex-1 px-3 py-2 rounded-lg text-sm bg-red-950/60 text-red-400">
-                        Deleting…
-                      </div>
+                      <div className="flex-1 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">Deleting…</div>
                     ) : isConfirming ? (
-                      <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-zinc-800">
-                        <span className="text-zinc-400 flex-1">Delete "{child.name}"?</span>
+                      <div className="flex flex-1 items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm">
+                        <span className="flex-1 text-zinc-400">Delete "{child.name}"?</span>
                         <button
                           onClick={async () => {
                             setConfirmDeleteId(null);
@@ -342,13 +360,13 @@ export default function ProjectPage({
                             await onDeleteSubproject(child.id);
                             setDeletingId(null);
                           }}
-                          className="px-2 py-0.5 rounded text-xs font-medium bg-red-900/60 text-red-300 hover:bg-red-800/60 transition-colors"
+                          className="rounded bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-800/60"
                         >
                           Yes
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-2 py-0.5 rounded text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                          className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
                         >
                           No
                         </button>
@@ -357,16 +375,14 @@ export default function ProjectPage({
                       <>
                         <button
                           onClick={() => onSelectProject(child.id)}
-                          className="flex-1 text-left px-3 py-2 rounded-lg text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+                          className="flex-1 rounded-lg px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
                         >
                           {child.name}
-                          {child.description && (
-                            <span className="ml-2 text-xs text-zinc-600">{child.description}</span>
-                          )}
+                          {child.description && <span className="ml-2 text-xs text-zinc-600">{child.description}</span>}
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(child.id)}
-                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-all"
+                          className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
                           title="Delete subproject"
                         >
                           <TrashIcon />
@@ -387,7 +403,7 @@ export default function ProjectPage({
           allWorkflows={allWorkflows}
           allProjects={allProjects}
           onClose={() => setShowSetupModal(false)}
-          onCreate={async (data) => {
+          onCreate={async data => {
             await onCreateWorkflow(data);
             setShowSetupModal(false);
           }}

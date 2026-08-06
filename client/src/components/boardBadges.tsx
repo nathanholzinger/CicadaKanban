@@ -16,7 +16,7 @@ interface AttentionBadgeProps {
 
 export function AttentionBadge({ title, children }: AttentionBadgeProps) {
   return (
-    <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded shrink-0" title={title}>
+    <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400" title={title}>
       {children}
     </span>
   );

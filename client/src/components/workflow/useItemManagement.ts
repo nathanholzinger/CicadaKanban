@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import type { Item } from '../../types';
-import { createItem } from '../../api';
+import { createItem } from '../../api/items';
 
 // Attached children with a parent render nested inside the parent's card
 // (see getAttachedChildrenFrom) instead of as separate top-level board cards.
-export function getWorkphaseItemsFrom(
-  items: readonly Item[],
-  workphaseId: string,
-  filterProjectId?: string,
-): Item[] {
+export function getWorkphaseItemsFrom(items: readonly Item[], workphaseId: string, filterProjectId?: string): Item[] {
   return items
-    .filter(item =>
-      item.workphaseId === workphaseId &&
-      (!filterProjectId || item.projectId === filterProjectId) &&
-      !(item.isAttached && item.parentId))
+    .filter(
+      item =>
+        item.workphaseId === workphaseId &&
+        (!filterProjectId || item.projectId === filterProjectId) &&
+        !(item.isAttached && item.parentId),
+    )
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 }
 
@@ -36,10 +34,7 @@ export function computeChildCounts(items: readonly Item[]): Record<string, numbe
   return counts;
 }
 
-export function useItemManagement(
-  projectId: string | undefined,
-  filterProjectId: string | undefined,
-) {
+export function useItemManagement(projectId: string | undefined, filterProjectId: string | undefined) {
   const [items, setItems] = useState<Item[]>([]);
 
   function getWorkphaseItems(workphaseId: string): Item[] {
@@ -64,7 +59,7 @@ export function useItemManagement(
   }
 
   function handleItemUpdated(updated: Item) {
-    setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+    setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)));
   }
 
   function handleItemDeleted(id: string) {

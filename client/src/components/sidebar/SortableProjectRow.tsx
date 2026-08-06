@@ -4,7 +4,8 @@ import { CSS } from '@dnd-kit/utilities';
 import type { FlatItem } from './projectTreeUtils';
 import { INDENT_WIDTH } from './projectTreeUtils';
 
-const ROW_ACTION_BTN = 'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
+const ROW_ACTION_BTN =
+  'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
 
 interface RowProps {
   item: FlatItem;
@@ -21,30 +22,33 @@ interface RowProps {
 }
 
 export function SortableProjectRow({
-  item, selectedProjectId, isActive, isDescendantOfActive,
-  showIndicator, indicatorDepth,
-  expandedIds, onToggleExpand, onSelectProject, onCreateSubproject, onDelete,
+  item,
+  selectedProjectId,
+  isActive,
+  isDescendantOfActive,
+  showIndicator,
+  indicatorDepth,
+  expandedIds,
+  onToggleExpand,
+  onSelectProject,
+  onCreateSubproject,
+  onDelete,
 }: RowProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const {
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-    attributes,
-    listeners,
-  } = useSortable({ id: item.id });
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id: item.id });
 
   // When this item is the active drag, don't apply the transform — we're using DragOverlay
   // for the ghost, so the original element must stay at its DOM position. If we moved it
   // with the cursor, its droppable would follow and closestCenter would always return it,
   // preventing other items from ever becoming the collision target.
-  const style = isDragging ? {} : {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style = isDragging
+    ? {}
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+      };
 
   const isExpanded = expandedIds.has(item.id);
   const isSelected = selectedProjectId === item.id;
@@ -82,28 +86,31 @@ export function SortableProjectRow({
       {/* Drop indicator line */}
       {showIndicator && (
         <div
-          className="absolute -top-px left-0 right-0 z-10 h-0.5 rounded-full bg-blue-500 pointer-events-none"
+          className="pointer-events-none absolute -top-px right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500"
           style={{ marginLeft: 12 + indicatorDepth * INDENT_WIDTH }}
         />
       )}
 
       <div
-        className={`group flex items-center gap-1 rounded-lg select-none transition-colors ${rowOpacityClass()} ${rowBackgroundClass()}`}
+        className={`group flex items-center gap-1 rounded-lg transition-colors select-none ${rowOpacityClass()} ${rowBackgroundClass()}`}
         style={{ padding: `6px 12px 6px ${12 + item.depth * INDENT_WIDTH}px` }}
       >
         {/* Drag handle */}
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 w-3 flex items-center justify-center text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing touch-none opacity-0 group-hover:opacity-100 transition-opacity"
+          className="flex w-3 shrink-0 cursor-grab touch-none items-center justify-center text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-400 active:cursor-grabbing"
           tabIndex={-1}
           aria-label="Drag to reorder"
           title="Drag to reorder"
         >
           <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-            <circle cx="2" cy="2" r="1.2" /><circle cx="6" cy="2" r="1.2" />
-            <circle cx="2" cy="6" r="1.2" /><circle cx="6" cy="6" r="1.2" />
-            <circle cx="2" cy="10" r="1.2" /><circle cx="6" cy="10" r="1.2" />
+            <circle cx="2" cy="2" r="1.2" />
+            <circle cx="6" cy="2" r="1.2" />
+            <circle cx="2" cy="6" r="1.2" />
+            <circle cx="6" cy="6" r="1.2" />
+            <circle cx="2" cy="10" r="1.2" />
+            <circle cx="6" cy="10" r="1.2" />
           </svg>
         </button>
 
@@ -112,9 +119,18 @@ export function SortableProjectRow({
           onClick={() => onToggleExpand(item.id)}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
           title={isExpanded ? 'Collapse' : 'Expand'}
-          className={`w-4 h-4 shrink-0 flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors ${!item.hasChildren ? 'invisible' : ''}`}
+          className={`flex h-4 w-4 shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400 ${!item.hasChildren ? 'invisible' : ''}`}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d={isExpanded ? 'M2 3.5l3 3 3-3' : 'M3.5 2l3 3-3 3'} />
           </svg>
         </button>
@@ -123,35 +139,47 @@ export function SortableProjectRow({
         <button
           onClick={() => onSelectProject(item.id)}
           disabled={deleting}
-          className={`flex-1 min-w-0 truncate p-0 text-left text-sm transition-colors ${nameButtonClass()}`}
+          className={`min-w-0 flex-1 truncate p-0 text-left text-sm transition-colors ${nameButtonClass()}`}
         >
           {item.project.name}
         </button>
 
         {/* Actions */}
         {deleting ? (
-          <span className="text-xs text-red-500/70 shrink-0 ml-1">Deleting…</span>
+          <span className="ml-1 shrink-0 text-xs text-red-500/70">Deleting…</span>
         ) : confirmDelete ? (
-          <div className="flex items-center gap-1 shrink-0 ml-1">
+          <div className="ml-1 flex shrink-0 items-center gap-1">
             <span className="text-xs text-zinc-500">Delete?</span>
             <button
               onClick={handleConfirmDelete}
-              className="text-xs text-red-400 hover:text-red-300 px-1 py-0.5 rounded hover:bg-zinc-700 transition-colors"
-            >Yes</button>
+              className="rounded px-1 py-0.5 text-xs text-red-400 transition-colors hover:bg-zinc-700 hover:text-red-300"
+            >
+              Yes
+            </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="text-xs text-zinc-500 hover:text-zinc-300 px-1 py-0.5 rounded hover:bg-zinc-700 transition-colors"
-            >No</button>
+              className="rounded px-1 py-0.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-300"
+            >
+              No
+            </button>
           </div>
         ) : (
-          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-1">
+          <div className="ml-1 hidden shrink-0 items-center gap-0.5 group-hover:flex">
             <button
               onClick={() => onCreateSubproject(item.id)}
               className={`${ROW_ACTION_BTN} hover:text-zinc-200`}
               aria-label="Add subproject"
               title="Add subproject"
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 11 11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
                 <path d="M5.5 1.5v8M1.5 5.5h8" />
               </svg>
             </button>
@@ -161,7 +189,16 @@ export function SortableProjectRow({
               aria-label="Delete project"
               title="Delete project"
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 11 11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M1.5 2.5h8M3.5 2.5V1.5h4v1M4.5 4.5v3M6.5 4.5v3M2.5 2.5l.6 6h5l.6-6" />
               </svg>
             </button>
@@ -174,8 +211,8 @@ export function SortableProjectRow({
 
 export function DragGhost({ name }: { name: string }) {
   return (
-    <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-700 border border-zinc-600 shadow-xl opacity-90">
-      <span className="text-sm text-zinc-100 truncate max-w-[160px]">{name}</span>
+    <div className="flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl">
+      <span className="max-w-[160px] truncate text-sm text-zinc-100">{name}</span>
     </div>
   );
 }

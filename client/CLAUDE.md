@@ -186,7 +186,9 @@ KanbanApp/
 │   └── src/
 │       ├── App.tsx              ← state root, layout, workflow inheritance
 │       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
-│       ├── api.ts               ← fetch wrappers for all endpoints
+│       ├── api/                 ← fetch wrappers, one file per domain (projects.ts,
+│       │                          workflows.ts, items.ts, ...) + shared.ts (the API base
+│       │                          path) — mirrors server/src/routes/*.ts, no barrel index
 │       └── components/
 │           ├── ProjectSidebar.tsx    ← project tree + dnd-kit drag reorder
 │           ├── ProjectPage.tsx       ← project detail (overview + board tabs)

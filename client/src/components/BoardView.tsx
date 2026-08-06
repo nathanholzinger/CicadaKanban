@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { BoardWithDetails, ItemType, Column } from '../types';
-import { fetchBoard, fetchItemTypes } from '../api';
+import { fetchBoard } from '../api/boards';
+import { fetchItemTypes } from '../api/itemTypes';
 import BoardColumn from './BoardColumn';
 import UnsortedBucket from './UnsortedBucket';
 import ColumnEditorModal from './ColumnEditorModal';
@@ -18,9 +19,9 @@ import { useBoardDnd } from './workflow/useBoardDnd';
 
 interface BoardViewProps {
   workflowId: string;
-  projectId?: string;        // project context for new items
-  filterProjectId?: string;  // when set, only show items for this project (inherited view)
-  readOnly?: boolean;        // when true, hides board/workphase management controls
+  projectId?: string; // project context for new items
+  filterProjectId?: string; // when set, only show items for this project (inherited view)
+  readOnly?: boolean; // when true, hides board/workphase management controls
 }
 
 export default function BoardView({ workflowId, projectId, filterProjectId, readOnly }: BoardViewProps) {
@@ -36,33 +37,54 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [workphaseNotice, setWorkphaseNotice] = useState('');
 
   const {
-    boards, activeBoardId, setActiveBoardId,
-    handleCreateBoard, handleRenameBoard, handleDeleteBoard, handleToggleShowAttachedChildren,
+    boards,
+    activeBoardId,
+    setActiveBoardId,
+    handleCreateBoard,
+    handleRenameBoard,
+    handleDeleteBoard,
+    handleToggleShowAttachedChildren,
   } = useBoardManagement(workflowId);
 
   const showAttachedChildrenDefault = Boolean(boards.find(b => b.id === activeBoardId)?.showAttachedChildren);
 
   const {
-    workphases, setWorkphases,
-    addingWorkphase, setAddingWorkphase,
-    newWorkphaseName, setNewWorkphaseName,
+    workphases,
+    setWorkphases,
+    addingWorkphase,
+    setAddingWorkphase,
+    newWorkphaseName,
+    setNewWorkphaseName,
     handleCreateWorkphase: rawHandleCreateWorkphase,
     handleRenameWorkphase: rawHandleRenameWorkphase,
     handleDeleteWorkphase: rawHandleDeleteWorkphase,
   } = useWorkphaseManagement(workflowId);
 
   const {
-    items, setItems, childCounts,
-    getWorkphaseItems, getAttachedChildren, findWorkphaseForItem,
-    handleCreateItem, handleItemUpdated, handleItemDeleted, handleChildCreated,
+    items,
+    setItems,
+    childCounts,
+    getWorkphaseItems,
+    getAttachedChildren,
+    findWorkphaseForItem,
+    handleCreateItem,
+    handleItemUpdated,
+    handleItemDeleted,
+    handleChildCreated,
   } = useItemManagement(projectId, filterProjectId);
 
   useEffect(() => {
-    fetchItemTypes().then(setItemTypes).catch(() => {});
+    fetchItemTypes()
+      .then(setItemTypes)
+      .catch(() => {});
   }, []);
 
   const loadBoard = useCallback(async () => {
-    if (!activeBoardId) { setBoard(null); setLoading(false); return; }
+    if (!activeBoardId) {
+      setBoard(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await fetchBoard(activeBoardId);
@@ -117,19 +139,35 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     await loadBoard();
     if (result && (result.shrunkColumns.length > 0 || result.deletedColumns.length > 0)) {
       const parts: string[] = [];
-      if (result.shrunkColumns.length > 0) parts.push(`${result.shrunkColumns.length} column${result.shrunkColumns.length === 1 ? '' : 's'} resized`);
-      if (result.deletedColumns.length > 0) parts.push(`${result.deletedColumns.length} column${result.deletedColumns.length === 1 ? '' : 's'} removed`);
+      if (result.shrunkColumns.length > 0)
+        parts.push(`${result.shrunkColumns.length} column${result.shrunkColumns.length === 1 ? '' : 's'} resized`);
+      if (result.deletedColumns.length > 0)
+        parts.push(`${result.deletedColumns.length} column${result.deletedColumns.length === 1 ? '' : 's'} removed`);
       setWorkphaseNotice(parts.join(', '));
     } else {
       setWorkphaseNotice('');
     }
   }
 
-  const { error: columnError, setError: setColumnError, handleCreateColumn, handleUpdateColumn, handleDeleteColumn, handleReorderColumns } =
-    useColumnManagement(activeBoardId, loadBoard);
+  const {
+    error: columnError,
+    setError: setColumnError,
+    handleCreateColumn,
+    handleUpdateColumn,
+    handleDeleteColumn,
+    handleReorderColumns,
+  } = useColumnManagement(activeBoardId, loadBoard);
 
-  const { sensors, activeItem, handleDragStart, handleDragOver, handleDragEnd } =
-    useBoardDnd(board, setBoard, items, setItems, getWorkphaseItems, findWorkphaseForItem, handleReorderColumns, loadBoard);
+  const { sensors, activeItem, handleDragStart, handleDragOver, handleDragEnd } = useBoardDnd(
+    board,
+    setBoard,
+    items,
+    setItems,
+    getWorkphaseItems,
+    findWorkphaseForItem,
+    handleReorderColumns,
+    loadBoard,
+  );
 
   function handleChildWorkphaseChange(workphaseId: string | null) {
     setChildDefaultWorkphaseId(workphaseId);
@@ -150,7 +188,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <p className="text-zinc-500">Loading board…</p>
       </div>
     );
@@ -158,14 +196,14 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   if (!board) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <p className="text-zinc-400">No board found for this workflow</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 shrink-0 space-y-2">
         <BoardToolbar
           boards={boards}
@@ -177,7 +215,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           handleDeleteBoard={handleDeleteBoard}
           handleToggleShowAttachedChildren={handleToggleShowAttachedChildren}
           onAddColumn={() => setEditingColumn('new')}
-          onToggleWorkphaseManager={() => { setShowWorkphaseManager(v => !v); setWorkphaseNotice(''); }}
+          onToggleWorkphaseManager={() => {
+            setShowWorkphaseManager(v => !v);
+            setWorkphaseNotice('');
+          }}
           childDefaultWorkphaseId={childDefaultWorkphaseId}
           onChildWorkphaseChange={handleChildWorkphaseChange}
           workphases={workphases}
@@ -206,7 +247,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-4 overflow-x-auto flex-1 min-h-0 pb-4 items-stretch">
+          <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4">
             {board.columns.map(column => (
               <BoardColumn
                 key={column.id}
@@ -249,7 +290,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           workphases={workphases}
           column={editingColumn === 'new' ? undefined : editingColumn}
           onSubmit={submitColumn}
-          onClose={() => { setEditingColumn(null); setColumnError(''); }}
+          onClose={() => {
+            setEditingColumn(null);
+            setColumnError('');
+          }}
           error={columnError}
         />
       )}

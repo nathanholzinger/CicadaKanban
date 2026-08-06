@@ -10,14 +10,7 @@ function node(id: string, parentId: string | null = null): NamedNode {
 }
 
 describe('getDescendantIds', () => {
-  const nodes = [
-    node('root'),
-    node('a', 'root'),
-    node('b', 'root'),
-    node('a1', 'a'),
-    node('a1x', 'a1'),
-    node('other'),
-  ];
+  const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
 
   it('collects descendants through multiple levels', () => {
     expect(getDescendantIds('root', nodes)).toEqual(new Set(['a', 'b', 'a1', 'a1x']));
@@ -65,12 +58,7 @@ describe('getAncestors', () => {
 });
 
 describe('buildParentOptions', () => {
-  const nodes = [
-    node('root'),
-    node('a', 'root'),
-    node('a1', 'a'),
-    node('sibling', 'root'),
-  ];
+  const nodes = [node('root'), node('a', 'root'), node('a1', 'a'), node('sibling', 'root')];
 
   it('excludes the current node and all of its descendants', () => {
     const options = buildParentOptions(nodes, 'a', n => n.name, '(none)');
@@ -94,13 +82,7 @@ describe('buildParentOptions with indent', () => {
   // drives output — a node always lands under its parent even when the
   // parent appears later in `nodes`. Sibling order within a group still
   // follows input order.
-  const nodes = [
-    node('a1', 'a'),
-    node('sibling', 'root'),
-    node('root'),
-    node('a', 'root'),
-    node('a1x', 'a1'),
-  ];
+  const nodes = [node('a1', 'a'), node('sibling', 'root'), node('root'), node('a', 'root'), node('a1x', 'a1')];
 
   it('groups each node directly under its parent, depth-first', () => {
     const options = buildParentOptions(nodes, 'ghost', n => n.name, '(none)', true);

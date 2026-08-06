@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Label } from '../../types';
-import { fetchLabels, fetchItemLabels, addLabelToItem, removeLabelFromItem, createLabel } from '../../api';
+import { fetchLabels, fetchItemLabels, addLabelToItem, removeLabelFromItem, createLabel } from '../../api/labels';
 import { SECTION_LABEL, INPUT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
 
 interface LabelsSectionProps {
@@ -17,16 +17,22 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
 
   useEffect(() => {
     if (!projectId) return;
-    Promise.all([fetchLabels(), fetchItemLabels(itemId)]).then(([all, mine]) => {
-      setLabels(all);
-      setItemLabelIds(new Set(mine.map(l => l.id)));
-    }).catch(() => {});
+    Promise.all([fetchLabels(), fetchItemLabels(itemId)])
+      .then(([all, mine]) => {
+        setLabels(all);
+        setItemLabelIds(new Set(mine.map(l => l.id)));
+      })
+      .catch(() => {});
   }, [itemId, projectId]);
 
   async function handleToggle(labelId: string) {
     if (itemLabelIds.has(labelId)) {
       await removeLabelFromItem(itemId, labelId);
-      setItemLabelIds(prev => { const s = new Set(prev); s.delete(labelId); return s; });
+      setItemLabelIds(prev => {
+        const s = new Set(prev);
+        s.delete(labelId);
+        return s;
+      });
     } else {
       await addLabelToItem(itemId, labelId);
       setItemLabelIds(prev => new Set([...prev, labelId]));
@@ -60,15 +66,13 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
           <button
             key={label.id}
             onClick={() => handleToggle(label.id)}
-            className={`border px-2 py-0.5 rounded-full text-[11px] font-medium transition-opacity ${itemLabelIds.has(label.id) ? 'opacity-100' : 'opacity-35 hover:opacity-60'}`}
+            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-opacity ${itemLabelIds.has(label.id) ? 'opacity-100' : 'opacity-35 hover:opacity-60'}`}
             style={{ backgroundColor: label.color + '33', borderColor: label.color + '66', color: label.color }}
           >
             {label.name}
           </button>
         ))}
-        {labels.length === 0 && !addingLabel && (
-          <p className={EMPTY_STATE}>No labels yet.</p>
-        )}
+        {labels.length === 0 && !addingLabel && <p className={EMPTY_STATE}>No labels yet.</p>}
       </div>
 
       {addingLabel && (
@@ -80,7 +84,12 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
               onChange={e => setNewLabelName(e.target.value)}
               placeholder="Label name..."
               className={`flex-1 ${INPUT_BASE}`}
-              onKeyDown={e => { if (e.key === 'Escape') { setAddingLabel(false); setNewLabelName(''); } }}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setAddingLabel(false);
+                  setNewLabelName('');
+                }
+              }}
             />
             <input
               type="color"
@@ -90,8 +99,19 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className={BTN_PRIMARY}>Create</button>
-            <button type="button" onClick={() => { setAddingLabel(false); setNewLabelName(''); }} className={BTN_CANCEL}>Cancel</button>
+            <button type="submit" className={BTN_PRIMARY}>
+              Create
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddingLabel(false);
+                setNewLabelName('');
+              }}
+              className={BTN_CANCEL}
+            >
+              Cancel
+            </button>
           </div>
         </form>
       )}

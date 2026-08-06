@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Item, ItemDetail } from '../../types';
-import { updateItem } from '../../api';
+import { updateItem } from '../../api/items';
 import { buildParentOptions as buildTreeParentOptions } from '../../lib/hierarchy';
 import type { SelectOption } from '../../lib/hierarchy';
 import { SECTION_LABEL, SELECT_BASE } from './pillUtils';
@@ -68,11 +68,13 @@ export function ParentSection({ item, allItems, onSelfUpdated }: ParentSectionPr
           className={`${SELECT_BASE} flex-1`}
         >
           {parentOptions.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
         {item.parentId && (
-          <label className="flex items-center gap-1 text-xs text-zinc-400 cursor-pointer shrink-0">
+          <label className="flex shrink-0 cursor-pointer items-center gap-1 text-xs text-zinc-400">
             <input
               type="checkbox"
               checked={Boolean(item.isAttached)}

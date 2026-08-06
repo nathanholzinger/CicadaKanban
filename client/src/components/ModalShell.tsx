@@ -20,7 +20,15 @@ interface ModalShellProps {
 // their own <form> around body+footer inside `children` rather than using
 // the `footer` prop.
 export default function ModalShell({
-  onClose, ariaLabel, title, subtitle, maxWidth, maxHeight, showCloseButton, footer, children,
+  onClose,
+  ariaLabel,
+  title,
+  subtitle,
+  maxWidth,
+  maxHeight,
+  showCloseButton,
+  footer,
+  children,
 }: ModalShellProps) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -37,18 +45,18 @@ export default function ModalShell({
       <div
         role="dialog"
         aria-label={ariaLabel}
-        className={`relative z-10 w-full ${maxWidth} mx-4 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden flex flex-col ${maxHeight ?? ''}`}
+        className={`relative z-10 w-full ${maxWidth} mx-4 flex flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl ${maxHeight ?? ''}`}
       >
-        <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-zinc-800 shrink-0">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-800 px-6 pt-6 pb-4">
           <div>
             <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
-            {subtitle && <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>}
+            {subtitle && <p className="mt-1 text-xs text-zinc-500">{subtitle}</p>}
           </div>
           {showCloseButton && (
             <button
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-800 transition-colors"
+              className="shrink-0 rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
             >
               <XIcon size={16} strokeWidth={2} />
             </button>
@@ -57,7 +65,7 @@ export default function ModalShell({
 
         {children}
 
-        {footer && <div className="px-6 py-4 border-t border-zinc-800 shrink-0">{footer}</div>}
+        {footer && <div className="shrink-0 border-t border-zinc-800 px-6 py-4">{footer}</div>}
       </div>
     </div>
   );

@@ -3,7 +3,8 @@ import { XIcon } from './icons';
 
 // Shared classes for the two-step confirm-delete control (was duplicated verbatim
 // across BoardColumn, WorkphaseManagerPanel, and AgentsModal — audit finding #9).
-const DELETE_PILL = 'text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10 disabled:opacity-50';
+const DELETE_PILL =
+  'text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10 disabled:opacity-50';
 const CANCEL_PILL = 'text-[10px] text-zinc-500 hover:text-zinc-300';
 const TRASH_BASE = 'text-zinc-600 hover:text-red-400 transition-colors';
 
@@ -28,9 +29,14 @@ interface ConfirmDeleteButtonProps {
 }
 
 export default function ConfirmDeleteButton({
-  onDelete, title, errorFallback = 'Failed to delete.', disabled,
-  triggerClassName = '', errorClassName = 'text-[10px] text-red-400 basis-full',
-  onError, beforeTrigger,
+  onDelete,
+  title,
+  errorFallback = 'Failed to delete.',
+  disabled,
+  triggerClassName = '',
+  errorClassName = 'text-[10px] text-red-400 basis-full',
+  onError,
+  beforeTrigger,
 }: ConfirmDeleteButtonProps) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
@@ -58,11 +64,15 @@ export default function ConfirmDeleteButton({
 
   return (
     <>
-      <span className="flex items-center gap-1 shrink-0">
+      <span className="flex shrink-0 items-center gap-1">
         {confirming ? (
           <>
-            <button onClick={handleDelete} disabled={disabled} className={DELETE_PILL}>Delete</button>
-            <button onClick={cancel} className={CANCEL_PILL}>Cancel</button>
+            <button onClick={handleDelete} disabled={disabled} className={DELETE_PILL}>
+              Delete
+            </button>
+            <button onClick={cancel} className={CANCEL_PILL}>
+              Cancel
+            </button>
           </>
         ) : (
           <>

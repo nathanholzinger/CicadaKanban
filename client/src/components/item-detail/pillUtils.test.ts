@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { depthLabel, typePillStyle, typePillClass, formatTime, PILL, PILL_NEUTRAL, MINI, MINI_NEUTRAL } from './pillUtils';
+import {
+  depthLabel,
+  typePillStyle,
+  typePillClass,
+  formatTime,
+  PILL,
+  PILL_NEUTRAL,
+  MINI,
+  MINI_NEUTRAL,
+} from './pillUtils';
 import type { ItemType } from '../../types';
 
 function itemType(overrides: Partial<ItemType> & { id: string }): ItemType {
@@ -32,7 +41,7 @@ describe('typePillStyle', () => {
     expect(typePillStyle('t1', types)).toBeUndefined();
   });
 
-  it('derives backgroundColor/borderColor/color from the matched type\'s color', () => {
+  it("derives backgroundColor/borderColor/color from the matched type's color", () => {
     const types = [itemType({ id: 't1', color: '#ff0000' })];
     expect(typePillStyle('t1', types)).toEqual({
       backgroundColor: '#ff000033',

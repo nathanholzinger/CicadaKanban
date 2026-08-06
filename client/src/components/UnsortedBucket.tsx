@@ -16,8 +16,16 @@ interface UnsortedBucketProps {
 }
 
 export default function UnsortedBucket({
-  uncoveredWorkphases, invalidItems, getWorkphaseItems, needsAttention, itemTypes, childCounts,
-  getAttachedChildren, defaultExpanded, filterProjectId, onCardClick,
+  uncoveredWorkphases,
+  invalidItems,
+  getWorkphaseItems,
+  needsAttention,
+  itemTypes,
+  childCounts,
+  getAttachedChildren,
+  defaultExpanded,
+  filterProjectId,
+  onCardClick,
 }: UnsortedBucketProps) {
   const groups = uncoveredWorkphases.map(w => ({ workphase: w, items: getWorkphaseItems(w.id) }));
   // Items whose workphase is null or outside this workflow. Attached children
@@ -30,9 +38,13 @@ export default function UnsortedBucket({
   if (totalItems === 0 && !needsAttention) return null;
 
   return (
-    <div role="group" aria-label="Unsorted" className="flex flex-col w-72 shrink-0 border-2 border-dashed border-zinc-700/60 rounded-xl">
+    <div
+      role="group"
+      aria-label="Unsorted"
+      className="flex w-72 shrink-0 flex-col rounded-xl border-2 border-dashed border-zinc-700/60"
+    >
       <div className="flex items-center gap-1.5 px-2 pt-3 pb-2">
-        <h3 className="text-sm font-semibold text-zinc-400 tracking-wide">Unsorted</h3>
+        <h3 className="text-sm font-semibold tracking-wide text-zinc-400">Unsorted</h3>
         <span className={COUNT_BADGE}>{totalItems}</span>
         {needsAttention && (
           <AttentionBadge title="Some workphases in this workflow aren't covered by any column on this board yet">
@@ -41,7 +53,7 @@ export default function UnsortedBucket({
         )}
       </div>
 
-      <div className="flex-1 flex flex-col gap-2 p-2 min-h-[120px] overflow-y-auto">
+      <div className="flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto p-2">
         {groups.map(({ workphase, items }) => (
           <WorkphaseCardList
             key={workphase.id}
@@ -70,7 +82,7 @@ export default function UnsortedBucket({
         )}
 
         {totalItems === 0 && (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-1 items-center justify-center">
             <p className="text-xs text-zinc-600">No uncovered items</p>
           </div>
         )}

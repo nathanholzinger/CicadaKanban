@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../types';
-import { fetchItem, updateItem, deleteItem } from '../api';
-import { PILL_DEPTH, typePillClass, typePillStyle, depthLabel, formatTime, SECTION_LABEL } from './item-detail/pillUtils';
+import { fetchItem, updateItem, deleteItem } from '../api/items';
+import {
+  PILL_DEPTH,
+  typePillClass,
+  typePillStyle,
+  depthLabel,
+  formatTime,
+  SECTION_LABEL,
+} from './item-detail/pillUtils';
 import { LabelsSection } from './item-detail/LabelsSection';
 import { AgentSection } from './item-detail/AgentSection';
 import { AttachmentsSection } from './item-detail/AttachmentsSection';
@@ -22,7 +29,17 @@ interface ItemDetailPanelProps {
   onChildCreated: (item: Item) => void;
 }
 
-export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId, itemTypes, onClose, onUpdate, onDelete, onNavigate, onChildCreated }: ItemDetailPanelProps) {
+export default function ItemDetailPanel({
+  itemId,
+  items,
+  childDefaultWorkphaseId,
+  itemTypes,
+  onClose,
+  onUpdate,
+  onDelete,
+  onNavigate,
+  onChildCreated,
+}: ItemDetailPanelProps) {
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -63,9 +80,20 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        if (editingTitle) { setEditingTitle(false); setTitleDraft(detail?.title ?? ''); return; }
-        if (editingDesc) { setEditingDesc(false); setDescDraft(detail?.description ?? ''); return; }
-        if (confirmDelete) { setConfirmDelete(false); return; }
+        if (editingTitle) {
+          setEditingTitle(false);
+          setTitleDraft(detail?.title ?? '');
+          return;
+        }
+        if (editingDesc) {
+          setEditingDesc(false);
+          setDescDraft(detail?.description ?? '');
+          return;
+        }
+        if (confirmDelete) {
+          setConfirmDelete(false);
+          return;
+        }
         onClose();
       }
     }
@@ -74,11 +102,14 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
   }, [editingTitle, editingDesc, confirmDelete, detail, onClose]);
 
   async function saveTitle() {
-    if (!detail || titleDraft.trim() === detail.title) { setEditingTitle(false); return; }
+    if (!detail || titleDraft.trim() === detail.title) {
+      setEditingTitle(false);
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateItem(detail.id, { title: titleDraft.trim() });
-      setDetail(prev => prev ? { ...prev, title: updated.title, updatedAt: updated.updatedAt } : prev);
+      setDetail(prev => (prev ? { ...prev, title: updated.title, updatedAt: updated.updatedAt } : prev));
       onUpdate(updated);
     } catch (err) {
       console.error('Failed to update title:', err);
@@ -89,13 +120,19 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
   }
 
   async function saveDesc() {
-    if (!detail) { setEditingDesc(false); return; }
+    if (!detail) {
+      setEditingDesc(false);
+      return;
+    }
     const newDesc = descDraft.trim() || null;
-    if (newDesc === detail.description) { setEditingDesc(false); return; }
+    if (newDesc === detail.description) {
+      setEditingDesc(false);
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateItem(detail.id, { description: newDesc ?? undefined });
-      setDetail(prev => prev ? { ...prev, description: updated.description, updatedAt: updated.updatedAt } : prev);
+      setDetail(prev => (prev ? { ...prev, description: updated.description, updatedAt: updated.updatedAt } : prev));
       onUpdate(updated);
     } catch (err) {
       console.error('Failed to update description:', err);
@@ -122,13 +159,13 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
 
   // Called by AgentSection when the item's agent/assigneeType fields change.
   function handleItemUpdated(updated: Item) {
-    setDetail(prev => prev ? { ...prev, ...updated } : prev);
+    setDetail(prev => (prev ? { ...prev, ...updated } : prev));
     onUpdate(updated);
   }
 
   // Called by ChildrenSection after a child is created.
   function handleChildCreated(child: Item) {
-    setDetail(prev => prev ? { ...prev, children: [...prev.children, child] } : prev);
+    setDetail(prev => (prev ? { ...prev, children: [...prev.children, child] } : prev));
     onChildCreated(child);
   }
 
@@ -138,7 +175,7 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
       if (c.id === updated.id) return { ...c, ...updated };
       return c;
     }
-    setDetail(prev => prev ? { ...prev, children: prev.children.map(replaceChild) } : prev);
+    setDetail(prev => (prev ? { ...prev, children: prev.children.map(replaceChild) } : prev));
     onUpdate(updated);
   }
 
@@ -148,27 +185,23 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         onClick={onClose}
       />
 
       {/* Panel */}
-      <div className={`
-        fixed top-0 right-0 z-50 h-full w-[420px] max-w-full
-        bg-zinc-900 border-l border-zinc-700
-        flex flex-col
-        transition-transform duration-200 ease-out
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-      `}>
+      <div
+        className={`fixed top-0 right-0 z-50 flex h-full w-[420px] max-w-full flex-col border-l border-zinc-700 bg-zinc-900 transition-transform duration-200 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} `}
+      >
         {loading || !detail ? (
-          <div className="flex items-center justify-center flex-1">
-            <p className="text-zinc-500 text-sm">{loading ? 'Loading…' : ''}</p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-sm text-zinc-500">{loading ? 'Loading…' : ''}</p>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-start gap-3 px-5 pt-5 pb-4 border-b border-zinc-800">
-              <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 border-b border-zinc-800 px-5 pt-5 pb-4">
+              <div className="mt-0.5 flex shrink-0 items-center gap-1">
                 <span className={PILL_DEPTH}>{depthLabel(detail.depth ?? 0)}</span>
                 {detail.type && (
                   <span className={typePillClass(detail.type, itemTypes)} style={typePillStyle(detail.type, itemTypes)}>
@@ -177,41 +210,51 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
                 )}
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 {editingTitle ? (
                   <input
                     ref={titleInputRef}
                     value={titleDraft}
                     onChange={e => setTitleDraft(e.target.value)}
                     onBlur={saveTitle}
-                    onKeyDown={e => { if (e.key === 'Enter') saveTitle(); }}
-                    className="w-full bg-zinc-800 border border-zinc-600 rounded px-2 py-1 text-sm font-semibold text-zinc-100 focus:outline-none focus:border-blue-500/60"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') saveTitle();
+                    }}
+                    className="w-full rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-sm font-semibold text-zinc-100 focus:border-blue-500/60 focus:outline-none"
                   />
                 ) : (
                   <h2
-                    onClick={() => { setTitleDraft(detail.title); setEditingTitle(true); }}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setTitleDraft(detail.title); setEditingTitle(true); } }}
+                    onClick={() => {
+                      setTitleDraft(detail.title);
+                      setEditingTitle(true);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setTitleDraft(detail.title);
+                        setEditingTitle(true);
+                      }
+                    }}
                     tabIndex={0}
-                    className="text-sm font-semibold text-zinc-100 cursor-text hover:text-white leading-snug focus:outline-none focus-visible:underline"
+                    className="cursor-text text-sm leading-snug font-semibold text-zinc-100 hover:text-white focus:outline-none focus-visible:underline"
                     title="Click to edit"
                   >
                     {detail.title}
                   </h2>
                 )}
-                <p className="text-[11px] text-zinc-500 mt-0.5">Updated {formatTime(detail.updatedAt)}</p>
+                <p className="mt-0.5 text-[11px] text-zinc-500">Updated {formatTime(detail.updatedAt)}</p>
               </div>
 
               <button
                 onClick={onClose}
                 aria-label="Close panel"
-                className="shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded hover:bg-zinc-800"
+                className="shrink-0 rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
               >
                 <XIcon size={16} strokeWidth={2} />
               </button>
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
               {/* Description */}
               <div>
                 <p className={`${SECTION_LABEL} mb-1.5`}>Description</p>
@@ -222,16 +265,24 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
                     onChange={e => setDescDraft(e.target.value)}
                     onBlur={saveDesc}
                     rows={5}
-                    className="w-full bg-zinc-800 border border-zinc-600 rounded px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 resize-none focus:outline-none focus:border-blue-500/60"
+                    className="w-full resize-none rounded border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:outline-none"
                     placeholder="Add a description…"
                   />
                 ) : (
                   <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => { setDescDraft(detail.description ?? ''); setEditingDesc(true); }}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setDescDraft(detail.description ?? ''); setEditingDesc(true); } }}
-                    className={`min-h-[72px] rounded px-3 py-2 cursor-text border border-transparent hover:border-zinc-700 hover:bg-zinc-800/50 text-sm leading-relaxed transition-colors focus:outline-none focus-visible:border-zinc-600 ${detail.description ? 'text-zinc-300' : 'text-zinc-600'}`}
+                    onClick={() => {
+                      setDescDraft(detail.description ?? '');
+                      setEditingDesc(true);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setDescDraft(detail.description ?? '');
+                        setEditingDesc(true);
+                      }
+                    }}
+                    className={`min-h-[72px] cursor-text rounded border border-transparent px-3 py-2 text-sm leading-relaxed transition-colors hover:border-zinc-700 hover:bg-zinc-800/50 focus:outline-none focus-visible:border-zinc-600 ${detail.description ? 'text-zinc-300' : 'text-zinc-600'}`}
                   >
                     {detail.description || 'Click to add a description…'}
                   </div>
@@ -241,11 +292,7 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
               <LabelsSection itemId={detail.id} projectId={detail.projectId} />
               <AgentSection item={detail} onUpdate={handleItemUpdated} />
               <AttachmentsSection itemId={detail.id} />
-              <ParentSection
-                item={detail}
-                allItems={items}
-                onSelfUpdated={handleItemUpdated}
-              />
+              <ParentSection item={detail} allItems={items} onSelfUpdated={handleItemUpdated} />
               <ChildrenSection
                 item={detail}
                 childDefaultWorkphaseId={childDefaultWorkphaseId}
@@ -258,20 +305,20 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-4 border-t border-zinc-800">
+            <div className="border-t border-zinc-800 px-5 py-4">
               {confirmDelete ? (
                 <div className="flex items-center gap-3">
-                  <p className="text-xs text-zinc-400 flex-1">Delete this item and all its children?</p>
+                  <p className="flex-1 text-xs text-zinc-400">Delete this item and all its children?</p>
                   <button
                     onClick={() => setConfirmDelete(false)}
-                    className="text-xs text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded hover:bg-zinc-800"
+                    className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={saving}
-                    className="text-xs font-medium text-white bg-red-600 hover:bg-red-500 px-3 py-1.5 rounded disabled:opacity-50"
+                    className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -279,7 +326,7 @@ export default function ItemDetailPanel({ itemId, items, childDefaultWorkphaseId
               ) : (
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                  className="text-xs text-zinc-500 transition-colors hover:text-red-400"
                 >
                   Delete item
                 </button>

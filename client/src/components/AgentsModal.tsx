@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Agent } from '../types';
-import { fetchAgents, createAgent, updateAgent, deleteAgent } from '../api';
+import { fetchAgents, createAgent, updateAgent, deleteAgent } from '../api/agents';
 import ModalShell from './ModalShell';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 
@@ -33,7 +33,6 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(emptyForm);
-
 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,7 +95,7 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
         repoPath: editForm.repoPath.trim() || undefined,
         notes: editForm.notes.trim() || undefined,
       });
-      setAgents(prev => prev.map(a => a.id === editingId ? updated : a));
+      setAgents(prev => prev.map(a => (a.id === editingId ? updated : a)));
       setEditingId(null);
     } catch {
       setError('Failed to update agent.');
@@ -127,11 +126,14 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
       showCloseButton
       footer={
         <>
-          {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+          {error && <p className="mb-3 text-xs text-red-400">{error}</p>}
           {!addingNew && editingId === null && (
             <button
-              onClick={() => { setAddingNew(true); setEditingId(null); }}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+              onClick={() => {
+                setAddingNew(true);
+                setEditingId(null);
+              }}
+              className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
             >
               + New agent
             </button>
@@ -139,11 +141,11 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
         </>
       }
     >
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+      <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
         {loading ? (
-          <p className="text-xs text-zinc-500 py-4 text-center">Loading…</p>
+          <p className="py-4 text-center text-xs text-zinc-500">Loading…</p>
         ) : agents.length === 0 && !addingNew ? (
-          <p className="text-xs text-zinc-600 py-4 text-center">No agents yet. Add one below.</p>
+          <p className="py-4 text-center text-xs text-zinc-600">No agents yet. Add one below.</p>
         ) : (
           agents.map(agent => (
             <div key={agent.id}>
@@ -157,21 +159,19 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
                   submitLabel="Save"
                 />
               ) : (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-zinc-100 truncate">{agent.name}</span>
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${surfaceBadgeColors[agent.surface] ?? ''}`}>
+                <div className="flex items-start gap-3 rounded-lg border border-zinc-700/50 bg-zinc-800/50 p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-zinc-100">{agent.name}</span>
+                      <span
+                        className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${surfaceBadgeColors[agent.surface] ?? ''}`}
+                      >
                         {surfaceLabels[agent.surface] ?? agent.surface}
                       </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-mono truncate">{agent.claudeProjectId}</p>
-                    {agent.repoPath && (
-                      <p className="text-[11px] text-zinc-600 truncate mt-0.5">{agent.repoPath}</p>
-                    )}
-                    {agent.notes && (
-                      <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{agent.notes}</p>
-                    )}
+                    <p className="truncate font-mono text-[11px] text-zinc-500">{agent.claudeProjectId}</p>
+                    {agent.repoPath && <p className="mt-0.5 truncate text-[11px] text-zinc-600">{agent.repoPath}</p>}
+                    {agent.notes && <p className="mt-1 text-xs leading-relaxed text-zinc-500">{agent.notes}</p>}
                   </div>
                   <ConfirmDeleteButton
                     onDelete={() => handleDelete(agent.id)}
@@ -183,7 +183,7 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
                     beforeTrigger={
                       <button
                         onClick={() => startEdit(agent)}
-                        className="text-[11px] text-zinc-500 hover:text-zinc-200 px-1.5 py-0.5 rounded hover:bg-zinc-700 transition-colors"
+                        className="rounded px-1.5 py-0.5 text-[11px] text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
                       >
                         Edit
                       </button>
@@ -200,7 +200,10 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
             form={newForm}
             onChange={setNewForm}
             onSubmit={handleCreate}
-            onCancel={() => { setAddingNew(false); setNewForm(emptyForm); }}
+            onCancel={() => {
+              setAddingNew(false);
+              setNewForm(emptyForm);
+            }}
             saving={saving}
             submitLabel="Add agent"
             firstInputRef={firstInputRef}
@@ -220,7 +223,13 @@ interface FormState {
 }
 
 function AgentForm({
-  form, onChange, onSubmit, onCancel, saving, submitLabel, firstInputRef,
+  form,
+  onChange,
+  onSubmit,
+  onCancel,
+  saving,
+  submitLabel,
+  firstInputRef,
 }: {
   form: FormState;
   onChange: (f: FormState) => void;
@@ -233,25 +242,25 @@ function AgentForm({
   const needsRepo = form.surface === 'code' || form.surface === 'cowork';
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 p-3 rounded-lg bg-zinc-800/60 border border-zinc-700">
+    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-zinc-700 bg-zinc-800/60 p-3">
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">Name</label>
+          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">Name</label>
           <input
             ref={firstInputRef}
             value={form.name}
             onChange={e => onChange({ ...form, name: e.target.value })}
             placeholder="e.g. Backend agent"
             required
-            className="w-full px-3 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60"
+            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
           />
         </div>
         <div className="w-36">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">Surface</label>
+          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">Surface</label>
           <select
             value={form.surface}
             onChange={e => onChange({ ...form, surface: e.target.value })}
-            className="w-full px-2 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/60"
+            className="w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:border-blue-500/60 focus:outline-none"
           >
             <option value="chat">Claude.ai Chat</option>
             <option value="code">Claude Code</option>
@@ -261,36 +270,42 @@ function AgentForm({
       </div>
 
       <div>
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">Project ID</label>
+        <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+          Project ID
+        </label>
         <input
           value={form.claudeProjectId}
           onChange={e => onChange({ ...form, claudeProjectId: e.target.value })}
           placeholder="UUID from claude.ai project URL"
           required
-          className="w-full px-3 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 font-mono"
+          className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
         />
       </div>
 
       {needsRepo && (
         <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">Repo Path</label>
+          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+            Repo Path
+          </label>
           <input
             value={form.repoPath}
             onChange={e => onChange({ ...form, repoPath: e.target.value })}
             placeholder="e.g. C:\Users\natha\Dev\MyProject"
-            className="w-full px-3 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 font-mono"
+            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
           />
         </div>
       )}
 
       <div>
-        <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 block mb-1">Notes <span className="normal-case font-normal">(optional)</span></label>
+        <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+          Notes <span className="font-normal normal-case">(optional)</span>
+        </label>
         <textarea
           value={form.notes}
           onChange={e => onChange({ ...form, notes: e.target.value })}
           placeholder="What does this agent do?"
           rows={2}
-          className="w-full px-3 py-1.5 rounded text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-500/60 resize-none"
+          className="w-full resize-none rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
         />
       </div>
 
@@ -298,15 +313,11 @@ function AgentForm({
         <button
           type="submit"
           disabled={saving || !form.name.trim() || !form.claudeProjectId.trim()}
-          className="px-3 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
         >
           {submitLabel}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-200"
-        >
+        <button type="button" onClick={onCancel} className="px-2 py-1.5 text-xs text-zinc-400 hover:text-zinc-200">
           Cancel
         </button>
       </div>

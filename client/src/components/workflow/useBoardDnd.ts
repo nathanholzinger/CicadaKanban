@@ -9,7 +9,7 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
-import { reorderItems, moveItem } from '../../api';
+import { reorderItems, moveItem } from '../../api/items';
 import {
   buildColumnForWorkphaseMap,
   resolveDropWorkphaseId as resolveDropTarget,
@@ -32,16 +32,11 @@ export function useBoardDnd(
 ) {
   const [activeItem, setActiveItem] = useState<Item | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // Maps every covered workphase id -> the column that covers it, for
   // resolving drop targets and hover-derived lookups.
-  const columnForWorkphase = useMemo(
-    () => buildColumnForWorkphaseMap<Column>(board?.columns ?? []),
-    [board],
-  );
+  const columnForWorkphase = useMemo(() => buildColumnForWorkphaseMap<Column>(board?.columns ?? []), [board]);
 
   function resolveDropWorkphaseId(overId: string): string | null {
     return resolveDropTarget(overId, board?.columns ?? [], columnForWorkphase, findWorkphaseForItem);
@@ -64,9 +59,7 @@ export function useBoardDnd(
 
     if (!activeWorkphaseId || !targetWorkphaseId || activeWorkphaseId === targetWorkphaseId) return;
 
-    setItems(prev =>
-      prev.map(item => item.id === activeId ? { ...item, workphaseId: targetWorkphaseId } : item),
-    );
+    setItems(prev => prev.map(item => (item.id === activeId ? { ...item, workphaseId: targetWorkphaseId } : item)));
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -89,7 +82,7 @@ export function useBoardDnd(
       if (oldIndex === -1 || newIndex === -1) return;
 
       const reordered = arrayMove(cols, oldIndex, newIndex);
-      setBoard(prev => prev ? { ...prev, columns: reordered } : prev);
+      setBoard(prev => (prev ? { ...prev, columns: reordered } : prev));
       try {
         await handleReorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
       } catch (err) {
@@ -109,10 +102,12 @@ export function useBoardDnd(
       const updatedPositions = computeSameWorkphaseReorder(getWorkphaseItems(targetWorkphaseId), activeId, overId);
       if (!updatedPositions) return;
 
-      setItems(prev => prev.map(item => {
-        const u = updatedPositions.find(p => p.id === item.id);
-        return u ? { ...item, position: u.position } : item;
-      }));
+      setItems(prev =>
+        prev.map(item => {
+          const u = updatedPositions.find(p => p.id === item.id);
+          return u ? { ...item, position: u.position } : item;
+        }),
+      );
       try {
         await reorderItems(updatedPositions);
       } catch (err) {

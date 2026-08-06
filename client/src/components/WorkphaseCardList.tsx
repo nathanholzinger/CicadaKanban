@@ -35,9 +35,19 @@ interface WorkphaseCardListProps {
 // finding #21). Single-sources that wiring so it can't drift as KanbanCard's
 // props evolve.
 export default function WorkphaseCardList({
-  label, labelClassName = DEFAULT_LABEL_CLASS, labelTitle,
-  items, itemTypes, childCounts, getAttachedChildren, defaultExpanded, onCardClick,
-  droppable = false, containerRef, isOver, isCardBeingDragged,
+  label,
+  labelClassName = DEFAULT_LABEL_CLASS,
+  labelTitle,
+  items,
+  itemTypes,
+  childCounts,
+  getAttachedChildren,
+  defaultExpanded,
+  onCardClick,
+  droppable = false,
+  containerRef,
+  isOver,
+  isCardBeingDragged,
 }: WorkphaseCardListProps) {
   const showDropHighlight = droppable && isOver && isCardBeingDragged;
   const dropHighlightClass = showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20';
@@ -48,14 +58,13 @@ export default function WorkphaseCardList({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 px-1 mb-1">
-        <span className={labelClassName} title={labelTitle}>{label}</span>
+      <div className="mb-1 flex items-center gap-1.5 px-1">
+        <span className={labelClassName} title={labelTitle}>
+          {label}
+        </span>
         <span className="text-[10px] text-zinc-600">{items.length}</span>
       </div>
-      <div
-        ref={containerRef}
-        className={containerClass}
-      >
+      <div ref={containerRef} className={containerClass}>
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(item => (
             <KanbanCard

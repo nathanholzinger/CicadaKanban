@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Agent, Item, ItemDetail } from '../../types';
-import { fetchAgents, updateItem } from '../../api';
+import { fetchAgents } from '../../api/agents';
+import { updateItem } from '../../api/items';
 import { SECTION_LABEL } from './pillUtils';
 
 interface AgentSectionProps {
@@ -14,7 +15,9 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetchAgents().then(setAgents).catch(() => {});
+    fetchAgents()
+      .then(setAgents)
+      .catch(() => {});
   }, []);
 
   async function handleAgentChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -65,7 +68,7 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
         value={item.agentId ?? ''}
         onChange={handleAgentChange}
         disabled={saving}
-        className="w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:outline-none focus:border-blue-500/60 disabled:opacity-50"
+        className="w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:border-blue-500/60 focus:outline-none disabled:opacity-50"
       >
         <option value="">None</option>
         {agents.map(a => (

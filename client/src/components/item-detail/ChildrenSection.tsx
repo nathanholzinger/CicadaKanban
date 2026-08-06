@@ -1,7 +1,18 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
-import { createItem, updateItem } from '../../api';
-import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, SECTION_LABEL, SELECT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
+import { createItem, updateItem } from '../../api/items';
+import {
+  MINI_DEPTH,
+  depthLabel,
+  typePillClass,
+  typePillStyle,
+  SECTION_LABEL,
+  SELECT_BASE,
+  BTN_PRIMARY,
+  BTN_CANCEL,
+  BTN_ADD_TRIGGER,
+  EMPTY_STATE,
+} from './pillUtils';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
@@ -23,7 +34,12 @@ function attachToggleClass(isAttached: boolean): string {
 // lives in the sibling ParentSection — a different concern with no shared
 // state.
 export function ChildrenSection({
-  item, childDefaultWorkphaseId, itemTypes, onNavigate, onChildCreated, onChildUpdated,
+  item,
+  childDefaultWorkphaseId,
+  itemTypes,
+  onNavigate,
+  onChildCreated,
+  onChildUpdated,
 }: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
@@ -66,9 +82,7 @@ export function ChildrenSection({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
-        <p className={SECTION_LABEL}>
-          Children {item.children.length > 0 && `(${item.children.length})`}
-        </p>
+        <p className={SECTION_LABEL}>Children {item.children.length > 0 && `(${item.children.length})`}</p>
         {!adding && (
           <button onClick={() => setAdding(true)} className={BTN_ADD_TRIGGER}>
             + Add
@@ -83,13 +97,13 @@ export function ChildrenSection({
               key={child.id}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-800"
             >
-              <button
-                onClick={() => onNavigate(child.id)}
-                className="flex flex-1 min-w-0 items-center gap-2 text-left"
-              >
+              <button onClick={() => onNavigate(child.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                 <span className={MINI_DEPTH}>{depthLabel(child.depth ?? (item.depth ?? 0) + 1)}</span>
                 {child.type && (
-                  <span className={typePillClass(child.type, itemTypes, true)} style={typePillStyle(child.type, itemTypes)}>
+                  <span
+                    className={typePillClass(child.type, itemTypes, true)}
+                    style={typePillStyle(child.type, itemTypes)}
+                  >
                     {itemTypes.find(x => x.id === child.type)?.name ?? child.type}
                   </span>
                 )}
@@ -98,7 +112,11 @@ export function ChildrenSection({
               <button
                 onClick={() => handleChildAttachedToggle(child, !child.isAttached)}
                 className={attachToggleClass(Boolean(child.isAttached))}
-                title={child.isAttached ? 'Attached — moves with this item. Click to detach.' : 'Detached — stays put. Click to attach.'}
+                title={
+                  child.isAttached
+                    ? 'Attached — moves with this item. Click to detach.'
+                    : 'Detached — stays put. Click to attach.'
+                }
               >
                 {child.isAttached ? 'Attached' : 'Detached'}
               </button>
@@ -115,33 +133,41 @@ export function ChildrenSection({
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Child title..."
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60"
-            onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setTitle(''); } }}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:outline-none"
+            onKeyDown={e => {
+              if (e.key === 'Escape') {
+                setAdding(false);
+                setTitle('');
+              }
+            }}
           />
           <div className="flex items-center gap-2">
-            <select
-              value={type}
-              onChange={e => setType(e.target.value)}
-              className={SELECT_BASE}
-            >
+            <select value={type} onChange={e => setType(e.target.value)} className={SELECT_BASE}>
               <option value="">No Type</option>
               {itemTypes.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
               ))}
             </select>
             <button type="submit" disabled={saving} className={`${BTN_PRIMARY} disabled:opacity-50`}>
               Add
             </button>
-            <button type="button" onClick={() => { setAdding(false); setTitle(''); }} className={BTN_CANCEL}>
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setTitle('');
+              }}
+              className={BTN_CANCEL}
+            >
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {item.children.length === 0 && !adding && (
-        <p className={EMPTY_STATE}>No children yet.</p>
-      )}
+      {item.children.length === 0 && !adding && <p className={EMPTY_STATE}>No children yet.</p>}
     </div>
   );
 }

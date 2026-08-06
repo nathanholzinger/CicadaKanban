@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Project, Workflow, WorkflowTemplate } from '../types';
-import { fetchWorkflowTemplates } from '../api';
-import type { CreateWorkflowInput } from '../api';
+import { fetchWorkflowTemplates } from '../api/workflowTemplates';
+import type { CreateWorkflowInput } from '../api/workflows';
 import ModalShell from './ModalShell';
 
 interface SetupWorkflowModalProps {
@@ -12,12 +12,20 @@ interface SetupWorkflowModalProps {
   onCreate: (data: CreateWorkflowInput) => Promise<void>;
 }
 
-export default function SetupWorkflowModal({ project, allWorkflows, allProjects, onClose, onCreate }: SetupWorkflowModalProps) {
+export default function SetupWorkflowModal({
+  project,
+  allWorkflows,
+  allProjects,
+  onClose,
+  onCreate,
+}: SetupWorkflowModalProps) {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchWorkflowTemplates().then(setTemplates).catch(() => {});
+    fetchWorkflowTemplates()
+      .then(setTemplates)
+      .catch(() => {});
   }, []);
 
   // Projects that have a workflow (excluding the current project)
@@ -42,46 +50,50 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
       onClose={onClose}
       ariaLabel="Set up a Workflow"
       title="Set up a Workflow"
-      subtitle={<>Choose how to configure the workflow for <span className="text-zinc-400">{project.name}</span>.</>}
+      subtitle={
+        <>
+          Choose how to configure the workflow for <span className="text-zinc-400">{project.name}</span>.
+        </>
+      }
       maxWidth="max-w-md"
       footer={
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
           >
             Cancel
           </button>
         </div>
       }
     >
-      <div className="px-6 py-4 space-y-2 max-h-[60vh] overflow-y-auto">
+      <div className="max-h-[60vh] space-y-2 overflow-y-auto px-6 py-4">
         {/* Custom */}
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600 mb-1">Start fresh</p>
+        <p className="mb-1 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">Start fresh</p>
         <button
           disabled={saving}
           onClick={() => submit({})}
-          className="w-full text-left px-4 py-3 rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/60 transition-colors disabled:opacity-50"
+          className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
         >
           <span className="text-sm font-medium text-zinc-200">Custom</span>
-          <span className="block text-xs text-zinc-500 mt-0.5">Empty workflow — add your own workphases</span>
+          <span className="mt-0.5 block text-xs text-zinc-500">Empty workflow — add your own workphases</span>
         </button>
 
         {/* Templates */}
         {templates.length > 0 && (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600 mt-4 mb-1">Use a template</p>
+            <p className="mt-4 mb-1 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">
+              Use a template
+            </p>
             {templates.map(t => (
               <button
                 key={t.id}
                 disabled={saving}
                 onClick={() => submit({ templateId: t.id })}
-                className="w-full text-left px-4 py-3 rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/60 transition-colors disabled:opacity-50"
+                className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
               >
                 <span className="text-sm font-medium text-zinc-200 capitalize">{t.name}</span>
-                <span className="block text-xs text-zinc-500 mt-0.5">
-                  {t.workphases.map(p => p.name).join(' → ')}
-                </span>
+                <span className="mt-0.5 block text-xs text-zinc-500">{t.workphases.map(p => p.name).join(' → ')}</span>
               </button>
             ))}
           </>
@@ -90,16 +102,18 @@ export default function SetupWorkflowModal({ project, allWorkflows, allProjects,
         {/* Copy from */}
         {copyableWorkflows.length > 0 && (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600 mt-4 mb-1">Copy from a project</p>
+            <p className="mt-4 mb-1 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">
+              Copy from a project
+            </p>
             {copyableWorkflows.map(({ workflow, projectName }) => (
               <button
                 key={workflow.id}
                 disabled={saving}
                 onClick={() => submit({ sourceWorkflowId: workflow.id })}
-                className="w-full text-left px-4 py-3 rounded-lg border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/60 transition-colors disabled:opacity-50"
+                className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
               >
                 <span className="text-sm font-medium text-zinc-200">{projectName}</span>
-                <span className="block text-xs text-zinc-500 mt-0.5">Copy workphase structure</span>
+                <span className="mt-0.5 block text-xs text-zinc-500">Copy workphase structure</span>
               </button>
             ))}
           </>

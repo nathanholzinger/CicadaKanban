@@ -24,8 +24,17 @@ interface BoardColumnProps {
 }
 
 export default function BoardColumn({
-  column, getWorkphaseItems, childCounts, getAttachedChildren, defaultExpanded, itemTypes, isCardBeingDragged,
-  onCreateItem, onCardClick, onEdit, onDelete,
+  column,
+  getWorkphaseItems,
+  childCounts,
+  getAttachedChildren,
+  defaultExpanded,
+  itemTypes,
+  isCardBeingDragged,
+  onCreateItem,
+  onCardClick,
+  onEdit,
+  onDelete,
 }: BoardColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -58,37 +67,38 @@ export default function BoardColumn({
       style={style}
       role="group"
       aria-label={column.displayName}
-      className={`flex flex-col w-72 shrink-0 ${isDragging ? 'opacity-40' : ''}`}
+      className={`flex w-72 shrink-0 flex-col ${isDragging ? 'opacity-40' : ''}`}
     >
       {/* Column header */}
-      <div className="flex items-center gap-1.5 mb-3 px-1">
+      <div className="mb-3 flex items-center gap-1.5 px-1">
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 text-zinc-600 hover:text-zinc-400 cursor-grab active:cursor-grabbing touch-none p-0.5 rounded"
+          className="shrink-0 cursor-grab touch-none rounded p-0.5 text-zinc-600 hover:text-zinc-400 active:cursor-grabbing"
           tabIndex={-1}
           title="Drag to reorder"
         >
           <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
-            <circle cx="2.5" cy="2.5" r="1.5" /><circle cx="7.5" cy="2.5" r="1.5" />
-            <circle cx="2.5" cy="7" r="1.5" /><circle cx="7.5" cy="7" r="1.5" />
-            <circle cx="2.5" cy="11.5" r="1.5" /><circle cx="7.5" cy="11.5" r="1.5" />
+            <circle cx="2.5" cy="2.5" r="1.5" />
+            <circle cx="7.5" cy="2.5" r="1.5" />
+            <circle cx="2.5" cy="7" r="1.5" />
+            <circle cx="7.5" cy="7" r="1.5" />
+            <circle cx="2.5" cy="11.5" r="1.5" />
+            <circle cx="7.5" cy="11.5" r="1.5" />
           </svg>
         </button>
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <h3
             onClick={() => onEdit?.(column)}
-            className={`text-sm font-semibold text-zinc-300 tracking-wide truncate ${onEdit ? 'cursor-pointer hover:text-zinc-100' : ''}`}
+            className={`truncate text-sm font-semibold tracking-wide text-zinc-300 ${onEdit ? 'cursor-pointer hover:text-zinc-100' : ''}`}
             title={onEdit ? 'Click to edit column' : undefined}
           >
             {column.displayName}
           </h3>
         </div>
 
-        <span className={COUNT_BADGE}>
-          {totalItems}
-        </span>
+        <span className={COUNT_BADGE}>{totalItems}</span>
 
         {column.broken && (
           <AttentionBadge title="This column's range no longer resolves cleanly after a workphase reorder — move items out, then fix its range.">
@@ -107,14 +117,12 @@ export default function BoardColumn({
         )}
       </div>
 
-      {deleteError && <p className="text-[11px] text-red-400 px-1 mb-2">{deleteError}</p>}
+      {deleteError && <p className="mb-2 px-1 text-[11px] text-red-400">{deleteError}</p>}
 
       {/* Body */}
-      <div className={`
-        flex-1 flex flex-col gap-2 p-2 rounded-xl min-h-[120px] overflow-y-auto
-        transition-colors duration-200
-        ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}
-      `}>
+      <div
+        className={`flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors duration-200 ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'} `}
+      >
         {column.displayMode === 'expanded' ? (
           column.subRows.map(row => (
             <ExpandedSubRow
@@ -146,7 +154,7 @@ export default function BoardColumn({
               ))}
             </SortableContext>
             {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-1 items-center justify-center">
                 <p className="text-xs text-zinc-600">Drop cards here</p>
               </div>
             )}
@@ -163,31 +171,51 @@ export default function BoardColumn({
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               placeholder="Item title..."
-              className="w-full px-3 py-2 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
-              onKeyDown={e => { if (e.key === 'Escape') { setIsAdding(false); setNewTitle(''); } }}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 focus:outline-none"
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setIsAdding(false);
+                  setNewTitle('');
+                }
+              }}
             />
             <div className="flex items-center gap-2">
               <select
                 value={newType}
                 onChange={e => setNewType(e.target.value)}
-                className="px-2 py-1 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/50"
+                className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:border-blue-500/50 focus:outline-none"
               >
                 {itemTypes.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
               </select>
-              <button type="submit" className="px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors">
+              <button
+                type="submit"
+                className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+              >
                 Add
               </button>
-              <button type="button" onClick={() => { setIsAdding(false); setNewTitle(''); }} className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdding(false);
+                  setNewTitle('');
+                }}
+                className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
+              >
                 Cancel
               </button>
             </div>
           </form>
         ) : (
           <button
-            onClick={() => { setIsAdding(true); setNewType(itemTypes[0]?.id ?? ''); }}
-            className="w-full py-1.5 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-lg transition-colors"
+            onClick={() => {
+              setIsAdding(true);
+              setNewType(itemTypes[0]?.id ?? '');
+            }}
+            className="w-full rounded-lg py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
           >
             + Add item
           </button>
@@ -210,7 +238,15 @@ interface ExpandedSubRowProps {
 }
 
 function ExpandedSubRow({
-  columnId, workphase, items, itemTypes, childCounts, getAttachedChildren, defaultExpanded, isCardBeingDragged, onCardClick,
+  columnId,
+  workphase,
+  items,
+  itemTypes,
+  childCounts,
+  getAttachedChildren,
+  defaultExpanded,
+  isCardBeingDragged,
+  onCardClick,
 }: ExpandedSubRowProps) {
   const { setNodeRef, isOver } = useDroppable({ id: subrowContainerId(columnId, workphase.id) });
 

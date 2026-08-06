@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Board } from '../../types';
-import { fetchBoards, createBoard, updateBoard, deleteBoard } from '../../api';
+import { fetchBoards, createBoard, updateBoard, deleteBoard } from '../../api/boards';
 
 export function useBoardManagement(workflowId: string) {
   const [boards, setBoards] = useState<Board[]>([]);

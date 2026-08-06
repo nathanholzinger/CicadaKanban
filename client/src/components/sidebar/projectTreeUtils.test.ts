@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  flattenTree, getDescendantIds, computeProjection, findPrevSibling, findNextSibling,
+  flattenTree,
+  getDescendantIds,
+  computeProjection,
+  findPrevSibling,
+  findNextSibling,
   type FlatItem,
 } from './projectTreeUtils';
 import type { Project } from '../../types';
@@ -19,7 +23,9 @@ function project(overrides: Partial<Project> & { id: string }): Project {
 
 function flat(id: string, depth: number, parentId: string | null, overrides: Partial<FlatItem> = {}): FlatItem {
   return {
-    id, depth, parentId,
+    id,
+    depth,
+    parentId,
     project: project({ id }),
     hasChildren: false,
     collapsed: false,
@@ -89,12 +95,7 @@ describe('getDescendantIds', () => {
 
 describe('computeProjection', () => {
   // Shared fixture: A(depth0) -> [B(depth1), C(depth1)], D(depth0)
-  const items = [
-    flat('A', 0, null),
-    flat('B', 1, 'A'),
-    flat('C', 1, 'A'),
-    flat('D', 0, null),
-  ];
+  const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
 
   it('resolves the parent by walking backward to the nearest item at projectedDepth - 1', () => {
     const active = flat('C', 1, 'A');
@@ -116,12 +117,7 @@ describe('computeProjection', () => {
 });
 
 describe('findPrevSibling / findNextSibling', () => {
-  const items = [
-    flat('A', 0, null),
-    flat('B', 1, 'A'),
-    flat('C', 1, 'A'),
-    flat('D', 0, null),
-  ];
+  const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
 
   it('findPrevSibling finds the nearest match at the same depth/parent', () => {
     expect(findPrevSibling(items, 2, { depth: 1, parentId: 'A' })).toEqual(items[1]);

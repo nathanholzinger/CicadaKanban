@@ -17,7 +17,14 @@
       "Bash(awk -F: '{ n=length\\($0\\); print FILENAME\": \"n\" chars: \"$0 }')",
       "Bash(sort -t: -k2 -rn)",
       "Bash(awk 'length\\($0\\) > 120 { print NR\": \"length\\($0\\) }' server/src/routes/items.ts)",
-      "Bash(awk '{print length}')"
+      "Bash(awk '{print length}')",
+      "Bash(powershell -Command \"\\(Get-Item coverage/index.html\\).LastWriteTime\")",
+      "Bash(powershell -Command \"Get-Item 'coverage/src/components/ItemDetailPanel.tsx.html' | Select-Object LastWriteTime; Get-Item 'coverage' | Select-Object LastWriteTime; Get-ChildItem coverage -Recurse -File | Sort-Object LastWriteTime -Descending | Select-Object -First 5 FullName, LastWriteTime\")",
+      "Bash(cd \"c:\\\\Users\\\\natha\\\\Dev\\\\KanbanApp\\\\client\" && npx prettier \"src/components/BoardColumn.tsx\" > /tmp/pretty-boardcolumn.tsx 2>/dev/null; diff \"src/components/BoardColumn.tsx\" /tmp/pretty-boardcolumn.tsx | head -60)",
+      "Read(//tmp/**)",
+      "Bash(head -20 /tmp/pretty-boardcolumn.tsx)",
+      "Bash(awk 'length\\($0\\) > 120 {print FILENAME\":\"NR\": \"length\\($0\\)\" chars\"}' src/components/workflow/useBoardDnd.ts src/lib/positions.ts src/components/KanbanCard.tsx src/components/ProjectPage.tsx)",
+      "Bash(awk 'length\\($0\\) > 120 {print FILENAME\":\"FNR\": \"length\\($0\\)\" chars\"}' src/components/workflow/useBoardDnd.ts src/lib/positions.ts src/components/KanbanCard.tsx src/components/ProjectPage.tsx)"
     ]
   }
 }

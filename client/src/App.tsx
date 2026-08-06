@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Workflow } from './types';
 import type { Notification, Project } from './types';
-import { fetchWorkflows, createWorkflow, fetchNotifications, markNotificationRead, markAllNotificationsRead, fetchProjects, createProject, updateProject, deleteProject, reorderProjects } from './api';
-import type { CreateWorkflowInput, UpdateProjectInput } from './api';
+import { fetchWorkflows, createWorkflow } from './api/workflows';
+import type { CreateWorkflowInput } from './api/workflows';
+import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from './api/notifications';
+import { fetchProjects, createProject, updateProject, deleteProject, reorderProjects } from './api/projects';
+import type { UpdateProjectInput } from './api/projects';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
@@ -20,8 +23,8 @@ export default function App() {
   const notifRef = useRef<HTMLDivElement>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    () => localStorage.getItem('activeProjectId'),
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
+    localStorage.getItem('activeProjectId'),
   );
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
@@ -40,7 +43,9 @@ export default function App() {
 
   useEffect(() => {
     function load() {
-      fetchNotifications().then(setNotifications).catch(() => {});
+      fetchNotifications()
+        .then(setNotifications)
+        .catch(() => {});
     }
     load();
     const interval = setInterval(load, 15000);
@@ -102,21 +107,25 @@ export default function App() {
 
   async function handleUpdateProject(id: string, data: UpdateProjectInput) {
     const updated = await updateProject(id, data);
-    setProjects(prev => prev.map(p => p.id === id ? updated : p));
+    setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
   }
 
   async function handleDeleteProject(id: string) {
     await deleteProject(id);
     setSelectedProjectId(prev => (prev === id ? null : prev));
-    fetchProjects().then(setProjects).catch(() => {});
+    fetchProjects()
+      .then(setProjects)
+      .catch(() => {});
   }
 
   async function handleReorderProject(id: string, parentId: string | null, position: number) {
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, parentId, position } : p));
+    setProjects(prev => prev.map(p => (p.id === id ? { ...p, parentId, position } : p)));
     try {
       await reorderProjects([{ id, parentId, position }]);
     } catch {
-      fetchProjects().then(setProjects).catch(() => {});
+      fetchProjects()
+        .then(setProjects)
+        .catch(() => {});
     }
   }
 
@@ -142,30 +151,23 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-zinc-900">
         <p className="text-zinc-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-zinc-900 text-zinc-100 flex flex-col">
+    <div className="flex h-screen flex-col bg-zinc-900 text-zinc-100">
       {/* Top nav bar */}
-      <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="px-6 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
+        <div className="flex h-14 items-center justify-between px-6">
           <div className="flex items-center gap-6">
-            <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-400">
-              Kanban
-            </h1>
+            <h1 className="text-sm font-bold tracking-widest text-zinc-400 uppercase">Kanban</h1>
 
             <button
               onClick={() => setShowAgentsModal(true)}
-              className="
-                px-3 py-1.5 rounded-lg text-sm font-medium
-                bg-zinc-800 border border-zinc-700 text-zinc-300
-                hover:text-zinc-100 hover:border-zinc-600
-                transition-colors
-              "
+              className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-100"
             >
               Agents
             </button>
@@ -175,13 +177,7 @@ export default function App() {
           <div ref={notifRef} className="relative flex items-center gap-3">
             <button
               onClick={() => setShowNotifications(prev => !prev)}
-              className="
-                relative w-8 h-8 rounded-lg
-                bg-zinc-800 border border-zinc-700
-                flex items-center justify-center
-                text-zinc-400 hover:text-zinc-200 hover:border-zinc-600
-                transition-colors
-              "
+              className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
               title="Notifications"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -189,35 +185,38 @@ export default function App() {
                 <path d="M12 10V7a4 4 0 0 0-8 0v3l-1.5 2h11L12 10z" />
               </svg>
               {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                   {notifications.length > 9 ? '9+' : notifications.length}
                 </span>
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute top-10 right-0 w-80 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <div className="absolute top-10 right-0 z-50 w-80 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
                   <span className="text-xs font-semibold text-zinc-300">Notifications</span>
                   {notifications.length > 0 && (
-                    <button onClick={handleMarkAllRead} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+                    >
                       Mark all read
                     </button>
                   )}
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="px-4 py-6 text-xs text-zinc-600 text-center">No new notifications</p>
+                  <p className="px-4 py-6 text-center text-xs text-zinc-600">No new notifications</p>
                 ) : (
-                  <ul className="max-h-72 overflow-y-auto divide-y divide-zinc-800">
+                  <ul className="max-h-72 divide-y divide-zinc-800 overflow-y-auto">
                     {notifications.map(n => (
                       <li key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-zinc-800/50">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-zinc-300 leading-snug">{n.message}</p>
-                          <p className="text-[11px] text-zinc-600 mt-0.5">{formatTime(n.createdAt)}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs leading-snug text-zinc-300">{n.message}</p>
+                          <p className="mt-0.5 text-[11px] text-zinc-600">{formatTime(n.createdAt)}</p>
                         </div>
                         <button
                           onClick={() => handleDismissNotification(n.id)}
-                          className="shrink-0 text-zinc-600 hover:text-zinc-300 mt-0.5"
+                          className="mt-0.5 shrink-0 text-zinc-600 hover:text-zinc-300"
                           title="Dismiss"
                         >
                           <XIcon strokeWidth={2} />
@@ -233,7 +232,7 @@ export default function App() {
       </header>
 
       {/* Body: sidebar + main */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <ProjectSidebar
           projects={projects}
           selectedProjectId={selectedProjectId}
@@ -243,7 +242,7 @@ export default function App() {
           onReorderProject={handleReorderProject}
         />
 
-        <main className="flex-1 overflow-hidden flex flex-col px-6 py-6">
+        <main className="flex flex-1 flex-col overflow-hidden px-6 py-6">
           {selectedProject ? (
             <ProjectPage
               project={selectedProject}
@@ -259,7 +258,7 @@ export default function App() {
               onCreateWorkflow={handleCreateWorkflow}
             />
           ) : (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex h-64 items-center justify-center">
               <p className="text-zinc-500">Select a project to get started.</p>
             </div>
           )}
@@ -274,9 +273,7 @@ export default function App() {
         />
       )}
 
-      {showAgentsModal && (
-        <AgentsModal onClose={() => setShowAgentsModal(false)} />
-      )}
+      {showAgentsModal && <AgentsModal onClose={() => setShowAgentsModal(false)} />}
     </div>
   );
 }

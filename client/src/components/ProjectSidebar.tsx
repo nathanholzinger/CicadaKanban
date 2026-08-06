@@ -10,10 +10,7 @@ import {
   type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Project } from '../types';
 import {
   flattenTree,
@@ -36,7 +33,12 @@ interface ProjectSidebarProps {
 }
 
 export default function ProjectSidebar({
-  projects, selectedProjectId, onSelectProject, onCreateProject, onDeleteProject, onReorderProject,
+  projects,
+  selectedProjectId,
+  onSelectProject,
+  onCreateProject,
+  onDeleteProject,
+  onReorderProject,
 }: ProjectSidebarProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(projects.map(p => p.id)));
 
@@ -46,15 +48,13 @@ export default function ProjectSidebar({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const descendantIds = useRef<Set<string>>(new Set());
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const flatItems = flattenTree(projects, expandedIds);
 
   // Items shown in the sortable context — active item removed so siblings fill the gap
   const sortableItems = activeId ? flatItems.filter(i => i.id !== activeId) : flatItems;
-  const activeItem = activeId ? flatItems.find(i => i.id === activeId) ?? null : null;
+  const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
 
   function toggleExpand(id: string) {
     setExpandedIds(prev => {
@@ -145,16 +145,24 @@ export default function ProjectSidebar({
   }
 
   return (
-    <aside className="w-60 shrink-0 border-r border-zinc-800 flex flex-col overflow-y-auto">
-      <div className="px-3 pt-4 pb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Projects</span>
+    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-zinc-800">
+      <div className="flex items-center justify-between px-3 pt-4 pb-2">
+        <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Projects</span>
         <button
           onClick={() => onCreateProject(undefined)}
-          className="w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+          className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
           aria-label="New project"
           title="New project"
         >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 11 11"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          >
             <path d="M5.5 1.5v8M1.5 5.5h8" />
           </svg>
         </button>
@@ -180,7 +188,7 @@ export default function ProjectSidebar({
                   no path where the ref changes without a state update triggering
                   the render that reads it. */}
               {/* eslint-disable-next-line react-hooks/refs */}
-              {flatItems.map((item) => {
+              {flatItems.map(item => {
                 // When active item is removed from sortable list, its index in flatItems
                 // maps to a shifted index in sortableItems. The indicator uses overIndex
                 // which is already relative to sortableItems.
@@ -211,9 +219,7 @@ export default function ProjectSidebar({
             </div>
           </SortableContext>
 
-          <DragOverlay>
-            {activeItem && <DragGhost name={activeItem.project.name} />}
-          </DragOverlay>
+          <DragOverlay>{activeItem && <DragGhost name={activeItem.project.name} />}</DragOverlay>
         </DndContext>
       )}
     </aside>

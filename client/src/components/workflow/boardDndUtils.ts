@@ -75,8 +75,7 @@ export function computeSameWorkphaseReorder(
   const newIndex = workphaseItems.findIndex(i => i.id === overId);
   if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return null;
 
-  return arrayMove([...workphaseItems], oldIndex, newIndex)
-    .map((item, idx) => ({ id: item.id, position: idx + 1 }));
+  return arrayMove([...workphaseItems], oldIndex, newIndex).map((item, idx) => ({ id: item.id, position: idx + 1 }));
 }
 
 // Cross-workphase drop position: append when dropping on a container (or an
@@ -88,17 +87,15 @@ export function computeDropPosition(
   isOverContainer: boolean,
 ): number {
   if (isOverContainer || workphaseItems.length === 0) {
-    return workphaseItems.length > 0
-      ? Math.max(...workphaseItems.map(i => i.position ?? 0)) + 1.0
-      : 1.0;
+    return workphaseItems.length > 0 ? Math.max(...workphaseItems.map(i => i.position ?? 0)) + 1.0 : 1.0;
   }
 
   const overIndex = workphaseItems.findIndex(i => i.id === overId);
   const prevItem = workphaseItems[overIndex - 1];
   const nextItem = workphaseItems[overIndex];
   return positionBetween(
-    prevItem ? prevItem.position ?? overIndex : null,
-    nextItem ? nextItem.position ?? overIndex + 1 : null,
+    prevItem ? (prevItem.position ?? overIndex) : null,
+    nextItem ? (nextItem.position ?? overIndex + 1) : null,
     () => 1.0 / 2,
   );
 }

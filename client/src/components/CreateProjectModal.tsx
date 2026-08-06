@@ -14,11 +14,16 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
   const [error, setError] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { nameInputRef.current?.focus(); }, []);
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, []);
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!name.trim()) { setError('Project name is required.'); return; }
+    if (!name.trim()) {
+      setError('Project name is required.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -37,22 +42,27 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
       onClose={onClose}
       ariaLabel={isSubproject ? 'New subproject' : 'New project'}
       title={isSubproject ? 'New subproject' : 'New project'}
-      subtitle={isSubproject ? <>Under <span className="text-zinc-400">{parentName}</span></> : undefined}
+      subtitle={
+        isSubproject ? (
+          <>
+            Under <span className="text-zinc-400">{parentName}</span>
+          </>
+        ) : undefined
+      }
       maxWidth="max-w-md"
     >
-      <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4 pt-4">
+      <form onSubmit={handleSubmit} className="space-y-4 px-6 pt-4 pb-6">
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-zinc-400">Name</label>
           <input
             ref={nameInputRef}
             value={name}
-            onChange={e => { setName(e.target.value); setError(''); }}
+            onChange={e => {
+              setName(e.target.value);
+              setError('');
+            }}
             placeholder={isSubproject ? 'Subproject name' : 'Project name'}
-            className="
-              w-full px-3 py-2 rounded-lg text-sm
-              bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500
-              focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20
-            "
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
           />
         </div>
 
@@ -64,11 +74,7 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="What is this project for?"
-            className="
-              w-full px-3 py-2 rounded-lg text-sm
-              bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500
-              focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20
-            "
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
           />
         </div>
 
@@ -78,14 +84,14 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg disabled:opacity-50 transition-colors"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
           >
             {saving ? 'Creating…' : isSubproject ? 'Create subproject' : 'Create project'}
           </button>

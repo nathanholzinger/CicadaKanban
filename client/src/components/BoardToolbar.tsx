@@ -23,10 +23,19 @@ interface BoardToolbarProps {
 // create/rename form state — callers only need the board list and the
 // underlying API handlers.
 export default function BoardToolbar({
-  boards, activeBoardId, setActiveBoardId, readOnly,
-  handleCreateBoard, handleRenameBoard, handleDeleteBoard, handleToggleShowAttachedChildren,
-  onAddColumn, onToggleWorkphaseManager,
-  childDefaultWorkphaseId, onChildWorkphaseChange, workphases,
+  boards,
+  activeBoardId,
+  setActiveBoardId,
+  readOnly,
+  handleCreateBoard,
+  handleRenameBoard,
+  handleDeleteBoard,
+  handleToggleShowAttachedChildren,
+  onAddColumn,
+  onToggleWorkphaseManager,
+  childDefaultWorkphaseId,
+  onChildWorkphaseChange,
+  workphases,
 }: BoardToolbarProps) {
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -81,7 +90,7 @@ export default function BoardToolbar({
 
   return (
     <div className="mb-4 shrink-0 space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-zinc-500">Board:</span>
         <select
           value={activeBoardId ?? ''}
@@ -90,13 +99,18 @@ export default function BoardToolbar({
           className={SELECT_SM}
         >
           {boards.map(b => (
-            <option key={b.id} value={b.id}>{b.name}</option>
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
           ))}
         </select>
 
         {!readOnly && (
           <>
-            <button onClick={() => setCreatingBoard(v => !v)} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+            <button
+              onClick={() => setCreatingBoard(v => !v)}
+              className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+            >
               + New board
             </button>
             {activeBoardId && (
@@ -105,7 +119,7 @@ export default function BoardToolbar({
                   setBoardNameDraft(boards.find(b => b.id === activeBoardId)?.name ?? '');
                   setRenamingBoard(v => !v);
                 }}
-                className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors"
+                className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
               >
                 Rename board
               </button>
@@ -113,22 +127,25 @@ export default function BoardToolbar({
             {boards.length > 1 && activeBoardId && (
               <button
                 onClick={() => submitDeleteBoard(activeBoardId)}
-                className="text-[11px] text-zinc-500 hover:text-red-400 transition-colors"
+                className="text-[11px] text-zinc-500 transition-colors hover:text-red-400"
               >
                 Delete board
               </button>
             )}
-            <button onClick={onAddColumn} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+            <button onClick={onAddColumn} className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400">
               + Add column
             </button>
-            <button onClick={onToggleWorkphaseManager} className="text-[11px] text-zinc-500 hover:text-blue-400 transition-colors">
+            <button
+              onClick={onToggleWorkphaseManager}
+              className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+            >
               Manage workphases
             </button>
           </>
         )}
 
         {activeBoard && (
-          <label className="flex items-center gap-1 text-[11px] text-zinc-500 ml-2 cursor-pointer">
+          <label className="ml-2 flex cursor-pointer items-center gap-1 text-[11px] text-zinc-500">
             <input
               type="checkbox"
               checked={Boolean(activeBoard.showAttachedChildren)}
@@ -139,7 +156,7 @@ export default function BoardToolbar({
           </label>
         )}
 
-        <span className="text-[11px] text-zinc-500 ml-2">New child items go to:</span>
+        <span className="ml-2 text-[11px] text-zinc-500">New child items go to:</span>
         <select
           value={childDefaultWorkphaseId ?? ''}
           onChange={e => onChildWorkphaseChange(e.target.value || null)}
@@ -148,7 +165,9 @@ export default function BoardToolbar({
         >
           <option value="">Same workphase as parent</option>
           {workphases.map(w => (
-            <option key={w.id} value={w.id}>{w.name}</option>
+            <option key={w.id} value={w.id}>
+              {w.name}
+            </option>
           ))}
         </select>
       </div>
@@ -161,10 +180,16 @@ export default function BoardToolbar({
             onChange={e => setBoardNameDraft(e.target.value)}
             aria-label="Board name"
             className={INPUT_LG}
-            onKeyDown={e => { if (e.key === 'Escape') setRenamingBoard(false); }}
+            onKeyDown={e => {
+              if (e.key === 'Escape') setRenamingBoard(false);
+            }}
           />
-          <button type="submit" className={BTN_PRIMARY}>Save</button>
-          <button type="button" onClick={() => setRenamingBoard(false)} className={BTN_CANCEL}>Cancel</button>
+          <button type="submit" className={BTN_PRIMARY}>
+            Save
+          </button>
+          <button type="button" onClick={() => setRenamingBoard(false)} className={BTN_CANCEL}>
+            Cancel
+          </button>
         </form>
       )}
 
@@ -177,10 +202,26 @@ export default function BoardToolbar({
             placeholder="Board name..."
             aria-label="Board name"
             className={INPUT_LG}
-            onKeyDown={e => { if (e.key === 'Escape') { setCreatingBoard(false); setNewBoardName(''); } }}
+            onKeyDown={e => {
+              if (e.key === 'Escape') {
+                setCreatingBoard(false);
+                setNewBoardName('');
+              }
+            }}
           />
-          <button type="submit" className={BTN_PRIMARY}>Create board</button>
-          <button type="button" onClick={() => { setCreatingBoard(false); setNewBoardName(''); }} className={BTN_CANCEL}>Cancel</button>
+          <button type="submit" className={BTN_PRIMARY}>
+            Create board
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCreatingBoard(false);
+              setNewBoardName('');
+            }}
+            className={BTN_CANCEL}
+          >
+            Cancel
+          </button>
         </form>
       )}
 
