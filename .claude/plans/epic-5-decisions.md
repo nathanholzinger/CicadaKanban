@@ -143,7 +143,26 @@ an Epic 5 structural decision — don't pre-commit.
 
 ---
 
-## Non-decision note: `client/src/api.ts` file-split watch (audit finding #18)
+## Closed: `client/src/api.ts` file-split watch (audit finding #18) — done, not by Epic 5 after all
+
+This used to be a "watch for Epic 5" note (original text kept below for
+history). The split happened on 2026-08-06, well before Epic 5 — and for a
+reason unrelated to anything predicted here. It wasn't line-count or Epic 5's
+Label Management surface that triggered it; it was Prettier's
+`printWidth: 120` under real enforcement, which made several consumer files'
+imports from the single `api.ts` explode to 8–12 lines regardless of the
+file's own length. Split into `client/src/api/`, one module per domain, no
+barrel (`server/src/routes/*.ts` — the thing being mirrored — doesn't use one
+either, so a barrel would've been a new, unprecedented pattern for this
+codebase). Full account in finding #18's Status in
+`.claude/guides/code-quality-audit-epic3.md`.
+
+**Nothing left for Epic 5 to do here** — when Epic 5's Global Label Management
+surface lands, it just adds to `api/labels.ts` like any other domain change,
+no split decision pending.
+
+<details>
+<summary>Original note (superseded — kept for history)</summary>
 
 Epic 3 audit finding #18 flagged `client/src/api.ts` (one `// ====` section per
 API domain, ~500 lines as of 2026-08-05) as a natural split candidate — one
@@ -164,3 +183,5 @@ genuinely new domain (saved filter configs) landing right after.
 its endpoints are drafted, and do the `api/` split then rather than deferring
 again — don't pre-build the split's shape now, before Epic 5's actual bucket
 API is designed.
+
+</details>

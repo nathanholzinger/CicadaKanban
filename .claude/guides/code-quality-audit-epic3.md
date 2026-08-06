@@ -485,13 +485,38 @@ badly hurt yet, but the natural seam — one module per domain mirroring
 land: split into `client/src/api/boards.ts` etc. with a barrel
 `api/index.ts`.
 
-**Status:** Deliberately deferred, not fixed. Discussed rather than split:
+**Status:** ✅ Fixed 2026-08-06 — done earlier than planned, for a different
+reason than expected. Originally deferred (see the now-superseded discussion
+below) to wait for Epic 5's endpoints to actually push the line count past
+~700. Instead the trigger ended up being Prettier's `printWidth: 120`: several
+consumer files' imports from the single `api.ts` were exploding to 8–12 lines
+once the whole codebase went under real Prettier enforcement, independent of
+`api.ts`'s own length. Split into `client/src/api/` — one file per domain
+(`projects.ts`, `workflows.ts`, `workflowTemplates.ts`, `workphases.ts`,
+`boards.ts`, `columns.ts`, `items.ts`, `attachments.ts`, `labels.ts`,
+`notifications.ts`, `itemTypes.ts`, `agents.ts`) plus `shared.ts` for the one
+shared `API` base-path constant. **No barrel `api/index.ts`** — deviated from
+the fix suggested above on purpose: no barrel/re-export pattern exists
+anywhere else in this codebase, and `server/src/routes/*.ts` (the thing this
+split mirrors) doesn't use one either — `server/src/index.ts` imports each
+route module directly by path. A barrel here would have partly undone the
+point of splitting, since a consumer needing several domains could still pull
+a long re-exported list from one place. Consumers import directly from each
+domain module instead (`from '../api/items'`, `from '../api/workflows'`,
+etc.) — matches the codebase's one real precedent.
+
+<details>
+<summary>Original deferral discussion (superseded — kept for history)</summary>
+
+Deliberately deferred, not fixed. Discussed rather than split:
 Epic 4 (Quick Items) is unlikely to push `api.ts` past the threshold (it
 extends the existing Items domain); Epic 5 (tag buckets) and Epic 6 (Inbox)
 are the more likely triggers. A forward-looking note was added to
 `.claude/plans/epic-5-decisions.md` to re-check and do the split when Epic 5's
 endpoints are actually drafted. Verified current line count: 498 — essentially
 unchanged, still well under the ~700 threshold.
+
+</details>
 
 ---
 
