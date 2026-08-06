@@ -53,6 +53,25 @@ Work items gain an `is_attached` flag. Attached children move with their parent 
 
 ---
 
+### Epic 3.2 — Item Positioning & Board-Scoped Ordering
+**Why here:** Surfaced while auditing Epic 3 — today's `items.position` is a
+single workphase-scoped value with no manual reordering for attached
+children, no recalculation when a column's merged/expanded display or range
+changes, and (per further discussion) may need to become a board-level
+concern so reordering on one board doesn't affect another. Sequenced before
+Epic 3.5 because that epic's drag gesture builds on the same `useBoardDnd`
+layer this would change — doing the gesture first would mean redoing it.
+
+Rework item positioning: attached children become manually reorderable
+relative to their siblings; merged↔expanded column changes (and range edits
+that change a merged column's covered workphases) recompute ordering by
+workphase-rank while preserving prior relative order; resolve whether
+position should move from an item-level value to a board-scoped one. See
+`.claude/plans/epic-3.2-decisions.md` for the full design discussion —
+nothing here is decided yet.
+
+---
+
 ### Epic 3.5 — Drag-and-Drop Attach/Detach Gesture
 **Why here:** The attach/detach *state* and all its behaviors shipped in Epic 3 (detail-panel checkbox + child-badge controls, cascade on parent move, nested render, cycle prevention). What's left is only the ergonomic **board gesture** for it. It's split out because it touches the dnd-kit board-interaction layer deeply and isn't required for the attached/detached model to be correct and usable — so Epic 3 closes without it (audit finding #13).
 
