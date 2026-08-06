@@ -31,22 +31,16 @@ is written.
 - **Tests:** Playwright E2E + Vitest (client + server unit tests)
 - **MCP:** 8 tools wrapping the REST API — no direct DB access
 
-## Completed Epics
+## Epic Status
 
-- Epic 2: Boards layer. `workphases` (data layer, unchanged) stay a flat ordered list per
-  workflow; `boards`/`columns` are a new UI layer — each column covers a contiguous range
-  of workphases (by position) with a `merged`/`expanded` display mode. Unsorted is a
-  computed bucket for uncovered workphases, never stored. See `client/CLAUDE.md` for the
-  full data model.
-
-## Planned Epics (do not design around things already planned)
-
-- Epic 3: Work item attached/detached behavior
-- Epic 4: Quick items
-- Epic 5: Tags & type system (replaces current flat labels)
-- Epic 6: Inbox
-- Epic 7: Work item detail & chat UI
-- Epic 8: Dashboard, navigation & notifications
+Check `.claude/plans/mvp-roadmap.md` for what's complete, in progress, or
+planned — don't hand-maintain a copy of that list here; it drifts (this
+section used to list Epic 3 as "planned" and had to be caught and fixed after
+Epic 3 had already shipped). The "Future epics" skeptical question above
+means: check the roadmap before assuming something is in scope, out of scope,
+or already covered. For the shipped data-model details behind each completed
+epic, see `client/CLAUDE.md` — kept current as the actual architecture
+reference, not a status tracker.
 
 ## Key Architectural Decisions Already Made
 
@@ -54,5 +48,8 @@ is written.
 - Items derive their workflow through `workphase → workflow`; there is no `board_id` or
   `column_id` on items — boards/columns are a pure presentation layer
 - Position ordering uses real-number midpoints (no full reindexes)
+- Items are a tree (`parent_id`) with an `is_attached` flag: attached children mirror
+  their parent's workphase and move with it via a server-side cascade; detached
+  children keep independent status. See `client/CLAUDE.md`'s Epic 3 section.
 - No API billing — Claude integration uses deep links and MCP, not the Anthropic API
 - Single user, local SQLite — no auth, no multi-tenancy required for MVP

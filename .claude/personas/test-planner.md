@@ -39,18 +39,25 @@ coverage strategy for a feature or epic before implementation begins (or during 
   test (e.g. `item-detail/pillUtils.test.ts`, `sidebar/projectTreeUtils.test.ts`)
 - Run: `npm run test:unit` from project root (or `test:server` / `test:client`)
 
-## Known Coverage Gaps (as of Epic 2)
+## Known Coverage Gaps
 
 These areas have zero tests — mention them if adjacent to the feature being planned:
-labels, notifications display, attachments, agents modal, item detail panel editing,
-browser drag-and-drop gestures (boards/columns E2E tests set up state via API and assert
-on rendering rather than simulating real drag gestures, matching the existing convention).
+labels, notifications display, attachments, agents modal, item detail panel editing.
+(Re-verify before relying on this list — it's a manually-checked snapshot, not derived
+from anything that stays current automatically.)
 
-## Planned Features That Are Out of Scope
+**Browser drag-and-drop is not off the table.** Most boards/columns E2E tests set up
+state via API and assert on rendering rather than simulating a real drag — but real
+mouse-based drag simulation (`pointerdown` → move past dnd-kit's activation distance →
+stepped `pointermove`s → `pointerup`) is proven reliable against this app's
+`PointerSensor` setup; see `tests/ui/attached-children.spec.ts`'s parent-drag-cascades-
+attached-child test. Don't default to "hard to test" for new DnD-critical behavior —
+use a real drag simulation when the drag itself is what needs verifying, and reserve
+the API-setup+assert-on-rendering shortcut for cases where it isn't.
 
-Do not design tests around functionality planned for future epics:
-- Epic 4: Quick items
-- Epic 5: Tag buckets (current labels are a temporary system)
-- Epic 6: Inbox
-- Epic 7: Full detail panel + chat UI
-- Epic 8: Dashboard + full notification system
+## Scope Check
+
+Check `.claude/plans/mvp-roadmap.md` before designing tests around functionality — don't
+build a test plan around something planned for a later epic. Don't hand-maintain a copy
+of the epic list here; it drifts (this section had already fallen behind by two
+sub-epics, 3.2 and 3.5, before anyone noticed).

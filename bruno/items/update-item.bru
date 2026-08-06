@@ -1,0 +1,19 @@
+meta {
+  name: Update Item
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/items/{{itemId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Updated title",
+    "parentId": "{{parentItemId}}",
+    "isAttached": true
+  }
+}

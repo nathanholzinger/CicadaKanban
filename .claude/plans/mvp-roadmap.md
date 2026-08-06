@@ -35,18 +35,18 @@ Rename `boards` → `workflows` throughout (schema, API routes, MCP tools, UI, t
 ### Epic 1.5 — Codebase Orientation & Hardening ✅ (complete)
 **Why here:** Epic 1's rename left rough edges (`card`/`work-item`/`column` still leaking through code and docs), no unit-level safety net, and no onboarding docs for a fresh contributor. Settling this before Epic 2 means subsequent epics build on clean naming and a real test harness instead of compounding drift.
 
-Finished the Epic 1 rename (`card`→`item`, `work-item`→`item`, `column`→`workphase`) across schema, routes, MCP tools, UI, and the Bruno collection. Ran a full code quality audit and fixed its findings (stale `workItemId` fields, a `boardId`/`workflowId` mix-up bug, a cascade-delete gap orphaning grandchildren). Split the oversized `CardDetailPanel.tsx` into `ItemDetailPanel.tsx` plus focused sub-components, and refactored Tailwind usage to best-practice patterns. Added a Vitest unit test suite (client + server) alongside the existing Playwright E2E suite. Added onboarding docs (`.claude/guides/codebase-walkthrough.md`, rewritten `client/CLAUDE.md`) and persona/checklist scaffolding for future epics. Removed `node_modules` from git tracking.
+Finished the Epic 1 rename (`card`→`item`, `work-item`→`item`, `column`→`workphase`) across schema, routes, MCP tools, UI, and the Bruno collection. Ran a full code quality audit and fixed its findings (stale `workItemId` fields, a `boardId`/`workflowId` mix-up bug, a cascade-delete gap orphaning grandchildren). Split the oversized `CardDetailPanel.tsx` into `ItemDetailPanel.tsx` plus focused sub-components, and refactored Tailwind usage to best-practice patterns. Added a Vitest unit test suite (client + server) alongside the existing Playwright E2E suite. Added onboarding docs (`.claude/guides/epic1and2-codebase-walkthrough.md`, rewritten `client/CLAUDE.md`) and persona/checklist scaffolding for future epics. Removed `node_modules` from git tracking.
 
 ---
 
-### Epic 2 — Boards Layer
+### Epic 2 — Boards Layer ✅ (complete)
 **Why second:** Board views define how the workflow is displayed and interacted with. This needs to exist cleanly before downstream epics (Inbox, Dashboard) that depend on how items are surfaced.
 
 A workflow is a flat ordered list of statuses (columns). Boards are configurable views of a workflow. Add a `boards` table and a `board_columns` table where each board column covers a contiguous range of workflow statuses (`start_status_id`, `end_status_id`). Display mode per board column: `merged` (all statuses in one swimlane) or `expanded` (each status gets a sub-row). An unsorted column appears automatically when any workflow status is not covered by any board column's range, with a "needs attention" indicator. Dropping a card into a merged column assigns it to the first status in that column's range; for finer precision, use a board where individual statuses are their own columns.
 
 ---
 
-### Epic 3 — Work Item Behaviors (Attached & Detached)
+### Epic 3 — Work Item Behaviors (Attached & Detached) ✅ (complete)
 **Why third:** Once the project/workflow structure exists and columns are properly hierarchical, the rules for how work items move through that structure need to be defined. Attached vs. detached determines whether children follow parents — this affects drag-and-drop, column moves, and board display in every subsequent feature.
 
 Work items gain an `is_attached` flag. Attached children move with their parent when the parent changes columns. Detached children keep their independent column assignment. Board display toggles: show attached children as indented list, or collapse/hide them. Attach/detach is driven from the item detail panel (checkbox) and the child badge; the board-level **drag-and-drop gesture** for it is split out to Epic 3.5 and is **not** required to close Epic 3.

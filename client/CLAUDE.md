@@ -31,7 +31,7 @@ native claude.ai interface — no Anthropic API billing.
   contiguous range of workphases (by position), with a `merged` (one swimlane) or
   `expanded` (each workphase its own sub-row) display mode. This lets different boards
   show the same workflow at different levels of granularity. See Epic 2 in
-  `.claude/guides/codebase-walkthrough.md` for the full design rationale.
+  `.claude/guides/epic1and2-codebase-walkthrough.md` for the full design rationale.
 - **Single user:** No auth system. App runs locally on `localhost`.
 - **No API billing:** Claude integration uses deep links (`claude://...`) and the local
   MCP server — no calls to the Anthropic API.
@@ -71,7 +71,7 @@ projects (tree — unlimited depth via parent_id self-ref)
 | `workphases` | Workflow stages (data layer) — `id, workflow_id, name, position, triggers_notification, is_terminal, created_at` |
 | `boards` | Named views of a workflow (UI layer) — `id, workflow_id, name, position, created_at, updated_at` |
 | `columns` | A board's columns — `id, board_id, name?, start_workphase_id, end_workphase_id, display_mode, position, created_at`. `name` is nullable and falls back to the covered workphase(s)' own name(s) |
-| `items` | Kanban cards — `id, type?, parent_id?, project_id, workphase_id?, title, description?, position?, assignee_type?, agent_id?, created_at, updated_at` |
+| `items` | Kanban cards — `id, type?, parent_id?, is_attached, project_id, workphase_id?, title, description?, position?, assignee_type?, agent_id?, created_at, updated_at` |
 | `item_types` | Descriptive labels: Epic, Story, Task (seeded). FK target for `items.type`. |
 | `agents` | Claude agent registrations — `claude_project_id`, `surface` (chat/code/cowork), `repo_path` |
 | `labels` | Flat global tags — a single reusable set shared across all projects/workflows (will be replaced by tag buckets in Epic 5) |
@@ -107,6 +107,24 @@ midpoint strategy: inserting between 2.0 and 3.0 → 1.5. New rows go at `max(ex
   presentation layer over `items.workphase_id`. MCP tools operate at the workphase level
   and are unaffected by this layer.
 
+### Attached / Detached Children (Epic 3)
+- Items gain `is_attached` (default `true`). An **attached** child mirrors its
+  parent's current `workphase_id` and moves with it; a **detached** child keeps
+  its own, independent `workphase_id`.
+- The cascade (`server/src/lib/attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`)
+  fires on every server path that changes a parent's workphase — the move
+  endpoint, PUT reparent/attach, and MCP's `move_item` all route through it.
+  A **detached** child halts the cascade for its whole branch: its own
+  attached children do not follow, by construction.
+- Attaching (`is_attached: true`) snaps the item to its parent's current
+  workphase immediately; detaching leaves the item's `workphase_id` exactly
+  where it was.
+- Attached children render nested under their parent card (non-draggable —
+  detaching is done via the item detail panel checkbox or the child badge,
+  not drag-and-drop yet). `boards.showAttachedChildren` toggles whether they
+  show expanded/indented or collapsed by default. A board-level **drag
+  gesture** to attach/detach is deliberately not built — split out to Epic 3.5.
+
 ---
 
 ## API Routes
@@ -138,7 +156,7 @@ Base URL: `http://localhost:3001`
 KanbanApp/
 ├── .mcp.json                    ← MCP server config (points to server/src/mcp.ts)
 ├── .claude/
-│   ├── guides/                  ← codebase-walkthrough.md, audit docs
+│   ├── guides/                  ← epic1and2-codebase-walkthrough.md, audit docs
 │   ├── personas/                ← architect.md, coder.md, test-planner.md, auditor.md
 │   └── checklists/              ← epic-done.md
 ├── server/
@@ -154,9 +172,13 @@ KanbanApp/
 │       │   └── runMigrations.ts ← migration runner + seed + board backfill
 │       ├── lib/                 ← shared domain logic (routes import from lib/, never from each other)
 │       │   ├── columnRanges.ts  ← rank map, range coverage/overlap/broken, getOrderedWorkphases, shrink-on-workphase-delete
-│       │   ├── workflowItems.ts ← getWorkflowItems (items in any of a workflow's workphases)
+│       │   ├── workflowItems.ts ← getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope)
 │       │   ├── boardCascade.ts  ← deleteBoardsById (transactional columns→boards delete, used by 3 delete paths)
-│       │   └── getOrNotFound.ts ← fetch-single-entity-or-404 helper (used across all route files)
+│       │   ├── attachedCascade.ts ← cascadeWorkphaseToAttachedDescendants (attach/detach cascade, Epic 3)
+│       │   ├── itemTree.ts      ← isSelfRefDescendant/assertValidReparent (items+projects) + walkItemDescendants (items)
+│       │   ├── reorder.ts       ← applyReorder (shared PATCH /reorder validation — items, workphases, columns)
+│       │   ├── positions.ts     ← nextPosition (shared append-at-end position math)
+│       │   └── getOrNotFound.ts ← getByIdOrNotFound (fetch-by-id-or-404 helper, used across all route files)
 │       └── routes/              ← one file per route prefix (boards.ts, columns.ts, workphases.ts, ...)
 ├── client/
 │   ├── CLAUDE.md                ← you are here
