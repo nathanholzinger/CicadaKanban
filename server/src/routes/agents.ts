@@ -3,7 +3,7 @@ import { db } from '../db/index.js';
 import { agents } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -43,7 +43,7 @@ router.post('/', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
-  const agent = getOrNotFound(db.select().from(agents).where(eq(agents.id, req.params.id)).get(), res, 'Agent not found');
+  const agent = getByIdOrNotFound(agents, req.params.id, res, 'Agent not found');
   if (!agent) return;
 
   const { name, claudeProjectId, surface, repoPath, notes } = req.body;
@@ -70,7 +70,7 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  const agent = getOrNotFound(db.select().from(agents).where(eq(agents.id, req.params.id)).get(), res, 'Agent not found');
+  const agent = getByIdOrNotFound(agents, req.params.id, res, 'Agent not found');
   if (!agent) return;
 
   // Items and chat threads referencing this agent are not blocked — their FK

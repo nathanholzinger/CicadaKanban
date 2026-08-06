@@ -3,7 +3,7 @@ import { db } from '../db/index.js';
 import { itemTypes } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -37,7 +37,7 @@ router.post('/', (req, res) => {
 
 // Update an item type
 router.put('/:id', (req, res) => {
-  const existing = getOrNotFound(db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get(), res, 'Item type not found');
+  const existing = getByIdOrNotFound(itemTypes, req.params.id, res, 'Item type not found');
   if (!existing) return;
 
   const { name, color } = req.body;
@@ -59,7 +59,7 @@ router.put('/:id', (req, res) => {
 // Delete an item type. Items using it are not blocked — the FK nulls their
 // `type` (ON DELETE SET NULL), leaving them typeless.
 router.delete('/:id', (req, res) => {
-  const existing = getOrNotFound(db.select().from(itemTypes).where(eq(itemTypes.id, req.params.id)).get(), res, 'Item type not found');
+  const existing = getByIdOrNotFound(itemTypes, req.params.id, res, 'Item type not found');
   if (!existing) return;
 
   db.delete(itemTypes).where(eq(itemTypes.id, req.params.id)).run();

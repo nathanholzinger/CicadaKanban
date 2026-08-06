@@ -4,7 +4,7 @@ import { projects, workflows, workphases, items, notifications, boards } from '.
 import { eq, inArray, asc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { assertValidReparent } from '../lib/itemTree.js';
 
 const router = Router();
@@ -17,7 +17,7 @@ router.get('/', (_req, res) => {
 
 // Get a single project with its workflows
 router.get('/:id', (req, res) => {
-  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
   const projectWorkflows = db.select().from(workflows).where(eq(workflows.projectId, req.params.id)).all();
   res.json({ ...project, workflows: projectWorkflows });
@@ -47,7 +47,7 @@ router.post('/', (req, res) => {
 
 // Update a project
 router.put('/:id', (req, res) => {
-  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
 
   const { name, description, parentId, position } = req.body;
@@ -155,7 +155,7 @@ router.patch('/reorder', (req, res) => {
 
 // Delete a project — recursively cascades through descendants → workflows → workphases → items
 router.delete('/:id', (req, res) => {
-  const project = getOrNotFound(db.select().from(projects).where(eq(projects.id, req.params.id)).get(), res, 'Project not found');
+  const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
 
   try {

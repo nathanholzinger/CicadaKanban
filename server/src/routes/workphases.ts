@@ -4,7 +4,7 @@ import { workphases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
 import { nextPosition } from '../lib/positions.js';
 
@@ -42,7 +42,7 @@ router.post('/', (req, res) => {
 
 // Update a workphase (name, agent, notification/terminal flags)
 router.put('/:id', (req, res) => {
-  const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
+  const workphase = getByIdOrNotFound(workphases, req.params.id, res, 'Workphase not found');
   if (!workphase) return;
 
   const { name, triggersNotification, isTerminal } = req.body;
@@ -78,7 +78,7 @@ router.patch('/reorder', (req, res) => {
 // their workphaseId (ON DELETE SET NULL), so they survive and surface as
 // "Unknown status" in the board's unsorted bucket until re-filed.
 router.delete('/:id', (req, res) => {
-  const workphase = getOrNotFound(db.select().from(workphases).where(eq(workphases.id, req.params.id)).get(), res, 'Workphase not found');
+  const workphase = getByIdOrNotFound(workphases, req.params.id, res, 'Workphase not found');
   if (!workphase) return;
 
   const { shrunkColumns, deletedColumns } = db.transaction(tx => {

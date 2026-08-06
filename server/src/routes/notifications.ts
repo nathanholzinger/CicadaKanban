@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db } from '../db/index.js';
 import { notifications } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -20,7 +20,7 @@ router.patch('/read-all', (_req, res) => {
 });
 
 router.patch('/:id/read', (req, res) => {
-  const row = getOrNotFound(db.select().from(notifications).where(eq(notifications.id, req.params.id)).get(), res, 'Notification not found');
+  const row = getByIdOrNotFound(notifications, req.params.id, res, 'Notification not found');
   if (!row) return;
   db.update(notifications).set({ isRead: 1 }).where(eq(notifications.id, req.params.id)).run();
   res.json({ success: true });

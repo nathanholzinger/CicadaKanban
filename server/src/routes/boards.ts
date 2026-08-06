@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { nextPosition } from '../lib/positions.js';
 
 type Workphase = typeof workphases.$inferSelect;
@@ -82,7 +82,7 @@ router.get('/', (req, res) => {
 
 // Get a board with its columns (resolved to sub-rows) and unsorted bucket
 router.get('/:id', (req, res) => {
-  const board = getOrNotFound(db.select().from(boards).where(eq(boards.id, req.params.id)).get(), res, 'Board not found');
+  const board = getByIdOrNotFound(boards, req.params.id, res, 'Board not found');
   if (!board) return;
 
   const { workphases: workflowWorkphases, rankMap } = getOrderedWorkphases(board.workflowId);
@@ -141,7 +141,7 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, workflowId)).get(), res, 'Workflow not found');
+  const workflow = getByIdOrNotFound(workflows, workflowId, res, 'Workflow not found');
   if (!workflow) return;
 
   const { workphases: workflowWorkphases } = getOrderedWorkphases(workflowId);
@@ -151,7 +151,7 @@ router.post('/', (req, res) => {
 
 // Rename a board and/or update its display settings
 router.put('/:id', (req, res) => {
-  const board = getOrNotFound(db.select().from(boards).where(eq(boards.id, req.params.id)).get(), res, 'Board not found');
+  const board = getByIdOrNotFound(boards, req.params.id, res, 'Board not found');
   if (!board) return;
 
   const { name, showAttachedChildren } = req.body;
@@ -168,7 +168,7 @@ router.put('/:id', (req, res) => {
 
 // Delete a board and its columns — blocked if it's the workflow's last board
 router.delete('/:id', (req, res) => {
-  const board = getOrNotFound(db.select().from(boards).where(eq(boards.id, req.params.id)).get(), res, 'Board not found');
+  const board = getByIdOrNotFound(boards, req.params.id, res, 'Board not found');
   if (!board) return;
 
   const siblingBoards = db.select().from(boards).where(eq(boards.workflowId, board.workflowId)).all();

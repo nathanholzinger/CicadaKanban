@@ -7,7 +7,7 @@ import { createDefaultBoard } from './boards.js';
 import { getOrderedWorkphases } from '../lib/columnRanges.js';
 import { getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -39,7 +39,7 @@ router.get('/', (req, res) => {
 
 // Get a single workflow with workphases and items
 router.get('/:id', (req, res) => {
-  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;
 
   const { workphases: workflowWorkphases } = getOrderedWorkphases(workflow.id);
@@ -132,7 +132,7 @@ router.post('/', (req, res) => {
 
 // Update a workflow
 router.put('/:id', (req, res) => {
-  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;
 
   const { name, description } = req.body;
@@ -153,7 +153,7 @@ router.put('/:id', (req, res) => {
 // inherited this workflow) and surface as "Unknown status" on whatever board
 // their project now resolves to.
 router.delete('/:id', (req, res) => {
-  const workflow = getOrNotFound(db.select().from(workflows).where(eq(workflows.id, req.params.id)).get(), res, 'Workflow not found');
+  const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;
 
   db.transaction(tx => {

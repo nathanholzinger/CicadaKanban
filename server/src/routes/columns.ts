@@ -4,7 +4,7 @@ import { boards, columns } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, validateColumnRange } from '../lib/columnRanges.js';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
 import { nextPosition } from '../lib/positions.js';
 
@@ -19,7 +19,7 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const board = getOrNotFound(db.select().from(boards).where(eq(boards.id, boardId)).get(), res, 'Board not found');
+  const board = getByIdOrNotFound(boards, boardId, res, 'Board not found');
   if (!board) return;
 
   const { rankMap } = getOrderedWorkphases(board.workflowId);
@@ -51,7 +51,7 @@ router.post('/', (req, res) => {
 
 // Update a column's range, display mode, or name override
 router.put('/:id', (req, res) => {
-  const column = getOrNotFound(db.select().from(columns).where(eq(columns.id, req.params.id)).get(), res, 'Column not found');
+  const column = getByIdOrNotFound(columns, req.params.id, res, 'Column not found');
   if (!column) return;
 
   const { startWorkphaseId, endWorkphaseId, displayMode, name } = req.body;
@@ -93,7 +93,7 @@ router.patch('/reorder', (req, res) => {
 
 // Delete a column — always safe, items never reference columns directly
 router.delete('/:id', (req, res) => {
-  const column = getOrNotFound(db.select().from(columns).where(eq(columns.id, req.params.id)).get(), res, 'Column not found');
+  const column = getByIdOrNotFound(columns, req.params.id, res, 'Column not found');
   if (!column) return;
 
   db.delete(columns).where(eq(columns.id, req.params.id)).run();

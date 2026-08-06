@@ -3,7 +3,7 @@ import { db, type Tx } from '../db/index.js';
 import { items, workphases, activityLog, notifications } from '../db/schema.js';
 import { and, eq, inArray, ne } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
@@ -44,7 +44,7 @@ function workphaseExists(id: string): boolean {
 
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
-  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
   if (!item) return;
 
   const depth = computeDepth(req.params.id);
@@ -161,7 +161,7 @@ router.post('/', (req, res) => {
 // Update an item's details (not position/workphase directly — use move for that,
 // though reparenting/attaching here can still shift workphaseId to follow the parent)
 router.put('/:id', (req, res) => {
-  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
   if (!item) return;
 
   const { title, description, assigneeType, agentId, parentId, isAttached } = req.body;
@@ -228,7 +228,7 @@ router.put('/:id', (req, res) => {
 
 // Move an item to a different workphase and/or reorder within a workphase
 router.patch('/:id/move', (req, res) => {
-  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
   if (!item) return;
 
   const { workphaseId } = req.body;
@@ -309,7 +309,7 @@ router.patch('/reorder', (req, res) => {
 
 // Add a comment to an item's activity log
 router.post('/:id/comments', (req, res) => {
-  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
   if (!item) return;
 
   const { content } = req.body;
@@ -327,7 +327,7 @@ router.post('/:id/comments', (req, res) => {
 // ON DELETE CASCADE; parentId is a soft reference with no FK, so the subtree is
 // still collected in app code and deleted in one statement.
 router.delete('/:id', (req, res) => {
-  const item = getOrNotFound(db.select().from(items).where(eq(items.id, req.params.id)).get(), res, 'Item not found');
+  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
   if (!item) return;
 
   const allIds = walkItemDescendants(req.params.id, { includeRoot: true });
