@@ -28,6 +28,13 @@ export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readon
   return map;
 }
 
+// Encodes a droppable id for an expanded column's per-workphase sub-row.
+// Paired with the `subrow::` decode branch in resolveDropWorkphaseId below —
+// keep them in the same file so the id format only needs to be understood once.
+export function subrowContainerId(columnId: string, workphaseId: string): string {
+  return `subrow::${columnId}::${workphaseId}`;
+}
+
 // Resolves a dnd-kit `over.id` to the workphase an item should be assigned
 // to if dropped there, or null if it's not a valid drop target (Unsorted,
 // a broken column, or an expanded column's outer wrapper — expanded mode

@@ -8,19 +8,7 @@ import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import { XIcon } from './components/icons';
 import { formatTime } from './components/item-detail/pillUtils';
-
-export function getAncestors(project: Project, projects: Project[]): Project[] {
-  const map = new Map(projects.map(p => [p.id, p]));
-  const ancestors: Project[] = [];
-  let current: Project | undefined = project;
-  while (current?.parentId) {
-    const parent = map.get(current.parentId);
-    if (!parent) break;
-    ancestors.unshift(parent);
-    current = parent;
-  }
-  return ancestors;
-}
+import { getAncestors } from './lib/hierarchy';
 
 export default function App() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);

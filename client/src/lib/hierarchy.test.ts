@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDescendantIds, buildParentOptions, type TreeNode } from './hierarchy';
+import { getAncestors, getDescendantIds, buildParentOptions, type TreeNode } from './hierarchy';
 
 interface NamedNode extends TreeNode {
   name: string;
@@ -36,6 +36,31 @@ describe('getDescendantIds', () => {
 
   it('is safe when the id does not exist in the collection', () => {
     expect(getDescendantIds('ghost', nodes)).toEqual(new Set());
+  });
+});
+
+describe('getAncestors', () => {
+  it('returns an empty array for a top-level node', () => {
+    const root = node('root');
+    expect(getAncestors(root, [root])).toEqual([]);
+  });
+
+  it('returns the parent for a node one level deep', () => {
+    const parent = node('parent');
+    const child = node('child', 'parent');
+    expect(getAncestors(child, [parent, child])).toEqual([parent]);
+  });
+
+  it('returns ancestors root-first for a node three levels deep', () => {
+    const grandparent = node('grandparent');
+    const parent = node('parent', 'grandparent');
+    const child = node('child', 'parent');
+    expect(getAncestors(child, [grandparent, parent, child])).toEqual([grandparent, parent]);
+  });
+
+  it('does not throw when a parentId points to a node absent from the array', () => {
+    const child = node('child', 'missing-parent');
+    expect(getAncestors(child, [child])).toEqual([]);
   });
 });
 

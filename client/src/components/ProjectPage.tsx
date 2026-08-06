@@ -42,6 +42,9 @@ export default function ProjectPage({
   const [deletingProject, setDeletingProject] = useState(false);
   const [savingParent, setSavingParent] = useState(false);
 
+  // Intentionally scoped to project.id only: this resets the edit buffers/tab
+  // state when navigating to a *different* project, not on every edit to the
+  // current project's name/description (which would fight the user mid-edit).
   useEffect(() => {
     setNameValue(project.name);
     setDescValue(project.description ?? '');
@@ -49,6 +52,7 @@ export default function ProjectPage({
     setSavingParent(false);
     setActiveTab('overview');
     setShowSetupModal(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
   async function handleSave(field: 'name' | 'description') {

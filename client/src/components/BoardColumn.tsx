@@ -7,10 +7,7 @@ import KanbanCard from './KanbanCard';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
-
-export function subrowContainerId(columnId: string, workphaseId: string): string {
-  return `subrow::${columnId}::${workphaseId}`;
-}
+import { subrowContainerId } from './workflow/boardDndUtils';
 
 interface BoardColumnProps {
   column: Column;

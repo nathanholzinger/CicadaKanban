@@ -23,6 +23,22 @@ export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<st
   return result;
 }
 
+// Walks up the parentId chain from `node`, collecting ancestors in
+// root-to-immediate-parent order (excludes `node` itself). Stops without
+// throwing if a parentId points to a node absent from `nodes`.
+export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): T[] {
+  const map = new Map(nodes.map(n => [n.id, n]));
+  const ancestors: T[] = [];
+  let current: T | undefined = node;
+  while (current?.parentId) {
+    const parent = map.get(current.parentId);
+    if (!parent) break;
+    ancestors.unshift(parent);
+    current = parent;
+  }
+  return ancestors;
+}
+
 // Reparent dropdown options: every node except the current one and its
 // descendants (either would create a cycle), preceded by a "none" entry.
 //

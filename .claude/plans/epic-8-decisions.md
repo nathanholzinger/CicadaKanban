@@ -219,3 +219,21 @@ one-offs** — inputs/selects, buttons, badges, icons, repeated JSX. (The Epic 3
 individual *Duplication & Abstraction* findings are being addressed now; this note is
 about the later once-over across the whole app, not that backlog.) No dependency on the
 events work — if Epic 8 slips, spin it out as its own tech-debt ticket.
+
+**Also a good time to revisit remaining ESLint issues.** As of 2026-08-05, a full
+`client` lint sweep was triaged and cleaned up: `coverage/` (generated, not source)
+excluded from linting; the two `react-refresh/only-export-components` violations
+fixed by moving `getAncestors`/`subrowContainerId` into their natural shared-lib
+homes (`lib/hierarchy.ts`, `workflow/boardDndUtils.ts`); two confirmed-safe
+violations (`ProjectSidebar.tsx`'s ref read, `ProjectPage.tsx`'s narrowed
+`useEffect` deps) given documented `eslint-disable-next-line` suppressions rather
+than left as unexplained noise. **Three remain, deliberately deferred, all the same
+shape:** `react-hooks/set-state-in-effect` in `BoardView.tsx`, `ItemDetailPanel.tsx`,
+and `ProjectPage.tsx` — each resets local UI state (loading flags, edit-draft
+fields) synchronously inside a `useEffect` when an id/prop changes, then fetches.
+Legitimate, common pattern, not a bug — but the properly-idiomatic fix (e.g. keying
+these components by `itemId`/`project.id` so React remounts fresh instead of
+manually resetting each field) is a real behavioral change worth testing carefully,
+not a drive-by lint fix. This UI consistency pass is the natural point to either do
+that refactor for all three at once, or make a deliberate, documented call to
+suppress them too.

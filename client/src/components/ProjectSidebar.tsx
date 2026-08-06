@@ -173,6 +173,13 @@ export default function ProjectSidebar({
         >
           <SortableContext items={sortableItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
             <div className="pb-4">
+              {/* Reading descendantIds.current here is safe: every mutation site
+                  (handleDragStart, clearDrag) always sets it alongside a real
+                  setActiveId(...) state update in the same call, so the re-render
+                  that follows always sees the ref's already-updated value — there's
+                  no path where the ref changes without a state update triggering
+                  the render that reads it. */}
+              {/* eslint-disable-next-line react-hooks/refs */}
               {flatItems.map((item) => {
                 // When active item is removed from sortable list, its index in flatItems
                 // maps to a shifted index in sortableItems. The indicator uses overIndex

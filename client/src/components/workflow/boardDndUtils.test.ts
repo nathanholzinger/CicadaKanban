@@ -4,10 +4,10 @@ import {
   resolveDropWorkphaseId,
   computeSameWorkphaseReorder,
   computeDropPosition,
+  subrowContainerId,
   type DropColumn,
   type PositionedItem,
 } from './boardDndUtils';
-import { subrowContainerId } from '../BoardColumn';
 
 function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
