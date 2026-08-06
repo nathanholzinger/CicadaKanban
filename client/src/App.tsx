@@ -7,6 +7,7 @@ import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import { XIcon } from './components/icons';
+import { formatTime } from './components/item-detail/pillUtils';
 
 export function getAncestors(project: Project, projects: Project[]): Project[] {
   const map = new Map(projects.map(p => [p.id, p]));
@@ -77,10 +78,6 @@ export default function App() {
   async function handleDismissNotification(id: string) {
     await markNotificationRead(id);
     setNotifications(prev => prev.filter(n => n.id !== id));
-  }
-
-  function formatTime(ts: number) {
-    return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
   async function handleCreateWorkflow(data: { projectId: string; name: string; templateId?: string; sourceWorkflowId?: string }) {
