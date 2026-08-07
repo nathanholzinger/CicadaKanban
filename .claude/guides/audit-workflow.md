@@ -22,9 +22,9 @@ Use the `Agent` tool with `subagent_type: general-purpose`, one call per pass,
 same mechanical way — this is a lookup, not a judgment call:
 
 1. Contents (or a pointer to) `.claude/personas/auditor.md` — shared context,
-   output format, and the pointer to `.claude/plans/mvp-roadmap.md` for
+   output format, and the pointer to `docs/planning/mvp-roadmap.md` for
    **Covered by Epic N** tagging
-2. Contents (or a pointer to) `.claude/plans/mvp-roadmap.md` — needed so the
+2. Contents (or a pointer to) `docs/planning/mvp-roadmap.md` — needed so the
    subagent can tag findings against real epics instead of guessing
 3. Contents (or a pointer to) the pass doc itself:
    - `.claude/personas/auditor-correctness-security.md`
@@ -39,7 +39,7 @@ same mechanical way — this is a lookup, not a judgment call:
 Each subagent returns its own findings list, tagged **Fix Now** / **Watch
 List** / **Covered by Epic N** / **Informational**, with file path + line
 range + problem + fix per finding — same format as
-`.claude/guides/code-quality-audit-epic1.md`.
+`docs/audits/code-quality-audit-epic1.md`.
 
 Run in the background if the audit covers a large scope; run in the
 foreground (synchronously) if you need the results before continuing —
@@ -56,10 +56,10 @@ usually simpler for an interactive audit session.
 - Tag each finding with which pass(es) surfaced it, e.g. `[Correctness &
   Security]` or `[File Responsibility + Duplication & Abstraction]`
 - Spot-check any **Covered by Epic N** tags against
-  `.claude/plans/mvp-roadmap.md` yourself before finalizing — a subagent
+  `docs/planning/mvp-roadmap.md` yourself before finalizing — a subagent
   mistagging something is a one-line fix here, not a re-run
 - Write the combined report to
-  `.claude/guides/code-quality-audit-epic{N}.md` (or a dated filename for a
+  `docs/audits/code-quality-audit-epic{N}.md` (or a dated filename for a
   non-epic-scoped audit), matching the existing Epic 1 audit doc's structure:
   Fix Now / Watch List / Covered by Future Epics sections, findings numbered
   within each
@@ -84,7 +84,7 @@ Findings don't stop being tracked once the report is written. As each finding
 actually gets addressed — in the same session or a much later one — add a
 terse `**Status:**` line directly under it in the audit doc itself:
 resolved/deferred/superseded in one clause, where the real fix lives (file,
-or a memory/`.claude/plans/` doc for anything with real design rationale
+or a memory/`docs/planning/` doc for anything with real design rationale
 behind it), and the one non-obvious insight if the original investigation
 turned one up. Skip routine verification detail ("tsc clean, 12 tests
 added") — that's what CI and git history are for.

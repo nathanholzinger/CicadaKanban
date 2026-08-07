@@ -4,7 +4,7 @@ import { db } from '../db/index.js';
 import { items } from '../db/schema.js';
 
 // Epic 3.2's general position-resolution contract. See
-// `.claude/plans/epic-3.2-decisions.md` and `.claude/plans/please-adopt-the-architect-functional-chipmunk.md`
+// `docs/planning/epic-3.2-decisions.md` and `.claude/plans/please-adopt-the-architect-functional-chipmunk.md`
 // (Part 2) for the full design rationale — summarized here:
 //
 // Position-adjacent writes never trust a client-computed final value. The

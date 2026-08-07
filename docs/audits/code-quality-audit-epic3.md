@@ -350,13 +350,13 @@ here rather than tagged Covered by Epic N.
 **Fix:** Implement the gesture before calling Epic 3 done, or consciously
 descope it (update the roadmap line if so).
 
-**Status:** ✅ Addressed via conscious descope. `mvp-roadmap.md` carves out
+**Status:** ✅ Addressed via conscious descope. `docs/planning/mvp-roadmap.md` carves out
 a dedicated **Epic 3.5 — Drag-and-Drop Attach/Detach Gesture**, whose
 rationale explicitly cites this finding. Not yet built — verified
 `KanbanCard.tsx` still stops pointer-down propagation on attached-child
 interactive elements, so the gesture genuinely doesn't exist yet, consistent
 with Epic 3.5 being unstarted. (Epic 3.2 — item positioning — is now
-sequenced before it; see `.claude/plans/epic-3.2-decisions.md`.)
+sequenced before it; see `docs/planning/epic-3.2-decisions.md`.)
 
 ---
 
@@ -512,7 +512,7 @@ Deliberately deferred, not fixed. Discussed rather than split:
 Epic 4 (Quick Items) is unlikely to push `api.ts` past the threshold (it
 extends the existing Items domain); Epic 5 (tag buckets) and Epic 6 (Inbox)
 are the more likely triggers. A forward-looking note was added to
-`.claude/plans/epic-5-decisions.md` to re-check and do the split when Epic 5's
+`docs/planning/epic-5-decisions.md` to re-check and do the split when Epic 5's
 endpoints are actually drafted. Verified current line count: 498 — essentially
 unchanged, still well under the ~700 threshold.
 
@@ -664,7 +664,7 @@ handler. `PATCH /api/items/:id/move` now defaults `position` to the end of
 the target workphase's list when the caller omits it, so MCP's `move_item`
 no longer needs to precompute it — it just sends `workphaseId`. An explicit
 `position` on a move still wins outright. Also logged as Q4 in
-`.claude/plans/epic-8-decisions.md`'s Open Questions: whether items need a
+`docs/planning/epic-8-decisions.md`'s Open Questions: whether items need a
 global cross-workphase order (no schema support exists today) — flagged, not
 built.
 
@@ -778,7 +778,7 @@ low-priority.
   project's established class-ordering style.
 - MCP still exposes no `boards`/`columns` tools — already logged in the Epic 1
   audit as an ongoing per-epic expansion item, not re-flagged.
-- `mvp-roadmap.md` prose calls the range table `board_columns`; the
+- `docs/planning/mvp-roadmap.md` prose calls the range table `board_columns`; the
   implementation consistently uses `columns` everywhere. Code-internal naming
   is consistent; only the planning-doc wording differs.
 
@@ -848,7 +848,7 @@ workphase shift, cycle rejection, create-time attach/detach inheritance
 2026-08-06):**
 - **#1 (MCP paths) — still genuinely open.** No `mcp`-specific test file
   exists in `server/tests/`. Lower priority pending a decision (logged as Q5
-  in `.claude/plans/epic-8-decisions.md`) on whether testing the MCP layer
+  in `docs/planning/epic-8-decisions.md`) on whether testing the MCP layer
   is worth it given it's a thin wrapper over the already-tested REST routes.
 - **#2 (DnD cascade integration) — ✅ closed.** The "too unreliable to
   automate" assumption didn't hold up when tried: a real mouse-based drag

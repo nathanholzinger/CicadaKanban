@@ -3,7 +3,7 @@
 > Frozen snapshot as of Epic 2 complete (2026-07-15) — boards layer + post-epic
 > audit fixes. This file covers Epics 1–2 only and is no longer updated;
 > later epics get their own `epic{n}-codebase-walkthrough.md` file, created
-> during that epic's Orientation Checkpoint (see `.claude/checklists/epic-done.md`).
+> during that epic's Orientation Checkpoint (see `.claude/guides/epic-done-checklist.md`).
 
 ## How to Run
 

@@ -30,7 +30,11 @@
       "Bash(awk '/SF:.*routes.columns\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
       "Bash(awk '/SF:.*boardDndUtils\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
       "WebSearch",
-      "Bash(rm \"C:\\\\Users\\\\natha\\\\.claude\\\\plans\\\\please-take-on-the-breezy-wirth.md\")"
+      "Bash(rm \"C:\\\\Users\\\\natha\\\\.claude\\\\plans\\\\please-take-on-the-breezy-wirth.md\")",
+      "Bash(grep -rl \"\\\\.claude/plans\\\\|\\\\.claude/checklists\\\\|\\\\.claude/guides/code-quality-audit\\\\|\\\\.claude/guides/epic.*codebase-walkthrough\" \"C:\\\\Users\\\\natha\\\\.claude\\\\projects\\\\c--Users-natha-Dev-KanbanApp\\\\memory\\\\\" 2>/dev/null)",
+      "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory\" 2>/dev/**)",
+      "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory/**)",
+      "Bash(sed -i 's#\\\\.claude/plans/epic-8-decisions\\\\.md#docs/planning/epic-8-decisions.md#g; s#\\\\.claude/plans/epic-6-decisions\\\\.md#docs/planning/epic-6-decisions.md#g' MEMORY.md architecture_data_modeling.md architecture_events_notifications.md)"
     ]
   }
 }

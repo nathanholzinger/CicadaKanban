@@ -33,7 +33,7 @@ is written.
 
 ## Epic Status
 
-Check `.claude/plans/mvp-roadmap.md` for what's complete, in progress, or
+Check `docs/planning/mvp-roadmap.md` for what's complete, in progress, or
 planned — don't hand-maintain a copy of that list here; it drifts (this
 section used to list Epic 3 as "planned" and had to be caught and fixed after
 Epic 3 had already shipped). The "Future epics" skeptical question above

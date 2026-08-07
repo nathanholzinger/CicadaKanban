@@ -123,7 +123,7 @@ export const items = sqliteTable('items', {
   // Set when this item's workphase becomes terminal (done); cleared if it's
   // reopened into a non-terminal workphase. Detached/root items in a
   // terminal workphase have no meaningful `position` — ordering is derived
-  // from this field instead (see .claude/plans/epic-3.2-decisions.md).
+  // from this field instead (see docs/planning/epic-3.2-decisions.md).
   // Attached children keep their position regardless (parent-scoped, not
   // workphase-scoped).
   completedAt: integer('completed_at'),
@@ -134,7 +134,7 @@ export const items = sqliteTable('items', {
 // ============================================================
 
 // Labels are global (not scoped to a workflow) — a single reusable set shared
-// across every project and workflow. See .claude/plans/epic-5-decisions.md.
+// across every project and workflow. See docs/planning/epic-5-decisions.md.
 export const labels = sqliteTable('labels', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -157,7 +157,7 @@ export const chatThreads = sqliteTable('chat_threads', {
   id: text('id').primaryKey(),
   itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
   // Interim: nulls on agent delete so agents stay deletable. Authorship should
-  // eventually be a snapshot (see .claude/plans/epic-8-decisions.md).
+  // eventually be a snapshot (see docs/planning/epic-8-decisions.md).
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
   label: text('label'),
   createdAt: integer('created_at').notNull(),

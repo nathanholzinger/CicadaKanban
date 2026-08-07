@@ -31,7 +31,7 @@ native claude.ai interface — no Anthropic API billing.
   contiguous range of workphases (by position), with a `merged` (one swimlane) or
   `expanded` (each workphase its own sub-row) display mode. This lets different boards
   show the same workflow at different levels of granularity. See Epic 2 in
-  `.claude/guides/epic1and2-codebase-walkthrough.md` for the full design rationale.
+  `docs/walkthroughs/epic1and2-codebase-walkthrough.md` for the full design rationale.
 - **Single user:** No auth system. App runs locally on `localhost`.
 - **No API billing:** Claude integration uses deep links (`claude://...`) and the local
   MCP server — no calls to the Anthropic API.
@@ -42,7 +42,7 @@ native claude.ai interface — no Anthropic API billing.
 - **Boards → project-owned (decided 2026-07-15, lands in Epic 7):** boards will be
   rescoped from workflow-owned to project-owned, paired with URL routing
   (`/projects/:id`, `/board/:id`, `/items/:id`). Until then the code below reflects
-  workflow-owned boards. See Epic 7 openers in `.claude/plans/mvp-roadmap.md`.
+  workflow-owned boards. See Epic 7 openers in `docs/planning/mvp-roadmap.md`.
 
 ---
 
@@ -156,9 +156,15 @@ Base URL: `http://localhost:3001`
 KanbanApp/
 ├── .mcp.json                    ← MCP server config (points to server/src/mcp.ts)
 ├── .claude/
-│   ├── guides/                  ← epic1and2-codebase-walkthrough.md, audit docs
-│   ├── personas/                ← architect.md, coder.md, test-planner.md, auditor.md
-│   └── checklists/              ← epic-done.md
+│   ├── agents/                  ← test-reconciler.md, auditor-*.md (subagent definitions — harness-discovered path, don't relocate)
+│   ├── guides/                  ← audit-workflow.md, epic-done-checklist.md, pattern/library guides
+│   └── personas/                ← architect.md, coder.md, test-planner.md, product-owner.md, auditor.md
+├── docs/
+│   ├── planning/                ← mvp-roadmap.md, epic-N-decisions.md
+│   ├── audits/                  ← code-quality-audit-epicN.md
+│   ├── walkthroughs/            ← epicN-codebase-walkthrough.md
+│   ├── wiki/                    ← feature-organized source of truth (hardened, testable rules)
+│   └── test-plans/              ← feature-organized test-case catalog, folder-aligned with wiki/
 ├── server/
 │   ├── .env                     ← HOST, PORT, DB_PATH
 │   ├── drizzle/                 ← migration SQL files (0000–0006)

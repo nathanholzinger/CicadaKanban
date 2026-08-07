@@ -155,7 +155,7 @@ file's own length. Split into `client/src/api/`, one module per domain, no
 barrel (`server/src/routes/*.ts` — the thing being mirrored — doesn't use one
 either, so a barrel would've been a new, unprecedented pattern for this
 codebase). Full account in finding #18's Status in
-`.claude/guides/code-quality-audit-epic3.md`.
+`docs/audits/code-quality-audit-epic3.md`.
 
 **Nothing left for Epic 5 to do here** — when Epic 5's Global Label Management
 surface lands, it just adds to `api/labels.ts` like any other domain change,

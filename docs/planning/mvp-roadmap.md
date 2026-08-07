@@ -35,7 +35,7 @@ Rename `boards` → `workflows` throughout (schema, API routes, MCP tools, UI, t
 ### Epic 1.5 — Codebase Orientation & Hardening ✅ (complete)
 **Why here:** Epic 1's rename left rough edges (`card`/`work-item`/`column` still leaking through code and docs), no unit-level safety net, and no onboarding docs for a fresh contributor. Settling this before Epic 2 means subsequent epics build on clean naming and a real test harness instead of compounding drift.
 
-Finished the Epic 1 rename (`card`→`item`, `work-item`→`item`, `column`→`workphase`) across schema, routes, MCP tools, UI, and the Bruno collection. Ran a full code quality audit and fixed its findings (stale `workItemId` fields, a `boardId`/`workflowId` mix-up bug, a cascade-delete gap orphaning grandchildren). Split the oversized `CardDetailPanel.tsx` into `ItemDetailPanel.tsx` plus focused sub-components, and refactored Tailwind usage to best-practice patterns. Added a Vitest unit test suite (client + server) alongside the existing Playwright E2E suite. Added onboarding docs (`.claude/guides/epic1and2-codebase-walkthrough.md`, rewritten `client/CLAUDE.md`) and persona/checklist scaffolding for future epics. Removed `node_modules` from git tracking.
+Finished the Epic 1 rename (`card`→`item`, `work-item`→`item`, `column`→`workphase`) across schema, routes, MCP tools, UI, and the Bruno collection. Ran a full code quality audit and fixed its findings (stale `workItemId` fields, a `boardId`/`workflowId` mix-up bug, a cascade-delete gap orphaning grandchildren). Split the oversized `CardDetailPanel.tsx` into `ItemDetailPanel.tsx` plus focused sub-components, and refactored Tailwind usage to best-practice patterns. Added a Vitest unit test suite (client + server) alongside the existing Playwright E2E suite. Added onboarding docs (`docs/walkthroughs/epic1and2-codebase-walkthrough.md`, rewritten `client/CLAUDE.md`) and persona/checklist scaffolding for future epics. Removed `node_modules` from git tracking.
 
 ---
 
@@ -67,7 +67,7 @@ relative to their siblings; merged↔expanded column changes (and range edits
 that change a merged column's covered workphases) recompute ordering by
 workphase-rank while preserving prior relative order; resolve whether
 position should move from an item-level value to a board-scoped one. See
-`.claude/plans/epic-3.2-decisions.md` for the full design discussion —
+`epic-3.2-decisions.md` for the full design discussion —
 nothing here is decided yet.
 
 ---

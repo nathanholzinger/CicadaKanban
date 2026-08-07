@@ -29,10 +29,14 @@ quietly fix the test case.
   sub-area, e.g. one "Part" of a design doc) — not one file per case, to
   keep this human-browsable rather than turning into dozens of tiny files.
 - Each suite file opens with a scannable table (ID / case / priority /
-  automated / automation test ref) followed by full Given/When/Then detail
-  per case below. The **Automated** column is the visible coverage flag;
-  the **Automation test** column is the lower-visibility mapping to the
-  specific automated test that covers it, filled in once that test exists.
+  automated) followed by full detail per case below. The table's
+  **Automated** column is the visible coverage flag. Each case's detail
+  block is: a `**Priority:** … · **Automated:** …` header line, then the
+  Given/When/Then, then a lower-visibility `**Automation test:**` line
+  *below* the Given/When/Then — the specific test that covers it, filled in
+  once that test exists. Keeping it below the behavioral description rather
+  than beside it is deliberate: the rule should read standalone before the
+  implementation pointer shows up.
 - Automated-column states: **⏳ pending triage** (default — not yet
   compared against existing coverage), **✅ automated** (a specific test
   covers it — see the Automation test column), **❌ not automated** (triaged

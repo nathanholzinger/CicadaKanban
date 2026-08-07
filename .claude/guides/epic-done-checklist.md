@@ -1,6 +1,6 @@
 # Epic Definition of Done
 
-Apply this checklist before marking an epic ✅ in `.claude/plans/mvp-roadmap.md`.
+Apply this checklist before marking an epic ✅ in `docs/planning/mvp-roadmap.md`.
 
 ## Code Quality
 - [ ] Code quality audit run (multi-pass workflow: `.claude/guides/audit-workflow.md`)
@@ -24,7 +24,7 @@ Apply this checklist before marking an epic ✅ in `.claude/plans/mvp-roadmap.md
 
 ## Versioning
 - [ ] Git tag created: `git tag -a epic-N-complete -m "Epic N: <name> complete"`
-- [ ] `.claude/plans/mvp-roadmap.md` epic marked ✅
+- [ ] `docs/planning/mvp-roadmap.md` epic marked ✅
 
 ---
 
@@ -32,5 +32,5 @@ Apply this checklist before marking an epic ✅ in `.claude/plans/mvp-roadmap.md
 
 Before starting the next epic, run an orientation session:
 
-1. New session reads: `.claude/plans/mvp-roadmap.md`, and the relevant epic plan
-2. Create a new file `.claude/guides/epic{n}-codebase-walkthrough` and walk through any significant new code with the user
+1. New session reads: `docs/planning/mvp-roadmap.md`, and the relevant epic plan
+2. Create a new file `docs/walkthroughs/epic{n}-codebase-walkthrough.md` and walk through any significant new code with the user

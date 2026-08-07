@@ -38,7 +38,7 @@ whole by every pass:
 
 ## Known Deferred Items (do NOT flag these)
 
-Read `.claude/plans/mvp-roadmap.md` — it's the source of truth for what each
+Read `docs/planning/mvp-roadmap.md` — it's the source of truth for what each
 epic covers and which epics are already ✅ complete. Only use a specific
 **Covered by Epic N** tag when the roadmap doc names that gap under that
 epic; don't infer or guess an epic number for anything it doesn't cover. A

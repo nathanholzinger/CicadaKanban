@@ -2,56 +2,72 @@
 
 **Wiki:** [`../../wiki/item-positioning/#6-activedone-split`](../../wiki/item-positioning/README.md#6-activedone-split)
 
-| ID | Case | Priority | Automated | Automation test |
-|---|---|---|---|---|
-| TC-6.1 | `completedAt` set on transition to terminal | P0 | ⏳ pending triage | — |
-| TC-6.2 | `completedAt` cleared on reopen | P0 | ⏳ pending triage | — |
-| TC-6.3 | Done items store no position | P0 | ⏳ pending triage | — |
-| TC-6.4 | Done-item ordering is purely `completedAt`-based | P0 | ⏳ pending triage | — |
-| TC-6.5 | Attached children keep position under terminal cascade | P0 | ⏳ pending triage | — |
-| TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ⏳ pending triage | — |
-| TC-6.7 | Column range validation rejects terminal+non-terminal mix | P0 | ⏳ pending triage | — |
-| TC-6.8 | Range entirely terminal or entirely non-terminal remains valid | P1 | ⏳ pending triage | — |
-| TC-6.9 | Reopening a done item doesn't resurrect a stale position | P1 | ⏳ pending triage | — |
+| ID | Case | Priority | Automated |
+|---|---|---|---|
+| TC-6.1 | `completedAt` set on transition to terminal | P0 | ✅ automated |
+| TC-6.2 | `completedAt` cleared on reopen | P0 | ✅ automated |
+| TC-6.3 | Done items store no position | P0 | ✅ automated |
+| TC-6.4 | Done-item ordering is purely `completedAt`-based | P0 | ✅ automated |
+| TC-6.5 | Attached children keep position under terminal cascade | P0 | ⏳ pending triage |
+| TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ⏳ pending triage |
+| TC-6.7 | Column range validation rejects terminal+non-terminal mix | P0 | ✅ automated |
+| TC-6.8 | Range entirely terminal or entirely non-terminal remains valid | P1 | ✅ automated |
+| TC-6.9 | Reopening a done item doesn't resurrect a stale position | P1 | ⏳ pending triage |
 
 ---
 
 ## TC-6.1 — `completedAt` set on transition to terminal
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ✅ automated
 
-*Given* a detached/root item currently in a non-terminal workphase with
+*Given* a detached/root item currently in a non-terminal workphace with
 `completedAt = null`, *when* its effective workphace transitions to a
 terminal one, *then* `completedAt` is set to the transition time.
 
+**Automation test:** `server/tests/routes/items.test.ts` › "POST into a
+terminal workphase gets no position, but a completedAt timestamp" and
+"moving into a terminal workphase clears position and sets completedAt"
+
 ## TC-6.2 — `completedAt` cleared on reopen
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* a done item with `completedAt` set, *when* it is moved back to a
 non-terminal workphase, *then* `completedAt` is cleared to `null`.
 
+**Automation test:** `items.test.ts` › "moving out of a terminal workphase
+clears completedAt and assigns a fresh position"
+
 ## TC-6.3 — Done items store no position
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* an item transitioning to a terminal workphace, *when* the
 transition completes, *then* its `position` is not written/updated as
 part of that transition — ordering among done items is derived from
 `completedAt`, not a stored `position` value.
 
+**Automation test:** Same tests as TC-6.1, plus `items.test.ts` ›
+"detaching into a terminal workphase clears position and sets completedAt"
+
 ## TC-6.4 — Done-item ordering is purely `completedAt`-based
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* several done items with different `completedAt` timestamps,
 *when* they are listed/sorted, *then* the order follows `completedAt`
 (e.g. most recently completed first, or whatever direction is specified),
 never a `position` comparison.
 
+**Automation test:** `client/src/components/workflow/useItemManagement.test.ts`
+› `getWorkphaseItemsFrom` › "sorts by completedAt instead of position for a
+terminal workphase (Epic 3.2 Part 6)" and `getMergedColumnItemsFrom` ›
+"sorts by completedAt instead of position when the covered set is
+terminal"
+
 ## TC-6.5 — Attached children keep position under terminal cascade
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* an attached child whose parent (and thus the child's cascaded
 effective workphace) transitions to terminal, *when* the cascade applies,
@@ -59,35 +75,57 @@ effective workphace) transitions to terminal, *when* the cascade applies,
 `(parentId, isAttached)` — only detached/root items lose position on
 terminal transition.
 
+**Automation test:** — *(no test verifies an attached child's `position`
+survives when its parent transitions to terminal; only the inverse — a
+*detaching* child losing position into terminal — is tested)*
+
 ## TC-6.6 — `positionScope` stays `"attached-siblings"` under terminal cascade
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ⏳ pending triage
 
 Cross-reference [TC-2.13](part-2-anchor-resolution.md). An attached child
 cascaded to terminal still reports `"attached-siblings"`, not `"none"`.
 
+**Automation test:** — *(the `classifyPositionScope` attached-siblings
+test only ever passes `workphaseIsTerminal: false` — the branch order in
+the source makes this precedence true by construction, but no test input
+combines `isAttached: true` with `workphaseIsTerminal: true` to prove it)*
+
 ## TC-6.7 — Column range validation rejects terminal+non-terminal mix
 
-**Priority:** P0 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* an attempt to create or edit a board column whose configured
 status range includes both a terminal and a non-terminal workphace,
 *when* the range is validated, *then* it is rejected with an error,
 alongside the existing overlap/direction/foreign-workphase checks.
 
+**Automation test:** `server/tests/routes/columns.test.ts` › "POST rejects
+a range spanning a terminal and non-terminal workphase" and "PUT rejects
+extending a range to cross the terminal boundary"
+
 ## TC-6.8 — Range entirely terminal or entirely non-terminal remains valid
 
-**Priority:** P1 (regression/guard) · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
 
 *Given* a column range that covers only non-terminal statuses (or only
 terminal ones), *when* validated, *then* it is accepted — the new check
 only rejects a *mixed* range.
 
+**Automation test:** `columns.test.ts` › "POST allows a range entirely
+within terminal workphases" (all-terminal case explicit; all-non-terminal
+case implicit via every other pre-existing column test in the same file)
+
 ## TC-6.9 — Reopening a done item doesn't resurrect a stale position
 
-**Priority:** P1 · **Automated:** ⏳ pending triage · **Automation test:** —
+**Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* a detached/root done item with no stored position, *when* it's
 reopened (moved to non-terminal), *then* it receives a fresh position via
 the append-fallback mechanism ([Part 2](part-2-anchor-resolution.md)),
 consistent with any other scope-change reassignment.
+
+**Automation test:** — *(the mapped test, `items.test.ts` › "moving out of
+a terminal workphase clears completedAt and assigns a fresh position,"
+only asserts `expect(res.body.position).not.toBeNull()` — proves *a*
+position was assigned, not that it specifically followed append-fallback)*

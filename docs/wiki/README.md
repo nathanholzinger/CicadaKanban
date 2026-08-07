@@ -13,11 +13,11 @@ the implementation.
 
 It is **not** a design-discussion log and **not** an implementation plan:
 
-- `.claude/plans/epic-N-decisions.md` captures *deliberation* — open
+- `docs/planning/epic-N-decisions.md` captures *deliberation* — open
   questions, alternatives considered, why one option won over another.
   Once a question resolves, the answer graduates here; the discussion of
   how it got resolved stays there.
-- `.claude/plans/*.md` (implementation plans) capture *how to build it* —
+- `docs/planning/*.md` (implementation plans) capture *how to build it* —
   files touched, sequencing, migration steps. Once built, that plan is a
   historical record, not something to keep re-reading for "what's true."
 - This wiki captures the *rules themselves* — testable, agent-readable,
