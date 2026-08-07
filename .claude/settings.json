@@ -28,7 +28,9 @@
       "Bash(awk '/SF:.*positionResolver/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
       "Bash(echo \"EXIT CODE: $?\")",
       "Bash(awk '/SF:.*routes.columns\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
-      "Bash(awk '/SF:.*boardDndUtils\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)"
+      "Bash(awk '/SF:.*boardDndUtils\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
+      "WebSearch",
+      "Bash(rm \"C:\\\\Users\\\\natha\\\\.claude\\\\plans\\\\please-take-on-the-breezy-wirth.md\")"
     ]
   }
 }
