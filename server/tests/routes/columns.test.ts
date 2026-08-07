@@ -273,3 +273,40 @@ describe('DELETE /api/columns/:id', () => {
     expect(res.status).toBe(204);
   });
 });
+
+describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
+  async function setupWithTerminal() {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const boardsBefore = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const board = boardsBefore.body[0];
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
+    return { project, workflow, board, inProgress, done };
+  }
+
+  it('POST rejects a range spanning a terminal and non-terminal workphase', async () => {
+    const { board, inProgress, done } = await setupWithTerminal();
+    const res = await request(app).post('/api/columns').send({
+      boardId: board.id, startWorkphaseId: inProgress.id, endWorkphaseId: done.id,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/terminal/i);
+  });
+
+  it('POST allows a range entirely within terminal workphases', async () => {
+    const { board, done } = await setupWithTerminal();
+    const res = await request(app).post('/api/columns').send({
+      boardId: board.id, startWorkphaseId: done.id, endWorkphaseId: done.id,
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it('PUT rejects extending a range to cross the terminal boundary', async () => {
+    const { board, inProgress, done } = await setupWithTerminal();
+    const created = await createColumn(board.id, inProgress.id, inProgress.id);
+    const res = await request(app).put(`/api/columns/${created.id}`).send({ endWorkphaseId: done.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/terminal/i);
+  });
+});

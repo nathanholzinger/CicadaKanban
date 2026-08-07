@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core';
+import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { BoardWithDetails, ItemType, Column } from '../types';
+import { boardCollisionDetection } from './workflow/boardDndUtils';
 import { fetchBoard } from '../api/boards';
 import { fetchItemTypes } from '../api/itemTypes';
 import BoardColumn from './BoardColumn';
@@ -65,6 +66,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     setItems,
     childCounts,
     getWorkphaseItems,
+    getMergedColumnItems,
     getAttachedChildren,
     findWorkphaseForItem,
     handleCreateItem,
@@ -163,7 +165,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     setBoard,
     items,
     setItems,
-    getWorkphaseItems,
     findWorkphaseForItem,
     handleReorderColumns,
     loadBoard,
@@ -241,7 +242,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={boardCollisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -253,6 +254,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                 key={column.id}
                 column={column}
                 getWorkphaseItems={getWorkphaseItems}
+                getMergedColumnItems={getMergedColumnItems}
                 childCounts={childCounts}
                 getAttachedChildren={getAttachedChildren}
                 defaultExpanded={showAttachedChildrenDefault}

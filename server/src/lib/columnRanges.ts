@@ -82,6 +82,7 @@ export function validateColumnRange(
   range: ColumnRange,
   rankMap: Map<string, number>,
   siblingColumns: { id: string; name: string | null; startWorkphaseId: string; endWorkphaseId: string }[],
+  orderedWorkphases: Workphase[],
 ): ColumnRangeValidation {
   if (!rankMap.has(range.startWorkphaseId) || !rankMap.has(range.endWorkphaseId)) {
     return {
@@ -104,6 +105,18 @@ export function validateColumnRange(
         conflictingColumnId: conflict.id,
       },
     };
+  }
+
+  // Epic 3.2 Part 6: a column can't span both a terminal (done) and a
+  // non-terminal (active) workphase. Active and done items are never
+  // meant to be directly compared in one sorted list — done items have no
+  // stored position at all (ordered by completedAt instead), so a column
+  // spanning the boundary would have no coherent order to show.
+  const covered = getCoveredWorkphases(range, orderedWorkphases, rankMap);
+  const hasTerminal = covered.some(w => w.isTerminal);
+  const hasNonTerminal = covered.some(w => !w.isTerminal);
+  if (hasTerminal && hasNonTerminal) {
+    return { ok: false, status: 400, body: { error: 'A column cannot span both a terminal (done) and a non-terminal workphase' } };
   }
 
   return { ok: true };

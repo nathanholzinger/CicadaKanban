@@ -14,6 +14,36 @@ work first would mean redoing it.
 Recorded 2026-08-05. **Nothing below is implemented — this is a discussion
 capture, not a decision.**
 
+> **Resolved 2026-08-07** — implemented per
+> `.claude/plans/please-adopt-the-architect-functional-chipmunk.md`.
+>
+> - **Q1 (position storage)**: stays a single item-owned scalar (Part 1 of
+>   the plan) — no per-board table. The "boards are a pure presentation
+>   layer over `items.workphaseId`" principle was extended to position:
+>   it's the same *kind* of fact about an item (current state), just a
+>   second axis of it. A future personal-boards concept would overlay this
+>   with a sparse per-`(item, boardId)` table falling back to the scalar,
+>   never replace it — see the deferred-ideas section below.
+> - **Q2 (what triggers recalculation)**: resolved by finding that no
+>   forced regroup mechanism is needed at all. Union-sorting a merged
+>   column across its covered workphases (Part 4) *is* the recalculation —
+>   "grouped by workphace rank" is an emergent tendency from normal usage
+>   (create early-rank, advance forward over time), not an actively
+>   enforced guarantee. A real reindex mechanism (Part 5) still exists, but
+>   for a different reason: float-precision buildup and magnitude drift,
+>   not display grouping.
+> - **Q3 (merged-column drag bug)**: fixed as a byproduct of Part 4's
+>   "is the active item already a member of the target column's covered
+>   set" check, not a standalone patch — exactly the outcome this doc
+>   guessed at ("arguably a bug worth patching regardless... left alone
+>   since it'll be superseded once this feature lands anyway").
+>
+> Everything below is preserved as the discussion record that led there —
+> several open questions here (the merged-column collapse-to-
+> `entryWorkphaseId` bug, the "stale position after detach" origin trigger)
+> read very differently once you know where the conversation ended up, but
+> the reasoning trail is worth keeping.
+
 ---
 
 ## Confirmed: none of the desired behavior exists today
@@ -187,3 +217,58 @@ arguably a bug worth patching regardless of whether/when the fuller
 interleaved-ordering feature gets built. Decide whether that's worth a
 standalone fix now, or left alone since it'll be superseded once this
 feature lands anyway.
+
+---
+
+## Deferred ideas surfaced while resolving this epic (not built, for whenever picked up)
+
+Recorded 2026-08-07, alongside the resolution banner at the top of this doc.
+None of this is scoped or scheduled — captured here so it isn't lost before
+whichever future epic actually picks it up, matching the treatment already
+given to `epic-3.5-decisions.md` / `epic-5-decisions.md` / `epic-6-decisions.md`
+/ `epic-8-decisions.md`.
+
+- **Personal boards.** Team-shared boards (what got built) vs. an
+  individual's own divergently-ordered view of the same workflow. Extensive
+  discussion landed on: not needed for MVP (industry precedent — Jira,
+  Linear, and GitHub Projects all share manual order globally rather than
+  per-view, even GitHub Projects, which is architected explicitly around
+  multiple independent views); a real future desire nonetheless, but one
+  that splits into two different shapes depending on what "personal" ends
+  up meaning — (a) truly per-authenticated-user, which is blocked on a
+  multi-user/auth epic that doesn't exist on the roadmap at all, or (b) just
+  a second board *type* usable today by a single operator for a scratch/
+  triage view, independent of who's logged in. Whenever this is scoped,
+  resolve which of (a)/(b) is actually meant before designing further — the
+  original motivating examples (different team members wanting different
+  drag orders) describe (a), but only (b) is buildable against this
+  codebase's current state. Mechanically: a sparse per-`(item,
+  personalBoardId)` position-override table, falling back to the item's own
+  `position` scalar for anything it doesn't cover — additive on top of Part
+  1's design, not a migration away from it. Worth a naming check against
+  Epic 6's "personal task aggregation" (saved filter views) too, in case
+  they turn out to be the same concept wearing two names.
+- **Generation-tagging for done-item recalculation.** A per-recalculation
+  epoch marker + composite `(generation, position)` sort, which would let
+  done items *also* be periodically compacted later, the way active items
+  are (Part 5) — not needed now because Part 6's actual resolution
+  (`completedAt`-based ordering, no stored position for done items at all)
+  sidesteps the need entirely rather than just tolerating it. Cleanly
+  layerable later if `completedAt` ordering ever stops being sufficient at
+  some larger scale (existing done items would backfill as generation 0).
+- **A third "inbox" status bucket** (pre-workflow items), alongside
+  active/done. Floated as a possible third leg of the active/done split,
+  but turned out unnecessary — the active/done split alone fully resolved
+  the magnitude-drift problem it was raised for. Still a plausible future
+  extension on its own merits (not required here); flagged for the same
+  naming-collision check as personal boards, this time against Epic 6's
+  "Inbox" (saved cross-project views) concept specifically.
+- **Column sort-by-computed-field** (e.g. "sort this column by time in
+  column" rather than manual drag order). Settled in principle during
+  discussion — dragging while a computed sort is active should disable
+  drag-reorder entirely (matching this app's DnD-first interaction model)
+  rather than silently detaching from the sort or requiring a confirm
+  dialog, because a computed sort's value comes from being trustworthy as a
+  monitoring tool, and a silent detach undermines that. No sort feature
+  exists yet to attach this decision to; captured so the rationale doesn't
+  need re-deriving when one does.

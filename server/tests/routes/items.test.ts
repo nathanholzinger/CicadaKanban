@@ -225,6 +225,166 @@ describe('PATCH /api/items/:id/move', () => {
   });
 });
 
+describe('Epic 3.2 — position resolution', () => {
+  async function setupTwoPhases(doneOverrides: Record<string, unknown> = {}) {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true, ...doneOverrides });
+    return { project, workflow, todo, done };
+  }
+
+  it('POST scopes a new attached child to its true siblings, not the whole workphase', async () => {
+    const { project, todo } = await setupTwoPhases();
+    // Unrelated top-level items sharing the workphase must not pollute the
+    // new child's position (the pre-Epic-3.2 bug: nextPosition was scoped
+    // only to workphaseId).
+    await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Unrelated 1' });
+    await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Unrelated 2' });
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    expect(child.position).toBe(1.0); // first among the parent's own attached children
+  });
+
+  it('POST into a terminal workphase gets no position, but a completedAt timestamp', async () => {
+    const { project, done } = await setupTwoPhases();
+    const res = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    expect(res.status).toBe(201);
+    expect(res.body.position).toBeNull();
+    expect(res.body.completedAt).toBeGreaterThan(0);
+  });
+
+  it('attaching to a parent reassigns a fresh position scoped to the new siblings', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    await createItem({ projectId: project.id, parentId: parent.id, title: 'Existing sibling' }); // position 1.0
+    const detached = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Detached', isAttached: false });
+
+    const res = await request(app).put(`/api/items/${detached.id}`).send({ parentId: parent.id, isAttached: true });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBe(2.0); // fresh, past the existing sibling — not its old workphace-scoped value
+  });
+
+  it('detaching reassigns a fresh position scoped to the workphase', async () => {
+    const { project, todo } = await setupTwoPhases();
+    await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Existing root' }); // position 1.0
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' }); // position 2.0
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, position 1.0 among siblings
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ isAttached: false });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBeGreaterThan(2.0); // fresh, past the workphase's existing items
+  });
+
+  it('detaching into a terminal workphase clears position and sets completedAt', async () => {
+    const { project, done } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: done.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Done, keeps a position
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ isAttached: false });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBeNull();
+    expect(res.body.completedAt).toBeGreaterThan(0);
+  });
+
+  it('reparenting while staying attached reassigns a fresh position scoped to the new parent', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const parentA = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent A' });
+    const parentB = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent B' });
+    await createItem({ projectId: project.id, parentId: parentB.id, title: 'Existing under B' }); // position 1.0
+    const child = await createItem({ projectId: project.id, parentId: parentA.id, title: 'Child' });
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: parentB.id });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBe(2.0);
+  });
+
+  it('a redundant re-attach to the same parent leaves position untouched', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+
+    const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: parent.id, isAttached: true });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBe(child.position);
+  });
+
+  it('move resolves anchorId+side against the true neighbor, not a client-supplied guess', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' }); // 1.0
+    const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' }); // 2.0
+    const c = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'C' }); // 3.0
+
+    const res = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'after' });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBeGreaterThan(a.position);
+    expect(res.body.position).toBeLessThan(b.position);
+  });
+
+  it('excludes the item itself from its own scope query on reposition', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const a = await createItem({ projectId: project.id, workphaseId: todo.id }); // 1.0
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id }); // 2.0
+    const b = await createItem({ projectId: project.id, workphaseId: todo.id }); // 3.0
+    // Force x to sit numerically between a and b — if x's own (pre-move) row
+    // weren't excluded from its scope query, resolving "after a" would find
+    // x itself as the closest neighbor and anchor against its stale value.
+    await request(app).patch(`/api/items/${x.id}/move`).send({ position: 1.5 });
+
+    const res = await request(app).patch(`/api/items/${x.id}/move`).send({ anchorId: a.id, side: 'after' });
+    expect(res.status).toBe(200);
+    // Correctly resolves against the true next neighbor (b, at 3.0),
+    // skipping x's own stale 1.5 — a buggy resolution would land below 1.5.
+    expect(res.body.position).toBeGreaterThan(1.5);
+    expect(res.body.position).toBeLessThan(3.0);
+  });
+
+  it('move rejects an invalid side when anchorId is given', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const a = await createItem({ projectId: project.id, workphaseId: todo.id });
+    const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: a.id, side: 'sideways' });
+    expect(res.status).toBe(400);
+  });
+
+  it('move rejects a non-existent anchorId', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const a = await createItem({ projectId: project.id, workphaseId: todo.id });
+    const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: 'no-such-item', side: 'after' });
+    expect(res.status).toBe(400);
+  });
+
+  it('move rejects anchoring to a done item (no position to anchor against)', async () => {
+    const { project, todo, done } = await setupTwoPhases();
+    const active = await createItem({ projectId: project.id, workphaseId: todo.id });
+    const doneItem = await request(app).post('/api/items').send({ title: 'Done item', projectId: project.id, workphaseId: done.id });
+
+    const res = await request(app).patch(`/api/items/${active.id}/move`).send({ anchorId: doneItem.body.id, side: 'after' });
+    expect(res.status).toBe(400);
+  });
+
+  it('moving into a terminal workphase clears position and sets completedAt', async () => {
+    const { project, todo, done } = await setupTwoPhases();
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id });
+
+    const res = await request(app).patch(`/api/items/${item.id}/move`).send({ workphaseId: done.id });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBeNull();
+    expect(res.body.completedAt).toBeGreaterThan(0);
+  });
+
+  it('moving out of a terminal workphase clears completedAt and assigns a fresh position', async () => {
+    const { project, todo, done } = await setupTwoPhases();
+    const item = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    expect(item.body.completedAt).toBeGreaterThan(0);
+
+    const res = await request(app).patch(`/api/items/${item.body.id}/move`).send({ workphaseId: todo.id });
+    expect(res.status).toBe(200);
+    expect(res.body.completedAt).toBeNull();
+    expect(res.body.position).not.toBeNull();
+  });
+});
+
 describe('PATCH /api/items/reorder', () => {
   it('returns 400 when itemOrders is not an array', async () => {
     const res = await request(app).patch('/api/items/reorder').send({});

@@ -22,11 +22,11 @@ router.post('/', (req, res) => {
   const board = getByIdOrNotFound(boards, boardId, res, 'Board not found');
   if (!board) return;
 
-  const { rankMap } = getOrderedWorkphases(board.workflowId);
+  const { workphases: orderedWorkphases, rankMap } = getOrderedWorkphases(board.workflowId);
 
   const siblingColumns = db.select().from(columns).where(eq(columns.boardId, boardId)).all();
   const range = { startWorkphaseId, endWorkphaseId };
-  const validation = validateColumnRange(range, rankMap, siblingColumns);
+  const validation = validateColumnRange(range, rankMap, siblingColumns, orderedWorkphases);
   if (!validation.ok) {
     res.status(validation.status).json(validation.body);
     return;
@@ -59,12 +59,12 @@ router.put('/:id', (req, res) => {
   const nextEnd = endWorkphaseId ?? column.endWorkphaseId;
 
   const board = db.select().from(boards).where(eq(boards.id, column.boardId)).get()!;
-  const { rankMap } = getOrderedWorkphases(board.workflowId);
+  const { workphases: orderedWorkphases, rankMap } = getOrderedWorkphases(board.workflowId);
 
   const siblingColumns = db.select().from(columns).where(eq(columns.boardId, column.boardId)).all()
     .filter(c => c.id !== column.id);
   const range = { startWorkphaseId: nextStart, endWorkphaseId: nextEnd };
-  const validation = validateColumnRange(range, rankMap, siblingColumns);
+  const validation = validateColumnRange(range, rankMap, siblingColumns, orderedWorkphases);
   if (!validation.ok) {
     res.status(validation.status).json(validation.body);
     return;

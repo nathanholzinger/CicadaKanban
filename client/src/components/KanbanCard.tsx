@@ -1,4 +1,4 @@
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Item, ItemType } from '../types';
@@ -47,6 +47,13 @@ export default function KanbanCard({
 
   let avatarBadgeClass = 'bg-cyan-500/20 text-cyan-300';
   if (item.assigneeType === 'agent') avatarBadgeClass = 'bg-amber-500/20 text-amber-300';
+
+  // Computed once (not called inline in JSX below) — getAttachedChildren
+  // returns a fresh array/sort every call, and calling it twice inline for
+  // both SortableContext's `items` and the `.map()` produced unstable
+  // references that fed a dnd-kit measurement loop during a real drag
+  // (matches this codebase's known "inline function call in JSX" gotcha).
+  const attachedChildren = expanded && childCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
 
   return (
     <div
@@ -107,18 +114,21 @@ export default function KanbanCard({
         </div>
       )}
 
-      {/* Attached children, indented — read-only rows, click opens that child */}
-      {expanded && childCount > 0 && getAttachedChildren && (
+      {/* Attached children, indented — draggable among siblings (Epic 3.2 Part
+          3); dragging one *out* of its parent stays blocked until Epic 3.5 */}
+      {attachedChildren.length > 0 && getAttachedChildren && (
         <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
-          {getAttachedChildren(item.id).map(child => (
-            <AttachedChildRow
-              key={child.id}
-              item={child}
-              itemTypes={itemTypes}
-              getAttachedChildren={getAttachedChildren}
-              onCardClick={onCardClick}
-            />
-          ))}
+          <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
+            {attachedChildren.map(child => (
+              <AttachedChildRow
+                key={child.id}
+                item={child}
+                itemTypes={itemTypes}
+                getAttachedChildren={getAttachedChildren}
+                onCardClick={onCardClick}
+              />
+            ))}
+          </SortableContext>
         </div>
       )}
     </div>
@@ -135,17 +145,32 @@ interface AttachedChildRowProps {
 function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }: AttachedChildRowProps) {
   const resolvedType = resolveType(item.type, itemTypes);
   const grandchildren = getAttachedChildren(item.id);
+  // Epic 3.2 Part 3: draggable among siblings under the same parent — a
+  // self-contained SortableContext (see the parent's wrapper above and the
+  // recursive one below), not the board-level card DnD. `data.type:
+  // 'attached-child'` is what routes the drag to useBoardDnd's dedicated
+  // sibling-reorder branch instead of the board's card-move logic.
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    // parentId lets boardCollisionDetection scope collisions to true
+    // siblings (same parent) — without it, an attached child could collide
+    // with an unrelated card's attached child if their rects happen to be
+    // near each other.
+    data: { type: 'attached-child', parentId: item.parentId },
+  });
+  const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div>
+    <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-30' : ''}>
       <button
         type="button"
+        {...attributes}
+        {...listeners}
         onClick={e => {
           e.stopPropagation();
-          onCardClick?.(item.id);
+          if (!isDragging) onCardClick?.(item.id);
         }}
-        onPointerDown={e => e.stopPropagation()}
-        className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40"
+        className="flex w-full cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing"
       >
         {resolvedType && (
           <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
@@ -156,15 +181,17 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
       </button>
       {grandchildren.length > 0 && (
         <div className="space-y-1 border-l border-zinc-700/50 pl-3">
-          {grandchildren.map(child => (
-            <AttachedChildRow
-              key={child.id}
-              item={child}
-              itemTypes={itemTypes}
-              getAttachedChildren={getAttachedChildren}
-              onCardClick={onCardClick}
-            />
-          ))}
+          <SortableContext items={grandchildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
+            {grandchildren.map(child => (
+              <AttachedChildRow
+                key={child.id}
+                item={child}
+                itemTypes={itemTypes}
+                getAttachedChildren={getAttachedChildren}
+                onCardClick={onCardClick}
+              />
+            ))}
+          </SortableContext>
         </div>
       )}
     </div>

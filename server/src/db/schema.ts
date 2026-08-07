@@ -120,6 +120,13 @@ export const items = sqliteTable('items', {
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
+  // Set when this item's workphase becomes terminal (done); cleared if it's
+  // reopened into a non-terminal workphase. Detached/root items in a
+  // terminal workphase have no meaningful `position` — ordering is derived
+  // from this field instead (see .claude/plans/epic-3.2-decisions.md).
+  // Attached children keep their position regardless (parent-scoped, not
+  // workphase-scoped).
+  completedAt: integer('completed_at'),
 });
 
 // ============================================================

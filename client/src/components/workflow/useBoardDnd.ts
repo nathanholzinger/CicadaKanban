@@ -9,23 +9,28 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
-import { reorderItems, moveItem } from '../../api/items';
-import {
-  buildColumnForWorkphaseMap,
-  resolveDropWorkphaseId as resolveDropTarget,
-  computeSameWorkphaseReorder,
-  computeDropPosition,
-} from './boardDndUtils';
+import { moveItem } from '../../api/items';
+import { buildColumnForWorkphaseMap, resolveDropTarget } from './boardDndUtils';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
 // all resolve to different target workphases (or no-ops).
+//
+// Epic 3.2: item repositioning always resolves server-side against true
+// current data (see positionResolver.ts) — this hook sends `{anchorId,
+// side}` (or a plain `{workphaseId}`/`{scopeWorkphaseIds}` append) instead
+// of a client-computed position. The tradeoff: there's no cheap, always-
+// correct client-side position to show optimistically anymore, so the list
+// can briefly show its pre-drop order until the server's response lands,
+// rather than the old fully-optimistic update. A documented, deliberate
+// simplification — not a correctness gap (see the Epic 3.2 plan's Part 2
+// "client-side role" note for the fuller optimistic-preview option this
+// leaves on the table for later).
 export function useBoardDnd(
   board: BoardWithDetails | null,
   setBoard: React.Dispatch<React.SetStateAction<BoardWithDetails | null>>,
   items: Item[],
   setItems: React.Dispatch<React.SetStateAction<Item[]>>,
-  getWorkphaseItems: (workphaseId: string) => Item[],
   findWorkphaseForItem: (itemId: string) => string | null,
   handleReorderColumns: (orders: { id: string; position: number }[]) => Promise<void>,
   loadBoard: () => Promise<void>,
@@ -38,8 +43,14 @@ export function useBoardDnd(
   // resolving drop targets and hover-derived lookups.
   const columnForWorkphase = useMemo(() => buildColumnForWorkphaseMap<Column>(board?.columns ?? []), [board]);
 
-  function resolveDropWorkphaseId(overId: string): string | null {
-    return resolveDropTarget(overId, board?.columns ?? [], columnForWorkphase, findWorkphaseForItem);
+  // activeItem is captured once in handleDragStart and stays stable for the
+  // whole gesture — using its workphaseId (rather than a live
+  // findWorkphaseForItem(activeId) lookup) is what keeps handleDragOver's
+  // optimistic re-bucket from confusing handleDragEnd's later resolution
+  // (see resolveDropTarget's doc comment).
+  function resolveDrop(activeId: string, overId: string) {
+    const activeWorkphaseId = activeItem?.id === activeId ? activeItem.workphaseId : findWorkphaseForItem(activeId);
+    return resolveDropTarget(activeId, activeWorkphaseId, overId, board?.columns ?? [], columnForWorkphase, findWorkphaseForItem);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -50,22 +61,27 @@ export function useBoardDnd(
 
   function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
-    if (!over || active.data.current?.type === 'column') return;
+    // Attached-sibling drags (Epic 3.2 Part 3) are handled entirely in
+    // handleDragEnd below — they never change workphaseId, so there's
+    // nothing to live-preview here, and running the board-level resolution
+    // logic on them would be wrong (it doesn't know about parent-scoped
+    // reordering).
+    if (!over || active.data.current?.type === 'column' || active.data.current?.type === 'attached-child') return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const activeWorkphaseId = findWorkphaseForItem(activeId);
-    const targetWorkphaseId = resolveDropWorkphaseId(overId);
+    const resolution = resolveDrop(activeId, overId);
+    // Only a genuine cross-column move gets a live re-bucket preview — a
+    // same-visual-group reorder's visual feedback comes from dnd-kit's own
+    // SortableContext animation, not a workphase re-bucket.
+    if (!resolution || resolution.kind !== 'move') return;
 
-    if (!activeWorkphaseId || !targetWorkphaseId || activeWorkphaseId === targetWorkphaseId) return;
-
-    setItems(prev => prev.map(item => (item.id === activeId ? { ...item, workphaseId: targetWorkphaseId } : item)));
+    setItems(prev => prev.map(item => (item.id === activeId ? { ...item, workphaseId: resolution.targetWorkphaseId } : item)));
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     const type = active.data.current?.type;
-    const originalWorkphaseId = activeItem?.workphaseId ?? null;
 
     setActiveItem(null);
     if (!over) return;
@@ -92,44 +108,42 @@ export function useBoardDnd(
       return;
     }
 
-    // ── Item reorder / move ──
-    const isOverContainer = overId.startsWith('subrow::') || (board?.columns.some(c => c.id === overId) ?? false);
-    const targetWorkphaseId = resolveDropWorkphaseId(overId);
-    if (!targetWorkphaseId) return; // dropped on Unsorted, a broken column, or nowhere resolvable
-
-    // Same-workphase reorder
-    if (!isOverContainer && originalWorkphaseId === targetWorkphaseId) {
-      const updatedPositions = computeSameWorkphaseReorder(getWorkphaseItems(targetWorkphaseId), activeId, overId);
-      if (!updatedPositions) return;
-
-      setItems(prev =>
-        prev.map(item => {
-          const u = updatedPositions.find(p => p.id === item.id);
-          return u ? { ...item, position: u.position } : item;
-        }),
-      );
+    // ── Attached-sibling reorder (Epic 3.2 Part 3) ──
+    // Position-only, scoped to the parent's other attached children — the
+    // server derives that scope from the anchor's own (parentId, isAttached)
+    // state, so no extra scope info needs to be sent. Never touches
+    // workphaceId; dragging a child *out* of its parent stays blocked until
+    // Epic 3.5 owns that gesture.
+    if (type === 'attached-child') {
+      if (activeId === overId) return;
       try {
-        await reorderItems(updatedPositions);
+        const updated = await moveItem(activeId, { anchorId: overId, side: 'before' });
+        setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
       } catch (err) {
-        console.error('Failed to reorder items:', err);
+        console.error('Failed to reorder attached child:', err);
         loadBoard();
       }
       return;
     }
 
-    // Cross-workphase move
-    const workphaseItems = getWorkphaseItems(targetWorkphaseId).filter(i => i.id !== activeId);
-    const newPosition = computeDropPosition(workphaseItems, overId, isOverContainer);
+    // ── Item reorder / move ──
+    const resolution = resolveDrop(activeId, overId);
+    if (!resolution) return; // dropped on Unsorted, a broken column, or nowhere resolvable
 
-    setItems(prev =>
-      prev.map(item =>
-        item.id === activeId ? { ...item, workphaseId: targetWorkphaseId, position: newPosition } : item,
-      ),
-    );
     try {
-      await moveItem(activeId, targetWorkphaseId, newPosition);
+      const updated =
+        resolution.kind === 'reorder'
+          ? await moveItem(activeId, {
+              scopeWorkphaseIds: resolution.scopeWorkphaseIds,
+              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side: 'before' as const } : {}),
+            })
+          : await moveItem(activeId, {
+              workphaseId: resolution.targetWorkphaseId,
+              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side: 'before' as const } : {}),
+            });
+      setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
     } catch (err) {
-      console.error('Failed to move item:', err);
+      console.error('Failed to reposition item:', err);
       loadBoard();
     }
   }

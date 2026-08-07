@@ -34,6 +34,13 @@ export interface WorkPhase {
   createdAt: number;
 }
 
+// Epic 3.2: derived, read-only — what an item's `position` is actually
+// comparable against, computed server-side from isAttached/parentId/
+// workphaseId/workphase.isTerminal (never stored). Not required by any
+// client logic today (the client re-derives scope itself), but useful for
+// debugging and future consumers.
+export type PositionScope = 'attached-siblings' | 'workphase' | 'none';
+
 export interface Item {
   id: string;
   type: string | null;
@@ -44,11 +51,17 @@ export interface Item {
   title: string;
   description: string | null;
   position: number | null;
+  positionScope?: PositionScope;
   assigneeType: string | null;
   agentId: string | null;
   isAttached: number;
   createdAt: number;
   updatedAt: number;
+  // Epic 3.2 Part 6: set when this item's workphase became terminal (done);
+  // null otherwise. A detached/root item with completedAt set has no
+  // position — ordered by this field instead. Attached children keep their
+  // position regardless of their (cascaded) workphase's status.
+  completedAt: number | null;
 }
 
 export interface WorkflowWithDetails extends Workflow {

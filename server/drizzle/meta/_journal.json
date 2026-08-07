@@ -71,6 +71,13 @@
       "when": 1785000000000,
       "tag": "0009_item_dependent_cascades",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785500000000,
+      "tag": "0010_item_completed_at",
+      "breakpoints": true
     }
   ]
 }

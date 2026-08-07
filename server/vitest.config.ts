@@ -44,6 +44,8 @@ export default defineConfig({
         'src/routes/workflowTemplates.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
         'src/routes/boards.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
         'src/routes/columns.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
+        // Epic 3.2: general position-resolution contract.
+        'src/lib/positionResolver.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
       },
     },
   },

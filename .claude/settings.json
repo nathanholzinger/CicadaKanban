@@ -24,7 +24,11 @@
       "Read(//tmp/**)",
       "Bash(head -20 /tmp/pretty-boardcolumn.tsx)",
       "Bash(awk 'length\\($0\\) > 120 {print FILENAME\":\"NR\": \"length\\($0\\)\" chars\"}' src/components/workflow/useBoardDnd.ts src/lib/positions.ts src/components/KanbanCard.tsx src/components/ProjectPage.tsx)",
-      "Bash(awk 'length\\($0\\) > 120 {print FILENAME\":\"FNR\": \"length\\($0\\)\" chars\"}' src/components/workflow/useBoardDnd.ts src/lib/positions.ts src/components/KanbanCard.tsx src/components/ProjectPage.tsx)"
+      "Bash(awk 'length\\($0\\) > 120 {print FILENAME\":\"FNR\": \"length\\($0\\)\" chars\"}' src/components/workflow/useBoardDnd.ts src/lib/positions.ts src/components/KanbanCard.tsx src/components/ProjectPage.tsx)",
+      "Bash(awk '/SF:.*positionResolver/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(awk '/SF:.*routes.columns\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)",
+      "Bash(awk '/SF:.*boardDndUtils\\\\.ts$/{p=1} p{print} /end_of_record/{if\\(p\\){exit}}' coverage/lcov.info)"
     ]
   }
 }

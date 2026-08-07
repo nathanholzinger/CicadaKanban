@@ -1,13 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildColumnForWorkphaseMap,
-  resolveDropWorkphaseId,
-  computeSameWorkphaseReorder,
-  computeDropPosition,
-  subrowContainerId,
-  type DropColumn,
-  type PositionedItem,
-} from './boardDndUtils';
+import type { CollisionDetection } from '@dnd-kit/core';
+import { buildColumnForWorkphaseMap, resolveDropTarget, subrowContainerId, boardCollisionDetection, type DropColumn } from './boardDndUtils';
+
+// Minimal fixture for boardCollisionDetection's args — every candidate gets
+// an identical rect, close enough to the pointer that closestCorners would
+// happily pick any of them; the interesting assertion is which ones survive
+// the *filter* before closestCorners ever runs, not the geometry itself.
+const SAME_RECT = { top: 0, left: 0, right: 10, bottom: 10, width: 10, height: 10 };
+
+function collisionArgs(
+  activeId: string,
+  activeData: Record<string, unknown>,
+  containers: Array<{ id: string; data: Record<string, unknown> }>,
+): Parameters<CollisionDetection>[0] {
+  return {
+    active: { id: activeId, data: { current: activeData }, rect: { current: SAME_RECT } } as never,
+    collisionRect: SAME_RECT as never,
+    droppableRects: new Map(containers.map(c => [c.id, SAME_RECT])) as never,
+    droppableContainers: containers.map(c => ({ id: c.id, data: { current: c.data }, rect: { current: SAME_RECT } })) as never,
+    pointerCoordinates: { x: 5, y: 5 },
+  };
+}
 
 function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
@@ -20,10 +33,6 @@ function column(id: string, workphaseIds: string[], overrides: Partial<DropColum
   };
 }
 
-function item(id: string, position: number | null): PositionedItem {
-  return { id, position };
-}
-
 // Board fixture: merged col-1 covers [todo, review], expanded col-2 covers
 // [dev, qa], broken col-3 covers [old].
 const columns = [
@@ -33,17 +42,27 @@ const columns = [
 ];
 const columnMap = buildColumnForWorkphaseMap(columns);
 
-// Card lookup used by the hover-a-card path.
-const cardWorkphases: Record<string, string> = {
+// Workphace lookup shared by both the dragged (active) item and whatever
+// card is being hovered over.
+const workphases: Record<string, string> = {
   'card-in-review': 'review',
   'card-in-qa': 'qa',
   'card-in-old': 'old',
   'card-unplaced': '',
+  'active-in-todo': 'todo',
+  'active-in-review': 'review',
+  'active-in-dev': 'dev',
+  'active-in-qa': 'qa',
+  'active-nowhere': 'nowhere', // a real workphase, just not covered by any column here
 };
-const findWorkphaseForItem = (id: string) => cardWorkphases[id] || null;
+const findWorkphaseForItem = (id: string) => workphases[id] || null;
 
-function resolve(overId: string): string | null {
-  return resolveDropWorkphaseId(overId, columns, columnMap, findWorkphaseForItem);
+// Mirrors useBoardDnd's real call: the active item's workphace is resolved
+// once (as if from a stable activeItem captured at drag-start), not re-read
+// live on every call — see resolveDropTarget's doc comment for why that
+// distinction matters.
+function resolve(activeId: string, overId: string) {
+  return resolveDropTarget(activeId, findWorkphaseForItem(activeId), overId, columns, columnMap, findWorkphaseForItem);
 }
 
 describe('subrowContainerId', () => {
@@ -61,83 +80,141 @@ describe('buildColumnForWorkphaseMap', () => {
   });
 });
 
-describe('resolveDropWorkphaseId', () => {
-  it('resolves a sub-row droppable to its workphase', () => {
-    expect(resolve(subrowContainerId('col-2', 'qa'))).toBe('qa');
+describe('boardCollisionDetection', () => {
+  it('never collides an item with itself', () => {
+    const result = boardCollisionDetection(collisionArgs('card-a', { type: 'card' }, [{ id: 'card-a', data: { type: 'card' } }]));
+    expect(result).toHaveLength(0);
   });
 
-  it('rejects a sub-row of a broken column', () => {
-    expect(resolve(subrowContainerId('col-3', 'old'))).toBeNull();
+  it('excludes attached-child containers from a card drag (the collision-hijack bug this guards against)', () => {
+    // Regression: a card being dragged must never resolve onto its own (or
+    // any) attached child, even when that child's rect happens to be
+    // closest — this is exactly what let a nested "Cascading Kid" row
+    // hijack its parent's cross-column drop once attached children became
+    // draggable (Epic 3.2 Part 3).
+    const result = boardCollisionDetection(
+      collisionArgs('card-a', { type: 'card' }, [
+        { id: 'child-1', data: { type: 'attached-child', parentId: 'card-a' } },
+        { id: 'col-1', data: { type: 'column' } },
+      ]),
+    );
+    expect(result.map(r => r.id)).not.toContain('child-1');
+    expect(result.map(r => r.id)).toContain('col-1');
   });
 
-  it('resolves hovering a merged column to its entry workphase', () => {
-    expect(resolve('col-1')).toBe('todo');
-  });
-
-  it("rejects an expanded column's outer wrapper — a specific sub-row is required", () => {
-    expect(resolve('col-2')).toBeNull();
-  });
-
-  it('rejects a broken column outright', () => {
-    expect(resolve('col-3')).toBeNull();
-  });
-
-  it("resolves hovering a card in a merged column to the column's entry workphase", () => {
-    expect(resolve('card-in-review')).toBe('todo');
-  });
-
-  it("resolves hovering a card in an expanded column to the card's own workphase", () => {
-    expect(resolve('card-in-qa')).toBe('qa');
-  });
-
-  it('rejects a card whose column is broken, and unresolvable targets', () => {
-    expect(resolve('card-in-old')).toBeNull();
-    expect(resolve('card-unplaced')).toBeNull();
-    expect(resolve('something-unknown')).toBeNull();
+  it('scopes an attached-child drag to siblings under the same parent only', () => {
+    const result = boardCollisionDetection(
+      collisionArgs('child-a', { type: 'attached-child', parentId: 'parent-1' }, [
+        { id: 'child-b', data: { type: 'attached-child', parentId: 'parent-1' } }, // true sibling
+        { id: 'child-c', data: { type: 'attached-child', parentId: 'parent-2' } }, // different parent
+        { id: 'col-1', data: { type: 'column' } }, // never a valid target for an attached-child drag
+      ]),
+    );
+    expect(result.map(r => r.id)).toEqual(['child-b']);
   });
 });
 
-describe('computeSameWorkphaseReorder', () => {
-  const items = [item('a', 1), item('b', 2), item('c', 3)];
-
-  it('moves the active item to the hovered slot and reindexes 1..n', () => {
-    expect(computeSameWorkphaseReorder(items, 'a', 'c')).toEqual([
-      { id: 'b', position: 1 },
-      { id: 'c', position: 2 },
-      { id: 'a', position: 3 },
-    ]);
+describe('resolveDropTarget', () => {
+  it('rejects dropping an item onto itself', () => {
+    expect(resolve('active-in-todo', 'active-in-todo')).toBeNull();
   });
 
-  it('returns null when nothing changes or an id is unknown', () => {
-    expect(computeSameWorkphaseReorder(items, 'b', 'b')).toBeNull();
-    expect(computeSameWorkphaseReorder(items, 'ghost', 'c')).toBeNull();
-    expect(computeSameWorkphaseReorder(items, 'a', 'ghost')).toBeNull();
-  });
-});
+  describe('sub-row drops (expanded column)', () => {
+    it('is a reorder when the active item is already in that workphase', () => {
+      expect(resolve('active-in-qa', subrowContainerId('col-2', 'qa'))).toEqual({
+        kind: 'reorder',
+        scopeWorkphaseIds: ['qa'],
+        anchorId: null,
+      });
+    });
 
-describe('computeDropPosition', () => {
-  const items = [item('a', 1), item('b', 2), item('c', 3)];
+    it('is a move when the active item is in a different workphase', () => {
+      expect(resolve('active-in-dev', subrowContainerId('col-2', 'qa'))).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'qa',
+        anchorId: null,
+      });
+    });
 
-  it('appends past the max when dropping on a container', () => {
-    expect(computeDropPosition(items, 'ignored', true)).toBe(4.0);
-  });
-
-  it('starts at 1.0 in an empty workphase', () => {
-    expect(computeDropPosition([], 'ignored', false)).toBe(1.0);
-  });
-
-  it('slots at the midpoint when dropped between two cards', () => {
-    expect(computeDropPosition(items, 'b', false)).toBe(1.5);
-  });
-
-  it('prepends before the first card', () => {
-    expect(computeDropPosition(items, 'a', false)).toBe(0.5);
+    it('rejects a sub-row of a broken column', () => {
+      expect(resolve('active-in-todo', subrowContainerId('col-3', 'old'))).toBeNull();
+    });
   });
 
-  it('uses index-based fallbacks for neighbors with unset positions', () => {
-    const unset = [item('a', null), item('b', null)];
-    // Dropping on 'b' (overIndex 1): both unset neighbors fall back to the
-    // drop index — prev -> overIndex (1), next -> overIndex + 1 (2) -> midpoint 1.5.
-    expect(computeDropPosition(unset, 'b', false)).toBe(1.5);
+  describe('column body drops', () => {
+    it('merged column body: reorder (append) when the active item is already a covered-set member', () => {
+      expect(resolve('active-in-review', 'col-1')).toEqual({
+        kind: 'reorder',
+        scopeWorkphaseIds: ['todo', 'review'],
+        anchorId: null,
+      });
+    });
+
+    it('merged column body: move to entryWorkphaseId when the active item is not a member', () => {
+      expect(resolve('active-in-dev', 'col-1')).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'todo',
+        anchorId: null,
+      });
+    });
+
+    it('merged column body: move when the active item has no known workphase', () => {
+      expect(resolve('card-unplaced', 'col-1')).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'todo',
+        anchorId: null,
+      });
+    });
+
+    it("rejects an expanded column's outer wrapper — a specific sub-row is required", () => {
+      expect(resolve('active-in-qa', 'col-2')).toBeNull();
+    });
+
+    it('rejects a broken column outright', () => {
+      expect(resolve('active-in-todo', 'col-3')).toBeNull();
+    });
+  });
+
+  describe('hovering a specific card', () => {
+    it('merged column: reorder across the whole covered set, not just the hovered card\'s own workphase (the pre-Epic-3.2 bug)', () => {
+      // active-in-todo hovering card-in-review: different literal workphases,
+      // but both are members of col-1's covered set — a same-visual-group
+      // reorder, not a workphase change.
+      expect(resolve('active-in-todo', 'card-in-review')).toEqual({
+        kind: 'reorder',
+        scopeWorkphaseIds: ['todo', 'review'],
+        anchorId: 'card-in-review',
+      });
+    });
+
+    it('merged column: move to entryWorkphaseId when the active item is genuinely from outside the covered set', () => {
+      expect(resolve('active-in-dev', 'card-in-review')).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'todo',
+        anchorId: 'card-in-review',
+      });
+    });
+
+    it('expanded column: reorder when hovering a card in the same workphase', () => {
+      expect(resolve('active-in-qa', 'card-in-qa')).toEqual({
+        kind: 'reorder',
+        scopeWorkphaseIds: ['qa'],
+        anchorId: 'card-in-qa',
+      });
+    });
+
+    it('expanded column: move to the precise hovered workphase otherwise', () => {
+      expect(resolve('active-in-dev', 'card-in-qa')).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'qa',
+        anchorId: 'card-in-qa',
+      });
+    });
+
+    it('rejects a card whose column is broken, and unresolvable targets', () => {
+      expect(resolve('active-in-todo', 'card-in-old')).toBeNull();
+      expect(resolve('active-in-todo', 'card-unplaced')).toBeNull();
+      expect(resolve('active-in-todo', 'something-unknown')).toBeNull();
+    });
   });
 });

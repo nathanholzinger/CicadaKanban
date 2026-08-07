@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../../types';
-import { getWorkphaseItemsFrom, getAttachedChildrenFrom, computeChildCounts } from './useItemManagement';
+import { getWorkphaseItemsFrom, getMergedColumnItemsFrom, getAttachedChildrenFrom, computeChildCounts } from './useItemManagement';
 
 function item(id: string, overrides: Partial<Item> = {}): Item {
   return {
@@ -17,6 +17,7 @@ function item(id: string, overrides: Partial<Item> = {}): Item {
     isAttached: 1,
     createdAt: 0,
     updatedAt: 0,
+    completedAt: null,
     ...overrides,
   };
 }
@@ -39,6 +40,59 @@ describe('getWorkphaseItemsFrom', () => {
   it('applies the project filter when given', () => {
     const result = getWorkphaseItemsFrom(items, 'todo', 'p1');
     expect(result.map(i => i.id)).toEqual(['first', 'root', 'detached-child']);
+  });
+
+  it('breaks an exact position tie by createdAt, oldest first', () => {
+    const tied = [
+      item('newer', { position: 1, createdAt: 200 }),
+      item('older', { position: 1, createdAt: 100 }),
+    ];
+    expect(getWorkphaseItemsFrom(tied, 'todo').map(i => i.id)).toEqual(['older', 'newer']);
+  });
+
+  it('sorts by completedAt instead of position for a terminal workphase (Epic 3.2 Part 6)', () => {
+    const done = [
+      item('shipped-later', { position: null, completedAt: 200 }),
+      item('shipped-first', { position: null, completedAt: 100 }),
+    ];
+    expect(getWorkphaseItemsFrom(done, 'todo', undefined, true).map(i => i.id)).toEqual(['shipped-first', 'shipped-later']);
+  });
+});
+
+describe('getMergedColumnItemsFrom', () => {
+  const items = [
+    item('todo-2', { workphaseId: 'todo', position: 2 }),
+    item('todo-1', { workphaseId: 'todo', position: 1 }),
+    item('review-1', { workphaseId: 'review', position: 1.5 }), // interleaves between todo-1 and todo-2
+    item('elsewhere', { workphaseId: 'done' }),
+    item('attached-child', { workphaseId: 'todo', parentId: 'todo-1', position: 0.5 }),
+    item('other-project', { workphaseId: 'review', projectId: 'p2', position: 0.1 }),
+  ];
+
+  it('union-sorts across the covered workphases, allowing genuine interleaving', () => {
+    // Scoped to p1 so other-project's tiny position doesn't also need
+    // accounting for here — that's covered separately below.
+    const result = getMergedColumnItemsFrom(items, ['todo', 'review'], 'p1');
+    expect(result.map(i => i.id)).toEqual(['todo-1', 'review-1', 'todo-2']);
+  });
+
+  it('excludes attached children and workphases outside the covered set', () => {
+    const result = getMergedColumnItemsFrom(items, ['todo', 'review']).map(i => i.id);
+    expect(result).not.toContain('attached-child');
+    expect(result).not.toContain('elsewhere');
+  });
+
+  it('applies the project filter when given', () => {
+    const result = getMergedColumnItemsFrom(items, ['todo', 'review'], 'p1').map(i => i.id);
+    expect(result).not.toContain('other-project');
+  });
+
+  it('sorts by completedAt instead of position when the covered set is terminal', () => {
+    const done = [
+      item('a', { workphaseId: 'done1', position: null, completedAt: 200 }),
+      item('b', { workphaseId: 'done2', position: null, completedAt: 100 }),
+    ];
+    expect(getMergedColumnItemsFrom(done, ['done1', 'done2'], undefined, true).map(i => i.id)).toEqual(['b', 'a']);
   });
 });
 

@@ -44,13 +44,31 @@ export async function updateItem(id: string, data: UpdateItemInput): Promise<Ite
   return res.json();
 }
 
-export async function moveItem(id: string, workphaseId: string, position: number): Promise<Item> {
+// Epic 3.2: prefers {anchorId, side} (resolved server-side against true
+// current data, never a client-computed value) over a raw `position`, which
+// stays supported only as a direct-control escape hatch — the board drag
+// path no longer sends it. `scopeWorkphaseIds` widens the anchor/append
+// scope to a merged column's covered set when the item isn't changing
+// workphase (a same-visual-group reorder); omit it for a plain single
+// workphase.
+export interface MoveItemInput {
+  workphaseId?: string;
+  position?: number;
+  anchorId?: string;
+  side?: 'before' | 'after';
+  scopeWorkphaseIds?: string[];
+}
+
+export async function moveItem(id: string, data: MoveItemInput): Promise<Item> {
   const res = await fetch(`${API}/items/${id}/move`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ workphaseId, position }),
+    body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to move item');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to move item');
+  }
   return res.json();
 }
 

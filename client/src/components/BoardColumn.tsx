@@ -11,7 +11,8 @@ import { subrowContainerId } from './workflow/boardDndUtils';
 
 interface BoardColumnProps {
   column: Column;
-  getWorkphaseItems: (workphaseId: string) => Item[];
+  getWorkphaseItems: (workphaseId: string, isTerminal?: boolean) => Item[];
+  getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
   childCounts: Record<string, number>;
   getAttachedChildren: (parentId: string) => Item[];
   defaultExpanded: boolean;
@@ -26,6 +27,7 @@ interface BoardColumnProps {
 export default function BoardColumn({
   column,
   getWorkphaseItems,
+  getMergedColumnItems,
   childCounts,
   getAttachedChildren,
   defaultExpanded,
@@ -47,8 +49,18 @@ export default function BoardColumn({
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
-  const totalItems = column.subRows.reduce((n, r) => n + getWorkphaseItems(r.workphase.id).length, 0);
-  const mergedItems = column.subRows.flatMap(r => getWorkphaseItems(r.workphase.id));
+  // A column can't span both terminal and non-terminal workphases (Epic 3.2
+  // Part 6's column-range validation) — isTerminal is uniform across the
+  // whole covered set, so any sub-row's flag is representative.
+  const columnIsTerminal = Boolean(column.subRows[0]?.workphase.isTerminal);
+  const totalItems = column.subRows.reduce((n, r) => n + getWorkphaseItems(r.workphase.id, columnIsTerminal).length, 0);
+  // Epic 3.2 Part 4: union-sorted across the covered set, not a
+  // concatenation of independently-sorted per-workphase lists — this is
+  // what makes cross-workphase interleaving visible and draggable.
+  const mergedItems = getMergedColumnItems(
+    column.subRows.map(r => r.workphase.id),
+    columnIsTerminal,
+  );
   // A merged (not broken) column highlights as a drop target only while a card
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
@@ -129,7 +141,7 @@ export default function BoardColumn({
               key={row.workphase.id}
               columnId={column.id}
               workphase={row.workphase}
-              items={getWorkphaseItems(row.workphase.id)}
+              items={getWorkphaseItems(row.workphase.id, Boolean(row.workphase.isTerminal))}
               itemTypes={itemTypes}
               childCounts={childCounts}
               getAttachedChildren={getAttachedChildren}
