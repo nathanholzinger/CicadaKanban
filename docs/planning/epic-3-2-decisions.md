@@ -225,7 +225,7 @@ feature lands anyway.
 Recorded 2026-08-07, alongside the resolution banner at the top of this doc.
 None of this is scoped or scheduled — captured here so it isn't lost before
 whichever future epic actually picks it up, matching the treatment already
-given to `epic-3.5-decisions.md` / `epic-5-decisions.md` / `epic-6-decisions.md`
+given to `epic-3-5-decisions.md` / `epic-5-decisions.md` / `epic-6-decisions.md`
 / `epic-8-decisions.md`.
 
 - **Personal boards.** Team-shared boards (what got built) vs. an

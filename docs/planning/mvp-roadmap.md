@@ -67,7 +67,7 @@ relative to their siblings; merged↔expanded column changes (and range edits
 that change a merged column's covered workphases) recompute ordering by
 workphase-rank while preserving prior relative order; resolve whether
 position should move from an item-level value to a board-scoped one. See
-`epic-3.2-decisions.md` for the full design discussion —
+`epic-3-2-decisions.md` for the full design discussion —
 nothing here is decided yet.
 
 ---

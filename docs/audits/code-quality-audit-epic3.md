@@ -356,7 +356,7 @@ rationale explicitly cites this finding. Not yet built — verified
 `KanbanCard.tsx` still stops pointer-down propagation on attached-child
 interactive elements, so the gesture genuinely doesn't exist yet, consistent
 with Epic 3.5 being unstarted. (Epic 3.2 — item positioning — is now
-sequenced before it; see `docs/planning/epic-3.2-decisions.md`.)
+sequenced before it; see `docs/planning/epic-3-2-decisions.md`.)
 
 ---
 

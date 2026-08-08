@@ -123,7 +123,7 @@ export const items = sqliteTable('items', {
   // Set when this item's workphase becomes terminal (done); cleared if it's
   // reopened into a non-terminal workphase. Detached/root items in a
   // terminal workphase have no meaningful `position` — ordering is derived
-  // from this field instead (see docs/planning/epic-3.2-decisions.md).
+  // from this field instead (see docs/planning/epic-3-2-decisions.md).
   // Attached children keep their position regardless (parent-scoped, not
   // workphase-scoped).
   completedAt: integer('completed_at'),

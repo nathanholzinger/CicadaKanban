@@ -6,7 +6,7 @@ Update the status line below once it ships, and re-verify every rule below
 against actual behavior at that point.
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
-**Design history:** `docs/planning/epic-3.2-decisions.md`
+**Design history:** `docs/planning/epic-3-2-decisions.md`
 
 ---
 
