@@ -32,13 +32,27 @@ an item past a true neighbor the acting view never saw. Resolving against
 a fresh authoritative query, always, closes this for every comparison
 scope (attached-sibling list, merged-column union) at once.
 
+**Comparison scope.** A detached/root item's position is comparable against
+every other active item in its **whole workflow**, not just its own
+workphase — a workphase boundary alone was never a meaningful place to stop
+comparing positions (two items in different workphases of the same workflow
+still need to sort/collide cleanly — a merged column, a reindex, or a plain
+append into a workphase that merely happens to be empty right now would
+otherwise risk colliding or misordering against items elsewhere in the same
+workflow). Attached children stay parent-scoped, `(parentId, isAttached)`
+(§3) — narrower than workflow, and untouched by this. There is no scope
+narrower than "the whole workflow" for a detached/root item — in particular
+a merged column's covered workphaseIds is **not** a position-comparison
+boundary, just a rendering filter (§4).
+
 **Resolution steps, in order:**
 
 1. Query the anchor's true current position.
 2. Look for a true bounding neighbor beyond the anchor in the requested
    direction, against the full authoritative table — never limited to
-   what the requesting view currently has loaded or displayed. The check
-   is always "does a true neighbor exist," never "is one visible here."
+   what the requesting view currently has loaded or displayed, and never
+   narrower than the comparison scope above. The check is always "does a
+   true neighbor exist," never "is one visible here."
 3. If a true bounding neighbor exists: **coarsest-fit insert** between the
    anchor and that neighbor (below).
 4. If none exists (the anchor is the true last item for side `after`, or
@@ -55,16 +69,39 @@ falls strictly between the two neighbors. Example: between 1.5 and 2.0,
 the raw midpoint is 1.75, but 1.8 already fits (1 decimal), so use 1.8.
 
 **Append fallback** (step 4): `round(anchor.position + 1.0)` for `after`
-with no true successor, `round(anchor.position - 1.0)` for `before` with
-no true predecessor. Item creation with no explicit position and a
-cross-workphase move/drop with no specific target card both resolve
-through this same path.
+with no true successor. For `before` with no true predecessor, **not** a
+symmetric `round(anchor.position - 1.0)` — instead a coarsest-fit insert
+between `0.0` (a virtual floor) and the anchor's position. This keeps a
+repeatedly-prepended item's position bounded above zero instead of
+drifting negative without limit, which would otherwise collide with the
+`position ?? 0` tie-break sentinel used when sorting alongside unpositioned
+items (§5). A workphaseId-only move with no anchor at all (dropping an item
+into a different workphase, no specific target card) does **not** go
+through this path — see the addendum below. Item creation with no explicit
+position, and a same-workphase reorder/append with no specific target card,
+both still do.
 
-**Bootstrap fallback** (step 5, scope is completely empty): anchor to the
-nearest non-empty workphase by rank, rather than restarting at a fixed
-baseline like `1.0` — this is what prevents two independently-empty
-workphaces from each bootstrapping at `1.0` and later colliding when
-merged/compared.
+**Bootstrap fallback** (step 5, scope is completely empty): start at `1.0`.
+Because scope is workflow-wide (never workphase-narrow — see above), this
+only fires when the *whole workflow* has no positioned items yet, or a
+parent has no children yet — never merely because one particular workphase
+is currently empty while others in the same workflow aren't. (An earlier
+design considered a rank-aware bootstrap — anchoring an empty workphase to
+its nearest non-empty neighbor by rank — to avoid two independently-empty
+*workphases* colliding at `1.0`; that concern doesn't apply once scope is
+workflow-wide rather than workphase-wide, so it was dropped rather than
+built.)
+
+**A workphaseId-only move with no anchor keeps the item's existing
+position, unchanged** — a distinct, deliberate exception to steps 4/5
+above. Since position is workflow-scoped, an item's existing value is
+already comparable against everything else in its workflow; changing its
+workphaseId alone doesn't make that value stop being meaningful, so there's
+no need to compute a new one. (This is also the shape the MCP `move_item`
+tool already sends — `{workphaseId}` alone.) The one exception: if the item
+has no existing position to keep — reopening a done item, or a first-time
+workphase assignment — it still needs a fresh one via the append fallback,
+same as creation.
 
 **Tight-gap reindex trigger:** if the coarsest-fit search exhausts a max
 decimal depth with nothing fitting, that's precision exhaustion — reindex
@@ -73,10 +110,11 @@ the relevant local comparison scope first (§5), then retry the insert.
 **`positionScope` (computed, read-only API field):** alongside the
 existing `position: number | null` (unchanged shape), a derived field —
 `"attached-siblings"` (item is attached, has a `parentId`),
-`"workphase"` (detached/root, non-terminal workphase), or `"none"`
-(detached/root, terminal/done workphase — see §6). Purely computed at
-serialization time, never stored. Tells a client (or a human reading the
-API) what an item's `position` is actually comparable against.
+`"workflow"` (detached/root, non-terminal workphase — comparable against
+the whole workflow, see above), or `"none"` (detached/root, terminal/done
+workphase — see §6). Purely computed at serialization time, never stored.
+Tells a client (or a human reading the API) what an item's `position` is
+actually comparable against.
 
 **Client-side role:** `positionBetween`/`computeDropPosition` can still
 run client-side for optimistic instant visual feedback, but the server's
@@ -92,7 +130,7 @@ never when the scope is unchanged:
 
 | Operation | Scope change? | Result |
 |---|---|---|
-| Attach ↔ detach toggle | Yes (parent-scoped ↔ workphase-scoped) | Fresh position |
+| Attach ↔ detach toggle | Yes (parent-scoped ↔ workflow-scoped) | Fresh position |
 | Reparent while staying attached | Yes (old parent's siblings → new parent's) | Fresh position |
 | `cascadeWorkphaseToAttachedDescendants` | No (still parent-scoped regardless of workphaseId) | Position untouched — unchanged from today |
 | Active → done transition | N/A — see §6 | Position dropped entirely, not reassigned |

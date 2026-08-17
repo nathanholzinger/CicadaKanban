@@ -39,7 +39,7 @@ export interface WorkPhase {
 // workphaseId/workphase.isTerminal (never stored). Not required by any
 // client logic today (the client re-derives scope itself), but useful for
 // debugging and future consumers.
-export type PositionScope = 'attached-siblings' | 'workphase' | 'none';
+export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export interface Item {
   id: string;

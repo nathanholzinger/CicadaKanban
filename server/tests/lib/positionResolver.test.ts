@@ -120,12 +120,12 @@ describe('resolveAnchorPosition', () => {
     expect(result).toBe(6);
   });
 
-  it('prepends past the anchor when it is the true first item', async () => {
+  it('coarsest fit between the anchor and 0.0 when it is the before the first item (thus becomeing the new first item)', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
     const result = resolveAnchorPosition(created[0].id, 'before', eq(items.workphaseId, phase.id));
-    expect(result).toBe(4);
+    expect(result).toBe(3);
   });
 
   it('reindexes the scope and retries when the gap is too tight for any precision', async () => {
@@ -229,11 +229,11 @@ describe('classifyPositionScope', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, true)).toBe('none');
   });
 
-  it('classifies a detached/root item in a non-terminal workphase as workphase', () => {
-    expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, false)).toBe('workphase');
+  it('classifies a detached/root item in a non-terminal workphase as workflow', () => {
+    expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 
-  it('classifies an attached-but-parentless item as workphase, not attached-siblings', () => {
-    expect(classifyPositionScope({ isAttached: true, parentId: null, workphaseId: 'w1' }, false)).toBe('workphase');
+  it('classifies an attached-but-parentless item as workflow, not attached-siblings', () => {
+    expect(classifyPositionScope({ isAttached: true, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 });

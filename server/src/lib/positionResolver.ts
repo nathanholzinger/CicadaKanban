@@ -97,13 +97,13 @@ function resolveNear(getNearPosition: () => number | null, side: Side, scopeWher
   const nearPosition = getNearPosition();
 
   if (nearPosition === null) {
-    // Empty scope — bootstrap. A rank-aware bootstrap (anchor to the
-    // nearest non-empty workphase by rank, rather than restarting at a
-    // fixed baseline — the fix for the original independent-counter-
-    // collision bug) is a workphase-specific refinement layered in by
-    // whichever caller has workphase-rank context; this generic resolver
-    // only knows about "scope", not "workphase", so it defaults to the
-    // same simple base case `nextPosition` already used for an empty list.
+    // Genuinely empty scope — nothing to derive a value from, so start at
+    // 1.0. Scopes are workflow-wide (or parent-wide for attached children,
+    // Part 3) — never workphase-narrow — so this only fires for a whole new
+    // workflow with no positioned items yet, or a parent with no children
+    // yet (see positionScopeFor in items.ts). It deliberately does NOT fire
+    // just because one particular workphase happens to be empty while
+    // others in the same workflow aren't.
     return 1.0;
   }
 
@@ -126,27 +126,53 @@ function resolveNear(getNearPosition: () => number | null, side: Side, scopeWher
 
   if (boundingNeighbor?.position != null) {
     const [prev, next] = side === 'after' ? [nearPosition, boundingNeighbor.position] : [boundingNeighbor.position, nearPosition];
-    const fit = coarsestFit(prev, next);
-    if (fit !== null) return fit;
-
-    if (!allowRetry) {
-      throw new Error('positionResolver: precision exhausted even after a reindex — this should not happen');
-    }
-    reindexScope(scopeWhere, tx);
-    return resolveNear(getNearPosition, side, scopeWhere, tx, false);
+    return fitOrReindexAndRetry(prev, next, getNearPosition, side, scopeWhere, tx, allowRetry);
   }
 
-  // No true bounding neighbor beyond nearPosition — degenerate append
-  // fallback. Provably always past nearPosition: rounding perturbs by at
-  // most 0.5, the offset is a full 1.0.
-  const direction = side === 'after' ? 1 : -1;
-  const candidate = Math.round(nearPosition + direction * 1.0);
+  if (side === 'before') {
+    // No true predecessor — coarsest-fit toward the floor (0.0) rather than
+    // a flat `nearPosition - 1.0` step. Keeps a repeatedly-prepended item's
+    // position bounded above zero instead of drifting negative without
+    // limit, which would otherwise collide with the `position ?? 0`
+    // tie-break sentinel used when sorting alongside unpositioned items
+    // (§5's tie-break). Precision exhaustion near zero is handled by the
+    // same tight-gap reindex-and-retry as any other coarsest-fit call.
+    return fitOrReindexAndRetry(0.0, nearPosition, getNearPosition, side, scopeWhere, tx, allowRetry);
+  }
+
+  // side === 'after' with no true successor — degenerate append fallback,
+  // unbounded above (there's no natural ceiling the way 0.0 is a natural
+  // floor). Provably always past nearPosition: rounding perturbs by at most
+  // 0.5, the offset is a full 1.0.
+  const candidate = Math.round(nearPosition + 1.0);
 
   if (allowRetry && exceedsMagnitudeThreshold(candidate, scopeWhere, tx)) {
     reindexScope(scopeWhere, tx);
     return resolveNear(getNearPosition, side, scopeWhere, tx, false);
   }
   return candidate;
+}
+
+// Shared by both the true-neighbor case and the before-side zero-floor case:
+// coarsest-fit between two bounds, reindexing the scope and retrying once
+// (fresh, clean sequential positions) if precision is exhausted.
+function fitOrReindexAndRetry(
+  prev: number,
+  next: number,
+  getNearPosition: () => number | null,
+  side: Side,
+  scopeWhere: SQL,
+  tx: Tx | undefined,
+  allowRetry: boolean,
+): number {
+  const fit = coarsestFit(prev, next);
+  if (fit !== null) return fit;
+
+  if (!allowRetry) {
+    throw new Error('positionResolver: precision exhausted even after a reindex — this should not happen');
+  }
+  reindexScope(scopeWhere, tx);
+  return resolveNear(getNearPosition, side, scopeWhere, tx, false);
 }
 
 // Main `{anchor, side}` entry point: insert immediately before/after a
@@ -187,7 +213,7 @@ export function resolveAppendPosition(scopeWhere: SQL, tx?: Tx): number {
 // without re-deriving it from isAttached/parentId/workphaseId/
 // workphase.isTerminal itself.
 
-export type PositionScope = 'attached-siblings' | 'workphase' | 'none';
+export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export function classifyPositionScope(
   item: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
@@ -199,5 +225,7 @@ export function classifyPositionScope(
   if (item.workphaseId === null) return 'none';
   // Done item (Part 6) — ordered by completedAt, not position.
   if (workphaseIsTerminal) return 'none';
-  return 'workphase';
+  // Comparable against every other active item in the same workflow, not
+  // just the same workphase (Epic 3.2 addendum) — see positionScopeFor.
+  return 'workflow';
 }

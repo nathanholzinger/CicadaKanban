@@ -11,27 +11,50 @@ import { resolveAnchorPosition, resolveAppendPosition, type Side } from '../lib/
 
 const router = Router();
 
-// Epic 3.2's position-comparison scope for an item: parent-scoped for an
-// attached child (its true siblings), workphase-scoped otherwise — always
-// excluding attached children from a workphase-scoped lookup, since they
-// render nested under their parent rather than as flat list members
-// (mirrors the client's getWorkphaseItemsFrom filter). `workphaseIds` widens
-// a workphase-scoped lookup to a merged column's covered set instead of a
-// single workphase; `excludeId` keeps the subject's own (possibly
-// just-updated) row out of its own scope query.
+// Epic 3.2's position-comparison scope for an item: parent-scoped
+// (parentId, isAttached) for an attached child — its true siblings — or
+// workflow-scoped for everything else. Position is a single value shared
+// across a whole workflow (docs/wiki/item-positioning), not per-workphase —
+// a workphase boundary alone was never a meaningful place to stop comparing
+// positions, since two items in different workphases of the same workflow
+// still need to compare cleanly (a merged column, a reindex, or a plain
+// cross-workphase append would otherwise risk colliding/misordering
+// against a workphase that merely happened to be empty). So every
+// detached/root item's scope is every workphaseId sharing its current
+// workphase's workflowId, not just that one workphase — always excluding
+// attached children, since they render nested under their parent rather
+// than as flat list members (mirrors the client's getWorkphaseItemsFrom
+// filter). `excludeId` keeps the subject's own (possibly just-updated) row
+// out of its own scope query.
 function positionScopeFor(
   subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
-  workphaseIds?: string[],
   excludeId?: string,
+  tx?: Tx,
 ): SQL {
   const base: SQL =
     subject.isAttached && subject.parentId
       ? and(eq(items.parentId, subject.parentId), eq(items.isAttached, 1))!
       : and(
-          inArray(items.workphaseId, workphaseIds && workphaseIds.length > 0 ? workphaseIds : subject.workphaseId ? [subject.workphaseId] : []),
+          inArray(items.workphaseId, subject.workphaseId ? workphaseIdsInSameWorkflow(subject.workphaseId, tx) : []),
           not(and(eq(items.isAttached, 1), isNotNull(items.parentId))!),
         )!;
   return excludeId ? and(base, not(eq(items.id, excludeId)))! : base;
+}
+
+// Every workphaseId belonging to the same workflow as `workphaseId` —
+// resolves a detached/root item's true comparison scope (above). Falls back
+// to just the given id if it doesn't resolve to a workflow (shouldn't
+// happen for a valid FK, but keeps this from silently scoping to nothing).
+function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
+  const e = tx ?? db;
+  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  if (!workphase) return [workphaseId];
+  return e
+    .select({ id: workphases.id })
+    .from(workphases)
+    .where(eq(workphases.workflowId, workphase.workflowId))
+    .all()
+    .map(w => w.id);
 }
 
 function logActivity(
@@ -166,6 +189,9 @@ router.post('/', (req, res) => {
       position = resolveAppendPosition(positionScopeFor({ isAttached: false, parentId: null, workphaseId: resolvedWorkphaseId }));
     }
   }
+  // Note: append here is workflow-wide (see positionScopeFor), not narrowed
+  // to resolvedWorkphaseId — a brand-new item lands after the workflow's
+  // true last active item, not just the last item in its own workphase.
 
   const id = randomUUID();
 
@@ -257,7 +283,7 @@ router.put('/:id', (req, res) => {
           const scopeUpdates: Record<string, unknown> = { workphaseId: newParent.workphaseId, updatedAt: Date.now() };
           if (!scopeUnchanged) {
             scopeUpdates.position = resolveAppendPosition(
-              positionScopeFor({ isAttached: true, parentId: resultingParentId, workphaseId: newParent.workphaseId }, undefined, req.params.id),
+              positionScopeFor({ isAttached: true, parentId: resultingParentId, workphaseId: newParent.workphaseId }, req.params.id, tx),
               tx,
             );
             // Attached items don't participate in Part 6's done-tracking.
@@ -283,7 +309,7 @@ router.put('/:id', (req, res) => {
             tx.update(items).set({ position: null, completedAt: Date.now(), updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
           } else {
             const newPosition = resolveAppendPosition(
-              positionScopeFor({ isAttached: false, parentId: null, workphaseId: currentWorkphaseId }, undefined, req.params.id),
+              positionScopeFor({ isAttached: false, parentId: null, workphaseId: currentWorkphaseId }, req.params.id, tx),
               tx,
             );
             tx.update(items).set({ position: newPosition, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
@@ -315,7 +341,14 @@ router.patch('/:id/move', (req, res) => {
 
   const { workphaseId, position, anchorId, side, scopeWorkphaseIds } = req.body;
 
-  if (workphaseId === undefined && position === undefined && anchorId === undefined) {
+  // scopeWorkphaseIds is accepted (not just workphaseId/position/anchorId)
+  // so a bare same-column reorder-to-append request — no anchor, no
+  // workphaseId change, just "this merged group" — doesn't 400. It no
+  // longer affects scope resolution below, though (position is
+  // workflow-wide, not workphase-narrow — see positionScopeFor); it's kept
+  // only so this legacy request shape stays valid.
+  const hasScopeWorkphaseIds = Array.isArray(scopeWorkphaseIds) && scopeWorkphaseIds.length > 0;
+  if (workphaseId === undefined && position === undefined && anchorId === undefined && !hasScopeWorkphaseIds) {
     res.status(400).json({ error: 'workphaseId, position, and/or anchorId+side required' });
     return;
   }
@@ -353,19 +386,36 @@ router.patch('/:id/move', (req, res) => {
       }
       const scope = positionScopeFor(
         { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
-        scopeWorkphaseIds,
         req.params.id,
+        tx,
       );
       updates.position = resolveAnchorPosition(anchorId, side as Side, scope, tx);
     } else if (position !== undefined) {
       updates.position = position;
     } else if (targetWorkphaseId) {
-      // No explicit position: default to the end of the target scope — the
-      // same "append" rule every create endpoint uses (finding #25),
-      // generalized to the item's real position-comparison scope.
-      const isAttachedNow = Boolean(item.isAttached) && Boolean(item.parentId);
-      const scope = positionScopeFor({ isAttached: isAttachedNow, parentId: item.parentId, workphaseId: targetWorkphaseId }, undefined, req.params.id);
-      updates.position = resolveAppendPosition(scope, tx);
+      // No anchor and no explicit position. Two distinct cases:
+      //
+      // Epic 3.2 addendum #2 — a plain workphaseId-only move (no other
+      // reorder signal) where the item already has a real position: since
+      // position is workflow-scoped, not workphase-scoped, its existing
+      // value is already comparable against everything else in the (same)
+      // workflow — no new number needed just because workphaseId changed.
+      // Leave `position` untouched. This is also what the request shape the
+      // MCP move_item tool already sends (`{workphaseId}` alone) hits.
+      //
+      // Otherwise — a same-workphase reorder/append with no specific anchor
+      // card (e.g. dropped in empty column space), or the item has no
+      // existing position to keep (reopening a done item, or a first-time
+      // workphase assignment) — it needs a fresh one: append past the true
+      // last item in its (workflow-wide, or parent-wide for an attached
+      // child) comparison scope, the same "append" rule every create
+      // endpoint uses (finding #25).
+      const isGenuineWorkphaseChange = workphaseId !== undefined && workphaseId !== oldWorkphaseId;
+      if (!(isGenuineWorkphaseChange && item.position !== null)) {
+        const isAttachedNow = Boolean(item.isAttached) && Boolean(item.parentId);
+        const scope = positionScopeFor({ isAttached: isAttachedNow, parentId: item.parentId, workphaseId: targetWorkphaseId }, req.params.id, tx);
+        updates.position = resolveAppendPosition(scope, tx);
+      }
     }
 
     // Terminal transition (Epic 3.2 Part 6): only relevant for detached/root
