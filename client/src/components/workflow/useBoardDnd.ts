@@ -10,7 +10,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
 import { moveItem } from '../../api/items';
-import { buildColumnForWorkphaseMap, resolveDropTarget } from './boardDndUtils';
+import { buildColumnForWorkphaseMap, resolveDropTarget, resolveDropSide } from './boardDndUtils';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
@@ -88,6 +88,10 @@ export function useBoardDnd(
 
     const activeId = String(active.id);
     const overId = String(over.id);
+    // Resolved once, shared by every branch below that anchors against
+    // overId — which half of the hovered card the dragged card's current
+    // position falls in.
+    const side = resolveDropSide(active.rect.current.translated, over.rect);
 
     // ── Column reorder ──
     if (type === 'column') {
@@ -117,7 +121,7 @@ export function useBoardDnd(
     if (type === 'attached-child') {
       if (activeId === overId) return;
       try {
-        const updated = await moveItem(activeId, { anchorId: overId, side: 'before' });
+        const updated = await moveItem(activeId, { anchorId: overId, side });
         setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
       } catch (err) {
         console.error('Failed to reorder attached child:', err);
@@ -135,11 +139,11 @@ export function useBoardDnd(
         resolution.kind === 'reorder'
           ? await moveItem(activeId, {
               scopeWorkphaseIds: resolution.scopeWorkphaseIds,
-              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side: 'before' as const } : {}),
+              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
             })
           : await moveItem(activeId, {
               workphaseId: resolution.targetWorkphaseId,
-              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side: 'before' as const } : {}),
+              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
             });
       setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
     } catch (err) {

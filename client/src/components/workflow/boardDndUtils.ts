@@ -140,3 +140,39 @@ export function resolveDropTarget(
     ? { kind: 'reorder', scopeWorkphaseIds: coveredIds, anchorId: overId }
     : { kind: 'move', targetWorkphaseId: col.entryWorkphaseId, anchorId: overId };
 }
+
+// Narrowed structural subset of dnd-kit's ClientRect — only what
+// resolveDropSide needs, so callers can pass either a real ClientRect or a
+// plain fixture without importing dnd-kit's type.
+export interface VerticalRect {
+  top: number;
+  height: number;
+}
+
+// `over.rect` and `active.rect.current.translated` are measured via two
+// independent tracking paths (a droppable's periodic getBoundingClientRect
+// snapshot vs. initial rect + accumulated pointer delta) — expected to
+// agree closely but not always bit-identically, especially under a real
+// mouse-driven drag. A 1px tie band keeps an exact/near-exact center drop
+// resolving to 'before' (matching today's default, and what dropping
+// squarely onto a card is expected to do) without blurring a genuine
+// top-quarter/bottom-quarter drop, which sits ~10-12px further out.
+const SIDE_TIE_EPSILON_PX = 1;
+
+// Which side of the hovered card a drop resolves to — 'before' if the
+// dragged card's current center sits at or above the hovered card's
+// center (within the tie epsilon), 'after' otherwise. Pure geometry, no
+// dnd-kit types required directly. Missing rects (dnd-kit's
+// `active.rect.current.translated` can be null before the first measured
+// frame) fail safe to 'before' rather than throwing.
+export function resolveDropSide(
+  activeRect: VerticalRect | null | undefined,
+  overRect: VerticalRect | null | undefined,
+): 'before' | 'after' {
+  if (!activeRect || !overRect) return 'before';
+
+  const activeCenterY = activeRect.top + activeRect.height / 2;
+  const overCenterY = overRect.top + overRect.height / 2;
+
+  return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
+}

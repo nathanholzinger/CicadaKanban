@@ -39,7 +39,8 @@
       "Bash(grep -rln \"drag\\\\|DnD\\\\|dnd\" \"C:\\\\Users\\\\natha\\\\.claude\\\\projects\\\\c--Users-natha-Dev-KanbanApp\\\\memory\\\\\" 2>/dev/null *)",
       "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory\" 2>/**)",
       "Bash(npm run *)",
-      "Bash(curl -s -m 3 http://localhost:3002/api/health)"
+      "Bash(curl -s -m 3 http://localhost:3002/api/health)",
+      "Bash(git -C /c/Users/natha/Dev/KanbanApp status --short)"
     ]
   }
 }

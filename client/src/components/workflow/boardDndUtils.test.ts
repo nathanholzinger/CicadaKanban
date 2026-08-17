@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
-import { buildColumnForWorkphaseMap, resolveDropTarget, subrowContainerId, boardCollisionDetection, type DropColumn } from './boardDndUtils';
+import {
+  buildColumnForWorkphaseMap,
+  resolveDropTarget,
+  subrowContainerId,
+  boardCollisionDetection,
+  resolveDropSide,
+  type DropColumn,
+} from './boardDndUtils';
 
 // Minimal fixture for boardCollisionDetection's args — every candidate gets
 // an identical rect, close enough to the pointer that closestCorners would
@@ -215,6 +222,47 @@ describe('resolveDropTarget', () => {
       expect(resolve('active-in-todo', 'card-in-old')).toBeNull();
       expect(resolve('active-in-todo', 'card-unplaced')).toBeNull();
       expect(resolve('active-in-todo', 'something-unknown')).toBeNull();
+    });
+  });
+
+  describe('resolveDropSide', () => {
+    const card = (top: number, height = 100) => ({ top, height });
+
+    it('defaults to before when the active rect is missing', () => {
+      expect(resolveDropSide(null, card(100))).toBe('before');
+      expect(resolveDropSide(undefined, card(100))).toBe('before');
+    });
+
+    it('defaults to before when the over rect is missing', () => {
+      expect(resolveDropSide(card(100), null)).toBe('before');
+      expect(resolveDropSide(card(100), undefined)).toBe('before');
+    });
+
+    it('resolves before when the dragged card is centered in the target\'s upper region', () => {
+      // Target spans 100-200 (center 150); dragged card centered at 115,
+      // mirroring the E2E suite's topQuarter (15% down the target).
+      expect(resolveDropSide(card(65), card(100))).toBe('before');
+    });
+
+    it('resolves after when the dragged card is centered in the target\'s lower region', () => {
+      // Dragged card centered at 185, mirroring bottomQuarter (85% down).
+      expect(resolveDropSide(card(135), card(100))).toBe('after');
+    });
+
+    it('resolves before on an exact center-to-center tie', () => {
+      expect(resolveDropSide(card(100), card(100))).toBe('before');
+    });
+
+    it('resolves before on a near-tie within the epsilon', () => {
+      // Active center at 150.5 vs. target center 150 — 0.5px over, inside
+      // the 1px tie band.
+      expect(resolveDropSide(card(100.5), card(100))).toBe('before');
+    });
+
+    it('resolves after just outside the epsilon', () => {
+      // Active center at 152 vs. target center 150 — 2px over, past the
+      // 1px tie band.
+      expect(resolveDropSide(card(102), card(100))).toBe('after');
     });
   });
 });
