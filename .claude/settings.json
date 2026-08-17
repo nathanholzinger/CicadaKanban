@@ -35,7 +35,11 @@
       "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory\" 2>/dev/**)",
       "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory/**)",
       "Bash(sed -i 's#\\\\.claude/plans/epic-8-decisions\\\\.md#docs/planning/epic-8-decisions.md#g; s#\\\\.claude/plans/epic-6-decisions\\\\.md#docs/planning/epic-6-decisions.md#g' MEMORY.md architecture_data_modeling.md architecture_events_notifications.md)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(grep -rln \"drag\\\\|DnD\\\\|dnd\" \"C:\\\\Users\\\\natha\\\\.claude\\\\projects\\\\c--Users-natha-Dev-KanbanApp\\\\memory\\\\\" 2>/dev/null *)",
+      "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory\" 2>/**)",
+      "Bash(npm run *)",
+      "Bash(curl -s -m 3 http://localhost:3002/api/health)"
     ]
   }
 }

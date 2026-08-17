@@ -1,12 +1,8 @@
 # Item Positioning & Board-Scoped Ordering
 
-**Build status:** Not yet implemented — this page documents Epic 3.2's
-hardened design (all open questions resolved) ahead of the code landing.
-Update the status line below once it ships, and re-verify every rule below
-against actual behavior at that point.
+**Build status:** Implemented
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
-**Design history:** `docs/planning/epic-3-2-decisions.md`
 
 ---
 

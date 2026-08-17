@@ -36,8 +36,8 @@ describe('coarsestFit', () => {
   });
 
   it('rounds to the coarsest precision that still fits strictly between the neighbors', () => {
-    // Raw midpoint of 1.5/2.0 is 1.75, but 1.8 (1 decimal) already fits.
     expect(coarsestFit(1.5, 2.0)).toBe(1.8);
+    expect(coarsestFit(1.5, 1.8)).toBe(1.7);
   });
 
   it('falls to deeper precision once the gap no longer has room at 1 decimal', () => {
@@ -45,12 +45,12 @@ describe('coarsestFit', () => {
   });
 
   it('self-corrects when a rounded candidate would collide with a boundary', () => {
-    // Midpoint of 1.0/1.1 is 1.05; rounding to 1 decimal gives 1.1, which
-    // equals `next` — the strict-inequality check must reject that and fall
-    // through to 2 decimals.
-    const result = coarsestFit(1.0, 1.1);
-    expect(result).toBeGreaterThan(1.0);
-    expect(result).toBeLessThan(1.1);
+    expect(coarsestFit(1.0, 1.1)).toBe(1.05);
+    expect(coarsestFit(2.899, 2.9)).toBe(2.8995);
+  });
+
+  it('can return a value that is coarser than its inputs', () => {
+    expect(coarsestFit(4.87, 6.00456)).toBe(5);
   });
 
   it('returns null once the gap is exhausted even at max precision', () => {
@@ -60,23 +60,24 @@ describe('coarsestFit', () => {
 
 describe('reindexScope', () => {
   it('reassigns clean sequential positions while preserving relative order', async () => {
-    const { phase, items: created } = await seedPhaseWithItems(3);
-    // Force a tight, ugly cluster without disturbing relative order.
+    const { phase, items: created } = await seedPhaseWithItems(4);
     setPosition(created[0].id, 5.001);
     setPosition(created[1].id, 5.002);
     setPosition(created[2].id, 5.003);
+    setPosition(created[3].id, 5.0);
 
     reindexScope(eq(items.workphaseId, phase.id));
 
-    expect(getPosition(created[0].id)).toBe(1);
-    expect(getPosition(created[1].id)).toBe(2);
-    expect(getPosition(created[2].id)).toBe(3);
+    expect(getPosition(created[0].id)).toBe(2);
+    expect(getPosition(created[1].id)).toBe(3);
+    expect(getPosition(created[2].id)).toBe(4);
+    expect(getPosition(created[3].id)).toBe(1);
   });
 
   it('breaks exact ties by createdAt, oldest first', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
     setPosition(created[0].id, 1.0);
-    setPosition(created[1].id, 1.0); // tie — created[0] is older
+    setPosition(created[1].id, 1.0);
 
     reindexScope(eq(items.workphaseId, phase.id));
 
