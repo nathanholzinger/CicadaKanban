@@ -8,11 +8,10 @@
 | TC-5.2 | Magnitude threshold triggers reindex before append | P0 | ✅ automated |
 | TC-5.3 | Magnitude threshold scales with scope size | P1 | ✅ automated |
 | TC-5.4 | Active items reindex as one coordinated cross-workphase scope | P0 | ✅ automated |
-| TC-5.5 | ~~Two independently-reindexed active scopes never collide~~ — superseded, no longer applicable | P0 | N/A |
-| TC-5.6 | Done items are never reindexed | P1 | ✅ automated |
-| TC-5.7 | Tie-break on exact position equality | P1 | ✅ automated |
-| TC-5.8 | Attached-siblings reindex doesn't leak into workflow-wide scope | P0 (regression/guard) | ✅ automated |
-| TC-5.9 | Workflow-wide reindex doesn't leak into attached-siblings scope | P0 (regression/guard) | ✅ automated |
+| TC-5.5 | Done items are never reindexed | P1 | ✅ automated |
+| TC-5.6 | Tie-break on exact position equality | P1 | ✅ automated |
+| TC-5.7 | Attached-siblings reindex doesn't leak into workflow-wide scope | P0 (regression/guard) | ✅ automated |
+| TC-5.8 | Workflow-wide reindex doesn't leak into attached-siblings scope | P0 (regression/guard) | ✅ automated |
 
 ---
 
@@ -74,26 +73,7 @@ reindex via a real `PATCH /:id/move` anchor+side call, and confirms the
 second workphase's item was renumbered in the same pass — the
 coordination proof.
 
-## TC-5.5 — ~~Two independently-reindexed active scopes never collide~~ (superseded)
-
-**Priority:** P0 (regression/guard) · **Automated:** N/A — scenario no longer applies
-
-*Given* two non-terminal workphaces that both needed reindexing at
-different times, *when* their items are later compared in a merged
-column, *then* there is no position collision — because both were part of
-the same coordinated reindex, not separate resets.
-
-*(Superseded, same pattern as [TC-2.8](part-2-anchor-resolution.md):
-`positionScopeFor`'s workflow-wide scope is the only scope any reindex
-trigger ever uses for a detached item, and a board's columns are
-hard-scoped to one `workflowId` (`getOrderedWorkphases`/
-`getCoveredWorkphases`, `columnRanges.ts`) — a "merge" can never span two
-workflows. There is no code path, real or hypothetical, that produces two
-independently-reindexed non-terminal workphases colliding when merged —
-TC-5.4's test demonstrates the single coordinated scope in practice. Kept
-here, struck through, for traceability rather than deleted outright.)*
-
-## TC-5.6 — Done items are never reindexed
+## TC-5.5 — Done items are never reindexed
 
 **Priority:** P1 (regression/guard) · **Automated:** ✅ automated
 
@@ -116,7 +96,7 @@ position, and `ORDER BY position DESC` sorts `NULL` *last*, both
 confirmed empirically) — `reindexScope`'s blind order-and-renumber loop
 was the only exposed spot, so the fix lives there.
 
-## TC-5.7 — Tie-break on exact position equality
+## TC-5.6 — Tie-break on exact position equality
 
 **Priority:** P1 · **Automated:** ✅ automated
 
@@ -131,7 +111,7 @@ underlying DB row order.
 position tie by createdAt, oldest first" (client render-time) — two
 genuinely different code paths, not redundant
 
-## TC-5.8 — Attached-siblings reindex doesn't leak into workflow-wide scope
+## TC-5.7 — Attached-siblings reindex doesn't leak into workflow-wide scope
 
 **Priority:** P0 (regression/guard) · **Automated:** ✅ automated
 
@@ -153,7 +133,7 @@ construction argument alone. The pre-existing isolation coverage in
 reindex (its gaps are always resolvable directly), so this is genuinely
 new coverage, not a duplicate.
 
-## TC-5.9 — Workflow-wide reindex doesn't leak into attached-siblings scope
+## TC-5.8 — Workflow-wide reindex doesn't leak into attached-siblings scope
 
 **Priority:** P0 (regression/guard) · **Automated:** ✅ automated
 
