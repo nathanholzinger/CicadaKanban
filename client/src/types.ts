@@ -36,9 +36,11 @@ export interface WorkPhase {
 
 // Epic 3.2: derived, read-only — what an item's `position` is actually
 // comparable against, computed server-side from isAttached/parentId/
-// workphaseId/workphase.isTerminal (never stored). Not required by any
-// client logic today (the client re-derives scope itself), but useful for
-// debugging and future consumers.
+// workphaseId/workphase.isTerminal (never stored). Read by
+// useItemManagement.ts/UnsortedBucket.tsx to distinguish attached children
+// from everything else, instead of re-deriving isAttached && parentId
+// themselves. Optional because hand-built Item fixtures (tests) may omit it
+// — real API responses always include it.
 export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export interface Item {

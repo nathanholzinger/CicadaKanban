@@ -31,7 +31,7 @@ export default function UnsortedBucket({
   // Items whose workphase is null or outside this workflow. Attached children
   // nest under their (also-Unknown) parent rather than showing top-level.
   const unknownItems = invalidItems.filter(
-    i => !(i.isAttached && i.parentId) && (!filterProjectId || i.projectId === filterProjectId),
+    i => i.positionScope !== 'attached-siblings' && (!filterProjectId || i.projectId === filterProjectId),
   );
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + unknownItems.length;
 

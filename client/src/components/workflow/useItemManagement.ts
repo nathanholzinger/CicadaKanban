@@ -9,9 +9,14 @@ function byPositionThenCreatedAt(a: Item, b: Item): number {
 }
 
 // Attached children with a parent render nested inside the parent's card
-// (see getAttachedChildrenFrom) instead of as separate top-level board cards.
-// `isTerminal` (Epic 3.2 Part 6): a done workphase's items have no stored
-// position at all — ordered by completedAt instead.
+// (see getAttachedChildrenFrom) instead of as separate top-level board cards
+// — excluded here via `positionScope === 'attached-siblings'`, the
+// server-computed field (Epic 3.2 §2), rather than re-deriving
+// `isAttached && parentId` inline. `isTerminal` (Epic 3.2 Part 6): a done
+// workphase's items have no stored position at all — ordered by completedAt
+// instead. Kept as an explicit param (not derived from positionScope,
+// which only classifies a single item) since it picks the sort key for the
+// whole batch, including when the batch is empty.
 export function getWorkphaseItemsFrom(
   items: readonly Item[],
   workphaseId: string,
@@ -22,7 +27,7 @@ export function getWorkphaseItemsFrom(
     item =>
       item.workphaseId === workphaseId &&
       (!filterProjectId || item.projectId === filterProjectId) &&
-      !(item.isAttached && item.parentId),
+      item.positionScope !== 'attached-siblings',
   );
   return isTerminal
     ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
@@ -48,7 +53,7 @@ export function getMergedColumnItemsFrom(
       item.workphaseId !== null &&
       coveredSet.has(item.workphaseId) &&
       (!filterProjectId || item.projectId === filterProjectId) &&
-      !(item.isAttached && item.parentId),
+      item.positionScope !== 'attached-siblings',
   );
   return isTerminal
     ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
@@ -56,7 +61,7 @@ export function getMergedColumnItemsFrom(
 }
 
 export function getAttachedChildrenFrom(items: readonly Item[], parentId: string): Item[] {
-  return items.filter(item => item.parentId === parentId && item.isAttached).sort(byPositionThenCreatedAt);
+  return items.filter(item => item.parentId === parentId && item.positionScope === 'attached-siblings').sort(byPositionThenCreatedAt);
 }
 
 // Counts attached children only — these are the ones the card's expand
@@ -65,7 +70,7 @@ export function getAttachedChildrenFrom(items: readonly Item[], parentId: string
 export function computeChildCounts(items: readonly Item[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const item of items) {
-    if (item.parentId && item.isAttached) {
+    if (item.parentId && item.positionScope === 'attached-siblings') {
       counts[item.parentId] = (counts[item.parentId] ?? 0) + 1;
     }
   }

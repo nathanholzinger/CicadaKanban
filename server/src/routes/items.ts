@@ -7,9 +7,34 @@ import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
-import { resolveAnchorPosition, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
+import { resolveAnchorPosition, resolveAppendPosition, classifyPositionScope, type Side } from '../lib/positionResolver.js';
 
 const router = Router();
+
+// Attaches the computed, read-only `positionScope` field (Epic 3.2 §2) to an
+// item row before it goes out over the API — `"attached-siblings"`,
+// `"workflow"`, or `"none"`, telling a client what the item's `position` is
+// actually comparable against without it re-deriving
+// isAttached/parentId/workphaseId/workphase.isTerminal itself. Looks up the
+// item's current workphase fresh rather than trusting a caller-supplied
+// terminal flag, same "never trust a narrow view" posture as the rest of
+// this module.
+function withPositionScope<T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null }>(
+  item: T,
+  tx?: Tx,
+) {
+  const e = tx ?? db;
+  let workphaseIsTerminal: boolean | null = null;
+  if (item.workphaseId) {
+    const workphase = e.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, item.workphaseId)).get();
+    workphaseIsTerminal = workphase ? Boolean(workphase.isTerminal) : null;
+  }
+  const positionScope = classifyPositionScope(
+    { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: item.workphaseId },
+    workphaseIsTerminal,
+  );
+  return { ...item, positionScope };
+}
 
 // Epic 3.2's position-comparison scope for an item: parent-scoped
 // (parentId, isAttached) for an attached child — its true siblings — or
@@ -98,7 +123,7 @@ router.get('/:id', (req, res) => {
   const children = db.select().from(items)
     .where(eq(items.parentId, req.params.id))
     .all()
-    .map(child => ({ ...child, depth: depth + 1 }));
+    .map(child => ({ ...withPositionScope(child), depth: depth + 1 }));
 
   const activity = db.select().from(activityLog)
     .where(eq(activityLog.itemId, req.params.id))
@@ -112,7 +137,7 @@ router.get('/:id', (req, res) => {
     workflowId = workphase?.workflowId ?? null;
   }
 
-  res.json({ ...item, workflowId, depth, children, activity });
+  res.json({ ...withPositionScope(item), workflowId, depth, children, activity });
 });
 
 // Create an item
@@ -217,7 +242,7 @@ router.post('/', (req, res) => {
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
-  res.status(201).json(created);
+  res.status(201).json(withPositionScope(created!));
 });
 
 // Update an item's details (not position/workphase directly — use move for that,
@@ -327,7 +352,7 @@ router.put('/:id', (req, res) => {
   });
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  res.json(updated);
+  res.json(withPositionScope(updated!));
 });
 
 // Move an item to a different workphase and/or reorder. Epic 3.2: prefers
@@ -468,7 +493,7 @@ router.patch('/:id/move', (req, res) => {
   if (!ok) return;
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  res.json(updated);
+  res.json(withPositionScope(updated!));
 });
 
 // Reorder items within a workphase
