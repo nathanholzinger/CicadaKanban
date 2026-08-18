@@ -14,17 +14,17 @@
 | TC-2.8 | ~~Bootstrap collision avoidance across two empty scopes~~ — superseded, no longer applicable | P0 | N/A |
 | TC-2.9 | Narrow view cannot leapfrog past an unseen true neighbor | P0 | ✅ automated |
 | TC-2.10 | True neighbor lookup ignores visibility, only reality | P0 | ✅ automated |
-| TC-2.11 | Server resolution is authoritative over a stale client guess | P0 | ⏳ pending triage |
+| TC-2.11 | Server resolution is authoritative over a stale client guess | P0 | ✅ automated |
 | TC-2.12 | Precision exhaustion triggers reindex-then-retry | P0 | ✅ automated |
 | TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ✅ automated |
 | TC-2.14 | `positionScope` = `"workflow"` | P1 | ✅ automated |
 | TC-2.15 | `positionScope` = `"none"` for a done item | P1 | ✅ automated |
-| TC-2.16 | `position`'s shape is unchanged | P2 | ⏳ pending triage |
+| TC-2.16 | `position`'s shape is unchanged | P2 | ✅ automated |
 | TC-2.17 | Attach → detach reassigns position | P0 | ✅ automated |
 | TC-2.18 | Detach → attach reassigns position | P0 | ✅ automated |
 | TC-2.19 | Reparent while staying attached reassigns position | P0 | ✅ automated |
 | TC-2.20 | Reorder-only move does not reassign a fresh position | P0 | ✅ automated |
-| TC-2.21 | Cascade to attached descendants leaves position untouched | P0 | ⏳ pending triage |
+| TC-2.21 | Cascade to attached descendants leaves position untouched | P0 | ✅ automated |
 | TC-2.22 | Active → done transition reassigns per Part 6 rules | P0 | ✅ automated |
 
 ---
@@ -186,7 +186,7 @@ concept of "visible" at all, so one test structurally covers both
 
 ## TC-2.11 — Server resolution is authoritative over a stale client guess
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* a client computes an optimistic position locally
 (`positionBetween`) for instant visual feedback, *when* the server's
@@ -194,10 +194,14 @@ resolution disagrees with the client's guess (e.g. because of concurrent
 writes), *then* the server's value wins and the client re-syncs
 (`loadBoard()`) rather than persisting the client's guess.
 
-**Automation test:** — *(no test simulates a client optimistic guess
-disagreeing with server resolution plus the `loadBoard()` resync path —
-that logic lives in `useBoardDnd.ts`, not covered by any file in the
-reconciled scope)*
+**Automation test:** `client/src/components/workflow/boardDndUtils.test.ts`
+› `applyItemMove` — the `moveItem`-then-`setItems`-or-`loadBoard` contract
+was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure,
+directly-testable function (`applyItemMove`, same rationale this whole
+module already exists for): "falls back to loadBoard and never calls
+setItems when the move is rejected" proves the resync path; "updates items
+via setItems on a successful move" proves the success path never touches
+`loadBoard`.
 
 ### Tight-gap → reindex
 
@@ -262,13 +266,17 @@ for a done item (TC-2.15)"
 
 ## TC-2.16 — `position`'s shape is unchanged
 
-**Priority:** P2 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Automated:** ✅ automated
 
 *Given* any item, *when* fetched via the API, *then* `position` is still a
 plain `number | null` — existing consumers that only read `position` see
 no shape change.
 
-**Automation test:** —
+**Automation test:** `items.test.ts` › "POST scopes a new attached child to
+its true siblings..." (`typeof child.position === 'number'`) and "POST
+into a terminal workphase gets no position..." (`res.body.position`
+`toBeNull()`) — explicit shape assertions folded into two already-existing
+tests rather than a new test slot.
 
 ### Scope-change reassignment principle
 
@@ -322,16 +330,17 @@ strictly between two true neighbors, not an append value)
 
 ## TC-2.21 — Cascade to attached descendants leaves position untouched
 
-**Priority:** P0 (regression/guard) · **Automated:** ⏳ pending triage
+**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
 
 *Given* an attached child, *when* its parent moves to a different
 workphase and the cascade applies to the child, *then* the child's
 `position` value is unchanged (scope did not change — still
 parent-scoped).
 
-**Automation test:** — *(the cascade tests in `items.test.ts` only check
-`workphaseId` propagation, not that the child's `position` is specifically
-unchanged)*
+**Automation test:** `items.test.ts` › "cascading a non-terminal-to-
+non-terminal move leaves an attached child's position untouched (TC-2.21)"
+— reads `position` explicitly before/after, unlike the pre-existing
+cascade tests which only ever checked `workphaseId` propagation.
 
 ## TC-2.22 — Active → done transition reassigns per Part 6 rules
 

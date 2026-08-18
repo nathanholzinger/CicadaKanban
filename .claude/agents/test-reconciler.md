@@ -65,6 +65,15 @@ separate in the report:
   wiki gap). You already have the wiki open for the test-quality check above,
   so this costs nothing extra to note.
 
+## Known Non-Priorities
+
+- **MCP tools** (`server/src/mcp.ts`) — don't flag missing MCP tool test
+  coverage as an automation gap. This is a deliberate, project-wide
+  non-priority, not something the reconciled feature's suite is expected
+  to cover. If a test-plan case exists purely to test "the same rule via
+  MCP instead of the REST API," note in the report that it's a candidate
+  for removal from the catalog rather than an open gap.
+
 ## Output
 
 A single report, organized into these sections: Coverage Mapping, Automation

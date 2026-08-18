@@ -245,13 +245,14 @@ describe('Epic 3.2 — position resolution', () => {
 
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
     expect(child.position).toBe(1.0); // first among the parent's own attached children
+    expect(typeof child.position).toBe('number'); // TC-2.16: position's shape is unchanged (number|null)
   });
 
   it('POST into a terminal workphase gets no position, but a completedAt timestamp', async () => {
     const { project, done } = await setupTwoPhases();
     const res = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
     expect(res.status).toBe(201);
-    expect(res.body.position).toBeNull();
+    expect(res.body.position).toBeNull(); // TC-2.16: the other half of position's number|null shape
     expect(res.body.completedAt).toBeGreaterThan(0);
   });
 
@@ -320,6 +321,58 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.status).toBe(200);
     expect(res.body.position).toBeGreaterThan(a.position);
     expect(res.body.position).toBeLessThan(b.position);
+  });
+
+  describe('detached siblings sharing one workphase (TC-X.1 — unaffected pre-feature reorder behavior)', () => {
+    // Fresh GET-based reads, not the move response — a genuine persisted-
+    // order check on reload, same convention as
+    // itemRepositioningAttachedSiblings.spec.ts's siblingOrder helper.
+    async function orderOf(items: { id: string; title: string }[]): Promise<string> {
+      const fetched = await Promise.all(items.map(i => request(app).get(`/api/items/${i.id}`)));
+      return fetched
+        .map((res, idx) => ({ title: items[idx].title, position: res.body.position as number }))
+        .sort((x, y) => x.position - y.position)
+        .map(i => i.title)
+        .join('');
+    }
+
+    async function seedABC() {
+      const { project, todo } = await setupTwoPhases();
+      const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' }); // 1.0
+      const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' }); // 2.0
+      const c = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'C' }); // 3.0
+      return { a, b, c };
+    }
+
+    it('C before A — becomes the new true first sibling', async () => {
+      const { a, b, c } = await seedABC();
+      const res = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'before' });
+      expect(res.status).toBe(200);
+      // No true predecessor before A -> floor-anchored coarsest-fit between
+      // 0.0 and A's 1.0, not a flat A.position - 1.0.
+      expect(res.body.position).toBe(0.5);
+      expect(await orderOf([a, b, c])).toBe('CAB');
+    });
+
+    it('C after A / C before B — same true-neighbor midpoint from either anchor', async () => {
+      const { a, b, c } = await seedABC();
+      const afterA = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'after' });
+      expect(afterA.body.position).toBe(1.5);
+      expect(await orderOf([a, b, c])).toBe('ACB');
+
+      const beforeB = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: b.id, side: 'before' });
+      expect(beforeB.body.position).toBe(1.5);
+      expect(await orderOf([a, b, c])).toBe('ACB');
+    });
+
+    it('A after C — becomes the new true last sibling', async () => {
+      const { a, b, c } = await seedABC();
+      const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: c.id, side: 'after' });
+      expect(res.status).toBe(200);
+      // No true successor after C -> append fallback, C.position + 1.0.
+      expect(res.body.position).toBe(4.0);
+      expect(await orderOf([a, b, c])).toBe('BCA');
+    });
   });
 
   it('excludes the item itself from its own scope query on reposition', async () => {
@@ -413,6 +466,80 @@ describe('Epic 3.2 — position resolution', () => {
     const res = await request(app).get(`/api/items/${item.body.id}`);
     expect(res.status).toBe(200);
     expect(res.body.positionScope).toBe('none');
+  });
+
+  describe('multi-workphase active-scope reindex (TC-5.4/TC-5.6)', () => {
+    async function setupThreePhases() {
+      const { project, workflow, todo, done } = await setupTwoPhases();
+      const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+      return { project, workflow, todo, inProgress, done };
+    }
+
+    async function getPosition(id: string) {
+      return (await request(app).get(`/api/items/${id}`)).body.position;
+    }
+
+    it('reindexes every non-terminal workphase in the workflow together, in one coordinated pass (TC-5.4)', async () => {
+      const { project, todo, inProgress } = await setupThreePhases();
+
+      // A tight, unresolvable gap within `todo` — the trigger.
+      const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
+      const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
+      await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
+      await request(app).patch(`/api/items/${itemT2.id}/move`).send({ position: 1.0 + 1e-13 });
+
+      // A third item in a DIFFERENT non-terminal workphase, same workflow —
+      // this is what proves the coordinated (not per-workphase) scope.
+      const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
+      await request(app).patch(`/api/items/${itemP1.id}/move`).send({ position: 5.0 });
+
+      const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
+      const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
+      expect(res.status).toBe(200);
+
+      // Precision exhausted between T1 and T2 -> reindexScope ran over the
+      // full workflow-wide scope (positionScopeFor), not just `todo` ->
+      // T1/T2/P1 all land as clean sequential integers in one pass, then
+      // Mover's insert retries and resolves the now-open T1/T2 gap.
+      expect(await getPosition(itemT1.id)).toBe(1);
+      expect(await getPosition(itemT2.id)).toBe(2);
+      expect(await getPosition(itemP1.id)).toBe(3); // the coordination proof: a different workphase, reindexed together
+      expect(res.body.position).toBe(1.5);
+    });
+
+    // TODO(bug, confirmed 2026-08-18): positionScopeFor's workflow-wide scope
+    // (workphaseIdsInSameWorkflow) includes terminal workphase ids with no
+    // isTerminal/position-IS-NOT-NULL filter, so a done item (position: null)
+    // remains a scope member by workphaseId alone. reindexScope orders by
+    // asc(items.position) with no NULL filter, and SQLite/better-sqlite3
+    // sorts NULL first in ASC order — so a done item sorts first and gets a
+    // real position written by reindexScope, contradicting Part 6 ("done
+    // items get no stored position"). Needs an Architect/Coder fix (likely:
+    // exclude terminal workphase ids in positionScopeFor, or filter
+    // isNotNull(items.position) in reindexScope) — not fixed in this pass.
+    // This test is EXPECTED TO CURRENTLY FAIL and documents the bug rather
+    // than silently passing.
+    it('excludes a done item from an active-scope reindex (TC-5.6)', async () => {
+      const { project, todo, inProgress, done } = await setupThreePhases();
+
+      const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
+      const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
+      await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
+      await request(app).patch(`/api/items/${itemT2.id}/move`).send({ position: 1.0 + 1e-13 });
+      const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
+      await request(app).patch(`/api/items/${itemP1.id}/move`).send({ position: 5.0 });
+
+      const doneItem = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+      expect(doneItem.body.position).toBeNull();
+      expect(doneItem.body.completedAt).toBeGreaterThan(0);
+
+      const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
+      await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
+
+      const reread = await request(app).get(`/api/items/${doneItem.body.id}`);
+      expect(reread.body.position).toBeNull();
+      expect(reread.body.completedAt).toBe(doneItem.body.completedAt);
+    });
   });
 });
 
@@ -573,6 +700,47 @@ describe('attached children', () => {
 
     expect((await request(app).get(`/api/items/${child.id}`)).body.workphaseId).toBe(inProgress.id);
     expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
+  });
+
+  it('cascading a non-terminal-to-non-terminal move leaves an attached child\'s position untouched (TC-2.21)', async () => {
+    const { project, todo, inProgress } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    expect(child.position).toBe(1.0); // first among the parent's own attached children
+
+    const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: inProgress.id });
+    expect(res.status).toBe(200);
+
+    // cascadeWorkphaseToAttachedDescendants only ever sets {workphaseId,
+    // updatedAt} on a cascaded child — position is a separate, untouched
+    // axis regardless of how many times the parent's workphase changes.
+    const updatedChild = await request(app).get(`/api/items/${child.id}`);
+    expect(updatedChild.body.workphaseId).toBe(inProgress.id);
+    expect(updatedChild.body.position).toBe(child.position);
+  });
+
+  it('an attached child keeps its position (and stays out of Part 6 done-tracking) when its parent cascades into a terminal workphase (TC-6.5)', async () => {
+    const { project, workflow, todo } = await setupTwoPhases();
+    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    expect(child.position).toBe(1.0);
+
+    const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: done.id });
+    expect(res.status).toBe(200);
+    // The parent itself does go through Part 6's active->done transition...
+    expect(res.body.position).toBeNull();
+    expect(res.body.completedAt).toBeGreaterThan(0);
+
+    // ...but the attached child's own scope is (parentId, isAttached), never
+    // workphaseId — Part 6's done-tracking is explicitly detached/root-only
+    // (items.ts: "Attached items don't participate in Part 6's
+    // done-tracking"), so its position and completedAt are untouched even
+    // though its cascaded workphaseId is now terminal.
+    const updatedChild = await request(app).get(`/api/items/${child.id}`);
+    expect(updatedChild.body.workphaseId).toBe(done.id);
+    expect(updatedChild.body.position).toBe(child.position);
+    expect(updatedChild.body.completedAt).toBeNull();
   });
 
   it('a detached child halts the cascade for its whole branch', async () => {

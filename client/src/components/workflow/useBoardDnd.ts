@@ -10,7 +10,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
 import { moveItem } from '../../api/items';
-import { buildColumnForWorkphaseMap, resolveDropTarget, resolveDropSide } from './boardDndUtils';
+import { buildColumnForWorkphaseMap, resolveDropTarget, resolveDropSide, applyItemMove } from './boardDndUtils';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
@@ -134,22 +134,7 @@ export function useBoardDnd(
     const resolution = resolveDrop(activeId, overId);
     if (!resolution) return; // dropped on Unsorted, a broken column, or nowhere resolvable
 
-    try {
-      const updated =
-        resolution.kind === 'reorder'
-          ? await moveItem(activeId, {
-              scopeWorkphaseIds: resolution.scopeWorkphaseIds,
-              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
-            })
-          : await moveItem(activeId, {
-              workphaseId: resolution.targetWorkphaseId,
-              ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
-            });
-      setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
-    } catch (err) {
-      console.error('Failed to reposition item:', err);
-      loadBoard();
-    }
+    await applyItemMove(moveItem, activeId, resolution, side, setItems, loadBoard);
   }
 
   return { sensors, activeItem, handleDragStart, handleDragOver, handleDragEnd };

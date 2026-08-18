@@ -1,4 +1,6 @@
 import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
+import type { Item } from '../../types';
+import type { MoveItemInput } from '../../api/items';
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
 // useBoardDnd so it can be unit tested — real drag gestures are deliberately
@@ -175,4 +177,37 @@ export function resolveDropSide(
   const overCenterY = overRect.top + overRect.height / 2;
 
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
+}
+
+// Applies a resolved item drop: sends the request, updates local state on
+// success, or falls back to a full board reload on failure — extracted from
+// useBoardDnd's handleDragEnd so it, like the rest of this module, can be
+// unit tested without dnd-kit's runtime or a rendered component (TC-2.11).
+// `moveItem` is dependency-injected (not imported directly) purely so a test
+// can substitute a rejecting stub without mocking the module; production
+// code always passes the real client/src/api/items.ts moveItem.
+export async function applyItemMove(
+  moveItem: (id: string, data: MoveItemInput) => Promise<Item>,
+  activeId: string,
+  resolution: DropResolution,
+  side: 'before' | 'after',
+  setItems: (updater: (prev: Item[]) => Item[]) => void,
+  loadBoard: () => void,
+): Promise<void> {
+  try {
+    const updated =
+      resolution.kind === 'reorder'
+        ? await moveItem(activeId, {
+            scopeWorkphaseIds: resolution.scopeWorkphaseIds,
+            ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
+          })
+        : await moveItem(activeId, {
+            workphaseId: resolution.targetWorkphaseId,
+            ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
+          });
+    setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
+  } catch (err) {
+    console.error('Failed to reposition item:', err);
+    loadBoard();
+  }
 }

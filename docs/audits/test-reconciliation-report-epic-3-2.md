@@ -54,8 +54,38 @@ scope by design — not confirmed, not searched for. Treat "not found in the
   three at once (user-designed scenario: 3 attached siblings, boundary +
   interior moves, plus an isolation control group). **Section A is now
   fully closed** (7 resolved, TC-4.6 removed from the catalog outright).
-  Remaining open count: **0 of 9** quality concerns, **12 of 14** gaps
-  (TC-3.1/TC-3.2 resolved), **6** (5 original + 1 new) candidate cases.
+- **Update, 2026-08-18 (cont'd again):** checked whether four newer
+  suites (`itemRepositioningCrossColumn`/`CrossProject.spec.ts` and their
+  UI DnD counterparts, predating this reconciliation) closed any B gaps —
+  they don't directly, but the check surfaced that TC-X.5's premise was
+  itself stale (`resolveDropSide` already existed + unit-tested, commit
+  `9a649c0`) and a real, currently-live drag-gesture limitation beyond
+  the original 55 cases. TC-X.5 reclassified as deferred to Epic 3.5
+  (user call) rather than left open. TC-X.4 (MCP tools) removed from the
+  catalog outright (user call) — project-wide non-priority, now noted in
+  the Test Planner/Test Reconciler persona docs so it doesn't resurface.
+- **Update, 2026-08-18 (Section B closeout):** all 9 remaining automation
+  gaps worked through via a planned, agent-verified pass (see items 1-14
+  below for individual detail). **Section B is now fully closed**: 8
+  resolved with new tests (TC-1.1, TC-2.11, TC-2.16, TC-2.21, TC-5.4,
+  TC-6.5, TC-X.1, plus TC-2.8/TC-3.1/TC-3.2 resolved earlier), 1 resolved
+  as N/A/superseded (TC-5.5, same pattern as TC-2.8), 1 removed outright
+  (TC-X.4). **One exception, flagged not hidden:** TC-5.6's new test is
+  written and automated, but **currently fails** — it caught a real,
+  previously-undocumented bug (a done item can get swept into an
+  active-scope reindex and assigned a real position, contradicting Part
+  6), confirmed via direct code tracing and an empirical SQLite
+  NULL-ordering check, not just theorized. Per explicit user decision,
+  the test documents the bug (with a `TODO(bug, ...)` comment) rather
+  than being fixed as part of this pass — **needs an Architect/Coder
+  decision before it can go green.** TC-2.11 also required a small source
+  change (not just a test): the `moveItem`-then-`setItems`-or-`loadBoard`
+  logic was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure
+  `applyItemMove` function in `boardDndUtils.ts` (per user decision, over
+  introducing this codebase's first `renderHook`-based test).
+  **Final count: 0 of 9 quality concerns open, 0 of 14 gaps open (1
+  flagged failing/needs-decision), 6 (5 original + 1 new) candidate cases
+  in Section E — the only section left untouched.**
 
 **Two items worth resolving first, before the smaller ones:**
 
@@ -185,7 +215,12 @@ deliberately manual, or accept as a known gap for now.
 
 1. **TC-1.1** — no test fetches the same item through two different boards
    and compares `position`.
-   **Status:** Open
+   **Status:** Resolved — `boards.test.ts` › "reports identical position
+   for the same item across two different boards on one workflow
+   (TC-1.1)". Creates a genuine second board (`POST /api/boards`) on the
+   same workflow, distinct from the parent/child-project-inheritance
+   scenario `tests/ui/boards.spec.ts` already covered (same board, two
+   project-filtered views — checked visibility only, never `position`).
 2. **TC-2.8** — no test covers rank-aware bootstrap collision avoidance
    across two empty scopes (linked to item 1 in Status above).
    **Status:** Resolved as N/A — superseded, not a gap. Bootstrap scope is
@@ -196,14 +231,29 @@ deliberately manual, or accept as a known gap for now.
 3. **TC-2.11** — no test simulates a client optimistic guess disagreeing
    with server resolution plus the `loadBoard()` resync path; that logic
    lives in `useBoardDnd.ts`, not covered by any file in scope.
-   **Status:** Open
+   **Status:** Resolved — the `moveItem`-then-`setItems`-or-`loadBoard`
+   logic was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a
+   pure `applyItemMove` export in `boardDndUtils.ts` (that file's stated
+   purpose is exactly this — "extracted from useBoardDnd so it can be
+   unit tested"), then unit-tested directly in `boardDndUtils.test.ts`: a
+   rejected `moveItem` calls `loadBoard` and leaves `setItems` untouched;
+   a resolved one updates `setItems` and never calls `loadBoard`. No new
+   testing pattern (`renderHook`) introduced — investigated and rejected
+   in favor of this smaller, more consistent extraction (user call).
 4. **TC-2.16** — no test asserts `position`'s shape (`number | null`)
    directly; only inferred incidentally from other tests' values.
-   **Status:** Open
+   **Status:** Resolved — added explicit `typeof res.body.position ===
+   'number'` and `.toBeNull()` assertions to two already-existing tests
+   in `items.test.ts` (an active-item case and a done-item case) rather
+   than spending a new test slot on it.
 5. **TC-2.21** — no test asserts a child's `position` is unchanged
    specifically when its parent's workphase-cascade fires; existing
    cascade tests only check `workphaseId` propagation.
-   **Status:** Open
+   **Status:** Resolved — `items.test.ts` › "cascading a
+   non-terminal-to-non-terminal move leaves an attached child's position
+   untouched (TC-2.21)", in the `attached children` block. Confirms
+   `position` explicitly before/after (previous cascade tests never read
+   it at all).
 6. **TC-3.1** — no test reorders 3+ attached siblings and checks
    persisted order on reload.
    **Status:** Resolved — closed alongside A.5, same
@@ -219,27 +269,89 @@ deliberately manual, or accept as a known gap for now.
 8. **TC-5.4** — no test builds a multi-workphase "active scope" reindex
    and verifies it's coordinated as one operation; every `reindexScope`
    test uses a single-workphase predicate.
-   **Status:** Open
+   **Status:** Resolved — `items.test.ts` › "reindexes every non-terminal
+   workphase in the workflow together, in one coordinated pass (TC-5.4)".
+   Uses the tight-gap trigger (not magnitude — crossing the magnitude
+   threshold via real sequential appends would need 1000+ POSTs, since
+   `max(1000, count+100)` is never crossed by a plain `count+1` append).
+   Seeds items across two non-terminal workphases in one workflow, forces
+   a reindex via a real `PATCH /:id/move` anchor+side call, and confirms
+   an item in the *other* workphase gets renumbered in the same pass —
+   the coordination proof.
 9. **TC-5.5** — no test verifies two independently reindexed non-terminal
    workphases don't collide when merged.
-   **Status:** Open
+   **Status:** Resolved as N/A — superseded, not a gap, same pattern as
+   TC-2.8. `positionScopeFor`'s workflow-wide scope is the *only* scope
+   any reindex trigger ever uses for a detached item, and a board's
+   columns are hard-scoped to one `workflowId`
+   (`getOrderedWorkphases`/`getCoveredWorkphases`, `columnRanges.ts`) — a
+   "merge" can never span two workflows. There is no code path, real or
+   hypothetical, that produces two independently-reindexed non-terminal
+   workphases colliding when merged. TC-5.4's new test demonstrates the
+   single coordinated scope in practice.
 10. **TC-5.6** — no test verifies a done item is excluded/untouched by an
     active-scope reindex.
-    **Status:** Open
+    **Status:** Automated, but confirmed FAILING — a real bug, not just a
+    test gap (user decision: write the test now documenting it, defer
+    the fix). `items.test.ts` › "excludes a done item from an
+    active-scope reindex (TC-5.6)" currently fails: `positionScopeFor`'s
+    workflow-wide scope includes terminal workphase ids with no
+    `isTerminal`/`position IS NOT NULL` filter, so a done item
+    (`position: null`) stays a scope member by `workphaseId` alone.
+    SQLite/`better-sqlite3` sorts `NULL` first in `ASC` order, so
+    `reindexScope` assigns the done item a real position — contradicting
+    Part 6 ("done items get no stored position"). See the `TODO(bug, ...)`
+    comment directly above the test for the fix candidates (exclude
+    terminal workphase ids in `positionScopeFor`, or filter
+    `isNotNull(items.position)` in `reindexScope`). **Needs an
+    Architect/Coder decision before this test can go green.**
 11. **TC-6.5** — no test verifies an attached child's `position` survives
     when its parent transitions to terminal (only the inverse — a
     *detaching* child losing position into terminal — is tested).
-    **Status:** Open
+    **Status:** Resolved — `items.test.ts` › "an attached child keeps its
+    position (and stays out of Part 6 done-tracking) when its parent
+    cascades into a terminal workphase (TC-6.5)", in the `attached
+    children` block. Confirms the parent's own active→done transition
+    (position→null, completedAt set) alongside the child's position
+    staying non-null/unchanged and completedAt staying null.
 12. **TC-X.1** — no detached-sibling-only reorder test in scope; likely
     just pre-existing coverage outside scope, per the standing caveat.
-    **Status:** Open
+    **Status:** Resolved — the caveat's hedge turned out to be wrong; a
+    broader search (beyond the reconciled 8 files, across the whole
+    suite) found no coverage anywhere. Closed via `items.test.ts` ›
+    `describe('detached siblings sharing one workphase (TC-X.1 —
+    unaffected pre-feature reorder behavior)', ...)` — three
+    boundary/interior anchor+side moves on plain detached A/B/C siblings,
+    same shape as `itemRepositioningAttachedSiblings.spec.ts` but without
+    Playwright (an in-process vitest test fits this scenario more
+    cheaply), with a fresh-GET persisted-order check on each.
 13. **TC-X.4** — no MCP tool test content exists in any of the 8 files at
     all.
-    **Status:** Open
+    **Status:** Resolved as N/A — removed from the catalog (user call).
+    MCP tool coverage is a deliberate project-wide non-priority, not a
+    gap specific to this feature. Also noted in
+    `.claude/personas/test-planner.md` ("Known Scope Exclusions") and
+    `.claude/agents/test-reconciler.md` ("Known Non-Priorities") so this
+    doesn't get re-flagged in future reconciliation passes, for any
+    feature.
 14. **TC-X.5** — the client's `DropResolution` type has no `side` field at
     all; nothing in scope verifies the client defaults to `side: 'before'`
     when translating a card-drop into an API call.
-    **Status:** Open
+    **Status:** Resolved, then reclassified as deferred (user call). The
+    premise itself was stale — `resolveDropSide` (a real geometry
+    function, not a hardcoded default) already existed with 7 dedicated
+    unit tests in `boardDndUtils.test.ts` (commit `9a649c0`, same day as
+    `de80b59`, predates this reconciliation, just never cross-referenced
+    against the catalog). Checking it surfaced a deeper, currently-real
+    finding not in the original 55 cases at all: dnd-kit's live
+    swap-preview reflow interferes with `resolveDropSide`'s rect
+    measurement during an actual drag gesture, so bottom-half card drops
+    (intending `after`) still resolve to `before` in several documented,
+    currently-passing cases — see
+    `tests/ui/item-repositioning-cross-column-dnd.spec.ts` and
+    `tests/ui/item-repositioning-cross-project-dnd.spec.ts`. Explicitly
+    deferred to Epic 3.5 (the drag-and-drop tune-up epic), not treated as
+    an open gap to close now. Catalog updated to `⏸ deferred (Epic 3.5)`.
 
 ---
 

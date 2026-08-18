@@ -85,6 +85,36 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.unsorted.uncovered[0].items.map((i: { id: string }) => i.id)).toEqual([item2.id]);
   });
 
+  it('reports identical position for the same item across two different boards on one workflow (TC-1.1)', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id });
+
+    // The workflow's auto-bootstrapped default board predates `todo`
+    // (bootstrap only covers workphases that exist at workflow-creation
+    // time), so it needs an explicit column covering it, same as a
+    // genuinely independent second board would.
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const boardOne = boardsRes.body[0];
+    await createColumn(boardOne.id, todo.id, todo.id);
+
+    // A second, wholly independent board on the same workflow — position
+    // is a single item-owned scalar (wiki §1), not a per-board value;
+    // boards only ever read it, never own their own copy.
+    const boardTwo = await createBoard(workflow.id, { name: 'Second Board' });
+    await createColumn(boardTwo.id, todo.id, todo.id);
+
+    const detailOne = await request(app).get(`/api/boards/${boardOne.id}`);
+    const detailTwo = await request(app).get(`/api/boards/${boardTwo.id}`);
+
+    const onBoardOne = detailOne.body.columns[0].subRows[0].items.find((i: { id: string }) => i.id === item.id);
+    const onBoardTwo = detailTwo.body.columns[0].subRows[0].items.find((i: { id: string }) => i.id === item.id);
+    expect(onBoardOne.position).toBe(item.position);
+    expect(onBoardTwo.position).toBe(item.position);
+    expect(onBoardOne.position).toBe(onBoardTwo.position);
+  });
+
   it('surfaces items whose workphase was deleted as invalidItems (Unknown status)', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);

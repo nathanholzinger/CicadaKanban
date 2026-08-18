@@ -1,12 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
+import type { Item } from '../../types';
 import {
   buildColumnForWorkphaseMap,
   resolveDropTarget,
   subrowContainerId,
   boardCollisionDetection,
   resolveDropSide,
+  applyItemMove,
   type DropColumn,
+  type DropResolution,
 } from './boardDndUtils';
 
 // Minimal fixture for boardCollisionDetection's args — every candidate gets
@@ -264,5 +267,71 @@ describe('resolveDropTarget', () => {
       // 1px tie band.
       expect(resolveDropSide(card(102), card(100))).toBe('after');
     });
+  });
+});
+
+// TC-2.11: extracted from useBoardDnd's handleDragEnd so the "server
+// resolution is authoritative over a stale client guess, resync via
+// loadBoard() on failure" contract can be unit tested directly — no
+// dnd-kit runtime or rendered component needed, per the same reasoning
+// this whole module already exists for (see its header comment).
+describe('applyItemMove', () => {
+  const moveResolution: DropResolution = { kind: 'move', targetWorkphaseId: 'wp-2', anchorId: 'anchor-1' };
+  const reorderResolution: DropResolution = { kind: 'reorder', scopeWorkphaseIds: ['wp-1', 'wp-2'], anchorId: null };
+
+  function fakeItem(id: string): Item {
+    return {
+      id,
+      type: null,
+      parentId: null,
+      projectId: 'p1',
+      workphaseId: 'wp-2',
+      title: `Item ${id}`,
+      description: null,
+      position: 1.5,
+      assigneeType: null,
+      agentId: null,
+      isAttached: 0,
+      createdAt: 0,
+      updatedAt: 0,
+      completedAt: null,
+    };
+  }
+
+  it('updates items via setItems on a successful move, and never calls loadBoard', async () => {
+    const updated = fakeItem('active-1');
+    const moveItem = vi.fn(async () => updated);
+    const setItems = vi.fn();
+    const loadBoard = vi.fn();
+
+    await applyItemMove(moveItem, 'active-1', moveResolution, 'after', setItems, loadBoard);
+
+    expect(moveItem).toHaveBeenCalledWith('active-1', { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' });
+    expect(setItems).toHaveBeenCalledTimes(1);
+    const updater = setItems.mock.calls[0][0] as (prev: Item[]) => Item[];
+    expect(updater([fakeItem('active-1'), fakeItem('other')]).find(i => i.id === 'active-1')).toBe(updated);
+    expect(loadBoard).not.toHaveBeenCalled();
+  });
+
+  it('sends scopeWorkphaseIds (not workphaseId) for a reorder resolution', async () => {
+    const moveItem = vi.fn(async () => fakeItem('active-1'));
+    await applyItemMove(moveItem, 'active-1', reorderResolution, 'before', vi.fn(), vi.fn());
+
+    expect(moveItem).toHaveBeenCalledWith('active-1', { scopeWorkphaseIds: ['wp-1', 'wp-2'] });
+  });
+
+  it('falls back to loadBoard and never calls setItems when the move is rejected (server authoritative over a stale client guess)', async () => {
+    const moveItem = vi.fn(async () => {
+      throw new Error('anchorId does not reference an existing item');
+    });
+    const setItems = vi.fn();
+    const loadBoard = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await applyItemMove(moveItem, 'active-1', moveResolution, 'after', setItems, loadBoard);
+
+    expect(setItems).not.toHaveBeenCalled();
+    expect(loadBoard).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
   });
 });

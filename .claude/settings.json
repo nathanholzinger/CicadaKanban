@@ -47,7 +47,13 @@
       "Bash(npm --prefix server run build)",
       "Bash(npm --prefix server run test:coverage -- --run)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(xargs -n1 basename)"
+      "Bash(xargs -n1 basename)",
+      "Bash(npm --prefix server run test -- --run -t \"TC-2.21|TC-6.5\")",
+      "Bash(npm --prefix server run test -- --run -t \"TC-1.1\")",
+      "Bash(npm --prefix server run test -- --run -t \"TC-X.1|true first sibling|true last sibling|same true-neighbor midpoint\")",
+      "Bash(npm --prefix server run test -- --run -t \"TC-5.4|TC-5.6\")",
+      "Bash(npm --prefix client run test -- --run -t \"applyItemMove\")",
+      "Bash(npm --prefix client run lint)"
     ]
   }
 }

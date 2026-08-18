@@ -60,6 +60,16 @@ Follow `docs/test-plans/README.md`'s conventions exactly:
 5. **Is anything ambiguous or missing?** Flag it back to the user/Product
    Owner rather than guessing — see "Your Only Input" above.
 
+## Known Scope Exclusions
+
+- **MCP tools** (`server/src/mcp.ts`) — don't write cases whose only
+  distinguishing feature is "via the MCP tool instead of the REST API."
+  MCP tool coverage is a deliberate non-priority right now, project-wide.
+  If the wiki names an MCP-specific rule that genuinely diverges from the
+  equivalent UI/API behavior, that's still fair game — the exclusion is
+  for "same rule, different entry point" cases, not for real MCP-specific
+  business rules.
+
 ## Relationship to Other Personas
 
 - **Product Owner** — writes and hardens the wiki pages you read; an

@@ -8,7 +8,7 @@
 | TC-6.2 | `completedAt` cleared on reopen | P0 | ✅ automated |
 | TC-6.3 | Done items store no position | P0 | ✅ automated |
 | TC-6.4 | Done-item ordering is purely `completedAt`-based | P0 | ✅ automated |
-| TC-6.5 | Attached children keep position under terminal cascade | P0 | ⏳ pending triage |
+| TC-6.5 | Attached children keep position under terminal cascade | P0 | ✅ automated |
 | TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ✅ automated |
 | TC-6.7 | Column range validation rejects terminal+non-terminal mix | P0 | ✅ automated |
 | TC-6.8 | Range entirely terminal or entirely non-terminal remains valid | P1 | ✅ automated |
@@ -67,7 +67,7 @@ terminal"
 
 ## TC-6.5 — Attached children keep position under terminal cascade
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* an attached child whose parent (and thus the child's cascaded
 effective workphace) transitions to terminal, *when* the cascade applies,
@@ -75,9 +75,11 @@ effective workphace) transitions to terminal, *when* the cascade applies,
 `(parentId, isAttached)` — only detached/root items lose position on
 terminal transition.
 
-**Automation test:** — *(no test verifies an attached child's `position`
-survives when its parent transitions to terminal; only the inverse — a
-*detaching* child losing position into terminal — is tested)*
+**Automation test:** `items.test.ts` › "an attached child keeps its
+position (and stays out of Part 6 done-tracking) when its parent cascades
+into a terminal workphase (TC-6.5)" — confirms the parent's own
+active→done transition alongside the child's position/completedAt staying
+untouched, the inverse of the already-covered detaching-into-terminal case.
 
 ## TC-6.6 — `positionScope` stays `"attached-siblings"` under terminal cascade
 
