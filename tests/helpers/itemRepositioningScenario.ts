@@ -126,3 +126,58 @@ export function fullOrder(request: APIRequestContext, workflowId: string): Promi
 export function projectOrder(request: APIRequestContext, workflowId: string, projectId: string): Promise<string> {
   return orderOf(request, workflowId, i => i.projectId === projectId);
 }
+
+export interface AttachedSiblingsScenario {
+  project: { id: string; name: string };
+  workflow: { id: string };
+  phase: ScenarioWorkphase;
+  parent: ScenarioItem;
+  items: Record<'A' | 'B' | 'C', ScenarioItem>;
+  // Isolation control group (TC-3.2): a second parent with its own attached
+  // child, and an unrelated top-level item, all sharing `phase` — proves a
+  // reorder among `parent`'s children doesn't leak into either.
+  otherParent: ScenarioItem;
+  otherChild: ScenarioItem;
+  topLevel: ScenarioItem;
+}
+
+// Builds the attached-sibling scenario for Part 3 (TC-3.1/TC-3.5): one
+// parent with three attached children A/B/C, created via plain POST with no
+// explicit position — natural append gives A=1.0, B=2.0, C=3.0, scoped to
+// (parentId, isAttached) per positionScopeFor (server/src/routes/items.ts),
+// not the workphase or workflow. Unlike seedRepositioningScenario, positions
+// here are NOT manually pinned — the whole point is exercising the resolver
+// against its natural append/anchor behavior for this scope.
+export async function seedAttachedSiblingsScenario(request: APIRequestContext, projectName: string): Promise<AttachedSiblingsScenario> {
+  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
+  const workflow = await (await request.post(`${API}/workflows`, { data: { name: projectName, projectId: project.id } })).json();
+  const phase = await (await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Todo' } })).json();
+
+  const parent = await (await request.post(`${API}/items`, { data: { title: 'Parent', projectId: project.id, workphaseId: phase.id, isAttached: false } })).json();
+
+  const items = {} as AttachedSiblingsScenario['items'];
+  for (const key of ['A', 'B', 'C'] as const) {
+    items[key] = await (await request.post(`${API}/items`, { data: { title: `Item ${key}`, parentId: parent.id } })).json();
+  }
+
+  const otherParent = await (await request.post(`${API}/items`, { data: { title: 'Other Parent', projectId: project.id, workphaseId: phase.id, isAttached: false } })).json();
+  const otherChild = await (await request.post(`${API}/items`, { data: { title: 'Other Child', parentId: otherParent.id } })).json();
+  const topLevel = await (await request.post(`${API}/items`, { data: { title: 'Top Level', projectId: project.id, workphaseId: phase.id, isAttached: false } })).json();
+
+  return { project, workflow, phase, parent, items, otherParent, otherChild, topLevel };
+}
+
+// A parent's attached-children order, read via a DIFFERENT codepath than the
+// move response itself — GET /api/items/:parentId's `children` array — so
+// asserting against this is a genuine persistence/reload check (TC-3.1), not
+// just trusting what PATCH .../move echoed back. Same position+createdAt
+// tie-break convention as orderOf.
+export async function siblingOrder(request: APIRequestContext, parentId: string): Promise<string> {
+  const parentDetail = await (await request.get(`${API}/items/${parentId}`)).json();
+  const children = parentDetail.children as Array<{ title: string; position: number | null; createdAt: number }>;
+  return children
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt)
+    .map(i => i.title.replace('Item ', ''))
+    .join('');
+}

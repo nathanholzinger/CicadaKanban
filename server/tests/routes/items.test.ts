@@ -375,13 +375,44 @@ describe('Epic 3.2 — position resolution', () => {
 
   it('moving out of a terminal workphase clears completedAt and assigns a fresh position', async () => {
     const { project, todo, done } = await setupTwoPhases();
+    const existing = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Existing' }); // position 1.0
     const item = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
     expect(item.body.completedAt).toBeGreaterThan(0);
 
     const res = await request(app).patch(`/api/items/${item.body.id}/move`).send({ workphaseId: todo.id });
     expect(res.status).toBe(200);
     expect(res.body.completedAt).toBeNull();
-    expect(res.body.position).not.toBeNull();
+    // TC-6.9: proves the fresh position specifically follows append-fallback
+    // (past the true last item in scope) — not just "some non-null value".
+    expect(res.body.position).toBeGreaterThan(existing.position);
+  });
+
+  it('GET returns positionScope = "attached-siblings" for an attached child (TC-2.13)', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+
+    const res = await request(app).get(`/api/items/${child.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.positionScope).toBe('attached-siblings');
+  });
+
+  it('GET returns positionScope = "workflow" for a detached item in a non-terminal workphase (TC-2.14)', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id });
+
+    const res = await request(app).get(`/api/items/${item.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.positionScope).toBe('workflow');
+  });
+
+  it('GET returns positionScope = "none" for a done item (TC-2.15)', async () => {
+    const { project, done } = await setupTwoPhases();
+    const item = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+
+    const res = await request(app).get(`/api/items/${item.body.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.positionScope).toBe('none');
   });
 });
 

@@ -4,37 +4,40 @@
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-3.1 | Reordering an attached child persists new order | P0 | ⏳ pending triage |
-| TC-3.2 | Reordering scoped strictly to `(parentId, isAttached)` | P0 | ⏳ pending triage |
+| TC-3.1 | Reordering an attached child persists new order | P0 | ✅ automated |
+| TC-3.2 | Reordering scoped strictly to `(parentId, isAttached)` | P0 | ✅ automated |
 | TC-3.3 | Dragging a child out of its parent is still blocked | P0 | ✅ automated |
 | TC-3.4 | New attached child positioned among true siblings | P0 | ✅ automated |
-| TC-3.5 | Attached-sibling reorder reuses anchor+side resolution | P1 | ⏳ pending triage |
+| TC-3.5 | Attached-sibling reorder reuses anchor+side resolution | P1 | ✅ automated |
 
 ---
 
 ## TC-3.1 — Reordering an attached child persists new order
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* a parent with 3+ attached children, *when* one child is dragged to
 a new position among its siblings, *then* the persisted order (by
 `position`) reflects the drop location on reload.
 
-**Automation test:** — *(no test reorders 3+ attached siblings and checks
-persisted order on reload)*
+**Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
+— all three cases assert order via `siblingOrder`, which reads
+`GET /api/items/:parentId`'s `children` array (a different codepath than
+the move response itself) — a genuine reload/persistence check.
 
 ## TC-3.2 — Reordering scoped strictly to `(parentId, isAttached)`
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
 *Given* a workphase containing both top-level items and two different
 parents' attached children, *when* one parent's children are reordered,
 *then* the other parent's children and the top-level items retain their
 original relative order and are not renumbered.
 
-**Automation test:** — *(no test verifies that reordering one parent's
-attached children leaves another parent's children and top-level items'
-positions untouched)*
+**Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
+— every case calls `expectIsolationUnaffected`, checking an unrelated
+second parent's attached child and an unrelated top-level item (sharing
+the same workphase) after each reorder.
 
 ## TC-3.3 — Dragging a child out of its parent is still blocked
 
@@ -67,15 +70,19 @@ scenario: 2 unrelated top-level items + parent + child, child lands at 1.0)
 
 ## TC-3.5 — Attached-sibling reorder reuses anchor+side resolution
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Automated:** ✅ automated
 
 Attached-sibling reorder uses the same anchor+side resolution as
 everything else (coarsest-fit, append fallback at scope boundaries) —
 covered by re-running [TC-2.1](part-2-anchor-resolution.md)/[TC-2.4](part-2-anchor-resolution.md)/[TC-2.5](part-2-anchor-resolution.md)
-with comparison scope = `(parentId, isAttached)` instead of workphase.
+with comparison scope = `(parentId, isAttached)` instead of workflow.
 
-**Automation test:** — *(every `positionResolver.test.ts` test scopes with
-`eq(items.workphaseId, phase.id)`; none use a `(parentId, isAttached)`-shaped
-predicate — the resolver is scope-agnostic by design so this should hold,
-but nothing in scope literally instantiates it against an attached-sibling
+**Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
+— "C before A" (TC-2.5-equivalent: no true predecessor, floor-anchored
+coarsest-fit), "C after A / C before B" (TC-2.1-equivalent: true-neighbor
+coarsest-fit, asserted from both anchor directions), "A after C"
+(TC-2.4-equivalent: no true successor, append fallback). Each asserts the
+exact resolved value, not just "some plausible position" — proving these
+are the specific coarsest-fit/append-fallback code paths, not just any
+change in the right direction.
 scope)*

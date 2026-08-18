@@ -40,7 +40,14 @@
       "Read(//c/Users/natha/.claude/projects/c--Users-natha-Dev-KanbanApp/memory\" 2>/**)",
       "Bash(npm run *)",
       "Bash(curl -s -m 3 http://localhost:3002/api/health)",
-      "Bash(git -C /c/Users/natha/Dev/KanbanApp status --short)"
+      "Bash(git -C /c/Users/natha/Dev/KanbanApp status --short)",
+      "Bash(cd \"c:/Users/natha/Dev/KanbanApp\" && rm -f server/data/vitest-test.db && npx vitest run server/tests/lib/positionResolver.test.ts server/tests/routes/items.test.ts --reporter=dot 2>&1 | tail -40)",
+      "Bash(npm --prefix server run test -- --run)",
+      "Bash(npm --prefix client run test -- --run)",
+      "Bash(npm --prefix server run build)",
+      "Bash(npm --prefix server run test:coverage -- --run)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(xargs -n1 basename)"
     ]
   }
 }

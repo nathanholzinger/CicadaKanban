@@ -9,10 +9,10 @@
 | TC-6.3 | Done items store no position | P0 | ✅ automated |
 | TC-6.4 | Done-item ordering is purely `completedAt`-based | P0 | ✅ automated |
 | TC-6.5 | Attached children keep position under terminal cascade | P0 | ⏳ pending triage |
-| TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ⏳ pending triage |
+| TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ✅ automated |
 | TC-6.7 | Column range validation rejects terminal+non-terminal mix | P0 | ✅ automated |
 | TC-6.8 | Range entirely terminal or entirely non-terminal remains valid | P1 | ✅ automated |
-| TC-6.9 | Reopening a done item doesn't resurrect a stale position | P1 | ⏳ pending triage |
+| TC-6.9 | Reopening a done item doesn't resurrect a stale position | P1 | ✅ automated |
 
 ---
 
@@ -81,15 +81,14 @@ survives when its parent transitions to terminal; only the inverse — a
 
 ## TC-6.6 — `positionScope` stays `"attached-siblings"` under terminal cascade
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
 Cross-reference [TC-2.13](part-2-anchor-resolution.md). An attached child
 cascaded to terminal still reports `"attached-siblings"`, not `"none"`.
 
-**Automation test:** — *(the `classifyPositionScope` attached-siblings
-test only ever passes `workphaseIsTerminal: false` — the branch order in
-the source makes this precedence true by construction, but no test input
-combines `isAttached: true` with `workphaseIsTerminal: true` to prove it)*
+**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
+› "classifies an attached child as attached-siblings even under a terminal
+cascade (TC-6.6)"
 
 ## TC-6.7 — Column range validation rejects terminal+non-terminal mix
 
@@ -118,14 +117,14 @@ case implicit via every other pre-existing column test in the same file)
 
 ## TC-6.9 — Reopening a done item doesn't resurrect a stale position
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Automated:** ✅ automated
 
 *Given* a detached/root done item with no stored position, *when* it's
 reopened (moved to non-terminal), *then* it receives a fresh position via
 the append-fallback mechanism ([Part 2](part-2-anchor-resolution.md)),
 consistent with any other scope-change reassignment.
 
-**Automation test:** — *(the mapped test, `items.test.ts` › "moving out of
-a terminal workphase clears completedAt and assigns a fresh position,"
-only asserts `expect(res.body.position).not.toBeNull()` — proves *a*
-position was assigned, not that it specifically followed append-fallback)*
+**Automation test:** `items.test.ts` › "moving out of a terminal workphase
+clears completedAt and assigns a fresh position" — now asserts the fresh
+position is strictly past a true pre-existing sibling's position, proving
+append-fallback specifically rather than just non-null.

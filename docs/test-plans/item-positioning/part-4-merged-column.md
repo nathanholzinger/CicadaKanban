@@ -9,7 +9,6 @@
 | TC-4.3 | Drag-bug fix: hover no longer force-collapses to `entryWorkphaseId` | P0 | ✅ automated |
 | TC-4.4 | Genuine cross-column move still snaps workphaceId correctly | P0 | ✅ automated |
 | TC-4.5 | Expanded-column behavior unchanged | P1 | ✅ automated |
-| TC-4.6 | No forced regrouping in merged columns | P1 | ⏳ pending triage |
 
 ---
 
@@ -88,17 +87,3 @@ exact workphace equality and behavior matches pre-feature behavior.
 active item is already in that workphase", "is a move when the active item
 is in a different workphase", and "expanded column: reorder when hovering
 a card in the same workphase"
-
-## TC-4.6 — No forced regrouping in merged columns
-
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-*Given* a merged column where an item from W2 has drifted to sort ahead of
-some W1 items (via normal reordering over time), *when* the column is
-rendered, *then* the interleaved order is preserved as-is — nothing
-silently regroups items back by workphase rank.
-
-**Automation test:** — *(the mapped test, `useItemManagement.test.ts` ›
-`getMergedColumnItemsFrom` › "union-sorts across the covered workphases...",
-proves the mechanism has no regroup step, but doesn't simulate the
-"drifted over time, then re-rendered" scenario this case describes)*

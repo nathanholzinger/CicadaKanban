@@ -6,19 +6,19 @@
 |---|---|---|---|
 | TC-2.1 | Insert between two existing neighbors | P0 | ✅ automated |
 | TC-2.2 | Coarsest-fit rounding | P0 | ✅ automated |
-| TC-2.3 | Coarsest-fit stops at minimum needed precision | P1 | ⏳ pending triage |
+| TC-2.3 | Coarsest-fit stops at minimum needed precision | P1 | ✅ automated |
 | TC-2.4 | Append fallback, no true successor | P0 | ✅ automated |
 | TC-2.5 | Append fallback, no true predecessor | P0 | ✅ automated |
 | TC-2.6 | Creation with no anchor at all | P1 | ✅ automated |
-| TC-2.7 | Bootstrap: brand-new empty scope | P0 | ⏳ pending triage |
-| TC-2.8 | Bootstrap collision avoidance across two empty scopes | P0 | ⏳ pending triage |
+| TC-2.7 | Bootstrap: brand-new empty scope | P0 | ✅ automated |
+| TC-2.8 | ~~Bootstrap collision avoidance across two empty scopes~~ — superseded, no longer applicable | P0 | N/A |
 | TC-2.9 | Narrow view cannot leapfrog past an unseen true neighbor | P0 | ✅ automated |
 | TC-2.10 | True neighbor lookup ignores visibility, only reality | P0 | ✅ automated |
 | TC-2.11 | Server resolution is authoritative over a stale client guess | P0 | ⏳ pending triage |
 | TC-2.12 | Precision exhaustion triggers reindex-then-retry | P0 | ✅ automated |
-| TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ⏳ pending triage |
-| TC-2.14 | `positionScope` = `"workphase"` | P1 | ⏳ pending triage |
-| TC-2.15 | `positionScope` = `"none"` for a done item | P1 | ⏳ pending triage |
+| TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ✅ automated |
+| TC-2.14 | `positionScope` = `"workflow"` | P1 | ✅ automated |
+| TC-2.15 | `positionScope` = `"none"` for a done item | P1 | ✅ automated |
 | TC-2.16 | `position`'s shape is unchanged | P2 | ⏳ pending triage |
 | TC-2.17 | Attach → detach reassigns position | P0 | ✅ automated |
 | TC-2.18 | Detach → attach reassigns position | P0 | ✅ automated |
@@ -60,16 +60,21 @@ to the coarsest precision that still fits strictly between the neighbors"
 
 ## TC-2.3 — Coarsest-fit stops at minimum needed precision
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Automated:** ✅ automated
 
 *Given* neighbors at 1.0 and 2.0, *when* resolving an insert between them,
 *then* the result is at the coarsest precision level that fits, not an
 unnecessarily long decimal.
 
-**Automation test:** — *(candidate: `positionResolver.test.ts` ›
-`coarsestFit` › `coarsestFit(1, 3) === 2` — uses different neighbor values
-than this case's example; confirm as an acceptable proxy or add a case
-matching 1.0/2.0 literally before marking automated)*
+**Automation test:** `positionResolver.test.ts` › `coarsestFit` › "takes
+the exact midpoint when it already fits at 0 decimals" ›
+`coarsestFit(1, 3) === 2`. Confirmed as the intended mapping, not just an
+acceptable proxy: this case's business rule is about *stopping* at the
+coarsest precision that fits rather than always searching deeper — the
+0-decimal case is the sharpest demonstration of that (TC-2.2 already
+separately covers the wiki's 1.5/2.0 → 1.8 walkthrough at 1 decimal,
+so mapping TC-2.3 to the same assertion would just duplicate TC-2.2
+rather than add distinct coverage).
 
 ## TC-2.4 — Append fallback, no true successor
 
@@ -108,29 +113,41 @@ the first item in a workphase at 1.0 and the next at max + 1.0"
 
 ## TC-2.7 — Bootstrap: brand-new empty scope
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Automated:** ✅ automated
 
-*Given* a workphase with zero items, *when* an item is created/moved into
-it with no anchor, *then* its position is resolved relative to the nearest
-non-empty workphase by rank (not a fixed baseline like 1.0), so that later
-merges with adjacent workphases can't collide.
+*Given* a scope (workflow-wide for a detached/root item, parent-wide for
+an attached child) with zero positioned items, *when* an item is
+created/moved into it with no anchor, *then* its position starts at
+`1.0`.
 
-**Automation test:** — *(the mapped test, `positionResolver.test.ts` ›
-`resolveAppendPosition` › "returns 1.0 for a genuinely empty scope,"
-asserts the flat baseline this case's rule explicitly says NOT to use —
-the rank-aware bootstrap this case describes may not be implemented
-anywhere in the reconciled scope; needs an Architect/Coder check, not just
-a test)*
+**Automation test:** `positionResolver.test.ts` › `resolveAppendPosition`
+› "returns 1.0 for a genuinely empty scope"
 
-## TC-2.8 — Bootstrap collision avoidance across two empty scopes
+*(This case's rule text previously described a rank-aware bootstrap —
+anchoring to the nearest non-empty workphase by rank instead of a flat
+`1.0` — which was never implemented. That was resolved architecturally,
+not by writing a test: position scope moved from per-workphase to
+workflow-wide, which is what actually eliminates the two-empty-workphases
+collision this was meant to prevent — see the wiki's §2 bootstrap-fallback
+note. The flat `1.0` baseline is now correct as documented, and the
+originally-mapped test was right all along. See TC-2.8 below for the
+superseded collision scenario this made moot.)*
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+## TC-2.8 — ~~Bootstrap collision avoidance across two empty scopes~~ (superseded)
+
+**Priority:** P0 · **Automated:** N/A — scenario no longer applies
 
 *Given* two different, both-currently-empty workphaces, *when* an item is
 bootstrapped into each independently and the workphaces are later viewed
 together (e.g. in a merged column), *then* their positions do not collide
 or need renumbering — this is the original independent-counter-collision
 bug this design fixes.
+
+*(Superseded: bootstrap scope is workflow-wide now (see TC-2.7), not
+per-workphase, so "two independently-empty workphases" bootstrapping and
+later colliding can no longer happen — there is only ever one bootstrap
+point per workflow. Kept here, struck through, for history/traceability
+rather than deleted outright; safe to remove in a future catalog cleanup.)*
 
 **Automation test:** —
 
@@ -202,36 +219,46 @@ precision"
 
 ## TC-2.13 — `positionScope` = `"attached-siblings"`
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Automated:** ✅ automated
 
 *Given* an item with `isAttached = true` and a `parentId`, *when* fetched
 via the API, *then* its `positionScope` field reads `"attached-siblings"`.
 
-**Automation test:** — *(candidate: `classifyPositionScope` › "classifies
-an attached child with a parent as attached-siblings" — unit-only, never
-asserted on an actual API response)*
+**Automation test:** `items.test.ts` › "GET returns positionScope =
+'attached-siblings' for an attached child (TC-2.13)"
 
-## TC-2.14 — `positionScope` = `"workphase"`
+*(Previously mapped only at the unit layer, and for good reason:
+`classifyPositionScope` was exported from `positionResolver.ts` but never
+called anywhere else in `server/src` — `positionScope` didn't reach any
+API response at all. Fixed 2026-08-18: wired into every item-serializing
+response in `items.ts` (`GET/POST/PUT/:id`, `PATCH /:id/move`) and into
+the board read path (`boards.ts` — the `positionScope` clients actually
+render from). Unit coverage on the pure function stays in
+`positionResolver.test.ts`; this is now backed by a real API-level
+assertion too.)*
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+## TC-2.14 — `positionScope` = `"workflow"`
+
+**Priority:** P1 · **Automated:** ✅ automated
 
 *Given* a detached item whose workphase is not terminal, *when* fetched,
-*then* `positionScope` reads `"workphase"`.
+*then* `positionScope` reads `"workflow"`.
 
-**Automation test:** — *(candidate: `classifyPositionScope` › "classifies
-a detached/root item in a non-terminal workphase as workphase" — same
-unit-only caveat as TC-2.13)*
+**Automation test:** `items.test.ts` › "GET returns positionScope =
+'workflow' for a detached item in a non-terminal workphase (TC-2.14)"
+
+*(Case name/value updated from the pre-`de80b59` `"workphase"` naming —
+see part-2's §2 comparison-scope rewrite.)*
 
 ## TC-2.15 — `positionScope` = `"none"` for a done item
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Automated:** ✅ automated
 
 *Given* a detached/root item whose workphase is terminal, *when* fetched,
 *then* `positionScope` reads `"none"`.
 
-**Automation test:** — *(candidate: `classifyPositionScope` › "classifies
-a detached/root item in a terminal workphase as none (done, ordered by
-completedAt)" — same unit-only caveat as TC-2.13)*
+**Automation test:** `items.test.ts` › "GET returns positionScope = 'none'
+for a done item (TC-2.15)"
 
 ## TC-2.16 — `position`'s shape is unchanged
 
