@@ -47,7 +47,55 @@ export async function seedRepositioningScenario(request: APIRequestContext, proj
   return { project, workflow, colOnePhase, colTwoPhase, items };
 }
 
-type WorkflowItemRow = { title: string; position: number; createdAt: number; workphaseId: string | null };
+export interface CrossProjectRepositioningScenario {
+  rootProject: { id: string; name: string };
+  project1a: { id: string; name: string };
+  project1b: { id: string; name: string };
+  workflow: { id: string };
+  sharedPhase: ScenarioWorkphase;
+  items: Record<'A' | 'B' | 'C' | 'D' | 'E', ScenarioItem>;
+}
+
+// Builds the cross-project repositioning scenario: a root project owning
+// one workflow with one shared workphase, and two child sub-projects
+// (project1a, project1b) with no workflow of their own — they inherit the
+// root's (client/CLAUDE.md's "workflow inheritance" rule; see
+// client/src/App.tsx:136-146). Items A/C/E belong to project1a, B/D to
+// project1b, all five sharing the one workphase — position scope is
+// workflow-wide and provably blind to projectId (positionScopeFor,
+// items.ts:29-58), so this scenario isolates project membership as the
+// only variable, unlike seedRepositioningScenario's column/workphase split.
+// Same position-pinning approach as seedRepositioningScenario, for the same
+// reason (append alone won't reproduce the interleaved 1.0-5.0 layout).
+export async function seedCrossProjectRepositioningScenario(request: APIRequestContext, rootName: string): Promise<CrossProjectRepositioningScenario> {
+  const rootProject = await (await request.post(`${API}/projects`, { data: { name: rootName } })).json();
+  const project1a = await (await request.post(`${API}/projects`, { data: { name: `${rootName} 1a`, parentId: rootProject.id } })).json();
+  const project1b = await (await request.post(`${API}/projects`, { data: { name: `${rootName} 1b`, parentId: rootProject.id } })).json();
+
+  const workflow = await (await request.post(`${API}/workflows`, { data: { name: rootName, projectId: rootProject.id } })).json();
+  const sharedPhase = await (await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Shared Phase' } })).json();
+
+  const plan: Array<{ key: keyof CrossProjectRepositioningScenario['items']; projectId: string; position: number }> = [
+    { key: 'A', projectId: project1a.id, position: 1.0 },
+    { key: 'B', projectId: project1b.id, position: 2.0 },
+    { key: 'C', projectId: project1a.id, position: 3.0 },
+    { key: 'D', projectId: project1b.id, position: 4.0 },
+    { key: 'E', projectId: project1a.id, position: 5.0 },
+  ];
+
+  const items = {} as CrossProjectRepositioningScenario['items'];
+  for (const { key, projectId, position } of plan) {
+    const created = await (await request.post(`${API}/items`, {
+      data: { title: `Item ${key}`, projectId, workphaseId: sharedPhase.id },
+    })).json();
+    await request.patch(`${API}/items/${created.id}/move`, { data: { position } });
+    items[key] = { ...created, position };
+  }
+
+  return { rootProject, project1a, project1b, workflow, sharedPhase, items };
+}
+
+type WorkflowItemRow = { title: string; position: number; createdAt: number; workphaseId: string | null; projectId: string | null };
 
 // Sorts by position then createdAt (the same tie-break the DB's own
 // reindex/list queries use) so a real cross-workphase position collision —
@@ -69,4 +117,12 @@ export function columnOrder(request: APIRequestContext, workflowId: string, work
 
 export function fullOrder(request: APIRequestContext, workflowId: string): Promise<string> {
   return orderOf(request, workflowId, () => true);
+}
+
+// A single project's own item order — the "collated" full order narrowed to
+// one project's membership, mirroring the client's filterProjectId narrowing
+// (ProjectPage.tsx, useItemManagement.ts) but computed server-side so it's
+// independent of whatever the UI happens to render.
+export function projectOrder(request: APIRequestContext, workflowId: string, projectId: string): Promise<string> {
+  return orderOf(request, workflowId, i => i.projectId === projectId);
 }

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/repositioningScenario';
+import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
 
 const BASE = 'http://localhost:3002/api';
 
