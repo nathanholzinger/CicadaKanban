@@ -57,7 +57,8 @@
       "Bash(npm --prefix server run test -- --run -t \"excludes a done item\")",
       "Bash(npm --prefix server run test -- --run -t \"TEMP: does an attached-siblings\")",
       "Bash(npm --prefix server run test -- --run -t \"reindex scope isolation\")",
-      "Bash(grep -i \"onResolver\\\\|Coverage summary\" -A 5 /tmp/cov4.txt)"
+      "Bash(grep -i \"onResolver\\\\|Coverage summary\" -A 5 /tmp/cov4.txt)",
+      "Bash(npm --prefix server run test -- --run -t \"keeps the item's existing position exactly unchanged\")"
     ]
   }
 }

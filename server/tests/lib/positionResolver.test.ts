@@ -145,7 +145,7 @@ describe('resolveAnchorPosition', () => {
     expect(result).toBe(1.5);
   });
 
-  it('throws for an anchor with no position (a done item, per Part 6)', async () => {
+  it('throws for an anchor with no position (a done item, per Part 6) (TC-2.8)', async () => {
     const { items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, null);
 
@@ -230,7 +230,7 @@ describe('classifyPositionScope', () => {
     expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, true)).toBe('attached-siblings');
   });
 
-  it('classifies a null-workphase item as none (unsorted, not currently ordered)', () => {
+  it('classifies a null-workphase item as none (unsorted, not currently ordered) (TC-2.16)', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: null }, null)).toBe('none');
   });
 
@@ -242,7 +242,7 @@ describe('classifyPositionScope', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 
-  it('classifies an attached-but-parentless item as workflow, not attached-siblings', () => {
+  it('classifies an attached-but-parentless item as workflow, not attached-siblings (TC-2.17)', () => {
     expect(classifyPositionScope({ isAttached: true, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 });

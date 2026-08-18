@@ -11,7 +11,7 @@
 | TC-2.5 | Append fallback, no true predecessor | P0 | ✅ automated |
 | TC-2.6 | Creation with no anchor at all | P1 | ✅ automated |
 | TC-2.7 | Bootstrap: brand-new empty scope | P0 | ✅ automated |
-| TC-2.8 | ~~Bootstrap collision avoidance across two empty scopes~~ — superseded, no longer applicable | P0 | N/A |
+| TC-2.8 | Anchoring against a done item is rejected | P1 | ✅ automated |
 | TC-2.9 | Narrow view cannot leapfrog past an unseen true neighbor | P0 | ✅ automated |
 | TC-2.10 | True neighbor lookup ignores visibility, only reality | P0 | ✅ automated |
 | TC-2.11 | Server resolution is authoritative over a stale client guess | P0 | ✅ automated |
@@ -19,13 +19,17 @@
 | TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ✅ automated |
 | TC-2.14 | `positionScope` = `"workflow"` | P1 | ✅ automated |
 | TC-2.15 | `positionScope` = `"none"` for a done item | P1 | ✅ automated |
-| TC-2.16 | `position`'s shape is unchanged | P2 | ✅ automated |
-| TC-2.17 | Attach → detach reassigns position | P0 | ✅ automated |
-| TC-2.18 | Detach → attach reassigns position | P0 | ✅ automated |
-| TC-2.19 | Reparent while staying attached reassigns position | P0 | ✅ automated |
-| TC-2.20 | Reorder-only move does not reassign a fresh position | P0 | ✅ automated |
-| TC-2.21 | Cascade to attached descendants leaves position untouched | P0 | ✅ automated |
-| TC-2.22 | Active → done transition reassigns per Part 6 rules | P0 | ✅ automated |
+| TC-2.16 | `classifyPositionScope` on a null `workphaseId` → `"none"` | P1 | ✅ automated |
+| TC-2.17 | `classifyPositionScope` on an attached-but-parentless item → `"workflow"` | P1 | ✅ automated |
+| TC-2.18 | `position`'s shape is unchanged | P2 | ✅ automated |
+| TC-2.19 | Attach → detach reassigns position | P0 | ✅ automated |
+| TC-2.20 | Detach → attach reassigns position | P0 | ✅ automated |
+| TC-2.21 | Reparent while staying attached reassigns position | P0 | ✅ automated |
+| TC-2.22 | Reorder-only move does not reassign a fresh position | P0 | ✅ automated |
+| TC-2.23 | Redundant re-attach to the same parent is a no-op for position | P1 | ✅ automated |
+| TC-2.24 | Workphase-only move with no anchor keeps existing position | P0 | ✅ automated |
+| TC-2.25 | Cascade to attached descendants leaves position untouched | P0 | ✅ automated |
+| TC-2.26 | Active → done transition reassigns per Part 6 rules | P0 | ✅ automated |
 
 ---
 
@@ -130,26 +134,24 @@ not by writing a test: position scope moved from per-workphase to
 workflow-wide, which is what actually eliminates the two-empty-workphases
 collision this was meant to prevent — see the wiki's §2 bootstrap-fallback
 note. The flat `1.0` baseline is now correct as documented, and the
-originally-mapped test was right all along. See TC-2.8 below for the
-superseded collision scenario this made moot.)*
+originally-mapped test was right all along.)*
 
-## TC-2.8 — ~~Bootstrap collision avoidance across two empty scopes~~ (superseded)
+## TC-2.8 — Anchoring against a done item is rejected
 
-**Priority:** P0 · **Automated:** N/A — scenario no longer applies
+**Priority:** P1 · **Automated:** ✅ automated
 
-*Given* two different, both-currently-empty workphaces, *when* an item is
-bootstrapped into each independently and the workphaces are later viewed
-together (e.g. in a merged column), *then* their positions do not collide
-or need renumbering — this is the original independent-counter-collision
-bug this design fixes.
+*Given* a done item (terminal workphase, no stored `position` per Part 6),
+*when* it is passed as `anchorId` to a move, *then* the request is
+rejected rather than resolving against a nonexistent position — a real
+corollary of combining this section's "query the anchor's true current
+position" step with Part 6's "done items get no stored position," not a
+generic input-validation guard.
 
-*(Superseded: bootstrap scope is workflow-wide now (see TC-2.7), not
-per-workphase, so "two independently-empty workphases" bootstrapping and
-later colliding can no longer happen — there is only ever one bootstrap
-point per workflow. Kept here, struck through, for history/traceability
-rather than deleted outright; safe to remove in a future catalog cleanup.)*
-
-**Automation test:** —
+**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
+› "throws for an anchor with no position (a done item, per Part 6)
+(TC-2.8)"; also duplicated at the integration layer by `items.test.ts` ›
+"move rejects anchoring to a done item (no position to anchor against)
+(TC-2.8)"
 
 ### Narrow-view correctness (the core bug this feature fixes)
 
@@ -264,7 +266,38 @@ see part-2's §2 comparison-scope rewrite.)*
 **Automation test:** `items.test.ts` › "GET returns positionScope = 'none'
 for a done item (TC-2.15)"
 
-## TC-2.16 — `position`'s shape is unchanged
+## TC-2.16 — `classifyPositionScope` on a null `workphaseId` → `"none"`
+
+**Priority:** P1 · **Automated:** ✅ automated
+
+*Given* an item with a null `workphaseId` (unsorted/invalid — e.g. its
+workphase was deleted, SET NULL), *when* its `positionScope` is computed,
+*then* it reads `"none"` — the same practical bucket as a done item, even
+though the reason differs (not currently ordered at all, rather than
+ordered-by-`completedAt`). A fourth `positionScope` state the wiki's §2
+description doesn't separately enumerate (only three states are named),
+though `classifyPositionScope`'s own null-`workphaseId` branch has always
+implemented it.
+
+**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
+› "classifies a null-workphase item as none (unsorted, not currently
+ordered) (TC-2.16)"
+
+## TC-2.17 — `classifyPositionScope` on an attached-but-parentless item → `"workflow"`
+
+**Priority:** P1 · **Automated:** ✅ automated
+
+*Given* an item with `isAttached = true` but no `parentId`, *when* its
+`positionScope` is computed, *then* it reads `"workflow"`, not
+`"attached-siblings"` — the wiki states the AND-condition
+(`isAttached && parentId`) for the attached-siblings state, so this
+negative case is implied, just not previously enumerated as its own case.
+
+**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
+› "classifies an attached-but-parentless item as workflow, not
+attached-siblings (TC-2.17)"
+
+## TC-2.18 — `position`'s shape is unchanged
 
 **Priority:** P2 · **Automated:** ✅ automated
 
@@ -280,7 +313,7 @@ tests rather than a new test slot.
 
 ### Scope-change reassignment principle
 
-## TC-2.17 — Attach → detach reassigns position
+## TC-2.19 — Attach → detach reassigns position
 
 **Priority:** P0 · **Automated:** ✅ automated
 
@@ -292,7 +325,7 @@ leftover sibling-scoped value.
 **Automation test:** `items.test.ts` › "detaching reassigns a fresh
 position scoped to the workphase"
 
-## TC-2.18 — Detach → attach reassigns position
+## TC-2.20 — Detach → attach reassigns position
 
 **Priority:** P0 · **Automated:** ✅ automated
 
@@ -303,7 +336,7 @@ leftover workphase-scoped value.
 **Automation test:** `items.test.ts` › "attaching to a parent reassigns a
 fresh position scoped to the new siblings"
 
-## TC-2.19 — Reparent while staying attached reassigns position
+## TC-2.21 — Reparent while staying attached reassigns position
 
 **Priority:** P0 · **Automated:** ✅ automated
 
@@ -315,7 +348,7 @@ sibling scope.
 **Automation test:** `items.test.ts` › "reparenting while staying attached
 reassigns a fresh position scoped to the new parent"
 
-## TC-2.20 — Reorder-only move does not reassign a fresh position
+## TC-2.22 — Reorder-only move does not reassign a fresh position
 
 **Priority:** P0 · **Automated:** ✅ automated
 
@@ -328,7 +361,46 @@ TC-2.1–2.5), not an unrelated append-fallback value.
 against the true neighbor, not a client-supplied guess" (result lands
 strictly between two true neighbors, not an append value)
 
-## TC-2.21 — Cascade to attached descendants leaves position untouched
+## TC-2.23 — Redundant re-attach to the same parent is a no-op for position
+
+**Priority:** P1 · **Automated:** ✅ automated
+
+*Given* an already-attached child, *when* it is "re-attached" to the same
+parent it already belongs to (no actual scope change), *then* its
+`position` is left completely untouched — a corollary of the
+scope-change-reassignment principle above (no scope change → no
+reassignment) that the table doesn't name as its own scenario.
+
+**Automation test:** `items.test.ts` › "a redundant re-attach to the same
+parent leaves position untouched (TC-2.23)"
+
+## TC-2.24 — Workphase-only move with no anchor keeps existing position
+
+**Priority:** P0 · **Automated:** ✅ automated
+
+*Given* an item that already has a real `position`, *when* it moves to a
+different workphase with no anchor and no explicit `position` in the
+request, *then* its existing `position` value is left completely
+unchanged — since position is workflow-scoped, not workphase-scoped
+(`de80b59`), the existing value is already comparable against everything
+else in the (same) workflow, so no new number needs to be computed. A
+deliberate exception to the append-fallback default (steps 4/5 above),
+documented explicitly in the wiki's §2 addendum, and the shape the MCP
+`move_item` tool already sends (`{workphaseId}` alone). New as of
+`de80b59` (2026-08-17) — not in the original 55-case catalog at all.
+
+**Automation test:** `items.test.ts` › "a workphaseId-only move with no
+anchor keeps the item's existing position exactly unchanged (TC-2.24)" —
+pins the item's position to a value append-fallback could never naturally
+produce (so a pass can't be coincidental), then asserts it's exactly that
+value after the move. The one pre-existing test in this area
+("a workphaseId-only move (no position given) defaults to the end of the
+target workphase") turned out to be ambiguous — its `toBeGreaterThan`
+assertion passes whether the position was kept unchanged *or* freshly
+appended, given the specific values it uses — so it doesn't actually
+discriminate between the two behaviors this case cares about.
+
+## TC-2.25 — Cascade to attached descendants leaves position untouched
 
 **Priority:** P0 (regression/guard) · **Automated:** ✅ automated
 
@@ -338,11 +410,11 @@ workphase and the cascade applies to the child, *then* the child's
 parent-scoped).
 
 **Automation test:** `items.test.ts` › "cascading a non-terminal-to-
-non-terminal move leaves an attached child's position untouched (TC-2.21)"
+non-terminal move leaves an attached child's position untouched (TC-2.25)"
 — reads `position` explicitly before/after, unlike the pre-existing
 cascade tests which only ever checked `workphaseId` propagation.
 
-## TC-2.22 — Active → done transition reassigns per Part 6 rules
+## TC-2.26 — Active → done transition reassigns per Part 6 rules
 
 **Priority:** P0 · **Automated:** ✅ automated
 

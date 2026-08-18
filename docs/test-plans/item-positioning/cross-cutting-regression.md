@@ -9,6 +9,7 @@ see [`../../wiki/item-positioning/#already-correct-not-touched-by-this-feature`]
 | TC-X.2 | Cycle prevention still holds | P1 | ✅ automated |
 | TC-X.3 | Same-project reparent constraint still holds | P1 | ✅ automated |
 | TC-X.5 | Minimal anchor=card/side=before default is what ships now | P2 | ⏸ deferred (Epic 3.5) |
+| TC-X.6 | An item excludes its own stale row from its own scope query | P1 | ✅ automated |
 
 ---
 
@@ -72,3 +73,20 @@ and `tests/ui/item-repositioning-cross-project-dnd.spec.ts` document a
 live mismatch here (dnd-kit's swap-preview reflow interacting with the
 rect measurement), but that's exactly the kind of drag-and-drop tune-up
 Epic 3.5 owns — deferred, not a gap to close now.
+
+## TC-X.6 — An item excludes its own stale row from its own scope query
+
+**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
+
+*Given* an item being repositioned, *when* its own comparison scope is
+queried for true neighbors, *then* its own (possibly just-updated, now
+stale) row is excluded from that query — otherwise an item could end up
+comparing against its own pre-move position. A regression-style
+implementation-correctness guard rather than a stated product-facing
+business rule (closer to `positionScopeFor`'s `excludeId` parameter
+working correctly than to a rule a user would ever observe directly),
+which is why it lives here alongside TC-X.2/X.3 rather than in Part 2's
+more rule-driven cases.
+
+**Automation test:** `items.test.ts` › "excludes the item itself from its
+own scope query on reposition (TC-X.6)"
