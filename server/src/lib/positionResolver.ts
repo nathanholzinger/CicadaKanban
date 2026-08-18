@@ -1,4 +1,4 @@
-import { eq, gt, lt, asc, desc, and, type SQL } from 'drizzle-orm';
+import { eq, gt, lt, asc, desc, and, isNotNull, type SQL } from 'drizzle-orm';
 import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';
 import { items } from '../db/schema.js';
@@ -52,12 +52,23 @@ export function coarsestFit(prev: number, next: number): number | null {
 // reactive only — never call this from a scheduled job or a whole-project
 // sweep; it's meant to fire as a side effect of a write that's already
 // happening.
+//
+// `isNotNull(items.position)` guards against a scope that happens to also
+// contain done items (Part 6) — a done item's workphaseId can still match a
+// workflow-wide scope predicate (positionScopeFor has no isTerminal filter),
+// but it has no position to reindex by definition. Without this, SQLite
+// sorts NULL first in ASC order, so a done item would silently sort first
+// and get a real position written onto it here — the one place in the
+// resolution path that wasn't already protected by ordinary SQL null
+// comparisons (a null position can never satisfy gt()/lt() against a real
+// value, so the append/anchor neighbor-lookup queries elsewhere in this
+// file were never at risk; this blind order-and-renumber loop was).
 export function reindexScope(scopeWhere: SQL, tx?: Tx): void {
   const e = tx ?? db;
   const rows = e
     .select({ id: items.id, position: items.position, createdAt: items.createdAt })
     .from(items)
-    .where(scopeWhere)
+    .where(and(scopeWhere, isNotNull(items.position)))
     .orderBy(asc(items.position), asc(items.createdAt))
     .all();
 

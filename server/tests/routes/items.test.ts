@@ -507,18 +507,19 @@ describe('Epic 3.2 — position resolution', () => {
       expect(res.body.position).toBe(1.5);
     });
 
-    // TODO(bug, confirmed 2026-08-18): positionScopeFor's workflow-wide scope
-    // (workphaseIdsInSameWorkflow) includes terminal workphase ids with no
-    // isTerminal/position-IS-NOT-NULL filter, so a done item (position: null)
-    // remains a scope member by workphaseId alone. reindexScope orders by
-    // asc(items.position) with no NULL filter, and SQLite/better-sqlite3
-    // sorts NULL first in ASC order — so a done item sorts first and gets a
-    // real position written by reindexScope, contradicting Part 6 ("done
-    // items get no stored position"). Needs an Architect/Coder fix (likely:
-    // exclude terminal workphase ids in positionScopeFor, or filter
-    // isNotNull(items.position) in reindexScope) — not fixed in this pass.
-    // This test is EXPECTED TO CURRENTLY FAIL and documents the bug rather
-    // than silently passing.
+    // Regression guard for a real bug found 2026-08-18: positionScopeFor's
+    // workflow-wide scope includes terminal workphase ids with no
+    // isTerminal filter, so a done item (position: null) was a scope
+    // member by workphaseId alone. reindexScope ordered by
+    // asc(items.position) with no NULL filter, and SQLite sorts NULL
+    // first in ASC order — so a done item sorted first and got a real
+    // position written by reindexScope, contradicting Part 6 ("done items
+    // get no stored position"). Fixed by filtering
+    // isNotNull(items.position) directly in reindexScope (positionResolver.ts)
+    // — the one place in the resolution path not already protected by
+    // ordinary SQL null comparisons (gt()/lt() against a real value can
+    // never match a null position, so the append/anchor neighbor-lookup
+    // queries were never at risk; this blind order-and-renumber loop was).
     it('excludes a done item from an active-scope reindex (TC-5.6)', async () => {
       const { project, todo, inProgress, done } = await setupThreePhases();
 
@@ -539,6 +540,72 @@ describe('Epic 3.2 — position resolution', () => {
       const reread = await request(app).get(`/api/items/${doneItem.body.id}`);
       expect(reread.body.position).toBeNull();
       expect(reread.body.completedAt).toBe(doneItem.body.completedAt);
+    });
+  });
+
+  // positionScopeFor's two branches (attached-siblings: `parentId = X AND
+  // isAttached = 1`; workflow-wide: everything else, explicitly excluding
+  // `isAttached = 1 AND parentId IS NOT NULL`) are literal complements of
+  // each other, so no row can satisfy both — but TC-5.6 (above) is proof
+  // that reasoning about a scope predicate isn't the same as verifying it
+  // under an actual reindex, so this checks both leak directions directly
+  // rather than trusting the construction argument alone.
+  describe('reindex scope isolation: attached-siblings vs. workflow-wide', () => {
+    it('an attached-siblings reindex does not touch an unrelated workflow-wide item', async () => {
+      const { project, todo } = await setupTwoPhases();
+
+      const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+      const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildA' });
+      const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildB' });
+      await request(app).patch(`/api/items/${childA.id}/move`).send({ position: 1.0 });
+      await request(app).patch(`/api/items/${childB.id}/move`).send({ position: 1.0 + 1e-13 }); // tight gap -> reindex trigger
+
+      const farAway = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'FarAway' });
+      await request(app).patch(`/api/items/${farAway.id}/move`).send({ position: 500.0 });
+
+      const newChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'NewChild' });
+      const res = await request(app).patch(`/api/items/${newChild.id}/move`).send({ anchorId: childA.id, side: 'after' });
+
+      // The attached-siblings reindex itself worked (childA/childB got
+      // clean sequential positions, newChild resolved into the gap)...
+      expect((await request(app).get(`/api/items/${childA.id}`)).body.position).toBe(1);
+      expect((await request(app).get(`/api/items/${childB.id}`)).body.position).toBe(2);
+      expect(res.body.position).toBe(1.5);
+      // ...but a workflow-wide item sharing the same workphase, and the
+      // parent itself, are both completely untouched by it.
+      expect((await request(app).get(`/api/items/${farAway.id}`)).body.position).toBe(500);
+      expect((await request(app).get(`/api/items/${parent.id}`)).body.position).toBe(parent.position);
+    });
+
+    it('a workflow-wide reindex does not touch an unrelated parent\'s attached children', async () => {
+      const { project, todo } = await setupTwoPhases();
+
+      const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+      const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildA' });
+      const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildB' });
+      await request(app).patch(`/api/items/${childA.id}/move`).send({ position: 1.0 });
+      await request(app).patch(`/api/items/${childB.id}/move`).send({ position: 2.0 }); // plenty of room, not a trigger
+
+      const t1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
+      const t2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
+      await request(app).patch(`/api/items/${t1.id}/move`).send({ position: 10.0 });
+      await request(app).patch(`/api/items/${t2.id}/move`).send({ position: 10.0 + 1e-13 }); // tight gap -> reindex trigger
+
+      const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
+      const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: t1.id, side: 'after' });
+
+      // The workflow-wide reindex itself worked — `parent` is itself a
+      // plain top-level (non-attached) item, so it's a workflow-wide scope
+      // member too and gets swept into the same reindex, ahead of T1/T2 by
+      // position order.
+      expect((await request(app).get(`/api/items/${parent.id}`)).body.position).toBe(1);
+      expect((await request(app).get(`/api/items/${t1.id}`)).body.position).toBe(2);
+      expect((await request(app).get(`/api/items/${t2.id}`)).body.position).toBe(3);
+      expect(res.body.position).toBe(2.5);
+      // ...but the unrelated parent's attached children, sharing the same
+      // workphase, are completely untouched by it.
+      expect((await request(app).get(`/api/items/${childA.id}`)).body.position).toBe(1.0);
+      expect((await request(app).get(`/api/items/${childB.id}`)).body.position).toBe(2.0);
     });
   });
 });

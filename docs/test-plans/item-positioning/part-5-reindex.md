@@ -9,8 +9,10 @@
 | TC-5.3 | Magnitude threshold scales with scope size | P1 | ✅ automated |
 | TC-5.4 | Active items reindex as one coordinated cross-workphase scope | P0 | ✅ automated |
 | TC-5.5 | ~~Two independently-reindexed active scopes never collide~~ — superseded, no longer applicable | P0 | N/A |
-| TC-5.6 | Done items are never reindexed | P1 | ⚠️ automated, currently failing (real bug) |
+| TC-5.6 | Done items are never reindexed | P1 | ✅ automated |
 | TC-5.7 | Tie-break on exact position equality | P1 | ✅ automated |
+| TC-5.8 | Attached-siblings reindex doesn't leak into workflow-wide scope | P0 (regression/guard) | ✅ automated |
+| TC-5.9 | Workflow-wide reindex doesn't leak into attached-siblings scope | P0 (regression/guard) | ✅ automated |
 
 ---
 
@@ -93,25 +95,26 @@ here, struck through, for traceability rather than deleted outright.)*
 
 ## TC-5.6 — Done items are never reindexed
 
-**Priority:** P1 (regression/guard) · **Automated:** ⚠️ automated, currently failing — confirmed real bug
+**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
 
 *Given* a terminal-workphace (done) item, *when* an active-scope reindex
 occurs elsewhere, *then* the done item's data is untouched — done items
 have no stored `position` to reindex (see [Part 6](part-6-active-done-split.md)).
 
 **Automation test:** `items.test.ts` › "excludes a done item from an
-active-scope reindex (TC-5.6)" — **written expecting failure, and it
-currently fails.** `positionScopeFor`'s workflow-wide scope
-(`workphaseIdsInSameWorkflow`) includes terminal workphase ids with no
-`isTerminal`/`position IS NOT NULL` filter, so a done item (`position:
-null`) remains a scope member by `workphaseId` alone. SQLite/
-`better-sqlite3` sorts `NULL` first in `ASC` order, so `reindexScope`
-assigns the done item a real position — contradicting this very rule. See
-the `TODO(bug, ...)` comment directly above the test in `items.test.ts`
-for fix candidates (exclude terminal workphase ids in `positionScopeFor`,
-or filter `isNotNull(items.position)` in `reindexScope`). **Needs an
-Architect/Coder decision before this test can go green** — not fixed as
-part of this reconciliation pass, per explicit user call.
+active-scope reindex (TC-5.6)". Found a real bug on first write (2026-08-18):
+`positionScopeFor`'s workflow-wide scope (`workphaseIdsInSameWorkflow`)
+includes terminal workphase ids with no `isTerminal` filter, so a done
+item (`position: null`) was a scope member by `workphaseId` alone, and
+SQLite sorts `NULL` first in `ASC` order — so `reindexScope` assigned the
+done item a real position, contradicting this very rule. **Fixed** by
+filtering `isNotNull(items.position)` directly in `reindexScope`
+(`positionResolver.ts`) rather than narrowing `positionScopeFor`: the
+append/anchor neighbor-lookup queries elsewhere in that file were already
+safe (`gt()`/`lt()` against a real value can never match a null
+position, and `ORDER BY position DESC` sorts `NULL` *last*, both
+confirmed empirically) — `reindexScope`'s blind order-and-renumber loop
+was the only exposed spot, so the fix lives there.
 
 ## TC-5.7 — Tie-break on exact position equality
 
@@ -127,3 +130,37 @@ underlying DB row order.
 `useItemManagement.test.ts` › `getWorkphaseItemsFrom` › "breaks an exact
 position tie by createdAt, oldest first" (client render-time) — two
 genuinely different code paths, not redundant
+
+## TC-5.8 — Attached-siblings reindex doesn't leak into workflow-wide scope
+
+**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+
+*Given* a tight-gap reindex triggered within one parent's attached-siblings
+scope (`parentId = X AND isAttached = 1`), *when* the reindex runs, *then*
+an unrelated workflow-wide item sharing the same workphase — and the
+parent itself — are completely untouched by it.
+
+**Automation test:** `items.test.ts` › `describe('reindex scope isolation:
+attached-siblings vs. workflow-wide', ...)` › "an attached-siblings
+reindex does not touch an unrelated workflow-wide item". Added 2026-08-18
+after a direct question about whether `positionScopeFor`'s two branches
+(attached-siblings vs. workflow-wide — literal complements of each other
+by construction, see the describe block's own header comment) could
+cross-contaminate under a real reindex, the same class of gap TC-5.6
+turned out to hide. Verified empirically rather than trusting the
+construction argument alone. The pre-existing isolation coverage in
+`itemRepositioningAttachedSiblings.spec.ts` never actually triggers a
+reindex (its gaps are always resolvable directly), so this is genuinely
+new coverage, not a duplicate.
+
+## TC-5.9 — Workflow-wide reindex doesn't leak into attached-siblings scope
+
+**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+
+*Given* a tight-gap reindex triggered in the workflow-wide scope, *when*
+the reindex runs, *then* an unrelated parent's attached children, sharing
+the same workphase, are completely untouched by it.
+
+**Automation test:** `items.test.ts` › same describe block as TC-5.8 ›
+"a workflow-wide reindex does not touch an unrelated parent's attached
+children" — the reverse direction of TC-5.8, added alongside it.

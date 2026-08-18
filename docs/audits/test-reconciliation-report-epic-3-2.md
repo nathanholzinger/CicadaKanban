@@ -70,22 +70,25 @@ scope by design — not confirmed, not searched for. Treat "not found in the
   resolved with new tests (TC-1.1, TC-2.11, TC-2.16, TC-2.21, TC-5.4,
   TC-6.5, TC-X.1, plus TC-2.8/TC-3.1/TC-3.2 resolved earlier), 1 resolved
   as N/A/superseded (TC-5.5, same pattern as TC-2.8), 1 removed outright
-  (TC-X.4). **One exception, flagged not hidden:** TC-5.6's new test is
-  written and automated, but **currently fails** — it caught a real,
-  previously-undocumented bug (a done item can get swept into an
-  active-scope reindex and assigned a real position, contradicting Part
-  6), confirmed via direct code tracing and an empirical SQLite
-  NULL-ordering check, not just theorized. Per explicit user decision,
-  the test documents the bug (with a `TODO(bug, ...)` comment) rather
-  than being fixed as part of this pass — **needs an Architect/Coder
-  decision before it can go green.** TC-2.11 also required a small source
-  change (not just a test): the `moveItem`-then-`setItems`-or-`loadBoard`
-  logic was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure
+  (TC-X.4). TC-5.6's new test caught a real, previously-undocumented bug
+  (a done item could get swept into an active-scope reindex and assigned
+  a real position, contradicting Part 6) — confirmed via direct code
+  tracing and an empirical SQLite NULL-ordering check, not just
+  theorized. Written first expecting failure (user decision), then
+  **fixed the same day, once discussed**: `reindexScope`
+  (`positionResolver.ts`) now filters `isNotNull(items.position)` —
+  traced and confirmed every other consumer of `positionScopeFor`'s
+  scope was already immune to a null-position row via ordinary SQL null
+  comparisons, so the fix is scoped to the one place that wasn't, not
+  the shared scope-builder. TC-2.11 also required a small source change
+  (not just a test): the `moveItem`-then-`setItems`-or-`loadBoard` logic
+  was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure
   `applyItemMove` function in `boardDndUtils.ts` (per user decision, over
   introducing this codebase's first `renderHook`-based test).
-  **Final count: 0 of 9 quality concerns open, 0 of 14 gaps open (1
-  flagged failing/needs-decision), 6 (5 original + 1 new) candidate cases
-  in Section E — the only section left untouched.**
+  **Final count: 0 of 9 quality concerns open, 0 of 14 gaps open, 6 (5
+  original + 1 new) candidate cases in Section E — the only section left
+  untouched. Full suite (server/client/Playwright) and the server
+  coverage gate all green.**
 
 **Two items worth resolving first, before the smaller ones:**
 
@@ -291,20 +294,26 @@ deliberately manual, or accept as a known gap for now.
    single coordinated scope in practice.
 10. **TC-5.6** — no test verifies a done item is excluded/untouched by an
     active-scope reindex.
-    **Status:** Automated, but confirmed FAILING — a real bug, not just a
-    test gap (user decision: write the test now documenting it, defer
-    the fix). `items.test.ts` › "excludes a done item from an
-    active-scope reindex (TC-5.6)" currently fails: `positionScopeFor`'s
-    workflow-wide scope includes terminal workphase ids with no
-    `isTerminal`/`position IS NOT NULL` filter, so a done item
-    (`position: null`) stays a scope member by `workphaseId` alone.
-    SQLite/`better-sqlite3` sorts `NULL` first in `ASC` order, so
-    `reindexScope` assigns the done item a real position — contradicting
-    Part 6 ("done items get no stored position"). See the `TODO(bug, ...)`
-    comment directly above the test for the fix candidates (exclude
-    terminal workphase ids in `positionScopeFor`, or filter
-    `isNotNull(items.position)` in `reindexScope`). **Needs an
-    Architect/Coder decision before this test can go green.**
+    **Status:** Resolved — including the real bug it found. First write
+    (user decision at the time: write the test now documenting the
+    failure, defer the fix) caught a genuine bug: `positionScopeFor`'s
+    workflow-wide scope included terminal workphase ids with no
+    `isTerminal` filter, so a done item (`position: null`) was a scope
+    member by `workphaseId` alone, and SQLite sorts `NULL` first in
+    `ASC` order — so `reindexScope` assigned the done item a real
+    position, contradicting Part 6 ("done items get no stored
+    position"). **Fixed same day, once discussed**: filtered
+    `isNotNull(items.position)` directly in `reindexScope`
+    (`positionResolver.ts`), not by narrowing `positionScopeFor` — traced
+    and confirmed empirically that every *other* consumer of that scope
+    (append-fallback's `DESC LIMIT 1`, anchor-neighbor `gt()`/`lt()`
+    lookups) was already immune to a null-position row via ordinary SQL
+    null-comparison semantics; `reindexScope`'s blind
+    order-and-renumber loop was the only exposed spot, so the fix lives
+    there instead of the broader, shared scope-builder. `items.test.ts`
+    › "excludes a done item from an active-scope reindex (TC-5.6)" now
+    passes; full suite (server/client/Playwright) and the coverage gate
+    reverified green after the fix.
 11. **TC-6.5** — no test verifies an attached child's `position` survives
     when its parent transitions to terminal (only the inverse — a
     *detaching* child losing position into terminal — is tested).
