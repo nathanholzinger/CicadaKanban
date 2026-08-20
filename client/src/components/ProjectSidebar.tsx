@@ -20,7 +20,6 @@ import {
   findNextSibling,
 } from './sidebar/projectTreeUtils';
 import type { Projection } from './sidebar/projectTreeUtils';
-import { positionBetween } from '../lib/positions';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 
 interface ProjectSidebarProps {
@@ -29,7 +28,7 @@ interface ProjectSidebarProps {
   onSelectProject: (id: string) => void;
   onCreateProject: (parentId?: string) => void;
   onDeleteProject: (id: string) => Promise<void>;
-  onReorderProject: (id: string, parentId: string | null, position: number) => Promise<void>;
+  onReorderProject: (id: string, parentId: string | null, prevId: string | null, nextId: string | null) => Promise<void>;
 }
 
 export default function ProjectSidebar({
@@ -113,15 +112,13 @@ export default function ProjectSidebar({
       return;
     }
 
-    // Compute new position using midpoint between neighboring siblings
+    // Send the sibling ids the server should insert between — never a
+    // computed position (server always resolves it against true current
+    // data). If the target parent is collapsed, these may legitimately be
+    // null even though real children exist under it; the server always
+    // re-derives the truth rather than trusting an "empty" guess.
     const prevSibling = findPrevSibling(sortableItems, overIndex, projected);
     const nextSibling = findNextSibling(sortableItems, overIndex, projected);
-
-    const newPosition = positionBetween(
-      prevSibling?.project.position ?? null,
-      nextSibling?.project.position ?? null,
-      () => Date.now(),
-    );
 
     // Auto-expand collapsed parent
     if (projected.parentId) {
@@ -133,7 +130,7 @@ export default function ProjectSidebar({
       });
     }
 
-    onReorderProject(activeItem.id, projected.parentId, newPosition);
+    onReorderProject(activeItem.id, projected.parentId, prevSibling?.id ?? null, nextSibling?.id ?? null);
     clearDrag();
   }
 

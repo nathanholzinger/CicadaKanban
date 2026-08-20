@@ -4,7 +4,7 @@ import type { Notification, Project } from './types';
 import { fetchWorkflows, createWorkflow } from './api/workflows';
 import type { CreateWorkflowInput } from './api/workflows';
 import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from './api/notifications';
-import { fetchProjects, createProject, updateProject, deleteProject, reorderProjects } from './api/projects';
+import { fetchProjects, createProject, updateProject, deleteProject, moveProject } from './api/projects';
 import type { UpdateProjectInput } from './api/projects';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
@@ -118,11 +118,12 @@ export default function App() {
       .catch(() => {});
   }
 
-  async function handleReorderProject(id: string, parentId: string | null, position: number) {
-    setProjects(prev => prev.map(p => (p.id === id ? { ...p, parentId, position } : p)));
+  async function handleReorderProject(id: string, parentId: string | null, prevId: string | null, nextId: string | null) {
     try {
-      await reorderProjects([{ id, parentId, position }]);
-    } catch {
+      const updated = await moveProject(id, { parentId, prevId, nextId });
+      setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
+    } catch (err) {
+      console.error('Failed to reposition project:', err);
       fetchProjects()
         .then(setProjects)
         .catch(() => {});

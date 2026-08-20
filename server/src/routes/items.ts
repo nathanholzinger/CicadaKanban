@@ -196,49 +196,55 @@ router.post('/', (req, res) => {
   }
 
   const now = Date.now();
+  const id = randomUUID();
 
   // Position/completedAt (Epic 3.2): an attached child is scoped to
   // (parentId, isAttached) — its true siblings, not the whole workphase
   // (Part 3). A root/detached item is scoped to workphaseId, unless that
   // workphase is terminal, in which case it gets no stored position at
   // all — ordering is derived from completedAt instead (Part 6).
-  let position: number | null = null;
-  let completedAt: number | null = null;
-  if (attached && parentId && resolvedWorkphaseId) {
-    position = resolveAppendPosition(positionScopeFor({ isAttached: true, parentId, workphaseId: resolvedWorkphaseId }));
-  } else if (resolvedWorkphaseId) {
-    const targetWorkphase = db.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, resolvedWorkphaseId)).get();
-    if (targetWorkphase?.isTerminal) {
-      completedAt = now;
-    } else {
-      position = resolveAppendPosition(positionScopeFor({ isAttached: false, parentId: null, workphaseId: resolvedWorkphaseId }));
+  //
+  // Wrapped in a transaction: resolveAppendPosition can trigger a reindex of
+  // the whole scope (positionResolver.ts's magnitude-threshold trigger),
+  // which writes one row at a time — without an enclosing transaction each
+  // of those writes would auto-commit individually.
+  db.transaction((tx) => {
+    let position: number | null = null;
+    let completedAt: number | null = null;
+    if (attached && parentId && resolvedWorkphaseId) {
+      position = resolveAppendPosition(items, positionScopeFor({ isAttached: true, parentId, workphaseId: resolvedWorkphaseId }, undefined, tx), tx);
+    } else if (resolvedWorkphaseId) {
+      const targetWorkphase = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, resolvedWorkphaseId)).get();
+      if (targetWorkphase?.isTerminal) {
+        completedAt = now;
+      } else {
+        position = resolveAppendPosition(items, positionScopeFor({ isAttached: false, parentId: null, workphaseId: resolvedWorkphaseId }, undefined, tx), tx);
+      }
     }
-  }
-  // Note: append here is workflow-wide (see positionScopeFor), not narrowed
-  // to resolvedWorkphaseId — a brand-new item lands after the workflow's
-  // true last active item, not just the last item in its own workphase.
+    // Note: append here is workflow-wide (see positionScopeFor), not narrowed
+    // to resolvedWorkphaseId — a brand-new item lands after the workflow's
+    // true last active item, not just the last item in its own workphase.
 
-  const id = randomUUID();
+    tx.insert(items).values({
+      id,
+      type: type ?? null,
+      parentId: parentId || null,
+      projectId: resolvedProjectId,
+      workphaseId: resolvedWorkphaseId,
+      title,
+      description: description || null,
+      position,
+      completedAt,
+      assigneeType: assigneeType || null,
+      agentId: agentId || null,
+      isAttached: attached ? 1 : 0,
+      createdAt: now,
+      updatedAt: now,
+    }).run();
 
-  db.insert(items).values({
-    id,
-    type: type ?? null,
-    parentId: parentId || null,
-    projectId: resolvedProjectId,
-    workphaseId: resolvedWorkphaseId,
-    title,
-    description: description || null,
-    position,
-    completedAt,
-    assigneeType: assigneeType || null,
-    agentId: agentId || null,
-    isAttached: attached ? 1 : 0,
-    createdAt: now,
-    updatedAt: now,
-  }).run();
-
-  logActivity(id, 'status_change', type ? `Created as ${type}` : 'Created', {
-    workphaseId: resolvedWorkphaseId,
+    logActivity(id, 'status_change', type ? `Created as ${type}` : 'Created', {
+      workphaseId: resolvedWorkphaseId,
+    }, tx);
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
@@ -308,6 +314,7 @@ router.put('/:id', (req, res) => {
           const scopeUpdates: Record<string, unknown> = { workphaseId: newParent.workphaseId, updatedAt: Date.now() };
           if (!scopeUnchanged) {
             scopeUpdates.position = resolveAppendPosition(
+              items,
               positionScopeFor({ isAttached: true, parentId: resultingParentId, workphaseId: newParent.workphaseId }, req.params.id, tx),
               tx,
             );
@@ -334,6 +341,7 @@ router.put('/:id', (req, res) => {
             tx.update(items).set({ position: null, completedAt: Date.now(), updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
           } else {
             const newPosition = resolveAppendPosition(
+              items,
               positionScopeFor({ isAttached: false, parentId: null, workphaseId: currentWorkphaseId }, req.params.id, tx),
               tx,
             );
@@ -414,7 +422,7 @@ router.patch('/:id/move', (req, res) => {
         req.params.id,
         tx,
       );
-      updates.position = resolveAnchorPosition(anchorId, side as Side, scope, tx);
+      updates.position = resolveAnchorPosition(items, anchorId, side as Side, scope, tx);
     } else if (position !== undefined) {
       updates.position = position;
     } else if (targetWorkphaseId) {
@@ -439,7 +447,7 @@ router.patch('/:id/move', (req, res) => {
       if (!(isGenuineWorkphaseChange && item.position !== null)) {
         const isAttachedNow = Boolean(item.isAttached) && Boolean(item.parentId);
         const scope = positionScopeFor({ isAttached: isAttachedNow, parentId: item.parentId, workphaseId: targetWorkphaseId }, req.params.id, tx);
-        updates.position = resolveAppendPosition(scope, tx);
+        updates.position = resolveAppendPosition(items, scope, tx);
       }
     }
 

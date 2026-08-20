@@ -38,13 +38,23 @@ export async function deleteProject(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete project');
 }
 
-export async function reorderProjects(
-  projectOrders: { id: string; parentId: string | null; position: number }[],
-): Promise<void> {
-  const res = await fetch(`${API}/projects/reorder`, {
+export type MoveProjectInput = {
+  parentId?: string | null;
+  prevId?: string | null;
+  nextId?: string | null;
+};
+
+// Reposition and/or reparent a single project. Never computes or sends a
+// final position value — the server always resolves it against true
+// current sibling data (see positionResolver.ts); prevId/nextId just name
+// this project's resulting predecessor/successor, with both omitted meaning
+// "append to the end," never "the scope is empty."
+export async function moveProject(id: string, data: MoveProjectInput): Promise<Project> {
+  const res = await fetch(`${API}/projects/${id}/move`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ projectOrders }),
+    body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to reorder projects');
+  if (!res.ok) throw new Error('Failed to move project');
+  return res.json();
 }

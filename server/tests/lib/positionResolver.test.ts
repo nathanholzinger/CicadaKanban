@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { items } from '../../src/db/schema.js';
+import { items, projects } from '../../src/db/schema.js';
 import {
-  coarsestFit,
   reindexScope,
   resolveAnchorPosition,
   resolveAppendPosition,
   classifyPositionScope,
 } from '../../src/lib/positionResolver.js';
+import { coarsestFit } from '../../src/lib/coarsestFit.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
 function setPosition(id: string, position: number | null) {
@@ -29,6 +29,27 @@ async function seedPhaseWithItems(count: number) {
   }
   return { project, workflow, phase, items: created };
 }
+
+function setProjectPosition(id: string, position: number | null) {
+  db.update(projects).set({ position }).where(eq(projects.id, id)).run();
+}
+
+function getProjectPosition(id: string): number | null {
+  return db.select({ position: projects.position }).from(projects).where(eq(projects.id, id)).get()!.position;
+}
+
+async function seedRootProjects(count: number) {
+  const created = [];
+  for (let i = 0; i < count; i++) {
+    created.push(await createProject({ name: `Project ${i}` }));
+  }
+  return created;
+}
+
+// Root-scope predicate for these tests — same shape as projects.ts's
+// projectPositionScope(null), duplicated here (not imported) since it's a
+// one-line route-owned helper, not part of the lib's public surface.
+const rootScope = isNull(projects.parentId);
 
 describe('coarsestFit', () => {
   it('takes the exact midpoint when it already fits at 0 decimals', () => {
@@ -66,7 +87,7 @@ describe('reindexScope', () => {
     setPosition(created[2].id, 5.003);
     setPosition(created[3].id, 5.0);
 
-    reindexScope(eq(items.workphaseId, phase.id));
+    reindexScope(items, eq(items.workphaseId, phase.id));
 
     expect(getPosition(created[0].id)).toBe(2);
     expect(getPosition(created[1].id)).toBe(3);
@@ -79,7 +100,7 @@ describe('reindexScope', () => {
     setPosition(created[0].id, 1.0);
     setPosition(created[1].id, 1.0);
 
-    reindexScope(eq(items.workphaseId, phase.id));
+    reindexScope(items, eq(items.workphaseId, phase.id));
 
     expect(getPosition(created[0].id)).toBe(1);
     expect(getPosition(created[1].id)).toBe(2);
@@ -92,7 +113,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 1.5);
     setPosition(created[1].id, 2.0);
 
-    const result = resolveAnchorPosition(created[0].id, 'after', eq(items.workphaseId, phase.id));
+    const result = resolveAnchorPosition(items, created[0].id, 'after', eq(items.workphaseId, phase.id));
     expect(result).toBe(1.8);
   });
 
@@ -107,7 +128,7 @@ describe('resolveAnchorPosition', () => {
 
     // Anchor to item C (created[2]) with side 'before' — the true previous
     // neighbor is item B (2.8), not item A (1.0).
-    const result = resolveAnchorPosition(created[2].id, 'before', eq(items.workphaseId, phase.id));
+    const result = resolveAnchorPosition(items, created[2].id, 'before', eq(items.workphaseId, phase.id));
     expect(result).toBeGreaterThan(2.8);
     expect(result).toBeLessThan(3.0);
   });
@@ -116,7 +137,7 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = resolveAnchorPosition(created[0].id, 'after', eq(items.workphaseId, phase.id));
+    const result = resolveAnchorPosition(items, created[0].id, 'after', eq(items.workphaseId, phase.id));
     expect(result).toBe(6);
   });
 
@@ -124,7 +145,7 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = resolveAnchorPosition(created[0].id, 'before', eq(items.workphaseId, phase.id));
+    const result = resolveAnchorPosition(items, created[0].id, 'before', eq(items.workphaseId, phase.id));
     expect(result).toBe(3);
   });
 
@@ -133,7 +154,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 1.0);
     setPosition(created[1].id, 1.0 + 1e-13); // unresolvable gap at any decimal depth
 
-    const result = resolveAnchorPosition(created[0].id, 'after', eq(items.workphaseId, phase.id));
+    const result = resolveAnchorPosition(items, created[0].id, 'after', eq(items.workphaseId, phase.id));
 
     // The scope was reindexed to clean sequential integers first (order
     // preserved: created[0] was still numerically first).
@@ -149,7 +170,7 @@ describe('resolveAnchorPosition', () => {
     const { items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, null);
 
-    expect(() => resolveAnchorPosition(created[0].id, 'after', eq(items.workphaseId, 'anything'))).toThrow();
+    expect(() => resolveAnchorPosition(items, created[0].id, 'after', eq(items.workphaseId, 'anything'))).toThrow();
   });
 });
 
@@ -159,7 +180,7 @@ describe('resolveAppendPosition', () => {
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
 
-    const result = resolveAppendPosition(eq(items.workphaseId, phase.id));
+    const result = resolveAppendPosition(items, eq(items.workphaseId, phase.id));
     expect(result).toBe(1.0);
   });
 
@@ -167,7 +188,7 @@ describe('resolveAppendPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 7.2);
 
-    const result = resolveAppendPosition(eq(items.workphaseId, phase.id));
+    const result = resolveAppendPosition(items, eq(items.workphaseId, phase.id));
     expect(result).toBe(8);
   });
 
@@ -176,7 +197,7 @@ describe('resolveAppendPosition', () => {
     // Scope has 1 item, so the threshold is max(1000, 1 + 100) = 1000.
     setPosition(created[0].id, 1200);
 
-    const result = resolveAppendPosition(eq(items.workphaseId, phase.id));
+    const result = resolveAppendPosition(items, eq(items.workphaseId, phase.id));
     // After the reindex, the sole item becomes position 1, so the append
     // resolves to a small number again instead of continuing from 1200.
     expect(result).toBeLessThan(10);
@@ -206,7 +227,7 @@ describe('resolveAppendPosition', () => {
 
     const beforeA = getPosition(created[0].id);
     const beforeB = getPosition(created[1].id);
-    const result = resolveAppendPosition(eq(items.workphaseId, phase.id));
+    const result = resolveAppendPosition(items, eq(items.workphaseId, phase.id));
 
     // No reindex fired: earlier items are untouched, and the result is a
     // plain append-past-the-anchor value, not a small reindexed one.
@@ -244,5 +265,69 @@ describe('classifyPositionScope', () => {
 
   it('classifies an attached-but-parentless item as workflow, not attached-siblings (TC-2.17)', () => {
     expect(classifyPositionScope({ isAttached: true, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
+  });
+});
+
+// Same resolver, a second table — proves the table-generic generalization
+// (projects unification) didn't just happen to keep items working; it
+// genuinely serves any table matching PositionedTable. Not a full re-run of
+// every items case above, just enough of each function's core contract to
+// confirm it holds for a table with a different shape (no isAttached/
+// workphaseId, root scope instead of a workphase scope).
+describe('positionResolver against the projects table', () => {
+  describe('reindexScope', () => {
+    it('reassigns clean sequential positions while preserving relative order', async () => {
+      const created = await seedRootProjects(3);
+      setProjectPosition(created[0].id, 5.001);
+      setProjectPosition(created[1].id, 5.002);
+      setProjectPosition(created[2].id, 4.999);
+
+      reindexScope(projects, rootScope);
+
+      expect(getProjectPosition(created[2].id)).toBe(1);
+      expect(getProjectPosition(created[0].id)).toBe(2);
+      expect(getProjectPosition(created[1].id)).toBe(3);
+    });
+  });
+
+  describe('resolveAnchorPosition', () => {
+    it('coarsest-fits between the anchor and its true next neighbor', async () => {
+      const created = await seedRootProjects(2);
+      setProjectPosition(created[0].id, 1.5);
+      setProjectPosition(created[1].id, 2.0);
+
+      const result = resolveAnchorPosition(projects, created[0].id, 'after', rootScope);
+      expect(result).toBe(1.8);
+    });
+
+    it('throws for an anchor with no position', async () => {
+      const created = await seedRootProjects(1);
+      setProjectPosition(created[0].id, null);
+
+      expect(() => resolveAnchorPosition(projects, created[0].id, 'after', rootScope)).toThrow();
+    });
+  });
+
+  describe('resolveAppendPosition', () => {
+    it('appends past the true last project in a non-empty scope', async () => {
+      const created = await seedRootProjects(1);
+      setProjectPosition(created[0].id, 7.2);
+
+      const result = resolveAppendPosition(projects, rootScope);
+      expect(result).toBe(8);
+    });
+
+    it('reindexes before appending once the magnitude threshold is crossed (the Date.now()-scale legacy-data self-heal)', async () => {
+      const created = await seedRootProjects(1);
+      // Scope has 1 project, so the threshold is max(1000, 1 + 100) = 1000.
+      // Simulates a pre-migration Date.now()-scale position.
+      setProjectPosition(created[0].id, 1_761_234_567_890);
+
+      const result = resolveAppendPosition(projects, rootScope);
+      // After the reindex, the sole project becomes position 1, so the
+      // append resolves to a small number again instead of continuing from
+      // the huge legacy timestamp.
+      expect(result).toBeLessThan(10);
+    });
   });
 });

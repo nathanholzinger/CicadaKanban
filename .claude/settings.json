@@ -58,7 +58,9 @@
       "Bash(npm --prefix server run test -- --run -t \"TEMP: does an attached-siblings\")",
       "Bash(npm --prefix server run test -- --run -t \"reindex scope isolation\")",
       "Bash(grep -i \"onResolver\\\\|Coverage summary\" -A 5 /tmp/cov4.txt)",
-      "Bash(npm --prefix server run test -- --run -t \"keeps the item's existing position exactly unchanged\")"
+      "Bash(npm --prefix server run test -- --run -t \"keeps the item's existing position exactly unchanged\")",
+      "Bash(xargs -I{} grep -n \"\\\\\"version\\\\\"\" {})",
+      "Bash(xargs -I{} sed -n '1,120p' {})"
     ]
   }
 }

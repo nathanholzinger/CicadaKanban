@@ -115,45 +115,150 @@ describe('PUT /api/projects/:id', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toBeDefined();
   });
+
+  it('returns 400 when parentId does not reference an existing project', async () => {
+    const project = await createProject();
+    const res = await request(app).put(`/api/projects/${project.id}`).send({ parentId: 'does-not-exist' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('ignores a supplied position field entirely — positions only change via PATCH /:id/move', async () => {
+    const project = await createProject();
+    const before = await request(app).get(`/api/projects/${project.id}`);
+    const res = await request(app).put(`/api/projects/${project.id}`).send({ position: 999999 });
+    expect(res.status).toBe(200);
+    expect(res.body.position).toBe(before.body.position);
+  });
 });
 
-describe('PATCH /api/projects/reorder', () => {
-  it('returns 400 when projectOrders is not an array', async () => {
-    const res = await request(app).patch('/api/projects/reorder').send({});
-    expect(res.status).toBe(400);
+describe('PATCH /api/projects/:id/move', () => {
+  it('returns 404 for a non-existent id', async () => {
+    const res = await request(app).patch('/api/projects/does-not-exist/move').send({});
+    expect(res.status).toBe(404);
   });
 
-  it('atomically updates position and parentId for multiple projects', async () => {
-    const a = await createProject();
-    const b = await createProject();
+  it('with no body fields, appends the project past the true current last sibling', async () => {
+    const a = await createProject({ name: 'A' });
+    const b = await createProject({ name: 'B' });
+    const c = await createProject({ name: 'C' });
 
-    const res = await request(app).patch('/api/projects/reorder').send({
-      projectOrders: [
-        { id: a.id, parentId: null, position: 5 },
-        { id: b.id, parentId: a.id, position: 1 },
-      ],
-    });
+    const res = await request(app).patch(`/api/projects/${a.id}/move`).send({});
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBeNull();
+
+    const list = await request(app).get('/api/projects');
+    expect(list.body.map((p: { id: string }) => p.id)).toEqual([b.id, c.id, a.id]);
+  });
+
+  it('reparents and appends at the end of the new parent\'s children when no anchor is given', async () => {
+    const parent = await createProject();
+    const existingChild = await createProject({ parentId: parent.id });
+    const mover = await createProject();
+
+    const res = await request(app).patch(`/api/projects/${mover.id}/move`).send({ parentId: parent.id });
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBe(parent.id);
+
+    const list = await request(app).get('/api/projects');
+    const childIds = list.body.filter((p: { parentId: string | null }) => p.parentId === parent.id).map((p: { id: string }) => p.id);
+    expect(childIds).toEqual([existingChild.id, mover.id]);
+  });
+
+  it('reorders within the same parent via prevId', async () => {
+    const a = await createProject({ name: 'A' });
+    const b = await createProject({ name: 'B' });
+    const c = await createProject({ name: 'C' });
+
+    // Move C to sit immediately after A (A, C, B) — A becomes C's predecessor.
+    const res = await request(app).patch(`/api/projects/${c.id}/move`).send({ prevId: a.id });
     expect(res.status).toBe(200);
 
-    const updatedB = await request(app).get(`/api/projects/${b.id}`);
-    expect(updatedB.body.parentId).toBe(a.id);
+    const list = await request(app).get('/api/projects');
+    expect(list.body.map((p: { id: string }) => p.id)).toEqual([a.id, c.id, b.id]);
   });
 
-  it('returns 400 when an entry\'s parentId equals its own id', async () => {
-    const a = await createProject();
-    const res = await request(app).patch('/api/projects/reorder').send({
-      projectOrders: [{ id: a.id, parentId: a.id, position: 1 }],
-    });
+  it('reorders within the same parent via nextId', async () => {
+    const a = await createProject({ name: 'A' });
+    const b = await createProject({ name: 'B' });
+    const c = await createProject({ name: 'C' });
+
+    // Move A to sit immediately before C (B, A, C) — C becomes A's successor.
+    const res = await request(app).patch(`/api/projects/${a.id}/move`).send({ nextId: c.id });
+    expect(res.status).toBe(200);
+
+    const list = await request(app).get('/api/projects');
+    expect(list.body.map((p: { id: string }) => p.id)).toEqual([b.id, a.id, c.id]);
+  });
+
+  it('never treats an omitted anchor as an empty scope — appends past real existing children the caller did not mention (collapsed-parent guess bug)', async () => {
+    const parent = await createProject();
+    const existingChild1 = await createProject({ name: 'Existing 1', parentId: parent.id });
+    const existingChild2 = await createProject({ name: 'Existing 2', parentId: parent.id });
+    const mover = await createProject({ name: 'Mover' });
+
+    // Explicit nulls — simulates a client (e.g. a sidebar with this parent
+    // collapsed) that has no idea real children exist under this parent.
+    const res = await request(app)
+      .patch(`/api/projects/${mover.id}/move`)
+      .send({ parentId: parent.id, prevId: null, nextId: null });
+    expect(res.status).toBe(200);
+
+    const list = await request(app).get('/api/projects');
+    const childIds = list.body.filter((p: { parentId: string | null }) => p.parentId === parent.id).map((p: { id: string }) => p.id);
+    expect(childIds).toEqual([existingChild1.id, existingChild2.id, mover.id]);
+  });
+
+  it('rejects a prevId that exists but is not actually a sibling in the resulting scope', async () => {
+    const parentA = await createProject();
+    const parentB = await createProject();
+    const siblingUnderA = await createProject({ parentId: parentA.id });
+    const mover = await createProject({ parentId: parentB.id });
+    const before = await request(app).get(`/api/projects/${mover.id}`);
+
+    // mover is under parentB; siblingUnderA is under parentA — not a valid anchor.
+    const res = await request(app).patch(`/api/projects/${mover.id}/move`).send({ prevId: siblingUnderA.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+
+    const after = await request(app).get(`/api/projects/${mover.id}`);
+    expect(after.body.position).toBe(before.body.position);
+    expect(after.body.parentId).toBe(before.body.parentId);
+  });
+
+  it('returns 400 when prevId does not reference an existing project', async () => {
+    const project = await createProject();
+    const res = await request(app).patch(`/api/projects/${project.id}/move`).send({ prevId: 'does-not-exist' });
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when an entry\'s parentId is one of its own descendants', async () => {
+  it('returns 400 when parentId equals the project\'s own id', async () => {
+    const project = await createProject();
+    const res = await request(app).patch(`/api/projects/${project.id}/move`).send({ parentId: project.id });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when parentId is one of the project\'s own descendants', async () => {
     const parent = await createProject();
     const child = await createProject({ parentId: parent.id });
-    const res = await request(app).patch('/api/projects/reorder').send({
-      projectOrders: [{ id: parent.id, parentId: child.id, position: 1 }],
-    });
+    const res = await request(app).patch(`/api/projects/${parent.id}/move`).send({ parentId: child.id });
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when parentId does not reference an existing project', async () => {
+    const project = await createProject();
+    const res = await request(app).patch(`/api/projects/${project.id}/move`).send({ parentId: 'does-not-exist' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns the full updated project, not a bare success flag', async () => {
+    const project = await createProject();
+    const res = await request(app).patch(`/api/projects/${project.id}/move`).send({});
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(project.id);
+    expect(typeof res.body.position).toBe('number');
+    expect(res.body).toHaveProperty('parentId');
+    expect(res.body).toHaveProperty('updatedAt');
   });
 });
 
