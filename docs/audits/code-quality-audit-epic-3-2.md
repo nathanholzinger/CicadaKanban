@@ -934,6 +934,50 @@ would cover the first; a shared `<InlineItemForm>` (or at minimum swapping
 `BoardColumn`'s inline classes for the existing constants) covers the
 second.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed every cited
+duplicate. Built both suggested wrappers plus the shared form:
+- `item-detail/DetailSection.tsx` — new file, exports `DetailSection`
+  (label + conditional `+ Add` trigger; callers pass `onAdd={undefined}`
+  while their own form is open so trigger and form are never both visible)
+  and `FormActions` (the `BTN_PRIMARY`/`BTN_CANCEL` pair). `ChildrenSection`,
+  `LabelsSection`, `AttachmentsSection` now wrap their body in
+  `<DetailSection>`; `ParentSection`/`AgentSection` (the label-only half)
+  use it with no `onAdd`.
+- `pillUtils.ts` gained `escapeToCancel(onCancel)` — every add-form's title
+  input now shares one Escape handler, and since `onCancel` is the exact
+  same function the Cancel button calls, Escape and Cancel are now
+  guaranteed to do the same thing rather than two independently-maintained
+  copies of "reset these fields."
+- `client/src/components/InlineItemForm.tsx` — new file (lives outside
+  `item-detail/` since `BoardColumn` isn't one), the shared "title + type
+  select + Add/Cancel, Escape to dismiss" form. Preserves both callers'
+  actual behavioral differences via props rather than forcing one shape:
+  `ChildrenSection` allows a blank "No Type"; `BoardColumn` doesn't and
+  defaults to the first available type (a board card needs one to render
+  its pill). `onSubmit` returns `boolean | Promise<boolean>` — `true`
+  clears the draft and closes the form, `false` leaves it open with the
+  draft intact for a retry — so `ChildrenSection`'s "only close on success"
+  and `BoardColumn`'s "always close immediately, fire-and-forget" are both
+  just different `onSubmit` return values, not different code paths. This
+  also let `ChildrenSection`/`BoardColumn` drop their own `title`/`type`/
+  `saving` state entirely — `InlineItemForm` owns the draft now.
+  `BoardColumn`'s select/button classes (which had silently drifted from
+  `SELECT_BASE`/`BTN_PRIMARY`/`BTN_CANCEL`, e.g. an extra
+  `focus:border-blue-500/50` nothing else had) are gone, converged onto the
+  shared tokens — continuing where Finding #10 left off for this same file
+  (it fixed the input's classes but missed the select/buttons).
+
+Deliberately unchanged: `AttachmentsSection.tsx`'s `handleAdd`/`handleDelete`
+still have no try/catch — flagged as a related-but-uncited gap when fixing
+Finding #16, not touched here either, to keep this a pure scaffolding
+refactor with no behavior changes bundled in.
+
+Verified behavior-preserving via the full Playwright suite (114 passed, 6
+pre-existing skips, 0 failed) — covers item creation from both `BoardColumn`
+and `ChildrenSection`, plus labels/attachments/parent/agent flows. `tsc
+--noEmit` clean; full client suite unaffected (93 tests); server suite
+unaffected (264 tests, no server files touched).
+
 ### 29. Four inline SVGs re-duplicated next to an `icons.tsx` built specifically to prevent this `[Duplication & Abstraction]`
 **File (target):** `client/src/components/icons.tsx` (whose header already cites Epic 3 audit finding #28: "X/close and trash paths were re-inlined across components")
 

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import type { ItemType } from '../../types';
 
 // ─── Pill / badge tokens ──────────────────────────────────────────────────────
@@ -66,6 +66,17 @@ export function typePillClass(typeId: string | null, itemTypes: ItemType[], mini
   const neutral = mini ? MINI_NEUTRAL : PILL_NEUTRAL;
   const t = typeId ? itemTypes.find(x => x.id === typeId) : null;
   return t?.color ? base : neutral;
+}
+
+// "Escape resets the draft and closes the add-form" was hand-rolled
+// identically (different state setters, same shape) across every
+// item-detail add-form's title/name input (audit Finding #28). `onCancel`
+// is always the same function the form's own Cancel button calls, so
+// Escape and Cancel end up doing exactly the same thing by construction.
+export function escapeToCancel(onCancel: () => void) {
+  return (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onCancel();
+  };
 }
 
 export function formatTime(ts: number): string {

@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Attachment } from '../../types';
 import { fetchAttachments, createAttachment, deleteAttachment } from '../../api/attachments';
-import {
-  SECTION_LABEL,
-  INPUT_BASE,
-  SELECT_BASE,
-  BTN_PRIMARY,
-  BTN_CANCEL,
-  BTN_ADD_TRIGGER,
-  EMPTY_STATE,
-} from './pillUtils';
+import { INPUT_BASE, SELECT_BASE, EMPTY_STATE, escapeToCancel } from './pillUtils';
+import { DetailSection, FormActions } from './DetailSection';
 import { XIcon } from '../icons';
 
 interface AttachmentsSectionProps {
@@ -29,14 +22,18 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
       .catch(err => console.error('Failed to load attachments:', err));
   }, [itemId]);
 
+  function cancelAdd() {
+    setAdding(false);
+    setLabel('');
+    setUrl('');
+  }
+
   async function handleAdd(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!label.trim()) return;
     const att = await createAttachment(itemId, { type, label: label.trim(), externalUrl: url.trim() || undefined });
     setAttachments(prev => [...prev, att]);
-    setLabel('');
-    setUrl('');
-    setAdding(false);
+    cancelAdd();
   }
 
   async function handleDelete(id: string) {
@@ -45,16 +42,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
   }
 
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <p className={SECTION_LABEL}>Attachments</p>
-        {!adding && (
-          <button onClick={() => setAdding(true)} className={BTN_ADD_TRIGGER}>
-            + Add
-          </button>
-        )}
-      </div>
-
+    <DetailSection label="Attachments" onAdd={adding ? undefined : () => setAdding(true)}>
       {attachments.length > 0 && (
         <div className="mb-2 space-y-1">
           {attachments.map(att => (
@@ -92,13 +80,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
             onChange={e => setLabel(e.target.value)}
             placeholder="Label..."
             className={`w-full ${INPUT_BASE}`}
-            onKeyDown={e => {
-              if (e.key === 'Escape') {
-                setAdding(false);
-                setLabel('');
-                setUrl('');
-              }
-            }}
+            onKeyDown={escapeToCancel(cancelAdd)}
           />
           <input
             value={url}
@@ -113,25 +95,12 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
               <option value="local_file">Local File</option>
               <option value="export">Export</option>
             </select>
-            <button type="submit" className={BTN_PRIMARY}>
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdding(false);
-                setLabel('');
-                setUrl('');
-              }}
-              className={BTN_CANCEL}
-            >
-              Cancel
-            </button>
+            <FormActions onCancel={cancelAdd} />
           </div>
         </form>
       )}
 
       {attachments.length === 0 && !adding && <p className={EMPTY_STATE}>No attachments yet.</p>}
-    </div>
+    </DetailSection>
   );
 }

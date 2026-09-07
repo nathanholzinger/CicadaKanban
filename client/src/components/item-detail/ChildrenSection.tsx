@@ -1,19 +1,9 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
 import { createItem, updateItem } from '../../api/items';
-import {
-  MINI_DEPTH,
-  depthLabel,
-  typePillClass,
-  typePillStyle,
-  SECTION_LABEL,
-  SELECT_BASE,
-  BTN_PRIMARY,
-  BTN_CANCEL,
-  BTN_ADD_TRIGGER,
-  EMPTY_STATE,
-  INPUT_LG_RING,
-} from './pillUtils';
+import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, EMPTY_STATE } from './pillUtils';
+import { DetailSection } from './DetailSection';
+import InlineItemForm from '../InlineItemForm';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
@@ -43,9 +33,6 @@ export function ChildrenSection({
   onChildUpdated,
 }: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState('');
-  const [saving, setSaving] = useState(false);
   const [childError, setChildError] = useState('');
 
   async function handleChildAttachedToggle(child: Item, attached: boolean) {
@@ -58,39 +45,28 @@ export function ChildrenSection({
     }
   }
 
-  async function handleCreate(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setSaving(true);
+  async function handleCreate(title: string, type: string | null): Promise<boolean> {
     try {
       const child = await createItem({
-        type: type || null,
-        title: title.trim(),
+        type,
+        title,
         parentId: item.id,
         projectId: item.projectId ?? undefined,
         workphaseId: childDefaultWorkphaseId ?? item.workphaseId ?? undefined,
       });
       onChildCreated(child);
-      setTitle('');
-      setAdding(false);
+      return true;
     } catch (err) {
       console.error('Failed to create child:', err);
-    } finally {
-      setSaving(false);
+      return false;
     }
   }
 
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <p className={SECTION_LABEL}>Children {item.children.length > 0 && `(${item.children.length})`}</p>
-        {!adding && (
-          <button onClick={() => setAdding(true)} className={BTN_ADD_TRIGGER}>
-            + Add
-          </button>
-        )}
-      </div>
-
+    <DetailSection
+      label={<>Children {item.children.length > 0 && `(${item.children.length})`}</>}
+      onAdd={adding ? undefined : () => setAdding(true)}
+    >
       {item.children.length > 0 && (
         <div className="mb-2 space-y-1">
           {item.children.map(child => (
@@ -128,47 +104,16 @@ export function ChildrenSection({
       {childError && <p className="mb-2 text-xs text-red-400">{childError}</p>}
 
       {adding && (
-        <form onSubmit={handleCreate} className="space-y-2">
-          <input
-            autoFocus
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="Child title..."
-            className={`w-full ${INPUT_LG_RING}`}
-            onKeyDown={e => {
-              if (e.key === 'Escape') {
-                setAdding(false);
-                setTitle('');
-              }
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <select value={type} onChange={e => setType(e.target.value)} className={SELECT_BASE}>
-              <option value="">No Type</option>
-              {itemTypes.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" disabled={saving} className={`${BTN_PRIMARY} disabled:opacity-50`}>
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdding(false);
-                setTitle('');
-              }}
-              className={BTN_CANCEL}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <InlineItemForm
+          itemTypes={itemTypes}
+          placeholder="Child title..."
+          onSubmit={handleCreate}
+          onDone={() => setAdding(false)}
+          onCancel={() => setAdding(false)}
+        />
       )}
 
       {item.children.length === 0 && !adding && <p className={EMPTY_STATE}>No children yet.</p>}
-    </div>
+    </DetailSection>
   );
 }

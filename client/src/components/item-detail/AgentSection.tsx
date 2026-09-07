@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Agent, Item, ItemDetail } from '../../types';
 import { fetchAgents } from '../../api/agents';
 import { updateItem } from '../../api/items';
-import { SECTION_LABEL } from './pillUtils';
+import { DetailSection } from './DetailSection';
 
 interface AgentSectionProps {
   item: ItemDetail;
@@ -62,8 +62,7 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
   }
 
   return (
-    <div>
-      <p className={`${SECTION_LABEL} mb-1.5`}>Agent</p>
+    <DetailSection label="Agent">
       <select
         value={item.agentId ?? ''}
         onChange={handleAgentChange}
@@ -90,6 +89,6 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
           )}
         </button>
       )}
-    </div>
+    </DetailSection>
   );
 }

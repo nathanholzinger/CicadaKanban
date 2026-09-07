@@ -8,7 +8,7 @@ import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 import { subrowContainerId } from './workflow/boardDndUtils';
-import { INPUT_LG_RING } from './item-detail/pillUtils';
+import InlineItemForm from './InlineItemForm';
 
 interface BoardColumnProps {
   column: Column;
@@ -40,8 +40,6 @@ export default function BoardColumn({
   onDelete,
 }: BoardColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newType, setNewType] = useState<string>('');
   const [deleteError, setDeleteError] = useState('');
 
   const { setNodeRef, transform, transition, isDragging, isOver, attributes, listeners } = useSortable({
@@ -66,12 +64,9 @@ export default function BoardColumn({
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
 
-  function handleItemSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-    onCreateItem(column.entryWorkphaseId, newTitle.trim(), newType || null);
-    setNewTitle('');
-    setIsAdding(false);
+  function handleItemSubmit(title: string, type: string | null): boolean {
+    onCreateItem(column.entryWorkphaseId, title, type);
+    return true;
   }
 
   return (
@@ -178,56 +173,18 @@ export default function BoardColumn({
       {/* Add item form */}
       <div className="mt-2 px-1">
         {isAdding ? (
-          <form onSubmit={handleItemSubmit} className="space-y-2">
-            <input
-              autoFocus
-              value={newTitle}
-              onChange={e => setNewTitle(e.target.value)}
-              placeholder="Item title..."
-              className={`w-full ${INPUT_LG_RING}`}
-              onKeyDown={e => {
-                if (e.key === 'Escape') {
-                  setIsAdding(false);
-                  setNewTitle('');
-                }
-              }}
-            />
-            <div className="flex items-center gap-2">
-              <select
-                value={newType}
-                onChange={e => setNewType(e.target.value)}
-                className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300 focus:border-blue-500/50 focus:outline-none"
-              >
-                {itemTypes.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAdding(false);
-                  setNewTitle('');
-                }}
-                className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          <InlineItemForm
+            itemTypes={itemTypes}
+            initialType={itemTypes[0]?.id ?? ''}
+            includeNoTypeOption={false}
+            placeholder="Item title..."
+            onSubmit={handleItemSubmit}
+            onDone={() => setIsAdding(false)}
+            onCancel={() => setIsAdding(false)}
+          />
         ) : (
           <button
-            onClick={() => {
-              setIsAdding(true);
-              setNewType(itemTypes[0]?.id ?? '');
-            }}
+            onClick={() => setIsAdding(true)}
             className="w-full rounded-lg py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-300"
           >
             + Add item

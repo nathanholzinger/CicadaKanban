@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Label } from '../../types';
 import { fetchLabels, fetchItemLabels, addLabelToItem, removeLabelFromItem, createLabel } from '../../api/labels';
-import { SECTION_LABEL, INPUT_BASE, BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, EMPTY_STATE } from './pillUtils';
+import { INPUT_BASE, EMPTY_STATE, escapeToCancel } from './pillUtils';
+import { DetailSection, FormActions } from './DetailSection';
 
 interface LabelsSectionProps {
   itemId: string;
@@ -43,6 +44,11 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
     }
   }
 
+  function cancelAdd() {
+    setAddingLabel(false);
+    setNewLabelName('');
+  }
+
   async function handleCreate(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!newLabelName.trim()) return;
@@ -51,24 +57,14 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
       setLabels(prev => [...prev, label]);
       await addLabelToItem(itemId, label.id);
       setItemLabelIds(prev => new Set([...prev, label.id]));
-      setNewLabelName('');
-      setAddingLabel(false);
+      cancelAdd();
     } catch (err) {
       console.error('Failed to create label:', err);
     }
   }
 
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <p className={SECTION_LABEL}>Labels</p>
-        {!addingLabel && (
-          <button onClick={() => setAddingLabel(true)} className={BTN_ADD_TRIGGER}>
-            + New
-          </button>
-        )}
-      </div>
-
+    <DetailSection label="Labels" addLabel="+ New" onAdd={addingLabel ? undefined : () => setAddingLabel(true)}>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {labels.map(label => (
           <button
@@ -92,12 +88,7 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
               onChange={e => setNewLabelName(e.target.value)}
               placeholder="Label name..."
               className={`flex-1 ${INPUT_BASE}`}
-              onKeyDown={e => {
-                if (e.key === 'Escape') {
-                  setAddingLabel(false);
-                  setNewLabelName('');
-                }
-              }}
+              onKeyDown={escapeToCancel(cancelAdd)}
             />
             <input
               type="color"
@@ -107,22 +98,10 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className={BTN_PRIMARY}>
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAddingLabel(false);
-                setNewLabelName('');
-              }}
-              className={BTN_CANCEL}
-            >
-              Cancel
-            </button>
+            <FormActions submitLabel="Create" onCancel={cancelAdd} />
           </div>
         </form>
       )}
-    </div>
+    </DetailSection>
   );
 }

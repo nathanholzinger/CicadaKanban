@@ -3,7 +3,8 @@ import type { Item, ItemDetail } from '../../types';
 import { updateItem } from '../../api/items';
 import { buildParentOptions as buildTreeParentOptions } from '../../lib/hierarchy';
 import type { SelectOption } from '../../lib/hierarchy';
-import { SECTION_LABEL, SELECT_BASE } from './pillUtils';
+import { SELECT_BASE } from './pillUtils';
+import { DetailSection } from './DetailSection';
 
 interface ParentSectionProps {
   item: ItemDetail;
@@ -57,8 +58,7 @@ export function ParentSection({ item, allItems, onSelfUpdated }: ParentSectionPr
   const parentOptions = buildParentOptions(allItems, item.id, item.projectId);
 
   return (
-    <div>
-      <p className={`${SECTION_LABEL} mb-1.5`}>Parent</p>
+    <DetailSection label="Parent">
       <div className="flex items-center gap-2">
         <select
           value={item.parentId ?? ''}
@@ -87,6 +87,6 @@ export function ParentSection({ item, allItems, onSelfUpdated }: ParentSectionPr
         )}
       </div>
       {parentError && <p className="mt-1 text-xs text-red-400">{parentError}</p>}
-    </div>
+    </DetailSection>
   );
 }
