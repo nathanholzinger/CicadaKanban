@@ -9,6 +9,11 @@ function byPositionThenCreatedAt(a: Item, b: Item): number {
   return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
 }
 
+// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below (audit
+// Finding #25) — the two previously duplicated every rule here and differed
+// only in what counted as "belongs to this column," which is now the one
+// thing each thin wrapper still supplies itself via `matchesWorkphase`.
+//
 // Attached children with a parent render nested inside the parent's card
 // (see getAttachedChildrenFrom) instead of as separate top-level board cards
 // — excluded here via `positionScope === 'attached-siblings'`, the
@@ -18,21 +23,31 @@ function byPositionThenCreatedAt(a: Item, b: Item): number {
 // instead. Kept as an explicit param (not derived from positionScope,
 // which only classifies a single item) since it picks the sort key for the
 // whole batch, including when the batch is empty.
-export function getWorkphaseItemsFrom(
+function selectBoardItems(
   items: readonly Item[],
-  workphaseId: string,
+  matchesWorkphase: (item: Item) => boolean,
   filterProjectId?: string,
   isTerminal?: boolean,
 ): Item[] {
   const filtered = items.filter(
     item =>
-      item.workphaseId === workphaseId &&
+      matchesWorkphase(item) &&
       (!filterProjectId || item.projectId === filterProjectId) &&
       item.positionScope !== 'attached-siblings',
   );
   return isTerminal
     ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
     : filtered.sort(byPositionThenCreatedAt);
+}
+
+// A single workphase's items — membership is an exact workphaseId match.
+export function getWorkphaseItemsFrom(
+  items: readonly Item[],
+  workphaseId: string,
+  filterProjectId?: string,
+  isTerminal?: boolean,
+): Item[] {
+  return selectBoardItems(items, item => item.workphaseId === workphaseId, filterProjectId, isTerminal);
 }
 
 // Epic 3.2 Part 4: a merged column's item list is a union-sort across its
@@ -49,16 +64,12 @@ export function getMergedColumnItemsFrom(
   isTerminal?: boolean,
 ): Item[] {
   const coveredSet = new Set(coveredWorkphaseIds);
-  const filtered = items.filter(
-    item =>
-      item.workphaseId !== null &&
-      coveredSet.has(item.workphaseId) &&
-      (!filterProjectId || item.projectId === filterProjectId) &&
-      item.positionScope !== 'attached-siblings',
+  return selectBoardItems(
+    items,
+    item => item.workphaseId !== null && coveredSet.has(item.workphaseId),
+    filterProjectId,
+    isTerminal,
   );
-  return isTerminal
-    ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
-    : filtered.sort(byPositionThenCreatedAt);
 }
 
 // The server deletes an item's whole subtree, not just the one id (audit

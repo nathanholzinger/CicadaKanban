@@ -799,6 +799,15 @@ delete buttons. But `ConfirmDeleteButton` — the shared component used by
 instead, which reads as "dismiss" rather than "delete." A real semantic
 mismatch between two delete-affordance implementations living side by side.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed
+`ConfirmDeleteButton.tsx`'s trash trigger rendered `<XIcon />`. Swapped to
+`<TrashIcon />` (both share the same `{ size, strokeWidth, className }`
+prop signature, so no call-site changes needed). Purely cosmetic with no
+unit-testable logic — verified visually via `tsc --noEmit` (clean) and the
+Playwright specs exercising every `ConfirmDeleteButton` consumer (columns,
+workphases, boards, workflow creation): 29 passed, 0 failed. Client unit
+suite unaffected (93 tests).
+
 ### 25. `getWorkphaseItemsFrom` / `getMergedColumnItemsFrom` duplicate every filtering/sorting rule except the membership predicate `[Duplication & Abstraction]`
 **File:** `client/src/components/workflow/useItemManagement.ts:20–61`
 
@@ -809,6 +818,20 @@ Both filter by workphase membership → apply `filterProjectId` → exclude
 their own doc comments already cross-reference each other. Any future
 filter change (Epic 4's `kind: quick`, Epic 5's tags) needs both edited in
 lockstep. Consolidate into one `selectBoardItems(items, matchesWorkphase, filterProjectId?, isTerminal?)`; keep both exported names as thin wrappers.
+
+**Status:** ✅ Fixed exactly as specified — still valid, confirmed the
+full rule set (project filter, attached-siblings exclusion, terminal vs.
+position-then-createdAt sort) was duplicated verbatim between the two.
+Added the suggested `selectBoardItems(items, matchesWorkphase,
+filterProjectId?, isTerminal?)`; both `getWorkphaseItemsFrom` (membership:
+exact `workphaseId` match) and `getMergedColumnItemsFrom` (membership: in
+the covered set) are now one-line wrappers over it, keeping their existing
+exported signatures and doc comments. Pure refactor, no behavior change —
+the existing test suite for both functions (project filter, attached-child
+exclusion, terminal sort, tie-break) already served as regression coverage
+and needed no changes; all 93 client tests plus the Playwright board specs
+(`boards.spec.ts`, `boards-layer.spec.ts`, `attached-children.spec.ts` — 38
+tests) pass unchanged. `tsc --noEmit` clean.
 
 ### 26. Confirm-delete pattern hand-rolled again in `ProjectPage.tsx` (×2) and `SortableProjectRow.tsx`, despite `ConfirmDeleteButton` already existing for exactly this `[Duplication & Abstraction + File Responsibility]`
 **Files:** `client/src/components/ProjectPage.tsx:208–228` (project self-delete), `:353–373` (subproject delete); `client/src/components/sidebar/SortableProjectRow.tsx:148–165`
