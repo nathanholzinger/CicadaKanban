@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../../types';
-import { getWorkphaseItemsFrom, getMergedColumnItemsFrom, getAttachedChildrenFrom, computeChildCounts } from './useItemManagement';
+import {
+  getWorkphaseItemsFrom,
+  getMergedColumnItemsFrom,
+  getAttachedChildrenFrom,
+  computeChildCounts,
+  removeItemAndDescendants,
+} from './useItemManagement';
 
 // positionScope is server-computed in production (never hand-set by a
 // caller) — mirror that here from isAttached/parentId so these fixtures
@@ -118,6 +124,29 @@ describe('getAttachedChildrenFrom', () => {
 
   it('returns an empty list for an item with no attached children', () => {
     expect(getAttachedChildrenFrom(items, 'detached')).toEqual([]);
+  });
+});
+
+// Regression coverage for audit Finding #15: deleting an item previously
+// left its descendants stale in client state, rendering as live top-level
+// cards until a reload.
+describe('removeItemAndDescendants', () => {
+  const items = [
+    item('root'),
+    item('attached-child', { parentId: 'root' }),
+    item('grandchild', { parentId: 'attached-child' }),
+    item('detached-child', { parentId: 'root', isAttached: 0 }),
+    item('unrelated'),
+  ];
+
+  it('removes the item and every descendant, attached or detached, at any depth', () => {
+    const result = removeItemAndDescendants(items, 'root').map(i => i.id);
+    expect(result).toEqual(['unrelated']);
+  });
+
+  it('leaves unrelated items untouched when the deleted item has no descendants', () => {
+    const result = removeItemAndDescendants(items, 'unrelated').map(i => i.id);
+    expect(result).toEqual(['root', 'attached-child', 'grandchild', 'detached-child']);
   });
 });
 

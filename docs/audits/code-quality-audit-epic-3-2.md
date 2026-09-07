@@ -532,6 +532,16 @@ top-level cards until a reload; clicking one 404s. Fix: filter by descendant
 set (`getDescendantIds` from `lib/hierarchy`) or call `loadBoard()` after
 delete, matching every other structural mutation.
 
+**Status:** ✅ Fixed as specified (first option) — still valid, confirmed by
+re-reading `handleItemDeleted`. Extracted a new pure `removeItemAndDescendants(items, id)`
+(alongside this file's other exported pure helpers) that computes the
+descendant set via `getDescendantIds` from `lib/hierarchy.ts` and filters
+out `id` plus every descendant, attached or detached, at any depth;
+`handleItemDeleted` now just calls it inside `setItems`. Added two
+regression tests covering multi-depth/mixed-attachment removal and the
+no-descendants case. `tsc --noEmit` clean; full client suite passing (93
+tests, up from 91).
+
 ### 16. Client mutation handlers with no rejection path, and `.catch(() => {})` that discards the failure entirely `[Correctness & Security]`
 **Files (no catch at all):** `App.tsx:66–94,108–119` (`handleMarkAllRead`, `handleDismissNotification`, `handleCreateWorkflow`, `handleCreateProject`, `handleUpdateProject`, `handleDeleteProject`); `item-detail/LabelsSection.tsx:28–51` (`handleToggle`, `handleCreate` — compounds Finding #3); `workflow/useColumnManagement.ts:40–47` (`handleDeleteColumn`, `handleReorderColumns` — sibling create/update handlers *do* have try/catch); `workflow/useBoardManagement.ts:9–20,51–59` (`loadBoards`, `handleDeleteBoard` — the server's `409 Cannot delete a workflow's last remaining board` never reaches the user)
 **Files (`.catch(() => {})`):** `App.tsx:48,118,125–128`; `BoardView.tsx:81`; `item-detail/AgentSection.tsx:20`, `AttachmentsSection.tsx:29`, `LabelsSection.tsx:25`; `SetupWorkflowModal.tsx:28`

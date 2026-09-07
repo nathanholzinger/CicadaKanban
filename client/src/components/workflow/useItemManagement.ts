@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Item } from '../../types';
 import { createItem } from '../../api/items';
+import { getDescendantIds } from '../../lib/hierarchy';
 
 // Deterministic tie-break for an exact position match — prevents order from
 // depending on unspecified DB row order (Epic 3.2 Part 5).
@@ -60,6 +61,16 @@ export function getMergedColumnItemsFrom(
     : filtered.sort(byPositionThenCreatedAt);
 }
 
+// The server deletes an item's whole subtree, not just the one id (audit
+// Finding #15) — dropping only `id` from client state left its descendants
+// stale, rendering as live top-level cards until a reload. Descendants are
+// computed against `items` as passed in (the current state at delete time),
+// not a stale snapshot.
+export function removeItemAndDescendants(items: readonly Item[], id: string): Item[] {
+  const descendants = getDescendantIds(id, items);
+  return items.filter(i => i.id !== id && !descendants.has(i.id));
+}
+
 export function getAttachedChildrenFrom(items: readonly Item[], parentId: string): Item[] {
   return items.filter(item => item.parentId === parentId && item.positionScope === 'attached-siblings').sort(byPositionThenCreatedAt);
 }
@@ -110,7 +121,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   }
 
   function handleItemDeleted(id: string) {
-    setItems(prev => prev.filter(i => i.id !== id));
+    setItems(prev => removeItemAndDescendants(prev, id));
   }
 
   function handleChildCreated(item: Item) {
