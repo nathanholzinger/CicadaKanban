@@ -143,6 +143,75 @@ an Epic 5 structural decision — don't pre-commit.
 
 ---
 
+## Position resolution: unify onto `positionResolver`, deferred by schema readiness (not a permanent split)
+
+Captured 2026-09-06, reconstructing an earlier discussion whose original
+session transcript is gone. Recorded here as best current recollection,
+reconciled against what's actually on disk — flagged below where the two
+didn't agree.
+
+**Best current understanding of the decision:** `server/src/lib/positionResolver.ts`
+is meant to become the one ordering system for every re-arrangable table —
+`items`, `projects`, `workphases`, `columns`, `boards`, and eventually
+labels/tags — not a system permanently split between "hierarchical" tables
+(items/projects, which have it) and "flat" tables (workphases/columns/boards,
+which use the older `nextPosition()` append-only helper instead). The
+resolver being "overkill" for a table like `workphases` (which will rarely
+have enough rows to hit the tight-gap or magnitude-threshold reindex paths)
+isn't a reason to fork the implementation — it's already built and paid for;
+running it against a table that never exercises its reindex paths costs
+nothing extra. Maintaining two ordering systems long-term is the more
+expensive outcome.
+
+**Conflicting record found:** `docs/audits/code-quality-audit-epic-3-2.md:96-115`,
+written when projects were unified onto `positionResolver`, states the
+opposite conclusion — that "columns/workphases are a deliberately separate,
+smaller-scope follow-up (bulk resequence stays appropriate there — see the
+session's 'two standards' discussion for why)." That "two standards"
+reasoning was never written into a decisions doc, only referenced as living
+in that session's transcript — which is no longer recoverable. So there are
+two genuine possibilities: (a) unification was always the plan and this note
+just documents an intentionally deferred step, or (b) a real "these are
+different enough to deserve different systems" argument was made and lost.
+Not resolving that tension here — flagging it so it isn't silently
+overwritten by whichever memory happens to be freshest when this is picked
+back up.
+
+**Why deferred, either way:** joining `positionResolver`'s `PositionedTable`
+contract (`id`, `position: real`, `createdAt`, `updatedAt`) requires schema
+changes some of these tables don't have yet. Verified against
+`server/src/db/schema.ts` on 2026-09-06:
+
+- **`boards`** — already fully compatible: `position` is `real`, and it has
+  both `createdAt` and `updatedAt`. No migration needed.
+- **`columns`** — `position` is already `real`, but there's **no `updatedAt`
+  column** (only `createdAt`). Needs a migration to add it.
+- **`workphases`** — same gap as `columns`: `position` is already `real`,
+  but **no `updatedAt` column**. Needs a migration to add it.
+- **`labels`** (the likely future home of "tags," per this doc's opening
+  section) — has **no `position` column at all** today, and no `updatedAt`
+  either (only `createdAt`). Ordering doesn't exist yet for labels in any
+  form.
+
+Until those migrations land, `boards.ts`/`columns.ts`/`workphases.ts` stay on
+`nextPosition()` (`server/src/lib/positionResolver.ts` — the older,
+non-reindexing `max(existing) + 1.0` append helper) — no anchor-based
+drag-to-reorder and no magnitude-threshold self-heal for those three tables
+today, unlike `items`/`projects`.
+
+**Where tags fit:** tags/labels will need position handling of their own once
+Epic 5's bucket rebuild lands (this doc's Decision 9 area). Whether that
+ordering joins the same `positionResolver` unification pass, or gets decided
+independently as part of the bucket system's own design, is an open question
+— don't pre-commit either way before Epic 5's actual schema is drafted.
+
+**When this is picked up:** `boards` needs no schema work and could unify
+first as a low-risk proof; `columns`/`workphases` need one small migration
+each (`updatedAt`); `labels`/tags needs a `position` column added as part of
+whatever Epic 5 does with the table regardless of this decision.
+
+---
+
 ## Closed: `client/src/api.ts` file-split watch (audit finding #18) — done, not by Epic 5 after all
 
 This used to be a "watch for Epic 5" note (original text kept below for
