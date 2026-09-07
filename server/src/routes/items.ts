@@ -5,7 +5,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
-import { applyReorder } from '../lib/reorder.js';
+import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
 import { resolvePositionByAnchorAndSide, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
 import { isTerminalLookup, positionScopeFor, sharesPositionScope, withPositionScope } from '../lib/itemPositionScope.js';
@@ -354,40 +354,51 @@ router.patch('/:id/move', (req, res) => {
   const targetWorkphaseId = workphaseId !== undefined ? workphaseId : oldWorkphaseId;
   if (workphaseId !== undefined) updates.workphaseId = workphaseId;
 
+  // Anchor existence/position/scope are validated here, against plain `db`,
+  // rather than inside the transaction below — this handler doesn't insert
+  // or delete the anchor row, only (maybe) update the subject, so nothing
+  // between this check and the transaction that uses it can change what it
+  // saw (audit Finding #12: a db.transaction callback only rolls back on
+  // throw, so a validation bail-out signaled by returning false from inside
+  // it — after some other write had already run — would still commit; the
+  // fix is to not need that convention at all).
+  let anchor: { isAttached: number; parentId: string | null; workphaseId: string | null; position: number | null } | undefined;
+  if (anchorId !== undefined) {
+    anchor = db
+      .select({ isAttached: items.isAttached, parentId: items.parentId, workphaseId: items.workphaseId, position: items.position })
+      .from(items)
+      .where(eq(items.id, anchorId))
+      .get();
+    if (!anchor) {
+      res.status(400).json({ error: 'anchorId does not reference an existing item' });
+      return;
+    }
+    if (anchor.position === null) {
+      res.status(400).json({ error: 'anchorId has no position to anchor against (it may be a done item)' });
+      return;
+    }
+    // The anchor's position is only meaningful to compare against if it
+    // lives in the same comparison space the subject is about to end up
+    // in — an attached child's siblings space and a workflow-wide space
+    // are deliberately isolated, and two different workflows each have
+    // their own workflow-wide space (audit Finding #7). Without this,
+    // e.g. anchoring a detached item against someone else's attached
+    // child, or against an item in a different workflow, silently wrote
+    // a number from the wrong comparison space.
+    if (!sharesPositionScope(
+      { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
+      { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: targetWorkphaseId },
+    )) {
+      res.status(400).json({ error: "anchorId is not in this item's position scope" });
+      return;
+    }
+  }
+
   // The move, the attached-descendant cascade, the activity log, and the
   // notification insert commit together — a partial failure must not leave the
   // item moved but its children stranded (or vice versa).
-  const ok = db.transaction((tx) => {
-    if (anchorId !== undefined) {
-      const anchor = tx
-        .select({ isAttached: items.isAttached, parentId: items.parentId, workphaseId: items.workphaseId, position: items.position })
-        .from(items)
-        .where(eq(items.id, anchorId))
-        .get();
-      if (!anchor) {
-        res.status(400).json({ error: 'anchorId does not reference an existing item' });
-        return false;
-      }
-      if (anchor.position === null) {
-        res.status(400).json({ error: 'anchorId has no position to anchor against (it may be a done item)' });
-        return false;
-      }
-      // The anchor's position is only meaningful to compare against if it
-      // lives in the same comparison space the subject is about to end up
-      // in — an attached child's siblings space and a workflow-wide space
-      // are deliberately isolated, and two different workflows each have
-      // their own workflow-wide space (audit Finding #7). Without this,
-      // e.g. anchoring a detached item against someone else's attached
-      // child, or against an item in a different workflow, silently wrote
-      // a number from the wrong comparison space.
-      if (!sharesPositionScope(
-        { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
-        { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: targetWorkphaseId },
-        tx,
-      )) {
-        res.status(400).json({ error: "anchorId is not in this item's position scope" });
-        return false;
-      }
+  db.transaction((tx) => {
+    if (anchor) {
       const scope = positionScopeFor(
         { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
         req.params.id,
@@ -467,9 +478,7 @@ router.patch('/:id/move', (req, res) => {
         }).run();
       }
     }
-    return true;
   });
-  if (!ok) return;
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
   res.json(withPositionScope(updated!, isTerminalOf));
@@ -479,9 +488,13 @@ router.patch('/:id/move', (req, res) => {
 router.patch('/reorder', (req, res) => {
   const { itemOrders } = req.body;
 
-  const ok = db.transaction((tx) => applyReorder(items, itemOrders, tx, res, 'item', { updatedAt: Date.now() }));
-  if (!ok) return;
+  const validation = validateReorder(items, itemOrders, 'item');
+  if (!validation.ok) {
+    res.status(validation.status).json(validation.body);
+    return;
+  }
 
+  db.transaction((tx) => applyReorderEntries(items, validation.entries, tx, { updatedAt: Date.now() }));
   res.json({ success: true });
 });
 

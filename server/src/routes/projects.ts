@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { assertValidReparent } from '../lib/itemTree.js';
-import { resolveAppendPosition, resolvePositionByAnchorAndSide, type Side } from '../lib/positionResolver.js';
+import { resolveAppendPosition, resolvePositionByAnchorAndSide } from '../lib/positionResolver.js';
 
 const router = Router();
 
@@ -204,46 +204,53 @@ router.patch('/:id/move', (req, res) => {
     }
   }
 
-  let validationError: string | null = null;
+  // Verifies a claimed prevId/nextId is a real, current sibling in the
+  // *resulting* scope before trusting it for the midpoint math — rejects a
+  // stale/false claim rather than silently falling back. Validated here,
+  // against plain `db`, before the transaction below opens: this handler's
+  // only write is to the subject project itself, so nothing about a
+  // sibling's existence/scope/position can change between this check and
+  // the transaction that uses it (audit Finding #12 — a db.transaction
+  // callback in better-sqlite3 only rolls back on throw, so a validation
+  // bail-out signaled by returning false from inside it — after some other
+  // write had already run — would still commit; validating first removes
+  // the need for that convention).
+  function verifyAnchor(anchorId: string, label: 'prevId' | 'nextId'): string | null {
+    const sibling = db
+      .select({ parentId: projects.parentId, position: projects.position })
+      .from(projects)
+      .where(eq(projects.id, anchorId))
+      .get();
+    if (!sibling) return `${label} does not reference an existing project`;
+    if ((sibling.parentId ?? null) !== targetParentId) return `${label} is not a sibling in the target scope`;
+    if (sibling.position === null) return `${label} has no position to anchor against`;
+    return null;
+  }
 
-  const ok = db.transaction((tx) => {
-    const scope = projectPositionScope(targetParentId, req.params.id);
-
-    // Verifies a claimed prevId/nextId is a real, current sibling in the
-    // *resulting* scope before trusting it for the midpoint math — rejects a
-    // stale/false claim rather than silently falling back.
-    function verifiedAnchor(anchorId: string, side: Side, label: 'prevId' | 'nextId'): number | null {
-      const sibling = tx
-        .select({ parentId: projects.parentId, position: projects.position })
-        .from(projects)
-        .where(eq(projects.id, anchorId))
-        .get();
-      if (!sibling) {
-        validationError = `${label} does not reference an existing project`;
-        return null;
-      }
-      if ((sibling.parentId ?? null) !== targetParentId) {
-        validationError = `${label} is not a sibling in the target scope`;
-        return null;
-      }
-      if (sibling.position === null) {
-        validationError = `${label} has no position to anchor against`;
-        return null;
-      }
-      return resolvePositionByAnchorAndSide(projects, scope, tx, side, anchorId);
+  if (prevId) {
+    const error = verifyAnchor(prevId, 'prevId');
+    if (error) {
+      res.status(400).json({ error });
+      return;
     }
+  } else if (nextId) {
+    const error = verifyAnchor(nextId, 'nextId');
+    if (error) {
+      res.status(400).json({ error });
+      return;
+    }
+  }
+
+  db.transaction((tx) => {
+    const scope = projectPositionScope(targetParentId, req.params.id);
 
     let position: number;
     if (prevId) {
       // prevId is the project's resulting predecessor — insert immediately after it.
-      const resolved = verifiedAnchor(prevId, 'after', 'prevId');
-      if (resolved === null) return false;
-      position = resolved;
+      position = resolvePositionByAnchorAndSide(projects, scope, tx, 'after', prevId);
     } else if (nextId) {
       // nextId is the project's resulting successor — insert immediately before it.
-      const resolved = verifiedAnchor(nextId, 'before', 'nextId');
-      if (resolved === null) return false;
-      position = resolved;
+      position = resolvePositionByAnchorAndSide(projects, scope, tx, 'before', nextId);
     } else {
       // Both omitted/null — never trust "empty"; always re-derive the true
       // append position against current children.
@@ -255,14 +262,7 @@ router.patch('/:id/move', (req, res) => {
       position,
       updatedAt: Date.now(),
     }).where(eq(projects.id, req.params.id)).run();
-
-    return true;
   });
-
-  if (!ok) {
-    res.status(400).json({ error: validationError ?? 'Failed to resolve position' });
-    return;
-  }
 
   const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
   res.json(updated);

@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { validateColumnRange } from '../lib/columnRanges.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { applyReorder } from '../lib/reorder.js';
+import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { nextPosition } from "../lib/positionResolver.js";
 
 const router = Router();
@@ -90,9 +90,13 @@ router.put('/:id', (req, res) => {
 router.patch('/reorder', (req, res) => {
   const { columnOrders } = req.body;
 
-  const ok = db.transaction((tx) => applyReorder(columns, columnOrders, tx, res, 'column'));
-  if (!ok) return;
+  const validation = validateReorder(columns, columnOrders, 'column');
+  if (!validation.ok) {
+    res.status(validation.status).json(validation.body);
+    return;
+  }
 
+  db.transaction((tx) => applyReorderEntries(columns, validation.entries, tx));
   res.json({ success: true });
 });
 

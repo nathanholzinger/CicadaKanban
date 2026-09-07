@@ -5,7 +5,7 @@ import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { findColumnsMixingTerminalAfterFlip, shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { applyReorder } from '../lib/reorder.js';
+import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { nextPosition, resolveAppendPosition } from "../lib/positionResolver.js";
 import { positionScopeFor } from '../lib/itemPositionScope.js';
 
@@ -140,9 +140,13 @@ function backfillItemsForTerminalFlip(tx: Tx, workphaseId: string, newIsTerminal
 router.patch('/reorder', (req, res) => {
   const { workphaseOrders } = req.body;
 
-  const ok = db.transaction((tx) => applyReorder(workphases, workphaseOrders, tx, res, 'workphase'));
-  if (!ok) return;
+  const validation = validateReorder(workphases, workphaseOrders, 'workphase');
+  if (!validation.ok) {
+    res.status(validation.status).json(validation.body);
+    return;
+  }
 
+  db.transaction((tx) => applyReorderEntries(workphases, validation.entries, tx));
   res.json({ success: true });
 });
 
