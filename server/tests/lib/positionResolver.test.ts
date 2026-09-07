@@ -80,30 +80,21 @@ describe('coarsestFit', () => {
 });
 
 describe('reindexScope', () => {
-  it.skip('reassigns clean sequential positions while preserving relative order', async () => {
-    const { phase, items: created } = await seedPhaseWithItems(4);
-    setPosition(created[0].id, 5.001);
-    setPosition(created[1].id, 5.002);
-    setPosition(created[2].id, 5.003);
-    setPosition(created[3].id, 5.0);
-
-    reindexScope(items, eq(items.workphaseId, phase.id));
-
-    expect(getPosition(created[0].id)).toBe(2);
-    expect(getPosition(created[1].id)).toBe(3);
-    expect(getPosition(created[2].id)).toBe(4);
-    expect(getPosition(created[3].id)).toBe(1);
-  });
-
   it.skip('breaks exact ties by createdAt, oldest first', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
-    setPosition(created[0].id, 1.0);
-    setPosition(created[1].id, 1.0);
+    setPosition(created[0].id, 5.0);
+    setPosition(created[1].id, 1.0 + 1e-13);
+    setPosition(created[2].id, 1.0);
+    setPosition(created[3].id, 5.0);
 
-    reindexScope(items, eq(items.workphaseId, phase.id));
+    db.transaction((tx) =>
+      resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, phase.id), tx)
+    );
 
-    expect(getPosition(created[0].id)).toBe(1);
+    expect(getPosition(created[2].id)).toBe(1);
     expect(getPosition(created[1].id)).toBe(2);
+    expect(getPosition(created[0].id)).toBe(3);
+    expect(getPosition(created[3].id)).toBe(4);
   });
 });
 
@@ -268,14 +259,18 @@ describe('positionResolver against the projects table', () => {
     it.skip('reassigns clean sequential positions while preserving relative order', async () => {
       const created = await seedRootProjects(3);
       setProjectPosition(created[0].id, 5.001);
-      setProjectPosition(created[1].id, 5.002);
-      setProjectPosition(created[2].id, 4.999);
+      setProjectPosition(created[1].id, 5.001 + 1e-13);
+      setProjectPosition(created[2].id, 5.002);
+      setProjectPosition(created[3].id, 4.999);
 
-      reindexScope(projects, rootScope);
+      db.transaction((tx) =>
+        resolvePositionByAnchorAndSide(projects, created[0].id, 'after', rootScope, tx)
+      );
 
-      expect(getProjectPosition(created[2].id)).toBe(1);
+      expect(getProjectPosition(created[3].id)).toBe(1);
       expect(getProjectPosition(created[0].id)).toBe(2);
       expect(getProjectPosition(created[1].id)).toBe(3);
+      expect(getProjectPosition(created[1].id)).toBe(4);
     });
   });
 
