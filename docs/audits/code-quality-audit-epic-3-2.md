@@ -850,6 +850,38 @@ mode, don't force it. Extract a `ConfirmDeleteInline` sub-component for the
 two `ProjectPage` call sites now; they differ only in prompt text and the id
 being deleted.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed the byte-identical
+Yes/No markup and the duplicated confirm/deleting state pairs. Added
+`client/src/components/ConfirmDeleteInline.tsx`: self-contained
+(confirming/deleting state owned internally, matching `ConfirmDeleteButton`'s
+existing convention), taking a `trigger` render-prop for the idle state
+(since that part genuinely differs in layout between the two — a heading
+with an inline name-editor vs. a subproject-select button — and isn't part
+of what's duplicated), plus `prompt`/`onDelete`/`className`/
+`deletingClassName`. `SortableProjectRow.tsx` was left untouched, per the
+audit's own explicit deferral. Both `ProjectPage.tsx` call sites now use it;
+the 4 hand-rolled state variables
+(`confirmDeleteId`/`deletingId`/`confirmDeleteProject`/`deletingProject`)
+are gone.
+
+**Found and fixed along the way:** extracting this surfaced a real latent
+bug — `confirmDeleteProject`/`deletingProject` were never reset on a
+project switch (the `useEffect([project.id])` resets everything else but
+not these two), so starting a self-delete on one project and navigating
+away without confirming/cancelling would leave that confirm prompt showing
+under the *next* project's heading. Keying the new `ConfirmDeleteInline` on
+`project.id` remounts (and resets) it on every switch, fixing this by
+construction. Added a regression test for it, plus one covering
+`ProjectPage`'s own main-content self-delete trigger (nothing previously
+exercised that end-to-end — only the sidebar's separate delete affordance
+was tested). Confirmed the leak test fails without the `key` (the heading
+role vanishes entirely, replaced by the stale project's leaked confirm UI)
+by removing just the `key` and re-running, then restored it. Full
+Playwright suite for this area (`project-page.spec.ts`,
+`project-sidebar.spec.ts`): 24 passed (up from 22), 0 failed. `tsc --noEmit`
+clean; full client suite unaffected (93 tests, pure-refactor-plus-fix, no
+existing test needed changes).
+
 ### 27. E2E "seed a templated workflow" logic duplicated 4×; API base URL hardcoded ~18× `[Duplication & Abstraction]`
 **Files:** `tests/api/boards.spec.ts:10–18` (`createFlowWorkflow`); `tests/api/attachedChildren.spec.ts:10–20` (`setupWorkflow`); `tests/ui/attached-children.spec.ts:5–14` (`createTemplatedWorkflow`); `tests/ui/boards-layer.spec.ts:7–35` (`createBareWorkflow`/`addWorkphases`/a second `createTemplatedWorkflow`)
 

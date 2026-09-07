@@ -66,6 +66,47 @@ test('deleting the selected project returns to the placeholder', async ({ page, 
   await expect(page.getByText('Select a project to get started.')).toBeVisible();
 });
 
+// The sidebar's own delete affordance (SortableProjectRow, exercised above)
+// is a separate hand-rolled variant left as-is (audit Finding #26) — this
+// covers ProjectPage's own main-content self-delete trigger, which nothing
+// previously exercised end-to-end.
+test('a project can be deleted from its own page', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'Self Delete Me' } });
+  await page.reload();
+  await projectSidebar.select('Self Delete Me');
+  await expect(page.getByRole('heading', { level: 1, name: 'Self Delete Me' })).toBeVisible();
+
+  await page.getByRole('heading', { level: 1, name: 'Self Delete Me' }).hover();
+  await page.locator('main').getByTitle('Delete project').click();
+  await expect(page.getByText('Delete this project?')).toBeVisible();
+  await page.locator('main').getByRole('button', { name: 'Yes' }).click();
+
+  await expect(page.getByText('Select a project to get started.')).toBeVisible();
+});
+
+// Regression coverage from extracting ConfirmDeleteInline (audit Finding
+// #26): the two hand-rolled confirm/deleting state pairs it replaced were
+// never reset on a project switch, so triggering (without confirming or
+// cancelling) the self-delete prompt on one project and then navigating to
+// another would leave the prompt showing under the new project's heading.
+// ConfirmDeleteInline is now keyed on project.id, remounting (and resetting)
+// it on every switch.
+test('starting a project self-delete and navigating away does not leak the confirm prompt to a different project', async ({ page, projectSidebar, request }) => {
+  await request.post(`${API}/projects`, { data: { name: 'Leak Source' } });
+  await request.post(`${API}/projects`, { data: { name: 'Leak Target' } });
+  await page.reload();
+
+  await projectSidebar.select('Leak Source');
+  await page.getByRole('heading', { level: 1, name: 'Leak Source' }).hover();
+  await page.locator('main').getByTitle('Delete project').click();
+  await expect(page.getByText('Delete this project?')).toBeVisible();
+
+  await projectSidebar.select('Leak Target');
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Leak Target' })).toBeVisible();
+  await expect(page.getByText('Delete this project?')).not.toBeVisible();
+});
+
 test('project name can be edited inline', async ({ page, projectSidebar, request }) => {
   await request.post(`${API}/projects`, { data: { name: 'Rename Me' } });
   await page.reload();

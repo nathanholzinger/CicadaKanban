@@ -4,6 +4,7 @@ import type { CreateWorkflowInput } from '../api/workflows';
 import type { UpdateProjectInput } from '../api/projects';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
+import ConfirmDeleteInline from './ConfirmDeleteInline';
 import { buildParentOptions } from '../lib/hierarchy';
 import { TrashIcon } from './icons';
 
@@ -53,10 +54,6 @@ export default function ProjectPage({
   const [nameValue, setNameValue] = useState(project.name);
   const [descValue, setDescValue] = useState(project.description ?? '');
   const cancelRef = useRef(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
-  const [deletingProject, setDeletingProject] = useState(false);
   const [savingParent, setSavingParent] = useState(false);
 
   // Intentionally scoped to project.id only: this resets the edit buffers/tab
@@ -203,45 +200,40 @@ export default function ProjectPage({
           onKeyDown={e => handleKeyDown(e, 'name')}
           className="mb-1 w-full border-b border-zinc-600 bg-transparent text-2xl font-semibold text-zinc-100 focus:border-blue-500/60 focus:outline-none"
         />
-      ) : deletingProject ? (
-        <div className="mb-1 text-2xl font-semibold text-red-400">Deleting…</div>
-      ) : confirmDeleteProject ? (
-        <div className="mb-1 flex items-center gap-3">
-          <span className="text-2xl font-semibold text-zinc-100">{project.name}</span>
-          <span className="text-sm text-zinc-400">Delete this project?</span>
-          <button
-            onClick={async () => {
-              setConfirmDeleteProject(false);
-              setDeletingProject(true);
-              await onDeleteSubproject(project.id);
-            }}
-            className="rounded bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-800/60"
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => setConfirmDeleteProject(false)}
-            className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
-          >
-            No
-          </button>
-        </div>
       ) : (
-        <div className="group mb-1 flex items-center gap-2">
-          <h1
-            onClick={() => setEditingField('name')}
-            className="cursor-text text-2xl font-semibold text-zinc-100 transition-colors hover:text-zinc-200"
-          >
-            {project.name}
-          </h1>
-          <button
-            onClick={() => setConfirmDeleteProject(true)}
-            className="flex h-7 w-7 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
-            title="Delete project"
-          >
-            <TrashIcon size={13} />
-          </button>
-        </div>
+        // Keyed on project.id: without it, this instance's internal
+        // confirming/deleting state would survive a navigation to a
+        // different project (nothing else resets it — a real, latent bug
+        // uncovered while extracting this, now fixed by construction).
+        <ConfirmDeleteInline
+          key={project.id}
+          trigger={confirm => (
+            <div className="group mb-1 flex items-center gap-2">
+              <h1
+                onClick={() => setEditingField('name')}
+                className="cursor-text text-2xl font-semibold text-zinc-100 transition-colors hover:text-zinc-200"
+              >
+                {project.name}
+              </h1>
+              <button
+                onClick={confirm}
+                className="flex h-7 w-7 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
+                title="Delete project"
+              >
+                <TrashIcon size={13} />
+              </button>
+            </div>
+          )}
+          prompt={
+            <>
+              <span className="text-2xl font-semibold text-zinc-100">{project.name}</span>
+              <span className="text-sm text-zinc-400">Delete this project?</span>
+            </>
+          }
+          onDelete={() => onDeleteSubproject(project.id)}
+          className="mb-1 flex items-center gap-3"
+          deletingClassName="mb-1 text-2xl font-semibold text-red-400"
+        />
       )}
 
       {/* Tabs */}
@@ -343,35 +335,10 @@ export default function ProjectPage({
               </button>
             </div>
             <ul className="space-y-1">
-              {subprojects.map(child => {
-                const isConfirming = confirmDeleteId === child.id;
-                const isDeleting = deletingId === child.id;
-                return (
-                  <li key={child.id} className="group flex items-center gap-1">
-                    {isDeleting ? (
-                      <div className="flex-1 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">Deleting…</div>
-                    ) : isConfirming ? (
-                      <div className="flex flex-1 items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm">
-                        <span className="flex-1 text-zinc-400">Delete "{child.name}"?</span>
-                        <button
-                          onClick={async () => {
-                            setConfirmDeleteId(null);
-                            setDeletingId(child.id);
-                            await onDeleteSubproject(child.id);
-                            setDeletingId(null);
-                          }}
-                          className="rounded bg-red-900/60 px-2 py-0.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-800/60"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="rounded px-2 py-0.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
-                        >
-                          No
-                        </button>
-                      </div>
-                    ) : (
+              {subprojects.map(child => (
+                <li key={child.id} className="group flex items-center gap-1">
+                  <ConfirmDeleteInline
+                    trigger={confirm => (
                       <>
                         <button
                           onClick={() => onSelectProject(child.id)}
@@ -381,7 +348,7 @@ export default function ProjectPage({
                           {child.description && <span className="ml-2 text-xs text-zinc-600">{child.description}</span>}
                         </button>
                         <button
-                          onClick={() => setConfirmDeleteId(child.id)}
+                          onClick={confirm}
                           className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
                           title="Delete subproject"
                         >
@@ -389,9 +356,13 @@ export default function ProjectPage({
                         </button>
                       </>
                     )}
-                  </li>
-                );
-              })}
+                    prompt={<span className="flex-1 text-zinc-400">Delete "{child.name}"?</span>}
+                    onDelete={() => onDeleteSubproject(child.id)}
+                    className="flex flex-1 items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm"
+                    deletingClassName="flex-1 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400"
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         </div>
