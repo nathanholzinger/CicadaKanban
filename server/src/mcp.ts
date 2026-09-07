@@ -4,6 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { urlPart } from './lib/urlPart.js';
 
 const API = 'http://localhost:3001/api';
 
@@ -137,7 +138,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_workflows': {
-        const qs = args?.project_id ? `?projectId=${args.project_id}` : '';
+        const qs = args?.project_id ? `?projectId=${urlPart(args.project_id)}` : '';
         const workflows = await api(`/workflows${qs}`);
         return {
           content: [{ type: 'text', text: JSON.stringify(workflows, null, 2) }],
@@ -145,14 +146,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_workflow': {
-        const workflow = await api(`/workflows/${args!.workflow_id}`);
+        const workflow = await api(`/workflows/${urlPart(args!.workflow_id)}`);
         return {
           content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }],
         };
       }
 
       case 'get_item': {
-        const item = await api(`/items/${args!.item_id}`);
+        const item = await api(`/items/${urlPart(args!.item_id)}`);
         return {
           content: [{ type: 'text', text: JSON.stringify(item, null, 2) }],
         };
@@ -191,7 +192,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (args!.description !== undefined) updates.description = args!.description;
         if (args!.parent_id !== undefined) updates.parentId = args!.parent_id;
         if (args!.is_attached !== undefined) updates.isAttached = args!.is_attached;
-        const item = await api(`/items/${args!.item_id}`, {
+        const item = await api(`/items/${urlPart(args!.item_id)}`, {
           method: 'PUT',
           body: JSON.stringify(updates),
         });
@@ -204,7 +205,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // No position given: the move endpoint defaults to the end of the
         // target workphase's list, so MCP no longer needs to fetch the item
         // and its workflow just to compute an append position itself.
-        await api(`/items/${args!.item_id}/move`, {
+        await api(`/items/${urlPart(args!.item_id)}/move`, {
           method: 'PATCH',
           body: JSON.stringify({ workphaseId: args!.workphase_id }),
         });
@@ -214,7 +215,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'add_item_comment': {
-        await api(`/items/${args!.item_id}/comments`, {
+        await api(`/items/${urlPart(args!.item_id)}/comments`, {
           method: 'POST',
           body: JSON.stringify({ content: args!.content }),
         });

@@ -688,6 +688,21 @@ Not SQL injection (Drizzle parameterizes everywhere) — an id containing
 `/`, `?`, or `#` silently retargets the request to a different endpoint.
 `encodeURIComponent` each interpolated value.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed all 6 cited
+interpolations unchanged. Extracted a small `urlPart(value)` helper
+(`encodeURIComponent(String(value))`) into a new
+`server/src/lib/urlPart.ts` — rather than keeping it inline in `mcp.ts` —
+specifically so it can be unit-tested: `mcp.ts` is a standalone stdio
+entry point (`await server.connect(transport)` runs as a side effect of
+module load, `tsx src/mcp.ts` is its only invocation, nothing else imports
+it), so a test file importing it directly would try to open a real stdio
+transport. Applied `urlPart` at all 6 sites (the `project_id` query value,
+`workflow_id`, and `item_id` used four times). Added
+`server/tests/lib/urlPart.test.ts` (5 tests: path separator, query
+delimiter, fragment delimiter, non-string coercion, ordinary id
+unchanged). `tsc --noEmit` clean; full server suite passing (264 tests, up
+from 259).
+
 ### 20. Test helper sorts on a possibly-null `position` `[Correctness & Security]`
 **File:** `tests/helpers/itemRepositioningScenario.ts:110`
 
