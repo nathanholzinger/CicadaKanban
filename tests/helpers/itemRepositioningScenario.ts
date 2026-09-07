@@ -107,7 +107,12 @@ async function orderOf(request: APIRequestContext, workflowId: string, predicate
   const workflow = await (await request.get(`${API}/workflows/${workflowId}`)).json();
   const matched = (workflow.items as WorkflowItemRow[])
     .filter(predicate)
-    .sort((a, b) => a.position - b.position || a.createdAt - b.createdAt);
+    // `position` is null by design for a done/unsorted item (Part 6) — the
+    // `?? 0` guard (audit Finding #20, matching siblingOrder's existing
+    // convention below) keeps a future done-item scenario deterministic
+    // instead of `NaN`-comparator flake. Not reachable today (every
+    // scenario here is active-only); hardened for whenever one isn't.
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt);
   return matched.map(i => i.title.replace('Item ', '')).join('');
 }
 

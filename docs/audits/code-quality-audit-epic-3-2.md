@@ -713,6 +713,19 @@ with `(a.position ?? 0)`. Not currently reachable (all scenario items are
 active), but a real Part-6 ordering regression would read as flake rather
 than a failure.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed `orderOf`'s
+sort was unguarded while `siblingOrder`'s was. Added the same `(a.position
+?? 0)` guard to match. No regression test added: this is dead-code
+hardening in a Playwright test-helper (not reachable by any current
+scenario, all of which are active-only), and there's no vitest harness at
+the repo root to unit-test it in isolation anyway — the root `tsconfig.json`
+only covers a nonexistent `e2e/**/*` plus `playwright.config.ts`, not
+`tests/**/*` (a separate, pre-existing drift worth its own look someday,
+not chased here). Verified with a standalone `tsc --noEmit` against the
+file directly (clean) and by running the two Playwright specs that
+exercise this helper end-to-end (10 passed, 6 pre-existing skips, 0
+failed).
+
 ### 21. `WorkPhase` (capital P) naming in the client API/type layer diverges from the rest of the codebase's `workphase` convention `[Consistency & Drift]`
 **Files:** `client/src/types.ts:27` (`export interface WorkPhase`); `client/src/api/workphases.ts` (mirrors the capitalization in every function name)
 
