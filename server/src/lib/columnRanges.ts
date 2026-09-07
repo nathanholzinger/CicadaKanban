@@ -1,4 +1,4 @@
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { buildRankMap } from './workphaseOrder.js';
@@ -125,7 +125,7 @@ export function computeUnsorted<T extends ItemRow>(
 // Same shape as `db`, but also satisfied by the `tx` handle inside a
 // db.transaction() callback — lets callers fold this into a larger
 // transaction instead of committing its writes independently.
-type DbClient = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+type DbClient = Tx | typeof db;
 
 // Recomputes every column's range after `deletedWorkphaseId` is removed from
 // `workflowId`. Called from workphases.ts DELETE, before the workphase row

@@ -14,11 +14,24 @@ type SelfRefTable = SQLiteTable & { id: SQLiteColumn; parentId: SQLiteColumn };
 
 // True if `candidateId` sits anywhere in `ofId`'s subtree. DFS with early
 // exit — was `isItemDescendant` (items.ts) / `isDescendant` (projects.ts).
-function isSelfRefDescendant(table: SelfRefTable, ofId: string, candidateId: string, tx?: Tx): boolean {
+// `visited` guards against a corrupted parentId cycle already in the data
+// (audit Finding #11) turning this into unbounded recursion — each id is
+// only ever descended into once across the whole call tree; a revisit means
+// a cycle exists below `ofId`, which can't contain `candidateId` any more
+// than the first visit already determined, so it's safe to just stop there.
+function isSelfRefDescendant(
+  table: SelfRefTable,
+  ofId: string,
+  candidateId: string,
+  tx?: Tx,
+  visited: Set<string> = new Set(),
+): boolean {
+  if (visited.has(ofId)) return false;
+  visited.add(ofId);
   const e = tx ?? db;
   const children = e.select({ id: table.id }).from(table).where(eq(table.parentId, ofId)).all() as { id: string }[];
   for (const child of children) {
-    if (child.id === candidateId || isSelfRefDescendant(table, child.id, candidateId, tx)) return true;
+    if (child.id === candidateId || isSelfRefDescendant(table, child.id, candidateId, tx, visited)) return true;
   }
   return false;
 }
@@ -51,17 +64,25 @@ interface WalkItemDescendantsOptions {
 // `collectDescendantIds` (collect-all, includes root) and
 // attachedCascade.ts's `getAttachedDescendantIds` (attached-only, excludes
 // root) — the two differed only in predicate and whether the root itself
-// belongs in the result.
+// belongs in the result. `visited` (seeded with `rootId`) guards against a
+// corrupted parentId cycle in the data (audit Finding #11): a node is
+// marked visited the moment it's seen, before the predicate even runs, so a
+// cycle can't re-queue the same id forever regardless of what the predicate
+// decides — backs `DELETE /items/:id`, where a cycle here would otherwise
+// mean the delete never returns.
 export function walkItemDescendants(rootId: string, opts: WalkItemDescendantsOptions = {}): string[] {
   const { predicate = () => true, includeRoot = false, tx } = opts;
   const e = tx ?? db;
   const ids: string[] = includeRoot ? [rootId] : [];
+  const visited = new Set([rootId]);
   const queue = [rootId];
   while (queue.length > 0) {
     const id = queue.shift()!;
     const children = e.select({ id: items.id, isAttached: items.isAttached })
       .from(items).where(eq(items.parentId, id)).all();
     for (const child of children) {
+      if (visited.has(child.id)) continue;
+      visited.add(child.id);
       if (predicate(child)) {
         ids.push(child.id);
         queue.push(child.id);

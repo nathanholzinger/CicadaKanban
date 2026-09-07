@@ -1,8 +1,6 @@
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { boards, columns } from '../db/schema.js';
 import { inArray } from 'drizzle-orm';
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Deletes every column belonging to the given boards, then the boards
 // themselves. Shared by boards.ts (deleting a single board), workflows.ts
