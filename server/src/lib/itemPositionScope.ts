@@ -103,18 +103,52 @@ export function positionScopeFor(
   return excludeId ? and(base, not(eq(items.id, excludeId)))! : base;
 }
 
+// Resolves the workflowId a workphase belongs to, or null if the workphase
+// doesn't exist.
+export function workflowIdForWorkphase(workphaseId: string, tx?: Tx): string | null {
+  const e = tx ?? db;
+  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  return workphase?.workflowId ?? null;
+}
+
 // Every workphaseId belonging to the same workflow as `workphaseId` —
 // resolves a detached/root item's true comparison scope (above). Falls back
 // to just the given id if it doesn't resolve to a workflow (shouldn't
 // happen for a valid FK, but keeps this from silently scoping to nothing).
 function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
+  const workflowId = workflowIdForWorkphase(workphaseId, tx);
+  if (!workflowId) return [workphaseId];
   const e = tx ?? db;
-  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
-  if (!workphase) return [workphaseId];
   return e
     .select({ id: workphases.id })
     .from(workphases)
-    .where(eq(workphases.workflowId, workphase.workflowId))
+    .where(eq(workphases.workflowId, workflowId))
     .all()
     .map(w => w.id);
+}
+
+// True if `anchor` and `subject` resolve to the *same* comparison space —
+// not just the same PositionScope label (both could independently classify
+// as "workflow" while belonging to two different workflows). Used by
+// PATCH /items/:id/move to reject an anchorId whose position isn't
+// actually comparable to where the subject's is about to be written (audit
+// Finding #7): an attached child's siblings space and a workflow-wide space
+// are deliberately isolated (positionResolver.test.ts), and two different
+// workflows' "workflow-wide" spaces are two different sets of rows even
+// though positionScopeFor would expand either one on its own without
+// noticing the mismatch.
+export function sharesPositionScope(
+  anchor: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
+  subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
+  tx?: Tx,
+): boolean {
+  const anchorIsAttachedSibling = anchor.isAttached && Boolean(anchor.parentId);
+  const subjectIsAttachedSibling = subject.isAttached && Boolean(subject.parentId);
+  if (anchorIsAttachedSibling !== subjectIsAttachedSibling) return false;
+  if (anchorIsAttachedSibling) return anchor.parentId === subject.parentId;
+
+  if (!anchor.workphaseId || !subject.workphaseId) return false;
+  const anchorWorkflowId = workflowIdForWorkphase(anchor.workphaseId, tx);
+  const subjectWorkflowId = workflowIdForWorkphase(subject.workphaseId, tx);
+  return anchorWorkflowId !== null && anchorWorkflowId === subjectWorkflowId;
 }

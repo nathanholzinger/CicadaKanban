@@ -451,6 +451,66 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.status).toBe(400);
   });
 
+  // Regression coverage for audit Finding #7: the anchor's position scope
+  // was never checked against the subject's resulting scope.
+  describe('move rejects an anchorId outside the subject\'s position scope (Finding #7)', () => {
+    it('rejects anchoring a detached item against someone else\'s attached child', async () => {
+      const { project, todo } = await setupTwoPhases();
+      const detached = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Detached' });
+      const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+      const attachedChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached Child' });
+
+      const res = await request(app).patch(`/api/items/${detached.id}/move`).send({ anchorId: attachedChild.id, side: 'after' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/position scope/);
+    });
+
+    it('rejects anchoring an attached child against an attached child of a different parent', async () => {
+      const { project, todo } = await setupTwoPhases();
+      const parentA = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent A' });
+      const parentB = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent B' });
+      const childOfA = await createItem({ projectId: project.id, parentId: parentA.id, title: 'Child of A' });
+      const childOfB = await createItem({ projectId: project.id, parentId: parentB.id, title: 'Child of B' });
+
+      const res = await request(app).patch(`/api/items/${childOfA.id}/move`).send({ anchorId: childOfB.id, side: 'after' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/position scope/);
+    });
+
+    it('rejects anchoring against an item in a different workflow', async () => {
+      const { project, todo } = await setupTwoPhases();
+      const subject = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Subject' });
+
+      const otherProject = await createProject();
+      const otherWorkflow = await createWorkflow(otherProject.id);
+      const otherPhase = await createWorkphase(otherWorkflow.id, { name: 'Other Todo' });
+      const foreignAnchor = await createItem({ projectId: otherProject.id, workphaseId: otherPhase.id, title: 'Foreign Anchor' });
+
+      const res = await request(app).patch(`/api/items/${subject.id}/move`).send({ anchorId: foreignAnchor.id, side: 'after' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/position scope/);
+    });
+
+    it('still allows anchoring within the same workflow-wide scope (sanity check against a false-positive reject)', async () => {
+      const { project, todo } = await setupTwoPhases();
+      const a = await createItem({ projectId: project.id, workphaseId: todo.id });
+      const b = await createItem({ projectId: project.id, workphaseId: todo.id });
+
+      const res = await request(app).patch(`/api/items/${b.id}/move`).send({ anchorId: a.id, side: 'after' });
+      expect(res.status).toBe(200);
+    });
+
+    it('still allows anchoring within the same attached-siblings scope (sanity check against a false-positive reject)', async () => {
+      const { project, todo } = await setupTwoPhases();
+      const parent = await createItem({ projectId: project.id, workphaseId: todo.id });
+      const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child A' });
+      const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child B' });
+
+      const res = await request(app).patch(`/api/items/${childB.id}/move`).send({ anchorId: childA.id, side: 'after' });
+      expect(res.status).toBe(200);
+    });
+  });
+
   it('moving into a terminal workphase clears position and sets completedAt', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });

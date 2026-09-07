@@ -8,7 +8,7 @@ import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
 import { resolvePositionByAnchorAndSide, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
-import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
+import { isTerminalLookup, positionScopeFor, sharesPositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
 const router = Router();
 
@@ -370,6 +370,22 @@ router.patch('/:id/move', (req, res) => {
       }
       if (anchor.position === null) {
         res.status(400).json({ error: 'anchorId has no position to anchor against (it may be a done item)' });
+        return false;
+      }
+      // The anchor's position is only meaningful to compare against if it
+      // lives in the same comparison space the subject is about to end up
+      // in — an attached child's siblings space and a workflow-wide space
+      // are deliberately isolated, and two different workflows each have
+      // their own workflow-wide space (audit Finding #7). Without this,
+      // e.g. anchoring a detached item against someone else's attached
+      // child, or against an item in a different workflow, silently wrote
+      // a number from the wrong comparison space.
+      if (!sharesPositionScope(
+        { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
+        { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: targetWorkphaseId },
+        tx,
+      )) {
+        res.status(400).json({ error: "anchorId is not in this item's position scope" });
         return false;
       }
       const scope = positionScopeFor(
