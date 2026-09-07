@@ -21,7 +21,7 @@ export function getWorkflowItems(workflowWorkphases: Workphase[]): ItemRow[] {
 // project plus descendant projects that inherit it (i.e. no project between them
 // and the owner has its own workflow). Mirrors the client's App.tsx inheritance
 // resolution, on the server so the board read path can scope by project.
-export function getProjectsUsingWorkflow(workflowId: string): Set<string> {
+function getProjectsUsingWorkflow(workflowId: string): Set<string> {
   const workflow = db.select({ projectId: workflows.projectId }).from(workflows).where(eq(workflows.id, workflowId)).get();
   const ownerProjectId = workflow?.projectId ?? null;
   const result = new Set<string>();

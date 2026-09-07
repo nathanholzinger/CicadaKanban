@@ -218,6 +218,23 @@ describe('resolveAppendPosition', () => {
     expect(result).toBe(1.0);
   });
 
+  it('treats a scope holding only null-positioned rows the same as a genuinely empty one (regression: getLastPositionInScope missed an isNotNull guard)', async () => {
+    // A scope isn't only ever empty or fully-positioned — a done item keeps
+    // its row (null position, real completedAt instead, per Part 6) inside
+    // the same workflow-wide scope active items compare against. If every
+    // row currently matching the scope happens to be one of these (e.g. the
+    // whole workflow's non-attached items are done), appending must still
+    // start fresh at 1.0, not trip over the null rows it finds.
+    const { phase, items: created } = await seedPhaseWithItems(2);
+    setPosition(created[0].id, null);
+    setPosition(created[1].id, null);
+
+    const result = db.transaction((tx) =>
+      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
+    );
+    expect(result).toBe(1.0);
+  });
+
   it('appends past the true last item in a non-empty scope', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 7.2);

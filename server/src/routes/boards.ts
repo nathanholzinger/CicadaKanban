@@ -3,31 +3,17 @@ import { db, type Tx } from '../db/index.js';
 import { boards, columns, workflows, workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getOrderedWorkphases, isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
+import { isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
+import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { nextPosition } from "../lib/positionResolver.js";
-import { classifyPositionScope, type PositionScope } from '../lib/itemPositionScope.js';
+import { isTerminalLookup, type PositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ItemRow = typeof items.$inferSelect;
 type ItemRowWithScope = ItemRow & { positionScope: PositionScope };
-
-// Attaches the computed, read-only `positionScope` field (Epic 3.2 §2) to a
-// board-scoped item row. `workphaseIsTerminalById` is looked up once for
-// every workphase in the DB (not just this workflow's), not just the
-// board's own covered set — an "Unknown status" item can carry a
-// misaligned/foreign workphaseId, and its true terminal status still needs
-// to come from a real lookup, not be assumed.
-function withPositionScope(item: ItemRow, workphaseIsTerminalById: Map<string, boolean>): ItemRowWithScope {
-  const workphaseIsTerminal = item.workphaseId ? (workphaseIsTerminalById.get(item.workphaseId) ?? null) : null;
-  const positionScope = classifyPositionScope(
-    { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: item.workphaseId },
-    workphaseIsTerminal,
-  );
-  return { ...item, positionScope };
-}
 
 // Creates one board with 1:1 columns (one per current workphase) for a
 // workflow. Shared by POST /api/workflows (new-workflow bootstrap), POST
@@ -115,11 +101,14 @@ router.get('/:id', (req, res) => {
   // Per-project narrowing for inherited/read-only views is left to the client.
   const scopeItems = getBoardScopeItems(board.workflowId);
 
-  const workphaseIsTerminalById = new Map(
-    db.select({ id: workphases.id, isTerminal: workphases.isTerminal }).from(workphases).all()
-      .map(w => [w.id, Boolean(w.isTerminal)] as const),
+  // Looked up once for every workphase in the DB (not just this workflow's)
+  // since an "Unknown status" item can carry a misaligned/foreign
+  // workphaseId, and its true terminal status still needs to come from a
+  // real lookup, not be assumed.
+  const isTerminalOf = isTerminalLookup(
+    db.select({ id: workphases.id, isTerminal: workphases.isTerminal }).from(workphases).all(),
   );
-  const scopedItems = scopeItems.map(item => withPositionScope(item, workphaseIsTerminalById));
+  const scopedItems = scopeItems.map(item => withPositionScope(item, isTerminalOf));
 
   const workphaseIdSet = new Set(workflowWorkphases.map(w => w.id));
   const itemsByWorkphase = new Map<string, ItemRowWithScope[]>();

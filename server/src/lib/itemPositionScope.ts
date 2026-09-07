@@ -5,7 +5,15 @@
 //
 // Items-only vocabulary (isAttached/parentId/workphaseId/workphaseIsTerminal)
 // — not table-generic the way positionResolver.ts is, so this doesn't apply
-// to projects or any other PositionedTable.
+// to projects or any other PositionedTable. positionScopeFor below is the
+// SQL-predicate counterpart to classifyPositionScope's label — same items-
+// only scope rule, expressed as a query instead of a string — so it lives
+// here rather than in positionResolver.ts (audit Finding #17).
+import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
+import type { Tx } from '../db/index.js';
+import { db } from '../db/index.js';
+import { items, workphases } from '../db/schema.js';
+
 export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export function classifyPositionScope(
@@ -21,4 +29,92 @@ export function classifyPositionScope(
   // Comparable against every other active item in the same workflow, not
   // just the same workphase (Epic 3.2 addendum) — see positionScopeFor.
   return 'workflow';
+}
+
+// Attaches the computed, read-only `positionScope` field (Epic 3.2 §2) to an
+// item row before it goes out over the API, telling a client what the
+// item's `position` is actually comparable against without it re-deriving
+// isAttached/parentId/workphaseId/workphase.isTerminal itself.
+//
+// `isTerminalOf` is a caller-supplied lookup rather than a live query here,
+// because the right way to resolve it differs by caller: items.ts's
+// single-item routes query one workphase directly; its GET /:id (item +
+// children) and boards.ts (a whole board's worth of items) both prebuild a
+// `Map<workphaseId, isTerminal>` first so mapping many rows through this
+// function doesn't re-query per row. Was two near-identical copies of this
+// function, differing only in that lookup strategy (items.ts's per-item
+// query was an N+1 boards.ts's map already avoided) — audit Finding #17.
+export function withPositionScope<T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null }>(
+  item: T,
+  isTerminalOf: (workphaseId: string) => boolean | null,
+): T & { positionScope: PositionScope } {
+  const workphaseIsTerminal = item.workphaseId ? isTerminalOf(item.workphaseId) : null;
+  const positionScope = classifyPositionScope(
+    { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: item.workphaseId },
+    workphaseIsTerminal,
+  );
+  return { ...item, positionScope };
+}
+
+// Builds the `isTerminalOf` lookup withPositionScope above needs, from a
+// batch of already-fetched workphase rows (each caller decides which rows —
+// a whole board's worth, an item + its children, or a whole workflow's).
+// boards.ts, items.ts, and workflows.ts each built this same
+// `Map<id, isTerminal>` + `?? null` closure by hand; collapsed into one spot
+// so the pattern doesn't re-accumulate the way withPositionScope itself did.
+export function isTerminalLookup<T extends { id: string; isTerminal: number | boolean }>(
+  rows: T[],
+): (workphaseId: string) => boolean | null {
+  const map = new Map(rows.map(w => [w.id, Boolean(w.isTerminal)] as const));
+  return (workphaseId: string) => map.get(workphaseId) ?? null;
+}
+
+// Epic 3.2's position-comparison scope for an item: parent-scoped
+// (parentId, isAttached) for an attached child — its true siblings — or
+// workflow-scoped for everything else. Position is a single value shared
+// across a whole workflow (docs/wiki/item-positioning), not per-workphase —
+// a workphase boundary alone was never a meaningful place to stop comparing
+// positions, since two items in different workphases of the same workflow
+// still need to compare cleanly (a merged column, a reindex, or a plain
+// cross-workphase append would otherwise risk colliding/misordering
+// against a workphase that merely happened to be empty). So every
+// detached/root item's scope is every workphaseId sharing its current
+// workphase's workflowId, not just that one workphase — always excluding
+// attached children, since they render nested under their parent rather
+// than as flat list members (mirrors the client's getWorkphaseItemsFrom
+// filter). `excludeId` keeps the subject's own (possibly just-updated) row
+// out of its own scope query. Moved here from items.ts (audit Finding #17,
+// partial — the withPositionScope duplication between items.ts/boards.ts
+// and workflows.ts's missing positionScope are still open) so other route
+// modules (e.g. workphases.ts's terminal-flip backfill) can share it
+// instead of re-deriving the same scope rule inline.
+export function positionScopeFor(
+  subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
+  excludeId?: string,
+  tx?: Tx,
+): SQL {
+  const base: SQL =
+    subject.isAttached && subject.parentId
+      ? and(eq(items.parentId, subject.parentId), eq(items.isAttached, 1))!
+      : and(
+          inArray(items.workphaseId, subject.workphaseId ? workphaseIdsInSameWorkflow(subject.workphaseId, tx) : []),
+          not(and(eq(items.isAttached, 1), isNotNull(items.parentId))!),
+        )!;
+  return excludeId ? and(base, not(eq(items.id, excludeId)))! : base;
+}
+
+// Every workphaseId belonging to the same workflow as `workphaseId` —
+// resolves a detached/root item's true comparison scope (above). Falls back
+// to just the given id if it doesn't resolve to a workflow (shouldn't
+// happen for a valid FK, but keeps this from silently scoping to nothing).
+function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
+  const e = tx ?? db;
+  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  if (!workphase) return [workphaseId];
+  return e
+    .select({ id: workphases.id })
+    .from(workphases)
+    .where(eq(workphases.workflowId, workphase.workflowId))
+    .all()
+    .map(w => w.id);
 }

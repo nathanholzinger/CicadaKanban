@@ -4,10 +4,11 @@ import { workflows, workphases, items, workflowTemplatePhases, boards, notificat
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from './boards.js';
-import { getOrderedWorkphases } from '../lib/columnRanges.js';
+import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -47,7 +48,14 @@ router.get('/:id', (req, res) => {
   // All items in any workphase of this workflow (across all projects that inherit it)
   const workflowItems = getWorkflowItems(workflowWorkphases);
 
-  res.json({ ...workflow, workphases: workflowWorkphases, items: addDepths(workflowItems) });
+  // workflowWorkphases already carries isTerminal for every id an item here
+  // could reference, so no extra query is needed to attach positionScope —
+  // this was the one read path with no positionScope at all (audit Finding
+  // #17), now consistent with items.ts's GET /:id and boards.ts.
+  const isTerminalOf = isTerminalLookup(workflowWorkphases);
+  const scopedItems = workflowItems.map(item => withPositionScope(item, isTerminalOf));
+
+  res.json({ ...workflow, workphases: workflowWorkphases, items: addDepths(scopedItems) });
 });
 
 // Create a workflow

@@ -14,7 +14,7 @@ type SelfRefTable = SQLiteTable & { id: SQLiteColumn; parentId: SQLiteColumn };
 
 // True if `candidateId` sits anywhere in `ofId`'s subtree. DFS with early
 // exit — was `isItemDescendant` (items.ts) / `isDescendant` (projects.ts).
-export function isSelfRefDescendant(table: SelfRefTable, ofId: string, candidateId: string, tx?: Tx): boolean {
+function isSelfRefDescendant(table: SelfRefTable, ofId: string, candidateId: string, tx?: Tx): boolean {
   const e = tx ?? db;
   const children = e.select({ id: table.id }).from(table).where(eq(table.parentId, ofId)).all() as { id: string }[];
   for (const child of children) {

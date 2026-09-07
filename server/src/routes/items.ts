@@ -1,86 +1,24 @@
 import { Router } from 'express';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, activityLog, notifications } from '../db/schema.js';
-import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
 import { resolvePositionByAnchorAndSide, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
-import { classifyPositionScope } from '../lib/itemPositionScope.js';
+import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
 
 const router = Router();
 
-// Attaches the computed, read-only `positionScope` field (Epic 3.2 §2) to an
-// item row before it goes out over the API — `"attached-siblings"`,
-// `"workflow"`, or `"none"`, telling a client what the item's `position` is
-// actually comparable against without it re-deriving
-// isAttached/parentId/workphaseId/workphase.isTerminal itself. Looks up the
-// item's current workphase fresh rather than trusting a caller-supplied
-// terminal flag, same "never trust a narrow view" posture as the rest of
-// this module.
-function withPositionScope<T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null }>(
-  item: T,
-  tx?: Tx,
-) {
-  const e = tx ?? db;
-  let workphaseIsTerminal: boolean | null = null;
-  if (item.workphaseId) {
-    const workphase = e.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, item.workphaseId)).get();
-    workphaseIsTerminal = workphase ? Boolean(workphase.isTerminal) : null;
-  }
-  const positionScope = classifyPositionScope(
-    { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: item.workphaseId },
-    workphaseIsTerminal,
-  );
-  return { ...item, positionScope };
-}
-
-// Epic 3.2's position-comparison scope for an item: parent-scoped
-// (parentId, isAttached) for an attached child — its true siblings — or
-// workflow-scoped for everything else. Position is a single value shared
-// across a whole workflow (docs/wiki/item-positioning), not per-workphase —
-// a workphase boundary alone was never a meaningful place to stop comparing
-// positions, since two items in different workphases of the same workflow
-// still need to compare cleanly (a merged column, a reindex, or a plain
-// cross-workphase append would otherwise risk colliding/misordering
-// against a workphase that merely happened to be empty). So every
-// detached/root item's scope is every workphaseId sharing its current
-// workphase's workflowId, not just that one workphase — always excluding
-// attached children, since they render nested under their parent rather
-// than as flat list members (mirrors the client's getWorkphaseItemsFrom
-// filter). `excludeId` keeps the subject's own (possibly just-updated) row
-// out of its own scope query.
-function positionScopeFor(
-  subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
-  excludeId?: string,
-  tx?: Tx,
-): SQL {
-  const base: SQL =
-    subject.isAttached && subject.parentId
-      ? and(eq(items.parentId, subject.parentId), eq(items.isAttached, 1))!
-      : and(
-          inArray(items.workphaseId, subject.workphaseId ? workphaseIdsInSameWorkflow(subject.workphaseId, tx) : []),
-          not(and(eq(items.isAttached, 1), isNotNull(items.parentId))!),
-        )!;
-  return excludeId ? and(base, not(eq(items.id, excludeId)))! : base;
-}
-
-// Every workphaseId belonging to the same workflow as `workphaseId` —
-// resolves a detached/root item's true comparison scope (above). Falls back
-// to just the given id if it doesn't resolve to a workflow (shouldn't
-// happen for a valid FK, but keeps this from silently scoping to nothing).
-function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
-  const e = tx ?? db;
-  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
-  if (!workphase) return [workphaseId];
-  return e
-    .select({ id: workphases.id })
-    .from(workphases)
-    .where(eq(workphases.workflowId, workphase.workflowId))
-    .all()
-    .map(w => w.id);
+// The `isTerminalOf` withPositionScope needs, for the single-item routes
+// below — a plain per-call lookup, since each only ever scopes one row. GET
+// /:id looks up its own item+children batch instead (see below), the same
+// N+1-avoiding shape boards.ts uses for a whole board's worth of items.
+function isTerminalOf(workphaseId: string): boolean | null {
+  const workphase = db.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  return workphase ? Boolean(workphase.isTerminal) : null;
 }
 
 function logActivity(
@@ -121,10 +59,24 @@ router.get('/:id', (req, res) => {
 
   const depth = computeDepth(req.params.id);
 
-  const children = db.select().from(items)
+  const rawChildren = db.select().from(items)
     .where(eq(items.parentId, req.params.id))
-    .all()
-    .map(child => ({ ...withPositionScope(child), depth: depth + 1 }));
+    .all();
+
+  // One batched lookup covering the item's own workphase and every child's,
+  // instead of a query per row (audit Finding #17's N+1) — also folds in
+  // the workflowId derivation below, which needs the same rows.
+  const workphaseIds = [item.workphaseId, ...rawChildren.map(c => c.workphaseId)]
+    .filter((id): id is string => id !== null);
+  const workphaseRows = workphaseIds.length
+    ? db.select({ id: workphases.id, isTerminal: workphases.isTerminal, workflowId: workphases.workflowId })
+        .from(workphases)
+        .where(inArray(workphases.id, workphaseIds))
+        .all()
+    : [];
+  const isTerminalOf = isTerminalLookup(workphaseRows);
+
+  const children = rawChildren.map(child => ({ ...withPositionScope(child, isTerminalOf), depth: depth + 1 }));
 
   const activity = db.select().from(activityLog)
     .where(eq(activityLog.itemId, req.params.id))
@@ -132,13 +84,11 @@ router.get('/:id', (req, res) => {
     .all();
 
   // Derive workflowId from the item's workphase for MCP tool convenience
-  let workflowId: string | null = null;
-  if (item.workphaseId) {
-    const workphase = db.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, item.workphaseId)).get();
-    workflowId = workphase?.workflowId ?? null;
-  }
+  const workflowId = item.workphaseId
+    ? workphaseRows.find(w => w.id === item.workphaseId)?.workflowId ?? null
+    : null;
 
-  res.json({ ...withPositionScope(item), workflowId, depth, children, activity });
+  res.json({ ...withPositionScope(item, isTerminalOf), workflowId, depth, children, activity });
 });
 
 // Create an item
@@ -249,7 +199,7 @@ router.post('/', (req, res) => {
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
-  res.status(201).json(withPositionScope(created!));
+  res.status(201).json(withPositionScope(created!, isTerminalOf));
 });
 
 // Update an item's details (not position/workphase directly — use move for that,
@@ -361,7 +311,7 @@ router.put('/:id', (req, res) => {
   });
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  res.json(withPositionScope(updated!));
+  res.json(withPositionScope(updated!, isTerminalOf));
 });
 
 // Move an item to a different workphase and/or reorder. Epic 3.2: prefers
@@ -392,6 +342,10 @@ router.patch('/:id/move', (req, res) => {
   }
   if (workphaseId !== undefined && workphaseId !== null && !workphaseExists(workphaseId)) {
     res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
+    return;
+  }
+  if (position !== undefined && (typeof position !== 'number' || !Number.isFinite(position))) {
+    res.status(400).json({ error: 'position must be a finite number' });
     return;
   }
 
@@ -502,7 +456,7 @@ router.patch('/:id/move', (req, res) => {
   if (!ok) return;
 
   const updated = db.select().from(items).where(eq(items.id, req.params.id)).get();
-  res.json(withPositionScope(updated!));
+  res.json(withPositionScope(updated!, isTerminalOf));
 });
 
 // Reorder items within a workphase

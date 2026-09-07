@@ -17,7 +17,7 @@ export type PositionedTable = SQLiteTable & {
 };
 
 // Used to bundle the query context so functions have fewer params to handoff
-export type PositionQueryContext = {
+type PositionQueryContext = {
   table: PositionedTable, 
   scopeWhere: SQL, 
   tx: Tx 
@@ -85,10 +85,18 @@ function getTargetPosition(targetId: string, context: PositionQueryContext): num
 
 function getLastPositionInScope(context: PositionQueryContext): number | null {
   const {table, scopeWhere, tx} = context;
+  // isNotNull guard (same reasoning as reindexPositionsInScope's): a scope
+  // can legitimately contain done items with a null position (positionScopeFor
+  // doesn't filter them out), and SQLite sorts NULLs first in ASC / last in
+  // DESC — so a real position always outranks a null one here *unless every
+  // row in scope happens to be null* (e.g. reopening the only non-empty
+  // workphase in a workflow), in which case an unguarded DESC query would
+  // return a null-positioned row instead of falling through to the "no rows"
+  // case below.
   const row = (tx
           .select({ position: table.position })
           .from(table)
-          .where(scopeWhere)
+          .where(and(scopeWhere, isNotNull(table.position)))
           .orderBy(desc(table.position))
           .limit(1)
           .get()
@@ -103,10 +111,11 @@ function getLastPositionInScope(context: PositionQueryContext): number | null {
 
 function getFirstIdInScope(context: PositionQueryContext): string | null {
   const {table, scopeWhere, tx} = context;
+  // Same isNotNull guard as getLastPositionInScope above, mirrored for ASC.
   const row = (tx
           .select({ id: table.id })
           .from(table)
-          .where(scopeWhere)
+          .where(and(scopeWhere, isNotNull(table.position)))
           .orderBy(asc(table.position))
           .limit(1)
           .get()

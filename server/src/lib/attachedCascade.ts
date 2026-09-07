@@ -5,7 +5,7 @@ import { walkItemDescendants } from './itemTree.js';
 
 // BFS over an item's children, only descending through attached children —
 // a detached child stops its branch (it doesn't move, so neither do its own children).
-export function getAttachedDescendantIds(rootId: string, tx?: Tx): string[] {
+function getAttachedDescendantIds(rootId: string, tx?: Tx): string[] {
   return walkItemDescendants(rootId, { predicate: (child) => Boolean(child.isAttached), tx });
 }
 

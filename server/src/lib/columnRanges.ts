@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
+import { buildRankMap } from './workphaseOrder.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ColumnRow = typeof columns.$inferSelect;
@@ -12,25 +13,6 @@ type ColumnRange = { startWorkphaseId: string; endWorkphaseId: string };
 // workphases.ts so a board's columns can express a contiguous range of
 // workphases without those routes importing from one another.
 // ============================================================
-
-// Maps workphase id -> ordinal rank among workphases sorted by position.
-// Ranks (not raw float positions) sidestep float-precision edge cases.
-export function buildRankMap(orderedWorkphases: Workphase[]): Map<string, number> {
-  const map = new Map<string, number>();
-  orderedWorkphases.forEach((w, i) => map.set(w.id, i));
-  return map;
-}
-
-// Fetches a workflow's workphases ordered by position plus the rank map
-// derived from them — the query + buildRankMap pairing every route needing
-// column-range math repeats.
-export function getOrderedWorkphases(workflowId: string): { workphases: Workphase[]; rankMap: Map<string, number> } {
-  const ordered = db.select().from(workphases)
-    .where(eq(workphases.workflowId, workflowId))
-    .orderBy(workphases.position)
-    .all();
-  return { workphases: ordered, rankMap: buildRankMap(ordered) };
-}
 
 // [lowRank, highRank] for a range. Uses min/max so an inverted (broken) range
 // still resolves to a coverage set instead of nothing.
@@ -199,4 +181,41 @@ export function shrinkColumnsForDeletedWorkphase(
   }
 
   return { shrunkColumns, deletedColumns };
+}
+
+// Read-only check for `PUT /workphases/:id` flipping `isTerminal`: simulates
+// the flip against every column covering `flippedWorkphaseId` and returns
+// the ones that would end up spanning both a terminal and a non-terminal
+// workphase — the same invariant `validateColumnRange` enforces at column
+// create/update time (audit Finding #6), just checked from the workphase
+// side instead. Call with plain `db` *before* opening a transaction (nothing
+// has been written yet, so a conflict can still just 400) — the caller only
+// commits the flip once this returns empty.
+export function findColumnsMixingTerminalAfterFlip(
+  client: DbClient,
+  workflowId: string,
+  flippedWorkphaseId: string,
+  newIsTerminal: boolean,
+): ColumnRow[] {
+  const workflowBoards = client.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
+  if (workflowBoards.length === 0) return [];
+
+  const boardIds = workflowBoards.map(b => b.id);
+  const allColumns = client.select().from(columns).where(inArray(columns.boardId, boardIds)).all();
+  if (allColumns.length === 0) return [];
+
+  const orderedWorkphases = client.select().from(workphases)
+    .where(eq(workphases.workflowId, workflowId))
+    .orderBy(workphases.position)
+    .all()
+    .map(w => (w.id === flippedWorkphaseId ? { ...w, isTerminal: newIsTerminal ? 1 : 0 } : w));
+  const rankMap = buildRankMap(orderedWorkphases);
+
+  return allColumns.filter(col => {
+    const covered = getCoveredWorkphases(col, orderedWorkphases, rankMap);
+    if (!covered.some(w => w.id === flippedWorkphaseId)) return false;
+    const hasTerminal = covered.some(w => w.isTerminal);
+    const hasNonTerminal = covered.some(w => !w.isTerminal);
+    return hasTerminal && hasNonTerminal;
+  });
 }

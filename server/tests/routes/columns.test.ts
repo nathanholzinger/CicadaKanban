@@ -3,13 +3,13 @@ import request from 'supertest';
 import { app } from '../../src/index.js';
 import { createProject, createWorkflow, createWorkphase, createColumn, createItem } from '../fixtures.js';
 import {
-  buildRankMap,
   computeColumnRange,
   isColumnBroken,
   getCoveredWorkphases,
   columnsOverlap,
   computeUnsorted,
 } from '../../src/lib/columnRanges.js';
+import { buildRankMap } from '../../src/lib/workphaseOrder.js';
 
 // ── Pure helpers (no DB) ─────────────────────────────────────────────────────
 

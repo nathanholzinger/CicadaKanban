@@ -7,7 +7,7 @@ import { db, type Tx } from '../db/index.js';
 // 404 with `{ error }` and returns undefined so the caller can bail out with
 // a single `if (!row) return;` instead of repeating the same
 // select-then-check-then-respond block at every route.
-export function getOrNotFound<T>(row: T | undefined, res: Response, error: string): T | undefined {
+function getOrNotFound<T>(row: T | undefined, res: Response, error: string): T | undefined {
   if (!row) {
     res.status(404).json({ error });
     return undefined;

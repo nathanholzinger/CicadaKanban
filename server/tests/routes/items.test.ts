@@ -166,6 +166,21 @@ describe('PATCH /api/items/:id/move', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 for a non-numeric or non-finite raw position (regression: was written unvalidated)', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id });
+    await request(app).patch(`/api/items/${item.id}/move`).send({ position: 5 });
+
+    const nonNumeric = await request(app).patch(`/api/items/${item.id}/move`).send({ position: 'later' });
+    expect(nonNumeric.status).toBe(400);
+
+    const notFinite = await request(app).patch(`/api/items/${item.id}/move`).send({ position: Infinity });
+    expect(notFinite.status).toBe(400);
+
+    const unchanged = await request(app).get(`/api/items/${item.id}`);
+    expect(unchanged.body.position).toBe(5);
+  });
+
   it('a position-only move does not add a new status_change entry beyond the one logged at creation', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
@@ -468,6 +483,27 @@ describe('Epic 3.2 — position resolution', () => {
     const res = await request(app).get(`/api/items/${child.id}`);
     expect(res.status).toBe(200);
     expect(res.body.positionScope).toBe('attached-siblings');
+  });
+
+  // Regression coverage for audit Finding #17: GET /:id's children array used
+  // to compute positionScope with a query per child; exercise two distinct
+  // workphases across parent + children in one response to catch a batching
+  // regression that only shows up with more than one workphaseId involved.
+  it('GET attaches positionScope to the item and to every child in its children array', async () => {
+    const { project, todo, done } = await setupTwoPhases();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const attachedChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached Child' });
+    const detachedChild = await createItem({
+      projectId: project.id, parentId: parent.id, workphaseId: done.id, isAttached: false, title: 'Detached Child',
+    });
+
+    const res = await request(app).get(`/api/items/${parent.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.positionScope).toBe('workflow');
+
+    const children = res.body.children as Array<{ id: string; positionScope: string }>;
+    expect(children.find(c => c.id === attachedChild.id)?.positionScope).toBe('attached-siblings');
+    expect(children.find(c => c.id === detachedChild.id)?.positionScope).toBe('none');
   });
 
   it('GET returns positionScope = "workflow" for a detached item in a non-terminal workphase (TC-2.14)', async () => {

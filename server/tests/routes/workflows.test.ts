@@ -50,6 +50,21 @@ describe('GET /api/workflows/:id', () => {
     expect(items.find(i => i.id === root.id)?.depth).toBe(0);
     expect(items.find(i => i.id === child.id)?.depth).toBe(1);
   });
+
+  // Regression coverage for audit Finding #17: this was the one read path
+  // with no positionScope attached at all.
+  it('attaches positionScope to every item, matching GET /api/items/:id for the same rows', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const workphase = await createWorkphase(workflow.id);
+    const root = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'Root' });
+    const child = await createItem({ projectId: project.id, workphaseId: workphase.id, parentId: root.id, title: 'Child' });
+
+    const res = await request(app).get(`/api/workflows/${workflow.id}`);
+    const items = res.body.items as Array<{ id: string; positionScope: string }>;
+    expect(items.find(i => i.id === root.id)?.positionScope).toBe('workflow');
+    expect(items.find(i => i.id === child.id)?.positionScope).toBe('attached-siblings');
+  });
 });
 
 describe('POST /api/workflows', () => {
