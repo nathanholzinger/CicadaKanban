@@ -212,6 +212,64 @@ whatever Epic 5 does with the table regardless of this decision.
 
 ---
 
+## OPEN — pick one `positionResolver` entry-point shape before tags implement it
+
+Captured 2026-09-06. **Must be decided before Epic 5 wires labels/tags into
+`positionResolver`** — tags will be a third real consumer (after items and
+projects), and picking the public API shape after two more callers exist is
+strictly more expensive than picking it now with two.
+
+`server/src/lib/positionResolver.ts` currently exposes two entry points for
+"where should this row go":
+
+1. **`resolvePositionByAnchorAndSide(table, anchorId, side, scopeWhere, tx)`**
+   — anchor + before/after. **This is the only one any real caller uses
+   today** (`items.ts:426`, `projects.ts:233`).
+2. **`resolvePositionByTarget(table, TargetOptions, scopeWhere, tx)`** — a
+   `{prevId} | {nextId} | {edge: 'first'|'last'}` discriminated union.
+   Exported, but **called by no route today** — `resolveAppendPosition` and
+   the internal prepend/append helpers bypass it entirely. The `edge` branch
+   specifically has no caller and no test.
+
+There's also a stale comment on the `Side` type (positionResolver.ts:12-13)
+pointing the opposite direction from where this note leans: `// TODO:
+depreciate anchorId + side in favor of TargetOptions`. Whatever gets decided
+here, that comment needs to be updated or removed rather than left standing
+as a contradicted TODO.
+
+**The key finding: making `anchorId` optional on the anchor+side entry point
+makes `TargetOptions` a strict, lossless subset of it** — every
+`TargetOptions` case maps 1:1 onto an anchor+side call with nothing left
+over:
+- `{prevId: x}` ⟺ anchor `x`, side `'after'`
+- `{nextId: x}` ⟺ anchor `x`, side `'before'`
+- `{edge: 'first'}` ⟺ no anchor, side `'before'`
+- `{edge: 'last'}` ⟺ no anchor, side `'after'`
+
+That last pair is the real observation: `Edge = 'first' | 'last'` and
+`Side = 'before' | 'after'` are the same two-value concept under different
+names — `edge: 'first'` and `side: 'before'` with no anchor already resolve
+to the identical internal call (the 0.0-floor prepend). `TargetOptions`'s
+discriminated-union type safety (can't pass `prevId` + `edge` together)
+also stops mattering once anchor+side is down to two params — there's no
+combinatorial mistake left to prevent.
+
+**Leaning:** consolidate onto anchor+side with `anchorId` made optional
+(absent `anchorId` + `side: 'before'`/`'after'` means prepend-first /
+append-last, reusing `resolvePrependAsFirst`/`resolveAppendAsLast`, which
+already implement exactly that). Delete `TargetOptions`, `Edge`, and the
+public `resolvePositionByTarget` export — fold its dispatch into
+`resolvePositionByAnchorAndSide` or keep it as a private helper if still
+useful internally. This matches 100% of current real usage, removes an
+untested code path, and is provably lossless per the bijection above.
+
+**Status: not yet decided** — leaning stated above, not committed. Whoever
+picks this up should make the call and update this section (or delete it and
+just make the change) rather than let it sit open past the point tags need
+it.
+
+---
+
 ## Closed: `client/src/api.ts` file-split watch (audit finding #18) — done, not by Epic 5 after all
 
 This used to be a "watch for Epic 5" note (original text kept below for

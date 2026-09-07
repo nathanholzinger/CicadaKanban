@@ -9,7 +9,8 @@ const SOFT_MAX_POSITION = 1000; // We will reindex if a position value exceeds t
 const MAX_OVER_POSITION = 100; // If there are more rows than the soft max then max will be caluclated as (rows + MAX_OVER)
 
 
-// TODO: depreciate anchorId + side in favor of TargetOptions
+// TODO: chose one entry shape anchorId+side or targetOptions and depricate the other one
+
 // for defining anchorId + side.
 export type Side = 'before' | 'after';
 
