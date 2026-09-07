@@ -1,13 +1,11 @@
 import type { Item, ItemDetail } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchItem(id: string): Promise<ItemDetail> {
-  const res = await fetch(`${API}/items/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch item');
-  return res.json();
+export function fetchItem(id: string): Promise<ItemDetail> {
+  return apiJson(`/items/${id}`, undefined, 'Failed to fetch item');
 }
 
-export async function createItem(data: {
+export function createItem(data: {
   type?: string | null;
   title: string;
   projectId?: string;
@@ -18,30 +16,15 @@ export async function createItem(data: {
   agentId?: string;
   isAttached?: boolean;
 }): Promise<Item> {
-  const res = await fetch(`${API}/items`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create item');
-  return res.json();
+  return apiJson('/items', { method: 'POST', body: data }, 'Failed to create item');
 }
 
 export type UpdateItemInput = Partial<Pick<Item, 'title' | 'description' | 'assigneeType' | 'agentId' | 'parentId'>> & {
   isAttached?: boolean;
 };
 
-export async function updateItem(id: string, data: UpdateItemInput): Promise<Item> {
-  const res = await fetch(`${API}/items/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Failed to update item');
-  }
-  return res.json();
+export function updateItem(id: string, data: UpdateItemInput): Promise<Item> {
+  return apiJson(`/items/${id}`, { method: 'PUT', body: data }, 'Failed to update item');
 }
 
 // Epic 3.2: prefers {anchorId, side} (resolved server-side against true
@@ -59,29 +42,14 @@ export interface MoveItemInput {
   scopeWorkphaseIds?: string[];
 }
 
-export async function moveItem(id: string, data: MoveItemInput): Promise<Item> {
-  const res = await fetch(`${API}/items/${id}/move`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Failed to move item');
-  }
-  return res.json();
+export function moveItem(id: string, data: MoveItemInput): Promise<Item> {
+  return apiJson(`/items/${id}/move`, { method: 'PATCH', body: data }, 'Failed to move item');
 }
 
-export async function reorderItems(itemOrders: { id: string; position: number }[]): Promise<void> {
-  const res = await fetch(`${API}/items/reorder`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ itemOrders }),
-  });
-  if (!res.ok) throw new Error('Failed to reorder items');
+export function reorderItems(itemOrders: { id: string; position: number }[]): Promise<void> {
+  return apiVoid('/items/reorder', { method: 'PATCH', body: { itemOrders } }, 'Failed to reorder items');
 }
 
-export async function deleteItem(id: string): Promise<void> {
-  const res = await fetch(`${API}/items/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete item');
+export function deleteItem(id: string): Promise<void> {
+  return apiVoid(`/items/${id}`, { method: 'DELETE' }, 'Failed to delete item');
 }

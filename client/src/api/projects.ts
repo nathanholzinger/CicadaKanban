@@ -1,20 +1,12 @@
 import type { Project } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchProjects(): Promise<Project[]> {
-  const res = await fetch(`${API}/projects`);
-  if (!res.ok) throw new Error('Failed to fetch projects');
-  return res.json();
+export function fetchProjects(): Promise<Project[]> {
+  return apiJson('/projects', undefined, 'Failed to fetch projects');
 }
 
-export async function createProject(data: { name: string; description?: string; parentId?: string }): Promise<Project> {
-  const res = await fetch(`${API}/projects`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create project');
-  return res.json();
+export function createProject(data: { name: string; description?: string; parentId?: string }): Promise<Project> {
+  return apiJson('/projects', { method: 'POST', body: data }, 'Failed to create project');
 }
 
 export type UpdateProjectInput = {
@@ -23,19 +15,12 @@ export type UpdateProjectInput = {
   parentId?: string | null;
 };
 
-export async function updateProject(id: string, data: UpdateProjectInput): Promise<Project> {
-  const res = await fetch(`${API}/projects/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to update project');
-  return res.json();
+export function updateProject(id: string, data: UpdateProjectInput): Promise<Project> {
+  return apiJson(`/projects/${id}`, { method: 'PUT', body: data }, 'Failed to update project');
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  const res = await fetch(`${API}/projects/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete project');
+export function deleteProject(id: string): Promise<void> {
+  return apiVoid(`/projects/${id}`, { method: 'DELETE' }, 'Failed to delete project');
 }
 
 export type MoveProjectInput = {
@@ -49,12 +34,6 @@ export type MoveProjectInput = {
 // current sibling data (see positionResolver.ts); prevId/nextId just name
 // this project's resulting predecessor/successor, with both omitted meaning
 // "append to the end," never "the scope is empty."
-export async function moveProject(id: string, data: MoveProjectInput): Promise<Project> {
-  const res = await fetch(`${API}/projects/${id}/move`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to move project');
-  return res.json();
+export function moveProject(id: string, data: MoveProjectInput): Promise<Project> {
+  return apiJson(`/projects/${id}/move`, { method: 'PATCH', body: data }, 'Failed to move project');
 }

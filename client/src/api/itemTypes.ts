@@ -1,36 +1,18 @@
 import type { ItemType } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchItemTypes(): Promise<ItemType[]> {
-  const res = await fetch(`${API}/item-types`);
-  if (!res.ok) throw new Error('Failed to fetch item types');
-  return res.json();
+export function fetchItemTypes(): Promise<ItemType[]> {
+  return apiJson('/item-types', undefined, 'Failed to fetch item types');
 }
 
-export async function createItemType(data: { name: string; color?: string }): Promise<ItemType> {
-  const res = await fetch(`${API}/item-types`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create item type');
-  return res.json();
+export function createItemType(data: { name: string; color?: string }): Promise<ItemType> {
+  return apiJson('/item-types', { method: 'POST', body: data }, 'Failed to create item type');
 }
 
-export async function updateItemType(id: string, data: { name?: string; color?: string | null }): Promise<ItemType> {
-  const res = await fetch(`${API}/item-types/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to update item type');
-  return res.json();
+export function updateItemType(id: string, data: { name?: string; color?: string | null }): Promise<ItemType> {
+  return apiJson(`/item-types/${id}`, { method: 'PUT', body: data }, 'Failed to update item type');
 }
 
-export async function deleteItemType(id: string): Promise<void> {
-  const res = await fetch(`${API}/item-types/${id}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Failed to delete item type');
-  }
+export function deleteItemType(id: string): Promise<void> {
+  return apiVoid(`/item-types/${id}`, { method: 'DELETE' }, 'Failed to delete item type');
 }

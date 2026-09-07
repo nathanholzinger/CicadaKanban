@@ -1,13 +1,11 @@
 import type { Attachment } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchAttachments(itemId: string): Promise<Attachment[]> {
-  const res = await fetch(`${API}/attachments/item/${itemId}`);
-  if (!res.ok) throw new Error('Failed to fetch attachments');
-  return res.json();
+export function fetchAttachments(itemId: string): Promise<Attachment[]> {
+  return apiJson(`/attachments/item/${itemId}`, undefined, 'Failed to fetch attachments');
 }
 
-export async function createAttachment(
+export function createAttachment(
   itemId: string,
   data: {
     type: string;
@@ -16,16 +14,9 @@ export async function createAttachment(
     filePath?: string;
   },
 ): Promise<Attachment> {
-  const res = await fetch(`${API}/attachments/item/${itemId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create attachment');
-  return res.json();
+  return apiJson(`/attachments/item/${itemId}`, { method: 'POST', body: data }, 'Failed to create attachment');
 }
 
-export async function deleteAttachment(id: string): Promise<void> {
-  const res = await fetch(`${API}/attachments/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete attachment');
+export function deleteAttachment(id: string): Promise<void> {
+  return apiVoid(`/attachments/${id}`, { method: 'DELETE' }, 'Failed to delete attachment');
 }

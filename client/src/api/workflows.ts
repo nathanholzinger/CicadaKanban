@@ -1,16 +1,12 @@
 import type { Workflow, WorkflowWithDetails } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchWorkflows(): Promise<Workflow[]> {
-  const res = await fetch(`${API}/workflows`);
-  if (!res.ok) throw new Error('Failed to fetch workflows');
-  return res.json();
+export function fetchWorkflows(): Promise<Workflow[]> {
+  return apiJson('/workflows', undefined, 'Failed to fetch workflows');
 }
 
-export async function fetchWorkflow(id: string): Promise<WorkflowWithDetails> {
-  const res = await fetch(`${API}/workflows/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch workflow');
-  return res.json();
+export function fetchWorkflow(id: string): Promise<WorkflowWithDetails> {
+  return apiJson(`/workflows/${id}`, undefined, 'Failed to fetch workflow');
 }
 
 export type CreateWorkflowInput = {
@@ -20,17 +16,10 @@ export type CreateWorkflowInput = {
   sourceWorkflowId?: string;
 };
 
-export async function createWorkflow(data: CreateWorkflowInput): Promise<WorkflowWithDetails> {
-  const res = await fetch(`${API}/workflows`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Failed to create workflow');
-  return res.json();
+export function createWorkflow(data: CreateWorkflowInput): Promise<WorkflowWithDetails> {
+  return apiJson('/workflows', { method: 'POST', body: data }, 'Failed to create workflow');
 }
 
-export async function deleteWorkflow(id: string): Promise<void> {
-  const res = await fetch(`${API}/workflows/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete workflow');
+export function deleteWorkflow(id: string): Promise<void> {
+  return apiVoid(`/workflows/${id}`, { method: 'DELETE' }, 'Failed to delete workflow');
 }

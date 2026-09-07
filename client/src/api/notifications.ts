@@ -1,18 +1,14 @@
 import type { Notification } from '../types';
-import { API } from './shared';
+import { apiJson, apiVoid } from './shared';
 
-export async function fetchNotifications(): Promise<Notification[]> {
-  const res = await fetch(`${API}/notifications`);
-  if (!res.ok) throw new Error('Failed to fetch notifications');
-  return res.json();
+export function fetchNotifications(): Promise<Notification[]> {
+  return apiJson('/notifications', undefined, 'Failed to fetch notifications');
 }
 
-export async function markNotificationRead(id: string): Promise<void> {
-  const res = await fetch(`${API}/notifications/${id}/read`, { method: 'PATCH' });
-  if (!res.ok) throw new Error('Failed to mark notification read');
+export function markNotificationRead(id: string): Promise<void> {
+  return apiVoid(`/notifications/${id}/read`, { method: 'PATCH' }, 'Failed to mark notification read');
 }
 
-export async function markAllNotificationsRead(): Promise<void> {
-  const res = await fetch(`${API}/notifications/read-all`, { method: 'PATCH' });
-  if (!res.ok) throw new Error('Failed to mark all notifications read');
+export function markAllNotificationsRead(): Promise<void> {
+  return apiVoid('/notifications/read-all', { method: 'PATCH' }, 'Failed to mark all notifications read');
 }
