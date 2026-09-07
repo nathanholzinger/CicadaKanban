@@ -1,7 +1,6 @@
 import { test, expect } from '../fixtures';
 import type { Page } from '@playwright/test';
-
-const API = 'http://localhost:3002/api';
+import { API } from '../helpers/api';
 
 // ─────────────────────────────────────────────────────────────────
 // Core board interaction (the original .fixme tests, now passing)

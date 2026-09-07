@@ -1,6 +1,5 @@
 import type { APIRequestContext } from '@playwright/test';
-
-const API = 'http://localhost:3002/api';
+import { API } from './api';
 
 export type ScenarioItem = { id: string; title: string; workphaseId: string | null; position: number | null; createdAt: number };
 export type ScenarioWorkphase = { id: string; name: string };

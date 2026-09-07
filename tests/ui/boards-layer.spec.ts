@@ -1,37 +1,13 @@
 import { test, expect } from '../fixtures';
+import { API } from '../helpers/api';
+import { seedBareWorkflow, addWorkphases, seedTemplatedWorkflow } from '../helpers/seed';
 
-const API = 'http://localhost:3002/api';
-
-type Workphase = { id: string; name: string };
-
-async function createBareWorkflow(request: import('@playwright/test').APIRequestContext, projectName: string) {
-  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
-  const workflow = await (await request.post(`${API}/workflows`, {
-    data: { name: projectName, projectId: project.id },
-  })).json();
-  return { project, workflow };
-}
-
-async function addWorkphases(request: import('@playwright/test').APIRequestContext, workflowId: string, names: string[]) {
-  const phases: Workphase[] = [];
-  for (const name of names) {
-    const phase = await (await request.post(`${API}/workphases`, { data: { workflowId, name } })).json();
-    phases.push(phase);
-  }
-  return phases;
-}
-
-// Creates a workflow from the "quick" template (Todo/Done) so its workphases
-// exist at workflow-creation time — the auto-bootstrapped default board then
-// gets real 1:1 columns from the start, rather than an all-Unsorted board.
-async function createTemplatedWorkflow(request: import('@playwright/test').APIRequestContext, projectName: string) {
-  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
-  const templates = await (await request.get(`${API}/workflow-templates`)).json();
-  const quick = templates.find((t: { name: string }) => t.name === 'quick');
-  const workflow = await (await request.post(`${API}/workflows`, {
-    data: { name: projectName, projectId: project.id, templateId: quick.id },
-  })).json();
-  return { project, workflow };
+// This file's templated workflows use "quick" (Todo/Done) rather than the
+// seed helper's "flow" default, so its workphases exist at workflow-creation
+// time — the auto-bootstrapped default board then gets real 1:1 columns from
+// the start, rather than an all-Unsorted board.
+function createTemplatedWorkflow(request: import('@playwright/test').APIRequestContext, projectName: string) {
+  return seedTemplatedWorkflow(request, projectName, 'quick');
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -44,7 +20,7 @@ test.describe('multi-board management', () => {
   });
 
   test('Delete board is hidden when it is the only board on the workflow', async ({ page, request, projectSidebar }) => {
-    await createBareWorkflow(request, 'Single Board Project');
+    await seedBareWorkflow(request, 'Single Board Project');
     await page.goto('/');
     await projectSidebar.select('Single Board Project');
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
@@ -77,7 +53,7 @@ test.describe('multi-board management', () => {
   });
 
   test('renames the active board', async ({ page, request, projectSidebar }) => {
-    await createBareWorkflow(request, 'Toolbar Actions Project');
+    await seedBareWorkflow(request, 'Toolbar Actions Project');
     await page.goto('/');
     await projectSidebar.select('Toolbar Actions Project');
     const main = page.locator('main');
@@ -103,7 +79,7 @@ test.describe('column range configuration', () => {
   });
 
   test('creates a merged column spanning two workphases, moving their items out of Unsorted', async ({ page, request, projectSidebar }) => {
-    const { project, workflow } = await createBareWorkflow(request, 'Merged Column Project');
+    const { project, workflow } = await seedBareWorkflow(request, 'Merged Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Review', 'Done']);
     await request.post(`${API}/items`, { data: { title: 'Merge target item', projectId: project.id, workphaseId: todo.id } });
 
@@ -130,7 +106,7 @@ test.describe('column range configuration', () => {
   });
 
   test('creates an expanded column and each workphase renders as its own sub-row', async ({ page, request, projectSidebar }) => {
-    const { project, workflow } = await createBareWorkflow(request, 'Expanded Column Project');
+    const { project, workflow } = await seedBareWorkflow(request, 'Expanded Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     await request.post(`${API}/items`, { data: { title: 'Todo item', projectId: project.id, workphaseId: todo.id } });
     await request.post(`${API}/items`, { data: { title: 'In Progress item', projectId: project.id, workphaseId: inProgress.id } });
@@ -154,7 +130,7 @@ test.describe('column range configuration', () => {
   });
 
   test('rejects an overlapping range with an inline error', async ({ page, request, projectSidebar }) => {
-    const { workflow } = await createBareWorkflow(request, 'Overlap Reject Project');
+    const { workflow } = await seedBareWorkflow(request, 'Overlap Reject Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     await request.post(`${API}/columns`, {
       data: { boardId: (await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json())[0].id,
@@ -185,7 +161,7 @@ test.describe('broken column detection', () => {
   });
 
   test('flags a column as broken after reordering inverts its range', async ({ page, request, projectSidebar }) => {
-    const { workflow } = await createBareWorkflow(request, 'Broken Column Project');
+    const { workflow } = await seedBareWorkflow(request, 'Broken Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     await request.post(`${API}/columns`, {
@@ -218,7 +194,7 @@ test.describe('workphase delete notice', () => {
   });
 
   test('reports resized and removed columns after deleting workphases', async ({ page, request, projectSidebar }) => {
-    const { workflow } = await createBareWorkflow(request, 'Workphase Delete Project');
+    const { workflow } = await seedBareWorkflow(request, 'Workphase Delete Project');
     const [todo, inProgress, done] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Done']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     await request.post(`${API}/columns`, {
@@ -280,7 +256,7 @@ test.describe('board and column lifecycle', () => {
   });
 
   test("editing a column's range via the modal pulls a workphase out of Unsorted", async ({ page, request, projectSidebar }) => {
-    const { project, workflow } = await createBareWorkflow(request, 'Column Edit Project');
+    const { project, workflow } = await seedBareWorkflow(request, 'Column Edit Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     await request.post(`${API}/columns`, {
@@ -313,7 +289,7 @@ test.describe('board and column lifecycle', () => {
   });
 
   test('deleting a column returns its workphases to Unsorted with their items', async ({ page, request, projectSidebar }) => {
-    const { project, workflow } = await createBareWorkflow(request, 'Column Delete Project');
+    const { project, workflow } = await seedBareWorkflow(request, 'Column Delete Project');
     const [todo] = await addWorkphases(request, workflow.id, ['Todo']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     await request.post(`${API}/columns`, {
@@ -342,7 +318,7 @@ test.describe('board and column lifecycle', () => {
   });
 
   test('a column reorder via the API is reflected in the rendered order', async ({ page, request, projectSidebar }) => {
-    const { workflow } = await createBareWorkflow(request, 'Column Reorder UI Project');
+    const { workflow } = await seedBareWorkflow(request, 'Column Reorder UI Project');
     const [todo, done] = await addWorkphases(request, workflow.id, ['Todo', 'Done']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     const colA = await (await request.post(`${API}/columns`, {

@@ -1,24 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
+import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
 
 test.beforeAll(async () => {
   await resetAndSeedDb();
 });
 
-async function createFlowWorkflow(request: import('@playwright/test').APIRequestContext, name: string) {
-  const project = await (await request.post(`${BASE}/projects`, { data: { name } })).json();
-  const templates = await (await request.get(`${BASE}/workflow-templates`)).json();
-  const flow = templates.find((t: { name: string }) => t.name === 'flow');
-  const workflow = await (await request.post(`${BASE}/workflows`, {
-    data: { name, projectId: project.id, templateId: flow.id },
-  })).json();
-  return { project, workflow };
-}
-
 test('creating a workflow bootstraps one board with 1:1 merged columns', async ({ request }) => {
-  const { workflow } = await createFlowWorkflow(request, 'Board Bootstrap Project');
+  const { workflow } = await seedTemplatedWorkflow(request, 'Board Bootstrap Project');
 
   const res = await request.get(`${BASE}/boards?workflowId=${workflow.id}`);
   expect(res.ok()).toBeTruthy();
@@ -32,8 +22,8 @@ test('creating a workflow bootstraps one board with 1:1 merged columns', async (
 });
 
 test('GET /api/boards/:id returns the resolved column shape with items and unsorted state', async ({ request }) => {
-  const { project, workflow } = await createFlowWorkflow(request, 'Board Shape Project');
-  const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
+  const { project, workflow } = await seedTemplatedWorkflow(request, 'Board Shape Project');
+  const [todo] = pickWorkphases(workflow, 'Todo');
 
   const item = await (await request.post(`${BASE}/items`, {
     data: { title: 'Shape Item', projectId: project.id, workphaseId: todo.id },
@@ -52,7 +42,7 @@ test('GET /api/boards/:id returns the resolved column shape with items and unsor
 });
 
 test('deleting the last remaining board is rejected; a non-last board deletes cleanly', async ({ request }) => {
-  const { workflow } = await createFlowWorkflow(request, 'Board Delete Project');
+  const { workflow } = await seedTemplatedWorkflow(request, 'Board Delete Project');
   const boards = await (await request.get(`${BASE}/boards?workflowId=${workflow.id}`)).json();
 
   const last = await request.delete(`${BASE}/boards/${boards[0].id}`);
@@ -69,7 +59,7 @@ test('deleting the last remaining board is rejected; a non-last board deletes cl
 });
 
 test('PUT /api/boards/:id persists rename and the showAttachedChildren toggle', async ({ request }) => {
-  const { workflow } = await createFlowWorkflow(request, 'Board Update Project');
+  const { workflow } = await seedTemplatedWorkflow(request, 'Board Update Project');
   const boards = await (await request.get(`${BASE}/boards?workflowId=${workflow.id}`)).json();
   expect(boards[0].showAttachedChildren).toBe(1); // migration 0007 default
 

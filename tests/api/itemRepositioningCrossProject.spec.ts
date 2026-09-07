@@ -7,8 +7,7 @@ import {
   fullOrder,
   type CrossProjectRepositioningScenario,
 } from '../helpers/itemRepositioningScenario';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
 
 // The same 8-case structure as tests/api/itemRepositioning.spec.ts, this
 // time scoped by PROJECT rather than workphase: items A/C/E belong to

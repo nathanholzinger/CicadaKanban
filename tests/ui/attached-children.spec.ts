@@ -1,17 +1,6 @@
 import { test, expect } from '../fixtures';
-
-const API = 'http://localhost:3002/api';
-
-async function createTemplatedWorkflow(request: import('@playwright/test').APIRequestContext, projectName: string) {
-  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
-  const templates = await (await request.get(`${API}/workflow-templates`)).json();
-  const flow = templates.find((t: { name: string }) => t.name === 'flow');
-  const workflow = await (await request.post(`${API}/workflows`, {
-    data: { name: projectName, projectId: project.id, templateId: flow.id },
-  })).json();
-  const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
-  return { project, workflow, todo };
-}
+import { API } from '../helpers/api';
+import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
 
 test.describe('attached children on the board', () => {
   test.beforeAll(async ({ request }) => {
@@ -19,7 +8,8 @@ test.describe('attached children on the board', () => {
   });
 
   test('shows attached children nested under the parent card, and the toggle collapses them', async ({ page, request, projectSidebar }) => {
-    const { project, todo } = await createTemplatedWorkflow(request, 'Nested Children Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Nested Children Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Parent Card', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -40,7 +30,8 @@ test.describe('attached children on the board', () => {
   });
 
   test('a detached child renders as its own top-level card, not nested', async ({ page, request, projectSidebar }) => {
-    const { project, todo } = await createTemplatedWorkflow(request, 'Detached Sibling Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Detached Sibling Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Parent With Detached', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -62,7 +53,8 @@ test.describe('attached children on the board', () => {
     // attach semantics with a direct move (as a stale historical row or an
     // out-of-band API/MCP call could), then delete that workphase so only the
     // child's own reference goes invalid (null), leaving the parent's intact.
-    const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Invalid Workphase Child Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Invalid Workphase Child Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Diverged Parent', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -98,7 +90,8 @@ test.describe('attached children on the board', () => {
   });
 
   test('unchecking "Show attached children by default" collapses cards on the next load', async ({ page, request, projectSidebar }) => {
-    const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Board Toggle Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Board Toggle Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Toggle Default Parent', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -138,7 +131,8 @@ test.describe('attached children on the board', () => {
   });
 
   test('the child badge counts only attached children and nesting recurses through grandchildren', async ({ page, request, projectSidebar }) => {
-    const { project, todo } = await createTemplatedWorkflow(request, 'Badge Count Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Badge Count Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Badge Parent', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -165,8 +159,8 @@ test.describe('attached children on the board', () => {
   });
 
   test('dragging a parent card across columns cascades its attached child (audit test-coverage-gap #2)', async ({ page, request, projectSidebar }) => {
-    const { project, workflow, todo } = await createTemplatedWorkflow(request, 'Drag Cascade Project');
-    const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Drag Cascade Project');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Draggable Parent', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -222,8 +216,8 @@ test.describe('reparent and attach/detach controls', () => {
   });
 
   test('detaching a child via the detail panel keeps it in place when the parent moves', async ({ page, request, projectSidebar }) => {
-    const { project, todo, workflow } = await createTemplatedWorkflow(request, 'Detach Control Project');
-    const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Detach Control Project');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Movable Parent', projectId: project.id, workphaseId: todo.id },
     })).json();
@@ -263,7 +257,8 @@ test.describe('reparent and attach/detach controls', () => {
   });
 
   test('the Parent dropdown excludes descendants, and reparenting nests the item under its new parent', async ({ page, request, projectSidebar }) => {
-    const { project, todo } = await createTemplatedWorkflow(request, 'Reparent Control Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Reparent Control Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const itemA = await (await request.post(`${API}/items`, { data: { title: 'Item A', projectId: project.id, workphaseId: todo.id } })).json();
     const itemB = await (await request.post(`${API}/items`, { data: { title: 'Item B', projectId: project.id, workphaseId: todo.id } })).json();
     await request.post(`${API}/items`, { data: { title: 'A Child', parentId: itemA.id } });
@@ -292,7 +287,8 @@ test.describe('reparent and attach/detach controls', () => {
   });
 
   test("unchecking Attached in the item's own panel detaches it onto the board", async ({ page, request, projectSidebar }) => {
-    const { project, todo } = await createTemplatedWorkflow(request, 'Own Panel Project');
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Own Panel Project');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (await request.post(`${API}/items`, {
       data: { title: 'Own Panel Parent', projectId: project.id, workphaseId: todo.id },
     })).json();

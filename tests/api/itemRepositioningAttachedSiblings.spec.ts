@@ -2,8 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedAttachedSiblingsScenario, siblingOrder, type AttachedSiblingsScenario } from '../helpers/itemRepositioningScenario';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
 
 // 3 WHEN/THEN cases exercising anchor+side resolution against the
 // (parentId, isAttached) comparison scope (Part 3), driven directly through

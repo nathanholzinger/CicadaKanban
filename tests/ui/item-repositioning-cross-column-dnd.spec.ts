@@ -2,8 +2,8 @@ import { test, expect } from '../fixtures';
 import type { Locator, Page } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
+import { API } from '../helpers/api';
 
-const API = 'http://localhost:3002/api';
 const PROJECT_NAME = 'Repositioning DnD Project';
 
 // The same 8 WHEN/THEN cases as tests/api/itemRepositioning.spec.ts, this

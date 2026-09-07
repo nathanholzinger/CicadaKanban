@@ -1,6 +1,5 @@
 import { expect, test } from '../fixtures';
-
-const API = 'http://localhost:3002/api';
+import { API } from '../helpers/api';
 
 test.beforeAll(async ({ request }) => {
   await request.post(`${API}/test/reset`);

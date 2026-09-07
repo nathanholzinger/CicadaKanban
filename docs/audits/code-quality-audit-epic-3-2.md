@@ -894,6 +894,30 @@ workflow → pick phases out of the response." `tests/helpers/` already hosts
 constant) and `tests/helpers/seed.ts` (`seedTemplatedWorkflow`/
 `seedBareWorkflow`/`addWorkphases`).
 
+**Status:** ✅ Fixed as specified — still valid, confirmed all 4 duplicate
+seed helpers and 19 (not quite 18 — drift since the audit was written)
+hardcoded API base URLs. Added `tests/helpers/api.ts` (the single `API`
+constant) and `tests/helpers/seed.ts` (`seedTemplatedWorkflow`,
+`seedBareWorkflow`, `addWorkphases`, plus a small `pickWorkphases(workflow,
+...names)` covering the other half of the duplication the audit called out
+— "pick phases out of the response" — used by every caller that needs
+specific named phases). All 19 hardcoded-URL sites now import `API` from
+the one file (`tests/api/*` keeps importing it aliased `as BASE`, matching
+each file's existing local token name, to avoid an unrelated wholesale
+rename); all 4 local seed-helper definitions are gone, their call sites now
+use the shared versions (`boards-layer.spec.ts`'s own `createTemplatedWorkflow`
+survives as a one-line local wrapper pinning the "quick" template, matching
+the audit's "keep exported names as thin wrappers" precedent from Finding
+#25). Consolidating the return type surfaced one real latent type-safety
+gap along the way — `tests/api/boards.spec.ts` had a raw
+`workflow.workphases.find(...)` that TypeScript couldn't previously narrow
+(the old local helper's return was loosely typed via `.json()`'s implicit
+`any`); now explicitly typed through the shared helper, `tsc` correctly
+flagged it as possibly-`undefined`, fixed by switching that one site to
+`pickWorkphases` too. Verified via a standalone `tsc --noEmit` against
+every touched test file (clean) and the full Playwright suite: 114 passed,
+6 pre-existing skips, 0 failed.
+
 ### 28. Item-detail section header/add-form/Escape-handler scaffolding duplicated across sections; `BoardColumn`'s inline add-item form duplicates `ChildrenSection`'s `[Duplication & Abstraction]`
 **Files:** `ChildrenSection.tsx:84–91,144–166`; `LabelsSection.tsx:55–62,101–115`; `AttachmentsSection.tsx:49–56,109–130`; `ParentSection.tsx:61`; `AgentSection.tsx:66`; `BoardColumn.tsx:178–235` vs `ChildrenSection.tsx:129–168`
 

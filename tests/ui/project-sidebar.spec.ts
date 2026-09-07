@@ -1,7 +1,6 @@
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-
-const API = 'http://localhost:3002/api';
+import { API } from '../helpers/api';
 
 test.beforeAll(async () => {
   await resetAndSeedDb();

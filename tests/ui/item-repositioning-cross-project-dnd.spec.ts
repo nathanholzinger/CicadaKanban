@@ -7,8 +7,7 @@ import {
   fullOrder,
   type CrossProjectRepositioningScenario,
 } from '../helpers/itemRepositioningScenario';
-
-const API = 'http://localhost:3002/api';
+import { API } from '../helpers/api';
 const ROOT_NAME = 'Cross Project DnD';
 
 // The same 8 cases as tests/api/itemRepositioningCrossProject.spec.ts, this

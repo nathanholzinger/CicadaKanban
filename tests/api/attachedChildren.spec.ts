@@ -1,26 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
+import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
 
 test.beforeAll(async () => {
   await resetAndSeedDb();
 });
 
-async function setupWorkflow(request: import('@playwright/test').APIRequestContext, name: string) {
-  const project = await (await request.post(`${BASE}/projects`, { data: { name } })).json();
-  const templates = await (await request.get(`${BASE}/workflow-templates`)).json();
-  const flow = templates.find((t: { name: string }) => t.name === 'flow');
-  const workflow = await (await request.post(`${BASE}/workflows`, {
-    data: { name, projectId: project.id, templateId: flow.id },
-  })).json();
-  const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
-  const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
-  return { project, workflow, todo, inProgress };
-}
-
 test('attached child inherits parent workphase on create and follows on move; detached child does not', async ({ request }) => {
-  const { project, todo, inProgress } = await setupWorkflow(request, 'Cascade Move Project');
+  const { project, workflow } = await seedTemplatedWorkflow(request, 'Cascade Move Project');
+  const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
 
   const parent = await (await request.post(`${BASE}/items`, {
     data: { title: 'Parent', projectId: project.id, workphaseId: todo.id },
@@ -48,7 +37,8 @@ test('attached child inherits parent workphase on create and follows on move; de
 });
 
 test('reattaching a child snaps it to the parent\'s current workphase', async ({ request }) => {
-  const { project, todo, inProgress } = await setupWorkflow(request, 'Reattach Project');
+  const { project, workflow } = await seedTemplatedWorkflow(request, 'Reattach Project');
+  const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
 
   const parent = await (await request.post(`${BASE}/items`, {
     data: { title: 'Parent', projectId: project.id, workphaseId: inProgress.id },
@@ -62,7 +52,7 @@ test('reattaching a child snaps it to the parent\'s current workphase', async ({
 });
 
 test('rejects reparenting an item to its own descendant', async ({ request }) => {
-  const { project } = await setupWorkflow(request, 'Cycle Guard Project');
+  const { project } = await seedTemplatedWorkflow(request, 'Cycle Guard Project');
 
   const root = await (await request.post(`${BASE}/items`, { data: { title: 'Root', projectId: project.id } })).json();
   const child = await (await request.post(`${BASE}/items`, { data: { title: 'Child', parentId: root.id } })).json();
@@ -75,7 +65,7 @@ test('rejects reparenting an item to its own descendant', async ({ request }) =>
 });
 
 test('rejects an item being its own parent', async ({ request }) => {
-  const { project } = await setupWorkflow(request, 'Self Parent Project');
+  const { project } = await seedTemplatedWorkflow(request, 'Self Parent Project');
   const item = await (await request.post(`${BASE}/items`, { data: { title: 'Solo', projectId: project.id } })).json();
 
   const res = await request.put(`${BASE}/items/${item.id}`, { data: { parentId: item.id } });

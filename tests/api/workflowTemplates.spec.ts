@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
 
 test.beforeAll(async () => {
   await resetAndSeedDb();

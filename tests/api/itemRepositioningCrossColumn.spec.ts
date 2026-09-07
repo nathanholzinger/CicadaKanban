@@ -2,8 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
-
-const BASE = 'http://localhost:3002/api';
+import { API as BASE } from '../helpers/api';
 
 // 8 WHEN/THEN cases for item repositioning (grouped into 4 pairs), driven
 // directly through PATCH /items/:id/move — no browser involved. Shared
