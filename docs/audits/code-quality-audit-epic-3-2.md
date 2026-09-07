@@ -665,6 +665,22 @@ one response).
 `name` (`!name?.trim()`, line 19); PUT doesn't. Same class in `items.ts`:
 POST rejects an empty `title` (line 157) but PUT (line 275) accepts one.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed both routes
+unchanged from the audit's description. `itemTypes.ts` PUT now checks
+`typeof name !== 'string' || !name.trim()` before calling `.trim()`,
+400ing with "name must be a non-empty string" instead of crashing (non-string/`null`)
+or silently accepting blank input (matches POST's rejection either way).
+`items.ts` PUT now rejects `title !== undefined && !title` the same way
+POST does, before building `updates`. There was no existing test file for
+`itemTypes.ts` at all — added `server/tests/routes/itemTypes.test.ts`
+(POST/PUT/DELETE, 8 tests) covering the new validation plus basic route
+behavior; added one regression test to `items.test.ts`'s PUT suite.
+Confirmed via `git stash` that 4 of the new tests fail without the fix (two
+500s instead of 400s for `itemTypes`' non-string/`null` name, one 200
+instead of 400 for its blank name, one 200 instead of 400 for `items`'
+empty title). `tsc --noEmit` clean; full server suite passing (259 tests,
+up from 248).
+
 ### 19. MCP interpolates tool arguments into URLs unescaped `[Correctness & Security]`
 **File:** `server/src/mcp.ts:140,148,155,194,207,217`
 

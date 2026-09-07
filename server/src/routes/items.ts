@@ -234,6 +234,13 @@ router.put('/:id', (req, res) => {
     }
   }
 
+  // Mirrors POST's `!title` rejection (audit Finding #18) — PUT previously
+  // let a title update through unvalidated, including an empty string.
+  if (title !== undefined && !title) {
+    res.status(400).json({ error: 'title is required' });
+    return;
+  }
+
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;

@@ -42,7 +42,17 @@ router.put('/:id', (req, res) => {
 
   const { name, color } = req.body;
   const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name.trim();
+  // Mirrors POST's `!name?.trim()` rejection (audit Finding #18) — was
+  // `name.trim()` unguarded, so a non-string `name` (or `null`) threw a
+  // TypeError -> 500, and an empty/whitespace name was silently accepted
+  // here despite being rejected on create.
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'name must be a non-empty string' });
+      return;
+    }
+    updates.name = name.trim();
+  }
   if (color !== undefined) updates.color = color ?? null;
 
   if (Object.keys(updates).length === 0) {

@@ -147,6 +147,19 @@ describe('PUT /api/items/:id', () => {
     expect(res.body.description).toBe('Original desc');
   });
 
+  // Regression coverage for audit Finding #18: PUT let an empty title through
+  // unvalidated even though POST rejects one.
+  it('returns 400 and leaves the title unchanged when title is set to an empty string', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id, title: 'Keep Me' });
+
+    const res = await request(app).put(`/api/items/${item.id}`).send({ title: '' });
+    expect(res.status).toBe(400);
+
+    const stillThere = await request(app).get(`/api/items/${item.id}`);
+    expect(stillThere.body.title).toBe('Keep Me');
+  });
+
   it('logs an assignment activity entry only when assigneeType or agentId is touched', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
