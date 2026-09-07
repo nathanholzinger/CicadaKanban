@@ -56,6 +56,11 @@ doesn't catch this.
 
 **Fix:** `const hasInvalid = orders.some((o) => o === null || typeof o !== 'object' || typeof o.id !== 'string' || typeof o.position !== 'number' || !Number.isFinite(o.position));` — replace `find`+truthiness with `some`.
 
+**Status:** ✅ Fixed as specified — `reorder.ts:36–41` swapped `Array.find` +
+truthiness for `Array.some`. Added a regression test (`items.test.ts`)
+covering a falsy invalid entry (`null` in the array) that the original test
+suite didn't catch; verified it fails without the fix and passes with it.
+
 ---
 
 ### 2. `PATCH /api/projects/reorder` doesn't use the shared `applyReorder` helper it was written to replace, and can write a parent cycle `[Correctness & Security + Duplication & Abstraction]`
@@ -140,6 +145,18 @@ the only empty `catch` remaining anywhere in the audited scope.
 **Fix:** Inspect the error (`err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY'` →
 treat as idempotent success; anything else → log + 400/500).
 
+**Status:** ✅ Fixed as specified — `labels.ts:41–57` now checks `err.code`
+against `SQLITE_CONSTRAINT_PRIMARYKEY` before treating an insert failure as
+an idempotent duplicate; anything else (e.g. an FK violation from a bad
+`itemId`/`labelId`) logs and returns 500. Also added explicit 404s for a
+non-existent item or label (via `getByIdOrNotFound`) so bad input gets a
+specific error instead of surfacing only as an opaque constraint failure.
+Created `labels.test.ts` (no test file existed for this route before)
+covering the 400/404 cases, a successful assignment, and the
+idempotent-duplicate case. Note: tags/labels are slated for a heavier rework
+in Epic 6, so this fix was kept minimal/cheap rather than extended into
+broader labels-area cleanup.
+
 ---
 
 ### 4. `PATCH /items/:id/move`'s raw `position` field is written with no validation `[Correctness & Security]`
@@ -164,6 +181,12 @@ the E2E seed helper (`tests/helpers/itemRepositioningScenario.ts:43`), so
 it's a live, documented API surface, not a hypothetical one.
 
 **Fix:** `if (typeof position !== 'number' || !Number.isFinite(position)) → 400`, matching the validation already present on the other fields in this handler (lines 376–387).
+
+**Status:** ✅ Fixed as specified — added the missing check to
+`PATCH /items/:id/move`, matching the pattern of the other validated fields
+in the same handler. Added a regression test in `items.test.ts` covering
+both a non-numeric string and a non-finite number (`Infinity`), verifying
+the item's real position is untouched by the rejected requests.
 
 ---
 
@@ -228,6 +251,22 @@ inside the same transaction backfill affected items' `position`/
 `completedAt`, mirroring the move handler's terminal-transition logic
 (`items.ts:446–461`).
 
+**Status:** ✅ Fixed, via reject rather than auto-shrink — `PUT
+/api/workphases/:id` now checks every column covering the workphase (new
+`findColumnsMixingTerminalAfterFlip` in `columnRanges.ts`) *before* writing
+anything, rejecting with 400 + `conflictingColumnId` on conflict, then
+backfills affected items' `position`/`completedAt` inside the same
+transaction — non-terminal→terminal preserves order via a synthetic
+`completedAt` sequence, terminal→non-terminal re-appends via the shared
+position resolver, both skipping attached children per the existing Part 6
+rule. Surfaced and fixed a real, independently-reachable bug in the shared
+`positionResolver.ts` along the way: `getLastPositionInScope`/
+`getFirstIdInScope` were missing the `isNotNull(position)` guard
+`reindexScope` already has, so appending into a scope where every remaining
+row is a done item threw instead of resolving as empty. 5 new tests in
+`workphases.test.ts` plus a standalone regression test in
+`positionResolver.test.ts` for the resolver bug.
+
 ---
 
 ### 7. `PATCH /items/:id/move` never checks that the anchor's position scope matches the subject's resulting scope `[Correctness & Security]`
@@ -253,6 +292,21 @@ space the subject will end up in. Two reachable mismatches:
 targetWorkphaseId)`, compare its classified scope to the anchor's; on
 mismatch, 400 with `anchorId is not in this item's position scope`.
 
+**Status:** ✅ Fixed, comparing more than the classified label — added
+`sharesPositionScope(anchor, subject, tx)` to `itemPositionScope.ts`,
+comparing the anchor and subject on their actual comparison space
+(attached-siblings + exact `parentId`, or workflow-wide + exact
+`workflowId`) rather than just the `PositionScope` label, since two
+different workflows both independently classify as `'workflow'` — a
+label-only comparison wouldn't have caught the cross-workflow case.
+`PATCH /items/:id/move`'s anchor branch now rejects with exactly the
+suggested 400 message before resolving a position. Also catches an implicit
+third mismatch the audit's two named examples didn't spell out: an attached
+child anchored against a different attached child under a *different*
+parent. 5 new tests in `items.test.ts` (3 rejection cases + 2 "still allows"
+sanity checks against a false-positive reject); verified all 3 rejection
+cases genuinely fail without the fix.
+
 ---
 
 ### 8. `client/src/api/*.ts` — hand-rolled fetch/error pattern repeated ~45 times, already drifted into two inconsistent error-handling levels `[Duplication & Abstraction]`
@@ -276,6 +330,18 @@ any of them is purely which module happened to write the fetch call.
 error }` with a fallback. Every module function collapses to one line, and
 the error contract stops being per-endpoint luck.
 
+**Status:** ✅ Fixed as specified, plus one more primitive — added
+`apiRequest`/`apiJson`/`apiVoid` to `shared.ts` (`apiRequest` returns the raw
+`Response` for the one caller, `deleteWorkPhase`, that genuinely needs to
+branch on status rather than always parsing JSON). Every one of the 12
+domain modules collapsed to one-line functions built on these, always
+trying the server's real `{ error }` message before falling back. Caught a
+real bug while doing this: `deleteBoard` was first written against
+`apiJson`, but `DELETE /boards/:id` returns 204 with no body — cross-checked
+every DELETE route server-side before finishing the rest (all 204 except
+`workphases.ts`'s conditional 200/204). New `shared.test.ts` (9 cases) — the
+first test in the client suite to mock `fetch`.
+
 ---
 
 ### 9. Duplicated dnd-kit drag-gesture toolkit across three E2E spec files, one referencing a file that no longer exists `[Duplication & Abstraction]`
@@ -293,6 +359,13 @@ gesture work will need to touch all three copies identically.
 
 **Fix:** Extract `tests/helpers/dragGesture.ts` exporting `dragTo`, `center`,
 `topQuarter`, `bottomQuarter`, `pastColumnEnd`.
+
+**Status:** 📋 Deferred to Epic 3.5, captured as
+`docs/planning/epic-3-5-decisions.md` Q2 (2026-09-07) rather than fixed now —
+Epic 3.5's own DnD gesture work is about to add two more drag-based E2E tests
+(Q1) that would otherwise become a fourth/fifth copy of this same toolkit, so
+the extraction is sequenced to happen there, before those new tests are
+written, rather than as a standalone fix here.
 
 ---
 
@@ -320,6 +393,19 @@ constants from this same module:
 `pillUtils.ts`; replace the 5 inline `BTN_ADD_TRIGGER` copies with the
 import; reconcile the `INPUT_LG` variants to one (or two, explicitly named).
 
+**Status:** ✅ Fixed as specified, plus a fourth token — added
+`BTN_MODAL_CANCEL`, `BTN_MODAL_PRIMARY`, `FIELD_LABEL`, and `INPUT_LG_RING`
+(the "or two, explicitly named" option for the `INPUT_LG` bypasses, since
+all three near-copies wanted a focus ring `INPUT_LG` itself doesn't have) to
+`pillUtils.ts`. Replaced every named site: 5× `BTN_ADD_TRIGGER`, 3× cancel +
+2× primary, 9× field label (standardized on `AgentsModal`'s
+`tracking-wider`/`zinc-500` variant, matching `SECTION_LABEL`'s existing
+convention), 4× `INPUT_LG` near-copies (standardized on `CreateProjectModal`'s
+ring/border opacity, the 2-of-3 majority). Left the delete-trigger's
+`hover:text-red-400` variant and a few section-header spans outside the
+finding's named file list untouched — different role, out of scope. Verified
+with a production build plus the full client test suite.
+
 ---
 
 ## Watch List
@@ -333,6 +419,26 @@ which Finding #2 shows is bypassable via the projects-reorder batch path. A
 bounded result. `walkItemDescendants` backs `DELETE /items/:id` — a cycle
 there means the delete never returns.
 
+**Status:** ✅ Fixed as specified in all six, as a defense-in-depth measure
+— Finding #2's specific bypass is already closed (the batch reorder route
+is gone), but these six have no protection against a cycle introduced any
+other way (direct DB access, a future migration, a bug elsewhere), so the
+guard stands on its own merit. `isSelfRefDescendant` and
+`walkItemDescendants` (`itemTree.ts`) thread a shared `visited: Set`
+through their recursion/queue; `computeDepth` (`items.ts`) and
+`getAncestors`/`getDescendantIds` (client `hierarchy.ts`) each track
+visited ids walking their chain; `addDepths` (`workflows.ts`) needed a
+second set (`visiting`, the current recursion stack) distinct from its
+existing `depthCache`, since the cache only ever gets a node's entry
+*after* its recursive call returns — a cycle would never reach that write.
+Verified the fix is real, not just plausible: stashed `itemTree.ts` and
+reran its new test under a hard `timeout` wrapper (for safety, since a true
+infinite loop can't be killed by a test framework's own timeout) — it
+crashed with `RangeError: Maximum call stack size exceeded` in seconds,
+confirming the "stack-overflow" half of this finding concretely. New tests:
+`server/tests/lib/itemTree.test.ts` (new file), plus cycle cases added to
+`items.test.ts`, `workflows.test.ts`, and client `hierarchy.test.ts`.
+
 ### 12. `res.status(...)` sent inside `db.transaction`, with `return false` as the bail-out convention `[Correctness & Security]`
 **Files:** `server/src/routes/items.ts:397–493`; same pattern via `applyReorder` at `items.ts:503`, `columns.ts:92`, `workphases.ts:71`
 
@@ -343,6 +449,28 @@ producing a silent partial commit. Sending the response inside the
 transaction also means a later throw would hit the global handler with
 headers already sent. Validate before opening the transaction, or throw a
 typed error and map it to a status outside.
+
+**Status:** ✅ Fixed, via "validate before opening the transaction" (the
+first of the fix's two options) — in every case, the check that used to
+bail out from inside the callback turned out not to need transaction-scoped
+consistency at all: none of these transactions insert or delete the row(s)
+the check reads, only update the subject itself, so nothing about an id's
+existence/scope can change between a pre-transaction check and the
+transaction that later uses it (single-threaded, synchronous
+better-sqlite3). `reorder.ts`'s `applyReorder` split into `validateReorder`
+(plain `db`, returns a typed `{ok:true,entries} | {ok:false,status,body}`
+result) and `applyReorderEntries` (trusted, `tx`-scoped write only) — all
+three call sites (`items.ts`, `columns.ts`, `workphases.ts`) updated.
+`items.ts`'s `PATCH /:id/move` now validates the anchor (existence,
+has-a-position, scope-match) before the transaction opens, reusing the
+already-fetched row inside it rather than re-querying via `tx`. Also fixed
+the identical pattern in `projects.ts`'s `PATCH /:id/move` (a
+`let validationError` + `return false` variant of the same risk) even
+though it wasn't in this finding's original file list — it didn't exist yet
+when the audit was written, having been introduced by Finding #2's fix
+later in the same session, but it's the same class of bug. Verified by
+inspecting every remaining `db.transaction` call site in the routes: none
+still write `res` or use a falsy-return bail-out internally.
 
 ### 13. Missing FK-existence checks on two create routes → opaque 500s for plain bad input `[Correctness & Security]`
 **Files:** `server/src/routes/workflows.ts:54–64` (`projectId` unchecked → FK violation; `templateId`/`sourceWorkflowId` unchecked → silently creates a zero-workphase workflow); `server/src/routes/workphases.ts:14–21` (`workflowId` unchecked → FK violation)
@@ -410,6 +538,24 @@ already get). Worth noting `workflows.ts` GET `/:id` attaches no
 
 **Fix:** Move a single `withPositionScope(item, isTerminalOf: (id) => boolean | null)` into `positionResolver.ts`; `items.ts` passes a query closure, `boards.ts` passes `id => map.get(id) ?? null`; extract `positionScopeFor`/`workphaseIdsInSameWorkflow` alongside it, leaving `items.ts` as route handlers + thin wiring.
 
+**Status:** ✅ Fixed, into a different lib module than suggested — all three
+parts closed. Consolidated `withPositionScope` into one function in
+`itemPositionScope.ts` (not `positionResolver.ts`) taking an `isTerminalOf`
+lookup closure: `items.ts`'s GET `/:id` now batches its lookup across the
+item + all its children in one query (closing the N+1), `boards.ts` passes
+its existing prebuilt map unchanged. `positionScopeFor`/
+`workphaseIdsInSameWorkflow` moved to `itemPositionScope.ts` alongside it
+rather than `positionResolver.ts` — items-only vocabulary belongs with
+`classifyPositionScope`, matching the precedent already set when that
+function was pulled out of `positionResolver.ts`'s orbit for the same
+reason (its own header comment says "not table-generic the way
+positionResolver.ts is"). `workflows.ts` GET `/:id` now attaches
+`positionScope` too, reusing already-fetched workphase rows with zero extra
+queries — closing the third read path the finding flagged as a "worth
+noting" gap. New tests in `workflows.test.ts` and `items.test.ts` (the
+latter covering the N+1 fix specifically, with two distinct workphases in
+one response).
+
 ### 18. `itemTypes.ts` PUT calls `.trim()` on an unvalidated value; POST/PUT diverge on empty-string acceptance `[Correctness & Security]`
 **File:** `server/src/routes/itemTypes.ts:45`
 
@@ -445,6 +591,19 @@ real, consistent drift with a 22-file blast radius that a future
 contributor could copy the wrong casing from. Not worth a mechanical rename
 now; worth fixing opportunistically.
 
+**Status:** ✅ Fixed, decided as a real convention rather than left
+opportunistic — the user confirmed `workphase`/`Workphase` is deliberately
+treated as one compound word (parallel to `workflow`), so `WorkPhase` is
+wrong casing, not an acceptable alternate spelling. Renamed `WorkPhase` →
+`Workphase` everywhere it appeared (28 occurrences across 8 client files:
+`types.ts`'s interface, `api/workphases.ts`'s exported functions —
+`createWorkphase`/`updateWorkphase`/`deleteWorkphase`/`reorderWorkphases` —
+and every consumer of that type/those functions). Repo-wide scan confirmed
+no `workPhase` (camelCase), `work phase` (two words), or `work-phase`/
+`work_phase` variants exist anywhere — `WorkPhase` was the only drift.
+Handled together with Finding #23 below, per the same request. Full client
+suite + production build verified after.
+
 ### 22. `Tx` type redeclared locally in two files instead of importing the shared export `[Consistency & Drift + Duplication & Abstraction]`
 **Files:** `server/src/lib/boardCascade.ts:5` (`type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]`); `server/src/lib/columnRanges.ts:146` (`type DbClient = … | typeof db`)
 
@@ -455,12 +614,34 @@ shapes are identical, but it's the same concept declared three times —
 could silently diverge if the canonical `Tx` type changes.
 `import type { Tx } from '../db/index.js';` and drop both local redeclarations.
 
+**Status:** ✅ Fixed as specified — `boardCascade.ts`'s local `Tx` dropped
+in favor of importing the canonical one; `columnRanges.ts`'s `DbClient`
+(a genuinely distinct, wider type — `Tx | typeof db`, not a pure duplicate)
+now builds on the imported `Tx` instead of re-deriving the same
+`Parameters<Parameters<...>>` expression inline. `tsc --noEmit` stayed
+clean after the swap, confirming the shapes really were identical. Full
+suite (243 tests) passing.
+
 ### 23. "workphace" typo in doc comments `[Consistency & Drift]`
 **Files:** `client/src/components/workflow/boardDndUtils.ts:64,71`; `useBoardDnd.ts:119`
 
 E.g. `// Genuine cross-column move: workphaceId changes to targetWorkphaseId.`
 Comment-only, but these are doc comments future contributors will read when
 working in this file.
+
+**Status:** ✅ Fixed, and far more widespread than this finding's file list
+— a repo-wide scan (prompted by handling this together with Finding #21)
+found the same typo in 9 living files, not 2: the two named here plus
+`boardDndUtils.test.ts`, `server/tests/routes/items.test.ts`, and — the
+bulk of it — five prose docs (`docs/wiki/item-positioning/README.md`,
+`docs/test-plans/item-positioning/part-{2,4,5,6}-*.md`), where it had
+spread well beyond code comments into permanent reference documentation.
+Left two *historical* occurrences untouched on purpose: this finding's own
+quoted illustration above (the evidence, not a live comment) and this
+finding's own title. Fixed one more incidental, unrelated instance of the
+same typo found along the way: `docs/audits/code-quality-audit-epic3.md:126`
+(an older audit's prose, quoting the real `workphase_id` MCP field name
+with the same one-letter typo).
 
 ### 24. `ConfirmDeleteButton` renders an X (close-style) icon for its delete trigger, not the trash icon `[Consistency & Drift]`
 **File:** `client/src/components/ConfirmDeleteButton.tsx:85`
