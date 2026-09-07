@@ -5,8 +5,8 @@ import type { UpdateProjectInput } from '../api/projects';
 import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 import ConfirmDeleteInline from './ConfirmDeleteInline';
-import { buildParentOptions } from '../lib/hierarchy';
-import { TrashIcon, PlusIcon, ICON_BUTTON_SM } from './icons';
+import { ProjectOverviewTab } from './ProjectOverviewTab';
+import { TrashIcon } from './icons';
 
 interface EffectiveWorkflow {
   workflow: Workflow;
@@ -34,6 +34,11 @@ function tabButtonClass(active: boolean): string {
   return `${base} text-zinc-500 hover:text-zinc-300 border-transparent`;
 }
 
+// Tab shell (breadcrumb, name edit/self-delete, tabs) + board-tab wiring.
+// The Overview tab's own concerns (description, parent selector,
+// subprojects list) live in ProjectOverviewTab.tsx — this file mixed all of
+// it together as the largest client file in the codebase (audit Finding
+// #31).
 export default function ProjectPage({
   project,
   ancestors,
@@ -50,63 +55,53 @@ export default function ProjectPage({
   const [activeTab, setActiveTab] = useState<'overview' | 'board'>('overview');
   const [showSetupModal, setShowSetupModal] = useState(false);
 
-  const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
+  const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(project.name);
-  const [descValue, setDescValue] = useState(project.description ?? '');
   const cancelRef = useRef(false);
-  const [savingParent, setSavingParent] = useState(false);
 
-  // Intentionally scoped to project.id only: this resets the edit buffers/tab
-  // state when navigating to a *different* project, not on every edit to the
-  // current project's name/description (which would fight the user mid-edit).
+  // Intentionally scoped to project.id only: this resets the shell's own
+  // state when navigating to a *different* project, not on every edit to
+  // the current project's name (which would fight the user mid-edit).
+  // ProjectOverviewTab's own state (description edit, parent selector,
+  // subprojects) resets independently via its `key={project.id}` below.
   useEffect(() => {
     setNameValue(project.name);
-    setDescValue(project.description ?? '');
-    setEditingField(null);
-    setSavingParent(false);
+    setEditingName(false);
     setActiveTab('overview');
     setShowSetupModal(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
-  async function handleSave(field: 'name' | 'description') {
-    if (field === 'name') {
-      const trimmed = nameValue.trim();
-      if (trimmed && trimmed !== project.name) {
-        await onUpdate(project.id, { name: trimmed });
-      } else {
-        setNameValue(project.name);
-      }
+  async function handleSaveName() {
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== project.name) {
+      await onUpdate(project.id, { name: trimmed });
     } else {
-      const trimmed = descValue.trim() || null;
-      if (trimmed !== project.description) {
-        await onUpdate(project.id, { description: trimmed });
-      }
+      setNameValue(project.name);
     }
-    setEditingField(null);
+    setEditingName(false);
   }
 
-  function cancel() {
+  function cancelNameEdit() {
     cancelRef.current = true;
     setNameValue(project.name);
-    setDescValue(project.description ?? '');
-    setEditingField(null);
+    setEditingName(false);
   }
 
-  function handleBlur(field: 'name' | 'description') {
+  function handleNameBlur() {
     if (cancelRef.current) {
       cancelRef.current = false;
       return;
     }
-    handleSave(field);
+    handleSaveName();
   }
 
-  function handleKeyDown(e: React.KeyboardEvent, field: 'name' | 'description') {
+  function handleNameKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
-      cancel();
+      cancelNameEdit();
       return;
     }
-    if (e.key === 'Enter' && field === 'name') handleSave(field);
+    if (e.key === 'Enter') handleSaveName();
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
@@ -191,26 +186,30 @@ export default function ProjectPage({
       )}
 
       {/* Name */}
-      {editingField === 'name' ? (
+      {editingName ? (
         <input
           autoFocus
           value={nameValue}
           onChange={e => setNameValue(e.target.value)}
-          onBlur={() => handleBlur('name')}
-          onKeyDown={e => handleKeyDown(e, 'name')}
+          onBlur={handleNameBlur}
+          onKeyDown={handleNameKeyDown}
           className="mb-1 w-full border-b border-zinc-600 bg-transparent text-2xl font-semibold text-zinc-100 focus:border-blue-500/60 focus:outline-none"
         />
       ) : (
-        // Keyed on project.id: without it, this instance's internal
-        // confirming/deleting state would survive a navigation to a
-        // different project (nothing else resets it — a real, latent bug
-        // uncovered while extracting this, now fixed by construction).
+        // Keyed on project.id (prefixed to stay distinct from
+        // ProjectOverviewTab's own project.id-keyed sibling below — two
+        // direct children of the same parent sharing one key value confuses
+        // React's reconciler regardless of their differing component types):
+        // without a key, this instance's internal confirming/deleting state
+        // would survive a navigation to a different project (nothing else
+        // resets it — a real, latent bug uncovered while extracting this,
+        // now fixed by construction).
         <ConfirmDeleteInline
-          key={project.id}
+          key={`name-${project.id}`}
           trigger={confirm => (
             <div className="group mb-1 flex items-center gap-2">
               <h1
-                onClick={() => setEditingField('name')}
+                onClick={() => setEditingName(true)}
                 className="cursor-text text-2xl font-semibold text-zinc-100 transition-colors hover:text-zinc-200"
               >
                 {project.name}
@@ -259,103 +258,16 @@ export default function ProjectPage({
       {activeTab === 'board' ? (
         <div className="flex min-h-0 flex-1 flex-col pt-6">{renderBoard()}</div>
       ) : (
-        <div className="max-w-2xl overflow-y-auto pt-5">
-          {/* Description */}
-          {editingField === 'description' ? (
-            <textarea
-              autoFocus
-              value={descValue}
-              onChange={e => setDescValue(e.target.value)}
-              onBlur={() => handleBlur('description')}
-              onKeyDown={e => handleKeyDown(e, 'description')}
-              rows={3}
-              className="mb-6 w-full resize-none border-b border-zinc-600 bg-transparent text-sm text-zinc-400 focus:border-blue-500/60 focus:outline-none"
-            />
-          ) : project.description ? (
-            <p
-              onClick={() => setEditingField('description')}
-              className="mb-6 cursor-text text-sm whitespace-pre-wrap text-zinc-400 transition-colors hover:text-zinc-300"
-            >
-              {project.description}
-            </p>
-          ) : (
-            <button
-              onClick={() => setEditingField('description')}
-              className="mb-6 block text-sm text-zinc-600 transition-colors hover:text-zinc-400"
-            >
-              Add description
-            </button>
-          )}
-
-          {/* Parent project */}
-          <div className="mt-4 mb-6 flex items-center gap-3">
-            <span className="w-14 shrink-0 text-xs font-semibold tracking-widest text-zinc-600 uppercase">Parent</span>
-            <select
-              value={project.parentId ?? ''}
-              disabled={savingParent}
-              onChange={async e => {
-                const newParentId = e.target.value || null;
-                setSavingParent(true);
-                try {
-                  await onUpdate(project.id, { parentId: newParentId });
-                } finally {
-                  setSavingParent(false);
-                }
-              }}
-              className="cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-400 transition-opacity focus:border-zinc-600 focus:outline-none disabled:opacity-50"
-            >
-              {buildParentOptions(allProjects, project.id, p => p.name, 'Root', true).map(o => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Subprojects */}
-          <section className="mt-6">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Subprojects</h2>
-              <button
-                onClick={() => onCreateSubproject(project.id)}
-                className={ICON_BUTTON_SM}
-                title="Add subproject"
-              >
-                <PlusIcon />
-              </button>
-            </div>
-            <ul className="space-y-1">
-              {subprojects.map(child => (
-                <li key={child.id} className="group flex items-center gap-1">
-                  <ConfirmDeleteInline
-                    trigger={confirm => (
-                      <>
-                        <button
-                          onClick={() => onSelectProject(child.id)}
-                          className="flex-1 rounded-lg px-3 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
-                        >
-                          {child.name}
-                          {child.description && <span className="ml-2 text-xs text-zinc-600">{child.description}</span>}
-                        </button>
-                        <button
-                          onClick={confirm}
-                          className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 opacity-0 transition-all group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
-                          title="Delete subproject"
-                        >
-                          <TrashIcon />
-                        </button>
-                      </>
-                    )}
-                    prompt={<span className="flex-1 text-zinc-400">Delete "{child.name}"?</span>}
-                    onDelete={() => onDeleteSubproject(child.id)}
-                    className="flex flex-1 items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm"
-                    deletingClassName="flex-1 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400"
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
+        <ProjectOverviewTab
+          key={`overview-${project.id}`}
+          project={project}
+          allProjects={allProjects}
+          subprojects={subprojects}
+          onSelectProject={onSelectProject}
+          onUpdate={onUpdate}
+          onCreateSubproject={onCreateSubproject}
+          onDeleteSubproject={onDeleteSubproject}
+        />
       )}
 
       {showSetupModal && (

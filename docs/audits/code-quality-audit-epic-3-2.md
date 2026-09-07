@@ -1038,6 +1038,16 @@ layout — an unrelated sub-feature per the Component Composition guide.
 Extract a self-contained `NotificationsBell.tsx`. Not urgent — no bug, just
 an available seam.
 
+**Status:** ✅ Fixed as specified — still valid, confirmed the poll effect,
+outside-click handler, mark-read/mark-all handlers, and dropdown JSX were
+all still in `App.tsx`. Extracted `client/src/components/NotificationsBell.tsx`
+verbatim (all its own state, both effects, both handlers, the bell button
+and dropdown) — genuinely self-contained, takes no props at all. `App.tsx`
+now just renders `<NotificationsBell />` in the header; dropped to 208
+lines (from ~310) with zero notification-specific code left. Pure
+extraction, no behavior change — verified via `tsc --noEmit` (clean) and
+the full Playwright suite (114 passed, 6 pre-existing skips, 0 failed).
+
 ### 31. `ProjectPage.tsx` mixes five concerns in one 415-line file `[File Responsibility]`
 **File:** `client/src/components/ProjectPage.tsx:30–414`
 
@@ -1049,6 +1059,53 @@ audit's scope. Split into `ProjectOverviewTab.tsx` (edit state, parent
 selector, subprojects list) and keep `ProjectPage.tsx` as tab shell +
 board-tab wiring; swap both confirm-delete blocks for `ConfirmDeleteButton`
 per Finding #26 while there.
+
+**Status:** ✅ Split as specified — still valid (415 lines, 5 concerns).
+The confirm-delete swap was already done, differently: Finding #26 (fixed
+earlier in this pass) extracted `ConfirmDeleteInline` instead of reusing
+`ConfirmDeleteButton`, since these two blocks replace the whole
+name/row line rather than augmenting a persistent icon — carried forward
+as-is here, not redone.
+
+Added `client/src/components/ProjectOverviewTab.tsx`: description
+edit-in-place, the parent selector, and the subprojects list (with its
+`ConfirmDeleteInline` from #26). `ProjectPage.tsx` now holds only the
+breadcrumb, name edit-in-place + self-delete, the tab bar, and
+`renderBoard()` — 415 → 287 lines. Split the single `editingField: 'name' |
+'description' | null` state into two independent booleans, one per
+component (`editingName` stays in the shell, `editingDescription` moves to
+the new tab component) — they were already mutually exclusive in the UI
+(name lives in the always-visible header, description only in the Overview
+tab body), so this is a strict simplification, not a behavior change.
+`ProjectOverviewTab` is rendered keyed on `project.id`, so its own state
+resets by remounting on a project switch rather than needing its own copy
+of the shell's reset effect — same convention Finding #26 established for
+`ConfirmDeleteInline`.
+
+**Found and fixed while verifying:** keying *both* `ConfirmDeleteInline`
+(name area) and the new `ProjectOverviewTab` with the bare value
+`project.id` broke on first Playwright run — they're direct siblings under
+the same parent `<div>`, and React's reconciler doesn't tolerate two
+same-parent children sharing one key value even across different component
+types. It surfaced as real DOM corruption, not just a console warning:
+navigating via the breadcrumb left the previous project's name/delete block
+in the DOM *twice* alongside the new one. Fixed by prefixing each key
+(`` `name-${project.id}` `` / `` `overview-${project.id}` ``) so they can't
+collide. Caught immediately by the existing Playwright suite (4 failures
+the first run), confirmed fixed by rerunning it clean.
+
+One deliberate, minor behavior change from the split: an in-progress,
+unsaved description edit no longer survives switching to the Board tab and
+back — previously `ProjectPage.tsx` never unmounted that content, just hid
+it, so a stray draft could persist across tabs; now `ProjectOverviewTab`
+unmounts with the rest of the Overview tab, clearing it. Arguably more
+correct than the original behavior; noted rather than silently changed.
+
+Verified via `tsc --noEmit` (clean) and the full Playwright suite (114
+passed, 6 pre-existing skips, 0 failed — including the two
+`ConfirmDeleteInline`/self-delete regression tests added for Finding #26,
+which still pass against the relocated code). Client unit suite (93) and
+server suite (264) unaffected.
 
 ---
 
