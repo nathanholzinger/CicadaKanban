@@ -967,16 +967,20 @@ duplicate. Built both suggested wrappers plus the shared form:
   shared tokens — continuing where Finding #10 left off for this same file
   (it fixed the input's classes but missed the select/buttons).
 
-Deliberately unchanged: `AttachmentsSection.tsx`'s `handleAdd`/`handleDelete`
-still have no try/catch — flagged as a related-but-uncited gap when fixing
-Finding #16, not touched here either, to keep this a pure scaffolding
-refactor with no behavior changes bundled in.
+Initially left unchanged to keep this a pure scaffolding refactor:
+`AttachmentsSection.tsx`'s `handleAdd`/`handleDelete` had no try/catch —
+flagged as a related-but-uncited gap when fixing Finding #16. Per user
+follow-up, added them afterward: both now `try/catch` + `console.error`,
+matching the pattern used everywhere else in Finding #16. No dedicated
+Playwright coverage exists for the Attachments panel UI at all (a
+pre-existing gap, not introduced here) — verified via `tsc --noEmit`
+(clean) and the full client suite (93 tests) instead.
 
 Verified behavior-preserving via the full Playwright suite (114 passed, 6
 pre-existing skips, 0 failed) — covers item creation from both `BoardColumn`
-and `ChildrenSection`, plus labels/attachments/parent/agent flows. `tsc
---noEmit` clean; full client suite unaffected (93 tests); server suite
-unaffected (264 tests, no server files touched).
+and `ChildrenSection`, plus labels/parent/agent flows. `tsc --noEmit`
+clean; full client suite unaffected (93 tests); server suite unaffected
+(264 tests, no server files touched).
 
 ### 29. Four inline SVGs re-duplicated next to an `icons.tsx` built specifically to prevent this `[Duplication & Abstraction]`
 **File (target):** `client/src/components/icons.tsx` (whose header already cites Epic 3 audit finding #28: "X/close and trash paths were re-inlined across components")

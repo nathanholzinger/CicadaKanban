@@ -31,14 +31,22 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
   async function handleAdd(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!label.trim()) return;
-    const att = await createAttachment(itemId, { type, label: label.trim(), externalUrl: url.trim() || undefined });
-    setAttachments(prev => [...prev, att]);
-    cancelAdd();
+    try {
+      const att = await createAttachment(itemId, { type, label: label.trim(), externalUrl: url.trim() || undefined });
+      setAttachments(prev => [...prev, att]);
+      cancelAdd();
+    } catch (err) {
+      console.error('Failed to create attachment:', err);
+    }
   }
 
   async function handleDelete(id: string) {
-    await deleteAttachment(id);
-    setAttachments(prev => prev.filter(a => a.id !== id));
+    try {
+      await deleteAttachment(id);
+      setAttachments(prev => prev.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Failed to delete attachment:', err);
+    }
   }
 
   return (
