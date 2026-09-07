@@ -14,6 +14,14 @@ describe('POST /api/workphases', () => {
     expect(missingName.status).toBe(400);
   });
 
+  // Regression coverage for audit Finding #13: a bogus workflowId previously
+  // hit the FK constraint and surfaced as an opaque 500.
+  it('returns 400 with a specific message when workflowId does not reference an existing workflow', async () => {
+    const res = await request(app).post('/api/workphases').send({ workflowId: 'does-not-exist', name: 'Todo' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/workflowId/);
+  });
+
   it('places the first workphase at position 1.0 and appends the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);

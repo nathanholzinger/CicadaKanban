@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workflows, workphases, items, workflowTemplatePhases, boards, notifications } from '../db/schema.js';
+import { workflows, workphases, items, workflowTemplates, workflowTemplatePhases, projects, boards, notifications } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from './boards.js';
@@ -79,6 +79,22 @@ router.post('/', (req, res) => {
   }
   if (!projectId) {
     res.status(400).json({ error: 'projectId is required' });
+    return;
+  }
+  // A bogus projectId would otherwise surface as an opaque FK-violation 500
+  // (audit Finding #13).
+  if (!db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).get()) {
+    res.status(400).json({ error: 'projectId does not reference an existing project' });
+    return;
+  }
+  // Neither is an FK, so a bogus id here wouldn't crash — it would just
+  // silently produce a zero-workphase workflow, which is just as confusing.
+  if (templateId && !db.select({ id: workflowTemplates.id }).from(workflowTemplates).where(eq(workflowTemplates.id, templateId)).get()) {
+    res.status(400).json({ error: 'templateId does not reference an existing template' });
+    return;
+  }
+  if (sourceWorkflowId && !db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, sourceWorkflowId)).get()) {
+    res.status(400).json({ error: 'sourceWorkflowId does not reference an existing workflow' });
     return;
   }
 

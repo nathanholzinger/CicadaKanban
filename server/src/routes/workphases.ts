@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db, type Tx } from '../db/index.js';
-import { items, workphases } from '../db/schema.js';
+import { items, workflows, workphases } from '../db/schema.js';
 import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { findColumnsMixingTerminalAfterFlip, shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
@@ -17,6 +17,12 @@ router.post('/', (req, res) => {
 
   if (!workflowId || !name) {
     res.status(400).json({ error: 'workflowId and name are required' });
+    return;
+  }
+  // A bogus workflowId would otherwise surface as an opaque FK-violation 500
+  // (audit Finding #13).
+  if (!db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, workflowId)).get()) {
+    res.status(400).json({ error: 'workflowId does not reference an existing workflow' });
     return;
   }
 

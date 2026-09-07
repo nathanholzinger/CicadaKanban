@@ -100,6 +100,29 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(400);
   });
 
+  // Regression coverage for audit Finding #13: these previously either hit
+  // the projectId FK constraint (opaque 500) or silently created a
+  // zero-workphase workflow (templateId/sourceWorkflowId aren't FKs).
+  it('returns 400 with a specific message when projectId does not reference an existing project', async () => {
+    const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: 'does-not-exist' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/projectId/);
+  });
+
+  it('returns 400 with a specific message when templateId does not reference an existing template', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id, templateId: 'does-not-exist' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/templateId/);
+  });
+
+  it('returns 400 with a specific message when sourceWorkflowId does not reference an existing workflow', async () => {
+    const project = await createProject();
+    const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id, sourceWorkflowId: 'does-not-exist' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/sourceWorkflowId/);
+  });
+
   it('clones phases from a template when templateId is given', async () => {
     const project = await createProject();
     const flow = await findTemplateByName('flow');

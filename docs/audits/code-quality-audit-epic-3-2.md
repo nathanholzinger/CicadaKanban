@@ -26,7 +26,7 @@ wasn't extended uniformly to every new/changed mutation path, a client API
 layer that's structurally clean but functionally inconsistent about error
 handling, and duplication that re-accumulated in new files (icons, modal
 chrome, confirm-delete, E2E drag helpers) even though the patterns meant to
-prevent it already existed.
+prevent it already existed. 
 
 ---
 
@@ -478,6 +478,17 @@ still write `res` or use a falsy-return bail-out internally.
 `items.ts` already sets the precedent for this exact class (400 with a
 specific message at lines 169–172, 192–196, 384–387). These two routes are
 user-facing (`SetupWorkflowModal`, `WorkphaseManagerPanel`).
+
+**Status:** ✅ Fixed as specified — still valid, confirmed by re-reading
+both routes. `POST /api/workflows` now does a plain-`db` existence check
+against `projects` for `projectId` (400 "projectId does not reference an
+existing project"), and against `workflowTemplates`/`workflows` for
+`templateId`/`sourceWorkflowId` when given (400 with a specific message
+each) — all before `db.transaction` opens, matching `items.ts`'s
+precedent. `POST /api/workphases` does the same existence check against
+`workflows` for `workflowId`. Added 4 regression tests (one per checked
+field) across `workflows.test.ts` and `workphases.test.ts`. `tsc --noEmit`
+clean; full suite passing (247 tests, up from 243).
 
 ### 14. `deleteProjectById` can delete items belonging to a different, since-reparented project `[Correctness & Security]`
 **File:** `server/src/routes/projects.ts:93–102`
