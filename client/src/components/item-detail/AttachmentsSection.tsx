@@ -26,7 +26,7 @@ export function AttachmentsSection({ itemId }: AttachmentsSectionProps) {
   useEffect(() => {
     fetchAttachments(itemId)
       .then(setAttachments)
-      .catch(() => {});
+      .catch(err => console.error('Failed to load attachments:', err));
   }, [itemId]);
 
   async function handleAdd(e: React.SyntheticEvent<HTMLFormElement>) {

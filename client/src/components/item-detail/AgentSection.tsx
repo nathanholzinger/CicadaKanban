@@ -17,7 +17,7 @@ export function AgentSection({ item, onUpdate }: AgentSectionProps) {
   useEffect(() => {
     fetchAgents()
       .then(setAgents)
-      .catch(() => {});
+      .catch(err => console.error('Failed to load agents:', err));
   }, []);
 
   async function handleAgentChange(e: React.ChangeEvent<HTMLSelectElement>) {

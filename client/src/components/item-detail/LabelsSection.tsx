@@ -22,32 +22,40 @@ export function LabelsSection({ itemId, projectId }: LabelsSectionProps) {
         setLabels(all);
         setItemLabelIds(new Set(mine.map(l => l.id)));
       })
-      .catch(() => {});
+      .catch(err => console.error('Failed to load labels:', err));
   }, [itemId, projectId]);
 
   async function handleToggle(labelId: string) {
-    if (itemLabelIds.has(labelId)) {
-      await removeLabelFromItem(itemId, labelId);
-      setItemLabelIds(prev => {
-        const s = new Set(prev);
-        s.delete(labelId);
-        return s;
-      });
-    } else {
-      await addLabelToItem(itemId, labelId);
-      setItemLabelIds(prev => new Set([...prev, labelId]));
+    try {
+      if (itemLabelIds.has(labelId)) {
+        await removeLabelFromItem(itemId, labelId);
+        setItemLabelIds(prev => {
+          const s = new Set(prev);
+          s.delete(labelId);
+          return s;
+        });
+      } else {
+        await addLabelToItem(itemId, labelId);
+        setItemLabelIds(prev => new Set([...prev, labelId]));
+      }
+    } catch (err) {
+      console.error('Failed to toggle label:', err);
     }
   }
 
   async function handleCreate(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!newLabelName.trim()) return;
-    const label = await createLabel({ name: newLabelName.trim(), color: newLabelColor });
-    setLabels(prev => [...prev, label]);
-    await addLabelToItem(itemId, label.id);
-    setItemLabelIds(prev => new Set([...prev, label.id]));
-    setNewLabelName('');
-    setAddingLabel(false);
+    try {
+      const label = await createLabel({ name: newLabelName.trim(), color: newLabelColor });
+      setLabels(prev => [...prev, label]);
+      await addLabelToItem(itemId, label.id);
+      setItemLabelIds(prev => new Set([...prev, label.id]));
+      setNewLabelName('');
+      setAddingLabel(false);
+    } catch (err) {
+      console.error('Failed to create label:', err);
+    }
   }
 
   return (

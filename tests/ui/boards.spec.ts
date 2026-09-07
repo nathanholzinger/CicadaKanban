@@ -368,4 +368,52 @@ test.describe('workflow creation', () => {
     await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
   });
+
+  // Reproduces a concretely-reachable gap left open by audit Finding #16
+  // (client mutation handlers with no rejection path): App.tsx's `workflows`
+  // state is fetched once at mount and never refreshed or pruned afterward,
+  // so a project deleted elsewhere in the same session is still offered as a
+  // "copy from" source here. Combined with Finding #13's sourceWorkflowId
+  // existence check, submitting it now correctly 400s server-side — but
+  // SetupWorkflowModal's submit() has no catch, so that failure is a silent
+  // unhandled rejection: no message ever tells the user the workflow wasn't
+  // created. Expected to fail until that catch (and an error message) is added.
+  test('copying from a project deleted after the page loaded surfaces an error, not a silent no-op', async ({ page, projectSidebar, request }) => {
+    const source = await (await request.post(`${API}/projects`, { data: { name: 'Stale Copy Source' } })).json();
+    const templates = await (await request.get(`${API}/workflow-templates`)).json();
+    const flow = templates.find((t: { name: string }) => t.name === 'flow');
+    await request.post(`${API}/workflows`, {
+      data: { name: 'Stale Copy Source', projectId: source.id, templateId: flow.id },
+    });
+    await request.post(`${API}/projects`, { data: { name: 'Stale Copy Target' } });
+
+    // Mount the app while "Stale Copy Source" and its workflow still exist —
+    // App.tsx fetches `workflows`/`projects` here and never refreshes them
+    // again. `page.goto` only waits for the page load event, not for that
+    // fetch to resolve, so wait for the sidebar to actually show it before
+    // deleting anything — otherwise the delete below could race ahead of the
+    // app's own initial fetch and this wouldn't reproduce staleness at all.
+    await page.goto('/');
+    await expect(projectSidebar.projectName('Stale Copy Source')).toBeVisible();
+
+    // Delete the source project via a raw API call rather than the UI, so the
+    // already-loaded page's in-memory state is left untouched by it —
+    // reproducing a project being deleted elsewhere (another tab, another
+    // user) mid-visit.
+    await request.delete(`${API}/projects/${source.id}`);
+
+    await projectSidebar.select('Stale Copy Target');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await page.getByRole('button', { name: /Set up a Workflow/ }).click();
+
+    // The now-deleted "Stale Copy Source" still shows up as a copy option —
+    // the client never learned it (or its workflow) was gone.
+    await page.getByRole('dialog').getByRole('button', { name: /Stale Copy Source/ }).click();
+
+    // Expected: the failure surfaces visibly in the dialog instead of vanishing.
+    await expect(page.getByRole('dialog').getByText(/failed|does not reference/i)).toBeVisible();
+
+    // And no workflow should have actually been created for the target project.
+    await expect(page.getByRole('group', { name: 'Todo' })).not.toBeVisible();
+  });
 });

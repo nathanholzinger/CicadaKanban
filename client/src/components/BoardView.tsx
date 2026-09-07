@@ -78,7 +78,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   useEffect(() => {
     fetchItemTypes()
       .then(setItemTypes)
-      .catch(() => {});
+      .catch(err => console.error('Failed to load item types:', err));
   }, []);
 
   const loadBoard = useCallback(async () => {

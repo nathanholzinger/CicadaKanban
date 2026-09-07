@@ -7,16 +7,21 @@ export function useBoardManagement(workflowId: string) {
   const [activeBoardId, setActiveBoardIdState] = useState<string | null>(null);
 
   const loadBoards = useCallback(async () => {
-    const data = await fetchBoards(workflowId);
-    const sorted = [...data].sort((a, b) => a.position - b.position);
-    setBoards(sorted);
+    try {
+      const data = await fetchBoards(workflowId);
+      const sorted = [...data].sort((a, b) => a.position - b.position);
+      setBoards(sorted);
 
-    const stored = localStorage.getItem(`kanban_active_board_${workflowId}`);
-    let resolved: string | null = sorted[0]?.id ?? null;
-    if (stored && sorted.some(b => b.id === stored)) resolved = stored;
-    setActiveBoardIdState(resolved);
+      const stored = localStorage.getItem(`kanban_active_board_${workflowId}`);
+      let resolved: string | null = sorted[0]?.id ?? null;
+      if (stored && sorted.some(b => b.id === stored)) resolved = stored;
+      setActiveBoardIdState(resolved);
 
-    return sorted;
+      return sorted;
+    } catch (err) {
+      console.error('Failed to load boards:', err);
+      return [];
+    }
   }, [workflowId]);
 
   useEffect(() => {

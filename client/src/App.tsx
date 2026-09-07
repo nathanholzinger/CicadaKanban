@@ -64,19 +64,34 @@ export default function App() {
   }, [showNotifications]);
 
   async function handleMarkAllRead() {
-    await markAllNotificationsRead();
-    setNotifications([]);
-    setShowNotifications(false);
+    try {
+      await markAllNotificationsRead();
+      setNotifications([]);
+      setShowNotifications(false);
+    } catch (err) {
+      console.error('Failed to mark all notifications read:', err);
+      throw err;
+    }
   }
 
   async function handleDismissNotification(id: string) {
-    await markNotificationRead(id);
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await markNotificationRead(id);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      console.error('Failed to dismiss notification:', err);
+      throw err;
+    }
   }
 
   async function handleCreateWorkflow(data: CreateWorkflowInput) {
-    const created = await createWorkflow(data);
-    setWorkflows(prev => [...prev, created]);
+    try {
+      const created = await createWorkflow(data);
+      setWorkflows(prev => [...prev, created]);
+    } catch (err) {
+      console.error('Failed to create workflow:', err);
+      throw err;
+    }
   }
 
   function handleOpenCreateProject(parentId?: string) {
@@ -85,12 +100,17 @@ export default function App() {
   }
 
   async function handleCreateProject(name: string, description: string) {
-    const project = await createProject({
-      name,
-      description: description || undefined,
-      parentId: createProjectParentId,
-    });
-    setProjects(prev => [...prev, project]);
+    try {
+      const project = await createProject({
+        name,
+        description: description || undefined,
+        parentId: createProjectParentId,
+      });
+      setProjects(prev => [...prev, project]);
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      throw err;
+    }
   }
 
   useEffect(() => {
@@ -106,16 +126,26 @@ export default function App() {
   }
 
   async function handleUpdateProject(id: string, data: UpdateProjectInput) {
-    const updated = await updateProject(id, data);
-    setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
+    try {
+      const updated = await updateProject(id, data);
+      setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
+    } catch (err) {
+      console.error('Failed to update project:', err);
+      throw err;
+    }
   }
 
   async function handleDeleteProject(id: string) {
-    await deleteProject(id);
-    setSelectedProjectId(prev => (prev === id ? null : prev));
-    fetchProjects()
-      .then(setProjects)
-      .catch(() => {});
+    try {
+      await deleteProject(id);
+      setSelectedProjectId(prev => (prev === id ? null : prev));
+      fetchProjects()
+        .then(setProjects)
+        .catch(err => console.error('Failed to refresh projects after delete:', err));
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      throw err;
+    }
   }
 
   async function handleReorderProject(id: string, parentId: string | null, prevId: string | null, nextId: string | null) {
@@ -126,7 +156,7 @@ export default function App() {
       console.error('Failed to reposition project:', err);
       fetchProjects()
         .then(setProjects)
-        .catch(() => {});
+        .catch(refetchErr => console.error('Failed to refresh projects after failed reorder:', refetchErr));
     }
   }
 

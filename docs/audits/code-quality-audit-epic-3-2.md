@@ -555,6 +555,73 @@ second pattern; the rest should at minimum `console.error`.
 `handleReorderProject`'s catch (`App.tsx:125`) both discards the error *and*
 reverts the UI, so a rejected reorder looks like an unexplained snap-back.
 
+**Status:** ✅ Fixed to the audit's own stated minimum bar
+(`console.error`) — re-verified each cited location individually, since
+other findings' work had already fixed some of them:
+- **Already fixed (false positives now, no change needed):**
+  `useColumnManagement.ts`'s `handleDeleteColumn`/`handleReorderColumns` and
+  `useBoardManagement.ts`'s `handleDeleteBoard` are all now safely wrapped
+  by their *callers* — `ConfirmDeleteButton` (column/board delete) and
+  `useBoardDnd.ts`'s `handleDragEnd` (column reorder) each already
+  `try/catch` and surface a message, apparently added by unrelated work
+  since this audit was written. `handleReorderProject`'s own catch already
+  had `console.error` for the main failure; only its revert re-fetch was
+  still silently swallowed (fixed below).
+- **Still valid, fixed:** `App.tsx`'s 6 bare handlers
+  (`handleMarkAllRead`, `handleDismissNotification`, `handleCreateWorkflow`,
+  `handleCreateProject`, `handleUpdateProject`, `handleDeleteProject`) each
+  now `try/catch`, `console.error`, then **rethrow** — rethrow (not swallow)
+  because at least one of them (`handleCreateWorkflow`, awaited by
+  `SetupWorkflowModal`'s `onCreate` via `ProjectPage`) has a caller relying
+  on the rejection to avoid closing on failure; rethrowing is the one
+  choice that's safe for every caller uniformly, awaited or not.
+  `item-detail/LabelsSection.tsx`'s `handleToggle`/`handleCreate` now
+  `try/catch` + `console.error` (bare event handlers, nothing awaits them,
+  so swallow-after-log is fine here). `useBoardManagement.ts`'s `loadBoards`
+  (fire-and-forget from its own `useEffect`, nothing downstream to rethrow
+  to) now `try/catch` + `console.error`.
+- **`.catch(() => {})` upgraded to `console.error`:** `App.tsx`'s
+  `handleDeleteProject`/`handleReorderProject` revert re-fetches;
+  `BoardView.tsx:81` (item types); `item-detail/AgentSection.tsx:20`
+  (agents), `AttachmentsSection.tsx:29` (attachments),
+  `LabelsSection.tsx:25` (labels); `SetupWorkflowModal.tsx:28` (templates).
+  The 15s notification poll (`App.tsx:48`) was left untouched, per the
+  audit's own call that it's defensible.
+
+Deliberately out of scope: fully reverting stuck UI state at the *call
+sites* of the now-rethrowing App.tsx handlers (e.g. `ProjectPage.tsx`'s
+delete-confirm buttons stay on "Deleting…" forever on failure) — that goes
+beyond the audit's own stated fix bar of "at minimum console.error" and
+would need per-call-site design work. Also noted but not fixed, since none
+were cited by this finding: `AttachmentsSection.tsx`'s
+`handleAdd`/`handleDelete`, `AgentSection.tsx`'s `handleOpenInClaude`, and
+`WorkphaseManagerPanel.tsx`'s rename `handleBlur` have the same no-catch
+shape as the cited handlers. Per user direction, no new tests were added —
+these are mechanical error-logging additions with no branching logic, and
+the client suite has no render-test precedent to build on for this class
+of fix. `tsc --noEmit` clean; full client suite passing (93 tests,
+unchanged).
+
+**Follow-up:** one of the deliberately-out-of-scope items above
+(`SetupWorkflowModal.tsx`'s missing error message) turned out to be
+concretely reachable today, not just defensive — a direct interaction with
+Finding #13's new validation. `App.tsx`'s `workflows` state is fetched
+once at mount and never refreshed or pruned, so a project deleted elsewhere
+in the same session still offers its workflow as a "copy from" source;
+before Finding #13 that silently produced a zero-workphase workflow, but
+now it correctly 400s (`sourceWorkflowId does not reference an existing
+workflow`) — and `submit()`'s missing catch meant that rejection vanished
+entirely. Written test-first: added
+`tests/ui/boards.spec.ts` → `workflow creation` → "copying from a project
+deleted after the page loaded surfaces an error, not a silent no-op",
+confirmed it failed for the right reason (server genuinely 400s, logged via
+`console.error`, but no message ever appears in the dialog), then fixed
+`SetupWorkflowModal.tsx`: `submit()` now catches, sets an `error` state
+(server message when available), and renders it above the option list
+(same `text-xs text-red-400` convention as `CreateProjectModal.tsx`). Full
+Playwright suite passing (112 tests, 6 pre-existing skips); `tsc --noEmit`
+clean; full client (93) and server (248) suites unaffected.
+
 ### 17. `withPositionScope` duplicated (differently) between `items.ts` and `boards.ts`, and left embedded in a route file rather than the lib module it pairs with `[Correctness & Security + Duplication & Abstraction + File Responsibility]`
 **Files:** `server/src/routes/items.ts:14–114` (`withPositionScope`, `positionScopeFor`, `workphaseIdsInSameWorkflow`); `server/src/routes/boards.ts:17–30` (`withPositionScope`)
 

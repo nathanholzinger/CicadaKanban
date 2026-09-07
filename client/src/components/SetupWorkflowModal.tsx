@@ -22,11 +22,12 @@ export default function SetupWorkflowModal({
 }: SetupWorkflowModalProps) {
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchWorkflowTemplates()
       .then(setTemplates)
-      .catch(() => {});
+      .catch(err => console.error('Failed to load workflow templates:', err));
   }, []);
 
   // Projects that have a workflow (excluding the current project)
@@ -39,8 +40,14 @@ export default function SetupWorkflowModal({
 
   async function submit(opts: { templateId?: string; sourceWorkflowId?: string }) {
     setSaving(true);
+    setError('');
     try {
       await onCreate({ projectId: project.id, name: project.name, ...opts });
+    } catch (err) {
+      // A stale option here (e.g. a template/project deleted elsewhere since
+      // this modal's props were loaded) now surfaces as a real error instead
+      // of a silent no-op — audit Finding #16 follow-up.
+      setError(err instanceof Error ? err.message : 'Failed to create workflow.');
     } finally {
       setSaving(false);
     }
@@ -69,6 +76,8 @@ export default function SetupWorkflowModal({
       }
     >
       <div className="max-h-[60vh] space-y-2 overflow-y-auto px-6 py-4">
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
         {/* Custom */}
         <p className="mb-1 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">Start fresh</p>
         <button
