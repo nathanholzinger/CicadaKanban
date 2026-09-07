@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { labels, itemLabels } from '../db/schema.js';
+import { items, labels, itemLabels } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -40,10 +41,17 @@ router.get('/item/:itemId', (req, res) => {
 router.post('/item/:itemId', (req, res) => {
   const { labelId } = req.body;
   if (!labelId) { res.status(400).json({ error: 'labelId is required' }); return; }
+  if (!getByIdOrNotFound(items, req.params.itemId, res, 'Item not found')) return;
+  if (!getByIdOrNotFound(labels, labelId, res, 'Label not found')) return;
   try {
     db.insert(itemLabels).values({ itemId: req.params.itemId, labelId }).run();
-  } catch {
-    // already assigned — ignore duplicate
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      console.error('Failed to assign label:', err);
+      res.status(500).json({ error: 'Failed to assign label' });
+      return;
+    }
+    // already assigned — idempotent success
   }
   res.status(201).json({ success: true });
 });
