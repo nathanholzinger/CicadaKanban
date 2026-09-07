@@ -9,8 +9,6 @@ import {
 import { coarsestFit } from '../../src/lib/coarsestFit.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
-// TODO: fix tests skipped because of reindexScope refactor
-
 function setPosition(id: string, position: number | null) {
   db.update(items).set({ position }).where(eq(items.id, id)).run();
 }
@@ -80,15 +78,15 @@ describe('coarsestFit', () => {
 });
 
 describe('reindexScope', () => {
-  it.skip('breaks exact ties by createdAt, oldest first', async () => {
-    const { phase, items: created } = await seedPhaseWithItems(2);
+  it('breaks exact ties by createdAt, oldest first', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(4);
     setPosition(created[0].id, 5.0);
     setPosition(created[1].id, 1.0 + 1e-13);
     setPosition(created[2].id, 1.0);
     setPosition(created[3].id, 5.0);
 
     db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, created[2].id, 'after', eq(items.workphaseId, phase.id), tx)
     );
 
     expect(getPosition(created[2].id)).toBe(1);
@@ -256,8 +254,8 @@ describe('resolveAppendPosition', () => {
 // workphaseId, root scope instead of a workphase scope).
 describe('positionResolver against the projects table', () => {
   describe('reindexScope', () => {
-    it.skip('reassigns clean sequential positions while preserving relative order', async () => {
-      const created = await seedRootProjects(3);
+    it('reassigns clean sequential positions while preserving relative order', async () => {
+      const created = await seedRootProjects(4);
       setProjectPosition(created[0].id, 5.001);
       setProjectPosition(created[1].id, 5.001 + 1e-13);
       setProjectPosition(created[2].id, 5.002);
@@ -270,7 +268,7 @@ describe('positionResolver against the projects table', () => {
       expect(getProjectPosition(created[3].id)).toBe(1);
       expect(getProjectPosition(created[0].id)).toBe(2);
       expect(getProjectPosition(created[1].id)).toBe(3);
-      expect(getProjectPosition(created[1].id)).toBe(4);
+      expect(getProjectPosition(created[2].id)).toBe(4);
     });
   });
 
