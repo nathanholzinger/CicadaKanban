@@ -503,6 +503,19 @@ the delete to `projectId` only (letting `ON DELETE SET NULL` on
 `workphase_id` surface the rest as "Unknown status"), or logging what's
 cross-project before deleting it.
 
+**Status:** ✅ Fixed as specified (first option) — still valid, confirmed
+by re-reading `deleteProjectById`. `allItemIds` no longer unions in items
+merely sitting in the project's workphases; it now deletes only items whose
+`projectId` is this project. Removing the workphases still nulls a
+stranger's `workphaseId` via `ON DELETE SET NULL`, matching
+`workflows.ts`'s own DELETE behavior — the item survives and surfaces as
+"Unknown status." The now-unused `workphaseIds`/`workphaseItemIds`
+intermediates were dropped along with it. Added a regression test seeding
+exactly this scenario (a second project's item pointed at the deleted
+project's workphase) and confirmed via `git stash` that it fails (404
+instead of 200 — the item was actually deleted) without the fix. `tsc
+--noEmit` clean; full suite passing (248 tests).
+
 ### 15. Deleting an item leaves its descendants stale in client state `[Correctness & Security]`
 **File:** `client/src/components/workflow/useItemManagement.ts:112–114`
 

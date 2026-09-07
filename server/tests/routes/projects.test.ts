@@ -324,4 +324,30 @@ describe('DELETE /api/projects/:id', () => {
     expect(db.select().from(boards).where(eq(boards.id, boardId)).all()).toHaveLength(0);
     expect(db.select().from(columns).where(eq(columns.id, column.id)).all()).toHaveLength(0);
   });
+
+  // Regression coverage for audit Finding #14: an item merely sitting in a
+  // to-be-deleted project's workphase — because it belongs to another
+  // project that was reparented away, or was given its own workflow, after
+  // filing items into the old parent's workphases — must survive with its
+  // workphaseId nulled, not be deleted alongside the project's own items.
+  it('does not delete another project\'s item that is merely sitting in this project\'s workphase', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const workphase = await createWorkphase(workflow.id);
+
+    // A second, unrelated project whose item still points at `project`'s
+    // workphase (simulating an item left behind after a reparent/re-workflow).
+    const otherProject = await createProject();
+    const strandedItem = await createItem({ projectId: otherProject.id, workphaseId: workphase.id });
+
+    const res = await request(app).delete(`/api/projects/${project.id}`);
+    expect(res.status).toBe(204);
+
+    // The other project and its item both survive; the item's workphaseId is
+    // nulled by ON DELETE SET NULL (surfaces as "Unknown status").
+    expect((await request(app).get(`/api/projects/${otherProject.id}`)).status).toBe(200);
+    const itemRes = await request(app).get(`/api/items/${strandedItem.id}`);
+    expect(itemRes.status).toBe(200);
+    expect(itemRes.body.workphaseId).toBeNull();
+  });
 });

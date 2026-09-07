@@ -108,24 +108,24 @@ function deleteProjectById(id: string, tx: Tx) {
   const children = tx.select().from(projects).where(eq(projects.parentId, id)).all();
   for (const child of children) deleteProjectById(child.id, tx);
 
-  // Gather all workflow/workphase ids for this project upfront
+  // Gather this project's workflow ids upfront
   const workflowIds = tx.select({ id: workflows.id })
     .from(workflows).where(eq(workflows.projectId, id)).all().map(w => w.id);
 
-  const workphaseIds = workflowIds.length > 0
-    ? tx.select({ id: workphases.id }).from(workphases).where(inArray(workphases.workflowId, workflowIds)).all().map(w => w.id)
-    : [];
-
-  // All items to remove: owned by this project OR sitting in this project's
-  // workphases. Each item's dependent rows (itemLabels, activityLog,
-  // notifications, attachments, chat threads/messages) are removed by ON DELETE
-  // CASCADE, so deleting the items is enough.
-  const ownedItemIds = tx.select({ id: items.id })
+  // Items to remove: owned by this project ONLY — not also every item merely
+  // sitting in one of this project's workphases (audit Finding #14). A
+  // project that was reparented away, or had its own workflow assigned,
+  // after filing items into this project's workphases still points its
+  // workphaseId here; sweeping those up too meant deleting this project
+  // could silently delete another project's items. Removing the workphases
+  // below already nulls their workphaseId (ON DELETE SET NULL, the same
+  // behavior workflows.ts's own DELETE relies on) — they survive and
+  // surface as "Unknown status" on whatever board their real project now
+  // resolves to. Each deleted item's dependent rows (itemLabels,
+  // activityLog, notifications, attachments, chat threads/messages) are
+  // removed by ON DELETE CASCADE, so deleting the items is enough.
+  const allItemIds = tx.select({ id: items.id })
     .from(items).where(eq(items.projectId, id)).all().map(i => i.id);
-  const workphaseItemIds = workphaseIds.length > 0
-    ? tx.select({ id: items.id }).from(items).where(inArray(items.workphaseId, workphaseIds)).all().map(i => i.id)
-    : [];
-  const allItemIds = [...new Set([...ownedItemIds, ...workphaseItemIds])];
 
   if (allItemIds.length > 0) {
     tx.delete(items).where(inArray(items.id, allItemIds)).run();
@@ -141,9 +141,7 @@ function deleteProjectById(id: string, tx: Tx) {
       .from(boards).where(inArray(boards.workflowId, workflowIds)).all().map(b => b.id);
     deleteBoardsById(workflowBoardIds, tx);
 
-    if (workphaseIds.length > 0) {
-      tx.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
-    }
+    tx.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
   }
 
   tx.delete(workflows).where(eq(workflows.projectId, id)).run();
