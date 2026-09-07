@@ -655,6 +655,15 @@ describe('PATCH /api/items/reorder', () => {
     expect(res.status).toBe(400);
   });
 
+  it('rejects a falsy invalid entry (regression: Array.find/truthiness mix-up)', async () => {
+    const project = await createProject();
+    const a = await createItem({ projectId: project.id });
+    const res = await request(app).patch('/api/items/reorder').send({
+      itemOrders: [null, { id: a.id, position: 1 }],
+    });
+    expect(res.status).toBe(400);
+  });
+
   it('returns 404 with missingIds when any item does not exist', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });

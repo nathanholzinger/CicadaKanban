@@ -33,10 +33,10 @@ export function applyReorder(
     return false;
   }
 
-  const invalidEntry = orders.find(
+  const hasInvalid = orders.some(
     (o) => typeof o?.id !== 'string' || typeof o?.position !== 'number' || !Number.isFinite(o.position),
   );
-  if (invalidEntry) {
+  if (hasInvalid) {
     res.status(400).json({ error: 'Each entry must have a string id and a finite numeric position' });
     return false;
   }
