@@ -423,7 +423,7 @@ router.patch('/:id/move', (req, res) => {
         req.params.id,
         tx,
       );
-      updates.position = resolvePositionByAnchorAndSide(items, anchorId, side as Side, scope, tx);
+      updates.position = resolvePositionByAnchorAndSide(items, scope, tx, side as Side, anchorId);
     } else if (position !== undefined) {
       updates.position = position;
     } else if (targetWorkphaseId) {

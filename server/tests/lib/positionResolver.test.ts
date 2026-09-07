@@ -86,7 +86,7 @@ describe('reindexScope', () => {
     setPosition(created[3].id, 5.0);
 
     db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[2].id, 'after', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[2].id)
     );
 
     expect(getPosition(created[2].id)).toBe(1);
@@ -103,7 +103,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[1].id, 2.0);
 
     const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
     );
     expect(result).toBe(1.8);
   });
@@ -120,7 +120,7 @@ describe('resolveAnchorPosition', () => {
     // Anchor to item C (created[2]) with side 'before' — the true previous
     // neighbor is item B (2.8), not item A (1.0).
     const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[2].id, 'before', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[2].id)
     );
     expect(result).toBeGreaterThan(2.8);
     expect(result).toBeLessThan(3.0);
@@ -131,7 +131,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 5.3);
 
     const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
     );
     expect(result).toBe(6);
   });
@@ -141,7 +141,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 5.3);
 
     const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[0].id, 'before', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[0].id)
     );
     expect(result).toBe(3);
   });
@@ -152,7 +152,7 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[1].id, 1.0 + 1e-13); // unresolvable gap at any decimal depth
 
     const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, phase.id), tx)
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
     );
 
     // The scope was reindexed to clean sequential integers first (order
@@ -170,8 +170,39 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, null);
 
     expect(() =>
-      db.transaction((tx) => resolvePositionByAnchorAndSide(items, created[0].id, 'after', eq(items.workphaseId, 'anything'), tx))
+      db.transaction((tx) => resolvePositionByAnchorAndSide(items, eq(items.workphaseId, 'anything'), tx, 'after', created[0].id))
     ).toThrow();
+  });
+
+  it('appends as last when no anchorId is given, side "after"', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(1);
+    setPosition(created[0].id, 5.3);
+
+    const result = db.transaction((tx) =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after')
+    );
+    expect(result).toBe(6);
+  });
+
+  it('prepends as first when no anchorId is given, side "before"', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(1);
+    setPosition(created[0].id, 5.3);
+
+    const result = db.transaction((tx) =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before')
+    );
+    expect(result).toBe(3);
+  });
+
+  it('returns 1.0 when no anchorId is given, side "before", on a genuinely empty scope', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const phase = await createWorkphase(workflow.id);
+
+    const result = db.transaction((tx) =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before')
+    );
+    expect(result).toBe(1.0);
   });
 });
 
@@ -262,7 +293,7 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[3].id, 4.999);
 
       db.transaction((tx) =>
-        resolvePositionByAnchorAndSide(projects, created[0].id, 'after', rootScope, tx)
+        resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id)
       );
 
       expect(getProjectPosition(created[3].id)).toBe(1);
@@ -279,7 +310,7 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[1].id, 2.0);
 
       const result = db.transaction((tx) =>
-        resolvePositionByAnchorAndSide(projects, created[0].id, 'after', rootScope, tx)
+        resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id)
       );
       expect(result).toBe(1.8);
     });
@@ -289,7 +320,7 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[0].id, null);
 
       expect(() =>
-        db.transaction((tx) => resolvePositionByAnchorAndSide(projects, created[0].id, 'after', rootScope, tx))
+        db.transaction((tx) => resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id))
       ).toThrow();
     });
   });

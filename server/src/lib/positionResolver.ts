@@ -8,12 +8,6 @@ const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new positio
 const SOFT_MAX_POSITION = 1000; // We will reindex if a position value exceeds this soft max, unless the row count is also greater than the soft max
 const MAX_OVER_POSITION = 100; // If there are more rows than the soft max then max will be caluclated as (rows + MAX_OVER)
 
-
-// TODO: chose one entry shape anchorId+side or targetOptions and depricate the other one
-
-// for defining anchorId + side.
-export type Side = 'before' | 'after';
-
 // Table Generic that defines a minimum structure for a table that can be ordered by 'position'
 export type PositionedTable = SQLiteTable & {
   id: SQLiteColumn;
@@ -29,86 +23,38 @@ export type PositionQueryContext = {
   tx: Tx 
 }
 
-// Special case instruction to place the row as 'first in scope' or 'last in scope'
-export type Edge = 'first' | 'last';
+// for defining anchorId + side.
+export type Side = 'before' | 'after';
 
 /**
- * @param prevId the id for the row that should be immediately before this row
- * @param nextId the id for the row that should be immediately after this row
- * @param edge used to place the row as first or last in the entire scope
- * @remarks allowed combinations: 
- *    "prevId only" - nextInScope will be found; position calculated as midpoint between prevId and nextInScope
- *    "nextId only" - prevInScope will be found; position calculated as midpoint between nextId and prevInScope
- *    "edge only" - position calculated so that it is 'first' in scope or 'last' in scope
- * @remarks special cases:
- *    if prevId is the last in scope this resolves to appendToEnd, same as edge = 'last'
- *    if nextId is the first in scope this resolves to betweenZeroAndFirst, same as edge = 'first'
- */
-export type TargetOptions =
-  | { prevId: string; nextId?: never; edge?: never }
-  | { nextId: string; prevId?: never; edge?: never }
-  | { edge: Edge; prevId?: never; nextId?: never };
-
-type IdPos = {id: string, pos: number};
-/**
- * Core Resolve Position entry point. Uses TargetOptions (see type TargetOption for params and valid combos).
- * Identifies which parameter has been given and determines the appropriate resolution strategy 
+ * finds a postion as it relates to an anchor
  * 
- * @param table
- * @param TargetOptions 
- * @param scopeWhere 
- * @param tx 
- * @returns the position value that is handed back by the resolving method (along with table context)
- */
-export function resolvePositionByTarget(
-  table: PositionedTable,
-  TargetOptions: TargetOptions,
-  scopeWhere: SQL,
-  tx: Tx,
-): number {
-  const e = tx ?? db;
-  const { prevId, nextId, edge } = TargetOptions;
-  const queryContext: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: e}
+ * @param table - the table that defines what type of list we're ordering (items, projects, etc)
+ * @param scopeWhere - the SQL that scopes the list appropriately (position relative to fellow siblings, postion relative to all items in project, etc)
+ * @param tx - the transaction handler
+ * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor. if anchorId is null then side functions as "before all" or "after all"
+ * @param anchorId - nullable. the targetId that the new id will be placed alongside
 
-  if (prevId && !nextId && !edge) {
-    return resolveAfterTarget(prevId, queryContext)
-  } else if (nextId && !prevId && !edge) {
-    return resolveBeforeTarget(nextId, queryContext)
-  } else if (edge && !prevId && !nextId) {
-    switch (edge) {
-      case 'first': return resolvePrependAsFirst(queryContext); break;
-      case 'last': return resolveAppendAsLast(queryContext); break;
-      default: throw new Error(`positionResolver: 'edge' must be 'first' or 'last'`);
-    }
-  } else {
-    throw new Error('positionResolver: resolvePositionByTarget requires only one param (prevId, nextId, edge) to be populated');
-  }
-}
-
-/**
- * Transforms an anchorId + side style payload into TargetOptions payload
- * 
- * @param table 
- * @param anchorId - the targetId that the new id will be placed alongside
- * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor
- * @param scopeWhere 
- * @param tx 
- * @returns 
+ * @returns number value of the position
  */
 export function resolvePositionByAnchorAndSide(
   table: PositionedTable, 
-  anchorId: string, 
-  side: Side, 
   scopeWhere: SQL, 
-  tx: Tx
+  tx: Tx,
+  side: Side, 
+  anchorId?: string,
 ): number {
-  let targetOptions: TargetOptions;
-  switch (side) {
-    case 'after': targetOptions = { prevId: anchorId }; break;
-    case 'before': targetOptions = { nextId: anchorId }; break;
-    default: throw new Error(`positionResolver: side must be 'before' or 'after'`)
+  const context: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: tx} 
+
+  if (anchorId) {
+    if (side === 'before') return resolveBeforeTarget(anchorId, context);
+    if (side === 'after') return resolveAfterTarget(anchorId, context);
+  } else {
+    if (side === 'before') return resolvePrependAsFirst(context);
+    if (side === 'after') return resolveAppendAsLast(context);
   }
-  return resolvePositionByTarget(table, targetOptions, scopeWhere, tx);
+
+  throw new Error(`positionResolver: failed to parse anchor + side`)
 }
 
 // TODO: depreciate this passthrough function

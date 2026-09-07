@@ -230,7 +230,7 @@ router.patch('/:id/move', (req, res) => {
         validationError = `${label} has no position to anchor against`;
         return null;
       }
-      return resolvePositionByAnchorAndSide(projects, anchorId, side, scope, tx);
+      return resolvePositionByAnchorAndSide(projects, scope, tx, side, anchorId);
     }
 
     let position: number;
