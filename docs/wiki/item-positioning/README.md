@@ -144,8 +144,8 @@ context — dragging a child *out* of its parent stays blocked until Epic
 3.5, which owns the cross-boundary attach/detach gesture.
 
 A new attached child's position is scoped to `(parentId, isAttached)` —
-not to `workphaceId` — via the same append-fallback logic as everything
-else. (Scoping it to `workphaceId` would incorrectly pull in unrelated
+not to `workphaseId` — via the same append-fallback logic as everything
+else. (Scoping it to `workphaseId` would incorrectly pull in unrelated
 top-level items and other parents' attached children sharing that
 workphase.)
 
@@ -161,9 +161,9 @@ an emergent tendency from typical usage, not an actively-enforced
 guarantee. Once interleaved by normal use, items stay interleaved.
 
 **Drop resolution rule:** whether a drop within a merged column is a
-"same-visual-group reorder" (position-only, `workphaceId` untouched) or a
-"genuine cross-column move" (workphaceId reassigned) is decided by **"is
-the active item's current workphaceId already a member of the target
+"same-visual-group reorder" (position-only, `workphaseId` untouched) or a
+"genuine cross-column move" (workphaseId reassigned) is decided by **"is
+the active item's current workphaseId already a member of the target
 column's covered set"** — not by which specific workphase the hovered card
 belongs to. If yes: position-only reorder regardless of which covered
 workphase the active/hovered item happens to be in. If no: snaps to
@@ -188,8 +188,8 @@ whole-project sweep:
    every single append.
 
 **Active items reindex as one coordinated scope** — every non-terminal
-workphace's items reset *together*, in one operation, never
-per-workphace independently. This is what prevents two separately-reset
+workphase's items reset *together*, in one operation, never
+per-workphase independently. This is what prevents two separately-reset
 scopes from drifting into overlapping ranges and colliding later.
 
 **Done items are excluded entirely** — see §6.
@@ -212,18 +212,18 @@ and count grow together — never disproportionate, needs nothing).
 - The active/done split needs no new field — `workphases.isTerminal`
   (already exists) fully determines it.
 - **`items.completedAt`** (nullable timestamp): set when a detached/root
-  item's effective workphace transitions to terminal; cleared (set null)
+  item's effective workphase transitions to terminal; cleared (set null)
   if it transitions back to non-terminal (reopened).
-- **Done items (detached/root items whose workphace is terminal) get no
+- **Done items (detached/root items whose workphase is terminal) get no
   stored position** — ordering is derived from `completedAt` at read
   time, never written or compared as `position`.
 - **Exception: attached children keep their position** even when their
-  (cascaded) workphace is terminal — their comparison scope is
-  `(parentId, isAttached)`, not workphaceId, so position stays meaningful
+  (cascaded) workphase is terminal — their comparison scope is
+  `(parentId, isAttached)`, not workphaseId, so position stays meaningful
   regardless of the parent's status. Only detached/root items lose
   position on terminal transition.
 - **Column range validation:** a board column's range cannot span a
-  terminal and a non-terminal workphace together — active and done items
+  terminal and a non-terminal workphase together — active and done items
   must never be directly compared in one sorted list, since done's
   ordering isn't position-based at all.
 - **Explicitly deferred, not built now:** a "generation" tagging scheme

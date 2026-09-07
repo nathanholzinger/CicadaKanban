@@ -20,8 +20,8 @@
 
 **Priority:** P0 · **Automated:** ✅ automated
 
-*Given* a detached/root item currently in a non-terminal workphace with
-`completedAt = null`, *when* its effective workphace transitions to a
+*Given* a detached/root item currently in a non-terminal workphase with
+`completedAt = null`, *when* its effective workphase transitions to a
 terminal one, *then* `completedAt` is set to the transition time.
 
 **Automation test:** `server/tests/routes/items.test.ts` › "POST into a
@@ -42,7 +42,7 @@ clears completedAt and assigns a fresh position"
 
 **Priority:** P0 · **Automated:** ✅ automated
 
-*Given* an item transitioning to a terminal workphace, *when* the
+*Given* an item transitioning to a terminal workphase, *when* the
 transition completes, *then* its `position` is not written/updated as
 part of that transition — ordering among done items is derived from
 `completedAt`, not a stored `position` value.
@@ -70,7 +70,7 @@ terminal"
 **Priority:** P0 · **Automated:** ✅ automated
 
 *Given* an attached child whose parent (and thus the child's cascaded
-effective workphace) transitions to terminal, *when* the cascade applies,
+effective workphase) transitions to terminal, *when* the cascade applies,
 *then* the child's `position` is retained and still meaningful within
 `(parentId, isAttached)` — only detached/root items lose position on
 terminal transition.
@@ -97,7 +97,7 @@ cascade (TC-6.6)"
 **Priority:** P0 · **Automated:** ✅ automated
 
 *Given* an attempt to create or edit a board column whose configured
-status range includes both a terminal and a non-terminal workphace,
+status range includes both a terminal and a non-terminal workphase,
 *when* the range is validated, *then* it is rejected with an error,
 alongside the existing overlap/direction/foreign-workphase checks.
 

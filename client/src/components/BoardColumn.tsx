@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
-import type { Column, Item, ItemType, WorkPhase } from '../types';
+import type { Column, Item, ItemType, Workphase } from '../types';
 import KanbanCard from './KanbanCard';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
@@ -240,7 +240,7 @@ export default function BoardColumn({
 
 interface ExpandedSubRowProps {
   columnId: string;
-  workphase: WorkPhase;
+  workphase: Workphase;
   items: Item[];
   itemTypes: ItemType[];
   childCounts: Record<string, number>;

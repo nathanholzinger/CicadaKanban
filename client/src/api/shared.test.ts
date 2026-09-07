@@ -46,7 +46,7 @@ describe('apiJson/apiVoid/apiRequest', () => {
       .rejects.toThrow("Cannot delete a workflow's last remaining board");
   });
 
-  it('apiRequest returns the raw Response so a caller can branch on status (e.g. deleteWorkPhase)', async () => {
+  it('apiRequest returns the raw Response so a caller can branch on status (e.g. deleteWorkphase)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(emptyResponse(204));
     vi.stubGlobal('fetch', fetchMock);
     const res = await apiRequest('/workphases/1', { method: 'DELETE' }, 'fallback');

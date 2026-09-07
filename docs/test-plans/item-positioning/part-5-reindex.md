@@ -57,11 +57,11 @@ count"
 
 **Priority:** P0 · **Automated:** ✅ automated
 
-*Given* multiple non-terminal workphaces whose combined items need
+*Given* multiple non-terminal workphases whose combined items need
 reindexing, *when* a reindex is triggered by either cause (tight-gap or
 magnitude) affecting the active scope, *then* all active items across
-every non-terminal workphace are reset together in one operation — not
-workphace-by-workphace.
+every non-terminal workphase are reset together in one operation — not
+workphase-by-workphase.
 
 **Automation test:** `items.test.ts` › "reindexes every non-terminal
 workphase in the workflow together, in one coordinated pass (TC-5.4)".
@@ -77,7 +77,7 @@ coordination proof.
 
 **Priority:** P1 (regression/guard) · **Automated:** ✅ automated
 
-*Given* a terminal-workphace (done) item, *when* an active-scope reindex
+*Given* a terminal-workphase (done) item, *when* an active-scope reindex
 occurs elsewhere, *then* the done item's data is untouched — done items
 have no stored `position` to reindex (see [Part 6](part-6-active-done-split.md)).
 

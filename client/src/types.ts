@@ -24,7 +24,7 @@ export interface Workflow {
   updatedAt: number;
 }
 
-export interface WorkPhase {
+export interface Workphase {
   id: string;
   workflowId: string;
   name: string;
@@ -67,7 +67,7 @@ export interface Item {
 }
 
 export interface WorkflowWithDetails extends Workflow {
-  workphases: WorkPhase[];
+  workphases: Workphase[];
   items: Item[];
 }
 
@@ -84,7 +84,7 @@ export interface Board {
 export type ColumnDisplayMode = 'merged' | 'expanded';
 
 export interface ColumnSubRow {
-  workphase: WorkPhase;
+  workphase: Workphase;
   items: Item[];
 }
 

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { WorkPhase, Column, ColumnDisplayMode } from '../types';
+import type { Workphase, Column, ColumnDisplayMode } from '../types';
 import ModalShell from './ModalShell';
 import { BTN_MODAL_CANCEL, BTN_MODAL_PRIMARY, FIELD_LABEL, INPUT_LG } from './item-detail/pillUtils';
 
 interface ColumnEditorModalProps {
-  workphases: WorkPhase[]; // ordered by position
+  workphases: Workphase[]; // ordered by position
   column?: Column; // editing an existing column; omitted = creating a new one
   onSubmit: (data: {
     startWorkphaseId: string;

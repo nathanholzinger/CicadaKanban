@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { WorkPhase } from '../types';
+import type { Workphase } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG } from './item-detail/pillUtils';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 
 interface WorkphaseManagerPanelProps {
-  workphases: WorkPhase[];
+  workphases: Workphase[];
   notice: string;
   addingWorkphase: boolean;
   setAddingWorkphase: (v: boolean) => void;
@@ -82,7 +82,7 @@ function WorkphaseManagerRow({
   onRename,
   onDelete,
 }: {
-  workphase: WorkPhase;
+  workphase: Workphase;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {

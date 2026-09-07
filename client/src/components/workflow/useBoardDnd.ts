@@ -116,7 +116,7 @@ export function useBoardDnd(
     // Position-only, scoped to the parent's other attached children — the
     // server derives that scope from the anchor's own (parentId, isAttached)
     // state, so no extra scope info needs to be sent. Never touches
-    // workphaceId; dragging a child *out* of its parent stays blocked until
+    // workphaseId; dragging a child *out* of its parent stays blocked until
     // Epic 3.5 owns that gesture.
     if (type === 'attached-child') {
       if (activeId === overId) return;

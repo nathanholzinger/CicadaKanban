@@ -319,7 +319,7 @@ tests rather than a new test slot.
 
 *Given* an attached child with a position meaningful among its siblings,
 *when* it is detached, *then* it receives a fresh position appropriate to
-its new workphace-scoped comparison group (append fallback), not a
+its new workphase-scoped comparison group (append fallback), not a
 leftover sibling-scoped value.
 
 **Automation test:** `items.test.ts` › "detaching reassigns a fresh

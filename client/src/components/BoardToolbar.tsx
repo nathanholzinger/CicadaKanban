@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Board, WorkPhase } from '../types';
+import type { Board, Workphase } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';
 
 interface BoardToolbarProps {
@@ -15,7 +15,7 @@ interface BoardToolbarProps {
   onToggleWorkphaseManager: () => void;
   childDefaultWorkphaseId: string | null;
   onChildWorkphaseChange: (workphaseId: string | null) => void;
-  workphases: WorkPhase[];
+  workphases: Workphase[];
 }
 
 // Board switcher + board CRUD, column/workphase-manager entry points, and the

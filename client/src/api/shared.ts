@@ -21,7 +21,7 @@ async function parseErrorMessage(res: Response, fallback: string): Promise<strin
 }
 
 // The shared fetch + error path, returning the raw Response for callers that
-// need to branch on status (e.g. deleteWorkPhase's 204-vs-200 report). Most
+// need to branch on status (e.g. deleteWorkphase's 204-vs-200 report). Most
 // call sites want apiJson/apiVoid below instead.
 export async function apiRequest(path: string, init: ApiRequestInit | undefined, fallbackMessage: string): Promise<Response> {
   const hasBody = init?.body !== undefined;

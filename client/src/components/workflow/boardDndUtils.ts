@@ -61,14 +61,14 @@ export function subrowContainerId(columnId: string, workphaseId: string): string
 }
 
 export type DropResolution =
-  // Same-visual-group reorder: position-only, workphaceId untouched —
+  // Same-visual-group reorder: position-only, workphaseId untouched —
   // covers a plain same-workphase reorder (scopeWorkphaseIds has one entry)
   // and a merged-column interleave (scopeWorkphaseIds has the column's full
   // covered set). `anchorId` is the hovered card's id, or null when a
   // container (not a specific card) was hovered — the server appends to the
   // end of the scope in that case.
   | { kind: 'reorder'; scopeWorkphaseIds: string[]; anchorId: string | null }
-  // Genuine cross-column move: workphaceId changes to targetWorkphaseId.
+  // Genuine cross-column move: workphaseId changes to targetWorkphaseId.
   // `anchorId` is the hovered card's id for precise before/after placement,
   // or null when a container was hovered (server appends to the target).
   | { kind: 'move'; targetWorkphaseId: string; anchorId: string | null };
@@ -86,8 +86,8 @@ export type DropResolution =
 // expanded mode requires dropping on a specific sub-row for precision).
 //
 // `activeWorkphaseId` must be the active item's *original* (pre-drag)
-// workphace, not a live lookup — the caller's drag-over handler optimistically
-// re-buckets the dragged item's workphaceId in local state for the live
+// workphase, not a live lookup — the caller's drag-over handler optimistically
+// re-buckets the dragged item's workphaseId in local state for the live
 // preview, so re-deriving it from current state here would see that
 // already-mutated value and misjudge a genuine cross-column move as an
 // already-same-group reorder partway through the drag. Callers should

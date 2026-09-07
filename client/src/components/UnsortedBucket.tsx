@@ -1,9 +1,9 @@
-import type { Item, ItemType, WorkPhase } from '../types';
+import type { Item, ItemType, Workphase } from '../types';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 
 interface UnsortedBucketProps {
-  uncoveredWorkphases: WorkPhase[];
+  uncoveredWorkphases: Workphase[];
   invalidItems: Item[];
   getWorkphaseItems: (workphaseId: string) => Item[];
   needsAttention: boolean;

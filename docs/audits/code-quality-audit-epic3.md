@@ -123,7 +123,7 @@ current code.
 description on line 80 says an attached item "is placed in the parent's
 current workphase regardless of workphase_id", and the underlying route
 (`POST /api/items`) never requires `workphaseId`. An agent creating an
-attached child via MCP is forced to supply a bogus `workphace_id` the route
+attached child via MCP is forced to supply a bogus `workphase_id` the route
 silently ignores.
 
 **Fix:** Drop `workphase_id` from the `required` array (or require it only

@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import type { WorkPhase } from '../../types';
-import { createWorkPhase, updateWorkPhase, deleteWorkPhase } from '../../api/workphases';
+import type { Workphase } from '../../types';
+import { createWorkphase, updateWorkphase, deleteWorkphase } from '../../api/workphases';
 
 export function useWorkphaseManagement(workflowId: string) {
-  const [workphases, setWorkphases] = useState<WorkPhase[]>([]);
+  const [workphases, setWorkphases] = useState<Workphase[]>([]);
   const [addingWorkphase, setAddingWorkphase] = useState(false);
   const [newWorkphaseName, setNewWorkphaseName] = useState('');
 
   async function handleCreateWorkphase() {
     if (!newWorkphaseName.trim()) return;
     try {
-      const workphase = await createWorkPhase({ workflowId, name: newWorkphaseName.trim() });
+      const workphase = await createWorkphase({ workflowId, name: newWorkphaseName.trim() });
       setWorkphases(prev => [...prev, workphase]);
       setNewWorkphaseName('');
       setAddingWorkphase(false);
@@ -21,7 +21,7 @@ export function useWorkphaseManagement(workflowId: string) {
 
   async function handleRenameWorkphase(id: string, name: string) {
     try {
-      const updated = await updateWorkPhase(id, { name });
+      const updated = await updateWorkphase(id, { name });
       setWorkphases(prev => prev.map(w => (w.id === id ? { ...w, name: updated.name } : w)));
     } catch (err) {
       console.error('Failed to rename workphase:', err);
@@ -29,7 +29,7 @@ export function useWorkphaseManagement(workflowId: string) {
   }
 
   async function handleDeleteWorkphase(id: string) {
-    const result = await deleteWorkPhase(id);
+    const result = await deleteWorkphase(id);
     setWorkphases(prev => prev.filter(w => w.id !== id));
     return result;
   }

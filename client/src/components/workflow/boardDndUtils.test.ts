@@ -52,7 +52,7 @@ const columns = [
 ];
 const columnMap = buildColumnForWorkphaseMap(columns);
 
-// Workphace lookup shared by both the dragged (active) item and whatever
+// workphase lookup shared by both the dragged (active) item and whatever
 // card is being hovered over.
 const workphases: Record<string, string> = {
   'card-in-review': 'review',
@@ -67,7 +67,7 @@ const workphases: Record<string, string> = {
 };
 const findWorkphaseForItem = (id: string) => workphases[id] || null;
 
-// Mirrors useBoardDnd's real call: the active item's workphace is resolved
+// Mirrors useBoardDnd's real call: the active item's workphase is resolved
 // once (as if from a stable activeItem captured at drag-start), not re-read
 // live on every call — see resolveDropTarget's doc comment for why that
 // distinction matters.

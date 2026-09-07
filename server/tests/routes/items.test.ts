@@ -299,7 +299,7 @@ describe('Epic 3.2 — position resolution', () => {
 
     const res = await request(app).put(`/api/items/${detached.id}`).send({ parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
-    expect(res.body.position).toBe(2.0); // fresh, past the existing sibling — not its old workphace-scoped value
+    expect(res.body.position).toBe(2.0); // fresh, past the existing sibling — not its old workphase-scoped value
   });
 
   it('detaching reassigns a fresh position scoped to the workphase', async () => {
