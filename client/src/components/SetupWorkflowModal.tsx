@@ -3,6 +3,7 @@ import type { Project, Workflow, WorkflowTemplate } from '../types';
 import { fetchWorkflowTemplates } from '../api/workflowTemplates';
 import type { CreateWorkflowInput } from '../api/workflows';
 import ModalShell from './ModalShell';
+import { BTN_MODAL_CANCEL } from './item-detail/pillUtils';
 
 interface SetupWorkflowModalProps {
   project: Project;
@@ -60,7 +61,7 @@ export default function SetupWorkflowModal({
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            className={BTN_MODAL_CANCEL}
           >
             Cancel
           </button>

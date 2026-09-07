@@ -11,7 +11,7 @@ import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import { XIcon } from './components/icons';
-import { formatTime } from './components/item-detail/pillUtils';
+import { formatTime, BTN_ADD_TRIGGER } from './components/item-detail/pillUtils';
 import { getAncestors } from './lib/hierarchy';
 
 export default function App() {
@@ -199,7 +199,7 @@ export default function App() {
                   {notifications.length > 0 && (
                     <button
                       onClick={handleMarkAllRead}
-                      className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+                      className={BTN_ADD_TRIGGER}
                     >
                       Mark all read
                     </button>

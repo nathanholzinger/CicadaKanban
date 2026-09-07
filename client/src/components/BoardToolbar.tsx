@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Board, WorkPhase } from '../types';
-import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';
+import { BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';
 
 interface BoardToolbarProps {
   boards: Board[];
@@ -109,7 +109,7 @@ export default function BoardToolbar({
           <>
             <button
               onClick={() => setCreatingBoard(v => !v)}
-              className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+              className={BTN_ADD_TRIGGER}
             >
               + New board
             </button>
@@ -119,7 +119,7 @@ export default function BoardToolbar({
                   setBoardNameDraft(boards.find(b => b.id === activeBoardId)?.name ?? '');
                   setRenamingBoard(v => !v);
                 }}
-                className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+                className={BTN_ADD_TRIGGER}
               >
                 Rename board
               </button>
@@ -132,12 +132,12 @@ export default function BoardToolbar({
                 Delete board
               </button>
             )}
-            <button onClick={onAddColumn} className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400">
+            <button onClick={onAddColumn} className={BTN_ADD_TRIGGER}>
               + Add column
             </button>
             <button
               onClick={onToggleWorkphaseManager}
-              className="text-[11px] text-zinc-500 transition-colors hover:text-blue-400"
+              className={BTN_ADD_TRIGGER}
             >
               Manage workphases
             </button>

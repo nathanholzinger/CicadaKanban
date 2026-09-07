@@ -12,6 +12,7 @@ import {
   BTN_CANCEL,
   BTN_ADD_TRIGGER,
   EMPTY_STATE,
+  INPUT_LG_RING,
 } from './pillUtils';
 
 interface ChildrenSectionProps {
@@ -133,7 +134,7 @@ export function ChildrenSection({
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Child title..."
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:outline-none"
+            className={`w-full ${INPUT_LG_RING}`}
             onKeyDown={e => {
               if (e.key === 'Escape') {
                 setAdding(false);

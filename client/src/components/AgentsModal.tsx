@@ -3,6 +3,7 @@ import type { Agent } from '../types';
 import { fetchAgents, createAgent, updateAgent, deleteAgent } from '../api/agents';
 import ModalShell from './ModalShell';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
+import { FIELD_LABEL } from './item-detail/pillUtils';
 
 const surfaceLabels: Record<string, string> = {
   chat: 'Claude.ai Chat',
@@ -245,7 +246,7 @@ function AgentForm({
     <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-zinc-700 bg-zinc-800/60 p-3">
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">Name</label>
+          <label className={FIELD_LABEL}>Name</label>
           <input
             ref={firstInputRef}
             value={form.name}
@@ -256,7 +257,7 @@ function AgentForm({
           />
         </div>
         <div className="w-36">
-          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">Surface</label>
+          <label className={FIELD_LABEL}>Surface</label>
           <select
             value={form.surface}
             onChange={e => onChange({ ...form, surface: e.target.value })}
@@ -270,7 +271,7 @@ function AgentForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+        <label className={FIELD_LABEL}>
           Project ID
         </label>
         <input
@@ -284,7 +285,7 @@ function AgentForm({
 
       {needsRepo && (
         <div>
-          <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+          <label className={FIELD_LABEL}>
             Repo Path
           </label>
           <input
@@ -297,7 +298,7 @@ function AgentForm({
       )}
 
       <div>
-        <label className="mb-1 block text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+        <label className={FIELD_LABEL}>
           Notes <span className="font-normal normal-case">(optional)</span>
         </label>
         <textarea

@@ -8,6 +8,7 @@ import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 import { subrowContainerId } from './workflow/boardDndUtils';
+import { INPUT_LG_RING } from './item-detail/pillUtils';
 
 interface BoardColumnProps {
   column: Column;
@@ -183,7 +184,7 @@ export default function BoardColumn({
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               placeholder="Item title..."
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 focus:outline-none"
+              className={`w-full ${INPUT_LG_RING}`}
               onKeyDown={e => {
                 if (e.key === 'Escape') {
                   setIsAdding(false);

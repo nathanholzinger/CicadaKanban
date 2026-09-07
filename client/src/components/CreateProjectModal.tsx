@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ModalShell from './ModalShell';
+import { BTN_MODAL_CANCEL, BTN_MODAL_PRIMARY, INPUT_LG_RING } from './item-detail/pillUtils';
 
 interface CreateProjectModalProps {
   parentName?: string;
@@ -62,7 +63,7 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
               setError('');
             }}
             placeholder={isSubproject ? 'Subproject name' : 'Project name'}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+            className={`w-full ${INPUT_LG_RING}`}
           />
         </div>
 
@@ -74,7 +75,7 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="What is this project for?"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 focus:outline-none"
+            className={`w-full ${INPUT_LG_RING}`}
           />
         </div>
 
@@ -84,14 +85,14 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            className={BTN_MODAL_CANCEL}
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+            className={BTN_MODAL_PRIMARY}
           >
             {saving ? 'Creating…' : isSubproject ? 'Create subproject' : 'Create project'}
           </button>

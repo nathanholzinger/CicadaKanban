@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { WorkPhase, Column, ColumnDisplayMode } from '../types';
 import ModalShell from './ModalShell';
-import { INPUT_LG } from './item-detail/pillUtils';
+import { BTN_MODAL_CANCEL, BTN_MODAL_PRIMARY, FIELD_LABEL, INPUT_LG } from './item-detail/pillUtils';
 
 interface ColumnEditorModalProps {
   workphases: WorkPhase[]; // ordered by position
@@ -72,7 +72,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
         <div className="space-y-3 px-6 py-4">
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="mb-1 block text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">
+              <label className={FIELD_LABEL}>
                 From
               </label>
               <select
@@ -88,7 +88,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
               </select>
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">To</label>
+              <label className={FIELD_LABEL}>To</label>
               <select
                 value={endWorkphaseId}
                 onChange={e => setEndWorkphaseId(e.target.value)}
@@ -108,7 +108,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
           </p>
 
           <div>
-            <label className="mb-1 block text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">
+            <label className={FIELD_LABEL}>
               Display mode
             </label>
             <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
           </div>
 
           <div>
-            <label className="mb-1 block text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">
+            <label className={FIELD_LABEL}>
               Name (optional)
             </label>
             <input
@@ -148,14 +148,14 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            className={BTN_MODAL_CANCEL}
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving || !startWorkphaseId || !endWorkphaseId}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+            className={BTN_MODAL_PRIMARY}
           >
             {column ? 'Save' : 'Add column'}
           </button>
