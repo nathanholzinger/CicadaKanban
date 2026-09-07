@@ -62,3 +62,28 @@ before implementing, not after:
 **Lean:** automate the two data-correctness cases above the same way the
 promoted test does; don't try to automate the feel/affordance half — that's
 still explicitly a manual-verification job, not a gap to close.
+
+### Q2. Extract the shared drag-gesture toolkit before adding a third/fourth copy
+
+Carried over from `code-quality-audit-epic-3-2.md` Finding #9, re-verified
+still live as of 2026-09-07: `dragTo`, `boxOf`, `center`, `topQuarter`,
+`bottomQuarter`, `pastColumnEnd` are duplicated verbatim between
+`tests/ui/item-repositioning-cross-column-dnd.spec.ts:96–151` and
+`tests/ui/item-repositioning-cross-project-dnd.spec.ts:74–117` — the
+cross-project copy's own comments (lines 70, 111) still point at
+`tests/ui/item-repositioning-dnd.spec.ts`, a file that no longer exists
+(renamed/split since). `attached-children.spec.ts` hand-rolls the same
+pointerdown → move × N → pointerup sequence a third time inline
+(`:195–197`) rather than sharing either copy.
+
+All three encode one thing — how to satisfy dnd-kit's `PointerSensor`
+activation constraint (`distance: 5`) and force its rect re-measurement mid-drag
+— with one shared reason to change. Q1's two new drag-based E2E cases would be
+a fourth and fifth call site if written against the current per-file copies.
+
+**Lean:** extract `tests/helpers/dragGesture.ts` (exporting `dragTo`, `center`,
+`topQuarter`, `bottomQuarter`, `pastColumnEnd`) *before* writing Q1's new
+tests, not after — folding `attached-children.spec.ts`'s inline sequence into
+the same helper while touching that file for Q1 anyway. Doing the extraction
+first means the two new tests are written against the shared helper from the
+start instead of becoming a fourth/fifth copy to fold in later.
