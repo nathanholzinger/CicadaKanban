@@ -42,6 +42,21 @@ describe('GET /api/items/:id', () => {
     expect(childRes.body.workphaseId).toBeNull();
     expect(childRes.body.workflowId).toBeNull();
   });
+
+  // Regression coverage for audit Finding #11: computeDepth used to walk
+  // the parent chain with no cycle guard — a corrupted parentId cycle in
+  // the data would hang this request forever instead of returning.
+  it('returns a bounded depth instead of hanging when the data contains a parentId cycle', async () => {
+    const project = await createProject();
+    const a = await createItem({ projectId: project.id, title: 'A' });
+    const b = await createItem({ projectId: project.id, title: 'B' });
+    db.update(items).set({ parentId: b.id }).where(eq(items.id, a.id)).run();
+    db.update(items).set({ parentId: a.id }).where(eq(items.id, b.id)).run();
+
+    const res = await request(app).get(`/api/items/${a.id}`);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.depth).toBe('number');
+  });
 });
 
 describe('POST /api/items', () => {

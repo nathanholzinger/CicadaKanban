@@ -30,6 +30,13 @@ describe('getDescendantIds', () => {
   it('is safe when the id does not exist in the collection', () => {
     expect(getDescendantIds('ghost', nodes)).toEqual(new Set());
   });
+
+  // Regression coverage for audit Finding #11: a corrupted parentId cycle
+  // in the data used to make this loop forever instead of terminating.
+  it('terminates instead of looping forever when the data contains a parentId cycle', () => {
+    const cyclic = [node('a', 'b'), node('b', 'a')];
+    expect(getDescendantIds('a', cyclic)).toEqual(new Set(['b']));
+  });
 });
 
 describe('getAncestors', () => {
@@ -54,6 +61,14 @@ describe('getAncestors', () => {
   it('does not throw when a parentId points to a node absent from the array', () => {
     const child = node('child', 'missing-parent');
     expect(getAncestors(child, [child])).toEqual([]);
+  });
+
+  // Regression coverage for audit Finding #11: a corrupted parentId cycle
+  // in the data used to make this loop forever instead of terminating.
+  it('terminates instead of looping forever when the data contains a parentId cycle', () => {
+    const a = node('a', 'b');
+    const b = node('b', 'a');
+    expect(getAncestors(a, [a, b])).toEqual([b]);
   });
 });
 

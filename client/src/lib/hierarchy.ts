@@ -15,13 +15,19 @@ export interface SelectOption {
 }
 
 // Collects every descendant of `id`, walking the parentId references.
+// `visited` (seeded with `id`) guards against a corrupted parentId cycle in
+// the data (audit Finding #11) turning this into an infinite loop — once a
+// node has been queued, re-finding it as someone else's "child" can't
+// discover anything new, so it's skipped rather than re-queued forever.
 export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<string> {
   const result = new Set<string>();
+  const visited = new Set([id]);
   const queue = [id];
   while (queue.length > 0) {
     const current = queue.pop()!;
     for (const n of nodes) {
-      if (n.parentId === current) {
+      if (n.parentId === current && !visited.has(n.id)) {
+        visited.add(n.id);
         result.add(n.id);
         queue.push(n.id);
       }
@@ -32,14 +38,19 @@ export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<st
 
 // Walks up the parentId chain from `node`, collecting ancestors in
 // root-to-immediate-parent order (excludes `node` itself). Stops without
-// throwing if a parentId points to a node absent from `nodes`.
+// throwing if a parentId points to a node absent from `nodes`, or (audit
+// Finding #11) if a corrupted parentId cycle in the data would otherwise
+// walk the same chain forever — re-reaching an already-visited node means
+// the chain has looped, so it stops there instead.
 export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): T[] {
   const map = new Map(nodes.map(n => [n.id, n]));
   const ancestors: T[] = [];
+  const visited = new Set([node.id]);
   let current: T | undefined = node;
-  while (current?.parentId) {
+  while (current?.parentId && !visited.has(current.parentId)) {
     const parent = map.get(current.parentId);
     if (!parent) break;
+    visited.add(parent.id);
     ancestors.unshift(parent);
     current = parent;
   }

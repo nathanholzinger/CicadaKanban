@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
+import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { workflows } from '../../src/db/schema.js';
+import { items as itemsTable, workflows } from '../../src/db/schema.js';
 import { createProject, createWorkflow, createWorkphase, createItem, findTemplateByName } from '../fixtures.js';
 
 describe('GET /api/workflows', () => {
@@ -49,6 +50,26 @@ describe('GET /api/workflows/:id', () => {
     const items = res.body.items as Array<{ id: string; depth: number }>;
     expect(items.find(i => i.id === root.id)?.depth).toBe(0);
     expect(items.find(i => i.id === child.id)?.depth).toBe(1);
+  });
+
+  // Regression coverage for audit Finding #11: addDepths' recursive
+  // getDepth only cached a node's result *after* its recursive call
+  // returned, so a corrupted parentId cycle in the data would recurse
+  // forever instead of returning.
+  it('returns a bounded depth instead of hanging when the data contains a parentId cycle', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const workphase = await createWorkphase(workflow.id);
+    const a = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'A' });
+    const b = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'B' });
+    db.update(itemsTable).set({ parentId: b.id }).where(eq(itemsTable.id, a.id)).run();
+    db.update(itemsTable).set({ parentId: a.id }).where(eq(itemsTable.id, b.id)).run();
+
+    const res = await request(app).get(`/api/workflows/${workflow.id}`);
+    expect(res.status).toBe(200);
+    const items = res.body.items as Array<{ id: string; depth: number }>;
+    expect(typeof items.find(i => i.id === a.id)?.depth).toBe('number');
+    expect(typeof items.find(i => i.id === b.id)?.depth).toBe('number');
   });
 
   // Regression coverage for audit Finding #17: this was the one read path

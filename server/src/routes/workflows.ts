@@ -16,10 +16,21 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
   const parentMap = new Map(itemRows.map(i => [i.id, i.parentId]));
   const depthCache = new Map<string, number>();
 
-  function getDepth(id: string): number {
+  // `visiting` tracks the current recursion stack (distinct from
+  // `depthCache`, which only gets a node's entry *after* its recursive call
+  // returns) — a corrupted parentId cycle in the data (audit Finding #11)
+  // would otherwise recurse into the same ids forever, since the cache
+  // can't break a cycle it never gets to write to. Re-entering a node still
+  // on the stack means a cycle exists at that point; treating it as a
+  // synthetic root (depth 0) there bounds every id's depth instead of
+  // hanging, at the cost of an arbitrary (but stable) depth for the
+  // cycle's own members.
+  function getDepth(id: string, visiting: Set<string> = new Set()): number {
     if (depthCache.has(id)) return depthCache.get(id)!;
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
     const parentId = parentMap.get(id);
-    const d = parentId && parentMap.has(parentId) ? getDepth(parentId) + 1 : 0;
+    const d = parentId && parentMap.has(parentId) ? getDepth(parentId, visiting) + 1 : 0;
     depthCache.set(id, d);
     return d;
   }

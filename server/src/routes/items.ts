@@ -40,8 +40,14 @@ function logActivity(
 
 function computeDepth(itemId: string): number {
   let depth = 0;
+  // Guards against a corrupted parentId cycle in the data (audit Finding
+  // #11) turning this into an infinite loop — once a parent has already
+  // been visited walking up from itemId, the chain can't reach a true root
+  // any more than it already has, so stop there instead of looping forever.
+  const visited = new Set([itemId]);
   let current = db.select({ parentId: items.parentId }).from(items).where(eq(items.id, itemId)).get();
-  while (current?.parentId) {
+  while (current?.parentId && !visited.has(current.parentId)) {
+    visited.add(current.parentId);
     depth++;
     current = db.select({ parentId: items.parentId }).from(items).where(eq(items.id, current.parentId)).get();
   }
