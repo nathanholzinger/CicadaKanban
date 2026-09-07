@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { XIcon } from './icons';
+import { TrashIcon } from './icons';
 
 // Shared classes for the two-step confirm-delete control (was duplicated verbatim
 // across BoardColumn, WorkphaseManagerPanel, and AgentsModal — audit finding #9).
@@ -82,7 +82,7 @@ export default function ConfirmDeleteButton({
               className={`${TRASH_BASE} ${triggerClassName}`.trim()}
               title={title}
             >
-              <XIcon />
+              <TrashIcon />
             </button>
           </>
         )}
