@@ -1000,6 +1000,34 @@ clean; full client suite unaffected (93 tests); server suite unaffected
 Add `PlusIcon` and `DragHandleIcon` to `icons.tsx`; point `SortableProjectRow`
 at the existing `TrashIcon`.
 
+**Status:** ✅ Fixed exactly as specified — still valid, confirmed all 4
+duplicated SVGs plus the container-class duplication.
+- Added `PlusIcon` (all 3 copies were byte-identical, so no props needed
+  beyond the existing `size`) and `DragHandleIcon` to `icons.tsx`.
+  `DragHandleIcon` takes every dot position (`width`/`height`/`cx1`/`cx2`/
+  `cyTop`/`cyMid`/`cyBot`/`r`) as an explicit prop rather than a single
+  `size` scale — the two originals weren't a clean proportional scale of
+  each other, so this reproduces each caller's exact original numbers
+  (defaults match `BoardColumn`'s; `SortableProjectRow` passes its own)
+  instead of inventing new rounding.
+- `SortableProjectRow.tsx` now uses `PlusIcon`, `DragHandleIcon`, and the
+  existing `TrashIcon` (`size={11}` to match its old inline dimensions) —
+  its second, different trash-icon path is gone.
+- Added `ICON_BUTTON_SM` to `icons.tsx` for the identical container-button
+  classes; `ProjectSidebar.tsx` and `ProjectPage.tsx` (the two the audit
+  found byte-identical) both use it now. `SortableProjectRow.tsx`'s own
+  `ROW_ACTION_BTN` was left as-is — it's already a local shared constant
+  serving two differently-colored buttons and isn't quite the same string
+  (missing a hover color the other two have), so converging it in would be
+  a small behavior change beyond pure dedup, not requested by the audit.
+
+Verified via `tsc --noEmit` (clean), the full client suite (93 tests,
+unaffected — none of this had unit-testable logic), and the full
+Playwright suite (114 passed, 6 pre-existing skips, 0 failed) — covers the
+sidebar, project page, and board column drag handles this touched. A final
+grep for every original inline path/circle confirmed zero copies remain
+outside `icons.tsx`.
+
 ### 30. `App.tsx` mixes the project/workflow shell with a fully self-contained notifications feature `[File Responsibility]`
 **File:** `client/src/App.tsx:44–64,176–230`
 

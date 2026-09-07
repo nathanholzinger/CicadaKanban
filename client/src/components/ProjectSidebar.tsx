@@ -21,6 +21,7 @@ import {
 } from './sidebar/projectTreeUtils';
 import type { Projection } from './sidebar/projectTreeUtils';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
+import { PlusIcon, ICON_BUTTON_SM } from './icons';
 
 interface ProjectSidebarProps {
   projects: Project[];
@@ -147,21 +148,11 @@ export default function ProjectSidebar({
         <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Projects</span>
         <button
           onClick={() => onCreateProject(undefined)}
-          className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+          className={ICON_BUTTON_SM}
           aria-label="New project"
           title="New project"
         >
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 11 11"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          >
-            <path d="M5.5 1.5v8M1.5 5.5h8" />
-          </svg>
+          <PlusIcon />
         </button>
       </div>
 

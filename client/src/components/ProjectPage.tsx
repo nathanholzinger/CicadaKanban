@@ -6,7 +6,7 @@ import BoardView from './BoardView';
 import SetupWorkflowModal from './SetupWorkflowModal';
 import ConfirmDeleteInline from './ConfirmDeleteInline';
 import { buildParentOptions } from '../lib/hierarchy';
-import { TrashIcon } from './icons';
+import { TrashIcon, PlusIcon, ICON_BUTTON_SM } from './icons';
 
 interface EffectiveWorkflow {
   workflow: Workflow;
@@ -318,20 +318,10 @@ export default function ProjectPage({
               <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Subprojects</h2>
               <button
                 onClick={() => onCreateSubproject(project.id)}
-                className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+                className={ICON_BUTTON_SM}
                 title="Add subproject"
               >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 11 11"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M5.5 1.5v8M1.5 5.5h8" />
-                </svg>
+                <PlusIcon />
               </button>
             </div>
             <ul className="space-y-1">

@@ -9,6 +9,7 @@ import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 import { subrowContainerId } from './workflow/boardDndUtils';
 import InlineItemForm from './InlineItemForm';
+import { DragHandleIcon } from './icons';
 
 interface BoardColumnProps {
   column: Column;
@@ -86,14 +87,7 @@ export default function BoardColumn({
           tabIndex={-1}
           title="Drag to reorder"
         >
-          <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
-            <circle cx="2.5" cy="2.5" r="1.5" />
-            <circle cx="7.5" cy="2.5" r="1.5" />
-            <circle cx="2.5" cy="7" r="1.5" />
-            <circle cx="7.5" cy="7" r="1.5" />
-            <circle cx="2.5" cy="11.5" r="1.5" />
-            <circle cx="7.5" cy="11.5" r="1.5" />
-          </svg>
+          <DragHandleIcon />
         </button>
 
         <div className="min-w-0 flex-1">

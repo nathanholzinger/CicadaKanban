@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { FlatItem } from './projectTreeUtils';
 import { INDENT_WIDTH } from './projectTreeUtils';
+import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
   'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
@@ -104,14 +105,7 @@ export function SortableProjectRow({
           aria-label="Drag to reorder"
           title="Drag to reorder"
         >
-          <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-            <circle cx="2" cy="2" r="1.2" />
-            <circle cx="6" cy="2" r="1.2" />
-            <circle cx="2" cy="6" r="1.2" />
-            <circle cx="6" cy="6" r="1.2" />
-            <circle cx="2" cy="10" r="1.2" />
-            <circle cx="6" cy="10" r="1.2" />
-          </svg>
+          <DragHandleIcon width={8} height={12} cx1={2} cx2={6} cyTop={2} cyMid={6} cyBot={10} r={1.2} />
         </button>
 
         {/* Expand/collapse chevron */}
@@ -171,17 +165,7 @@ export function SortableProjectRow({
               aria-label="Add subproject"
               title="Add subproject"
             >
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 11 11"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              >
-                <path d="M5.5 1.5v8M1.5 5.5h8" />
-              </svg>
+              <PlusIcon />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
@@ -189,18 +173,7 @@ export function SortableProjectRow({
               aria-label="Delete project"
               title="Delete project"
             >
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 11 11"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M1.5 2.5h8M3.5 2.5V1.5h4v1M4.5 4.5v3M6.5 4.5v3M2.5 2.5l.6 6h5l.6-6" />
-              </svg>
+              <TrashIcon size={11} />
             </button>
           </div>
         )}
