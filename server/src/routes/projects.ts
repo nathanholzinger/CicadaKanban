@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { assertValidReparent } from '../lib/itemTree.js';
-import { resolveAppendPosition, resolveAnchorPosition, type Side } from '../lib/positionResolver.js';
+import { resolveAppendPosition, resolvePositionByAnchorAndSide, type Side } from '../lib/positionResolver.js';
 
 const router = Router();
 
@@ -52,7 +52,8 @@ router.post('/', (req, res) => {
     // Resolved via the shared positioning library (not a raw Date.now()
     // stamp) so a brand-new sibling under an old, contaminated position
     // group immediately triggers that group's magnitude-threshold self-heal.
-    const position = resolveAppendPosition(projects, projectPositionScope(resolvedParentId), tx);
+    const scope = projectPositionScope(parentId);
+    const position = resolveAppendPosition(projects, scope, tx);
     tx.insert(projects).values({
       id,
       parentId: resolvedParentId,
@@ -229,7 +230,7 @@ router.patch('/:id/move', (req, res) => {
         validationError = `${label} has no position to anchor against`;
         return null;
       }
-      return resolveAnchorPosition(projects, anchorId, side, scope, tx);
+      return resolvePositionByAnchorAndSide(projects, anchorId, side, scope, tx);
     }
 
     let position: number;

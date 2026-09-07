@@ -7,7 +7,8 @@ import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js';
 import { applyReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
-import { resolveAnchorPosition, resolveAppendPosition, classifyPositionScope, type Side } from '../lib/positionResolver.js';
+import { resolvePositionByAnchorAndSide, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
+import { classifyPositionScope } from '../lib/itemPositionScope.js';
 
 const router = Router();
 
@@ -422,7 +423,7 @@ router.patch('/:id/move', (req, res) => {
         req.params.id,
         tx,
       );
-      updates.position = resolveAnchorPosition(items, anchorId, side as Side, scope, tx);
+      updates.position = resolvePositionByAnchorAndSide(items, anchorId, side as Side, scope, tx);
     } else if (position !== undefined) {
       updates.position = position;
     } else if (targetWorkphaseId) {

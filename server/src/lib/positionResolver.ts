@@ -4,15 +4,16 @@ import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';
 import { coarsestFit } from './coarsestFit.js';
 
+const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new position to be placed. If it doesn't then something else went wrong that retries shouldn't fix
+const SOFT_MAX_POSITION = 1000; // We will reindex if a position value exceeds this soft max, unless the row count is also greater than the soft max
+const MAX_OVER_POSITION = 100; // If there are more rows than the soft max then max will be caluclated as (rows + MAX_OVER)
 
-/**
- * Table Generic that defines a minimum structure for a table that can be ordered by 'position'
- * 
- * @param id - id of the item in the list
- * @param position - float value 
- * @param createdAt - used to tie-break equivalent position values
- * @param updatedAt - gets updated when the new position value is updated
- */
+
+// TODO: depreciate anchorId + side in favor of TargetOptions
+// for defining anchorId + side.
+export type Side = 'before' | 'after';
+
+// Table Generic that defines a minimum structure for a table that can be ordered by 'position'
 export type PositionedTable = SQLiteTable & {
   id: SQLiteColumn;
   position: SQLiteColumn;
@@ -20,33 +21,260 @@ export type PositionedTable = SQLiteTable & {
   updatedAt: SQLiteColumn;
 };
 
-export type Side = 'before' | 'after';
+// Used to bundle the query context so functions have fewer params to handoff
+export type PositionQueryContext = {
+  table: PositionedTable, 
+  scopeWhere: SQL, 
+  tx: Tx 
+}
 
+// Special case instruction to place the row as 'first in scope' or 'last in scope'
+export type Edge = 'first' | 'last';
 
-// Reindex every item in a scope to clean, sequential integer positions,
-// preserving current relative order. The shared primitive behind both the
-// tight-gap and magnitude-threshold triggers below — generalizes
-// `boardDndUtils.ts::computeSameWorkphaseReorder`'s shape (client-side,
-// one workphase) to run server-side over any comparison scope. Lazy and
-// reactive only — never call this from a scheduled job or a whole-project
-// sweep; it's meant to fire as a side effect of a write that's already
-// happening.
-//
-// `isNotNull(table.position)` guards against a scope that happens to also
-// contain done items (Part 6, items-only concern) — a done item's
-// workphaseId can still match a workflow-wide scope predicate
-// (positionScopeFor has no isTerminal filter), but it has no position to
-// reindex by definition. Without this, SQLite sorts NULL first in ASC
-// order, so a done item would silently sort first and get a real position
-// written onto it here — the one place in the resolution path that wasn't
-// already protected by ordinary SQL null comparisons (a null position can
-// never satisfy gt()/lt() against a real value, so the append/anchor
-// neighbor-lookup queries elsewhere in this file were never at risk; this
-// blind order-and-renumber loop was). Harmless no-op for tables like
-// `projects` whose position is never null in practice.
-export function reindexScope(table: PositionedTable, scopeWhere: SQL, tx?: Tx): void {
+/**
+ * @param prevId the id for the row that should be immediately before this row
+ * @param nextId the id for the row that should be immediately after this row
+ * @param edge used to place the row as first or last in the entire scope
+ * @remarks allowed combinations: 
+ *    "prevId only" - nextInScope will be found; position calculated as midpoint between prevId and nextInScope
+ *    "nextId only" - prevInScope will be found; position calculated as midpoint between nextId and prevInScope
+ *    "edge only" - position calculated so that it is 'first' in scope or 'last' in scope
+ * @remarks special cases:
+ *    if prevId is the last in scope this resolves to appendToEnd, same as edge = 'last'
+ *    if nextId is the first in scope this resolves to betweenZeroAndFirst, same as edge = 'first'
+ */
+export type TargetOptions =
+  | { prevId: string; nextId?: never; edge?: never }
+  | { nextId: string; prevId?: never; edge?: never }
+  | { edge: Edge; prevId?: never; nextId?: never };
+
+type IdPos = {id: string, pos: number};
+/**
+ * Core Resolve Position entry point. Uses TargetOptions (see type TargetOption for params and valid combos).
+ * Identifies which parameter has been given and determines the appropriate resolution strategy 
+ * 
+ * @param table
+ * @param TargetOptions 
+ * @param scopeWhere 
+ * @param tx 
+ * @returns the position value that is handed back by the resolving method (along with table context)
+ */
+export function resolvePositionByTarget(
+  table: PositionedTable,
+  TargetOptions: TargetOptions,
+  scopeWhere: SQL,
+  tx: Tx,
+): number {
   const e = tx ?? db;
-  const rows = e
+  const { prevId, nextId, edge } = TargetOptions;
+  const queryContext: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: e}
+
+  if (prevId && !nextId && !edge) {
+    return resolveAfterTarget(prevId, queryContext)
+  } else if (nextId && !prevId && !edge) {
+    return resolveBeforeTarget(nextId, queryContext)
+  } else if (edge && !prevId && !nextId) {
+    switch (edge) {
+      case 'first': return resolvePrependAsFirst(queryContext); break;
+      case 'last': return resolveAppendAsLast(queryContext); break;
+      default: throw new Error(`positionResolver: 'edge' must be 'first' or 'last'`);
+    }
+  } else {
+    throw new Error('positionResolver: resolvePositionByTarget requires only one param (prevId, nextId, edge) to be populated');
+  }
+}
+
+/**
+ * Transforms an anchorId + side style payload into TargetOptions payload
+ * 
+ * @param table 
+ * @param anchorId - the targetId that the new id will be placed alongside
+ * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor
+ * @param scopeWhere 
+ * @param tx 
+ * @returns 
+ */
+export function resolvePositionByAnchorAndSide(
+  table: PositionedTable, 
+  anchorId: string, 
+  side: Side, 
+  scopeWhere: SQL, 
+  tx: Tx
+): number {
+  let targetOptions: TargetOptions;
+  switch (side) {
+    case 'after': targetOptions = { prevId: anchorId }; break;
+    case 'before': targetOptions = { nextId: anchorId }; break;
+    default: throw new Error(`positionResolver: side must be 'before' or 'after'`)
+  }
+  return resolvePositionByTarget(table, targetOptions, scopeWhere, tx);
+}
+
+// TODO: depreciate this passthrough function
+export function resolveAppendPosition(
+  table: PositionedTable, 
+  scopeWhere: SQL, 
+  tx: Tx
+): number {
+  const context: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: tx}
+  return resolveAppendAsLast(context)
+}
+
+function getTargetPosition(targetId: string, context: PositionQueryContext): number {
+  const {table, scopeWhere, tx} = context;
+  const row = (tx
+          .select({ position: table.position })
+          .from(table)
+          .where(and(scopeWhere, eq(table.id, targetId)))
+          .get()
+  ) as { position: number | null } | undefined;
+  if (row === undefined) {
+    throw new Error(`positionResolver: could not find id ${targetId} at table ${table} within scope ${scopeWhere}`)
+  } else if (!row?.position) {
+    throw new Error(`positionResolver: id ${targetId} at table ${table} does not have a position`)
+  }
+  return row.position;
+}
+
+function getLastPositionInScope(context: PositionQueryContext): number | null {
+  const {table, scopeWhere, tx} = context;
+  const row = (tx
+          .select({ position: table.position })
+          .from(table)
+          .where(scopeWhere)
+          .orderBy(desc(table.position))
+          .limit(1)
+          .get()
+  ) as { position: number | null } | undefined;
+  if (row === undefined) {
+    return null;
+  } else if (!row?.position) {
+    throw new Error(`positionResolver: a row was found with no position. (this shouldn't happen)`)
+  }
+  return row.position;
+}
+
+function getFirstIdInScope(context: PositionQueryContext): string | null {
+  const {table, scopeWhere, tx} = context;
+  const row = (tx
+          .select({ id: table.id })
+          .from(table)
+          .where(scopeWhere)
+          .orderBy(asc(table.position))
+          .limit(1)
+          .get()
+  ) as { id: string | null } | undefined;
+  if (row === undefined) {
+    return null;
+  } else if (!row?.id) {
+    throw new Error(`positionResolver: a row was found with no id. (this shouldn't happen)`)
+  }
+  return row.id;
+}
+
+function resolveAfterTarget(prevId: string, context: PositionQueryContext): number {
+  const {table, scopeWhere, tx} = context;
+  const prevPosition = getTargetPosition(prevId, context);
+
+  const nextRow = (tx
+    .select({ position: table.position })
+    .from(table)
+    .where(and(scopeWhere, gt(table.position, prevPosition)))
+    .orderBy(asc(table.position))
+    .limit(1)
+    .get()
+  ) as { position: number | null } | undefined;
+
+  if (nextRow === undefined) return resolveAppendAsLast(context, prevPosition);
+
+  const resolveBounds = () => {
+    const prev = getTargetPosition(prevId, context);
+    const next = (tx
+      .select({ position: table.position })
+      .from(table)
+      .where(and(scopeWhere, gt(table.position, prev)))
+      .orderBy(asc(table.position))
+      .limit(1)
+      .get()) as { position: number | null } | undefined;
+    if (next === undefined) {
+      throw new Error(`positionResolver: expected a next neighbor after reindex but found none (this shouldn't happen)`);
+    }
+    return { prev, next: next.position! };
+  };
+
+  return fitOrReindexAndRetry(resolveBounds, context);
+}
+
+function resolveBeforeTarget(nextId: string, context: PositionQueryContext): number {
+  const {table, scopeWhere, tx} = context;
+  
+  const resolveBounds = () => {
+    const nextPos = getTargetPosition(nextId, context);
+    const prev = (tx
+          .select({ position: table.position })
+          .from(table)
+          .where(and(scopeWhere, lt(table.position, nextPos)))
+          .orderBy(desc(table.position))
+          .limit(1)
+          .get()
+    ) as { position: number | null } | undefined;
+    return { prev: prev?.position ?? 0.0, next: nextPos };
+  };
+  return fitOrReindexAndRetry(resolveBounds, context);
+}
+
+function resolveAppendAsLast(context: PositionQueryContext, lastPosition?: number): number {
+  lastPosition = lastPosition ?? getLastPositionInScope(context) ?? 0.0;
+  return appendOrReindexAndRetry(lastPosition, context);
+}
+
+function resolvePrependAsFirst(context: PositionQueryContext): number {
+  const firstId = getFirstIdInScope(context)
+  if (!firstId) {
+    return resolveAppendAsLast(context, 0.0);
+  }
+  return resolveBeforeTarget(firstId, context);
+}
+
+function fitOrReindexAndRetry(
+  resolveBounds: () => { prev: number; next: number },
+  context: PositionQueryContext, 
+  retryCount: number = 0
+): number {
+  const { prev, next } = resolveBounds();
+  const fit = coarsestFit(prev, next);
+  if (fit !== null) return fit;
+
+  if (retryCount >= MAX_REINDEX_TRIES) {
+    throw new Error('positionResolver: precision exhausted even after a reindex - this should not happen');
+  }
+  reindexPositionsInScope(context);
+  return fitOrReindexAndRetry(resolveBounds, context, retryCount+1)
+}
+
+function appendOrReindexAndRetry(
+  lastPosition: number,
+  context: PositionQueryContext,
+  retryCount: number = 0
+): number {
+  const candidate = Math.round(lastPosition + 1.0)
+  if (exceedsMagnitudeThreshold(candidate, context)) {
+    if (retryCount >= MAX_REINDEX_TRIES) {
+      throw new Error('positionResolver: new position exceeded threshold even after a reindex - this should not happen');
+    }
+    reindexPositionsInScope(context)
+    const newLast = getLastPositionInScope(context);
+    if (!newLast) {
+      throw new Error(`positionResolver: last position was ${newLast} after a reindex - this should not happen`);
+    }
+    return appendOrReindexAndRetry(newLast, context, retryCount+1)
+  }
+  return candidate;
+}
+
+function reindexPositionsInScope(queryContext: PositionQueryContext): void {
+  const {table, scopeWhere, tx} = queryContext;
+  const rows = tx
     .select({ id: table.id, position: table.position, createdAt: table.createdAt })
     .from(table)
     .where(and(scopeWhere, isNotNull(table.position)))
@@ -55,209 +283,28 @@ export function reindexScope(table: PositionedTable, scopeWhere: SQL, tx?: Tx): 
 
   const now = Date.now();
   rows.forEach((row, index) => {
-    e.update(table).set({ position: index + 1, updatedAt: now }).where(eq(table.id, row.id)).run();
+    tx.update(table).set({ position: index + 1, updatedAt: now }).where(eq(table.id, row.id)).run();
   });
 }
 
-function scopeItemCount(table: PositionedTable, scopeWhere: SQL, tx?: Tx): number {
-  const e = tx ?? db;
-  return e.select({ id: table.id }).from(table).where(scopeWhere).all().length;
+function exceedsMagnitudeThreshold(candidate: number, context: PositionQueryContext): boolean {
+  if (candidate >= SOFT_MAX_POSITION) {
+    const {table, scopeWhere, tx} = context;
+    const rows = tx.select({ id: table.id }).from(table).where(scopeWhere).all().length;
+    if (candidate >= rows + MAX_OVER_POSITION) {
+      return true;
+    }
+  }
+  return false;
 }
 
-// The magnitude-threshold trigger: does appending/prepending past
-// `candidate` move far enough from proportionate that this scope should be
-// reindexed first? Scales with how many items are actually in the scope
-// (1000 as a floor) rather than a flat number — a scope that genuinely
-// holds 1200 items shouldn't reindex on every append just because a flat
-// threshold would otherwise fire constantly and uselessly for it. Checked
-// against the magnitude (not just the positive case) so a long run of
-// prepends is covered symmetrically with a long run of appends.
-function exceedsMagnitudeThreshold(table: PositionedTable, candidate: number, scopeWhere: SQL, tx?: Tx): boolean {
-  const count = scopeItemCount(table, scopeWhere, tx);
-  const threshold = Math.max(1000, count + 100);
-  return Math.abs(candidate) > threshold;
-}
+// "Append at end" position math — max(existing positions) + 1.0, with an
+// empty-list base case of 1.0. `position` may be null (items.position is
+// nullable); a null counts as 0 for the max, matching what every call site
+// already did ad hoc. Was hand-written identically in 4 POST handlers plus
+// MCP's move_item tool (audit finding #25).
 
-// Core resolution shared by the anchor-based and append-only entry points
-// below. `getNearPosition` is a closure so it can be re-queried for a fresh
-// value after a reindex (the position it returned before the reindex is now
-// stale). `allowRetry` bounds retries to one level — after a reindex, the
-// scope's positions are freshly-spaced sequential integers, so a second
-// tight-gap or magnitude hit on the same operation should not occur.
-function resolveNear(
-  table: PositionedTable,
-  getNearPosition: () => number | null,
-  side: Side,
-  scopeWhere: SQL,
-  tx: Tx | undefined,
-  allowRetry: boolean,
-): number {
-  const e = tx ?? db;
-  const nearPosition = getNearPosition();
-
-  if (nearPosition === null) {
-    // Genuinely empty scope — nothing to derive a value from, so start at
-    // 1.0. Scopes are workflow-wide (or parent-wide for attached children,
-    // Part 3, or a project's siblings) — never workphase-narrow — so this
-    // only fires for a whole new workflow with no positioned items yet, or
-    // a parent with no children yet (see positionScopeFor in items.ts /
-    // projectPositionScope in projects.ts). It deliberately does NOT fire
-    // just because one particular workphase happens to be empty while
-    // others in the same workflow aren't.
-    return 1.0;
-  }
-
-  const boundingNeighbor = (
-    side === 'after'
-      ? e
-          .select({ position: table.position })
-          .from(table)
-          .where(and(scopeWhere, gt(table.position, nearPosition)))
-          .orderBy(asc(table.position))
-          .limit(1)
-          .get()
-      : e
-          .select({ position: table.position })
-          .from(table)
-          .where(and(scopeWhere, lt(table.position, nearPosition)))
-          .orderBy(desc(table.position))
-          .limit(1)
-          .get()
-  ) as { position: number | null } | undefined;
-
-  if (boundingNeighbor?.position != null) {
-    const [prev, next] = side === 'after' ? [nearPosition, boundingNeighbor.position] : [boundingNeighbor.position, nearPosition];
-    return fitOrReindexAndRetry(table, prev, next, getNearPosition, side, scopeWhere, tx, allowRetry);
-  }
-
-  if (side === 'before') {
-    // No true predecessor — coarsest-fit toward the floor (0.0) rather than
-    // a flat `nearPosition - 1.0` step. Keeps a repeatedly-prepended item's
-    // position bounded above zero instead of drifting negative without
-    // limit, which would otherwise collide with the `position ?? 0`
-    // tie-break sentinel used when sorting alongside unpositioned items
-    // (§5's tie-break). Precision exhaustion near zero is handled by the
-    // same tight-gap reindex-and-retry as any other coarsest-fit call.
-    return fitOrReindexAndRetry(table, 0.0, nearPosition, getNearPosition, side, scopeWhere, tx, allowRetry);
-  }
-
-  // side === 'after' with no true successor — degenerate append fallback,
-  // unbounded above (there's no natural ceiling the way 0.0 is a natural
-  // floor). Provably always past nearPosition: rounding perturbs by at most
-  // 0.5, the offset is a full 1.0.
-  const candidate = Math.round(nearPosition + 1.0);
-
-  if (allowRetry && exceedsMagnitudeThreshold(table, candidate, scopeWhere, tx)) {
-    reindexScope(table, scopeWhere, tx);
-    return resolveNear(table, getNearPosition, side, scopeWhere, tx, false);
-  }
-  return candidate;
-}
-
-// Shared by both the true-neighbor case and the before-side zero-floor case:
-// coarsest-fit between two bounds, reindexing the scope and retrying once
-// (fresh, clean sequential positions) if precision is exhausted.
-function fitOrReindexAndRetry(
-  table: PositionedTable,
-  prev: number,
-  next: number,
-  getNearPosition: () => number | null,
-  side: Side,
-  scopeWhere: SQL,
-  tx: Tx | undefined,
-  allowRetry: boolean,
-): number {
-  const fit = coarsestFit(prev, next);
-  if (fit !== null) return fit;
-
-  if (!allowRetry) {
-    throw new Error('positionResolver: precision exhausted even after a reindex — this should not happen');
-  }
-  reindexScope(table, scopeWhere, tx);
-  return resolveNear(table, getNearPosition, side, scopeWhere, tx, false);
-}
-
-// Core `{prevId, nextId}` entry point. prevId/nextId name the resolved
-// row's predecessor/successor — a position in the sequence, not "the row I
-// go before/after" (which reads ambiguously either direction; settled on
-// prevId/nextId over beforeId/afterId for exactly that reason — see
-// projects.ts's PATCH /:id/move). Exactly one of prevId/nextId is expected
-// here for now (resolveAnchorPosition below always supplies exactly one);
-// throws if neither is given, matching resolveAnchorPosition's existing
-// contract of requiring a real anchor.
-export function resolveBetween(
-  table: PositionedTable,
-  ids: { prevId?: string | null; nextId?: string | null },
-  scopeWhere: SQL,
-  tx?: Tx,
-): number {
-  const e = tx ?? db;
-  const anchorId = ids.prevId ?? ids.nextId;
-  if (!anchorId) {
-    throw new Error('positionResolver: resolveBetween requires at least one of prevId/nextId');
-  }
-  const side: Side = ids.prevId ? 'after' : 'before';
-
-  const getAnchorPosition = () => {
-    const anchor = e.select({ position: table.position }).from(table).where(eq(table.id, anchorId)).get() as
-      | { position: number | null }
-      | undefined;
-    if (!anchor) throw new Error(`positionResolver: anchor ${anchorId} not found`);
-    return anchor.position;
-  };
-
-  const anchorPosition = getAnchorPosition();
-  if (anchorPosition === null) {
-    throw new Error(`positionResolver: anchor ${anchorId} has no position (likely a done item — see Part 6)`);
-  }
-  return resolveNear(table, getAnchorPosition, side, scopeWhere, tx, true);
-}
-
-// Main `{anchor, side}` entry point: insert immediately before/after a
-// specific item, resolved against that item's TRUE current neighbor (found
-// by querying the full scope, regardless of what's currently displayed) —
-// not a value the client computed itself. Thin translation over
-// resolveBetween — anchorId+side is just prevId/nextId expressed the other
-// way (side='after' → anchorId is the predecessor → prevId; side='before'
-// → anchorId is the successor → nextId).
-export function resolveAnchorPosition(table: PositionedTable, anchorId: string, side: Side, scopeWhere: SQL, tx?: Tx): number {
-  return resolveBetween(table, side === 'after' ? { prevId: anchorId } : { nextId: anchorId }, scopeWhere, tx);
-}
-
-// Append-only entry point: no anchor at all — row creation with no explicit
-// position, or a move/drop with no specific target row. Resolves past the
-// scope's true last row (or the empty-scope bootstrap above).
-export function resolveAppendPosition(table: PositionedTable, scopeWhere: SQL, tx?: Tx): number {
-  const e = tx ?? db;
-  const getLastPosition = () => {
-    const last = e.select({ position: table.position }).from(table).where(scopeWhere).orderBy(desc(table.position)).limit(1).get() as
-      | { position: number | null }
-      | undefined;
-    return last?.position ?? null;
-  };
-  return resolveNear(table, getLastPosition, 'after', scopeWhere, tx, true);
-}
-
-// ── Computed `positionScope` (Part 2) ───────────────────────────────────
-//
-// Purely derived, never stored — tells a client, or a human reading the API
-// directly, what an item's `position` is actually comparable *against*
-// without re-deriving it from isAttached/parentId/workphaseId/
-// workphase.isTerminal itself.
-
-export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
-
-export function classifyPositionScope(
-  item: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
-  workphaseIsTerminal: boolean | null,
-): PositionScope {
-  if (item.isAttached && item.parentId) return 'attached-siblings';
-  // Unsorted/invalid (null workphaseId) — not currently position-ordered at
-  // all, same practical bucket as a done item even though the reason differs.
-  if (item.workphaseId === null) return 'none';
-  // Done item (Part 6) — ordered by completedAt, not position.
-  if (workphaseIsTerminal) return 'none';
-  // Comparable against every other active item in the same workflow, not
-  // just the same workphase (Epic 3.2 addendum) — see positionScopeFor.
-  return 'workflow';
+export function nextPosition(rows: { position: number | null; }[]): number {
+  if (rows.length === 0) return 1.0;
+  return Math.max(...rows.map(r => r.position ?? 0)) + 1.0;
 }

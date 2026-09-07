@@ -46,6 +46,7 @@ export default defineConfig({
         'src/routes/columns.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
         // Epic 3.2: general position-resolution contract.
         'src/lib/positionResolver.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
+        'src/lib/itemPositionScope.ts': { statements: 80, branches: 80, functions: 80, lines: 80 },
       },
     },
   },

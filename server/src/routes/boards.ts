@@ -7,8 +7,8 @@ import { getOrderedWorkphases, isColumnBroken, getCoveredWorkphases, computeUnso
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { nextPosition } from '../lib/positions.js';
-import { classifyPositionScope, type PositionScope } from '../lib/positionResolver.js';
+import { nextPosition } from "../lib/positionResolver.js";
+import { classifyPositionScope, type PositionScope } from '../lib/itemPositionScope.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ItemRow = typeof items.$inferSelect;

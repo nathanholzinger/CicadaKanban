@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { getOrderedWorkphases, validateColumnRange } from '../lib/columnRanges.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorder } from '../lib/reorder.js';
-import { nextPosition } from '../lib/positions.js';
+import { nextPosition } from "../lib/positionResolver.js";
 
 const router = Router();
 
