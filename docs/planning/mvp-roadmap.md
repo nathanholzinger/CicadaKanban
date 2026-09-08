@@ -53,7 +53,7 @@ Work items gain an `is_attached` flag. Attached children move with their parent 
 
 ---
 
-### Epic 3.2 — Item Positioning & Board-Scoped Ordering
+### Epic 3.2 — Item Positioning & Board-Scoped Ordering ✅ (complete)
 **Why here:** Surfaced while auditing Epic 3 — today's `items.position` is a
 single workphase-scoped value with no manual reordering for attached
 children, no recalculation when a column's merged/expanded display or range
@@ -62,13 +62,21 @@ concern so reordering on one board doesn't affect another. Sequenced before
 Epic 3.5 because that epic's drag gesture builds on the same `useBoardDnd`
 layer this would change — doing the gesture first would mean redoing it.
 
-Rework item positioning: attached children become manually reorderable
-relative to their siblings; merged↔expanded column changes (and range edits
-that change a merged column's covered workphases) recompute ordering by
-workphase-rank while preserving prior relative order; resolve whether
-position should move from an item-level value to a board-scoped one. See
-`epic-3-2-decisions.md` for the full design discussion —
-nothing here is decided yet.
+Reworked item positioning onto a server-resolved anchor+side model: the
+client sends relative intent (insert before/after a specific item, by id),
+and the server resolves the real value against that item's true current
+neighbor, never a client-computed guess. Attached children are now
+manually reorderable relative to their siblings, scoped to `(parentId,
+isAttached)`. Position stayed an item-owned scalar rather than moving to a
+board-scoped value (see wiki §1) — comparison scope is workflow-wide for
+detached/root items, not board- or workphase-narrow, which is what
+actually fixes the merged-column/range-change recalculation concern this
+epic set out to solve. Done items get no stored position at all, ordered
+by `completedAt` instead. Projects were unified onto the same positioning
+system along the way, retiring the batch `PATCH /projects/reorder` (a
+latent cycle-write bug) in favor of `PATCH /projects/:id/move`. Full
+design in `docs/wiki/item-positioning/README.md`; test catalog in
+`docs/test-plans/item-positioning/`.
 
 ---
 
