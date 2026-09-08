@@ -13,6 +13,24 @@ patch {
 body:json {
   {
     "workphaseId": "{{workphaseId}}",
-    "position": 1.0
+    "anchorId": "{{anchorId}}",
+    "side": "after"
   }
+}
+
+docs {
+  # Move Item
+
+  Primary shape: `anchorId` + `side` ("before" | "after") — the server
+  resolves the actual position against the anchor's true current neighbor.
+  Omit `anchorId`/`side` to append to the end of the target scope.
+
+  `workphaseId` alone (no anchor) is a distinct case: it keeps the item's
+  existing `position` unchanged rather than appending — position is
+  workflow-scoped, so changing only the workphase doesn't invalidate the
+  existing value. This is also the shape the MCP `move_item` tool sends.
+
+  A raw `position` (finite number) is still accepted instead of
+  anchorId+side, but anchor+side is the documented, preferred way to
+  reposition an item — see `docs/wiki/item-positioning/README.md` §2.
 }

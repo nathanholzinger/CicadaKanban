@@ -111,10 +111,14 @@ the relevant local comparison scope first (§5), then retry the insert.
 existing `position: number | null` (unchanged shape), a derived field —
 `"attached-siblings"` (item is attached, has a `parentId`),
 `"workflow"` (detached/root, non-terminal workphase — comparable against
-the whole workflow, see above), or `"none"` (detached/root, terminal/done
-workphase — see §6). Purely computed at serialization time, never stored.
-Tells a client (or a human reading the API) what an item's `position` is
-actually comparable against.
+the whole workflow, see above), or `"none"` (not currently ordered — either
+a detached/root item in a terminal/done workphase, see §6, or one with no
+`workphaseId` at all, e.g. its workphase was deleted out from under it and
+`workphaseId` went `SET NULL`). Both land on the same value because neither
+has a meaningful comparison scope, even though the reason differs (ordered-
+by-`completedAt` vs. not ordered at all). Purely computed at serialization
+time, never stored. Tells a client (or a human reading the API) what an
+item's `position` is actually comparable against.
 
 **Client-side role:** `positionBetween`/`computeDropPosition` can still
 run client-side for optimistic instant visual feedback, but the server's

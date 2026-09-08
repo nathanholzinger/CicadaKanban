@@ -83,9 +83,33 @@ projects (tree — unlimited depth via parent_id self-ref)
 | `notifications` | Created when item moves to a `triggers_notification` workphase; polled by frontend |
 
 ### Position Field Pattern
-`workphases.position` and `columns.position` are `REAL NOT NULL`. `items.position` and
-`projects.position` are `REAL` (nullable — null means unordered). Ordering uses the
-midpoint strategy: inserting between 2.0 and 3.0 → 1.5. New rows go at `max(existing) + 1.0`.
+`workphases.position` and `columns.position` are `REAL NOT NULL`, ordered by simple
+append-at-end math (`server/src/lib/positions.ts::nextPosition`). `items.position` and
+`projects.position` are `REAL` (nullable — null means unordered) and share one
+table-generic, server-resolved system instead (`server/src/lib/positionResolver.ts`):
+the client never computes or sends a final number, only relative intent — insert
+`before`/`after` a specific anchor item/project, by id — and the server resolves the
+actual value against that anchor's **true current** neighbor, always re-queried fresh,
+never trusted from the client's (possibly narrower) view. See
+`docs/wiki/item-positioning/README.md` for the full design (anchor+side resolution,
+coarsest-fit rounding, lazy reindexing, and the active/done split where done items get
+no stored position at all — ordered by `completedAt` instead).
+
+### Item Positioning & Board-Scoped Ordering (Epic 3.2)
+- Items gain a computed, read-only `positionScope` field on every API response:
+  `"attached-siblings"` (attached child, position comparable only against its parent's
+  other children), `"workflow"` (detached/root, active — comparable against the whole
+  workflow), or `"none"` (not currently ordered — a done item, or one with no
+  `workphaseId` at all).
+- `PATCH /items/:id/move` and `PATCH /projects/:id/move` both accept anchor-relative
+  intent (`anchorId`/`side` for items; `prevId`/`nextId` naming the resulting
+  predecessor/successor for projects) as the primary shape. Items also still accept a
+  raw `position` (validated as a finite number) and a bare `workphaseId` with no anchor,
+  which deliberately **keeps the item's existing position unchanged** rather than
+  reassigning one — see the wiki's §2 addendum.
+- Projects reorder the same way items do — there is no more batch `PATCH
+  /projects/reorder` (retired: it validated each reparent independently against
+  current state, so a two-entry batch could collude to write an undetected cycle).
 
 ### Boards, Columns, and Unsorted (Epic 2)
 - A board's column range is defined by `start_workphase_id`/`end_workphase_id` — the
@@ -134,7 +158,7 @@ Base URL: `http://localhost:3001`
 | Prefix | Owns |
 |---|---|
 | `GET /api/health` | Health check |
-| `/api/projects` | Project CRUD + hierarchy reorder (`PATCH /reorder`) |
+| `/api/projects` | Project CRUD + hierarchy move (`PATCH /:id/move` — anchor-relative, see Position Field Pattern above) |
 | `/api/workflows` | Workflow CRUD + full detail (`GET /:id` returns workphases + items) |
 | `/api/workflow-templates` | Read-only system templates |
 | `/api/workphases` | Workphase CRUD + reorder |
@@ -167,7 +191,7 @@ KanbanApp/
 │   └── test-plans/              ← feature-organized test-case catalog, folder-aligned with wiki/
 ├── server/
 │   ├── .env                     ← HOST, PORT, DB_PATH
-│   ├── drizzle/                 ← migration SQL files (0000–0006)
+│   ├── drizzle/                 ← migration SQL files (0000–0010)
 │   ├── data/kanban.db           ← SQLite database
 │   └── src/
 │       ├── index.ts             ← Express entry point, route mounting, global error middleware (registered last)
@@ -181,9 +205,14 @@ KanbanApp/
 │       │   ├── workflowItems.ts ← getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope)
 │       │   ├── boardCascade.ts  ← deleteBoardsById (transactional columns→boards delete, used by 3 delete paths)
 │       │   ├── attachedCascade.ts ← cascadeWorkphaseToAttachedDescendants (attach/detach cascade, Epic 3)
-│       │   ├── itemTree.ts      ← isSelfRefDescendant/assertValidReparent (items+projects) + walkItemDescendants (items)
-│       │   ├── reorder.ts       ← applyReorder (shared PATCH /reorder validation — items, workphases, columns)
-│       │   ├── positions.ts     ← nextPosition (shared append-at-end position math)
+│       │   ├── itemTree.ts      ← isSelfRefDescendant/assertValidReparent (items+projects) + walkItemDescendants (items), all cycle-guarded
+│       │   ├── reorder.ts       ← validateReorder/applyReorderEntries (shared PATCH /reorder — items, workphases, columns)
+│       │   ├── positionResolver.ts ← table-generic anchor+side resolution, coarsest-fit, lazy reindex (Epic 3.2 — items + projects)
+│       │   ├── coarsestFit.ts   ← the coarsest-decimal-that-fits search, factored out of positionResolver.ts for standalone unit tests
+│       │   ├── itemPositionScope.ts ← items-only vocabulary atop positionResolver.ts: classifyPositionScope, positionScopeFor, withPositionScope, sharesPositionScope
+│       │   ├── workphaseOrder.ts ← workphase rank/order helpers shared by columnRanges.ts and itemPositionScope.ts
+│       │   ├── positions.ts     ← nextPosition (append-at-end math for workphases/boards/columns — non-nullable, no anchor/reindex)
+│       │   ├── urlPart.ts       ← encodeURIComponent wrapper for MCP's interpolated URL segments
 │       │   └── getOrNotFound.ts ← getByIdOrNotFound (fetch-by-id-or-404 helper, used across all route files)
 │       └── routes/              ← one file per route prefix (boards.ts, columns.ts, workphases.ts, ...)
 ├── client/
@@ -192,12 +221,17 @@ KanbanApp/
 │   └── src/
 │       ├── App.tsx              ← state root, layout, workflow inheritance
 │       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
+│       ├── lib/                 ← client-only shared logic
+│       │   └── hierarchy.ts     ← getAncestors/getDescendantIds (cycle-guarded tree walks, items+projects)
 │       ├── api/                 ← fetch wrappers, one file per domain (projects.ts,
-│       │                          workflows.ts, items.ts, ...) + shared.ts (the API base
-│       │                          path) — mirrors server/src/routes/*.ts, no barrel index
+│       │                          workflows.ts, items.ts, ...) + shared.ts (apiJson/apiVoid/
+│       │                          apiRequest — always parses the server's real `{ error }`
+│       │                          message with a fallback, plus the API base path) —
+│       │                          mirrors server/src/routes/*.ts, no barrel index
 │       └── components/
-│           ├── ProjectSidebar.tsx    ← project tree + dnd-kit drag reorder
-│           ├── ProjectPage.tsx       ← project detail (overview + board tabs)
+│           ├── ProjectSidebar.tsx    ← project tree, dnd-kit drag reorder (server-resolved, prevId/nextId)
+│           ├── ProjectPage.tsx       ← project detail shell: breadcrumb, name edit-in-place + self-delete, tab bar
+│           ├── ProjectOverviewTab.tsx ← Overview tab body: description edit-in-place, parent selector, subprojects list
 │           ├── BoardView.tsx         ← board orchestration: loads active board, composes hooks, renders DnD board
 │           ├── BoardToolbar.tsx      ← board switcher + board create/rename/delete, add-column/manage-workphases entry points
 │           ├── WorkphaseManagerPanel.tsx ← workphase rename/delete/add rows + column-shrink notices
@@ -205,12 +239,19 @@ KanbanApp/
 │           ├── UnsortedBucket.tsx    ← uncovered-workphase items, drag-source only
 │           ├── ColumnEditorModal.tsx ← range picker (start/end workphase, display mode)
 │           ├── KanbanCard.tsx        ← draggable card
-│           ├── ItemDetailPanel.tsx   ← slide-in item detail
+│           ├── ItemDetailPanel.tsx   ← slide-in item detail (composes item-detail/* sections)
+│           ├── InlineItemForm.tsx    ← shared "title + type select + Add/Cancel, Escape to dismiss" form (BoardColumn + ChildrenSection)
+│           ├── ConfirmDeleteButton.tsx ← shared icon-trigger confirm-delete (columns, workphases, boards, agents)
+│           ├── ConfirmDeleteInline.tsx ← shared inline confirm-delete for a row/heading being replaced outright (ProjectPage)
+│           ├── NotificationsBell.tsx ← self-contained: poll, dropdown, mark-read/mark-all (no props)
 │           ├── ModalShell.tsx        ← shared modal chrome (backdrop, header, footer, Esc) — all centered modals wrap this
+│           ├── icons.tsx             ← shared inline SVG icon set + a couple of shared icon-button Tailwind constants
 │           ├── SetupWorkflowModal.tsx
 │           ├── CreateProjectModal.tsx
 │           ├── AgentsModal.tsx
-│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement, useBoardDnd (all drag logic)
+│           ├── item-detail/          ← ItemDetailPanel's sections (Children/Labels/Attachments/Parent/Agent/ActivityLog) + pillUtils.ts (shared Tailwind tokens) + DetailSection.tsx (section header + form-actions wrapper)
+│           ├── sidebar/              ← SortableProjectRow.tsx + projectTreeUtils.ts (sidebar-only tree helpers)
+│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement, useBoardDnd (all drag logic) + boardDndUtils.ts (pure, unit-tested drag/drop resolution helpers)
 ├── tests/                       ← Playwright E2E
 │   ├── api/                     ← REST endpoint tests via Playwright request fixture
 │   └── ui/                      ← browser interaction tests (boards.spec.ts, boards-layer.spec.ts, ...)

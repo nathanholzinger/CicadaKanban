@@ -1,0 +1,34 @@
+meta {
+  name: Move Project
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/projects/{{projectId}}/move
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "parentId": null,
+    "prevId": "{{prevProjectId}}",
+    "nextId": "{{nextProjectId}}"
+  }
+}
+
+docs {
+  # Move Project
+
+  Replaces the old batch `PATCH /api/projects/reorder` (removed — it could
+  write a parent cycle across a two-entry batch with no guard).
+
+  All fields optional: `parentId` omitted keeps the current parent, `null`
+  reparents to root. `prevId`/`nextId` name the project's resulting
+  *predecessor*/*successor* in the sibling sequence (not "the project I go
+  before/after," which reads ambiguously either direction) — each is
+  verified as a real, current sibling in the resulting scope before its
+  position is trusted. Omitting both appends to the end of the resulting
+  scope.
+}

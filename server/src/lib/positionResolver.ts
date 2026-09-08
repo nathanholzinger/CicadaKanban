@@ -57,7 +57,11 @@ export function resolvePositionByAnchorAndSide(
   throw new Error(`positionResolver: failed to parse anchor + side`);
 }
 
-// TODO: depreciate this passthrough function
+// Kept as its own named export rather than folded away: every call site is a
+// pure "put this at the end" append (item creation, PUT reparent, workphase
+// terminal-transition backfill) with no anchor/side to express, so spelling
+// those 8 call sites as `resolvePositionByAnchorAndSide(table, scope, tx,
+// 'after')` would read as if a side/anchor choice were actually being made.
 export function resolveAppendPosition(table: PositionedTable, scopeWhere: SQL, tx: Tx): number {
   const context: PositionQueryContext = { table: table, scopeWhere: scopeWhere, tx: tx };
   return resolveAppendAsLast(context);

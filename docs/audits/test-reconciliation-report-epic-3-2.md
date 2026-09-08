@@ -85,10 +85,13 @@ scope by design — not confirmed, not searched for. Treat "not found in the
   was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure
   `applyItemMove` function in `boardDndUtils.ts` (per user decision, over
   introducing this codebase's first `renderHook`-based test).
-  **Final count: 0 of 9 quality concerns open, 0 of 14 gaps open, 6 (5
-  original + 1 new) candidate cases in Section E — the only section left
-  untouched. Full suite (server/client/Playwright) and the server
-  coverage gate all green.**
+  **Final count at that point: 0 of 9 quality concerns open, 0 of 14 gaps
+  open, 6 (5 original + 1 new) candidate cases in Section E — the only
+  section left untouched. Full suite (server/client/Playwright) and the
+  server coverage gate all green.**
+- **Update, 2026-09-07 (epic-done closeout):** Section E's 6 candidates
+  walked through and resolved (see section for detail) — **every section
+  of this report is now closed.**
 
 **Two items worth resolving first, before the smaller ones:**
 
@@ -412,42 +415,59 @@ tracking some other way later.
 
 ---
 
-## E. Candidate New Cases (5)
+## E. Candidate New Cases (6)
 
-Real tested behavior with no matching catalog entry. Each needs a human
+Real tested behavior with no matching catalog entry. Each needed a human
 decision on ownership (per `.claude/agents/test-reconciler.md`'s routing
 note: Product Owner if the wiki doesn't document the rule at all, Test
 Planner if the wiki already covers it and the catalog just missed the
 case) and then whether to actually add it.
 
+**Update, 2026-09-07 (epic-done closeout):** all 6 walked through with the
+user one at a time. All 6 got a catalog entry; the two flagged as
+wiki-gaps also got the wiki itself updated. **Section E is now closed.**
+
 1. **Anchoring against a done item is rejected.** Tested at both layers
    (`positionResolver.test.ts` and `items.test.ts`). A real corollary of
    combining §2 ("query the anchor's true current position") and §6
    ("done items get no stored position"), but the wiki never states the
-   error contract explicitly. Borderline — could be "obvious enough" to
-   just catalog, or the wiki should say it outright first.
-   **Likely owner:** Product Owner (wiki gap, borderline) · **Status:** Open
+   error contract explicitly.
+   **Owner:** Product Owner · **Status:** Resolved — wiki's §2 addendum
+   didn't exist yet at the time this was flagged; added TC-2.8 to
+   [part-2-anchor-resolution.md](../test-plans/item-positioning/part-2-anchor-resolution.md)
+   explicitly naming the rule as a corollary, marked automated against the
+   existing tests at both layers.
 2. **`classifyPositionScope` on a null `workphaseId`** → classifies as
-   `"none"` (unsorted, not currently ordered). A fourth `positionScope`
-   state the wiki's §2 description never mentions at all (only three
-   states are listed).
-   **Likely owner:** Product Owner (wiki gap) · **Status:** Open
+   `"none"` (unsorted, not currently ordered). The wiki's §2
+   `positionScope` description only named two causes for `"none"`
+   (terminal/done workphase) and didn't mention a null `workphaseId` as a
+   second, distinct cause landing on the same value.
+   **Owner:** Product Owner · **Status:** Resolved — wiki §2's
+   `positionScope` paragraph broadened to name both causes explicitly
+   (terminal/done workphase, or no `workphaseId` at all); TC-2.16 added to
+   the catalog, marked automated.
 3. **`classifyPositionScope` on `isAttached: true` with `parentId: null`**
-   → classifies as `"workphase"`, not `"attached-siblings"`. The wiki does
+   → classifies as `"workflow"`, not `"attached-siblings"`. The wiki does
    state the AND-condition, so this negative case is implied, just never
    enumerated as its own case.
-   **Likely owner:** Test Planner (catalog gap, wiki already covers it) · **Status:** Open
+   **Owner:** Test Planner · **Status:** Resolved — TC-2.17 added to the
+   catalog (wiki wording needed no change, per the user), marked automated.
 4. **A redundant re-attach to the same parent is a no-op for position.**
    Corollary of the wiki's documented scope-change-reassignment table (no
    scope change → no reassignment), but that table doesn't name this
    specific scenario.
-   **Likely owner:** Test Planner (catalog gap) · **Status:** Open
+   **Owner:** Test Planner · **Status:** Resolved — TC-2.23 added to the
+   catalog (wiki table needed no change, per the user), marked automated.
 5. **An item excludes its own stale row from its own scope query when
    repositioning.** Regression-style guard, not mentioned anywhere in the
    wiki. Closer to an implementation-correctness detail than a stated
-   business rule — may not need a wiki entry at all.
-   **Likely owner:** Product Owner (wiki gap, judgment call on whether it
-   needs one) · **Status:** Open
+   business rule.
+   **Owner:** Product Owner · **Status:** Resolved, no wiki entry (user
+   call — same reasoning as TC-4.6 earlier in this report: an
+   implementation-correctness invariant, not a product rule worth
+   documenting). Catalogued anyway as TC-X.6 in
+   [cross-cutting-regression.md](../test-plans/item-positioning/cross-cutting-regression.md),
+   marked automated.
 6. **A workphaseId-only move with no anchor keeps the item's existing
    position unchanged.** New as of `de80b59` (2026-08-17) — the wiki §2
    addendum states this explicitly as a deliberate exception, and
@@ -455,10 +475,14 @@ case) and then whether to actually add it.
    (`isGenuineWorkphaseChange && item.position !== null` short-circuits
    the append-fallback branch). Not in the original 55-case catalog at
    all — this is a genuinely new documented rule, not a missed case from
-   the original scope. No automation found for it in the reconciled
-   files either.
-   **Likely owner:** Test Planner (wiki already covers it in detail,
-   catalog just predates it) · **Status:** Open
+   the original scope.
+   **Owner:** Test Planner (wiki already covers it in detail, catalog just
+   predates it) · **Status:** Resolved — the "no automation found"
+   half of this item turned out to be stale too: `items.test.ts` already
+   had "a workphaseId-only move with no anchor keeps the item's existing
+   position exactly unchanged (TC-2.24)" by the time this was closed out.
+   Added TC-2.24 to the catalog pointing at that existing test — pure
+   bookkeeping, no new test needed.
 
 ---
 
