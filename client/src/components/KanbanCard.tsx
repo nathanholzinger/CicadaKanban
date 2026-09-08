@@ -20,7 +20,10 @@ function useLiveDropSide(itemId: string, expectedActiveType: string): 'before' |
 }
 
 const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
-const DROP_INDICATOR_AFTER = 'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+const DROP_INDICATOR_AFTER =
+  'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+const CARD_BASE =
+  'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
 
 // A card's type pill only renders when `item.type` resolves to a known
 // ItemType — an orphaned/unknown type reference hides the pill rather than
@@ -83,7 +86,7 @@ export default function KanbanCard({
       role="article"
       aria-label={item.title}
       onClick={() => !isDragging && onCardClick?.(item.id)}
-      className={`hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} `}
+      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       {dropSide === 'before' && <div className={DROP_INDICATOR_BEFORE} />}

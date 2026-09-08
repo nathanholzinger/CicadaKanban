@@ -1,9 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { urlPart } from './lib/urlPart.js';
 
 const API = 'http://localhost:3001/api';
@@ -21,10 +18,7 @@ async function api(path: string, options?: RequestInit) {
   return res.json();
 }
 
-const server = new Server(
-  { name: 'kanban', version: '1.0.0' },
-  { capabilities: { tools: {} } },
-);
+const server = new Server({ name: 'kanban', version: '1.0.0' }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -57,7 +51,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'get_item',
-      description: 'Get full details of an item including description, children, activity log, and which workflow it belongs to',
+      description:
+        'Get full details of an item including description, children, activity log, and which workflow it belongs to',
       inputSchema: {
         type: 'object',
         properties: {
@@ -73,26 +68,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: 'object',
         properties: {
           title: { type: 'string', description: 'Item title' },
-          project_id: { type: 'string', description: 'Project this item belongs to. Optional if parent_id is given (the parent\'s project is inherited).' },
-          workphase_id: { type: 'string', description: 'Workphase to place the item in. Optional — omit to leave the item unsorted. Ignored for an attached item with a parent (it takes the parent\'s current workphase).' },
+          project_id: {
+            type: 'string',
+            description:
+              "Project this item belongs to. Optional if parent_id is given (the parent's project is inherited).",
+          },
+          workphase_id: {
+            type: 'string',
+            description:
+              "Workphase to place the item in. Optional — omit to leave the item unsorted. Ignored for an attached item with a parent (it takes the parent's current workphase).",
+          },
           type: { type: 'string', description: 'Item type name (e.g. "Epic", "Story", "Task") or UUID. Optional.' },
           description: { type: 'string', description: 'Optional item description' },
           parent_id: { type: 'string', description: 'Optional parent item ID' },
-          is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases. Defaults to true. When true and parent_id is set, the item is placed in the parent\'s current workphase regardless of workphase_id.' },
+          is_attached: {
+            type: 'boolean',
+            description:
+              "Whether this item moves with its parent between workphases. Defaults to true. When true and parent_id is set, the item is placed in the parent's current workphase regardless of workphase_id.",
+          },
         },
         required: ['title'],
       },
     },
     {
       name: 'update_item',
-      description: "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase.",
+      description:
+        "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase.",
       inputSchema: {
         type: 'object',
         properties: {
           item_id: { type: 'string', description: 'The item ID' },
           title: { type: 'string', description: 'New title' },
           description: { type: 'string', description: 'New description' },
-          parent_id: { type: 'string', description: 'New parent item ID, or null to make it top-level. Rejected if it would create a cycle.' },
+          parent_id: {
+            type: 'string',
+            description: 'New parent item ID, or null to make it top-level. Rejected if it would create a cycle.',
+          },
           is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases.' },
         },
         required: ['item_id'],
@@ -125,7 +136,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   ],
 }));
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -162,11 +173,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'create_item': {
         let resolvedType: string | null = null;
         if (args!.type) {
-          const itemTypes = await api('/item-types') as Array<{ id: string; name: string }>;
+          const itemTypes = (await api('/item-types')) as Array<{ id: string; name: string }>;
           const match = itemTypes.find(
             t => t.name.toLowerCase() === String(args!.type).toLowerCase() || t.id === args!.type,
           );
-          if (!match) throw new Error(`Unknown item type: "${args!.type}". Available: ${itemTypes.map(t => t.name).join(', ')}`);
+          if (!match) {
+            const availableNames = itemTypes.map(t => t.name).join(', ');
+            throw new Error(`Unknown item type: "${args!.type}". Available: ${availableNames}`);
+          }
           resolvedType = match.id;
         }
         const item = await api('/items', {
@@ -229,10 +243,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (err) {
     return {
-      content: [{
-        type: 'text',
-        text: `Error: ${err instanceof Error ? err.message : String(err)}`,
-      }],
+      content: [
+        {
+          type: 'text',
+          text: `Error: ${err instanceof Error ? err.message : String(err)}`,
+        },
+      ],
       isError: true,
     };
   }

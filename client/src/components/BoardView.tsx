@@ -121,6 +121,14 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   }, [activeBoardId, workflowId, setWorkphases, setItems]);
 
   useEffect(() => {
+    // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
+    // intentional and shared: it's also called imperatively (not from an
+    // effect, so unflagged) from handleCreateWorkphase/RenameWorkphase/
+    // DeleteWorkphase below, and by useColumnManagement/useBoardDnd, all of
+    // which rely on the same immediate loading flash. Deriving `loading`
+    // from state instead would silently drop that flash from those other
+    // call sites — a real behavior change, not a lint-only fix.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBoard();
   }, [loadBoard]);
 

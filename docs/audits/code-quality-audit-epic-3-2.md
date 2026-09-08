@@ -1,5 +1,17 @@
 # Code Quality Audit — Epic 3.2 In Progress (2026-08-17)
 
+**Audit closed (2026-09-07):** all 31 Fix Now / Watch List findings (#1–#31)
+verified against current code and resolved — each carries its own
+`**Status:**` note recording what was found (still valid / already fixed /
+no longer reachable) and what was done (fixed, deferred with a documented
+reason, or split into follow-up decisions). Every fix shipped with
+regression tests where one was meaningful, and was checked against
+`tsc --noEmit` plus the relevant test suite(s) (server/client unit,
+Playwright) before being marked done. The 10 Informational findings
+(#32–#41) are positive confirmations, a consistency pass, and minor
+drift notes per the audit's own framing — no action items, not walked
+individually in this closing pass.
+
 Scope note: audited range is `epic-2-complete` → working tree, per explicit
 request. This spans the now-closed **Epic 3** (Attached/Detached work item
 behaviors — already covered by `code-quality-audit-epic3.md`) plus the

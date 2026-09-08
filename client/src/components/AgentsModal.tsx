@@ -3,7 +3,7 @@ import type { Agent } from '../types';
 import { fetchAgents, createAgent, updateAgent, deleteAgent } from '../api/agents';
 import ModalShell from './ModalShell';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
-import { FIELD_LABEL } from './item-detail/pillUtils';
+import { FIELD_LABEL, INPUT_LG, SELECT_LG } from './item-detail/pillUtils';
 
 const surfaceLabels: Record<string, string> = {
   chat: 'Claude.ai Chat',
@@ -16,6 +16,8 @@ const surfaceBadgeColors: Record<string, string> = {
   code: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   cowork: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
 };
+
+const SURFACE_BADGE_BASE = 'shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase';
 
 const emptyForm = { name: '', claudeProjectId: '', surface: 'chat', repoPath: '', notes: '' };
 
@@ -164,9 +166,7 @@ export default function AgentsModal({ onClose }: AgentsModalProps) {
                   <div className="min-w-0 flex-1">
                     <div className="mb-0.5 flex items-center gap-2">
                       <span className="truncate text-sm font-medium text-zinc-100">{agent.name}</span>
-                      <span
-                        className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${surfaceBadgeColors[agent.surface] ?? ''}`}
-                      >
+                      <span className={`${SURFACE_BADGE_BASE} ${surfaceBadgeColors[agent.surface] ?? ''}`}>
                         {surfaceLabels[agent.surface] ?? agent.surface}
                       </span>
                     </div>
@@ -253,7 +253,7 @@ function AgentForm({
             onChange={e => onChange({ ...form, name: e.target.value })}
             placeholder="e.g. Backend agent"
             required
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
+            className={`w-full ${INPUT_LG}`}
           />
         </div>
         <div className="w-36">
@@ -261,7 +261,7 @@ function AgentForm({
           <select
             value={form.surface}
             onChange={e => onChange({ ...form, surface: e.target.value })}
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:border-blue-500/60 focus:outline-none"
+            className={`w-full ${SELECT_LG}`}
           >
             <option value="chat">Claude.ai Chat</option>
             <option value="code">Claude Code</option>
@@ -271,28 +271,24 @@ function AgentForm({
       </div>
 
       <div>
-        <label className={FIELD_LABEL}>
-          Project ID
-        </label>
+        <label className={FIELD_LABEL}>Project ID</label>
         <input
           value={form.claudeProjectId}
           onChange={e => onChange({ ...form, claudeProjectId: e.target.value })}
           placeholder="UUID from claude.ai project URL"
           required
-          className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
+          className={`w-full font-mono ${INPUT_LG}`}
         />
       </div>
 
       {needsRepo && (
         <div>
-          <label className={FIELD_LABEL}>
-            Repo Path
-          </label>
+          <label className={FIELD_LABEL}>Repo Path</label>
           <input
             value={form.repoPath}
             onChange={e => onChange({ ...form, repoPath: e.target.value })}
             placeholder="e.g. C:\Users\natha\Dev\MyProject"
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
+            className={`w-full font-mono ${INPUT_LG}`}
           />
         </div>
       )}
@@ -306,7 +302,7 @@ function AgentForm({
           onChange={e => onChange({ ...form, notes: e.target.value })}
           placeholder="What does this agent do?"
           rows={2}
-          className="w-full resize-none rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:border-blue-500/60 focus:outline-none"
+          className={`w-full resize-none ${INPUT_LG}`}
         />
       </div>
 

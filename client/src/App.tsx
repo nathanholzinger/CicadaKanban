@@ -174,6 +174,7 @@ export default function App() {
         <main className="flex flex-1 flex-col overflow-hidden px-6 py-6">
           {selectedProject ? (
             <ProjectPage
+              key={selectedProject.id}
               project={selectedProject}
               ancestors={projectAncestors}
               subprojects={projectSubprojects}

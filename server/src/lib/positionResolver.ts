@@ -18,10 +18,10 @@ export type PositionedTable = SQLiteTable & {
 
 // Used to bundle the query context so functions have fewer params to handoff
 type PositionQueryContext = {
-  table: PositionedTable, 
-  scopeWhere: SQL, 
-  tx: Tx 
-}
+  table: PositionedTable;
+  scopeWhere: SQL;
+  tx: Tx;
+};
 
 // for defining anchorId + side.
 export type Side = 'before' | 'after';
@@ -38,13 +38,13 @@ export type Side = 'before' | 'after';
  * @returns number value of the position
  */
 export function resolvePositionByAnchorAndSide(
-  table: PositionedTable, 
-  scopeWhere: SQL, 
+  table: PositionedTable,
+  scopeWhere: SQL,
   tx: Tx,
-  side: Side, 
+  side: Side,
   anchorId?: string,
 ): number {
-  const context: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: tx} 
+  const context: PositionQueryContext = { table: table, scopeWhere: scopeWhere, tx: tx };
 
   if (anchorId) {
     if (side === 'before') return resolveBeforeTarget(anchorId, context);
@@ -54,37 +54,32 @@ export function resolvePositionByAnchorAndSide(
     if (side === 'after') return resolveAppendAsLast(context);
   }
 
-  throw new Error(`positionResolver: failed to parse anchor + side`)
+  throw new Error(`positionResolver: failed to parse anchor + side`);
 }
 
 // TODO: depreciate this passthrough function
-export function resolveAppendPosition(
-  table: PositionedTable, 
-  scopeWhere: SQL, 
-  tx: Tx
-): number {
-  const context: PositionQueryContext = {table: table, scopeWhere: scopeWhere, tx: tx}
-  return resolveAppendAsLast(context)
+export function resolveAppendPosition(table: PositionedTable, scopeWhere: SQL, tx: Tx): number {
+  const context: PositionQueryContext = { table: table, scopeWhere: scopeWhere, tx: tx };
+  return resolveAppendAsLast(context);
 }
 
 function getTargetPosition(targetId: string, context: PositionQueryContext): number {
-  const {table, scopeWhere, tx} = context;
-  const row = (tx
-          .select({ position: table.position })
-          .from(table)
-          .where(and(scopeWhere, eq(table.id, targetId)))
-          .get()
-  ) as { position: number | null } | undefined;
+  const { table, scopeWhere, tx } = context;
+  const row = tx
+    .select({ position: table.position })
+    .from(table)
+    .where(and(scopeWhere, eq(table.id, targetId)))
+    .get() as { position: number | null } | undefined;
   if (row === undefined) {
-    throw new Error(`positionResolver: could not find id ${targetId} at table ${table} within scope ${scopeWhere}`)
+    throw new Error(`positionResolver: could not find id ${targetId} at table ${table} within scope ${scopeWhere}`);
   } else if (!row?.position) {
-    throw new Error(`positionResolver: id ${targetId} at table ${table} does not have a position`)
+    throw new Error(`positionResolver: id ${targetId} at table ${table} does not have a position`);
   }
   return row.position;
 }
 
 function getLastPositionInScope(context: PositionQueryContext): number | null {
-  const {table, scopeWhere, tx} = context;
+  const { table, scopeWhere, tx } = context;
   // isNotNull guard (same reasoning as reindexPositionsInScope's): a scope
   // can legitimately contain done items with a null position (positionScopeFor
   // doesn't filter them out), and SQLite sorts NULLs first in ASC / last in
@@ -93,67 +88,66 @@ function getLastPositionInScope(context: PositionQueryContext): number | null {
   // workphase in a workflow), in which case an unguarded DESC query would
   // return a null-positioned row instead of falling through to the "no rows"
   // case below.
-  const row = (tx
-          .select({ position: table.position })
-          .from(table)
-          .where(and(scopeWhere, isNotNull(table.position)))
-          .orderBy(desc(table.position))
-          .limit(1)
-          .get()
-  ) as { position: number | null } | undefined;
+  const row = tx
+    .select({ position: table.position })
+    .from(table)
+    .where(and(scopeWhere, isNotNull(table.position)))
+    .orderBy(desc(table.position))
+    .limit(1)
+    .get() as { position: number | null } | undefined;
   if (row === undefined) {
     return null;
   } else if (!row?.position) {
-    throw new Error(`positionResolver: a row was found with no position. (this shouldn't happen)`)
+    throw new Error(`positionResolver: a row was found with no position. (this shouldn't happen)`);
   }
   return row.position;
 }
 
 function getFirstIdInScope(context: PositionQueryContext): string | null {
-  const {table, scopeWhere, tx} = context;
+  const { table, scopeWhere, tx } = context;
   // Same isNotNull guard as getLastPositionInScope above, mirrored for ASC.
-  const row = (tx
-          .select({ id: table.id })
-          .from(table)
-          .where(and(scopeWhere, isNotNull(table.position)))
-          .orderBy(asc(table.position))
-          .limit(1)
-          .get()
-  ) as { id: string | null } | undefined;
+  const row = tx
+    .select({ id: table.id })
+    .from(table)
+    .where(and(scopeWhere, isNotNull(table.position)))
+    .orderBy(asc(table.position))
+    .limit(1)
+    .get() as { id: string | null } | undefined;
   if (row === undefined) {
     return null;
   } else if (!row?.id) {
-    throw new Error(`positionResolver: a row was found with no id. (this shouldn't happen)`)
+    throw new Error(`positionResolver: a row was found with no id. (this shouldn't happen)`);
   }
   return row.id;
 }
 
 function resolveAfterTarget(prevId: string, context: PositionQueryContext): number {
-  const {table, scopeWhere, tx} = context;
+  const { table, scopeWhere, tx } = context;
   const prevPosition = getTargetPosition(prevId, context);
 
-  const nextRow = (tx
+  const nextRow = tx
     .select({ position: table.position })
     .from(table)
     .where(and(scopeWhere, gt(table.position, prevPosition)))
     .orderBy(asc(table.position))
     .limit(1)
-    .get()
-  ) as { position: number | null } | undefined;
+    .get() as { position: number | null } | undefined;
 
   if (nextRow === undefined) return resolveAppendAsLast(context, prevPosition);
 
   const resolveBounds = () => {
     const prev = getTargetPosition(prevId, context);
-    const next = (tx
+    const next = tx
       .select({ position: table.position })
       .from(table)
       .where(and(scopeWhere, gt(table.position, prev)))
       .orderBy(asc(table.position))
       .limit(1)
-      .get()) as { position: number | null } | undefined;
+      .get() as { position: number | null } | undefined;
     if (next === undefined) {
-      throw new Error(`positionResolver: expected a next neighbor after reindex but found none (this shouldn't happen)`);
+      throw new Error(
+        `positionResolver: expected a next neighbor after reindex but found none (this shouldn't happen)`,
+      );
     }
     return { prev, next: next.position! };
   };
@@ -162,18 +156,17 @@ function resolveAfterTarget(prevId: string, context: PositionQueryContext): numb
 }
 
 function resolveBeforeTarget(nextId: string, context: PositionQueryContext): number {
-  const {table, scopeWhere, tx} = context;
-  
+  const { table, scopeWhere, tx } = context;
+
   const resolveBounds = () => {
     const nextPos = getTargetPosition(nextId, context);
-    const prev = (tx
-          .select({ position: table.position })
-          .from(table)
-          .where(and(scopeWhere, lt(table.position, nextPos)))
-          .orderBy(desc(table.position))
-          .limit(1)
-          .get()
-    ) as { position: number | null } | undefined;
+    const prev = tx
+      .select({ position: table.position })
+      .from(table)
+      .where(and(scopeWhere, lt(table.position, nextPos)))
+      .orderBy(desc(table.position))
+      .limit(1)
+      .get() as { position: number | null } | undefined;
     return { prev: prev?.position ?? 0.0, next: nextPos };
   };
   return fitOrReindexAndRetry(resolveBounds, context);
@@ -185,7 +178,7 @@ function resolveAppendAsLast(context: PositionQueryContext, lastPosition?: numbe
 }
 
 function resolvePrependAsFirst(context: PositionQueryContext): number {
-  const firstId = getFirstIdInScope(context)
+  const firstId = getFirstIdInScope(context);
   if (!firstId) {
     return resolveAppendAsLast(context, 0.0);
   }
@@ -194,8 +187,8 @@ function resolvePrependAsFirst(context: PositionQueryContext): number {
 
 function fitOrReindexAndRetry(
   resolveBounds: () => { prev: number; next: number },
-  context: PositionQueryContext, 
-  retryCount: number = 0
+  context: PositionQueryContext,
+  retryCount: number = 0,
 ): number {
   const { prev, next } = resolveBounds();
   const fit = coarsestFit(prev, next);
@@ -205,31 +198,29 @@ function fitOrReindexAndRetry(
     throw new Error('positionResolver: precision exhausted even after a reindex - this should not happen');
   }
   reindexPositionsInScope(context);
-  return fitOrReindexAndRetry(resolveBounds, context, retryCount+1)
+  return fitOrReindexAndRetry(resolveBounds, context, retryCount + 1);
 }
 
-function appendOrReindexAndRetry(
-  lastPosition: number,
-  context: PositionQueryContext,
-  retryCount: number = 0
-): number {
-  const candidate = Math.round(lastPosition + 1.0)
+function appendOrReindexAndRetry(lastPosition: number, context: PositionQueryContext, retryCount: number = 0): number {
+  const candidate = Math.round(lastPosition + 1.0);
   if (exceedsMagnitudeThreshold(candidate, context)) {
     if (retryCount >= MAX_REINDEX_TRIES) {
-      throw new Error('positionResolver: new position exceeded threshold even after a reindex - this should not happen');
+      throw new Error(
+        'positionResolver: new position exceeded threshold even after a reindex - this should not happen',
+      );
     }
-    reindexPositionsInScope(context)
+    reindexPositionsInScope(context);
     const newLast = getLastPositionInScope(context);
     if (!newLast) {
       throw new Error(`positionResolver: last position was ${newLast} after a reindex - this should not happen`);
     }
-    return appendOrReindexAndRetry(newLast, context, retryCount+1)
+    return appendOrReindexAndRetry(newLast, context, retryCount + 1);
   }
   return candidate;
 }
 
 function reindexPositionsInScope(queryContext: PositionQueryContext): void {
-  const {table, scopeWhere, tx} = queryContext;
+  const { table, scopeWhere, tx } = queryContext;
   const rows = tx
     .select({ id: table.id, position: table.position, createdAt: table.createdAt })
     .from(table)
@@ -239,13 +230,16 @@ function reindexPositionsInScope(queryContext: PositionQueryContext): void {
 
   const now = Date.now();
   rows.forEach((row, index) => {
-    tx.update(table).set({ position: index + 1, updatedAt: now }).where(eq(table.id, row.id)).run();
+    tx.update(table)
+      .set({ position: index + 1, updatedAt: now })
+      .where(eq(table.id, row.id))
+      .run();
   });
 }
 
 function exceedsMagnitudeThreshold(candidate: number, context: PositionQueryContext): boolean {
   if (candidate >= SOFT_MAX_POSITION) {
-    const {table, scopeWhere, tx} = context;
+    const { table, scopeWhere, tx } = context;
     const rows = tx.select({ id: table.id }).from(table).where(scopeWhere).all().length;
     if (candidate >= rows + MAX_OVER_POSITION) {
       return true;
@@ -260,7 +254,7 @@ function exceedsMagnitudeThreshold(candidate: number, context: PositionQueryCont
 // already did ad hoc. Was hand-written identically in 4 POST handlers plus
 // MCP's move_item tool (audit finding #25).
 
-export function nextPosition(rows: { position: number | null; }[]): number {
+export function nextPosition(rows: { position: number | null }[]): number {
   if (rows.length === 0) return 1.0;
   return Math.max(...rows.map(r => r.position ?? 0)) + 1.0;
 }

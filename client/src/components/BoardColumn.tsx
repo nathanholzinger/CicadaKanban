@@ -11,6 +11,10 @@ import { subrowContainerId } from './workflow/boardDndUtils';
 import InlineItemForm from './InlineItemForm';
 import { DragHandleIcon } from './icons';
 
+const COLUMN_TITLE_BASE = 'truncate text-sm font-semibold tracking-wide text-zinc-300';
+const COLUMN_BODY_BASE =
+  'flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors duration-200';
+
 interface BoardColumnProps {
   column: Column;
   getWorkphaseItems: (workphaseId: string, isTerminal?: boolean) => Item[];
@@ -93,7 +97,7 @@ export default function BoardColumn({
         <div className="min-w-0 flex-1">
           <h3
             onClick={() => onEdit?.(column)}
-            className={`truncate text-sm font-semibold tracking-wide text-zinc-300 ${onEdit ? 'cursor-pointer hover:text-zinc-100' : ''}`}
+            className={`${COLUMN_TITLE_BASE} ${onEdit ? 'cursor-pointer hover:text-zinc-100' : ''}`}
             title={onEdit ? 'Click to edit column' : undefined}
           >
             {column.displayName}
@@ -123,7 +127,7 @@ export default function BoardColumn({
 
       {/* Body */}
       <div
-        className={`flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors duration-200 ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'} `}
+        className={`${COLUMN_BODY_BASE} ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}`}
       >
         {column.displayMode === 'expanded' ? (
           column.subRows.map(row => (

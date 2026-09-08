@@ -4,7 +4,14 @@ import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import {
-  labels, itemLabels, attachments, notifications, chatThreads, chatMessages, boards, columns,
+  labels,
+  itemLabels,
+  attachments,
+  notifications,
+  chatThreads,
+  chatMessages,
+  boards,
+  columns,
 } from '../../src/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { createProject, createWorkflow, createWorkphase, createItem, createColumn } from '../fixtures.js';
@@ -101,7 +108,7 @@ describe('PUT /api/projects/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('returns 400 when parentId equals the project\'s own id', async () => {
+  it("returns 400 when parentId equals the project's own id", async () => {
     const project = await createProject();
     const res = await request(app).put(`/api/projects/${project.id}`).send({ parentId: project.id });
     expect(res.status).toBe(400);
@@ -151,7 +158,7 @@ describe('PATCH /api/projects/:id/move', () => {
     expect(list.body.map((p: { id: string }) => p.id)).toEqual([b.id, c.id, a.id]);
   });
 
-  it('reparents and appends at the end of the new parent\'s children when no anchor is given', async () => {
+  it("reparents and appends at the end of the new parent's children when no anchor is given", async () => {
     const parent = await createProject();
     const existingChild = await createProject({ parentId: parent.id });
     const mover = await createProject();
@@ -161,7 +168,9 @@ describe('PATCH /api/projects/:id/move', () => {
     expect(res.body.parentId).toBe(parent.id);
 
     const list = await request(app).get('/api/projects');
-    const childIds = list.body.filter((p: { parentId: string | null }) => p.parentId === parent.id).map((p: { id: string }) => p.id);
+    const childIds = list.body
+      .filter((p: { parentId: string | null }) => p.parentId === parent.id)
+      .map((p: { id: string }) => p.id);
     expect(childIds).toEqual([existingChild.id, mover.id]);
   });
 
@@ -205,7 +214,9 @@ describe('PATCH /api/projects/:id/move', () => {
     expect(res.status).toBe(200);
 
     const list = await request(app).get('/api/projects');
-    const childIds = list.body.filter((p: { parentId: string | null }) => p.parentId === parent.id).map((p: { id: string }) => p.id);
+    const childIds = list.body
+      .filter((p: { parentId: string | null }) => p.parentId === parent.id)
+      .map((p: { id: string }) => p.id);
     expect(childIds).toEqual([existingChild1.id, existingChild2.id, mover.id]);
   });
 
@@ -232,13 +243,13 @@ describe('PATCH /api/projects/:id/move', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when parentId equals the project\'s own id', async () => {
+  it("returns 400 when parentId equals the project's own id", async () => {
     const project = await createProject();
     const res = await request(app).patch(`/api/projects/${project.id}/move`).send({ parentId: project.id });
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when parentId is one of the project\'s own descendants', async () => {
+  it("returns 400 when parentId is one of the project's own descendants", async () => {
     const parent = await createProject();
     const child = await createProject({ parentId: parent.id });
     const res = await request(app).patch(`/api/projects/${parent.id}/move`).send({ parentId: child.id });
@@ -293,17 +304,36 @@ describe('DELETE /api/projects/:id', () => {
     const label = { id: randomUUID(), name: 'bug', color: '#f00', createdAt: Date.now() };
     db.insert(labels).values(label).run();
     db.insert(itemLabels).values({ itemId: item.id, labelId: label.id }).run();
-    db.insert(attachments).values({
-      id: randomUUID(), itemId: item.id, type: 'local_file', label: 'notes.txt', createdAt: Date.now(),
-    }).run();
-    db.insert(notifications).values({
-      id: randomUUID(), itemId: item.id, workflowId: workflow.id, message: 'hi', type: 'item_in_workphase', createdAt: Date.now(),
-    }).run();
+    db.insert(attachments)
+      .values({
+        id: randomUUID(),
+        itemId: item.id,
+        type: 'local_file',
+        label: 'notes.txt',
+        createdAt: Date.now(),
+      })
+      .run();
+    db.insert(notifications)
+      .values({
+        id: randomUUID(),
+        itemId: item.id,
+        workflowId: workflow.id,
+        message: 'hi',
+        type: 'item_in_workphase',
+        createdAt: Date.now(),
+      })
+      .run();
     const thread = { id: randomUUID(), itemId: item.id, createdAt: Date.now() };
     db.insert(chatThreads).values(thread).run();
-    db.insert(chatMessages).values({
-      id: randomUUID(), threadId: thread.id, role: 'user', content: 'hello', createdAt: Date.now(),
-    }).run();
+    db.insert(chatMessages)
+      .values({
+        id: randomUUID(),
+        threadId: thread.id,
+        role: 'user',
+        content: 'hello',
+        createdAt: Date.now(),
+      })
+      .run();
 
     const res = await request(app).delete(`/api/projects/${parent.id}`);
     expect(res.status).toBe(204);
@@ -330,7 +360,7 @@ describe('DELETE /api/projects/:id', () => {
   // project that was reparented away, or was given its own workflow, after
   // filing items into the old parent's workphases — must survive with its
   // workphaseId nulled, not be deleted alongside the project's own items.
-  it('does not delete another project\'s item that is merely sitting in this project\'s workphase', async () => {
+  it("does not delete another project's item that is merely sitting in this project's workphase", async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);

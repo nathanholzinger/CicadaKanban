@@ -1,6 +1,15 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { workflows, workphases, items, workflowTemplates, workflowTemplatePhases, projects, boards, notifications } from '../db/schema.js';
+import {
+  workflows,
+  workphases,
+  items,
+  workflowTemplates,
+  workflowTemplatePhases,
+  projects,
+  boards,
+  notifications,
+} from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from './boards.js';
@@ -44,7 +53,11 @@ const router = Router();
 router.get('/', (req, res) => {
   const { projectId } = req.query;
   const allWorkflows = projectId
-    ? db.select().from(workflows).where(eq(workflows.projectId, String(projectId))).all()
+    ? db
+        .select()
+        .from(workflows)
+        .where(eq(workflows.projectId, String(projectId)))
+        .all()
     : db.select().from(workflows).all();
   res.json(allWorkflows);
 });
@@ -83,17 +96,29 @@ router.post('/', (req, res) => {
   }
   // A bogus projectId would otherwise surface as an opaque FK-violation 500
   // (audit Finding #13).
-  if (!db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).get()) {
+  const projectExists = Boolean(db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).get());
+  if (!projectExists) {
     res.status(400).json({ error: 'projectId does not reference an existing project' });
     return;
   }
   // Neither is an FK, so a bogus id here wouldn't crash — it would just
   // silently produce a zero-workphase workflow, which is just as confusing.
-  if (templateId && !db.select({ id: workflowTemplates.id }).from(workflowTemplates).where(eq(workflowTemplates.id, templateId)).get()) {
+  // Guarded by `templateId &&`/`sourceWorkflowId &&` before querying (not just
+  // before checking the result) — eq() against an omitted, undefined id would
+  // otherwise reach better-sqlite3 as an invalid bind parameter.
+  const templateExists =
+    !templateId ||
+    Boolean(
+      db.select({ id: workflowTemplates.id }).from(workflowTemplates).where(eq(workflowTemplates.id, templateId)).get(),
+    );
+  if (!templateExists) {
     res.status(400).json({ error: 'templateId does not reference an existing template' });
     return;
   }
-  if (sourceWorkflowId && !db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, sourceWorkflowId)).get()) {
+  const sourceWorkflowExists =
+    !sourceWorkflowId ||
+    Boolean(db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, sourceWorkflowId)).get());
+  if (!sourceWorkflowExists) {
     res.status(400).json({ error: 'sourceWorkflowId does not reference an existing workflow' });
     return;
   }
@@ -105,49 +130,59 @@ router.post('/', (req, res) => {
   // board bootstrap commit together — a mid-sequence failure must not leave a
   // workflow with only some of its intended workphases, or a workflow with no
   // usable board at all.
-  const { created, createdWorkphases } = db.transaction((tx) => {
-    tx.insert(workflows).values({
-      id: workflowId,
-      projectId,
-      name,
-      description: description || null,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+  const { created, createdWorkphases } = db.transaction(tx => {
+    tx.insert(workflows)
+      .values({
+        id: workflowId,
+        projectId,
+        name,
+        description: description || null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
     if (templateId) {
-      const templatePhases = tx.select().from(workflowTemplatePhases)
+      const templatePhases = tx
+        .select()
+        .from(workflowTemplatePhases)
         .where(eq(workflowTemplatePhases.templateId, templateId))
         .orderBy(workflowTemplatePhases.position)
         .all();
 
       for (const phase of templatePhases) {
-        tx.insert(workphases).values({
-          id: randomUUID(),
-          workflowId,
-          name: phase.name,
-          position: phase.position,
-          triggersNotification: phase.triggersNotification,
-          isTerminal: phase.isTerminal,
-          createdAt: now,
-        }).run();
+        tx.insert(workphases)
+          .values({
+            id: randomUUID(),
+            workflowId,
+            name: phase.name,
+            position: phase.position,
+            triggersNotification: phase.triggersNotification,
+            isTerminal: phase.isTerminal,
+            createdAt: now,
+          })
+          .run();
       }
     } else if (sourceWorkflowId) {
-      const sourcePhases = tx.select().from(workphases)
+      const sourcePhases = tx
+        .select()
+        .from(workphases)
         .where(eq(workphases.workflowId, sourceWorkflowId))
         .orderBy(workphases.position)
         .all();
 
       for (const phase of sourcePhases) {
-        tx.insert(workphases).values({
-          id: randomUUID(),
-          workflowId,
-          name: phase.name,
-          position: phase.position,
-          triggersNotification: phase.triggersNotification,
-          isTerminal: phase.isTerminal,
-          createdAt: now,
-        }).run();
+        tx.insert(workphases)
+          .values({
+            id: randomUUID(),
+            workflowId,
+            name: phase.name,
+            position: phase.position,
+            triggersNotification: phase.triggersNotification,
+            isTerminal: phase.isTerminal,
+            createdAt: now,
+          })
+          .run();
       }
     }
 
@@ -172,11 +207,14 @@ router.put('/:id', (req, res) => {
 
   const { name, description } = req.body;
 
-  db.update(workflows).set({
-    name: name ?? workflow.name,
-    description: description !== undefined ? description : workflow.description,
-    updatedAt: Date.now(),
-  }).where(eq(workflows.id, req.params.id)).run();
+  db.update(workflows)
+    .set({
+      name: name ?? workflow.name,
+      description: description !== undefined ? description : workflow.description,
+      updatedAt: Date.now(),
+    })
+    .where(eq(workflows.id, req.params.id))
+    .run();
 
   const updated = db.select().from(workflows).where(eq(workflows.id, req.params.id)).get();
   res.json(updated);
@@ -194,7 +232,12 @@ router.delete('/:id', (req, res) => {
   db.transaction(tx => {
     // Columns FK-reference workphases (no cascade), so boards/columns must go
     // before the workphases.
-    const workflowBoardIds = tx.select({ id: boards.id }).from(boards).where(eq(boards.workflowId, req.params.id)).all().map(b => b.id);
+    const workflowBoardIds = tx
+      .select({ id: boards.id })
+      .from(boards)
+      .where(eq(boards.workflowId, req.params.id))
+      .all()
+      .map(b => b.id);
     deleteBoardsById(workflowBoardIds, tx);
 
     // Interim until the Epic 8 events rework: notifications carry a workflowId FK.

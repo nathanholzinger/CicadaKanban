@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
 import type { CreateWorkflowInput } from '../api/workflows';
 import type { UpdateProjectInput } from '../api/projects';
@@ -58,19 +58,6 @@ export default function ProjectPage({
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(project.name);
   const cancelRef = useRef(false);
-
-  // Intentionally scoped to project.id only: this resets the shell's own
-  // state when navigating to a *different* project, not on every edit to
-  // the current project's name (which would fight the user mid-edit).
-  // ProjectOverviewTab's own state (description edit, parent selector,
-  // subprojects) resets independently via its `key={project.id}` below.
-  useEffect(() => {
-    setNameValue(project.name);
-    setEditingName(false);
-    setActiveTab('overview');
-    setShowSetupModal(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id]);
 
   async function handleSaveName() {
     const trimmed = nameValue.trim();

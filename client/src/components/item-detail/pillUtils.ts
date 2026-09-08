@@ -23,6 +23,14 @@ export const INPUT_LG =
   'px-3 py-1.5 rounded-lg text-sm bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500/60';
 export const SELECT_SM =
   'px-2 py-0.5 rounded text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 focus:outline-none focus:border-blue-500/60';
+// Select counterpart to INPUT_LG (same text-sm/py-1.5 board-form sizing),
+// with select's own narrower px-2 horizontal padding matching SELECT_BASE/
+// SELECT_SM's existing convention. Was independently re-typed with a
+// slightly divergent rounded/placeholder-color combo in AgentsModal before
+// being reconciled to this (INPUT_LG's own values). Prefix with `w-full `
+// where needed, same as INPUT_LG.
+export const SELECT_LG =
+  'rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-zinc-300 focus:border-blue-500/60 focus:outline-none';
 export const BTN_PRIMARY = 'px-3 py-1 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-500';
 export const BTN_CANCEL = 'px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200';
 export const BTN_ADD_TRIGGER = 'text-[11px] text-zinc-500 hover:text-blue-400 transition-colors';
@@ -32,8 +40,10 @@ export const EMPTY_STATE = 'text-xs text-zinc-600';
 // for compact inline item-detail-section forms. Was independently re-typed
 // identically 3× (cancel) and 2× (primary) across SetupWorkflowModal,
 // CreateProjectModal, and ColumnEditorModal (audit finding #10).
-export const BTN_MODAL_CANCEL = 'rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200';
-export const BTN_MODAL_PRIMARY = 'rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50';
+export const BTN_MODAL_CANCEL =
+  'rounded-lg px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200';
+export const BTN_MODAL_PRIMARY =
+  'rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50';
 // A form field's label (as opposed to SECTION_LABEL, which titles a whole
 // item-detail section like "Children" or "Parent") — same visual weight as
 // SECTION_LABEL but a separate token since the two label different things

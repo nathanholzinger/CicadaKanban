@@ -5,6 +5,9 @@ import type { CreateWorkflowInput } from '../api/workflows';
 import ModalShell from './ModalShell';
 import { BTN_MODAL_CANCEL } from './item-detail/pillUtils';
 
+const OPTION_CARD_BTN =
+  'w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50';
+
 interface SetupWorkflowModalProps {
   project: Project;
   allWorkflows: Workflow[];
@@ -66,10 +69,7 @@ export default function SetupWorkflowModal({
       maxWidth="max-w-md"
       footer={
         <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className={BTN_MODAL_CANCEL}
-          >
+          <button onClick={onClose} className={BTN_MODAL_CANCEL}>
             Cancel
           </button>
         </div>
@@ -80,11 +80,7 @@ export default function SetupWorkflowModal({
 
         {/* Custom */}
         <p className="mb-1 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">Start fresh</p>
-        <button
-          disabled={saving}
-          onClick={() => submit({})}
-          className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
-        >
+        <button disabled={saving} onClick={() => submit({})} className={OPTION_CARD_BTN}>
           <span className="text-sm font-medium text-zinc-200">Custom</span>
           <span className="mt-0.5 block text-xs text-zinc-500">Empty workflow — add your own workphases</span>
         </button>
@@ -100,7 +96,7 @@ export default function SetupWorkflowModal({
                 key={t.id}
                 disabled={saving}
                 onClick={() => submit({ templateId: t.id })}
-                className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
+                className={OPTION_CARD_BTN}
               >
                 <span className="text-sm font-medium text-zinc-200 capitalize">{t.name}</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">{t.workphases.map(p => p.name).join(' → ')}</span>
@@ -120,7 +116,7 @@ export default function SetupWorkflowModal({
                 key={workflow.id}
                 disabled={saving}
                 onClick={() => submit({ sourceWorkflowId: workflow.id })}
-                className="w-full rounded-lg border border-zinc-700 px-4 py-3 text-left transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 disabled:opacity-50"
+                className={OPTION_CARD_BTN}
               >
                 <span className="text-sm font-medium text-zinc-200">{projectName}</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">Copy workphase structure</span>

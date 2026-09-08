@@ -7,6 +7,8 @@ import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
   'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
+const CHEVRON_BTN_BASE =
+  'flex h-4 w-4 shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400';
 
 interface RowProps {
   item: FlatItem;
@@ -113,7 +115,7 @@ export function SortableProjectRow({
           onClick={() => onToggleExpand(item.id)}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
           title={isExpanded ? 'Collapse' : 'Expand'}
-          className={`flex h-4 w-4 shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400 ${!item.hasChildren ? 'invisible' : ''}`}
+          className={`${CHEVRON_BTN_BASE} ${!item.hasChildren ? 'invisible' : ''}`}
         >
           <svg
             width="10"

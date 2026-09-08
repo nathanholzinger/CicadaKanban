@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { eq, isNull } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
 import { items, projects } from '../../src/db/schema.js';
-import {
-  resolvePositionByAnchorAndSide,
-  resolveAppendPosition,
-} from '../../src/lib/positionResolver.js';
+import { resolvePositionByAnchorAndSide, resolveAppendPosition } from '../../src/lib/positionResolver.js';
 import { coarsestFit } from '../../src/lib/coarsestFit.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
@@ -85,8 +82,8 @@ describe('reindexScope', () => {
     setPosition(created[2].id, 1.0);
     setPosition(created[3].id, 5.0);
 
-    db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[2].id)
+    db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[2].id),
     );
 
     expect(getPosition(created[2].id)).toBe(1);
@@ -102,8 +99,8 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 1.5);
     setPosition(created[1].id, 2.0);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
     );
     expect(result).toBe(1.8);
   });
@@ -119,8 +116,8 @@ describe('resolveAnchorPosition', () => {
 
     // Anchor to item C (created[2]) with side 'before' — the true previous
     // neighbor is item B (2.8), not item A (1.0).
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[2].id)
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[2].id),
     );
     expect(result).toBeGreaterThan(2.8);
     expect(result).toBeLessThan(3.0);
@@ -130,8 +127,8 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
     );
     expect(result).toBe(6);
   });
@@ -140,8 +137,8 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[0].id)
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[0].id),
     );
     expect(result).toBe(3);
   });
@@ -151,8 +148,8 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, 1.0);
     setPosition(created[1].id, 1.0 + 1e-13); // unresolvable gap at any decimal depth
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id)
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
     );
 
     // The scope was reindexed to clean sequential integers first (order
@@ -170,7 +167,9 @@ describe('resolveAnchorPosition', () => {
     setPosition(created[0].id, null);
 
     expect(() =>
-      db.transaction((tx) => resolvePositionByAnchorAndSide(items, eq(items.workphaseId, 'anything'), tx, 'after', created[0].id))
+      db.transaction(tx =>
+        resolvePositionByAnchorAndSide(items, eq(items.workphaseId, 'anything'), tx, 'after', created[0].id),
+      ),
     ).toThrow();
   });
 
@@ -178,8 +177,8 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after')
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after'),
     );
     expect(result).toBe(6);
   });
@@ -188,8 +187,8 @@ describe('resolveAnchorPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before')
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before'),
     );
     expect(result).toBe(3);
   });
@@ -199,8 +198,8 @@ describe('resolveAnchorPosition', () => {
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
 
-    const result = db.transaction((tx) =>
-      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before')
+    const result = db.transaction(tx =>
+      resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before'),
     );
     expect(result).toBe(1.0);
   });
@@ -212,9 +211,7 @@ describe('resolveAppendPosition', () => {
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
 
-    const result = db.transaction((tx) => 
-      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
-    );
+    const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     expect(result).toBe(1.0);
   });
 
@@ -229,9 +226,7 @@ describe('resolveAppendPosition', () => {
     setPosition(created[0].id, null);
     setPosition(created[1].id, null);
 
-    const result = db.transaction((tx) =>
-      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
-    );
+    const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     expect(result).toBe(1.0);
   });
 
@@ -239,9 +234,7 @@ describe('resolveAppendPosition', () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 7.2);
 
-    const result = db.transaction((tx) => 
-      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
-    );
+    const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     expect(result).toBe(8);
   });
 
@@ -250,9 +243,7 @@ describe('resolveAppendPosition', () => {
     // Scope has 1 item, so the threshold is max(1000, 1 + 100) = 1000.
     setPosition(created[0].id, 1200);
 
-    const result = db.transaction((tx) => 
-      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
-    );
+    const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     // After the reindex, the sole item becomes position 1, so the append
     // resolves to a small number again instead of continuing from 1200.
     expect(result).toBeLessThan(10);
@@ -282,9 +273,7 @@ describe('resolveAppendPosition', () => {
 
     const beforeA = getPosition(created[0].id);
     const beforeB = getPosition(created[1].id);
-    const result = db.transaction((tx) => 
-      resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx)
-    );
+    const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
 
     // No reindex fired: earlier items are untouched, and the result is a
     // plain append-past-the-anchor value, not a small reindexed one.
@@ -309,9 +298,7 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[2].id, 5.002);
       setProjectPosition(created[3].id, 4.999);
 
-      db.transaction((tx) =>
-        resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id)
-      );
+      db.transaction(tx => resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id));
 
       expect(getProjectPosition(created[3].id)).toBe(1);
       expect(getProjectPosition(created[0].id)).toBe(2);
@@ -326,8 +313,8 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[0].id, 1.5);
       setProjectPosition(created[1].id, 2.0);
 
-      const result = db.transaction((tx) =>
-        resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id)
+      const result = db.transaction(tx =>
+        resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id),
       );
       expect(result).toBe(1.8);
     });
@@ -337,7 +324,7 @@ describe('positionResolver against the projects table', () => {
       setProjectPosition(created[0].id, null);
 
       expect(() =>
-        db.transaction((tx) => resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id))
+        db.transaction(tx => resolvePositionByAnchorAndSide(projects, rootScope, tx, 'after', created[0].id)),
       ).toThrow();
     });
   });
@@ -347,9 +334,7 @@ describe('positionResolver against the projects table', () => {
       const created = await seedRootProjects(1);
       setProjectPosition(created[0].id, 7.2);
 
-      const result = db.transaction((tx) => 
-        resolveAppendPosition(projects, rootScope, tx)
-      );
+      const result = db.transaction(tx => resolveAppendPosition(projects, rootScope, tx));
       expect(result).toBe(8);
     });
 
@@ -359,8 +344,7 @@ describe('positionResolver against the projects table', () => {
       // Simulates a pre-migration Date.now()-scale position.
       setProjectPosition(created[0].id, 1_761_234_567_890);
 
-      const result = db.transaction((tx) => resolveAppendPosition(projects, rootScope, tx)
-      );
+      const result = db.transaction(tx => resolveAppendPosition(projects, rootScope, tx));
       // After the reindex, the sole project becomes position 1, so the
       // append resolves to a small number again instead of continuing from
       // the huge legacy timestamp.

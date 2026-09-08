@@ -8,7 +8,12 @@ import { cascadeWorkphaseToAttachedDescendants } from '../lib/attachedCascade.js
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertValidReparent, walkItemDescendants } from '../lib/itemTree.js';
 import { resolvePositionByAnchorAndSide, resolveAppendPosition, type Side } from '../lib/positionResolver.js';
-import { isTerminalLookup, positionScopeFor, sharesPositionScope, withPositionScope } from '../lib/itemPositionScope.js';
+import {
+  isTerminalLookup,
+  positionScopeFor,
+  sharesPositionScope,
+  withPositionScope,
+} from '../lib/itemPositionScope.js';
 
 const router = Router();
 
@@ -17,25 +22,26 @@ const router = Router();
 // /:id looks up its own item+children batch instead (see below), the same
 // N+1-avoiding shape boards.ts uses for a whole board's worth of items.
 function isTerminalOf(workphaseId: string): boolean | null {
-  const workphase = db.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  const workphase = db
+    .select({ isTerminal: workphases.isTerminal })
+    .from(workphases)
+    .where(eq(workphases.id, workphaseId))
+    .get();
   return workphase ? Boolean(workphase.isTerminal) : null;
 }
 
-function logActivity(
-  itemId: string,
-  type: string,
-  content: string,
-  metadata?: Record<string, unknown>,
-  tx?: Tx,
-) {
-  (tx ?? db).insert(activityLog).values({
-    id: randomUUID(),
-    itemId,
-    type,
-    content,
-    metadata: metadata ? JSON.stringify(metadata) : null,
-    createdAt: Date.now(),
-  }).run();
+function logActivity(itemId: string, type: string, content: string, metadata?: Record<string, unknown>, tx?: Tx) {
+  (tx ?? db)
+    .insert(activityLog)
+    .values({
+      id: randomUUID(),
+      itemId,
+      type,
+      content,
+      metadata: metadata ? JSON.stringify(metadata) : null,
+      createdAt: Date.now(),
+    })
+    .run();
 }
 
 function computeDepth(itemId: string): number {
@@ -65,17 +71,17 @@ router.get('/:id', (req, res) => {
 
   const depth = computeDepth(req.params.id);
 
-  const rawChildren = db.select().from(items)
-    .where(eq(items.parentId, req.params.id))
-    .all();
+  const rawChildren = db.select().from(items).where(eq(items.parentId, req.params.id)).all();
 
   // One batched lookup covering the item's own workphase and every child's,
   // instead of a query per row (audit Finding #17's N+1) — also folds in
   // the workflowId derivation below, which needs the same rows.
-  const workphaseIds = [item.workphaseId, ...rawChildren.map(c => c.workphaseId)]
-    .filter((id): id is string => id !== null);
+  const workphaseIds = [item.workphaseId, ...rawChildren.map(c => c.workphaseId)].filter(
+    (id): id is string => id !== null,
+  );
   const workphaseRows = workphaseIds.length
-    ? db.select({ id: workphases.id, isTerminal: workphases.isTerminal, workflowId: workphases.workflowId })
+    ? db
+        .select({ id: workphases.id, isTerminal: workphases.isTerminal, workflowId: workphases.workflowId })
         .from(workphases)
         .where(inArray(workphases.id, workphaseIds))
         .all()
@@ -84,32 +90,22 @@ router.get('/:id', (req, res) => {
 
   const children = rawChildren.map(child => ({ ...withPositionScope(child, isTerminalOf), depth: depth + 1 }));
 
-  const activity = db.select().from(activityLog)
+  const activity = db
+    .select()
+    .from(activityLog)
     .where(eq(activityLog.itemId, req.params.id))
     .orderBy(activityLog.createdAt)
     .all();
 
   // Derive workflowId from the item's workphase for MCP tool convenience
-  const workflowId = item.workphaseId
-    ? workphaseRows.find(w => w.id === item.workphaseId)?.workflowId ?? null
-    : null;
+  const workflowId = item.workphaseId ? (workphaseRows.find(w => w.id === item.workphaseId)?.workflowId ?? null) : null;
 
   res.json({ ...withPositionScope(item, isTerminalOf), workflowId, depth, children, activity });
 });
 
 // Create an item
 router.post('/', (req, res) => {
-  const {
-    type,
-    parentId,
-    projectId,
-    workphaseId,
-    title,
-    description,
-    assigneeType,
-    agentId,
-    isAttached,
-  } = req.body;
+  const { type, parentId, projectId, workphaseId, title, description, assigneeType, agentId, isAttached } = req.body;
 
   if (!title) {
     res.status(400).json({ error: 'title is required' });
@@ -118,9 +114,8 @@ router.post('/', (req, res) => {
 
   // Resolve projectId from parent if not provided
   let resolvedProjectId = projectId;
-  const parent = parentId
-    ? db.select({ projectId: items.projectId, workphaseId: items.workphaseId }).from(items).where(eq(items.id, parentId)).get()
-    : null;
+  const parentProjection = { projectId: items.projectId, workphaseId: items.workphaseId };
+  const parent = parentId ? db.select(parentProjection).from(items).where(eq(items.id, parentId)).get() : null;
   // A non-existent parentId would otherwise be stored silently, leaving an
   // attached child invisible on every board (no parent card to nest under).
   if (parentId && !parent) {
@@ -165,43 +160,57 @@ router.post('/', (req, res) => {
   // the whole scope (positionResolver.ts's magnitude-threshold trigger),
   // which writes one row at a time — without an enclosing transaction each
   // of those writes would auto-commit individually.
-  db.transaction((tx) => {
+  db.transaction(tx => {
     let position: number | null = null;
     let completedAt: number | null = null;
     if (attached && parentId && resolvedWorkphaseId) {
-      position = resolveAppendPosition(items, positionScopeFor({ isAttached: true, parentId, workphaseId: resolvedWorkphaseId }, undefined, tx), tx);
+      const scopeInput = { isAttached: true, parentId, workphaseId: resolvedWorkphaseId };
+      position = resolveAppendPosition(items, positionScopeFor(scopeInput, undefined, tx), tx);
     } else if (resolvedWorkphaseId) {
-      const targetWorkphase = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, resolvedWorkphaseId)).get();
+      const targetWorkphase = tx
+        .select({ isTerminal: workphases.isTerminal })
+        .from(workphases)
+        .where(eq(workphases.id, resolvedWorkphaseId))
+        .get();
       if (targetWorkphase?.isTerminal) {
         completedAt = now;
       } else {
-        position = resolveAppendPosition(items, positionScopeFor({ isAttached: false, parentId: null, workphaseId: resolvedWorkphaseId }, undefined, tx), tx);
+        const scopeInput = { isAttached: false, parentId: null, workphaseId: resolvedWorkphaseId };
+        position = resolveAppendPosition(items, positionScopeFor(scopeInput, undefined, tx), tx);
       }
     }
     // Note: append here is workflow-wide (see positionScopeFor), not narrowed
     // to resolvedWorkphaseId — a brand-new item lands after the workflow's
     // true last active item, not just the last item in its own workphase.
 
-    tx.insert(items).values({
-      id,
-      type: type ?? null,
-      parentId: parentId || null,
-      projectId: resolvedProjectId,
-      workphaseId: resolvedWorkphaseId,
-      title,
-      description: description || null,
-      position,
-      completedAt,
-      assigneeType: assigneeType || null,
-      agentId: agentId || null,
-      isAttached: attached ? 1 : 0,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    tx.insert(items)
+      .values({
+        id,
+        type: type ?? null,
+        parentId: parentId || null,
+        projectId: resolvedProjectId,
+        workphaseId: resolvedWorkphaseId,
+        title,
+        description: description || null,
+        position,
+        completedAt,
+        assigneeType: assigneeType || null,
+        agentId: agentId || null,
+        isAttached: attached ? 1 : 0,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
-    logActivity(id, 'status_change', type ? `Created as ${type}` : 'Created', {
-      workphaseId: resolvedWorkphaseId,
-    }, tx);
+    logActivity(
+      id,
+      'status_change',
+      type ? `Created as ${type}` : 'Created',
+      {
+        workphaseId: resolvedWorkphaseId,
+      },
+      tx,
+    );
   });
 
   const created = db.select().from(items).where(eq(items.id, id)).get();
@@ -251,7 +260,7 @@ router.put('/:id', (req, res) => {
 
   // The base update, the parent-sync, its cascade, and the activity log form one
   // atomic unit — a mid-sequence failure must not leave a half-reparented subtree.
-  db.transaction((tx) => {
+  db.transaction(tx => {
     tx.update(items).set(updates).where(eq(items.id, req.params.id)).run();
 
     // Re-sync workphase to the parent only when the parent link or attach flag
@@ -272,16 +281,17 @@ router.put('/:id', (req, res) => {
       const isNowAttachedWithParent = resultingAttached && Boolean(resultingParentId);
 
       if (isNowAttachedWithParent) {
-        const newParent = tx.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, resultingParentId!)).get();
+        const newParent = tx
+          .select({ workphaseId: items.workphaseId })
+          .from(items)
+          .where(eq(items.id, resultingParentId!))
+          .get();
         if (newParent) {
           const scopeUnchanged = wasAttachedWithParent && resultingParentId === item.parentId;
           const scopeUpdates: Record<string, unknown> = { workphaseId: newParent.workphaseId, updatedAt: Date.now() };
           if (!scopeUnchanged) {
-            scopeUpdates.position = resolveAppendPosition(
-              items,
-              positionScopeFor({ isAttached: true, parentId: resultingParentId, workphaseId: newParent.workphaseId }, req.params.id, tx),
-              tx,
-            );
+            const scopeInput = { isAttached: true, parentId: resultingParentId, workphaseId: newParent.workphaseId };
+            scopeUpdates.position = resolveAppendPosition(items, positionScopeFor(scopeInput, req.params.id, tx), tx);
             // Attached items don't participate in Part 6's done-tracking.
             scopeUpdates.completedAt = null;
           }
@@ -297,29 +307,38 @@ router.put('/:id', (req, res) => {
         if (!currentWorkphaseId) {
           tx.update(items).set({ position: null, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
         } else {
-          const currentWorkphase = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, currentWorkphaseId)).get();
+          const currentWorkphase = tx
+            .select({ isTerminal: workphases.isTerminal })
+            .from(workphases)
+            .where(eq(workphases.id, currentWorkphaseId))
+            .get();
           if (currentWorkphase?.isTerminal) {
             // Becomes a done item the moment it starts being independently
             // tracked (Part 6) — its "doneness" was irrelevant while nested
             // under its parent.
-            tx.update(items).set({ position: null, completedAt: Date.now(), updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
+            const doneUpdate = { position: null, completedAt: Date.now(), updatedAt: Date.now() };
+            tx.update(items).set(doneUpdate).where(eq(items.id, req.params.id)).run();
           } else {
-            const newPosition = resolveAppendPosition(
-              items,
-              positionScopeFor({ isAttached: false, parentId: null, workphaseId: currentWorkphaseId }, req.params.id, tx),
-              tx,
-            );
-            tx.update(items).set({ position: newPosition, updatedAt: Date.now() }).where(eq(items.id, req.params.id)).run();
+            const scopeInput = { isAttached: false, parentId: null, workphaseId: currentWorkphaseId };
+            const newPosition = resolveAppendPosition(items, positionScopeFor(scopeInput, req.params.id, tx), tx);
+            const positionUpdate = { position: newPosition, updatedAt: Date.now() };
+            tx.update(items).set(positionUpdate).where(eq(items.id, req.params.id)).run();
           }
         }
       }
     }
 
     if (assigneeType !== undefined || agentId !== undefined) {
-      logActivity(req.params.id, 'assignment', `Assigned to ${assigneeType || 'unassigned'}`, {
-        assigneeType: assigneeType || null,
-        agentId: agentId || null,
-      }, tx);
+      logActivity(
+        req.params.id,
+        'assignment',
+        `Assigned to ${assigneeType || 'unassigned'}`,
+        {
+          assigneeType: assigneeType || null,
+          agentId: agentId || null,
+        },
+        tx,
+      );
     }
   });
 
@@ -375,13 +394,18 @@ router.patch('/:id/move', (req, res) => {
   // throw, so a validation bail-out signaled by returning false from inside
   // it — after some other write had already run — would still commit; the
   // fix is to not need that convention at all).
-  let anchor: { isAttached: number; parentId: string | null; workphaseId: string | null; position: number | null } | undefined;
+  // Named once so this shape isn't restated between the declaration and the
+  // `.select` that fills it below.
+  type AnchorRow = { isAttached: number; parentId: string | null; workphaseId: string | null; position: number | null };
+  let anchor: AnchorRow | undefined;
   if (anchorId !== undefined) {
-    anchor = db
-      .select({ isAttached: items.isAttached, parentId: items.parentId, workphaseId: items.workphaseId, position: items.position })
-      .from(items)
-      .where(eq(items.id, anchorId))
-      .get();
+    const anchorProjection = {
+      isAttached: items.isAttached,
+      parentId: items.parentId,
+      workphaseId: items.workphaseId,
+      position: items.position,
+    };
+    anchor = db.select(anchorProjection).from(items).where(eq(items.id, anchorId)).get();
     if (!anchor) {
       res.status(400).json({ error: 'anchorId does not reference an existing item' });
       return;
@@ -398,10 +422,12 @@ router.patch('/:id/move', (req, res) => {
     // e.g. anchoring a detached item against someone else's attached
     // child, or against an item in a different workflow, silently wrote
     // a number from the wrong comparison space.
-    if (!sharesPositionScope(
-      { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
-      { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: targetWorkphaseId },
-    )) {
+    if (
+      !sharesPositionScope(
+        { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
+        { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: targetWorkphaseId },
+      )
+    ) {
       res.status(400).json({ error: "anchorId is not in this item's position scope" });
       return;
     }
@@ -410,7 +436,7 @@ router.patch('/:id/move', (req, res) => {
   // The move, the attached-descendant cascade, the activity log, and the
   // notification insert commit together — a partial failure must not leave the
   // item moved but its children stranded (or vice versa).
-  db.transaction((tx) => {
+  db.transaction(tx => {
     if (anchor) {
       const scope = positionScopeFor(
         { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId },
@@ -441,7 +467,8 @@ router.patch('/:id/move', (req, res) => {
       const isGenuineWorkphaseChange = workphaseId !== undefined && workphaseId !== oldWorkphaseId;
       if (!(isGenuineWorkphaseChange && item.position !== null)) {
         const isAttachedNow = Boolean(item.isAttached) && Boolean(item.parentId);
-        const scope = positionScopeFor({ isAttached: isAttachedNow, parentId: item.parentId, workphaseId: targetWorkphaseId }, req.params.id, tx);
+        const scopeInput = { isAttached: isAttachedNow, parentId: item.parentId, workphaseId: targetWorkphaseId };
+        const scope = positionScopeFor(scopeInput, req.params.id, tx);
         updates.position = resolveAppendPosition(items, scope, tx);
       }
     }
@@ -473,22 +500,29 @@ router.patch('/:id/move', (req, res) => {
         : null;
       const newWorkphase = tx.select().from(workphases).where(eq(workphases.id, workphaseId)).get();
 
-      logActivity(req.params.id, 'status_change',
-        `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`, {
+      logActivity(
+        req.params.id,
+        'status_change',
+        `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`,
+        {
           fromWorkphaseId: oldWorkphaseId,
           toWorkphaseId: workphaseId,
-        }, tx);
+        },
+        tx,
+      );
 
       if (newWorkphase?.triggersNotification) {
-        tx.insert(notifications).values({
-          id: randomUUID(),
-          itemId: req.params.id,
-          workflowId: newWorkphase.workflowId,
-          message: `"${item.title}" moved to "${newWorkphase.name}"`,
-          type: 'item_in_workphase',
-          isRead: 0,
-          createdAt: Date.now(),
-        }).run();
+        tx.insert(notifications)
+          .values({
+            id: randomUUID(),
+            itemId: req.params.id,
+            workflowId: newWorkphase.workflowId,
+            message: `"${item.title}" moved to "${newWorkphase.name}"`,
+            type: 'item_in_workphase',
+            isRead: 0,
+            createdAt: Date.now(),
+          })
+          .run();
       }
     }
   });
@@ -507,7 +541,7 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  db.transaction((tx) => applyReorderEntries(items, validation.entries, tx, { updatedAt: Date.now() }));
+  db.transaction(tx => applyReorderEntries(items, validation.entries, tx, { updatedAt: Date.now() }));
   res.json({ success: true });
 });
 

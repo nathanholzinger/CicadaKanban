@@ -4,7 +4,16 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
-import { items, activityLog, attachments, notifications, itemLabels, labels, chatThreads, chatMessages } from '../../src/db/schema.js';
+import {
+  items,
+  activityLog,
+  attachments,
+  notifications,
+  itemLabels,
+  labels,
+  chatThreads,
+  chatMessages,
+} from '../../src/db/schema.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
 describe('GET /api/items/:id', () => {
@@ -88,14 +97,16 @@ describe('POST /api/items', () => {
 
   it('returns 400 for a non-existent workphaseId rather than an opaque FK 500', async () => {
     const project = await createProject();
-    const res = await request(app).post('/api/items')
+    const res = await request(app)
+      .post('/api/items')
       .send({ title: 'Task', projectId: project.id, workphaseId: 'no-such-workphase' });
     expect(res.status).toBe(400);
   });
 
   it('returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
     const project = await createProject();
-    const res = await request(app).post('/api/items')
+    const res = await request(app)
+      .post('/api/items')
       .send({ title: 'Child', projectId: project.id, parentId: 'no-such-parent' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/parentId/i);
@@ -105,7 +116,8 @@ describe('POST /api/items', () => {
     const projectA = await createProject();
     const projectB = await createProject();
     const parent = await createItem({ projectId: projectA.id, title: 'Parent A' });
-    const res = await request(app).post('/api/items')
+    const res = await request(app)
+      .post('/api/items')
       .send({ title: 'Child', projectId: projectB.id, parentId: parent.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/different project/i);
@@ -233,9 +245,11 @@ describe('PATCH /api/items/:id/move', () => {
     expect(toNoisy.status).toBe(200);
 
     const afterNoisy = await request(app).get(`/api/items/${item.id}`);
-    expect(afterNoisy.body.activity.some(
-      (a: { type: string; content: string }) => a.type === 'status_change' && a.content.includes('Moved'),
-    )).toBe(true);
+    expect(
+      afterNoisy.body.activity.some(
+        (a: { type: string; content: string }) => a.type === 'status_change' && a.content.includes('Moved'),
+      ),
+    ).toBe(true);
 
     const notifications = await request(app).get('/api/notifications');
     expect(notifications.body.some((n: { itemId: string }) => n.itemId === item.id)).toBe(true);
@@ -267,7 +281,7 @@ describe('PATCH /api/items/:id/move', () => {
     expect(res.body.position).toBe(0.5);
   });
 
-  it('a workphaseId-only move with no anchor keeps the item\'s existing position exactly unchanged (TC-2.24)', async () => {
+  it("a workphaseId-only move with no anchor keeps the item's existing position exactly unchanged (TC-2.24)", async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const todo = await createWorkphase(workflow.id, { name: 'Todo' });
@@ -313,7 +327,9 @@ describe('Epic 3.2 — position resolution', () => {
 
   it('POST into a terminal workphase gets no position, but a completedAt timestamp', async () => {
     const { project, done } = await setupTwoPhases();
-    const res = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    const res = await request(app)
+      .post('/api/items')
+      .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
     expect(res.status).toBe(201);
     expect(res.body.position).toBeNull(); // TC-2.18: the other half of position's number|null shape
     expect(res.body.completedAt).toBeGreaterThan(0);
@@ -323,7 +339,12 @@ describe('Epic 3.2 — position resolution', () => {
     const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     await createItem({ projectId: project.id, parentId: parent.id, title: 'Existing sibling' }); // position 1.0
-    const detached = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Detached', isAttached: false });
+    const detached = await createItem({
+      projectId: project.id,
+      workphaseId: todo.id,
+      title: 'Detached',
+      isAttached: false,
+    });
 
     const res = await request(app).put(`/api/items/${detached.id}`).send({ parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
@@ -473,22 +494,28 @@ describe('Epic 3.2 — position resolution', () => {
   it('move rejects anchoring to a done item (no position to anchor against) (TC-2.8)', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const active = await createItem({ projectId: project.id, workphaseId: todo.id });
-    const doneItem = await request(app).post('/api/items').send({ title: 'Done item', projectId: project.id, workphaseId: done.id });
+    const doneItem = await request(app)
+      .post('/api/items')
+      .send({ title: 'Done item', projectId: project.id, workphaseId: done.id });
 
-    const res = await request(app).patch(`/api/items/${active.id}/move`).send({ anchorId: doneItem.body.id, side: 'after' });
+    const res = await request(app)
+      .patch(`/api/items/${active.id}/move`)
+      .send({ anchorId: doneItem.body.id, side: 'after' });
     expect(res.status).toBe(400);
   });
 
   // Regression coverage for audit Finding #7: the anchor's position scope
   // was never checked against the subject's resulting scope.
-  describe('move rejects an anchorId outside the subject\'s position scope (Finding #7)', () => {
-    it('rejects anchoring a detached item against someone else\'s attached child', async () => {
+  describe("move rejects an anchorId outside the subject's position scope (Finding #7)", () => {
+    it("rejects anchoring a detached item against someone else's attached child", async () => {
       const { project, todo } = await setupTwoPhases();
       const detached = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Detached' });
       const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
       const attachedChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached Child' });
 
-      const res = await request(app).patch(`/api/items/${detached.id}/move`).send({ anchorId: attachedChild.id, side: 'after' });
+      const res = await request(app)
+        .patch(`/api/items/${detached.id}/move`)
+        .send({ anchorId: attachedChild.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
     });
@@ -500,7 +527,9 @@ describe('Epic 3.2 — position resolution', () => {
       const childOfA = await createItem({ projectId: project.id, parentId: parentA.id, title: 'Child of A' });
       const childOfB = await createItem({ projectId: project.id, parentId: parentB.id, title: 'Child of B' });
 
-      const res = await request(app).patch(`/api/items/${childOfA.id}/move`).send({ anchorId: childOfB.id, side: 'after' });
+      const res = await request(app)
+        .patch(`/api/items/${childOfA.id}/move`)
+        .send({ anchorId: childOfB.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
     });
@@ -512,9 +541,15 @@ describe('Epic 3.2 — position resolution', () => {
       const otherProject = await createProject();
       const otherWorkflow = await createWorkflow(otherProject.id);
       const otherPhase = await createWorkphase(otherWorkflow.id, { name: 'Other Todo' });
-      const foreignAnchor = await createItem({ projectId: otherProject.id, workphaseId: otherPhase.id, title: 'Foreign Anchor' });
+      const foreignAnchor = await createItem({
+        projectId: otherProject.id,
+        workphaseId: otherPhase.id,
+        title: 'Foreign Anchor',
+      });
 
-      const res = await request(app).patch(`/api/items/${subject.id}/move`).send({ anchorId: foreignAnchor.id, side: 'after' });
+      const res = await request(app)
+        .patch(`/api/items/${subject.id}/move`)
+        .send({ anchorId: foreignAnchor.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
     });
@@ -552,7 +587,9 @@ describe('Epic 3.2 — position resolution', () => {
   it('moving out of a terminal workphase clears completedAt and assigns a fresh position', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const existing = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Existing' }); // position 1.0
-    const item = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    const item = await request(app)
+      .post('/api/items')
+      .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
     expect(item.body.completedAt).toBeGreaterThan(0);
 
     const res = await request(app).patch(`/api/items/${item.body.id}/move`).send({ workphaseId: todo.id });
@@ -582,7 +619,11 @@ describe('Epic 3.2 — position resolution', () => {
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const attachedChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached Child' });
     const detachedChild = await createItem({
-      projectId: project.id, parentId: parent.id, workphaseId: done.id, isAttached: false, title: 'Detached Child',
+      projectId: project.id,
+      parentId: parent.id,
+      workphaseId: done.id,
+      isAttached: false,
+      title: 'Detached Child',
     });
 
     const res = await request(app).get(`/api/items/${parent.id}`);
@@ -605,7 +646,9 @@ describe('Epic 3.2 — position resolution', () => {
 
   it('GET returns positionScope = "none" for a done item (TC-2.15)', async () => {
     const { project, done } = await setupTwoPhases();
-    const item = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    const item = await request(app)
+      .post('/api/items')
+      .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
 
     const res = await request(app).get(`/api/items/${item.body.id}`);
     expect(res.status).toBe(200);
@@ -630,7 +673,9 @@ describe('Epic 3.2 — position resolution', () => {
       const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
       await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
-      await request(app).patch(`/api/items/${itemT2.id}/move`).send({ position: 1.0 + 1e-13 });
+      await request(app)
+        .patch(`/api/items/${itemT2.id}/move`)
+        .send({ position: 1.0 + 1e-13 });
 
       // A third item in a DIFFERENT non-terminal workphase, same workflow —
       // this is what proves the coordinated (not per-workphase) scope.
@@ -670,11 +715,15 @@ describe('Epic 3.2 — position resolution', () => {
       const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
       await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
-      await request(app).patch(`/api/items/${itemT2.id}/move`).send({ position: 1.0 + 1e-13 });
+      await request(app)
+        .patch(`/api/items/${itemT2.id}/move`)
+        .send({ position: 1.0 + 1e-13 });
       const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
       await request(app).patch(`/api/items/${itemP1.id}/move`).send({ position: 5.0 });
 
-      const doneItem = await request(app).post('/api/items').send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+      const doneItem = await request(app)
+        .post('/api/items')
+        .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
       expect(doneItem.body.position).toBeNull();
       expect(doneItem.body.completedAt).toBeGreaterThan(0);
 
@@ -702,13 +751,17 @@ describe('Epic 3.2 — position resolution', () => {
       const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildA' });
       const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildB' });
       await request(app).patch(`/api/items/${childA.id}/move`).send({ position: 1.0 });
-      await request(app).patch(`/api/items/${childB.id}/move`).send({ position: 1.0 + 1e-13 }); // tight gap -> reindex trigger
+      await request(app)
+        .patch(`/api/items/${childB.id}/move`)
+        .send({ position: 1.0 + 1e-13 }); // tight gap -> reindex trigger
 
       const farAway = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'FarAway' });
       await request(app).patch(`/api/items/${farAway.id}/move`).send({ position: 500.0 });
 
       const newChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'NewChild' });
-      const res = await request(app).patch(`/api/items/${newChild.id}/move`).send({ anchorId: childA.id, side: 'after' });
+      const res = await request(app)
+        .patch(`/api/items/${newChild.id}/move`)
+        .send({ anchorId: childA.id, side: 'after' });
 
       // The attached-siblings reindex itself worked (childA/childB got
       // clean sequential positions, newChild resolved into the gap)...
@@ -721,7 +774,7 @@ describe('Epic 3.2 — position resolution', () => {
       expect((await request(app).get(`/api/items/${parent.id}`)).body.position).toBe(parent.position);
     });
 
-    it('a workflow-wide reindex does not touch an unrelated parent\'s attached children', async () => {
+    it("a workflow-wide reindex does not touch an unrelated parent's attached children", async () => {
       const { project, todo } = await setupTwoPhases();
 
       const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
@@ -733,7 +786,9 @@ describe('Epic 3.2 — position resolution', () => {
       const t1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const t2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
       await request(app).patch(`/api/items/${t1.id}/move`).send({ position: 10.0 });
-      await request(app).patch(`/api/items/${t2.id}/move`).send({ position: 10.0 + 1e-13 }); // tight gap -> reindex trigger
+      await request(app)
+        .patch(`/api/items/${t2.id}/move`)
+        .send({ position: 10.0 + 1e-13 }); // tight gap -> reindex trigger
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
       const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: t1.id, side: 'after' });
@@ -764,36 +819,50 @@ describe('PATCH /api/items/reorder', () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });
     const b = await createItem({ projectId: project.id });
-    const res = await request(app).patch('/api/items/reorder').send({
-      itemOrders: [{ id: a.id, position: 5 }, { id: b.id, position: 1 }],
-    });
+    const res = await request(app)
+      .patch('/api/items/reorder')
+      .send({
+        itemOrders: [
+          { id: a.id, position: 5 },
+          { id: b.id, position: 1 },
+        ],
+      });
     expect(res.status).toBe(200);
   });
 
   it('rejects an entry without a string id and finite numeric position', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });
-    const res = await request(app).patch('/api/items/reorder').send({
-      itemOrders: [{ id: a.id, position: 'first' }],
-    });
+    const res = await request(app)
+      .patch('/api/items/reorder')
+      .send({
+        itemOrders: [{ id: a.id, position: 'first' }],
+      });
     expect(res.status).toBe(400);
   });
 
   it('rejects a falsy invalid entry (regression: Array.find/truthiness mix-up)', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });
-    const res = await request(app).patch('/api/items/reorder').send({
-      itemOrders: [null, { id: a.id, position: 1 }],
-    });
+    const res = await request(app)
+      .patch('/api/items/reorder')
+      .send({
+        itemOrders: [null, { id: a.id, position: 1 }],
+      });
     expect(res.status).toBe(400);
   });
 
   it('returns 404 with missingIds when any item does not exist', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });
-    const res = await request(app).patch('/api/items/reorder').send({
-      itemOrders: [{ id: a.id, position: 1 }, { id: 'ghost', position: 2 }],
-    });
+    const res = await request(app)
+      .patch('/api/items/reorder')
+      .send({
+        itemOrders: [
+          { id: a.id, position: 1 },
+          { id: 'ghost', position: 2 },
+        ],
+      });
     expect(res.status).toBe(404);
     expect(res.body.missingIds).toEqual(['ghost']);
   });
@@ -819,7 +888,9 @@ describe('POST /api/items/:id/comments', () => {
     expect(post.status).toBe(201);
 
     const res = await request(app).get(`/api/items/${item.id}`);
-    expect(res.body.activity.some((a: { type: string; content: string }) => a.type === 'comment' && a.content === 'hello')).toBe(true);
+    expect(
+      res.body.activity.some((a: { type: string; content: string }) => a.type === 'comment' && a.content === 'hello'),
+    ).toBe(true);
   });
 });
 
@@ -855,7 +926,10 @@ describe('DELETE /api/items/:id', () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'Parent' });
     const detachedChild = await createItem({
-      projectId: project.id, parentId: parent.id, title: 'Detached Child', isAttached: false,
+      projectId: project.id,
+      parentId: parent.id,
+      title: 'Detached Child',
+      isAttached: false,
     });
     const grandchild = await createItem({ projectId: project.id, parentId: detachedChild.id, title: 'Grandchild' });
 
@@ -866,7 +940,7 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
   });
 
-  it('cascades an item\'s dependent rows (labels, activity, notifications, attachments, chat) via ON DELETE CASCADE', async () => {
+  it("cascades an item's dependent rows (labels, activity, notifications, attachments, chat) via ON DELETE CASCADE", async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id, title: 'Item' });
     await request(app).post(`/api/items/${item.id}/comments`).send({ content: 'a comment' }); // seeds activityLog
@@ -875,17 +949,35 @@ describe('DELETE /api/items/:id', () => {
     const label = { id: randomUUID(), name: 'bug', color: '#f00', createdAt: Date.now() };
     db.insert(labels).values(label).run();
     db.insert(itemLabels).values({ itemId: item.id, labelId: label.id }).run();
-    db.insert(attachments).values({
-      id: randomUUID(), itemId: item.id, type: 'local_file', label: 'notes.txt', createdAt: Date.now(),
-    }).run();
-    db.insert(notifications).values({
-      id: randomUUID(), itemId: item.id, message: 'hi', type: 'item_in_workphase', createdAt: Date.now(),
-    }).run();
+    db.insert(attachments)
+      .values({
+        id: randomUUID(),
+        itemId: item.id,
+        type: 'local_file',
+        label: 'notes.txt',
+        createdAt: Date.now(),
+      })
+      .run();
+    db.insert(notifications)
+      .values({
+        id: randomUUID(),
+        itemId: item.id,
+        message: 'hi',
+        type: 'item_in_workphase',
+        createdAt: Date.now(),
+      })
+      .run();
     const thread = { id: randomUUID(), itemId: item.id, createdAt: Date.now() };
     db.insert(chatThreads).values(thread).run();
-    db.insert(chatMessages).values({
-      id: randomUUID(), threadId: thread.id, role: 'user', content: 'hello', createdAt: Date.now(),
-    }).run();
+    db.insert(chatMessages)
+      .values({
+        id: randomUUID(),
+        threadId: thread.id,
+        role: 'user',
+        content: 'hello',
+        createdAt: Date.now(),
+      })
+      .run();
 
     expect((await request(app).delete(`/api/items/${item.id}`)).status).toBe(204);
 
@@ -922,7 +1014,7 @@ describe('attached children', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
   });
 
-  it('cascading a non-terminal-to-non-terminal move leaves an attached child\'s position untouched (TC-2.25)', async () => {
+  it("cascading a non-terminal-to-non-terminal move leaves an attached child's position untouched (TC-2.25)", async () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
@@ -967,7 +1059,11 @@ describe('attached children', () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const root = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Root' });
     const detached = await createItem({
-      projectId: project.id, parentId: root.id, title: 'Detached', isAttached: false, workphaseId: todo.id,
+      projectId: project.id,
+      parentId: root.id,
+      title: 'Detached',
+      isAttached: false,
+      workphaseId: todo.id,
     });
     // Attached under the detached child — inherits its phase, but must not follow the root.
     const branchChild = await createItem({ projectId: project.id, parentId: detached.id, title: 'Branch Child' });
@@ -982,7 +1078,11 @@ describe('attached children', () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'Parent' });
     const child = await createItem({
-      projectId: project.id, parentId: parent.id, title: 'Child', isAttached: false, workphaseId: todo.id,
+      projectId: project.id,
+      parentId: parent.id,
+      title: 'Child',
+      isAttached: false,
+      workphaseId: todo.id,
     });
     const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
     expect(grandchild.workphaseId).toBe(todo.id);
@@ -1063,7 +1163,12 @@ describe('attached children', () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
 
-    const child = await createItem({ projectId: project.id, parentId: parent.id, workphaseId: inProgress.id, title: 'Child' });
+    const child = await createItem({
+      projectId: project.id,
+      parentId: parent.id,
+      workphaseId: inProgress.id,
+      title: 'Child',
+    });
     expect(child.workphaseId).toBe(todo.id);
   });
 
@@ -1079,7 +1184,11 @@ describe('attached children', () => {
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
 
     const child = await createItem({
-      projectId: project.id, parentId: parent.id, title: 'Child', isAttached: false, workphaseId: inProgress.id,
+      projectId: project.id,
+      parentId: parent.id,
+      title: 'Child',
+      isAttached: false,
+      workphaseId: inProgress.id,
     });
     expect(child.workphaseId).toBe(inProgress.id);
     expect(child.isAttached).toBe(0);
@@ -1087,9 +1196,9 @@ describe('attached children', () => {
 
   it('creates a parentless item with isAttached true (the default) and respects its explicit workphaseId', async () => {
     const { project, todo } = await setupTwoPhases();
-    const res = await request(app).post('/api/items').send({
-      title: 'Solo Root', projectId: project.id, workphaseId: todo.id, isAttached: true,
-    });
+    const res = await request(app)
+      .post('/api/items')
+      .send({ title: 'Solo Root', projectId: project.id, workphaseId: todo.id, isAttached: true });
     expect(res.status).toBe(201);
     expect(res.body.parentId).toBeNull();
     expect(res.body.isAttached).toBe(1);
@@ -1127,8 +1236,9 @@ describe('deleting a referenced entity nulls the item FK (SET NULL, not blocked)
 
   it('deleting an agent unassigns referencing items', async () => {
     const project = await createProject();
-    const agent = (await request(app).post('/api/agents')
-      .send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })).body;
+    const agent = (
+      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
+    ).body;
     const item = await createItem({ projectId: project.id, assigneeType: 'agent', agentId: agent.id });
 
     const del = await request(app).delete(`/api/agents/${agent.id}`);
