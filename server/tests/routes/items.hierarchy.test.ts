@@ -35,6 +35,22 @@ function hierarchyEntries(itemId: string) {
 const move = (id: string, body: Record<string, unknown>) => request(app).patch(`/api/items/${id}/move`).send(body);
 const put = (id: string, body: Record<string, unknown>) => request(app).put(`/api/items/${id}`).send(body);
 
+// A straight parent chain L1 → L2 → … → L{length} built through POST, so
+// the cap is exercised via the API rather than bypassed (contrast
+// itemTree.test.ts's seedChain). Returns the deepest item. Each link is
+// asserted to exist — createItem doesn't check status, and a silently
+// failed link would hand the next one `parentId: undefined` and quietly
+// flatten the chain, hiding exactly the off-by-one these tests pin.
+async function createChain(projectId: string, workphaseId: string, length: number) {
+  let deepest = await createItem({ projectId, workphaseId, title: 'L1' });
+  expect(deepest.id).toBeDefined();
+  for (let d = 2; d <= length; d++) {
+    deepest = await createItem({ projectId, parentId: deepest.id, title: `L${d}` });
+    expect(deepest.id).toBeDefined();
+  }
+  return deepest;
+}
+
 // One project owning a three-phase workflow (Todo, In Progress, Done*).
 async function setupWorkflow(name = 'P') {
   const project = await createProject({ name });
@@ -83,11 +99,7 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
 
   it('enforces the depth cap on move: exactly CAP is legal, CAP + 1 is not (ATT-4.4)', async () => {
     const { project, todo } = await setupWorkflow();
-    // Chain to depth CAP - 1 via ordinary creates.
-    let deepest = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'L1' });
-    for (let d = 2; d <= ITEM_DEPTH_CAP - 1; d++) {
-      deepest = await createItem({ projectId: project.id, parentId: deepest.id, title: `L${d}` });
-    }
+    const deepest = await createChain(project.id, todo.id, ITEM_DEPTH_CAP - 1);
     const leaf = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'leaf' });
     const ok = await move(leaf.id, { parentId: deepest.id, isAttached: true });
     expect(ok.status).toBe(200);
@@ -162,6 +174,19 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
     expect(res.body.error).toMatch(/resulting position scope/);
     expect(getRow(x.id)).toEqual(before.x);
     expect(getRow(x1.id)).toEqual(before.x1);
+  });
+
+  it('rejects the item as its own anchor with a 400, not a 500 (audit epic-3-5-story-1 #2)', async () => {
+    const { project, todo } = await setupWorkflow();
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const before = getRow(x.id);
+
+    // The subject is excluded from its own scope, so without an explicit
+    // check this passed validation and threw inside the transaction.
+    const res = await move(x.id, { anchorId: x.id, side: 'after' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/cannot be the item itself/);
+    expect(getRow(x.id)).toEqual(before);
   });
 });
 
@@ -422,16 +447,55 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
       expect(refiled.status).toBe(200);
       expect(refiled.body.position).toBe(4); // append past B's true last item
     });
+
+    // A board renders one workflow, so a workphaseId that changes the item's
+    // workflow can only come from a non-board caller. /move rejects it at
+    // the route (not in the shared primitive — PUT will carry these in
+    // Epic 7); audit code-quality-audit-epic-3-5-story-1 #1.
+    describe('workflow-changing workphaseId is rejected at the route', () => {
+      it("rejects a workphaseId from a workflow the item's project does not use, and stores nothing", async () => {
+        const a = await setupWorkflow('A');
+        const b = await setupWorkflow('B');
+        const x = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'X' });
+        const before = getRow(x.id);
+
+        const res = await move(x.id, { workphaseId: b.inProgress.id });
+        expect(res.status).toBe(400);
+        expect(res.body.error).toMatch(/cross-workflow moves are not supported/);
+        expect(getRow(x.id)).toEqual(before);
+      });
+
+      it('rejects a one-step reparent into a different-workflow project that also names a workphaseId', async () => {
+        const a = await setupWorkflow('A');
+        const b = await setupWorkflow('B');
+        const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
+        const x = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'X' });
+        const before = getRow(x.id);
+
+        // Would otherwise land in B carrying a position resolved in A's scope.
+        const res = await move(x.id, { parentId: pb.id, isAttached: false, workphaseId: b.todo.id });
+        expect(res.status).toBe(400);
+        expect(res.body.error).toMatch(/reparent first, then re-file/);
+        expect(getRow(x.id)).toEqual(before);
+      });
+
+      it('still allows a same-workflow reparent that names a workphaseId, and a re-file into the project\'s own workflow', async () => {
+        const { todo, inProgress, p1, p2 } = await setupSiblingProjects();
+        const q = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'Q' });
+        const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
+        // Sibling projects share the root's workflow: not a workflow change.
+        const res = await move(x.id, { parentId: q.id, isAttached: false, workphaseId: inProgress.id });
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({ projectId: p2.id, workphaseId: inProgress.id });
+      });
+    });
   });
 });
 
 describe('atomicity (wiki §6)', () => {
   it('a depth-cap rejection leaves the item and its subtree byte-identical (ATT-3.7)', async () => {
     const { project, todo, inProgress } = await setupWorkflow();
-    let deepest = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'L1' });
-    for (let d = 2; d <= ITEM_DEPTH_CAP - 1; d++) {
-      deepest = await createItem({ projectId: project.id, parentId: deepest.id, title: `L${d}` });
-    }
+    const deepest = await createChain(project.id, inProgress.id, ITEM_DEPTH_CAP - 1);
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     const x1 = await createItem({ projectId: project.id, parentId: x.id, title: 'X1' });
     const before = { x: getRow(x.id), x1: getRow(x1.id) };
@@ -544,10 +608,7 @@ describe('reindex disclosure (wiki item-positioning §5)', () => {
 describe('PUT /items/:id and POST /items share the guards (wiki §7 "every write")', () => {
   it('PUT enforces the depth cap', async () => {
     const { project, todo } = await setupWorkflow();
-    let deepest = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'L1' });
-    for (let d = 2; d <= ITEM_DEPTH_CAP; d++) {
-      deepest = await createItem({ projectId: project.id, parentId: deepest.id, title: `L${d}` });
-    }
+    const deepest = await createChain(project.id, todo.id, ITEM_DEPTH_CAP);
     const leaf = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'leaf' });
     const res = await put(leaf.id, { parentId: deepest.id });
     expect(res.status).toBe(400);
@@ -556,11 +617,7 @@ describe('PUT /items/:id and POST /items share the guards (wiki §7 "every write
 
   it('POST enforces the depth cap: a child at depth CAP is fine, CAP + 1 is refused', async () => {
     const { project, todo } = await setupWorkflow();
-    let deepest = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'L1' });
-    for (let d = 2; d <= ITEM_DEPTH_CAP; d++) {
-      deepest = await createItem({ projectId: project.id, parentId: deepest.id, title: `L${d}` });
-      expect(deepest.id).toBeDefined();
-    }
+    const deepest = await createChain(project.id, todo.id, ITEM_DEPTH_CAP);
     const res = await request(app).post('/api/items').send({ projectId: project.id, parentId: deepest.id, title: 'too deep' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/exceeds the cap/);

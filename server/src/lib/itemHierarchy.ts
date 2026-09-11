@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, notifications } from '../db/schema.js';
+import { existsById } from './getOrNotFound.js';
 import { assertValidReparent, assertWithinDepthCap, walkItemDescendants } from './itemTree.js';
 import { cascadeWorkphaseToAttachedDescendants } from './attachedCascade.js';
 import { positionScopeFor, sharesPositionScope, workflowIdForWorkphase } from './itemPositionScope.js';
@@ -83,10 +84,6 @@ function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: Pare
   return { parentId, attachedFlag, isAttachedWithParent, workphaseId, projectId };
 }
 
-function workphaseExists(id: string): boolean {
-  return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
-}
-
 // Hand-rolled request validation (no Zod until Epic 4). Returns the first
 // 400 message, or null when the request is legal. Order: shape → parent
 // legality (wiki §7–§8) → resulting-state invariants (§1, decision 4) →
@@ -108,7 +105,7 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     return 'position must be a finite number';
   }
   // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
-  if (typeof req.workphaseId === 'string' && !workphaseExists(req.workphaseId)) {
+  if (typeof req.workphaseId === 'string' && !existsById(workphases, req.workphaseId)) {
     return 'workphaseId does not reference an existing workphase';
   }
 
@@ -145,6 +142,10 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
   }
 
   if (req.anchorId !== undefined) {
+    // The subject is excluded from its own scope query (positionScopeFor's
+    // excludeId), so a self-anchor would pass the scope check below and
+    // then throw inside the transaction as "anchor not found in scope".
+    if (req.anchorId === item.id) return 'anchorId cannot be the item itself';
     const anchorProjection = {
       isAttached: items.isAttached,
       parentId: items.parentId,

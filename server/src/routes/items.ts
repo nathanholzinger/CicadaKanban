@@ -3,12 +3,13 @@ import { db } from '../db/index.js';
 import { items, workphases, activityLog } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertWithinDepthCap, hierarchyDepth, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
-import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
+import { isTerminalLookup, positionScopeFor, withPositionScope, workflowIdForWorkphase } from '../lib/itemPositionScope.js';
 import { applyHierarchyRequest, validateHierarchyRequest, type HierarchyRequest } from '../lib/itemHierarchy.js';
+import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';
 
 const router = Router();
@@ -26,8 +27,41 @@ function isTerminalOf(workphaseId: string): boolean | null {
   return workphase ? Boolean(workphase.isTerminal) : null;
 }
 
-function workphaseExists(id: string): boolean {
-  return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
+// PATCH /:id/move is the board's endpoint, and a board renders exactly one
+// workflow — its items may span projects but never workflows — so a
+// `workphaseId` that would change the item's workflow can only come from a
+// non-board caller. Rejected here rather than mis-placed: the primitive's
+// keep-position rule assumes same-workflow (positioning §2 addendum).
+// Deliberately a route-level guard and not part of validateHierarchyRequest
+// — PUT shares the primitive and will carry legitimate cross-workflow moves
+// in Epic 7 (audit epic-3-5-story-1 #1). Only fires when the request names
+// a workphase explicitly; an attached child's inherited workphase is its
+// parent's concern. Skipped when a project resolves to no workflow at all —
+// nothing to compare against.
+function crossWorkflowMoveError(item: typeof items.$inferSelect, req: HierarchyRequest): string | null {
+  if (typeof req.workphaseId !== 'string') return null;
+  // Mirrors deriveResultingState's projectId rule: a new parent's project,
+  // else the item's own. The parent is known to exist — validation ran.
+  const parentProjectId =
+    typeof req.parentId === 'string'
+      ? db.select({ projectId: items.projectId }).from(items).where(eq(items.id, req.parentId)).get()?.projectId
+      : undefined;
+  const resultingProjectId = parentProjectId ?? item.projectId;
+  const targetWorkflowId = resultingProjectId ? effectiveWorkflowIdForProject(resultingProjectId) : null;
+  if (!targetWorkflowId) return null;
+  // A reparent into a project on a different workflow may not also name a
+  // workphase in the same step (the one-step shape that keeps an old-scope
+  // position). Compared project-to-project, not against the item's stored
+  // workphase, so re-filing an item already left foreign by an earlier
+  // reparent (positioning §7.3) still goes through.
+  const currentWorkflowId = item.projectId ? effectiveWorkflowIdForProject(item.projectId) : null;
+  if (currentWorkflowId && currentWorkflowId !== targetWorkflowId) {
+    return 'a reparent into a project with a different workflow cannot also set workphaseId on this endpoint; reparent first, then re-file';
+  }
+  if (workflowIdForWorkphase(req.workphaseId) !== targetWorkflowId) {
+    return "workphaseId belongs to a workflow the item's project does not use; cross-workflow moves are not supported on this endpoint";
+  }
+  return null;
 }
 
 // Every item write responds with the fresh row plus, when a reindex fired,
@@ -133,7 +167,7 @@ router.post('/', (req, res) => {
   const resolvedWorkphaseId = attached && parent ? parent.workphaseId : workphaseId;
 
   // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
-  if (resolvedWorkphaseId && !workphaseExists(resolvedWorkphaseId)) {
+  if (resolvedWorkphaseId && !existsById(workphases, resolvedWorkphaseId)) {
     res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
     return;
   }
@@ -303,7 +337,7 @@ router.patch('/:id/move', (req, res) => {
   const hierarchyReq: HierarchyRequest = { parentId, isAttached, workphaseId, anchorId, side, position };
   if (!hasIntent) hierarchyReq.workphaseId = item.workphaseId;
 
-  const error = validateHierarchyRequest(item, hierarchyReq);
+  const error = validateHierarchyRequest(item, hierarchyReq) ?? crossWorkflowMoveError(item, hierarchyReq);
   if (error) {
     res.status(400).json({ error });
     return;

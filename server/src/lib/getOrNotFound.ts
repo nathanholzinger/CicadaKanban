@@ -25,3 +25,13 @@ export function getByIdOrNotFound<T extends IdTable>(table: T, id: string, res: 
   const e = tx ?? db;
   return getOrNotFound(e.select().from(table).where(eq(table.id, id)).get(), res, error);
 }
+
+// The "does a row with this id exist" check — the FK-existence guard a
+// route runs before an insert/update so a bogus reference surfaces as a
+// 400 instead of an opaque FK-violation 500 (audit Finding #13's
+// convention). Selects only the id. Was `workphaseExists` copied verbatim
+// into items.ts and itemHierarchy.ts (audit epic-3-5-story-1 #3).
+export function existsById<T extends IdTable>(table: T, id: string, tx?: Tx): boolean {
+  const e = tx ?? db;
+  return !!e.select({ id: table.id }).from(table).where(eq(table.id, id)).get();
+}

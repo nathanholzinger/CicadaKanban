@@ -76,26 +76,10 @@ export function hierarchyDepth(itemId: string, tx?: Tx): number {
 // Levels *below* the item — a leaf is 0. Counts the full descendant subtree,
 // detached descendants included: a detached child doesn't follow its
 // parent's workphase, but it does still sit under it in the hierarchy and
-// moves with it (wiki §8). Cycle-guarded the same way walkItemDescendants is.
+// moves with it (wiki §8). One level per BFS generation, so the height is
+// just how many generations the walk produced.
 export function subtreeHeight(itemId: string, tx?: Tx): number {
-  const e = tx ?? db;
-  let height = 0;
-  const visited = new Set([itemId]);
-  let frontier = [itemId];
-  while (frontier.length > 0) {
-    const next: string[] = [];
-    for (const id of frontier) {
-      const children = e.select({ id: items.id }).from(items).where(eq(items.parentId, id)).all();
-      for (const child of children) {
-        if (visited.has(child.id)) continue;
-        visited.add(child.id);
-        next.push(child.id);
-      }
-    }
-    if (next.length > 0) height++;
-    frontier = next;
-  }
-  return height;
+  return walkItemDescendantLevels(itemId, { tx }).length;
 }
 
 // A target at depth D is a legal parent only if D + 1 + subtreeHeight <= CAP
@@ -117,44 +101,64 @@ export function assertWithinDepthCap(parentId: string, movingId: string | null, 
 // for the predicate), so not folded into the generic self-ref helpers above.
 // ============================================================
 
+type ItemChild = { id: string; isAttached: number };
+
 interface WalkItemDescendantsOptions {
   /** Only descend through (and collect) children matching this predicate.
    *  Defaults to collecting every descendant. */
-  predicate?: (child: { id: string; isAttached: number }) => boolean;
+  predicate?: (child: ItemChild) => boolean;
   /** Include `rootId` itself as the first entry — item delete wants the item
    *  + its whole subtree in one id list. Defaults to false (strict descendants only). */
   includeRoot?: boolean;
   tx?: Tx;
 }
 
-// BFS over an item's descendants. Was duplicated as items.ts's
+// The one items-BFS: one generation per array, parents before children,
+// only descending through (and reporting) children the predicate accepts.
+// `visited` (seeded with `rootId`) guards against a corrupted parentId cycle
+// in the data (audit Finding #11): a node is marked visited the moment it's
+// seen, before the predicate even runs, so a cycle can't re-queue the same
+// id forever regardless of what the predicate decides — backs
+// `DELETE /items/:id`, where a cycle here would otherwise mean the delete
+// never returns. Level-ordered so subtreeHeight can count generations
+// without a second traversal (audit epic-3-5-story-1 #5 — the flat walk
+// and the height walk had grown into two copies of this loop).
+function walkItemDescendantLevels(
+  rootId: string,
+  opts: Pick<WalkItemDescendantsOptions, 'predicate' | 'tx'> = {},
+): ItemChild[][] {
+  const { predicate = () => true, tx } = opts;
+  const e = tx ?? db;
+  const levels: ItemChild[][] = [];
+  const visited = new Set([rootId]);
+  let frontier = [rootId];
+  while (frontier.length > 0) {
+    const next: ItemChild[] = [];
+    for (const id of frontier) {
+      const children = e.select({ id: items.id, isAttached: items.isAttached })
+        .from(items).where(eq(items.parentId, id)).all();
+      for (const child of children) {
+        if (visited.has(child.id)) continue;
+        visited.add(child.id);
+        if (predicate(child)) next.push(child);
+      }
+    }
+    if (next.length > 0) levels.push(next);
+    frontier = next.map(c => c.id);
+  }
+  return levels;
+}
+
+// Flat BFS id list over an item's descendants. Was duplicated as items.ts's
 // `collectDescendantIds` (collect-all, includes root) and
 // attachedCascade.ts's `getAttachedDescendantIds` (attached-only, excludes
 // root) — the two differed only in predicate and whether the root itself
-// belongs in the result. `visited` (seeded with `rootId`) guards against a
-// corrupted parentId cycle in the data (audit Finding #11): a node is
-// marked visited the moment it's seen, before the predicate even runs, so a
-// cycle can't re-queue the same id forever regardless of what the predicate
-// decides — backs `DELETE /items/:id`, where a cycle here would otherwise
-// mean the delete never returns.
+// belongs in the result.
 export function walkItemDescendants(rootId: string, opts: WalkItemDescendantsOptions = {}): string[] {
-  const { predicate = () => true, includeRoot = false, tx } = opts;
-  const e = tx ?? db;
+  const { includeRoot = false, ...walkOpts } = opts;
   const ids: string[] = includeRoot ? [rootId] : [];
-  const visited = new Set([rootId]);
-  const queue = [rootId];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    const children = e.select({ id: items.id, isAttached: items.isAttached })
-      .from(items).where(eq(items.parentId, id)).all();
-    for (const child of children) {
-      if (visited.has(child.id)) continue;
-      visited.add(child.id);
-      if (predicate(child)) {
-        ids.push(child.id);
-        queue.push(child.id);
-      }
-    }
+  for (const level of walkItemDescendantLevels(rootId, walkOpts)) {
+    for (const child of level) ids.push(child.id);
   }
   return ids;
 }
