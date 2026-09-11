@@ -8,13 +8,13 @@
 | TC-2.2 | Coarsest-fit rounding | P0 | ✅ automated |
 | TC-2.3 | Coarsest-fit stops at minimum needed precision | P1 | ✅ automated |
 | TC-2.4 | Append fallback, no true successor | P0 | ✅ automated |
-| TC-2.5 | Append fallback, no true predecessor | P0 | ✅ automated |
+| TC-2.5 | Prepend fallback, no true predecessor — floor-bounded, never negative | P0 | ⏳ pending re-triage |
 | TC-2.6 | Creation with no anchor at all | P1 | ✅ automated |
 | TC-2.7 | Bootstrap: brand-new empty scope | P0 | ✅ automated |
 | TC-2.8 | Anchoring against a done item is rejected | P1 | ✅ automated |
 | TC-2.9 | Narrow view cannot leapfrog past an unseen true neighbor | P0 | ✅ automated |
 | TC-2.10 | True neighbor lookup ignores visibility, only reality | P0 | ✅ automated |
-| TC-2.11 | Server resolution is authoritative over a stale client guess | P0 | ✅ automated |
+| TC-2.11 | The client never computes a position value, not even for display | P0 | ⏳ pending triage |
 | TC-2.12 | Precision exhaustion triggers reindex-then-retry | P0 | ✅ automated |
 | TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ✅ automated |
 | TC-2.14 | `positionScope` = `"workflow"` | P1 | ✅ automated |
@@ -30,6 +30,14 @@
 | TC-2.24 | Workphase-only move with no anchor keeps existing position | P0 | ✅ automated |
 | TC-2.25 | Cascade to attached descendants leaves position untouched | P0 | ✅ automated |
 | TC-2.26 | Active → done transition reassigns per Part 6 rules | P0 | ✅ automated |
+| TC-2.27 | Optimistic feedback is ordinal — an index, not a number | P0 | ⏳ pending triage |
+| TC-2.28 | Rendered projection of the server's answer matches the ordinal preview under a narrow view | P0 | ⏳ pending triage |
+| TC-2.29 | Ordinal preview holds when the anchor's own value is still in flight | P1 | ⏳ pending triage |
+| TC-2.30 | A pending item is never represented as `position: null` | P0 | ⏳ pending triage |
+
+*(TC-2.27–2.30 added by Epic 3.5 from the amended "Client-side role" of §2.
+TC-2.11 rewritten by the same amendment; TC-2.5's rule text corrected to
+match the wiki's floor-bounded prepend — see each case's note.)*
 
 ---
 
@@ -91,16 +99,34 @@ rather than add distinct coverage).
 **Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
 › "appends past the anchor when it is the true last item"
 
-## TC-2.5 — Append fallback, no true predecessor
+## TC-2.5 — Prepend fallback, no true predecessor — floor-bounded, never negative
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Automated:** ⏳ pending re-triage
 
 *Given* an anchor item that is the true first item in its scope, *when*
-inserting with side = `before`, *then* the resolved position is
-`round(anchor - 1.0)` and is strictly less than the anchor.
+inserting with side = `before`, *then* the resolved position is the
+coarsest-fit value strictly between a virtual floor of `0.0` and the
+anchor's position — **not** a symmetric `round(anchor − 1.0)`. The result
+is strictly less than the anchor and strictly greater than `0.0`.
+
+*And given* that prepend is repeated many times (each new item anchored
+`before` the current true first item), *then* every resolved position stays
+strictly above `0.0` — the sequence converges toward the floor rather than
+drifting negative without limit, so it can never collide with the
+`position ?? 0` sentinel used when sorting alongside unpositioned items
+(Part 5's tie-break).
+
+*(Rule text corrected 2026-09-10: this case previously described
+`round(anchor − 1.0)`, which the wiki's §2 "Append fallback" paragraph
+explicitly rules out. The mapped test below needs re-checking against the
+corrected rule by the Test Reconciler — TC-3.5's mapping already describes
+the attached-siblings equivalent as "floor-anchored coarsest-fit," so the
+implementation is likely already right and only this text was stale.)*
 
 **Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "prepends past the anchor when it is the true first item"
+› "prepends past the anchor when it is the true first item" — **verify**
+it asserts the floor-bounded coarsest-fit value, not `anchor − 1`, and that
+the repeated-prepend bound is covered somewhere.
 
 ## TC-2.6 — Creation with no anchor at all
 
@@ -186,24 +212,38 @@ never "is one visible here."
 **Automation test:** Same test as TC-2.9 — the server-side resolver has no
 concept of "visible" at all, so one test structurally covers both
 
-## TC-2.11 — Server resolution is authoritative over a stale client guess
+## TC-2.11 — The client never computes a position value, not even for display
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Automated:** ⏳ pending triage
 
-*Given* a client computes an optimistic position locally
-(`positionBetween`) for instant visual feedback, *when* the server's
-resolution disagrees with the client's guess (e.g. because of concurrent
-writes), *then* the server's value wins and the client re-syncs
-(`loadBoard()`) rather than persisting the client's guess.
+*Given* any client-side placement (a drop, a reorder, a create with a
+target slot), *when* the client prepares its optimistic state and its
+request, *then* no `position` number is computed client-side at any point
+— not held in local state, not rendered, and not sent. The request carries
+only relative intent (anchor + side, or a workphase-only move) and the
+written item's `position` in client state is whatever it was before the
+write until the server's value lands (see TC-2.30 for what "pending" looks
+like instead).
 
-**Automation test:** `client/src/components/workflow/boardDndUtils.test.ts`
-› `applyItemMove` — the `moveItem`-then-`setItems`-or-`loadBoard` contract
-was extracted from `useBoardDnd.ts`'s `handleDragEnd` into a pure,
-directly-testable function (`applyItemMove`, same rationale this whole
-module already exists for): "falls back to loadBoard and never calls
-setItems when the move is rejected" proves the resync path; "updates items
-via setItems on a successful move" proves the success path never touches
-`loadBoard`.
+*(Superseded and rewritten by Epic 3.5. This case previously read: "Given a
+client computes an optimistic position locally (`positionBetween`) for
+instant visual feedback, when the server's resolution disagrees with the
+client's guess, then the server's value wins and the client re-syncs
+(`loadBoard()`)." The amended §2 "Client-side role" now explicitly rules
+out a client-computed number, even for display, so that premise no longer
+describes allowed behavior. The still-valid half — a rejected write resyncs
+from the server and never keeps the optimistic guess — now lives with the
+gesture that exercises it:
+[`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md)
+DRAG-6.6, and as the atomicity rule in
+[`../item-attachment/att-3-reparent-placement-atomicity.md`](../item-attachment/att-3-reparent-placement-atomicity.md)
+ATT-3.8.)*
+
+**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
+`applyItemMove` › "falls back to loadBoard and never calls setItems when
+the move is rejected" / "updates items via setItems on a successful move" —
+covered the old resync premise, not this rule; it should be re-pointed at
+DRAG-6.6 by the Test Reconciler.)*
 
 ### Tight-gap → reindex
 
@@ -422,3 +462,76 @@ Covered by [Part 6](part-6-active-done-split.md) rather than an ordinary
 scope-change append — see TC-6.1–TC-6.4.
 
 **Automation test:** See [Part 6](part-6-active-done-split.md) — TC-6.1–TC-6.4
+
+### Client-side role (amended by Epic 3.5)
+
+These cases apply to *any* client holding a locally-ordered list. The board
+drag is what exercises them — the board-specific additions (pending marker
+cleared on response, inversion tripwire, per-item response sequencing,
+failure resync) are in
+[`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md),
+which cross-references these rather than restating them.
+
+## TC-2.27 — Optimistic feedback is ordinal — an index, not a number
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* a rendered list `A, C, E` and a placement of item `X` with anchor
+= `A`, side = `after`, *when* the client shows optimistic feedback before
+the server responds, *then* `X` is rendered at index 1 (`A, X, C, E`) as an
+ordinal placement — `X`'s `position` field is not assigned any client-
+invented value to achieve that ordering, and the rendered order is not the
+product of re-sorting by `position`.
+
+**Automation test:** —
+
+## TC-2.28 — Rendered projection of the server's answer matches the ordinal preview under a narrow view
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* the true full order `A, B, C, D, E` and a client view that has
+loaded only `A, C, E`, *when* the client places `X` either as `after A`
+or as `before C`, *then*:
+
+- for `after A`, the server resolves `X` strictly between `A` and `B`
+  (A's true successor) — and re-rendering the client's loaded set with the
+  server's value sorts to `A, X, C, E`;
+- for `before C`, the server resolves `X` strictly between `B` and `C`
+  (C's true predecessor) — and re-rendering sorts to the same `A, X, C, E`.
+
+In both cases the picture after the server's value lands is exactly the
+one the ordinal preview (TC-2.27) already drew. Nothing occupying the gap
+between the anchor and its true neighbor can be in the requesting view, so
+`X` always lands adjacent to its anchor on the requested side *within the
+rendered set*, whatever number it receives.
+
+**Automation test:** —
+
+## TC-2.29 — Ordinal preview holds when the anchor's own value is still in flight
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* item `Y` has just been placed (its write is pending, its
+authoritative `position` not yet received), *when* the client immediately
+places `X` with anchor = `Y`, side = `after`, *then* the ordinal preview
+shows `X` directly after `Y`, and once both server responses land and are
+reconciled (§5a), the rendered order still shows `X` directly after `Y` —
+the ordinal relationship never depended on either number.
+
+**Automation test:** —
+
+## TC-2.30 — A pending item is never represented as `position: null`
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* an item whose position write is in flight, *when* the client marks
+it as pending, *then* its `position` field is left exactly as it was before
+the write — specifically it is **not** set to `null` — and pending is
+tracked by a separate marker. *And when* anything re-sorts the rendered
+list while the write is still pending (e.g. another item's response lands),
+*then* the pending item does not jump to the front of the list: `null`
+would coerce to `0` under the tie-break and sort ahead of every positioned
+item, and would be indistinguishable from a done item ordered by
+`completedAt`.
+
+**Automation test:** —

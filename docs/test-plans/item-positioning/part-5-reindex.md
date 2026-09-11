@@ -12,6 +12,16 @@
 | TC-5.6 | Tie-break on exact position equality | P1 | ✅ automated |
 | TC-5.7 | Attached-siblings reindex doesn't leak into workflow-wide scope | P0 (regression/guard) | ✅ automated |
 | TC-5.8 | Workflow-wide reindex doesn't leak into attached-siblings scope | P0 (regression/guard) | ✅ automated |
+| TC-5.9 | A write that triggered a reindex discloses every renumbered position | P0 | ⏳ pending triage |
+| TC-5.10 | Disclosure entries are `{id, position}` and nothing more | P1 | ⏳ pending triage |
+| TC-5.11 | The written item is included in the disclosure when it was in the reindexed scope | P0 | ⏳ pending triage |
+| TC-5.12 | No reindex → disclosure is absent or empty | P1 | ⏳ pending triage |
+| TC-5.13 | Disclosure covers the whole reindexed scope, not just the caller's view | P0 | ⏳ pending triage |
+| TC-5.14 | Every reindex-capable write path discloses | P1 | ⏳ pending triage |
+
+*(TC-5.9–5.14 added by Epic 3.5 from §5 "Reindexing must be disclosed to
+the caller." The client's side of the contract — what to do with the
+disclosure — is [Part 5a](part-5a-client-reconciliation.md).)*
 
 ---
 
@@ -144,3 +154,99 @@ the same workphase, are completely untouched by it.
 **Automation test:** `items.test.ts` › same describe block as TC-5.8 ›
 "a workflow-wide reindex does not touch an unrelated parent's attached
 children" — the reverse direction of TC-5.8, added alongside it.
+
+### Reindexing must be disclosed to the caller (Epic 3.5)
+
+## TC-5.9 — A write that triggered a reindex discloses every renumbered position
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* a comparison scope rendered by a caller as `A=1.0, C=1.5, E=1.75`
+(with a gap too tight to insert into between `C` and `E`, or a scope past
+the magnitude threshold), *when* the caller writes `X` with a placement
+that triggers a reindex — say the scope is renumbered to `A=1, X=2, C=3,
+E=4` — *then* the write's response carries a collection of `{id,
+position}` pairs containing `A→1`, `X→2`, `C→3`, `E→4` (every item the
+reindex renumbered), so that a caller who applies all of them renders
+`A, X, C, E`.
+
+*Negative framing the case exists for:* a caller that learned only `X=2`
+and mixed it into its old values would sort `1.0, 2, 1.5, 1.75` → `A, C,
+E, X` — consistent-looking and wrong. The disclosure is what makes that
+impossible.
+
+**Automation test:** —
+
+## TC-5.10 — Disclosure entries are `{id, position}` and nothing more
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* a response carrying a reindex disclosure, *when* an entry is
+inspected, *then* it has exactly two fields — the item's `id` and its new
+`position` — and no other item fields (no title, workphase, parent, etc.).
+A reindex changes positions and never any other field; a fuller row would
+imply otherwise.
+
+**Automation test:** —
+
+## TC-5.11 — The written item is included in the disclosure when it was in the reindexed scope
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* a write whose target scope is reindexed as part of resolving it,
+*when* the response is inspected, *then* the written item's own `{id,
+position}` pair appears in the disclosure collection alongside its
+neighbors', and the value there equals the written item's `position` in the
+response body. A caller therefore has exactly one rule — apply every pair
+— and no precedence between "the item I wrote" and "the collection" to
+reason about.
+
+**Automation test:** —
+
+## TC-5.12 — No reindex → disclosure is absent or empty
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* an ordinary position write that resolves directly (a gap that fits
+at some precision; an append well under the magnitude threshold), *when*
+the response is inspected, *then* the disclosure is either absent or an
+empty collection — and a caller treats both identically as "no reindex
+occurred." This is the overwhelmingly common path and must not carry any
+per-item cost.
+
+**Automation test:** —
+
+## TC-5.13 — Disclosure covers the whole reindexed scope, not just the caller's view
+
+**Priority:** P0 · **Automated:** ⏳ pending triage
+
+*Given* a workflow-wide active scope spanning two non-terminal workphases
+`W1` and `W2` (and, for the attached-siblings variant, a parent whose
+attached children are the scope), and a caller whose view only loaded the
+`W1` items, *when* the caller's write triggers a reindex of the active
+scope, *then* the disclosure includes the renumbered `W2` items as well —
+every item the coordinated reindex (TC-5.4) touched — not only the ids the
+caller could have known about.
+
+Corollary on the receiving side (Part 5a, TC-5a.4): an id the caller doesn't
+recognize means "not in this view," never "missing data to go fetch."
+
+**Automation test:** —
+
+## TC-5.14 — Every reindex-capable write path discloses
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* each distinct write that can trigger a reindex —
+
+- an anchor+side move whose gap exhausts precision (tight-gap, TC-2.12),
+- a create or anchor-free append whose value would cross the magnitude
+  threshold (TC-5.2),
+- a scope-change reassignment (attach, detach, reparent — Part 2's table)
+  whose append fallback crosses the magnitude threshold in the *new* scope,
+
+*when* the reindex fires, *then* that write's response carries the
+disclosure per TC-5.9 — the rule is "a response to a write that triggered
+a reindex," not "a response to a move."
+
+**Automation test:** —

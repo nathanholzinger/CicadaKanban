@@ -87,3 +87,40 @@ tests, not after — folding `attached-children.spec.ts`'s inline sequence into
 the same helper while touching that file for Q1 anyway. Doing the extraction
 first means the two new tests are written against the shared helper from the
 start instead of becoming a fourth/fifth copy to fold in later.
+
+---
+
+## Decided: item representation vocabulary (2026-09-10)
+
+An item has three UI-only visual representations, each scoped to a different
+manipulation context — none of this changes the data model (`Item`,
+`is_attached`, etc.), it's naming for the client-side components/copy only:
+
+- **Stub** — the smallest representation: a title snippet, just enough to
+  identify the item. This is what an attached child renders as, nested
+  inside its parent's Card (currently `AttachedChildRow` in
+  `KanbanCard.tsx` — rename pending, not done yet). Stubs are manipulated
+  *within* a Card's context: reordered among sibling stubs, or (once Epic
+  3.5 lands) dragged out to detach. No independent board-level position of
+  their own.
+- **Card** — the board's draggable unit (`KanbanCard.tsx` — name already
+  correct). Longer title allotment, a description snippet, tags/labels, and
+  a collapsible section of descendant Stubs. Manipulated at the full-board
+  level: reposition, reparent, workphase moves — this is where Epic 3.5's
+  new attach/detach drag gesture lives.
+- **Sheet** — the full item detail view (currently `ItemDetailPanel.tsx` —
+  rename pending). The only place non-positional data (title, description,
+  ...) gets edited. Unlike Stub/Card/Headline, Sheet doesn't compete with an
+  alternate "full" representation, so it didn't strictly need a coined
+  name — kept one anyway for vocabulary consistency across the family.
+- **Headline** — pre-existing term from the design doc (not coined in this
+  discussion): an item's line in an Inbox list view (title + priority tags).
+
+**Deferred, not designed:** **Dossier** — a hypothetical concept for if a
+single Sheet ever can't hold everything about an item. No shape yet;
+revisit only if that actually happens. Explicitly post-MVP.
+
+**Not yet applied to code** — this is vocabulary only, decided ahead of
+implementation. When Epic 3.5 touches `KanbanCard.tsx`'s `AttachedChildRow`
+and `ItemDetailPanel.tsx` for the drag gesture anyway, that's the natural
+point to rename them (and their props/aria-labels) to match.

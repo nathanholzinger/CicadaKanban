@@ -1,8 +1,15 @@
 # Item Positioning & Board-Scoped Ordering
 
-**Build status:** Implemented
+**Build status:** §1–§6 implemented (Epic 3.2), except where marked.
+**Settled but not yet implemented** — Epic 3.5: §7 (Story 1), §5's
+"Reindexing must be disclosed to the caller," §5a, and §2's amended
+"Client-side role."
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
+
+**Related:** [`../item-attachment/`](../item-attachment/) (what a legal
+parent is, and what attaching means) · [`../board-drag-interaction/`](../board-drag-interaction/)
+(the board gesture that produces these placements)
 
 ---
 
@@ -120,11 +127,44 @@ by-`completedAt` vs. not ordered at all). Purely computed at serialization
 time, never stored. Tells a client (or a human reading the API) what an
 item's `position` is actually comparable against.
 
-**Client-side role:** `positionBetween`/`computeDropPosition` can still
-run client-side for optimistic instant visual feedback, but the server's
-resolution is authoritative — a mismatch resolves via the existing
-resync-on-failure path (`loadBoard()`), never by trusting the client's
-guess.
+**Client-side role: the client never computes a position value, not even
+for display.** Optimistic feedback is **ordinal** — the item is shown at an
+index in the rendered list — and the number arrives from the server.
+
+*(Amended by Epic 3.5. Epic 3.2 left the door open to running
+`positionBetween`/`computeDropPosition` client-side for optimistic visual
+feedback. That's now explicitly ruled out: a plausible-but-wrong number
+held in client state is a number something will eventually be tempted to
+send, and it buys nothing — see below.)*
+
+**Why ordinal is sufficient, and why it's correct rather than approximate:**
+the server places an item strictly between its anchor and that anchor's
+true neighbor in the requested direction. Anything occupying that gap is,
+by definition, not in the requesting view — otherwise it would have been
+the anchor's visible neighbor. So the item always lands adjacent to its
+anchor on the requested side *within the rendered set*, whatever number it
+receives and whatever unseen items sit around it. The rendered projection
+of the server's answer is exactly what the client already drew.
+
+Worked through: rendered `A, C, E`, with true order `A, B, C, D, E`.
+Requesting `after A` resolves between A and B → renders `A, X, C, E`.
+Requesting `before C` resolves between B and C → renders `A, X, C, E`. Same
+picture, and it's the one the client predicted.
+
+This holds under stacked operations too — an item may be positioned against
+an anchor whose own value is still in flight, because the ordinal
+relationship doesn't depend on either number.
+
+**A pending item must not be represented as `position: null`.** Null is
+already load-bearing: it means "not ordered by position" — a done item
+ordered by `completedAt` (§6), or an item with no workphase at all — and
+the tie-break below coerces it to `0`, sorting nulls to the *front*. A
+pending item marked null would be indistinguishable from a done one and
+would jump to the top of the list the moment anything re-sorted. Pending
+needs its own marker; `position` stays untouched until the real value
+lands.
+
+Reconciliation on the response, and what to do when a reindex fires: §5a.
 
 ### Scope-change reassignment principle
 
@@ -198,6 +238,63 @@ scopes from drifting into overlapping ranges and colliding later.
 
 **Done items are excluded entirely** — see §6.
 
+### Reindexing must be disclosed to the caller
+
+**Added by Epic 3.5; not yet implemented.**
+
+**A response to a write that triggered a reindex must carry the renumbered
+positions.** A reindex changes rows the caller never asked about, so a
+caller that only reads back the item it wrote is left holding one fresh
+value and a set of stale ones.
+
+**Why silence is unsafe rather than merely inefficient:** a reindex
+*preserves relative order* by definition, so a caller that mixes the one
+new number into its old ones can compute an ordering that is wrong while
+looking perfectly consistent. Given rendered `A=1.0, C=1.5, E=1.75` and a
+reindex to `A=1, X=2, C=3, E=4`, a caller that learns only `X=2` sees
+`1.0, 2, 1.5, 1.75` and concludes X belongs last. Nothing errors; the list
+is simply wrong from then on.
+
+Shape of the disclosure:
+
+- The response carries a **collection of `{id, position}` pairs** covering
+  every item the reindex renumbered — chosen over a bare "you should
+  requery" flag, which costs a round trip and leaves a window in which the
+  caller knows its data is stale but hasn't corrected it yet. The values
+  already exist in the transaction; withholding them to be asked again is
+  work for both sides.
+- **`{id, position}` and nothing more.** A reindex changes positions and
+  never any other field, so a full row would imply otherwise.
+- **The written item is included** in the collection when it was part of the
+  reindexed scope, so a caller has exactly one rule — apply every pair —
+  rather than a merge with precedence to reason about.
+- **Absent or empty means no reindex occurred**, which is the overwhelmingly
+  common case and should cost nothing to report.
+- The collection covers the **whole reindexed scope**, which may be far
+  wider than any one caller's view. A caller **applies the pairs it holds
+  and ignores the rest**; an unrecognized id means "not in this view," never
+  "missing data to go fetch."
+
+## 5a. Client reconciliation order
+
+**Added by Epic 3.5; not yet implemented.** Applies to any client holding a
+locally-ordered list, though the board drag is what exercises it — see
+[`../board-drag-interaction/`](../board-drag-interaction/) §10.
+
+On receiving a response to a position write, in this order:
+
+1. **Apply the reindex collection**, if populated.
+2. **Assign the written item's authoritative position.**
+3. **Check for inversions** among items with real positions.
+4. **Re-sort only if an inversion was found.**
+
+**The order is the rule.** Checking before applying the reindex makes the
+check fire on data that was never inconsistent, and "fix" it by reordering
+correct rows.
+
+Any client-side sort must use §5's tie-break verbatim — `position`, then
+`createdAt` — or it will diverge from the server on exact ties.
+
 **Tie-break:** wherever items are sorted client-side, secondary sort key
 `(a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt` —
 cheap, deterministic, prevents an exact-tie's order from depending on
@@ -238,6 +335,119 @@ and count grow together — never disproportionate, needs nothing).
   "inbox" status bucket (pre-workflow items) — may overlap with Epic 6's
   "Inbox" concept, worth a naming check whenever it's actually scoped.
 
+## 7. Placement intents added by the board gesture (Epic 3.5)
+
+**Not yet implemented.** These extend §2's resolution model; they don't
+replace any part of it.
+
+### 7.1 First-in-list and last-in-list are anchor + side, chosen by the client
+
+The board gesture's "first in list" and "last in list" placements (drop
+bands — see [`../board-drag-interaction/`](../board-drag-interaction/) §5
+and §7.1) introduce **no new request shape**. They are ordinary §2
+anchor + side requests where **the client picks the anchor from its own
+rendered list**:
+
+- **First in list** → `{ anchorId: <first item in the target context>, side: 'before' }`
+- **Last in list** → `{ anchorId: <last item in the target context>, side: 'after' }`
+
+"The target context" is the region the drop resolves into — the whole
+column in merged mode, the individual sub-row in expanded mode, or a
+parent's Stub list — exactly as
+[`../board-drag-interaction/`](../board-drag-interaction/) §1 defines it.
+"First" and "last" are read off the client's rendered order, using §5's
+tie-break, so an exact tie can't make the client and server disagree about
+which item is first.
+
+**Why the client choosing the anchor is safe, when the client computing a
+number is not.** §2's narrow-view hazard is about the *number*: a midpoint
+computed from two visible neighbors can leapfrog an unseen item between
+them. Choosing an anchor has no such hazard — the server still resolves
+against that anchor's *true* neighbor, so nothing is jumped. Picking the
+first visible item is no different in kind from picking the item the cursor
+happens to be over; every drag already chooses its anchor from what's on
+screen.
+
+**Why "first visible" is the *right* anchor, not merely an acceptable one.**
+If the view is narrower than the true order — an unseen item Z sits before
+the visible first item A — then anchoring `before A` lands the item between
+Z and A, and the rendered result is: first in the list the user was looking
+at. That is what "first in list" meant. A server-side "true first" would
+instead place it ahead of Z, an item the user never saw and expressed no
+intent about. The same §2 "Client-side role" argument that makes the
+ordinal preview correct makes this choice correct: the rendered projection
+of the server's answer matches the slot the user picked.
+
+**Empty target context — no anchor exists.** First and last are then the
+same slot and both degrade to the existing anchor-free paths, unchanged:
+
+- Into a **column region** with no items: a workphaseId-only move, which
+  keeps the item's position if it has one, or takes the append fallback if
+  it doesn't (§2 addendum).
+- Into a **parent's empty Stub list**: an attach/reparent with no anchor,
+  which is a scope change and takes the append fallback (§2 table).
+
+**Done columns:** the visible first/last items there have no position and
+so cannot be anchors (§7.4). The bands do not produce an anchor request in a
+done column; the drop is workphase-only.
+
+**Scope check happens against the item's *resulting* state.** When the same
+request also reparents or attaches (a Card dropped as a Stub), the anchor is
+one of the *new* parent's children — a scope the item isn't in yet. The
+server validates the anchor's scope against where the item will be after
+the reparent, not where it is now; this is §7.2's sequencing rule seen from
+the validation side.
+
+### 7.2 Reparenting re-resolves position, and the order matters
+
+A reparent-with-placement always resolves a fresh position, and always
+resolves it **after** the new parent is in effect — the target scope is
+derived from the new parent, so resolving first would resolve against the
+scope being left. Rationale and the Free-item exception:
+[`../item-attachment/`](../item-attachment/) §4–§5.
+
+The scope-change table in §2 gains no new rows from this epic — a
+gesture-driven attach, detach, or reparent lands on exactly the rows
+already there. What's new is only that a single request can now carry the
+scope change and the placement together.
+
+### 7.3 Cross-project reparenting doesn't change the comparison scope
+
+A board is scoped to one workflow, and a detached/root item's position
+scope is that whole workflow (§2). So a cross-project drop *on a board* is
+between two projects already sharing the workflow — the comparison scope on
+both sides of the move is the same one.
+
+**Consequence:** cross-project placement resolution is not a special case.
+It re-resolves because §7.2 says every reparent does, not because the
+project changed. There is no cross-project positioning rule to write.
+
+### 7.4 Done columns accept drops, but never positioned inserts
+
+Follows from §6 with no new mechanism: a detached/root item in a terminal
+workphase has **no stored position**, so it can be neither an anchor nor a
+"first"/"last" boundary. A drop into a done column resolves as a workphase
+change; ordering there is by `completedAt`.
+
+**A done Card's Stubs are anchorable, and unaffected.** Per §6's exception,
+attached children keep their positions regardless of the workphase they
+inherited — their scope is `(parentId, isAttached)`, which has nothing to
+do with terminality. Placement inside a done card's Stub list works
+normally.
+
+### 7.5 The column's middle band is §2's workphaseId-only move
+
+The gesture's "middle 60% of a column" band means *take this workphase,
+keep your position* — which is precisely §2's addendum: a workphaseId-only
+move with no anchor keeps the item's existing position, unchanged.
+
+This is a consistency worth stating rather than a new rule. The band exists
+because that behavior is useful to reach deliberately; the behavior exists
+because a workflow-wide position stays meaningful across a workphase
+change. The same §2 exception still applies — an item with **no** position
+to keep (a reopened done item, a first-time workphase assignment) still
+gets a fresh one via the append fallback.
+
 ## Explicitly out of scope for this feature (as currently scoped)
 
 - Per-board position table / personal boards (§1 — deferred idea)
@@ -246,14 +456,21 @@ and count grow together — never disproportionate, needs nothing).
 - A third "inbox" status bucket (§6 — not needed for this fix)
 - Column sort-by-computed-field (e.g. "time in column") and its
   drag-while-sorted behavior — no sort feature exists yet to attach it to
-- Epic 3.5's board-level attach/detach drag gesture and its visual
-  anchor/side hover cue (dynamic upper/lower-half indicator) — this
-  feature ships a minimal functional default (dropping on card X resolves
-  to anchor X, side `before`) with no new UI; 3.5 layers the polished cue
-  on top
+- The board-level attach/detach drag gesture itself — the contexts, pop
+  model, drop bands, and target classification now live in
+  [`../board-drag-interaction/`](../board-drag-interaction/), and what a
+  legal parent is lives in [`../item-attachment/`](../item-attachment/).
+  Epic 3.2 shipped a minimal functional default (dropping on card X
+  resolves to anchor X, side `before`) with no new UI; §7 above is the
+  positioning half of what Epic 3.5 layers on top
 
 ## Already correct, not touched by this feature
 
 Detached-child free positioning within a workphase, cycle prevention, and
 the same-project reparent constraint — all pre-existing and already
-correct; this feature doesn't change them.
+correct as of Epic 3.2; that epic doesn't change them.
+
+**Superseded since:** the same-project reparent constraint is deliberately
+lifted by Epic 3.5 — see §7.3 and [`../item-attachment/`](../item-attachment/)
+§9. Cycle prevention is unchanged and is now stated as a validity rule in
+[`../item-attachment/`](../item-attachment/) §7.

@@ -7,8 +7,8 @@ see [`../../wiki/item-positioning/#already-correct-not-touched-by-this-feature`]
 |---|---|---|---|
 | TC-X.1 | Detached-child free positioning unaffected | P1 | ✅ automated |
 | TC-X.2 | Cycle prevention still holds | P1 | ✅ automated |
-| TC-X.3 | Same-project reparent constraint still holds | P1 | ✅ automated |
-| TC-X.5 | Minimal anchor=card/side=before default is what ships now | P2 | ⏸ deferred (Epic 3.5) |
+| TC-X.3 | ~~Same-project reparent constraint still holds~~ — superseded by Epic 3.5 | — | ⏸ superseded |
+| TC-X.5 | ~~Minimal anchor=card/side=before default is what ships now~~ — superseded by Epic 3.5 | — | ⏸ superseded |
 | TC-X.6 | An item excludes its own stale row from its own scope query | P1 | ✅ automated |
 
 ---
@@ -37,42 +37,69 @@ whole suite) found no coverage anywhere before this.
 alongside a position change, *then* the cycle is still rejected exactly as
 before.
 
+*(Epic 3.5 restates cycle prevention as a validity rule in
+[`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §7;
+the fuller cases — self, direct child, deeper descendant, and the UI-side
+"cycle-forming" classification — are
+[`../item-attachment/att-4-legal-parent-depth-cap.md`](../item-attachment/att-4-legal-parent-depth-cap.md)
+ATT-4.2/4.3 and
+[`../board-drag-interaction/drag-2-target-classification.md`](../board-drag-interaction/drag-2-target-classification.md)
+DRAG-2.2. This guard stays as-is: the rule is unchanged.)*
+
 **Automation test:** `server/tests/routes/items.test.ts` › "rejects an item
 becoming its own parent or reparenting to a descendant"
 
-## TC-X.3 — Same-project reparent constraint still holds
+## TC-X.3 — ~~Same-project reparent constraint still holds~~ (superseded by Epic 3.5)
 
-**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
+**Priority:** — · **Automated:** ⏸ superseded
 
-*Given* an attempted reparent across projects, *when* attempted, *then* it
-is still rejected exactly as before, independent of any position
-resolution changes.
+*Superseded by Epic 3.5.* The same-project reparent constraint is
+deliberately **lifted** — reparenting across projects that share a
+workflow is now allowed and cascades the new project to the moved subtree.
+The replacing cases:
+[`../item-attachment/att-5-cross-project-reparenting.md`](../item-attachment/att-5-cross-project-reparenting.md)
+ATT-5.1–5.3, and the positioning consequence
+[Part 7 TC-7.14](part-7-board-placement-intents.md).
 
-**Automation test:** `items.test.ts` › "rejects reparenting an item under a
-parent in a different project (finding #11)"
+The cross-*workflow* case has no rule yet and no case — see
+[`../../planning/epic-7-decisions.md`](../../planning/epic-7-decisions.md).
 
+*Was:* "Given an attempted reparent across projects, when attempted, then
+it is still rejected exactly as before, independent of any position
+resolution changes."
 
-## TC-X.5 — Minimal anchor=card/side=before default is what ships now
+**Automation test:** *(previous mapping — `items.test.ts` › "rejects
+reparenting an item under a parent in a different project (finding #11)"
+— now asserts the opposite of the wiki; expected to be inverted into
+ATT-5.1's automation.)*
 
-**Priority:** P2 · **Automated:** ⏸ deferred (Epic 3.5)
+## TC-X.5 — ~~Minimal anchor=card/side=before default is what ships now~~ (superseded by Epic 3.5)
 
-Epic 3.5's deferred visual anchor/side hover cue is out of scope; the
-minimal default (drop-on-card-X resolves anchor=X, side=`before`) is what
-this feature ships. *Given* a drop directly on another card with no finer
-hover-half detection, *when* resolved, *then* it behaves as anchor = that
-card, side = `before` — no test should assume a polished upper/lower-half
-indicator exists yet.
+**Priority:** — · **Automated:** ⏸ superseded
 
-**Automation test:** the pure-function mechanics are covered —
-`boardDndUtils.test.ts` › `resolveDropSide` (7 cases: missing-rect
-defaults, upper/lower region, tie/near-tie/just-outside-epsilon). What's
-explicitly **not** chased right now: whether a real browser drag gesture's
-measured rects agree with that function closely enough to reliably reach
-`side: 'after'` in practice — `tests/ui/item-repositioning-cross-column-dnd.spec.ts`
-and `tests/ui/item-repositioning-cross-project-dnd.spec.ts` document a
-live mismatch here (dnd-kit's swap-preview reflow interacting with the
-rect measurement), but that's exactly the kind of drag-and-drop tune-up
-Epic 3.5 owns — deferred, not a gap to close now.
+*Superseded by Epic 3.5.* The Epic 3.2 interim — "dropping directly on
+card X resolves to anchor = X, side = `before`, with no finer hover
+detection" — is replaced by the full drop model: a drop on a Card without
+a sustained hold is a *reposition* resolved by anchor+side hovering within
+a column context, and a sustained hold *attaches*. The replacing cases:
+[`../board-drag-interaction/drag-1-contexts-and-popping.md`](../board-drag-interaction/drag-1-contexts-and-popping.md)
+and
+[`../board-drag-interaction/drag-4-attach-and-stub-placement.md`](../board-drag-interaction/drag-4-attach-and-stub-placement.md)
+DRAG-4.5.
+
+The rect-measurement mismatch this case's previous automation note
+described (dnd-kit's swap-preview reflow vs. `resolveDropSide`) is
+implementation detail for the coder building the gesture, not a business
+rule — the test plan carries no case for it.
+
+*Was:* "Given a drop directly on another card with no finer hover-half
+detection, when resolved, then it behaves as anchor = that card, side =
+`before`."
+
+**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
+`resolveDropSide` (7 cases) — is pure-function coverage of a mechanism the
+new gesture may or may not keep; the Test Reconciler should decide whether
+it maps to any DRAG case.)*
 
 ## TC-X.6 — An item excludes its own stale row from its own scope query
 

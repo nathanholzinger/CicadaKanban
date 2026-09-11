@@ -6,7 +6,7 @@
 |---|---|---|---|
 | TC-3.1 | Reordering an attached child persists new order | P0 | ✅ automated |
 | TC-3.2 | Reordering scoped strictly to `(parentId, isAttached)` | P0 | ✅ automated |
-| TC-3.3 | Dragging a child out of its parent is still blocked | P0 | ✅ automated |
+| TC-3.3 | ~~Dragging a child out of its parent is still blocked~~ — superseded by Epic 3.5 | — | ⏸ superseded |
 | TC-3.4 | New attached child positioned among true siblings | P0 | ✅ automated |
 | TC-3.5 | Attached-sibling reorder reuses anchor+side resolution | P1 | ✅ automated |
 
@@ -39,19 +39,33 @@ original relative order and are not renumbered.
 second parent's attached child and an unrelated top-level item (sharing
 the same workphase) after each reorder.
 
-## TC-3.3 — Dragging a child out of its parent is still blocked
+## TC-3.3 — ~~Dragging a child out of its parent is still blocked~~ (superseded by Epic 3.5)
 
-**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+**Priority:** — · **Automated:** ⏸ superseded
 
-*Given* an attached child rendered in its parent's nested list, *when* a
-drag gesture attempts to move it out of the parent (into the board-level
-dnd context), *then* the drag is rejected/no-ops — this cross-boundary
-gesture is explicitly deferred to Epic 3.5.
+*Superseded by Epic 3.5.* This case guarded the Epic 3.2 interim state in
+which the cross-boundary gesture was held closed. Epic 3.5 opens it — a
+Stub can now be dragged out of its parent Card, and Stubs are classified
+individually as targets during a Card drag instead of being blanket-
+excluded. The replacing rules and cases:
 
-**Automation test:** `client/src/components/workflow/boardDndUtils.test.ts`
-› `boardCollisionDetection` › "excludes attached-child containers from a
-card drag (the collision-hijack bug this guards against)" and "scopes an
-attached-child drag to siblings under the same parent only"
+- Stub → out (detach by drag):
+  [`../board-drag-interaction/drag-5-detach-and-overflow.md`](../board-drag-interaction/drag-5-detach-and-overflow.md)
+  DRAG-5.1–5.5
+- Stubs classified individually during a Card drag (replaces the blanket
+  exclusion):
+  [`../board-drag-interaction/drag-2-target-classification.md`](../board-drag-interaction/drag-2-target-classification.md)
+  DRAG-2.7
+
+*Was:* "Given an attached child rendered in its parent's nested list, when
+a drag gesture attempts to move it out of the parent (into the board-level
+dnd context), then the drag is rejected/no-ops."
+
+**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
+`boardCollisionDetection` › "excludes attached-child containers from a card
+drag" and "scopes an attached-child drag to siblings under the same parent
+only" — now asserts behavior the wiki no longer describes; expected to be
+retired or inverted when the replacing cases are automated.)*
 
 ## TC-3.4 — New attached child positioned among true siblings
 
@@ -85,4 +99,3 @@ coarsest-fit, asserted from both anchor directions), "A after C"
 exact resolved value, not just "some plausible position" — proving these
 are the specific coarsest-fit/append-fallback code paths, not just any
 change in the right direction.
-scope)*

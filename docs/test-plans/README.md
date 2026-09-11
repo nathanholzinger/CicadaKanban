@@ -37,10 +37,20 @@ quietly fix the test case.
   once that test exists. Keeping it below the behavioral description rather
   than beside it is deliberate: the rule should read standalone before the
   implementation pointer shows up.
+- **Case IDs are unique per suite, not globally.** Each suite file declares
+  a unique suite ID (e.g. `ATT-4`, `DRAG-3`); cases inside it are `TC-1`,
+  `TC-2`, … From outside that suite — another suite, another feature, a
+  reconciliation report — refer to a case as `<suite-id>.<n>` (`ATT-4.5`).
+  `item-positioning/` predates this convention and keeps its `TC-<part>.<n>`
+  form, where the part number is the suite ID.
 - Automated-column states: **⏳ pending triage** (default — not yet
   compared against existing coverage), **✅ automated** (a specific test
   covers it — see the Automation test column), **❌ not automated** (triaged
-  and confirmed there's a gap).
+  and confirmed there's a gap), **⏸ superseded** (a later epic replaced the
+  rule; the case stays in place under its ID with a "was:" note and a
+  pointer to the replacing cases, and drops out of the priority counts).
+  A case whose rule text was corrected after being automated goes back to
+  **⏳ pending re-triage** so the mapping is re-verified.
 - Priority: **P0** = must-pass correctness/data-integrity, **P1** =
   important behavior, **P2** = edge case / nice-to-verify.
 - No run-history tracking here by design — this catalog says *whether* a
