@@ -412,6 +412,15 @@ from one shared source, fed by each side's own traversal — not a client
 re-derivation. Story decision 1 defers the mechanism to Story 2; not named
 in the roadmap — Watch List.
 
+**Status (2026-09-11, Story 2 landed in `fb3d5d8`):** constant half
+resolved — `ITEM_DEPTH_CAP` has one definition, is returned as
+`itemDepthCap` on `GET /boards/:id`, and the client reads
+`board.itemDepthCap` (never a literal). Formula half accepted as
+deliberate parallelism by Story 2 decision 1: the client names it
+(`dragClassification.ts::isWithinDepthCap`), the server keeps it inline in
+`assertWithinDepthCap`. Residual (name the server copy so both are
+greppable) carried as Story 2 audit #10.
+
 ---
 
 ## Covered by Future Epics
@@ -424,6 +433,10 @@ widened, and no call site sends them. Explicitly deferred: the story doc's
 out-of-scope list and `epic-3-5-roadmap.md:85` ("Server half only; the
 client half is Story 2") — spot-checked. Flagged so the type isn't
 overlooked when Story 2 lands.
+
+**Status (2026-09-11, Story 2 landed in `fb3d5d8`):** resolved —
+`MoveItemInput` (`client/src/api/items.ts`) now matches
+`HierarchyRequest` field-for-field.
 
 ---
 

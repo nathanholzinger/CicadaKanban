@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Item } from '../../types';
+import { makeItem } from '../../test/itemFixture';
 import {
   getWorkphaseItemsFrom,
   getMergedColumnItemsFrom,
@@ -9,32 +9,7 @@ import {
   applyItemWriteResponse,
 } from './useItemManagement';
 
-// positionScope is server-computed in production (never hand-set by a
-// caller) — mirror that here from isAttached/parentId so these fixtures
-// stay consistent with real API data instead of needing every test to
-// separately track two things that always agree in practice.
-function item(id: string, overrides: Partial<Item> = {}): Item {
-  const isAttached = overrides.isAttached ?? 1;
-  const parentId = overrides.parentId ?? null;
-  return {
-    id,
-    type: null,
-    parentId,
-    projectId: 'p1',
-    workphaseId: 'todo',
-    title: `Item ${id}`,
-    description: null,
-    position: null,
-    assigneeType: null,
-    agentId: null,
-    isAttached,
-    createdAt: 0,
-    updatedAt: 0,
-    completedAt: null,
-    positionScope: isAttached && parentId ? 'attached-siblings' : 'workflow',
-    ...overrides,
-  };
-}
+const item = makeItem;
 
 describe('getWorkphaseItemsFrom', () => {
   const items = [

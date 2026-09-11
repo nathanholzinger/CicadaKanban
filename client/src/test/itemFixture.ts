@@ -1,0 +1,33 @@
+import type { Item } from '../types';
+
+// The one client-side Item fixture. Was three near-identical 15-field
+// literals across components/workflow/*.test.ts (audit epic-3-5-story-2
+// #5); every remaining Epic 3.5 story adds tests over Item[] fixtures.
+//
+// positionScope is server-computed in production (never hand-set by a
+// caller) — derived here from isAttached/parentId the same way the API
+// does, so fixtures stay consistent with real data instead of every test
+// separately tracking two things that always agree. An explicit override
+// still wins, for tests about the field itself.
+export function makeItem(id: string, overrides: Partial<Item> = {}): Item {
+  const isAttached = overrides.isAttached ?? 1;
+  const parentId = overrides.parentId ?? null;
+  return {
+    id,
+    type: null,
+    parentId,
+    projectId: 'p1',
+    workphaseId: 'todo',
+    title: `Item ${id}`,
+    description: null,
+    position: null,
+    assigneeType: null,
+    agentId: null,
+    isAttached,
+    createdAt: 0,
+    updatedAt: 0,
+    completedAt: null,
+    positionScope: isAttached && parentId ? 'attached-siblings' : 'workflow',
+    ...overrides,
+  };
+}

@@ -180,37 +180,40 @@ export function resolveDropSide(
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
 }
 
-// Applies a resolved item drop: sends the request, updates local state on
-// success (folding in any reindex the server disclosed — Epic 3.5,
-// applyItemWriteResponse), or falls back to a full board reload on failure —
-// extracted from useBoardDnd's handleDragEnd so it, like the rest of this
-// module, can be unit tested without dnd-kit's runtime or a rendered
-// component (TC-2.11). `moveItem` is dependency-injected (not imported
-// directly) purely so a test can substitute a rejecting stub without
-// mocking the module; production code always passes the real
-// client/src/api/items.ts moveItem.
-export async function applyItemMove(
+// The PATCH /items/:id/move body a resolved Card drop turns into: a
+// same-group reorder sends the legacy scope shape, a cross-column move sends
+// the target workphase; either carries `{anchorId, side}` when there's a
+// card to anchor against (TC-2.11). Pure — the request literal is the part
+// worth pinning in a test.
+export function buildMoveInput(resolution: DropResolution, side: 'before' | 'after'): MoveItemInput {
+  const anchor = resolution.anchorId ? { anchorId: resolution.anchorId, side } : {};
+  return resolution.kind === 'reorder'
+    ? { scopeWorkphaseIds: resolution.scopeWorkphaseIds, ...anchor }
+    : { workphaseId: resolution.targetWorkphaseId, ...anchor };
+}
+
+// The one "send a move, fold the response in, or resync" block: on success
+// updates local state (folding in any reindex the server disclosed — Epic
+// 3.5, applyItemWriteResponse), on failure falls back to a full board
+// reload — the server's resolution is authoritative over a stale client
+// guess. Every board-gesture write path goes through here (Card drops via
+// buildMoveInput, attached-sibling reorders with a bare anchor) so the
+// fold/resync contract can't drift between them (audit epic-3-5-story-2
+// #4). `moveItem` is dependency-injected (not imported directly) purely so
+// a test can substitute a rejecting stub without mocking the module;
+// production code always passes the real client/src/api/items.ts moveItem.
+export async function sendItemMove(
   moveItem: (id: string, data: MoveItemInput) => Promise<ItemWriteResponse>,
   activeId: string,
-  resolution: DropResolution,
-  side: 'before' | 'after',
+  input: MoveItemInput,
   setItems: (updater: (prev: Item[]) => Item[]) => void,
   loadBoard: () => void,
 ): Promise<void> {
   try {
-    const updated =
-      resolution.kind === 'reorder'
-        ? await moveItem(activeId, {
-            scopeWorkphaseIds: resolution.scopeWorkphaseIds,
-            ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
-          })
-        : await moveItem(activeId, {
-            workphaseId: resolution.targetWorkphaseId,
-            ...(resolution.anchorId ? { anchorId: resolution.anchorId, side } : {}),
-          });
+    const updated = await moveItem(activeId, input);
     setItems(prev => applyItemWriteResponse(prev, updated));
   } catch (err) {
-    console.error('Failed to reposition item:', err);
+    console.error('Failed to move item:', err);
     loadBoard();
   }
 }

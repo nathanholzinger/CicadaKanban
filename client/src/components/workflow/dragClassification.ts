@@ -1,5 +1,5 @@
 import type { Item } from '../../types';
-import { getDepth, getDescendantIds, getSubtreeHeight } from '../../lib/hierarchy';
+import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
 
 // Epic 3.5 Story 2 — what every item on the board *is* to the item being
 // carried (docs/wiki/board-drag-interaction §4). Pure, like boardDndUtils:
@@ -44,9 +44,11 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
   const freeDescendantIds = new Set<string>();
   if (!active) return { activeId, states, freeDescendantIds };
 
-  // Computed once per drag, not per target.
-  const descendantIds = getDescendantIds(activeId, items);
-  const height = getSubtreeHeight(activeId, items);
+  // Computed once per drag, not per target — one walk yields both the
+  // subtree (for cycle-forming) and its height (for the depth rule).
+  const levels = getDescendantLevels(activeId, items);
+  const descendantIds = new Set(levels.flat());
+  const height = levels.length;
 
   // A Stub drag is confined to its parent's Stub list until Story 5 opens
   // the detach direction: siblings are reposition targets, everything else

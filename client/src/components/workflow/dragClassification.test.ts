@@ -1,30 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../../types';
+import { makeItem } from '../../test/itemFixture';
 import { classifyDragTargets, isWithinDepthCap } from './dragClassification';
 
 // Cases follow docs/test-plans/board-drag-interaction/drag-2-target-
 // classification.md (DRAG-2.n). Every depth case parameterizes on `cap`
 // rather than a literal, per ATT-4.8.
 
-// Mirrors how the API sets positionScope: attached + parented -> a Stub.
+// Positional alias over the shared fixture — these cases only ever vary
+// parent and attachment (positionScope follows from those, per makeItem).
 function item(id: string, parentId: string | null = null, attached = true): Item {
-  return {
-    id,
-    type: null,
-    parentId,
-    projectId: 'p1',
-    workphaseId: 'todo',
-    title: `Item ${id}`,
-    description: null,
-    position: 1,
-    assigneeType: null,
-    agentId: null,
-    isAttached: attached ? 1 : 0,
-    createdAt: 0,
-    updatedAt: 0,
-    completedAt: null,
-    positionScope: attached && parentId ? 'attached-siblings' : 'workflow',
-  };
+  return makeItem(id, { parentId, isAttached: attached ? 1 : 0, position: 1 });
 }
 
 // A root -> ... chain of `length` items named `${prefix}1..N`; returns them.

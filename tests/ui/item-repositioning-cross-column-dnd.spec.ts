@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { dragTo, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
+import { dragTo, pickUp, hoverTo, release, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
 import { API } from '../helpers/api';
 
@@ -213,5 +213,43 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colTwoPhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colTwoPhase.id)).toBe('BCD');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ABCDE');
+  });
+});
+
+test.describe('5: an abandoned drop must not strand the cross-column preview', () => {
+  // handleDragOver re-buckets the carried card into whatever column it's
+  // hovering, optimistically. Releasing over something that resolves to no
+  // drop at all — here a card in Unsorted's "Unknown status" list, whose
+  // workphase no column covers — writes nothing, so that preview has to be
+  // rolled back, exactly as an Escape-cancel rolls it back. Previously it
+  // wasn't: C stayed drawn in Column Two with the server still on Column
+  // One, and the next drag of C snapshotted the wrong workphase (audit
+  // code-quality-audit-epic-3-5-story-2 #1).
+  test('5.a — hover C over Column Two, then release on an Unknown-status card', async ({ page, request, projectSidebar }) => {
+    // An item with no workphase surfaces in Unsorted → Unknown status.
+    const u = await request.post(`${API}/items`, { data: { title: 'Item U', projectId: scenario.project.id } });
+    expect(u.ok()).toBe(true);
+    await page.goto('/');
+    await projectSidebar.select(PROJECT_NAME);
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    const unsorted = page.getByRole('group', { name: 'Unsorted' });
+    await expect(unsorted.getByRole('article', { name: 'Item U', exact: true })).toBeVisible();
+
+    const colOne = page.getByRole('group', { name: 'Column One' });
+    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    await pickUp(page, colOne.getByRole('article', { name: 'Item C', exact: true }));
+    await hoverTo(page, await center(colTwo));
+    // The live preview: C is now drawn in Column Two mid-drag.
+    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+
+    await hoverTo(page, await center(unsorted.getByRole('article', { name: 'Item U', exact: true })));
+    await release(page);
+
+    // Nothing was written, so C is back where it started — on screen and on the server.
+    await expect(colOne.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toHaveCount(0);
+    const c = await getC(request);
+    expect(c.workphaseId).toBe(scenario.colOnePhase.id);
+    expect(c.position).toBe(3.0);
   });
 });

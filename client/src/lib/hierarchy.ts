@@ -14,26 +14,52 @@ export interface SelectOption {
   label: string;
 }
 
-// Collects every descendant of `id`, walking the parentId references.
-// `visited` (seeded with `id`) guards against a corrupted parentId cycle in
-// the data (audit Finding #11) turning this into an infinite loop — once a
-// node has been queued, re-finding it as someone else's "child" can't
-// discover anything new, so it's skipped rather than re-queued forever.
-export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<string> {
-  const result = new Set<string>();
+// parentId -> child ids, one pass over `nodes`. Roots (null parentId) are
+// skipped; a dangling parentId is indexed under its missing parent, which
+// no walk below ever reaches — harmless.
+function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
+  const childrenOf = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (n.parentId === null) continue;
+    const list = childrenOf.get(n.parentId) ?? [];
+    list.push(n.id);
+    childrenOf.set(n.parentId, list);
+  }
+  return childrenOf;
+}
+
+// The one descendant walk: one generation per array, parents before
+// children. `visited` (seeded with `id`) guards against a corrupted parentId
+// cycle in the data (audit Finding #11) turning this into an infinite loop —
+// once a node has been queued, re-finding it as someone else's "child" can't
+// discover anything new, so it's skipped rather than re-queued. Level-
+// ordered so a caller that needs both the id set and the height (drag
+// classification) walks once, and so the guard lives in one loop instead of
+// two (audit epic-3-5-story-2 #3 — the same fold the server made in
+// itemTree.ts).
+export function getDescendantLevels(id: string, nodes: readonly TreeNode[]): string[][] {
+  const childrenOf = childrenByParent(nodes);
+  const levels: string[][] = [];
   const visited = new Set([id]);
-  const queue = [id];
-  while (queue.length > 0) {
-    const current = queue.pop()!;
-    for (const n of nodes) {
-      if (n.parentId === current && !visited.has(n.id)) {
-        visited.add(n.id);
-        result.add(n.id);
-        queue.push(n.id);
+  let frontier = [id];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const current of frontier) {
+      for (const childId of childrenOf.get(current) ?? []) {
+        if (visited.has(childId)) continue;
+        visited.add(childId);
+        next.push(childId);
       }
     }
+    if (next.length > 0) levels.push(next);
+    frontier = next;
   }
-  return result;
+  return levels;
+}
+
+// Every descendant of `id`, as a set.
+export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<string> {
+  return new Set(getDescendantLevels(id, nodes).flat());
 }
 
 // Walks up the parentId chain from `node`, collecting ancestors in
@@ -68,33 +94,11 @@ export function getDepth(id: string, nodes: readonly TreeNode[]): number {
 
 // Levels *below* `id` — a leaf is 0. Counts every descendant, attached or
 // not: for the item hierarchy a detached child still sits under its parent
-// and moves with it (wiki §8), so it counts toward the height. Level-
-// ordered BFS with the same visited-set cycle guard as getDescendantIds
-// (audit Finding #11); the height is the number of generations produced.
+// and moves with it (wiki §8), so it counts toward the height. One level
+// per BFS generation, so the height is how many generations the walk
+// produced.
 export function getSubtreeHeight(id: string, nodes: readonly TreeNode[]): number {
-  const childrenOf = new Map<string, string[]>();
-  for (const n of nodes) {
-    if (n.parentId === null) continue;
-    const list = childrenOf.get(n.parentId) ?? [];
-    list.push(n.id);
-    childrenOf.set(n.parentId, list);
-  }
-  let height = 0;
-  const visited = new Set([id]);
-  let frontier = [id];
-  while (frontier.length > 0) {
-    const next: string[] = [];
-    for (const current of frontier) {
-      for (const childId of childrenOf.get(current) ?? []) {
-        if (visited.has(childId)) continue;
-        visited.add(childId);
-        next.push(childId);
-      }
-    }
-    if (next.length > 0) height++;
-    frontier = next;
-  }
-  return height;
+  return getDescendantLevels(id, nodes).length;
 }
 
 // Reparent dropdown options: every node except the current one and its

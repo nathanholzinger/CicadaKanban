@@ -10,9 +10,14 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
 import { moveItem } from '../../api/items';
-import { buildColumnForWorkphaseMap, resolveDropTarget, resolveDropSide, applyItemMove } from './boardDndUtils';
+import {
+  buildColumnForWorkphaseMap,
+  resolveDropTarget,
+  resolveDropSide,
+  buildMoveInput,
+  sendItemMove,
+} from './boardDndUtils';
 import { classifyDragTargets, type DragClassification } from './dragClassification';
-import { applyItemWriteResponse } from './useItemManagement';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
@@ -77,18 +82,25 @@ export function useBoardDnd(
     }
   }
 
+  // Undoes handleDragOver's optimistic re-bucket. activeItem is the pre-drag
+  // snapshot, so it's exactly the restore source. Needed on every path that
+  // ends a gesture without a server write: Escape (handleDragCancel) and a
+  // drop that resolves to nothing (handleDragEnd's early returns) — without
+  // it the card stays drawn in a column it never moved to, and the *next*
+  // drag of it snapshots that wrong workphaseId (audit epic-3-5-story-2 #1).
+  function restorePreview() {
+    if (!activeItem) return;
+    const original = activeItem;
+    setItems(prev =>
+      prev.map(item => (item.id === original.id ? { ...item, workphaseId: original.workphaseId } : item)),
+    );
+  }
+
   // Escape / a cancelled gesture. Previously unhandled — activeItem (and the
-  // DragOverlay it drives) lingered until the next completed drop, and
-  // handleDragOver's optimistic re-bucket was never undone, leaving the card
-  // drawn in a column it never moved to. activeItem is the pre-drag
-  // snapshot, so it's exactly the restore source.
+  // DragOverlay it drives) lingered until the next completed drop, and the
+  // re-bucket was never undone.
   function handleDragCancel() {
-    if (activeItem) {
-      const original = activeItem;
-      setItems(prev =>
-        prev.map(item => (item.id === original.id ? { ...item, workphaseId: original.workphaseId } : item)),
-      );
-    }
+    restorePreview();
     setActiveItem(null);
     setClassification(null);
   }
@@ -121,7 +133,10 @@ export function useBoardDnd(
 
     setActiveItem(null);
     setClassification(null);
-    if (!over) return;
+    if (!over) {
+      restorePreview();
+      return;
+    }
 
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -157,21 +172,20 @@ export function useBoardDnd(
     // Epic 3.5 owns that gesture.
     if (type === 'attached-child') {
       if (activeId === overId) return;
-      try {
-        const updated = await moveItem(activeId, { anchorId: overId, side });
-        setItems(prev => applyItemWriteResponse(prev, updated));
-      } catch (err) {
-        console.error('Failed to reorder attached child:', err);
-        loadBoard();
-      }
+      await sendItemMove(moveItem, activeId, { anchorId: overId, side }, setItems, loadBoard);
       return;
     }
 
     // ── Item reorder / move ──
     const resolution = resolveDrop(activeId, overId);
-    if (!resolution) return; // dropped on Unsorted, a broken column, or nowhere resolvable
+    if (!resolution) {
+      // Dropped on Unsorted, a broken column, or nowhere resolvable — no
+      // write, so any cross-column preview must be rolled back here too.
+      restorePreview();
+      return;
+    }
 
-    await applyItemMove(moveItem, activeId, resolution, side, setItems, loadBoard);
+    await sendItemMove(moveItem, activeId, buildMoveInput(resolution, side), setItems, loadBoard);
   }
 
   return { sensors, activeItem, classification, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel };

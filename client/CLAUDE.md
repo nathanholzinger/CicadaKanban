@@ -163,7 +163,7 @@ no stored position at all — ordered by `completedAt` instead).
 - **Depth cap:** `ITEM_DEPTH_CAP` (provisionally 6, `server/src/lib/itemTree.ts`) —
   a target at depth `D` (root = 1) is legal iff `D + 1 + subtreeHeight <= CAP`,
   detached descendants counted. Enforced on POST/PUT/move, never in the schema.
-  The client doesn't consume it yet (Story 2 decides how it's shared).
+  The client reads it as `board.itemDepthCap` from `GET /boards/:id` (Story 2, below).
 - **Cross-project reparent is allowed**: `projectId` is derived from the new parent
   and cascades to the whole subtree (detached descendants included). Never sent by
   the client. Cross-*workflow* is accepted too (Sheet/MCP only): workphases are left
@@ -174,7 +174,7 @@ no stored position at all — ordered by `completedAt` instead).
   an attached item inherits from.
 - **Reindex disclosure:** any item-write response may carry `reindexed: {id, position}[]`
   when a lazy reindex renumbered rows the caller never asked about. Absent otherwise.
-  The client half (apply, then check inversions) is Story 2.
+  The client applies it as of Story 2 (below); the inversion tripwire is Story 3.
 - Hierarchy changes log a `hierarchy_change` activity entry on the moving item.
 
 ### Drag-Target Classification (Epic 3.5 Story 2)
@@ -277,7 +277,8 @@ KanbanApp/
 │       ├── App.tsx              ← state root, layout, workflow inheritance
 │       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
 │       ├── lib/                 ← client-only shared logic
-│       │   └── hierarchy.ts     ← getAncestors/getDescendantIds/getDepth/getSubtreeHeight (cycle-guarded tree walks, items+projects)
+│       │   └── hierarchy.ts     ← getAncestors/getDescendantLevels (the one BFS) + getDescendantIds/getSubtreeHeight derived from it, getDepth (cycle-guarded tree walks, items+projects)
+│       ├── test/                ← shared unit-test fixtures (itemFixture.ts::makeItem — the one Item factory; never hand-write a 15-field Item literal in a test)
 │       ├── api/                 ← fetch wrappers, one file per domain (projects.ts,
 │       │                          workflows.ts, items.ts, ...) + shared.ts (apiJson/apiVoid/
 │       │                          apiRequest — always parses the server's real `{ error }`

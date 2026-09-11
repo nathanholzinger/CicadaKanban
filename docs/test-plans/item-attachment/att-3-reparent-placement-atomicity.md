@@ -11,7 +11,7 @@ TC-7.7 and TC-7.11–7.13. This suite holds the attachment-side rules: that
 a reparent always re-resolves, the sequencing, and atomicity.
 
 **Scope note (from the wiki):** §4's rule is about **Attached** items.
-Whether a Free item can be reparented while staying Free is an open
+Whether a Free     item can be reparented while staying Free is an open
 question; no case here covers it.
 
 | ID | Case | Priority | Automated |
