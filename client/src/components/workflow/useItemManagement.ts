@@ -1,7 +1,32 @@
 import { useState } from 'react';
 import type { Item } from '../../types';
-import { createItem } from '../../api/items';
+import { createItem, type ItemWriteResponse } from '../../api/items';
 import { getDescendantIds } from '../../lib/hierarchy';
+
+// Epic 3.5 Story 2 — the client half of docs/wiki/item-positioning §5/§5a:
+// fold an item-write response into local state. Order is the rule: apply
+// every `reindexed` pair the list holds first (an unknown id means "not in
+// this view," never missing data), then upsert the written row — it is
+// authoritative for itself and is also in the pairs, so applying it first
+// and a stale pair over it would be the silent-wrong order §5a warns
+// about. `reindexed` is stripped so it never lands in an Item. The board's
+// render order is derived from `position` on every render (selectBoardItems
+// sorts), so applying the pairs *is* the re-sort — no separate step.
+export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
+  if (!response.reindexed) return upsertItem(items, response);
+  const { reindexed, ...written } = response;
+  const positionById = new Map(reindexed.map(r => [r.id, r.position]));
+  const renumbered = items.map(item => {
+    const position = positionById.get(item.id);
+    return position === undefined || item.position === position ? item : { ...item, position };
+  });
+  return upsertItem(renumbered, written);
+}
+
+function upsertItem(items: readonly Item[], written: Item): Item[] {
+  const exists = items.some(i => i.id === written.id);
+  return exists ? items.map(i => (i.id === written.id ? written : i)) : [...items, written];
+}
 
 // Deterministic tie-break for an exact position match — prevents order from
 // depending on unspecified DB row order (Epic 3.2 Part 5).
@@ -83,7 +108,9 @@ export function removeItemAndDescendants(items: readonly Item[], id: string): It
 }
 
 export function getAttachedChildrenFrom(items: readonly Item[], parentId: string): Item[] {
-  return items.filter(item => item.parentId === parentId && item.positionScope === 'attached-siblings').sort(byPositionThenCreatedAt);
+  return items
+    .filter(item => item.parentId === parentId && item.positionScope === 'attached-siblings')
+    .sort(byPositionThenCreatedAt);
 }
 
 // Counts attached children only — these are the ones the card's expand
@@ -118,25 +145,28 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     return items.find(i => i.id === itemId)?.workphaseId ?? null;
   }
 
+  // Every write path lands through applyItemWriteResponse so a reindex the
+  // server disclosed is applied the same way whether the write came from
+  // the board, the Sheet, or an inline create.
   async function handleCreateItem(workphaseId: string, title: string, type: string | null) {
     try {
       const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
-      setItems(prev => [...prev, newItem]);
+      setItems(prev => applyItemWriteResponse(prev, newItem));
     } catch (err) {
       console.error('Failed to create item:', err);
     }
   }
 
-  function handleItemUpdated(updated: Item) {
-    setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)));
+  function handleItemUpdated(updated: ItemWriteResponse) {
+    setItems(prev => applyItemWriteResponse(prev, updated));
   }
 
   function handleItemDeleted(id: string) {
     setItems(prev => removeItemAndDescendants(prev, id));
   }
 
-  function handleChildCreated(item: Item) {
-    setItems(prev => [...prev, item]);
+  function handleChildCreated(item: ItemWriteResponse) {
+    setItems(prev => applyItemWriteResponse(prev, item));
   }
 
   const childCounts = computeChildCounts(items);

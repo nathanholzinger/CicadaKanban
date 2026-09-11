@@ -103,7 +103,9 @@ adding a fourth and fifth hand-rolled copy — see `epic-3-5-decisions.md` Q2.
 
 ---
 
-### Story 2 — Drop-target validity + relationship overlays
+### Story 2 — Drop-target validity + relationship overlays ✅ (done 2026-09-11)
+**Plan / record:** [`story-2-drop-target-classification.md`](story-2-drop-target-classification.md)
+
 **Goal:** decide, at drag start, what every visible target *is* for the item
 currently being carried — valid, cycle-forming, depth-capped, or inert — and
 show it. Free descendants get the green relationship overlay; depth-capped
@@ -121,15 +123,19 @@ from growing.
 **Verified by:** pick up a Card, assert which targets render green / grey /
 inert — no drop needed.
 
-**Needs attention** (flagged by test planning, 2026-09-10 — see
-`docs/test-plans/board-drag-interaction/INDEX.md`):
-- **What is Inert?** `wiki/board-drag-interaction/` §4 defines it as "not a
-  target for this drag at all" but names no example, so no test case asserts
-  anything is Inert. Name at least one intended Inert target (or state that
-  the set is empty for now) so the classification has a fourth testable
-  state.
-- Classification must use Story 1's strict depth-cap formula (above) — no
+**Resolved** (flagged by test planning 2026-09-10; decided 2026-09-11 —
+see the story plan's decisions):
+- **What is Inert → named in `wiki/board-drag-interaction/` §4.** For a
+  Card drag: the Unsorted bucket, a broken column, an expanded column's
+  outer wrapper. For a Stub drag, until Story 5: everything outside its
+  own parent's Stub list.
+- **Strict depth-cap formula** — `isWithinDepthCap` is the one-line rule,
+  fed by the cap the board response carries (`itemDepthCap`); no
   direction-aware clause.
+- **Scope note:** classification is computed and shown, but no drop
+  *outcome* changed — Stubs stay out of collision for Card drags until
+  Stories 4/6 give that drop a meaning. The §5a inversion tripwire moved to
+  Story 3, where the ordinal preview gives it something to compare against.
 
 ---
 

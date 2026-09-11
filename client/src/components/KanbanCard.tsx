@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import { resolveDropSide } from './workflow/boardDndUtils';
+import { useDropTargetState, type DropTargetView } from './workflow/DragClassificationContext';
 
 // Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
 // full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
@@ -17,6 +18,22 @@ function useLiveDropSide(itemId: string, expectedActiveType: string): 'before' |
   if (!active || !over || over.id !== itemId || active.id === itemId) return null;
   if (active.data.current?.type !== expectedActiveType) return null;
   return resolveDropSide(active.rect.current.translated, over.rect);
+}
+
+// Epic 3.5 Story 2: provisional drag-target overlays (docs/wiki/board-drag-
+// interaction §4). The *classification* is settled and exposed as
+// `data-drop-state` for tests; the look — palette, weight, animation — is
+// deliberately rough until Story 8 tunes it against real gestures. Green:
+// a Free descendant of the carried item ("these are yours"). Dimmed: a real
+// target this item can't use (depth-capped). Valid and Inert draw nothing.
+const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-emerald-500/60';
+const OVERLAY_DEPTH_CAPPED = 'opacity-40';
+
+function dropTargetClass(view: DropTargetView | null): string {
+  if (!view) return '';
+  if (view.isFreeDescendant) return OVERLAY_FREE_DESCENDANT;
+  if (view.state === 'depth-capped') return OVERLAY_DEPTH_CAPPED;
+  return '';
 }
 
 const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
@@ -58,6 +75,8 @@ export default function KanbanCard({
     data: { type: 'card' },
   });
   const dropSide = useLiveDropSide(item.id, 'card');
+  // The DragOverlay copy is the carried item itself, never a target.
+  const dropTarget = useDropTargetState(isOverlay ? '' : item.id);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -85,8 +104,10 @@ export default function KanbanCard({
       {...listeners}
       role="article"
       aria-label={item.title}
+      data-item-id={isOverlay ? undefined : item.id}
+      data-drop-state={dropTarget?.state}
       onClick={() => !isDragging && onCardClick?.(item.id)}
-      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''}`}
+      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClass(dropTarget)}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       {dropSide === 'before' && <div className={DROP_INDICATOR_BEFORE} />}
@@ -185,10 +206,19 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
     data: { type: 'attached-child', parentId: item.parentId },
   });
   const dropSide = useLiveDropSide(item.id, 'attached-child');
+  // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
+  // — same attribute and overlay as a Card, so a test reads them alike.
+  const dropTarget = useDropTargetState(item.id);
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div ref={setNodeRef} style={style} className={`relative ${isDragging ? 'opacity-30' : ''}`}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-item-id={item.id}
+      data-drop-state={dropTarget?.state}
+      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${dropTargetClass(dropTarget)}`}
+    >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       {dropSide === 'before' && <div className={DROP_INDICATOR_BEFORE} />}
       {dropSide === 'after' && <div className={DROP_INDICATOR_AFTER} />}

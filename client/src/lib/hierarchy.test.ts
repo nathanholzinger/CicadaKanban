@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getAncestors, getDescendantIds, buildParentOptions, type TreeNode } from './hierarchy';
+import {
+  getAncestors,
+  getDescendantIds,
+  getDepth,
+  getSubtreeHeight,
+  buildParentOptions,
+  type TreeNode,
+} from './hierarchy';
 
 interface NamedNode extends TreeNode {
   name: string;
@@ -36,6 +43,39 @@ describe('getDescendantIds', () => {
   it('terminates instead of looping forever when the data contains a parentId cycle', () => {
     const cyclic = [node('a', 'b'), node('b', 'a')];
     expect(getDescendantIds('a', cyclic)).toEqual(new Set(['b']));
+  });
+});
+
+// Epic 3.5 Story 2: the client half of docs/wiki/item-attachment §8's depth
+// math, feeding drag-target classification. Same counting convention as the
+// server's hierarchyDepth/subtreeHeight (root = 1, leaf height = 0).
+describe('getDepth / getSubtreeHeight', () => {
+  const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
+
+  it('a root is at depth 1; depth counts the ancestor chain', () => {
+    expect(getDepth('root', nodes)).toBe(1);
+    expect(getDepth('a', nodes)).toBe(2);
+    expect(getDepth('a1x', nodes)).toBe(4);
+  });
+
+  it('a leaf has height 0; height is the deepest generation below', () => {
+    expect(getSubtreeHeight('a1x', nodes)).toBe(0);
+    expect(getSubtreeHeight('a', nodes)).toBe(2);
+    expect(getSubtreeHeight('root', nodes)).toBe(3); // via a -> a1 -> a1x, not the shorter b branch
+  });
+
+  it('a dangling parentId reads as a root; an unknown id is depth 1 / height 0', () => {
+    const orphan = [node('x', 'missing'), node('y', 'x')];
+    expect(getDepth('x', orphan)).toBe(1);
+    expect(getDepth('y', orphan)).toBe(2);
+    expect(getDepth('ghost', orphan)).toBe(1);
+    expect(getSubtreeHeight('ghost', orphan)).toBe(0);
+  });
+
+  it('both terminate against a parentId cycle (Finding #11)', () => {
+    const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
+    expect(typeof getDepth('a', cyclic)).toBe('number');
+    expect(getSubtreeHeight('a', cyclic)).toBe(1); // b and c are one generation; the loop back to a is skipped
   });
 });
 

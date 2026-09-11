@@ -4,6 +4,7 @@ import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import { columns } from '../../src/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
 import { createProject, createWorkflow, createWorkphase, createBoard, createColumn, createItem } from '../fixtures.js';
 
 describe('workflow creation bootstraps a default board', () => {
@@ -83,6 +84,17 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.unsorted.needsAttention).toBe(true);
     expect(res.body.unsorted.uncovered.map((r: { workphase: { id: string } }) => r.workphase.id)).toEqual([done.id]);
     expect(res.body.unsorted.uncovered[0].items.map((i: { id: string }) => i.id)).toEqual([item2.id]);
+  });
+
+  // Epic 3.5 Story 2: the client's drag-target classification reads the cap
+  // off the board rather than hard-coding it (ATT-4.8 — one constant moves
+  // both enforcement points).
+  it('carries the item depth cap the API enforces', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+    const res = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    expect(res.body.itemDepthCap).toBe(ITEM_DEPTH_CAP);
   });
 
   it('reports identical position for the same item across two different boards on one workflow (TC-1.1)', async () => {

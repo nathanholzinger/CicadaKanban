@@ -1,11 +1,15 @@
 # Board Drag Interaction — Contexts, Popping & Drop Resolution
 
-**Build status:** **Not yet implemented.** Rules settled for Epic 3.5;
-Stories 2–6 build them. Today's board supports same-context repositioning
-and cross-column moves only — dragging a Stub out of its parent is
-explicitly held closed pending this work.
+**Build status:** Rules settled for Epic 3.5; Stories 2–6 build them.
+**§4 (target classification) implemented as of Story 2** — computed once
+at drag start (`client/src/components/workflow/dragClassification.ts`),
+shown as a `data-drop-state` attribute plus provisional overlays on every
+Card and Stub. Everything else — contexts, popping, drop bands, attach,
+detach — is **not yet implemented**: today's board supports same-context
+repositioning and cross-column moves only, and dragging a Stub out of its
+parent is explicitly held closed pending Story 5.
 
-**Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/) *(not yet written)*
+**Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
 
 **Related:** [`../item-attachment/`](../item-attachment/) (what the gesture
 is allowed to produce) · [`../item-positioning/`](../item-positioning/)
@@ -143,6 +147,27 @@ being carried**, and that classification is shown. Four states:
 **Classification is computed once, at drag start.** The item being carried
 doesn't change mid-gesture, so neither does what any target *is* to it.
 This is a per-drag property, not a per-hover one.
+
+**Cycle-forming wins.** A descendant of the carried item is Cycle-forming
+even when it would also fail the depth cap — it is never a "real target"
+for its own ancestor.
+
+**What is Inert** (settled in Story 2):
+
+- For a **Card** drag: the Unsorted bucket, a broken column, and an
+  expanded column's outer wrapper (a drop must land on a specific sub-row).
+  These are non-targets for *every* item, not just this one, which is what
+  separates Inert from Depth-capped.
+- For a **Stub** drag, *until Story 5 opens the detach direction*: every
+  target outside its own parent's Stub list. Its siblings are Valid
+  (reposition targets); the parent Card, other Cards, and other Cards'
+  Stubs are Inert. Story 5 replaces this interim rule with the full
+  classification.
+
+**The depth cap reaches the board over the API.** `GET /boards/:id`
+carries `itemDepthCap`, the server's `ITEM_DEPTH_CAP`; the client never
+hard-codes it, so changing the constant moves both enforcement points
+([`../item-attachment/`](../item-attachment/) §8, ATT-4.8).
 
 Settled overlay assignments:
 

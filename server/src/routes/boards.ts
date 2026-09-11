@@ -8,6 +8,7 @@ import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { ITEM_DEPTH_CAP } from '../lib/itemTree.js';
 import { nextPosition } from "../lib/positionResolver.js";
 import { isTerminalLookup, type PositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
@@ -141,6 +142,12 @@ router.get('/:id', (req, res) => {
       invalidItems,
       needsAttention: uncovered.length > 0 || invalidItems.length > 0,
     },
+    // Epic 3.5 Story 2: the board's drag-target classification needs the
+    // same depth cap the API enforces (docs/wiki/item-attachment §8 — one
+    // definition, two enforcement points). Carried on the board response
+    // rather than a shared client/server module, so the client never
+    // hard-codes it.
+    itemDepthCap: ITEM_DEPTH_CAP,
   });
 });
 

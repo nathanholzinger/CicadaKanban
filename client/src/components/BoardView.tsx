@@ -17,6 +17,7 @@ import { useWorkphaseManagement } from './workflow/useWorkphaseManagement';
 import { useColumnManagement } from './workflow/useColumnManagement';
 import { useItemManagement } from './workflow/useItemManagement';
 import { useBoardDnd } from './workflow/useBoardDnd';
+import { DragClassificationContext } from './workflow/DragClassificationContext';
 
 interface BoardViewProps {
   workflowId: string;
@@ -168,15 +169,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleReorderColumns,
   } = useColumnManagement(activeBoardId, loadBoard);
 
-  const { sensors, activeItem, handleDragStart, handleDragOver, handleDragEnd } = useBoardDnd(
-    board,
-    setBoard,
-    items,
-    setItems,
-    findWorkphaseForItem,
-    handleReorderColumns,
-    loadBoard,
-  );
+  const { sensors, activeItem, classification, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } =
+    useBoardDnd(board, setBoard, items, setItems, findWorkphaseForItem, handleReorderColumns, loadBoard);
 
   function handleChildWorkphaseChange(workphaseId: string | null) {
     setChildDefaultWorkphaseId(workphaseId);
@@ -254,41 +248,44 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-          <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4">
-            {board.columns.map(column => (
-              <BoardColumn
-                key={column.id}
-                column={column}
+        <DragClassificationContext value={classification}>
+          <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+            <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4">
+              {board.columns.map(column => (
+                <BoardColumn
+                  key={column.id}
+                  column={column}
+                  getWorkphaseItems={getWorkphaseItems}
+                  getMergedColumnItems={getMergedColumnItems}
+                  childCounts={childCounts}
+                  getAttachedChildren={getAttachedChildren}
+                  defaultExpanded={showAttachedChildrenDefault}
+                  itemTypes={itemTypes}
+                  isCardBeingDragged={activeItem !== null}
+                  onCreateItem={handleCreateItem}
+                  onCardClick={setSelectedItemId}
+                  onEdit={readOnly ? undefined : setEditingColumn}
+                  onDelete={readOnly ? undefined : handleDeleteColumn}
+                />
+              ))}
+
+              <UnsortedBucket
+                uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
+                invalidItems={board.unsorted.invalidItems}
                 getWorkphaseItems={getWorkphaseItems}
-                getMergedColumnItems={getMergedColumnItems}
+                needsAttention={board.unsorted.needsAttention}
+                itemTypes={itemTypes}
                 childCounts={childCounts}
                 getAttachedChildren={getAttachedChildren}
-                defaultExpanded={showAttachedChildrenDefault}
-                itemTypes={itemTypes}
-                isCardBeingDragged={activeItem !== null}
-                onCreateItem={handleCreateItem}
+                defaultExpanded={Boolean(board.showAttachedChildren)}
+                filterProjectId={filterProjectId}
                 onCardClick={setSelectedItemId}
-                onEdit={readOnly ? undefined : setEditingColumn}
-                onDelete={readOnly ? undefined : handleDeleteColumn}
               />
-            ))}
-
-            <UnsortedBucket
-              uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-              invalidItems={board.unsorted.invalidItems}
-              getWorkphaseItems={getWorkphaseItems}
-              needsAttention={board.unsorted.needsAttention}
-              itemTypes={itemTypes}
-              childCounts={childCounts}
-              getAttachedChildren={getAttachedChildren}
-              defaultExpanded={Boolean(board.showAttachedChildren)}
-              filterProjectId={filterProjectId}
-              onCardClick={setSelectedItemId}
-            />
-          </div>
-        </SortableContext>
+            </div>
+          </SortableContext>
+        </DragClassificationContext>
 
         <DragOverlay>
           {activeItem ? <KanbanCard item={activeItem} itemTypes={itemTypes} isOverlay /> : null}

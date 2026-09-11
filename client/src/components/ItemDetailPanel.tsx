@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../types';
-import { fetchItem, updateItem, deleteItem } from '../api/items';
+import { fetchItem, updateItem, deleteItem, type ItemWriteResponse } from '../api/items';
 import {
   PILL_DEPTH,
   typePillClass,
@@ -29,10 +29,12 @@ interface ItemDetailPanelProps {
   childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
-  onUpdate: (item: Item) => void;
+  // Receive the raw write response so a disclosed reindex reaches the board
+  // (Epic 3.5, useItemManagement's applyItemWriteResponse).
+  onUpdate: (item: ItemWriteResponse) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
-  onChildCreated: (item: Item) => void;
+  onChildCreated: (item: ItemWriteResponse) => void;
 }
 
 // Owns only the open/close slide transition. All per-item state (detail,
@@ -83,10 +85,10 @@ interface ItemDetailPanelContentProps {
   childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
-  onUpdate: (item: Item) => void;
+  onUpdate: (item: ItemWriteResponse) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
-  onChildCreated: (item: Item) => void;
+  onChildCreated: (item: ItemWriteResponse) => void;
 }
 
 function ItemDetailPanelContent({

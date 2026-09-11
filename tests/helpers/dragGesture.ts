@@ -29,20 +29,45 @@ import type { Locator, Page } from '@playwright/test';
 // gesture precision.
 export type Point = { x: number; y: number };
 
-export async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<Point>) {
+// Pointer down on `source` and past the activation distance — the drag is
+// now live (onDragStart has fired) but nothing has been dropped. Pair with
+// `release` or `cancel`. Exposed on its own (Epic 3.5 Story 2) so a spec can
+// assert what the board shows *during* a drag without committing a drop.
+export async function pickUp(page: Page, source: Locator): Promise<Point> {
   const start = await center(source);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x + 10, start.y + 10, { steps: 5 });
+  return start;
+}
 
-  const rough = await resolveTarget();
-  await page.mouse.move(rough.x, rough.y, { steps: 15 });
-  await page.mouse.move(rough.x, rough.y, { steps: 2 }); // let the re-bucket preview/reflow settle
+// Hover the live drag over a point, in enough steps for dnd-kit's collision
+// detection to keep up.
+export async function hoverTo(page: Page, target: Point) {
+  await page.mouse.move(target.x, target.y, { steps: 15 });
+  await page.mouse.move(target.x, target.y, { steps: 2 }); // let the re-bucket preview/reflow settle
+}
 
+// Drop wherever the pointer is.
+export async function release(page: Page) {
+  await page.mouse.up();
+}
+
+// Abandon the drag without dropping: dnd-kit's PointerSensor cancels on
+// Escape (onDragCancel fires, nothing is written), then the button is let go.
+export async function cancel(page: Page) {
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+}
+
+export async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<Point>) {
+  await pickUp(page, source);
+  await hoverTo(page, await resolveTarget());
+  // Re-resolve after the reflow (see header comment) for the precise approach.
   const settled = await resolveTarget();
   await page.mouse.move(settled.x, settled.y, { steps: 10 });
   await page.mouse.move(settled.x, settled.y, { steps: 2 });
-  await page.mouse.up();
+  await release(page);
 }
 
 export async function boxOf(locator: Locator) {

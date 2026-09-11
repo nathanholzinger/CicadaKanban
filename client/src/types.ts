@@ -116,6 +116,10 @@ export interface BoardWithDetails extends Board {
     invalidItems: Item[];
     needsAttention: boolean;
   };
+  // Epic 3.5: the hierarchy depth cap the API enforces on every reparent
+  // (docs/wiki/item-attachment §8). Read here for drag-target
+  // classification; never hard-coded client-side.
+  itemDepthCap: number;
 }
 
 export interface WorkflowTemplatePhase {

@@ -4,8 +4,10 @@
 be disclosed to the caller," and §2's cross-workflow scope-change row
 implemented as of Epic 3.5 Story 1 (server side — the disclosure is an
 optional `reindexed: {id, position}[]` field on every item-write response).
-**Settled but not yet implemented:** §5a and §2's amended "Client-side
-role" (Story 2).
+§5a's apply order (pairs, then the written item) implemented in Story 2
+(`applyItemWriteResponse`, on every item-write path). **Settled but not
+yet implemented:** §5a's inversion tripwire and §2's amended "Client-side
+role" (the ordinal preview / pending marker) — Story 3.
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
@@ -283,7 +285,14 @@ Shape of the disclosure:
 
 ## 5a. Client reconciliation order
 
-**Added by Epic 3.5; not yet implemented.** Applies to any client holding a
+**Added by Epic 3.5.** Steps 1–2 implemented in Story 2
+(`client/src/components/workflow/useItemManagement.ts`'s
+`applyItemWriteResponse`, used by the board move, the attached-sibling
+reorder, inline create, and the Sheet's PUT alike); steps 3–4 land with
+Story 3's ordinal preview, which is what gives an inversion something to
+be checked against. Note that this client derives its render order from
+`position` on every render, so applying the pairs *is* the re-sort — step
+4 has no separate mechanism here. Applies to any client holding a
 locally-ordered list, though the board drag is what exercises it — see
 [`../board-drag-interaction/`](../board-drag-interaction/) §10.
 

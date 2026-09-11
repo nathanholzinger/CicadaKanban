@@ -11,6 +11,8 @@ import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item, Column } from '../../types';
 import { moveItem } from '../../api/items';
 import { buildColumnForWorkphaseMap, resolveDropTarget, resolveDropSide, applyItemMove } from './boardDndUtils';
+import { classifyDragTargets, type DragClassification } from './dragClassification';
+import { applyItemWriteResponse } from './useItemManagement';
 
 // Drag-and-drop resolution + handlers for the board's DndContext: dropping on
 // Unsorted, a broken column, a merged column, or a specific expanded sub-row
@@ -36,6 +38,11 @@ export function useBoardDnd(
   loadBoard: () => Promise<void>,
 ) {
   const [activeItem, setActiveItem] = useState<Item | null>(null);
+  // Epic 3.5 Story 2: what every item on the board is to the carried item —
+  // computed once here at drag start and never re-derived mid-gesture
+  // (docs/wiki/board-drag-interaction §4, DRAG-2.4). Provided to Cards and
+  // Stubs via DragClassificationContext.
+  const [classification, setClassification] = useState<DragClassification | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -50,13 +57,40 @@ export function useBoardDnd(
   // (see resolveDropTarget's doc comment).
   function resolveDrop(activeId: string, overId: string) {
     const activeWorkphaseId = activeItem?.id === activeId ? activeItem.workphaseId : findWorkphaseForItem(activeId);
-    return resolveDropTarget(activeId, activeWorkphaseId, overId, board?.columns ?? [], columnForWorkphase, findWorkphaseForItem);
+    return resolveDropTarget(
+      activeId,
+      activeWorkphaseId,
+      overId,
+      board?.columns ?? [],
+      columnForWorkphase,
+      findWorkphaseForItem,
+    );
   }
 
   function handleDragStart(event: DragStartEvent) {
     if (event.active.data.current?.type !== 'column') {
-      setActiveItem(items.find(i => i.id === String(event.active.id)) ?? null);
+      const activeId = String(event.active.id);
+      setActiveItem(items.find(i => i.id === activeId) ?? null);
+      // The cap comes off the board response (never hard-coded client-side)
+      // so the server's constant governs both enforcement points.
+      if (board) setClassification(classifyDragTargets(activeId, items, board.itemDepthCap));
     }
+  }
+
+  // Escape / a cancelled gesture. Previously unhandled — activeItem (and the
+  // DragOverlay it drives) lingered until the next completed drop, and
+  // handleDragOver's optimistic re-bucket was never undone, leaving the card
+  // drawn in a column it never moved to. activeItem is the pre-drag
+  // snapshot, so it's exactly the restore source.
+  function handleDragCancel() {
+    if (activeItem) {
+      const original = activeItem;
+      setItems(prev =>
+        prev.map(item => (item.id === original.id ? { ...item, workphaseId: original.workphaseId } : item)),
+      );
+    }
+    setActiveItem(null);
+    setClassification(null);
   }
 
   function handleDragOver(event: DragOverEvent) {
@@ -76,7 +110,9 @@ export function useBoardDnd(
     // SortableContext animation, not a workphase re-bucket.
     if (!resolution || resolution.kind !== 'move') return;
 
-    setItems(prev => prev.map(item => (item.id === activeId ? { ...item, workphaseId: resolution.targetWorkphaseId } : item)));
+    setItems(prev =>
+      prev.map(item => (item.id === activeId ? { ...item, workphaseId: resolution.targetWorkphaseId } : item)),
+    );
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -84,6 +120,7 @@ export function useBoardDnd(
     const type = active.data.current?.type;
 
     setActiveItem(null);
+    setClassification(null);
     if (!over) return;
 
     const activeId = String(active.id);
@@ -122,7 +159,7 @@ export function useBoardDnd(
       if (activeId === overId) return;
       try {
         const updated = await moveItem(activeId, { anchorId: overId, side });
-        setItems(prev => prev.map(item => (item.id === activeId ? updated : item)));
+        setItems(prev => applyItemWriteResponse(prev, updated));
       } catch (err) {
         console.error('Failed to reorder attached child:', err);
         loadBoard();
@@ -137,5 +174,5 @@ export function useBoardDnd(
     await applyItemMove(moveItem, activeId, resolution, side, setItems, loadBoard);
   }
 
-  return { sensors, activeItem, handleDragStart, handleDragOver, handleDragEnd };
+  return { sensors, activeItem, classification, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel };
 }

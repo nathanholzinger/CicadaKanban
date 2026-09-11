@@ -1,0 +1,139 @@
+import type { Page } from '@playwright/test';
+import { test, expect } from '../fixtures';
+import { API } from '../helpers/api';
+import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
+import { pickUp, hoverTo, cancel, center } from '../helpers/dragGesture';
+
+// Epic 3.5 Story 2 — docs/wiki/board-drag-interaction §4: every visible
+// target is classified against the carried item at drag start, and that
+// classification is what the board shows. Cases from
+// docs/test-plans/board-drag-interaction/drag-2-target-classification.md.
+//
+// Asserts the *state* (the `data-drop-state` attribute), never the overlay's
+// look — that's Story 8's. Nothing is dropped: the drag is picked up,
+// hovered, and cancelled, so no write happens and no outcome is asserted.
+
+const PROJECT = 'Drag Classification Project';
+
+function target(page: Page, id: string) {
+  return page.locator(`[data-item-id="${id}"]`);
+}
+
+async function createItem(request: Parameters<typeof seedTemplatedWorkflow>[0], data: Record<string, unknown>) {
+  const res = await request.post(`${API}/items`, { data });
+  expect(res.ok()).toBe(true);
+  return res.json() as Promise<{ id: string }>;
+}
+
+test.describe('drag-target classification', () => {
+  test.beforeAll(async ({ request }) => {
+    await request.post(`${API}/test/reset`);
+  });
+
+  test('every visible target is classified at pickup, stays classified while hovering, and clears on cancel', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, PROJECT);
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
+    const board = await (await request.get(`${API}/boards/${boards[0].id}`)).json();
+    const cap: number = board.itemDepthCap;
+    expect(typeof cap).toBe('number');
+
+    // X: the carried Card, with an attached Stub S, a detached child D (its
+    // own Card) and D's own child D1 — DRAG-2.2/2.5's fixture.
+    const x = await createItem(request, { title: 'X', projectId: project.id, workphaseId: todo.id });
+    const s = await createItem(request, { title: 'S', parentId: x.id });
+    const d = await createItem(request, { title: 'D', parentId: x.id, isAttached: false, workphaseId: todo.id });
+    const d1 = await createItem(request, { title: 'D1', parentId: d.id });
+
+    // X's subtree is 2 levels tall (X -> D -> D1, through the detached
+    // branch — ATT-4.5), so the deepest legal parent for X sits at depth
+    // cap - 1 - 2. A chain of nested Stubs down to exactly that depth ends
+    // in T_ok; one more level under it is T_over — DRAG-2.3/2.7's fixture,
+    // parameterized on the cap the board reports, never a literal.
+    const xHeight = 2;
+    const okDepth = cap - 1 - xHeight;
+    expect(okDepth).toBeGreaterThanOrEqual(1);
+    let deepest = await createItem(request, { title: 'T1', projectId: project.id, workphaseId: todo.id });
+    for (let depth = 2; depth <= okDepth; depth++) {
+      deepest = await createItem(request, { title: `T${depth}`, parentId: deepest.id });
+    }
+    const tOk = deepest;
+    const tOver = await createItem(request, { title: `T${okDepth + 1}`, parentId: tOk.id });
+
+    // V: an unrelated Card in the other column, to hover across to.
+    const v = await createItem(request, { title: 'V', projectId: project.id, workphaseId: inProgress.id });
+
+    await page.goto('/');
+    await projectSidebar.select(PROJECT);
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await expect(page.getByRole('article', { name: 'X', exact: true })).toBeVisible();
+
+    // Nothing is classified before a drag begins.
+    await expect(page.locator('[data-drop-state]')).toHaveCount(0);
+
+    await pickUp(page, page.getByRole('article', { name: 'X', exact: true }));
+
+    const expectStates = async () => {
+      await expect(target(page, v.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.1
+      await expect(target(page, tOk.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.3, 2.7 (a Stub)
+      await expect(target(page, tOver.id)).toHaveAttribute('data-drop-state', 'depth-capped'); // DRAG-2.3, 2.6
+      for (const id of [x.id, s.id, d.id, d1.id]) {
+        await expect(target(page, id).first()).toHaveAttribute('data-drop-state', 'cycle-forming'); // DRAG-2.2
+      }
+    };
+    await expectStates();
+
+    // DRAG-2.4: hover across the board — over the other column, over V,
+    // back over a Stub chain — and nothing changes.
+    await hoverTo(page, await center(page.getByRole('group', { name: 'In Progress' })));
+    await expectStates();
+    await hoverTo(page, await center(target(page, v.id)));
+    await expectStates();
+    await hoverTo(page, await center(target(page, tOk.id)));
+    await expectStates();
+
+    await cancel(page);
+
+    // The classification is per-drag: gone once the drag is, and nothing moved.
+    await expect(page.locator('[data-drop-state]')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'X', exact: true })).toBeVisible();
+    const reloaded = await (await request.get(`${API}/items/${x.id}`)).json();
+    expect(reloaded.workphaseId).toBe(todo.id);
+    expect(reloaded.parentId).toBeNull();
+  });
+
+  test('a Stub drag classifies its siblings valid and everything else inert (interim until Story 5)', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const name = 'Stub Drag Classification Project';
+    const { project, workflow } = await seedTemplatedWorkflow(request, name);
+    const [todo] = pickWorkphases(workflow, 'Todo');
+    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const s1 = await createItem(request, { title: 'S1', parentId: p.id });
+    const s2 = await createItem(request, { title: 'S2', parentId: p.id });
+    const q = await createItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+    const sq = await createItem(request, { title: 'SQ', parentId: q.id });
+
+    await page.goto('/');
+    await projectSidebar.select(name);
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await expect(target(page, s1.id)).toBeVisible();
+
+    await pickUp(page, target(page, s1.id).getByRole('button', { name: 'S1' }));
+
+    await expect(target(page, s2.id)).toHaveAttribute('data-drop-state', 'valid');
+    await expect(target(page, s1.id)).toHaveAttribute('data-drop-state', 'cycle-forming');
+    await expect(target(page, p.id)).toHaveAttribute('data-drop-state', 'inert');
+    await expect(target(page, q.id)).toHaveAttribute('data-drop-state', 'inert');
+    await expect(target(page, sq.id)).toHaveAttribute('data-drop-state', 'inert');
+
+    await cancel(page);
+    await expect(page.locator('[data-drop-state]')).toHaveCount(0);
+  });
+});

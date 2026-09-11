@@ -57,6 +57,46 @@ export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): 
   return ancestors;
 }
 
+// 1-based hierarchy depth: a root is at depth 1 (docs/wiki/item-attachment
+// §8's counting convention — the server's hierarchyDepth uses the same).
+// Built on getAncestors, so a dangling parentId reads as a root and a
+// corrupted cycle terminates. An id absent from `nodes` is depth 1.
+export function getDepth(id: string, nodes: readonly TreeNode[]): number {
+  const self = nodes.find(n => n.id === id);
+  return self ? getAncestors(self, nodes).length + 1 : 1;
+}
+
+// Levels *below* `id` — a leaf is 0. Counts every descendant, attached or
+// not: for the item hierarchy a detached child still sits under its parent
+// and moves with it (wiki §8), so it counts toward the height. Level-
+// ordered BFS with the same visited-set cycle guard as getDescendantIds
+// (audit Finding #11); the height is the number of generations produced.
+export function getSubtreeHeight(id: string, nodes: readonly TreeNode[]): number {
+  const childrenOf = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (n.parentId === null) continue;
+    const list = childrenOf.get(n.parentId) ?? [];
+    list.push(n.id);
+    childrenOf.set(n.parentId, list);
+  }
+  let height = 0;
+  const visited = new Set([id]);
+  let frontier = [id];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const current of frontier) {
+      for (const childId of childrenOf.get(current) ?? []) {
+        if (visited.has(childId)) continue;
+        visited.add(childId);
+        next.push(childId);
+      }
+    }
+    if (next.length > 0) height++;
+    frontier = next;
+  }
+  return height;
+}
+
 // Reparent dropdown options: every node except the current one and its
 // descendants (either would create a cycle), preceded by a "none" entry.
 //

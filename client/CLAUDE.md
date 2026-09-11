@@ -177,6 +177,31 @@ no stored position at all — ordered by `completedAt` instead).
   The client half (apply, then check inversions) is Story 2.
 - Hierarchy changes log a `hierarchy_change` activity entry on the moving item.
 
+### Drag-Target Classification (Epic 3.5 Story 2)
+- When a Card or Stub is picked up, `useBoardDnd` classifies every item on the board
+  against it **once** (`workflow/dragClassification.ts::classifyDragTargets` — pure,
+  unit-tested): `valid` / `cycle-forming` (the item and its whole subtree, attached or
+  not) / `depth-capped` (`D + 1 + h > cap`, `isWithinDepthCap`) / `inert`. The cap is
+  `board.itemDepthCap` from `GET /boards/:id`, never hard-coded. Stubs are classified
+  individually, same as Cards. A Stub drag is interim until Story 5: siblings valid,
+  everything else inert.
+- Cards and Stubs read their state through `workflow/DragClassificationContext.ts`'s
+  `useDropTargetState(itemId)` (a context provided by BoardView inside DndContext — no
+  prop drilling) and render `data-item-id` + `data-drop-state` attributes (the E2E
+  surface) plus provisional overlays: green ring for a Free descendant of the carried
+  item, dimmed for depth-capped. Story 8 tunes the look.
+- **Classification doesn't change any drop outcome yet.** `boardCollisionDetection`
+  still excludes Stubs from Card drags; Stories 3/4/6 consult the map when they give
+  those drops a meaning. Rules: `docs/wiki/board-drag-interaction/README.md` §4.
+- `handleDragCancel` (Escape mid-drag) restores `handleDragOver`'s optimistic
+  re-bucket from the drag-start snapshot and clears the DragOverlay — previously
+  neither happened.
+- **Reindex disclosure, client half:** every item-write response may carry
+  `reindexed: {id, position}[]` (`api/items.ts::ItemWriteResponse`); every write path
+  (board move, attached-sibling reorder, inline create, the Sheet's PUT) folds it in
+  through `useItemManagement.ts::applyItemWriteResponse` — pairs first, written item
+  last. Never merge a written row alone.
+
 ---
 
 ## API Routes
@@ -252,7 +277,7 @@ KanbanApp/
 │       ├── App.tsx              ← state root, layout, workflow inheritance
 │       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
 │       ├── lib/                 ← client-only shared logic
-│       │   └── hierarchy.ts     ← getAncestors/getDescendantIds (cycle-guarded tree walks, items+projects)
+│       │   └── hierarchy.ts     ← getAncestors/getDescendantIds/getDepth/getSubtreeHeight (cycle-guarded tree walks, items+projects)
 │       ├── api/                 ← fetch wrappers, one file per domain (projects.ts,
 │       │                          workflows.ts, items.ts, ...) + shared.ts (apiJson/apiVoid/
 │       │                          apiRequest — always parses the server's real `{ error }`
@@ -281,10 +306,10 @@ KanbanApp/
 │           ├── AgentsModal.tsx
 │           ├── item-detail/          ← ItemDetailPanel's sections (Children/Labels/Attachments/Parent/Agent/ActivityLog) + pillUtils.ts (shared Tailwind tokens) + DetailSection.tsx (section header + form-actions wrapper)
 │           ├── sidebar/              ← SortableProjectRow.tsx + projectTreeUtils.ts (sidebar-only tree helpers)
-│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement, useBoardDnd (all drag logic) + boardDndUtils.ts (pure, unit-tested drag/drop resolution helpers)
+│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement (+ applyItemWriteResponse), useBoardDnd (all drag logic) + boardDndUtils.ts (pure, unit-tested drag/drop resolution helpers) + dragClassification.ts (pure per-drag target classification) + DragClassificationContext.ts (useDropTargetState)
 ├── tests/                       ← Playwright E2E
 │   ├── api/                     ← REST endpoint tests via Playwright request fixture
-│   ├── helpers/                 ← api.ts, db.ts, seed.ts, itemRepositioningScenario.ts, dragGesture.ts (the one dnd-kit pointer recipe — never hand-roll a drag in a spec)
+│   ├── helpers/                 ← api.ts, db.ts, seed.ts, itemRepositioningScenario.ts, dragGesture.ts (the one dnd-kit pointer recipe: pickUp/hoverTo/release/cancel + dragTo — never hand-roll a drag in a spec)
 │   └── ui/                      ← browser interaction tests (boards.spec.ts, boards-layer.spec.ts, ...)
 └── bruno/                       ← saved HTTP requests (manual API testing)
 ```
