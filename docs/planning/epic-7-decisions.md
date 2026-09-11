@@ -52,9 +52,25 @@ Whichever lands, the same rule must hold at both the Sheet (before the
 option is offered) and the API (on the write) — see
 [`../wiki/item-attachment/`](../wiki/item-attachment/README.md) §7.
 
-**Until this is decided, the interim behavior of the API for a cross-
-workflow parent is unspecified**, and the Epic 3.5 test plans say so
-explicitly rather than guessing.
+**Decided 2026-09-10 (Epic 3.5 Story 1): accept, and neither remap nor
+null out.** The API takes the reparent as-is — the item gets the new
+project, every `workphaseId` in the moved subtree stays what it was, and
+the board's Unsorted → "Unknown status" bucket (which already handles a
+foreign-but-existing `workphaseId`, not only a null one) shows the items
+until a user re-files them. An item should be able to move to any
+project; the board's needs-attention surface exists precisely to display
+an item it recognizes as the project's but can't place in a workphase.
+Recorded in the wiki at
+[`../wiki/item-attachment/`](../wiki/item-attachment/README.md) §9 and
+[`../wiki/item-positioning/`](../wiki/item-positioning/README.md) §7.3
+(items left holding a foreign workphase have their position nulled; a
+later re-file assigns a fresh one).
+
+**What's left for Epic 7** is therefore only the UI: a "move to project"
+action that presents the remapping choice and issues the same reparent
+plus per-item workphase moves — on top of the accepting API, not instead
+of it. The "accept and null out" option is dropped: it would discard
+information the "Unknown status" bucket can display, for no gain.
 
 ### Q2. Does "move to project" also cover *non-reparenting* project changes?
 

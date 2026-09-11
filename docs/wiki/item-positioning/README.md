@@ -1,9 +1,9 @@
 # Item Positioning & Board-Scoped Ordering
 
 **Build status:** §1–§6 implemented (Epic 3.2), except where marked.
-**Settled but not yet implemented** — Epic 3.5: §7 (Story 1), §5's
-"Reindexing must be disclosed to the caller," §5a, and §2's amended
-"Client-side role."
+**Settled but not yet implemented** — Epic 3.5: §7, §5's "Reindexing
+must be disclosed to the caller," and §2's cross-workflow scope-change
+row (all Story 1); §5a and §2's amended "Client-side role" (Story 2).
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
@@ -177,6 +177,8 @@ never when the scope is unchanged:
 | Attach ↔ detach toggle | Yes (parent-scoped ↔ workflow-scoped) | Fresh position |
 | Reparent while staying attached | Yes (old parent's siblings → new parent's) | Fresh position |
 | `cascadeWorkphaseToAttachedDescendants` | No (still parent-scoped regardless of workphaseId) | Position untouched — unchanged from today |
+| Workphase change, no anchor | No (workflow-scoped either way) | Position kept — the addendum above |
+| Cross-workflow reparent, for each subtree item keeping its own workphase (Epic 3.5, §7.3) | Yes (old workflow's scope → none) | Position nulled; re-filing later assigns a fresh one via the no-position path |
 | Active → done transition | N/A — see §6 | Position dropped entirely, not reassigned |
 
 ## 3. Attached-child sibling reordering
@@ -398,6 +400,13 @@ server validates the anchor's scope against where the item will be after
 the reparent, not where it is now; this is §7.2's sequencing rule seen from
 the validation side.
 
+**An anchor outside the resulting scope is rejected** — 400, and per
+[`../item-attachment/`](../item-attachment/) §6 nothing in the request
+commits: not the reparent, not the workphase change, not the cascade. The
+same applies to an anchor that doesn't exist or has no position (§7.4).
+There is no fallback that ignores the anchor and appends instead; a
+request that names an anchor means that anchor.
+
 ### 7.2 Reparenting re-resolves position, and the order matters
 
 A reparent-with-placement always resolves a fresh position, and always
@@ -406,10 +415,11 @@ derived from the new parent, so resolving first would resolve against the
 scope being left. Rationale and the Free-item exception:
 [`../item-attachment/`](../item-attachment/) §4–§5.
 
-The scope-change table in §2 gains no new rows from this epic — a
+The scope-change table in §2 gains no new rows from the *gesture* — a
 gesture-driven attach, detach, or reparent lands on exactly the rows
 already there. What's new is only that a single request can now carry the
-scope change and the placement together.
+scope change and the placement together. (The one row the epic does add
+comes from the API-only cross-workflow case, §7.3.)
 
 ### 7.3 Cross-project reparenting doesn't change the comparison scope
 
@@ -421,6 +431,26 @@ both sides of the move is the same one.
 **Consequence:** cross-project placement resolution is not a special case.
 It re-resolves because §7.2 says every reparent does, not because the
 project changed. There is no cross-project positioning rule to write.
+
+**Cross-*workflow* reparenting (API-only — see
+[`../item-attachment/`](../item-attachment/) §9) is different in one
+way.** An *attached* item's placement is still unremarkable — it lands in
+its new parent's sibling scope, which has nothing to do with workflows.
+But every item in the moved subtree that keeps its own `workphaseId` — the
+moved item itself if it is Free, and every detached descendant — now
+holds a workphase from a workflow its project doesn't use. Those items
+sit in "Unknown status," which is not position-ordered (`positionScope`
+is `"none"`), and a position number resolved in the old workflow's scope
+means nothing there.
+
+**So the reparent nulls their `position`.** This keeps the invariant
+that an item with no meaningful comparison scope has no stored position —
+the same treatment §6 gives a done item, for the same reason. It also
+means re-filing needs no new rule: when a user later moves the item into
+a workphase of the new workflow, it has no position to keep and takes the
+append fallback through §2's existing "no existing position" path, like a
+reopened done item or a first-time assignment. The scope-change table in
+§2 gains this as its one new row from the epic.
 
 ### 7.4 Done columns accept drops, but never positioned inserts
 

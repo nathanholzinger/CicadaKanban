@@ -38,33 +38,42 @@ the same tests.
 
 ## Explicitly not covered (wiki "Open questions" — do not derive)
 
-- **Free-item reparent while staying Free** (Story 9) — no case; ATT-3's
-  scope note records that §4 is about Attached items only.
+- **Free-item reparent while staying Free *as a board gesture*** (Story 9)
+  — no case. *(The API rule itself was settled 2026-09-11 — see below.)*
 - **`CAP`'s real value** (Story 7) — cases parameterize on `CAP`, never on 6.
 - **Beyond the cap** (pagination/folder scheme) — not MVP, no case.
-- **Cross-workflow reparent at the API** — no rule exists; recorded in
-  [`../../planning/epic-7-decisions.md`](../../planning/epic-7-decisions.md).
+- ~~**Cross-workflow reparent at the API** — no rule exists; recorded in
+  [`../../planning/epic-7-decisions.md`](../../planning/epic-7-decisions.md).~~
+  *Superseded 2026-09-10 — accepted at the API, see below.*
 
-## Flagged for the Product Owner
+## Flagged for the Product Owner — all resolved 2026-09-10
 
-Derived cases deliberately stop short where the wiki is silent. Each of
-these would sharpen or add a case once answered:
+Derived cases deliberately stopped short where the wiki was silent. Each
+answer below has been written into the wiki; the affected cases should be
+sharpened when Story 1's plan is written:
 
-1. **§8 — over-cap subtrees and move direction.** "Only a gesture that
-   would *increase* depth past the cap is refused" and the formula
-   `D + 1 + h <= CAP` disagree when the moving subtree is already taller
-   than `CAP`: moving it to a shallower parent *decreases* its deepest
-   leaf's depth but can still fail the formula. ATT-4.7 covers only the
-   uncontested parts. Which reading is the rule?
-2. **§8/§9 — detached descendants.** The PO confirmed (2026-09-10) that
-   "entire descendant subtree" and `draggedSubtreeHeight` both include
-   detached descendants. ATT-4.5 and ATT-5.2 are written that way; the
-   wiki text would benefit from saying so explicitly.
-3. **§1 — a parentless "attach" request.** The wiki says a top-level item
-   is always Free, but not whether setting the attachment flag with no
-   parent is *rejected* or *ignored*. ATT-1.1 asserts only the outcome.
-4. **§7.1 (positioning) — an anchor outside the resulting scope.** The
-   wiki says the server "validates the anchor's scope against where the
-   item will be," which implies a rejection path but doesn't state it.
-   [TC-7.10](../item-positioning/part-7-board-placement-intents.md) is
-   written as a P1 rejection; confirm.
+1. **§8 — over-cap subtrees and move direction → strict.** The formula
+   `D + 1 + h <= CAP` is the whole rule; the "increase" sentence was
+   removed. ATT-4.7 can now assert that an already-over-cap subtree is
+   refused for *every* target, including a shallower one.
+2. **§8/§9 — detached descendants → now explicit in the wiki.** ATT-4.5
+   and ATT-5.2 stand as written.
+3. **§1 — a parentless "attach" request → rejected (400)**, and clearing
+   `parentId` clears the flag. ATT-1.1 can assert the rejection, not only
+   the outcome.
+4. **§7.1 (positioning) — an anchor outside the resulting scope →
+   rejected (400), nothing commits.** TC-7.10 stands as written.
+
+Newly settled alongside these, with no case yet (derive when Story 1's
+plan is written): §4's Free-item reparent at the API (flag omitted keeps
+current state), §7's "every write" clause (cap on create/edit/move), §9's
+cross-workflow acceptance ("Unknown status"), §11's reparent-to-root via
+`parentId: null`, §11a's activity log, and positioning §7.3's position
+nulling for subtree items left holding a foreign workphase.
+
+ATT-3's scope note ("§4 is about Attached items only") is now partly
+stale: Free-item reparent is settled at the API and derivable; only the
+*gesture* remains open.
+
+Cross-workflow reparent at the API is therefore **no longer** uncovered —
+the "Explicitly not covered" bullet above is superseded.

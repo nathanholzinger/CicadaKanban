@@ -2,8 +2,9 @@
 
 **Build status:** The Free/Attached state model and its consequences are
 **implemented as of Epic 3**. The rules below that describe *reparenting
-placement* (§4–§8) are **settled but not yet implemented** — Epic 3.5
-Story 1 builds them.
+placement* (§4–§8), §1's parentless-attach rejection, §9's cross-workflow
+acceptance, §11's reparent-to-root, and §11a's activity log are
+**settled but not yet implemented** — Epic 3.5 Story 1 builds them.
 
 **Test suite:** [`../../test-plans/item-attachment/`](../../test-plans/item-attachment/) *(not yet written)*
 
@@ -31,6 +32,13 @@ attachment flag is clear ("detached").
 - **A detached child is Free**, exactly as Free as a top-level item. There
   is no third status. "Detached child" describes where it sits in the
   hierarchy; "Free" describes how it behaves.
+- **"Attached with no parent" is rejected, not ignored.** A write that
+  sets the attachment flag on an item that has (or would have) no parent
+  is refused with a 400 and stores nothing. The request can only be a
+  client bug, and silently accepting it would leave a stray flag on the
+  row that later attaches the item the instant it gains a parent. The
+  invariant *attached ⇒ has a parent* holds in the stored row, not only in
+  the reading: a write that clears `parentId` also clears the flag.
 
 The state determines three things at once, and they always move together:
 
@@ -78,9 +86,9 @@ Attached item.** An attached item's position is only meaningful among its
 old siblings; carried into a new parent's list it means nothing. So a
 reparent always resolves a fresh position in the *new* scope.
 
-Scope note: this rule is about **Attached** items only. Whether a Free item
-can be reparented at all is an open question (below), so this page states
-no rule either way for that case.
+Scope note: this rule is about **Attached** items only. A Free item can
+also be reparented (below), but its position scope is workflow-wide and
+parent-independent, so a reparent alone doesn't touch its position.
 
 The placement is always **before/after a specific anchor**. "First in
 list" and "last in list" are that same form with the anchor chosen by the
@@ -93,9 +101,16 @@ A resolved position may coincidentally come out equal to the old number.
 That is not the same thing as keeping it, and does not make the operation
 a no-op.
 
-*(A Free item's position scope is workflow-wide and therefore
-parent-independent, so this rule's rationale doesn't reach it. That case is
-deliberately unsettled — see Open questions, not a rule here.)*
+**A Free item may be reparented and stay Free.** Reparenting and
+attaching are separate choices (§2), and the API supports every
+combination: a request carries `parentId` and, independently, the
+attachment flag. **Omitting the flag keeps the item's current state** —
+a Free item reparented without the flag is still Free under its new
+parent; an Attached one is still Attached. Nothing attaches by default.
+A Free reparent with no anchor leaves the position alone (its scope is
+workflow-wide and didn't change); with an anchor it repositions like any
+other Free item. Whether the *board gesture* offers this is Story 9's
+question — the API rule is settled here.
 
 ## 5. Reparent first, then resolve the position
 
@@ -135,12 +150,19 @@ following hold:
    own subtree would form a cycle.
 4. **It leaves the resulting tree within the depth cap** — see §8.
 
-**Cross-project is *not* a disqualifier.** See §9.
+**Cross-project is *not* a disqualifier**, and neither is cross-workflow.
+See §9.
 
 **Where this is enforced:** at the **UI** (before the drop is offered) and
 at the **API** (on the write). Never in the database schema — the hierarchy
 link is a soft reference by design, and the schema is not the place to
 encode a product policy that a later epic may relax.
+
+**"On the write" means every write.** The rules above apply to any API
+request that could give an item a parent — creating an item with a
+parent, editing its parent, or moving it — not only to the board's move
+endpoint. A rule the move endpoint enforces and the create endpoint
+doesn't is not a rule.
 
 **The two enforcement points must agree.** The UI must never present as
 droppable a target the API would reject; a validity rule that only the
@@ -159,7 +181,19 @@ levels *below* the dragged item (a leaf being dragged has height 0).
 
 The moving item brings its whole subtree with it, so the cap is checked
 against the deepest leaf that would result — not against the dragged item
-alone.
+alone. **The subtree is the full descendant subtree, attached and
+detached alike** — a detached descendant still sits under the moving item
+in the hierarchy and still moves with it, so it counts toward the height.
+
+**The formula is the whole rule.** It evaluates the *resulting* depth
+and nothing else — not the direction of the move, not the item's current
+depth. A subtree that is already taller than the cap therefore fails the
+check for every target, including a root; it can be moved only by
+dismantling it. This is deliberate: over-cap data can only arise from a
+later change to `CAP` (Story 7) or from data the UI/API never produced,
+and a direction-aware exception would cost the UI and the API a second
+clause each to stay in agreement. Deeper-hierarchy traversal is a later
+feature; the cap isn't the place to pre-build for it.
 
 **`CAP` is provisionally 6, pending Story 7's empirical determination.**
 
@@ -177,9 +211,10 @@ change with it. Derived test cases parameterize on it rather than hard-
 coding 6.
 
 **The cap does not retroactively invalidate existing data.** It gates
-*moves*; a tree that is already deeper than the cap (imported, or created
-before the cap existed) stays valid and readable. Only a gesture that would
-*increase* depth past the cap is refused.
+*writes*; a tree that is already deeper than the cap (created before the
+cap existed, or left over-cap by a lowered `CAP`) stays valid, readable,
+and operable in every way that doesn't reparent it. It is not hidden,
+not flagged, and not repaired.
 
 ## 9. Cross-project reparenting
 
@@ -192,14 +227,36 @@ projects that already share that workflow — every workphase the moved
 subtree references stays valid, and no cross-workflow case can arise from
 this gesture.
 
-**Cross-*workflow* moves are not a board gesture at all.** They belong to
-the Sheet-level "move to project" action (Epic 7), where the workphase
-remapping problem can be presented to the user properly.
+**"Entire descendant subtree" includes detached descendants.** A detached
+child does not follow its parent's *workphase* (§2), but it does follow
+its parent's *project* — it is still that parent's child in the
+hierarchy, and a hierarchy can't straddle two projects. This is the one
+place a detached child is affected by its parent moving; §2's "not
+affected" is about workphase, position, and `completedAt`.
+
+**Cross-*workflow* reparenting is also allowed at the API.** No board
+gesture can produce it (a board sees one workflow), but the Sheet or an
+MCP call can, and the API accepts it: the item takes the new project, and
+every `workphaseId` in the moved subtree is left exactly as it was. An
+item whose workphase isn't in its project's workflow is what a board's
+**Unsorted → "Unknown status"** bucket exists to show; it renders there
+until a user re-files it into a workphase of the new workflow. Nothing is
+nulled and nothing is remapped — remapping is Epic 7's "move to project"
+UI, which will run on top of this same accepting API rather than replace
+it. The one exception is an *attached* item, which never keeps its own
+workphase anyway: it inherits the new parent's, and its attached
+descendants cascade with it, exactly as §2 says. Only items that keep
+their own workphase — a Free moving item, and every detached descendant
+— end up in "Unknown status," and those have their position nulled
+because it no longer compares against anything
+([`../item-positioning/`](../item-positioning/) §7.3).
 
 A cross-project reparent does **not** on its own change the moved item's
 position comparison scope — position is workflow-wide, and the workflow is
 unchanged. The position is still re-resolved, but because §4 says a
-reparent always re-resolves, not because the project changed.
+reparent always re-resolves, not because the project changed. *(A
+cross-workflow reparent does change it — see
+[`../item-positioning/`](../item-positioning/) §7.3.)*
 
 ## 10. Attaching to a done parent
 
@@ -232,6 +289,27 @@ onto the board is answering the first question, and there is no reason to
 assume they meant to answer the second. Severing the relationship is a
 separate, explicit act.
 
+**Severing is "reparent to root."** A write that sets `parentId` to null
+makes the item top-level: it clears the parent *and* (per §1's invariant)
+the attachment flag, so it is Free with nothing above it. Its workphase is
+whatever it holds at that moment — no workphase change is implied. For an
+Attached item this is a scope change (attached-siblings → workflow) and
+resolves a fresh position like any detach — including the done-item
+consequence if that workphase is terminal, since it is now a Free item in
+a done workphase; for an already-Free child it changes nothing about its
+position scope, and its position is left alone unless the same write
+carries an anchor. It is a legal target for any entry point, including
+the move endpoint, and needs no UI gesture to exist.
+
+## 11a. Hierarchy changes are logged
+
+**Any write that changes an item's parent or attachment flag records an
+activity entry on the moving item**, whichever entry point produced it.
+The entry says what changed — attached to, detached from, reparented
+from/to, made top-level — so the Sheet's activity list can account for
+why an item is where it is. A write that touches neither field logs
+nothing under this rule (a workphase move logs its own entry already).
+
 ## 12. Representation follows state
 
 Naming used throughout the product and these pages (UI vocabulary only —
@@ -257,15 +335,14 @@ Not settled. **Do not derive test cases from anything in this section.**
 Everything *outside* this section is settled and derivable — including the
 depth cap, whose *rule* is settled and whose *value* is provisional.
 
-- **Free-item reparent (Story 9).** May a Free item be reparented while
-  *staying* Free? Cheap on the server — a Free item's position scope is
-  parent-independent, so §4's re-resolution isn't strictly needed — but it
-  introduces a third meaning for a drop that the UI must disambiguate
-  against attach-on-drop and reposition-on-drop. Undecided whether to
-  build, defer, or conclude it isn't a board action that makes sense.
-  - **Known trap if it is built:** a reparent request that doesn't
-    *explicitly* carry "stay detached" silently attaches, because attaching
-    is the default for a newly-parented item.
+- **Free-item reparent *as a board gesture* (Story 9).** The API supports
+  it (§4) and Story 1 builds that. What's open is whether the board offers
+  a drop that means "reparent but stay Free" — it would be a third meaning
+  the UI must disambiguate against attach-on-drop and reposition-on-drop.
+  Undecided whether to build, defer, or conclude it isn't a board action
+  that makes sense. *(An earlier note here warned that a reparent without
+  an explicit "stay detached" would silently attach; it doesn't — the API
+  keeps the current state when the flag is omitted, §4.)*
 - **`CAP`'s real value (Story 7).** 6 is a provisional working number
   derived from sidebar arithmetic, not from looking at real hierarchies.
 - **Beyond the cap.** Trees deep enough that per-level indentation fits

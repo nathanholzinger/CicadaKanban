@@ -23,10 +23,13 @@ rationale in `epic-3-5-decisions.md`.
 - **One gesture, one call:** reparent + attach + workphase + position resolve
   atomically through `PATCH /items/:id/move`, not a PUT/PATCH pair.
 - **Cross-project reparenting is allowed** on a board and cascades `projectId`
-  to all descendants. Because a board is scoped to one workflow, any
-  cross-project drag on a board is between projects already sharing that
-  workflow — so workphases stay valid and no cross-workflow case arises here.
-  (Cross-workflow moves belong to Epic 7's Sheet-level "move to project".)
+  to all descendants (detached ones included). Because a board is scoped to
+  one workflow, any cross-project drag on a board is between projects already
+  sharing that workflow — so workphases stay valid and no cross-workflow case
+  arises from the gesture. The API nonetheless *accepts* a cross-workflow
+  reparent (Sheet/MCP can produce one): the subtree's workphases are left
+  as-is and the items surface in "Unknown status" until re-filed. Epic 7's
+  Sheet-level "move to project" adds the remapping UI on top.
 - **Attached children keep Epic 3.2's model unchanged** — they never receive
   `completedAt` and always keep their position. Reparenting onto a done Card
   already works; a Stub under a done parent reads as done by deriving it from
@@ -35,8 +38,10 @@ rationale in `epic-3-5-decisions.md`.
   inserts** — free done items have `position = null`, so they can't serve as
   anchors. A done Card's Stubs *are* anchorable.
 - **Depth cap:** a target at depth `D` is a valid parent only if
-  `D + 1 + draggedSubtreeHeight <= cap`, with root items at depth 1. Enforced
-  at the UI and API levels; never in the schema.
+  `D + 1 + draggedSubtreeHeight <= cap`, with root items at depth 1 and the
+  subtree counting detached descendants. Strict — the formula is the whole
+  rule, no direction-aware exception for already-over-cap subtrees. Enforced
+  at the UI and at every parent-giving API write; never in the schema.
 - **Invalid targets are never poppable** — the UI must not allow popping into
   a context that would fail on drop.
 - **No Zod in this epic.** Request validation stays hand-rolled the way the
@@ -58,29 +63,41 @@ Also folds in the **test-helper extraction** (`tests/helpers/dragGesture.ts`),
 so every story after this writes drag E2E against a shared helper rather than
 adding a fourth and fifth hand-rolled copy — see `epic-3-5-decisions.md` Q2.
 
+**Also in scope** (added 2026-09-10/11 while resolving the items below):
+- **Depth cap on every parent-giving write** — `POST /items`, `PUT
+  /items/:id`, and the move endpoint share one guard; the same-project
+  restriction is lifted at `PUT` too (`wiki/item-attachment/` §7).
+- **Cross-workflow reparent is accepted at the API**, not rejected — the
+  item lands in the target project with its subtree's `workphaseId`s
+  untouched, and surfaces in Unsorted → "Unknown status" on that project's
+  board (§9). Needs a test that reparents into a different-workflow project
+  and reads the board to find the item there. Corollary: every subtree item
+  that keeps its own workphase has its position nulled — it no longer
+  compares against anything (`wiki/item-positioning/` §7.3).
+- **Free-item reparent is supported at the API** (§4): `parentId` and
+  `isAttached` are independent; omitting the flag keeps the item's current
+  state. Story 9 is only about whether the *gesture* offers it.
+- **`parentId: null` on move = reparent to root** (§11) — clears the flag
+  too, per §1's invariant; workphase unchanged.
+- **Reindex disclosure** — the `{id, position}[]` response collection from
+  `wiki/item-positioning/` §5. Server half only; the client half is Story 2.
+- **Activity log on hierarchy changes** (§11a), at every entry point.
+
 **Depends on:** nothing. **Unblocks:** Stories 4, 5, 6.
 **Verified by:** API tests alone — no UI required.
 
-**Needs attention** (flagged by test planning, 2026-09-10 — see
+**Resolved** (flagged by test planning 2026-09-10; decided 2026-09-10 — see
 `docs/test-plans/item-attachment/INDEX.md`):
-- **Depth-cap semantics for an already-over-cap subtree.** The wiki says
-  "only a gesture that would *increase* depth past the cap is refused," but
-  the formula `D + 1 + h <= CAP` evaluates the *resulting* depth regardless
-  of direction — for a subtree already taller than `CAP`, moving it to a
-  shallower parent can pass one reading and fail the other. Pick one, write
-  it into `wiki/item-attachment/` §8, and make Story 2's classification use
-  the same reading. (ATT-4.7 covers only the uncontested parts until then.)
-- **Detached descendants are in scope for both the `projectId` cascade and
-  `draggedSubtreeHeight`** — confirmed by the PO, but the wiki only says
-  "entire descendant subtree." Add the explicit sentence to §8/§9 so the
-  guard and the cascade are built to it (ATT-4.5, ATT-5.2).
-- **A parentless "attach" request** — the wiki says a top-level item is
-  always Free but not whether setting the attachment flag with no parent is
-  *rejected* or *silently ignored*. Decide and record in §1 (ATT-1.1).
-- **An anchor outside the item's resulting scope** — `wiki/item-positioning/`
-  §7.1 says the server "validates the anchor's scope against where the item
-  will be," which implies a rejection path but never states it. Confirm it
-  rejects (and, per atomicity, commits nothing) and say so (TC-7.10).
+- **Depth cap for an already-over-cap subtree → strict.** The formula
+  `D + 1 + h <= CAP` is the whole rule; no direction-aware exception. The
+  "only a gesture that would *increase* depth" sentence is gone from §8.
+  Story 2's classification uses the same single formula.
+- **Detached descendants count** toward `draggedSubtreeHeight` and follow
+  the `projectId` cascade — now stated in §8 and §9.
+- **A parentless "attach" request is rejected** (400), and clearing
+  `parentId` clears the flag — §1.
+- **An anchor outside the resulting scope is rejected** (400, nothing
+  commits) — `wiki/item-positioning/` §7.1.
 
 ---
 
@@ -91,7 +108,14 @@ show it. Free descendants get the green relationship overlay; depth-capped
 targets get the grey one. Replaces the current blanket exclusion of Stubs from
 Card drags with these rules.
 
-**Depends on:** Story 1 (depth rules). **Unblocks:** Stories 3-6.
+**Also in scope** (added 2026-09-11): the **client half of reindex
+disclosure** — reading Story 1's `{id, position}[]` collection off a move
+response and applying it in `wiki/item-positioning/` §5a's order (apply
+pairs → assign the written item → check inversions → re-sort only if one
+was found). Lands here rather than Story 3 to keep the highest-risk story
+from growing.
+
+**Depends on:** Story 1 (depth rules, reindex shape). **Unblocks:** Stories 3-6.
 **Verified by:** pick up a Card, assert which targets render green / grey /
 inert — no drop needed.
 
@@ -102,7 +126,8 @@ inert — no drop needed.
   anything is Inert. Name at least one intended Inert target (or state that
   the set is empty for now) so the classification has a fourth testable
   state.
-- Classification must use the same depth-cap reading Story 1 settles (above).
+- Classification must use Story 1's strict depth-cap formula (above) — no
+  direction-aware clause.
 
 ---
 
@@ -203,15 +228,16 @@ cues are tuned against real, working gestures.
 
 ---
 
-### Story 9 — Free-item reparent keeping Free status
-**Goal:** decide whether a Free item can be reparented while staying Free —
-implement it, defer it, or conclude it isn't a board action that makes sense.
+### Story 9 — Free-item reparent keeping Free status (gesture only)
+**Goal:** decide whether the *board* offers a drop that reparents a Free item
+while keeping it Free — implement it, defer it, or conclude it isn't a board
+action that makes sense. The API side is already Story 1's
+(`wiki/item-attachment/` §4: `parentId` and `isAttached` are independent, and
+omitting the flag keeps the current state).
 
-Last by design: cheap on the server (a Free item's position scope is
-parent-independent, so no recalculation is needed), but it adds a third
+Last by design: nothing left to build on the server, but it adds a third
 drop-meaning to disambiguate in the UI, and that's only judgeable once the
-other gestures exist. Note the trap recorded in the decisions doc — reparenting
-without explicitly passing `isAttached: false` silently attaches.
+other gestures exist.
 
 ---
 
