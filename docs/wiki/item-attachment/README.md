@@ -1,10 +1,14 @@
 # Item Attachment & Hierarchy Placement
 
 **Build status:** The Free/Attached state model and its consequences are
-**implemented as of Epic 3**. The rules below that describe *reparenting
-placement* (§4–§8), §1's parentless-attach rejection, §9's cross-workflow
+**implemented as of Epic 3**. The reparenting-placement rules (§4–§8),
+§1's parentless-attach rejection, §9's cross-project and cross-workflow
 acceptance, §11's reparent-to-root, and §11a's activity log are
-**settled but not yet implemented** — Epic 3.5 Story 1 builds them.
+**implemented as of Epic 3.5 Story 1** — one server primitive
+(`server/src/lib/itemHierarchy.ts`) behind `POST /items`, `PUT /items/:id`,
+and `PATCH /items/:id/move`. Only the *board gesture* that drives them is
+still to come (Stories 2–6). `CAP` is defined server-side
+(`ITEM_DEPTH_CAP`); how the UI shares it is Story 2's.
 
 **Test suite:** [`../../test-plans/item-attachment/`](../../test-plans/item-attachment/) *(not yet written)*
 

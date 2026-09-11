@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures';
-import type { Locator, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
+import { dragTo, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
 import {
   seedCrossProjectRepositioningScenario,
   projectOrder,
@@ -65,55 +66,7 @@ async function goToBoard(page: Page, projectSidebar: { select: (name: string) =>
   await expect(page.getByRole('group', { name: 'Shared Phase' })).toBeVisible();
 }
 
-// Same gesture recipe as tests/ui/attached-children.spec.ts's cross-column
-// drag test and tests/ui/item-repositioning-dnd.spec.ts's dragTo — see
-// either for the full rationale on why a real pointer sequence (not
-// Playwright's dragTo()/dragAndDrop()) is required for dnd-kit, and why the
-// target is re-resolved mid-drag rather than measured once up front.
-async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<{ x: number; y: number }>) {
-  const start = await center(source);
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 10, start.y + 10, { steps: 5 });
-
-  const rough = await resolveTarget();
-  await page.mouse.move(rough.x, rough.y, { steps: 15 });
-  await page.mouse.move(rough.x, rough.y, { steps: 2 });
-
-  const settled = await resolveTarget();
-  await page.mouse.move(settled.x, settled.y, { steps: 10 });
-  await page.mouse.move(settled.x, settled.y, { steps: 2 });
-  await page.mouse.up();
-}
-
-async function boxOf(locator: Locator) {
-  const box = await locator.boundingBox();
-  if (!box) throw new Error('drag target not visible/measurable');
-  return box;
-}
-
-async function center(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-
-async function topQuarter(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.15 };
-}
-
-async function bottomQuarter(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
-}
-
-// See tests/ui/item-repositioning-dnd.spec.ts's pastColumnEnd for the full
-// rationale (dnd-kit's closestCorners resolves a drop here to the column
-// container itself — a true append — not the last card).
-async function pastColumnEnd(columnGroup: Locator) {
-  const box = await boxOf(columnGroup);
-  return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
-}
+// Drag gesture recipe: tests/helpers/dragGesture.ts.
 
 function article(page: Page, title: string) {
   return page.getByRole('article', { name: title, exact: true });
@@ -193,9 +146,9 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2)
 
     // Same drag-lockout bug as Suite 2's 3.a: hovering A always resolves
     // `side: 'before'`, so this can't reach "after A"'s 1.5. Expected to
-    // fail on position and/or order — see item-repositioning-dnd.spec.ts's
-    // 3.a for the full explanation and the same caveat about exact
-    // resolved-value precision in this suite's drag mechanics.
+    // fail on position and/or order — see item-repositioning-cross-column-
+    // dnd.spec.ts's 3.a for the full explanation and the same caveat about
+    // exact resolved-value precision in this suite's drag mechanics.
     await expect.poll(async () => (await getItem(request, scenario.items.C.id)).position).toBe(1.5);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');

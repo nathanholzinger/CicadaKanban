@@ -33,4 +33,26 @@ docs {
   A raw `position` (finite number) is still accepted instead of
   anchorId+side, but anchor+side is the documented, preferred way to
   reposition an item — see `docs/wiki/item-positioning/README.md` §2.
+
+  ## Hierarchy (Epic 3.5)
+
+  `parentId` (string, or `null` for "make top-level") and `isAttached`
+  (boolean) can ride along with any of the above and commit in the same
+  transaction — e.g. the board's "drop Card onto Card" gesture sends
+  `{ parentId, isAttached: true, anchorId, side }`. Rules:
+
+  - Omitting `isAttached` keeps the item's current state; nothing attaches
+    by default. `isAttached: true` with no resulting parent is a 400.
+  - An attached item inherits its parent's workphase; sending a different
+    `workphaseId` alongside is a 400.
+  - Cross-project parents are allowed — `projectId` is derived from the
+    parent and cascades to the whole subtree. Never send `projectId`.
+  - Rejected for a parent that doesn't exist, is the item itself or one of
+    its descendants, or would put the resulting tree past the depth cap.
+  - `anchorId` is validated against the scope the item will be in *after*
+    the reparent (a new sibling under the target parent is a legal anchor).
+
+  The response is the item row plus, only when a reindex fired, a
+  `reindexed: [{id, position}]` collection covering every renumbered item.
+  See `docs/wiki/item-attachment/README.md` §1, §4–§11a.
 }

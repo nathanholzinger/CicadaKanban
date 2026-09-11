@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { eq, isNull } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
 import { items, projects } from '../../src/db/schema.js';
-import { resolvePositionByAnchorAndSide, resolveAppendPosition } from '../../src/lib/positionResolver.js';
+import {
+  resolvePositionByAnchorAndSide,
+  resolveAppendPosition,
+  type ReindexedPosition,
+} from '../../src/lib/positionResolver.js';
 import { coarsestFit } from '../../src/lib/coarsestFit.js';
 import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
 
@@ -90,6 +94,57 @@ describe('reindexScope', () => {
     expect(getPosition(created[1].id)).toBe(2);
     expect(getPosition(created[0].id)).toBe(3);
     expect(getPosition(created[3].id)).toBe(4);
+  });
+
+  // docs/wiki/item-positioning §5 "Reindexing must be disclosed to the
+  // caller" (Epic 3.5): a caller that mixes one fresh number into stale
+  // ones computes an ordering that is wrong while looking consistent, so
+  // the resolver must report every row it renumbered.
+  describe('disclosure (wiki §5)', () => {
+    it('reports every renumbered row, in scope order, as bare {id, position} pairs (tight-gap trigger)', async () => {
+      const { phase, items: created } = await seedPhaseWithItems(3);
+      setPosition(created[0].id, 1.0);
+      setPosition(created[1].id, 1.0 + 1e-13);
+      setPosition(created[2].id, 5.0);
+
+      const reindexed: ReindexedPosition[] = [];
+      db.transaction(tx =>
+        resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id, reindexed),
+      );
+
+      expect(reindexed).toEqual([
+        { id: created[0].id, position: 1 },
+        { id: created[1].id, position: 2 },
+        { id: created[2].id, position: 3 },
+      ]);
+    });
+
+    it('reports the reindex fired by the magnitude threshold on an append', async () => {
+      const { phase, items: created } = await seedPhaseWithItems(2);
+      setPosition(created[0].id, 1100);
+      setPosition(created[1].id, 1200);
+
+      const reindexed: ReindexedPosition[] = [];
+      const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx, reindexed));
+
+      expect(reindexed).toEqual([
+        { id: created[0].id, position: 1 },
+        { id: created[1].id, position: 2 },
+      ]);
+      expect(result).toBe(3);
+    });
+
+    it('leaves the collector empty when no reindex fired', async () => {
+      const { phase, items: created } = await seedPhaseWithItems(2);
+      setPosition(created[0].id, 1.5);
+      setPosition(created[1].id, 2.0);
+
+      const reindexed: ReindexedPosition[] = [];
+      db.transaction(tx =>
+        resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id, reindexed),
+      );
+      expect(reindexed).toEqual([]);
+    });
   });
 });
 

@@ -46,6 +46,73 @@ export function assertValidReparent(table: SelfRefTable, id: string, parentId: s
 }
 
 // ============================================================
+// Item hierarchy depth (Epic 3.5, docs/wiki/item-attachment §8).
+// ============================================================
+
+// The depth cap is a display constraint (sidebar/modal indentation stays
+// legible), provisionally 6 pending Story 7's empirical determination. One
+// definition, consumed by every parent-giving write; the UI's target
+// classification (Story 2) must read the same value — how it's shared
+// across the client/server boundary is Story 2's call.
+export const ITEM_DEPTH_CAP = 6;
+
+// 1-based: a root item is at depth 1. Walks parentId upward with a visited
+// set so a corrupted cycle (audit Finding #11) terminates instead of looping.
+// GET /items/:id's response `depth` field stays 0-based (this minus 1) so
+// that API contract is unchanged.
+export function hierarchyDepth(itemId: string, tx?: Tx): number {
+  const e = tx ?? db;
+  let depth = 1;
+  const visited = new Set([itemId]);
+  let current = e.select({ parentId: items.parentId }).from(items).where(eq(items.id, itemId)).get();
+  while (current?.parentId && !visited.has(current.parentId)) {
+    visited.add(current.parentId);
+    depth++;
+    current = e.select({ parentId: items.parentId }).from(items).where(eq(items.id, current.parentId)).get();
+  }
+  return depth;
+}
+
+// Levels *below* the item — a leaf is 0. Counts the full descendant subtree,
+// detached descendants included: a detached child doesn't follow its
+// parent's workphase, but it does still sit under it in the hierarchy and
+// moves with it (wiki §8). Cycle-guarded the same way walkItemDescendants is.
+export function subtreeHeight(itemId: string, tx?: Tx): number {
+  const e = tx ?? db;
+  let height = 0;
+  const visited = new Set([itemId]);
+  let frontier = [itemId];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      const children = e.select({ id: items.id }).from(items).where(eq(items.parentId, id)).all();
+      for (const child of children) {
+        if (visited.has(child.id)) continue;
+        visited.add(child.id);
+        next.push(child.id);
+      }
+    }
+    if (next.length > 0) height++;
+    frontier = next;
+  }
+  return height;
+}
+
+// A target at depth D is a legal parent only if D + 1 + subtreeHeight <= CAP
+// — evaluated on the *resulting* deepest leaf, with no direction-aware
+// exception (an already-over-cap subtree fails for every target, including
+// a root; wiki §8 "the formula is the whole rule"). `movingId` null means a
+// brand-new item (height 0) — POST's case. Returns the 400 message, or null
+// if legal.
+export function assertWithinDepthCap(parentId: string, movingId: string | null, tx?: Tx): string | null {
+  const resultingDepth = hierarchyDepth(parentId, tx) + 1 + (movingId ? subtreeHeight(movingId, tx) : 0);
+  if (resultingDepth > ITEM_DEPTH_CAP) {
+    return `Resulting hierarchy depth ${resultingDepth} exceeds the cap of ${ITEM_DEPTH_CAP}`;
+  }
+  return null;
+}
+
+// ============================================================
 // items.parentId BFS collector. Items-specific (needs the isAttached column
 // for the predicate), so not folded into the generic self-ref helpers above.
 // ============================================================

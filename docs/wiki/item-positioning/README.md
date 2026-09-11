@@ -1,9 +1,11 @@
 # Item Positioning & Board-Scoped Ordering
 
-**Build status:** §1–§6 implemented (Epic 3.2), except where marked.
-**Settled but not yet implemented** — Epic 3.5: §7, §5's "Reindexing
-must be disclosed to the caller," and §2's cross-workflow scope-change
-row (all Story 1); §5a and §2's amended "Client-side role" (Story 2).
+**Build status:** §1–§6 implemented (Epic 3.2). §7, §5's "Reindexing must
+be disclosed to the caller," and §2's cross-workflow scope-change row
+implemented as of Epic 3.5 Story 1 (server side — the disclosure is an
+optional `reindexed: {id, position}[]` field on every item-write response).
+**Settled but not yet implemented:** §5a and §2's amended "Client-side
+role" (Story 2).
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
@@ -242,7 +244,9 @@ scopes from drifting into overlapping ranges and colliding later.
 
 ### Reindexing must be disclosed to the caller
 
-**Added by Epic 3.5; not yet implemented.**
+**Added by Epic 3.5; implemented in Story 1** as an optional `reindexed`
+field on the item-write responses (`POST /items`, `PUT /items/:id`,
+`PATCH /items/:id/move`).
 
 **A response to a write that triggered a reindex must carry the renumbered
 positions.** A reindex changes rows the caller never asked about, so a
@@ -339,8 +343,9 @@ and count grow together — never disproportionate, needs nothing).
 
 ## 7. Placement intents added by the board gesture (Epic 3.5)
 
-**Not yet implemented.** These extend §2's resolution model; they don't
-replace any part of it.
+**Server side implemented in Epic 3.5 Story 1** (the client half — which
+band sends which request — is Stories 3–6). These extend §2's resolution
+model; they don't replace any part of it.
 
 ### 7.1 First-in-list and last-in-list are anchor + side, chosen by the client
 

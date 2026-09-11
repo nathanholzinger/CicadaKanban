@@ -16,11 +16,20 @@ export type PositionedTable = SQLiteTable & {
   updatedAt: SQLiteColumn;
 };
 
+// One renumbered row from a reindex — `{id, position}` and nothing more,
+// since a reindex changes positions and never any other field
+// (docs/wiki/item-positioning §5, "Reindexing must be disclosed").
+export type ReindexedPosition = { id: string; position: number };
+
 // Used to bundle the query context so functions have fewer params to handoff
 type PositionQueryContext = {
   table: PositionedTable;
   scopeWhere: SQL;
   tx: Tx;
+  // Where a reindex reports the rows it renumbered. Optional: only callers
+  // that surface the disclosure to their response (the item writes) pass
+  // one; projects/workphases don't and the pairs are simply dropped.
+  reindexed?: ReindexedPosition[];
 };
 
 // for defining anchorId + side.
@@ -28,12 +37,13 @@ export type Side = 'before' | 'after';
 
 /**
  * finds a postion as it relates to an anchor
- * 
+ *
  * @param table - the table that defines what type of list we're ordering (items, projects, etc)
  * @param scopeWhere - the SQL that scopes the list appropriately (position relative to fellow siblings, postion relative to all items in project, etc)
  * @param tx - the transaction handler
  * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor. if anchorId is null then side functions as "before all" or "after all"
  * @param anchorId - nullable. the targetId that the new id will be placed alongside
+ * @param reindexed - optional collector; if a reindex fires, every renumbered `{id, position}` is pushed here so the caller can disclose it (wiki §5)
 
  * @returns number value of the position
  */
@@ -43,8 +53,9 @@ export function resolvePositionByAnchorAndSide(
   tx: Tx,
   side: Side,
   anchorId?: string,
+  reindexed?: ReindexedPosition[],
 ): number {
-  const context: PositionQueryContext = { table: table, scopeWhere: scopeWhere, tx: tx };
+  const context: PositionQueryContext = { table, scopeWhere, tx, reindexed };
 
   if (anchorId) {
     if (side === 'before') return resolveBeforeTarget(anchorId, context);
@@ -62,8 +73,13 @@ export function resolvePositionByAnchorAndSide(
 // terminal-transition backfill) with no anchor/side to express, so spelling
 // those 8 call sites as `resolvePositionByAnchorAndSide(table, scope, tx,
 // 'after')` would read as if a side/anchor choice were actually being made.
-export function resolveAppendPosition(table: PositionedTable, scopeWhere: SQL, tx: Tx): number {
-  const context: PositionQueryContext = { table: table, scopeWhere: scopeWhere, tx: tx };
+export function resolveAppendPosition(
+  table: PositionedTable,
+  scopeWhere: SQL,
+  tx: Tx,
+  reindexed?: ReindexedPosition[],
+): number {
+  const context: PositionQueryContext = { table, scopeWhere, tx, reindexed };
   return resolveAppendAsLast(context);
 }
 
@@ -224,7 +240,7 @@ function appendOrReindexAndRetry(lastPosition: number, context: PositionQueryCon
 }
 
 function reindexPositionsInScope(queryContext: PositionQueryContext): void {
-  const { table, scopeWhere, tx } = queryContext;
+  const { table, scopeWhere, tx, reindexed } = queryContext;
   const rows = tx
     .select({ id: table.id, position: table.position, createdAt: table.createdAt })
     .from(table)
@@ -234,10 +250,9 @@ function reindexPositionsInScope(queryContext: PositionQueryContext): void {
 
   const now = Date.now();
   rows.forEach((row, index) => {
-    tx.update(table)
-      .set({ position: index + 1, updatedAt: now })
-      .where(eq(table.id, row.id))
-      .run();
+    const position = index + 1;
+    tx.update(table).set({ position, updatedAt: now }).where(eq(table.id, row.id)).run();
+    reindexed?.push({ id: row.id, position });
   });
 }
 

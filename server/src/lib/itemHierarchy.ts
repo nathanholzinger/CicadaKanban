@@ -1,0 +1,355 @@
+import { eq, inArray } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { db, type Tx } from '../db/index.js';
+import { items, workphases, notifications } from '../db/schema.js';
+import { assertValidReparent, assertWithinDepthCap, walkItemDescendants } from './itemTree.js';
+import { cascadeWorkphaseToAttachedDescendants } from './attachedCascade.js';
+import { positionScopeFor, sharesPositionScope, workflowIdForWorkphase } from './itemPositionScope.js';
+import {
+  resolveAppendPosition,
+  resolvePositionByAnchorAndSide,
+  type ReindexedPosition,
+  type Side,
+} from './positionResolver.js';
+import { effectiveWorkflowIdForProject } from './workflowItems.js';
+import { logActivity } from './activityLog.js';
+
+// ============================================================
+// The one implementation of "this item changes parent / attachment /
+// workphase / position" (Epic 3.5 Story 1). Three entry points share it —
+// PATCH /items/:id/move (the board drag), PUT /items/:id (the Sheet's
+// checkbox / parent picker / MCP update_item), and POST /items for the
+// legality guard — so a rule enforced on one write is enforced on every
+// write (docs/wiki/item-attachment §7, "on the write means every write").
+//
+// Two halves, by the audit Finding #12 convention: validate against plain
+// `db` *before* the transaction and answer 400s from the route; apply
+// inside the transaction with no early returns, so nothing partial can
+// commit (wiki §6, one gesture one commit).
+// ============================================================
+
+export type ItemRow = typeof items.$inferSelect;
+
+export type HierarchyRequest = {
+  /** undefined = unchanged; null = reparent to root (wiki §11). */
+  parentId?: string | null;
+  /** undefined = keep the current state — nothing attaches by default (wiki §4). */
+  isAttached?: boolean;
+  /** undefined = unchanged. Ignored-with-400 when the resulting state is attached and it disagrees with the parent's. */
+  workphaseId?: string | null;
+  anchorId?: string;
+  side?: Side;
+  /** Raw escape hatch for non-drag callers (MCP, scripts) — never sent by the board. */
+  position?: number;
+};
+
+// Where the item will be once the request is applied — every check and
+// every scope below is evaluated against this, never against the row as it
+// currently is (wiki §5: reparent first, then resolve; positioning §7.1:
+// the anchor is validated against the resulting scope).
+type ResultingState = {
+  parentId: string | null;
+  /** The stored flag. Cleared whenever the parent is cleared (wiki §1's invariant). */
+  attachedFlag: boolean;
+  /** attachedFlag && parentId — the effective "is a Stub" test the rest of the code uses. */
+  isAttachedWithParent: boolean;
+  workphaseId: string | null;
+  projectId: string | null;
+};
+
+type ParentRow = { id: string; title: string; projectId: string | null; workphaseId: string | null };
+
+const parentProjection = { id: items.id, title: items.title, projectId: items.projectId, workphaseId: items.workphaseId };
+
+function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
+  return (tx ?? db).select(parentProjection).from(items).where(eq(items.id, parentId)).get();
+}
+
+function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: ParentRow | undefined): ResultingState {
+  const parentId = req.parentId !== undefined ? req.parentId : item.parentId;
+  const parentCleared = req.parentId === null && item.parentId !== null;
+  // A root item may carry a stale flag from POST's attached-by-default
+  // (meaningless without a parent, per the schema comment) — leave it be
+  // unless this write is the one clearing the parent, in which case the
+  // flag goes with it.
+  const attachedFlag = parentCleared ? false : req.isAttached !== undefined ? req.isAttached : Boolean(item.isAttached);
+  const isAttachedWithParent = attachedFlag && parentId !== null;
+  const workphaseId = isAttachedWithParent
+    ? (parent?.workphaseId ?? null)
+    : req.workphaseId !== undefined
+      ? req.workphaseId
+      : item.workphaseId;
+  const projectId = typeof req.parentId === 'string' ? (parent?.projectId ?? item.projectId) : item.projectId;
+  return { parentId, attachedFlag, isAttachedWithParent, workphaseId, projectId };
+}
+
+function workphaseExists(id: string): boolean {
+  return !!db.select({ id: workphases.id }).from(workphases).where(eq(workphases.id, id)).get();
+}
+
+// Hand-rolled request validation (no Zod until Epic 4). Returns the first
+// 400 message, or null when the request is legal. Order: shape → parent
+// legality (wiki §7–§8) → resulting-state invariants (§1, decision 4) →
+// anchor (positioning §7.1).
+export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): string | null {
+  if (req.parentId !== undefined && req.parentId !== null && typeof req.parentId !== 'string') {
+    return 'parentId must be a string or null';
+  }
+  if (req.isAttached !== undefined && typeof req.isAttached !== 'boolean') {
+    return 'isAttached must be a boolean';
+  }
+  if (req.workphaseId !== undefined && req.workphaseId !== null && typeof req.workphaseId !== 'string') {
+    return 'workphaseId must be a string or null';
+  }
+  if (req.anchorId !== undefined && req.side !== 'before' && req.side !== 'after') {
+    return "side must be 'before' or 'after' when anchorId is given";
+  }
+  if (req.position !== undefined && (typeof req.position !== 'number' || !Number.isFinite(req.position))) {
+    return 'position must be a finite number';
+  }
+  // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
+  if (typeof req.workphaseId === 'string' && !workphaseExists(req.workphaseId)) {
+    return 'workphaseId does not reference an existing workphase';
+  }
+
+  let parent: ParentRow | undefined;
+  if (typeof req.parentId === 'string') {
+    // Exists / not self / not a descendant / within the depth cap — §7's
+    // four legality rules. No same-project check: cross-project is not a
+    // disqualifier (§9); projectId is derived from the parent below.
+    parent = getParent(req.parentId);
+    if (!parent) return 'parentId does not reference an existing item';
+    const reparentError = assertValidReparent(items, item.id, req.parentId, 'item');
+    if (reparentError) return reparentError;
+    // The cap gates reparents, not existing data (§8): an attach toggle
+    // that names the parent the item already has isn't one.
+    if (req.parentId !== item.parentId) {
+      const depthError = assertWithinDepthCap(req.parentId, item.id);
+      if (depthError) return depthError;
+    }
+  } else if (item.parentId) {
+    parent = getParent(item.parentId);
+  }
+
+  const resulting = deriveResultingState(item, req, parent);
+
+  // "Attached with no parent" is rejected, not ignored (§1) — the request
+  // can only be a client bug, and accepting it would leave a stray flag.
+  if (req.isAttached === true && resulting.parentId === null) {
+    return 'isAttached requires a parentId';
+  }
+  // An attached item inherits its parent's workphase; a request naming a
+  // different one is contradictory (planning decision 4).
+  if (resulting.isAttachedWithParent && req.workphaseId !== undefined && req.workphaseId !== resulting.workphaseId) {
+    return "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
+  }
+
+  if (req.anchorId !== undefined) {
+    const anchorProjection = {
+      isAttached: items.isAttached,
+      parentId: items.parentId,
+      workphaseId: items.workphaseId,
+      position: items.position,
+    };
+    const anchor = db.select(anchorProjection).from(items).where(eq(items.id, req.anchorId)).get();
+    if (!anchor) return 'anchorId does not reference an existing item';
+    if (anchor.position === null) return 'anchorId has no position to anchor against (it may be a done item)';
+    // The anchor's position is only comparable if it lives in the scope
+    // the subject is about to end up in — an attached child's sibling
+    // space and a workflow-wide space are isolated, and two workflows each
+    // have their own (audit Finding #7). Checked against the *resulting*
+    // state: an anchor among the new parent's children is legal even
+    // though the subject isn't in that scope yet (positioning §7.1).
+    const anchorScope = { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId };
+    const subjectScope = {
+      isAttached: resulting.isAttachedWithParent,
+      parentId: resulting.parentId,
+      workphaseId: resulting.workphaseId,
+    };
+    if (!sharesPositionScope(anchorScope, subjectScope)) {
+      return "anchorId is not in this item's resulting position scope";
+    }
+  }
+
+  return null;
+}
+
+function isTerminal(workphaseId: string | null, tx: Tx): boolean {
+  if (!workphaseId) return false;
+  const row = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  return Boolean(row?.isTerminal);
+}
+
+function hierarchyChangeContent(item: ItemRow, resulting: ResultingState, oldParent?: ParentRow, newParent?: ParentRow): string {
+  const wasAttached = Boolean(item.isAttached) && Boolean(item.parentId);
+  const oldName = oldParent ? `"${oldParent.title}"` : 'none';
+  const newName = newParent ? `"${newParent.title}"` : 'none';
+  if (resulting.parentId === null) return `Made top-level (was under ${oldName})`;
+  if (resulting.parentId !== item.parentId) {
+    const suffix = resulting.isAttachedWithParent ? ' (attached)' : ' (detached)';
+    return item.parentId ? `Reparented from ${oldName} to ${newName}${suffix}` : `Parented under ${newName}${suffix}`;
+  }
+  if (resulting.isAttachedWithParent && !wasAttached) return `Attached to ${newName}`;
+  return `Detached from ${newName}`;
+}
+
+// Applies a validated request inside `tx`. Returns the reindex disclosure
+// (wiki item-positioning §5) for the caller's response — empty when no
+// reindex fired, which is the overwhelmingly common case.
+export function applyHierarchyRequest(tx: Tx, item: ItemRow, req: HierarchyRequest): { reindexed: ReindexedPosition[] } {
+  const now = Date.now();
+  const oldParent = item.parentId ? getParent(item.parentId, tx) : undefined;
+  const newParent = typeof req.parentId === 'string' ? getParent(req.parentId, tx) : oldParent;
+  const resulting = deriveResultingState(item, req, newParent);
+
+  const wasAttachedWithParent = Boolean(item.isAttached) && Boolean(item.parentId);
+  const workphaseChanged = resulting.workphaseId !== item.workphaseId;
+  const parentChanged = resulting.parentId !== item.parentId;
+  const projectChanged = resulting.projectId !== item.projectId;
+  // The comparison scope changes on attach↔detach and on a reparent while
+  // attached (positioning §2's table); a redundant re-attach to the same
+  // parent is not a scope change and keeps its position.
+  const scopeChanged =
+    wasAttachedWithParent !== resulting.isAttachedWithParent || (resulting.isAttachedWithParent && parentChanged);
+
+  const updates: Record<string, unknown> = {
+    updatedAt: now,
+    parentId: resulting.parentId,
+    isAttached: resulting.attachedFlag ? 1 : 0,
+    workphaseId: resulting.workphaseId,
+    projectId: resulting.projectId,
+  };
+
+  // --- Position, resolved against the *resulting* scope (wiki §5) ---
+  const reindexed: ReindexedPosition[] = [];
+  const scope = () =>
+    positionScopeFor(
+      { isAttached: resulting.isAttachedWithParent, parentId: resulting.parentId, workphaseId: resulting.workphaseId },
+      item.id,
+      tx,
+    );
+  if (req.anchorId !== undefined) {
+    updates.position = resolvePositionByAnchorAndSide(items, scope(), tx, req.side as Side, req.anchorId, reindexed);
+  } else if (req.position !== undefined) {
+    updates.position = req.position;
+  } else if (scopeChanged) {
+    // Scope changed with no anchor → append fallback (positioning §2's
+    // scope-change principle). "Reparent but keep your position" is not an
+    // operation for an attached item (wiki §4). A Free item with no
+    // workphase at all has no scope to append into (positionScope "none").
+    updates.position =
+      resulting.isAttachedWithParent || resulting.workphaseId ? resolveAppendPosition(items, scope(), tx, reindexed) : null;
+  } else if (req.workphaseId !== undefined && resulting.workphaseId) {
+    // A workphaseId-only move keeps an existing position (positioning §2
+    // addendum — position is workflow-wide, so it's still comparable). A
+    // same-workphase "move" with no anchor is a reorder-to-end, and an item
+    // with no position to keep (reopened done item, first assignment) needs
+    // a fresh one — both take the append fallback.
+    if (!(workphaseChanged && item.position !== null)) updates.position = resolveAppendPosition(items, scope(), tx, reindexed);
+  }
+  // Otherwise (a Free reparent with no anchor, a no-op re-attach): the scope
+  // didn't change and nothing asked for placement — position is left alone.
+
+  // --- Active/done split (positioning §6) — Free items only ---
+  if (resulting.isAttachedWithParent) {
+    // Attached children never carry completedAt and always keep their
+    // position, whatever workphase they inherited (wiki §2).
+    if (item.completedAt !== null) updates.completedAt = null;
+  } else if (isTerminal(resulting.workphaseId, tx)) {
+    // A Free item in a terminal workphase has no position; it's ordered by
+    // completedAt. Overrides whatever was resolved above.
+    updates.position = null;
+    if (workphaseChanged || wasAttachedWithParent || item.completedAt === null) updates.completedAt = now;
+  } else if (item.completedAt !== null) {
+    updates.completedAt = null;
+  }
+
+  tx.update(items).set(updates).where(eq(items.id, item.id)).run();
+
+  // --- Cascades ---
+  if (projectChanged && resulting.projectId) {
+    // A hierarchy can't straddle two projects: every descendant follows,
+    // detached ones included (wiki §9).
+    const descendantIds = walkItemDescendants(item.id, { tx });
+    if (descendantIds.length > 0) {
+      tx.update(items).set({ projectId: resulting.projectId, updatedAt: now }).where(inArray(items.id, descendantIds)).run();
+    }
+  }
+  if (workphaseChanged) cascadeWorkphaseToAttachedDescendants(item.id, tx);
+  if (projectChanged && resulting.projectId) nullForeignWorkphasePositions(tx, item.id, resulting, now);
+
+  // --- Activity log (wiki §11a, plus the pre-existing workphase entry) ---
+  const flagChanged = wasAttachedWithParent !== resulting.isAttachedWithParent;
+  if (parentChanged || flagChanged) {
+    const metadata = {
+      fromParentId: item.parentId,
+      toParentId: resulting.parentId,
+      fromAttached: wasAttachedWithParent,
+      toAttached: resulting.isAttachedWithParent,
+      ...(projectChanged ? { fromProjectId: item.projectId, toProjectId: resulting.projectId } : {}),
+    };
+    logActivity(item.id, 'hierarchy_change', hierarchyChangeContent(item, resulting, oldParent, newParent), metadata, tx);
+  }
+  if (workphaseChanged) {
+    const oldWorkphase = item.workphaseId
+      ? tx.select().from(workphases).where(eq(workphases.id, item.workphaseId)).get()
+      : null;
+    const newWorkphase = resulting.workphaseId
+      ? tx.select().from(workphases).where(eq(workphases.id, resulting.workphaseId)).get()
+      : null;
+    logActivity(
+      item.id,
+      'status_change',
+      `Moved from "${oldWorkphase?.name || 'none'}" to "${newWorkphase?.name || 'unknown'}"`,
+      { fromWorkphaseId: item.workphaseId, toWorkphaseId: resulting.workphaseId },
+      tx,
+    );
+    if (newWorkphase?.triggersNotification) {
+      tx.insert(notifications)
+        .values({
+          id: randomUUID(),
+          itemId: item.id,
+          workflowId: newWorkphase.workflowId,
+          message: `"${item.title}" moved to "${newWorkphase.name}"`,
+          type: 'item_in_workphase',
+          isRead: 0,
+          createdAt: now,
+        })
+        .run();
+    }
+  }
+
+  return { reindexed };
+}
+
+// Cross-workflow reparent (wiki §9; positioning §7.3): every subtree item
+// that keeps its *own* workphase — the moved item if it's Free, and every
+// detached descendant — may now hold a workphase from a workflow its new
+// project doesn't use. Those items sit in "Unknown status," which isn't
+// position-ordered, so their stored position is nulled: an item with no
+// meaningful comparison scope has no position (same treatment §6 gives a
+// done item). Attached items inherit and keep their parent-scoped
+// position; nothing is remapped (that's Epic 7's UI).
+function nullForeignWorkphasePositions(tx: Tx, rootId: string, resulting: ResultingState, now: number): void {
+  const targetWorkflowId = effectiveWorkflowIdForProject(resulting.projectId!, tx);
+  const workflowOfWorkphase = new Map<string, string | null>();
+  const isForeign = (workphaseId: string | null): boolean => {
+    if (!workphaseId) return false;
+    if (!workflowOfWorkphase.has(workphaseId)) workflowOfWorkphase.set(workphaseId, workflowIdForWorkphase(workphaseId, tx));
+    return workflowOfWorkphase.get(workphaseId) !== targetWorkflowId;
+  };
+
+  const toNull: string[] = [];
+  if (!resulting.isAttachedWithParent && isForeign(resulting.workphaseId)) toNull.push(rootId);
+  const descendantIds = walkItemDescendants(rootId, { tx });
+  if (descendantIds.length > 0) {
+    const projection = { id: items.id, isAttached: items.isAttached, workphaseId: items.workphaseId, position: items.position };
+    const rows = tx.select(projection).from(items).where(inArray(items.id, descendantIds)).all();
+    for (const row of rows) {
+      if (!row.isAttached && row.position !== null && isForeign(row.workphaseId)) toNull.push(row.id);
+    }
+  }
+  if (toNull.length > 0) {
+    tx.update(items).set({ position: null, updatedAt: now }).where(inArray(items.id, toNull)).run();
+  }
+}

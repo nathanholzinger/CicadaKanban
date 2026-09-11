@@ -53,7 +53,9 @@ rationale in `epic-3-5-decisions.md`.
 
 ## Stories
 
-### Story 1 — Server: atomic reparent-with-placement
+### Story 1 — Server: atomic reparent-with-placement ✅ (done 2026-09-11)
+**Plan / record:** [`story-1-server-reparent-with-placement.md`](story-1-server-reparent-with-placement.md)
+
 **Goal:** `PATCH /items/:id/move` accepts parent and attachment changes
 alongside workphase and placement, so one gesture commits in one transaction.
 Adds first-in-list placement, the `projectId` cascade, the depth-cap guard, and

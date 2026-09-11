@@ -1,4 +1,4 @@
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { items, projects, workflows } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
@@ -55,6 +55,26 @@ function getProjectsUsingWorkflow(workflowId: string): Set<string> {
     }
   }
   return result;
+}
+
+// The inverse of getProjectsUsingWorkflow, for one project: the workflow it
+// owns, or the nearest ancestor project's. Null if no project up the chain
+// owns one. Cycle-guarded like every other parentId walk (audit Finding
+// #11). Epic 3.5: lets a cross-project reparent tell whether a subtree
+// item's workphase is foreign to its new project (wiki item-positioning
+// §7.3), which is what decides whether that item's position is nulled.
+export function effectiveWorkflowIdForProject(projectId: string, tx?: Tx): string | null {
+  const e = tx ?? db;
+  const visited = new Set<string>();
+  let current: string | null = projectId;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const owned = e.select({ id: workflows.id }).from(workflows).where(eq(workflows.projectId, current)).get();
+    if (owned) return owned.id;
+    const project = e.select({ parentId: projects.parentId }).from(projects).where(eq(projects.id, current)).get();
+    current = project?.parentId ?? null;
+  }
+  return null;
 }
 
 // Every item belonging to the projects whose effective workflow is this one —

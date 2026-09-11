@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
-import type { Locator, Page } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
+import { dragTo, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
 import { API } from '../helpers/api';
 
@@ -66,89 +66,10 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
   await expect(page.getByRole('group', { name: 'Column One' })).toBeVisible();
 });
 
-// Same gesture recipe as tests/ui/attached-children.spec.ts's cross-column
-// drag test: dnd-kit's PointerSensor (activationConstraint: {distance: 5})
-// needs real pointerdown/pointermove/pointerup, several intermediate moves
-// so its rect/collision recalculation keeps up, then pointerup to drop.
-// Playwright's dragTo()/dragAndDrop() simulate native HTML5 DnD instead and
-// never trigger dnd-kit at all.
-//
-// `resolveTarget` is a callback, not a static point: a genuine cross-column
-// move triggers handleDragOver's live re-bucket preview, which — since
-// BoardColumn unions/sorts a column's covered items by position
-// (BoardColumn.tsx:57-58) — inserts the dragged card at its real position
-// among the target column's existing cards *during* the drag, shifting
-// whichever card used to sit there. A point measured once before the drag
-// started can go stale the moment that reflow happens, so this approaches
-// in two passes: once toward the target's pre-drag position (close enough
-// to cross into the target column and trigger the preview), then again
-// after re-measuring the target's post-reflow position for the final,
-// precise approach.
-//
-// This isn't perfectly reliable for every case (see 1.a/2.a's comments
-// below) — dnd-kit's own live swap-preview animation can make a target
-// card's box a moving goalpost in ways that are sensitive to exact pixel
-// targeting in this codebase's current DnD implementation. Not chasing that
-// further right now: the API suite already proves the underlying position
-// math is correct, and Epic 3.5 plans to tune the drop-placement UX itself
-// (see [useBoardDnd.ts](client/src/components/workflow/useBoardDnd.ts)),
-// which is a better time to revisit drag-gesture precision than now.
-async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<{ x: number; y: number }>) {
-  const start = await center(source);
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 10, start.y + 10, { steps: 5 });
-
-  const rough = await resolveTarget();
-  await page.mouse.move(rough.x, rough.y, { steps: 15 });
-  await page.mouse.move(rough.x, rough.y, { steps: 2 }); // let the re-bucket preview/reflow settle
-
-  const settled = await resolveTarget();
-  await page.mouse.move(settled.x, settled.y, { steps: 10 });
-  await page.mouse.move(settled.x, settled.y, { steps: 2 });
-  await page.mouse.up();
-}
-
-async function boxOf(locator: Locator) {
-  const box = await locator.boundingBox();
-  if (!box) throw new Error('drag target not visible/measurable');
-  return box;
-}
-
-async function center(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-
-// These still aim at the literal top/bottom quarter a user would target for
-// "drop before/after this card" — the app just doesn't currently read that
-// distinction (see header comment), so bottomQuarter(A) and center(A) drive
-// dnd-kit to the exact same collision today.
-async function topQuarter(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.15 };
-}
-
-async function bottomQuarter(locator: Locator) {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
-}
-
-// The "drop past the end of the column" attempt. dnd-kit's closestCorners
-// is a nearest-neighbor heuristic over every registered droppable's
-// corners, not a "what's under the pointer" hit test — even targeting deep
-// into the column group's own remaining space (near its true bottom edge,
-// well past the last card, past the last card's own drag-overlay height)
-// never wins collision away from the last card in a short column; verified
-// by screenshotting mid-drag. So this still resolves to hovering the last
-// card, same as `center`/`topQuarter` would — kept as its own named
-// function (rather than reused directly) because it documents that dead
-// end at its call sites (1.b, 2.b) rather than silently matching 3.b/4.b's
-// intent.
-async function pastColumnEnd(columnGroup: Locator) {
-  const box = await boxOf(columnGroup);
-  return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
-}
+// Drag gesture recipe: tests/helpers/dragGesture.ts — see it for why a real
+// pointer sequence is required for dnd-kit, why dragTo re-resolves its
+// target mid-drag, and the known precision limits behind the skipped cases
+// below (1.a/2.a) and the pastColumnEnd dead end (1.b/2.b).
 
 async function getC(request: import('@playwright/test').APIRequestContext) {
   return (await request.get(`${API}/items/${scenario.items.C.id}`)).json();

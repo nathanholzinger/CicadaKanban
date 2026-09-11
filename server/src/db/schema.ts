@@ -193,7 +193,7 @@ export const attachments = sqliteTable('attachments', {
 export const activityLog = sqliteTable('activity_log', {
   id: text('id').primaryKey(),
   itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
-  type: text('type').notNull(), // app-level: 'status_change' | 'assignment' | 'attachment_added' | 'comment' | 'action_triggered'
+  type: text('type').notNull(), // app-level: 'status_change' | 'assignment' | 'hierarchy_change' | 'attachment_added' | 'comment' | 'action_triggered'
   content: text('content').notNull(),
   metadata: text('metadata'), // JSON string
   createdAt: integer('created_at').notNull(),

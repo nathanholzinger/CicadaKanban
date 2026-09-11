@@ -146,8 +146,36 @@ no stored position at all — ordered by `completedAt` instead).
 - Attached children render nested under their parent card (non-draggable —
   detaching is done via the item detail panel checkbox or the child badge,
   not drag-and-drop yet). `boards.showAttachedChildren` toggles whether they
-  show expanded/indented or collapsed by default. A board-level **drag
-  gesture** to attach/detach is deliberately not built — split out to Epic 3.5.
+  show expanded/indented or collapsed by default. The board-level **drag
+  gesture** to attach/detach is Epic 3.5 Stories 2–6; its server half is done.
+
+### Hierarchy Changes — One Primitive, Three Entry Points (Epic 3.5 Story 1)
+- Every write that can give an item a parent goes through
+  `server/src/lib/itemHierarchy.ts` — `validateHierarchyRequest` (pre-transaction,
+  returns the 400 message) + `applyHierarchyRequest` (inside the transaction: project
+  cascade → parent/flag/workphase write → position resolved against the *resulting*
+  scope → active/done split → workphase cascade → cross-workflow position nulling →
+  activity log). `PATCH /items/:id/move` accepts `parentId`/`isAttached` alongside
+  `workphaseId`/`anchorId`/`side`/`position`, all in one commit; `PUT /items/:id`
+  (the Sheet's edit endpoint) accepts `parentId`/`isAttached` and calls the same
+  primitive; `POST /items` shares the legality guard. Full rules:
+  `docs/wiki/item-attachment/README.md`.
+- **Depth cap:** `ITEM_DEPTH_CAP` (provisionally 6, `server/src/lib/itemTree.ts`) —
+  a target at depth `D` (root = 1) is legal iff `D + 1 + subtreeHeight <= CAP`,
+  detached descendants counted. Enforced on POST/PUT/move, never in the schema.
+  The client doesn't consume it yet (Story 2 decides how it's shared).
+- **Cross-project reparent is allowed**: `projectId` is derived from the new parent
+  and cascades to the whole subtree (detached descendants included). Never sent by
+  the client. Cross-*workflow* is accepted too (Sheet/MCP only): workphases are left
+  as-is, items keeping a now-foreign workphase get `position: null` and surface in
+  Unsorted → "Unknown status".
+- **`parentId: null`** = reparent to root — clears `isAttached` too; `isAttached: true`
+  with no resulting parent is a 400, as is a `workphaseId` that contradicts the parent
+  an attached item inherits from.
+- **Reindex disclosure:** any item-write response may carry `reindexed: {id, position}[]`
+  when a lazy reindex renumbered rows the caller never asked about. Absent otherwise.
+  The client half (apply, then check inversions) is Story 2.
+- Hierarchy changes log a `hierarchy_change` activity entry on the moving item.
 
 ---
 
@@ -202,10 +230,12 @@ KanbanApp/
 │       │   └── runMigrations.ts ← migration runner + seed + board backfill
 │       ├── lib/                 ← shared domain logic (routes import from lib/, never from each other)
 │       │   ├── columnRanges.ts  ← rank map, range coverage/overlap/broken, getOrderedWorkphases, shrink-on-workphase-delete
-│       │   ├── workflowItems.ts ← getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope)
+│       │   ├── workflowItems.ts ← getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope), effectiveWorkflowIdForProject
 │       │   ├── boardCascade.ts  ← deleteBoardsById (transactional columns→boards delete, used by 3 delete paths)
 │       │   ├── attachedCascade.ts ← cascadeWorkphaseToAttachedDescendants (attach/detach cascade, Epic 3)
-│       │   ├── itemTree.ts      ← isSelfRefDescendant/assertValidReparent (items+projects) + walkItemDescendants (items), all cycle-guarded
+│       │   ├── itemHierarchy.ts ← validateHierarchyRequest/applyHierarchyRequest — the one reparent/attach/workphase/placement implementation behind POST, PUT, and move (Epic 3.5)
+│       │   ├── activityLog.ts   ← logActivity (one activity_log insert, optionally inside a tx)
+│       │   ├── itemTree.ts      ← isSelfRefDescendant/assertValidReparent (items+projects) + walkItemDescendants, hierarchyDepth/subtreeHeight/assertWithinDepthCap + ITEM_DEPTH_CAP (items), all cycle-guarded
 │       │   ├── reorder.ts       ← validateReorder/applyReorderEntries (shared PATCH /reorder — items, workphases, columns)
 │       │   ├── positionResolver.ts ← table-generic anchor+side resolution, coarsest-fit, lazy reindex (Epic 3.2 — items + projects)
 │       │   ├── coarsestFit.ts   ← the coarsest-decimal-that-fits search, factored out of positionResolver.ts for standalone unit tests
@@ -254,6 +284,7 @@ KanbanApp/
 │           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement, useBoardDnd (all drag logic) + boardDndUtils.ts (pure, unit-tested drag/drop resolution helpers)
 ├── tests/                       ← Playwright E2E
 │   ├── api/                     ← REST endpoint tests via Playwright request fixture
+│   ├── helpers/                 ← api.ts, db.ts, seed.ts, itemRepositioningScenario.ts, dragGesture.ts (the one dnd-kit pointer recipe — never hand-roll a drag in a spec)
 │   └── ui/                      ← browser interaction tests (boards.spec.ts, boards-layer.spec.ts, ...)
 └── bruno/                       ← saved HTTP requests (manual API testing)
 ```

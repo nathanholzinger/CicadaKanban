@@ -1148,15 +1148,20 @@ describe('attached children', () => {
     expect(res.body.error).toMatch(/parentId/i);
   });
 
-  it('rejects reparenting an item under a parent in a different project (finding #11)', async () => {
+  // Superseded (Epic 3.5): the same-project restriction from finding #11 is
+  // lifted — a cross-project reparent is accepted and the child takes the
+  // parent's project (docs/wiki/item-attachment §9). The full cascade cases
+  // live in items.hierarchy.test.ts; this pins the PUT entry point.
+  it('accepts reparenting under a parent in a different project and adopts its projectId (wiki §9)', async () => {
     const projectA = await createProject();
     const projectB = await createProject();
     const itemA = await createItem({ projectId: projectA.id, title: 'Item A' });
     const parentB = await createItem({ projectId: projectB.id, title: 'Parent B' });
 
     const res = await request(app).put(`/api/items/${itemA.id}`).send({ parentId: parentB.id });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/different project/i);
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBe(parentB.id);
+    expect(res.body.projectId).toBe(projectB.id);
   });
 
   it('an attached child inherits the parent workphase even when a different one is passed', async () => {
@@ -1206,7 +1211,11 @@ describe('attached children', () => {
     expect(res.body.workphaseId).toBe(todo.id);
   });
 
-  it('reparenting to null while attached leaves isAttached flagged, not cleared (finding #27 stored-state note)', async () => {
+  // Superseded (Epic 3.5): finding #27 noted the flag used to survive a
+  // parentId: null write. docs/wiki/item-attachment §1 now makes
+  // "attached ⇒ has a parent" hold in the stored row — clearing the parent
+  // clears the flag (§11 "reparent to root").
+  it('reparenting to null while attached clears isAttached and keeps the workphase (wiki §1, §11)', async () => {
     const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
@@ -1215,8 +1224,10 @@ describe('attached children', () => {
     const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: null });
     expect(res.status).toBe(200);
     expect(res.body.parentId).toBeNull();
-    expect(res.body.isAttached).toBe(1); // flag stays set even though there's no parent to attach to
-    expect(res.body.workphaseId).toBe(todo.id); // no resync attempted — nothing to snap to
+    expect(res.body.isAttached).toBe(0);
+    expect(res.body.workphaseId).toBe(todo.id); // no workphase change is implied
+    expect(res.body.positionScope).toBe('workflow'); // now a Free item, freshly positioned
+    expect(res.body.position).not.toBeNull();
   });
 });
 
