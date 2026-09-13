@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import { resolveDropSide } from './workflow/boardDndUtils';
-import { useDropTargetState, type DropTargetView } from './workflow/DragClassificationContext';
+import { useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
 
 // Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
 // full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
@@ -26,8 +26,14 @@ function useLiveDropSide(itemId: string, expectedActiveType: string): 'before' |
 // deliberately rough until Story 8 tunes it against real gestures. Green:
 // a Free descendant of the carried item ("these are yours"). Dimmed: a real
 // target this item can't use (depth-capped). Valid and Inert draw nothing.
-const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-emerald-500/60';
-const OVERLAY_DEPTH_CAPPED = 'opacity-40';
+// The color and the dim level are CSS custom properties BoardView sets from
+// the dev/test panel (Story 3).
+const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';
+const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
+// Epic 3.5 Story 3: a write is in flight for this item — it's drawn at the
+// slot it was dropped in, and its position is the server's to confirm
+// (wiki §10). Test surface: `data-pending`.
+const PENDING = 'animate-pulse';
 
 function dropTargetClass(view: DropTargetView | null): string {
   if (!view) return '';
@@ -39,6 +45,34 @@ function dropTargetClass(view: DropTargetView | null): string {
 const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
 const DROP_INDICATOR_AFTER =
   'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+
+// The drag-time chrome a Card and a Stub share (audit epic-3-5-story-2
+// #13): the live side indicator, the drag-target attributes/overlay, the
+// pending marker. The DragOverlay copy is the carried item itself — never a
+// target, never pending — so it gets none of it.
+function useDropTargetProps(itemId: string, activeType: 'card' | 'attached-child', isOverlay = false) {
+  const dropSide = useLiveDropSide(itemId, activeType);
+  const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
+  const pending = useIsPending(isOverlay ? '' : itemId);
+  return {
+    dropSide,
+    dataAttrs: {
+      'data-item-id': isOverlay ? undefined : itemId,
+      // The carried copy, for the E2E helper's "drag finished" wait — it
+      // outlives the drag by dnd-kit's drop animation.
+      'data-drag-overlay': isOverlay ? 'true' : undefined,
+      'data-drop-state': dropTarget?.state,
+      'data-pending': pending ? 'true' : undefined,
+    },
+    className: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''}`,
+  };
+}
+
+function DropSideIndicator({ side }: { side: 'before' | 'after' | null }) {
+  if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} />;
+  if (side === 'after') return <div className={DROP_INDICATOR_AFTER} />;
+  return null;
+}
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
 
@@ -74,9 +108,7 @@ export default function KanbanCard({
     id: item.id,
     data: { type: 'card' },
   });
-  const dropSide = useLiveDropSide(item.id, 'card');
-  // The DragOverlay copy is the carried item itself, never a target.
-  const dropTarget = useDropTargetState(isOverlay ? '' : item.id);
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, 'card', isOverlay);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -104,14 +136,12 @@ export default function KanbanCard({
       {...listeners}
       role="article"
       aria-label={item.title}
-      data-item-id={isOverlay ? undefined : item.id}
-      data-drop-state={dropTarget?.state}
+      {...dataAttrs}
       onClick={() => !isDragging && onCardClick?.(item.id)}
-      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClass(dropTarget)}`}
+      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
-      {dropSide === 'before' && <div className={DROP_INDICATOR_BEFORE} />}
-      {dropSide === 'after' && <div className={DROP_INDICATOR_AFTER} />}
+      <DropSideIndicator side={dropSide} />
 
       {/* Depth + type pills */}
       <div className="mb-2 flex items-center gap-1">
@@ -205,23 +235,20 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
     // near each other.
     data: { type: 'attached-child', parentId: item.parentId },
   });
-  const dropSide = useLiveDropSide(item.id, 'attached-child');
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
-  // — same attribute and overlay as a Card, so a test reads them alike.
-  const dropTarget = useDropTargetState(item.id);
+  // — same attributes and overlay as a Card, so a test reads them alike.
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, 'attached-child');
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      data-item-id={item.id}
-      data-drop-state={dropTarget?.state}
-      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${dropTargetClass(dropTarget)}`}
+      {...dataAttrs}
+      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${dropTargetClassName}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
-      {dropSide === 'before' && <div className={DROP_INDICATOR_BEFORE} />}
-      {dropSide === 'after' && <div className={DROP_INDICATOR_AFTER} />}
+      <DropSideIndicator side={dropSide} />
 
       <button
         type="button"

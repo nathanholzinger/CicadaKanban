@@ -7,9 +7,17 @@ import {
   computeChildCounts,
   removeItemAndDescendants,
   applyItemWriteResponse,
-} from './useItemManagement';
+  applyPlacements,
+  freeItemOrder,
+  findInversion,
+  completeItemWrite,
+  withPlacement,
+  EMPTY_ITEM_LIST_STATE,
+  type Placement,
+} from './itemListOps';
 
 const item = makeItem;
+const placements = (entries: Array<[string, Placement]>) => new Map(entries);
 
 describe('getWorkphaseItemsFrom', () => {
   const items = [
@@ -199,5 +207,182 @@ describe('applyItemWriteResponse', () => {
     const before = list();
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'A', position: 1.0 }] };
     expect(applyItemWriteResponse(before, response).find(i => i.id === 'A')).toBe(before[0]);
+  });
+});
+
+// Epic 3.5 Story 3 — the ordinal placement layer (docs/wiki/item-positioning
+// §2 "Client-side role", board-drag-interaction §10). Cross-reference
+// TC-2.27–2.30, DRAG-6.1/6.2.
+describe('applyPlacements', () => {
+  const sorted = () => [item('A', { position: 1 }), item('C', { position: 3 }), item('E', { position: 5 })];
+  const x = () => item('X', { position: 9 });
+
+  it('TC-2.27: places an item after its anchor by index — its position is untouched', () => {
+    const list = [...sorted(), x()];
+    const result = applyPlacements(list, placements([['X', { slot: { anchorId: 'A', side: 'after' } }]]));
+    expect(result.map(i => i.id)).toEqual(['A', 'X', 'C', 'E']);
+    expect(result.find(i => i.id === 'X')!.position).toBe(9);
+  });
+
+  it('places before an anchor, first, and last', () => {
+    const list = [...sorted(), x()];
+    const ids = (p: Placement) => applyPlacements(list, placements([['X', p]])).map(i => i.id);
+    expect(ids({ slot: { anchorId: 'C', side: 'before' } })).toEqual(['A', 'X', 'C', 'E']);
+    expect(ids({ slot: 'first' })).toEqual(['X', 'A', 'C', 'E']);
+    expect(ids({ slot: 'last' })).toEqual(['A', 'C', 'E', 'X']);
+  });
+
+  it("'existing' leaves the sort alone, and a list with no placed items comes back as-is", () => {
+    const list = [...sorted(), x()];
+    expect(applyPlacements(list, placements([['X', { slot: 'existing' }]])).map(i => i.id)).toEqual([
+      'A',
+      'C',
+      'E',
+      'X',
+    ]);
+    expect(applyPlacements(list, new Map()).map(i => i.id)).toEqual(['A', 'C', 'E', 'X']);
+  });
+
+  it('TC-2.29: an item anchored against a still-pending item follows that item wherever it was placed', () => {
+    const list = [...sorted(), item('Y', { position: 8 }), x()];
+    const result = applyPlacements(
+      list,
+      placements([
+        ['Y', { slot: { anchorId: 'A', side: 'after' } }],
+        ['X', { slot: { anchorId: 'Y', side: 'after' } }],
+      ]),
+    );
+    expect(result.map(i => i.id)).toEqual(['A', 'Y', 'X', 'C', 'E']);
+  });
+
+  it('falls back to where the sort had the item when its anchor is not in this list (a narrowed view)', () => {
+    const list = [item('A', { position: 1 }), item('X', { position: 2 }), item('E', { position: 5 })];
+    const result = applyPlacements(list, placements([['X', { slot: { anchorId: 'unseen', side: 'after' } }]]));
+    expect(result.map(i => i.id)).toEqual(['A', 'X', 'E']);
+  });
+
+  it('a placement on an item outside the list has no effect on it', () => {
+    const result = applyPlacements(sorted(), placements([['X', { slot: 'first' }]]));
+    expect(result.map(i => i.id)).toEqual(['A', 'C', 'E']);
+  });
+});
+
+describe('selectors with placements', () => {
+  it('a placement with a workphaseId moves the item into that list without changing the item (TC-2.30: position kept, not null)', () => {
+    const items = [
+      item('A', { position: 1 }),
+      item('X', { position: 3 }),
+      item('Q', { workphaseId: 'doing', position: 2 }),
+    ];
+    const p = placements([['X', { workphaseId: 'doing', slot: 'first' }]]);
+    expect(getWorkphaseItemsFrom(items, 'todo', undefined, undefined, p).map(i => i.id)).toEqual(['A']);
+    const doing = getWorkphaseItemsFrom(items, 'doing', undefined, undefined, p);
+    expect(doing.map(i => i.id)).toEqual(['X', 'Q']);
+    expect(doing[0].position).toBe(3);
+    expect(doing[0].workphaseId).toBe('todo');
+  });
+
+  it("a merged column honours the placement's workphase for membership", () => {
+    const items = [item('A', { position: 1 }), item('X', { workphaseId: 'done', position: null })];
+    const p = placements([['X', { workphaseId: 'review', slot: 'last' }]]);
+    expect(getMergedColumnItemsFrom(items, ['todo', 'review'], undefined, undefined, p).map(i => i.id)).toEqual([
+      'A',
+      'X',
+    ]);
+  });
+
+  it('Stub lists apply anchor placements the same way', () => {
+    const items = [
+      item('root'),
+      item('s1', { parentId: 'root', position: 1 }),
+      item('s2', { parentId: 'root', position: 2 }),
+    ];
+    const p = placements([['s2', { slot: { anchorId: 's1', side: 'before' } }]]);
+    expect(getAttachedChildrenFrom(items, 'root', p).map(i => i.id)).toEqual(['s2', 's1']);
+  });
+});
+
+describe('freeItemOrder / findInversion', () => {
+  it('orders Free positioned items board-wide, with placements layered on; Stubs and unpositioned items make no claim', () => {
+    const items = [
+      item('A', { position: 1 }),
+      item('B', { workphaseId: 'doing', position: 2 }),
+      item('stub', { parentId: 'A', position: 0 }),
+      item('done', { position: null }),
+      item('X', { position: 9 }),
+    ];
+    expect(freeItemOrder(items, new Map())).toEqual(['A', 'B', 'X']);
+    expect(freeItemOrder(items, placements([['X', { slot: { anchorId: 'A', side: 'after' } }]]))).toEqual([
+      'A',
+      'X',
+      'B',
+    ]);
+  });
+
+  it('finds nothing when the sequences agree over their shared ids', () => {
+    expect(findInversion(['A', 'X', 'B'], ['A', 'X', 'B'])).toBeNull();
+    expect(findInversion(['A', 'X', 'B'], ['A', 'B'])).toBeNull(); // X left the positioned set
+  });
+
+  it('reports the expected vs actual sequence when they differ', () => {
+    expect(findInversion(['A', 'X', 'B'], ['A', 'B', 'X'])).toEqual({
+      expected: ['A', 'X', 'B'],
+      actual: ['A', 'B', 'X'],
+    });
+  });
+});
+
+// DRAG-6.3 / TC-5a.1–5a.3: the reconciliation step, in order.
+describe('completeItemWrite', () => {
+  const pending = () =>
+    withPlacement(
+      {
+        ...EMPTY_ITEM_LIST_STATE,
+        items: [
+          item('A', { position: 1.0 }),
+          item('C', { position: 1.5 }),
+          item('E', { position: 1.75 }),
+          item('X', { position: 9 }),
+        ],
+      },
+      'X',
+      { slot: { anchorId: 'A', side: 'after' } },
+    );
+
+  it('TC-5a.2: applies the reindex first, so a correct response is not read as an inversion; clears the placement', () => {
+    const response = {
+      ...item('X', { position: 2 }),
+      reindexed: [
+        { id: 'A', position: 1 },
+        { id: 'X', position: 2 },
+        { id: 'C', position: 3 },
+        { id: 'E', position: 4 },
+      ],
+    };
+    const next = completeItemWrite(pending(), response);
+    expect(freeItemOrder(next.items, next.placements)).toEqual(['A', 'X', 'C', 'E']);
+    expect(next.placements.has('X')).toBe(false);
+    expect(next.inversions).toEqual([]);
+  });
+
+  it('DRAG-6.4: a response that inverts the previewed order is applied *and* recorded as an inversion', () => {
+    // The server put X after E — not where the preview drew it.
+    const next = completeItemWrite(pending(), item('X', { position: 1.9 }));
+    expect(freeItemOrder(next.items, next.placements)).toEqual(['A', 'C', 'E', 'X']);
+    expect(next.inversions).toEqual([{ itemId: 'X', expected: ['A', 'X', 'C', 'E'], actual: ['A', 'C', 'E', 'X'] }]);
+  });
+
+  it('a write the board never previewed (a Sheet edit) is folded in with no tripwire', () => {
+    const state = { ...pending(), placements: new Map() };
+    const next = completeItemWrite(state, item('X', { position: 1.9 }));
+    expect(next.inversions).toEqual([]);
+    expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);
+  });
+
+  it('leaves other pending placements alone', () => {
+    const state = withPlacement(pending(), 'C', { slot: 'last' });
+    const next = completeItemWrite(state, item('X', { position: 1.2 }));
+    expect(next.placements.has('C')).toBe(true);
+    expect(next.placements.has('X')).toBe(false);
   });
 });

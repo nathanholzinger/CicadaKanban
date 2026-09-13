@@ -139,7 +139,9 @@ see the story plan's decisions):
 
 ---
 
-### Story 3 — Pop state machine + Card→Column drop bands
+### Story 3 — Pop state machine + Card→Column drop bands ✅ (done 2026-09-11)
+**Plan / record:** [`story-3-pop-state-machine-column-bands.md`](story-3-pop-state-machine-column-bands.md)
+
 **Goal:** the core interaction model. Cards stay locked to their context until
 the cursor pulls them out, then pop and follow freely. Includes the
 configurable dev/test panel for thresholds and overlay colors, and the column
@@ -149,25 +151,35 @@ the first gesture riding on it.
 Merged deliberately: pop *feel* can't be evaluated without a gesture exercising
 it, and column drops are the simplest one.
 
+**Also in scope** (added 2026-09-11 while planning): the **ordinal preview +
+pending marker** of `wiki/board-drag-interaction/` §10, the **inversion
+tripwire** of `wiki/item-positioning/` §5a (deferred here from Story 2),
+**per-item response sequencing** (DRAG-6.5), and **expanded sub-rows as
+contexts** (§1) — the open item below.
+
 **Highest-risk story.** Axis-lock toggling mid-drag isn't native to dnd-kit's
-declarative modifiers — worth prototyping before committing an estimate.
+declarative modifiers — resolved with a `DragOverlay` modifier that reads the
+machine's state through a ref (the overlay is clamped; `DndContext` gets no
+modifier, so the collision rect stays raw).
 
 **Depends on:** Story 2.
 **Verified by:** automated state-transition cases; **feel is manual**, per the
 coverage split in `epic-3-5-decisions.md` Q1.
 
-**Needs attention** (flagged by test planning, 2026-09-10 — see
-`docs/test-plans/board-drag-interaction/INDEX.md`):
-- **`wiki/board-drag-interaction/` §10 describes the pre-response state two
-  ways.** It opens with "the board previews a drop ordinally: the item is
-  placed at the ghost's index" and closes with "the board may briefly show
-  its pre-drop order until the response lands … a deliberate tradeoff
-  carried over from Epic 3.2." Under the amended client-side role
-  (`wiki/item-positioning/` §2) those are different behaviors. DRAG-6.1 is
-  written to the ordinal-preview statement. If the closing paragraph is a
-  stale carry-over, delete it; if it describes a real transient (e.g.
-  between release and preview render), say when it applies. This is the
-  same question as the "Optimistic preview" open item below.
+**Resolved** (flagged by test planning 2026-09-10; decided 2026-09-11 —
+see the story plan's decisions):
+- **§10's closing "may briefly show its pre-drop order" paragraph was a
+  stale carry-over — deleted.** The placement is set synchronously on
+  release, so there is no transient; DRAG-6.1's ordinal-preview statement
+  is the behavior.
+- **A band is measured against the region's rect as it was on entry**
+  (recorded in §5) — the ghost's own insertion moves an expanded column's
+  sub-rows, and a live measurement let the drop change its own band.
+- **Popping is two-way** (§3 amended after the hands-on rounds): the
+  cursor outside the context past `popDelayMs` pops the card *out* — it
+  follows the cursor, belonging to nothing — and resting in any column's
+  middle band past `popInDelayMs` pops it *in* and locks it there, the
+  column it just left included.
 
 ---
 
@@ -251,10 +263,15 @@ other gestures exist.
 
 ## Open items
 
-- **Expanded-mode columns:** when a column renders each workphase as its own
-  sub-row, do those rows each get their own drop bands and pop behavior, or is
-  expanded mode out of the pop model this epic? Sizes Story 3; doesn't move a
-  boundary.
-- **Optimistic preview:** Epic 3.2 shipped without optimistic position preview.
-  Ghost cards may raise that bar and reopen the fuller-preview option 3.2 left
-  on the table. Surfaces in Story 3.
+None outstanding. Resolved in Story 3 (2026-09-11):
+
+- **Expanded-mode columns** — in the pop model: each sub-row is its own
+  region with its own bands and pop, as `wiki/board-drag-interaction/` §1/§5
+  already stated; the machinery is parametric on "a region", so it cost a
+  region registration and a test (DRAG-1.6, DRAG-3.8).
+- **Optimistic preview** — the ordinal placement of §10 is the preview:
+  the item is drawn at its slot (first / last / where its kept position
+  falls / beside its anchor) with no position invented, and that placement
+  becomes the pending marker until the response lands. The fuller
+  "compute a number client-side" option Epic 3.2 left open is closed by
+  `wiki/item-positioning/` §2's amended client-side role.

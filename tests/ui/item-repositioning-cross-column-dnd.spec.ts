@@ -217,14 +217,15 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
 });
 
 test.describe('5: an abandoned drop must not strand the cross-column preview', () => {
-  // handleDragOver re-buckets the carried card into whatever column it's
-  // hovering, optimistically. Releasing over something that resolves to no
-  // drop at all — here a card in Unsorted's "Unknown status" list, whose
-  // workphase no column covers — writes nothing, so that preview has to be
-  // rolled back, exactly as an Escape-cancel rolls it back. Previously it
-  // wasn't: C stayed drawn in Column Two with the server still on Column
-  // One, and the next drag of C snapshotted the wrong workphase (audit
-  // code-quality-audit-epic-3-5-story-2 #1).
+  // Hovering another column draws the carried card's ghost there (Epic 3.5
+  // Story 3's ordinal placement; before that, handleDragOver's optimistic
+  // re-bucket). Releasing over something that resolves to no drop at all —
+  // here a card in Unsorted's "Unknown status" list, whose workphase no
+  // column covers — writes nothing, so that preview has to go, exactly as
+  // an Escape-cancel clears it. Previously it didn't: C stayed drawn in
+  // Column Two with the server still on Column One, and the next drag of C
+  // snapshotted the wrong workphase (audit code-quality-audit-epic-3-5-
+  // story-2 #1).
   test('5.a — hover C over Column Two, then release on an Unknown-status card', async ({ page, request, projectSidebar }) => {
     // An item with no workphase surfaces in Unsorted → Unknown status.
     const u = await request.post(`${API}/items`, { data: { title: 'Item U', projectId: scenario.project.id } });

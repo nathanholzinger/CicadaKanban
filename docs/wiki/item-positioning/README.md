@@ -5,9 +5,11 @@ be disclosed to the caller," and §2's cross-workflow scope-change row
 implemented as of Epic 3.5 Story 1 (server side — the disclosure is an
 optional `reindexed: {id, position}[]` field on every item-write response).
 §5a's apply order (pairs, then the written item) implemented in Story 2
-(`applyItemWriteResponse`, on every item-write path). **Settled but not
-yet implemented:** §5a's inversion tripwire and §2's amended "Client-side
-role" (the ordinal preview / pending marker) — Story 3.
+(`applyItemWriteResponse`, on every item-write path). §5a's inversion
+tripwire and §2's amended "Client-side role" (the ordinal preview /
+pending marker) implemented in Story 3 (`client/src/components/workflow/
+itemListOps.ts` — `applyPlacements`, `completeItemWrite`). **Fully
+implemented.**
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
@@ -286,15 +288,19 @@ Shape of the disclosure:
 ## 5a. Client reconciliation order
 
 **Added by Epic 3.5.** Steps 1–2 implemented in Story 2
-(`client/src/components/workflow/useItemManagement.ts`'s
-`applyItemWriteResponse`, used by the board move, the attached-sibling
-reorder, inline create, and the Sheet's PUT alike); steps 3–4 land with
-Story 3's ordinal preview, which is what gives an inversion something to
-be checked against. Note that this client derives its render order from
-`position` on every render, so applying the pairs *is* the re-sort — step
-4 has no separate mechanism here. Applies to any client holding a
-locally-ordered list, though the board drag is what exercises it — see
-[`../board-drag-interaction/`](../board-drag-interaction/) §10.
+(`applyItemWriteResponse`, used by the board move, the attached-sibling
+reorder, inline create, and the Sheet's PUT alike); steps 3–4 in Story 3
+(`client/src/components/workflow/itemListOps.ts`'s `completeItemWrite`),
+where the ordinal preview gives an inversion something to be checked
+against: the board-wide rendered order of positioned Free items *with the
+pending placement* is compared to the order *after* the response with the
+placement cleared, and a difference is logged and counted. Note that this
+client derives its render order from `position` on every render, so
+applying the pairs *is* the re-sort — step 4 has no separate mechanism
+here. The check only runs for a write the board previewed; a Sheet edit
+that reassigns a position made no ordinal claim. Applies to any client
+holding a locally-ordered list, though the board drag is what exercises it
+— see [`../board-drag-interaction/`](../board-drag-interaction/) §10.
 
 On receiving a response to a position write, in this order:
 

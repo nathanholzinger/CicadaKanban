@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { BoardWithDetails, ItemType, Column } from '../types';
-import { boardCollisionDetection } from './workflow/boardDndUtils';
 import { fetchBoard } from '../api/boards';
 import { fetchItemTypes } from '../api/itemTypes';
 import BoardColumn from './BoardColumn';
@@ -17,7 +16,12 @@ import { useWorkphaseManagement } from './workflow/useWorkphaseManagement';
 import { useColumnManagement } from './workflow/useColumnManagement';
 import { useItemManagement } from './workflow/useItemManagement';
 import { useBoardDnd } from './workflow/useBoardDnd';
-import { DragClassificationContext } from './workflow/DragClassificationContext';
+import { DragSessionContext, PlacementsContext } from './workflow/DragSessionContext';
+import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
+import { DragTuningContext } from './workflow/DragTuningContext';
+import { isLocked } from './workflow/popSession';
+import { HoveredBandGuide } from './BandGuides';
+import DragTuningPanel from './DragTuningPanel';
 
 interface BoardViewProps {
   workflowId: string;
@@ -37,6 +41,16 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [editingColumn, setEditingColumn] = useState<Column | 'new' | null>(null);
   const [showWorkphaseManager, setShowWorkphaseManager] = useState(false);
   const [workphaseNotice, setWorkphaseNotice] = useState('');
+  // Epic 3.5 Story 3: the drag gesture's tunable parameters, persisted so a
+  // change survives a reload (docs/wiki/board-drag-interaction §3.1).
+  const [dragTuning, setDragTuningState] = useState(loadDragTuning);
+  const [showDragTuning, setShowDragTuning] = useState(false);
+  const boardRootRef = useRef<HTMLDivElement>(null);
+
+  function setDragTuning(next: DragTuning) {
+    setDragTuningState(next);
+    saveDragTuning(next);
+  }
 
   const {
     boards,
@@ -64,7 +78,11 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   const {
     items,
-    setItems,
+    placements,
+    inversions,
+    replaceItems,
+    previewPlacement,
+    writes,
     childCounts,
     getWorkphaseItems,
     getMergedColumnItems,
@@ -107,7 +125,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         ...data.unsorted.uncovered.flatMap(r => r.items),
         ...data.unsorted.invalidItems,
       ];
-      setItems(allItems);
+      replaceItems(allItems);
 
       const stored = localStorage.getItem(`kanban_child_col_${workflowId}`);
       if (!stored) {
@@ -119,7 +137,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     } finally {
       setLoading(false);
     }
-  }, [activeBoardId, workflowId, setWorkphases, setItems]);
+  }, [activeBoardId, workflowId, setWorkphases, replaceItems]);
 
   useEffect(() => {
     // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
@@ -169,8 +187,28 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleReorderColumns,
   } = useColumnManagement(activeBoardId, loadBoard);
 
-  const { sensors, activeItem, classification, handleDragStart, handleDragOver, handleDragEnd, handleDragCancel } =
-    useBoardDnd(board, setBoard, items, setItems, findWorkphaseForItem, handleReorderColumns, loadBoard);
+  const { sensors, session, collisionDetection, overlayModifiers, handleDragStart, handleDragEnd, handleDragCancel } =
+    useBoardDnd({
+      board,
+      setBoard,
+      items,
+      tuning: dragTuning,
+      previewPlacement,
+      writes,
+      getWorkphaseItems,
+      getMergedColumnItems,
+      findWorkphaseForItem,
+      handleReorderColumns,
+      loadBoard,
+      rootRef: boardRootRef,
+    });
+
+  // §4's overlay colors reach KanbanCard as CSS custom properties, so the
+  // dev/test panel can change them without a rebuild.
+  const overlayVars = {
+    '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
+    '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,
+  } as CSSProperties;
 
   function handleChildWorkphaseChange(workphaseId: string | null) {
     setChildDefaultWorkphaseId(workphaseId);
@@ -222,10 +260,21 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
             setShowWorkphaseManager(v => !v);
             setWorkphaseNotice('');
           }}
+          onToggleDragTuning={() => setShowDragTuning(v => !v)}
           childDefaultWorkphaseId={childDefaultWorkphaseId}
           onChildWorkphaseChange={handleChildWorkphaseChange}
           workphases={workphases}
         />
+
+        {showDragTuning && (
+          <DragTuningPanel
+            tuning={dragTuning}
+            onChange={setDragTuning}
+            session={session}
+            inversions={inversions}
+            onClose={() => setShowDragTuning(false)}
+          />
+        )}
 
         {showWorkphaseManager && !readOnly && (
           <WorkphaseManagerPanel
@@ -244,51 +293,61 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
       <DndContext
         sensors={sensors}
-        collisionDetection={boardCollisionDetection}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <DragClassificationContext value={classification}>
-          <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-            <div className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4">
-              {board.columns.map(column => (
-                <BoardColumn
-                  key={column.id}
-                  column={column}
-                  getWorkphaseItems={getWorkphaseItems}
-                  getMergedColumnItems={getMergedColumnItems}
-                  childCounts={childCounts}
-                  getAttachedChildren={getAttachedChildren}
-                  defaultExpanded={showAttachedChildrenDefault}
-                  itemTypes={itemTypes}
-                  isCardBeingDragged={activeItem !== null}
-                  onCreateItem={handleCreateItem}
-                  onCardClick={setSelectedItemId}
-                  onEdit={readOnly ? undefined : setEditingColumn}
-                  onDelete={readOnly ? undefined : handleDeleteColumn}
-                />
-              ))}
+        <DragSessionContext value={session}>
+          <PlacementsContext value={placements}>
+            <DragTuningContext value={dragTuning}>
+              <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+                {/* data-drag-state / data-drag-context: the pop machine's state, for tests (wiki §1–§3) */}
+                <div
+                  ref={boardRootRef}
+                  style={overlayVars}
+                  data-drag-state={session?.pop ? (isLocked(session.pop) ? 'locked' : 'popped-out') : undefined}
+                  data-drag-context={session?.pop?.contextKey ?? undefined}
+                  className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
+                >
+                  {board.columns.map(column => (
+                    <BoardColumn
+                      key={column.id}
+                      column={column}
+                      getWorkphaseItems={getWorkphaseItems}
+                      getMergedColumnItems={getMergedColumnItems}
+                      childCounts={childCounts}
+                      getAttachedChildren={getAttachedChildren}
+                      defaultExpanded={showAttachedChildrenDefault}
+                      itemTypes={itemTypes}
+                      onCreateItem={handleCreateItem}
+                      onCardClick={setSelectedItemId}
+                      onEdit={readOnly ? undefined : setEditingColumn}
+                      onDelete={readOnly ? undefined : handleDeleteColumn}
+                    />
+                  ))}
 
-              <UnsortedBucket
-                uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-                invalidItems={board.unsorted.invalidItems}
-                getWorkphaseItems={getWorkphaseItems}
-                needsAttention={board.unsorted.needsAttention}
-                itemTypes={itemTypes}
-                childCounts={childCounts}
-                getAttachedChildren={getAttachedChildren}
-                defaultExpanded={Boolean(board.showAttachedChildren)}
-                filterProjectId={filterProjectId}
-                onCardClick={setSelectedItemId}
-              />
-            </div>
-          </SortableContext>
-        </DragClassificationContext>
+                  <UnsortedBucket
+                    uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
+                    invalidItems={board.unsorted.invalidItems}
+                    getWorkphaseItems={getWorkphaseItems}
+                    needsAttention={board.unsorted.needsAttention}
+                    itemTypes={itemTypes}
+                    childCounts={childCounts}
+                    getAttachedChildren={getAttachedChildren}
+                    defaultExpanded={Boolean(board.showAttachedChildren)}
+                    filterProjectId={filterProjectId}
+                    onCardClick={setSelectedItemId}
+                  />
+                </div>
+              </SortableContext>
+              <HoveredBandGuide />
+            </DragTuningContext>
+          </PlacementsContext>
+        </DragSessionContext>
 
-        <DragOverlay>
-          {activeItem ? <KanbanCard item={activeItem} itemTypes={itemTypes} isOverlay /> : null}
+        <DragOverlay modifiers={overlayModifiers}>
+          {session ? <KanbanCard item={session.activeItem} itemTypes={itemTypes} isOverlay /> : null}
         </DragOverlay>
       </DndContext>
 

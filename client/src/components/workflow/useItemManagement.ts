@@ -1,179 +1,123 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
 import { createItem, type ItemWriteResponse } from '../../api/items';
-import { getDescendantIds } from '../../lib/hierarchy';
+import {
+  EMPTY_ITEM_LIST_STATE,
+  completeItemWrite,
+  computeChildCounts,
+  getAttachedChildrenFrom,
+  getMergedColumnItemsFrom,
+  getWorkphaseItemsFrom,
+  removeItemAndDescendants,
+  withPlacement,
+  type Placement,
+} from './itemListOps';
 
-// Epic 3.5 Story 2 — the client half of docs/wiki/item-positioning §5/§5a:
-// fold an item-write response into local state. Order is the rule: apply
-// every `reindexed` pair the list holds first (an unknown id means "not in
-// this view," never missing data), then upsert the written row — it is
-// authoritative for itself and is also in the pairs, so applying it first
-// and a stale pair over it would be the silent-wrong order §5a warns
-// about. `reindexed` is stripped so it never lands in an Item. The board's
-// render order is derived from `position` on every render (selectBoardItems
-// sorts), so applying the pairs *is* the re-sort — no separate step.
-export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
-  if (!response.reindexed) return upsertItem(items, response);
-  const { reindexed, ...written } = response;
-  const positionById = new Map(reindexed.map(r => [r.id, r.position]));
-  const renumbered = items.map(item => {
-    const position = positionById.get(item.id);
-    return position === undefined || item.position === position ? item : { ...item, position };
-  });
-  return upsertItem(renumbered, written);
+// A position write in flight, tracked per item so a stale response can never
+// land last (wiki board-drag-interaction §10, DRAG-6.5): `begin` records the
+// pending placement and hands back a sequence number; `complete`/`fail` are
+// no-ops for any sequence that isn't the item's latest.
+export interface ItemWriteTracker {
+  begin(itemId: string, pending: Placement | null): number;
+  /** Folds the response in (§5a order) unless it's stale. Returns whether it was applied. */
+  complete(itemId: string, seq: number, response: ItemWriteResponse): boolean;
+  /** Clears the pending placement so nothing from the guess survives; the caller resyncs. */
+  fail(itemId: string, seq: number): void;
 }
 
-function upsertItem(items: readonly Item[], written: Item): Item[] {
-  const exists = items.some(i => i.id === written.id);
-  return exists ? items.map(i => (i.id === written.id ? written : i)) : [...items, written];
-}
-
-// Deterministic tie-break for an exact position match — prevents order from
-// depending on unspecified DB row order (Epic 3.2 Part 5).
-function byPositionThenCreatedAt(a: Item, b: Item): number {
-  return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
-}
-
-// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below (audit
-// Finding #25) — the two previously duplicated every rule here and differed
-// only in what counted as "belongs to this column," which is now the one
-// thing each thin wrapper still supplies itself via `matchesWorkphase`.
-//
-// Attached children with a parent render nested inside the parent's card
-// (see getAttachedChildrenFrom) instead of as separate top-level board cards
-// — excluded here via `positionScope === 'attached-siblings'`, the
-// server-computed field (Epic 3.2 §2), rather than re-deriving
-// `isAttached && parentId` inline. `isTerminal` (Epic 3.2 Part 6): a done
-// workphase's items have no stored position at all — ordered by completedAt
-// instead. Kept as an explicit param (not derived from positionScope,
-// which only classifies a single item) since it picks the sort key for the
-// whole batch, including when the batch is empty.
-function selectBoardItems(
-  items: readonly Item[],
-  matchesWorkphase: (item: Item) => boolean,
-  filterProjectId?: string,
-  isTerminal?: boolean,
-): Item[] {
-  const filtered = items.filter(
-    item =>
-      matchesWorkphase(item) &&
-      (!filterProjectId || item.projectId === filterProjectId) &&
-      item.positionScope !== 'attached-siblings',
-  );
-  return isTerminal
-    ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
-    : filtered.sort(byPositionThenCreatedAt);
-}
-
-// A single workphase's items — membership is an exact workphaseId match.
-export function getWorkphaseItemsFrom(
-  items: readonly Item[],
-  workphaseId: string,
-  filterProjectId?: string,
-  isTerminal?: boolean,
-): Item[] {
-  return selectBoardItems(items, item => item.workphaseId === workphaseId, filterProjectId, isTerminal);
-}
-
-// Epic 3.2 Part 4: a merged column's item list is a union-sort across its
-// covered workphases, not a concatenation of independently-sorted
-// per-workphase lists — this is what makes genuine cross-workphase
-// interleaving possible (today's rendering forced grouped-by-workphase order
-// unconditionally). `isTerminal` mirrors getWorkphaseItemsFrom above — a
-// column can't span both terminal and non-terminal workphases (Part 6's
-// column-range validation), so it's uniform across the whole covered set.
-export function getMergedColumnItemsFrom(
-  items: readonly Item[],
-  coveredWorkphaseIds: readonly string[],
-  filterProjectId?: string,
-  isTerminal?: boolean,
-): Item[] {
-  const coveredSet = new Set(coveredWorkphaseIds);
-  return selectBoardItems(
-    items,
-    item => item.workphaseId !== null && coveredSet.has(item.workphaseId),
-    filterProjectId,
-    isTerminal,
-  );
-}
-
-// The server deletes an item's whole subtree, not just the one id (audit
-// Finding #15) — dropping only `id` from client state left its descendants
-// stale, rendering as live top-level cards until a reload. Descendants are
-// computed against `items` as passed in (the current state at delete time),
-// not a stale snapshot.
-export function removeItemAndDescendants(items: readonly Item[], id: string): Item[] {
-  const descendants = getDescendantIds(id, items);
-  return items.filter(i => i.id !== id && !descendants.has(i.id));
-}
-
-export function getAttachedChildrenFrom(items: readonly Item[], parentId: string): Item[] {
-  return items
-    .filter(item => item.parentId === parentId && item.positionScope === 'attached-siblings')
-    .sort(byPositionThenCreatedAt);
-}
-
-// Counts attached children only — these are the ones the card's expand
-// toggle reveals nested underneath it. Detached children render as
-// ordinary top-level cards and aren't counted here.
-export function computeChildCounts(items: readonly Item[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const item of items) {
-    if (item.parentId && item.positionScope === 'attached-siblings') {
-      counts[item.parentId] = (counts[item.parentId] ?? 0) + 1;
-    }
-  }
-  return counts;
-}
-
+// The pure list operations live in itemListOps.ts; this hook only closes
+// over state. State is one atom — items, ordinal placements, and the
+// inversion log — so a write's reconciliation (pairs → row → clear the
+// placement → tripwire) is a single pure reducer step rather than three
+// setStates that could interleave with another response.
 export function useItemManagement(projectId: string | undefined, filterProjectId: string | undefined) {
-  const [items, setItems] = useState<Item[]>([]);
+  const [list, setList] = useState(EMPTY_ITEM_LIST_STATE);
+  const { items, placements, inversions } = list;
+  const writeSeq = useRef(new Map<string, number>());
+
+  // A board load replaces the list wholesale and drops every placement —
+  // each belonged to the list it was made against. Every other change is a
+  // reducer step below.
+  const replaceItems = useCallback((next: Item[]) => {
+    setList(s => ({ ...s, items: next, placements: new Map() }));
+  }, []);
+
+  // The live ghost during a drag (§10): where the carried item is drawn,
+  // with no position invented. Null clears it.
+  const previewPlacement = useCallback((itemId: string, placement: Placement | null) => {
+    setList(s => withPlacement(s, itemId, placement));
+  }, []);
+
+  const writes = useMemo<ItemWriteTracker>(
+    () => ({
+      begin(itemId, pending) {
+        const seq = (writeSeq.current.get(itemId) ?? 0) + 1;
+        writeSeq.current.set(itemId, seq);
+        setList(s => withPlacement(s, itemId, pending));
+        return seq;
+      },
+      complete(itemId, seq, response) {
+        if (writeSeq.current.get(itemId) !== seq) return false;
+        setList(s => completeItemWrite(s, response));
+        return true;
+      },
+      fail(itemId, seq) {
+        if (writeSeq.current.get(itemId) !== seq) return;
+        setList(s => withPlacement(s, itemId, null));
+      },
+    }),
+    [],
+  );
 
   function getWorkphaseItems(workphaseId: string, isTerminal?: boolean): Item[] {
-    return getWorkphaseItemsFrom(items, workphaseId, filterProjectId, isTerminal);
+    return getWorkphaseItemsFrom(items, workphaseId, filterProjectId, isTerminal, placements);
   }
 
   function getMergedColumnItems(coveredWorkphaseIds: readonly string[], isTerminal?: boolean): Item[] {
-    return getMergedColumnItemsFrom(items, coveredWorkphaseIds, filterProjectId, isTerminal);
+    return getMergedColumnItemsFrom(items, coveredWorkphaseIds, filterProjectId, isTerminal, placements);
   }
 
   function getAttachedChildren(parentId: string): Item[] {
-    return getAttachedChildrenFrom(items, parentId);
+    return getAttachedChildrenFrom(items, parentId, placements);
   }
 
   function findWorkphaseForItem(itemId: string): string | null {
     return items.find(i => i.id === itemId)?.workphaseId ?? null;
   }
 
-  // Every write path lands through applyItemWriteResponse so a reindex the
-  // server disclosed is applied the same way whether the write came from
-  // the board, the Sheet, or an inline create.
+  // Every write path lands through completeItemWrite so a reindex the server
+  // disclosed is applied the same way whether the write came from the
+  // board, the Sheet, or an inline create.
   async function handleCreateItem(workphaseId: string, title: string, type: string | null) {
     try {
       const newItem = await createItem({ type: type ?? undefined, title, projectId, workphaseId });
-      setItems(prev => applyItemWriteResponse(prev, newItem));
+      setList(s => completeItemWrite(s, newItem));
     } catch (err) {
       console.error('Failed to create item:', err);
     }
   }
 
   function handleItemUpdated(updated: ItemWriteResponse) {
-    setItems(prev => applyItemWriteResponse(prev, updated));
+    setList(s => completeItemWrite(s, updated));
   }
 
   function handleItemDeleted(id: string) {
-    setItems(prev => removeItemAndDescendants(prev, id));
+    setList(s => ({ ...s, items: removeItemAndDescendants(s.items, id) }));
   }
 
   function handleChildCreated(item: ItemWriteResponse) {
-    setItems(prev => applyItemWriteResponse(prev, item));
+    setList(s => completeItemWrite(s, item));
   }
 
   const childCounts = computeChildCounts(items);
 
   return {
     items,
-    setItems,
+    placements,
+    inversions,
+    replaceItems,
+    previewPlacement,
+    writes,
     childCounts,
     getWorkphaseItems,
     getMergedColumnItems,

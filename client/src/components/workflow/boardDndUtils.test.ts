@@ -1,38 +1,53 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
-import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
+import { rect, region } from '../../test/dragFixtures';
 import {
   buildColumnForWorkphaseMap,
   resolveDropTarget,
   subrowContainerId,
-  boardCollisionDetection,
+  createBoardCollisionDetection,
+  bandDropResolution,
+  pendingPlacementFor,
   resolveDropSide,
   buildMoveInput,
   sendItemMove,
+  type CollisionSession,
   type DropColumn,
   type DropResolution,
 } from './boardDndUtils';
+import type { ItemWriteTracker } from './useItemManagement';
 
-// Minimal fixture for boardCollisionDetection's args — every candidate gets
-// an identical rect, close enough to the pointer that closestCorners would
-// happily pick any of them; the interesting assertion is which ones survive
-// the *filter* before closestCorners ever runs, not the geometry itself.
-const SAME_RECT = { top: 0, left: 0, right: 10, bottom: 10, width: 10, height: 10 };
+// Minimal fixture for the collision detection's args — by default every
+// candidate gets an identical rect, close enough to the pointer that
+// closestCorners would happily pick any of them; the interesting assertion
+// is which ones survive the *filter* before closestCorners ever runs, not
+// the geometry itself. A container may carry its own rect for the
+// in-context containment rule.
+const SAME_RECT = rect(0, 0, 10, 10);
+
+type Container = { id: string; data: Record<string, unknown>; rect?: ReturnType<typeof rect> };
 
 function collisionArgs(
   activeId: string,
   activeData: Record<string, unknown>,
-  containers: Array<{ id: string; data: Record<string, unknown> }>,
+  containers: Container[],
 ): Parameters<CollisionDetection>[0] {
   return {
     active: { id: activeId, data: { current: activeData }, rect: { current: SAME_RECT } } as never,
     collisionRect: SAME_RECT as never,
-    droppableRects: new Map(containers.map(c => [c.id, SAME_RECT])) as never,
-    droppableContainers: containers.map(c => ({ id: c.id, data: { current: c.data }, rect: { current: SAME_RECT } })) as never,
+    droppableRects: new Map(containers.map(c => [c.id, c.rect ?? SAME_RECT])) as never,
+    droppableContainers: containers.map(c => ({
+      id: c.id,
+      data: { current: c.data },
+      rect: { current: c.rect ?? SAME_RECT },
+    })) as never,
     pointerCoordinates: { x: 5, y: 5 },
   };
 }
+
+// The Epic 3.2 behavior: no pop machine in play.
+const boardCollisionDetection = createBoardCollisionDetection(() => null);
 
 function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
@@ -94,7 +109,9 @@ describe('buildColumnForWorkphaseMap', () => {
 
 describe('boardCollisionDetection', () => {
   it('never collides an item with itself', () => {
-    const result = boardCollisionDetection(collisionArgs('card-a', { type: 'card' }, [{ id: 'card-a', data: { type: 'card' } }]));
+    const result = boardCollisionDetection(
+      collisionArgs('card-a', { type: 'card' }, [{ id: 'card-a', data: { type: 'card' } }]),
+    );
     expect(result).toHaveLength(0);
   });
 
@@ -123,6 +140,138 @@ describe('boardCollisionDetection', () => {
       ]),
     );
     expect(result.map(r => r.id)).toEqual(['child-b']);
+  });
+
+  // Epic 3.5 Story 3: `over` follows the pop machine (wiki §2–§3, §5).
+  describe('under the pop machine', () => {
+    const withSession = (session: CollisionSession | null) => createBoardCollisionDetection(() => session);
+    const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
+    const containers: Container[] = [
+      { id: 'col-a', data: { type: 'column' }, rect: rect(0, 0, 100, 400) },
+      { id: 'card-a1', data: { type: 'card' }, rect: rect(5, 10, 90, 50) },
+      { id: 'col-b', data: { type: 'column' }, rect: rect(120, 0, 100, 400) },
+      { id: 'card-b1', data: { type: 'card' }, rect: rect(125, 10, 90, 50) },
+      { id: 'child-1', data: { type: 'attached-child', parentId: 'card-a1' }, rect: rect(10, 30, 80, 20) },
+    ];
+
+    it('in-context: only the context container and the cards inside it are candidates', () => {
+      const detect = withSession({ hoverContainerId: null, context });
+      const ids = detect(collisionArgs('card-x', { type: 'card' }, containers)).map(c => c.id);
+      expect(ids).toContain('col-a');
+      expect(ids).toContain('card-a1');
+      expect(ids).not.toContain('col-b');
+      expect(ids).not.toContain('card-b1');
+      expect(ids).not.toContain('child-1');
+    });
+
+    it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
+      const detect = withSession({ hoverContainerId: 'col-b', context });
+      expect(detect(collisionArgs('card-x', { type: 'card' }, containers)).map(c => c.id)).toEqual(['col-b']);
+    });
+
+    it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
+      const detect = withSession({ hoverContainerId: null, context: null });
+      expect(detect(collisionArgs('card-x', { type: 'card' }, containers))).toHaveLength(0);
+    });
+
+    it('the machine only governs card drags — an attached-child drag is scoped to its siblings as before', () => {
+      const detect = withSession({ hoverContainerId: 'col-b', context });
+      const ids = detect(collisionArgs('child-x', { type: 'attached-child', parentId: 'card-a1' }, containers)).map(
+        c => c.id,
+      );
+      expect(ids).toEqual(['child-1']);
+    });
+  });
+});
+
+// DRAG-3.1–3.3, 3.6, 3.7, 3.9, 3.10 / TC-7.1, 7.2, 7.5, 7.8, 7.16: the
+// request a band release turns into.
+describe('bandDropResolution', () => {
+  const merged = region('column:m', rect(0, 0, 100, 400), {
+    coveredWorkphaseIds: ['w2', 'w3'],
+    targetWorkphaseId: 'w2',
+  });
+  const rendered = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
+  const outsider = { id: 'X', workphaseId: 'w1' };
+  const member = { id: 'X', workphaseId: 'w3' };
+
+  it('top band → before the first rendered item, plus the entry workphase for an outsider (DRAG-3.1, 3.6)', () => {
+    expect(bandDropResolution(merged, 'top', outsider, rendered)).toEqual({
+      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: 'A' },
+      side: 'before',
+    });
+  });
+
+  it('bottom band → after the last rendered item (DRAG-3.2)', () => {
+    expect(bandDropResolution(merged, 'bottom', outsider, rendered)).toEqual({
+      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: 'C' },
+      side: 'after',
+    });
+  });
+
+  it('middle band → workphase-only, no anchor (DRAG-3.3 / TC-7.16)', () => {
+    expect(bandDropResolution(merged, 'middle', outsider, rendered)).toEqual({
+      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: null },
+      side: 'before',
+    });
+  });
+
+  it('a covered-set member keeps its workphase: the band is a reorder, and the middle band is nothing at all (DRAG-3.7)', () => {
+    expect(bandDropResolution(merged, 'top', member, rendered)).toEqual({
+      resolution: { kind: 'reorder', scopeWorkphaseIds: ['w2', 'w3'], anchorId: 'A' },
+      side: 'before',
+    });
+    expect(bandDropResolution(merged, 'middle', member, rendered)).toBeNull();
+  });
+
+  it('the carried item is skipped when the preview already drew it in the region', () => {
+    const withX = [{ id: 'X' }, ...rendered];
+    expect(bandDropResolution(merged, 'top', outsider, withX)?.resolution).toMatchObject({ anchorId: 'A' });
+  });
+
+  it('empty region: every band is a workphase-only move (DRAG-3.10 / TC-7.5)', () => {
+    for (const band of ['top', 'middle', 'bottom'] as const) {
+      expect(bandDropResolution(merged, band, outsider, [])?.resolution).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'w2',
+        anchorId: null,
+      });
+    }
+    expect(bandDropResolution(merged, 'top', member, [])).toBeNull();
+  });
+
+  it('done region: no anchor in any band — a workphase-only move (DRAG-3.9 / TC-7.8)', () => {
+    const done = region('column:d', rect(0, 0, 100, 400), {
+      isTerminal: true,
+      coveredWorkphaseIds: ['done'],
+      targetWorkphaseId: 'done',
+    });
+    for (const band of ['top', 'middle', 'bottom'] as const) {
+      expect(bandDropResolution(done, band, outsider, [{ id: 'D1' }, { id: 'D2' }])?.resolution).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'done',
+        anchorId: null,
+      });
+    }
+  });
+});
+
+// The pending marker's ordinal claim (§10) mirrors the request exactly.
+describe('pendingPlacementFor', () => {
+  it('an anchored request pins the item beside its anchor in the target list', () => {
+    expect(pendingPlacementFor({ workphaseId: 'w2', anchorId: 'A', side: 'after' }, 'w1')).toEqual({
+      workphaseId: 'w2',
+      slot: { anchorId: 'A', side: 'after' },
+    });
+    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'], anchorId: 'A', side: 'before' }, 'w1')).toEqual({
+      workphaseId: 'w1',
+      slot: { anchorId: 'A', side: 'before' },
+    });
+  });
+
+  it('a bare workphase change keeps its slot; a bare same-group reorder is an append', () => {
+    expect(pendingPlacementFor({ workphaseId: 'w2' }, 'w1')).toEqual({ workphaseId: 'w2', slot: 'existing' });
+    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'] }, 'w1')).toEqual({ workphaseId: 'w1', slot: 'last' });
   });
 });
 
@@ -188,7 +337,7 @@ describe('resolveDropTarget', () => {
   });
 
   describe('hovering a specific card', () => {
-    it('merged column: reorder across the whole covered set, not just the hovered card\'s own workphase (the pre-Epic-3.2 bug)', () => {
+    it("merged column: reorder across the whole covered set, not just the hovered card's own workphase (the pre-Epic-3.2 bug)", () => {
       // active-in-todo hovering card-in-review: different literal workphases,
       // but both are members of col-1's covered set — a same-visual-group
       // reorder, not a workphase change.
@@ -243,13 +392,13 @@ describe('resolveDropTarget', () => {
       expect(resolveDropSide(card(100), undefined)).toBe('before');
     });
 
-    it('resolves before when the dragged card is centered in the target\'s upper region', () => {
+    it("resolves before when the dragged card is centered in the target's upper region", () => {
       // Target spans 100-200 (center 150); dragged card centered at 115,
       // mirroring the E2E suite's topQuarter (15% down the target).
       expect(resolveDropSide(card(65), card(100))).toBe('before');
     });
 
-    it('resolves after when the dragged card is centered in the target\'s lower region', () => {
+    it("resolves after when the dragged card is centered in the target's lower region", () => {
       // Dragged card centered at 185, mirroring bottomQuarter (85% down).
       expect(resolveDropSide(card(135), card(100))).toBe('after');
     });
@@ -292,34 +441,41 @@ describe('buildMoveInput', () => {
 // this whole module already exists for (see its header comment).
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
+  const pending = pendingPlacementFor(input, 'wp-1');
   const fakeItem = (id: string) => makeItem(id, { isAttached: 0, workphaseId: 'wp-2', position: 1.5 });
+  const tracker = () => ({
+    begin: vi.fn<ItemWriteTracker['begin']>(() => 7),
+    complete: vi.fn<ItemWriteTracker['complete']>(() => true),
+    fail: vi.fn<ItemWriteTracker['fail']>(),
+  });
 
-  it('updates items via setItems on a successful move, and never calls loadBoard', async () => {
+  it('begins the write with its pending placement, completes it with the response, and never calls loadBoard', async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
-    const setItems = vi.fn();
+    const writes = tracker();
     const loadBoard = vi.fn();
 
-    await sendItemMove(moveItem, 'active-1', input, setItems, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
 
+    expect(writes.begin).toHaveBeenCalledWith('active-1', pending);
     expect(moveItem).toHaveBeenCalledWith('active-1', input);
-    expect(setItems).toHaveBeenCalledTimes(1);
-    const updater = setItems.mock.calls[0][0] as (prev: Item[]) => Item[];
-    expect(updater([fakeItem('active-1'), fakeItem('other')]).find(i => i.id === 'active-1')).toBe(updated);
+    expect(writes.complete).toHaveBeenCalledWith('active-1', 7, updated);
+    expect(writes.fail).not.toHaveBeenCalled();
     expect(loadBoard).not.toHaveBeenCalled();
   });
 
-  it('falls back to loadBoard and never calls setItems when the move is rejected (server authoritative over a stale client guess)', async () => {
+  it('DRAG-6.6: a rejected move fails the write (the guess is dropped) and resyncs via loadBoard', async () => {
     const moveItem = vi.fn(async () => {
       throw new Error('anchorId does not reference an existing item');
     });
-    const setItems = vi.fn();
+    const writes = tracker();
     const loadBoard = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await sendItemMove(moveItem, 'active-1', input, setItems, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
 
-    expect(setItems).not.toHaveBeenCalled();
+    expect(writes.complete).not.toHaveBeenCalled();
+    expect(writes.fail).toHaveBeenCalledWith('active-1', 7);
     expect(loadBoard).toHaveBeenCalledTimes(1);
     consoleError.mockRestore();
   });

@@ -1,5 +1,6 @@
 import type { Item } from '../../types';
 import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
+import { isStub } from '../../lib/isStub';
 
 // Epic 3.5 Story 2 — what every item on the board *is* to the item being
 // carried (docs/wiki/board-drag-interaction §4). Pure, like boardDndUtils:
@@ -32,10 +33,6 @@ export interface DragClassification {
 // assertWithinDepthCap, fed by the client's own in-memory traversal.
 export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap: number): boolean {
   return targetDepth + 1 + subtreeHeight <= cap;
-}
-
-function isStub(item: Item): boolean {
-  return item.positionScope === 'attached-siblings';
 }
 
 export function classifyDragTargets(activeId: string, items: readonly Item[], cap: number): DragClassification {

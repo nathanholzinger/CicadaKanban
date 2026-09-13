@@ -1,6 +1,8 @@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType } from '../types';
 import KanbanCard from './KanbanCard';
+import { BandGuides } from './BandGuides';
+import { DRAG_REGION_ATTR } from './workflow/dragRegions';
 
 const DEFAULT_LABEL_CLASS = 'text-[11px] font-medium text-zinc-500 truncate';
 
@@ -27,6 +29,8 @@ interface WorkphaseCardListProps {
   isOver?: boolean;
   /** Whether a card is being dragged anywhere on the board — gates the isOver highlight. */
   isCardBeingDragged?: boolean;
+  /** Epic 3.5: registers the whole block (label + list) as a drag region — an expanded column's sub-row. */
+  regionKey?: string;
 }
 
 // A workphase sub-header (name + count) plus its card list — the shape
@@ -48,6 +52,7 @@ export default function WorkphaseCardList({
   containerRef,
   isOver,
   isCardBeingDragged,
+  regionKey,
 }: WorkphaseCardListProps) {
   const showDropHighlight = droppable && isOver && isCardBeingDragged;
   const dropHighlightClass = showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20';
@@ -57,7 +62,8 @@ export default function WorkphaseCardList({
   }
 
   return (
-    <div>
+    <div {...(regionKey ? { [DRAG_REGION_ATTR]: regionKey, className: 'relative' } : {})}>
+      {regionKey && <BandGuides regionKey={regionKey} />}
       <div className="mb-1 flex items-center gap-1.5 px-1">
         <span className={labelClassName} title={labelTitle}>
           {label}

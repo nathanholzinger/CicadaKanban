@@ -4,10 +4,15 @@
 **§4 (target classification) implemented as of Story 2** — computed once
 at drag start (`client/src/components/workflow/dragClassification.ts`),
 shown as a `data-drop-state` attribute plus provisional overlays on every
-Card and Stub. Everything else — contexts, popping, drop bands, attach,
-detach — is **not yet implemented**: today's board supports same-context
-repositioning and cross-column moves only, and dragging a Stub out of its
-parent is explicitly held closed pending Story 5.
+Card and Stub. **§1–§3 (contexts, popping), §5 (column bands) and §10
+(ordinal preview, reconciliation, per-item sequencing) implemented as of
+Story 3** — the pop machine is `workflow/popSession.ts`, the regions
+`workflow/dragRegions.ts`, the placement layer `workflow/itemListOps.ts`,
+and every threshold and band is a dev/test-panel value
+(`workflow/dragTuning.ts`, toolbar → "Drag tuning"). A Card's context is
+its column region (or sub-row); a *Card* is not yet a context to pop into
+— §6 (attach), §7 (Stub bands) and §8 (detach) are Stories 4–6, and
+dragging a Stub out of its parent stays held closed pending Story 5.
 
 **Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
 
@@ -86,16 +91,35 @@ While the item is in-context:
 
 **The cursor, not the card, decides whether the context holds.** Because
 the card is axis-locked, the cursor can leave the context while the card
-cannot follow. When the cursor establishes a *different* context, the item
-**pops** into it.
+cannot follow. Popping is two-way, and each way takes its own sustained
+signal (§3.1):
 
-On popping:
+- **Pop out.** When the cursor has stayed *outside* the card's context —
+  anywhere: another column, the gap between columns, Unsorted — past the
+  pop-out threshold, the item pops out: it **snaps to the cursor and
+  follows it freely**, belonging to no context. *As built:* a short tween
+  (`popSnapMs`, a panel value; 0 teleports) from where the card was
+  clamped to the cursor, chasing the cursor if it moves meanwhile.
+- **Pop in.** A popped-out item enters a context when the cursor rests in
+  that context's pop-eligible band (§5: the middle band) past the pop-in
+  threshold — any column, **including the one it just left**. It is now
+  positioned within that context under its rules **and bounded by it**,
+  exactly as it was bounded by the origin.
 
-- The axis lock releases.
-- The item **snaps to the cursor and follows it fully** thereafter.
-  *(Existing free-drag behavior.)*
-- The item is now being positioned within the **new** context, under that
-  context's rules.
+A release while popped out still resolves by whatever is under the cursor:
+a column's band (§5), or nothing at all between columns. Popping in is
+only needed to reach a column's *in-context* placement (anchor + side).
+
+The one drag that starts without a context is one picked up outside every
+context (Unsorted is drag-source only): it begins popped out.
+
+*(Amended twice on 2026-09-11 after Story 3's hands-on. The original text
+read "the axis lock releases … follows it fully thereafter" — one pop, then
+free for the rest of the drag; the first amendment made a pop a direct
+transfer between contexts with no free state at all. The two-way model
+above is what the gesture wants: leaving and entering are separate,
+deliberate acts, and the popped-out state between them is a real place to
+be.)*
 
 ### 3.1 A pop requires a demonstration of deliberateness
 
@@ -111,11 +135,29 @@ comparable — a **distance** term alongside duration (the further outside
 the context the cursor travels, the sooner the pop), *either* threshold
 satisfying rather than both, or a combined function.
 
+*As built (Story 3):* two clocks. **Pop-out** — starts the moment the
+cursor leaves the context (wherever it goes), resets when it comes back;
+fires once `popDelayMs` has elapsed **or** — when `popDistancePx` is
+non-zero — once the cursor is at least that far outside the context's rect
+(either satisfies; distance ships disabled). **Pop-in** — starts when a
+popped-out card's cursor enters a region (or at the pop-out itself, if the
+cursor is already in one), so the popped-out state always lasts at least
+`popInDelayMs`; fires from the middle band only. The cursor's region is
+decided by the column's horizontal extent, so a drag only leaves a region
+by moving sideways; between columns, over Unsorted or a broken column, the
+cursor is nowhere and a release there writes nothing.
+
 **The dev/test panel exposing every threshold is a required deliverable of
 this feature, not a debugging convenience.** The correct value can only be
 found by feel, and feel can only be compared by changing one number between
 two attempts without a rebuild. The panel also exposes the band boundaries
-of §5 and §7.1 and the overlay colors of §4.
+of §5 and §7.1 and the overlay colors of §4. *As built:* the panel's
+values persist in `localStorage` under `kanban_drag_tuning` — `popDelayMs`,
+`popDistancePx`, `popInDelayMs`, `popSnapMs`, `columnTopBand`,
+`columnBottomBand`, `stubFirstChildBand`,
+`stubLastChildBand`, `stubPopBandStart`, `stubPopBandEnd`,
+`overlayFreeDescendantColor`, `overlayDepthCappedOpacity` — and tests seed
+that key, so every case runs against the configured value.
 
 Derived test cases should assert *that* a sustained signal pops and a
 momentary one doesn't, parameterized on the threshold — never on 0.5s
@@ -198,13 +240,29 @@ mode; the bands are measured against whichever one applies:
 | **Bottom 20%** | Position **after the last item** in the column. Ghost renders at the bottom; highlight on the bottom edge of the current last card. |
 | **Middle 60%** | **No position change.** The item takes the column's workphase and keeps the position it already has. The ghost renders wherever that existing position places it in this column's order. |
 
-**The middle band is also the pop-eligible zone.** Holding there past the
-threshold pops the Card into the column, after which it is positioned by
-ordinary anchor+side hovering rather than by band. Releasing without
-holding commits the band's meaning.
+**The middle band is also the pop-eligible zone.** Holding there pops the
+Card into the column — out of its old context first, then in (§3: two
+thresholds, run back to back when the cursor simply rests) — after which
+it is positioned by ordinary anchor+side hovering rather than by band.
+Releasing without holding, or after popping out but before popping in,
+commits the band's meaning.
 
 **Band boundaries are dev/test-panel values**, same as the pop threshold —
 20/60/20 is a starting point to tune, not a settled constant.
+
+**A band is measured against the region's rect as it was when the cursor
+entered it**, for as long as the cursor stays. The ghost's own insertion
+grows the hovered list — and in an expanded column moves the sub-rows
+below it — so measuring against the live rect would let the drop change
+the band it is about to be resolved by. *(Settled in Story 3.)*
+
+**The bands are shown while a Card is carried** (`BandGuides.tsx`, added
+after Story 3's hands-on): every region the card doesn't currently belong
+to draws two subtle dashed lines at the boundaries, and the region the
+cursor is in tints the band the cursor is in — drawn from the same frozen
+rect the drop resolves against. The card's own context draws nothing:
+in-context there are no bands, and the absence of lines says so. Look is
+provisional (Story 8).
 
 **Merged columns:** an item moved into a column covering multiple
 workphases takes the **first workphase in the column's range**. The
@@ -359,12 +417,14 @@ resyncs the board from the server. §3.2 should make this nearly
 unreachable — an invalid target shouldn't have been poppable — so a
 rejection arriving at all means the two enforcement points have drifted.
 
-Position is resolved server-side against true current data, so there is no
-cheap always-correct client-side position to preview — the board may
-briefly show its pre-drop order until the response lands. This is a
-documented, deliberate tradeoff carried over from Epic 3.2, not a
-correctness gap. See [`../item-positioning/`](../item-positioning/) §2,
-"Client-side role."
+*As built (Story 3):* the preview is a **placement** layered over the
+position sort — `{ list, slot }`, where the slot is `first`, `last`,
+`existing` (where the item's kept position already falls), or
+`{ anchorId, side }` — the same relation the request carries, so the
+picture before and after the response is the same one. The placement is
+the ghost during the drag and the pending marker (`data-pending`) after
+release; nothing in the item is touched until the response. An inversion
+is logged to the console and counted in the dev/test panel.
 
 ---
 

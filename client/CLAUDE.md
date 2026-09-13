@@ -147,7 +147,9 @@ no stored position at all — ordered by `completedAt` instead).
   detaching is done via the item detail panel checkbox or the child badge,
   not drag-and-drop yet). `boards.showAttachedChildren` toggles whether they
   show expanded/indented or collapsed by default. The board-level **drag
-  gesture** to attach/detach is Epic 3.5 Stories 2–6; its server half is done.
+  gesture** to attach/detach is Epic 3.5 Stories 4–6; its server half (Story 1),
+  target classification (Story 2) and the pop machine + column bands (Story 3) are
+  done.
 
 ### Hierarchy Changes — One Primitive, Three Entry Points (Epic 3.5 Story 1)
 - Every write that can give an item a parent goes through
@@ -185,22 +187,65 @@ no stored position at all — ordered by `completedAt` instead).
   `board.itemDepthCap` from `GET /boards/:id`, never hard-coded. Stubs are classified
   individually, same as Cards. A Stub drag is interim until Story 5: siblings valid,
   everything else inert.
-- Cards and Stubs read their state through `workflow/DragClassificationContext.ts`'s
+- Cards and Stubs read their state through `workflow/DragSessionContext.ts`'s
   `useDropTargetState(itemId)` (a context provided by BoardView inside DndContext — no
   prop drilling) and render `data-item-id` + `data-drop-state` attributes (the E2E
   surface) plus provisional overlays: green ring for a Free descendant of the carried
-  item, dimmed for depth-capped. Story 8 tunes the look.
-- **Classification doesn't change any drop outcome yet.** `boardCollisionDetection`
-  still excludes Stubs from Card drags; Stories 3/4/6 consult the map when they give
-  those drops a meaning. Rules: `docs/wiki/board-drag-interaction/README.md` §4.
-- `handleDragCancel` (Escape mid-drag) restores `handleDragOver`'s optimistic
-  re-bucket from the drag-start snapshot and clears the DragOverlay — previously
-  neither happened.
+  item, dimmed for depth-capped — both CSS custom properties set from the dev/test
+  panel. Story 8 tunes the look.
+- **Classification doesn't change any drop outcome yet.** Stubs are still excluded
+  from Card drags; Stories 4/6 consult the map when they give those drops a meaning.
+  Rules: `docs/wiki/board-drag-interaction/README.md` §4.
 - **Reindex disclosure, client half:** every item-write response may carry
   `reindexed: {id, position}[]` (`api/items.ts::ItemWriteResponse`); every write path
   (board move, attached-sibling reorder, inline create, the Sheet's PUT) folds it in
-  through `useItemManagement.ts::applyItemWriteResponse` — pairs first, written item
-  last. Never merge a written row alone.
+  through `workflow/itemListOps.ts::completeItemWrite` — pairs first, written item
+  last, then the placement is cleared and the inversion tripwire runs. Never merge a
+  written row alone.
+
+### Pop State Machine, Column Drop Bands, Ordinal Preview (Epic 3.5 Story 3)
+- A Card drag starts in exactly one **context** — the region (merged column body or
+  expanded sub-row, registered by a `data-drag-region` attribute and measured from the
+  DOM by `workflow/dragRegions.ts`) the cursor is in at pickup. `workflow/popSession.ts`
+  is the pure machine, three states: **locked** — the DragOverlay is clamped to the
+  context (a `DragOverlay` modifier — `DndContext` itself gets no modifier, so `delta`
+  and the collision rect stay raw) while the cursor roams; **popped out** — the cursor
+  stayed outside the context past `popDelayMs` (or past `popDistancePx`, either
+  satisfies): the card tweens to the cursor (`popSnapMs`) and follows it, belonging
+  to nothing; **locked** again once the cursor rests in any column's middle band past
+  `popInDelayMs` — the column it just left included. A drag from Unsorted starts
+  popped out. A Card is not a context yet (Story 4).
+- **A release resolves one of two ways.** Cursor in the context: dnd-kit's `over`
+  decides (anchor + side, unchanged from Epic 3.2). Cursor in a region the card doesn't
+  belong to (locked or popped out): that region's **band** decides
+  (`boardDndUtils.ts::bandDropResolution`): top → before its
+  first rendered item, bottom → after its last, middle → workphase-only (position
+  kept); an empty or done region is workphase-only in any band; a covered-set member
+  keeps its workphase. Between columns / over Unsorted / a broken column: nothing is
+  written. Bands are measured against the region's rect *as it was on entry* — the
+  ghost's own insertion moves things — and drawn while a Card is carried
+  (`BandGuides.tsx`: dashed boundary lines on every region the card doesn't belong to,
+  the hovered region's active band tinted, from that same frozen rect).
+- **`over` follows the machine** (`boardDndUtils.ts::resolveBoardCollisions`): in
+  context, `closestCorners` over the context container and the cards inside it; in
+  another region, exactly that region's container — never a card in it — so the
+  target's sortable can't shift against a hover the band ignores.
+- **The ghost is an ordinal placement, never a position** (`itemListOps.ts` —
+  `Placement = { workphaseId?, slot: 'existing' | 'first' | 'last' | {anchorId, side} }`,
+  layered over the position sort by every list selector, Stubs included). Nothing in
+  `items` is mutated during a drag; cancel just clears the placement. On release the
+  placement becomes the **pending marker** (`data-pending`) carrying the request's own
+  relation, cleared by the response. `useItemManagement.ts::writes` sequences writes
+  per item so a stale response is dropped whole (DRAG-6.5); a rejected write clears
+  the placement and reloads.
+- **Every threshold and band is a dev/test-panel value** (`workflow/dragTuning.ts`,
+  `DragTuningPanel.tsx`, toolbar → "Drag tuning"), persisted in `localStorage` under
+  `kanban_drag_tuning`. E2E seeds that key with `addInitScript` and reads the numbers
+  back from the same object — never a literal. The board root carries
+  `data-drag-state` (`locked` / `popped-out`) and `data-drag-context` for tests.
+- `workflow/DragSessionContext.ts` holds the whole drag (`activeItem`,
+  `classification`, `pop`) plus `PlacementsContext`; `useIsCardBeingDragged` replaced
+  the drilled prop. `lib/isStub.ts` is the one "renders as a Stub" predicate.
 
 ---
 
@@ -277,8 +322,9 @@ KanbanApp/
 │       ├── App.tsx              ← state root, layout, workflow inheritance
 │       ├── types.ts             ← TypeScript interfaces (manually synced with schema)
 │       ├── lib/                 ← client-only shared logic
-│       │   └── hierarchy.ts     ← getAncestors/getDescendantLevels (the one BFS) + getDescendantIds/getSubtreeHeight derived from it, getDepth (cycle-guarded tree walks, items+projects)
-│       ├── test/                ← shared unit-test fixtures (itemFixture.ts::makeItem — the one Item factory; never hand-write a 15-field Item literal in a test)
+│       │   ├── hierarchy.ts     ← getAncestors/getDescendantLevels (the one BFS) + getDescendantIds/getSubtreeHeight derived from it, getDepth (cycle-guarded tree walks, items+projects)
+│       │   └── isStub.ts        ← the one "renders as a Stub" predicate (positionScope === 'attached-siblings')
+│       ├── test/                ← shared unit-test fixtures (itemFixture.ts::makeItem — the one Item factory; never hand-write a 15-field Item literal in a test; dragFixtures.ts::rect/region for the drag geometry)
 │       ├── api/                 ← fetch wrappers, one file per domain (projects.ts,
 │       │                          workflows.ts, items.ts, ...) + shared.ts (apiJson/apiVoid/
 │       │                          apiRequest — always parses the server's real `{ error }`
@@ -289,7 +335,9 @@ KanbanApp/
 │           ├── ProjectPage.tsx       ← project detail shell: breadcrumb, name edit-in-place + self-delete, tab bar
 │           ├── ProjectOverviewTab.tsx ← Overview tab body: description edit-in-place, parent selector, subprojects list
 │           ├── BoardView.tsx         ← board orchestration: loads active board, composes hooks, renders DnD board
-│           ├── BoardToolbar.tsx      ← board switcher + board create/rename/delete, add-column/manage-workphases entry points
+│           ├── BoardToolbar.tsx      ← board switcher + board create/rename/delete, add-column/manage-workphases/drag-tuning entry points
+│           ├── DragTuningPanel.tsx   ← dev/test panel: every drag threshold/band/overlay value, live machine state, inversion log (Epic 3.5)
+│           ├── BandGuides.tsx        ← the drop bands made visible while a Card is carried: dashed boundary lines per region + the hovered band tinted (Epic 3.5)
 │           ├── WorkphaseManagerPanel.tsx ← workphase rename/delete/add rows + column-shrink notices
 │           ├── BoardColumn.tsx       ← droppable column (merged or per-workphase expanded sub-rows)
 │           ├── UnsortedBucket.tsx    ← uncovered-workphase items, drag-source only
@@ -307,10 +355,10 @@ KanbanApp/
 │           ├── AgentsModal.tsx
 │           ├── item-detail/          ← ItemDetailPanel's sections (Children/Labels/Attachments/Parent/Agent/ActivityLog) + pillUtils.ts (shared Tailwind tokens) + DetailSection.tsx (section header + form-actions wrapper)
 │           ├── sidebar/              ← SortableProjectRow.tsx + projectTreeUtils.ts (sidebar-only tree helpers)
-│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement (+ applyItemWriteResponse), useBoardDnd (all drag logic) + boardDndUtils.ts (pure, unit-tested drag/drop resolution helpers) + dragClassification.ts (pure per-drag target classification) + DragClassificationContext.ts (useDropTargetState)
+│           └── workflow/             ← useBoardManagement, useColumnManagement, useWorkphaseManagement, useItemManagement (state atom + write tracker), useBoardDnd (the gesture's clocks, DOM measurement, dnd-kit plumbing) + pure, unit-tested modules: itemListOps.ts (selectors, ordinal placements, §5a reconciliation + tripwire), boardDndUtils.ts (collision, drop/band resolution, request shapes), dragClassification.ts (per-drag target classification), dragRegions.ts (regions, bands), popSession.ts (the pop machine), dragTuning.ts (tunable parameters + storage) + DragSessionContext.ts (useDragSession/useDropTargetState/useIsPending) + DragTuningContext.ts (the tuning values for the pieces that draw them)
 ├── tests/                       ← Playwright E2E
 │   ├── api/                     ← REST endpoint tests via Playwright request fixture
-│   ├── helpers/                 ← api.ts, db.ts, seed.ts, itemRepositioningScenario.ts, dragGesture.ts (the one dnd-kit pointer recipe: pickUp/hoverTo/release/cancel + dragTo — never hand-roll a drag in a spec)
+│   ├── helpers/                 ← api.ts, db.ts, seed.ts, itemRepositioningScenario.ts, dragGesture.ts (the one dnd-kit pointer recipe: pickUp/hoverTo/release/cancel + dragTo, with every target measured in layout space via boxOf — never hand-roll a drag or read boundingBox() for a drop target in a spec; a drag spec seeds `kanban_drag_tuning` and reads its thresholds back, never a literal)
 │   └── ui/                      ← browser interaction tests (boards.spec.ts, boards-layer.spec.ts, ...)
 └── bruno/                       ← saved HTTP requests (manual API testing)
 ```

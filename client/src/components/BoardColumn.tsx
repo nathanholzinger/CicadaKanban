@@ -8,12 +8,14 @@ import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 import { subrowContainerId } from './workflow/boardDndUtils';
+import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from './workflow/dragRegions';
+import { useIsCardBeingDragged } from './workflow/DragSessionContext';
 import InlineItemForm from './InlineItemForm';
+import { BandGuides } from './BandGuides';
 import { DragHandleIcon } from './icons';
 
 const COLUMN_TITLE_BASE = 'truncate text-sm font-semibold tracking-wide text-zinc-300';
-const COLUMN_BODY_BASE =
-  'flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors duration-200';
+const COLUMN_BODY_BASE = 'flex flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2 transition-colors duration-200';
 
 interface BoardColumnProps {
   column: Column;
@@ -23,7 +25,6 @@ interface BoardColumnProps {
   getAttachedChildren: (parentId: string) => Item[];
   defaultExpanded: boolean;
   itemTypes: ItemType[];
-  isCardBeingDragged: boolean;
   onCreateItem: (workphaseId: string, title: string, type: string | null) => void;
   onCardClick: (id: string) => void;
   onEdit?: (column: Column) => void;
@@ -38,7 +39,6 @@ export default function BoardColumn({
   getAttachedChildren,
   defaultExpanded,
   itemTypes,
-  isCardBeingDragged,
   onCreateItem,
   onCardClick,
   onEdit,
@@ -46,6 +46,7 @@ export default function BoardColumn({
 }: BoardColumnProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const isCardBeingDragged = useIsCardBeingDragged();
 
   const { setNodeRef, transform, transition, isDragging, isOver, attributes, listeners } = useSortable({
     id: column.id,
@@ -68,6 +69,7 @@ export default function BoardColumn({
   // A merged (not broken) column highlights as a drop target only while a card
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
+  const regionKey = column.displayMode === 'merged' && !column.broken ? columnRegionKey(column.id) : undefined;
 
   function handleItemSubmit(title: string, type: string | null): boolean {
     onCreateItem(column.entryWorkphaseId, title, type);
@@ -125,47 +127,58 @@ export default function BoardColumn({
 
       {deleteError && <p className="mb-2 px-1 text-[11px] text-red-400">{deleteError}</p>}
 
-      {/* Body */}
+      {/* Body — a merged column's body is one drag region (wiki board-drag-
+          interaction §1); an expanded column's sub-rows each register their
+          own below, and its wrapper is Inert. A broken column registers none.
+          The region is the wrapper, not the scrolling body inside it, so the
+          band guides sit over the visible box rather than scrolling away. */}
       <div
-        className={`${COLUMN_BODY_BASE} ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}`}
+        {...(regionKey ? { [DRAG_REGION_ATTR]: regionKey } : {})}
+        className="relative flex min-h-[120px] flex-1 flex-col"
       >
-        {column.displayMode === 'expanded' ? (
-          column.subRows.map(row => (
-            <ExpandedSubRow
-              key={row.workphase.id}
-              columnId={column.id}
-              workphase={row.workphase}
-              items={getWorkphaseItems(row.workphase.id, Boolean(row.workphase.isTerminal))}
-              itemTypes={itemTypes}
-              childCounts={childCounts}
-              getAttachedChildren={getAttachedChildren}
-              defaultExpanded={defaultExpanded}
-              isCardBeingDragged={isCardBeingDragged && !column.broken}
-              onCardClick={onCardClick}
-            />
-          ))
-        ) : (
-          <>
-            <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              {mergedItems.map(item => (
-                <KanbanCard
-                  key={item.id}
-                  item={item}
-                  itemTypes={itemTypes}
-                  childCount={childCounts[item.id] ?? 0}
-                  getAttachedChildren={getAttachedChildren}
-                  defaultExpanded={defaultExpanded}
-                  onCardClick={onCardClick}
-                />
-              ))}
-            </SortableContext>
-            {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && (
-              <div className="flex flex-1 items-center justify-center">
-                <p className="text-xs text-zinc-600">Drop cards here</p>
-              </div>
-            )}
-          </>
-        )}
+        <div
+          className={`${COLUMN_BODY_BASE} ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}`}
+        >
+          {column.displayMode === 'expanded' ? (
+            column.subRows.map(row => (
+              <ExpandedSubRow
+                key={row.workphase.id}
+                columnId={column.id}
+                workphase={row.workphase}
+                items={getWorkphaseItems(row.workphase.id, Boolean(row.workphase.isTerminal))}
+                itemTypes={itemTypes}
+                childCounts={childCounts}
+                getAttachedChildren={getAttachedChildren}
+                defaultExpanded={defaultExpanded}
+                isCardBeingDragged={isCardBeingDragged && !column.broken}
+                regionKey={column.broken ? undefined : subrowRegionKey(column.id, row.workphase.id)}
+                onCardClick={onCardClick}
+              />
+            ))
+          ) : (
+            <>
+              <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                {mergedItems.map(item => (
+                  <KanbanCard
+                    key={item.id}
+                    item={item}
+                    itemTypes={itemTypes}
+                    childCount={childCounts[item.id] ?? 0}
+                    getAttachedChildren={getAttachedChildren}
+                    defaultExpanded={defaultExpanded}
+                    onCardClick={onCardClick}
+                  />
+                ))}
+              </SortableContext>
+              {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && (
+                <div className="flex flex-1 items-center justify-center">
+                  <p className="text-xs text-zinc-600">Drop cards here</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {regionKey && <BandGuides regionKey={regionKey} />}
       </div>
 
       {/* Add item form */}
@@ -202,6 +215,7 @@ interface ExpandedSubRowProps {
   getAttachedChildren: (parentId: string) => Item[];
   defaultExpanded: boolean;
   isCardBeingDragged: boolean;
+  regionKey?: string;
   onCardClick: (id: string) => void;
 }
 
@@ -214,6 +228,7 @@ function ExpandedSubRow({
   getAttachedChildren,
   defaultExpanded,
   isCardBeingDragged,
+  regionKey,
   onCardClick,
 }: ExpandedSubRowProps) {
   const { setNodeRef, isOver } = useDroppable({ id: subrowContainerId(columnId, workphase.id) });
@@ -231,6 +246,7 @@ function ExpandedSubRow({
       containerRef={setNodeRef}
       isOver={isOver}
       isCardBeingDragged={isCardBeingDragged}
+      regionKey={regionKey}
     />
   );
 }

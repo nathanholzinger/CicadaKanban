@@ -13,6 +13,7 @@ interface BoardToolbarProps {
   handleToggleShowAttachedChildren: (id: string, show: boolean) => Promise<Board>;
   onAddColumn: () => void;
   onToggleWorkphaseManager: () => void;
+  onToggleDragTuning: () => void;
   childDefaultWorkphaseId: string | null;
   onChildWorkphaseChange: (workphaseId: string | null) => void;
   workphases: Workphase[];
@@ -33,6 +34,7 @@ export default function BoardToolbar({
   handleToggleShowAttachedChildren,
   onAddColumn,
   onToggleWorkphaseManager,
+  onToggleDragTuning,
   childDefaultWorkphaseId,
   onChildWorkphaseChange,
   workphases,
@@ -155,6 +157,12 @@ export default function BoardToolbar({
             Show attached children by default
           </label>
         )}
+
+        {/* Always available, read-only boards included: the drag gesture works
+            everywhere and its tuning is a per-browser setting, not board data. */}
+        <button onClick={onToggleDragTuning} className={BTN_ADD_TRIGGER} title="Drag gesture thresholds, bands, overlays">
+          Drag tuning
+        </button>
 
         <span className="ml-2 text-[11px] text-zinc-500">New child items go to:</span>
         <select

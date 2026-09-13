@@ -1,4 +1,5 @@
 import type { Item, ItemType, Workphase } from '../types';
+import { isStub } from '../lib/isStub';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 
@@ -30,9 +31,7 @@ export default function UnsortedBucket({
   const groups = uncoveredWorkphases.map(w => ({ workphase: w, items: getWorkphaseItems(w.id) }));
   // Items whose workphase is null or outside this workflow. Attached children
   // nest under their (also-Unknown) parent rather than showing top-level.
-  const unknownItems = invalidItems.filter(
-    i => i.positionScope !== 'attached-siblings' && (!filterProjectId || i.projectId === filterProjectId),
-  );
+  const unknownItems = invalidItems.filter(i => !isStub(i) && (!filterProjectId || i.projectId === filterProjectId));
   const totalItems = groups.reduce((n, g) => n + g.items.length, 0) + unknownItems.length;
 
   if (totalItems === 0 && !needsAttention) return null;

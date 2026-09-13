@@ -1,0 +1,267 @@
+import type { Item } from '../../types';
+import type { ItemWriteResponse } from '../../api/items';
+import { getDescendantIds } from '../../lib/hierarchy';
+import { isStub } from '../../lib/isStub';
+
+// Pure operations over the board's Item[] state — no React. Split out of
+// useItemManagement.ts (audit epic-3-5-story-2 #15) so the hook only closes
+// over state and the reducers here stay unit-testable.
+//
+// Two layers live here:
+//   - the list *selectors* (which items a column/sub-row/Stub list renders,
+//     in what order), and
+//   - the *ordinal placement* layer of Epic 3.5 Story 3 (docs/wiki/board-
+//     drag-interaction §10, item-positioning §2 "Client-side role"): a
+//     dragged or just-dropped item is shown at a slot in a list without any
+//     position value being invented for it. `position` is never touched
+//     client-side; the number is the server's to produce.
+
+// ── Ordinal placement ──────────────────────────────────────────────────────
+
+export type PlacementSlot =
+  // Where the position sort already puts it (the column's "middle band").
+  | 'existing'
+  | 'first'
+  | 'last'
+  // Adjacent to a specific item in the rendered list — the same relation the
+  // move request carries, so the picture before and after the response is
+  // the same one (item-positioning §2, TC-2.28).
+  | { anchorId: string; side: 'before' | 'after' };
+
+export interface Placement {
+  /**
+   * Which board list the item is shown in, overriding its own workphaseId
+   * for membership only. Omitted for a Stub (its list is its parent's) or
+   * when the list doesn't change.
+   */
+  workphaseId?: string;
+  slot: PlacementSlot;
+}
+
+export type Placements = ReadonlyMap<string, Placement>;
+
+const NO_PLACEMENTS: Placements = new Map();
+
+// The workphase an item is *rendered* under — its placement's, if it has
+// one, else its own. Membership only; the item's data is untouched.
+export function renderedWorkphaseId(item: Item, placements: Placements): string | null {
+  return placements.get(item.id)?.workphaseId ?? item.workphaseId;
+}
+
+// Layers placements over an already-sorted list: every item with a
+// non-'existing' slot is pulled out and re-inserted at its slot, in the
+// order the placements were recorded — so an item anchored against another
+// pending item (TC-2.29) is inserted after its anchor has been. An anchor
+// that isn't in this list (filtered out of the view) falls back to where the
+// sort already had the item.
+export function applyPlacements(sorted: readonly Item[], placements: Placements): Item[] {
+  const placed = new Map<string, Item>();
+  for (const item of sorted) {
+    const slot = placements.get(item.id)?.slot;
+    if (slot && slot !== 'existing') placed.set(item.id, item);
+  }
+  if (placed.size === 0) return [...sorted];
+
+  const sortedIndex = new Map(sorted.map((item, i) => [item.id, i]));
+  const list = sorted.filter(item => !placed.has(item.id));
+  for (const [id, placement] of placements) {
+    const item = placed.get(id);
+    if (!item) continue;
+    list.splice(slotIndex(list, item, placement.slot, sortedIndex), 0, item);
+  }
+  return list;
+}
+
+function slotIndex(list: Item[], item: Item, slot: PlacementSlot, sortedIndex: Map<string, number>): number {
+  if (slot === 'first') return 0;
+  if (slot === 'last') return list.length;
+  if (slot !== 'existing') {
+    const anchorAt = list.findIndex(i => i.id === slot.anchorId);
+    if (anchorAt !== -1) return slot.side === 'after' ? anchorAt + 1 : anchorAt;
+  }
+  // Fallback: the index the sort gave it, expressed against the current list.
+  const own = sortedIndex.get(item.id) ?? Number.MAX_SAFE_INTEGER;
+  return list.filter(i => (sortedIndex.get(i.id) ?? -1) < own).length;
+}
+
+// ── Selectors ──────────────────────────────────────────────────────────────
+
+// Deterministic tie-break for an exact position match — prevents order from
+// depending on unspecified DB row order (Epic 3.2 Part 5, TC-5a.5).
+export function byPositionThenCreatedAt(a: Item, b: Item): number {
+  return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
+}
+
+// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below (audit
+// Finding #25) — the two differ only in what counts as "belongs to this
+// column," supplied via `matchesWorkphase`.
+//
+// Stubs render nested inside their parent's Card (see getAttachedChildrenFrom)
+// instead of as top-level board cards. `isTerminal` (Epic 3.2 Part 6): a
+// done workphase's items have no stored position — ordered by completedAt
+// instead. Kept as an explicit param since it picks the sort key for the
+// whole batch, including when the batch is empty.
+function selectBoardItems(
+  items: readonly Item[],
+  matchesWorkphase: (workphaseId: string | null) => boolean,
+  filterProjectId: string | undefined,
+  isTerminal: boolean | undefined,
+  placements: Placements,
+): Item[] {
+  const filtered = items.filter(
+    item =>
+      matchesWorkphase(renderedWorkphaseId(item, placements)) &&
+      (!filterProjectId || item.projectId === filterProjectId) &&
+      !isStub(item),
+  );
+  const sorted = isTerminal
+    ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
+    : filtered.sort(byPositionThenCreatedAt);
+  return applyPlacements(sorted, placements);
+}
+
+// A single workphase's items — membership is an exact workphaseId match.
+export function getWorkphaseItemsFrom(
+  items: readonly Item[],
+  workphaseId: string,
+  filterProjectId?: string,
+  isTerminal?: boolean,
+  placements: Placements = NO_PLACEMENTS,
+): Item[] {
+  return selectBoardItems(items, id => id === workphaseId, filterProjectId, isTerminal, placements);
+}
+
+// Epic 3.2 Part 4: a merged column's item list is a union-sort across its
+// covered workphases, not a concatenation of independently-sorted
+// per-workphase lists — this is what makes genuine cross-workphase
+// interleaving possible. `isTerminal` is uniform across the covered set (a
+// column can't span both terminal and non-terminal workphases).
+export function getMergedColumnItemsFrom(
+  items: readonly Item[],
+  coveredWorkphaseIds: readonly string[],
+  filterProjectId?: string,
+  isTerminal?: boolean,
+  placements: Placements = NO_PLACEMENTS,
+): Item[] {
+  const coveredSet = new Set(coveredWorkphaseIds);
+  return selectBoardItems(items, id => id !== null && coveredSet.has(id), filterProjectId, isTerminal, placements);
+}
+
+export function getAttachedChildrenFrom(
+  items: readonly Item[],
+  parentId: string,
+  placements: Placements = NO_PLACEMENTS,
+): Item[] {
+  const sorted = items.filter(item => item.parentId === parentId && isStub(item)).sort(byPositionThenCreatedAt);
+  return applyPlacements(sorted, placements);
+}
+
+// The server deletes an item's whole subtree, not just the one id (audit
+// Finding #15) — dropping only `id` from client state left its descendants
+// stale, rendering as live top-level cards until a reload.
+export function removeItemAndDescendants(items: readonly Item[], id: string): Item[] {
+  const descendants = getDescendantIds(id, items);
+  return items.filter(i => i.id !== id && !descendants.has(i.id));
+}
+
+// Counts attached children only — the ones the card's expand toggle reveals
+// nested underneath it. Detached children render as ordinary top-level
+// cards and aren't counted here.
+export function computeChildCounts(items: readonly Item[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) {
+    if (item.parentId && isStub(item)) {
+      counts[item.parentId] = (counts[item.parentId] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+// ── Write reconciliation (item-positioning §5a) ────────────────────────────
+
+// Epic 3.5 Story 2 — fold an item-write response into the list. Order is
+// the rule: apply every `reindexed` pair the list holds first (an unknown id
+// means "not in this view," never missing data), then upsert the written
+// row — it is authoritative for itself and is also in the pairs, so applying
+// it first and a stale pair over it would be the silent-wrong order §5a
+// warns about. `reindexed` is stripped so it never lands in an Item.
+export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
+  if (!response.reindexed) return upsertItem(items, response);
+  const { reindexed, ...written } = response;
+  const positionById = new Map(reindexed.map(r => [r.id, r.position]));
+  const renumbered = items.map(item => {
+    const position = positionById.get(item.id);
+    return position === undefined || item.position === position ? item : { ...item, position };
+  });
+  return upsertItem(renumbered, written);
+}
+
+function upsertItem(items: readonly Item[], written: Item): Item[] {
+  const exists = items.some(i => i.id === written.id);
+  return exists ? items.map(i => (i.id === written.id ? written : i)) : [...items, written];
+}
+
+// The board-wide rendered order of Free, positioned items — what the ordinal
+// preview makes a claim about. Positions compare workflow-wide (item-
+// positioning §2), so the claim "X sits right after A" holds across the
+// whole loaded set, not just one column. Unpositioned items (done, or no
+// workphase) make no ordering claim and are left out.
+export function freeItemOrder(items: readonly Item[], placements: Placements): string[] {
+  const sorted = items.filter(i => !isStub(i) && i.position !== null).sort(byPositionThenCreatedAt);
+  return applyPlacements(sorted, placements).map(i => i.id);
+}
+
+export interface Inversion {
+  itemId: string;
+  expected: string[];
+  actual: string[];
+}
+
+// The §5a/§10 tripwire: after a correctly reconciled response the position
+// sort should reproduce exactly the order the preview drew. Compares the two
+// sequences over the ids they share (an item that left the positioned set —
+// moved to done — makes no claim either way).
+export function findInversion(
+  before: readonly string[],
+  after: readonly string[],
+): Pick<Inversion, 'expected' | 'actual'> | null {
+  const common = new Set(before.filter(id => after.includes(id)));
+  const expected = before.filter(id => common.has(id));
+  const actual = after.filter(id => common.has(id));
+  return expected.every((id, i) => id === actual[i]) ? null : { expected, actual };
+}
+
+export interface ItemListState {
+  items: Item[];
+  placements: Placements;
+  /** Every inversion the tripwire has caught this session (DRAG-6.4); surfaced by the dev/test panel. */
+  inversions: readonly Inversion[];
+}
+
+export const EMPTY_ITEM_LIST_STATE: ItemListState = { items: [], placements: NO_PLACEMENTS, inversions: [] };
+
+export function withPlacement(state: ItemListState, itemId: string, placement: Placement | null): ItemListState {
+  const placements = new Map(state.placements);
+  if (placement) placements.set(itemId, placement);
+  else placements.delete(itemId);
+  return { ...state, placements };
+}
+
+// A write's response, in §5a's order: apply the reindex collection, assign
+// the written item, clear its pending placement, then check for an
+// inversion — the check runs on a list where the item is an ordinary
+// positioned row (DRAG-6.3). Re-sorting is implicit: render order is
+// derived from `position` every render, so applying the rows *is* the
+// re-sort (TC-5a.3 — nothing is rebuilt when nothing changed). The tripwire
+// only fires for a write the board previewed; a Sheet edit that reassigns a
+// position made no ordinal claim.
+export function completeItemWrite(state: ItemListState, response: ItemWriteResponse): ItemListState {
+  const items = applyItemWriteResponse(state.items, response);
+  if (!state.placements.has(response.id)) return { ...state, items };
+
+  const before = freeItemOrder(state.items, state.placements);
+  const next = withPlacement({ ...state, items }, response.id, null);
+  const inversion = findInversion(before, freeItemOrder(next.items, next.placements));
+  if (!inversion) return next;
+  return { ...next, inversions: [...state.inversions, { itemId: response.id, ...inversion }] };
+}
