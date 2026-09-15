@@ -19,6 +19,7 @@ export function region(key: string, r: Rect, overrides: Partial<DragRegion> = {}
     coveredWorkphaseIds: ['wp-' + key],
     targetWorkphaseId: 'wp-' + key,
     isTerminal: false,
+    scrollTop: 0,
     ...overrides,
   };
 }

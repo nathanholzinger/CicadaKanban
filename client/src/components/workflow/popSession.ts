@@ -38,9 +38,19 @@ export interface PopHover {
    * this for as long as the hover lasts. The ghost's own insertion grows the
    * hovered list (and, in an expanded column, moves the sub-rows below it),
    * so measuring the band against the live rect would let a drop change the
-   * band it is about to be resolved by.
+   * band it is about to be resolved by. The freeze is against that
+   * insertion only: it is translated to follow the region's own scroll (see
+   * `scrollTop` below), so auto-scrolling a long column carries the band
+   * with the sub-row it belongs to (wiki §5, reconciliation #21).
    */
   rect: Rect;
+  /**
+   * `region.scrollTop` as of the last sample (not the entry value) — the
+   * reference point `rect` is translated from on the next one. Real
+   * scrolling changes this; the ghost's own insertion never does, which is
+   * what tells the two apart.
+   */
+  scrollTop: number;
 }
 
 export interface PopSession {
@@ -107,9 +117,10 @@ export function advancePopSession(
   return hover === session.hover ? session : { ...session, hover };
 }
 
-// The hover for `region`, keeping the entry time and frozen rect while the
-// cursor stays in the same region and returning the same object when the
-// band hasn't changed either.
+// The hover for `region`, keeping the entry time and frozen rect (carried
+// forward by the region's own scroll, never by its content-driven resize)
+// while the cursor stays in the same region, and returning the same object
+// when neither the band nor the rect has changed either.
 function hoverFor(
   current: PopHover | null,
   region: DragRegion,
@@ -119,9 +130,21 @@ function hoverFor(
 ): PopHover {
   const staying = current?.regionKey === region.key ? current : null;
   const since = staying?.since ?? now;
-  const rect = staying?.rect ?? region.rect;
+  const rect = staying ? translateRect(staying.rect, region.scrollTop - staying.scrollTop) : region.rect;
   const band = bandFor(pointer.y, rect, tuning);
-  return staying && staying.band === band ? staying : { regionKey: region.key, band, since, rect };
+  return staying && staying.band === band && rect === staying.rect
+    ? staying
+    : { regionKey: region.key, band, since, rect, scrollTop: region.scrollTop };
+}
+
+// Translates a frozen rect by a change in scroll offset — an increase in
+// scrollTop moves content up on screen, so the rect moves the same amount
+// the other way. A 0 delta returns the very same object, so a still cursor
+// over a still region keeps producing `===` hovers (reconciliation #21).
+function translateRect(rect: Rect, deltaScrollTop: number): Rect {
+  if (deltaScrollTop === 0) return rect;
+  const dy = -deltaScrollTop;
+  return { ...rect, top: rect.top + dy, bottom: rect.bottom + dy };
 }
 
 function popOutDue(
@@ -157,12 +180,24 @@ export function placementFor(
   session: PopSession,
   regions: readonly DragRegion[],
   activeWorkphaseId: string | null,
+  activeItemPosition: number | null,
 ): Placement | null {
   const key = session.hover?.regionKey ?? session.contextKey;
   const region = key === null ? undefined : regions.find(r => r.key === key);
   if (!region) return null;
   const band = session.hover?.band;
-  const slot = region.isTerminal || !band || band === 'middle' ? 'existing' : band === 'top' ? 'first' : 'last';
+  let slot: Placement['slot'];
+  if (region.isTerminal || !band || band === 'middle') {
+    // A workphase-only move (no anchor): keeps the position it already has
+    // — unless it has none to keep, which takes the append fallback
+    // instead of the position-sort's null-coerced top slot (item-
+    // positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
+    // mirror of #14). A done region never previews a positioned insert
+    // either way.
+    slot = region.isTerminal || activeItemPosition !== null ? 'existing' : 'last';
+  } else {
+    slot = band === 'top' ? 'first' : 'last';
+  }
   return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
 }
 

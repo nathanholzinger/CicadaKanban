@@ -19,7 +19,9 @@ import type { Band } from './workflow/dragRegions';
 //     PopHover.rect), with the band the cursor is in tinted. The frozen
 //     rect is what the drop resolves against, so the lines show exactly
 //     where it will land even after the ghost's insertion has grown the
-//     list under it.
+//     list under it — and, since that rect is translated to follow the
+//     region's own scroll (reconciliation #21), even after auto-scroll has
+//     moved the sub-row it belongs to.
 //
 // Provisional look, like the §4 overlays — Story 8 tunes it.
 

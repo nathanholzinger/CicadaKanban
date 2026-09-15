@@ -206,15 +206,20 @@ no stored position at all — ordered by `completedAt` instead).
 ### Pop State Machine, Column Drop Bands, Ordinal Preview (Epic 3.5 Story 3)
 - A Card drag starts in exactly one **context** — the region (merged column body or
   expanded sub-row, registered by a `data-drag-region` attribute and measured from the
-  DOM by `workflow/dragRegions.ts`) the cursor is in at pickup. `workflow/popSession.ts`
-  is the pure machine, three states: **locked** — the DragOverlay is clamped to the
-  context (a `DragOverlay` modifier — `DndContext` itself gets no modifier, so `delta`
-  and the collision rect stay raw) while the cursor roams; **popped out** — the cursor
-  stayed outside the context past `popDelayMs` (or past `popDistancePx`, either
-  satisfies): the card tweens to the cursor (`popSnapMs`) and follows it, belonging
-  to nothing; **locked** again once the cursor rests in any column's middle band past
-  `popInDelayMs` — the column it just left included. A drag from Unsorted starts
-  popped out. A Card is not a context yet (Story 4).
+  DOM by `workflow/dragRegions.ts`) the cursor is in at pickup. A region is a **bounded
+  box**: `regionAt` is plain containment, nothing more — a column's header/footer, the
+  gaps between columns or sub-rows, and the space below the last sub-row are nowhere,
+  and a sub-row is additionally clipped to its column's visible scroll box
+  (`measureDragRegions`'s `findVerticalScrollAncestor` + `clipToVisible`) — scrolled
+  fully out of view, it registers no region at all (wiki §1, wiki–code reconciliation
+  #20). `workflow/popSession.ts` is the pure machine, three states: **locked** — the
+  DragOverlay is clamped to the context (a `DragOverlay` modifier — `DndContext` itself
+  gets no modifier, so `delta` and the collision rect stay raw) while the cursor roams;
+  **popped out** — the cursor stayed outside the context past `popDelayMs` (or past
+  `popDistancePx`, either satisfies): the card tweens to the cursor (`popSnapMs`) and
+  follows it, belonging to nothing; **locked** again once the cursor rests in any
+  column's middle band past `popInDelayMs` — the column it just left included. A drag
+  from Unsorted starts popped out. A Card is not a context yet (Story 4).
 - **A release resolves one of two ways.** Cursor in the context: dnd-kit's `over`
   decides (anchor + side, unchanged from Epic 3.2). Cursor in a region the card doesn't
   belong to (locked or popped out): that region's **band** decides
@@ -223,29 +228,44 @@ no stored position at all — ordered by `completedAt` instead).
   kept); an empty or done region is workphase-only in any band; a covered-set member
   keeps its workphase. Between columns / over Unsorted / a broken column: nothing is
   written. Bands are measured against the region's rect *as it was on entry* — the
-  ghost's own insertion moves things — and drawn while a Card is carried
-  (`BandGuides.tsx`: dashed boundary lines on every region the card doesn't belong to,
-  the hovered region's active band tinted, from that same frozen rect).
+  ghost's own insertion moves things — and that frozen rect is translated to follow the
+  region's own scroll (`PopHover.scrollTop`, wiki–code reconciliation #21), so an
+  auto-scrolled column carries the band with the sub-row it belongs to. Drawn while a
+  Card is carried (`BandGuides.tsx`: dashed boundary lines on every region the card
+  doesn't belong to, the hovered region's active band tinted, from that same frozen
+  rect).
 - **`over` follows the machine** (`boardDndUtils.ts::resolveBoardCollisions`): in
   context, `closestCorners` over the context container and the cards inside it; in
   another region, exactly that region's container — never a card in it — so the
   target's sortable can't shift against a hover the band ignores.
 - **The ghost is an ordinal placement, never a position** (`itemListOps.ts` —
   `Placement = { workphaseId?, slot: 'existing' | 'first' | 'last' | {anchorId, side} }`,
-  layered over the position sort by every list selector, Stubs included). Nothing in
-  `items` is mutated during a drag; cancel just clears the placement. On release the
+  layered over the position sort by every list selector, Stubs included). An item with
+  no position to keep (a reopened done item, a first-time workphase assignment)
+  previews at `'last'` rather than `'existing'`, matching the append fallback it will
+  actually resolve to (`popSession.ts::placementFor`, `boardDndUtils.ts::pendingPlacementFor`
+  — wiki–code reconciliation #29). Nothing in `items` is mutated during a drag; cancel
+  restores the item's pre-drag placement if a write for it is still in flight, else
+  clears it (`ItemWriteTracker.isPending`, reconciliation #22). On release the
   placement becomes the **pending marker** (`data-pending`) carrying the request's own
   relation, cleared by the response. `useItemManagement.ts::writes` sequences writes
-  per item so a stale response is dropped whole (DRAG-6.5); a rejected write clears
-  the placement and reloads.
+  per item so a stale response's own row is dropped whole (DRAG-6.5), but if it
+  disclosed a reindex, `complete` reports `needsResync` and the board reloads instead of
+  silently losing the renumbering of other rows (reconciliation #15); a response landing
+  mid-drag of the *active* item's own ghost is reasserted reactively rather than waiting
+  for the machine's next state change; a rejected write clears the placement and
+  reloads.
 - **Every threshold and band is a dev/test-panel value** (`workflow/dragTuning.ts`,
   `DragTuningPanel.tsx`, toolbar → "Drag tuning"), persisted in `localStorage` under
   `kanban_drag_tuning`. E2E seeds that key with `addInitScript` and reads the numbers
-  back from the same object — never a literal. The board root carries
-  `data-drag-state` (`locked` / `popped-out`) and `data-drag-context` for tests.
+  back from the same object — never a literal. Values are deliberately unlocked, tuned
+  by feel; automated tests assert *reachability* and write correctness, never a timing
+  sequence. The board root carries `data-drag-state` (`locked` / `popped-out`) and
+  `data-drag-context` for tests.
 - `workflow/DragSessionContext.ts` holds the whole drag (`activeItem`,
-  `classification`, `pop`) plus `PlacementsContext`; `useIsCardBeingDragged` replaced
-  the drilled prop. `lib/isStub.ts` is the one "renders as a Stub" predicate.
+  `classification`, `pop`, `priorPlacement`) plus `PlacementsContext`;
+  `useIsCardBeingDragged` replaced the drilled prop. `lib/isStub.ts` is the one
+  "renders as a Stub" predicate.
 
 ---
 

@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
 import type { PopSession } from './popSession';
-import type { Placements } from './itemListOps';
+import type { Placement, Placements } from './itemListOps';
 
 // Everything about the drag in progress, in one value (audit
 // epic-3-5-story-2 #14): the carried item, what every target is to it
@@ -17,6 +17,15 @@ export interface DragSession {
   classification: DragClassification;
   /** The pop machine — Card drags only; a Stub drag stays in its sibling list (Story 5 opens it). */
   pop: PopSession | null;
+  /**
+   * The item's placement as it stood *before* this drag touched it — null
+   * for most drags, but a re-drag of an item whose earlier write is still
+   * in flight starts with its pending marker already there. Restored on
+   * cancel or a release that writes nothing, in place of clearing it
+   * outright, when that write is still outstanding (wiki–code
+   * reconciliation #22).
+   */
+  priorPlacement: Placement | null;
 }
 
 export const DragSessionContext = createContext<DragSession | null>(null);

@@ -134,13 +134,17 @@ export async function bottomQuarter(locator: Locator): Promise<Point> {
   return { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
 }
 
-// "Drop past the end of the column": the bottom edge of the column group.
-// In another column that is the bottom band (after the last item — Story
-// 3). In the card's own column it's in-context, where dnd-kit's
-// closestCorners (a nearest-corner heuristic, not a hit test) resolves to
-// the column container or its last card depending on the column's height —
-// the append the older suites assert.
+// "Drop past the end of the column": just inside the bottom edge of its
+// drag region — its bounded box (wiki §1; a region stops at the column
+// body, not its outer group, since wiki–code reconciliation #20), not the
+// column group's footer/"+ Add item" row below that box, which is nowhere
+// to the pop machine. In another column that lands in the bottom band
+// (after the last item — Story 3). In the card's own column it's
+// in-context, where dnd-kit's closestCorners (a nearest-corner heuristic,
+// not a hit test) resolves to the column container or its last card
+// depending on the column's height — the append the older suites assert.
 export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
-  const box = await boxOf(columnGroup);
+  const region = columnGroup.locator('[data-drag-region]').last();
+  const box = (await region.count()) > 0 ? await boxOf(region) : await boxOf(columnGroup);
   return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
 }

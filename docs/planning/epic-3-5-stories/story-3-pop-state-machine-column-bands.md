@@ -61,6 +61,12 @@ Settled with the Product Owner before this plan was written.
    write takes a per-item sequence number; a response that isn't the
    latest for its item is dropped whole (pairs included — the later
    response supersedes them). A rejected write still resyncs.
+   *Corrected 2026-09-15 (wiki–code reconciliation #15):* the parenthetical
+   is wrong — the later response carries only the reindex *it* caused, so
+   a dropped response's pairs are never re-delivered. Dropping the item's
+   own row is right; dropping the pairs loses committed renumbering of
+   other rows. Rule now: a stale response's row is discarded, and if it
+   carried pairs the client resyncs. Ride-along fix, not built yet.
 6. **Story 2 audit items folded in:** #12 (`isStub`), #13
    (`useDropTargetProps`), #14 (`dragSession` collapse; `isCardBeingDragged`
    moves into the context), #15 (`itemListOps.ts` split). #6–#11, #16, #17
@@ -340,9 +346,12 @@ Each step leaves the suite green.
   state rather than a `console.warn` side effect inside an updater; the
   panel renders it. `setItems` is gone — a board load is `replaceItems`
   (which also drops every placement), everything else is a reducer.
-- **`DragTuningContext` was planned and dropped** — the hook takes the
-  tuning as a dep, the panel takes it as props, and the overlays read CSS
-  custom properties BoardView sets; nothing needed a context.
+- **`DragTuningContext` exists, for the band guides only.** The hook takes
+  the tuning as a dep, the panel takes it as props, and the overlays read
+  CSS custom properties BoardView sets — none of those needed a context —
+  but `BandGuides.tsx` (added after the hands-on) reads the band fractions
+  through it. *(An earlier bullet here said the context was dropped; it
+  predated the guides — wiki–code reconciliation #26.)*
 - **The tripwire runs only for a write the board previewed.** A Sheet edit
   that reparents (and so reassigns a position) makes no ordinal claim and
   must not trip it; the plan didn't say either way.

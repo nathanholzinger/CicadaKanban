@@ -309,6 +309,10 @@ adds a second nested representation.
 **Fix:** `export function isStub(item: Pick<Item, 'positionScope'>)` in
 `client/src/lib/` (or beside `Item` in `types.ts`), used at all five sites.
 
+**Status (2026-09-13, Story 3 landed in `e77e31f`):** resolved as proposed
+— `client/src/lib/isStub.ts`; no inline `positionScope === 'attached-siblings'`
+survives outside `types.ts` and the test fixture's derivation.
+
 ### 13. Card and Stub drop-target chrome is the same six-line block in two components `[File Responsibility + Duplication & Abstraction]`
 **File:** `client/src/components/KanbanCard.tsx:77–79`, `:107–110`, `:113–114` (Card) vs `:208–211`, `:218–220`, `:223–224` (`AttachedChildRow`)
 
@@ -332,6 +336,12 @@ copy-paste.
 (sole consumer). Test-visible output (`data-drop-state`, `data-item-id` on
 the same elements) unchanged.
 
+**Status (2026-09-13, Story 3 landed in `e77e31f`):** resolved as proposed
+— `useDropTargetProps` + `DropSideIndicator` in `KanbanCard.tsx`, used by
+both `KanbanCard` and `AttachedChildRow`. Story 3's new per-target
+attribute (`data-pending`) landed once, inside the hook — the fix held
+under exactly the load this finding predicted.
+
 ### 14. `useBoardDnd`: twin drag-session states set in lockstep, and two channels for "an item drag is live" `[File Responsibility + Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:40`, `:45` (states), `:73,76` / `:92–93` / `:122–123` (set/cleared together), `:88–90` vs `:113–115` (restore is the mirror of preview); `client/src/components/BoardView.tsx:253` (context) vs `:266` (`isCardBeingDragged={activeItem !== null}` drilled through `BoardColumn.tsx:26,143,233` → `WorkphaseCardList.tsx:29,52`)
 
@@ -351,6 +361,15 @@ the second story in a row to add a state atom + handler pair here; Story
 `isCardBeingDragged` into the context (or `useDndContext().active`); give
 the over/cancel pair a local `withWorkphase(items, id, workphaseId)`.
 
+**Status (2026-09-13, Story 3 landed in `e77e31f`):** resolved — one
+`DragSession { activeItem, classification, pop }` atom in
+`DragSessionContext.ts`; `useIsCardBeingDragged()` replaced the
+BoardView → BoardColumn drill; the over/cancel mirror is gone with the
+re-bucket itself (nothing in `items` mutates during a drag). Residual —
+`WorkphaseCardList` still receives the flag as a prop two hops inside
+`BoardColumn`, and `DragClassification.activeId` still re-states
+`activeItem.id` — carried as Story 3 audit #24.
+
 ### 15. `useItemManagement.ts` bundles pure list ops with the hook, and `boardDndUtils.ts` (self-described "pure") now imports from the hook file `[File Responsibility]`
 **Files:** `client/src/components/workflow/useItemManagement.ts:1–187` (pure functions `:15–127`, hook `:129–187`); `boardDndUtils.ts:4` (imports `applyItemWriteResponse`), `useBoardDnd.ts:15`
 
@@ -367,6 +386,13 @@ a hook. Functionally fine; the layering reads wrong.
 `boardDndUtils` / `useBoardDnd` import the reducer from the pure module —
 matching the `dragClassification.ts` / `DragClassificationContext.ts`
 split this story established.
+
+**Status (2026-09-13, Story 3 landed in `e77e31f`):** resolved — pure
+selectors, placement layer, and write reconciliation live in
+`workflow/itemListOps.ts`; `useItemManagement.ts` is hook-only. Residual:
+the `ItemWriteTracker` interface stayed in the hook file, so
+`boardDndUtils.ts` still has a (type-only) import from a hook-named
+module — carried as Story 3 audit #4.
 
 ### 16. Test scaffolding: duplicated tree fixture, and the E2E spec's local helpers start a second helper set `[Duplication & Abstraction]`
 **Files:** `client/src/lib/hierarchy.test.ts:20` vs `:53` (identical six-node fixture, second copy new); `tests/ui/drag-target-classification.spec.ts:22–26` (`createItem`), `:40–41` (two-step board fetch), `:60–63` (depth-chain loop), `:70–72` / `:123–125` (open-board three-liner); natural home `tests/helpers/seed.ts`
@@ -387,6 +413,11 @@ ok) and `seedItemChain(request, { projectId, workphaseId, length })`; add
 `fetchDefaultBoard(request, workflowId)`; add
 `ProjectSidebarPage.openBoard(name)`. Migrate opportunistically; the next
 Epic 3.5 spec uses them from day one.
+
+**Status (2026-09-13, Story 3 landed in `e77e31f`):** open, made worse —
+none of the four helpers were added and `tests/ui/drag-column-bands.spec.ts`
+carries a fresh copy of each plus three spec-local geometry recipes.
+Escalated to Story 3 audit #7 (Fix Now).
 
 ---
 

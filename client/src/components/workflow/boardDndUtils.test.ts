@@ -258,20 +258,33 @@ describe('bandDropResolution', () => {
 
 // The pending marker's ordinal claim (§10) mirrors the request exactly.
 describe('pendingPlacementFor', () => {
+  const active = { workphaseId: 'w1', position: 1 };
+
   it('an anchored request pins the item beside its anchor in the target list', () => {
-    expect(pendingPlacementFor({ workphaseId: 'w2', anchorId: 'A', side: 'after' }, 'w1')).toEqual({
+    expect(pendingPlacementFor({ workphaseId: 'w2', anchorId: 'A', side: 'after' }, active)).toEqual({
       workphaseId: 'w2',
       slot: { anchorId: 'A', side: 'after' },
     });
-    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'], anchorId: 'A', side: 'before' }, 'w1')).toEqual({
+    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'], anchorId: 'A', side: 'before' }, active)).toEqual({
       workphaseId: 'w1',
       slot: { anchorId: 'A', side: 'before' },
     });
   });
 
   it('a bare workphase change keeps its slot; a bare same-group reorder is an append', () => {
-    expect(pendingPlacementFor({ workphaseId: 'w2' }, 'w1')).toEqual({ workphaseId: 'w2', slot: 'existing' });
-    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'] }, 'w1')).toEqual({ workphaseId: 'w1', slot: 'last' });
+    expect(pendingPlacementFor({ workphaseId: 'w2' }, active)).toEqual({ workphaseId: 'w2', slot: 'existing' });
+    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'] }, active)).toEqual({ workphaseId: 'w1', slot: 'last' });
+  });
+
+  // Reconciliation #29, the mirror of #14: no position to keep takes the
+  // append fallback (item-positioning §2 addendum, §7.5), not the position-
+  // sort's null-coerced top slot — a bare workphase change with nothing to
+  // keep previews as 'last', same as a bare same-group reorder.
+  it('a bare workphase change with no position to keep is an append too — a reopened done item, or a first-time assignment', () => {
+    expect(pendingPlacementFor({ workphaseId: 'w2' }, { workphaseId: 'w1', position: null })).toEqual({
+      workphaseId: 'w2',
+      slot: 'last',
+    });
   });
 });
 
@@ -441,12 +454,13 @@ describe('buildMoveInput', () => {
 // this whole module already exists for (see its header comment).
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
-  const pending = pendingPlacementFor(input, 'wp-1');
+  const pending = pendingPlacementFor(input, { workphaseId: 'wp-1', position: 1.5 });
   const fakeItem = (id: string) => makeItem(id, { isAttached: 0, workphaseId: 'wp-2', position: 1.5 });
   const tracker = () => ({
     begin: vi.fn<ItemWriteTracker['begin']>(() => 7),
-    complete: vi.fn<ItemWriteTracker['complete']>(() => true),
+    complete: vi.fn<ItemWriteTracker['complete']>(() => ({ applied: true, needsResync: false })),
     fail: vi.fn<ItemWriteTracker['fail']>(),
+    isPending: vi.fn<ItemWriteTracker['isPending']>(() => false),
   });
 
   it('begins the write with its pending placement, completes it with the response, and never calls loadBoard', async () => {
@@ -478,5 +492,37 @@ describe('sendItemMove', () => {
     expect(writes.fail).toHaveBeenCalledWith('active-1', 7);
     expect(loadBoard).toHaveBeenCalledTimes(1);
     consoleError.mockRestore();
+  });
+
+  // Reconciliation #15: the row itself is rightly dropped whole when the
+  // response is stale (a newer write for the same item superseded it) —
+  // but if it also disclosed a reindex, those pairs renumbered other rows
+  // for real, and losing them silently is the exact wrong-looking-
+  // consistent failure item-positioning §5 warns about. The tracker is the
+  // one that knows staleness; this only has to act on what it reports.
+  it("#15: a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
+    const updated = fakeItem('active-1');
+    const moveItem = vi.fn(async () => updated);
+    const writes = tracker();
+    writes.complete.mockReturnValue({ applied: false, needsResync: true });
+    const loadBoard = vi.fn();
+
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+
+    expect(writes.complete).toHaveBeenCalledWith('active-1', 7, updated);
+    expect(writes.fail).not.toHaveBeenCalled();
+    expect(loadBoard).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stale response with no reindex disclosed needs no resync', async () => {
+    const updated = fakeItem('active-1');
+    const moveItem = vi.fn(async () => updated);
+    const writes = tracker();
+    writes.complete.mockReturnValue({ applied: false, needsResync: false });
+    const loadBoard = vi.fn();
+
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+
+    expect(loadBoard).not.toHaveBeenCalled();
   });
 });

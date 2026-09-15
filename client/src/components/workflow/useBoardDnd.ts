@@ -33,7 +33,7 @@ import {
   startPopSession,
   type PopSession,
 } from './popSession';
-import type { Placement } from './itemListOps';
+import type { Placement, Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
 
@@ -66,6 +66,8 @@ export interface BoardDndDeps {
   setBoard: React.Dispatch<React.SetStateAction<BoardWithDetails | null>>;
   items: Item[];
   tuning: DragTuning;
+  /** The live ordinal placements — read at drag start to stash a re-dragged item's pending marker (reconciliation #22). */
+  placements: Placements;
   previewPlacement: (itemId: string, placement: Placement | null) => void;
   writes: ItemWriteTracker;
   getWorkphaseItems: (workphaseId: string, isTerminal?: boolean) => Item[];
@@ -86,6 +88,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const regionsRef = useRef<DragRegion[]>([]);
   const pointerRef = useRef<Point | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The ghost we last asked to be shown for the active drag's item — so the
+  // reactive re-assertion below (#22) can tell "we meant it to be nothing
+  // right now" from "something else cleared what we wanted." Compared by
+  // reference: `previewPlacement` always stores exactly the object it's
+  // given, so an unmolested placement reads back `===` this.
+  const wantedPlacementRef = useRef<Placement | null>(null);
   // The latest props, for the pointer/timer callbacks that live across renders.
   const latest = useRef(deps);
   useEffect(() => {
@@ -150,20 +158,31 @@ export function useBoardDnd(deps: BoardDndDeps) {
     return regionsRef.current;
   }
 
+  // The one place the active drag's ghost is set — records what we asked
+  // for in `wantedPlacementRef` so the reactive effect below knows whether
+  // a later absence is ours or someone else's (#22).
+  function setGhost(itemId: string, placement: Placement | null) {
+    wantedPlacementRef.current = placement;
+    deps.previewPlacement(itemId, placement);
+  }
+
   // One step of the pop machine against the current pointer; re-arms the
   // pop timer when the cursor is resting in a pop-eligible band.
   function evaluatePop() {
     const current = sessionRef.current;
     const pointer = pointerRef.current;
     if (!current?.pop || !pointer) return;
-    const { tuning, previewPlacement } = latest.current;
+    const { tuning } = latest.current;
     const now = performance.now();
     const regions = measureRegions();
     const pop = advancePopSession(current.pop, pointer, regions, tuning, now);
     if (pop !== current.pop) {
       if (pop.contextKey !== current.pop.contextKey) startSnap();
       updateSession({ ...current, pop });
-      previewPlacement(current.activeItem.id, placementFor(pop, regions, current.activeItem.workphaseId));
+      setGhost(
+        current.activeItem.id,
+        placementFor(pop, regions, current.activeItem.workphaseId, current.activeItem.position),
+      );
     }
     clearPopTimer();
     const due = popDueAt(pop, tuning);
@@ -264,11 +283,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activeItem = deps.items.find(i => i.id === activeId);
     if (!activeItem) return;
 
+    // Whatever this item's placement was *before* this drag — non-null
+    // only for a re-drag of an item whose earlier write is still pending
+    // (its marker is sitting right there). Read before the ghost below
+    // overwrites it; restored, instead of cleared, if that write is still
+    // in flight when this drag ends without writing anything (#22).
+    const priorPlacement = deps.placements.get(activeId) ?? null;
+
     // The cap comes off the board response (never hard-coded client-side)
     // so the server's constant governs both enforcement points.
     const classification = classifyDragTargets(activeId, deps.items, board.itemDepthCap);
     if (type !== 'card') {
-      updateSession({ activeItem, classification, pop: null });
+      updateSession({ activeItem, classification, pop: null, priorPlacement });
       return;
     }
 
@@ -278,8 +304,34 @@ export function useBoardDnd(deps: BoardDndDeps) {
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
     const regions = measureRegions();
     const pop = startPopSession(regionAt(regions, pointerRef.current)?.key ?? null);
-    updateSession({ activeItem, classification, pop });
-    deps.previewPlacement(activeId, placementFor(pop, regions, activeItem.workphaseId));
+    updateSession({ activeItem, classification, pop, priorPlacement });
+    setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position));
+  }
+
+  // The ghost's placement is otherwise only ever set here, on the machine's
+  // own state changes — a response completing an earlier, still-outstanding
+  // write for the *active* drag's item (a re-drag scenario) clears it from
+  // underneath the live gesture the moment it lands. This corrects that as
+  // soon as it's visible in `deps.placements`, rather than waiting for the
+  // next pointer move or band crossing (reconciliation #22). Compared
+  // against `wantedPlacementRef`, not mere presence: the ghost legitimately
+  // reads as absent whenever the cursor is over nothing, and reacting to
+  // *that* would fight `previewPlacement`'s own Map churn forever.
+  useEffect(() => {
+    const current = sessionRef.current;
+    if (!current?.pop) return;
+    const wanted = wantedPlacementRef.current;
+    if ((latest.current.placements.get(current.activeItem.id) ?? null) === wanted) return;
+    latest.current.previewPlacement(current.activeItem.id, wanted);
+  }, [deps.placements]);
+
+  // Restores the item's pre-drag pending marker (if its write is still in
+  // flight) instead of clearing the ghost outright — cancelling, or a
+  // release that writes nothing, otherwise leaves it looking un-pending
+  // until that write's response lands (wiki §10, reconciliation #22).
+  function restorePriorPlacement(ended: DragSession) {
+    const restore = deps.writes.isPending(ended.activeItem.id) ? ended.priorPlacement : null;
+    deps.previewPlacement(ended.activeItem.id, restore);
   }
 
   // Escape / a cancelled gesture: nothing was written, so the ghost is the
@@ -289,7 +341,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     clearPopTimer();
     cancelSnap();
     updateSession(null);
-    if (current) deps.previewPlacement(current.activeItem.id, null);
+    if (current) restorePriorPlacement(current);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -345,11 +397,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const input = resolveCardDrop(current, over ? String(over.id) : null, side);
     if (!input) {
       // Nothing to write (between columns, an Inert surface, a band that
-      // asks for nothing new): the ghost goes and the card is where it was.
-      deps.previewPlacement(activeId, null);
+      // asks for nothing new): the ghost goes and the card is where it was
+      // — or, if it had a pending marker from an earlier write still in
+      // flight, that comes back instead (#22).
+      restorePriorPlacement(current);
       return;
     }
-    const pending = pendingPlacementFor(input, activeItem.workphaseId);
+    const pending = pendingPlacementFor(input, activeItem);
     await sendItemMove(moveItem, activeId, input, pending, deps.writes, deps.loadBoard);
   }
 

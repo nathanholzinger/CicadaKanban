@@ -193,6 +193,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       setBoard,
       items,
       tuning: dragTuning,
+      placements,
       previewPlacement,
       writes,
       getWorkphaseItems,

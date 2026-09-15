@@ -19,10 +19,20 @@ import {
 // no-ops for any sequence that isn't the item's latest.
 export interface ItemWriteTracker {
   begin(itemId: string, pending: Placement | null): number;
-  /** Folds the response in (§5a order) unless it's stale. Returns whether it was applied. */
-  complete(itemId: string, seq: number, response: ItemWriteResponse): boolean;
+  /**
+   * Folds the response in (§5a order) unless it's stale — a stale
+   * response's own row is always discarded, since the newer write
+   * supersedes it. But a reindex it disclosed renumbered *other* rows too,
+   * and those are real, committed changes a discarded response must not
+   * take with it (wiki–code reconciliation #15) — `needsResync` says so,
+   * for the caller to resync the whole board from rather than silently
+   * lose them.
+   */
+  complete(itemId: string, seq: number, response: ItemWriteResponse): { applied: boolean; needsResync: boolean };
   /** Clears the pending placement so nothing from the guess survives; the caller resyncs. */
   fail(itemId: string, seq: number): void;
+  /** Whether a write for this item is currently outstanding — for restoring its pending marker after a re-drag that ends up writing nothing (reconciliation #22). */
+  isPending(itemId: string): boolean;
 }
 
 // The pure list operations live in itemListOps.ts; this hook only closes
@@ -34,6 +44,11 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   const [list, setList] = useState(EMPTY_ITEM_LIST_STATE);
   const { items, placements, inversions } = list;
   const writeSeq = useRef(new Map<string, number>());
+  // Item ids with a write currently outstanding — from `begin` until the
+  // matching non-stale `complete`/`fail` — backing `isPending`
+  // (reconciliation #22). `placements` alone can't answer this: a live
+  // drag's ghost occupies the same slot and would read as "pending" too.
+  const inFlight = useRef(new Set<string>());
 
   // A board load replaces the list wholesale and drops every placement —
   // each belonged to the list it was made against. Every other change is a
@@ -53,17 +68,32 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
       begin(itemId, pending) {
         const seq = (writeSeq.current.get(itemId) ?? 0) + 1;
         writeSeq.current.set(itemId, seq);
+        inFlight.current.add(itemId);
         setList(s => withPlacement(s, itemId, pending));
         return seq;
       },
       complete(itemId, seq, response) {
-        if (writeSeq.current.get(itemId) !== seq) return false;
+        const isLatest = writeSeq.current.get(itemId) === seq;
+        if (isLatest) inFlight.current.delete(itemId);
+        if (!isLatest) {
+          // The row is discarded — a newer write supersedes it — but a
+          // reindex it disclosed renumbered *other* rows too, and those
+          // are real, committed changes this response is the only carrier
+          // of; losing them along with the stale row would be silently
+          // wrong, not merely stale (reconciliation #15). The caller
+          // resyncs instead.
+          return { applied: false, needsResync: Boolean(response.reindexed?.length) };
+        }
         setList(s => completeItemWrite(s, response));
-        return true;
+        return { applied: true, needsResync: false };
       },
       fail(itemId, seq) {
         if (writeSeq.current.get(itemId) !== seq) return;
+        inFlight.current.delete(itemId);
         setList(s => withPlacement(s, itemId, null));
+      },
+      isPending(itemId) {
+        return inFlight.current.has(itemId);
       },
     }),
     [],

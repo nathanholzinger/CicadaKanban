@@ -8,8 +8,9 @@ refer to them as `DRAG-2.n`.
 **Settled vs. deferred.** The *classification* — which of the four states
 each target is in — is settled and catalogued here. The *visual
 treatment* (palette, weight, animation) is an open question (Story 8) and
-has no cases. Where the wiki names an overlay ("green," "grey"), cases
-assert the classification state the overlay expresses, not the color.
+has no cases. Where the wiki names an overlay ("green" for descendants,
+"de-emphasized" for depth-capped), cases assert the classification state
+the overlay expresses, not the color or the dimming amount.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
@@ -18,8 +19,9 @@ assert the classification state the overlay expresses, not the color.
 | TC-3 | A target whose resulting depth would exceed `CAP` is classified Depth-capped | P0 | ⏳ pending triage |
 | TC-4 | Classification is computed once at drag start and does not change mid-gesture | P1 | ⏳ pending triage |
 | TC-5 | Free descendants of the carried item carry the relationship marker | P1 | ⏳ pending triage |
-| TC-6 | Depth-capped targets carry the "real target, not for this item" marker | P2 | ⏳ pending triage |
+| TC-6 | Depth-capped targets are de-emphasized, not hidden | P2 | ⏳ pending triage |
 | TC-7 | Stubs are classified individually during a Card drag — no blanket exclusion | P0 | ⏳ pending triage |
+| TC-8 | Inert targets: non-targets for every item, not just this one | P1 | ⏳ pending triage |
 
 ---
 
@@ -85,14 +87,16 @@ marker is asserted as a state; its rendering is not.
 
 **Automation test:** —
 
-## TC-6 — Depth-capped targets carry the "real target, not for this item" marker
+## TC-6 — Depth-capped targets are de-emphasized, not hidden
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 
 *Given* a Depth-capped target per TC-3, *when* the drag begins, *then* it
-carries the marker distinguishing it from Inert (the settled grey overlay)
-— it is a real target that this particular item can't use, not a
-non-target. Asserted as a state; rendering not.
+is still rendered on the board — not removed, not collapsed — and carries
+the marker distinguishing it from Inert: "real target, not for this
+item." It is a real target that this particular item can't use, not a
+non-target. Asserted as a state plus presence; the dimming treatment
+itself (a panel value until Story 8 settles it) is not asserted.
 
 **Automation test:** —
 
@@ -109,5 +113,27 @@ merits. No Stub is excluded from consideration merely for being a Stub.
 *(Supersedes the Epic 3.2 interim behavior that
 [TC-3.3](../item-positioning/part-3-attached-sibling-reorder.md) guarded,
 in which a Card drag treated every Stub as a non-target.)*
+
+**Automation test:** —
+
+## TC-8 — Inert targets: non-targets for every item, not just this one
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* a drag of a **Card** `X`, *when* the drag begins, *then* each of
+the following is classified **Inert** regardless of `X`'s depth or
+descendants: the Unsorted bucket; a broken column; an expanded column's
+outer wrapper (a drop must land on a specific sub-row). What separates
+Inert from Depth-capped (TC-6) is that these are non-targets for *every*
+item — the same drag with a different item classifies them identically.
+
+*And given* a drag of a **Stub** `S` under parent `P` (interim rule until
+Story 5 opens the detach direction), *when* the drag begins, *then* `S`'s
+siblings in `P`'s Stub list are **Valid** (reposition targets) and every
+target outside that list — `P` itself, other Cards, other Cards' Stubs —
+is **Inert**.
+
+*(The Stub half is superseded when Story 5 lands the full classification;
+it stays here under this ID with a "was:" note at that point.)*
 
 **Automation test:** —

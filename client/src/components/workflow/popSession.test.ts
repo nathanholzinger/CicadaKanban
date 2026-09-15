@@ -56,7 +56,7 @@ describe('locked', () => {
     expect(run([[bTop, 100]])).toEqual({
       ...locked(A.key),
       outsideSince: 100,
-      hover: { regionKey: B.key, band: 'top', since: 100, rect: B.rect },
+      hover: { regionKey: B.key, band: 'top', since: 100, rect: B.rect, scrollTop: 0 },
     });
   });
 
@@ -80,7 +80,7 @@ describe('locked', () => {
     expect(out).toEqual({
       contextKey: null,
       outsideSince: null,
-      hover: { regionKey: B.key, band: 'middle', since: 100 + OUT, rect: B.rect },
+      hover: { regionKey: B.key, band: 'middle', since: 100 + OUT, rect: B.rect, scrollTop: 0 },
     });
     expect(isLocked(out)).toBe(false);
   });
@@ -120,6 +120,20 @@ describe('locked', () => {
     expect(releaseIntent(later, bTop, [A, grownB, C], tuning)).toMatchObject({ kind: 'band', band: 'top' });
     const fresh = advancePopSession(startPopSession(A.key), bTop, [A, grownB, C], tuning, 0);
     expect(fresh.hover?.band).toBe('middle');
+  });
+
+  it('the frozen rect follows a real scroll of the region (reconciliation #21), not the ghost regrowing it', () => {
+    const entered = run([[bTop, 0]]);
+    // The column scrolled down 30px: B's freshly-measured rect moves up by
+    // 30 on screen, and its scrollTop says so — unlike `grownB` above, which
+    // moved the same way with scrollTop unchanged (the ghost's own doing).
+    const scrolledB = region(B.key, rect(120, -30, 100, 400), { scrollTop: 30 });
+    const after = advancePopSession(entered, bTop, [A, scrolledB, C], tuning, 10);
+    expect(after.hover).toMatchObject({ rect: { ...B.rect, top: -30, bottom: 370 }, scrollTop: 30, band: 'top' });
+
+    // Scrolling back to 0 carries it right back.
+    const back = advancePopSession(after, bTop, [A, B, C], tuning, 20);
+    expect(back.hover).toMatchObject({ rect: B.rect, scrollTop: 0 });
   });
 });
 
@@ -169,7 +183,7 @@ describe('popped out', () => {
     expect(top.contextKey).toBeNull();
     expect(top.hover?.band).toBe('top');
     const moved = advancePopSession(outInB, cMiddle, regions, tuning, OUT + IN - 1);
-    expect(moved.hover).toEqual({ regionKey: C.key, band: 'middle', since: OUT + IN - 1, rect: C.rect });
+    expect(moved.hover).toEqual({ regionKey: C.key, band: 'middle', since: OUT + IN - 1, rect: C.rect, scrollTop: 0 });
     expect(moved.contextKey).toBeNull();
   });
 
@@ -205,22 +219,22 @@ describe('placementFor', () => {
   const activeWorkphase = A.coveredWorkphaseIds[0];
 
   it('in-context: the item sorts where it already is, under its own workphase', () => {
-    expect(placementFor(startPopSession(A.key), regions, activeWorkphase)).toEqual({
+    expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1)).toEqual({
       workphaseId: activeWorkphase,
       slot: 'existing',
     });
   });
 
   it("DRAG-3.11: the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
-    expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase)).toEqual({
+    expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
-    expect(placementFor(run([[bMiddle, 0]]), regions, activeWorkphase)).toEqual({
+    expect(placementFor(run([[bMiddle, 0]]), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
-    expect(placementFor(run([[bBottom, 0]]), regions, activeWorkphase)).toEqual({
+    expect(placementFor(run([[bBottom, 0]]), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -232,22 +246,49 @@ describe('placementFor', () => {
       targetWorkphaseId: 'w1',
     });
     const s = advancePopSession(startPopSession(A.key), bTop, [A, merged], tuning, 0);
-    expect(placementFor(s, [A, merged], 'w2')).toEqual({ workphaseId: 'w2', slot: 'first' });
+    expect(placementFor(s, [A, merged], 'w2', 1)).toEqual({ workphaseId: 'w2', slot: 'first' });
   });
 
-  it('DRAG-3.9: a done region previews no positioned insert in any band', () => {
+  it("DRAG-3.9: a done region previews no positioned insert in any band, whatever the item's own position", () => {
     const done = region('column:d', rect(120, 0, 100, 400), { isTerminal: true });
     for (const p of [bTop, bMiddle, bBottom]) {
-      const s = advancePopSession(startPopSession(A.key), p, [A, done], tuning, 0);
-      expect(placementFor(s, [A, done], activeWorkphase)).toEqual({
-        workphaseId: done.targetWorkphaseId,
-        slot: 'existing',
-      });
+      for (const position of [1, null]) {
+        const s = advancePopSession(startPopSession(A.key), p, [A, done], tuning, 0);
+        expect(placementFor(s, [A, done], activeWorkphase, position)).toEqual({
+          workphaseId: done.targetWorkphaseId,
+          slot: 'existing',
+        });
+      }
     }
   });
 
+  // Reconciliation #29, the mirror of #14: no position to keep — a
+  // reopened done item, a first-time assignment — takes the append
+  // fallback instead of the position-sort's null-coerced top slot, in
+  // either of the two places band resolution lands on 'existing'.
+  it('#29: an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
+    expect(placementFor(run([[bMiddle, 0]]), regions, activeWorkphase, null)).toEqual({
+      workphaseId: B.targetWorkphaseId,
+      slot: 'last',
+    });
+    const poppedIn = run([
+      [bMiddle, 0],
+      [bMiddle, OUT],
+      [bMiddle, OUT + IN],
+    ]);
+    expect(placementFor(poppedIn, regions, activeWorkphase, null)).toEqual({
+      workphaseId: B.targetWorkphaseId,
+      slot: 'last',
+    });
+    // The edge bands are unaffected — they already name an explicit anchor.
+    expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, null)).toEqual({
+      workphaseId: B.targetWorkphaseId,
+      slot: 'first',
+    });
+  });
+
   it('popped out over nothing: no placement — the card is drawn where it already is', () => {
-    expect(placementFor(poppedOut(), regions, activeWorkphase)).toBeNull();
+    expect(placementFor(poppedOut(), regions, activeWorkphase, 1)).toBeNull();
   });
 
   it('after popping in, the new context is where the item sorts', () => {
@@ -257,7 +298,10 @@ describe('placementFor', () => {
       [bMiddle, OUT + IN],
     ]);
     expect(s).toEqual(locked(B.key));
-    expect(placementFor(s, regions, activeWorkphase)).toEqual({ workphaseId: B.targetWorkphaseId, slot: 'existing' });
+    expect(placementFor(s, regions, activeWorkphase, 1)).toEqual({
+      workphaseId: B.targetWorkphaseId,
+      slot: 'existing',
+    });
   });
 });
 

@@ -54,6 +54,31 @@ describe('getWorkphaseItemsFrom', () => {
       'shipped-later',
     ]);
   });
+
+  // Wiki–code reconciliation #14: a drop into a done column previews with
+  // slot 'existing', so the sort alone decides where the ghost and the
+  // pending marker draw. The server stamps completedAt on the write, so the
+  // item lands last — the preview has to say the same (drag §10).
+  it('draws an item with no completedAt at the end of a done list, where the server will stamp it', () => {
+    const done = [
+      item('shipped-later', { position: null, completedAt: 200 }),
+      item('being-dropped', { position: null, completedAt: null }),
+      item('shipped-first', { position: null, completedAt: 100 }),
+    ];
+    expect(getWorkphaseItemsFrom(done, 'todo', undefined, true).map(i => i.id)).toEqual([
+      'shipped-first',
+      'shipped-later',
+      'being-dropped',
+    ]);
+  });
+
+  it('breaks an exact completedAt tie by createdAt, oldest first', () => {
+    const tied = [
+      item('newer', { position: null, completedAt: 100, createdAt: 200 }),
+      item('older', { position: null, completedAt: 100, createdAt: 100 }),
+    ];
+    expect(getWorkphaseItemsFrom(tied, 'todo', undefined, true).map(i => i.id)).toEqual(['older', 'newer']);
+  });
 });
 
 describe('getMergedColumnItemsFrom', () => {

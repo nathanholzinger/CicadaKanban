@@ -273,24 +273,38 @@ export function bandDropResolution(
 
 // The ordinal claim a move request makes — what the board keeps drawing
 // until the response lands (§10's pending marker). `workphaseId` is the
-// list the item is drawn in: the request's target, else its own.
-export function pendingPlacementFor(input: MoveItemInput, ownWorkphaseId: string | null): Placement {
-  const workphaseId = input.workphaseId ?? ownWorkphaseId ?? undefined;
+// list the item is drawn in: the request's target, else the active item's
+// own.
+export function pendingPlacementFor(
+  input: MoveItemInput,
+  active: { workphaseId: string | null; position: number | null },
+): Placement {
+  const workphaseId = input.workphaseId ?? active.workphaseId ?? undefined;
   if (input.anchorId && input.side) return { workphaseId, slot: { anchorId: input.anchorId, side: input.side } };
-  // A bare workphase change keeps its position; a bare same-group reorder is
-  // an append (server: itemHierarchy.ts's position resolution).
-  return { workphaseId, slot: input.workphaseId ? 'existing' : 'last' };
+  // A bare workphase change keeps its position — unless it has none to
+  // keep (a reopened done item, a first-time assignment), which takes the
+  // append fallback instead of the position-sort's null-coerced top slot
+  // (item-positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
+  // mirror of #14). A bare same-group reorder is always an append (server:
+  // itemHierarchy.ts's position resolution).
+  const keepsExisting = Boolean(input.workphaseId) && active.position !== null;
+  return { workphaseId, slot: keepsExisting ? 'existing' : 'last' };
 }
 
 // The one "send a move, fold the response in, or resync" block: on success
 // the response is folded in through the write tracker (§5a order, stale
 // responses dropped — DRAG-6.5), on failure the pending placement is
 // cleared and the board reloads — the server's resolution is authoritative
-// over a client guess, which is never kept (DRAG-6.6). Every board-gesture
-// write path goes through here (Card drops via buildMoveInput, attached-
-// sibling reorders with a bare anchor) so the contract can't drift between
-// them (audit epic-3-5-story-2 #4). `moveItem` is dependency-injected so a
-// test can substitute a rejecting stub without mocking the module.
+// over a client guess, which is never kept (DRAG-6.6). A *stale* success
+// still resyncs if it disclosed a reindex (reconciliation #15): the row
+// itself is rightly discarded (a newer write for the same item supersedes
+// it), but the pairs are real, committed renumbering of other rows that a
+// silently-dropped response would otherwise take with it. Every board-
+// gesture write path goes through here (Card drops via buildMoveInput,
+// attached-sibling reorders with a bare anchor) so the contract can't
+// drift between them (audit epic-3-5-story-2 #4). `moveItem` is
+// dependency-injected so a test can substitute a rejecting stub without
+// mocking the module.
 export async function sendItemMove(
   moveItem: (id: string, data: MoveItemInput) => Promise<ItemWriteResponse>,
   activeId: string,
@@ -302,7 +316,8 @@ export async function sendItemMove(
   const seq = writes.begin(activeId, pending);
   try {
     const updated = await moveItem(activeId, input);
-    writes.complete(activeId, seq, updated);
+    const { needsResync } = writes.complete(activeId, seq, updated);
+    if (needsResync) loadBoard();
   } catch (err) {
     console.error('Failed to move item:', err);
     writes.fail(activeId, seq);

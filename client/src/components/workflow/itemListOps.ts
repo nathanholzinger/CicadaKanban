@@ -92,6 +92,16 @@ export function byPositionThenCreatedAt(a: Item, b: Item): number {
   return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
 }
 
+// A done list's order (Epic 3.2 Part 6). An item with no completedAt in a
+// done list is one being previewed into it — the server stamps `now` on the
+// write (itemHierarchy.ts, active/done split) — so it sorts as the newest
+// completion: the slot the response will put it in (board-drag-interaction
+// §10). Same createdAt tie-break as byPositionThenCreatedAt.
+function byCompletedAtThenCreatedAt(a: Item, b: Item): number {
+  const at = (item: Item) => item.completedAt ?? Number.MAX_SAFE_INTEGER;
+  return at(a) - at(b) || a.createdAt - b.createdAt;
+}
+
 // Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below (audit
 // Finding #25) — the two differ only in what counts as "belongs to this
 // column," supplied via `matchesWorkphase`.
@@ -114,9 +124,7 @@ function selectBoardItems(
       (!filterProjectId || item.projectId === filterProjectId) &&
       !isStub(item),
   );
-  const sorted = isTerminal
-    ? filtered.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
-    : filtered.sort(byPositionThenCreatedAt);
+  const sorted = filtered.sort(isTerminal ? byCompletedAtThenCreatedAt : byPositionThenCreatedAt);
   return applyPlacements(sorted, placements);
 }
 
