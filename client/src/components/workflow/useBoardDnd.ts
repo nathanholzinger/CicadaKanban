@@ -181,7 +181,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       updateSession({ ...current, pop });
       setGhost(
         current.activeItem.id,
-        placementFor(pop, regions, current.activeItem.workphaseId, current.activeItem.position),
+        placementFor(pop, regions, current.activeItem.workphaseId, current.activeItem.position, current.priorPlacement),
       );
     }
     clearPopTimer();
@@ -305,7 +305,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const regions = measureRegions();
     const pop = startPopSession(regionAt(regions, pointerRef.current)?.key ?? null);
     updateSession({ activeItem, classification, pop, priorPlacement });
-    setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position));
+    setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position, priorPlacement));
   }
 
   // The ghost's placement is otherwise only ever set here, on the machine's

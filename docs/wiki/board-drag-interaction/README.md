@@ -487,7 +487,7 @@ response lands") no longer applies. See the placement-layer description
 below.*
 
 *As built (Story 3):* the preview is a **placement** layered over the
-position sort — `{ list, slot }`, where the slot is `first`, `last`,
+position sort — `{ workphaseId?, slot }`, where the slot is `first`, `last`,
 `existing` (where the item's kept position already falls), or
 `{ anchorId, side }` — the same relation the request carries, so the
 picture before and after the response is the same one. **`existing` never

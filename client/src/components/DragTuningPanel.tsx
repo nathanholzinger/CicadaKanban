@@ -1,7 +1,7 @@
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
 import type { DragSession } from './workflow/DragSessionContext';
-import { isLocked } from './workflow/popSession';
+import { popState } from './workflow/popSession';
 import type { Inversion } from './workflow/itemListOps';
 
 // Epic 3.5 Story 3 — the dev/test panel docs/wiki/board-drag-interaction
@@ -22,33 +22,37 @@ interface DragTuningPanelProps {
 type NumericKey = {
   [K in keyof DragTuning]: DragTuning[K] extends number ? K : never;
 }[keyof DragTuning];
+type TextKey = {
+  [K in keyof DragTuning]: DragTuning[K] extends string ? K : never;
+}[keyof DragTuning];
 
-interface NumericField {
-  key: NumericKey;
-  label: string;
-  step: number;
-  min?: number;
-  max?: number;
-}
+// One descriptor drives every field — numeric and text alike — so the
+// label/input row is rendered in exactly one place (audit epic-3-5-story-3 #8).
+type Field =
+  | { kind: 'number'; key: NumericKey; label: string; step: number; min?: number; max?: number }
+  | { kind: 'text'; key: TextKey; label: string };
 
-const POP_FIELDS: NumericField[] = [
-  { key: 'popDelayMs', label: 'Pop-out delay (ms)', step: 50, min: 0 },
-  { key: 'popDistancePx', label: 'Pop-out distance (px, 0 = off)', step: 10, min: 0 },
-  { key: 'popInDelayMs', label: 'Pop-in delay (ms)', step: 50, min: 0 },
-  { key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
+const FIELD_LABEL = 'flex items-center justify-between gap-2 text-[11px] text-zinc-400';
+
+const POP_FIELDS: Field[] = [
+  { kind: 'number', key: 'popDelayMs', label: 'Pop-out delay (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'popDistancePx', label: 'Pop-out distance (px, 0 = off)', step: 10, min: 0 },
+  { kind: 'number', key: 'popInDelayMs', label: 'Pop-in delay (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
-const COLUMN_FIELDS: NumericField[] = [
-  { key: 'columnTopBand', label: 'Column top band', step: 0.05, min: 0, max: 0.5 },
-  { key: 'columnBottomBand', label: 'Column bottom band', step: 0.05, min: 0, max: 0.5 },
+const COLUMN_FIELDS: Field[] = [
+  { kind: 'number', key: 'columnTopBand', label: 'Column top band', step: 0.05, min: 0, max: 0.5 },
+  { kind: 'number', key: 'columnBottomBand', label: 'Column bottom band', step: 0.05, min: 0, max: 0.5 },
 ];
-const STUB_FIELDS: NumericField[] = [
-  { key: 'stubFirstChildBand', label: 'Stub first-child band', step: 0.05, min: 0, max: 1 },
-  { key: 'stubLastChildBand', label: 'Stub last-child band', step: 0.05, min: 0, max: 1 },
-  { key: 'stubPopBandStart', label: 'Stub pop band start', step: 0.05, min: 0, max: 1 },
-  { key: 'stubPopBandEnd', label: 'Stub pop band end', step: 0.05, min: 0, max: 1 },
+const STUB_FIELDS: Field[] = [
+  { kind: 'number', key: 'stubFirstChildBand', label: 'Stub first-child band', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'stubLastChildBand', label: 'Stub last-child band', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'stubPopBandStart', label: 'Stub pop band start', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'stubPopBandEnd', label: 'Stub pop band end', step: 0.05, min: 0, max: 1 },
 ];
-const OVERLAY_FIELDS: NumericField[] = [
-  { key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
+const OVERLAY_FIELDS: Field[] = [
+  { kind: 'text', key: 'overlayFreeDescendantColor', label: 'Free-descendant ring' },
+  { kind: 'number', key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
 ];
 
 export default function DragTuningPanel({ tuning, onChange, session, inversions, onClose }: DragTuningPanelProps) {
@@ -60,20 +64,30 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
     if (Number.isFinite(value)) onChange({ ...tuning, [key]: value });
   }
 
-  function renderFields(fields: NumericField[]) {
+  function renderFields(fields: Field[]) {
     return fields.map(field => (
-      <label key={field.key} className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+      <label key={field.key} className={FIELD_LABEL}>
         {field.label}
-        <input
-          type="number"
-          value={tuning[field.key]}
-          step={field.step}
-          min={field.min}
-          max={field.max}
-          aria-label={field.label}
-          onChange={e => setNumber(field.key, e.target.value)}
-          className={`${INPUT_BASE} w-24 text-right`}
-        />
+        {field.kind === 'number' ? (
+          <input
+            type="number"
+            value={tuning[field.key]}
+            step={field.step}
+            min={field.min}
+            max={field.max}
+            aria-label={field.label}
+            onChange={e => setNumber(field.key, e.target.value)}
+            className={`${INPUT_BASE} w-24 text-right`}
+          />
+        ) : (
+          <input
+            type="text"
+            value={tuning[field.key]}
+            aria-label={`${field.label} color`}
+            onChange={e => onChange({ ...tuning, [field.key]: e.target.value })}
+            className={`${INPUT_BASE} w-40`}
+          />
+        )}
       </label>
     ));
   }
@@ -97,16 +111,6 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
 
       <div className="space-y-1.5">
         <h4 className={SECTION_LABEL}>Overlays</h4>
-        <label className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
-          Free-descendant ring
-          <input
-            type="text"
-            value={tuning.overlayFreeDescendantColor}
-            aria-label="Free-descendant ring color"
-            onChange={e => onChange({ ...tuning, overlayFreeDescendantColor: e.target.value })}
-            className={`${INPUT_BASE} w-40`}
-          />
-        </label>
         {renderFields(OVERLAY_FIELDS)}
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={() => onChange(DEFAULT_DRAG_TUNING)} className={BTN_CANCEL}>
@@ -120,7 +124,7 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
 
       <div className="space-y-1 font-mono text-[11px] text-zinc-400">
         <h4 className={SECTION_LABEL}>Live</h4>
-        <p>state: {pop ? (isLocked(pop) ? 'locked' : 'popped out') : session ? '(stub drag)' : '—'}</p>
+        <p>state: {pop ? popState(pop) : session ? '(stub drag)' : '—'}</p>
         <p>context: {pop?.contextKey ?? '—'}</p>
         <p>hover: {pop?.hover ? `${pop.hover.regionKey} · ${pop.hover.band}` : '—'}</p>
         <p data-inversion-count={inversions.length}>

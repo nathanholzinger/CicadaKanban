@@ -1,8 +1,8 @@
 import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
-import type { Placement } from './itemListOps';
+import { workphaseOnlySlot, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
-import type { Band, DragRegion, Rect } from './dragRegions';
+import { containsPoint, type Band, type DragRegion, type Rect } from './dragRegions';
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
 // useBoardDnd so it can be unit tested — real drag gestures are deliberately
@@ -76,9 +76,7 @@ export function createBoardCollisionDetection(getSession: () => CollisionSession
 }
 
 function rectCenterInside(rect: Rect, bounds: Rect): boolean {
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  return cx >= bounds.left && cx <= bounds.right && cy >= bounds.top && cy <= bounds.bottom;
+  return containsPoint(bounds, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
 }
 
 export interface DropColumn {
@@ -130,14 +128,9 @@ export type DropResolution =
 // (Unsorted, a broken column, or an expanded column's outer wrapper —
 // expanded mode requires dropping on a specific sub-row for precision).
 //
-// `activeWorkphaseId` must be the active item's *original* (pre-drag)
-// workphase, not a live lookup — the caller's drag-over handler optimistically
-// re-buckets the dragged item's workphaseId in local state for the live
-// preview, so re-deriving it from current state here would see that
-// already-mutated value and misjudge a genuine cross-column move as an
-// already-same-group reorder partway through the drag. Callers should
-// resolve it once, from the stable item captured at drag-start (e.g.
-// `activeItem`), and pass the same value on every call for the gesture.
+// `activeWorkphaseId` is the active item's own workphase — nothing in
+// `items` is mutated during a drag (the ghost is a placement, Story 3), so
+// the value captured at drag start is the value throughout.
 export function resolveDropTarget(
   activeId: string,
   activeWorkphaseId: string | null,
@@ -172,10 +165,20 @@ export function resolveDropTarget(
   const col = columnForWorkphase.get(hoverWorkphaseId);
   if (!col || col.broken) return null;
 
+  // A done card has no position to anchor against — the server rejects any
+  // anchorId pointing at one, reorder or move alike (itemHierarchy.ts's "it
+  // may be a done item" 400). The band path already never anchors in a
+  // terminal region (bandDropResolution); hovering a specific card
+  // in-context is the one path that still could (audit
+  // epic-3-5-story-3-reconciled #4). Same request shape as hovering the
+  // bare container: no anchor, workphase-only.
+  const hoveredIsTerminal = Boolean(col.subRows.find(r => r.workphase.id === hoverWorkphaseId)?.workphase.isTerminal);
+  const anchorId = hoveredIsTerminal ? null : overId;
+
   if (col.displayMode === 'expanded') {
     return activeWorkphaseId === hoverWorkphaseId
-      ? { kind: 'reorder', scopeWorkphaseIds: [hoverWorkphaseId], anchorId: overId }
-      : { kind: 'move', targetWorkphaseId: hoverWorkphaseId, anchorId: overId };
+      ? { kind: 'reorder', scopeWorkphaseIds: [hoverWorkphaseId], anchorId }
+      : { kind: 'move', targetWorkphaseId: hoverWorkphaseId, anchorId };
   }
 
   // Merged column, hovering a specific card: same-visual-group membership is
@@ -184,8 +187,8 @@ export function resolveDropTarget(
   const coveredIds = col.subRows.map(r => r.workphase.id);
   const isMember = activeWorkphaseId !== null && coveredIds.includes(activeWorkphaseId);
   return isMember
-    ? { kind: 'reorder', scopeWorkphaseIds: coveredIds, anchorId: overId }
-    : { kind: 'move', targetWorkphaseId: col.entryWorkphaseId, anchorId: overId };
+    ? { kind: 'reorder', scopeWorkphaseIds: coveredIds, anchorId }
+    : { kind: 'move', targetWorkphaseId: col.entryWorkphaseId, anchorId };
 }
 
 // Narrowed structural subset of dnd-kit's ClientRect — only what
@@ -285,10 +288,10 @@ export function pendingPlacementFor(
   // keep (a reopened done item, a first-time assignment), which takes the
   // append fallback instead of the position-sort's null-coerced top slot
   // (item-positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
-  // mirror of #14). A bare same-group reorder is always an append (server:
-  // itemHierarchy.ts's position resolution).
-  const keepsExisting = Boolean(input.workphaseId) && active.position !== null;
-  return { workphaseId, slot: keepsExisting ? 'existing' : 'last' };
+  // mirror of #14; one rule with placementFor's, via workphaseOnlySlot —
+  // audit epic-3-5-story-3-reconciled #3). A bare same-group reorder is
+  // always an append (server: itemHierarchy.ts's position resolution).
+  return { workphaseId, slot: input.workphaseId ? workphaseOnlySlot(active.position) : 'last' };
 }
 
 // The one "send a move, fold the response in, or resync" block: on success

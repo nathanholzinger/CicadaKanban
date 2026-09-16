@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import type { Band } from './workflow/dragRegions';
+import { bandBoundaries, type Band } from './workflow/dragRegions';
 
 // Epic 3.5 Story 3 — the column drop bands, made visible (docs/wiki/board-
 // drag-interaction §5). While a Card is being dragged, every region the
@@ -28,9 +28,8 @@ import type { Band } from './workflow/dragRegions';
 const LINE = 'pointer-events-none absolute right-2 left-2 border-t border-dashed border-zinc-400/35';
 const SECTION = 'pointer-events-none absolute right-0 left-0 bg-blue-400/10';
 
-function linePositions(tuning: { columnTopBand: number; columnBottomBand: number }) {
-  return { top: tuning.columnTopBand, bottom: 1 - tuning.columnBottomBand };
-}
+// The line positions are `bandBoundaries` — the same fractions `bandFor`
+// switches at, so the guides can't drift from the resolver.
 
 interface BandGuidesProps {
   regionKey: string;
@@ -41,7 +40,7 @@ export function BandGuides({ regionKey }: BandGuidesProps) {
   const tuning = useDragTuning();
   const pop = session?.pop;
   if (!pop || pop.contextKey === regionKey || pop.hover?.regionKey === regionKey) return null;
-  const { top, bottom } = linePositions(tuning);
+  const { top, bottom } = bandBoundaries(tuning);
   return (
     <>
       <div aria-hidden className={LINE} style={{ top: `${top * 100}%` }} />
@@ -62,7 +61,7 @@ export function HoveredBandGuide() {
   const tuning = useDragTuning();
   const hover = session?.pop?.hover;
   if (!hover) return null;
-  const { top, bottom } = linePositions(tuning);
+  const { top, bottom } = bandBoundaries(tuning);
   const { rect, band } = hover;
   return (
     <div

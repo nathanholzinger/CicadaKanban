@@ -1,7 +1,50 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { DEFAULT_DRAG_TUNING } from './dragTuning';
-import { bandFor, clipToVisible, distanceOutside, measureDragRegions, regionAt, type Rect } from './dragRegions';
-import { rect, region } from '../../test/dragFixtures';
+import {
+  bandBoundaries,
+  bandFor,
+  clipToVisible,
+  containsPoint,
+  distanceOutside,
+  measureDragRegions,
+  regionAt,
+  translateRect,
+  type Rect,
+} from './dragRegions';
+import { rect, region, column } from '../../test/dragFixtures';
+
+// A real browser's DOMRect exposes its fields as accessor getters on
+// `DOMRect.prototype`, not as the instance's own enumerable properties
+// (unlike jsdom's, and unlike a plain-object fixture) — so `{ ...domRect }`
+// silently drops every field instead of throwing. This is what actually
+// caught it: every sub-row region resolved with `left`/`right`/`width`
+// missing, so no point could ever match it. Shared by every test below that
+// needs to prove a Rect-shaped function doesn't re-introduce the hazard
+// (audit epic-3-5-story-3-reconciled #2 — it moved from being `clipToVisible`'s
+// problem alone to being every `Rect`-touching function's, until `toRect`
+// became the one place a DOMRect is read).
+function fakeDomRect(values: Rect): Rect {
+  return Object.create({
+    get top() {
+      return values.top;
+    },
+    get bottom() {
+      return values.bottom;
+    },
+    get left() {
+      return values.left;
+    },
+    get right() {
+      return values.right;
+    },
+    get width() {
+      return values.width;
+    },
+    get height() {
+      return values.height;
+    },
+  });
+}
 
 // Two columns 100 wide with a 20px gap; column B is expanded into two
 // sub-rows stacked with a 30px label gap between them.
@@ -37,6 +80,17 @@ describe('regionAt', () => {
 describe('bandFor', () => {
   const r = rect(0, 100, 100, 200); // spans y 100..300
 
+  it('switches exactly at the fractions bandBoundaries reports — the guides draw from the same numbers', () => {
+    const wide = { columnTopBand: 0.3, columnBottomBand: 0.25 };
+    const { top, bottom } = bandBoundaries(wide);
+    expect({ top, bottom }).toEqual({ top: 0.3, bottom: 0.75 });
+    const yAt = (fraction: number) => r.top + fraction * r.height;
+    expect(bandFor(yAt(top) - 1, r, wide)).toBe('top');
+    expect(bandFor(yAt(top) + 1, r, wide)).toBe('middle');
+    expect(bandFor(yAt(bottom) - 1, r, wide)).toBe('middle');
+    expect(bandFor(yAt(bottom) + 1, r, wide)).toBe('bottom');
+  });
+
   it('splits the rect by the configured fractions', () => {
     expect(bandFor(139, r, DEFAULT_DRAG_TUNING)).toBe('top'); // 19.5%
     expect(bandFor(141, r, DEFAULT_DRAG_TUNING)).toBe('middle'); // 20.5%
@@ -71,6 +125,38 @@ describe('distanceOutside', () => {
   });
 });
 
+describe('containsPoint', () => {
+  const r = rect(100, 100, 50, 50); // 100..150 both axes
+  it('is inclusive of every edge, and false just outside one', () => {
+    expect(containsPoint(r, { x: 100, y: 100 })).toBe(true);
+    expect(containsPoint(r, { x: 150, y: 150 })).toBe(true);
+    expect(containsPoint(r, { x: 99, y: 120 })).toBe(false);
+    expect(containsPoint(r, { x: 120, y: 151 })).toBe(false);
+  });
+});
+
+// audit epic-3-5-story-3-reconciled #2 — moved out of popSession.ts so
+// every Rect operation (including the DOMRect-read boundary the hazard
+// above exercises) has one owner.
+describe('translateRect', () => {
+  const r = rect(0, 100, 100, 200); // top 100, bottom 300
+
+  it('shifts top/bottom the opposite way from the scroll delta, leaving the rest untouched', () => {
+    // Scrolling down 30 (deltaScrollTop = 30) moves content up on screen.
+    expect(translateRect(r, 30)).toEqual({ ...r, top: 70, bottom: 270 });
+    expect(translateRect(r, -30)).toEqual({ ...r, top: 130, bottom: 330 });
+  });
+
+  it('a zero delta returns the very same object (keeps a still hover `===`)', () => {
+    expect(translateRect(r, 0)).toBe(r);
+  });
+
+  it('reads a DOMRect-shaped input explicitly rather than spreading it', () => {
+    const domRect = fakeDomRect(r);
+    expect(translateRect(domRect, 10)).toEqual({ ...r, top: 90, bottom: 290 });
+  });
+});
+
 // Reconciliation #20/#21: a sub-row is clipped to its column's visible
 // scroll box, not just bounded by its own extent.
 describe('clipToVisible', () => {
@@ -92,35 +178,6 @@ describe('clipToVisible', () => {
     expect(clipToVisible(rect(0, 0, 200, 90), bounds)).toBeNull(); // fully above
   });
 
-  // A real browser's DOMRect exposes its fields as accessor getters on
-  // `DOMRect.prototype`, not as the instance's own enumerable properties
-  // (unlike jsdom's, and unlike the plain-object fixture above) — so
-  // `{ ...domRect }` silently drops every field instead of throwing. This
-  // is what actually caught it: every subrow region resolved with
-  // `left`/`right`/`width` missing, so no point could ever match it.
-  function fakeDomRect(values: Rect): Rect {
-    return Object.create({
-      get top() {
-        return values.top;
-      },
-      get bottom() {
-        return values.bottom;
-      },
-      get left() {
-        return values.left;
-      },
-      get right() {
-        return values.right;
-      },
-      get width() {
-        return values.width;
-      },
-      get height() {
-        return values.height;
-      },
-    });
-  }
-
   it('keeps left/right/width from a DOMRect-shaped object, not just a plain one', () => {
     const domRect = fakeDomRect(rect(10, 50, 80, 200)); // left 10, top 50, width 80, height 200 -> bottom 250
     expect({ ...domRect }).toEqual({}); // confirms the shape actually exercises the hazard
@@ -138,16 +195,6 @@ describe('clipToVisible', () => {
 describe('measureDragRegions', () => {
   function mockRect(el: HTMLElement, r: ReturnType<typeof rect>) {
     Object.defineProperty(el, 'getBoundingClientRect', { value: () => ({ ...r, x: r.left, y: r.top }) });
-  }
-
-  function expandedColumn(id: string, workphaseId: string) {
-    return {
-      id,
-      broken: false,
-      displayMode: 'expanded' as const,
-      entryWorkphaseId: workphaseId,
-      subRows: [{ workphase: { id: workphaseId } }],
-    };
   }
 
   // A sub-row's `[data-drag-region]` element sits inside its column's
@@ -171,13 +218,13 @@ describe('measureDragRegions', () => {
 
   it("clips a sub-row's region to its column's visible scroll box", () => {
     buildScrolledSubrow(rect(0, 150, 300, 150), rect(0, 0, 300, 200)); // sub-row y 150..300, box y 0..200
-    const regions = measureDragRegions(document, [expandedColumn('col-1', 'w1')]);
+    const regions = measureDragRegions(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
     expect(regions).toHaveLength(1);
     expect(regions[0].rect).toMatchObject({ top: 150, bottom: 200, height: 50 });
   });
 
   it('a sub-row scrolled fully out of view registers no region at all', () => {
     buildScrolledSubrow(rect(0, 400, 300, 150), rect(0, 0, 300, 200)); // sub-row y 400..550, box y 0..200
-    expect(measureDragRegions(document, [expandedColumn('col-1', 'w1')])).toEqual([]);
+    expect(measureDragRegions(document, [column('col-1', ['w1'], { displayMode: 'expanded' })])).toEqual([]);
   });
 });

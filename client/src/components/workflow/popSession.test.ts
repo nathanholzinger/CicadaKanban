@@ -10,6 +10,7 @@ import {
   type PopSession,
 } from './popSession';
 import { rect, region } from '../../test/dragFixtures';
+import type { Placement } from './itemListOps';
 
 // docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
 // every threshold parameterized on the tuning value, never 0.5 s.
@@ -289,6 +290,36 @@ describe('placementFor', () => {
 
   it('popped out over nothing: no placement — the card is drawn where it already is', () => {
     expect(placementFor(poppedOut(), regions, activeWorkphase, 1)).toBeNull();
+  });
+
+  // audit epic-3-5-story-3-reconciled #1: re-picking up an item whose
+  // earlier write is still pending (or popping back into the context it
+  // started in) must not recompute a fresh slot from the raw, possibly
+  // stale item — that jumps the ghost. The prior placement wins whenever
+  // there's no hover to say otherwise.
+  describe('priorPlacement (a re-dragged item)', () => {
+    const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
+
+    it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
+      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, prior)).toBe(prior);
+      // Even where the fresh computation would have said something else —
+      // e.g. no position to keep, which alone would say 'last'.
+      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, null, prior)).toBe(prior);
+    });
+
+    it('a hovered band ignores it — a genuine new region still computes its own slot', () => {
+      expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, 1, prior)).toEqual({
+        workphaseId: B.targetWorkphaseId,
+        slot: 'first',
+      });
+    });
+
+    it('with no prior placement (the ordinary drag), in-context still computes the raw slot as before', () => {
+      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null)).toEqual({
+        workphaseId: activeWorkphase,
+        slot: 'existing',
+      });
+    });
   });
 
   it('after popping in, the new context is where the item sorts', () => {

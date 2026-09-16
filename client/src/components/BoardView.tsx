@@ -19,7 +19,7 @@ import { useBoardDnd } from './workflow/useBoardDnd';
 import { DragSessionContext, PlacementsContext } from './workflow/DragSessionContext';
 import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
 import { DragTuningContext } from './workflow/DragTuningContext';
-import { isLocked } from './workflow/popSession';
+import { popState } from './workflow/popSession';
 import { HoveredBandGuide } from './BandGuides';
 import DragTuningPanel from './DragTuningPanel';
 
@@ -307,7 +307,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                 <div
                   ref={boardRootRef}
                   style={overlayVars}
-                  data-drag-state={session?.pop ? (isLocked(session.pop) ? 'locked' : 'popped-out') : undefined}
+                  data-drag-state={session?.pop ? popState(session.pop) : undefined}
                   data-drag-context={session?.pop?.contextKey ?? undefined}
                   className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
                 >

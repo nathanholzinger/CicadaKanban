@@ -12,15 +12,19 @@ const PROJECT_NAME = 'Repositioning DnD Project';
 // to match current behavior — see that file's header comment for the full
 // rationale on why several of these are expected to fail).
 //
-// dnd-kit only resolves collisions at whole-card/whole-column granularity —
-// there's no code path today that reads "which half of the card" the
-// pointer is over (useBoardDnd.ts's handleDragEnd hardcodes `side:
-// 'before'` on every anchored drop). So on top of the position-scoping gap
-// this suite's API sibling documents, 3.a and 4.a are also expected to fail
-// on ORDER: "drop C just after A/B" is attempted at the literal pixel a
-// user would aim for (the card's bottom quarter), but the app currently
-// can't tell that apart from "drop C on A/B", so it performs a "before"
-// move instead — reproducing the drag lockout bug directly.
+// The side of an anchored drop is geometry, not the pointer: `resolveDropSide`
+// (boardDndUtils.ts) compares the *dragged card's* center against the
+// hovered card's center, so where the pointer sits on the target card only
+// matters through how far the carried card has travelled. "Drop C just
+// after A/B" is attempted at the literal pixel a user would aim for (the
+// card's bottom quarter), and whether that lands C's center below A/B's
+// depends on the two cards' heights and dnd-kit's live swap-preview
+// shifting the target — so 3.a and 4.a are expected to fail on ORDER as
+// well as on the position-scoping gap this suite's API sibling documents.
+// Since Epic 3.5 Story 3, 4.a is additionally governed by the pop machine:
+// C dropped in Column Two from Column One is a cross-region release, which
+// resolves by Column Two's band (top / middle / bottom of the column), not
+// by the hovered card at all, unless C has first popped into Column Two.
 //
 // 1.b and 2.b surfaced a third, independent finding while writing this
 // suite: dnd-kit's closestCorners collision detection is a nearest-corner
@@ -156,13 +160,14 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
     const cardA = page.getByRole('article', { name: 'Item A', exact: true });
     await dragTo(page, cardC, () => bottomQuarter(cardA));
 
-    // The documented drag-lockout bug: hovering any part of card A — top or
-    // bottom half alike — resolves to `anchorId: A, side: 'before'`
-    // (useBoardDnd.ts hardcodes 'before'), not the 'after' this gesture
-    // intends, so it can't land C between A and B the way the API suite's
-    // 3.a does. Expected to fail on position and/or order (exact resolved
-    // value not asserted as meaningful here — see dragTo's header comment
-    // on this suite's drag-targeting precision limits).
+    // In-context, `side` comes from `resolveDropSide`: 'after' only if C's
+    // *center* ends up below A's center. Aiming the pointer at A's bottom
+    // quarter doesn't guarantee that — the carried card's center is offset
+    // from the pointer, and dnd-kit's swap preview shifts A as C approaches
+    // — so this can resolve 'before' and fail to land C between A and B
+    // the way the API suite's 3.a does. Expected to fail on position
+    // and/or order (exact resolved value not asserted as meaningful here —
+    // see dragTo's header comment on drag-targeting precision limits).
     await expect.poll(async () => (await getC(request)).position).toBe(1.5);
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colOnePhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colOnePhase.id)).toBe('ACE');
@@ -191,10 +196,12 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
     const cardB = page.getByRole('article', { name: 'Item B', exact: true });
     await dragTo(page, cardC, () => bottomQuarter(cardB));
 
-    // Same drag-lockout bug as 3.a: hovering B resolves to `side: 'before'`
-    // regardless of half, not the 'after' this gesture intends, so it can't
-    // land C between B and D the way the API suite's 4.a does. Expected to
-    // fail on position and/or order.
+    // A cross-region release (Story 3): unless C has popped into Column Two
+    // first, the drop is resolved by Column Two's *band* at the pointer —
+    // top → before its first card, bottom → after its last, middle →
+    // workphase-only — not by which half of B the pointer is over, so it
+    // can't land C between B and D the way the API suite's 4.a does.
+    // Expected to fail on position and/or order.
     await expect.poll(async () => (await getC(request)).position).toBe(3.0);
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colTwoPhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colTwoPhase.id)).toBe('BCD');

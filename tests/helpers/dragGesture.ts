@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 // The one recipe for driving this app's @dnd-kit board from Playwright
 // (extracted in Epic 3.5 Story 1 from three per-spec copies — see
@@ -115,9 +116,16 @@ export async function boxOf(locator: Locator) {
   return box;
 }
 
-export async function center(locator: Locator): Promise<Point> {
+// A point on the element's vertical centre line, `fraction` of the way down
+// its box — the one shape every "aim at part of a card / a band of a
+// region" helper reduces to (audit epic-3-5-story-3 #7).
+export async function atFraction(locator: Locator, fraction: number): Promise<Point> {
   const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  return { x: box.x + box.width / 2, y: box.y + box.height * fraction };
+}
+
+export async function center(locator: Locator): Promise<Point> {
+  return atFraction(locator, 0.5);
 }
 
 // These aim at the literal top/bottom quarter a user would target for "drop
@@ -125,13 +133,37 @@ export async function center(locator: Locator): Promise<Point> {
 // (resolveDropSide reads which half of the hovered card the dragged card's
 // center is in).
 export async function topQuarter(locator: Locator): Promise<Point> {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.15 };
+  return atFraction(locator, 0.15);
 }
 
 export async function bottomQuarter(locator: Locator): Promise<Point> {
-  const box = await boxOf(locator);
-  return { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
+  return atFraction(locator, 0.85);
+}
+
+// The point midway across the horizontal gap between two side-by-side
+// elements (`left`'s right edge to `right`'s left edge), at `left`'s
+// vertical centre — over no column, no region, nothing droppable.
+export async function gapBetween(left: Locator, right: Locator): Promise<Point> {
+  const a = await boxOf(left);
+  const b = await boxOf(right);
+  return { x: (a.x + a.width + b.x) / 2, y: a.y + a.height / 2 };
+}
+
+// The pop machine's state as the board root reports it (`data-drag-state`,
+// `data-drag-context`). These retry until the attribute matches, so a spec
+// waits for a clock to run out by asserting the state it produces rather
+// than sleeping a guessed margin past the threshold. `timeout` must cover
+// every clock that has to fire first (e.g. pop-out then pop-in).
+export const dragMachine = (page: Page) => page.locator('[data-drag-state]');
+
+export async function awaitDragState(page: Page, state: 'locked' | 'popped-out', timeout?: number) {
+  await expect(dragMachine(page)).toHaveAttribute('data-drag-state', state, { timeout });
+}
+
+// `null` asserts no context at all (popped out).
+export async function awaitDragContext(page: Page, regionKey: string | null, timeout?: number) {
+  if (regionKey === null) await expect(dragMachine(page)).not.toHaveAttribute('data-drag-context', /./, { timeout });
+  else await expect(dragMachine(page)).toHaveAttribute('data-drag-context', regionKey, { timeout });
 }
 
 // "Drop past the end of the column": just inside the bottom edge of its
@@ -144,7 +176,7 @@ export async function bottomQuarter(locator: Locator): Promise<Point> {
 // not a hit test) resolves to the column container or its last card
 // depending on the column's height — the append the older suites assert.
 export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
-  const region = columnGroup.locator('[data-drag-region]').last();
+  const region = columnGroup.locator(`[${DRAG_REGION_ATTR}]`).last();
   const box = (await region.count()) > 0 ? await boxOf(region) : await boxOf(columnGroup);
   return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
 }

@@ -49,6 +49,12 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   // (reconciliation #22). `placements` alone can't answer this: a live
   // drag's ghost occupies the same slot and would read as "pending" too.
   const inFlight = useRef(new Set<string>());
+  // The placement each outstanding write recorded via `begin` — so
+  // `complete` can tell "this write's own marker is still there" from
+  // "something else (a re-drag's ghost, a different write) now owns this
+  // id's placement" and only clear/tripwire in the former case (audit
+  // epic-3-5-story-3-reconciled #1). Keyed the same as `writeSeq`.
+  const recordedPlacement = useRef(new Map<string, Placement | null>());
 
   // A board load replaces the list wholesale and drops every placement —
   // each belonged to the list it was made against. Every other change is a
@@ -69,6 +75,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
         const seq = (writeSeq.current.get(itemId) ?? 0) + 1;
         writeSeq.current.set(itemId, seq);
         inFlight.current.add(itemId);
+        recordedPlacement.current.set(itemId, pending);
         setList(s => withPlacement(s, itemId, pending));
         return seq;
       },
@@ -84,12 +91,15 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
           // resyncs instead.
           return { applied: false, needsResync: Boolean(response.reindexed?.length) };
         }
-        setList(s => completeItemWrite(s, response));
+        const recorded = recordedPlacement.current.get(itemId) ?? null;
+        recordedPlacement.current.delete(itemId);
+        setList(s => completeItemWrite(s, response, recorded));
         return { applied: true, needsResync: false };
       },
       fail(itemId, seq) {
         if (writeSeq.current.get(itemId) !== seq) return;
         inFlight.current.delete(itemId);
+        recordedPlacement.current.delete(itemId);
         setList(s => withPlacement(s, itemId, null));
       },
       isPending(itemId) {

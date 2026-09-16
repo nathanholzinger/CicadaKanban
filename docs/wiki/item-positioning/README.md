@@ -294,7 +294,8 @@ reorder, inline create, and the Sheet's PUT alike); steps 3–4 in Story 3
 where the ordinal preview gives an inversion something to be checked
 against: the board-wide rendered order of positioned Free items *with the
 pending placement* is compared to the order *after* the response with the
-placement cleared, and a difference is logged and counted. Note that this
+placement cleared, and a difference is counted and surfaced in the dev/test
+panel — nothing goes to the console. Note that this
 client derives its render order from `position` on every render, so
 applying the pairs *is* the re-sort — step 4 has no separate mechanism
 here. The check only runs for a write the board previewed; a Sheet edit

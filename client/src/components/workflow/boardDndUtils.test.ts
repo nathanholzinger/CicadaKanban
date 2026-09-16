@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
-import { rect, region } from '../../test/dragFixtures';
+import { rect, region, column } from '../../test/dragFixtures';
 import {
   buildColumnForWorkphaseMap,
   resolveDropTarget,
@@ -13,7 +13,6 @@ import {
   buildMoveInput,
   sendItemMove,
   type CollisionSession,
-  type DropColumn,
   type DropResolution,
 } from './boardDndUtils';
 import type { ItemWriteTracker } from './useItemManagement';
@@ -48,17 +47,6 @@ function collisionArgs(
 
 // The Epic 3.2 behavior: no pop machine in play.
 const boardCollisionDetection = createBoardCollisionDetection(() => null);
-
-function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
-  return {
-    id,
-    broken: false,
-    displayMode: 'merged',
-    entryWorkphaseId: workphaseIds[0],
-    subRows: workphaseIds.map(w => ({ workphase: { id: w } })),
-    ...overrides,
-  };
-}
 
 // Board fixture: merged col-1 covers [todo, review], expanded col-2 covers
 // [dev, qa], broken col-3 covers [old].
@@ -389,6 +377,44 @@ describe('resolveDropTarget', () => {
       expect(resolve('active-in-todo', 'card-in-old')).toBeNull();
       expect(resolve('active-in-todo', 'card-unplaced')).toBeNull();
       expect(resolve('active-in-todo', 'something-unknown')).toBeNull();
+    });
+  });
+
+  // A done card has no position — the server rejects any anchorId pointing
+  // at one, whether the request would otherwise be a reorder or a move
+  // (itemHierarchy.ts: "anchorId has no position to anchor against (it may
+  // be a done item)"). In-context hovering a specific card is the one path
+  // that could still produce one; the band path never does
+  // (bandDropResolution) (audit epic-3-5-story-3-reconciled #4).
+  describe('a done card is never a usable anchor', () => {
+    const doneColumn = column('col-done', ['done'], { subRows: [{ workphase: { id: 'done', isTerminal: true } }] });
+    const doneMap = buildColumnForWorkphaseMap([doneColumn]);
+    const findWorkphase = (id: string) => (id === 'done-card' ? 'done' : id === 'active-in-done' ? 'done' : null);
+
+    it('drops the anchor for a covered-set member (reorder) and an outsider (move) alike', () => {
+      expect(resolveDropTarget('x', 'done', 'done-card', [doneColumn], doneMap, findWorkphase)).toEqual({
+        kind: 'reorder',
+        scopeWorkphaseIds: ['done'],
+        anchorId: null,
+      });
+      expect(resolveDropTarget('x', 'todo', 'done-card', [doneColumn], doneMap, findWorkphase)).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'done',
+        anchorId: null,
+      });
+    });
+
+    it('same guard in an expanded column', () => {
+      const expandedDone = column('col-done-x', ['done'], {
+        displayMode: 'expanded',
+        subRows: [{ workphase: { id: 'done', isTerminal: true } }],
+      });
+      const map = buildColumnForWorkphaseMap([expandedDone]);
+      expect(resolveDropTarget('x', 'elsewhere', 'done-card', [expandedDone], map, findWorkphase)).toEqual({
+        kind: 'move',
+        targetWorkphaseId: 'done',
+        anchorId: null,
+      });
     });
   });
 

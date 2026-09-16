@@ -1,10 +1,23 @@
 import type { APIRequestContext, Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
-import { pickUp, hoverTo, release, center, topQuarter, bottomQuarter, boxOf } from '../helpers/dragGesture';
+import { seedTemplatedWorkflow, pickWorkphases, seedPositionedItems, fetchDefaultBoard } from '../helpers/seed';
+import {
+  pickUp,
+  hoverTo,
+  release,
+  center,
+  topQuarter,
+  bottomQuarter,
+  boxOf,
+  atFraction,
+  gapBetween,
+  awaitDragState,
+  awaitDragContext,
+} from '../helpers/dragGesture';
 import { columnOrder, fullOrder } from '../helpers/itemRepositioningScenario';
 import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY, type DragTuning } from '../../client/src/components/workflow/dragTuning';
+import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // Epic 3.5 Story 3 — docs/wiki/board-drag-interaction §1–§3 (contexts and
 // popping), §5 (Card → column drop bands), §10 (ordinal preview and
@@ -34,6 +47,7 @@ const popThrough = (tuning: DragTuning) => tuning.popDelayMs + tuning.popInDelay
 test.use({ viewport: { width: 1600, height: 900 } });
 
 interface Scenario {
+  projectId: string;
   workflow: { id: string };
   boardId: string;
   columns: Array<{ id: string; entryWorkphaseId: string; displayName: string }>;
@@ -49,29 +63,41 @@ async function seed(request: APIRequestContext): Promise<Scenario> {
   await request.post(`${API}/test/reset`);
   const { project, workflow } = await seedTemplatedWorkflow(request, PROJECT);
   const [todo, inProgress, review, done] = pickWorkphases(workflow, 'Todo', 'In Progress', 'Review', 'Done');
-  const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-  const board = await (await request.get(`${API}/boards/${boards[0].id}`)).json();
-
-  const items = {} as Scenario['items'];
-  const plan: Array<[keyof Scenario['items'], string, number]> = [
-    ['A', inProgress.id, 1],
-    ['B', inProgress.id, 2],
-    ['X', todo.id, 2.5],
-    ['C', inProgress.id, 3],
-  ];
-  for (const [key, workphaseId, position] of plan) {
-    const res = await request.post(`${API}/items`, { data: { title: `Item ${key}`, projectId: project.id, workphaseId } });
-    expect(res.ok()).toBe(true);
-    items[key] = await res.json();
-    await request.patch(`${API}/items/${items[key].id}/move`, { data: { position } });
-  }
+  const board = await fetchDefaultBoard(request, workflow.id);
+  const items = await seedPositionedItems(request, [
+    { key: 'A', projectId: project.id, workphaseId: inProgress.id, position: 1 },
+    { key: 'B', projectId: project.id, workphaseId: inProgress.id, position: 2 },
+    { key: 'X', projectId: project.id, workphaseId: todo.id, position: 2.5 },
+    { key: 'C', projectId: project.id, workphaseId: inProgress.id, position: 3 },
+  ]);
   return {
+    projectId: project.id,
     workflow,
     boardId: board.id,
     columns: board.columns,
     phase: { todo, inProgress, review, done },
     items,
   };
+}
+
+// In Progress and Review folded into one column (merged, or expanded into
+// two sub-rows), with Y seeded into Review at 5 — the fixture DRAG-3.6/3.7
+// and DRAG-3.8/1.6 share. Returns the surviving column and Y.
+async function foldReviewIntoInProgress(
+  request: APIRequestContext,
+  s: Scenario,
+  displayMode: 'merged' | 'expanded',
+): Promise<{ col: Scenario['columns'][number]; y: { id: string } }> {
+  const col = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
+  const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
+  await request.delete(`${API}/columns/${reviewCol.id}`);
+  await request.put(`${API}/columns/${col.id}`, {
+    data: { startWorkphaseId: s.phase.inProgress.id, endWorkphaseId: s.phase.review.id, displayMode },
+  });
+  const { Y: y } = await seedPositionedItems(request, [
+    { key: 'Y', projectId: s.projectId, workphaseId: s.phase.review.id, position: 5 },
+  ]);
+  return { col, y };
 }
 
 async function seedTuning(page: Page, override: Partial<DragTuning>): Promise<DragTuning> {
@@ -83,10 +109,8 @@ async function seedTuning(page: Page, override: Partial<DragTuning>): Promise<Dr
   return tuning;
 }
 
-async function openBoard(page: Page, projectSidebar: { select: (name: string) => Promise<void> }) {
-  await page.goto('/');
-  await projectSidebar.select(PROJECT);
-  await page.locator('main').getByRole('button', { name: 'Board', exact: true }).click();
+async function openBoard(page: Page, projectSidebar: { openBoard: (name: string) => Promise<void> }) {
+  await projectSidebar.openBoard(PROJECT);
   await expect(page.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
 }
 
@@ -98,15 +122,18 @@ function article(page: Page, title: string): Locator {
   return page.getByRole('article', { name: title, exact: true });
 }
 
-// A point inside a region's band, by fraction of the region's height — the
-// region is the column body (or sub-row block) that carries data-drag-region.
-async function bandPoint(region: Locator, fraction: number) {
-  const box = await boxOf(region);
-  return { x: box.x + box.width / 2, y: box.y + box.height * fraction };
+// The region key the board root reports for a column (`data-drag-context`),
+// spelled by the client's own key builder rather than re-typed here.
+function columnKeyOf(s: Scenario, workphaseId: string): string {
+  return columnRegionKey(s.columns.find(c => c.entryWorkphaseId === workphaseId)!.id);
 }
 
+// A point inside a region's band, by fraction of the region's height — the
+// region is the column body (or sub-row block) that carries data-drag-region.
+const bandPoint = atFraction;
+
 function regionOf(col: Locator): Locator {
-  return col.locator('[data-drag-region]').first();
+  return col.locator(`[${DRAG_REGION_ATTR}]`).first();
 }
 
 async function item(request: APIRequestContext, id: string) {
@@ -116,8 +143,6 @@ async function item(request: APIRequestContext, id: string) {
 async function titlesIn(col: Locator): Promise<string[]> {
   return col.getByRole('article').evaluateAll(els => els.map(e => e.getAttribute('aria-label') ?? ''));
 }
-
-const machine = (page: Page) => page.locator('[data-drag-state]');
 
 test.describe('Card → column drop bands', () => {
   test('DRAG-3.1 / 3.2: the top band places before the first item, the bottom band after the last (DRAG-3.5: at the configured fractions)', async ({
@@ -133,7 +158,7 @@ test.describe('Card → column drop bands', () => {
     // Just inside the configured top band.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await bandPoint(regionOf(inProgress), tuning.columnTopBand * 0.5));
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragState(page, 'locked');
     // The hovered column's band guide tints the band the cursor is in.
     await expect(page.locator('[data-band-highlight]')).toHaveAttribute('data-band-highlight', 'top');
     await release(page);
@@ -186,7 +211,7 @@ test.describe('Card → column drop bands', () => {
       }
     }
     expect(hovered, 'fixture: some card must sit in the middle band').not.toBeNull();
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragState(page, 'locked');
     await release(page);
 
     await expect.poll(async () => (await item(request, s.items.X.id)).workphaseId).toBe(s.phase.inProgress.id);
@@ -203,16 +228,17 @@ test.describe('Card → column drop bands', () => {
     const tuning = await seedTuning(page, SUSTAINED);
     await openBoard(page, projectSidebar);
     const inProgress = column(page, 'In Progress');
-    const contextKey = `column:${s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!.id}`;
+    const contextKey = columnKeyOf(s, s.phase.inProgress.id);
 
     await pickUp(page, article(page, 'Item X'));
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragState(page, 'locked');
     await hoverTo(page, await bandPoint(regionOf(inProgress), 0.5));
-    await page.waitForTimeout(popThrough(tuning));
 
-    // Popped in: the context is now In Progress, and the card is locked to *it* (§3).
-    await expect(machine(page)).toHaveAttribute('data-drag-context', contextKey);
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    // Popped in (out first, then in — both clocks run while the cursor
+    // rests): the context is now In Progress, and the card is locked to
+    // *it* (§3).
+    await awaitDragContext(page, contextKey, popThrough(tuning));
+    await awaitDragState(page, 'locked');
 
     // In-context now: the hovered card decides, not the band (DRAG-1.5).
     await hoverTo(page, await bottomQuarter(article(page, 'Item A')));
@@ -232,30 +258,25 @@ test.describe('Card → column drop bands', () => {
     await openBoard(page, projectSidebar);
     const todo = column(page, 'Todo');
     const inProgress = column(page, 'In Progress');
-    const todoKey = `column:${s.columns.find(c => c.entryWorkphaseId === s.phase.todo.id)!.id}`;
+    const todoKey = columnKeyOf(s, s.phase.todo.id);
 
     // Rest in the gap between Todo and In Progress — outside the context,
     // over no region at all.
-    const todoBox = await boxOf(todo);
-    const inProgressBox = await boxOf(inProgress);
-    const gap = { x: (todoBox.x + todoBox.width + inProgressBox.x) / 2, y: todoBox.y + todoBox.height / 2 };
     await pickUp(page, article(page, 'Item X'));
-    await expect(machine(page)).toHaveAttribute('data-drag-context', todoKey);
-    await hoverTo(page, gap);
-    await page.waitForTimeout(tuning.popDelayMs + 250);
+    await awaitDragContext(page, todoKey);
+    await hoverTo(page, await gapBetween(todo, inProgress));
 
     // Popped out: no context, not locked, and the card is still drawn where it was.
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'popped-out');
-    await expect(machine(page)).not.toHaveAttribute('data-drag-context', /./);
+    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+    await awaitDragContext(page, null);
     await expect(todo.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
 
     // A release over nothing while popped out writes nothing …
     // (asserted separately below); here, come back and rest in Todo's middle
     // band: the card pops back into the column it left.
     await hoverTo(page, await bandPoint(regionOf(todo), 0.5));
-    await page.waitForTimeout(tuning.popInDelayMs + 250);
-    await expect(machine(page)).toHaveAttribute('data-drag-context', todoKey);
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragContext(page, todoKey, tuning.popInDelayMs + 2000);
+    await awaitDragState(page, 'locked');
     await release(page);
 
     // In-context release in Todo, X the only card: nothing to reorder against.
@@ -271,16 +292,13 @@ test.describe('Card → column drop bands', () => {
     const todo = column(page, 'Todo');
     const inProgress = column(page, 'In Progress');
 
-    const todoBox = await boxOf(todo);
-    const inProgressBox = await boxOf(inProgress);
     await pickUp(page, article(page, 'Item X'));
-    await hoverTo(page, { x: (todoBox.x + todoBox.width + inProgressBox.x) / 2, y: todoBox.y + todoBox.height / 2 });
-    await page.waitForTimeout(tuning.popDelayMs + 250);
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'popped-out');
+    await hoverTo(page, await gapBetween(todo, inProgress));
+    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
 
     // Popped out, over In Progress's bottom band: after the last item.
     await hoverTo(page, await bandPoint(regionOf(inProgress), 1 - tuning.columnBottomBand * 0.5));
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'popped-out');
+    await awaitDragState(page, 'popped-out');
     await release(page);
 
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
@@ -290,26 +308,23 @@ test.describe('Card → column drop bands', () => {
     const s = await seed(request);
     const tuning = await seedTuning(page, SUSTAINED);
     await openBoard(page, projectSidebar);
-    const keyOf = (workphaseId: string) => `column:${s.columns.find(c => c.entryWorkphaseId === workphaseId)!.id}`;
 
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await bandPoint(regionOf(column(page, 'In Progress')), 0.5));
-    await page.waitForTimeout(popThrough(tuning));
-    await expect(machine(page)).toHaveAttribute('data-drag-context', keyOf(s.phase.inProgress.id));
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragContext(page, columnKeyOf(s, s.phase.inProgress.id), popThrough(tuning));
+    await awaitDragState(page, 'locked');
 
     // From In Progress, on to Review (empty): out, then in, again.
     await hoverTo(page, await bandPoint(regionOf(column(page, 'Review')), 0.5));
-    await page.waitForTimeout(popThrough(tuning));
-    await expect(machine(page)).toHaveAttribute('data-drag-context', keyOf(s.phase.review.id));
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'locked');
+    await awaitDragContext(page, columnKeyOf(s, s.phase.review.id), popThrough(tuning));
+    await awaitDragState(page, 'locked');
     await release(page);
 
     await expect.poll(async () => (await item(request, s.items.X.id)).workphaseId).toBe(s.phase.review.id);
     expect((await item(request, s.items.X.id)).position).toBe(2.5);
   });
 
-  test('DRAG-1.4: brushing across another column while reordering never leaves the context', async ({ page, request, projectSidebar }) => {
+  test('DRAG-1.3 (momentary): brushing across another column while reordering never leaves the context', async ({ page, request, projectSidebar }) => {
     const s = await seed(request);
     await seedTuning(page, MOMENTARY);
     await openBoard(page, projectSidebar);
@@ -335,9 +350,7 @@ test.describe('Card → column drop bands', () => {
     await hoverTo(page, await bandPoint(regionOf(inProgress), 0.5));
     await expect(inProgress.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
     // The gap between the two columns.
-    const todoBox = await boxOf(todo);
-    const inProgressBox = await boxOf(inProgress);
-    await hoverTo(page, { x: (todoBox.x + todoBox.width + inProgressBox.x) / 2, y: todoBox.y + todoBox.height / 2 });
+    await hoverTo(page, await gapBetween(todo, inProgress));
     await release(page);
 
     await expect(todo.getByRole('article', { name: 'Item X', exact: true })).toBeVisible();
@@ -357,15 +370,7 @@ test.describe('Card → column drop bands', () => {
     // enough to hold past deliberately; popping back in is not wanted here.
     const tuning = await seedTuning(page, { popDelayMs: 1000, popInDelayMs: 30_000 });
     // In Progress + Review merged into one column; Y sits in Review (non-entry).
-    const col = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
-    const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
-    await request.delete(`${API}/columns/${reviewCol.id}`);
-    await request.put(`${API}/columns/${col.id}`, {
-      data: { startWorkphaseId: s.phase.inProgress.id, endWorkphaseId: s.phase.review.id },
-    });
-    const projectId = (await item(request, s.items.A.id)).projectId;
-    const y = await (await request.post(`${API}/items`, { data: { title: 'Item Y', projectId, workphaseId: s.phase.review.id } })).json();
-    await request.patch(`${API}/items/${y.id}/move`, { data: { position: 5 } });
+    const { y } = await foldReviewIntoInProgress(request, s, 'merged');
     await openBoard(page, projectSidebar);
     const merged = page.getByRole('group', { name: /In Progress/ }).first();
     const todo = column(page, 'Todo');
@@ -376,8 +381,7 @@ test.describe('Card → column drop bands', () => {
     // A reorder before A; Y stays in Review, not the entry workphase.
     await pickUp(page, article(page, 'Item Y'));
     await hoverTo(page, await bandPoint(regionOf(todo), 0.5));
-    await page.waitForTimeout(tuning.popDelayMs + 250);
-    await expect(machine(page)).toHaveAttribute('data-drag-state', 'popped-out');
+    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
     await hoverTo(page, await bandPoint(regionOf(merged), tuning.columnTopBand * 0.5));
     await release(page);
     await expect.poll(() => fullOrder(request, s.workflow.id)).toBe('YABXC');
@@ -398,16 +402,9 @@ test.describe('Card → column drop bands', () => {
   }) => {
     const s = await seed(request);
     const tuning = await seedTuning(page, MOMENTARY);
-    const col = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
-    const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
-    await request.delete(`${API}/columns/${reviewCol.id}`);
-    await request.put(`${API}/columns/${col.id}`, {
-      data: { startWorkphaseId: s.phase.inProgress.id, endWorkphaseId: s.phase.review.id, displayMode: 'expanded' },
-    });
-    const y = await (await request.post(`${API}/items`, { data: { title: 'Item Y', projectId: (await item(request, s.items.A.id)).projectId, workphaseId: s.phase.review.id } })).json();
-    await request.patch(`${API}/items/${y.id}/move`, { data: { position: 5 } });
+    const { col } = await foldReviewIntoInProgress(request, s, 'expanded');
     await openBoard(page, projectSidebar);
-    const reviewRow = page.locator(`[data-drag-region="subrow:${col.id}:${s.phase.review.id}"]`);
+    const reviewRow = page.locator(`[${DRAG_REGION_ATTR}="${subrowRegionKey(col.id, s.phase.review.id)}"]`);
 
     // X from Todo into the Review sub-row's top band: before Y, exactly Review.
     // Approached at the row's own height (via the gap left of the column):

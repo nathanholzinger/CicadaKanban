@@ -419,6 +419,12 @@ none of the four helpers were added and `tests/ui/drag-column-bands.spec.ts`
 carries a fresh copy of each plus three spec-local geometry recipes.
 Escalated to Story 3 audit #7 (Fix Now).
 
+**Status (2026-09-15):** resolved via Story 3 #7 — see its status line for
+what landed (`seedItem` / `seedPositionedItems` / `fetchDefaultBoard`,
+`atFraction` / `gapBetween` / `awaitDragState`, `openBoard`). The
+`hierarchy.test.ts` duplicated tree fixture (`:20` vs `:53`) was not part
+of that pass and stays open.
+
 ---
 
 ## Covered by Future Epics

@@ -81,13 +81,25 @@ export function measureDragRegions(root: ParentNode, columns: readonly DropColum
     if (!key) continue;
     const scrollBox = findVerticalScrollAncestor(el, root);
     const rect = scrollBox
-      ? clipToVisible(el.getBoundingClientRect(), scrollBox.getBoundingClientRect())
-      : el.getBoundingClientRect();
+      ? clipToVisible(toRect(el.getBoundingClientRect()), toRect(scrollBox.getBoundingClientRect()))
+      : toRect(el.getBoundingClientRect());
     if (!rect) continue;
     const region = regionFromKey(key, rect, scrollBox?.scrollTop ?? 0, byId);
     if (region) regions.push(region);
   }
   return regions;
+}
+
+// Reads a DOMRect's fields into a plain object — a real DOMRect's fields
+// are accessor properties on its prototype, not its own enumerable ones,
+// so `{ ...domRect }` silently drops every one of them (see clipToVisible's
+// history below). The one place a DOMRect is read; every `Rect` downstream
+// of this (clipped, translated, frozen) is a plain object, so nothing else
+// in this module — or `translateRect`, which used to spread its input —
+// has to remember the hazard (audit epic-3-5-story-3-reconciled #2).
+function toRect(domRect: DOMRect): Rect {
+  const { top, left, right, bottom, width, height } = domRect;
+  return { top, left, right, bottom, width, height };
 }
 
 // The nearest ancestor that scrolls vertically, bounded to `root` — never
@@ -108,9 +120,10 @@ function findVerticalScrollAncestor(el: HTMLElement, root: ParentNode): HTMLElem
 // Clips `rect` vertically to `bounds` (a scrolling ancestor's own visible
 // box) — null when nothing of it remains visible. Horizontal is left
 // alone: the board scrolls whole columns sideways, never a fraction of one.
-// Reads every field explicitly rather than spreading `rect` — a real
-// DOMRect's fields are accessor properties on its prototype, not its own
-// enumerable ones, so `{ ...domRect }` silently drops all of them.
+// The hazard `toRect` above now guards at the boundary: this was the
+// function that caught it, back when it read `el.getBoundingClientRect()`
+// directly and spread it — every sub-row region resolved with
+// `left`/`right`/`width` missing, so no point could ever match it.
 export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   const top = Math.max(rect.top, bounds.top);
   const bottom = Math.min(rect.bottom, bounds.bottom);
@@ -156,16 +169,39 @@ function regionFromKey(
   return null;
 }
 
+// Whether `point` lies inside `rect`, inclusive of the edges — the one
+// containment test, shared by `regionAt` below and `boardDndUtils.ts`'s
+// in-context collision filter (audit epic-3-5-story-3-reconciled #2).
+export function containsPoint(rect: Rect, point: Point): boolean {
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
 // Which region contains the point — a region is a bounded box (see the
 // header note), nothing more. Null over a column's header/footer, the gaps
 // between columns or sub-rows, the space below the last sub-row, or a
 // sub-row currently scrolled out of view.
 export function regionAt(regions: readonly DragRegion[], point: Point): DragRegion | null {
-  return (
-    regions.find(
-      r => point.x >= r.rect.left && point.x <= r.rect.right && point.y >= r.rect.top && point.y <= r.rect.bottom,
-    ) ?? null
-  );
+  return regions.find(r => containsPoint(r.rect, point)) ?? null;
+}
+
+// Translates a frozen rect by a change in scroll offset — an increase in
+// scrollTop moves content up on screen, so the rect moves the same amount
+// the other way. A 0 delta returns the very same object, so a still cursor
+// over a still region keeps producing `===` hovers (reconciliation #21).
+// Lives here, not in popSession.ts, so every Rect-shaped operation has one
+// owner (audit epic-3-5-story-3-reconciled #2) — popSession.ts's `hoverFor`
+// only decides *whether* to carry the rect forward; this is the geometry.
+export function translateRect(rect: Rect, deltaScrollTop: number): Rect {
+  if (deltaScrollTop === 0) return rect;
+  const dy = -deltaScrollTop;
+  return {
+    top: rect.top + dy,
+    bottom: rect.bottom + dy,
+    left: rect.left,
+    right: rect.right,
+    width: rect.width,
+    height: rect.height,
+  };
 }
 
 function verticalDistance(y: number, rect: Rect): number {
@@ -174,14 +210,26 @@ function verticalDistance(y: number, rect: Rect): number {
   return 0;
 }
 
-// The vertical band a point falls in (§5): the top `columnTopBand` fraction,
-// the bottom `columnBottomBand` fraction, the middle otherwise. A point
-// outside the rect clamps to the nearer edge's band.
-export function bandFor(y: number, rect: Rect, tuning: Pick<DragTuning, 'columnTopBand' | 'columnBottomBand'>): Band {
+export type BandTuning = Pick<DragTuning, 'columnTopBand' | 'columnBottomBand'>;
+
+// Where the two band boundaries sit, as fractions of a region's height —
+// the top band ends at `top`, the bottom band begins at `bottom`. The one
+// definition both the resolver (`bandFor`) and the guides (BandGuides.tsx)
+// read, so what's drawn is what a release resolves against (audit
+// epic-3-5-story-3 #5).
+export function bandBoundaries(tuning: BandTuning): { top: number; bottom: number } {
+  return { top: tuning.columnTopBand, bottom: 1 - tuning.columnBottomBand };
+}
+
+// The vertical band a point falls in (§5): above `top` is the top band,
+// below `bottom` is the bottom band, the middle otherwise. A point outside
+// the rect clamps to the nearer edge's band.
+export function bandFor(y: number, rect: Rect, tuning: BandTuning): Band {
   if (rect.height <= 0) return 'middle';
   const fraction = Math.min(1, Math.max(0, (y - rect.top) / rect.height));
-  if (fraction < tuning.columnTopBand) return 'top';
-  if (fraction > 1 - tuning.columnBottomBand) return 'bottom';
+  const { top, bottom } = bandBoundaries(tuning);
+  if (fraction < top) return 'top';
+  if (fraction > bottom) return 'bottom';
   return 'middle';
 }
 

@@ -1,5 +1,6 @@
 import type { APIRequestContext } from '@playwright/test';
 import { API } from './api';
+import { seedPositionedItems } from './seed';
 
 export type ScenarioItem = { id: string; title: string; workphaseId: string | null; position: number | null; createdAt: number };
 export type ScenarioWorkphase = { id: string; name: string };
@@ -26,22 +27,13 @@ export async function seedRepositioningScenario(request: APIRequestContext, proj
   const colOnePhase = await (await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Column One' } })).json();
   const colTwoPhase = await (await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Column Two' } })).json();
 
-  const plan: Array<{ key: keyof RepositioningScenario['items']; workphaseId: string; position: number }> = [
-    { key: 'A', workphaseId: colOnePhase.id, position: 1.0 },
-    { key: 'B', workphaseId: colTwoPhase.id, position: 2.0 },
-    { key: 'C', workphaseId: colOnePhase.id, position: 3.0 },
-    { key: 'D', workphaseId: colTwoPhase.id, position: 4.0 },
-    { key: 'E', workphaseId: colOnePhase.id, position: 5.0 },
-  ];
-
-  const items = {} as RepositioningScenario['items'];
-  for (const { key, workphaseId, position } of plan) {
-    const created = await (await request.post(`${API}/items`, {
-      data: { title: `Item ${key}`, projectId: project.id, workphaseId },
-    })).json();
-    await request.patch(`${API}/items/${created.id}/move`, { data: { position } });
-    items[key] = { ...created, position };
-  }
+  const items = await seedPositionedItems(request, [
+    { key: 'A', projectId: project.id, workphaseId: colOnePhase.id, position: 1.0 },
+    { key: 'B', projectId: project.id, workphaseId: colTwoPhase.id, position: 2.0 },
+    { key: 'C', projectId: project.id, workphaseId: colOnePhase.id, position: 3.0 },
+    { key: 'D', projectId: project.id, workphaseId: colTwoPhase.id, position: 4.0 },
+    { key: 'E', projectId: project.id, workphaseId: colOnePhase.id, position: 5.0 },
+  ]);
 
   return { project, workflow, colOnePhase, colTwoPhase, items };
 }
@@ -74,22 +66,13 @@ export async function seedCrossProjectRepositioningScenario(request: APIRequestC
   const workflow = await (await request.post(`${API}/workflows`, { data: { name: rootName, projectId: rootProject.id } })).json();
   const sharedPhase = await (await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Shared Phase' } })).json();
 
-  const plan: Array<{ key: keyof CrossProjectRepositioningScenario['items']; projectId: string; position: number }> = [
-    { key: 'A', projectId: project1a.id, position: 1.0 },
-    { key: 'B', projectId: project1b.id, position: 2.0 },
-    { key: 'C', projectId: project1a.id, position: 3.0 },
-    { key: 'D', projectId: project1b.id, position: 4.0 },
-    { key: 'E', projectId: project1a.id, position: 5.0 },
-  ];
-
-  const items = {} as CrossProjectRepositioningScenario['items'];
-  for (const { key, projectId, position } of plan) {
-    const created = await (await request.post(`${API}/items`, {
-      data: { title: `Item ${key}`, projectId, workphaseId: sharedPhase.id },
-    })).json();
-    await request.patch(`${API}/items/${created.id}/move`, { data: { position } });
-    items[key] = { ...created, position };
-  }
+  const items = await seedPositionedItems(request, [
+    { key: 'A', projectId: project1a.id, workphaseId: sharedPhase.id, position: 1.0 },
+    { key: 'B', projectId: project1b.id, workphaseId: sharedPhase.id, position: 2.0 },
+    { key: 'C', projectId: project1a.id, workphaseId: sharedPhase.id, position: 3.0 },
+    { key: 'D', projectId: project1b.id, workphaseId: sharedPhase.id, position: 4.0 },
+    { key: 'E', projectId: project1a.id, workphaseId: sharedPhase.id, position: 5.0 },
+  ]);
 
   return { rootProject, project1a, project1b, workflow, sharedPhase, items };
 }

@@ -1,6 +1,15 @@
 import type { DragTuning } from './dragTuning';
-import type { Placement } from './itemListOps';
-import { bandFor, distanceOutside, regionAt, type Band, type DragRegion, type Point, type Rect } from './dragRegions';
+import { workphaseOnlySlot, type Placement } from './itemListOps';
+import {
+  bandFor,
+  distanceOutside,
+  regionAt,
+  translateRect,
+  type Band,
+  type DragRegion,
+  type Point,
+  type Rect,
+} from './dragRegions';
 
 // Epic 3.5 Story 3 — the pop state machine (docs/wiki/board-drag-interaction
 // §1–§3, §5). Pure: a session value, a transition on each pointer sample,
@@ -75,6 +84,15 @@ export function isLocked(session: PopSession): boolean {
   return session.contextKey !== null;
 }
 
+// The machine's state by name — the board root's `data-drag-state` (the
+// E2E surface) and the tuning panel's readout both print this, so there is
+// one spelling (audit epic-3-5-story-3 #6). Story 4/5 extend it here.
+export type PopState = 'locked' | 'popped-out';
+
+export function popState(session: PopSession): PopState {
+  return isLocked(session) ? 'locked' : 'popped-out';
+}
+
 // One pointer sample. Returns the same object when nothing changed, so a
 // caller can skip a re-render.
 export function advancePopSession(
@@ -137,16 +155,6 @@ function hoverFor(
     : { regionKey: region.key, band, since, rect, scrollTop: region.scrollTop };
 }
 
-// Translates a frozen rect by a change in scroll offset — an increase in
-// scrollTop moves content up on screen, so the rect moves the same amount
-// the other way. A 0 delta returns the very same object, so a still cursor
-// over a still region keeps producing `===` hovers (reconciliation #21).
-function translateRect(rect: Rect, deltaScrollTop: number): Rect {
-  if (deltaScrollTop === 0) return rect;
-  const dy = -deltaScrollTop;
-  return { ...rect, top: rect.top + dy, bottom: rect.bottom + dy };
-}
-
 function popOutDue(
   session: PopSession,
   pointer: Point,
@@ -176,16 +184,26 @@ export function popDueAt(session: PopSession, tuning: DragTuning): number | null
 // workphase, anyone else takes the region's target. A done region never
 // previews a positioned insert. Null when the card belongs nowhere and the
 // cursor is over nothing: it's drawn where it already is.
+//
+// `priorPlacement` is the item's placement from *before* this drag — set
+// only when picking up (or popping back into the context of) a re-dragged
+// item whose earlier write is still pending. In-context, with no hover, it
+// wins over a freshly computed slot: recomputing from the raw item would
+// use its stale pre-write position/workphase and visibly jump the ghost
+// the instant the item is picked up, or again the moment it pops back into
+// the context it started in (audit epic-3-5-story-3-reconciled #1).
 export function placementFor(
   session: PopSession,
   regions: readonly DragRegion[],
   activeWorkphaseId: string | null,
   activeItemPosition: number | null,
+  priorPlacement: Placement | null = null,
 ): Placement | null {
   const key = session.hover?.regionKey ?? session.contextKey;
   const region = key === null ? undefined : regions.find(r => r.key === key);
   if (!region) return null;
   const band = session.hover?.band;
+  if (!band && priorPlacement) return priorPlacement;
   let slot: Placement['slot'];
   if (region.isTerminal || !band || band === 'middle') {
     // A workphase-only move (no anchor): keeps the position it already has
@@ -194,7 +212,7 @@ export function placementFor(
     // positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
     // mirror of #14). A done region never previews a positioned insert
     // either way.
-    slot = region.isTerminal || activeItemPosition !== null ? 'existing' : 'last';
+    slot = region.isTerminal ? 'existing' : workphaseOnlySlot(activeItemPosition);
   } else {
     slot = band === 'top' ? 'first' : 'last';
   }

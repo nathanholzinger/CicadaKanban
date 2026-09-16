@@ -1,4 +1,5 @@
 import type { DragRegion, Rect } from '../components/workflow/dragRegions';
+import type { DropColumn } from '../components/workflow/boardDndUtils';
 
 // Shared geometry fixtures for the Epic 3.5 drag tests (regions, the pop
 // machine, band resolution) — one place for the rect/region shape, same
@@ -20,6 +21,22 @@ export function region(key: string, r: Rect, overrides: Partial<DragRegion> = {}
     targetWorkphaseId: 'wp-' + key,
     isTerminal: false,
     scrollTop: 0,
+    ...overrides,
+  };
+}
+
+// A merged column covering the given workphases — override any field,
+// including `subRows` (for an expanded column, or per-row facts like
+// `isTerminal`), for a differently-shaped board fixture. Shared by
+// boardDndUtils.test.ts and dragRegions.test.ts, which each built this
+// independently (audit epic-3-5-story-3-reconciled #8).
+export function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
+  return {
+    id,
+    broken: false,
+    displayMode: 'merged',
+    entryWorkphaseId: workphaseIds[0],
+    subRows: workphaseIds.map(w => ({ workphase: { id: w } })),
     ...overrides,
   };
 }

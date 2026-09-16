@@ -60,6 +60,12 @@ become four with Story 6; (e) the E2E scaffolding Story 2 asked for was not
 added and the new spec re-creates all of it; and (f) five documentation /
 comment drifts, two of them in the wikis.
 
+> **Status sweep (2026-09-15):** every finding below was re-verified against
+> `2300fdf` ("reconcile wiki, test plan, code") by
+> `code-quality-audit-epic-3-5-story-3-reconciled.md`, which carries the full
+> status table and the follow-on findings. Findings with a **Status** line
+> here changed state; every other finding is **open, unchanged** at `2300fdf`.
+
 ---
 
 ## Fix Now
@@ -107,6 +113,14 @@ the marker; a response during a re-drag clears the marker but not the
 ghost and records no inversion; a Sheet response for a pending item
 doesn't clear the marker.
 
+**Status (2026-09-15, `2300fdf`):** partially resolved. Cancel / no-op
+release now restores `priorPlacement` when `writes.isPending` (an `inFlight`
+set separate from `placements`), and a reactive effect re-asserts the live
+ghost after a response clears it. Still open — the reducer is ghost-blind,
+so a mid-re-drag response still logs a false inversion, a Sheet PUT still
+clears a pending marker, and pickup still jumps to `{B, 'existing'}`.
+Carried as reconciled-audit #1 (reference-compare fix) and #9 / #10.
+
 ### 2. The `'existing'` slot is the wrong ordinal claim for an item with `position === null` entering an active column — it previews at the top, the server appends `[Correctness & Security]`
 **Files:** `client/src/components/workflow/popSession.ts:161–166` (`placementFor` → `'existing'` for middle band / in-context); `client/src/components/workflow/boardDndUtils.ts:277–283` (`pendingPlacementFor` → `'existing'` for a bare `workphaseId`); `client/src/components/workflow/itemListOps.ts:91–93` (`(a.position ?? 0)` sorts null first); server rule `server/src/lib/itemHierarchy.ts:243–250`
 
@@ -130,6 +144,13 @@ use `'last'` instead of `'existing'` (pass `activeItem` or
 a `popSession.test.ts` case, a `pendingPlacementFor` case, and an E2E
 done → In Progress middle-band case asserting `titlesIn` before and after
 the response are equal.
+
+**Status (2026-09-15, `2300fdf`):** resolved — `placementFor` and
+`pendingPlacementFor` take the active item's `position` and preview
+`'last'` when it's `null` and the target isn't terminal (reconciliation
+#29); pinned in `popSession.test.ts` and `boardDndUtils.test.ts`. The E2E
+case wasn't added. The rule shipped as two copies with differing terminal
+handling → reconciled-audit #3.
 
 ### 3. `useBoardDnd.ts` (406 lines) bundles four independent mechanisms behind one "gesture" label — and the cheap symptom is that the clocks are stopped in three places by copy `[File Responsibility + Duplication & Abstraction]`
 **File:** `client/src/components/workflow/useBoardDnd.ts:1–406`; the copy-paste at `:115–118` / `:120–124` (`clearPopTimer` / `cancelSnap`) vs `:185–192` (effect cleanup inlines both bodies verbatim); `:289–291` and `:299–301` (`clearPopTimer(); cancelSnap(); updateSession(null);` ×2); `:90–93` and `:96`, `:172–174` (two `ref + useEffect(() => ref.current = x)` latest-ref pairs)
@@ -194,6 +215,11 @@ boundary function it becomes four formulas.
 `dragRegions.test.ts` assertion that `bandBoundaries` returns the fractions
 `bandFor` switches at.
 
+**Status (2026-09-15):** resolved as proposed — `bandBoundaries(tuning)` in
+`dragRegions.ts` (with a `BandTuning` alias); `bandFor` switches on it,
+both guides draw from it, `linePositions` deleted; boundary-agreement test
+in `dragRegions.test.ts`.
+
 ### 6. Pop-state name derived in two components, spelled two ways (`popped-out` vs `popped out`) `[Duplication & Abstraction]`
 **Files:** `client/src/components/BoardView.tsx:309` (`isLocked(session.pop) ? 'locked' : 'popped-out'`); `client/src/components/DragTuningPanel.tsx:123` (`isLocked(pop) ? 'locked' : 'popped out'`)
 
@@ -204,6 +230,10 @@ show the same thing. Stories 4 and 5 both extend this vocabulary.
 **Fix:** `export type PopState = 'locked' | 'popped-out'; export function popState(session): PopState`
 beside `isLocked` in `popSession.ts`; `BoardView` stamps it, the panel
 prints it.
+
+**Status (2026-09-15):** resolved as proposed — `PopState` + `popState()`
+in `popSession.ts`; both call sites use it (the panel now prints
+`popped-out`, matching the E2E surface).
 
 ### 7. E2E: the new band spec re-creates every helper Story 2 #16 named, plus three spec-local geometry recipes that belong in `dragGesture.ts` `[Duplication & Abstraction]`
 **Files:** `tests/ui/drag-column-bands.spec.ts:48–75` (`seed`: reset + templated workflow + two-step board fetch `:52–53` + plan→create→pin loop `:56–67`); `:86–91` (`openBoard`, the sidebar-select + Board-tab three-liner); `:63–66`, `:367–368`, `:407–408` (inline `POST /items` — only the first asserts `ok()`); `:103–106` (`bandPoint`); `:239–241`, `:274–277`, `:338–340` (the inter-column gap point, byte-identical ×3); `:206`, `:235`, `:293` (`column:${…}` key hand-rolled where `keyOf` exists in one test); `:360–368` vs `:401–408` ("delete Review column, widen In Progress, create Y in Review" ×2); `:245`/`:278`/`:379` and `:211`/`:297`/`:303` (sleep-then-assert-state ×6). Prior copies: `tests/helpers/itemRepositioningScenario.ts:38–44`, `:86–92`; `tests/ui/drag-target-classification.spec.ts:22–26`, `:41`; the `Board`-tab click ~45× across `tests/ui`
@@ -227,6 +257,24 @@ replaces three copies), `fetchDefaultBoard(request, workflowId)`.
 Import the client's `columnRegionKey` for `keyOf` the way the spec already
 imports `DEFAULT_DRAG_TUNING`.
 
+**Status (2026-09-15):** resolved as proposed, and Story 2 #16 with it.
+`tests/helpers/seed.ts`: `seedItem` (asserts `ok()`, typed `SeededItem`),
+`seedPositionedItems` (replaces the three plan→create→pin loops — both
+repositioning scenarios and the band spec), `fetchDefaultBoard`.
+`tests/helpers/dragGesture.ts`: `atFraction` (with `center` /
+`topQuarter` / `bottomQuarter` defined through it), `gapBetween`,
+`dragMachine` + `awaitDragState` / `awaitDragContext` (retrying
+assertions replacing every sleep-then-assert pair; the one remaining
+`waitForTimeout` in the band spec is DRAG-6.5's deliberate negative
+hold). `ProjectSidebarPage.openBoard(name)`. The band spec imports
+`columnRegionKey` / `subrowRegionKey` / `DRAG_REGION_ATTR` from the
+client's `dragRegions.ts` — Playwright resolves the client module fine —
+and its two fold-Review-into-In-Progress blocks became one
+`foldReviewIntoInProgress(request, s, displayMode)`. The classification
+spec migrated too. Non-obvious: `seedPositionedItems` has to return the
+full `SeededItem` row (not just `{id, title, position}`) because the
+repositioning scenarios' `ScenarioItem` reads `workphaseId` / `createdAt`.
+
 ### 8. Tuning panel: the field-label class string is duplicated for the one non-numeric field `[Duplication & Abstraction]`
 **File:** `client/src/components/DragTuningPanel.tsx:65` and `:100` (`flex items-center justify-between gap-2 text-[11px] text-zinc-400`, 6 classes)
 
@@ -240,6 +288,11 @@ panel values and Story 8 may add overlay colors.
 through `renderFields` (also removes the second `onChange({ ...tuning, … })`
 spelling).
 
+**Status (2026-09-15):** resolved — both halves: the descriptor is now a
+`Field` union (`kind: 'number' | 'text'`, with a `TextKey` mapped type),
+the color field is a row in `OVERLAY_FIELDS`, and the label class is the
+`FIELD_LABEL` constant rendered in one place.
+
 ### 9. Both wikis claim the inversion tripwire is "logged to the console" — it isn't, and the story doc's own "As built" note says so `[Consistency & Drift]`
 **Files:** `docs/wiki/board-drag-interaction/README.md:426–427` ("An inversion is logged to the console and counted in the dev/test panel"); `docs/wiki/item-positioning/README.md:296–297` ("a difference is logged and counted"); vs `client/src/components/workflow/itemListOps.ts` (`findInversion` / `completeItemWrite` push into `ItemListState.inversions` only) and `docs/planning/epic-3-5-stories/story-3-pop-state-machine-column-bands.md:432–434` ("The tripwire's log lives in state rather than a `console.warn` side effect inside an updater; the panel renders it")
 
@@ -247,6 +300,10 @@ No `console.*` anywhere in the inversion path. The wikis are the settled
 truth and are contradicted by this commit's own historical record.
 
 **Fix:** reword both to "counted and surfaced in the dev/test panel".
+
+**Status (2026-09-15, `2300fdf`):** half resolved — `board-drag-interaction`
+§10 now says "nothing goes to the console" (reconciliation #18);
+`item-positioning/README.md:297` still says "logged" → reconciled-audit #6.
 
 ### 10. Wiki §10 describes `Placement` as `{ list, slot }` — the field is `workphaseId` `[Consistency & Drift]`
 **File:** `docs/wiki/board-drag-interaction/README.md:420–421`; actual shape `client/src/components/workflow/itemListOps.ts:31–39`
@@ -266,6 +323,9 @@ no longer exist (grepped: this is the only surviving reference). **Fix:**
 delete the caveat; `activeWorkphaseId` is simply the active item's
 workphase.
 
+**Status (2026-09-15):** resolved — caveat replaced with the current
+rule (nothing in `items` mutates during a drag).
+
 ### 12. `item-repositioning-cross-column-dnd.spec.ts`'s "hardcodes `side: 'before'`" framing is wrong, and this commit fixed the identical claim in `dragGesture.ts` but left this one `[Consistency & Drift]`
 **File:** `tests/ui/item-repositioning-cross-column-dnd.spec.ts:15–23` (header), `:159–165` (3.a), `:194–197` (4.a); corrected sibling text at `tests/helpers/dragGesture.ts` (`topQuarter` / `bottomQuarter` comment, this commit)
 
@@ -280,6 +340,10 @@ the pop machine's context/band state, not the hovered card.
 **Fix:** reword header and the 3.a / 4.a comments to point at
 `resolveDropSide`'s geometry and, for 4.a, the pop machine's band rule.
 
+**Status (2026-09-15):** resolved — header and both inline comments now
+describe `resolveDropSide` (card-center geometry, target shifted by the
+swap preview) and, for 4.a, the cross-region band resolution.
+
 ### 13. Story doc's "As built" says `DragTuningContext` was "planned and dropped" — it shipped and is load-bearing `[File Responsibility → Consistency & Drift]`
 **Files:** `docs/planning/epic-3-5-stories/story-3-pop-state-machine-column-bands.md` ("As built": "`DragTuningContext` was planned and dropped — the hook takes the tuning as a dep, the panel takes it as props … nothing needed a context") vs `client/src/components/workflow/DragTuningContext.ts` (12 lines) and `client/src/components/BandGuides.tsx:3`, `:39`, `:60` (`useDragTuning()`)
 
@@ -288,6 +352,9 @@ The file itself is a clean single-purpose context, correctly separate from
 contradicts the code it retrospects. **Fix:** one sentence — it shipped,
 for `BandGuides` / `HoveredBandGuide`, which read tuning off the render
 path.
+
+**Status (2026-09-15, `2300fdf`):** resolved — story doc corrected
+(reconciliation #26).
 
 ---
 
@@ -327,6 +394,12 @@ is worse than applying, and it's silent.
 call the injected `loadBoard()` (or return a `'stale-reindexed'` sentinel
 and let `sendItemMove` reload). Optionally `console.debug` the drop.
 
+**Status (2026-09-15, `2300fdf`):** resolved, immediate variant —
+`ItemWriteTracker.complete` returns `{ applied, needsResync }`; a stale
+response's row is discarded but `needsResync` is true when it carried
+`reindexed` pairs, and `sendItemMove` reloads. Both branches pinned in
+`boardDndUtils.test.ts`.
+
 ### 16. A board reload mid-drag unmounts the `DndContext` but not the session — listener, timer and ghost keep running against the reloaded board, and the eventual `pointerup` completes the gesture with a pre-reload snapshot `[Correctness & Security]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:178–193` (listener/timer live on `machineActive`, cleared only by `handleDragEnd/Cancel`), `:155–171`; `client/src/components/BoardView.tsx:103–140` (`loadBoard` sets `loading`), `:230–236` (loading branch unmounts the whole `DndContext`)
 
@@ -345,6 +418,11 @@ cancel path when `sessionRef.current` is set and the board identity
 changed since `handleDragStart` (capture `board` in the session), plus the
 same when `loading` flips — or (b) keep the `DndContext` mounted during
 reload so dnd-kit's own lifecycle completes. (a) is smaller and testable.
+
+**Status (2026-09-15, `2300fdf`):** open; shape changed — the new
+re-assert effect now puts the stuck drag's ghost back *onto the reloaded
+list* after `replaceItems` wipes it. Not worse in practice; still no
+cancel-on-board-change.
 
 ### 17. The Unsorted "Unknown status" list is payload-derived, so the Unsorted-origin drag this story documents renders the item twice during the drag and leaves it in Unsorted after the write `[Correctness & Security]`
 **Files:** `client/src/components/UnsortedBucket.tsx:34`, `:69–80` (`unknownItems` from the `invalidItems` prop); `client/src/components/BoardView.tsx:123–128` (same rows also folded into `items` state), `:332`
@@ -396,6 +474,10 @@ discovered by feel.
 (keep `rect` frozen); align the §3.1 sentence either way; add the crossing
 case to `popSession.test.ts`.
 
+**Status (2026-09-15, `2300fdf`):** superseded — the PO ratified the
+region-entry clock on purpose (reconciliation #19, "No code"); the wiki
+was aligned to the code. Not a bug.
+
 ### 20. Sub-row regions sit inside the scrolling column body, so the frozen `hover.rect` and the fixed-position `HoveredBandGuide` don't follow dnd-kit's auto-scroll of that body `[Correctness & Security]`
 **Files:** `client/src/components/BoardColumn.tsx:135–138` (merged region is *outside* the scroller — correct) vs `client/src/components/WorkphaseCardList.tsx:65` (sub-row region is *inside* `overflow-y-auto`); `popSession.ts:37–43`; `BandGuides.tsx:65–70`
 
@@ -410,6 +492,14 @@ The freeze was tested only against the ghost's own reflow.
 — store the nearest scrollable ancestor's `scrollTop` in `PopHover` and
 compare in `hoverFor`.
 
+**Status (2026-09-15, `2300fdf`):** resolved as specified — `DragRegion.scrollTop`
+is measured; `PopHover` carries the last-seen `scrollTop`; `translateRect`
+shifts the frozen rect by the delta each sample; regression test in
+`popSession.test.ts`. The fix exposes two new gaps in the same path — the
+rect frozen is the *clipped* slice (reconciled-audit #11) and the follow
+only runs on pointer samples (#12) — plus a latent `DOMRect` spread in
+`translateRect` (#2).
+
 ### 21. The §5 band table is encoded twice — once as a slot (`placementFor`) and once as an anchor (`bandDropResolution`) `[Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/popSession.ts:165`; `client/src/components/workflow/boardDndUtils.ts:262–265`; third reader `itemListOps.ts:75–85` (`slotIndex`)
 
@@ -421,6 +511,10 @@ deliberate. Story 6's Stub table arrives in the same two shapes.
 **Fix when Story 6 adds the second table:** `bandSlot(region, band)` in
 `popSession.ts` / `dragRegions.ts`; `placementFor` uses it directly,
 `bandDropResolution` maps `'first'` / `'last'` / `'existing'` to anchors.
+
+**Status (2026-09-15, `2300fdf`):** open; grew a third axis — the
+null-position `'last'` rule is now in both `placementFor` and
+`pendingPlacementFor` with differing terminal handling → reconciled-audit #3.
 
 ### 22. "Is the active item a member of this region's covered set" — four spellings `[Duplication & Abstraction]`
 **Files:** `popSession.ts:170` (`regionWorkphaseFor`); `boardDndUtils.ts:258` (`bandDropResolution`), `:164`, `:185` (`resolveDropTarget`, pre-existing)
@@ -466,6 +560,10 @@ Fine at 144 lines under one "regions" label; the pure half is what
 without a DOM. Story 6 adds more pure geometry here. **Fix if it grows:**
 `dragRegionGeometry.ts` vs `dragRegions.ts`.
 
+**Status (2026-09-15, `2300fdf`):** grown past "if it grows" (+50:
+`findVerticalScrollAncestor`, `clipToVisible`, scroll-aware measurement).
+Split now recommended → reconciled-audit #14.
+
 ### 26. `popSession.ts`'s `placementFor` / `regionWorkphaseFor` are output-translation, not machine transition `[File Responsibility]`
 **File:** `client/src/components/workflow/popSession.ts:156–172`
 
@@ -473,6 +571,11 @@ A third read-out beside `releaseIntent` / `popDueAt`, importing
 `Placement` from `itemListOps.ts` — reasonable today, slightly understated
 by the "pure machine" framing at `:5–9`. Not a split candidate; flagged so
 Story 6's second placement-shape derivation doesn't land here by default.
+
+**Status (2026-09-15, `2300fdf`):** unchanged in kind; `translateRect`
+(new, in `hoverFor`'s neighbourhood) is the same class of drift in the
+other direction — geometry in the machine file. Folded into
+reconciled-audit #2's fix (move it to `dragRegions.ts`).
 
 ### 27. `itemListOps.ts` (267 lines) carries selectors, ordinal placement, and write reconciliation — cohesive today, the largest new pure module `[File Responsibility]`
 **File:** `client/src/components/workflow/itemListOps.ts:19–85`, `:87–178`, `:180–267`
@@ -512,6 +615,11 @@ the middle band (#2); Escape while popped out; cancel or a landing response
 *during* a re-drag of a pending item (#1); a board reload mid-drag (#16).
 The 14 cases that exist are well-targeted and parameterized on the seeded
 tuning, never on literals.
+
+**Status (2026-09-15, `2300fdf`):** narrowed at unit level (null-position
+slot, scroll follow, clipping all have unit cases). Still no E2E for any
+listed case, and nothing at any level pins `priorPlacement` restore, the
+re-assert effect, or `isPending` / `inFlight`.
 
 ### 32. Overlay CSS custom-property names are literal in two files — unavoidable `[Duplication & Abstraction]`
 `BoardView.tsx:208–211` sets `--drag-overlay-free` /

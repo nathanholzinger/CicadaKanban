@@ -1,4 +1,4 @@
-import type { APIRequestContext } from '@playwright/test';
+import { expect, type APIRequestContext } from '@playwright/test';
 import { API } from './api';
 
 type WorkflowTemplateName = 'flow' | 'quick';
@@ -49,6 +49,65 @@ export async function addWorkphases(
     phases.push(phase);
   }
   return phases;
+}
+
+// POST /items with the status asserted. The bare
+// `(await request.post(…/items)).json()` shape hands the next step an
+// `{ error }` body when the create fails — a chain link silently missing
+// its parent, a fixture item that never existed — so every seeded item
+// goes through here (audit epic-3-5-story-2 #16 / story-3 #7).
+export interface SeededItem {
+  id: string;
+  title: string;
+  parentId: string | null;
+  projectId: string | null;
+  workphaseId: string | null;
+  position: number | null;
+  isAttached: number;
+  createdAt: number;
+}
+
+export async function seedItem(request: APIRequestContext, data: Record<string, unknown>): Promise<SeededItem> {
+  const res = await request.post(`${API}/items`, { data });
+  expect(res.ok(), `POST /items ${JSON.stringify(data)} → ${res.status()}`).toBe(true);
+  return res.json();
+}
+
+export interface PositionedItemPlan<K extends string> {
+  key: K;
+  projectId: string;
+  workphaseId: string;
+  position: number;
+  /** Defaults to `Item ${key}`. */
+  title?: string;
+}
+
+// Creates items and pins each to an explicit position — the "plan → create
+// → PATCH position" loop the repositioning scenarios and the band spec each
+// wrote by hand. Append alone can't reproduce an interleaved layout (each
+// workphase has its own append counter), which is why the pin exists.
+// Returns the created rows keyed by plan key, with `position` as pinned.
+export async function seedPositionedItems<K extends string>(
+  request: APIRequestContext,
+  plan: ReadonlyArray<PositionedItemPlan<K>>,
+): Promise<Record<K, SeededItem & { position: number }>> {
+  const items = {} as Record<K, SeededItem & { position: number }>;
+  for (const { key, projectId, workphaseId, position, title } of plan) {
+    const created = await seedItem(request, { title: title ?? `Item ${key}`, projectId, workphaseId });
+    const pinned = await request.patch(`${API}/items/${created.id}/move`, { data: { position } });
+    expect(pinned.ok(), `pin ${key} at ${position} → ${pinned.status()}`).toBe(true);
+    items[key] = { ...created, position };
+  }
+  return items;
+}
+
+// The workflow's auto-bootstrapped default board, resolved (columns + Unsorted)
+// — the `boards?workflowId=` → `boards/:id` two-step that every board-driven
+// spec repeated.
+export async function fetchDefaultBoard(request: APIRequestContext, workflowId: string) {
+  const boards = await (await request.get(`${API}/boards?workflowId=${workflowId}`)).json();
+  expect(boards.length, `workflow ${workflowId} has no board`).toBeGreaterThan(0);
+  return (await request.get(`${API}/boards/${boards[0].id}`)).json();
 }
 
 // Pulls named phases out of a workflow's `workphases` array, in the given

@@ -38,6 +38,21 @@ export interface Placement {
   slot: PlacementSlot;
 }
 
+// Whether a workphase-only claim (no anchor — a bare "put me in this list")
+// keeps the item where the position sort already has it, or takes the
+// append fallback instead: the server does the same thing for the same
+// reason (item-positioning §2 addendum, §7.5) — a position to keep sorts as
+// 'existing'; none (a reopened done item, a first assignment) takes the
+// append slot instead of the position-sort's null-coerced top ordering
+// (wiki–code reconciliation #29, the mirror of #14). One definition, shared
+// by `placementFor`'s non-terminal in-context/middle-band case and
+// `pendingPlacementFor`'s bare-workphase-change case — they used to answer
+// this with two independently-typed copies of the same rule (audit
+// epic-3-5-story-3-reconciled #3).
+export function workphaseOnlySlot(position: number | null): 'existing' | 'last' {
+  return position === null ? 'last' : 'existing';
+}
+
 export type Placements = ReadonlyMap<string, Placement>;
 
 const NO_PLACEMENTS: Placements = new Map();
@@ -263,9 +278,25 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // re-sort (TC-5a.3 — nothing is rebuilt when nothing changed). The tripwire
 // only fires for a write the board previewed; a Sheet edit that reassigns a
 // position made no ordinal claim.
-export function completeItemWrite(state: ItemListState, response: ItemWriteResponse): ItemListState {
+//
+// `recorded` is the exact placement object `writes.begin` stashed when this
+// write started (undefined for a write that was never placement-tracked —
+// a Sheet PUT, an inline create, a child create). Clearing the placement
+// and running the tripwire only happens when the item's *current*
+// placement is still that same object, by reference — not mere presence —
+// so a placement written after this write began (a re-drag's live ghost, a
+// different write's own marker) is left untouched: this write isn't the
+// one that owns it. Without this, a response landing mid-re-drag would
+// clear the live ghost and log a false inversion, and an unrelated write
+// (a Sheet PUT) would clear a pending marker it never recorded (audit
+// epic-3-5-story-3-reconciled #1).
+export function completeItemWrite(
+  state: ItemListState,
+  response: ItemWriteResponse,
+  recorded?: Placement | null,
+): ItemListState {
   const items = applyItemWriteResponse(state.items, response);
-  if (!state.placements.has(response.id)) return { ...state, items };
+  if (recorded === undefined || state.placements.get(response.id) !== recorded) return { ...state, items };
 
   const before = freeItemOrder(state.items, state.placements);
   const next = withPlacement({ ...state, items }, response.id, null);
