@@ -181,14 +181,45 @@ see the story plan's decisions):
   middle band past `popInDelayMs` pops it *in* and locks it there, the
   column it just left included.
 
+**Addendum (2026-09-16) — column-band geometry reworked, hands-on with the
+Product Owner.** §5's drop bands were rebuilt from a percentage-of-the-
+rendered-slice model to pixel carve-outs anchored to real content, with
+Board-layer space reservation (`ghostCardHeightPx`), and both visible
+copies of a dragged card were collapsed to a fixed shape (§5a). Recorded in
+full in [`story-3-pop-state-machine-column-bands.md`](story-3-pop-state-machine-column-bands.md)'s
+own addendum section rather than as a new story — same subject Story 3
+already owns, not new capability. Kept here rather than folded into Story
+8: Story 8 is unrelated (§4's relationship-overlay palette/animation, not
+started).
+
 ---
 
-### Story 4 — Card → Card = attach
+### Story 4 — Card → Card = attach ✅ (done 2026-09-16)
+**Plan / record:** [`story-4-card-to-card-attach.md`](story-4-card-to-card-attach.md)
+
 **Goal:** the headline gesture. Dropping a Card onto another Card attaches it
 as a Stub at the dropped slot, inheriting the parent's workphase. Covers the
-cross-project case and attaching to a done parent.
+cross-project case and attaching to a done parent. Must not regress in-column
+reposition, which already works (Story 3) and is the baseline every attach
+mechanic has to coexist with.
 
 **Depends on:** Stories 1-3.
+
+**Built hands-on with the Product Owner (2026-09-16)**, same trial-and-error
+process as Story 3's popping model. The four open decisions the plan
+doc named are all resolved — see its own "As built" section for the detail
+— and the board is now a strict three-layer stack (Board → Column/sub-row
+→ Card), a genuine rule change from Story 3's flatter model, not just this
+story's build catching up to a rule already on the page. Wiki §1.1, §2, §3,
+§3.1 and §6 all carry the result.
+
+Also swept up (2026-09-16), same session: §5's column-band geometry rework
+— see Story 3's addendum above; recorded against Story 3 since it's a
+rework of Story 3's own subject, not new capability.
+
+Not in scope, still closed: §7's Descendants-layer placement inside a
+hierarchy (Story 6), and dragging an already-attached Stub at all
+(Story 5).
 
 ---
 
@@ -197,47 +228,74 @@ cross-project case and attaching to a done parent.
 becoming Free and landing where dropped, while keeping its parent relationship.
 Unblocks the drag-out path currently held closed in `useBoardDnd`.
 
-**Depends on:** Stories 1-3.
+**Rules settled 2026-09-17** (Product Owner, with the test planner; wiki
+§1, §1.1, §6, §8 carry them — see "Decisions of 2026-09-17" below for the
+alternatives weighed):
+- A Stub's drag **starts at its parent's Descendants layer** (Story 6's
+  layer), so a sibling reorder is the within-action and costs no pop.
+- Leaving the parent is **two one-layer pops**: Descendants → Card, then
+  Card → the containing column. The intermediate Card-layer stop is a real
+  state; a release there is the auto-drop, which for the Card's own Stub
+  means *set back down where it was picked up — nothing written*.
+- Moving a Stub out of a Card is an un-attach only; zooming into a
+  different Card is a reparent (auto-drop as that Card's last child).
+- Test cases: `docs/test-plans/board-drag-interaction/drag-5-detach-and-overflow.md`
+  TC-1–5, 9–12.
+
+**Depends on:** Stories 1-3. Story 5 needs the Descendants layer to exist
+as a *start* state even before Story 6 builds manual placement inside it —
+sequence the two accordingly, or build Story 6's layer first.
 
 ---
 
 ### Story 6 — Stub → Stub hierarchy placement
-**Goal:** placement *within* the descendant hierarchy, using the same
-three-way ruleset as the project sidebar — above an anchor as a sibling, below
-as a sibling, or below and indented as a child — with overlapping quick-drop /
-hover-to-pop bands.
+**Goal:** placement *within* the descendant hierarchy — the **Descendants
+layer**, one inside the Card — using the same ruleset as the project
+sidebar. Part of this story is consolidating as much of the projects /
+item-descendants reposition-and-reparent logic as possible into one
+shared library; if the sidebar is found doing anything differently, it is
+brought to the same rule here.
 
-Kept separate from Story 4 despite sharing Story 1's server surface: the UI
-context and drop resolution genuinely differ.
+**Rules settled 2026-09-17** (wiki §1.1, §3.1, §3.2, §7):
+- **Reached by holding** over a locked Card's descendants section
+  (duration-only, its own panel clock). A childless Card has no
+  descendants section and so no Descendants layer — the auto-drop is its
+  only outcome.
+- **Placement is a range, not three options.** The ghost sits in a gap
+  between *Top* and *Bottom* (vertical position); horizontal offset picks
+  a depth from `[Bottom's depth … Top's depth + 1]`. Top + 1 → Top's
+  **first child**; Top's depth → sibling after Top's subtree; each level
+  shallower → sibling after the corresponding ancestor of Top; nothing
+  shallower than Bottom. Full statement, worked example and boundaries in
+  wiki §7.1.
+- **An over-cap tab state is reachable, marked invalid, and a no-op on
+  release** — the one exception to §3.2. Cycles are unreachable because
+  the dragged subtree travels with the item.
+- Test cases: `drag-4-attach-and-stub-placement.md` TC-8–11, 18;
+  `drag-1-contexts-and-popping.md` TC-21.
 
-**Depends on:** Stories 1-3.
+~~**Needs attention** — option 3 settles the parent but not the slot.~~
+Resolved: tabbed right of Top is Top's **first** child; any other slot is
+reached by anchoring against a sibling.
 
-**Needs attention** (flagged by test planning, 2026-09-10 — see
-`docs/test-plans/board-drag-interaction/INDEX.md`):
-- **Option 3 ("below an anchor, indented right → child of the anchor")
-  settles the parent but not the slot.** Where among the anchor's *existing*
-  children does the item land — first, last, or anchored to the child
-  nearest the cursor? Record it in `wiki/board-drag-interaction/` §7.2;
-  DRAG-4.10 asserts parent and attachment only until then.
+**Depends on:** Stories 1-3; Story 5 for a Stub-started drag.
 
 ---
 
-### Story 7 — Depth cap determination + "See X children"
+### Story 7 — Depth cap determination + depth overflow
 **Goal:** derive the real cap empirically from what the project sidebar can
-display comfortably, then build the overflow affordance for hierarchies that
-exceed what a Card can show.
+display comfortably, then decide what happens to a hierarchy that exceeds
+what a Card can show — **either** the previously sketched "see X children"
+placeholder with a wider modal, **or** simply restricting the hierarchy to
+the depth the UI has room for. Undecided as of 2026-09-17; wiki §9 is a
+pointer to Open questions until this story rules, and the test plan carries
+nothing for it (DRAG-5.6–5.8 withdrawn).
 
 Deferred beyond this story: any solution for depth so great that indenting each
 level no longer fits the sidebar or the overflow modal either.
 
-**Needs attention** (flagged by test planning, 2026-09-10 — see
-`docs/test-plans/board-drag-interaction/INDEX.md`):
-- **The "see X children" hold threshold is unnamed.** `wiki/board-drag-interaction/`
-  §9 says dragging a Stub over the placeholder and "holding past a
-  threshold" opens the modal, without saying whether that is the pop
-  `THRESHOLD` or its own dev/test-panel parameter. Decide, expose it in the
-  panel accordingly, and name it in §9 (DRAG-5.6 parameterizes on
-  "whatever the panel exposes").
+~~**Needs attention** — the "see X children" hold threshold is unnamed.~~
+Moot until the story decides whether a modal exists.
 
 ---
 
@@ -260,6 +318,47 @@ drop-meaning to disambiguate in the UI, and that's only judgeable once the
 other gestures exist.
 
 ---
+
+## Decisions of 2026-09-17 (Stories 5/6 planning)
+
+Recorded here because these were weighed, not just stated; the settled
+rules live in `wiki/board-drag-interaction/`.
+
+- **Hierarchy placement: a depth range, not three options.** The first
+  draft enumerated three placements per gap — aligned to the item below,
+  aligned to the item above, indented under the item above — and worked
+  through scenarios one by one. Test planning showed it missed real
+  placements: when Top sits two or more levels deeper than Bottom, the
+  gap also contains "sibling after each of Top's intermediate ancestors,"
+  and those are reachable from *no other gap*. Reframed as a single rule,
+  `range = [Bottom's depth … Top's depth + 1]`, which the three options
+  fall out of as the two- and three-level cases and which also covers
+  nested-last, empty, and the one-option gap where Bottom is Top's child.
+  Same rule for the project sidebar; Story 6 consolidates.
+
+- **Auto-drop is *last* child; *first* child is a manual gesture.** The
+  Card layer's within-action (Story 4 as built) appends an incoming item
+  as the last child. A draft addendum briefly had "auto defaults to first
+  child," which would have flipped Story 4's built behaviour. Ruled
+  instead that these are two different gestures: dropping over the Card
+  and letting it auto-place → **last**; manually dragging a Stub to sit
+  directly beneath a line item at Descendants layer, tabbed right →
+  **first** child of that item. And the auto-drop for the Card's *own*
+  Stub is "set back down, nothing written," distinguished by where the
+  drag started rather than by anything about the release.
+
+- **No two-layer pop out of Descendants.** The design doc floated a
+  special rule letting Descendants pop straight to the column — possibly
+  as its *only* pop-out, on the view that stopping at the Card layer
+  (whose within-action is auto-place) has little value on the way out.
+  Rejected: every pop is exactly one layer (§1.1 rule 2), and the
+  distance term of the pop-out clock is expected to make a decisive yank
+  fire both pops back to back without a special case. The Card-layer
+  stop stays a real, if brief, state with a defined release meaning.
+
+- **Overflow (§9) demoted to an open question.** Story 7 will choose
+  between the placeholder/modal and a hard display-depth restriction;
+  nothing is planned or tested for it until then.
 
 ## Open items
 

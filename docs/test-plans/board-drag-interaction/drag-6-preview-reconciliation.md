@@ -14,17 +14,11 @@ This suite holds what the *board* adds on top: applying the placement on
 release, clearing the pending marker, the inversion tripwire, per-item
 response sequencing, and failure resync.
 
-**Not catalogued: the interim picture during a re-drag.** §10 describes,
-as built in Story 3 and *accepted for now*, what the board shows while a
-pending item is re-dragged (the ghost replaces the pending marker; a
-cancel or a no-write release clears the placement so the item shows at
-its pre-write slot until the response lands; a response landing mid-drag
-clears the ghost until the machine's next state change). The wiki names
-the intended replacements (restore the marker on cancel, keep the ghost
-through a mid-drag response) as riding along with reconciliation #15/#22.
-No case is derived from the interim picture; the durable rule — the
-picture corrects itself when the response lands, and the final state is
-the latest write's — is TC-5.
+The re-drag picture (reconciliation #22) and the stale-response resync
+(#15) were built in the Story 3 follow-up (2026-09-15) and are now settled
+rules — TC-7–TC-9. A placement can also carry a `parentId` (Story 4's
+attach ghost — [DRAG-4.16](drag-4-attach-and-stub-placement.md)); the
+reconciliation rules below apply to it unchanged.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
@@ -35,6 +29,10 @@ the latest write's — is TC-5.
 | TC-5 | Re-dragging a pending item: responses are sequenced per item so a stale one can't land last | P0 | ⏳ pending triage |
 | TC-6 | A failed drop resyncs the board from the server; the guess is never kept | P0 | ⏳ pending triage |
 | TC-7 | A stale response carrying reindex pairs triggers a resync rather than a guess | P1 | ⏳ pending triage |
+| TC-8 | Cancelling a re-drag restores the still-pending marker rather than clearing it | P1 | ⏳ pending triage |
+| TC-9 | A response landing mid-drag of the same item does not leave the ghost missing | P1 | ⏳ pending triage |
+| TC-10 | `existing` never means "no position": an item with none previews at `last` | P1 | ⏳ pending triage |
+| TC-11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | ⏳ pending triage |
 
 ---
 
@@ -155,6 +153,71 @@ board matches the server, including every reindexed item.
 *And given* a stale response with **no** reindex pairs, *then* discarding
 its row is the whole handling; no resync is needed.
 
-*(Reconciliation #15, ruled in the wiki; code pending.)*
+*(Reconciliation #15.)*
+
+**Automation test:** —
+
+## TC-8 — Cancelling a re-drag restores the still-pending marker rather than clearing it
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* `X` dropped at slot `s1` (write 1 in flight, `X` rendered pending
+at `s1`), *when* `X` is picked up again — the ghost taking over from the
+pending marker — and the drag is then cancelled, or released where
+nothing is written ([DRAG-1.9](drag-1-contexts-and-popping.md),
+[DRAG-3.12](drag-3-card-column-bands.md)), while write 1 is still in
+flight, *then* `X` is rendered pending at `s1` again — the stashed
+placement is restored, not cleared — so the board never shows `X` at its
+pre-write slot while a write that moves it is outstanding. *And given*
+write 1 had already landed before the cancel, *then* there is nothing to
+restore: `X` sits at its authoritative position with no marker.
+
+*(Reconciliation #22.)*
+
+**Automation test:** —
+
+## TC-9 — A response landing mid-drag of the same item does not leave the ghost missing
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* `X` pending from write 1 and being re-dragged (ghost at the
+drag's current placement), *when* write 1's response lands mid-drag,
+*then* the response is reconciled normally (TC-3, TC-5) **and** the ghost
+is restored at the drag's current placement without waiting for any
+further cursor movement or state change — the board corrects the missing
+placement reactively, so at most a single render shows `X` without one.
+The drag continues, and its eventual release commits against the
+reconciled board.
+
+*(Reconciliation #22.)*
+
+**Automation test:** —
+
+## TC-10 — `existing` never means "no position": an item with none previews at `last`
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* a Card `X` with `position = null` — a reopened done item, or an
+item receiving its first workphase — *when* it is previewed with the
+"keep existing position" placement (a middle-band release,
+[DRAG-3.3](drag-3-card-column-bands.md)), *then* the ghost, and the
+pending marker after release, sit at the **end** of the receiving list,
+not the top — matching the append fallback the write will resolve to
+([TC-6.9](../item-positioning/part-6-active-done-split.md),
+[TC-7.5](../item-positioning/part-7-board-placement-intents.md)). The
+picture before and after the response is the same one.
+
+**Automation test:** —
+
+## TC-11 — A done list previews an incoming item as the newest completion, not the oldest
+
+**Priority:** P1 · **Automated:** ⏳ pending triage
+
+*Given* a done column rendering `D1, D2` by `completedAt` and a Card `X`
+with no `completedAt` yet, *when* `X` is released into the done column
+([DRAG-3.9](drag-3-card-column-bands.md)), *then* the preview and the
+pending marker place `X` **after** `D2` — a missing `completedAt` sorts
+last, matching the server's stamp on the write — and when the response
+lands with `completedAt` set, `X` stays where it was previewed.
 
 **Automation test:** —

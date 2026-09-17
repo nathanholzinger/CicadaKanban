@@ -148,8 +148,9 @@ no stored position at all — ordered by `completedAt` instead).
   not drag-and-drop yet). `boards.showAttachedChildren` toggles whether they
   show expanded/indented or collapsed by default. The board-level **drag
   gesture** to attach/detach is Epic 3.5 Stories 4–6; its server half (Story 1),
-  target classification (Story 2) and the pop machine + column bands (Story 3) are
-  done.
+  target classification (Story 2), the pop machine + column bands (Story 3), and
+  the Card → Card attach direction (Story 4) are done. Detach (Story 5) and
+  full anchor+side+indent hierarchy placement (Story 6) remain.
 
 ### Hierarchy Changes — One Primitive, Three Entry Points (Epic 3.5 Story 1)
 - Every write that can give an item a parent goes through
@@ -203,50 +204,92 @@ no stored position at all — ordered by `completedAt` instead).
   last, then the placement is cleared and the inversion tripwire runs. Never merge a
   written row alone.
 
-### Pop State Machine, Column Drop Bands, Ordinal Preview (Epic 3.5 Story 3)
-- A Card drag starts in exactly one **context** — the region (merged column body or
-  expanded sub-row, registered by a `data-drag-region` attribute and measured from the
-  DOM by `workflow/dragRegions.ts`) the cursor is in at pickup. A region is a **bounded
-  box**: `regionAt` is plain containment, nothing more — a column's header/footer, the
-  gaps between columns or sub-rows, and the space below the last sub-row are nowhere,
-  and a sub-row is additionally clipped to its column's visible scroll box
+### Pop State Machine, Column Drop Bands, Card Attach, Ordinal Preview (Epic 3.5 Stories 3–4)
+- **The board is a strict stack of layers, never more than one deep from where you
+  are: Board → a Column/sub-row → one of its own Cards** (wiki §1.1, re-planned for
+  Story 4, 2026-09-16 — a genuine rule change over Story 3's flatter model, not just
+  Story 4 catching up to it). A Card drag starts in exactly one **context** — the
+  region the cursor is in at pickup, registered by a `data-drag-region` attribute and
+  measured from the DOM by `workflow/dragRegions.ts` — never a Card (a Card is reachable
+  only by zooming in). A region is a **bounded box**: `nonCardRegionAt`/`cardRegionAt`
+  are plain containment, nothing more — a column's header/footer, the gaps between
+  columns or sub-rows, and the space below the last sub-row are nowhere, and a sub-row
+  (or a Card) is additionally clipped to its column's visible scroll box
   (`measureDragRegions`'s `findVerticalScrollAncestor` + `clipToVisible`) — scrolled
   fully out of view, it registers no region at all (wiki §1, wiki–code reconciliation
-  #20). `workflow/popSession.ts` is the pure machine, three states: **locked** — the
-  DragOverlay is clamped to the context (a `DragOverlay` modifier — `DndContext` itself
-  gets no modifier, so `delta` and the collision rect stay raw) while the cursor roams;
-  **popped out** — the cursor stayed outside the context past `popDelayMs` (or past
-  `popDistancePx`, either satisfies): the card tweens to the cursor (`popSnapMs`) and
-  follows it, belonging to nothing; **locked** again once the cursor rests in any
-  column's middle band past `popInDelayMs` — the column it just left included. A drag
-  from Unsorted starts popped out. A Card is not a context yet (Story 4).
-- **A release resolves one of two ways.** Cursor in the context: dnd-kit's `over`
-  decides (anchor + side, unchanged from Epic 3.2). Cursor in a region the card doesn't
-  belong to (locked or popped out): that region's **band** decides
-  (`boardDndUtils.ts::bandDropResolution`): top → before its
-  first rendered item, bottom → after its last, middle → workphase-only (position
-  kept); an empty or done region is workphase-only in any band; a covered-set member
-  keeps its workphase. Between columns / over Unsorted / a broken column: nothing is
-  written. Bands are measured against the region's rect *as it was on entry* — the
-  ghost's own insertion moves things — and that frozen rect is translated to follow the
-  region's own scroll (`PopHover.scrollTop`, wiki–code reconciliation #21), so an
-  auto-scrolled column carries the band with the sub-row it belongs to. Drawn while a
-  Card is carried (`BandGuides.tsx`: dashed boundary lines on every region the card
-  doesn't belong to, the hovered region's active band tinted, from that same frozen
-  rect).
-- **`over` follows the machine** (`boardDndUtils.ts::resolveBoardCollisions`): in
-  context, `closestCorners` over the context container and the cards inside it; in
-  another region, exactly that region's container — never a card in it — so the
-  target's sortable can't shift against a hover the band ignores.
+  #20). `workflow/popSession.ts` is the pure machine, two states per layer: **locked** —
+  the DragOverlay is clamped to the context (a `DragOverlay` modifier — `DndContext`
+  itself gets no modifier, so `delta` and the collision rect stay raw) while the cursor
+  roams; **popped out**, one layer only (Board has no parent) — the cursor stayed
+  outside the context past `popDelayMs` (or past `popDistancePx`, either satisfies): the
+  card tweens to the cursor's parent layer (`popSnapMs`), following it freely at Board
+  layer or bounded by the wider context one layer down. Popping back **in** is
+  duration-only, never distance, and is two different clocks depending on the edge:
+  Board → Column/sub-row uses `popInDelayMs` and fires only from the middle band;
+  Column/sub-row → one of its own Cards uses its own `cardPopInDelayMs` (default 800ms,
+  longer on purpose — this edge can mean a reparent) and has no band at all, just
+  presence and duration. A drag from Unsorted starts popped out with no context.
+- **A release always commits the locked layer's own within-action**, never a foreign
+  region's, regardless of where the bare cursor rests (wiki §1.1 rule 1 — this is what
+  keeps a Card's bands and a column's bands from being simultaneously live once a Card
+  is also a region). Column/sub-row: dnd-kit's `over` decides (anchor + side, unchanged
+  from Epic 3.2). Card: always append as the last Stub — no band, no anchor (§6,
+  narrowed scope; full anchor+side+indent placement is Story 6). **Only at Board layer**
+  (genuinely popped all the way out) does a bare hover's **band** decide
+  (`boardDndUtils.ts::bandDropResolution`): top → before the region's first rendered
+  item, bottom → after its last, middle → workphase-only (position kept); an empty or
+  done region is workphase-only in any band; a covered-set member keeps its workphase
+  (no-op). Between columns / over Unsorted / a broken column: nothing is written.
+- **Bands are pixel carve-outs anchored to the region's real content
+  (`DragRegion.contentRect`), not fractions of the visible-scrolled slice** (Story 3
+  re-plan, 2026-09-16 — replaces the original 20/60/20-of-rendered-height model
+  entirely). At Board layer every region reserves one collapsed ghost card's height
+  (`ghostCardHeightPx`, default 96px) for the drag's duration — two half-height dead
+  zones ("Move Top"/"Move Bottom") when it's not the live hover target, a real ghost
+  filling the same reserved height when it is (net height never changes). Divider lines
+  sit a full `ghostCardHeightPx` from each edge (deliberately bisecting the first/last
+  card for 2+ cards; halved for exactly one card, so it stays a real middle band); an
+  empty or terminal region collapses to one full-height band
+  (`dragRegions.ts::bandBoundaries`, drawn by `BandGuides.tsx::DragCarveFrame`, the one
+  place `[data-drag-region]` is applied for both merged columns and sub-rows now). The
+  reservation exists only at Board layer and collapses — not just hides — the instant
+  anything is locked. Bands are measured against the region's `contentRect` *as it was
+  on entry* — the ghost's own insertion moves things — and that frozen rect follows
+  everything else that can move the region: a real scroll, or a sibling region's own
+  carve-out reflow (`popSession.ts::followRegionTop`, generalized from a plain
+  scroll-offset translation — wiki–code reconciliation #20/#21). Guides draw only at
+  Board layer (`BandGuides.tsx`): dashed boundary lines on every region the card doesn't
+  belong to, the hovered region's band tinted, from that same frozen rect.
+- **A Card is a region too** (`card:<id>`, `dragRegions.ts::cardRegionKey`), reachable
+  only by zooming in from the column/sub-row that contains it (`parentRegionKey`), never
+  a Board-layer target in its own right (`nonCardRegionAt` excludes it unconditionally —
+  so a column's own edge bands stay reachable no matter what Cards are drawn over them).
+  Dropping onto one attaches the carried Card as its last Stub, inheriting its workphase
+  (wiki §6; consequences are `docs/wiki/item-attachment/`'s rules, unmodified). The ghost
+  migrates lists like any cross-column move: `Placement` gained an optional `parentId`
+  (`itemListOps.ts`), and `renderedIsStub`/`renderedParentId` pull a previewing card out
+  of its origin column's selector and into the target's `getAttachedChildrenFrom` at its
+  slot — `computeChildCounts` and the inversion tripwire are placement-aware for the
+  same reason a done item excludes itself. The rendered stand-in inside the target
+  (`KanbanCard.tsx::AttachGhostRow`) is a plain visual placeholder with no
+  `useSortable`/`useDroppable` registration, to keep the collision closure from ever
+  reading a real Card as an `attached-child` mid-drag.
+- **Both visible copies of a dragged Card collapse to a fixed shape** for the drag's
+  duration (`KanbanCard.tsx`'s `isGhostLike`, covering the DragOverlay copy and the
+  in-list `isDragging` row alike): title truncated to one line, description clamped to
+  exactly one line (space reserved even when empty), attached-children indicator and
+  count fully unrendered, not dimmed. Keeps a real card's otherwise-unbounded height
+  close to the carve-out's `ghostCardHeightPx` approximation. Expands back to full
+  height instantaneously on drop — no animation yet.
 - **The ghost is an ordinal placement, never a position** (`itemListOps.ts` —
-  `Placement = { workphaseId?, slot: 'existing' | 'first' | 'last' | {anchorId, side} }`,
-  layered over the position sort by every list selector, Stubs included). An item with
-  no position to keep (a reopened done item, a first-time workphase assignment)
-  previews at `'last'` rather than `'existing'`, matching the append fallback it will
-  actually resolve to (`popSession.ts::placementFor`, `boardDndUtils.ts::pendingPlacementFor`
-  — wiki–code reconciliation #29). Nothing in `items` is mutated during a drag; cancel
-  restores the item's pre-drag placement if a write for it is still in flight, else
-  clears it (`ItemWriteTracker.isPending`, reconciliation #22). On release the
+  `Placement = { workphaseId?, parentId?, slot: 'existing' | 'first' | 'last' |
+  {anchorId, side} }`, layered over the position sort by every list selector, Stubs
+  included). An item with no position to keep (a reopened done item, a first-time
+  workphase assignment) previews at `'last'` rather than `'existing'`, matching the
+  append fallback it will actually resolve to (`popSession.ts::placementFor`,
+  `boardDndUtils.ts::pendingPlacementFor` — wiki–code reconciliation #29). Nothing in
+  `items` is mutated during a drag; cancel restores the item's pre-drag placement if a
+  write for it is still in flight, else clears it (reconciliation #22). On release the
   placement becomes the **pending marker** (`data-pending`) carrying the request's own
   relation, cleared by the response. `useItemManagement.ts::writes` sequences writes
   per item so a stale response's own row is dropped whole (DRAG-6.5), but if it
@@ -261,7 +304,8 @@ no stored position at all — ordered by `completedAt` instead).
   back from the same object — never a literal. Values are deliberately unlocked, tuned
   by feel; automated tests assert *reachability* and write correctness, never a timing
   sequence. The board root carries `data-drag-state` (`locked` / `popped-out`) and
-  `data-drag-context` for tests.
+  `data-drag-context` for tests. The panel itself is a tuning-phase tool, retired once
+  the values lock and become constants.
 - `workflow/DragSessionContext.ts` holds the whole drag (`activeItem`,
   `classification`, `pop`, `priorPlacement`) plus `PlacementsContext`;
   `useIsCardBeingDragged` replaced the drilled prop. `lib/isStub.ts` is the one

@@ -371,3 +371,71 @@ Each step leaves the suite green.
   second pop-in; DRAG-3.7 is reached by popping out and coming back, since
   a member's own column is its context and has no bands). Server:
   untouched.
+
+---
+
+## Addendum (2026-09-16) — column-band geometry reworked, hands-on with the Product Owner
+
+Recorded here rather than as a new story: this reworks Story 3's own
+subject (§5's drop bands) rather than adding new capability, and it landed
+in the same hands-on session that built Story 4's card-region/layer-stack
+work (see that story's own record) — the two are separable in the wiki
+(§5/§5a vs. §1.1/§6) but were built and decided together. Superseded parts
+of the "As built" section above: the 20/60/20 percentage-band model, and
+the plain scroll-offset translation of the frozen rect.
+
+**The model:** bands stopped being a fraction of the rendered slice and
+became pixel carve-outs anchored to the region's real content
+(`contentRect`, never the visible-clipped `rect` used for hit-testing).
+Full detail and rationale: wiki §5/§5a. Summary of what changed:
+
+- **Space reservation**, not just measurement — every region reserves one
+  collapsed ghost card's height (`ghostCardHeightPx`, panel value, default
+  96px) for the drag's duration. Not the hover target: two half-height dead
+  zones, "Move Top"/"Move Bottom". The hover target: dead zones collapse,
+  a real ghost fills the same height — net height never changes.
+  `dragRegions.ts::bandBoundaries` is the one definition both the resolver
+  (`bandFor`) and the guides (`BandGuides.tsx::DragCarveFrame`) read.
+- **Divider lines sit a full `ghostCardHeightPx` from each edge** regardless
+  of the half-height dead zone, deliberately bisecting the first/last card
+  for 2+ cards. **Exactly one card halves both edges** instead, so it stays
+  a real, unlabeled middle band. **An empty or terminal region collapses to
+  one full-height band** unconditionally — terminal is new geometry, not
+  just new resolution semantics.
+- **`DragCarveFrame` is the one place `[data-drag-region]` is applied now**
+  for both merged columns (`BoardColumn.tsx`) and expanded sub-rows
+  (`WorkphaseCardList.tsx`) — previously separate wiring. Card count comes
+  off a sibling attribute, `data-drag-card-count`, read straight from the
+  same `items`/`mergedItems` array React already renders (never inferred
+  from `contentRect`'s height, since a real card's height only
+  approximates `ghostCardHeightPx` — see the visual-collapse item below).
+- **Merged columns' region moved off a non-scrolling wrapper into the
+  scrolling body itself** — the same place a sub-row's already was. Side
+  effects: merged columns gained real scroll-tracking they never had
+  before (previously only sub-rows auto-scrolled correctly), and a short
+  column's bottom band no longer strands itself far below the last card,
+  since the region now sizes to its own content instead of the column's
+  full available height.
+- **The frozen band rect generalized from "follows scroll" to "follows the
+  region's own top edge"** (`popSession.ts::followRegionTop`, replacing the
+  plain `scrollTop`-delta translation this story first built). Necessary
+  because a region's own carve-out reservation can now shift a *sibling*
+  region's top edge with zero scroll involved — two sub-rows of an expanded
+  column share one scroll body, and each can independently reserve/release
+  a ghost-height of space. `followRegionTop` re-measures the top edge each
+  sample rather than tracking the cause, so it catches both a real scroll
+  and a sibling's reflow in one comparison, while staying inert to the one
+  motion that must never move it (the hovered region's own insertion, which
+  only ever grows its bottom edge).
+- **Both visible copies of a dragged card collapse to a fixed shape**
+  (`KanbanCard.tsx`'s `isGhostLike`, covering `isOverlay` and the in-list
+  `isDragging` row alike): title truncated, description clamped to exactly
+  one line (space reserved even when empty), attached-children indicator
+  and count fully suppressed — not dimmed, unrendered. This is why: a real
+  card's height is otherwise unbounded, which is what the carve-out's
+  `ghostCardHeightPx` treats as only an approximation; collapsing both
+  copies keeps that approximation close. On drop, the expansion back to
+  full height is instantaneous — no animation, flagged as a likely
+  follow-up.
+
+**Not built:** the drop-back-to-full-height animation on release.

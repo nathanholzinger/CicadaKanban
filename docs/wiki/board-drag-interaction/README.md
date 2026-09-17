@@ -6,13 +6,38 @@ at drag start (`client/src/components/workflow/dragClassification.ts`),
 shown as a `data-drop-state` attribute plus provisional overlays on every
 Card and Stub. **§1–§3 (contexts, popping), §5 (column bands) and §10
 (ordinal preview, reconciliation, per-item sequencing) implemented as of
-Story 3** — the pop machine is `workflow/popSession.ts`, the regions
-`workflow/dragRegions.ts`, the placement layer `workflow/itemListOps.ts`,
-and every threshold and band is a dev/test-panel value
-(`workflow/dragTuning.ts`, toolbar → "Drag tuning"). A Card's context is
-its column region (or sub-row); a *Card* is not yet a context to pop into
-— §6 (attach), §7 (Stub bands) and §8 (detach) are Stories 4–6, and
-dragging a Stub out of its parent stays held closed pending Story 5.
+Story 3, re-planned and rebuilt for Story 4 (2026-09-16)** — the pop
+machine is `workflow/popSession.ts`, the regions `workflow/dragRegions.ts`,
+the placement layer `workflow/itemListOps.ts`, and every threshold and band
+is a dev/test-panel value (`workflow/dragTuning.ts`, toolbar → "Drag
+tuning"). **§6 (attach), narrowed, implemented as of Story 4** — a Card is
+now a full context (§1.1), but its *within-action* is a constant (always
+append as the last child, §6) rather than the full anchor+side ruleset;
+that ruleset — §7 (the Descendants layer's manual hierarchy placement) —
+and §8 (detach) are Stories 5/6's; dragging a Stub out of its parent, or
+placing it anywhere but last inside a Card, stays held closed until then.
+
+**The 2026-09-16 re-plan is a genuine rule change, not just Story 4's
+build catching up to §6.** Working the story with the Product Owner
+surfaced that Story 3's original model — any region's band decides on
+release regardless of whether the drag had ever left its own context —
+produces too many simultaneously-live gesture meanings once a Card is
+also a region: every column's bands *and* every card's attach bands are
+armed at once, all the time. The fix settled on (§1.1, §2, §3) is a strict
+layer stack: **Board → a Column/sub-row → one of its own Cards**, never
+more than one layer away from the locked context, and **a release always
+commits the locked context's own within-action**, full stop, regardless of
+where the bare cursor happens to be resting. A hovered-but-not-locked
+region only ever matters at Board layer (§5) — which is also the only
+layer where the band guides (`BandGuides.tsx`) draw anything.
+
+**Stories 5/6 rules settled with the Product Owner (2026-09-17), not yet
+built:** a fourth layer, **Descendants**, one inside the Card (§1.1) — it
+is where a Stub's drag starts and where manual hierarchy placement lives,
+under a single depth-range rule shared with the project sidebar (§7,
+which replaces the earlier Stub-band draft entirely); the detach path is
+two one-layer pops (§8); and the overflow placeholder (§9) is no longer a
+settled rule — Story 7 decides whether it exists at all.
 
 **Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
 
@@ -50,7 +75,15 @@ something else. There are two kinds:
     context is **the individual sub-row**, not the column containing them.
     Sibling sub-rows are separate contexts, and moving between two sub-rows
     of the same column is a context change like any other.
-- **A Card** — the context for its Stubs (its attached descendants).
+- **A Card** — the context a *Free* Card zooms into from the column/
+  sub-row that contains it (§1.1, Story 4). Its within-action is the
+  auto-drop (§6).
+- **A Card's Descendants** — the context for its Stubs (its attached
+  descendants), one layer inside the Card (§1.1, Stories 5/6). Its
+  within-action is manual hierarchy placement (§7). *(Ruled 2026-09-17.
+  Earlier drafts named the Card itself as a Stub's context; under the
+  layer stack that would leave a Stub no way to be reordered by hand,
+  since the Card layer's within-action is the auto-drop.)*
 
 **A region is a bounded box.** Only the box counts — not the column's
 horizontal stripe above or below it. A column's header and footer, the
@@ -59,10 +92,10 @@ space below the last one are **nowhere**: no region, no context. A region
 is also clipped to what is visible — a sub-row scrolled out of its column's
 view is not a region until it scrolls back in; you can only be in what you
 can see. Resting nowhere pops the card out (§3); releasing nowhere writes
-nothing (§5). A Card's region (§6, Story 4) is the same kind of box,
-hit-tested before the column that contains it — one rule for every region.
+nothing (§5). A Card's region (§6, Story 4) is the same kind of box.
 *(Ruled 2026-09-15, reconciliation #20; built in the Story 3 follow-up
-(2026-09-15) — `dragRegions.ts::regionAt` is now simple containment, and a
+(2026-09-15) — `dragRegions.ts`'s region lookup is now simple containment
+(`nonCardRegionAt`/`cardRegionAt` as of the Story 4 re-plan), and a
 sub-row is clipped to its column's visible scroll box in
 `measureDragRegions`. Story 3 as built had used the column's full
 horizontal stripe with a nearest-sub-row fallback.)*
@@ -70,7 +103,11 @@ horizontal stripe with a nearest-sub-row fallback.)*
 Every drag starts inside exactly one, determined by what the item already
 is and how its column is currently displayed — except a drag picked up
 from Unsorted, which starts popped out with no context (§3). Nothing about
-the drag's start is a user choice.
+the drag's start is a user choice. **A Free Card's drag never starts
+inside a Card** — only a column/sub-row, or (from Unsorted) nowhere; a
+Card is reachable only by zooming in (§1.1, §3). **A Stub's drag starts
+at its parent's Descendants layer** (§1.1, §8), so reordering it among
+its siblings costs no pop at all.
 
 **Why the sub-row and not the column, in expanded mode:** an expanded
 column exists precisely to make each workphase individually targetable. If
@@ -78,6 +115,72 @@ the whole column were the context, moving between its sub-rows would be a
 free in-context reposition — and the workphase distinction the display mode
 was configured to expose would carry no weight during a drag, which is the
 one moment it most needs to.
+
+### 1.1 The board is a strict stack of layers (re-plan, 2026-09-16)
+
+**There are exactly four layers, and a drag is always in exactly one:**
+
+| Layer | Reached from | Zoom-in target | Within-action |
+|---|---|---|---|
+| **Board** | (the top) | a column/sub-row | §5's band, on release |
+| **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — anchor + side |
+| **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (Story 6) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
+| **Descendants** (Stories 5/6) | its own Card, only; or where a Stub's drag starts | *(none)* | manual hierarchy placement — gap + depth (§7) |
+
+*(Three layers as built for Story 4; the Descendants row ruled
+2026-09-17.)* A Card with no attached children has no descendants
+section, so its Descendants layer is unreachable and the auto-drop is its
+only outcome — with nothing to reposition or reparent among, manual
+placement has nothing to offer.
+
+**Three rules govern every transition, settled with the Product Owner
+before Story 4's build:**
+
+1. **A release always commits the locked layer's own within-action** —
+   never a foreign region's, no matter where the bare cursor is resting.
+   This replaces §2/§3's original "the bands are three quick auto-
+   placements for when the cursor is somewhere else" framing: that framing
+   made sense when a bare hover's meaning was independent of whether the
+   drag had ever left its context, but it does not survive a Card also
+   being a region (armed alongside every column's bands, all the time) —
+   see §2.
+2. **Popping is always exactly one layer.** Zooming in reaches only the
+   *next* layer down — Board into a column/sub-row, a column/sub-row into
+   one of *its own* Cards, a Card into its own descendants section — never
+   a foreign column's Card and never two layers in one hop. Popping out
+   always lands on the current layer's own *parent* — Descendants' is its
+   Card, a Card's is the column/sub-row that contains it, **never Board
+   directly**. Moving from one Card to a different one — even a sibling
+   in the same column — always passes back through the column layer
+   first; there is no direct sibling-to-sibling hop. There is likewise no
+   "two layers at once" pop out of Descendants (ruled 2026-09-17): a
+   decisive pull away from the whole Card is expected to satisfy
+   Descendants' and then the Card's pop-out in quick succession through
+   rule 3's distance term, and the intermediate stop at Card layer is a
+   real state, however brief (§8).
+3. **Zooming in is a duration-only signal; zooming out is duration *or*
+   distance**, same as Story 3 already built for the Board ↔ Column/sub-row
+   edge (§3.1). The asymmetry is deliberate: zooming in can mean a
+   reparent, so it earns a sustained, unambiguous hold; zooming out never
+   changes what anything *is*, so a fast, decisive yank is allowed to
+   satisfy it. A "yank a Card's own attach-preview out, and the cursor is
+   already well past the column too" gesture cascades through **two**
+   pops in quick succession as a consequence of rule 2 alone — no special
+   two-layer-skip case is needed: the first pop lands on the containing
+   column, and that column's own zoom-out threshold is then evaluated
+   fresh against the same, still-distant cursor position.
+
+**Because of rule 1, the band guides (§5, `BandGuides.tsx`) only draw
+anything at Board layer.** A locked column/sub-row shows no dashed lines
+on any *other* column, and a locked Card shows nothing at all — there is
+nothing to cue, since nothing about a bare hover elsewhere would change
+what a release does.
+
+**The locked layer itself always gets an outline, at every layer** —
+whichever region or Card is currently `contextKey` (`BandGuides.tsx` for a
+column/sub-row, `KanbanCard.tsx` for a Card), so which layer you're in is
+legible on the board itself, not only from the dev panel's text readout.
+*As built:* `activeContextOutlineColor`, a panel value (§3.1).
 
 ## 2. Default assumption: reposition in place
 
@@ -103,36 +206,57 @@ While the item is in-context:
 - A **ghost** shows the slot it would land in, and a **side highlight** on
   a neighboring item shows which item it is anchoring to and on which side.
 
+**A release always commits the in-context meaning above, no matter where
+the bare cursor is resting** (re-plan, 2026-09-16 — §1.1 rule 1). The card
+never visually leaves its context (it's bounded, per the bullet above), so
+nothing shown ever promises a foreign region's meaning the way a bare
+hover once implied. Reaching any *other* meaning — a column's band (§5), a
+different column/sub-row's in-context placement, a Card's attach (§6) —
+always requires an actual pop first (§3), never just a glance.
+
 ## 3. Popping
 
 **The cursor, not the card, decides whether the context holds.** Because
 the card is axis-locked, the cursor can leave the context while the card
 cannot follow. Popping is two-way, and each way takes its own sustained
-signal (§3.1):
+signal (§3.1), and each way moves exactly one layer of §1.1's stack:
 
 - **Pop out.** When the cursor has stayed *outside* the card's context —
   anywhere: another column, the gap between columns, Unsorted — past the
-  pop-out threshold, the item pops out: it **snaps to the cursor and
-  follows it freely**, belonging to no context. *As built:* a short tween
-  (`popSnapMs`, a panel value; 0 teleports) from where the card was
-  clamped to the cursor, chasing the cursor if it moves meanwhile.
-- **Pop in.** A popped-out item enters a context when the cursor has
-  stayed in that context's *region* past the pop-in threshold and is in
-  the middle band (§5) when the clock runs out — any column, **including
-  the one it just left**. The clock counts time in the region, not in the
-  band: time spent in the top or bottom band counts, and sliding into the
-  middle band after it pops in at once. The item is now positioned within
-  that context under its rules **and bounded by it**, exactly as it was
-  bounded by the origin.
+  pop-out threshold, the item pops out to its **parent layer** (§1.1 rule
+  2): a column/sub-row's parent is Board — the item **snaps to the cursor
+  and follows it freely**, belonging to no context; a Card's parent is the
+  column/sub-row that contains it — the item becomes bounded by *that*
+  instead, still locked, just one layer shallower; Descendants' parent is
+  its Card (§8). *As built:* a short
+  tween (`popSnapMs`, a panel value; 0 teleports) from where the card was
+  clamped to the cursor (or to the new, wider context), chasing it if it
+  moves meanwhile.
+- **Pop in.** From Board, a popped-out item enters a column/sub-row when
+  the cursor has stayed in that context's *region* past the pop-in
+  threshold and is in the middle band (§5) when the clock runs out — any
+  column, **including the one it just left**. From inside a locked
+  column/sub-row, the cursor resting on one of *that column's own* Cards
+  past its own (duration-only, §1.1 rule 3) threshold zooms into it instead
+  (§6) — never a foreign column's Card, and never reachable from Board
+  directly. From inside a locked Card, the cursor resting on *that Card's*
+  descendants section past its own duration-only threshold zooms into
+  Descendants (§7, Story 6). Either way, the clock counts time in the region/Card, not in a
+  band: time spent in the top or bottom band of a column still counts
+  toward its own pop-in, and sliding into the middle band after it pops in
+  at once. The item is now positioned within the new context under its
+  rules **and bounded by it**, exactly as it was bounded by the one before.
 
-A release while popped out still resolves by whatever is under the cursor:
-a column's band (§5), or nothing at all between columns. **The two paths
-are two intents.** Staying in a region long enough says "I want *into* this
-column's context, to choose the position myself" (or, once §6 lands, to go
-on into a card's context). The bands are three quick auto-placements — top,
-bottom, or just "move it here" — for when the column change is what
-matters and the exact position isn't. Popping in is only needed to reach a
-column's *in-context* placement (anchor + side).
+A release while genuinely popped out to Board still resolves by whatever
+column/sub-row is under the cursor: its band (§5), or nothing at all
+between columns — this is Board layer's *own* in-context meaning (§2),
+just phrased as a band instead of an anchor because there's no specific
+card to anchor against yet. Staying in a region long enough says "I want
+*into* this column's context, to choose the position myself" (or, for one
+of its own Cards, to go on and attach into it, §6). The bands are three
+quick auto-placements — top, bottom, or just "move it here" — for when the
+column change is what matters and the exact position isn't. Popping in is
+only needed to reach a column's *in-context* placement (anchor + side).
 
 The one drag that starts without a context is one picked up outside every
 context (Unsorted is drag-source only): it begins popped out.
@@ -159,37 +283,57 @@ comparable — a **distance** term alongside duration (the further outside
 the context the cursor travels, the sooner the pop), *either* threshold
 satisfying rather than both, or a combined function.
 
-*As built (Story 3), ratified 2026-09-15:* two clocks — the **model** is
+*As built (Story 3), ratified 2026-09-15, extended for Story 4's re-plan
+(2026-09-16):* two clocks per edge of §1.1's stack — the **model** is
 settled (pop out, then pop in; a cross-column in-context placement costs
-both, back to back); **neither value is**. Both are being tuned by feel,
-with no target settle time committed. **Pop-out** — starts the moment the
-cursor leaves the context (wherever it goes), resets when it comes back;
-fires once `popDelayMs` has elapsed **or** — when `popDistancePx` is
-non-zero — once the cursor is at least that far outside the context's rect
-(either satisfies; distance ships disabled). **Pop-in** — starts when a
-popped-out card's cursor enters a region (or at the pop-out itself, if the
-cursor is already in one), so the popped-out state always lasts at least
-`popInDelayMs`; fires from the middle band only. The cursor's region is
+both, back to back); **none of the values are**. All are being tuned by
+feel, with no target settle time committed. **Pop-out** (any layer, into
+its parent) — starts the moment the cursor leaves the context (wherever it
+goes), resets when it comes back; fires once `popDelayMs` has elapsed
+**or** — when `popDistancePx` is non-zero — once the cursor is at least
+that far outside the context's rect (either satisfies; distance ships
+disabled). Shared by every layer's pop-out, since zooming out never
+signals a reparent (§1.1 rule 3) — Descendants → Card included, once
+built. **Pop-in, Board → Column/sub-row** —
+starts when a popped-out card's cursor enters a region (or at the pop-out
+itself, if the cursor is already in one), so the popped-out state always
+lasts at least `popInDelayMs`; fires from the middle band only. **Pop-in,
+Column/sub-row → Card** — its own, separate, duration-only clock
+(`cardPopInDelayMs`, no distance term): starts when the cursor rests on
+one of the locked context's own Cards, fires once that alone has elapsed.
+Kept apart from `popInDelayMs` because this edge is the one that can mean
+a reparent — the tuning is free to make it a more deliberate hold than an
+ordinary column pop-in, though nothing requires it. **Pop-in, Card →
+Descendants** (Story 6, not built) — a fourth clock, duration-only,
+starting when the cursor rests on the locked Card's descendants section;
+its own panel value, to be named when built, and free to share a value
+with `cardPopInDelayMs` if the tuning finds no reason to differ. The cursor's region is
 the bounded box of §1 — outside every box, over Unsorted or a broken
-column, the cursor is nowhere and a release there writes nothing. *(Story 3
-as built decided the region by the column's horizontal extent instead, so a
-drag only left a region sideways; superseded by §1's rule in the Story 3
-follow-up (2026-09-15).)*
+column, the cursor is nowhere and a release there writes nothing (subject
+to §2's "always the locked context's own within-action" once anything is
+locked at all). *(Story 3 as built decided the region by the column's
+horizontal extent instead, so a drag only left a region sideways;
+superseded by §1's rule in the Story 3 follow-up (2026-09-15).)*
 
 **The dev/test panel exposing every threshold is a required deliverable of
 this feature, not a debugging convenience.** The correct value can only be
 found by feel, and feel can only be compared by changing one number between
-two attempts without a rebuild. The panel also exposes the band boundaries
-of §5 and §7.1 and the overlay colors of §4. *As built:* the panel's
+two attempts without a rebuild. The panel also exposes §5's carve-out
+reservation height and the overlay colors of §4. *As built:* the panel's
 values persist in `localStorage` under `kanban_drag_tuning` — `popDelayMs`,
-`popDistancePx`, `popInDelayMs`, `popSnapMs`, `columnTopBand`,
-`columnBottomBand`, `stubFirstChildBand`,
-`stubLastChildBand`, `stubPopBandStart`, `stubPopBandEnd`,
-`overlayFreeDescendantColor`, `overlayDepthCappedOpacity` — and tests seed
-that key, so every case runs against the configured value. The panel is a
-tuning-phase tool for the humans doing the tuning: where it lives and who
-sees it is deliberately not specified here, and it is retired once the
-values lock and become constants.
+`popDistancePx`, `popInDelayMs`, `cardPopInDelayMs`, `popSnapMs`,
+`ghostCardHeightPx` (§5's reservation height, replacing the retired
+`columnTopBand`/`columnBottomBand` percentage pair — a percentage of the
+*rendered* slice stopped meaning anything once bands became pixel
+carve-outs measured against real content), `overlayFreeDescendantColor`,
+`overlayDepthCappedOpacity`, `activeContextOutlineColor` (§1.1's locked-
+layer outline) — and tests seed that key, so every case runs against the
+configured value. The panel is a tuning-phase tool for the
+humans doing the tuning: where it lives and who sees it is deliberately not
+specified here, and it is retired once the values lock and become
+constants. *(The retired Stub-band draft's `stubFirstChildBand`/`stubLastChildBand`/
+`stubPopBandStart`/`stubPopBandEnd` were tuning fields in Story 4's first,
+retired trial build — a Card's within-action has no band at all now, §6.)*
 
 Derived test cases should assert *that* a sustained signal pops and a
 momentary one doesn't, parameterized on the threshold — never on 0.5s
@@ -210,6 +354,17 @@ The user should never watch an item settle into a place and then bounce
 back. Validity is decided before the affordance is offered, using the same
 rules the API enforces (see [`../item-attachment/`](../item-attachment/)
 §7–§8).
+
+**One explicit exception (ruled 2026-09-17): a tab state at Descendants
+layer (§7).** A tab state is a discrete depth the ghost snaps to inside a
+context the item is already in, not a target it pops into. An over-cap tab
+state is therefore *reachable* — the ghost renders there with a visible
+invalid cue (look TBD, Story 8) — and a release in it **commits nothing**,
+exactly as if the item had been set back down. The rule above still
+holds for what it was written for: no *context* — a column, a Card — that
+would reject the drop is ever enterable. A cycle needs no cue at all: the
+dragged item's own subtree travels with it and is never a placement
+candidate, so no tab state can make an item its own descendant.
 
 ## 4. Target classification at drag start
 
@@ -269,15 +424,74 @@ front.
 
 ## 5. Card → column region: drop bands
 
-A Card held over a column region resolves by **vertical band**. Per §1, the
-region is the whole column in merged mode and a single sub-row in expanded
-mode; the bands are measured against whichever one applies:
+**This section is Board layer's own within-action (§1.1) — it governs a
+release only while the drag is genuinely popped all the way out, never a
+bare hover while still locked somewhere else (§2 rule 1).** A Card held
+over a column region, at Board layer, resolves by **vertical band**. Per
+§1, the region is the whole column in merged mode and a single sub-row in
+expanded mode; the bands are measured against whichever one applies:
 
 | Band | Meaning |
 |---|---|
-| **Top 20%** | Position **before the first item** in the column. The ghost renders at the top of the list and the band is tinted (below). |
-| **Bottom 20%** | Position **after the last item** in the column. The ghost renders at the bottom of the list and the band is tinted. |
-| **Middle 60%** | **No position change.** An item from elsewhere takes the column's workphase and keeps the position it already has; the ghost renders wherever that existing position places it in this column's order. An item **already in this column** (a covered-set member, §8) released here is simply being set back down — nothing is written. |
+| **Top** (above the top divider) | Position **before the first item** in the column. The ghost renders at the top of the list and the band is tinted. |
+| **Bottom** (below the bottom divider) | Position **after the last item** in the column. The ghost renders at the bottom of the list and the band is tinted. |
+| **Middle** (between the dividers) | **No position change.** An item from elsewhere takes the column's workphase and keeps the position it already has; the ghost renders wherever that existing position places it in this column's order. An item **already in this column or sub-row** — a covered-set member of the region it is released in (§8) — released here is simply being set back down — nothing is written. In an expanded column the region is the sub-row, so a member of sub-row `W2` released in sub-row `W3`'s middle band is a workphase change to `W3`, not a set-down. *(Wording clarified 2026-09-17.)* |
+
+*(Reworked 2026-09-16, addendum to Story 3 below — this replaces the
+original 20/60/20-of-the-rendered-slice model entirely, not just its
+numbers. The semantics above — before-first / after-last / no-change — are
+unchanged; what changed is where the dividers actually sit.)*
+
+**Bands are pixel carve-outs anchored to the region's real content, never a
+fraction of whatever's currently rendered.** Where the dividers sit is
+governed by reservation, not a live measurement:
+
+- **At Board layer, every region reserves exactly one collapsed ghost
+  card's height (`ghostCardHeightPx`, a panel value, default 96px) for the
+  whole life of the drag**, so a region's total size never changes as the
+  drag moves around the board — only *where* the reservation currently is.
+- **Not the live hover target:** the reservation is two half-height dead
+  zones carved out of the region's own real content — its cards shift down
+  by half a ghost-height to open them — labeled **"Move Top"** / **"Move
+  Bottom."** (No "Move Auto": a middle release needs no label of its own,
+  since in-context hovering already reads as "keep this position.")
+- **The live hover target** (about to be committed on release, though not
+  yet locked in): the dead zones collapse and a real ghost — the ordinal
+  placement of §10 — fills the same reserved height instead, at the same
+  fixed divider offsets. **Hovering takes over the reservation; it doesn't
+  add to it — net height never changes.**
+- The carve is measured against the region's real content, **never the
+  visible-scrolled slice** — sharper than §1's "clipped to visible," which
+  governs only whether the cursor is *in* the region at all. A divider
+  scrolled out of view is neither drawn nor reachable until the cursor (or
+  the page) scrolls to it.
+
+**The divider lines sit a full `ghostCardHeightPx` in from each edge,
+regardless of the half-height dead zone — and for two or more cards this
+deliberately bisects the first and last rendered card.** That's
+intentional, not a bug: the dead zone shifts the real cards down by only
+*half* a ghost-height, so a divider a *full* ghost-height from the edge
+falls at the vertical midpoint of the card now sitting there (a real
+card's own height only approximates `ghostCardHeightPx` — close enough for
+the geometry, not pinned to it, see §5a). Exactly where the line crosses a
+card is cosmetic; what a release above or below it means is not.
+
+**Exactly one card in a region halves the edge too**, instead of the
+normal full height, so the card stays a real, unlabeled middle band rather
+than being bisected with nothing left on either side of the cut (Product
+Owner special rule, 2026-09-16).
+
+**A genuinely empty region collapses to a single band spanning its own
+height**, labeled **"Move to {name}"** — there's no "first" or "last" to
+carve two dead zones around.
+
+**The reserved space exists only at Board layer, and it collapses, not
+merely hides, everywhere else.** §1.1 already states that the drawn guides
+disappear the moment anything is locked (this region or a different one) —
+that's a claim about the *cues*. This is a separate claim about the
+*layout*: the carve-out and its dead zones vanish entirely the same
+moment, and cards render back-to-basics adjacent with no reserved gap left
+behind.
 
 **The middle band is also the pop-eligible zone.** Holding there pops the
 Card into the column — out of its old context first, then in (§3: two
@@ -286,31 +500,46 @@ it is positioned by ordinary anchor+side hovering rather than by band.
 Releasing without holding, or after popping out but before popping in,
 commits the band's meaning.
 
-**Band boundaries are dev/test-panel values**, same as the pop threshold —
-20/60/20 is a starting point to tune, not a settled constant.
+**The reservation height is a dev/test-panel value**, same as the pop
+thresholds — `ghostCardHeightPx`'s default (96px) is a starting point to
+tune, not a settled constant; both dividers and both dead-zone heights all
+derive from this one value rather than being independently tunable.
 
-**A band is measured against the region's rect as it was when the cursor
-entered it**, for as long as the cursor stays. The ghost's own insertion
-grows the hovered list — and in an expanded column moves the sub-rows
-below it — so measuring against the live rect would let the drop change
-the band it is about to be resolved by. **The freeze is against the
-ghost's insertion only: the frozen rect follows scroll.** It is held in
-scroll-content coordinates and translated by the live scroll offset, so
-auto-scrolling a long column moves the band with the sub-row it belongs
-to rather than leaving it behind. *(Frozen rect settled in Story 3;
-scroll-following ruled 2026-09-15, reconciliation #20/#21, built in the
-Story 3 follow-up (2026-09-15) — `popSession.ts`'s `PopHover` carries the
-region's scroll offset alongside the frozen rect and translates the rect
-by the change in it each sample, so a real scroll carries the band with it
-while the ghost's own insertion still can't move it.)*
+**A band is measured against the region's content rect as it was when the
+cursor entered it**, for as long as the cursor stays. The ghost's own
+insertion grows the hovered list — and in an expanded column moves the
+sub-rows below it — so measuring against the live rect would let the drop
+change the band it is about to be resolved by. **The freeze is against
+that insertion only: the frozen rect follows everything else that can move
+the region — a real scroll, or a sibling region's own carve-out reflow.**
+Two sub-rows of the same expanded column share one scrolling body, and
+each independently reserves or releases a ghost-height of space at Board
+layer (above); one doing so can shift the other's top edge with no scroll
+involved at all. `popSession.ts::followRegionTop` doesn't try to tell a
+real scroll apart from a sibling's reflow — it re-measures the region's own
+top edge each sample and translates the frozen rect by however far that
+moved, catching both causes in one comparison while staying inert to the
+one cause that must never move it (the hovered region's *own* insertion,
+which only ever grows its bottom edge, never its top). *(Frozen rect
+settled in Story 3; generalized to scroll in the Story 3 follow-up
+(2026-09-15, reconciliation #20/#21); generalized again to sibling reflow
+in the 2026-09-16 addendum below, replacing the plain scroll-offset
+translation the follow-up had built.)* Merged columns needed no separate
+case added for this: their region now sits inside the same scrolling body
+a sub-row's already did (moved off a non-scrolling wrapper around it, in
+the same addendum), so a merged column tracks scroll exactly as a sub-row
+does — and, as a side effect, a short column's bottom band no longer
+strands itself far below the last card, since the region now sizes to its
+own content instead of the column's full available height.
 
-**The bands are shown while a Card is carried** (`BandGuides.tsx`, added
-after Story 3's hands-on): every region the card doesn't currently belong
-to draws two subtle dashed lines at the boundaries, and the region the
-cursor is in tints the band the cursor is in — drawn from the same frozen
-rect the drop resolves against. The card's own context draws nothing:
-in-context there are no bands, and the absence of lines says so. Look is
-provisional (Story 8).
+**The bands are shown only at Board layer** (`BandGuides.tsx`, added after
+Story 3's hands-on, re-scoped in the Story 4 re-plan 2026-09-16): while
+genuinely popped out, every column/sub-row draws two subtle dashed lines
+at the boundaries, and the one the cursor is in tints the band the cursor
+is in — drawn from the same frozen rect the drop resolves against. The
+moment the drag is locked into anything — a column/sub-row *or* a Card —
+every guide disappears: there are no bands to cue there (§2), and the
+absence of lines says so. Look is provisional (Story 8).
 
 **Merged columns:** an item moved into a column covering multiple
 workphases takes the **first workphase in the column's range**. The
@@ -333,10 +562,62 @@ as a workphase change; ordering there is by completion time.
 (A done *Card's* Stubs do keep positions, and **are** anchorable — §7
 applies inside a done card normally.)
 
+**A terminal (done) region collapses to a single band on the board itself,
+unconditionally, regardless of card count** — the same single-band
+treatment as a genuinely empty region above, labeled by the workphase's own
+name. New as of the 2026-09-16 addendum: previously "done" only changed
+what a release *resolved to* (the rule above); now it also changes the
+*geometry* a carried card sees while hovering, for the same reason —
+there's nothing to place a positioned insert against. Not crucial as
+labeled; done/terminal handling gets a fuller rework in Epic 4
+([[project_epic4_done_column_rework]]).
+
+## 5a. The dragged card's own visual collapse
+
+**Both visible copies of a Card being dragged — the floating DragOverlay
+copy and the in-place row at its own slot — render identically collapsed**
+for the life of the drag, regardless of which layer it's locked into or
+whether it's genuinely popped out:
+
+- **Title** truncates to one line.
+- **Description** clamps to exactly one line, with the space reserved even
+  when the item has no description at all — so the collapsed height
+  doesn't vary on whether a description happens to be set.
+- **The attached-children indicator and count are fully suppressed** — not
+  shown collapsed, not shown dimmed, simply gone from both copies. This
+  means **an item's own attached children go completely unrendered, not
+  merely visually hidden, for as long as that item is being dragged** — a
+  deliberate side effect, not an oversight.
+
+**Why:** a card's real height is otherwise unbounded (a long description,
+many attached children), which is what §5's carve-out geometry treats as
+only an *approximation* of `ghostCardHeightPx` rather than an exact match.
+Collapsing both copies to a fixed, predictable shape keeps that
+approximation close, so the reservation doesn't visibly mismatch the thing
+it's reserving space for.
+
+**On drop, the ghost expands back to full height instantaneously** — no
+animation yet. Flagged as a likely follow-up if this collapsed treatment
+sticks, not decided as final.
+
 ## 6. Card → Card: attach
 
-**Dropping a Card onto another Card attaches it as a Stub at the dropped
-slot, inheriting the new parent's workphase.**
+**Dropping a Card onto another Card attaches it as a Stub, inheriting the
+new parent's workphase.** As built for Story 4 (narrowed scope, re-plan
+2026-09-16): **always as the last child** — no band, no anchor, no choice
+of position among the parent's existing Stubs. This is the Card layer's
+**auto-drop**, and it has exactly two cases (ruled 2026-09-17):
+
+- an item brought into the Card **from outside** — a Free Card, or a Stub
+  detached from another parent — is attached as the **last child**;
+- the Card's **own Stub**, popped out of Descendants to the Card layer and
+  released there (§8), is **set back down where it was picked up** —
+  nothing is written.
+
+Placing an item as some Stub's *first* child is a different gesture — the
+manual tabbed-right placement at Descendants layer (§7) — not a variant
+of the auto-drop. Any position among the parent's children is Story 6's
+Descendants layer, reached only by zooming one layer further in.
 
 This is the headline gesture of the epic. Its consequences — the attach,
 the reparent, the workphase inheritance, the `projectId` cascade if the two
@@ -349,8 +630,8 @@ reads as "inserting between these two" — the very gesture attaching has to
 be told apart from. **The pop threshold is what separates them**, not
 geometry: hovering between two cards is a reposition no matter how precise
 the aim, and entering a card's context requires the sustained signal of
-§3.1. Insertion is the default because it's the common case; nesting costs
-a deliberate hold.
+§1.1 rule 3 (`cardPopInDelayMs`, duration-only). Insertion is the default
+because it's the common case; nesting costs a deliberate hold.
 
 This is why §2's "assume reposition" bias and §3.1's "never incidental"
 rule carry real weight here — they are the answer to this ambiguity, not
@@ -358,52 +639,155 @@ general principles that happen to apply. The remaining work is making the
 moment of transition *legible* (Story 8's cue polish), not deciding what it
 means.
 
-## 7. Stub drop bands and hierarchy placement
+**As built:** the carried card keeps following the cursor while locked
+into the target Card's context (bounded to its box, same "clamped, not
+frozen" treatment as any other locked context, §2) — it's the *ghost*
+(the placement preview among the target's Stubs) that's pinned, always at
+the last position, never tracking where inside the card the cursor
+happens to be. This is what keeps the moment legible even before Story 8's
+cue polish: since the within-action can't change no matter where the
+cursor rests, nothing about the preview is left to promise otherwise.
 
-### 7.1 Bands, when dropping onto a Card as a child
+## 7. The Descendants layer: manual hierarchy placement
 
-| Band | Meaning |
-|---|---|
-| **Top 50%** | Place as the **first child**. |
-| **Bottom 50%** | Place as the **last child**. |
-| **Middle 60%** (i.e. 20%–80%), held past the threshold | **Pop** into the full hierarchy context, where §7.2's three-way ruleset applies. |
+**Not yet built (Story 6).** The Descendants layer is one inside a Card
+(§1.1): a Free Card reaches it by zooming into the Card and then holding
+over its descendants section; a Stub's drag *starts* here (§1, §8). Its
+within-action is precise placement in the parent's hierarchy — the same
+ruleset as the project sidebar, deliberately, and Story 6 consolidates the
+two into one shared library. From the Card layer down the carried item is
+represented as a Stub-ghost.
 
-**These bands overlap on purpose.** The 20–50% and 50–80% regions are
-simultaneously quick-drop regions and pop-eligible regions. **The overlap
-is resolved by time, not by geometry:** release immediately and the
-quick-drop meaning commits; hold and it pops into precise placement.
+*(Ruled 2026-09-17, replacing the earlier draft of this section entirely.
+That draft had a Card-level Stub band — top half "first child," bottom
+half "last child," middle "hold to pop into the hierarchy" — and a
+three-option placement rule. There is no band: a Card's within-action is
+the auto-drop (§6), and placement here is a **range** of depths, not
+three fixed options. `stubFirstChildBand`/`stubLastChildBand`/
+`stubPopBandStart`/`stubPopBandEnd` were tuning fields in Story 4's
+first, retired trial build and no longer exist.)*
 
-This is the same shape as the column's middle band (§5) — a coarse default
-that's instantly available, with precision reachable by waiting. A user who
-knows where they want it doesn't have to aim; a user who needs precision
-doesn't have to give up.
+### 7.1 Gap and depth
 
-**These boundaries are dev/test-panel values too.** 50/50 and the 60%
-overlap are starting points to tune alongside the pop threshold, not
-settled constants.
+With full context of the hierarchy, the ghost sits in a **gap** between
+two rendered items, chosen by vertical position: **Top**, the item it will
+sit directly under, and **Bottom**, the item it will sit directly above.
+**Horizontal offset** then picks a depth from a range of discrete tab
+states — depth counted the way the rest of this wiki counts it, increasing
+as you tab **right** (deeper):
 
-### 7.2 Three-way placement inside a hierarchy
+> **range = [ Bottom's depth … Top's depth + 1 ]**
 
-Once popped into a hierarchy context, placement uses the **same ruleset as
-the project sidebar**, deliberately — it's an interaction users already
-know from that tree:
+- **Top's depth + 1** — tabbed once right of Top: the item becomes
+  **Top's first child**. To land anywhere else among Top's children, the
+  user anchors against one of those children instead — never directly
+  under the parent.
+- **Top's depth** — aligned with Top: the item becomes Top's sibling,
+  positioned **just after Top** — which means after Top's *entire
+  subtree* in render order, since that is where the gap is.
+- **Each shallower level**, down to Bottom's depth — tabbed left of Top:
+  walk Top's ancestors. One tab left → sibling of Top's parent, just after
+  it (after *its* subtree); two tabs left → sibling of Top's grandparent;
+  and so on. The shallowest of these, at Bottom's depth, is the same
+  placement as "Bottom's sibling, just before it" — the client sends one
+  relation, and the result is identical either way.
+- **Nothing shallower than Bottom.** That would make the item Bottom's
+  ancestor. An item may choose its parent; it may never choose its
+  children.
 
-1. **Above an anchor** → sibling; inherits the anchor's parent.
-2. **Below an anchor** → sibling; inherits the anchor's parent.
-3. **Below an anchor, indented right** → **child of** the anchor.
+By and large the item is being placed somewhere in Top's hierarchy — as
+its child, its next sibling, or the next sibling of one of its ancestors.
+Bottom only caps how far left the walk can go.
 
-Options 2 and 3 occupy the same vertical position and are distinguished by
-**horizontal cursor offset**, exactly as in the sidebar.
+**Worked example.** With the parent's hierarchy rendered as `S1 › S1a ›
+S1a1`, then `S2` at the top level, the gap between `S1a1` (Top, depth 2)
+and `S2` (Bottom, depth 0) offers exactly four states: depth 3, child of
+`S1a1`; depth 2, after `S1a1` under `S1a`; depth 1, after `S1a` under
+`S1`; depth 0, after `S1` — a.k.a. before `S2`. The gap directly beneath
+`S1a` (Bottom `S1a1` is Top's own child) offers exactly **one** state:
+first child of `S1a`, before `S1a1`. Note that "sibling after `S1a`" is
+*not* reached from the gap under `S1a`; it is reached from the gap below
+the last item of `S1a`'s subtree, tabbed to `S1a`'s depth.
+
+**Boundaries.**
+
+- **Above the first item** (no Top): one state, at Bottom's depth — the
+  first child of the root.
+- **Below the last item** (no Bottom): every state from the root's depth
+  up to Top's depth + 1. If the last item is nested, that includes a
+  sibling placement after each of its ancestors.
+- **An empty hierarchy** (no Top, no Bottom): one state — the root's sole
+  child. On the board this never arises as a Descendants layer (a
+  childless Card has none, §1.1); in the project sidebar it does.
+- **Offsets past either end clamp** to the nearest valid state. No offset
+  produces "no state."
+
+**The root, per context.** The range is floored at the hierarchy's root:
+the project in the sidebar; on the board, the Card `P` whose Descendants
+layer this is, so the shallowest level anywhere is *`P`'s own children*.
+An item can never be tabbed out of `P` — leaving `P` is a zoom-out (§8),
+not a tab state.
+
+### 7.2 What travels with the item, and what's invalid
+
+**The dragged item carries its whole subtree.** The item and its
+descendants are removed from the Top/Bottom candidates before any gap is
+computed, so no tab state can make an item a child of its own descendant —
+a cycle is structurally unreachable, not merely disallowed.
+
+**The depth cap is checked per tab state, against the deepest descendant,
+at absolute depth.** A state's resulting depth is `P`'s absolute depth in
+the workflow plus the relative depth, plus the dragged subtree's height
+([`../item-attachment/`](../item-attachment/) §8). A state that would
+exceed `ITEM_DEPTH_CAP` is still reachable — the ghost snaps there with a
+visible invalid cue (look TBD, Story 8) — and a release in it **commits
+nothing**, the same as setting the item back down where it was picked
+up. This is the one exception to §3.2's "never enterable," for the
+reason given there. Sibling states in the same gap that do fit stay
+valid; validity is per state, never per gap.
+
+**Without full context** — a hierarchy the UI knows is partial — only the
+basic anchor+side relation against a visible item is offered; the walk
+and the concatenation above depend on knowing nothing is missing between
+Top and Bottom. Whether the board ever shows a partial hierarchy is Story
+7's question (§9).
 
 ## 8. Stub → out: detach
 
-**A Stub can be dragged out of its parent Card.** Popping out of the parent
-context makes the item Free; it lands where it is dropped and is positioned
-by whatever context received it.
+**A Stub can be dragged out of its parent Card.** Its drag starts at the
+parent's Descendants layer (§1.1), so the common case — reordering it
+among its siblings, or moving it under a sibling — is the within-action
+there (§7) and needs no pop at all. Leaving the parent is a zoom-out, and
+by §1.1 rule 2 it is **two one-layer pops** (ruled 2026-09-17):
 
-Its relationship to its former parent is **preserved** — detaching is not
-un-parenting. The exception is landing inside a different parent's context,
-which is a reparent. See [`../item-attachment/`](../item-attachment/) §11.
+1. **Descendants → Card** — the cursor rests outside the descendants
+   section (still inside the Card's box) past the shared pop-out
+   threshold (§3.1). The item is now at the parent's Card layer, still
+   attached, bounded by the Card.
+2. **Card → column/sub-row** — the cursor rests outside the Card's box
+   past the same threshold. The item is now **Free**: it arrives locked in
+   the column that contains the Card, represented as a Card rather than a
+   Stub, and is positioned by that column's within-action (anchor + side)
+   — or, after a further pop out to Board, by any column's band (§5).
+
+There is no special "two layers at once" rule. The distance term of the
+pop-out clock (§3.1) is expected to do that work: a decisive pull away
+from the whole Card is already far outside the descendants section *and*
+far outside the Card, so the first pop fires and the second, evaluated
+fresh against the same distant cursor, fires right behind it.
+
+**The intermediate stop at Card layer is a real state, though not one the
+user is expected to linger in.** A release there is the Card layer's
+auto-drop (§6), and for the Card's own Stub that means **set it back down
+where it was picked up — nothing is written**. (An item brought in from
+*outside* the Card auto-drops as the last child; what distinguishes the
+two is where the drag started, not anything about the release.)
+
+Once Free, the item's relationship to its former parent is **preserved** —
+detaching is not un-parenting. The exception is zooming into a different
+Card, which is a reparent: the item arrives from outside and auto-drops as
+that Card's last child (§6), or goes on into its Descendants for a precise
+slot (§7). See [`../item-attachment/`](../item-attachment/) §11.
 
 **Detaching in place keeps the inherited workphase.** A Stub's workphase is
 already its parent's, so it is already a member of the covered set of the
@@ -415,19 +799,18 @@ wasn't already in. This matters for a parent sitting in a *non-entry*
 workphase of a merged column: detaching its child in place must not
 silently walk that child back to the entry workphase.
 
-This direction is currently held closed in the board's drag layer; this
-epic opens it.
+This direction is currently held closed in the board's drag layer; Story 5
+opens it.
 
-## 9. Depth overflow: "See X children"
+## 9. Depth overflow
 
-A Card whose descendant hierarchy is too deep to list shows a placeholder —
-**"see X children"** — in place of the remaining Stubs.
-
-- **Clicking it** opens a wider modal showing the full hierarchy.
-- **Dragging a Stub over it** and holding past a threshold opens the same
-  modal mid-drag, so a drag can reach into the overflow without being
-  restarted.
-- Inside the modal, §7.2's placement ruleset applies unchanged.
+**Not a settled rule as of 2026-09-17 — see Open questions.** An earlier
+draft of this section specified a "see X children" placeholder for a Card
+whose hierarchy is too deep to list, opening a wider modal on click or on
+a held drag-over. Story 7 will decide between that and simply restricting
+the hierarchy to the depth the UI has room to display; nothing here is
+derivable until it does. Whatever lands, §7's placement rule applies
+unchanged inside any surface that shows the hierarchy.
 
 ## 10. Optimistic preview, reconciliation, and failure
 
@@ -519,7 +902,12 @@ provisional values (§3.1).
 
 - **Overlay visual treatment (§4).** Classification is settled; palette,
   weight, and animation are deferred until there are real gestures to tune
-  them against.
+  them against. The invalid-tab-state cue of §7.2 belongs to the same
+  Story 8 pass.
+- **Depth overflow (§9, Story 7).** Whether a too-deep hierarchy gets a
+  "see X children" placeholder and modal, or the hierarchy is simply
+  capped at what the UI can display. Until decided, the board is assumed
+  to show a Card's hierarchy with full context (§7.2).
 - **Free-item reparent as a board gesture.** Would add a third drop-meaning
   to disambiguate here. See [`../item-attachment/`](../item-attachment/)
   Open questions.
