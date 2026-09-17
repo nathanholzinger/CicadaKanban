@@ -1,8 +1,21 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { dragTo, pickUp, hoverTo, release, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
+import {
+  dragTo,
+  pickUp,
+  hoverTo,
+  release,
+  center,
+  topQuarter,
+  bottomQuarter,
+  pastColumnEnd,
+  awaitDragState,
+  gapBetween,
+} from '../helpers/dragGesture';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
 import { API } from '../helpers/api';
+import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
 
 const PROJECT_NAME = 'Repositioning DnD Project';
 
@@ -49,6 +62,26 @@ const PROJECT_NAME = 'Repositioning DnD Project';
 
 let scenario: RepositioningScenario;
 
+// A cross-column release only resolves by the target's band once the drag
+// has actually reached Board layer (docs/wiki/board-drag-interaction §1–§3,
+// re-planned 2026-09-16) — still locked to its origin column, a release
+// commits *that* column's own reorder instead, no matter what a bare hover
+// is resting on. Seeded short so the cross-column cases below (2, 4, 5) can
+// deliberately pop out; long enough on the pop-*in* side that resting in a
+// target column's own middle band never completes a second, unwanted pop
+// into full anchor+side placement before the test releases. `cardPopInDelayMs`
+// is a separate clock again (Story 4, re-plan 2026-09-16) — several cases
+// here (1.a/2.a skipped aside, 3.a/3.b/4.b) briefly hover a sibling card
+// in-context right before releasing, which is enough to accumulate toward
+// it even though none of these are about attaching; kept absurdly high for
+// the same reason. Same-column cases (1, 3) never leave their own context
+// at all, so none of this affects them either way.
+const TUNING = { ...DEFAULT_DRAG_TUNING, popDelayMs: 150, popInDelayMs: 30_000, cardPopInDelayMs: 30_000 };
+
+async function popOutFully(page: Page) {
+  await awaitDragState(page, 'popped-out', TUNING.popDelayMs + 2000);
+}
+
 test.beforeEach(async ({ request, page, projectSidebar }) => {
   await resetAndSeedDb();
   scenario = await seedRepositioningScenario(request, PROJECT_NAME);
@@ -64,6 +97,10 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
     data: { boardId: boards[0].id, startWorkphaseId: scenario.colTwoPhase.id, endWorkphaseId: scenario.colTwoPhase.id },
   });
 
+  await page.addInitScript(
+    ([key, value]) => localStorage.setItem(key, value),
+    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(TUNING)] as const,
+  );
   await page.goto('/');
   await projectSidebar.select(PROJECT_NAME);
   await page.locator('main').getByRole('button', { name: 'Board' }).click();
@@ -139,7 +176,13 @@ test.describe('2: extreme boundary moves into column 2', () => {
   test('2.b — drag C below card D, into the empty column space', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const colTwo = page.getByRole('group', { name: 'Column Two' });
-    await dragTo(page, cardC, () => pastColumnEnd(colTwo));
+    // C starts locked to Column One — pop out to Board layer first, or a
+    // release there commits Column One's own reorder instead (re-plan
+    // 2026-09-16).
+    await pickUp(page, cardC);
+    await hoverTo(page, await pastColumnEnd(colTwo));
+    await popOutFully(page);
+    await release(page);
 
     await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
 
@@ -194,14 +237,29 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
   test('4.a — drag C to the bottom quarter of card B', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const cardB = page.getByRole('article', { name: 'Item B', exact: true });
-    await dragTo(page, cardC, () => bottomQuarter(cardB));
+    const colOne = page.getByRole('group', { name: 'Column One' });
+    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    // C starts locked to Column One — pop out to Board layer first, or a
+    // release there commits Column One's own reorder instead (re-plan
+    // 2026-09-16). Popping out while the pointer rests *outside* Column
+    // Two (the gap) rather than already inside it matters here: Column Two
+    // only carves out its own top/bottom dead zone once it's a Board-layer
+    // region no one is hovering yet (Story 8) — arriving already inside it
+    // the moment it *becomes* one skips straight to "hovered", freezing
+    // its band math against a shape one card-height short of what it
+    // assumes.
+    await pickUp(page, cardC);
+    await hoverTo(page, await gapBetween(colOne, colTwo));
+    await popOutFully(page);
+    await hoverTo(page, await bottomQuarter(cardB));
+    await release(page);
 
-    // A cross-region release (Story 3): unless C has popped into Column Two
-    // first, the drop is resolved by Column Two's *band* at the pointer —
-    // top → before its first card, bottom → after its last, middle →
-    // workphase-only — not by which half of B the pointer is over, so it
-    // can't land C between B and D the way the API suite's 4.a does.
-    // Expected to fail on position and/or order.
+    // Once at Board layer, unless C has popped *into* Column Two too, the
+    // drop is resolved by Column Two's *band* at the pointer — top → before
+    // its first card, bottom → after its last, middle → workphase-only —
+    // not by which half of B the pointer is over, so it can't land C
+    // between B and D the way the API suite's 4.a does. Expected to fail on
+    // position and/or order.
     await expect.poll(async () => (await getC(request)).position).toBe(3.0);
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colTwoPhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colTwoPhase.id)).toBe('BCD');
@@ -211,7 +269,21 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
   test('4.b — drag C onto card D', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const cardD = page.getByRole('article', { name: 'Item D', exact: true });
-    await dragTo(page, cardC, () => center(cardD));
+    const colOne = page.getByRole('group', { name: 'Column One' });
+    const colTwo = page.getByRole('group', { name: 'Column Two' });
+    // Same reasoning as 4.a — pop out via the gap, not from already inside
+    // Column Two, so its own carve-out has a chance to exist before this
+    // becomes the region it's frozen against.
+    await pickUp(page, cardC);
+    await hoverTo(page, await gapBetween(colOne, colTwo));
+    await popOutFully(page);
+    // topQuarter, not center: with only 2 cards in Column Two, the middle
+    // band's own bottom boundary deliberately cuts across D's own center
+    // (Story 8's "the divider bisects the last rendered card" rule for a
+    // 2+-card region) — D's exact center is the one point guaranteed to
+    // sit right on that line, not safely inside the band either side of it.
+    await hoverTo(page, await topQuarter(cardD));
+    await release(page);
 
     // "Before D" maps cleanly onto the existing before-only primitive, and
     // the bounding pair (B, D) happens to resolve to C's own original value
@@ -247,9 +319,17 @@ test.describe('5: an abandoned drop must not strand the cross-column preview', (
     const colTwo = page.getByRole('group', { name: 'Column Two' });
     await pickUp(page, colOne.getByRole('article', { name: 'Item C', exact: true }));
     await hoverTo(page, await center(colTwo));
+    // C starts locked to Column One — the live cross-column preview only
+    // shows once the drag has actually popped out to Board layer (re-plan
+    // 2026-09-16); still locked, the ghost stays put in Column One.
+    await popOutFully(page);
     // The live preview: C is now drawn in Column Two mid-drag.
     await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
 
+    // Unsorted registers no region at all (wiki §1) and Item U carries no
+    // workphase either, so this stays Board layer, over nothing — never
+    // popping *into* Column Two, which would otherwise make the release
+    // commit there instead of writing nothing.
     await hoverTo(page, await center(unsorted.getByRole('article', { name: 'Item U', exact: true })));
     await release(page);
 

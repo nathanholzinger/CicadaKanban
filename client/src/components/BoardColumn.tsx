@@ -8,10 +8,10 @@ import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
 import { subrowContainerId } from './workflow/boardDndUtils';
-import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from './workflow/dragRegions';
-import { useIsCardBeingDragged } from './workflow/DragSessionContext';
+import { columnRegionKey, subrowRegionKey } from './workflow/dragRegions';
+import { useDragSession, useIsCardBeingDragged } from './workflow/DragSessionContext';
 import InlineItemForm from './InlineItemForm';
-import { BandGuides } from './BandGuides';
+import { DragCarveFrame } from './BandGuides';
 import { DragHandleIcon } from './icons';
 
 const COLUMN_TITLE_BASE = 'truncate text-sm font-semibold tracking-wide text-zinc-300';
@@ -47,6 +47,7 @@ export default function BoardColumn({
   const [isAdding, setIsAdding] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const isCardBeingDragged = useIsCardBeingDragged();
+  const session = useDragSession();
 
   const { setNodeRef, transform, transition, isDragging, isOver, attributes, listeners } = useSortable({
     id: column.id,
@@ -70,6 +71,29 @@ export default function BoardColumn({
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
   const regionKey = column.displayMode === 'merged' && !column.broken ? columnRegionKey(column.id) : undefined;
+  // Computed once — used either bare or wrapped in DragCarveFrame below,
+  // and building it twice would double-register the same sortable ids. Its
+  // own flex/gap (mirroring WorkphaseCardList's `list`) is self-contained
+  // rather than relying on COLUMN_BODY_BASE's gap-2 — DragCarveFrame's own
+  // wrap div sits between them and isn't itself a flex container, since its
+  // carve-out math depends on a plain `relative` box with no extra spacing.
+  const mergedCards = (
+    <div className="flex flex-col gap-2">
+      <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+        {mergedItems.map(item => (
+          <KanbanCard
+            key={item.id}
+            item={item}
+            itemTypes={itemTypes}
+            childCount={childCounts[item.id] ?? 0}
+            getAttachedChildren={getAttachedChildren}
+            defaultExpanded={defaultExpanded}
+            onCardClick={onCardClick}
+          />
+        ))}
+      </SortableContext>
+    </div>
+  );
 
   function handleItemSubmit(title: string, type: string | null): boolean {
     onCreateItem(column.entryWorkphaseId, title, type);
@@ -127,15 +151,16 @@ export default function BoardColumn({
 
       {deleteError && <p className="mb-2 px-1 text-[11px] text-red-400">{deleteError}</p>}
 
-      {/* Body — a merged column's body is one drag region (wiki board-drag-
-          interaction §1); an expanded column's sub-rows each register their
-          own below, and its wrapper is Inert. A broken column registers none.
-          The region is the wrapper, not the scrolling body inside it, so the
-          band guides sit over the visible box rather than scrolling away. */}
-      <div
-        {...(regionKey ? { [DRAG_REGION_ATTR]: regionKey } : {})}
-        className="relative flex min-h-[120px] flex-1 flex-col"
-      >
+      {/* Body — a merged column's card list is one drag region (wiki
+          board-drag-interaction §1); an expanded column's sub-rows each
+          register their own below, and its wrapper is Inert. A broken
+          column registers none. The region sits *inside* the scrolling
+          body (Story 8 re-plan) rather than being a non-scrolling wrapper
+          around it, so it's found as a real scroll ancestor the same way a
+          sub-row's already is, and sizes to its own content rather than
+          the column's available height — a short column no longer strands
+          its bottom band far below the last card. */}
+      <div className="relative flex min-h-[120px] flex-1 flex-col">
         <div
           className={`${COLUMN_BODY_BASE} ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}`}
         >
@@ -157,20 +182,23 @@ export default function BoardColumn({
             ))
           ) : (
             <>
-              <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                {mergedItems.map(item => (
-                  <KanbanCard
-                    key={item.id}
-                    item={item}
-                    itemTypes={itemTypes}
-                    childCount={childCounts[item.id] ?? 0}
-                    getAttachedChildren={getAttachedChildren}
-                    defaultExpanded={defaultExpanded}
-                    onCardClick={onCardClick}
-                  />
-                ))}
-              </SortableContext>
-              {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && (
+              {regionKey ? (
+                <DragCarveFrame
+                  regionKey={regionKey}
+                  cardCount={mergedItems.length}
+                  isTerminal={columnIsTerminal}
+                  targetLabel={column.displayName}
+                >
+                  {mergedCards}
+                </DragCarveFrame>
+              ) : (
+                mergedCards
+              )}
+              {/* Story 8's own "Move to {name}" carve (above) takes over
+                  this same message during a Card drag; a Stub drag never
+                  reaches the pop machine at all (DragSessionContext.ts), so
+                  this is still what it — and no drag at all — falls back to. */}
+              {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && !session?.pop && (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-xs text-zinc-600">Drop cards here</p>
                 </div>
@@ -178,7 +206,6 @@ export default function BoardColumn({
             </>
           )}
         </div>
-        {regionKey && <BandGuides regionKey={regionKey} />}
       </div>
 
       {/* Add item form */}
@@ -247,6 +274,7 @@ function ExpandedSubRow({
       isOver={isOver}
       isCardBeingDragged={isCardBeingDragged}
       regionKey={regionKey}
+      isTerminal={Boolean(workphase.isTerminal)}
     />
   );
 }

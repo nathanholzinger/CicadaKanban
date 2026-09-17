@@ -149,7 +149,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     setList(s => completeItemWrite(s, item));
   }
 
-  const childCounts = computeChildCounts(items);
+  const childCounts = computeChildCounts(items, placements);
 
   return {
     items,

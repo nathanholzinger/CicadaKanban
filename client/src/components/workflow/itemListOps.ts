@@ -35,6 +35,15 @@ export interface Placement {
    * when the list doesn't change.
    */
   workphaseId?: string;
+  /**
+   * Story 4: previewed as a Stub of this Card, overriding the
+   * item's own attachment for rendering purposes only — exactly as
+   * `workphaseId` overrides column membership above, and never touching
+   * real data. Explicit `null` previews detaching to Free (Story 5);
+   * omitted means "no opinion, use the item's own data" (`isStub`/its real
+   * `parentId`).
+   */
+  parentId?: string | null;
   slot: PlacementSlot;
 }
 
@@ -61,6 +70,28 @@ const NO_PLACEMENTS: Placements = new Map();
 // one, else its own. Membership only; the item's data is untouched.
 export function renderedWorkphaseId(item: Item, placements: Placements): string | null {
   return placements.get(item.id)?.workphaseId ?? item.workphaseId;
+}
+
+// The parent an item is *rendered* under (Story 4 planning) — its
+// placement's, if the placement carries an opinion, else its own. A
+// placement's `parentId` can be an explicit `null` (would become Free), so
+// this checks the key's presence rather than truthiness — the same
+// distinction `renderedWorkphaseId` doesn't need, since a workphase
+// placement is never intentionally cleared to null.
+function renderedParentId(item: Item, placements: Placements): string | null {
+  const placement = placements.get(item.id);
+  return placement && 'parentId' in placement ? (placement.parentId ?? null) : item.parentId;
+}
+
+// Whether the item renders as a Stub — nested inside a parent Card — under
+// its current placement. A placement carrying a `parentId` opinion always
+// decides this for preview purposes (a non-null value previews attaching;
+// Story 5's detach previews null, i.e. Free); with no opinion, the item's
+// own data does, via isStub.
+function renderedIsStub(item: Item, placements: Placements): boolean {
+  const placement = placements.get(item.id);
+  if (placement && 'parentId' in placement) return placement.parentId != null;
+  return isStub(item);
 }
 
 // Layers placements over an already-sorted list: every item with a
@@ -137,7 +168,7 @@ function selectBoardItems(
     item =>
       matchesWorkphase(renderedWorkphaseId(item, placements)) &&
       (!filterProjectId || item.projectId === filterProjectId) &&
-      !isStub(item),
+      !renderedIsStub(item, placements),
   );
   const sorted = filtered.sort(isTerminal ? byCompletedAtThenCreatedAt : byPositionThenCreatedAt);
   return applyPlacements(sorted, placements);
@@ -170,12 +201,22 @@ export function getMergedColumnItemsFrom(
   return selectBoardItems(items, id => id !== null && coveredSet.has(id), filterProjectId, isTerminal, placements);
 }
 
+// Story 4: a Card whose own placement previews it attaching
+// *into* this parent is pulled into the filtered set by that placement
+// (`renderedParentId`/`renderedIsStub`, the same pattern `selectBoardItems`
+// already uses for a cross-column workphase preview), then positioned by
+// `applyPlacements` at its slot — its own stale `position` (from wherever it
+// used to be, a scope this parent's positions aren't even comparable
+// against) never matters, since a non-'existing' slot is always pulled out
+// and reinserted regardless of where the initial sort put it.
 export function getAttachedChildrenFrom(
   items: readonly Item[],
   parentId: string,
   placements: Placements = NO_PLACEMENTS,
 ): Item[] {
-  const sorted = items.filter(item => item.parentId === parentId && isStub(item)).sort(byPositionThenCreatedAt);
+  const sorted = items
+    .filter(item => renderedParentId(item, placements) === parentId && renderedIsStub(item, placements))
+    .sort(byPositionThenCreatedAt);
   return applyPlacements(sorted, placements);
 }
 
@@ -189,12 +230,19 @@ export function removeItemAndDescendants(items: readonly Item[], id: string): It
 
 // Counts attached children only — the ones the card's expand toggle reveals
 // nested underneath it. Detached children render as ordinary top-level
-// cards and aren't counted here.
-export function computeChildCounts(items: readonly Item[]): Record<string, number> {
+// cards and aren't counted here. Placement-aware (Story 4 planning) so a
+// Card previewing an attach shows a non-zero count — and expands to reveal
+// the ghost — the moment something targets it, not only once the write
+// lands.
+export function computeChildCounts(
+  items: readonly Item[],
+  placements: Placements = NO_PLACEMENTS,
+): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const item of items) {
-    if (item.parentId && isStub(item)) {
-      counts[item.parentId] = (counts[item.parentId] ?? 0) + 1;
+    const parentId = renderedParentId(item, placements);
+    if (parentId && renderedIsStub(item, placements)) {
+      counts[parentId] = (counts[parentId] ?? 0) + 1;
     }
   }
   return counts;
@@ -228,9 +276,12 @@ function upsertItem(items: readonly Item[], written: Item): Item[] {
 // preview makes a claim about. Positions compare workflow-wide (item-
 // positioning §2), so the claim "X sits right after A" holds across the
 // whole loaded set, not just one column. Unpositioned items (done, or no
-// workphase) make no ordering claim and are left out.
+// workphase) make no ordering claim and are left out — and, once a Card
+// previews attaching (Story 4 planning), so does it: its position is about
+// to stop being comparable to anything, exactly like a done item's, and the
+// tripwire (findInversion) must not judge it against a scale it's leaving.
 export function freeItemOrder(items: readonly Item[], placements: Placements): string[] {
-  const sorted = items.filter(i => !isStub(i) && i.position !== null).sort(byPositionThenCreatedAt);
+  const sorted = items.filter(i => !renderedIsStub(i, placements) && i.position !== null).sort(byPositionThenCreatedAt);
   return applyPlacements(sorted, placements).map(i => i.id);
 }
 

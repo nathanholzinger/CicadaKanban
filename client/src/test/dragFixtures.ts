@@ -10,17 +10,23 @@ export function rect(left: number, top: number, width: number, height: number): 
 }
 
 // A region keyed the way the board keys them; the workphase facts default
-// to one covered workphase named after the key.
+// to one covered workphase named after the key. `contentRect` defaults to
+// the same rect (no clipping — the common case a geometry-only test
+// wants); `cardCount` defaults to 2, the "normal" band shape, so a fixture
+// that doesn't care about Story 8's single-band/one-card exceptions
+// doesn't have to spell it out.
 export function region(key: string, r: Rect, overrides: Partial<DragRegion> = {}): DragRegion {
   return {
     key,
     containerId: key,
     rect: r,
+    contentRect: r,
     columnId: key.split(':')[1],
     coveredWorkphaseIds: ['wp-' + key],
     targetWorkphaseId: 'wp-' + key,
     isTerminal: false,
     scrollTop: 0,
+    cardCount: 2,
     ...overrides,
   };
 }

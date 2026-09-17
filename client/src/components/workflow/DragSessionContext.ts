@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
+import { cardRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
 
@@ -53,6 +54,20 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
   const state = session?.classification.states.get(itemId);
   if (!session || !state) return null;
   return { state, isFreeDescendant: session.classification.freeDescendantIds.has(itemId) };
+}
+
+// Story 4: whether this Card is the pop machine's live attach target right
+// now — the drag has popped fully into it. Merely being hovered toward
+// that (before the zoom-in threshold fires) does *not* count (re-plan,
+// 2026-09-16, rule 1): a release right now would still commit the column's
+// own within-action, not attach here, so showing this cue early would
+// promise something a drop wouldn't deliver. A collapsed Card can't show
+// the ghost landing inside it, so KanbanCard uses this to force itself open
+// for as long as it's true, independent of the user's own expand/collapse
+// choice.
+export function useIsAttachTarget(itemId: string): boolean {
+  const pop = useContext(DragSessionContext)?.pop;
+  return pop?.contextKey === cardRegionKey(itemId);
 }
 
 // The ordinal placements (itemListOps.ts) — the live ghost and every

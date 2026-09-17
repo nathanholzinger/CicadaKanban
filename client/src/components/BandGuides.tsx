@@ -1,78 +1,164 @@
-import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import { bandBoundaries, type Band } from './workflow/dragRegions';
+import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';
 
-// Epic 3.5 Story 3 — the column drop bands, made visible (docs/wiki/board-
-// drag-interaction §5). While a Card is being dragged, every region the
-// card doesn't currently belong to shows two dashed lines at the configured
-// band boundaries: above the first is "before the first item", below the
-// second "after the last", between them "keep your position" (and the
-// pop-eligible zone). The card's own context shows nothing — in-context a
-// release is anchor + side, and the absence of lines is what says so.
+// Epic 3.5 Story 8 re-plan (2026-09-16) — the column drop bands, made
+// visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
+// percentage-of-height overlay to a content-anchored, space-reserving one.
+// These are Board layer's own cues, and only Board layer's: while a Card is
+// genuinely locked into anything — a column/sub-row, or a Card — every
+// carve-out disappears, since nothing about a bare hover elsewhere changes
+// what a release commits.
 //
-// Two renderings of the same thing:
-//   - BandGuides, inside each region element, at percentages of its live
-//     height — for every region the cursor is *not* in;
-//   - HoveredBandGuide, one fixed-position box drawn from the rect the pop
-//     machine froze when the cursor entered the region (popSession.ts's
-//     PopHover.rect), with the band the cursor is in tinted. The frozen
-//     rect is what the drop resolves against, so the lines show exactly
-//     where it will land even after the ghost's insertion has grown the
-//     list under it — and, since that rect is translated to follow the
-//     region's own scroll (reconciliation #21), even after auto-scroll has
-//     moved the sub-row it belongs to.
+// At Board layer, every region reserves exactly one collapsed ghost card's
+// height (`tuning.ghostCardHeightPx`) for the life of the drag, so nothing
+// about a region's total size ever changes as the drag moves around the
+// board — only *where* that reservation currently is:
+//   - not the live hover target: two half-height dead zones, "Move Top" /
+//     "Move Bottom", carved out of the region's own real content (its
+//     cards shift down to make room) — never the visible-scrolled slice,
+//     so a boundary scrolled out of view is neither drawn nor reachable
+//     until it's scrolled to.
+//   - the live hover target (about to be committed on release, though not
+//     yet locked in): the dead zones collapse and a real ghost (itemListOps'
+//     ordinal placement) fills the reservation instead — same net height.
+//     The divider lines stay, at the same fixed offsets, since the ghost's
+//     own insertion is exactly what they have to stay stable against.
+// Terminal and truly-empty regions collapse to one single band spanning
+// their own height (no top/bottom to speak of — dragRegions.ts::bandFor).
 //
-// Provisional look, like the §4 overlays — Story 8 tunes it.
+// Two special cases the Product Owner settled 2026-09-16: an empty region
+// carves the *full* ghost height, not two halves (nothing to shift out of
+// the way); a region with exactly one card halves both edges instead of
+// the normal full height, so the card stays a real, unlabeled middle band
+// rather than being bisected into top/bottom with nothing left between.
+//
+// Card (KanbanCard.tsx) draws the active-context outline directly on
+// itself; this file draws it for a column/sub-row instead, plus everything
+// above — a column/sub-row and a Card are the two places a context can be.
 
-const LINE = 'pointer-events-none absolute right-2 left-2 border-t border-dashed border-zinc-400/35';
-const SECTION = 'pointer-events-none absolute right-0 left-0 bg-blue-400/10';
+// Whichever region — column, sub-row, or Card — is the pop machine's
+// current `contextKey` (wiki §1.1) gets this ring, so the locked layer is
+// legible without reading the dev panel. Shared with KanbanCard.tsx, which
+// applies it directly to a Card's own element rather than an overlay div.
+export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 
-// The line positions are `bandBoundaries` — the same fractions `bandFor`
-// switches at, so the guides can't drift from the resolver.
+const DIVIDER = 'pointer-events-none absolute right-2 left-2 border-t border-dashed border-zinc-400/35';
+const ZONE_LABEL =
+  'pointer-events-none flex items-center justify-center text-[10px] font-medium tracking-wide text-zinc-500 uppercase';
+const SINGLE_BAND_BORDER = 'rounded-lg border border-dashed border-zinc-600/50';
 
-interface BandGuidesProps {
+interface DragCarveFrameProps {
   regionKey: string;
+  /** The region's own current card count — its rendered `items.length`, ghost included once one's previewing there. */
+  cardCount: number;
+  isTerminal: boolean;
+  /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
+  targetLabel: string;
+  children: ReactNode;
 }
 
-export function BandGuides({ regionKey }: BandGuidesProps) {
+// Wraps a region's own card-list content (dead-zones-and-all at Board
+// layer) — the one place §5's band geometry becomes pixels, and the one
+// place `[DRAG_REGION_ATTR]` is applied: this component's own root is
+// always "the region" `measureDragRegions` finds, in every branch below,
+// so a carve-out div is always a descendant of it rather than a sibling a
+// region-scoped lookup can't reach. `cardCount` must be the region's *own*
+// rendered count (ghost-inclusive), matching what dragRegions.ts::bandFor
+// resolves against once this region becomes the live hover target — see
+// PopHover.cardCount's own comment for why that freezes rather than
+// tracking the ghost's own insertion live.
+export function DragCarveFrame({ regionKey, cardCount, isTerminal, targetLabel, children }: DragCarveFrameProps) {
   const session = useDragSession();
   const tuning = useDragTuning();
   const pop = session?.pop;
-  if (!pop || pop.contextKey === regionKey || pop.hover?.regionKey === regionKey) return null;
-  const { top, bottom } = bandBoundaries(tuning);
-  return (
-    <>
-      <div aria-hidden className={LINE} style={{ top: `${top * 100}%` }} />
-      <div aria-hidden className={LINE} style={{ top: `${bottom * 100}%` }} />
-    </>
-  );
-}
 
-// The band the cursor is in, as a slice of the frozen rect.
-function sectionStyle(band: Band, top: number, bottom: number): CSSProperties {
-  if (band === 'top') return { top: 0, height: `${top * 100}%` };
-  if (band === 'bottom') return { top: `${bottom * 100}%`, bottom: 0 };
-  return { top: `${top * 100}%`, height: `${(bottom - top) * 100}%` };
-}
-
-export function HoveredBandGuide() {
-  const session = useDragSession();
-  const tuning = useDragTuning();
-  const hover = session?.pop?.hover;
-  if (!hover) return null;
-  const { top, bottom } = bandBoundaries(tuning);
-  const { rect, band } = hover;
-  return (
-    <div
-      aria-hidden
-      data-band-highlight={band}
-      className="pointer-events-none fixed z-40 rounded-xl"
-      style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
-    >
-      <div className={`${SECTION} rounded-xl`} style={sectionStyle(band, top, bottom)} />
-      <div className={LINE} style={{ top: `${top * 100}%` }} />
-      <div className={LINE} style={{ top: `${bottom * 100}%` }} />
+  const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: cardCount };
+  const wrap = (content: ReactNode, extraClassName = '') => (
+    <div {...regionAttrs} className={`relative ${extraClassName}`}>
+      {content}
     </div>
+  );
+
+  if (!pop) return wrap(children);
+
+  const isActiveContext = pop.contextKey === regionKey;
+  if (pop.contextKey !== null) {
+    // Locked into this region or a different one: no carve-out cues
+    // anywhere (rule: nothing but the current 3 actions gets a cue). The
+    // active-context outline is a separate, unrelated concern that still
+    // draws on whichever one is locked.
+    if (!isActiveContext) return wrap(children);
+    return wrap(
+      <>
+        {children}
+        <div aria-hidden className={`pointer-events-none absolute inset-0 rounded-xl ${ACTIVE_CONTEXT_OUTLINE}`} />
+      </>,
+    );
+  }
+
+  // Board layer. `hoveredHere` uses the frozen, pre-ghost card count for
+  // exactly the reason PopHover.cardCount is frozen at all: this region's
+  // own live count already includes the ghost hovering it just inserted.
+  const hoveredHere = pop.hover?.regionKey === regionKey;
+  const effectiveCardCount = hoveredHere ? (pop.hover?.cardCount ?? cardCount) : cardCount;
+
+  if (isTerminal || effectiveCardCount === 0) {
+    if (effectiveCardCount === 0) {
+      // Genuinely empty, not (yet) the live hover target: nothing in
+      // `children` to show at all, so the label is the only cue there is.
+      // Once hovered, a real ghost (itemListOps' ordinal placement) is
+      // already the live content — rendering *that* instead, same as the
+      // terminal-with-cards branch below, rather than a label with nothing
+      // under it.
+      if (!hoveredHere) {
+        return wrap(
+          <div
+            aria-hidden="true"
+            data-carve-zone="single"
+            className={`${ZONE_LABEL} ${SINGLE_BAND_BORDER}`}
+            style={{ height: tuning.ghostCardHeightPx }}
+          >
+            Move to {targetLabel}
+          </div>,
+        );
+      }
+      return wrap(children);
+    }
+    return wrap(
+      <>
+        {children}
+        {!hoveredHere && (
+          <div
+            aria-hidden="true"
+            data-carve-zone="single"
+            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/70 text-[11px] font-medium tracking-wide text-zinc-400 uppercase"
+          >
+            Move to {targetLabel}
+          </div>
+        )}
+      </>,
+    );
+  }
+
+  const edge = effectiveCardCount === 1 ? tuning.ghostCardHeightPx / 2 : tuning.ghostCardHeightPx;
+  const halfHeight = tuning.ghostCardHeightPx / 2;
+  return wrap(
+    <>
+      {!hoveredHere && (
+        <div aria-hidden="true" data-carve-zone="top" className={ZONE_LABEL} style={{ height: halfHeight }}>
+          Move Top
+        </div>
+      )}
+      {children}
+      {!hoveredHere && (
+        <div aria-hidden="true" data-carve-zone="bottom" className={ZONE_LABEL} style={{ height: halfHeight }}>
+          Move Bottom
+        </div>
+      )}
+      <div aria-hidden data-carve-divider="top" className={DIVIDER} style={{ top: edge }} />
+      <div aria-hidden data-carve-divider="bottom" className={DIVIDER} style={{ bottom: edge }} />
+    </>,
   );
 }

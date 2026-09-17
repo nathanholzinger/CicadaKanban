@@ -5,7 +5,15 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import { resolveDropSide } from './workflow/boardDndUtils';
-import { useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
+import { DRAG_REGION_ATTR, cardRegionKey } from './workflow/dragRegions';
+import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
+import {
+  useDragSession,
+  useDropTargetState,
+  useIsAttachTarget,
+  useIsPending,
+  type DropTargetView,
+} from './workflow/DragSessionContext';
 
 // Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
 // full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
@@ -13,10 +21,10 @@ import { useDropTargetState, useIsPending, type DropTargetView } from './workflo
 // useDndContext — no prop drilling through BoardColumn/BoardView — and
 // calls the exact same resolveDropSide function useBoardDnd's handleDragEnd
 // uses, so the line shown here is guaranteed to match what gets sent.
-function useLiveDropSide(itemId: string, expectedActiveType: string): 'before' | 'after' | null {
+function useLiveDropSide(itemId: string, expectedActiveTypes: readonly string[]): 'before' | 'after' | null {
   const { active, over } = useDndContext();
   if (!active || !over || over.id !== itemId || active.id === itemId) return null;
-  if (active.data.current?.type !== expectedActiveType) return null;
+  if (!expectedActiveTypes.includes(active.data.current?.type)) return null;
   return resolveDropSide(active.rect.current.translated, over.rect);
 }
 
@@ -50,8 +58,8 @@ const DROP_INDICATOR_AFTER =
 // #13): the live side indicator, the drag-target attributes/overlay, the
 // pending marker. The DragOverlay copy is the carried item itself — never a
 // target, never pending — so it gets none of it.
-function useDropTargetProps(itemId: string, activeType: 'card' | 'attached-child', isOverlay = false) {
-  const dropSide = useLiveDropSide(itemId, activeType);
+function useDropTargetProps(itemId: string, activeTypes: readonly ('card' | 'attached-child')[], isOverlay = false) {
+  const dropSide = useLiveDropSide(itemId, activeTypes);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
   return {
@@ -103,12 +111,41 @@ export default function KanbanCard({
   isOverlay = false,
   onCardClick,
 }: KanbanCardProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [manualExpanded, setExpanded] = useState(defaultExpanded);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: { type: 'card' },
   });
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, 'card', isOverlay);
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card'], isOverlay);
+  // Story 4: forced open — independent of the user's own
+  // collapse choice — for as long as this Card is the live attach target,
+  // so a drag actually reveals the ghost landing inside it rather than
+  // requiring a click the cursor can't make mid-drag.
+  const isAttachTarget = useIsAttachTarget(item.id);
+  const expanded = manualExpanded || isAttachTarget;
+  // The live *Card* drag this row's ghost belongs to, if any — `pop` is set
+  // only for a Card-type drag (handleDragStart), never for an ordinary Stub
+  // sibling-reorder, so this can't misidentify a Stub that's simply being
+  // dragged among its own real siblings as "the attach ghost" (that bug hid
+  // the dragged Stub's own row entirely — no `data-item-id` to find it by).
+  // Renders as a plain preview instead of a second, differently-typed
+  // sortable registration under its id once it *is* the ghost (Story 4
+  // planning, decision 3).
+  const cardDragSession = useDragSession();
+  const attachGhostId = cardDragSession?.pop ? cardDragSession.activeItem.id : undefined;
+  // Story 8 re-plan (2026-09-16): the DragOverlay copy and this same item's
+  // own in-list row while it's the one being dragged (`isDragging`, from
+  // useSortable — true wherever the item's pending Placement currently
+  // sorts it, its original slot included) are the drag's two visible
+  // copies, and both render collapsed the same way: title truncated to one
+  // line, description clamped to exactly one (reserved even when empty, so
+  // a card with no description takes the same height as one with a short
+  // one), no attached-children preview, no child-count control. Bounds the
+  // card's own height variance to just the assignee-footer's presence,
+  // which the carve-out geometry (dragTuning.ts's `ghostCardHeightPx`)
+  // accepts as an approximation rather than measuring for exactly.
+  const isGhostLike = isOverlay || isDragging;
+  const displayChildCount = isGhostLike ? 0 : childCount;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -126,7 +163,9 @@ export default function KanbanCard({
   // both SortableContext's `items` and the `.map()` produced unstable
   // references that fed a dnd-kit measurement loop during a real drag
   // (matches this codebase's known "inline function call in JSX" gotcha).
-  const attachedChildren = expanded && childCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
+  // Story 4: placement-aware, so a Card being previewed as
+  // attaching here is already included at its slot (itemListOps.ts).
+  const attachedChildren = expanded && displayChildCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
 
   return (
     <div
@@ -137,8 +176,16 @@ export default function KanbanCard({
       role="article"
       aria-label={item.title}
       {...dataAttrs}
+      // Story 4: a Card is a drag region too (wiki §1, §1.1) — a zoom-in
+      // target only from the column/sub-row that contains it, never on the
+      // DragOverlay's own floating copy.
+      {...(isOverlay ? {} : { [DRAG_REGION_ATTR]: cardRegionKey(item.id) })}
       onClick={() => !isDragging && onCardClick?.(item.id)}
-      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName}`}
+      // isAttachTarget doubles as "this Card is the pop machine's current
+      // context" (wiki §1.1) — the Card half of the active-context outline
+      // BandGuides.tsx draws for a column/sub-row.
+      data-active-context={isAttachTarget ? true : undefined}
+      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
@@ -153,18 +200,26 @@ export default function KanbanCard({
         )}
       </div>
 
-      {/* Title */}
-      <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
+      {/* Title — one line while ghost-like, so neither visible copy of a
+          dragged item grows past its collapsed height on a long title. */}
+      <p className={`text-sm leading-snug font-medium text-zinc-100 ${isGhostLike ? 'truncate' : ''}`}>{item.title}</p>
 
-      {/* Description preview */}
-      {item.description && (
-        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+      {/* Description preview — ghost-like always renders the line (empty
+          space when there's none) so the collapsed height doesn't also
+          vary on whether a description happens to be set; otherwise the
+          normal conditional two-line preview. */}
+      {isGhostLike ? (
+        <p className="mt-1.5 line-clamp-1 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+      ) : (
+        item.description && (
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+        )
       )}
 
       {/* Footer */}
-      {(item.assigneeType || childCount > 0) && (
+      {(item.assigneeType || displayChildCount > 0) && (
         <div className="mt-2 flex items-center gap-2">
-          {childCount > 0 && (
+          {displayChildCount > 0 && (
             <button
               type="button"
               onClick={e => {
@@ -175,7 +230,7 @@ export default function KanbanCard({
               className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
               title={expanded ? 'Hide attached children' : 'Show attached children'}
             >
-              {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
+              {displayChildCount} child{displayChildCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
             </button>
           )}
           {item.assigneeType && (
@@ -196,18 +251,51 @@ export default function KanbanCard({
       {attachedChildren.length > 0 && getAttachedChildren && (
         <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
           <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
-            {attachedChildren.map(child => (
-              <AttachedChildRow
-                key={child.id}
-                item={child}
-                itemTypes={itemTypes}
-                getAttachedChildren={getAttachedChildren}
-                onCardClick={onCardClick}
-              />
-            ))}
+            {attachedChildren.map(child =>
+              // Story 4: this row is the active Card drag's own
+              // ghost (previewed attaching here, not a real Stub yet) —
+              // rendered as a plain, non-sortable preview rather than a
+              // second registration of the same id under a different drag
+              // `type` (decision 3's risk: dnd-kit's `active.data.current`
+              // is read fresh by the collision closure on every pass, so a
+              // real Card being *also* registered here as `attached-child`
+              // could make the pop machine see the wrong type mid-drag).
+              child.id === attachGhostId ? (
+                <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} />
+              ) : (
+                <AttachedChildRow
+                  key={child.id}
+                  item={child}
+                  itemTypes={itemTypes}
+                  getAttachedChildren={getAttachedChildren}
+                  onCardClick={onCardClick}
+                />
+              ),
+            )}
           </SortableContext>
         </div>
       )}
+    </div>
+  );
+}
+
+// Story 4: a purely visual stand-in for the active drag's own
+// item once it's previewed attaching here — same slot, same small pill
+// treatment as a real AttachedChildRow, but no `useSortable`/`useDroppable`
+// registration of its own (see the call site's comment for why that
+// matters). Rendering `AttachedChildRow` itself for this row was the more
+// obvious choice; this is the one deliberate departure from "reuse the
+// existing sibling-reorder row" and exists only to sidestep that risk.
+function AttachGhostRow({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
+  const resolvedType = resolveType(item.type, itemTypes);
+  return (
+    <div className="flex items-center gap-1.5 rounded border border-dashed border-blue-500/50 bg-blue-500/10 px-1.5 py-1">
+      {resolvedType && (
+        <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
+          {resolvedType.name}
+        </span>
+      )}
+      <span className="truncate text-xs text-zinc-300">{item.title}</span>
     </div>
   );
 }
@@ -237,7 +325,13 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
   });
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
   // — same attributes and overlay as a Card, so a test reads them alike.
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, 'attached-child');
+  // Both active types: a sibling Stub reorder, or (Story 4 planning) a
+  // foreign Card popped into this row's own parent, anchoring beside it.
+  const {
+    dropSide,
+    dataAttrs,
+    className: dropTargetClassName,
+  } = useDropTargetProps(item.id, ['card', 'attached-child']);
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (

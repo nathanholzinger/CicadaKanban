@@ -38,21 +38,16 @@ const POP_FIELDS: Field[] = [
   { kind: 'number', key: 'popDelayMs', label: 'Pop-out delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popDistancePx', label: 'Pop-out distance (px, 0 = off)', step: 10, min: 0 },
   { kind: 'number', key: 'popInDelayMs', label: 'Pop-in delay (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'cardPopInDelayMs', label: 'Card zoom-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
 const COLUMN_FIELDS: Field[] = [
-  { kind: 'number', key: 'columnTopBand', label: 'Column top band', step: 0.05, min: 0, max: 0.5 },
-  { kind: 'number', key: 'columnBottomBand', label: 'Column bottom band', step: 0.05, min: 0, max: 0.5 },
-];
-const STUB_FIELDS: Field[] = [
-  { kind: 'number', key: 'stubFirstChildBand', label: 'Stub first-child band', step: 0.05, min: 0, max: 1 },
-  { kind: 'number', key: 'stubLastChildBand', label: 'Stub last-child band', step: 0.05, min: 0, max: 1 },
-  { kind: 'number', key: 'stubPopBandStart', label: 'Stub pop band start', step: 0.05, min: 0, max: 1 },
-  { kind: 'number', key: 'stubPopBandEnd', label: 'Stub pop band end', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'ghostCardHeightPx', label: 'Ghost card height (px)', step: 4, min: 0 },
 ];
 const OVERLAY_FIELDS: Field[] = [
   { kind: 'text', key: 'overlayFreeDescendantColor', label: 'Free-descendant ring' },
   { kind: 'number', key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
+  { kind: 'text', key: 'activeContextOutlineColor', label: 'Active-context outline' },
 ];
 
 export default function DragTuningPanel({ tuning, onChange, session, inversions, onClose }: DragTuningPanelProps) {
@@ -95,18 +90,13 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
   return (
     <section
       aria-label="Drag tuning"
-      className="grid gap-4 rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3 md:grid-cols-4"
+      className="grid gap-4 rounded-lg border border-zinc-700/60 bg-zinc-900/60 p-3 md:grid-cols-3"
     >
       <div className="space-y-1.5">
         <h4 className={SECTION_LABEL}>Pop threshold</h4>
         {renderFields(POP_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Column bands</h4>
         {renderFields(COLUMN_FIELDS)}
-      </div>
-
-      <div className="space-y-1.5">
-        <h4 className={SECTION_LABEL}>Stub bands (Story 6)</h4>
-        {renderFields(STUB_FIELDS)}
       </div>
 
       <div className="space-y-1.5">
@@ -126,7 +116,7 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
         <h4 className={SECTION_LABEL}>Live</h4>
         <p>state: {pop ? popState(pop) : session ? '(stub drag)' : '—'}</p>
         <p>context: {pop?.contextKey ?? '—'}</p>
-        <p>hover: {pop?.hover ? `${pop.hover.regionKey} · ${pop.hover.band}` : '—'}</p>
+        <p>hover: {pop?.hover ? `${pop.hover.regionKey}${pop.hover.band ? ` · ${pop.hover.band}` : ''}` : '—'}</p>
         <p data-inversion-count={inversions.length}>
           inversions: {inversions.length}
           {lastInversion && (

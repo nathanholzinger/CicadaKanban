@@ -175,8 +175,14 @@ export async function awaitDragContext(page: Page, regionKey: string | null, tim
 // in-context, where dnd-kit's closestCorners (a nearest-corner heuristic,
 // not a hit test) resolves to the column container or its last card
 // depending on the column's height — the append the older suites assert.
+// Story 4 (planning): a Card now carries `[data-drag-region]` too (`card:`
+// keys), so a bare `.last()` here would pick the column's own *last card*
+// instead of its region wrapper (or, in expanded mode, its last sub-row) —
+// landing 5px above a card's bottom edge, inside it, rather than genuinely
+// past the column's content. Excluded by key prefix, not by re-deriving
+// which element is "the column's own" some other way.
 export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
-  const region = columnGroup.locator(`[${DRAG_REGION_ATTR}]`).last();
+  const region = columnGroup.locator(`[${DRAG_REGION_ATTR}]:not([${DRAG_REGION_ATTR}^="card:"])`).last();
   const box = (await region.count()) > 0 ? await boxOf(region) : await boxOf(columnGroup);
   return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
 }

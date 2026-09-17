@@ -13,37 +13,52 @@ export interface DragTuning {
   popDistancePx: number;
   /** How long a popped-out card's cursor must rest in a column's pop-eligible band before the card pops in and locks there. */
   popInDelayMs: number;
+  /**
+   * Story 4 (re-plan, 2026-09-16): how long the cursor must rest over one of
+   * the locked column's own Cards before the drag zooms into it — a
+   * separate, duration-only threshold from `popInDelayMs`, since this one
+   * signals a reparent (the layer-change doc's "the big distinguisher is
+   * likely to be a context switch that signals reparenting"). No distance
+   * term: zooming in is never a fast yank, only zooming out is (Q4).
+   */
+  cardPopInDelayMs: number;
   /** How long the card takes to travel from its clamped position to the cursor on a pop. 0 teleports. */
   popSnapMs: number;
-  /** `TOP_BAND` — fraction of a column region's height that means "before the first item". */
-  columnTopBand: number;
-  /** `BOTTOM_BAND` — fraction that means "after the last item". The rest is the middle (pop-eligible) band. */
-  columnBottomBand: number;
-  /** `FIRST_CHILD_BAND` — Story 6: fraction of a Card that means "first child". */
-  stubFirstChildBand: number;
-  /** `LAST_CHILD_BAND` — Story 6: fraction that means "last child". */
-  stubLastChildBand: number;
-  /** `POP_BAND` start/end — Story 6: the overlapping pop-eligible range on a Card. */
-  stubPopBandStart: number;
-  stubPopBandEnd: number;
+  /**
+   * Story 8 re-plan (2026-09-16) — the reserved height of one collapsed
+   * ghost card, in pixels. At Board layer this is carved out at the top and
+   * bottom of a region's real content (never its visible-scrolled slice) as
+   * two half-height dead zones ("Move Top"/"Move Bottom"); the top/bottom
+   * band boundary sits a full one of these in from each edge, so it cuts
+   * across the middle of the first/last rendered card. A region with
+   * exactly one card halves both edges instead (dragRegions.ts::bandFor),
+   * so the card itself stays a real, unlabeled middle band rather than
+   * being split in two.
+   */
+  ghostCardHeightPx: number;
   /** §4 overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
   overlayFreeDescendantColor: string;
   overlayDepthCappedOpacity: number;
+  /**
+   * An outline drawn around whichever region — column, sub-row, or Card —
+   * is the pop machine's current `contextKey` (wiki §1.1), so the locked
+   * layer is legible without reading the dev panel's text readout. Never
+   * drawn at Board layer: nothing is a singular "current region" while
+   * genuinely popped out.
+   */
+  activeContextOutlineColor: string;
 }
 
 export const DEFAULT_DRAG_TUNING: DragTuning = {
   popDelayMs: 500,
   popDistancePx: 0,
   popInDelayMs: 500,
+  cardPopInDelayMs: 800,
   popSnapMs: 150,
-  columnTopBand: 0.2,
-  columnBottomBand: 0.2,
-  stubFirstChildBand: 0.5,
-  stubLastChildBand: 0.5,
-  stubPopBandStart: 0.2,
-  stubPopBandEnd: 0.8,
+  ghostCardHeightPx: 96,
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,
+  activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
 };
 
 export const DRAG_TUNING_STORAGE_KEY = 'kanban_drag_tuning';

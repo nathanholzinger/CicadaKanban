@@ -1,7 +1,9 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
 import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
-import { dragTo, center } from '../helpers/dragGesture';
+import { center, pickUp, hoverTo, release, awaitDragState } from '../helpers/dragGesture';
+import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
+import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 test.describe('attached children on the board', () => {
   test.beforeAll(async ({ request }) => {
@@ -181,6 +183,16 @@ test.describe('attached children on the board', () => {
       data: { title: 'Cascading Kid', parentId: parent.id },
     })).json();
 
+    // A cross-column move is a Board-layer band resolution (docs/wiki/
+    // board-drag-interaction §1–§3, re-planned 2026-09-16): the card starts
+    // locked to Todo, and a release still locked there commits Todo's own
+    // reorder, not a foreign column's band — so this needs an actual pop
+    // out first, not just a quick hover.
+    const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 150 };
+    await page.addInitScript(
+      ([key, value]) => localStorage.setItem(key, value),
+      [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
+    );
     await page.goto('/');
     await projectSidebar.select('Drag Cascade Project');
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
@@ -191,7 +203,14 @@ test.describe('attached children on the board', () => {
     // Real pointer sequence, not Playwright's native-DnD helpers — see
     // tests/helpers/dragGesture.ts.
     const targetColumn = page.getByRole('group', { name: 'In Progress' });
-    await dragTo(page, card, () => center(targetColumn));
+    // The region itself, not the group's own center — In Progress is empty,
+    // and an empty region's carve-out (Story 8) is a fixed, small band near
+    // the top of the column body, not the whole available column height.
+    const targetRegion = targetColumn.locator(`[${DRAG_REGION_ATTR}]`).first();
+    await pickUp(page, card);
+    await hoverTo(page, await center(targetRegion));
+    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+    await release(page);
 
     // UI: parent lands under "In Progress", child still nested under it.
     const movedCard = page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Draggable Parent' });

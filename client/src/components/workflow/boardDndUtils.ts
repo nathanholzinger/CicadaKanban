@@ -18,30 +18,37 @@ import { containsPoint, type Band, type DragRegion, type Rect } from './dragRegi
 // What the collision closure needs to know about the live pop session
 // (Epic 3.5 Story 3) — a read-only view the hook keeps in a ref.
 export interface CollisionSession {
-  /** The cursor is in a region other than the context: that region's droppable container. */
+  /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover — re-plan 2026-09-16, rule 1: a mere hover never drives `over`. */
   hoverContainerId: string | null;
-  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted). */
+  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), or while genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
 }
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
 // so it has to agree with the pop machine (wiki board-drag-interaction
-// §2–§3, §5), which is why this is a factory over the live session rather
-// than a constant:
+// §1–§3, §5–§6), which is why this is a factory over the live session
+// rather than a constant:
 //
-//   - Card drag, cursor in the context (or nowhere): closestCorners over the
-//     context's container and the cards whose rect lies inside it — the
-//     in-context reorder, unchanged in feel from Epic 3.2.
-//   - Card drag, cursor in another region: `over` is that region's container
-//     and never a card in it, so the target column's sortable doesn't shift
-//     against a hover the band ignores; the ghost's index comes from the
-//     placement alone. After a pop the region *is* the context.
-//   - Card drag with no context (picked up in Unsorted) and no hover: nothing.
+//   - Card drag, locked (a column/sub-row, or a Card): closestCorners over
+//     the context's container and the cards whose rect lies inside it —
+//     the in-context reorder, unchanged in feel from Epic 3.2. A Card
+//     context is never actually resolved this way (its within-action is a
+//     constant append — useBoardDnd.ts's resolveCardDrop never reads
+//     `over` for it), but restricting candidates here is still what keeps
+//     dnd-kit from shifting a sibling against a hover rule 1 ignores.
+//   - Card drag, Board layer (popped out), hovering a region: `over` is
+//     that region's container and never a card in it, so the target
+//     column's sortable doesn't shift against a hover the band alone
+//     resolves; the ghost's index comes from the placement instead.
+//   - Card drag with no context and no hover (picked up in Unsorted,
+//     nothing hovered yet): nothing.
 //
 // Epic 3.2 Part 3, unchanged: attached-child rows are only ever valid
 // collision targets for another attached-child drag under the *same* parent
 // — never for a card or column drag, and never for a different parent's
-// children. dnd-kit has no notion of a nested child being "inside" the
+// children (including, still, a Card drag locked into that parent's own
+// context — Story 4's narrowed scope has no anchor+side among Stubs to
+// resolve). dnd-kit has no notion of a nested child being "inside" the
 // dragged card, so it has to be told to ignore it here.
 export function resolveBoardCollisions(
   args: Parameters<CollisionDetection>[0],
@@ -61,7 +68,7 @@ export function resolveBoardCollisions(
     if (activeData?.type === 'attached-child') {
       return data?.type === 'attached-child' && data?.parentId === activeData.parentId;
     }
-    if (data?.type === 'attached-child') return false;
+    if (data?.type === 'attached-child') return false; // never a valid target for a card drag
     if (!session) return true; // column drag, or no machine in play
     if (!session.context) return false;
     if (container.id === session.context.containerId) return true;
@@ -114,7 +121,13 @@ export type DropResolution =
   // Genuine cross-column move: workphaseId changes to targetWorkphaseId.
   // `anchorId` is the hovered card's id for precise before/after placement,
   // or null when a container was hovered (server appends to the target).
-  | { kind: 'move'; targetWorkphaseId: string; anchorId: string | null };
+  | { kind: 'move'; targetWorkphaseId: string; anchorId: string | null }
+  // Story 4: attach as the *last* Stub of `parentId`, inheriting its
+  // workphase (wiki §6) — the server derives that inheritance from the
+  // parent, so this never carries a workphaseId of its own. Always an
+  // append: Story 4's narrowed scope has no anchor+side among Stubs (no
+  // band, no hovered-sibling anchor) — manual placement is Story 6.
+  | { kind: 'attach'; parentId: string };
 
 // Resolves a dnd-kit `over.id` (plus which item is being dragged) to how the
 // drop should be applied. The key fix over the pre-Epic-3.2 version: a
@@ -233,6 +246,7 @@ export function resolveDropSide(
 // card to anchor against (TC-2.11). Pure — the request literal is the part
 // worth pinning in a test.
 export function buildMoveInput(resolution: DropResolution, side: 'before' | 'after'): MoveItemInput {
+  if (resolution.kind === 'attach') return { parentId: resolution.parentId, isAttached: true };
   const anchor = resolution.anchorId ? { anchorId: resolution.anchorId, side } : {};
   return resolution.kind === 'reorder'
     ? { scopeWorkphaseIds: resolution.scopeWorkphaseIds, ...anchor }
@@ -282,6 +296,14 @@ export function pendingPlacementFor(
   input: MoveItemInput,
   active: { workphaseId: string | null; position: number | null },
 ): Placement {
+  if (input.parentId) {
+    // Story 4: the pending ghost is a Stub of the new parent —
+    // no workphaseId of its own (the server derives inheritance), and no
+    // 'existing' fallback the way a bare workphase change gets below: there
+    // is no position to keep among a different parent's children.
+    const slot = input.anchorId && input.side ? { anchorId: input.anchorId, side: input.side } : 'last';
+    return { parentId: input.parentId, slot };
+  }
   const workphaseId = input.workphaseId ?? active.workphaseId ?? undefined;
   if (input.anchorId && input.side) return { workphaseId, slot: { anchorId: input.anchorId, side: input.side } };
   // A bare workphase change keeps its position — unless it has none to

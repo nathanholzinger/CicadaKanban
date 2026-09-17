@@ -1,5 +1,4 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { DEFAULT_DRAG_TUNING } from './dragTuning';
 import {
   bandBoundaries,
   bandFor,
@@ -7,7 +6,7 @@ import {
   containsPoint,
   distanceOutside,
   measureDragRegions,
-  regionAt,
+  nonCardRegionAt,
   translateRect,
   type Rect,
 } from './dragRegions';
@@ -53,65 +52,80 @@ const subB1 = region('subrow:b:w1', rect(120, 0, 100, 150));
 const subB2 = region('subrow:b:w2', rect(120, 180, 100, 150));
 const regions = [colA, subB1, subB2];
 
-describe('regionAt', () => {
+describe('nonCardRegionAt', () => {
   it('hits the region containing the point', () => {
-    expect(regionAt(regions, { x: 50, y: 200 })).toBe(colA);
-    expect(regionAt(regions, { x: 150, y: 100 })).toBe(subB1);
-    expect(regionAt(regions, { x: 150, y: 200 })).toBe(subB2);
+    expect(nonCardRegionAt(regions, { x: 50, y: 200 })).toBe(colA);
+    expect(nonCardRegionAt(regions, { x: 150, y: 100 })).toBe(subB1);
+    expect(nonCardRegionAt(regions, { x: 150, y: 200 })).toBe(subB2);
   });
 
   it("is null between columns (a gap is nobody's region)", () => {
-    expect(regionAt(regions, { x: 110, y: 200 })).toBeNull();
+    expect(nonCardRegionAt(regions, { x: 110, y: 200 })).toBeNull();
   });
 
   it('is a bounded box (reconciliation #20): above or below it is nowhere, not the column', () => {
-    expect(regionAt(regions, { x: 50, y: -40 })).toBeNull();
-    expect(regionAt(regions, { x: 50, y: 900 })).toBeNull();
+    expect(nonCardRegionAt(regions, { x: 50, y: -40 })).toBeNull();
+    expect(nonCardRegionAt(regions, { x: 50, y: 900 })).toBeNull();
   });
 
   it('is null in the gap between two sub-rows (DRAG-1.6: sub-rows are distinct contexts, and the gap belongs to neither)', () => {
-    expect(regionAt(regions, { x: 150, y: 160 })).toBeNull();
-    expect(regionAt(regions, { x: 150, y: 179 })).toBeNull();
-    expect(regionAt(regions, { x: 150, y: 180 })).toBe(subB2);
+    expect(nonCardRegionAt(regions, { x: 150, y: 160 })).toBeNull();
+    expect(nonCardRegionAt(regions, { x: 150, y: 179 })).toBeNull();
+    expect(nonCardRegionAt(regions, { x: 150, y: 180 })).toBe(subB2);
   });
 });
 
-// DRAG-3.5: the bands are the configured values, not 20/60/20.
+// DRAG-3.5 / Story 8 re-plan: the boundaries are content-anchored pixels
+// (`ghostCardHeightPx` in from each edge of `contentRect`, never a fraction
+// of the region's height), with two collapses to a single band and one
+// exception that halves the edge — the Product Owner's three special rules
+// (2026-09-16).
 describe('bandFor', () => {
-  const r = rect(0, 100, 100, 200); // spans y 100..300
+  const contentRect = rect(0, 100, 100, 200); // spans y 100..300
+  const tuning = { ghostCardHeightPx: 40 };
+  const twoCards = { contentRect, isTerminal: false, cardCount: 2 };
 
-  it('switches exactly at the fractions bandBoundaries reports — the guides draw from the same numbers', () => {
-    const wide = { columnTopBand: 0.3, columnBottomBand: 0.25 };
-    const { top, bottom } = bandBoundaries(wide);
-    expect({ top, bottom }).toEqual({ top: 0.3, bottom: 0.75 });
-    const yAt = (fraction: number) => r.top + fraction * r.height;
-    expect(bandFor(yAt(top) - 1, r, wide)).toBe('top');
-    expect(bandFor(yAt(top) + 1, r, wide)).toBe('middle');
-    expect(bandFor(yAt(bottom) - 1, r, wide)).toBe('middle');
-    expect(bandFor(yAt(bottom) + 1, r, wide)).toBe('bottom');
+  it('switches exactly at the boundaries bandBoundaries reports — the guides draw from the same numbers', () => {
+    const boundaries = bandBoundaries(twoCards, tuning);
+    expect(boundaries).toEqual({ top: 140, bottom: 260 });
+    expect(bandFor(139, twoCards, tuning)).toBe('top');
+    expect(bandFor(141, twoCards, tuning)).toBe('middle');
+    expect(bandFor(259, twoCards, tuning)).toBe('middle');
+    expect(bandFor(261, twoCards, tuning)).toBe('bottom');
   });
 
-  it('splits the rect by the configured fractions', () => {
-    expect(bandFor(139, r, DEFAULT_DRAG_TUNING)).toBe('top'); // 19.5%
-    expect(bandFor(141, r, DEFAULT_DRAG_TUNING)).toBe('middle'); // 20.5%
-    expect(bandFor(259, r, DEFAULT_DRAG_TUNING)).toBe('middle'); // 79.5%
-    expect(bandFor(261, r, DEFAULT_DRAG_TUNING)).toBe('bottom'); // 80.5%
-  });
-
-  it('moves with the configured values', () => {
-    const wide = { columnTopBand: 0.4, columnBottomBand: 0.1 };
-    expect(bandFor(170, r, wide)).toBe('top'); // 35%
-    expect(bandFor(261, r, wide)).toBe('middle'); // 80.5% — bottom band now starts at 90%
-    expect(bandFor(285, r, wide)).toBe('bottom');
+  it('moves with ghostCardHeightPx', () => {
+    const wide = { ghostCardHeightPx: 80 };
+    expect(bandFor(170, twoCards, wide)).toBe('top'); // boundary now at 180
+    expect(bandFor(215, twoCards, wide)).toBe('middle');
+    expect(bandFor(225, twoCards, wide)).toBe('bottom'); // boundary now at 220
   });
 
   it('clamps a point outside the rect to the nearer edge band', () => {
-    expect(bandFor(-50, r, DEFAULT_DRAG_TUNING)).toBe('top');
-    expect(bandFor(999, r, DEFAULT_DRAG_TUNING)).toBe('bottom');
+    expect(bandFor(-50, twoCards, tuning)).toBe('top');
+    expect(bandFor(999, twoCards, tuning)).toBe('bottom');
   });
 
-  it('a zero-height rect is all middle', () => {
-    expect(bandFor(5, rect(0, 0, 100, 0), DEFAULT_DRAG_TUNING)).toBe('middle');
+  it('a terminal region is a single band regardless of card count', () => {
+    expect(bandBoundaries({ contentRect, isTerminal: true, cardCount: 2 }, tuning)).toBeNull();
+    expect(bandFor(105, { contentRect, isTerminal: true, cardCount: 2 }, tuning)).toBe('middle');
+    expect(bandFor(295, { contentRect, isTerminal: true, cardCount: 2 }, tuning)).toBe('middle');
+  });
+
+  it('an empty region is a single band', () => {
+    const empty = { contentRect, isTerminal: false, cardCount: 0 };
+    expect(bandBoundaries(empty, tuning)).toBeNull();
+    expect(bandFor(105, empty, tuning)).toBe('middle');
+    expect(bandFor(295, empty, tuning)).toBe('middle');
+  });
+
+  it('exactly one card halves the edge, leaving it a real, unlabeled middle band', () => {
+    const oneCard = { contentRect, isTerminal: false, cardCount: 1 };
+    expect(bandBoundaries(oneCard, tuning)).toEqual({ top: 120, bottom: 280 });
+    expect(bandFor(119, oneCard, tuning)).toBe('top');
+    expect(bandFor(121, oneCard, tuning)).toBe('middle');
+    expect(bandFor(279, oneCard, tuning)).toBe('middle');
+    expect(bandFor(281, oneCard, tuning)).toBe('bottom');
   });
 });
 

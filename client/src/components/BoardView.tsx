@@ -20,7 +20,6 @@ import { DragSessionContext, PlacementsContext } from './workflow/DragSessionCon
 import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
 import { DragTuningContext } from './workflow/DragTuningContext';
 import { popState } from './workflow/popSession';
-import { HoveredBandGuide } from './BandGuides';
 import DragTuningPanel from './DragTuningPanel';
 
 interface BoardViewProps {
@@ -204,11 +203,13 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       rootRef: boardRootRef,
     });
 
-  // §4's overlay colors reach KanbanCard as CSS custom properties, so the
-  // dev/test panel can change them without a rebuild.
+  // §4's overlay colors (plus the active-context outline) reach KanbanCard
+  // and BandGuides as CSS custom properties, so the dev/test panel can
+  // change them without a rebuild.
   const overlayVars = {
     '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
     '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,
+    '--active-context-outline': dragTuning.activeContextOutlineColor,
   } as CSSProperties;
 
   function handleChildWorkphaseChange(workphaseId: string | null) {
@@ -303,12 +304,14 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           <PlacementsContext value={placements}>
             <DragTuningContext value={dragTuning}>
               <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                {/* data-drag-state / data-drag-context: the pop machine's state, for tests (wiki §1–§3) */}
+                {/* data-drag-state / data-drag-context / data-drag-band: the pop
+                    machine's state, for tests (wiki §1–§3, §5) */}
                 <div
                   ref={boardRootRef}
                   style={overlayVars}
                   data-drag-state={session?.pop ? popState(session.pop) : undefined}
                   data-drag-context={session?.pop?.contextKey ?? undefined}
+                  data-drag-band={session?.pop?.hover?.band ?? undefined}
                   className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
                 >
                   {board.columns.map(column => (
@@ -342,7 +345,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                   />
                 </div>
               </SortableContext>
-              <HoveredBandGuide />
             </DragTuningContext>
           </PlacementsContext>
         </DragSessionContext>

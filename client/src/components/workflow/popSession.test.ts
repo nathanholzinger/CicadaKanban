@@ -16,8 +16,9 @@ import type { Placement } from './itemListOps';
 // every threshold parameterized on the tuning value, never 0.5 s.
 
 // Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
-// tall; column C further right. Bands at the default 20/60/20: B's top band
-// is y < 80, bottom band y > 320.
+// tall; column C further right, all fixture-default 2-card regions. Bands
+// at the default ghostCardHeightPx (96): B's top band is y < 96, bottom
+// band y > 304.
 const A = region('column:a', rect(0, 0, 100, 400));
 const B = region('column:b', rect(120, 0, 100, 400));
 const C = region('column:c', rect(240, 0, 100, 400));
@@ -37,6 +38,18 @@ const IN = tuning.popInDelayMs;
 const locked = (key: string): PopSession => ({ contextKey: key, hover: null, outsideSince: null });
 const poppedOut = (): PopSession => ({ contextKey: null, hover: null, outsideSince: null });
 
+// Board layer, fresh: hovering `point` from a standing start (re-plan
+// 2026-09-16 — a locked drag's release no longer depends on a foreign
+// region's band at all, so every case that exercises the band has to
+// actually be at Board layer, not merely glancing at one while still
+// locked elsewhere).
+function hoverAt(
+  point: { x: number; y: number },
+  regionsArg: readonly ReturnType<typeof region>[] = regions,
+): PopSession {
+  return advancePopSession(poppedOut(), point, regionsArg, tuning, 0);
+}
+
 function run(steps: Array<[{ x: number; y: number }, number]>, start = startPopSession(A.key)): PopSession {
   return steps.reduce((s, [pointer, now]) => advancePopSession(s, pointer, regions, tuning, now), start);
 }
@@ -52,13 +65,9 @@ describe('locked', () => {
     expect(advancePopSession(s, inA, regions, tuning, 0)).toBe(s);
   });
 
-  it('leaving the context starts the pop-out clock — into a gap as much as into another column', () => {
+  it('leaving the context starts the pop-out clock — into a gap as much as into another column, and neither is tracked beyond that (re-plan 2026-09-16, rule 1: nothing about a foreign region matters until an actual pop)', () => {
     expect(run([[gap, 100]])).toEqual({ ...locked(A.key), outsideSince: 100 });
-    expect(run([[bTop, 100]])).toEqual({
-      ...locked(A.key),
-      outsideSince: 100,
-      hover: { regionKey: B.key, band: 'top', since: 100, rect: B.rect, scrollTop: 0 },
-    });
+    expect(run([[bTop, 100]])).toEqual({ ...locked(A.key), outsideSince: 100 });
   });
 
   it('DRAG-1.3 (momentary): coming back inside before THRESHOLD resets the clock', () => {
@@ -81,7 +90,15 @@ describe('locked', () => {
     expect(out).toEqual({
       contextKey: null,
       outsideSince: null,
-      hover: { regionKey: B.key, band: 'middle', since: 100 + OUT, rect: B.rect, scrollTop: 0 },
+      hover: {
+        regionKey: B.key,
+        band: 'middle',
+        poppable: true,
+        since: 100 + OUT,
+        rect: B.rect,
+        scrollTop: 0,
+        cardCount: 2,
+      },
     });
     expect(isLocked(out)).toBe(false);
   });
@@ -95,14 +112,14 @@ describe('locked', () => {
     ).toEqual(poppedOut());
   });
 
-  it('DRAG-1.4: the clock runs wherever the cursor is outside; the band it would release by follows the hovered region', () => {
+  it('DRAG-1.4: the clock runs wherever the cursor is outside, from whenever it first left — wandering to a different foreign point never restarts it, nor tracks anything about that point', () => {
     const s = run([
       [bTop, 0],
       [bBottom, OUT - 10],
     ]);
     expect(s.contextKey).toBe(A.key);
     expect(s.outsideSince).toBe(0);
-    expect(s.hover?.band).toBe('bottom');
+    expect(s.hover).toBeNull();
   });
 
   it('the distance term pops out as soon as the cursor is far enough from the context (either satisfies)', () => {
@@ -113,21 +130,33 @@ describe('locked', () => {
     expect(far.contextKey).toBeNull();
   });
 
-  it("the band is measured against the region's rect as it was on entry, so the ghost's own insertion can't move the band", () => {
-    const entered = run([[bTop, 0]]);
-    const grownB = region(B.key, rect(120, -100, 100, 500));
+  it("Board layer: the band is measured against the region's rect as it was on entry, so the ghost's own insertion can't move the band", () => {
+    const entered = advancePopSession(poppedOut(), bTop, regions, tuning, 0);
+    // Grown from the bottom only, top unchanged — a real ghost inserting
+    // *within* a region only ever extends how far down it reaches; the
+    // region's own top edge is fixed by what's above it, not by its own
+    // content, so no real insertion could move that instead (Story 8
+    // re-plan's own ground-truth finding — followRegionTop relies on
+    // exactly this to tell a real external shift from the ghost's own
+    // doing without needing scrollTop as a separate signal at all).
+    const grownB = region(B.key, rect(120, 0, 100, 500));
     const later = advancePopSession(entered, bTop, [A, grownB, C], tuning, 10);
     expect(later.hover?.band).toBe('top');
-    expect(releaseIntent(later, bTop, [A, grownB, C], tuning)).toMatchObject({ kind: 'band', band: 'top' });
-    const fresh = advancePopSession(startPopSession(A.key), bTop, [A, grownB, C], tuning, 0);
+    expect(releaseIntent(later, [A, grownB, C])).toMatchObject({ kind: 'band', band: 'top' });
+    // A *fresh* entry, with no sticky hover to ignore the growth for, does
+    // reflect it — bBottom (y 360) was the bottom band against B's original
+    // 400-tall rect (boundary 304) but is only the middle band against
+    // grownB's own, now-500-tall one (boundary 404): the contrast that
+    // shows sticky is doing something, not that nothing here reads live.
+    const fresh = advancePopSession(poppedOut(), bBottom, [A, grownB, C], tuning, 0);
     expect(fresh.hover?.band).toBe('middle');
   });
 
-  it('the frozen rect follows a real scroll of the region (reconciliation #21), not the ghost regrowing it', () => {
-    const entered = run([[bTop, 0]]);
+  it('Board layer: the frozen rect follows a real scroll of the region (reconciliation #21), unlike the ghost regrowing it (which never moves the top edge at all — see `grownB` above)', () => {
+    const entered = advancePopSession(poppedOut(), bTop, regions, tuning, 0);
     // The column scrolled down 30px: B's freshly-measured rect moves up by
-    // 30 on screen, and its scrollTop says so — unlike `grownB` above, which
-    // moved the same way with scrollTop unchanged (the ghost's own doing).
+    // 30 on screen (scrollTop just comes along for the ride — followRegionTop
+    // reads the top edge itself, not this).
     const scrolledB = region(B.key, rect(120, -30, 100, 400), { scrollTop: 30 });
     const after = advancePopSession(entered, bTop, [A, scrolledB, C], tuning, 10);
     expect(after.hover).toMatchObject({ rect: { ...B.rect, top: -30, bottom: 370 }, scrollTop: 30, band: 'top' });
@@ -135,6 +164,23 @@ describe('locked', () => {
     // Scrolling back to 0 carries it right back.
     const back = advancePopSession(after, bTop, [A, B, C], tuning, 20);
     expect(back.hover).toMatchObject({ rect: B.rect, scrollTop: 0 });
+  });
+
+  it('Board layer: the frozen rect also follows a sibling region reshaping next to it, with no scroll involved at all', () => {
+    // Story 8 re-plan: an expanded column's sub-rows share one scroll body,
+    // and each can carve out or give back a card's height at Board layer —
+    // one doing so shifts a sibling's own top edge exactly as a real scroll
+    // would, but scrollTop itself never changes. followRegionTop reads the
+    // top edge directly for exactly this reason, rather than trusting
+    // scrollTop to say whether the region moved. A point picked to land in
+    // the gap between the un-followed and followed boundary (here, 96 and
+    // 136) actually exercises that — one that would stay "top" either way
+    // wouldn't prove this is being read at all.
+    const entered = advancePopSession(poppedOut(), { x: 170, y: 110 }, regions, tuning, 0);
+    expect(entered.hover?.band).toBe('middle');
+    const pushedDownB = region(B.key, rect(120, 40, 100, 400));
+    const after = advancePopSession(entered, { x: 170, y: 110 }, [A, pushedDownB, C], tuning, 10);
+    expect(after.hover).toMatchObject({ rect: { ...B.rect, top: 40, bottom: 440 }, scrollTop: 0, band: 'top' });
   });
 });
 
@@ -184,7 +230,15 @@ describe('popped out', () => {
     expect(top.contextKey).toBeNull();
     expect(top.hover?.band).toBe('top');
     const moved = advancePopSession(outInB, cMiddle, regions, tuning, OUT + IN - 1);
-    expect(moved.hover).toEqual({ regionKey: C.key, band: 'middle', since: OUT + IN - 1, rect: C.rect, scrollTop: 0 });
+    expect(moved.hover).toEqual({
+      regionKey: C.key,
+      band: 'middle',
+      poppable: true,
+      since: OUT + IN - 1,
+      rect: C.rect,
+      scrollTop: 0,
+      cardCount: 2,
+    });
     expect(moved.contextKey).toBeNull();
   });
 
@@ -226,35 +280,35 @@ describe('placementFor', () => {
     });
   });
 
-  it("DRAG-3.11: the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
-    expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, 1)).toEqual({
+  it("DRAG-3.11: Board layer — the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
+    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
-    expect(placementFor(run([[bMiddle, 0]]), regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
-    expect(placementFor(run([[bBottom, 0]]), regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(hoverAt(bBottom), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
   });
 
-  it('DRAG-3.7: a covered-set member keeps its own workphase in the preview', () => {
+  it('DRAG-3.7: Board layer — a covered-set member keeps its own workphase in the preview', () => {
     const merged = region('column:m', rect(120, 0, 100, 400), {
       coveredWorkphaseIds: ['w1', 'w2'],
       targetWorkphaseId: 'w1',
     });
-    const s = advancePopSession(startPopSession(A.key), bTop, [A, merged], tuning, 0);
+    const s = hoverAt(bTop, [A, merged]);
     expect(placementFor(s, [A, merged], 'w2', 1)).toEqual({ workphaseId: 'w2', slot: 'first' });
   });
 
-  it("DRAG-3.9: a done region previews no positioned insert in any band, whatever the item's own position", () => {
+  it("DRAG-3.9: Board layer — a done region previews no positioned insert in any band, whatever the item's own position", () => {
     const done = region('column:d', rect(120, 0, 100, 400), { isTerminal: true });
     for (const p of [bTop, bMiddle, bBottom]) {
       for (const position of [1, null]) {
-        const s = advancePopSession(startPopSession(A.key), p, [A, done], tuning, 0);
+        const s = hoverAt(p, [A, done]);
         expect(placementFor(s, [A, done], activeWorkphase, position)).toEqual({
           workphaseId: done.targetWorkphaseId,
           slot: 'existing',
@@ -267,8 +321,8 @@ describe('placementFor', () => {
   // reopened done item, a first-time assignment — takes the append
   // fallback instead of the position-sort's null-coerced top slot, in
   // either of the two places band resolution lands on 'existing'.
-  it('#29: an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
-    expect(placementFor(run([[bMiddle, 0]]), regions, activeWorkphase, null)).toEqual({
+  it('#29: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
+    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -282,7 +336,7 @@ describe('placementFor', () => {
       slot: 'last',
     });
     // The edge bands are unaffected — they already name an explicit anchor.
-    expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, null)).toEqual({
+    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
@@ -307,8 +361,8 @@ describe('placementFor', () => {
       expect(placementFor(startPopSession(A.key), regions, activeWorkphase, null, prior)).toBe(prior);
     });
 
-    it('a hovered band ignores it — a genuine new region still computes its own slot', () => {
-      expect(placementFor(run([[bTop, 0]]), regions, activeWorkphase, 1, prior)).toEqual({
+    it('a Board-layer hovered band ignores it — a genuine new region still computes its own slot', () => {
+      expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1, prior)).toEqual({
         workphaseId: B.targetWorkphaseId,
         slot: 'first',
       });
@@ -337,19 +391,15 @@ describe('placementFor', () => {
 });
 
 describe('releaseIntent', () => {
-  it('in the context region: in-context (anchor + side via dnd-kit)', () => {
-    expect(releaseIntent(startPopSession(A.key), inA, regions, tuning)).toEqual({ kind: 'in-context' });
+  it('locked: always in-context (anchor + side via dnd-kit) — rule 1, regardless of a foreign hover, since one is never even tracked', () => {
+    expect(releaseIntent(startPopSession(A.key), regions)).toEqual({ kind: 'in-context' });
+    expect(releaseIntent(run([[bBottom, 100]]), regions)).toEqual({ kind: 'in-context' });
   });
 
-  it("in another region: that region's band, whether locked or popped out, and whether or not the cursor had rested there", () => {
-    expect(releaseIntent(startPopSession(A.key), bBottom, regions, tuning)).toEqual({
-      kind: 'band',
-      region: B,
-      band: 'bottom',
-    });
-    expect(releaseIntent(poppedOut(), bBottom, regions, tuning)).toEqual({ kind: 'band', region: B, band: 'bottom' });
-    // Popped out, back over the column it came from: a band drop there too.
-    expect(releaseIntent(poppedOut(), inA, regions, tuning)).toEqual({ kind: 'band', region: A, band: 'middle' });
+  it("Board layer (popped out): a hovered region's band", () => {
+    expect(releaseIntent(hoverAt(bBottom), regions)).toEqual({ kind: 'band', region: B, band: 'bottom' });
+    // Even back over the column it came from: a band drop there too.
+    expect(releaseIntent(hoverAt(inA), regions)).toEqual({ kind: 'band', region: A, band: 'middle' });
   });
 
   it('DRAG-1.5 / DRAG-3.4: after popping into B, a release in B is in-context', () => {
@@ -358,11 +408,11 @@ describe('releaseIntent', () => {
       [bMiddle, OUT],
       [bMiddle, OUT + IN],
     ]);
-    expect(releaseIntent(s, bMiddle, regions, tuning)).toEqual({ kind: 'in-context' });
+    expect(releaseIntent(s, regions)).toEqual({ kind: 'in-context' });
   });
 
-  it('between columns or over an Inert surface: nothing, from either state', () => {
-    expect(releaseIntent(startPopSession(A.key), gap, regions, tuning)).toEqual({ kind: 'none' });
-    expect(releaseIntent(poppedOut(), gap, regions, tuning)).toEqual({ kind: 'none' });
+  it('locked, released between columns or over an Inert surface: still in-context (rule 1) — only Board layer over nothing is a genuine no-op', () => {
+    expect(releaseIntent(startPopSession(A.key), regions)).toEqual({ kind: 'in-context' });
+    expect(releaseIntent(poppedOut(), regions)).toEqual({ kind: 'none' });
   });
 });

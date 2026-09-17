@@ -22,8 +22,8 @@ import {
   sendItemMove,
   type CollisionSession,
 } from './boardDndUtils';
-import { classifyDragTargets } from './dragClassification';
-import { measureDragRegions, regionAt, type DragRegion, type Point } from './dragRegions';
+import { classifyDragTargets, type DragClassification } from './dragClassification';
+import { measureDragRegions, nonCardRegionAt, type CardTarget, type DragRegion, type Point } from './dragRegions';
 import type { DragTuning } from './dragTuning';
 import {
   advancePopSession,
@@ -152,9 +152,21 @@ export function useBoardDnd(deps: BoardDndDeps) {
     snapFrame.current = requestAnimationFrame(frame);
   }
 
-  function measureRegions(): DragRegion[] {
+  // `classification` decides which Cards register as regions at all (§3.2:
+  // an invalid target — cycle-forming, depth-capped — is never poppable,
+  // and here that's simply "never a region," so nothing downstream has to
+  // re-check validity). It's a parameter rather than read off the session
+  // ref because the very first measurement of a drag (handleDragStart)
+  // runs before the session exists yet — every call site below already has
+  // its own classification in scope regardless.
+  function measureRegions(classification: DragClassification): DragRegion[] {
     const root = latest.current.rootRef.current ?? document;
-    regionsRef.current = measureDragRegions(root, latest.current.board?.columns ?? []);
+    const resolveCardTarget = (cardId: string): CardTarget | null => {
+      if (classification.states.get(cardId) !== 'valid') return null;
+      const workphaseId = latest.current.items.find(i => i.id === cardId)?.workphaseId;
+      return workphaseId ? { workphaseId } : null;
+    };
+    regionsRef.current = measureDragRegions(root, latest.current.board?.columns ?? [], resolveCardTarget);
     return regionsRef.current;
   }
 
@@ -174,7 +186,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (!current?.pop || !pointer) return;
     const { tuning } = latest.current;
     const now = performance.now();
-    const regions = measureRegions();
+    const regions = measureRegions(current.classification);
     const pop = advancePopSession(current.pop, pointer, regions, tuning, now);
     if (pop !== current.pop) {
       if (pop.contextKey !== current.pop.contextKey) startSnap();
@@ -220,7 +232,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
       const context = regions.find(r => r.key === pop.contextKey);
       live = {
-        hoverContainerId: hover?.containerId ?? null,
+        // A Card hover (locked column/sub-row, tracking a zoom-in
+        // candidate) never forces `over` — rule 1: a mere hover, not yet a
+        // pop, must never drive anything a release would act on.
+        hoverContainerId: hover && hover.attachToCardId === undefined ? hover.containerId : null,
         context: context ? { containerId: context.containerId, rect: context.rect } : null,
       };
     }
@@ -269,6 +284,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     );
   }
 
+  // Board layer only (a Card region never reaches a band resolution —
+  // Story 4's within-action is a constant append, resolved without
+  // consulting the region's rendered items at all).
   function regionItems(region: DragRegion): Item[] {
     const { getMergedColumnItems, getWorkphaseItems } = latest.current;
     return region.key.startsWith('column:')
@@ -298,12 +316,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
       return;
     }
 
-    // §1: the drag starts in exactly one context — the region the cursor
-    // (which is on the card) is in. Null from Unsorted: nothing to lock to.
+    // §1: the drag starts in exactly one context — always a column/sub-row
+    // (a Card is never a *starting* context — only reachable by zooming
+    // in), the region the cursor (which is on the card) is in. Null from
+    // Unsorted: nothing to lock to.
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
-    const regions = measureRegions();
-    const pop = startPopSession(regionAt(regions, pointerRef.current)?.key ?? null);
+    const regions = measureRegions(classification);
+    const pop = startPopSession(nonCardRegionAt(regions, pointerRef.current)?.key ?? null);
     updateSession({ activeItem, classification, pop, priorPlacement });
     setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position, priorPlacement));
   }
@@ -408,16 +428,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
   }
 
   function resolveCardDrop(ended: DragSession, overId: string | null, side: 'before' | 'after'): MoveItemInput | null {
-    const { activeItem, pop } = ended;
-    const pointer = pointerRef.current;
-    const regions = measureRegions();
-    const intent =
-      pop && pointer ? releaseIntent(pop, pointer, regions, latest.current.tuning) : { kind: 'none' as const };
+    const { activeItem, pop, classification } = ended;
+    const regions = measureRegions(classification);
+    const intent = pop ? releaseIntent(pop, regions) : { kind: 'none' as const };
 
     if (intent.kind === 'in-context') {
       if (!overId) return null;
       const resolution = resolveDrop(activeItem, overId);
       return resolution ? buildMoveInput(resolution, side) : null;
+    }
+    if (intent.kind === 'attach') {
+      return buildMoveInput({ kind: 'attach', parentId: intent.parentId }, side);
     }
     if (intent.kind === 'band') {
       const resolved = bandDropResolution(intent.region, intent.band, activeItem, regionItems(intent.region));
@@ -444,9 +465,12 @@ function clampToCurrentContext(
   const context = regions.find(r => r.key === pop.contextKey);
   if (!context) return transform;
   const x = clampAxis(transform.x, rect.left, rect.width, context.rect.left, context.rect.right);
-  const y = context.key.startsWith('subrow:')
-    ? clampAxis(transform.y, rect.top, rect.height, context.rect.top, context.rect.bottom)
-    : transform.y;
+  // A sub-row bounds both axes (§1); so does a Card's Stub context, once
+  // popped into one (Story 4 planning) — a merged column bounds x only.
+  const y =
+    context.key.startsWith('subrow:') || context.attachToCardId !== undefined
+      ? clampAxis(transform.y, rect.top, rect.height, context.rect.top, context.rect.bottom)
+      : transform.y;
   return { ...transform, x, y };
 }
 

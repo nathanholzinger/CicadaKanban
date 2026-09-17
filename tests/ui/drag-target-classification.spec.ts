@@ -3,6 +3,7 @@ import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
 import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchDefaultBoard } from '../helpers/seed';
 import { pickUp, hoverTo, cancel, center } from '../helpers/dragGesture';
+import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
 
 // Epic 3.5 Story 2 — docs/wiki/board-drag-interaction §4: every visible
 // target is classified against the carried item at drag start, and that
@@ -12,6 +13,25 @@ import { pickUp, hoverTo, cancel, center } from '../helpers/dragGesture';
 // Asserts the *state* (the `data-drop-state` attribute), never the overlay's
 // look — that's Story 8's. Nothing is dropped: the drag is picked up,
 // hovered, and cancelled, so no write happens and no outcome is asserted.
+//
+// Story 4 made a Card a zoom-in target from its own containing column (wiki
+// §1.1), so a hover that lingers on a deeply-nested Stub chain's own Card
+// (this spec's own X -> D -> D1 / T1 -> T2 -> T3 fixtures, hovered while
+// still locked to the same Todo column X started in) accumulates toward a
+// genuine pop into it — and several real pointer-move steps across several
+// hoverTo calls can accumulate enough wall-clock time to cross the default
+// `cardPopInDelayMs` (or, for a genuine cross-column hover, `popDelayMs`/
+// `popInDelayMs`). This spec was never about pop timing at all
+// (classification never changes mid-drag, hover or not), so it seeds every
+// threshold absurdly high, the same way the momentary cases elsewhere do,
+// purely to keep an incidental pop from ever firing here.
+async function seedNoPop(page: Page): Promise<void> {
+  const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 60_000, popInDelayMs: 60_000, cardPopInDelayMs: 60_000 };
+  await page.addInitScript(
+    ([key, value]) => localStorage.setItem(key, value),
+    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
+  );
+}
 
 const PROJECT = 'Drag Classification Project';
 
@@ -62,6 +82,7 @@ test.describe('drag-target classification', () => {
     // V: an unrelated Card in the other column, to hover across to.
     const v = await createItem(request, { title: 'V', projectId: project.id, workphaseId: inProgress.id });
 
+    await seedNoPop(page);
     await projectSidebar.openBoard(PROJECT);
     await expect(page.getByRole('article', { name: 'X', exact: true })).toBeVisible();
 
@@ -74,9 +95,17 @@ test.describe('drag-target classification', () => {
       await expect(target(page, v.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.1
       await expect(target(page, tOk.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.3, 2.7 (a Stub)
       await expect(target(page, tOver.id)).toHaveAttribute('data-drop-state', 'depth-capped'); // DRAG-2.3, 2.6
-      for (const id of [x.id, s.id, d.id, d1.id]) {
+      for (const id of [x.id, d.id, d1.id]) {
         await expect(target(page, id).first()).toHaveAttribute('data-drop-state', 'cycle-forming'); // DRAG-2.2
       }
+      // S is X's own attached child, so it renders only nested inside X's
+      // own card — and Story 8 collapses that card's attached children
+      // while it's the one being dragged (a fixed, small ghost height for
+      // the carve-out math), so S isn't in the DOM at all right now, never
+      // mind classified. D and D1 above are unaffected: D is detached (its
+      // own card, not nested under X), so neither it nor its own child D1
+      // depends on X's collapse.
+      await expect(target(page, s.id)).toHaveCount(0);
     };
     await expectStates();
 
