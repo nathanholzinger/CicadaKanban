@@ -9,7 +9,7 @@ off in whatever order is convenient.
 ## Documentation
 - [ ] `docs/wiki/...` adequately captures feature details and business rules introduced in the epic
 - [ ] Wiki page(s)' `Build status` line updated to reflect what actually shipped this epic
-- [ ] `client/CLAUDE.md` updated if stack, architecture, or run instructions changed
+- [ ] `CLAUDE.md` updated if stack, architecture, conventions, or run instructions changed
 
 ## Tests
 - [ ] `docs/test-plans/...` has been updated with test plans for the features introduced in this epic (derived from the wiki above, per `.claude/personas/test-planner.md`)

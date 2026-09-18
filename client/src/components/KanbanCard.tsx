@@ -1,3 +1,6 @@
+// Draggable card. isGhostLike renders both drag copies as shortCard for the
+// drag's duration — see client/src/components/workflow/CLAUDE.md.
+
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDndContext } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';

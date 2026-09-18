@@ -1,3 +1,5 @@
+// Shared icon-trigger confirm-delete (columns, workphases, boards, agents).
+
 import { useState, type ReactNode } from 'react';
 import { TrashIcon } from './icons';
 

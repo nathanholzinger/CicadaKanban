@@ -39,8 +39,10 @@ section used to list Epic 3 as "planned" and had to be caught and fixed after
 Epic 3 had already shipped). The "Future epics" skeptical question above
 means: check the roadmap before assuming something is in scope, out of scope,
 or already covered. For the shipped data-model details behind each completed
-epic, see `client/CLAUDE.md` — kept current as the actual architecture
-reference, not a status tracker.
+epic, see `CLAUDE.md` — kept current as the actual architecture reference, not
+a status tracker. Feature-specific rules (positioning, attachment, board drag,
+boards/columns/Unsorted) live in `docs/wiki/*/README.md` instead — `CLAUDE.md`
+only points to them.
 
 ## Key Architectural Decisions Already Made
 
@@ -50,6 +52,6 @@ reference, not a status tracker.
 - Position ordering uses real-number midpoints (no full reindexes)
 - Items are a tree (`parent_id`) with an `is_attached` flag: attached children mirror
   their parent's workphase and move with it via a server-side cascade; detached
-  children keep independent status. See `client/CLAUDE.md`'s Epic 3 section.
+  children keep independent status. See `docs/wiki/item-attachment/README.md`.
 - No API billing — Claude integration uses deep links and MCP, not the Anthropic API
 - Single user, local SQLite — no auth, no multi-tenancy required for MVP

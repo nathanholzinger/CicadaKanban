@@ -1,3 +1,5 @@
+// The one "renders as a Stub" predicate: positionScope === 'attached-siblings'.
+
 import type { Item } from '../types';
 
 // The one definition of "this item renders as a Stub" — an attached child

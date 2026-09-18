@@ -1,3 +1,6 @@
+// cascadeWorkphaseToAttachedDescendants: propagates a parent's workphase change to its
+// attached children only — a detached child halts the cascade for its whole branch. (Epic 3)
+
 import { db, type Tx } from '../db/index.js';
 import { items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';

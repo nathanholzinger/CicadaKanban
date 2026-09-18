@@ -1,3 +1,5 @@
+// Project tree with dnd-kit drag reorder (server-resolved via prevId/nextId).
+
 import { useState, useRef } from 'react';
 import {
   DndContext,

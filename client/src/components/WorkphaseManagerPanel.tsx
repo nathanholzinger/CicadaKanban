@@ -1,3 +1,5 @@
+// Workphase rename/delete/add rows + column-shrink notices.
+
 import { useState } from 'react';
 import type { Workphase } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, INPUT_LG } from './item-detail/pillUtils';

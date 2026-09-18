@@ -1,3 +1,5 @@
+// Express entry point: route mounting, global error middleware (registered last).
+
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';

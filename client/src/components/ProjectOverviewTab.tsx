@@ -1,3 +1,5 @@
+// Overview tab body: description edit-in-place, parent selector, subprojects list.
+
 import { useRef, useState } from 'react';
 import type { Project } from '../types';
 import type { UpdateProjectInput } from '../api/projects';

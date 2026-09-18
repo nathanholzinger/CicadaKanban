@@ -5,7 +5,10 @@ the spec throughout, and this story exists to make the code look as if the
 rules that *are* on the page had been there from the start. Becomes a
 historical record once done.
 
-**Status: planned 2026-09-17, not started.**
+**Status: Phases 0–4 implemented 2026-09-18 (this is the last phase in the
+build order). Hands-on Product Owner check still open for Phase 1's
+shortCard/carve-out feel and Phase 4's merged-column pop-out/exit-clock
+feel — see "As built" below.**
 
 - Story entry: [`epic-3-5-roadmap.md`](epic-3-5-roadmap.md) § Story 4.1
 - Working documents: [`story-4-1-anchor-draft.md`](story-4-1-anchor-draft.md)
@@ -470,11 +473,43 @@ a write for a same-slot release (decision 2) — expected none.
   Keep it only if the overlay tween composes cleanly; record the outcome
   either way in the `useBoardDnd.ts` comment that currently explains the
   raw rect.
-- **F6, needs a Product Owner ruling first:** either (i) clamp both axes for
-  every kind — §1's box rule, matching sub-rows and Cards; visible as the
-  card stopping at the last card's bottom edge in a short merged column —
-  or (ii) make the merged region span the column body again so §2's
-  sentence holds. Recommend (i). Amend §1/§2 to match whichever wins.
+- **F6 — ruled by the Product Owner (2026-09-18):** neither of the two
+  options above as originally framed. The real requirement is narrower than
+  either: **a merged column must never pop out while the cursor is still
+  somewhere inside it** — today's bug is that a short column's own empty
+  space below the last card is *nowhere* (§1's box rule stops at the
+  content-sized region), so the exit clock runs there even though the
+  cursor never left the column visually. Sub-rows and Cards are unaffected
+  either way — this is a merged-column-only fix.
+  - **Keep the merged-column clamp X-only (`clampToCurrentContext`
+    unchanged — `transform.y` still passes straight through, so the
+    DragOverlay keeps following the cursor freely, exactly as today).**
+    What changes is *which rect* the locked-context "is the cursor still
+    inside" test (`advancePopSession`'s `containsPoint(contextRegion.rect,
+    …)`, and `popOutDue`'s `distanceOutside`) is measured against for a
+    merged column specifically: not the content-sized `rect`/`contentRect`
+    band math already depends on, but a second, taller bound — the
+    column's own outer body, the same element §2's original "spans the
+    column's full height" sentence meant before the Story 3 follow-up
+    narrowed the region to its content.
+  - **This needs a second field, not a resized one.** `contentRect`/`rect`
+    stay exactly as Phase 1 built them (content-sized, exact reservation,
+    feeding `bandBoundaries`/`bandFor` and the carve-out render) —
+    resizing them instead of adding alongside would silently move the
+    Board-layer bottom-band boundary down with it, so the empty space
+    right after the last card would start reading as the *middle* band
+    (no-op) instead of *bottom* (append) the moment the column is merged
+    and short. Add `ColumnLikeRegion.boundsRect: Rect` (merged columns
+    only — a sub-row's own `rect` already is its full bound, nothing to
+    add), measured in `resolveDragStructure`/`measureRegions` from the
+    column body element `BoardColumn.tsx` already renders (the one whose
+    height the pre-Story-3 region used to equal), never clipped to visible
+    scroll the way `rect` is scrollable content is. `advancePopSession`'s
+    locked branch and `popOutDue` read `boundsRect` in place of `rect`
+    when the context is a merged column; `clampToCurrentContext` is
+    unaffected (still X-only, still against `contentRect`/`rect` for the
+    axis it does clamp). Amend wiki §1/§2 to describe both rects and which
+    each governs.
 
 ---
 
@@ -563,4 +598,61 @@ sidebar's own drag code (Story 6 touches it, this story doesn't); the
 
 ## As built
 
-*(Empty until the story is done.)*
+All five phases (0–4) are implemented and green on the full suite (client
+unit tests, client/root `tsc`, `eslint`, `prettier`, and the complete
+Playwright E2E run) with zero net regressions. No behavior changed outside
+decisions 2, 3, 5, and F6/F8 below — the existing catalog stayed the
+regression gate throughout.
+
+- **Phase 0** — `DragRegion`/`DragStructure` are a discriminated union on
+  `kind`; `childRegionAt` replaced `nonCardRegionAt`/`cardRegionAt`.
+- **Phase 1** — shortCard (a fixed-height Card mode, not a sixth
+  representation tier) backs both drag copies; the carve-out reservation
+  is exact (three shapes: positional, empty, terminal-with-cards); the
+  frozen-rect family (`followRegionTop`, `PopHover.rect`/`.cardCount`) is
+  deleted. **Gate not yet run with the Product Owner** — needs a hands-on
+  look at the shortCard body and the terminal region's bottom zone.
+- **Phase 2** — `resolveDragStructure` (once per drag, and again after a
+  layer change) + `measureRegions` (per sample, scoped to the context
+  region and its children) replaced `measureDragRegions`. Found and fixed
+  a genuine bug along the way: a timer-driven pop-out sampled against the
+  *old* layer's regions before checking whether the layer had just
+  changed, which could strand the machine with no further timer scheduled
+  and no pointermove left to self-correct it — fixed by re-sampling and
+  re-running the same pointer sample against the new layer's regions
+  immediately on transition, before anything downstream reads a region.
+- **Phase 3** — `placementFor` gained an `over` parameter so release reads
+  the same `Placement` the drag has been previewing all along
+  (`boardDndUtils.ts::toRequest`/`isIdentity` replace
+  `resolveDropTarget`/`bandDropResolution`/`buildMoveInput`/
+  `pendingPlacementFor`); a placement resolving to the item's own current
+  list-and-ordinal now writes nothing at every layer (decision 2).
+- **Phase 4** —
+  - **F6** (ruled by the Product Owner 2026-09-18): a merged column must
+    never pop out while the cursor is still visually inside it.
+    `ColumnLikeRegion.boundsRect` (merged columns only — the column's own
+    outer body, unclipped) is read by `advancePopSession`'s locked branch
+    and `popOutDue`'s distance term in place of `rect`/`contentRect`,
+    which keep governing the band math untouched; `clampToCurrentContext`
+    is unchanged (still X-only for a merged column). **Gate not yet run
+    with the Product Owner** — needs a hands-on drag past a short merged
+    column's last card.
+  - **F8**: the same clamp modifier is now passed to `DndContext` as well
+    as `DragOverlay` (`useBoardDnd.ts`'s `dragModifiers`, `BoardView.tsx`),
+    so `over` and the live side line track the same bounded position the
+    overlay is actually drawn at during the exit clock, instead of the raw,
+    unclamped one. Verified against dnd-kit 6.3.1's own source
+    (`applyModifiers` feeds both the collision rect and
+    `active.rect.current.translated`) rather than assumed; the two calls
+    (`DndContext`, `DragOverlay`) are idempotent with each other since
+    `clampAxis` clamping an already-clamped value is a no-op and both read
+    the same `snap`/`overlayTranslate` refs.
+  - Wiki `docs/wiki/board-drag-interaction/README.md` amended: §1/§2/§3 for
+    F6 (the two-rect split); backfilled Phase 1's own outstanding debt in
+    §3.1/§5/§5a (frozen-rect and approximate-reservation language replaced
+    with the exact-reservation/shortCard model) and §1's stale
+    `nonCardRegionAt`/`cardRegionAt` reference, which an earlier phase's
+    wiki update had missed (it landed correctly in
+    `client/src/components/workflow/CLAUDE.md` but not here). Memory note
+    `naming_conventions` gained a line: shortCard is a Card mode, not a
+    sixth tier.

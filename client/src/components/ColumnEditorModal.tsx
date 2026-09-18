@@ -1,3 +1,5 @@
+// Column range picker: start/end workphase, display mode.
+
 import { useState } from 'react';
 import type { Workphase, Column, ColumnDisplayMode } from '../types';
 import ModalShell from './ModalShell';

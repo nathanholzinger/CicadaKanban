@@ -1,3 +1,5 @@
+// getByIdOrNotFound: fetch-by-id-or-404 helper used across all route files.
+
 import type { Response } from 'express';
 import { eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';

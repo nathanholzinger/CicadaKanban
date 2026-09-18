@@ -1,3 +1,5 @@
+// Shared inline confirm-delete for a row/heading being replaced outright (ProjectPage).
+
 import { useState, type ReactNode } from 'react';
 
 interface ConfirmDeleteInlineProps {

@@ -1,3 +1,6 @@
+// getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope),
+// effectiveWorkflowIdForProject.
+
 import { db, type Tx } from '../db/index.js';
 import { items, projects, workflows } from '../db/schema.js';
 import { eq } from 'drizzle-orm';

@@ -1,3 +1,6 @@
+// MCP server: tools wrapping the REST API (calls localhost:3001), used by external
+// Claude agents.
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';

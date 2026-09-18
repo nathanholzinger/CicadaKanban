@@ -1,3 +1,6 @@
+// The drop bands made visible while a Card is carried: dashed boundary lines per
+// region + the hovered band tinted. (Epic 3.5)
+
 import type { ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
 import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';

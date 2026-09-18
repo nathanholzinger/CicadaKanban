@@ -1,3 +1,5 @@
+// Workphase rank/order helpers shared by columnRanges.ts and itemPositionScope.ts.
+
 import { db } from '../db/index.js';
 import { workphases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';

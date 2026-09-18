@@ -1,3 +1,5 @@
+// makeItem: the one Item factory for tests. Never hand-write a 15-field Item literal.
+
 import type { Item } from '../types';
 
 // The one client-side Item fixture. Was three near-identical 15-field

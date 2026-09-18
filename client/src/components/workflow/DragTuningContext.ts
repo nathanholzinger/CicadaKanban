@@ -1,3 +1,5 @@
+// Supplies the live dragTuning values to the components that draw thresholds/bands.
+
 import { createContext, useContext } from 'react';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
 

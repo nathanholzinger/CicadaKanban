@@ -50,8 +50,8 @@ export interface CrossProjectRepositioningScenario {
 // Builds the cross-project repositioning scenario: a root project owning
 // one workflow with one shared workphase, and two child sub-projects
 // (project1a, project1b) with no workflow of their own — they inherit the
-// root's (client/CLAUDE.md's "workflow inheritance" rule; see
-// client/src/App.tsx:136-146). Items A/C/E belong to project1a, B/D to
+// root's ("workflow inheritance" rule, CLAUDE.md; see
+// client/src/App.tsx:122-132). Items A/C/E belong to project1a, B/D to
 // project1b, all five sharing the one workphase — position scope is
 // workflow-wide and provably blind to projectId (positionScopeFor,
 // items.ts:29-58), so this scenario isolates project membership as the

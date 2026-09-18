@@ -1,3 +1,5 @@
+// Workphase CRUD + reorder state for BoardView.
+
 import { useState } from 'react';
 import type { Workphase } from '../../types';
 import { createWorkphase, updateWorkphase, deleteWorkphase } from '../../api/workphases';

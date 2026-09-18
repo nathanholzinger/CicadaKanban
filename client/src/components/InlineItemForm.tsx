@@ -1,3 +1,6 @@
+// Shared "title + type select + Add/Cancel, Escape to dismiss" form
+// (used by BoardColumn and ChildrenSection).
+
 import { useState } from 'react';
 import type { ItemType } from '../types';
 import { INPUT_LG_RING, SELECT_BASE, escapeToCancel } from './item-detail/pillUtils';

@@ -1,3 +1,5 @@
+// Uncovered-workphase items bucket — drag-source only, no drop target.
+
 import type { Item, ItemType, Workphase } from '../types';
 import { isStub } from '../lib/isStub';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';

@@ -1,3 +1,5 @@
+// TypeScript interfaces — manually synced with server/src/db/schema.ts. No codegen.
+
 export interface Project {
   id: string;
   parentId: string | null;

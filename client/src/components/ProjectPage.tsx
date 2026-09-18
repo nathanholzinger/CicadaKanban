@@ -1,3 +1,5 @@
+// Project detail shell: breadcrumb, name edit-in-place + self-delete, tab bar.
+
 import { Fragment, useRef, useState } from 'react';
 import type { Project, Workflow } from '../types';
 import type { CreateWorkflowInput } from '../api/workflows';

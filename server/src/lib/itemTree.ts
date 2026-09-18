@@ -1,3 +1,6 @@
+// isSelfRefDescendant/assertValidReparent (items + projects), walkItemDescendants,
+// hierarchyDepth/subtreeHeight/assertWithinDepthCap + ITEM_DEPTH_CAP (items). All cycle-guarded.
+
 import { eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { db, type Tx } from '../db/index.js';

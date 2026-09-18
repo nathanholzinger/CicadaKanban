@@ -1,3 +1,5 @@
+// Shared modal chrome (backdrop, header, footer, Esc) — all centered modals wrap this.
+
 import { useEffect, type ReactNode } from 'react';
 import { XIcon } from './icons';
 

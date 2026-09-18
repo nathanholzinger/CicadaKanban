@@ -1,3 +1,6 @@
+// The coarsest-decimal-that-fits search for position values, factored out of
+// positionResolver.ts so it can be unit-tested standalone.
+
 const DEFAULT_MAX_COARSEST_FIT_DECIMALS = 12;
 
 /**

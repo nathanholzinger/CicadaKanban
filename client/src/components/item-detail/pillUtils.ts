@@ -1,3 +1,5 @@
+// Shared Tailwind class-string constants (buttons, inputs, pills) for item-detail sections.
+
 import type { CSSProperties, KeyboardEvent } from 'react';
 import type { ItemType } from '../../types';
 

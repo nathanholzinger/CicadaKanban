@@ -1,3 +1,6 @@
+// Item list selectors + ordinal placements: the ghost is a Placement, not a position.
+// completeItemWrite folds a write's `reindexed` disclosure into every list. (wiki §5a/§10)
+
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
 import { getDescendantIds } from '../../lib/hierarchy';

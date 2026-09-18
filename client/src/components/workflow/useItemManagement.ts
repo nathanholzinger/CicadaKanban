@@ -1,3 +1,6 @@
+// Item state atom + per-item write tracker (sequences writes so a stale response
+// can't clobber a newer one — see itemListOps.ts::completeItemWrite).
+
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
 import { createItem, type ItemWriteResponse } from '../../api/items';

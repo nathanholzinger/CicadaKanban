@@ -1,3 +1,5 @@
+// Slide-in item detail panel — composes item-detail/* sections.
+
 import { useEffect, useRef, useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../types';
 import { fetchItem, updateItem, deleteItem, type ItemWriteResponse } from '../api/items';

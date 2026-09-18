@@ -95,10 +95,11 @@ can see. Resting nowhere pops the card out (§3); releasing nowhere writes
 nothing (§5). A Card's region (§6, Story 4) is the same kind of box.
 *(Ruled 2026-09-15, reconciliation #20; built in the Story 3 follow-up
 (2026-09-15) — `dragRegions.ts`'s region lookup is now simple containment
-(`nonCardRegionAt`/`cardRegionAt` as of the Story 4 re-plan), and a
-sub-row is clipped to its column's visible scroll box in
-`measureDragRegions`. Story 3 as built had used the column's full
-horizontal stripe with a nearest-sub-row fallback.)*
+(`childRegionAt`, one function for every layer as of Story 4.1 Phase 0 —
+replacing the Story 4 re-plan's separate `nonCardRegionAt`/`cardRegionAt`
+pair), and a sub-row is clipped to its column's visible scroll box in
+`measureRegions`. Story 3 as built had used the column's full horizontal
+stripe with a nearest-sub-row fallback.)*
 
 Every drag starts inside exactly one, determined by what the item already
 is and how its column is currently displayed — except a drag picked up
@@ -198,11 +199,29 @@ While the item is in-context:
   the context's own extent; movement that would carry it outside is not
   followed until a pop.
   - In a **merged** column this reduces to a horizontal axis lock — the
-    context spans the column's full height, so the only way out is
-    sideways, and the card moves freely up and down within it.
+    only way the card *itself* is ever visibly held back is sideways; it
+    moves freely up and down within the column. *(This is about the
+    overlay's own clamp, `clampToCurrentContext` — unchanged by the
+    paragraph below.)*
   - In an **expanded** column the sub-row bounds the card **vertically as
     well**. Drifting toward the sub-row above or below is held exactly the
     way drifting toward the next column is, and crossing it is a pop.
+
+  **Whether the *context itself still holds* is a separate question from
+  the clamp above, and for a merged column the two are measured against
+  different boxes (ruled by the Product Owner 2026-09-18, F6).** §1's
+  region — what §5's bands are measured against — is the column's
+  content-sized list box, sized to its own cards; a short merged column's
+  own empty space below its last card is outside that box, i.e. nowhere.
+  Read literally, leaving the cards and entering that empty space would
+  count as leaving the context and start the pop-out clock (§3) — visibly
+  wrong, since the cursor is still plainly inside the column. The context
+  is judged to still hold there instead: a merged column is bounded, for
+  *this* purpose only, by its own outer body (the column's full
+  available-height box, before Story 3's follow-up narrowed the region to
+  its content) — taller than, and never resized to match, the content-sized
+  box §5's bands still carve out of. Sub-rows have no such gap (a sub-row's
+  box already is its full bound) and are unaffected either way.
 - A **ghost** shows the slot it would land in, and a **side highlight** on
   a neighboring item shows which item it is anchoring to and on which side.
 
@@ -218,8 +237,10 @@ always requires an actual pop first (§3), never just a glance.
 
 **The cursor, not the card, decides whether the context holds.** Because
 the card is axis-locked, the cursor can leave the context while the card
-cannot follow. Popping is two-way, and each way takes its own sustained
-signal (§3.1), and each way moves exactly one layer of §1.1's stack:
+cannot follow. "The context" here is a merged column's outer body, not the
+content-sized box §5's bands are measured against — §2's F6 addendum.
+Popping is two-way, and each way takes its own sustained signal (§3.1), and
+each way moves exactly one layer of §1.1's stack:
 
 - **Pop out.** When the cursor has stayed *outside* the card's context —
   anywhere: another column, the gap between columns, Unsorted — past the
@@ -318,22 +339,22 @@ superseded by §1's rule in the Story 3 follow-up (2026-09-15).)*
 **The dev/test panel exposing every threshold is a required deliverable of
 this feature, not a debugging convenience.** The correct value can only be
 found by feel, and feel can only be compared by changing one number between
-two attempts without a rebuild. The panel also exposes §5's carve-out
-reservation height and the overlay colors of §4. *As built:* the panel's
-values persist in `localStorage` under `kanban_drag_tuning` — `popDelayMs`,
-`popDistancePx`, `popInDelayMs`, `cardPopInDelayMs`, `popSnapMs`,
-`ghostCardHeightPx` (§5's reservation height, replacing the retired
-`columnTopBand`/`columnBottomBand` percentage pair — a percentage of the
-*rendered* slice stopped meaning anything once bands became pixel
-carve-outs measured against real content), `overlayFreeDescendantColor`,
+two attempts without a rebuild. The panel also exposes the overlay colors
+of §4. *As built:* the panel's values persist in `localStorage` under
+`kanban_drag_tuning` — `popDelayMs`, `popDistancePx`, `popInDelayMs`,
+`cardPopInDelayMs`, `popSnapMs`, `overlayFreeDescendantColor`,
 `overlayDepthCappedOpacity`, `activeContextOutlineColor` (§1.1's locked-
 layer outline) — and tests seed that key, so every case runs against the
-configured value. The panel is a tuning-phase tool for the
-humans doing the tuning: where it lives and who sees it is deliberately not
-specified here, and it is retired once the values lock and become
-constants. *(The retired Stub-band draft's `stubFirstChildBand`/`stubLastChildBand`/
+configured value. The panel is a tuning-phase tool for the humans doing the
+tuning: where it lives and who sees it is deliberately not specified here,
+and it is retired once the values lock and become constants. *(The retired
+Stub-band draft's `stubFirstChildBand`/`stubLastChildBand`/
 `stubPopBandStart`/`stubPopBandEnd` were tuning fields in Story 4's first,
-retired trial build — a Card's within-action has no band at all now, §6.)*
+retired trial build — a Card's within-action has no band at all now, §6.
+`ghostCardHeightPx`, once here too, left the panel in Story 4.1 Phase 1:
+§5's reservation is now a fixed fact about the shortCard component
+(`KanbanCard.tsx::SHORT_CARD_HEIGHT_PX` plus the card lists' own gap),
+never a value found by feel — see §5.)*
 
 Derived test cases should assert *that* a sustained signal pops and a
 momentary one doesn't, parameterized on the threshold — never on 0.5s
@@ -444,46 +465,59 @@ unchanged; what changed is where the dividers actually sit.)*
 
 **Bands are pixel carve-outs anchored to the region's real content, never a
 fraction of whatever's currently rendered.** Where the dividers sit is
-governed by reservation, not a live measurement:
+governed by reservation, not a live measurement — and the reservation is
+*exact* (Story 4.1 Phase 1): a region's total rendered height never
+changes whether or not it's the live hover target. Both drag copies — the
+floating DragOverlay and the in-list ghost row — render as a fixed-height
+**shortCard** (§5a), so the geometry below is built from two fixed facts
+about that component, never a value found by feel: its height (`h` —
+`KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`) and the card lists' own shared gap
+(`gap` — `CARD_LIST_GAP_PX`). Three shapes, read off the region's live
+content rect and live card count on every sample:
 
-- **At Board layer, every region reserves exactly one collapsed ghost
-  card's height (`ghostCardHeightPx`, a panel value, default 96px) for the
-  whole life of the drag**, so a region's total size never changes as the
-  drag moves around the board — only *where* the reservation currently is.
-- **Not the live hover target:** the reservation is two half-height dead
-  zones carved out of the region's own real content — its cards shift down
-  by half a ghost-height to open them — labeled **"Move Top"** / **"Move
-  Bottom."** (No "Move Auto": a middle release needs no label of its own,
-  since in-context hovering already reads as "keep this position.")
-- **The live hover target** (about to be committed on release, though not
-  yet locked in): the dead zones collapse and a real ghost — the ordinal
-  placement of §10 — fills the same reserved height instead, at the same
-  fixed divider offsets. **Hovering takes over the reservation; it doesn't
-  add to it — net height never changes.**
-- The carve is measured against the region's real content, **never the
-  visible-scrolled slice** — sharper than §1's "clipped to visible," which
-  governs only whether the cursor is *in* the region at all. A divider
-  scrolled out of view is neither drawn nor reachable until the cursor (or
-  the page) scrolls to it.
+- **A positional region (1 or more real cards, not terminal):** two zones
+  of `(h + gap) / 2` each, outside the list, labeled **"Move Top"** /
+  **"Move Bottom"** — not the live hover target. (No "Move Auto": a middle
+  release needs no label of its own, since in-context hovering already
+  reads as "keep this position.") **The live hover target** (about to be
+  committed on release, though not yet locked in) collapses both zones and
+  fills the same reserved height with a real ghost — the ordinal placement
+  of §10 — instead: the non-hovered list has `n − 1` gaps between its `n`
+  cards and the hovered one has `n`, and the ghost row brings exactly
+  `h + gap`, so the total never changes. **Hovering takes over the
+  reservation; it doesn't add to it — net height never changes.**
+- **A genuinely empty region:** one zone of `h` alone, labeled **"Move to
+  {name}"** — there's no "first" or "last" to carve two dead zones around,
+  and the hovered list holds the ghost with no sibling to gap against.
+- **A terminal (done) region with cards:** one **bottom-only** zone of
+  `h + gap`, also labeled **"Move to {name}"** — a done region's ghost
+  always previews as the newest completion, i.e. last (§10), exactly where
+  this zone is. A terminal region with *no* cards collapses to the empty
+  case above.
 
-**The divider lines sit a full `ghostCardHeightPx` in from each edge,
-regardless of the half-height dead zone — and for two or more cards this
-deliberately bisects the first and last rendered card.** That's
-intentional, not a bug: the dead zone shifts the real cards down by only
-*half* a ghost-height, so a divider a *full* ghost-height from the edge
-falls at the vertical midpoint of the card now sitting there (a real
-card's own height only approximates `ghostCardHeightPx` — close enough for
-the geometry, not pinned to it, see §5a). Exactly where the line crosses a
-card is cosmetic; what a release above or below it means is not.
+The carve is measured against the region's real content, **never the
+visible-scrolled slice** — sharper than §1's "clipped to visible," which
+governs only whether the cursor is *in* the region at all. A divider
+scrolled out of view is neither drawn nor reachable until the cursor (or
+the page) scrolls to it.
 
-**Exactly one card in a region halves the edge too**, instead of the
-normal full height, so the card stays a real, unlabeled middle band rather
-than being bisected with nothing left on either side of the cut (Product
-Owner special rule, 2026-09-16).
+**The divider lines sit a full `h` in from each edge of a positional
+region, and for two or more cards this deliberately bisects the first and
+last rendered card.** That's intentional, not a bug: the dead zone is only
+`(h + gap) / 2` tall, so a divider a full `h` from the edge falls at the
+vertical midpoint of the real card now sitting there — a real card's own
+height *is* exactly `h` for the life of the drag, both drag copies being
+shortCard (§5a; no longer an approximation, as an earlier draft of this
+section had it). Exactly where the line crosses a card is cosmetic; what a
+release above or below it means is not.
 
-**A genuinely empty region collapses to a single band spanning its own
-height**, labeled **"Move to {name}"** — there's no "first" or "last" to
-carve two dead zones around.
+**Exactly one card in a region halves the edge too** — to `(h + gap) / 2`,
+the same as the dead-zone height — instead of the normal full `h`, so the
+card stays a real, unlabeled middle band rather than being bisected with
+nothing left on either side of the cut (Product Owner special rule,
+2026-09-16). This changes only where the *divider line* sits, never the
+dead-zone reservation itself, which is already `(h + gap) / 2` on both
+sides regardless of card count.
 
 **The reserved space exists only at Board layer, and it collapses, not
 merely hides, everywhere else.** §1.1 already states that the drawn guides
@@ -500,43 +534,32 @@ it is positioned by ordinary anchor+side hovering rather than by band.
 Releasing without holding, or after popping out but before popping in,
 commits the band's meaning.
 
-**The reservation height is a dev/test-panel value**, same as the pop
-thresholds — `ghostCardHeightPx`'s default (96px) is a starting point to
-tune, not a settled constant; both dividers and both dead-zone heights all
-derive from this one value rather than being independently tunable.
+**The reservation is derived from shortCard, not tuned.** `h` and `gap`
+are fixed facts about the card component (§5a), read by both
+`dragRegions.ts`'s band math and `BandGuides.tsx`'s carve-out render — the
+dividers, both dead-zone heights, and the one-card exception above all
+derive from the same two numbers. Neither is a dev/test-panel value; they
+left the panel in Story 4.1 Phase 1, along with the retired
+`ghostCardHeightPx` (§3.1).
 
-**A band is measured against the region's content rect as it was when the
-cursor entered it**, for as long as the cursor stays. The ghost's own
-insertion grows the hovered list — and in an expanded column moves the
-sub-rows below it — so measuring against the live rect would let the drop
-change the band it is about to be resolved by. **The freeze is against
-that insertion only: the frozen rect follows everything else that can move
-the region — a real scroll, or a sibling region's own carve-out reflow.**
-Two sub-rows of the same expanded column share one scrolling body, and
-each independently reserves or releases a ghost-height of space at Board
-layer (above); one doing so can shift the other's top edge with no scroll
-involved at all. `popSession.ts::followRegionTop` doesn't try to tell a
-real scroll apart from a sibling's reflow — it re-measures the region's own
-top edge each sample and translates the frozen rect by however far that
-moved, catching both causes in one comparison while staying inert to the
-one cause that must never move it (the hovered region's *own* insertion,
-which only ever grows its bottom edge, never its top). *(Frozen rect
-settled in Story 3; generalized to scroll in the Story 3 follow-up
-(2026-09-15, reconciliation #20/#21); generalized again to sibling reflow
-in the 2026-09-16 addendum below, replacing the plain scroll-offset
-translation the follow-up had built.)* Merged columns needed no separate
-case added for this: their region now sits inside the same scrolling body
-a sub-row's already did (moved off a non-scrolling wrapper around it, in
-the same addendum), so a merged column tracks scroll exactly as a sub-row
-does — and, as a side effect, a short column's bottom band no longer
-strands itself far below the last card, since the region now sizes to its
-own content instead of the column's full available height.
+**A band reads the region's live content rect and live card count on
+every sample, never one frozen at drag start.** *(Story 3 built a frozen
+copy, kept stable against the ghost's own insertion but tracking a real
+scroll; the Story 3 follow-up generalized it to also track a sibling
+region's own carve-out reflow. Story 4.1 Phase 1 deletes the freeze
+entirely — `followRegionTop` and the sticky-hover check it existed for are
+gone. The freeze was needed only because the old reservation was
+*approximate*: a hovered region's own rendered size genuinely changed
+shape as the ghost joined it. The exact-reservation math above rules that
+out by construction — the ghost's insertion changes *where* the
+reservation currently is, never the region's *total* size — so a live
+read on every sample has nothing left to get wrong.)*
 
 **The bands are shown only at Board layer** (`BandGuides.tsx`, added after
 Story 3's hands-on, re-scoped in the Story 4 re-plan 2026-09-16): while
 genuinely popped out, every column/sub-row draws two subtle dashed lines
 at the boundaries, and the one the cursor is in tints the band the cursor
-is in — drawn from the same frozen rect the drop resolves against. The
+is in — drawn from the same live rect the drop resolves against. The
 moment the drag is locked into anything — a column/sub-row *or* a Card —
 every guide disappears: there are no bands to cue there (§2), and the
 absence of lines says so. Look is provisional (Story 8).
@@ -575,26 +598,36 @@ labeled; done/terminal handling gets a fuller rework in Epic 4
 ## 5a. The dragged card's own visual collapse
 
 **Both visible copies of a Card being dragged — the floating DragOverlay
-copy and the in-place row at its own slot — render identically collapsed**
-for the life of the drag, regardless of which layer it's locked into or
-whether it's genuinely popped out:
+copy and the in-place row at its own slot — render as shortCard**, a fixed-
+height compact mode, for the life of the drag, regardless of which layer
+it's locked into or whether it's genuinely popped out (Story 4.1 Phase 1;
+named and settled with the Product Owner 2026-09-17). shortCard is a Card
+*mode*, not a fifth representation tier alongside Stub/Card/Sheet/
+Headline — a compact Card on the board is still the board's draggable
+unit, and it's built as a presentational body with no knowledge of
+dragging, so a later board-density option can reuse it unchanged:
 
+- **One pills row.**
 - **Title** truncates to one line.
 - **Description** clamps to exactly one line, with the space reserved even
   when the item has no description at all — so the collapsed height
   doesn't vary on whether a description happens to be set.
+- **No assignee footer** — never rendered while dragging, not even
+  collapsed.
 - **The attached-children indicator and count are fully suppressed** — not
   shown collapsed, not shown dimmed, simply gone from both copies. This
   means **an item's own attached children go completely unrendered, not
   merely visually hidden, for as long as that item is being dragged** — a
   deliberate side effect, not an oversight.
 
-**Why:** a card's real height is otherwise unbounded (a long description,
-many attached children), which is what §5's carve-out geometry treats as
-only an *approximation* of `ghostCardHeightPx` rather than an exact match.
-Collapsing both copies to a fixed, predictable shape keeps that
-approximation close, so the reservation doesn't visibly mismatch the thing
-it's reserving space for.
+**Why:** a full Card's real height is otherwise unbounded (a long
+description, many attached children, an assignee footer). shortCard fixes
+both drag copies to one exact height
+(`KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`), which is what makes §5's carve-out
+reservation *exact* rather than an approximation — earlier drafts of this
+section, before Phase 1, described the collapsed height as only
+approximately matching the reservation constant; there is no longer a gap
+between the two to approximate.
 
 **On drop, the ghost expands back to full height instantaneously** — no
 animation yet. Flagged as a likely follow-up if this collapsed treatment

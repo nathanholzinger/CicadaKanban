@@ -1,3 +1,5 @@
+// deleteBoardsById: transactional columns→boards delete, shared by all 3 board-delete paths.
+
 import { db, type Tx } from '../db/index.js';
 import { boards, columns } from '../db/schema.js';
 import { inArray } from 'drizzle-orm';

@@ -1,3 +1,5 @@
+// Shared section header + form-actions wrapper for ItemDetailPanel sections.
+
 import type { ReactNode } from 'react';
 import { SECTION_LABEL, BTN_ADD_TRIGGER, BTN_PRIMARY, BTN_CANCEL } from './pillUtils';
 

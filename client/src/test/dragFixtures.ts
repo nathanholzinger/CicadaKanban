@@ -1,3 +1,5 @@
+// rect/region test fixtures for drag geometry (Rect, ColumnLikeRegion, DropColumn).
+
 import type { ColumnLikeRegion, Rect } from '../components/workflow/dragRegions';
 import type { DropColumn } from '../components/workflow/boardDndUtils';
 

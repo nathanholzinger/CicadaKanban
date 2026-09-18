@@ -1,3 +1,6 @@
+// Dev/test panel: every drag threshold/band/overlay value, live machine state,
+// inversion log. Retired once the values lock and become constants. (Epic 3.5)
+
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
 import type { DragSession } from './workflow/DragSessionContext';

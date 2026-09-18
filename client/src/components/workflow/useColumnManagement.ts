@@ -1,3 +1,5 @@
+// Column CRUD + reorder state for BoardView.
+
 import { useState } from 'react';
 import type { ColumnDisplayMode } from '../../types';
 import { createColumn, updateColumn, deleteColumn, reorderColumns } from '../../api/columns';

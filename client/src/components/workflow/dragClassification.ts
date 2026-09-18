@@ -1,3 +1,6 @@
+// classifyDragTargets: classifies every item on the board against the carried item,
+// once per drag start — valid / cycle-forming / depth-capped / inert.
+
 import type { Item } from '../../types';
 import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';

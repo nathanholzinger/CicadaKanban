@@ -1,3 +1,6 @@
+// Board switcher + board create/rename/delete, add-column/manage-workphases/
+// drag-tuning entry points.
+
 import { useState } from 'react';
 import type { Board, Workphase } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';

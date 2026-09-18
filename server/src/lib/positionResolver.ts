@@ -1,3 +1,8 @@
+// Table-generic anchor+side position resolution, coarsest-fit, lazy reindex — shared by
+// items and projects. Rules: docs/wiki/item-positioning/README.md (Epic 3.2).
+// Also home to nextPosition: simple append-at-end math for workphases/boards/columns
+// (non-nullable fields, no anchor/reindex needed).
+
 import { eq, gt, lt, asc, desc, and, isNotNull, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { Tx } from '../db/index.js';

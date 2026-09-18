@@ -1,3 +1,5 @@
+// Droppable column — merged (one swimlane) or per-workphase expanded sub-rows.
+
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';

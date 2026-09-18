@@ -1,3 +1,5 @@
+// Sidebar-only project tree helpers (flattening, drop validation).
+
 import type { Project } from '../../types';
 
 export interface FlatItem {

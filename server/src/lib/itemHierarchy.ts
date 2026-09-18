@@ -1,3 +1,7 @@
+// validateHierarchyRequest / applyHierarchyRequest — the one reparent/attach/workphase/
+// placement implementation behind POST /items, PUT /items/:id, and PATCH /items/:id/move.
+// Rules: docs/wiki/item-attachment/README.md (Epic 3.5).
+
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';

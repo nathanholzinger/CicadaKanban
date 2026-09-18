@@ -1,3 +1,6 @@
+// State root: layout, workflow inheritance (a project with no workflow inherits
+// from its nearest ancestor that has one).
+
 import { useEffect, useState } from 'react';
 import type { Workflow } from './types';
 import type { Project } from './types';

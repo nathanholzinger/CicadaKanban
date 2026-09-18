@@ -1,3 +1,5 @@
+// logActivity: one activity_log insert, optionally inside a transaction.
+
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { activityLog } from '../db/schema.js';

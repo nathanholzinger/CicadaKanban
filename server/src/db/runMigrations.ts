@@ -1,3 +1,5 @@
+// Migration runner + seed data + board backfill (1:1 board per pre-existing workflow).
+
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
 import { projects, workflows, workflowTemplates, workflowTemplatePhases, workphases, boards } from './schema.js';

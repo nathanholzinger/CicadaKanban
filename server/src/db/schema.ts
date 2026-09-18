@@ -1,3 +1,5 @@
+// Drizzle table definitions — source of truth for the data model.
+
 import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
 
 // ============================================================

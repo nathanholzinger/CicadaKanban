@@ -1,3 +1,6 @@
+// apiJson/apiVoid/apiRequest — shared fetch helpers; always parse the server's real
+// { error } message with a fallback. Mirrors server/src/routes/*.ts, no barrel index.
+
 export const API = '/api';
 
 // Every domain module in this directory used to hand-roll its own fetch call

@@ -1,3 +1,5 @@
+// Self-contained: poll, dropdown, mark-read/mark-all. No props.
+
 import { useEffect, useRef, useState } from 'react';
 import type { Notification } from '../types';
 import { fetchNotifications, markNotificationRead, markAllNotificationsRead } from '../api/notifications';

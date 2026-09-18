@@ -1,3 +1,5 @@
+// Board CRUD + active-board state for BoardView.
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Board } from '../../types';
 import { fetchBoards, createBoard, updateBoard, deleteBoard } from '../../api/boards';

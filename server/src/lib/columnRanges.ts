@@ -1,3 +1,6 @@
+// Rank map + range coverage/overlap/broken-column detection for board columns.
+// getOrderedWorkphases and shrink-on-workphase-delete also live here.
+
 import { db, type Tx } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';

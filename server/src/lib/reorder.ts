@@ -1,3 +1,6 @@
+// validateReorder/applyReorderEntries — the shared PATCH /reorder implementation for
+// items, workphases, and columns.
+
 import { eq, inArray } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { db, type Tx } from '../db/index.js';
