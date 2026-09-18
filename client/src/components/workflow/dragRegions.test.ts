@@ -8,6 +8,7 @@ import {
   distanceOutside,
   measureRegions,
   resolveDragStructure,
+  type ColumnLikeRegion,
   type Rect,
 } from './dragRegions';
 import { rect, region, column } from '../../test/dragFixtures';
@@ -289,5 +290,34 @@ describe('resolveDragStructure / measureRegions', () => {
 
     const board = measureRegions(structure, null);
     expect(board.map(r => r.key).sort()).toEqual(['column:col-1', 'column:col-2']);
+  });
+
+  // Story 4.1 Phase 4 (F6) — a merged column's `boundsRect` is its own outer
+  // body (BoardColumn.tsx's `overflow-y-auto` wrapper — the same element
+  // already resolved as the scroll ancestor for clipping), never the
+  // content-sized region `rect` stays. A short column with room below its
+  // last card is exactly the case that used to strand the exit clock.
+  it("a merged column's boundsRect is its own outer body, taller than the content-sized region", () => {
+    const box = document.createElement('div');
+    box.style.overflowY = 'auto';
+    mockRect(box, rect(0, 0, 300, 400)); // the outer body — y 0..400
+    const columnEl = document.createElement('div');
+    columnEl.setAttribute('data-drag-region', 'column:col-1');
+    mockRect(columnEl, rect(0, 0, 300, 120)); // the content-sized region — y 0..120
+    box.appendChild(columnEl);
+    document.body.appendChild(box);
+
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])]);
+    const [region] = measureRegions(structure, null) as [ColumnLikeRegion];
+    expect(region.rect).toMatchObject({ top: 0, bottom: 120 });
+    expect(region.boundsRect).toMatchObject({ top: 0, bottom: 400 });
+  });
+
+  it("a sub-row's boundsRect is undefined — its own rect already is its full bound, nothing to add", () => {
+    buildScrolledSubrow(rect(0, 0, 300, 150), rect(0, 0, 300, 200));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
+    const [region] = measureRegions(structure, null) as [ColumnLikeRegion];
+    expect(region.kind).toBe('subrow');
+    expect(region.boundsRect).toBeUndefined();
   });
 });

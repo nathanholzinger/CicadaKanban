@@ -1,3 +1,6 @@
+// The pop state machine (locked / popped-out) for the board drag gesture — pure,
+// unit-tested. Rules: docs/wiki/board-drag-interaction/README.md.
+
 import type { DragTuning } from './dragTuning';
 import { workphaseOnlySlot, type Placement } from './itemListOps';
 import {
@@ -9,16 +12,19 @@ import {
   type ColumnLikeRegion,
   type DragRegion,
   type Point,
+  type Rect,
   type RegionKind,
   type ShortCardMetrics,
 } from './dragRegions';
 
 // Epic 3.5 Story 3, re-planned for Story 4 (2026-09-16) — the pop state
 // machine (docs/wiki/board-drag-interaction §1–§3, §5–§6). Pure: a session
-// value, a transition on each pointer sample, and two read-outs (what the
-// ghost should show, what a release means). No React, no dnd-kit, no
-// timers — the hook that owns the gesture supplies the clock and the
-// measured regions.
+// value, a transition on each pointer sample, and one read-out
+// (`placementFor`) that names the ghost mid-drag and the request itself at
+// release alike (Story 4.1 Phase 3 — a release is just this same call with
+// `over` filled in, not a second, separately-derived answer). No React, no
+// dnd-kit, no timers — the hook that owns the gesture supplies the clock
+// and the measured regions.
 //
 // The board is a strict stack of layers, never more than one deep from
 // where you are: **Board** (`contextKey === null`) → **Column/sub-row** →
@@ -175,7 +181,7 @@ export function advancePopSession(
   // enough to pop into it (a Card has none yet — Story 6's own further
   // zoom-in is what would give it any).
   const contextRegion = regions.find(r => r.key === session.contextKey);
-  const inside = contextRegion !== undefined && containsPoint(contextRegion.rect, pointer);
+  const inside = contextRegion !== undefined && containsPoint(containmentRect(contextRegion), pointer);
 
   if (inside) {
     const candidate = childRegionAt(regions, pointer, session.contextKey);
@@ -242,6 +248,28 @@ function hoverFor(
   return staying && staying.band === band ? staying : { regionKey: region.key, band, poppable, since };
 }
 
+// Story 4.1 Phase 4 (F6, ruled by the Product Owner 2026-09-18) — the rect
+// the locked-context "is the cursor still inside" test (above) and
+// `popOutDue`'s distance term measure against. The real requirement is
+// narrower than either of the two options originally floated: a merged
+// column must never pop out while the cursor is still somewhere inside it.
+// `rect`/`contentRect` are exact-reservation, content-sized (Phase 1) — a
+// short merged column's own empty space below its last card is nowhere in
+// that box, so the exit clock ran there even though the cursor never left
+// the column visually. `boundsRect` (merged columns only, `dragRegions.ts`)
+// is the column's own outer, un-clipped body instead — resizing `rect`
+// itself would have silently moved the Board-layer bottom-band boundary
+// down with it, turning that same empty space into the *middle* band
+// (no-op) instead of *bottom* (append). A sub-row's own `rect` already is
+// its full bound (nothing to add), and a Card's within-action has no such
+// ambiguity, so both fall through unchanged. `clampToCurrentContext`
+// (useBoardDnd.ts) is unaffected — still X-only for a merged column,
+// against `rect`, not `boundsRect`: this only changes when the pop-out
+// clock is running, never how far the overlay can visually stray.
+function containmentRect(region: DragRegion): Rect {
+  return region.kind === 'column' && region.boundsRect ? region.boundsRect : region.rect;
+}
+
 function popOutDue(
   contextRegion: DragRegion | undefined,
   pointer: Point,
@@ -251,7 +279,9 @@ function popOutDue(
 ): boolean {
   if (now - outsideSince >= tuning.popDelayMs) return true;
   if (tuning.popDistancePx <= 0) return false;
-  return contextRegion !== undefined && distanceOutside(pointer, contextRegion.rect) >= tuning.popDistancePx;
+  return (
+    contextRegion !== undefined && distanceOutside(pointer, containmentRect(contextRegion)) >= tuning.popDistancePx
+  );
 }
 
 // When the pending transition would fire if the cursor didn't move — for
@@ -272,30 +302,41 @@ export function popDueAt(session: PopSession, regions: readonly DragRegion[], tu
   return session.hover?.poppable ? session.hover.since + tuning.popInDelayMs : null;
 }
 
+// Story 4.1 Phase 3 — what a real drop in-context resolved to, distinct
+// from "nothing computed yet" (mid-drag, decision 1: sortable draws the
+// slot, the ghost just sits at 'existing'). `null` is the mid-drag case,
+// or release over genuinely nothing. `'container'` is release onto the
+// bare column/sub-row container — no specific card to anchor beside.
+// `{anchorId, side}` is release onto a specific card, `resolveDropSide`'s
+// side.
+export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'container' | null;
+
 // The ghost (§10 ordinal preview, §5 band table): always the *locked*
 // context's own within-action when there is one — Column/sub-row: the
-// slot the position sort already keeps (or the hovered Board-layer band's
-// slot, when genuinely popped out); Card: always 'last' (Story 4's
-// narrowed scope — no band, no anchor). Never previews a foreign region a
-// mere hover hasn't actually reached (rule 1): the ghost only ever shows
-// what a drop right now would do. Null when the card belongs nowhere and
-// the cursor is over nothing: it's drawn where it already is.
+// slot a real drop resolved to (`over`), or 'existing' while that's still
+// unknown (mid-drag, decision 1); Board layer: the hovered band's slot;
+// Card: always 'last' (Story 4's narrowed scope — no band, no anchor).
+// Never previews a foreign region a mere hover hasn't actually reached
+// (rule 1): the ghost only ever shows what a drop right now would do.
+// Null when the card belongs nowhere and the cursor is over nothing: it's
+// drawn where it already is.
 //
 // `priorPlacement` is the item's placement from *before* this drag — set
 // only when picking up (or popping back into the context of) a re-dragged
-// item whose earlier write is still pending. In-context, with no Board-
-// layer hover, it wins over a freshly computed slot: recomputing from the
-// raw item would use its stale pre-write position/workphase and visibly
-// jump the ghost the instant the item is picked up, or again the moment it
-// pops back into the context it started in (audit
-// epic-3-5-story-3-reconciled #1). Not consulted for a Card context: its
-// within-action is constant, nothing to jump.
+// item whose earlier write is still pending. In-context, with `over` still
+// null (mid-drag), it wins over a freshly computed slot: recomputing from
+// the raw item would use its stale pre-write position/workphase and
+// visibly jump the ghost the instant the item is picked up, or again the
+// moment it pops back into the context it started in (audit
+// epic-3-5-story-3-reconciled #1). Not consulted for a Card context, or
+// once `over` names a real resolved drop: there's nothing left to jump.
 export function placementFor(
   session: PopSession,
   regions: readonly DragRegion[],
   activeWorkphaseId: string | null,
   activeItemPosition: number | null,
   priorPlacement: Placement | null = null,
+  over: PlacementOver = null,
 ): Placement | null {
   const key = session.contextKey === null ? (session.hover?.regionKey ?? null) : session.contextKey;
   const region = key === null ? undefined : regions.find(r => r.key === key);
@@ -305,17 +346,34 @@ export function placementFor(
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
-  const band = session.contextKey === null ? session.hover?.band : undefined;
+  if (session.contextKey !== null) {
+    // A workphase-only fallback (no anchor): keeps the position it already
+    // has — unless it has none to keep, which takes the append fallback
+    // instead of the position-sort's null-coerced top slot (item-
+    // positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
+    // mirror of #14). A done region never previews a positioned insert
+    // either way — uniform across its whole covered set
+    // (itemListOps.ts::getMergedColumnItemsFrom's own invariant), so this
+    // also covers a real drop onto one of its own (terminal) cards, same
+    // as the band path already never anchoring in a terminal region.
+    const fallback: Placement['slot'] = region.isTerminal ? 'existing' : workphaseOnlySlot(activeItemPosition);
+    if (over === null)
+      return priorPlacement ?? { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
+    if (over === 'container' || region.isTerminal) {
+      return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
+    }
+    return {
+      workphaseId: regionWorkphaseFor(region, activeWorkphaseId),
+      slot: { anchorId: over.anchorId, side: over.side },
+    };
+  }
+
+  // Board layer (popped out): the hovered band decides — unchanged.
+  const band = session.hover?.band;
   if (!band && priorPlacement) return priorPlacement;
 
   let slot: Placement['slot'];
   if (region.isTerminal || !band || band === 'middle') {
-    // A workphase-only move (no anchor): keeps the position it already has
-    // — unless it has none to keep, which takes the append fallback
-    // instead of the position-sort's null-coerced top slot (item-
-    // positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
-    // mirror of #14). A done region never previews a positioned insert
-    // either way.
     slot = region.isTerminal ? 'existing' : workphaseOnlySlot(activeItemPosition);
   } else {
     slot = band === 'top' ? 'first' : 'last';
@@ -326,30 +384,4 @@ export function placementFor(
 export function regionWorkphaseFor(region: ColumnLikeRegion, activeWorkphaseId: string | null): string {
   const member = activeWorkphaseId !== null && region.coveredWorkphaseIds.includes(activeWorkphaseId);
   return member ? activeWorkphaseId : region.targetWorkphaseId;
-}
-
-export type ReleaseIntent =
-  // Locked in a column/sub-row: dnd-kit's `over` (anchor + side) decides.
-  | { kind: 'in-context' }
-  // Locked in a Card: always append as the last child (Story 4's narrowed
-  // scope — no anchor, no band; manual placement is Story 6).
-  | { kind: 'attach'; parentId: string }
-  // Board layer, hovering a column/sub-row: its band decides (§5).
-  | { kind: 'band'; region: ColumnLikeRegion; band: Band }
-  // Board layer, over nothing: nothing is written.
-  | { kind: 'none' };
-
-// What a release means right now — read entirely off the machine's own
-// state (rule 1: a locked release never depends on where the bare cursor
-// currently is, so this needs no fresh geometry at release time).
-export function releaseIntent(session: PopSession, regions: readonly DragRegion[]): ReleaseIntent {
-  if (session.contextKey !== null) {
-    const region = regions.find(r => r.key === session.contextKey);
-    return region?.kind === 'card' ? { kind: 'attach', parentId: region.attachToCardId } : { kind: 'in-context' };
-  }
-  if (!session.hover) return { kind: 'none' };
-  const region = regions.find(r => r.key === session.hover?.regionKey);
-  return region && region.kind !== 'card'
-    ? { kind: 'band', region, band: session.hover.band ?? 'middle' }
-    : { kind: 'none' };
 }

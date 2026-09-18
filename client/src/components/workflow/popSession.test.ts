@@ -1,14 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
-import {
-  advancePopSession,
-  isLocked,
-  placementFor,
-  popDueAt,
-  releaseIntent,
-  startPopSession,
-  type PopSession,
-} from './popSession';
+import { advancePopSession, isLocked, placementFor, popDueAt, startPopSession, type PopSession } from './popSession';
 import { rect, region } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
 import type { ShortCardMetrics } from './dragRegions';
@@ -130,6 +122,44 @@ describe('locked', () => {
     expect(near.contextKey).toBe(A.key);
     const far = advancePopSession(startPopSession(A.key), { x: 170, y: 200 }, regions, withDistance, metrics, 0); // 70px past A
     expect(far.contextKey).toBeNull();
+  });
+
+  // Story 4.1 Phase 4 (F6, ruled by the Product Owner 2026-09-18): a merged
+  // column must never pop out while the cursor is still somewhere inside
+  // it. `M`'s own `rect` is content-sized (Phase 1's exact reservation) and
+  // stops well short of `boundsRect`, the column's outer body — the empty
+  // space between them is exactly the case that used to strand the exit
+  // clock (F6's finding: "the pointer below a short merged column's last
+  // card is nowhere"). A sub-row has no such gap (its own `rect` already is
+  // its full bound), so it keeps reading straight off `rect`, unchanged.
+  describe("merged-column boundsRect — the 'still inside' test reads the outer body, not the content-sized rect", () => {
+    const shortRect = rect(0, 0, 100, 120); // the column's own cards — y 0..120
+    const outerBody = rect(0, 0, 100, 400); // BoardColumn.tsx's own overflow-y-auto wrapper — y 0..400
+    const M = region('column:m', shortRect, { boundsRect: outerBody });
+
+    it('below the last card but still inside the outer body: still locked, nothing tracked', () => {
+      const s = advancePopSession(startPopSession(M.key), { x: 50, y: 200 }, [M], tuning, metrics, 0);
+      expect(s).toEqual(locked(M.key));
+    });
+
+    it('past the outer body too: the pop-out clock starts, same as any other region', () => {
+      const s = advancePopSession(startPopSession(M.key), { x: 50, y: 450 }, [M], tuning, metrics, 0);
+      expect(s).toEqual({ ...locked(M.key), outsideSince: 0 });
+    });
+
+    it('a sub-row has no boundsRect to speak of — its own rect stays the containment test', () => {
+      const sub = region('subrow:m:w1', shortRect);
+      const s = advancePopSession(startPopSession(sub.key), { x: 50, y: 200 }, [sub], tuning, metrics, 0);
+      expect(s).toEqual({ ...locked(sub.key), outsideSince: 0 });
+    });
+
+    it('the distance term also measures against the outer body for a merged column', () => {
+      const withDistance = { ...tuning, popDistancePx: 50 };
+      const near = advancePopSession(startPopSession(M.key), { x: 50, y: 430 }, [M], withDistance, metrics, 0); // 30px past the outer body
+      expect(near.contextKey).toBe(M.key);
+      const far = advancePopSession(startPopSession(M.key), { x: 50, y: 470 }, [M], withDistance, metrics, 0); // 70px past the outer body
+      expect(far.contextKey).toBeNull();
+    });
   });
 
   // Story 4.1 Phase 1: the frozen-rect/`followRegionTop` family (and the
@@ -256,6 +286,45 @@ describe('placementFor', () => {
     });
   });
 
+  // Story 4.1 Phase 3: `over` is release-only (decision 1 — mid-drag,
+  // sortable draws the slot and the ghost just sits at 'existing', tested
+  // above with no `over` at all). These are what useBoardDnd.ts's
+  // handleDragEnd actually calls once a real drop has resolved.
+  describe('over (release, in-context)', () => {
+    it('a specific card: the anchor + side dnd-kit resolved, under its own workphase (TC-2.11)', () => {
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null, { anchorId: 'card-x', side: 'after' }),
+      ).toEqual({ workphaseId: activeWorkphase, slot: { anchorId: 'card-x', side: 'after' } });
+    });
+
+    it("the bare container: the same workphase-only fallback mid-drag already uses — there's no card to anchor beside", () => {
+      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null, 'container')).toEqual({
+        workphaseId: activeWorkphase,
+        slot: 'existing',
+      });
+    });
+
+    it('a done region never anchors, even onto one of its own cards — same fallback as a bare container (audit epic-3-5-story-3-reconciled #4)', () => {
+      const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
+      expect(
+        placementFor(startPopSession(done.key), [done], activeWorkphase, 1, null, {
+          anchorId: 'done-card',
+          side: 'before',
+        }),
+      ).toEqual({ workphaseId: done.targetWorkphaseId, slot: 'existing' });
+    });
+
+    it('a real drop always wins over priorPlacement — only the null (mid-drag) case defers to it', () => {
+      const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, prior, {
+          anchorId: 'card-x',
+          side: 'before',
+        }),
+      ).toEqual({ workphaseId: activeWorkphase, slot: { anchorId: 'card-x', side: 'before' } });
+    });
+  });
+
   it("DRAG-3.11: Board layer — the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
     expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1)).toEqual({
       workphaseId: B.targetWorkphaseId,
@@ -363,32 +432,5 @@ describe('placementFor', () => {
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
-  });
-});
-
-describe('releaseIntent', () => {
-  it('locked: always in-context (anchor + side via dnd-kit) — rule 1, regardless of a foreign hover, since one is never even tracked', () => {
-    expect(releaseIntent(startPopSession(A.key), regions)).toEqual({ kind: 'in-context' });
-    expect(releaseIntent(run([[bBottom, 100]]), regions)).toEqual({ kind: 'in-context' });
-  });
-
-  it("Board layer (popped out): a hovered region's band", () => {
-    expect(releaseIntent(hoverAt(bBottom), regions)).toEqual({ kind: 'band', region: B, band: 'bottom' });
-    // Even back over the column it came from: a band drop there too.
-    expect(releaseIntent(hoverAt(inA), regions)).toEqual({ kind: 'band', region: A, band: 'middle' });
-  });
-
-  it('DRAG-1.5 / DRAG-3.4: after popping into B, a release in B is in-context', () => {
-    const s = run([
-      [bMiddle, 0],
-      [bMiddle, OUT],
-      [bMiddle, OUT + IN],
-    ]);
-    expect(releaseIntent(s, regions)).toEqual({ kind: 'in-context' });
-  });
-
-  it('locked, released between columns or over an Inert surface: still in-context (rule 1) — only Board layer over nothing is a genuine no-op', () => {
-    expect(releaseIntent(startPopSession(A.key), regions)).toEqual({ kind: 'in-context' });
-    expect(releaseIntent(poppedOut(), regions)).toEqual({ kind: 'none' });
   });
 });

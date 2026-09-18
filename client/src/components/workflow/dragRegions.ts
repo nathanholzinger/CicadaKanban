@@ -1,3 +1,6 @@
+// Drag regions (Board/Column/sub-row/Card) and their pixel drop bands —
+// resolveDragStructure (structural, once per drag) + measureRegions (live rects, per sample).
+
 import { subrowContainerId, type DropColumn } from './boardDndUtils';
 
 // Epic 3.5 Story 3 — the *regions* a Card drag can be in (docs/wiki/board-
@@ -84,6 +87,19 @@ export interface ColumnLikeRegion extends RegionCommon {
    */
   cardCount: number;
   parentRegionKey: null;
+  /**
+   * Merged columns only (Story 4.1 Phase 4, F6) — the column's own outer
+   * body element (`BoardColumn.tsx`'s `overflow-y-auto` wrapper), never
+   * clipped to visible scroll the way `rect` is. `rect`/`contentRect` stay
+   * exact-reservation and content-sized (Phase 1), feeding `bandBoundaries`/
+   * `bandFor`/the carve-out render unchanged; `boundsRect` exists only for
+   * `popSession.ts`'s locked-context "is the cursor still inside" test and
+   * its pop-out distance measure, so a short merged column's own empty
+   * space below the last card reads as still-inside instead of nowhere.
+   * Undefined for a sub-row (its own `rect` already is its full bound —
+   * nothing to add) and always undefined on a `CardRegion`.
+   */
+  boundsRect?: Rect;
 }
 
 // Story 4: a Card region — reachable only as a zoom-in target from the
@@ -207,7 +223,12 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
   for (const s of structure) {
     if (s.key !== scope && s.parentRegionKey !== scope) continue;
     const contentRect = layoutRect(s.element, s.kind === 'card');
-    const rect = s.scrollAncestor ? clipToVisible(contentRect, layoutRect(s.scrollAncestor, false)) : contentRect;
+    // Also the merged-column `boundsRect` source below (F6) — the same
+    // scroll-ancestor element already resolved for clipping is exactly
+    // `BoardColumn.tsx`'s own outer body, the one whose height the region
+    // used to equal before the Story 3 follow-up narrowed it to content.
+    const scrollAncestorRect = s.scrollAncestor ? layoutRect(s.scrollAncestor, false) : null;
+    const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
     regions.push(
       s.kind === 'card'
@@ -231,6 +252,7 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
             isTerminal: s.isTerminal,
             cardCount: cardCountOf(s.element),
             parentRegionKey: null,
+            boundsRect: s.kind === 'column' ? (scrollAncestorRect ?? contentRect) : undefined,
           },
     );
   }

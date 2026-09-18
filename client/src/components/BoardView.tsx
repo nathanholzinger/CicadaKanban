@@ -1,3 +1,6 @@
+// Board orchestration: loads the active board, composes the workflow/ hooks,
+// renders the DnD board. See client/src/components/workflow/CLAUDE.md.
+
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
@@ -186,7 +189,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleReorderColumns,
   } = useColumnManagement(activeBoardId, loadBoard);
 
-  const { sensors, session, collisionDetection, overlayModifiers, handleDragStart, handleDragEnd, handleDragCancel } =
+  const { sensors, session, collisionDetection, dragModifiers, handleDragStart, handleDragEnd, handleDragCancel } =
     useBoardDnd({
       board,
       setBoard,
@@ -296,6 +299,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
+        modifiers={dragModifiers}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
@@ -349,7 +353,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           </PlacementsContext>
         </DragSessionContext>
 
-        <DragOverlay modifiers={overlayModifiers}>
+        <DragOverlay modifiers={dragModifiers}>
           {session ? <KanbanCard item={session.activeItem} itemTypes={itemTypes} isOverlay /> : null}
         </DragOverlay>
       </DndContext>

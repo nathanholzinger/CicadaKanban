@@ -1,8 +1,11 @@
+// Collision detection + request-shape helpers for the board drag gesture:
+// toRequest (placement → API request) and isIdentity (recognizes a no-op placement).
+
 import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
-import { workphaseOnlySlot, type Placement } from './itemListOps';
+import type { Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
-import { containsPoint, type Band, type ColumnLikeRegion, type Rect } from './dragRegions';
+import { containsPoint, type Rect } from './dragRegions';
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
 // useBoardDnd so it can be unit tested — real drag gestures are deliberately
@@ -10,10 +13,12 @@ import { containsPoint, type Band, type ColumnLikeRegion, type Rect } from './dr
 // functions testable without full Column/Item fixtures.
 //
 // Epic 3.2: position values are no longer computed here — the server
-// resolves them against true current data (see positionResolver.ts). This
-// module's job is purely to decide *what kind* of drop this is (a
-// same-visual-group reorder vs. a genuine cross-column move) and *what
-// scope/anchor* to hand to the API.
+// resolves them against true current data (see positionResolver.ts). Story
+// 4.1 Phase 3: this module's job is `toRequest` — adapting the pop
+// machine's own placement (popSession.ts::placementFor) into the API's
+// terms, and `isIdentity`, the "nothing to write" half of that same
+// question — not deciding a drop's kind from dnd-kit's `over` independently
+// the way `resolveDropTarget` used to (deleted this phase; F3).
 
 // What the collision closure needs to know about the live pop session
 // (Epic 3.5 Story 3) — a read-only view the hook keeps in a ref.
@@ -33,8 +38,8 @@ export interface CollisionSession {
 //     the context's container and the cards whose rect lies inside it —
 //     the in-context reorder, unchanged in feel from Epic 3.2. A Card
 //     context is never actually resolved this way (its within-action is a
-//     constant append — useBoardDnd.ts's resolveCardDrop never reads
-//     `over` for it), but restricting candidates here is still what keeps
+//     constant append — popSession.ts::placementFor's Card branch never
+//     reads `over`), but restricting candidates here is still what keeps
 //     dnd-kit from shifting a sibling against a hover rule 1 ignores.
 //   - Card drag, Board layer (popped out), hovering a region: `over` is
 //     that region's container and never a card in it, so the target
@@ -99,105 +104,11 @@ export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readon
   return map;
 }
 
-// Encodes a droppable id for an expanded column's per-workphase sub-row.
-// Paired with the `subrow::` decode branch in resolveDropTarget below — keep
-// them in the same file so the id format only needs to be understood once.
+// Encodes a droppable id for an expanded column's per-workphase sub-row —
+// the same id `dragRegions.ts::columnLikeStructureFromKey` sets as that
+// region's own `containerId`, so the two only have to agree once.
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;
-}
-
-export type DropResolution =
-  // Same-visual-group reorder: position-only, workphaseId untouched —
-  // covers a plain same-workphase reorder (scopeWorkphaseIds has one entry)
-  // and a merged-column interleave (scopeWorkphaseIds has the column's full
-  // covered set). `anchorId` is the hovered card's id, or null when a
-  // container (not a specific card) was hovered — the server appends to the
-  // end of the scope in that case.
-  | { kind: 'reorder'; scopeWorkphaseIds: string[]; anchorId: string | null }
-  // Genuine cross-column move: workphaseId changes to targetWorkphaseId.
-  // `anchorId` is the hovered card's id for precise before/after placement,
-  // or null when a container was hovered (server appends to the target).
-  | { kind: 'move'; targetWorkphaseId: string; anchorId: string | null }
-  // Story 4: attach as the *last* Stub of `parentId`, inheriting its
-  // workphase (wiki §6) — the server derives that inheritance from the
-  // parent, so this never carries a workphaseId of its own. Always an
-  // append: Story 4's narrowed scope has no anchor+side among Stubs (no
-  // band, no hovered-sibling anchor) — manual placement is Story 6.
-  | { kind: 'attach'; parentId: string };
-
-// Resolves a dnd-kit `over.id` (plus which item is being dragged) to how the
-// drop should be applied. The key fix over the pre-Epic-3.2 version: a
-// merged column no longer always collapses to its entryWorkphaseId
-// regardless of the hovered card's real workphase (which either silently
-// no-op'd or silently performed an unintended workphase change, depending on
-// drag direction) — instead it checks whether the *active* item's current
-// workphaseId is already a member of the target column's covered set. If
-// so, this is a same-visual-group reorder; if not, it's a genuine
-// cross-column move. Returns null when there's no valid drop target
-// (Unsorted, a broken column, or an expanded column's outer wrapper —
-// expanded mode requires dropping on a specific sub-row for precision).
-//
-// `activeWorkphaseId` is the active item's own workphase — nothing in
-// `items` is mutated during a drag (the ghost is a placement, Story 3), so
-// the value captured at drag start is the value throughout.
-export function resolveDropTarget(
-  activeId: string,
-  activeWorkphaseId: string | null,
-  overId: string,
-  columns: readonly DropColumn[],
-  columnForWorkphase: Map<string, DropColumn>,
-  findWorkphaseForItem: (itemId: string) => string | null,
-): DropResolution | null {
-  if (activeId === overId) return null;
-
-  if (overId.startsWith('subrow::')) {
-    const workphaseId = overId.split('::')[2];
-    const col = columnForWorkphase.get(workphaseId);
-    if (!col || col.broken) return null;
-    return activeWorkphaseId === workphaseId
-      ? { kind: 'reorder', scopeWorkphaseIds: [workphaseId], anchorId: null }
-      : { kind: 'move', targetWorkphaseId: workphaseId, anchorId: null };
-  }
-
-  const hoveredColumn = columns.find(c => c.id === overId);
-  if (hoveredColumn) {
-    if (hoveredColumn.broken || hoveredColumn.displayMode !== 'merged') return null;
-    const coveredIds = hoveredColumn.subRows.map(r => r.workphase.id);
-    const isMember = activeWorkphaseId !== null && coveredIds.includes(activeWorkphaseId);
-    return isMember
-      ? { kind: 'reorder', scopeWorkphaseIds: coveredIds, anchorId: null }
-      : { kind: 'move', targetWorkphaseId: hoveredColumn.entryWorkphaseId, anchorId: null };
-  }
-
-  const hoverWorkphaseId = findWorkphaseForItem(overId);
-  if (!hoverWorkphaseId) return null;
-  const col = columnForWorkphase.get(hoverWorkphaseId);
-  if (!col || col.broken) return null;
-
-  // A done card has no position to anchor against — the server rejects any
-  // anchorId pointing at one, reorder or move alike (itemHierarchy.ts's "it
-  // may be a done item" 400). The band path already never anchors in a
-  // terminal region (bandDropResolution); hovering a specific card
-  // in-context is the one path that still could (audit
-  // epic-3-5-story-3-reconciled #4). Same request shape as hovering the
-  // bare container: no anchor, workphase-only.
-  const hoveredIsTerminal = Boolean(col.subRows.find(r => r.workphase.id === hoverWorkphaseId)?.workphase.isTerminal);
-  const anchorId = hoveredIsTerminal ? null : overId;
-
-  if (col.displayMode === 'expanded') {
-    return activeWorkphaseId === hoverWorkphaseId
-      ? { kind: 'reorder', scopeWorkphaseIds: [hoverWorkphaseId], anchorId }
-      : { kind: 'move', targetWorkphaseId: hoverWorkphaseId, anchorId };
-  }
-
-  // Merged column, hovering a specific card: same-visual-group membership is
-  // determined by the *active* item's workphase against the whole covered
-  // set, not by comparing to the specific hovered card's own workphase.
-  const coveredIds = col.subRows.map(r => r.workphase.id);
-  const isMember = activeWorkphaseId !== null && coveredIds.includes(activeWorkphaseId);
-  return isMember
-    ? { kind: 'reorder', scopeWorkphaseIds: coveredIds, anchorId }
-    : { kind: 'move', targetWorkphaseId: col.entryWorkphaseId, anchorId };
 }
 
 // Narrowed structural subset of dnd-kit's ClientRect — only what
@@ -236,80 +147,83 @@ export function resolveDropSide(
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
 }
 
-// The PATCH /items/:id/move body a resolved Card drop turns into: a
-// same-group reorder sends the legacy scope shape, a cross-column move sends
-// the target workphase; either carries `{anchorId, side}` when there's a
-// card to anchor against (TC-2.11). Pure — the request literal is the part
-// worth pinning in a test.
-export function buildMoveInput(resolution: DropResolution, side: 'before' | 'after'): MoveItemInput {
-  if (resolution.kind === 'attach') return { parentId: resolution.parentId, isAttached: true };
-  const anchor = resolution.anchorId ? { anchorId: resolution.anchorId, side } : {};
-  return resolution.kind === 'reorder'
-    ? { scopeWorkphaseIds: resolution.scopeWorkphaseIds, ...anchor }
-    : { workphaseId: resolution.targetWorkphaseId, ...anchor };
-}
-
-// Epic 3.5 Story 3 — what a release in another region's band means (wiki
-// board-drag-interaction §5, item-positioning §7). `regionItems` is the
-// region's *rendered* list, so "first"/"last" are read off the client's own
-// order under the tie-break (TC-7.3/7.4); the carried item is skipped if the
-// preview already drew it there. Returns null when the band asks for
-// nothing the item doesn't already have — a covered-set member in the
-// middle band, or in an empty/done region (DRAG-3.7/3.10).
+// Story 4.1 Phase 3 — the ghost's own placement is the request; nothing
+// downstream re-derives one from `over`/`side` independently (F3: the two
+// used to drift, once already, before this). `others` is the placement's
+// *target* list, rendered, with the active item excluded — the same list
+// `isIdentity` compares against, so both read one shared, live-item-based
+// answer to "where is everything else right now."
 //
-//   top    → { anchorId: first, side: 'before' }          (TC-7.1)
-//   bottom → { anchorId: last,  side: 'after' }           (TC-7.2)
-//   middle → workphase-only: position kept                (TC-7.16)
-//   empty or done region → workphase-only, any band       (TC-7.5, 7.8)
-export function bandDropResolution(
-  region: ColumnLikeRegion,
-  band: Band,
-  active: { id: string; workphaseId: string | null },
-  regionItems: readonly { id: string }[],
-): { resolution: DropResolution; side: 'before' | 'after' } | null {
-  const others = regionItems.filter(i => i.id !== active.id);
-  const member = active.workphaseId !== null && region.coveredWorkphaseIds.includes(active.workphaseId);
-
-  let anchorId: string | null = null;
-  let side: 'before' | 'after' = 'before';
-  if (!region.isTerminal && others.length > 0 && band !== 'middle') {
-    anchorId = band === 'top' ? others[0].id : others[others.length - 1].id;
-    side = band === 'top' ? 'before' : 'after';
-  }
-
-  if (member) {
-    if (!anchorId) return null;
-    return { resolution: { kind: 'reorder', scopeWorkphaseIds: region.coveredWorkphaseIds, anchorId }, side };
-  }
-  return { resolution: { kind: 'move', targetWorkphaseId: region.targetWorkphaseId, anchorId }, side };
+// `'first'`/`'last'` are ghost-preview-only ordinals (itemListOps.ts's
+// `applyPlacements`/`slotIndex` insert at either literal end of a list with
+// no anchor needed); the server has no such concept, so they resolve here
+// to a concrete anchor beside `others`' own first/last element — the same
+// resolution `bandDropResolution` used to do (TC-7.1/7.2). An explicit
+// `{anchorId, side}` slot passes straight through.
+function anchorFor(
+  slot: Placement['slot'],
+  others: readonly { id: string }[],
+): Pick<MoveItemInput, 'anchorId' | 'side'> {
+  if (typeof slot === 'object') return { anchorId: slot.anchorId, side: slot.side };
+  if (slot === 'first' && others.length > 0) return { anchorId: others[0].id, side: 'before' };
+  if (slot === 'last' && others.length > 0) return { anchorId: others[others.length - 1].id, side: 'after' };
+  return {};
 }
 
-// The ordinal claim a move request makes — what the board keeps drawing
-// until the response lands (§10's pending marker). `workphaseId` is the
-// list the item is drawn in: the request's target, else the active item's
-// own.
-export function pendingPlacementFor(
-  input: MoveItemInput,
-  active: { workphaseId: string | null; position: number | null },
-): Placement {
-  if (input.parentId) {
-    // Story 4: the pending ghost is a Stub of the new parent —
-    // no workphaseId of its own (the server derives inheritance), and no
-    // 'existing' fallback the way a bare workphase change gets below: there
-    // is no position to keep among a different parent's children.
-    const slot = input.anchorId && input.side ? { anchorId: input.anchorId, side: input.side } : 'last';
-    return { parentId: input.parentId, slot };
+// Decision 2 (2026-09-17): a placement that resolves to the list and
+// ordinal the item already occupies writes nothing, at every layer — this
+// subsumes every prior per-case "nothing to write" (a covered-set member
+// in the middle band, TC-7.16; an empty or done region, TC-7.5/7.8) into
+// one rule. Same list: a `parentId` placement matching the item's current
+// parent, or a `workphaseId` one matching its current workphase (an
+// omitted `workphaseId` always means "unchanged" — nothing upstream ever
+// builds a Placement that names the list without changing it). Same
+// ordinal: `'existing'` always; `'first'`/`'last'`/an explicit anchor only
+// when `others` is empty, or the anchor isn't one of them — genuinely
+// nothing to order against, the same reason an empty/done region or a
+// stray self-reference (`others` excludes the active item, so its own id
+// can never match) used to resolve to no request. A non-trivial
+// anchor/first/last is never identity even if it happens to already
+// describe the same neighbor — the bands never checked that before
+// either, and this story changes no band or threshold.
+export function isIdentity(
+  item: { workphaseId: string | null; parentId: string | null },
+  placement: Placement,
+  others: readonly { id: string }[],
+): boolean {
+  const sameList =
+    'parentId' in placement
+      ? placement.parentId === item.parentId
+      : (placement.workphaseId ?? item.workphaseId) === item.workphaseId;
+  if (!sameList) return false;
+  if (placement.slot === 'existing') return true;
+  if (placement.slot === 'first' || placement.slot === 'last') return others.length === 0;
+  return !others.some(i => i.id === placement.slot.anchorId);
+}
+
+// The one adapter from the ghost's own terms (Placement: which list, what
+// ordinal) to the item's (MoveItemInput: the PATCH body) — release now
+// *reads* the same placement the drag has been showing the whole time
+// (decision 1) instead of re-deriving a second answer from dnd-kit's
+// `over`/`side` the way `resolveDropTarget` + `buildMoveInput` used to
+// (F3). `null` for a `null` placement (drawn where it already is) or an
+// identity (decision 2) alike — the caller sends nothing either way, and
+// the placement itself (never a value re-derived from this request) is
+// what stays on as the pending marker (§10).
+export function toRequest(
+  item: { workphaseId: string | null; parentId: string | null },
+  placement: Placement | null,
+  others: readonly { id: string }[],
+): MoveItemInput | null {
+  if (!placement || isIdentity(item, placement, others)) return null;
+  if ('parentId' in placement) {
+    // Story 4: attach as the last Stub, inheriting the parent's workphase
+    // server-side — no anchor, no workphaseId of its own. Manual anchor +
+    // side placement among Stubs is Story 6.
+    return { parentId: placement.parentId, isAttached: true };
   }
-  const workphaseId = input.workphaseId ?? active.workphaseId ?? undefined;
-  if (input.anchorId && input.side) return { workphaseId, slot: { anchorId: input.anchorId, side: input.side } };
-  // A bare workphase change keeps its position — unless it has none to
-  // keep (a reopened done item, a first-time assignment), which takes the
-  // append fallback instead of the position-sort's null-coerced top slot
-  // (item-positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
-  // mirror of #14; one rule with placementFor's, via workphaseOnlySlot —
-  // audit epic-3-5-story-3-reconciled #3). A bare same-group reorder is
-  // always an append (server: itemHierarchy.ts's position resolution).
-  return { workphaseId, slot: input.workphaseId ? workphaseOnlySlot(active.position) : 'last' };
+  const workphaseId = placement.workphaseId !== item.workphaseId ? placement.workphaseId : undefined;
+  return { workphaseId, ...anchorFor(placement.slot, others) };
 }
 
 // The one "send a move, fold the response in, or resync" block: on success
@@ -321,7 +235,7 @@ export function pendingPlacementFor(
 // itself is rightly discarded (a newer write for the same item supersedes
 // it), but the pairs are real, committed renumbering of other rows that a
 // silently-dropped response would otherwise take with it. Every board-
-// gesture write path goes through here (Card drops via buildMoveInput,
+// gesture write path goes through here (Card drops via `toRequest`,
 // attached-sibling reorders with a bare anchor) so the contract can't
 // drift between them (audit epic-3-5-story-2 #4). `moveItem` is
 // dependency-injected so a test can substitute a rejecting stub without

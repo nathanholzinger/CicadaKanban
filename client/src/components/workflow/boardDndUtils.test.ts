@@ -1,20 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
-import { rect, region, column } from '../../test/dragFixtures';
+import { rect, column } from '../../test/dragFixtures';
 import {
   buildColumnForWorkphaseMap,
-  resolveDropTarget,
   subrowContainerId,
   resolveBoardCollisions,
-  bandDropResolution,
-  pendingPlacementFor,
   resolveDropSide,
-  buildMoveInput,
+  isIdentity,
+  toRequest,
   sendItemMove,
   type CollisionSession,
-  type DropResolution,
 } from './boardDndUtils';
+import type { Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 
 // Minimal fixture for the collision detection's args — by default every
@@ -53,29 +51,6 @@ const columns = [
   column('col-3', ['old'], { broken: true }),
 ];
 const columnMap = buildColumnForWorkphaseMap(columns);
-
-// workphase lookup shared by both the dragged (active) item and whatever
-// card is being hovered over.
-const workphases: Record<string, string> = {
-  'card-in-review': 'review',
-  'card-in-qa': 'qa',
-  'card-in-old': 'old',
-  'card-unplaced': '',
-  'active-in-todo': 'todo',
-  'active-in-review': 'review',
-  'active-in-dev': 'dev',
-  'active-in-qa': 'qa',
-  'active-nowhere': 'nowhere', // a real workphase, just not covered by any column here
-};
-const findWorkphaseForItem = (id: string) => workphases[id] || null;
-
-// Mirrors useBoardDnd's real call: the active item's workphase is resolved
-// once (as if from a stable activeItem captured at drag-start), not re-read
-// live on every call — see resolveDropTarget's doc comment for why that
-// distinction matters.
-function resolve(activeId: string, overId: string) {
-  return resolveDropTarget(activeId, findWorkphaseForItem(activeId), overId, columns, columnMap, findWorkphaseForItem);
-}
 
 describe('subrowContainerId', () => {
   it('encodes column and workphase into the droppable id', () => {
@@ -174,304 +149,165 @@ describe('resolveBoardCollisions', () => {
   });
 });
 
-// DRAG-3.1–3.3, 3.6, 3.7, 3.9, 3.10 / TC-7.1, 7.2, 7.5, 7.8, 7.16: the
-// request a band release turns into.
-describe('bandDropResolution', () => {
-  const merged = region('column:m', rect(0, 0, 100, 400), {
-    coveredWorkphaseIds: ['w2', 'w3'],
-    targetWorkphaseId: 'w2',
-  });
-  const rendered = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
-  const outsider = { id: 'X', workphaseId: 'w1' };
-  const member = { id: 'X', workphaseId: 'w3' };
+describe('resolveDropSide', () => {
+  const card = (top: number, height = 100) => ({ top, height });
 
-  it('top band → before the first rendered item, plus the entry workphase for an outsider (DRAG-3.1, 3.6)', () => {
-    expect(bandDropResolution(merged, 'top', outsider, rendered)).toEqual({
-      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: 'A' },
-      side: 'before',
-    });
+  it('defaults to before when the active rect is missing', () => {
+    expect(resolveDropSide(null, card(100))).toBe('before');
+    expect(resolveDropSide(undefined, card(100))).toBe('before');
   });
 
-  it('bottom band → after the last rendered item (DRAG-3.2)', () => {
-    expect(bandDropResolution(merged, 'bottom', outsider, rendered)).toEqual({
-      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: 'C' },
+  it('defaults to before when the over rect is missing', () => {
+    expect(resolveDropSide(card(100), null)).toBe('before');
+    expect(resolveDropSide(card(100), undefined)).toBe('before');
+  });
+
+  it("resolves before when the dragged card is centered in the target's upper region", () => {
+    // Target spans 100-200 (center 150); dragged card centered at 115,
+    // mirroring the E2E suite's topQuarter (15% down the target).
+    expect(resolveDropSide(card(65), card(100))).toBe('before');
+  });
+
+  it("resolves after when the dragged card is centered in the target's lower region", () => {
+    // Dragged card centered at 185, mirroring bottomQuarter (85% down).
+    expect(resolveDropSide(card(135), card(100))).toBe('after');
+  });
+
+  it('resolves before on an exact center-to-center tie', () => {
+    expect(resolveDropSide(card(100), card(100))).toBe('before');
+  });
+
+  it('resolves before on a near-tie within the epsilon', () => {
+    // Active center at 150.5 vs. target center 150 — 0.5px over, inside
+    // the 1px tie band.
+    expect(resolveDropSide(card(100.5), card(100))).toBe('before');
+  });
+
+  it('resolves after just outside the epsilon', () => {
+    // Active center at 152 vs. target center 150 — 2px over, past the
+    // 1px tie band.
+    expect(resolveDropSide(card(102), card(100))).toBe('after');
+  });
+});
+
+// Story 4.1 Phase 3 — decision 2 (2026-09-17): a placement that resolves to
+// the item's own current list and ordinal writes nothing. Replaces
+// bandDropResolution's per-case nulls and resolveDropTarget's "same
+// workphase → reorder" branch alike: both were really this one rule.
+describe('isIdentity', () => {
+  const outsider = { workphaseId: 'w1', parentId: null };
+  const member = { workphaseId: 'w2', parentId: null };
+  const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
+
+  it('a different workphase is never identity, whatever the slot (DRAG-3.1/3.2/3.6)', () => {
+    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(false);
+    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
+    expect(isIdentity(outsider, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
+  });
+
+  it('same workphase, slot existing: always identity (middle band member, TC-7.16)', () => {
+    expect(isIdentity(member, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
+    // An omitted workphaseId means "unchanged" — same rule, no literal to compare.
+    expect(isIdentity(member, { slot: 'existing' }, others)).toBe(true);
+  });
+
+  it('same workphase, empty others: any slot is identity — nothing to order against (DRAG-3.10 / TC-7.5, DRAG-3.9 / TC-7.8)', () => {
+    expect(isIdentity(member, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
+    expect(isIdentity(member, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
+    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
+  });
+
+  it('same workphase, empty others, but a genuine outsider: not identity — the workphase itself is still changing', () => {
+    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'first' }, [])).toBe(false);
+  });
+
+  it('same workphase, non-empty others, a real anchor found: not identity — a genuine reorder (DRAG-3.7 top/bottom)', () => {
+    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
+    expect(isIdentity(member, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
+    expect(isIdentity(member, { workphaseId: 'w2', slot: 'last' }, others)).toBe(false);
+  });
+
+  it('same workphase, an anchor absent from others (hovering itself, or a stray id): identity — nothing sensible to order against', () => {
+    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'not-there', side: 'after' } }, others)).toBe(
+      true,
+    );
+  });
+
+  it("a parentId placement compares against the item's current parent, never its workphase", () => {
+    const child = { workphaseId: 'w1', parentId: 'card-1' };
+    expect(isIdentity(child, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(child, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
+    // Story 4's narrowed scope: a Free Card being dragged is never already
+    // attached to the card it's hovering (that item would render as a
+    // non-draggable Stub instead) — attaching is always a new relationship.
+    expect(isIdentity(outsider, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+  });
+});
+
+// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10: the request a resolved placement
+// turns into — the one adapter from the ghost's own terms to the item's,
+// replacing resolveDropTarget + buildMoveInput's independent re-derivation
+// (F3).
+describe('toRequest', () => {
+  const outsider = { workphaseId: 'w1', parentId: null };
+  const member = { workphaseId: 'w2', parentId: null };
+  const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
+
+  it('a null placement sends nothing — drawn where it already is', () => {
+    expect(toRequest(outsider, null, others)).toBeNull();
+  });
+
+  it('an identity sends nothing (decision 2)', () => {
+    expect(toRequest(member, { workphaseId: 'w2', slot: 'existing' }, others)).toBeNull();
+  });
+
+  it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider / TC-7.16-shaped, middle band)', () => {
+    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'existing' }, others)).toEqual({ workphaseId: 'w2' });
+  });
+
+  it('cross-column with a specific anchor: workphaseId + anchor + side (TC-2.11)', () => {
+    expect(toRequest(outsider, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'after' } }, others)).toEqual({
+      workphaseId: 'w2',
+      anchorId: 'A',
       side: 'after',
     });
   });
 
-  it('middle band → workphase-only, no anchor (DRAG-3.3 / TC-7.16)', () => {
-    expect(bandDropResolution(merged, 'middle', outsider, rendered)).toEqual({
-      resolution: { kind: 'move', targetWorkphaseId: 'w2', anchorId: null },
+  it("first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, 3.2)", () => {
+    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
+      workphaseId: 'w2',
+      anchorId: 'A',
+      side: 'before',
+    });
+    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'last' }, others)).toEqual({
+      workphaseId: 'w2',
+      anchorId: 'C',
+      side: 'after',
+    });
+  });
+
+  it('empty others: first/last send a bare workphase move, no anchor to resolve (DRAG-3.10)', () => {
+    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'first' }, [])).toEqual({ workphaseId: 'w2' });
+  });
+
+  it('same workphase, a real anchor: no workphaseId sent, just the anchor (in-context reorder, TC-2.11)', () => {
+    expect(toRequest(member, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toEqual({
+      anchorId: 'A',
       side: 'before',
     });
   });
 
-  it('a covered-set member keeps its workphase: the band is a reorder, and the middle band is nothing at all (DRAG-3.7)', () => {
-    expect(bandDropResolution(merged, 'top', member, rendered)).toEqual({
-      resolution: { kind: 'reorder', scopeWorkphaseIds: ['w2', 'w3'], anchorId: 'A' },
-      side: 'before',
-    });
-    expect(bandDropResolution(merged, 'middle', member, rendered)).toBeNull();
-  });
-
-  it('the carried item is skipped when the preview already drew it in the region', () => {
-    const withX = [{ id: 'X' }, ...rendered];
-    expect(bandDropResolution(merged, 'top', outsider, withX)?.resolution).toMatchObject({ anchorId: 'A' });
-  });
-
-  it('empty region: every band is a workphase-only move (DRAG-3.10 / TC-7.5)', () => {
-    for (const band of ['top', 'middle', 'bottom'] as const) {
-      expect(bandDropResolution(merged, band, outsider, [])?.resolution).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'w2',
-        anchorId: null,
-      });
-    }
-    expect(bandDropResolution(merged, 'top', member, [])).toBeNull();
-  });
-
-  it('done region: no anchor in any band — a workphase-only move (DRAG-3.9 / TC-7.8)', () => {
-    const done = region('column:d', rect(0, 0, 100, 400), {
-      isTerminal: true,
-      coveredWorkphaseIds: ['done'],
-      targetWorkphaseId: 'done',
-    });
-    for (const band of ['top', 'middle', 'bottom'] as const) {
-      expect(bandDropResolution(done, band, outsider, [{ id: 'D1' }, { id: 'D2' }])?.resolution).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'done',
-        anchorId: null,
-      });
-    }
-  });
-});
-
-// The pending marker's ordinal claim (§10) mirrors the request exactly.
-describe('pendingPlacementFor', () => {
-  const active = { workphaseId: 'w1', position: 1 };
-
-  it('an anchored request pins the item beside its anchor in the target list', () => {
-    expect(pendingPlacementFor({ workphaseId: 'w2', anchorId: 'A', side: 'after' }, active)).toEqual({
-      workphaseId: 'w2',
-      slot: { anchorId: 'A', side: 'after' },
-    });
-    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'], anchorId: 'A', side: 'before' }, active)).toEqual({
-      workphaseId: 'w1',
-      slot: { anchorId: 'A', side: 'before' },
+  it("a done region never anchors — DRAG-3.9/TC-7.8 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
+    expect(toRequest(outsider, { workphaseId: 'done', slot: 'existing' }, [{ id: 'D1' }, { id: 'D2' }])).toEqual({
+      workphaseId: 'done',
     });
   });
 
-  it('a bare workphase change keeps its slot; a bare same-group reorder is an append', () => {
-    expect(pendingPlacementFor({ workphaseId: 'w2' }, active)).toEqual({ workphaseId: 'w2', slot: 'existing' });
-    expect(pendingPlacementFor({ scopeWorkphaseIds: ['w1'] }, active)).toEqual({ workphaseId: 'w1', slot: 'last' });
-  });
-
-  // Reconciliation #29, the mirror of #14: no position to keep takes the
-  // append fallback (item-positioning §2 addendum, §7.5), not the position-
-  // sort's null-coerced top slot — a bare workphase change with nothing to
-  // keep previews as 'last', same as a bare same-group reorder.
-  it('a bare workphase change with no position to keep is an append too — a reopened done item, or a first-time assignment', () => {
-    expect(pendingPlacementFor({ workphaseId: 'w2' }, { workphaseId: 'w1', position: null })).toEqual({
-      workphaseId: 'w2',
-      slot: 'last',
+  it('attach: parentId + isAttached, never an anchor — always an append (Story 4, no manual placement among Stubs until Story 6)', () => {
+    expect(toRequest(outsider, { parentId: 'card-1', slot: 'last' }, [])).toEqual({
+      parentId: 'card-1',
+      isAttached: true,
     });
-  });
-});
-
-describe('resolveDropTarget', () => {
-  it('rejects dropping an item onto itself', () => {
-    expect(resolve('active-in-todo', 'active-in-todo')).toBeNull();
-  });
-
-  describe('sub-row drops (expanded column)', () => {
-    it('is a reorder when the active item is already in that workphase', () => {
-      expect(resolve('active-in-qa', subrowContainerId('col-2', 'qa'))).toEqual({
-        kind: 'reorder',
-        scopeWorkphaseIds: ['qa'],
-        anchorId: null,
-      });
-    });
-
-    it('is a move when the active item is in a different workphase', () => {
-      expect(resolve('active-in-dev', subrowContainerId('col-2', 'qa'))).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'qa',
-        anchorId: null,
-      });
-    });
-
-    it('rejects a sub-row of a broken column', () => {
-      expect(resolve('active-in-todo', subrowContainerId('col-3', 'old'))).toBeNull();
-    });
-  });
-
-  describe('column body drops', () => {
-    it('merged column body: reorder (append) when the active item is already a covered-set member', () => {
-      expect(resolve('active-in-review', 'col-1')).toEqual({
-        kind: 'reorder',
-        scopeWorkphaseIds: ['todo', 'review'],
-        anchorId: null,
-      });
-    });
-
-    it('merged column body: move to entryWorkphaseId when the active item is not a member', () => {
-      expect(resolve('active-in-dev', 'col-1')).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'todo',
-        anchorId: null,
-      });
-    });
-
-    it('merged column body: move when the active item has no known workphase', () => {
-      expect(resolve('card-unplaced', 'col-1')).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'todo',
-        anchorId: null,
-      });
-    });
-
-    it("rejects an expanded column's outer wrapper — a specific sub-row is required", () => {
-      expect(resolve('active-in-qa', 'col-2')).toBeNull();
-    });
-
-    it('rejects a broken column outright', () => {
-      expect(resolve('active-in-todo', 'col-3')).toBeNull();
-    });
-  });
-
-  describe('hovering a specific card', () => {
-    it("merged column: reorder across the whole covered set, not just the hovered card's own workphase (the pre-Epic-3.2 bug)", () => {
-      // active-in-todo hovering card-in-review: different literal workphases,
-      // but both are members of col-1's covered set — a same-visual-group
-      // reorder, not a workphase change.
-      expect(resolve('active-in-todo', 'card-in-review')).toEqual({
-        kind: 'reorder',
-        scopeWorkphaseIds: ['todo', 'review'],
-        anchorId: 'card-in-review',
-      });
-    });
-
-    it('merged column: move to entryWorkphaseId when the active item is genuinely from outside the covered set', () => {
-      expect(resolve('active-in-dev', 'card-in-review')).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'todo',
-        anchorId: 'card-in-review',
-      });
-    });
-
-    it('expanded column: reorder when hovering a card in the same workphase', () => {
-      expect(resolve('active-in-qa', 'card-in-qa')).toEqual({
-        kind: 'reorder',
-        scopeWorkphaseIds: ['qa'],
-        anchorId: 'card-in-qa',
-      });
-    });
-
-    it('expanded column: move to the precise hovered workphase otherwise', () => {
-      expect(resolve('active-in-dev', 'card-in-qa')).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'qa',
-        anchorId: 'card-in-qa',
-      });
-    });
-
-    it('rejects a card whose column is broken, and unresolvable targets', () => {
-      expect(resolve('active-in-todo', 'card-in-old')).toBeNull();
-      expect(resolve('active-in-todo', 'card-unplaced')).toBeNull();
-      expect(resolve('active-in-todo', 'something-unknown')).toBeNull();
-    });
-  });
-
-  // A done card has no position — the server rejects any anchorId pointing
-  // at one, whether the request would otherwise be a reorder or a move
-  // (itemHierarchy.ts: "anchorId has no position to anchor against (it may
-  // be a done item)"). In-context hovering a specific card is the one path
-  // that could still produce one; the band path never does
-  // (bandDropResolution) (audit epic-3-5-story-3-reconciled #4).
-  describe('a done card is never a usable anchor', () => {
-    const doneColumn = column('col-done', ['done'], { subRows: [{ workphase: { id: 'done', isTerminal: true } }] });
-    const doneMap = buildColumnForWorkphaseMap([doneColumn]);
-    const findWorkphase = (id: string) => (id === 'done-card' ? 'done' : id === 'active-in-done' ? 'done' : null);
-
-    it('drops the anchor for a covered-set member (reorder) and an outsider (move) alike', () => {
-      expect(resolveDropTarget('x', 'done', 'done-card', [doneColumn], doneMap, findWorkphase)).toEqual({
-        kind: 'reorder',
-        scopeWorkphaseIds: ['done'],
-        anchorId: null,
-      });
-      expect(resolveDropTarget('x', 'todo', 'done-card', [doneColumn], doneMap, findWorkphase)).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'done',
-        anchorId: null,
-      });
-    });
-
-    it('same guard in an expanded column', () => {
-      const expandedDone = column('col-done-x', ['done'], {
-        displayMode: 'expanded',
-        subRows: [{ workphase: { id: 'done', isTerminal: true } }],
-      });
-      const map = buildColumnForWorkphaseMap([expandedDone]);
-      expect(resolveDropTarget('x', 'elsewhere', 'done-card', [expandedDone], map, findWorkphase)).toEqual({
-        kind: 'move',
-        targetWorkphaseId: 'done',
-        anchorId: null,
-      });
-    });
-  });
-
-  describe('resolveDropSide', () => {
-    const card = (top: number, height = 100) => ({ top, height });
-
-    it('defaults to before when the active rect is missing', () => {
-      expect(resolveDropSide(null, card(100))).toBe('before');
-      expect(resolveDropSide(undefined, card(100))).toBe('before');
-    });
-
-    it('defaults to before when the over rect is missing', () => {
-      expect(resolveDropSide(card(100), null)).toBe('before');
-      expect(resolveDropSide(card(100), undefined)).toBe('before');
-    });
-
-    it("resolves before when the dragged card is centered in the target's upper region", () => {
-      // Target spans 100-200 (center 150); dragged card centered at 115,
-      // mirroring the E2E suite's topQuarter (15% down the target).
-      expect(resolveDropSide(card(65), card(100))).toBe('before');
-    });
-
-    it("resolves after when the dragged card is centered in the target's lower region", () => {
-      // Dragged card centered at 185, mirroring bottomQuarter (85% down).
-      expect(resolveDropSide(card(135), card(100))).toBe('after');
-    });
-
-    it('resolves before on an exact center-to-center tie', () => {
-      expect(resolveDropSide(card(100), card(100))).toBe('before');
-    });
-
-    it('resolves before on a near-tie within the epsilon', () => {
-      // Active center at 150.5 vs. target center 150 — 0.5px over, inside
-      // the 1px tie band.
-      expect(resolveDropSide(card(100.5), card(100))).toBe('before');
-    });
-
-    it('resolves after just outside the epsilon', () => {
-      // Active center at 152 vs. target center 150 — 2px over, past the
-      // 1px tie band.
-      expect(resolveDropSide(card(102), card(100))).toBe('after');
-    });
-  });
-});
-
-// TC-2.11: the request shape a resolved drop produces, pinned directly.
-describe('buildMoveInput', () => {
-  it('sends workphaseId plus the anchor for a cross-column move', () => {
-    const resolution: DropResolution = { kind: 'move', targetWorkphaseId: 'wp-2', anchorId: 'anchor-1' };
-    expect(buildMoveInput(resolution, 'after')).toEqual({ workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' });
-  });
-
-  it('sends scopeWorkphaseIds (not workphaseId) for a reorder resolution, with no anchor when there is none', () => {
-    const resolution: DropResolution = { kind: 'reorder', scopeWorkphaseIds: ['wp-1', 'wp-2'], anchorId: null };
-    expect(buildMoveInput(resolution, 'before')).toEqual({ scopeWorkphaseIds: ['wp-1', 'wp-2'] });
   });
 });
 
@@ -482,7 +318,10 @@ describe('buildMoveInput', () => {
 // this whole module already exists for (see its header comment).
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
-  const pending = pendingPlacementFor(input, { workphaseId: 'wp-1', position: 1.5 });
+  // Story 4.1 Phase 3: the pending marker is just the placement that
+  // produced `input` (toRequest's own input) — no separate re-derivation
+  // (F3) — so this is pinned directly rather than built from a function.
+  const pending: Placement = { workphaseId: 'wp-2', slot: { anchorId: 'anchor-1', side: 'after' } };
   const fakeItem = (id: string) => makeItem(id, { isAttached: 0, workphaseId: 'wp-2', position: 1.5 });
   const tracker = () => ({
     begin: vi.fn<ItemWriteTracker['begin']>(() => 7),

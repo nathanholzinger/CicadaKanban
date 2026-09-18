@@ -1,3 +1,6 @@
+// The whole drag's context: activeItem, classification, pop, priorPlacement, origin,
+// plus PlacementsContext. useDropTargetState/useIsPending read it without prop drilling.
+
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
@@ -27,6 +30,18 @@ export interface DragSession {
    * reconciliation #22).
    */
   priorPlacement: Placement | null;
+  /**
+   * Story 4.1 Phase 3: where the item genuinely started — `{workphaseId,
+   * slot: 'existing'}` for a Free Card (Story 5 sets `{parentId, slot:
+   * 'existing'}` for a Stub). Unlike `priorPlacement` (a *pending* marker
+   * from an earlier, still-in-flight write), this is always set, and is
+   * what `isIdentity` compares a resolved release against — "same list,
+   * same ordinal" as where the drag began is the general form decision 2
+   * (2026-09-17) names: a release back into the item's own slot writes
+   * nothing, at every layer. Null only for a Stub drag (Story 5 opens it;
+   * `pop: null` already marks that case).
+   */
+  origin: Placement | null;
 }
 
 export const DragSessionContext = createContext<DragSession | null>(null);

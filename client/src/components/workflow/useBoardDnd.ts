@@ -1,3 +1,6 @@
+// The drag gesture's clocks, DOM measurement, and dnd-kit plumbing — composes
+// popSession.ts, dragRegions.ts, dragClassification.ts, itemListOps.ts.
+
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   PointerSensor,
@@ -9,17 +12,13 @@ import {
   type Modifier,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { BoardWithDetails, Item, Column } from '../../types';
-import { moveItem, type MoveItemInput } from '../../api/items';
+import type { BoardWithDetails, Item } from '../../types';
+import { moveItem } from '../../api/items';
 import {
-  bandDropResolution,
-  buildColumnForWorkphaseMap,
-  buildMoveInput,
-  pendingPlacementFor,
   resolveBoardCollisions,
   resolveDropSide,
-  resolveDropTarget,
   sendItemMove,
+  toRequest,
   type CollisionSession,
 } from './boardDndUtils';
 import { classifyDragTargets, type DragClassification } from './dragClassification';
@@ -38,8 +37,8 @@ import {
   advancePopSession,
   placementFor,
   popDueAt,
-  releaseIntent,
   startPopSession,
+  type PlacementOver,
   type PopSession,
 } from './popSession';
 import type { Placement, Placements } from './itemListOps';
@@ -62,10 +61,12 @@ const SHORT_CARD_METRICS: ShortCardMetrics = { heightPx: SHORT_CARD_HEIGHT_PX, g
 //     drag, and every sample runs the pop machine against freshly measured
 //     regions (a pop that needs no movement — the cursor resting — fires
 //     from a timer);
-//   - the machine's state is mirrored into a ref so two closures dnd-kit
+//   - the machine's state is mirrored into a ref so the closures dnd-kit
 //     calls during *its* render can read it: the collision detection (which
-//     decides `over`) and the DragOverlay modifier (which clamps the card
-//     to its context while locked);
+//     decides `over`) and the clamp modifier (which clamps the card to its
+//     context while locked — passed to both `DndContext` and `DragOverlay`,
+//     Phase 4/F8, so `over` and the live side line track the same bounded
+//     position the overlay is actually drawn at);
 //   - the ghost is an ordinal placement (§10) over the list selectors —
 //     nothing in `items` is mutated during a drag, so cancel is just
 //     clearing it;
@@ -131,9 +132,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const [, setSnapTick] = useState(0);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  // Maps every covered workphase id -> the column that covers it.
-  const columnForWorkphase = useMemo(() => buildColumnForWorkphaseMap<Column>(board?.columns ?? []), [board]);
 
   function updateSession(next: DragSession | null) {
     sessionRef.current = next;
@@ -299,8 +297,20 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // at that moment the card's target is under the cursor — the snap of §3,
   // tweened over `popSnapMs` from where it was clamped — and it is bounded
   // there from then on. No context (a drag from Unsorted that hasn't popped
-  // yet) passes the transform through. DndContext itself gets no modifier,
-  // so the collision rect and `delta` stay raw.
+  // yet) passes the transform through.
+  //
+  // Story 4.1 Phase 4 (F8) — this same modifier is now also passed to
+  // `DndContext` itself (BoardView.tsx), not only `DragOverlay`: dnd-kit
+  // feeds a `DndContext`-level modifier's output into both the collision
+  // rect (`over`) and `active.rect.current.translated` (`resolveDropSide`'s
+  // input), so without it those two tracked the *raw*, unclamped position
+  // while only the visible copy was bounded — during the exit clock,
+  // `closestCorners` could pick a card a column away from the visible copy,
+  // and the live side line could flip to it too. Calling this twice (once
+  // for each context) is idempotent: `clampAxis` clamping an
+  // already-clamped value returns it unchanged, and both calls read the
+  // same `snap`/`overlayTranslate` refs, so the tween composes cleanly
+  // rather than double-easing.
   const clampToContext = useCallback<Modifier>(({ transform, draggingNodeRect }) => {
     const target = clampToCurrentContext(
       transform,
@@ -322,17 +332,19 @@ export function useBoardDnd(deps: BoardDndDeps) {
     overlayTranslate.current = { x: drawn.x, y: drawn.y };
     return drawn;
   }, []);
-  const overlayModifiers = useMemo(() => [clampToContext], [clampToContext]);
+  // Shared by `DndContext` and `DragOverlay` alike (F8, above) — one array
+  // reference so passing it to both doesn't create a new one every render.
+  const dragModifiers = useMemo(() => [clampToContext], [clampToContext]);
 
-  function resolveDrop(active: Item, overId: string) {
-    return resolveDropTarget(
-      active.id,
-      active.workphaseId,
-      overId,
-      latest.current.board?.columns ?? [],
-      columnForWorkphase,
-      latest.current.findWorkphaseForItem,
-    );
+  // The region `placementFor` will itself resolve `pop` against — the
+  // exact same key derivation, so a caller that also needs to know *which*
+  // region a placement came from (for `over`, for the "others" list below)
+  // reads the identical answer rather than a second, independently-typed
+  // guess (F3's whole reason for being).
+  function placementRegion(pop: PopSession | null, regions: readonly DragRegion[]): DragRegion | undefined {
+    if (!pop) return undefined;
+    const key = pop.contextKey === null ? (pop.hover?.regionKey ?? null) : pop.contextKey;
+    return key === null ? undefined : regions.find(r => r.key === key);
   }
 
   // Board layer only (a Card region never reaches a band resolution —
@@ -363,7 +375,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // so the server's constant governs both enforcement points.
     const classification = classifyDragTargets(activeId, deps.items, board.itemDepthCap);
     if (type !== 'card') {
-      updateSession({ activeItem, classification, pop: null, priorPlacement });
+      // Story 4.1 Phase 3: `origin` is a Free/Stub-drag distinction (Story
+      // 5 sets a Stub's) — null here alongside `pop: null` rather than a
+      // value nothing in this drag's own path would ever consult.
+      updateSession({ activeItem, classification, pop: null, priorPlacement, origin: null });
       return;
     }
 
@@ -378,7 +393,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const startContextKey = childRegionAt(boardScope, pointerRef.current, null)?.key ?? null;
     const regions = startContextKey === null ? boardScope : sampleRegions(startContextKey);
     const pop = startPopSession(startContextKey);
-    updateSession({ activeItem, classification, pop, priorPlacement });
+    // Story 4.1 Phase 3: where the item genuinely started — a Free Card's
+    // own list, at whatever ordinal the position sort already gives it.
+    // What `isIdentity` ultimately compares a resolved release against, at
+    // every layer (decision 2); `toRequest`/`isIdentity` read the raw item
+    // directly today; `origin` itself is what Story 5 hands them for a
+    // Stub, whose "own data" isn't as simply the item's raw fields.
+    const origin: Placement = { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' };
+    updateSession({ activeItem, classification, pop, priorPlacement, origin });
     setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position, priorPlacement));
   }
 
@@ -467,44 +489,55 @@ export function useBoardDnd(deps: BoardDndDeps) {
       return;
     }
 
-    // ── Card drop: in-context via `over`, or another region's band ──
-    const input = resolveCardDrop(current, over ? String(over.id) : null, side);
+    // ── Card drop: the ghost's own placement is the request (decision 1) ──
+    // No fresh geometry at release — `regionsRef` already holds exactly
+    // what the machine's own final state needs, scoped to `current.pop`'s
+    // own contextKey/hover by the last sample (Phase 2). `over` only means
+    // anything while locked in a column/sub-row (Board-band and Card are
+    // the branches placementFor already had, unchanged); a bare container
+    // hover or a done region's own card both fall back to the same
+    // workphase-only slot placementFor's in-context branch already uses
+    // mid-drag, so `over` only ever narrows toward a specific anchor, never
+    // introduces a new kind of answer.
+    const regions = regionsRef.current;
+    const region = placementRegion(current.pop, regions);
+    // Release always gives a decisive answer while locked in a column/
+    // sub-row (`null` is reserved for placementFor's mid-drag calls,
+    // where there's genuinely nothing fresh yet to prefer over
+    // `priorPlacement`) — over resolving to anything but the context's
+    // own container is a specific anchor; the container itself, or dnd-kit
+    // finding no collision at all, is a bare hover with nothing to anchor
+    // beside.
+    const placementOver: PlacementOver =
+      !region || region.kind === 'card'
+        ? null
+        : over && String(over.id) !== region.containerId
+          ? { anchorId: String(over.id), side }
+          : 'container';
+    const placement = current.pop
+      ? placementFor(
+          current.pop,
+          regions,
+          activeItem.workphaseId,
+          activeItem.position,
+          current.priorPlacement,
+          placementOver,
+        )
+      : null;
+    const others = region && region.kind !== 'card' ? regionItems(region).filter(i => i.id !== activeId) : [];
+    const input = toRequest(activeItem, placement, others);
     if (!input) {
-      // Nothing to write (between columns, an Inert surface, a band that
-      // asks for nothing new): the ghost goes and the card is where it was
-      // — or, if it had a pending marker from an earlier write still in
-      // flight, that comes back instead (#22).
+      // Nothing to write — a null placement (drawn where it already is)
+      // or an identity (decision 2): the ghost goes and the card is where
+      // it was, or, if it had a pending marker from an earlier write still
+      // in flight, that comes back instead (#22).
       restorePriorPlacement(current);
       return;
     }
-    const pending = pendingPlacementFor(input, activeItem);
-    await sendItemMove(moveItem, activeId, input, pending, deps.writes, deps.loadBoard);
+    await sendItemMove(moveItem, activeId, input, placement, deps.writes, deps.loadBoard);
   }
 
-  function resolveCardDrop(ended: DragSession, overId: string | null, side: 'before' | 'after'): MoveItemInput | null {
-    const { activeItem, pop } = ended;
-    // Story 4.1 Phase 2: no fresh geometry at release — releaseIntent's own
-    // comment already said none was needed. regionsRef holds exactly what
-    // the machine's own final state needs: the last sample was already
-    // scoped to `ended.pop`'s own contextKey/hover.
-    const intent = pop ? releaseIntent(pop, regionsRef.current) : { kind: 'none' as const };
-
-    if (intent.kind === 'in-context') {
-      if (!overId) return null;
-      const resolution = resolveDrop(activeItem, overId);
-      return resolution ? buildMoveInput(resolution, side) : null;
-    }
-    if (intent.kind === 'attach') {
-      return buildMoveInput({ kind: 'attach', parentId: intent.parentId }, side);
-    }
-    if (intent.kind === 'band') {
-      const resolved = bandDropResolution(intent.region, intent.band, activeItem, regionItems(intent.region));
-      return resolved ? buildMoveInput(resolved.resolution, resolved.side) : null;
-    }
-    return null;
-  }
-
-  return { sensors, session, collisionDetection, overlayModifiers, handleDragStart, handleDragEnd, handleDragCancel };
+  return { sensors, session, collisionDetection, dragModifiers, handleDragStart, handleDragEnd, handleDragCancel };
 }
 
 type OverlayTransform = Parameters<Modifier>[0]['transform'];
