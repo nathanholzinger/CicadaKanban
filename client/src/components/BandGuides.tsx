@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
-import { useDragTuning } from './workflow/DragTuningContext';
 import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';
+import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './KanbanCard';
 
 // Epic 3.5 Story 8 re-plan (2026-09-16) — the column drop bands, made
 // visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
@@ -11,15 +11,17 @@ import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';
 // carve-out disappears, since nothing about a bare hover elsewhere changes
 // what a release commits.
 //
-// At Board layer, every region reserves exactly one collapsed ghost card's
-// height (`tuning.ghostCardHeightPx`) for the life of the drag, so nothing
-// about a region's total size ever changes as the drag moves around the
-// board — only *where* that reservation currently is:
-//   - not the live hover target: two half-height dead zones, "Move Top" /
-//     "Move Bottom", carved out of the region's own real content (its
-//     cards shift down to make room) — never the visible-scrolled slice,
-//     so a boundary scrolled out of view is neither drawn nor reachable
-//     until it's scrolled to.
+// Story 4.1 Phase 1: the reservation is exact now, not approximate — a
+// region's total rendered height never changes whether or not it's the
+// live hover target, because the ghost row (KanbanCard.tsx's shortCard) is
+// pinned to exactly `SHORT_CARD_HEIGHT_PX`, and every zone below is sized
+// from that same constant plus the card lists' own shared gap
+// (`CARD_LIST_GAP_PX`) rather than the height alone. Both are fixed facts
+// about the card, owned by KanbanCard.tsx — nothing here tunes them.
+//   - not the live hover target: dead zones carved out of the region's own
+//     real content (its cards shift down to make room) — never the
+//     visible-scrolled slice, so a boundary scrolled out of view is
+//     neither drawn nor reachable until it's scrolled to.
 //   - the live hover target (about to be committed on release, though not
 //     yet locked in): the dead zones collapse and a real ghost (itemListOps'
 //     ordinal placement) fills the reservation instead — same net height.
@@ -28,11 +30,26 @@ import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';
 // Terminal and truly-empty regions collapse to one single band spanning
 // their own height (no top/bottom to speak of — dragRegions.ts::bandFor).
 //
+// The reservation math, so the height is identical hovered or not (a
+// non-hovered list has one fewer gap than the hovered one, since the ghost
+// row brings both its own height *and* one more gap when it joins):
+//   - 1+ cards, non-terminal: two zones of `(h + gap) / 2` each.
+//   - genuinely empty: one zone of `h` alone — the hovered list holds the
+//     ghost with no sibling to gap against.
+//   - terminal with cards: one *bottom-only* zone of `h + gap` — a done
+//     region's ghost always previews last (§10's newest-completion rule),
+//     exactly where this zone is. Reserving nothing here (as built before
+//     this phase, an absolute overlay instead) let the ghost's entry grow
+//     the region; the frozen-rect family silently covered for it.
+//
 // Two special cases the Product Owner settled 2026-09-16: an empty region
-// carves the *full* ghost height, not two halves (nothing to shift out of
+// carves the *full* card height, not two halves (nothing to shift out of
 // the way); a region with exactly one card halves both edges instead of
 // the normal full height, so the card stays a real, unlabeled middle band
-// rather than being bisected into top/bottom with nothing left between.
+// rather than being bisected into top/bottom with nothing left between —
+// matching `dragRegions.ts::bandBoundaries`'s own edge formula exactly, so
+// the divider drawn here is the boundary a release actually resolves
+// against.
 //
 // Card (KanbanCard.tsx) draws the active-context outline directly on
 // itself; this file draws it for a column/sub-row instead, plus everything
@@ -51,8 +68,22 @@ const SINGLE_BAND_BORDER = 'rounded-lg border border-dashed border-zinc-600/50';
 
 interface DragCarveFrameProps {
   regionKey: string;
-  /** The region's own current card count — its rendered `items.length`, ghost included once one's previewing there. */
+  /** The region's own current *raw* card count — its rendered `items.length`, the active drag's own row included if it's currently one of them. */
   cardCount: number;
+  /**
+   * Whether the active drag's own item is currently one of this region's
+   * rendered rows — either because a ghost genuinely just joined (this
+   * region is the live Board-layer hover target), or because it's resting
+   * unclaimed in its own, otherwise-empty origin region while the cursor
+   * is elsewhere entirely (wiki §5: with nowhere hovered, an item "is drawn
+   * where it already is"). Either way `children` already reserves exactly
+   * the space that row needs, since it's rendered at the same fixed
+   * shortCard height regardless of which of the two reasons applies — so
+   * this, not whether the region happens to be hovered right now, is what
+   * decides whether the dead-zone/label chrome collapses (Story 4.1 Phase
+   * 1): showing both at once would double the reservation.
+   */
+  hasActiveItemRow: boolean;
   isTerminal: boolean;
   /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
   targetLabel: string;
@@ -64,17 +95,26 @@ interface DragCarveFrameProps {
 // place `[DRAG_REGION_ATTR]` is applied: this component's own root is
 // always "the region" `measureDragRegions` finds, in every branch below,
 // so a carve-out div is always a descendant of it rather than a sibling a
-// region-scoped lookup can't reach. `cardCount` must be the region's *own*
-// rendered count (ghost-inclusive), matching what dragRegions.ts::bandFor
-// resolves against once this region becomes the live hover target — see
-// PopHover.cardCount's own comment for why that freezes rather than
-// tracking the ghost's own insertion live.
-export function DragCarveFrame({ regionKey, cardCount, isTerminal, targetLabel, children }: DragCarveFrameProps) {
+// region-scoped lookup can't reach.
+export function DragCarveFrame({
+  regionKey,
+  cardCount,
+  hasActiveItemRow,
+  isTerminal,
+  targetLabel,
+  children,
+}: DragCarveFrameProps) {
   const session = useDragSession();
-  const tuning = useDragTuning();
   const pop = session?.pop;
 
-  const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: cardCount };
+  // Ghost-exclusive: the count of *other* cards, excluding the active
+  // item's own row whenever it's currently here — never based on whether
+  // this region happens to be the live hover target right now, which is
+  // a different question `hasActiveItemRow` can disagree with (Story 4.1
+  // Phase 1 — see that prop's own comment for the case that caught this).
+  const otherCardCount = hasActiveItemRow ? cardCount - 1 : cardCount;
+
+  const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: otherCardCount };
   const wrap = (content: ReactNode, extraClassName = '') => (
     <div {...regionAttrs} className={`relative ${extraClassName}`}>
       {content}
@@ -98,27 +138,21 @@ export function DragCarveFrame({ regionKey, cardCount, isTerminal, targetLabel, 
     );
   }
 
-  // Board layer. `hoveredHere` uses the frozen, pre-ghost card count for
-  // exactly the reason PopHover.cardCount is frozen at all: this region's
-  // own live count already includes the ghost hovering it just inserted.
-  const hoveredHere = pop.hover?.regionKey === regionKey;
-  const effectiveCardCount = hoveredHere ? (pop.hover?.cardCount ?? cardCount) : cardCount;
-
-  if (isTerminal || effectiveCardCount === 0) {
-    if (effectiveCardCount === 0) {
-      // Genuinely empty, not (yet) the live hover target: nothing in
-      // `children` to show at all, so the label is the only cue there is.
-      // Once hovered, a real ghost (itemListOps' ordinal placement) is
-      // already the live content — rendering *that* instead, same as the
-      // terminal-with-cards branch below, rather than a label with nothing
-      // under it.
-      if (!hoveredHere) {
+  // Board layer.
+  if (isTerminal || otherCardCount === 0) {
+    if (otherCardCount === 0) {
+      // Genuinely nothing *else* here. If the active item's own row isn't
+      // here either, there's truly nothing in `children` to show, so the
+      // label is the only cue there is. If it is, that row already reserves
+      // exactly the space the label would have — rendering it instead, same
+      // as the terminal-with-cards branch below, rather than doubling up.
+      if (!hasActiveItemRow) {
         return wrap(
           <div
             aria-hidden="true"
             data-carve-zone="single"
             className={`${ZONE_LABEL} ${SINGLE_BAND_BORDER}`}
-            style={{ height: tuning.ghostCardHeightPx }}
+            style={{ height: SHORT_CARD_HEIGHT_PX }}
           >
             Move to {targetLabel}
           </div>,
@@ -126,14 +160,18 @@ export function DragCarveFrame({ regionKey, cardCount, isTerminal, targetLabel, 
       }
       return wrap(children);
     }
+    // Terminal, with cards: a real bottom-only reservation now (Phase 1),
+    // sized for the ghost that always previews last there — not an
+    // absolute overlay that let the ghost's entry grow the region.
     return wrap(
       <>
         {children}
-        {!hoveredHere && (
+        {!hasActiveItemRow && (
           <div
             aria-hidden="true"
             data-carve-zone="single"
-            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-zinc-900/70 text-[11px] font-medium tracking-wide text-zinc-400 uppercase"
+            className={ZONE_LABEL}
+            style={{ height: SHORT_CARD_HEIGHT_PX + CARD_LIST_GAP_PX }}
           >
             Move to {targetLabel}
           </div>
@@ -142,18 +180,18 @@ export function DragCarveFrame({ regionKey, cardCount, isTerminal, targetLabel, 
     );
   }
 
-  const edge = effectiveCardCount === 1 ? tuning.ghostCardHeightPx / 2 : tuning.ghostCardHeightPx;
-  const halfHeight = tuning.ghostCardHeightPx / 2;
+  const zoneHeight = (SHORT_CARD_HEIGHT_PX + CARD_LIST_GAP_PX) / 2;
+  const edge = otherCardCount === 1 ? zoneHeight : SHORT_CARD_HEIGHT_PX;
   return wrap(
     <>
-      {!hoveredHere && (
-        <div aria-hidden="true" data-carve-zone="top" className={ZONE_LABEL} style={{ height: halfHeight }}>
+      {!hasActiveItemRow && (
+        <div aria-hidden="true" data-carve-zone="top" className={ZONE_LABEL} style={{ height: zoneHeight }}>
           Move Top
         </div>
       )}
       {children}
-      {!hoveredHere && (
-        <div aria-hidden="true" data-carve-zone="bottom" className={ZONE_LABEL} style={{ height: halfHeight }}>
+      {!hasActiveItemRow && (
+        <div aria-hidden="true" data-carve-zone="bottom" className={ZONE_LABEL} style={{ height: zoneHeight }}>
           Move Bottom
         </div>
       )}

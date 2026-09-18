@@ -175,13 +175,22 @@ test.describe('2: extreme boundary moves into column 2', () => {
 
   test('2.b — drag C below card D, into the empty column space', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
+    const colOne = page.getByRole('group', { name: 'Column One' });
     const colTwo = page.getByRole('group', { name: 'Column Two' });
     // C starts locked to Column One — pop out to Board layer first, or a
     // release there commits Column One's own reorder instead (re-plan
-    // 2026-09-16).
+    // 2026-09-16). Popping out while the pointer rests *outside* Column Two
+    // (the gap) rather than already inside it matters here, same reasoning
+    // as 4.a/4.b below: Column Two only carves out its own reservation once
+    // it's a Board-layer region (Story 4.1), which grows it by roughly a
+    // shortCard's height — arriving already inside it via `pastColumnEnd`
+    // (measured against its *pre*-Board-layer box) means that growth pushes
+    // the bottom edge down past the point the test is resting on, so it
+    // reads as the middle band instead of the bottom one once it settles.
     await pickUp(page, cardC);
-    await hoverTo(page, await pastColumnEnd(colTwo));
+    await hoverTo(page, await gapBetween(colOne, colTwo));
     await popOutFully(page);
+    await hoverTo(page, await pastColumnEnd(colTwo));
     await release(page);
 
     await expect(colTwo.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();

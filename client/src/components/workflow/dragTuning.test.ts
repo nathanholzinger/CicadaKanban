@@ -25,8 +25,8 @@ describe('loadDragTuning', () => {
   });
 
   it('merges a partial override over the defaults', () => {
-    const s = storage({ [DRAG_TUNING_STORAGE_KEY]: JSON.stringify({ popDelayMs: 120, ghostCardHeightPx: 64 }) });
-    expect(loadDragTuning(s)).toEqual({ ...DEFAULT_DRAG_TUNING, popDelayMs: 120, ghostCardHeightPx: 64 });
+    const s = storage({ [DRAG_TUNING_STORAGE_KEY]: JSON.stringify({ popDelayMs: 120, popSnapMs: 300 }) });
+    expect(loadDragTuning(s)).toEqual({ ...DEFAULT_DRAG_TUNING, popDelayMs: 120, popSnapMs: 300 });
   });
 
   it('ignores malformed JSON, wrong types, non-finite numbers and unknown keys', () => {

@@ -23,7 +23,16 @@ import {
   type CollisionSession,
 } from './boardDndUtils';
 import { classifyDragTargets, type DragClassification } from './dragClassification';
-import { measureDragRegions, nonCardRegionAt, type CardTarget, type DragRegion, type Point } from './dragRegions';
+import {
+  childRegionAt,
+  measureRegions,
+  resolveDragStructure,
+  type ColumnLikeRegion,
+  type DragRegion,
+  type DragStructure,
+  type Point,
+  type ShortCardMetrics,
+} from './dragRegions';
 import type { DragTuning } from './dragTuning';
 import {
   advancePopSession,
@@ -36,6 +45,13 @@ import {
 import type { Placement, Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
+import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../KanbanCard';
+
+// Story 4.1 Phase 1: the reservation basis, sourced from the card module
+// (KanbanCard.tsx owns both — decision 3's "dependency points drag →
+// card, never the reverse") and handed to the pure pop machine as plain
+// data, the same way `tuning` already is.
+const SHORT_CARD_METRICS: ShortCardMetrics = { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX };
 
 // Drag-and-drop for the board's DndContext — the gesture layer of
 // docs/wiki/board-drag-interaction. The rules live in pure modules
@@ -86,6 +102,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // Mirrors for the closures that run outside React's render of this hook.
   const sessionRef = useRef<DragSession | null>(null);
   const regionsRef = useRef<DragRegion[]>([]);
+  // Story 4.1 Phase 2: the board's structural facts (elements, kinds,
+  // parent chains, scroll ancestors, column facts) — resolved once per
+  // drag and again after each layer change, not on every pointer sample.
+  const structureRef = useRef<DragStructure>([]);
   const pointerRef = useRef<Point | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The ghost we last asked to be shown for the active drag's item — so the
@@ -152,21 +172,33 @@ export function useBoardDnd(deps: BoardDndDeps) {
     snapFrame.current = requestAnimationFrame(frame);
   }
 
-  // `classification` decides which Cards register as regions at all (§3.2:
+  // `classification` decides which Cards resolve as regions at all (§3.2:
   // an invalid target — cycle-forming, depth-capped — is never poppable,
   // and here that's simply "never a region," so nothing downstream has to
   // re-check validity). It's a parameter rather than read off the session
-  // ref because the very first measurement of a drag (handleDragStart)
-  // runs before the session exists yet — every call site below already has
-  // its own classification in scope regardless.
-  function measureRegions(classification: DragClassification): DragRegion[] {
+  // ref because the very first resolution of a drag (handleDragStart) runs
+  // before the session exists yet — every call site below already has its
+  // own classification in scope regardless.
+  //
+  // Story 4.1 Phase 2: structural (element ↔ key ↔ kind ↔ parent chain ↔
+  // scroll ancestor ↔ column facts) and re-resolved only per drag and after
+  // each layer change — a ghost migrating lists can remount the elements
+  // underneath a cached reference, which is exactly what a layer change is
+  // liable to cause.
+  function resolveStructure(classification: DragClassification): DragStructure {
     const root = latest.current.rootRef.current ?? document;
-    const resolveCardTarget = (cardId: string): CardTarget | null => {
-      if (classification.states.get(cardId) !== 'valid') return null;
-      const workphaseId = latest.current.items.find(i => i.id === cardId)?.workphaseId;
-      return workphaseId ? { workphaseId } : null;
-    };
-    regionsRef.current = measureDragRegions(root, latest.current.board?.columns ?? [], resolveCardTarget);
+    const isValidCard = (cardId: string): boolean => classification.states.get(cardId) === 'valid';
+    structureRef.current = resolveDragStructure(root, latest.current.board?.columns ?? [], isValidCard);
+    return structureRef.current;
+  }
+
+  // The per-sample read: live rects and live card counts, scoped to
+  // exactly what the locked layer can use — `scope` is the pop machine's
+  // current `contextKey`, so this is the context region itself plus its
+  // own children (F5: Board never reads a Card region; a locked column
+  // never reads another column's).
+  function sampleRegions(scope: string | null): DragRegion[] {
+    regionsRef.current = measureRegions(structureRef.current, scope);
     return regionsRef.current;
   }
 
@@ -186,10 +218,24 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (!current?.pop || !pointer) return;
     const { tuning } = latest.current;
     const now = performance.now();
-    const regions = measureRegions(current.classification);
-    const pop = advancePopSession(current.pop, pointer, regions, tuning, now);
+    let regions = sampleRegions(current.pop.contextKey);
+    let pop = advancePopSession(current.pop, pointer, regions, tuning, SHORT_CARD_METRICS, now);
+    if (pop.contextKey !== current.pop.contextKey) {
+      // A layer change: the sample above was scoped to the *old* layer, so
+      // a hover onto something only visible from the *new* one (a sibling
+      // region at Board, a Card inside the column just entered) can't have
+      // been seen yet. Re-resolve for the new scope and re-run this same
+      // sample against it, once, before anything downstream reads a region
+      // — including `popDueAt` below, which would otherwise schedule no
+      // further timer at all off a hover that was never actually looked
+      // for, stranding a timer-driven transition (no further pointermove
+      // ever arrives to self-correct it) the instant it lands.
+      startSnap();
+      resolveStructure(current.classification);
+      regions = sampleRegions(pop.contextKey);
+      pop = advancePopSession(pop, pointer, regions, tuning, SHORT_CARD_METRICS, now);
+    }
     if (pop !== current.pop) {
-      if (pop.contextKey !== current.pop.contextKey) startSnap();
       updateSession({ ...current, pop });
       setGhost(
         current.activeItem.id,
@@ -197,7 +243,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       );
     }
     clearPopTimer();
-    const due = popDueAt(pop, tuning);
+    const due = popDueAt(pop, regions, tuning);
     if (due !== null) popTimer.current = setTimeout(() => evaluateRef.current(), Math.max(0, due - now));
   }
   useEffect(() => {
@@ -230,13 +276,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (pop) {
       const regions = regionsRef.current;
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
-      const context = regions.find(r => r.key === pop.contextKey);
+      const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — rule 1: a mere hover, not yet a
         // pop, must never drive anything a release would act on.
-        hoverContainerId: hover && hover.attachToCardId === undefined ? hover.containerId : null,
-        context: context ? { containerId: context.containerId, rect: context.rect } : null,
+        hoverContainerId: hover && hover.kind !== 'card' ? hover.containerId : null,
+        // A locked Card context has no `over` either (decision 5, Story 4.1
+        // Phase 0): its within-action is a constant append, never a
+        // preview — today the target Card would otherwise be its own only
+        // collision candidate, which could light the live side indicator on
+        // it for no reason a release would ever honor.
+        context: context && context.kind !== 'card' ? { containerId: context.containerId, rect: context.rect } : null,
       };
     }
     return resolveBoardCollisions(args, live);
@@ -287,9 +338,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // Board layer only (a Card region never reaches a band resolution —
   // Story 4's within-action is a constant append, resolved without
   // consulting the region's rendered items at all).
-  function regionItems(region: DragRegion): Item[] {
+  function regionItems(region: ColumnLikeRegion): Item[] {
     const { getMergedColumnItems, getWorkphaseItems } = latest.current;
-    return region.key.startsWith('column:')
+    return region.kind === 'column'
       ? getMergedColumnItems(region.coveredWorkphaseIds, region.isTerminal)
       : getWorkphaseItems(region.targetWorkphaseId, region.isTerminal);
   }
@@ -322,8 +373,11 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // Unsorted: nothing to lock to.
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
-    const regions = measureRegions(classification);
-    const pop = startPopSession(nonCardRegionAt(regions, pointerRef.current)?.key ?? null);
+    resolveStructure(classification);
+    const boardScope = sampleRegions(null);
+    const startContextKey = childRegionAt(boardScope, pointerRef.current, null)?.key ?? null;
+    const regions = startContextKey === null ? boardScope : sampleRegions(startContextKey);
+    const pop = startPopSession(startContextKey);
     updateSession({ activeItem, classification, pop, priorPlacement });
     setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position, priorPlacement));
   }
@@ -428,9 +482,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
   }
 
   function resolveCardDrop(ended: DragSession, overId: string | null, side: 'before' | 'after'): MoveItemInput | null {
-    const { activeItem, pop, classification } = ended;
-    const regions = measureRegions(classification);
-    const intent = pop ? releaseIntent(pop, regions) : { kind: 'none' as const };
+    const { activeItem, pop } = ended;
+    // Story 4.1 Phase 2: no fresh geometry at release — releaseIntent's own
+    // comment already said none was needed. regionsRef holds exactly what
+    // the machine's own final state needs: the last sample was already
+    // scoped to `ended.pop`'s own contextKey/hover.
+    const intent = pop ? releaseIntent(pop, regionsRef.current) : { kind: 'none' as const };
 
     if (intent.kind === 'in-context') {
       if (!overId) return null;
@@ -468,7 +525,7 @@ function clampToCurrentContext(
   // A sub-row bounds both axes (§1); so does a Card's Stub context, once
   // popped into one (Story 4 planning) — a merged column bounds x only.
   const y =
-    context.key.startsWith('subrow:') || context.attachToCardId !== undefined
+    context.kind !== 'column'
       ? clampAxis(transform.y, rect.top, rect.height, context.rect.top, context.rect.bottom)
       : transform.y;
   return { ...transform, x, y };

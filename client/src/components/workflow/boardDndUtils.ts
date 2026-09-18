@@ -2,7 +2,7 @@ import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
 import { workphaseOnlySlot, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
-import { containsPoint, type Band, type DragRegion, type Rect } from './dragRegions';
+import { containsPoint, type Band, type ColumnLikeRegion, type Rect } from './dragRegions';
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
 // useBoardDnd so it can be unit tested — real drag gestures are deliberately
@@ -76,10 +76,6 @@ export function resolveBoardCollisions(
     return data?.type === 'card' && rect !== undefined && rectCenterInside(rect, session.context.rect);
   });
   return closestCorners({ ...args, droppableContainers });
-}
-
-export function createBoardCollisionDetection(getSession: () => CollisionSession | null): CollisionDetection {
-  return args => resolveBoardCollisions(args, getSession());
 }
 
 function rectCenterInside(rect: Rect, bounds: Rect): boolean {
@@ -266,7 +262,7 @@ export function buildMoveInput(resolution: DropResolution, side: 'before' | 'aft
 //   middle → workphase-only: position kept                (TC-7.16)
 //   empty or done region → workphase-only, any band       (TC-7.5, 7.8)
 export function bandDropResolution(
-  region: DragRegion,
+  region: ColumnLikeRegion,
   band: Band,
   active: { id: string; workphaseId: string | null },
   regionItems: readonly { id: string }[],

@@ -3,7 +3,7 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Column, Item, ItemType, Workphase } from '../types';
-import KanbanCard from './KanbanCard';
+import KanbanCard, { CARD_LIST_GAP_CLASS } from './KanbanCard';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
@@ -71,14 +71,21 @@ export default function BoardColumn({
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
   const regionKey = column.displayMode === 'merged' && !column.broken ? columnRegionKey(column.id) : undefined;
+  // Story 4.1 Phase 1: whether the active drag's own item is currently
+  // rendered as one of *this* column's own cards — by list membership, not
+  // by whether this column is the live hover target right now (DragCarveFrame's
+  // own `hasActiveItemRow` doc comment has the case that distinguishes them).
+  const mergedHasActiveItem = mergedItems.some(i => i.id === session?.activeItem.id);
   // Computed once — used either bare or wrapped in DragCarveFrame below,
   // and building it twice would double-register the same sortable ids. Its
-  // own flex/gap (mirroring WorkphaseCardList's `list`) is self-contained
-  // rather than relying on COLUMN_BODY_BASE's gap-2 — DragCarveFrame's own
-  // wrap div sits between them and isn't itself a flex container, since its
-  // carve-out math depends on a plain `relative` box with no extra spacing.
+  // own flex/gap (mirroring WorkphaseCardList's `list`, and sharing its
+  // exact gap constant — Story 4.1 Phase 1's reservation math depends on
+  // it) is self-contained rather than relying on COLUMN_BODY_BASE's own
+  // gap-2 — DragCarveFrame's own wrap div sits between them and isn't
+  // itself a flex container, since its carve-out math depends on a plain
+  // `relative` box with no extra spacing.
   const mergedCards = (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${CARD_LIST_GAP_CLASS}`}>
       <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
         {mergedItems.map(item => (
           <KanbanCard
@@ -186,6 +193,7 @@ export default function BoardColumn({
                 <DragCarveFrame
                   regionKey={regionKey}
                   cardCount={mergedItems.length}
+                  hasActiveItemRow={mergedHasActiveItem}
                   isTerminal={columnIsTerminal}
                   targetLabel={column.displayName}
                 >

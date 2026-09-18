@@ -1,10 +1,15 @@
 // Epic 3.5 Story 3 — the tunable parameters of the board drag gesture
-// (docs/wiki/board-drag-interaction §3.1, §5, §7.1, §4). The wiki settles
+// (docs/wiki/board-drag-interaction §3.1, §7.1, §4). The wiki settles
 // these *as parameters* with provisional values; the correct values are
 // found by feel, so every one of them is exposed by the dev/test panel and
 // persisted in localStorage — a change takes effect on the next drag, no
 // rebuild. Tests are written against the configured value (seeded through
 // the same storage key), never the literal.
+//
+// §5's reservation height (Story 4.1 Phase 1) left this file — it's a
+// fixed fact about the shortCard component (`KanbanCard.tsx`'s
+// `SHORT_CARD_HEIGHT_PX`), not a value found by feel, so there's nothing
+// left here to tune by changing a number between two attempts.
 
 export interface DragTuning {
   /** `THRESHOLD` — how long the cursor must stay outside the card's context before the card pops out and follows it. */
@@ -24,18 +29,6 @@ export interface DragTuning {
   cardPopInDelayMs: number;
   /** How long the card takes to travel from its clamped position to the cursor on a pop. 0 teleports. */
   popSnapMs: number;
-  /**
-   * Story 8 re-plan (2026-09-16) — the reserved height of one collapsed
-   * ghost card, in pixels. At Board layer this is carved out at the top and
-   * bottom of a region's real content (never its visible-scrolled slice) as
-   * two half-height dead zones ("Move Top"/"Move Bottom"); the top/bottom
-   * band boundary sits a full one of these in from each edge, so it cuts
-   * across the middle of the first/last rendered card. A region with
-   * exactly one card halves both edges instead (dragRegions.ts::bandFor),
-   * so the card itself stays a real, unlabeled middle band rather than
-   * being split in two.
-   */
-  ghostCardHeightPx: number;
   /** §4 overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
   overlayFreeDescendantColor: string;
   overlayDepthCappedOpacity: number;
@@ -55,7 +48,6 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   popInDelayMs: 500,
   cardPopInDelayMs: 800,
   popSnapMs: 150,
-  ghostCardHeightPx: 96,
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',

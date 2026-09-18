@@ -1,4 +1,3 @@
-import type { DragTuning } from './dragTuning';
 import { subrowContainerId, type DropColumn } from './boardDndUtils';
 
 // Epic 3.5 Story 3 — the *regions* a Card drag can be in (docs/wiki/board-
@@ -12,11 +11,12 @@ import { subrowContainerId, type DropColumn } from './boardDndUtils';
 // target only from the column/sub-row that contains it (`parentRegionKey`)
 // and only while genuinely locked into that parent context — never hit-
 // tested unconditionally, and never a Board-layer target in its own right
-// (re-plan 2026-09-16; see `nonCardRegionAt`/`cardRegionAt` below). It
-// carries `attachToCardId` instead of (well, alongside a nominal) workphase
-// target; every function below that branches on region shape does so on
-// that field, never on a separate "kind" enum, so a plain containment
-// helper only has to grow one more field to read.
+// (re-plan 2026-09-16; see `childRegionAt` below). `DragRegion` is a
+// discriminated union on `kind` (Story 4.1 Phase 0) — a Card region carries
+// only what its kind reads (`attachToCardId`, its own payload, never a type
+// test), a column/sub-row keeps the rest; every function downstream that
+// used to branch on a key prefix or `attachToCardId !== undefined` reads
+// `region.kind` instead.
 //
 // A region is a bounded box (§1, wiki–code reconciliation #20) — hit-tested
 // by simple containment, nothing outside it. A column's header/footer, the
@@ -42,12 +42,30 @@ export interface Point {
 
 export type Band = 'top' | 'middle' | 'bottom';
 
-export interface DragRegion {
-  /** `column:<id>` or `subrow:<columnId>:<workphaseId>` — also the DOM attribute value. */
+export type RegionKind = 'column' | 'subrow' | 'card';
+
+interface RegionCommon {
+  /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `card:<id>` — also the DOM attribute value. */
   key: string;
+  rect: Rect;
+  /**
+   * The region element's own bounds, before `clipToVisible` clips them to a
+   * scrolling ancestor's visible box. `rect` (above) stays the clipped one,
+   * for hit-testing: a band scrolled fully out of view must be neither
+   * drawn nor reachable. `contentRect` is what band boundaries are measured
+   * against instead, so a band's position is a fact about the region's real
+   * content, never about how much of it happens to be scrolled into view.
+   */
+  contentRect: Rect;
+}
+
+// A column/sub-row region — the context for Free items (§1). Board is its
+// parent layer unconditionally: `parentRegionKey` is always null, never a
+// branch elsewhere has to ask.
+export interface ColumnLikeRegion extends RegionCommon {
+  kind: 'column' | 'subrow';
   /** The dnd-kit droppable id a drop in this region resolves against. */
   containerId: string;
-  rect: Rect;
   columnId: string;
   coveredWorkphaseIds: string[];
   /** The workphase a non-member takes on entry — the merged column's entry workphase, or the sub-row's exact one. */
@@ -55,52 +73,33 @@ export interface DragRegion {
   /** A done region: no positioned inserts, every band is a workphase-only move (§5). */
   isTerminal: boolean;
   /**
-   * The vertical scroll offset of the region's scrolling ancestor — 0 when
-   * it has none (never happens for a column/sub-row region as of Story 8's
-   * re-plan; every one of them nests inside its column's own scrolling
-   * body). This is how popSession.ts's frozen band rect tells a real
-   * scroll from the ghost's own insertion (§5, reconciliation #21): only
-   * this changes for the former.
-   */
-  scrollTop: number;
-  /**
-   * Story 8 re-plan (2026-09-16) — the region element's own bounds, before
-   * `clipToVisible` clips them to a scrolling ancestor's visible box. `rect`
-   * (above) stays the clipped one, for hit-testing: a band scrolled fully
-   * out of view must be neither drawn nor reachable. `contentRect` is what
-   * band boundaries are measured against instead, so a band's position is a
-   * fact about the region's real content, never about how much of it
-   * happens to be scrolled into view.
-   */
-  contentRect: Rect;
-  /**
-   * The number of real cards currently rendered in this column/sub-row —
-   * `0` for a `card:` region, where it's unused. Read straight off the DOM
-   * (`data-drag-card-count`, set by the React side from the same `items`
-   * array it renders) rather than inferred from `contentRect`'s height,
-   * since a real card's height is only approximately `ghostCardHeightPx`
-   * (KanbanCard.tsx's collapsed-ghost styling narrows this but doesn't
-   * pin it exactly). Drives `bandFor`'s single-band collapse (0) and
-   * one-card exception (1) — see its own comment.
+   * The number of real cards currently rendered in this column/sub-row.
+   * Read straight off the DOM (`data-drag-card-count`, set by the React
+   * side from the same `items` array it renders) rather than inferred from
+   * `contentRect`'s height, since a real card's height is only
+   * approximately `ghostCardHeightPx` (KanbanCard.tsx's collapsed-ghost
+   * styling narrows this but doesn't pin it exactly). Drives `bandFor`'s
+   * single-band collapse (0) and one-card exception (1) — see its own
+   * comment.
    */
   cardCount: number;
-  /**
-   * Story 4: set only for a `card:<id>` region — the Card a drop here
-   * attaches into. Undefined for every column/sub-row region. This is the
-   * one field every card-aware branch downstream (popSession.ts,
-   * boardDndUtils.ts, useBoardDnd.ts) actually reads; nothing else about a
-   * Card region's shape is special-cased separately.
-   */
-  attachToCardId?: string;
-  /**
-   * Story 4 (re-plan, 2026-09-16): set only for a `card:<id>` region — the
-   * key of the column/sub-row region that contains it. This is where a pop-
-   * out of the Card lands (its context's own *parent* layer, never Board
-   * directly — the layer rule: one context change at a time). Undefined for
-   * every column/sub-row region, which always pops out to Board (`null`).
-   */
-  parentRegionKey?: string;
+  parentRegionKey: null;
 }
+
+// Story 4: a Card region — reachable only as a zoom-in target from the
+// column/sub-row that contains it (`parentRegionKey`), never a Board-layer
+// target in its own right. Carries only what a Card's within-action reads:
+// no workphase fields, no card count — those questions never reach a Card
+// region (`placementFor`'s Card branch returns before anything would).
+export interface CardRegion extends RegionCommon {
+  kind: 'card';
+  /** The Card a drop here attaches into — the same id as the key's own suffix. */
+  attachToCardId: string;
+  /** The column/sub-row that contains this Card — where its own pop-out lands (never Board directly). */
+  parentRegionKey: string;
+}
+
+export type DragRegion = ColumnLikeRegion | CardRegion;
 
 export const DRAG_REGION_ATTR = 'data-drag-region';
 // Story 8 re-plan: set alongside DRAG_REGION_ATTR on the same element, from
@@ -123,50 +122,117 @@ export function cardRegionKey(itemId: string): string {
   return `card:${itemId}`;
 }
 
-// What measureDragRegions needs to know about a Card to register it as a
-// region — just enough for workphase inheritance (wiki §6). Returning null
-// (an invalid target for *this* drag, or an id the caller doesn't
-// recognize) means "not a region at all" — the same as a column that
-// doesn't resolve: §3.2's "invalid targets are never poppable" falls out of
-// this for free, since a non-region can't be hovered, popped into, or
-// dropped on.
-export interface CardTarget {
-  workphaseId: string;
+// Story 4.1 Phase 2 — everything about a region except its *live* geometry
+// and card count: which element it is, its kind and parent chain, its
+// scrolling ancestor (if any), and — column/sub-row only — the workphase
+// facts derived from the column definitions. None of this changes for the
+// life of a single drag except across a layer change, when a ghost
+// migrating lists can remount the DOM underneath a cached element
+// reference — the reason `resolveDragStructure` below runs again right
+// after one, not only at drag start (F5's "recomputed per sample" cost was
+// this and the geometry below, conflated into one function; this is the
+// half that a drag's own duration can share across every sample instead).
+interface StructureCommon {
+  key: string;
+  element: HTMLElement;
+  scrollAncestor: HTMLElement | null;
 }
+interface ColumnLikeStructure extends StructureCommon {
+  kind: 'column' | 'subrow';
+  containerId: string;
+  columnId: string;
+  coveredWorkphaseIds: string[];
+  targetWorkphaseId: string;
+  isTerminal: boolean;
+  parentRegionKey: null;
+}
+interface CardStructure extends StructureCommon {
+  kind: 'card';
+  attachToCardId: string;
+  parentRegionKey: string;
+}
+export type DragStructure = readonly (ColumnLikeStructure | CardStructure)[];
 
-// Builds the region list from every `[data-drag-region]` element under
-// `root`, joined with the column definitions for the workphase facts.
-// Measured fresh on each evaluation — a handful of getBoundingClientRect
-// calls per pointer move, and the ghost's insertion can change a body's
-// height mid-drag. A region whose element sits inside a vertically
-// scrolling ancestor (a sub-row, inside its column's `overflow-y-auto`
-// body — a Card is one too) is clipped to that ancestor's own visible box
-// first — scrolled fully out of view, it contributes no region at all.
+// Resolves every `[data-drag-region]` element under `root` into its
+// structural facts, joined with the column definitions for the workphase
+// ones. Called once per drag (`handleDragStart`) and again after each
+// layer change — never per pointer sample, unlike the old, single
+// `measureDragRegions` this and `measureRegions` below replace (Story 4.1
+// Phase 2).
 //
-// `resolveCardTarget` is Story 4: omitted, no `card:` element
-// registers a region at all (so a caller that hasn't wired Card regions up
-// yet — or a test fixture — sees exactly Story 3's set). Passed, it decides
-// per Card whether *this* drag can target it; returning null skips the
-// element the same way an unresolvable column key already does.
-export function measureDragRegions(
+// `isValidCard` is Story 4: omitted, no `card:` element resolves at all (so
+// a caller that hasn't wired Card regions up yet — or a test fixture —
+// sees exactly Story 3's set). Passed, it decides per Card whether *this*
+// drag can target it at all; false skips the element the same way an
+// unresolvable column key already does — a Card region carries no
+// workphase of its own to resolve (§3.2 "invalid targets are never
+// poppable" falls out of this for free).
+export function resolveDragStructure(
   root: ParentNode,
   columns: readonly DropColumn[],
-  resolveCardTarget?: (cardId: string) => CardTarget | null,
-): DragRegion[] {
+  isValidCard?: (cardId: string) => boolean,
+): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
-  const regions: DragRegion[] = [];
+  const structure: (ColumnLikeStructure | CardStructure)[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(`[${DRAG_REGION_ATTR}]`)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
     if (!key) continue;
-    const scrollBox = findVerticalScrollAncestor(el, root);
-    const contentRect = layoutRect(el);
-    const rect = scrollBox ? clipToVisible(contentRect, layoutRect(scrollBox)) : contentRect;
+    const isCard = key.startsWith('card:');
+    const scrollAncestor = findVerticalScrollAncestor(el, root);
+    const record = isCard
+      ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, findParentRegionKey(el, root))
+      : columnLikeStructureFromKey(key, el, scrollAncestor, byId);
+    if (record) structure.push(record);
+  }
+  return structure;
+}
+
+// The live half: a region's rect, content rect, and (column/sub-row only)
+// card count — the three facts that can change on every pointer sample
+// (the ghost's insertion can change a body's height mid-drag, or move
+// which list carries the count at all), read fresh against the
+// structure's cached element references. `scope` is the pop machine's
+// current `contextKey` — only the region matching it and that region's
+// own children (`parentRegionKey === scope`) are worth reading at all,
+// since nothing else is reachable from where the drag currently is (Board
+// never reads a Card region; a locked column never reads another
+// column's — F5). At Board (`scope: null`) that's every column/sub-row,
+// none of which ever carry a non-null `parentRegionKey`. A region whose
+// element sits inside a vertically scrolling ancestor (a sub-row, inside
+// its column's `overflow-y-auto` body — a Card is one too) is clipped to
+// that ancestor's own visible box — scrolled fully out of view, it yields
+// no region at all.
+export function measureRegions(structure: DragStructure, scope: string | null): DragRegion[] {
+  const regions: DragRegion[] = [];
+  for (const s of structure) {
+    if (s.key !== scope && s.parentRegionKey !== scope) continue;
+    const contentRect = layoutRect(s.element, s.kind === 'card');
+    const rect = s.scrollAncestor ? clipToVisible(contentRect, layoutRect(s.scrollAncestor, false)) : contentRect;
     if (!rect) continue;
-    const scrollTop = scrollBox?.scrollTop ?? 0;
-    const region = key.startsWith('card:')
-      ? cardRegionFromKey(key, rect, contentRect, scrollTop, resolveCardTarget, findParentRegionKey(el, root))
-      : regionFromKey(key, rect, contentRect, scrollTop, byId, cardCountOf(el));
-    if (region) regions.push(region);
+    regions.push(
+      s.kind === 'card'
+        ? {
+            key: s.key,
+            kind: 'card',
+            rect,
+            contentRect,
+            attachToCardId: s.attachToCardId,
+            parentRegionKey: s.parentRegionKey,
+          }
+        : {
+            key: s.key,
+            kind: s.kind,
+            rect,
+            contentRect,
+            containerId: s.containerId,
+            columnId: s.columnId,
+            coveredWorkphaseIds: s.coveredWorkphaseIds,
+            targetWorkphaseId: s.targetWorkphaseId,
+            isTerminal: s.isTerminal,
+            cardCount: cardCountOf(s.element),
+            parentRegionKey: null,
+          },
+    );
   }
   return regions;
 }
@@ -192,10 +258,13 @@ function toRect(domRect: DOMRect): Rect {
 // `tests/helpers/dragGesture.ts::boxOf` corrects for), so a Card region
 // measured naively would disagree with dnd-kit's own idea of where that
 // Card collides. Columns and sub-rows never carry this transform (only list
-// *items* do), so this is a no-op for them — safe to apply uniformly rather
-// than branching on region kind (Story 4 planning, decision 2).
-function layoutRect(el: HTMLElement): Rect {
+// *items* do), so `isCard` gates the correction rather than applying it
+// uniformly (Story 4.1 Phase 0 — `currentTranslate`'s own
+// `getComputedStyle` call is skipped entirely for a kind that can never
+// need it, not just a no-op once run).
+function layoutRect(el: HTMLElement, isCard: boolean): Rect {
   const rect = toRect(el.getBoundingClientRect());
+  if (!isCard) return rect;
   const { dx, dy } = currentTranslate(el);
   if (dx === 0 && dy === 0) return rect;
   return { top: rect.top - dy, bottom: rect.bottom - dy, left: rect.left - dx, right: rect.right - dx, ...size(rect) };
@@ -208,8 +277,7 @@ function size(rect: Rect): Pick<Rect, 'width' | 'height'> {
 // The translation dnd-kit's sortable strategy has currently applied to
 // `el`, read back out of the computed style (`CSS.Transform.toString`'s
 // `translate3d` resolves to a matrix/matrix3d) rather than trusted from a
-// prop — this runs on *any* element measureDragRegions is asked about, most
-// of which were never dnd-kit sortables at all.
+// prop.
 function currentTranslate(el: HTMLElement): { dx: number; dy: number } {
   const transform = getComputedStyle(el).transform;
   if (!transform || transform === 'none') return { dx: 0, dy: 0 };
@@ -219,40 +287,23 @@ function currentTranslate(el: HTMLElement): { dx: number; dy: number } {
   return match[1] ? { dx: values[12], dy: values[13] } : { dx: values[4], dy: values[5] };
 }
 
-// Story 4: a Card region's shape — enough for `cardRegionAt`'s lookup and
-// `regionWorkphaseFor`'s inheritance to key off `attachToCardId` without a
-// separate lookup. `isTerminal: false` unconditionally — a done Card's
-// Stubs still keep positions (wiki §5 closing note, §7), it's only the
-// column/sub-row level that goes position-less on completion. No
-// `resolveCardTarget` (a caller that hasn't wired Story 4 up), an id it
-// can't place (invalid for this drag, or off-board), or no resolvable
-// parent region registers no region at all.
-function cardRegionFromKey(
+// Story 4: a Card region's structural identity — enough for
+// `childRegionAt`'s lookup and `placementFor`'s attach branch, keyed off
+// `attachToCardId` alone; nothing else about a Card region is
+// special-cased separately. No `isValidCard` (a caller that hasn't wired
+// Story 4 up), an id it says is invalid for this drag, or no resolvable
+// parent region resolves to nothing at all.
+function cardStructureFromKey(
   key: string,
-  rect: Rect,
-  contentRect: Rect,
-  scrollTop: number,
-  resolveCardTarget: ((cardId: string) => CardTarget | null) | undefined,
+  el: HTMLElement,
+  scrollAncestor: HTMLElement | null,
+  isValidCard: ((cardId: string) => boolean) | undefined,
   parentRegionKey: string | null,
-): DragRegion | null {
-  if (!resolveCardTarget || !parentRegionKey) return null;
+): CardStructure | null {
+  if (!isValidCard || !parentRegionKey) return null;
   const cardId = key.slice('card:'.length);
-  const target = resolveCardTarget(cardId);
-  if (!target) return null;
-  return {
-    key,
-    containerId: cardId,
-    rect,
-    contentRect,
-    columnId: cardId,
-    coveredWorkphaseIds: [target.workphaseId],
-    targetWorkphaseId: target.workphaseId,
-    isTerminal: false,
-    scrollTop,
-    cardCount: 0,
-    attachToCardId: cardId,
-    parentRegionKey,
-  };
+  if (!isValidCard(cardId)) return null;
+  return { key, kind: 'card', element: el, scrollAncestor, attachToCardId: cardId, parentRegionKey };
 }
 
 // The real card count a column/sub-row's own element carries
@@ -273,7 +324,7 @@ function cardCountOf(el: HTMLElement): number {
 // attached Stub's row carries no `[data-drag-region]`), so nothing nests a
 // card region inside another one. No parent found (a Card rendered outside
 // any registered region, which shouldn't happen) means no region at all —
-// same as an id `resolveCardTarget` can't place.
+// same as an id `isValidCard` rejects.
 function findParentRegionKey(el: HTMLElement, root: ParentNode): string | null {
   for (let node = el.parentElement; node && node !== root; node = node.parentElement) {
     const key = node.getAttribute(DRAG_REGION_ATTR);
@@ -309,14 +360,12 @@ export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }
 
-function regionFromKey(
+function columnLikeStructureFromKey(
   key: string,
-  rect: Rect,
-  contentRect: Rect,
-  scrollTop: number,
+  el: HTMLElement,
+  scrollAncestor: HTMLElement | null,
   columns: Map<string, DropColumn>,
-  cardCount: number,
-): DragRegion | null {
+): ColumnLikeStructure | null {
   const [kind, columnId, workphaseId] = key.split(':');
   const column = columns.get(columnId);
   if (!column || column.broken) return null;
@@ -324,86 +373,63 @@ function regionFromKey(
   if (kind === 'column' && column.displayMode === 'merged') {
     return {
       key,
+      kind: 'column',
+      element: el,
+      scrollAncestor,
+      parentRegionKey: null,
       containerId: column.id,
-      rect,
-      contentRect,
       columnId,
       coveredWorkphaseIds: covered,
       targetWorkphaseId: column.entryWorkphaseId,
       isTerminal: Boolean(column.subRows[0]?.workphase.isTerminal),
-      scrollTop,
-      cardCount,
     };
   }
   if (kind === 'subrow' && workphaseId && covered.includes(workphaseId)) {
     const row = column.subRows.find(r => r.workphase.id === workphaseId);
     return {
       key,
+      kind: 'subrow',
+      element: el,
+      scrollAncestor,
+      parentRegionKey: null,
       containerId: subrowContainerId(columnId, workphaseId),
-      rect,
-      contentRect,
       columnId,
       coveredWorkphaseIds: [workphaseId],
       targetWorkphaseId: workphaseId,
       isTerminal: Boolean(row?.workphase.isTerminal),
-      scrollTop,
-      cardCount,
     };
   }
   return null;
 }
 
 // Whether `point` lies inside `rect`, inclusive of the edges — the one
-// containment test, shared by `regionAt` below and `boardDndUtils.ts`'s
+// containment test, shared by `childRegionAt` below and `boardDndUtils.ts`'s
 // in-context collision filter (audit epic-3-5-story-3-reconciled #2).
 export function containsPoint(rect: Rect, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-// Which column/sub-row region contains the point — a region is a bounded
-// box (see the header note), nothing more. Null over a column's
-// header/footer, the gaps between columns or sub-rows, the space below the
-// last sub-row, a sub-row currently scrolled out of view, or (always) a
-// Card: a Card is never a Board-layer target in its own right (re-plan,
-// 2026-09-16) — the layer rule is one context change at a time, and Board's
-// own zoom-in target is a column/sub-row, never a card two layers down.
-// This is also always the right lookup for where a drag *starts* (wiki §1:
-// always a column/sub-row) and for the pop-out clock, which measures
-// against the *current* locked region's own rect, never a card's.
-export function nonCardRegionAt(regions: readonly DragRegion[], point: Point): DragRegion | null {
-  return regions.find(r => r.attachToCardId === undefined && containsPoint(r.rect, point)) ?? null;
-}
-
-// Which of `parentKey`'s own Cards contains the point — the one further
-// zoom-in a locked column/sub-row offers (re-plan, 2026-09-16): reachable
-// only from *this* context, never from Board or from a different column's
-// context, matching "no crossing into a sibling without a trip through the
-// parent first." A card whose own `parentRegionKey` doesn't match is never
-// a candidate, even if it geometrically contains the point (impossible in
-// practice — a card only ever sits inside its own column/sub-row — but the
-// check is the one thing that would actually enforce it).
-export function cardRegionAt(regions: readonly DragRegion[], point: Point, parentKey: string): DragRegion | null {
+// Which of `parentKey`'s own children contains the point — Board's own
+// column/sub-row regions when `parentKey` is null (every one of them has
+// `parentRegionKey: null`), or a locked column/sub-row's own Cards when
+// `parentKey` is its key (replaces the old `nonCardRegionAt`/`cardRegionAt`
+// pair — Story 4.1 Phase 0). A Card's own further zoom-in (Story 5's
+// `descendants` kind) reads the same way once it exists. Reachable only
+// from *this* parent — never a foreign column's Card, never two layers in
+// one hop (wiki §1.1 rule 2) — because nothing but a true child ever
+// carries a matching `parentRegionKey`. Null over a column's header/footer,
+// the gaps between columns or sub-rows, the space below the last sub-row, a
+// region currently scrolled out of view, or (at Board layer) always a Card:
+// a Card is never a Board-layer target in its own right (re-plan,
+// 2026-09-16) — the layer rule is one context change at a time, and no
+// column/sub-row ever carries a non-null `parentRegionKey` for this to
+// match against.
+export function childRegionAt(
+  regions: readonly DragRegion[],
+  point: Point,
+  parentKey: string | null,
+): DragRegion | null {
   return regions.find(r => r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ?? null;
-}
-
-// Translates a frozen rect by a change in scroll offset — an increase in
-// scrollTop moves content up on screen, so the rect moves the same amount
-// the other way. A 0 delta returns the very same object, so a still cursor
-// over a still region keeps producing `===` hovers (reconciliation #21).
-// Lives here, not in popSession.ts, so every Rect-shaped operation has one
-// owner (audit epic-3-5-story-3-reconciled #2) — popSession.ts's `hoverFor`
-// only decides *whether* to carry the rect forward; this is the geometry.
-export function translateRect(rect: Rect, deltaScrollTop: number): Rect {
-  if (deltaScrollTop === 0) return rect;
-  const dy = -deltaScrollTop;
-  return {
-    top: rect.top + dy,
-    bottom: rect.bottom + dy,
-    left: rect.left,
-    right: rect.right,
-    width: rect.width,
-    height: rect.height,
-  };
 }
 
 function verticalDistance(y: number, rect: Rect): number {
@@ -412,24 +438,34 @@ function verticalDistance(y: number, rect: Rect): number {
   return 0;
 }
 
-export type BandTuning = Pick<DragTuning, 'ghostCardHeightPx'>;
-export type BandRegion = Pick<DragRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
+// The two numbers the reservation math is built from — a fixed fact about
+// the shortCard component (`KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`) and the
+// card lists' own gap (`KanbanCard.tsx::CARD_LIST_GAP_PX`), never a tuning
+// bag: Story 4.1 Phase 1 made both fixed, so there's nothing left here to
+// find by feel. Passed in rather than imported so this pure module still
+// depends on nothing under `components/` — the caller (`popSession.ts`,
+// itself handed the values by `useBoardDnd.ts`) is what points drag → card.
+export interface ShortCardMetrics {
+  heightPx: number;
+  gapPx: number;
+}
+export type BandRegion = Pick<ColumnLikeRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
 
-// Story 8 re-plan (2026-09-16) — where the two band boundaries sit, in
-// viewport pixels, measured from `contentRect` (never the visible-clipped
-// `rect`: a boundary scrolled out of view stays exactly where its content
-// put it, reachable only by scrolling to it — wiki §5). Null collapses to
-// a single band spanning the whole region: a done region (positions never
-// apply, wiki §5 closing note) or a genuinely empty one (nothing to be
-// before/after). Exactly one card halves the edge instead of the normal
-// full `ghostCardHeightPx` — full edges would meet at the card's own
-// midpoint and leave no middle band for it to be a real, unlabeled "keep
-// this position" target (Product Owner special rule, 2026-09-16). The one
-// definition both the resolver (`bandFor`) and the guides read, so what's
-// drawn is what a release resolves against (audit epic-3-5-story-3 #5).
-export function bandBoundaries(region: BandRegion, tuning: BandTuning): { top: number; bottom: number } | null {
+// Story 4.1 Phase 1 — where the two band boundaries sit, in viewport
+// pixels, measured from `contentRect` (never the visible-clipped `rect`: a
+// boundary scrolled out of view stays exactly where its content put it,
+// reachable only by scrolling to it — wiki §5). Null collapses to a single
+// band spanning the whole region: a done region (positions never apply,
+// wiki §5 closing note) or a genuinely empty one (nothing to be
+// before/after). Exactly one card halves the edge to `(heightPx + gapPx) /
+// 2` instead of the normal `heightPx` alone — full edges would meet at the
+// card's own midpoint and leave no middle band for it to be a real,
+// unlabeled "keep this position" target (Product Owner special rule,
+// 2026-09-16) — matching `BandGuides.tsx`'s own dead-zone math for the same
+// case, so the divider drawn there is the boundary resolved here.
+export function bandBoundaries(region: BandRegion, metrics: ShortCardMetrics): { top: number; bottom: number } | null {
   if (region.isTerminal || region.cardCount === 0) return null;
-  const edge = region.cardCount === 1 ? tuning.ghostCardHeightPx / 2 : tuning.ghostCardHeightPx;
+  const edge = region.cardCount === 1 ? (metrics.heightPx + metrics.gapPx) / 2 : metrics.heightPx;
   return { top: region.contentRect.top + edge, bottom: region.contentRect.bottom - edge };
 }
 
@@ -438,8 +474,8 @@ export function bandBoundaries(region: BandRegion, tuning: BandTuning): { top: n
 // region, collapsed). A point outside the rect clamps to the nearer edge's
 // band, same as before — the boundaries are absolute pixels now, not
 // fractions, so no clamping arithmetic is needed to get that for free.
-export function bandFor(y: number, region: BandRegion, tuning: BandTuning): Band {
-  const boundaries = bandBoundaries(region, tuning);
+export function bandFor(y: number, region: BandRegion, metrics: ShortCardMetrics): Band {
+  const boundaries = bandBoundaries(region, metrics);
   if (!boundaries) return 'middle';
   if (y < boundaries.top) return 'top';
   if (y > boundaries.bottom) return 'bottom';

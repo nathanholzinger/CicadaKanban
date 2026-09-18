@@ -6,7 +6,7 @@ import {
   buildColumnForWorkphaseMap,
   resolveDropTarget,
   subrowContainerId,
-  createBoardCollisionDetection,
+  resolveBoardCollisions,
   bandDropResolution,
   pendingPlacementFor,
   resolveDropSide,
@@ -44,9 +44,6 @@ function collisionArgs(
     pointerCoordinates: { x: 5, y: 5 },
   };
 }
-
-// The Epic 3.2 behavior: no pop machine in play.
-const boardCollisionDetection = createBoardCollisionDetection(() => null);
 
 // Board fixture: merged col-1 covers [todo, review], expanded col-2 covers
 // [dev, qa], broken col-3 covers [old].
@@ -95,10 +92,11 @@ describe('buildColumnForWorkphaseMap', () => {
   });
 });
 
-describe('boardCollisionDetection', () => {
+describe('resolveBoardCollisions', () => {
   it('never collides an item with itself', () => {
-    const result = boardCollisionDetection(
+    const result = resolveBoardCollisions(
       collisionArgs('card-a', { type: 'card' }, [{ id: 'card-a', data: { type: 'card' } }]),
+      null,
     );
     expect(result).toHaveLength(0);
   });
@@ -109,30 +107,31 @@ describe('boardCollisionDetection', () => {
     // closest — this is exactly what let a nested "Cascading Kid" row
     // hijack its parent's cross-column drop once attached children became
     // draggable (Epic 3.2 Part 3).
-    const result = boardCollisionDetection(
+    const result = resolveBoardCollisions(
       collisionArgs('card-a', { type: 'card' }, [
         { id: 'child-1', data: { type: 'attached-child', parentId: 'card-a' } },
         { id: 'col-1', data: { type: 'column' } },
       ]),
+      null,
     );
     expect(result.map(r => r.id)).not.toContain('child-1');
     expect(result.map(r => r.id)).toContain('col-1');
   });
 
   it('scopes an attached-child drag to siblings under the same parent only', () => {
-    const result = boardCollisionDetection(
+    const result = resolveBoardCollisions(
       collisionArgs('child-a', { type: 'attached-child', parentId: 'parent-1' }, [
         { id: 'child-b', data: { type: 'attached-child', parentId: 'parent-1' } }, // true sibling
         { id: 'child-c', data: { type: 'attached-child', parentId: 'parent-2' } }, // different parent
         { id: 'col-1', data: { type: 'column' } }, // never a valid target for an attached-child drag
       ]),
+      null,
     );
     expect(result.map(r => r.id)).toEqual(['child-b']);
   });
 
   // Epic 3.5 Story 3: `over` follows the pop machine (wiki §2–§3, §5).
   describe('under the pop machine', () => {
-    const withSession = (session: CollisionSession | null) => createBoardCollisionDetection(() => session);
     const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
     const containers: Container[] = [
       { id: 'col-a', data: { type: 'column' }, rect: rect(0, 0, 100, 400) },
@@ -143,8 +142,8 @@ describe('boardCollisionDetection', () => {
     ];
 
     it('in-context: only the context container and the cards inside it are candidates', () => {
-      const detect = withSession({ hoverContainerId: null, context });
-      const ids = detect(collisionArgs('card-x', { type: 'card' }, containers)).map(c => c.id);
+      const session: CollisionSession = { hoverContainerId: null, context };
+      const ids = resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session).map(c => c.id);
       expect(ids).toContain('col-a');
       expect(ids).toContain('card-a1');
       expect(ids).not.toContain('col-b');
@@ -153,20 +152,23 @@ describe('boardCollisionDetection', () => {
     });
 
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
-      const detect = withSession({ hoverContainerId: 'col-b', context });
-      expect(detect(collisionArgs('card-x', { type: 'card' }, containers)).map(c => c.id)).toEqual(['col-b']);
+      const session: CollisionSession = { hoverContainerId: 'col-b', context };
+      expect(
+        resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session).map(c => c.id),
+      ).toEqual(['col-b']);
     });
 
     it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
-      const detect = withSession({ hoverContainerId: null, context: null });
-      expect(detect(collisionArgs('card-x', { type: 'card' }, containers))).toHaveLength(0);
+      const session: CollisionSession = { hoverContainerId: null, context: null };
+      expect(resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session)).toHaveLength(0);
     });
 
     it('the machine only governs card drags — an attached-child drag is scoped to its siblings as before', () => {
-      const detect = withSession({ hoverContainerId: 'col-b', context });
-      const ids = detect(collisionArgs('child-x', { type: 'attached-child', parentId: 'card-a1' }, containers)).map(
-        c => c.id,
-      );
+      const session: CollisionSession = { hoverContainerId: 'col-b', context };
+      const ids = resolveBoardCollisions(
+        collisionArgs('child-x', { type: 'attached-child', parentId: 'card-a1' }, containers),
+        session,
+      ).map(c => c.id);
       expect(ids).toEqual(['child-1']);
     });
   });

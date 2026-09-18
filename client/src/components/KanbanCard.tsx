@@ -92,6 +92,45 @@ function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | n
   return typeId ? (itemTypes.find(t => t.id === typeId) ?? null) : null;
 }
 
+// Story 4.1 Phase 1 (decision 3) — shortCard: the Card's fixed-height
+// compact mode, used for both drag copies (the DragOverlay and the in-list
+// ghost row) so the board's carve-out reservation (BandGuides.tsx) has one
+// exact height to reserve, not an approximation of whatever a real card's
+// footer happens to add. A presentational body only — it knows nothing
+// about dragging, so a later board density option can reuse it unchanged;
+// drag-specific styling (the overlay's tilt/shadow, the in-list ghost's
+// dimming) stays on `KanbanCard`'s own wrapper, which chooses whether to
+// render this or the full body. The dependency points drag → card, never
+// the reverse: nothing under `components/workflow/` defines this height or
+// the list gap it's reserved alongside — they import both from here.
+export const SHORT_CARD_HEIGHT_PX = 96;
+// The card lists' own gap (`BoardColumn`'s merged list, `WorkphaseCardList`)
+// — standardized on one constant so the reservation math (net height never
+// changes, wiki §5) has one gap value to add in, not two.
+export const CARD_LIST_GAP_PX = 8;
+export const CARD_LIST_GAP_CLASS = 'gap-2';
+
+function ShortCard({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
+  const resolvedType = resolveType(item.type, itemTypes);
+  const depth = item.depth ?? 0;
+  return (
+    <>
+      <div className="mb-2 flex items-center gap-1">
+        <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
+        {resolvedType && (
+          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
+            {resolvedType.name}
+          </span>
+        )}
+      </div>
+      <p className="truncate text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
+      {/* Always one line, even with no description — reserves the same
+          space either way, which is the whole point of a fixed height. */}
+      <p className="mt-1.5 line-clamp-1 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+    </>
+  );
+}
+
 interface KanbanCardProps {
   item: Item;
   itemTypes?: ItemType[];
@@ -133,23 +172,19 @@ export default function KanbanCard({
   // planning, decision 3).
   const cardDragSession = useDragSession();
   const attachGhostId = cardDragSession?.pop ? cardDragSession.activeItem.id : undefined;
-  // Story 8 re-plan (2026-09-16): the DragOverlay copy and this same item's
-  // own in-list row while it's the one being dragged (`isDragging`, from
-  // useSortable — true wherever the item's pending Placement currently
-  // sorts it, its original slot included) are the drag's two visible
-  // copies, and both render collapsed the same way: title truncated to one
-  // line, description clamped to exactly one (reserved even when empty, so
-  // a card with no description takes the same height as one with a short
-  // one), no attached-children preview, no child-count control. Bounds the
-  // card's own height variance to just the assignee-footer's presence,
-  // which the carve-out geometry (dragTuning.ts's `ghostCardHeightPx`)
-  // accepts as an approximation rather than measuring for exactly.
+  // The DragOverlay copy and this same item's own in-list row while it's
+  // the one being dragged (`isDragging`, from useSortable — true wherever
+  // the item's pending Placement currently sorts it, its original slot
+  // included) are the drag's two visible copies, and both render as a
+  // shortCard (Story 4.1 Phase 1, decision 3) — a fixed height the board's
+  // carve-out reservation (BandGuides.tsx) reserves exactly, not an
+  // approximation of whatever the full card's footer happens to add.
   const isGhostLike = isOverlay || isDragging;
-  const displayChildCount = isGhostLike ? 0 : childCount;
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    ...(isGhostLike ? { height: SHORT_CARD_HEIGHT_PX } : {}),
   };
 
   const depth = item.depth ?? 0;
@@ -163,9 +198,10 @@ export default function KanbanCard({
   // both SortableContext's `items` and the `.map()` produced unstable
   // references that fed a dnd-kit measurement loop during a real drag
   // (matches this codebase's known "inline function call in JSX" gotcha).
-  // Story 4: placement-aware, so a Card being previewed as
-  // attaching here is already included at its slot (itemListOps.ts).
-  const attachedChildren = expanded && displayChildCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
+  // Story 4: placement-aware, so a Card being previewed as attaching here
+  // is already included at its slot (itemListOps.ts). None while
+  // ghost-like: a shortCard shows no children at all, not even collapsed.
+  const attachedChildren = !isGhostLike && expanded && childCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
 
   return (
     <div
@@ -185,95 +221,92 @@ export default function KanbanCard({
       // context" (wiki §1.1) — the Card half of the active-context outline
       // BandGuides.tsx draws for a column/sub-row.
       data-active-context={isAttachTarget ? true : undefined}
-      className={`${CARD_BASE} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`}
+      className={`${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
 
-      {/* Depth + type pills */}
-      <div className="mb-2 flex items-center gap-1">
-        <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
-        {resolvedType && (
-          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-            {resolvedType.name}
-          </span>
-        )}
-      </div>
-
-      {/* Title — one line while ghost-like, so neither visible copy of a
-          dragged item grows past its collapsed height on a long title. */}
-      <p className={`text-sm leading-snug font-medium text-zinc-100 ${isGhostLike ? 'truncate' : ''}`}>{item.title}</p>
-
-      {/* Description preview — ghost-like always renders the line (empty
-          space when there's none) so the collapsed height doesn't also
-          vary on whether a description happens to be set; otherwise the
-          normal conditional two-line preview. */}
       {isGhostLike ? (
-        <p className="mt-1.5 line-clamp-1 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+        <ShortCard item={item} itemTypes={itemTypes} />
       ) : (
-        item.description && (
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
-        )
-      )}
-
-      {/* Footer */}
-      {(item.assigneeType || displayChildCount > 0) && (
-        <div className="mt-2 flex items-center gap-2">
-          {displayChildCount > 0 && (
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                setExpanded(v => !v);
-              }}
-              onPointerDown={e => e.stopPropagation()}
-              className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
-              title={expanded ? 'Hide attached children' : 'Show attached children'}
-            >
-              {displayChildCount} child{displayChildCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
-            </button>
-          )}
-          {item.assigneeType && (
-            <div className="flex items-center gap-1">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${avatarBadgeClass}`}
-              >
-                {item.assigneeType === 'agent' ? 'A' : 'H'}
+        <>
+          {/* Depth + type pills */}
+          <div className="mb-2 flex items-center gap-1">
+            <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
+            {resolvedType && (
+              <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
+                {resolvedType.name}
               </span>
-              <span className="text-[11px] text-zinc-500">{item.assigneeType === 'agent' ? 'Agent' : 'Human'}</span>
+            )}
+          </div>
+
+          <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
+
+          {item.description && (
+            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+          )}
+
+          {/* Footer */}
+          {(item.assigneeType || childCount > 0) && (
+            <div className="mt-2 flex items-center gap-2">
+              {childCount > 0 && (
+                <button
+                  type="button"
+                  onClick={e => {
+                    e.stopPropagation();
+                    setExpanded(v => !v);
+                  }}
+                  onPointerDown={e => e.stopPropagation()}
+                  className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
+                  title={expanded ? 'Hide attached children' : 'Show attached children'}
+                >
+                  {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
+                </button>
+              )}
+              {item.assigneeType && (
+                <div className="flex items-center gap-1">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${avatarBadgeClass}`}
+                  >
+                    {item.assigneeType === 'agent' ? 'A' : 'H'}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">{item.assigneeType === 'agent' ? 'Agent' : 'Human'}</span>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Attached children, indented — draggable among siblings (Epic 3.2 Part
-          3); dragging one *out* of its parent stays blocked until Epic 3.5 */}
-      {attachedChildren.length > 0 && getAttachedChildren && (
-        <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
-          <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
-            {attachedChildren.map(child =>
-              // Story 4: this row is the active Card drag's own
-              // ghost (previewed attaching here, not a real Stub yet) —
-              // rendered as a plain, non-sortable preview rather than a
-              // second registration of the same id under a different drag
-              // `type` (decision 3's risk: dnd-kit's `active.data.current`
-              // is read fresh by the collision closure on every pass, so a
-              // real Card being *also* registered here as `attached-child`
-              // could make the pop machine see the wrong type mid-drag).
-              child.id === attachGhostId ? (
-                <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} />
-              ) : (
-                <AttachedChildRow
-                  key={child.id}
-                  item={child}
-                  itemTypes={itemTypes}
-                  getAttachedChildren={getAttachedChildren}
-                  onCardClick={onCardClick}
-                />
-              ),
-            )}
-          </SortableContext>
-        </div>
+          {/* Attached children, indented — draggable among siblings (Epic
+              3.2 Part 3); dragging one *out* of its parent stays blocked
+              until Epic 3.5 */}
+          {attachedChildren.length > 0 && getAttachedChildren && (
+            <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
+              <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                {attachedChildren.map(child =>
+                  // Story 4: this row is the active Card drag's own
+                  // ghost (previewed attaching here, not a real Stub yet) —
+                  // rendered as a plain, non-sortable preview rather than a
+                  // second registration of the same id under a different drag
+                  // `type` (decision 3's risk: dnd-kit's `active.data.current`
+                  // is read fresh by the collision closure on every pass, so a
+                  // real Card being *also* registered here as `attached-child`
+                  // could make the pop machine see the wrong type mid-drag).
+                  child.id === attachGhostId ? (
+                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} />
+                  ) : (
+                    <AttachedChildRow
+                      key={child.id}
+                      item={child}
+                      itemTypes={itemTypes}
+                      getAttachedChildren={getAttachedChildren}
+                      onCardClick={onCardClick}
+                    />
+                  ),
+                )}
+              </SortableContext>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -41,9 +41,6 @@ const POP_FIELDS: Field[] = [
   { kind: 'number', key: 'cardPopInDelayMs', label: 'Card zoom-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
-const COLUMN_FIELDS: Field[] = [
-  { kind: 'number', key: 'ghostCardHeightPx', label: 'Ghost card height (px)', step: 4, min: 0 },
-];
 const OVERLAY_FIELDS: Field[] = [
   { kind: 'text', key: 'overlayFreeDescendantColor', label: 'Free-descendant ring' },
   { kind: 'number', key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
@@ -95,8 +92,6 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
       <div className="space-y-1.5">
         <h4 className={SECTION_LABEL}>Pop threshold</h4>
         {renderFields(POP_FIELDS)}
-        <h4 className={`${SECTION_LABEL} pt-2`}>Column bands</h4>
-        {renderFields(COLUMN_FIELDS)}
       </div>
 
       <div className="space-y-1.5">

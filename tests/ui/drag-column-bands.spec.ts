@@ -153,13 +153,14 @@ function columnKeyOf(s: Scenario, workphaseId: string): string {
 }
 
 // Story 8 re-plan (2026-09-16): a band is content-anchored pixels now
-// (dragRegions.ts::bandFor), sized by the configured `ghostCardHeightPx`
-// and the region's own card count/terminal-ness — never a fraction of the
-// region's height — so a band is targeted by locating the carve-out that
-// marks it (BandGuides.tsx's `DragCarveFrame`), never by recomputing that
-// arithmetic here. A carve-out only exists while this region *isn't* the
-// live hover target, which every case below arranges by construction (it
-// measures the point before moving there).
+// (dragRegions.ts::bandFor), sized by the shortCard's own fixed height and
+// the card lists' shared gap (KanbanCard.tsx, Story 4.1 Phase 1 — no longer
+// a tunable) and the region's own card count/terminal-ness — never a
+// fraction of the region's height — so a band is targeted by locating the
+// carve-out that marks it (BandGuides.tsx's `DragCarveFrame`), never by
+// recomputing that arithmetic here. A carve-out only exists while this
+// region *isn't* the live hover target, which every case below arranges by
+// construction (it measures the point before moving there).
 //
 // Popping out grows *every* region on the board at once (each reserves its
 // own carve-out the instant Board layer is reached), and in an expanded
@@ -310,6 +311,55 @@ test.describe('Card → column drop bands', () => {
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
     x = await item(request, s.items.X.id);
     expect(x.position).toBeGreaterThan(3);
+  });
+
+  // Story 4.1 Phase 1's own tripwire: §5's "net height never changes" is
+  // now exact, not approximate (the old frozen-rect family existed only to
+  // absorb the gap between the two) — so a region's *own rendered height*
+  // must be identical whether or not it's the live hover target, in each
+  // of the three reservation shapes (dragRegions.ts::bandBoundaries): a
+  // positional region with real cards, a genuinely empty one, and a
+  // terminal one that still has cards. This is the regression gate that
+  // keeps that true after any future card-chrome change — it doesn't probe
+  // *why*, unit tests already do that; it just measures the real rendered
+  // box before and after.
+  test('the reservation invariant: hovering a region never changes its own rendered height, for a positional, an empty, and a terminal-with-cards region alike', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const s = await seed(request);
+    // A into Done — terminal, but not empty, the newest and least-tried of
+    // the three reservation shapes (Risks/things to watch).
+    await request.patch(`${API}/items/${s.items.A.id}/move`, { data: { workphaseId: s.phase.done.id } });
+    const tuning = await seedTuning(page, POP_OUT_ONLY);
+    await openBoard(page, projectSidebar);
+    const todo = column(page, 'Todo');
+    const inProgress = column(page, 'In Progress'); // positional: B, C
+    const review = column(page, 'Review'); // genuinely empty
+    const done = column(page, 'Done'); // terminal, with A
+
+    const neutral = () => gapBetween(todo, inProgress);
+
+    async function assertHeightUnchangedOnHover(col: Locator, middle: () => Promise<Point>) {
+      const before = await stableBoxOf(regionOf(col));
+      await hoverTo(page, await middle());
+      const after = await stableBoxOf(regionOf(col));
+      expect(after.height).toBeCloseTo(before.height, 0);
+      // Back to nowhere, so the next region's own "before" reading is also
+      // taken while it genuinely isn't the hover target.
+      await hoverTo(page, await neutral());
+    }
+
+    await pickUp(page, article(page, 'Item X'));
+    await hoverTo(page, await neutral());
+    await popOutFully(page, tuning);
+
+    await assertHeightUnchangedOnHover(inProgress, () => center(regionOf(inProgress)));
+    await assertHeightUnchangedOnHover(review, () => singleBandPoint(regionOf(review)));
+    await assertHeightUnchangedOnHover(done, () => singleBandPoint(regionOf(done)));
+
+    await release(page);
   });
 
   test('DRAG-3.3 / DRAG-1.3 (momentary): the middle band released before THRESHOLD is a workphase-only move — position kept, the hovered card ignored', async ({

@@ -1,4 +1,4 @@
-import type { DragRegion, Rect } from '../components/workflow/dragRegions';
+import type { ColumnLikeRegion, Rect } from '../components/workflow/dragRegions';
 import type { DropColumn } from '../components/workflow/boardDndUtils';
 
 // Shared geometry fixtures for the Epic 3.5 drag tests (regions, the pop
@@ -9,15 +9,21 @@ export function rect(left: number, top: number, width: number, height: number): 
   return { left, top, width, height, right: left + width, bottom: top + height };
 }
 
-// A region keyed the way the board keys them; the workphase facts default
-// to one covered workphase named after the key. `contentRect` defaults to
-// the same rect (no clipping — the common case a geometry-only test
-// wants); `cardCount` defaults to 2, the "normal" band shape, so a fixture
-// that doesn't care about Story 8's single-band/one-card exceptions
-// doesn't have to spell it out.
-export function region(key: string, r: Rect, overrides: Partial<DragRegion> = {}): DragRegion {
+// A column/sub-row region keyed the way the board keys them (`kind`
+// inferred from the key's own prefix, so no existing call site has to name
+// it); the workphase facts default to one covered workphase named after
+// the key. `contentRect` defaults to the same rect (no clipping — the
+// common case a geometry-only test wants); `cardCount` defaults to 2, the
+// "normal" band shape, so a fixture that doesn't care about Story 8's
+// single-band/one-card exceptions doesn't have to spell it out;
+// `parentRegionKey` is always null — Board is every column/sub-row's
+// parent. No `card:`-keyed fixture yet (Story 4.1 Phase 0): nothing here
+// currently needs one — see dragRegions.test.ts's own DOM-built case for
+// the Card-kind shape instead.
+export function region(key: string, r: Rect, overrides: Partial<ColumnLikeRegion> = {}): ColumnLikeRegion {
   return {
     key,
+    kind: key.startsWith('subrow:') ? 'subrow' : 'column',
     containerId: key,
     rect: r,
     contentRect: r,
@@ -25,8 +31,8 @@ export function region(key: string, r: Rect, overrides: Partial<DragRegion> = {}
     coveredWorkphaseIds: ['wp-' + key],
     targetWorkphaseId: 'wp-' + key,
     isTerminal: false,
-    scrollTop: 0,
     cardCount: 2,
+    parentRegionKey: null,
     ...overrides,
   };
 }

@@ -2,15 +2,15 @@ import type { DragTuning } from './dragTuning';
 import { workphaseOnlySlot, type Placement } from './itemListOps';
 import {
   bandFor,
-  cardRegionAt,
+  childRegionAt,
   containsPoint,
   distanceOutside,
-  nonCardRegionAt,
-  translateRect,
   type Band,
+  type ColumnLikeRegion,
   type DragRegion,
   type Point,
-  type Rect,
+  type RegionKind,
+  type ShortCardMetrics,
 } from './dragRegions';
 
 // Epic 3.5 Story 3, re-planned for Story 4 (2026-09-16) — the pop state
@@ -50,6 +50,24 @@ import {
 // locked* region still matters: a quick release there is that region's
 // band; resting past `popInDelayMs` locks into it. This is Story 3's
 // mechanism, unchanged — it just no longer reaches past Board layer.
+//
+// Story 4.1 Phase 0: every locked layer's zoom-in and pop-out is now one
+// branch, parametric on `region.kind` and `region.parentRegionKey`
+// (`childRegionAt`, `popInDelayFor`) rather than a `card:`-prefix string
+// test (`isCardKey`, retired) or an `attachToCardId !== undefined` check
+// repeated at each call site — a Card is still the only kind with child
+// regions today (Story 5 adds a `descendants` kind), but nothing here
+// hard-codes that; it falls out of nothing else carrying a matching
+// `parentRegionKey` yet.
+//
+// Story 4.1 Phase 1: the reservation is now exact (wiki §5 — a region's
+// `contentRect` never changes size whether or not it's the live hover
+// target, since the ghost row is a fixed-height shortCard occupying
+// exactly what the dead zones did), so `hoverFor` reads a region's live
+// rect and live card count directly. The frozen-rect family that absorbed
+// the old, approximate reservation (`PopHover.rect`/`.cardCount`,
+// `followRegionTop`, the sticky-hover check that kept a hover stable
+// against its own carve-out collapsing) is gone with it.
 
 export interface PopHover {
   regionKey: string;
@@ -58,38 +76,6 @@ export interface PopHover {
    * hovered region changes.
    */
   since: number;
-  /**
-   * The region's *content* rect (never the visible-clipped one — wiki §5)
-   * as it was on entry — the band is measured against this for as long as
-   * the hover lasts (Board layer only; see `band` below). The ghost's own
-   * insertion grows the hovered list, so measuring against the live rect
-   * would let a drop change the band it is about to be resolved by. The
-   * freeze is against that insertion only: on every later sample it's
-   * translated to follow the region's own top edge (`followRegionTop`),
-   * which a real scroll moves — and so, distinctly, can a sibling
-   * region's own reflow (Story 8: an expanded column's sub-rows can each
-   * carve out or give back a card's height, and one doing so can shift
-   * another's top edge with no scroll involved at all) — so auto-scrolling
-   * a long column, or a sibling reshaping next to this one, both carry the
-   * band with the region it belongs to (wiki §5, reconciliation #21).
-   */
-  rect: Rect;
-  /**
-   * `region.scrollTop` as of the last sample (not the entry value) —
-   * carried along for whatever else keys off it, though the frozen `rect`
-   * above no longer needs it to follow the region (see `followRegionTop`).
-   */
-  scrollTop: number;
-  /**
-   * Story 8 re-plan: the region's card count as it was on entry, frozen
-   * alongside `rect` and for the same reason — the middle band's own ghost
-   * insertion changes it on the very next measurement, and a live read
-   * would let that retroactively change which edge-size `bandFor` uses
-   * mid-hover (its own one-card exception) for a hover its own insertion
-   * caused. Undefined for a locked column/sub-row's hover on one of its own
-   * Cards, where card count is meaningless.
-   */
-  cardCount?: number;
   /**
    * Board layer only: the band a release would commit right now, and
    * whether resting here past `popInDelayMs` pops the card in (exactly the
@@ -138,8 +124,11 @@ export function popState(session: PopSession): PopState {
   return isLocked(session) ? 'locked' : 'popped-out';
 }
 
-function isCardKey(key: string): boolean {
-  return key.startsWith('card:');
+// How long a candidate of this kind takes to pop into (§3.1) — a lookup
+// instead of a repeated `cardPopInDelayMs`-or-`popInDelayMs` branch at
+// every call site (Story 4.1 Phase 0). Story 5 gains a `descendants` row.
+function popInDelayFor(kind: RegionKind, tuning: DragTuning): number {
+  return kind === 'card' ? tuning.cardPopInDelayMs : tuning.popInDelayMs;
 }
 
 // One pointer sample. Returns the same object when nothing changed, so a
@@ -153,70 +142,59 @@ export function advancePopSession(
   pointer: Point,
   regions: readonly DragRegion[],
   tuning: DragTuning,
+  metrics: ShortCardMetrics,
   now: number,
 ): PopSession {
   if (session.contextKey === null) {
     // Board layer: a Card is never a target here (rule 2) — only a
     // column/sub-row is hoverable, both for its own band and for the
-    // zoom-in clock into it.
-    //
-    // Story 8 re-plan: staying in the *currently hovered* region checks its
-    // frozen rect first, never a fresh live lookup alone — that region's
-    // own carve-out collapses in favor of a real ghost precisely because
-    // it *is* the hover target (BandGuides.tsx), which can shrink its live
-    // rect out from under a cursor that never moved. A live-only check
-    // would then find no region there, clear the hover, let the carve-out
-    // reappear, and find the same point inside it again next sample — a
-    // hover-causes-reshape-causes-unhover loop that never accumulates
-    // `popInDelayMs` of continuous dwell. The frozen rect (unaffected by a
-    // collapse it itself causes) keeps the hover stable; a pointer that
-    // never entered it in the first place still falls through to a fresh
-    // lookup as before.
-    const sticky = session.hover && regions.find(r => r.key === session.hover!.regionKey);
-    const stickyRect = sticky && followRegionTop(session.hover!, sticky.contentRect.top);
-    const region =
-      sticky && stickyRect && containsPoint(stickyRect, pointer) ? sticky : nonCardRegionAt(regions, pointer);
+    // zoom-in clock into it. `childRegionAt(regions, pointer, null)` finds
+    // exactly those: every column/sub-row's own `parentRegionKey` is null.
+    const region = childRegionAt(regions, pointer, null);
     if (!region) return session.hover ? { ...session, hover: null } : session;
-    const hover = hoverFor(session.hover, region, pointer, tuning, now);
-    if (hover.poppable && now - hover.since >= tuning.popInDelayMs) {
+    const hover = hoverFor(session.hover, region, pointer, metrics, now);
+    if (hover.poppable && now - hover.since >= popInDelayFor(region.kind, tuning)) {
       return advancePopSession(
         { contextKey: region.key, hover: null, outsideSince: null },
         pointer,
         regions,
         tuning,
+        metrics,
         now,
       );
     }
     return hover === session.hover ? session : { ...session, hover };
   }
 
-  // Locked (a column/sub-row, or a Card): a release commits this context's
-  // own within-action no matter where the bare cursor is (rule 1). What's
-  // left to track: has the cursor left long/far enough to pop back out
-  // (rule 2's parent-layer target); and, one layer down from a column/sub-
-  // row only, is it resting on one of this context's own Cards long enough
-  // to pop in to it (a Card's own further zoom-in is Story 6).
+  // Locked (any layer): a release commits this context's own within-action
+  // no matter where the bare cursor is (rule 1). What's left to track: has
+  // the cursor left long/far enough to pop back out (rule 2's parent-layer
+  // target, read straight off `parentRegionKey` — null for every
+  // column/sub-row, so a locked one always pops to Board with no branch);
+  // and is it resting on one of *this* context's own child regions long
+  // enough to pop into it (a Card has none yet — Story 6's own further
+  // zoom-in is what would give it any).
   const contextRegion = regions.find(r => r.key === session.contextKey);
   const inside = contextRegion !== undefined && containsPoint(contextRegion.rect, pointer);
 
   if (inside) {
-    if (!isCardKey(session.contextKey)) {
-      const card = cardRegionAt(regions, pointer, session.contextKey);
-      if (card) {
-        const hover = hoverForCard(session.hover, card, pointer, now);
-        if (now - hover.since >= tuning.cardPopInDelayMs) {
-          return advancePopSession(
-            { contextKey: card.key, hover: null, outsideSince: null },
-            pointer,
-            regions,
-            tuning,
-            now,
-          );
-        }
-        return hover === session.hover && session.outsideSince === null
-          ? session
-          : { ...session, hover, outsideSince: null };
+    const candidate = childRegionAt(regions, pointer, session.contextKey);
+    if (candidate) {
+      const hover = hoverFor(session.hover, candidate, pointer, metrics, now);
+      const gated = candidate.kind === 'card' ? true : hover.band === 'middle';
+      if (gated && now - hover.since >= popInDelayFor(candidate.kind, tuning)) {
+        return advancePopSession(
+          { contextKey: candidate.key, hover: null, outsideSince: null },
+          pointer,
+          regions,
+          tuning,
+          metrics,
+          now,
+        );
       }
+      return hover === session.hover && session.outsideSince === null
+        ? session
+        : { ...session, hover, outsideSince: null };
     }
     return session.hover === null && session.outsideSince === null
       ? session
@@ -225,61 +203,43 @@ export function advancePopSession(
 
   const outsideSince = session.outsideSince ?? now;
   if (popOutDue(contextRegion, pointer, tuning, now, outsideSince)) {
-    const parentKey = isCardKey(session.contextKey) ? (contextRegion?.parentRegionKey ?? null) : null;
-    return advancePopSession({ contextKey: parentKey, hover: null, outsideSince: null }, pointer, regions, tuning, now);
+    return advancePopSession(
+      { contextKey: contextRegion?.parentRegionKey ?? null, hover: null, outsideSince: null },
+      pointer,
+      regions,
+      tuning,
+      metrics,
+      now,
+    );
   }
   return session.hover === null && session.outsideSince === outsideSince
     ? session
     : { ...session, hover: null, outsideSince };
 }
 
-// Board-layer hover: band-aware, keeping the entry time and frozen rect
-// (carried forward by the region's own scroll, never by its content-driven
-// resize) while the cursor stays in the same region, and returning the
-// same object when neither the band nor the rect has changed either.
-// Translates the frozen rect by however far the region's own top edge has
-// moved since the last sample — a real scroll moves it (a scrolling
-// ancestor's scrollTop changing moves every descendant's own
-// getBoundingClientRect, this region included), and so, distinctly, can a
-// sibling region's own reflow (Story 8: every region can carve out or
-// give back a card's height at Board layer, and two of them can do it at
-// once in an expanded column's shared scroll body — carving one out can
-// shift a sibling's own top edge with no scroll involved at all). Neither
-// is the ghost's own insertion growing *this* region from within, which
-// only ever moves its bottom edge, never its top — comparing the top edge
-// directly catches both real causes in one, without having to tell them
-// apart, while staying inert to the one cause that must never move it.
-function followRegionTop(staying: PopHover, liveTop: number): Rect {
-  return translateRect(staying.rect, staying.rect.top - liveTop);
-}
-
+// Board-layer hover, or a locked column/sub-row's hover on one of its own
+// Cards: keeps the entry time while the cursor stays in the same region,
+// returning the same object when nothing tracked has changed. Only a
+// column/sub-row candidate has a band (§5), read off the region's *live*
+// rect and card count now that the reservation is exact (Phase 1) — a
+// Card candidate's within-action is a constant, so there's nothing to
+// track but presence and duration (unified with the old, separate
+// `hoverForCard` in Phase 0).
 function hoverFor(
   current: PopHover | null,
   region: DragRegion,
   pointer: Point,
-  tuning: DragTuning,
+  metrics: ShortCardMetrics,
   now: number,
 ): PopHover {
   const staying = current?.regionKey === region.key ? current : null;
+  if (region.kind === 'card') {
+    return staying ?? { regionKey: region.key, since: now };
+  }
   const since = staying?.since ?? now;
-  const rect = staying ? followRegionTop(staying, region.contentRect.top) : region.contentRect;
-  const cardCount = staying?.cardCount ?? region.cardCount;
-  const band = bandFor(pointer.y, { contentRect: rect, isTerminal: region.isTerminal, cardCount }, tuning);
+  const band = bandFor(pointer.y, region, metrics);
   const poppable = band === 'middle';
-  return staying && staying.band === band && rect === staying.rect
-    ? staying
-    : { regionKey: region.key, band, poppable, since, rect, scrollTop: region.scrollTop, cardCount };
-}
-
-// Locked column/sub-row, hovering one of its own Cards toward zooming in:
-// no band at all, just presence and duration.
-function hoverForCard(current: PopHover | null, region: DragRegion, pointer: Point, now: number): PopHover {
-  const staying = current?.regionKey === region.key ? current : null;
-  const since = staying?.since ?? now;
-  const rect = staying ? followRegionTop(staying, region.rect.top) : region.rect;
-  return staying && rect === staying.rect
-    ? staying
-    : { regionKey: region.key, since, rect, scrollTop: region.scrollTop };
+  return staying && staying.band === band ? staying : { regionKey: region.key, band, poppable, since };
 }
 
 function popOutDue(
@@ -296,13 +256,18 @@ function popOutDue(
 
 // When the pending transition would fire if the cursor didn't move — for
 // the owner to schedule a timer. Null when nothing is pending. At most one
-// of {a locked pop-out, a locked card pop-in, a Board-layer pop-in} is ever
+// of {a locked pop-out, a locked zoom-in, a Board-layer pop-in} is ever
 // pending at once (advancePopSession never sets both `hover` and
 // `outsideSince`), so there's no ambiguity about which clock this reports.
-export function popDueAt(session: PopSession, tuning: DragTuning): number | null {
+// `regions` resolves the hovered candidate's own kind for `popInDelayFor` —
+// a locked hover falls back to `cardPopInDelayMs` if its region can't be
+// found (the only kind a locked hover could be before Story 5 adds another).
+export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
   if (session.contextKey !== null) {
     if (session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
-    return session.hover ? session.hover.since + tuning.cardPopInDelayMs : null;
+    if (!session.hover) return null;
+    const candidate = regions.find(r => r.key === session.hover!.regionKey);
+    return session.hover.since + popInDelayFor(candidate?.kind ?? 'card', tuning);
   }
   return session.hover?.poppable ? session.hover.since + tuning.popInDelayMs : null;
 }
@@ -336,7 +301,7 @@ export function placementFor(
   const region = key === null ? undefined : regions.find(r => r.key === key);
   if (!region) return null;
 
-  if (region.attachToCardId !== undefined) {
+  if (region.kind === 'card') {
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
@@ -358,7 +323,7 @@ export function placementFor(
   return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
 }
 
-export function regionWorkphaseFor(region: DragRegion, activeWorkphaseId: string | null): string {
+export function regionWorkphaseFor(region: ColumnLikeRegion, activeWorkphaseId: string | null): string {
   const member = activeWorkphaseId !== null && region.coveredWorkphaseIds.includes(activeWorkphaseId);
   return member ? activeWorkphaseId : region.targetWorkphaseId;
 }
@@ -370,7 +335,7 @@ export type ReleaseIntent =
   // scope — no anchor, no band; manual placement is Story 6).
   | { kind: 'attach'; parentId: string }
   // Board layer, hovering a column/sub-row: its band decides (§5).
-  | { kind: 'band'; region: DragRegion; band: Band }
+  | { kind: 'band'; region: ColumnLikeRegion; band: Band }
   // Board layer, over nothing: nothing is written.
   | { kind: 'none' };
 
@@ -379,13 +344,12 @@ export type ReleaseIntent =
 // currently is, so this needs no fresh geometry at release time).
 export function releaseIntent(session: PopSession, regions: readonly DragRegion[]): ReleaseIntent {
   if (session.contextKey !== null) {
-    if (!isCardKey(session.contextKey)) return { kind: 'in-context' };
     const region = regions.find(r => r.key === session.contextKey);
-    return region?.attachToCardId !== undefined
-      ? { kind: 'attach', parentId: region.attachToCardId }
-      : { kind: 'none' };
+    return region?.kind === 'card' ? { kind: 'attach', parentId: region.attachToCardId } : { kind: 'in-context' };
   }
   if (!session.hover) return { kind: 'none' };
   const region = regions.find(r => r.key === session.hover?.regionKey);
-  return region ? { kind: 'band', region, band: session.hover.band ?? 'middle' } : { kind: 'none' };
+  return region && region.kind !== 'card'
+    ? { kind: 'band', region, band: session.hover.band ?? 'middle' }
+    : { kind: 'none' };
 }

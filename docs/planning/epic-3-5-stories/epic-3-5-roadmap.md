@@ -223,7 +223,52 @@ hierarchy (Story 6), and dragging an already-attached Stub at all
 
 ---
 
+### Story 4.1 — Drag-layer efficiency refactor (vestige removal)
+**Plan / record:** [`story-4-1-efficiency-refactor.md`](story-4-1-efficiency-refactor.md)
+· anchor: [`story-4-1-anchor-draft.md`](story-4-1-anchor-draft.md)
+· comparison: [`story-4-1-comparison.md`](story-4-1-comparison.md)
+
+**Goal:** no rule changes. Stories 3 and 4 were built hands-on while the
+rules changed several times; this story removes what the iteration left
+behind so the code reads as if §1.1's four-layer stack had been the spec
+from the start — *before* Stories 5/6 build on the current shape. Found by
+drafting a clean-slate framework from the settled rules first (Stories
+5/6's included), then comparing the code against it and sorting every
+difference into vestige / draft-was-naive / judgment call.
+
+Four phases, each green on every existing suite before the next: **(0)** a
+`kind` discriminant and a universal `parentRegionKey` replace the
+key-prefix / `attachToCardId` branching at ~12 sites; **(1)** both drag
+copies become **shortCard** — the Card's fixed-height compact mode — and
+the reservation derives from its height plus the list gap, so §5's "net
+height never changes" is exact, retiring the frozen-rect family
+(`PopHover.rect`/`cardCount`/`scrollTop`, `followRegionTop`, the
+sticky-hover block) and `ghostCardHeightPx` as a panel value; **(2)** per-layer
+measurement with structure resolved once per drag; **(3)** the release
+derived from a placement through one `toRequest` + `isIdentity`, retiring
+`ReleaseIntent`/`DropResolution`/`resolveDropTarget`/`bandDropResolution`/
+`pendingPlacementFor`. A fourth phase is test-first: the raw collision
+rect, and the merged-column x-only clamp (which needs a §1/§2 ruling).
+
+Kept deliberately: dnd-kit sortable as the in-context renderer — the
+sidebar's `computeProjection` is already §7.1 in the sortable world, and
+Story 6 consolidates with it. The draft's proposal to drop it was the one
+place it was naive to a real constraint.
+
+**Depends on:** Story 4. **Unblocks:** Stories 5, 6 — each becomes "add a
+row" rather than "add a branch in twelve places."
+**Verified by:** the existing unit + E2E drag suites staying green through
+every phase; one new E2E case (the reservation invariant); hands-on for the
+pinned ghost and the Phase 4 items.
+
+**Status: planned 2026-09-17, not started.**
+
+---
+
 ### Story 5 — Stub → out = detach
+**Plan / record:** [`story-5-stub-detach.md`](story-5-stub-detach.md)
+(planned 2026-09-17, not started — written against the post-4.1 code)
+
 **Goal:** the reverse direction. A Stub can be dragged out of its parent Card,
 becoming Free and landing where dropped, while keeping its parent relationship.
 Unblocks the drag-out path currently held closed in `useBoardDnd`.
@@ -242,13 +287,19 @@ alternatives weighed):
 - Test cases: `docs/test-plans/board-drag-interaction/drag-5-detach-and-overflow.md`
   TC-1–5, 9–12.
 
-**Depends on:** Stories 1-3. Story 5 needs the Descendants layer to exist
-as a *start* state even before Story 6 builds manual placement inside it —
-sequence the two accordingly, or build Story 6's layer first.
+**Depends on:** Stories 1-3; Story 4.1 first (its Phases 0 and 3 are what
+make the Descendants layer a row rather than a branch). Story 5 needs the
+Descendants layer to exist as a *start* state even before Story 6 builds
+manual placement inside it — sequence the two accordingly, or build Story
+6's layer first.
 
 ---
 
 ### Story 6 — Stub → Stub hierarchy placement
+**Plan / record:** [`story-6-descendants-placement.md`](story-6-descendants-placement.md)
+(planned 2026-09-17, not started — the shared placement library, the flat
+descendants list, and the sidebar's two behavior differences it corrects)
+
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
 sidebar. Part of this story is consolidating as much of the projects /
@@ -278,7 +329,8 @@ brought to the same rule here.
 Resolved: tabbed right of Top is Top's **first** child; any other slot is
 reached by anchoring against a sibling.
 
-**Depends on:** Stories 1-3; Story 5 for a Stub-started drag.
+**Depends on:** Stories 1-3; Story 4.1 first; Story 5 for a Stub-started
+drag.
 
 ---
 

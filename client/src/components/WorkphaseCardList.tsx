@@ -1,7 +1,8 @@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType } from '../types';
-import KanbanCard from './KanbanCard';
+import KanbanCard, { CARD_LIST_GAP_CLASS } from './KanbanCard';
 import { DragCarveFrame } from './BandGuides';
+import { useDragSession } from './workflow/DragSessionContext';
 
 const DEFAULT_LABEL_CLASS = 'text-[11px] font-medium text-zinc-500 truncate';
 
@@ -58,9 +59,20 @@ export default function WorkphaseCardList({
 }: WorkphaseCardListProps) {
   const showDropHighlight = droppable && isOver && isCardBeingDragged;
   const dropHighlightClass = showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/20';
-  let containerClass = 'flex flex-col gap-1.5';
+  // Story 4.1 Phase 1: whether the active drag's own item is currently
+  // rendered as one of *this* list's own cards — by list membership, not
+  // by whether this list is the live hover target right now
+  // (DragCarveFrame's own `hasActiveItemRow` doc comment has the case that
+  // distinguishes them).
+  const activeItemId = useDragSession()?.activeItem.id;
+  const hasActiveItemRow = items.some(i => i.id === activeItemId);
+  // The two card lists (this one, and BoardColumn's merged list) share
+  // exactly one gap constant — the carve-out reservation math (Story 4.1
+  // Phase 1) depends on both lists actually using the same value, not just
+  // two classes that happen to render the same.
+  let containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS}`;
   if (droppable) {
-    containerClass = `flex flex-col gap-1.5 p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${dropHighlightClass}`;
+    containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS} p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${dropHighlightClass}`;
   }
 
   const list = (
@@ -90,7 +102,13 @@ export default function WorkphaseCardList({
         <span className="text-[10px] text-zinc-600">{items.length}</span>
       </div>
       {regionKey ? (
-        <DragCarveFrame regionKey={regionKey} cardCount={items.length} isTerminal={isTerminal} targetLabel={label}>
+        <DragCarveFrame
+          regionKey={regionKey}
+          cardCount={items.length}
+          hasActiveItemRow={hasActiveItemRow}
+          isTerminal={isTerminal}
+          targetLabel={label}
+        >
           {list}
         </DragCarveFrame>
       ) : (
