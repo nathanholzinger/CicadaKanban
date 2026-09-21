@@ -233,6 +233,20 @@ as for a Card drag.
 - `isIdentity` against `origin` → no request: TC-12 (a release at P's
   Card layer), TC-5 (a sibling reorder that ends in its own slot).
 
+**Known deletion (audit `code-quality-audit-epic-3-5-story-4.md` #1, added
+2026-09-21).** `isIdentity`'s parent branch today decides "same list" by
+`placement.parentId === item.parentId`, which mistakes a *detached* child
+of X (Free, `parentId = X`) for X's own Stub — the re-attach previews as
+X's last child and then never writes. The interim fix is `&&
+Boolean(item.isAttached)` on that branch (a detached child has the
+parentId without the attachment). This story replaces the whole comparison
+with `origin`: a detached child's origin is a *workphase* placement and the
+Card-layer placement is a *parent* placement, so they're different kinds
+and never identity; X's own Stub has origin `{ parentId: X, slot:
+'existing' }` and the within-action returns `origin` itself, so identity →
+set-down. Both cases fall out of one comparison, and the `isAttached` read
+goes with it. Don't carry it forward.
+
 The pending marker is the placement; `sendItemMove` and the tracker are
 untouched. `handleDragEnd`'s separate `attached-child` branch is deleted —
 a Stub drag ends the way a Card drag does.

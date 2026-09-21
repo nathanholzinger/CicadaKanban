@@ -5,7 +5,8 @@ actually about Quick Items — recorded against Epic 4 only because it's the
 next epic marker, and the goal was to nail down the convention *before* much
 more API surface gets built, rather than let it calcify ad hoc. Recorded
 2026-09-06 from a design discussion; nothing here is built yet except where
-noted.
+noted. Section 9 (added 2026-09-21) is a deferred data-model question, not
+a schema convention — parked here for the same "next epic marker" reason.
 
 ---
 
@@ -26,7 +27,7 @@ them; don't force a shared source where the consumers' needs actually
 diverge.** The decisions below are the result of applying that test
 consumer-by-consumer, not a decision to adopt any single tool everywhere.
 
-## Decisions
+## Decisions - Patterns to Nail Down before implementing more API
 
 ### 1. Zod is the shared source of truth for request shapes — adopted incrementally, per-route
 Not TSDoc, not a hand-written type: a Zod schema does runtime validation, TS
@@ -150,9 +151,148 @@ ESLint bootstrapped. Today only `client/eslint.config.js` exists; the root
 `lint` script only runs the client. Noted so it isn't assumed covered; not
 scheduled.
 
+## Decisions - Questions to ask before implementing Quick Items
+
+### 9. Open question, to re-approach in Epic 4: an attached item's workphase — stored cascade, or null and inherit-at-read?
+Not a decision. Recorded 2026-09-21 from the Story 4 code-quality audit
+discussion (`docs/audits/code-quality-audit-epic-3-5-story-4.md` #1 and the
+"no cascade" assertion it prompted), parked here rather than in Epic 3.5
+because its natural neighbor is Epic 4's done-column rework, which also
+revisits what a status means for a nested item. A data-model question, not
+a schema-convention one — kept in this file for the same reason the rest of
+it is here: Epic 4 is the next marker.
+
+**The model today: a denormalized copy, maintained by a cascade.** An
+attached item's `workphaseId` is a stored copy of its nearest Free
+ancestor's. [attachedCascade.ts](../../server/src/lib/attachedCascade.ts)
+keeps it in sync — a plain `UPDATE` over the attached subtree on every
+parent workphase write (move, PUT, MCP), inside the same transaction — and
+[itemHierarchy.ts](../../server/src/lib/itemHierarchy.ts) rejects a request
+that names a different workphase for an attached item ("an attached item
+inherits its parent's workphase; omit workphaseId or match the parent's").
+Nothing else happens to the children: no notification (the
+`triggersNotification` check fires for the moved item only) and no activity
+entry. Observably, children already behave as if they inherit; the cascade
+is cache maintenance. Note the split this leaves: a Stub's *done-ness* is
+already derived at read ("reads as done by inheriting the terminal
+workphase, storing nothing new" — Epic 3.5 ground rules), while its
+workphase is copied.
+
+**The alternative:** attached rows store `workphaseId = null`; the
+effective workphase is resolved at read by walking `parentId` to the
+nearest item with `isAttached = false` (bounded by `ITEM_DEPTH_CAP`).
+Nothing to cascade; drift impossible by construction.
+
+| Concern | Stored copy (today) | Null + inherit |
+|---|---|---|
+| Source of truth | the ancestor's row, copied down; invariant held by one function | the ancestor's row, resolved by a walk |
+| Drift | possible in principle (child ≠ parent); guarded by the 400 above and the cascade | impossible |
+| Queries by workphase | a column — `WHERE workphase_id = ?` everywhere | every consumer resolves: the board response's sub-row grouping, `GET /workflows/:id`, MCP `get_workflow`, the Unsorted computation, any future Inbox/Headline or notification filter |
+| Meaning of `null` | "Unknown status" (a tolerated soft ref — `SET NULL` on workphase delete, surfaces in Unsorted) | two meanings on one column — attached + null = inherits, Free + null = unknown — disambiguated by the flag |
+| Detach | leaves `workphaseId` where it is | must *materialize* the effective value into the row |
+| Cross-workflow reparent | the subtree keeps its now-foreign workphases → Unknown until re-filed | attached descendants follow the new root automatically; detached ones still go Unknown |
+| Client | reads `item.workphaseId` | needs an `effectiveWorkphaseId` — server-decorated next to `positionScope`, or a client walk; the covered-set rule for a Stub drag (Epic 3.5 Story 5) reads it |
+| Consistency with done-ness | split (done derived, workphase copied) | uniform (both derived) |
+
+**The strongest argument each way.** For the stored copy: workphase is the
+primary query axis of a Kanban app, and denormalizing it keeps every
+consumer — including ones not written yet — a column read; the cascade is
+the price of that and it is already single-sourced. For inherit: it is the
+honest model — the Story 4 audit's caveat ("re-attaching a child rewrites
+its attached descendants' workphases") exists only because the copy has to
+be re-synced — and the cap is already derived per read, so the walk is
+cheap and bounded.
+
+**Leaning, not ruled: keep the stored value, but define what it *is*.**
+State the truth as inheritance and the column as a cache of it — "an
+attached item's `workphaseId` always equals its nearest Free ancestor's;
+the cascade maintains the cache" — write that invariant into
+`docs/wiki/item-attachment/`, and add a cheap integrity check (a test that
+walks every attached item on a seeded board and asserts equality, or a
+repair-on-read that logs a mismatch). That buys the conceptual purity
+without touching every read path. If the cascade ever bites — a real drift
+in the wild, or a consumer that wants the walk anyway — the migration is
+well-defined: null the attached rows, decorate reads with
+`effectiveWorkphaseId`, exclude attached items from Unsorted, materialize
+on detach.
+
+**Verify before ruling:** whether anything relies on an attached child's
+stored workphase *differing* from its parent's. The E2E "an attached child
+whose workphaseId goes invalid still renders only nested, never duplicated
+in Unknown status" (`tests/ui/attached-children.spec.ts`) suggests the
+client already tolerates a stale copy — evidence the cache framing is safe,
+and a case the inherit model would make unreachable.
+
+**What a switch would touch**, so its size is known when the question comes
+back: the board response shape (`GET /boards/:id` groups items by
+workphase into sub-rows; attached items would need their resolved
+workphase, or a separate list), `getWorkflowItems`/`getBoardScopeItems`,
+the Unsorted computation, MCP `get_workflow`/`move_item`, the client's
+`itemListOps.ts` selectors and the Stub-drag covered-set rule, the
+`positionScope` decoration (the natural home for `effectiveWorkphaseId`),
+`attachedCascade.ts` (deleted), and a data migration nulling attached rows.
+Not an Epic 3.5 change under any outcome.
+
+### 10. Start datetime feature
+There will be a start datetime feature that, when set, will automatically move 
+an item from Backlog to Active if the current time is after the start time. We
+should decide if start-time should be implemented now as part of this story. Or
+as a part of epic-5's tag/label work since start-time is likely to get a label
+pill and might get classified  as tag/label work.
+
+### 11. Column merging-expanding rework
+Right now a column can only merge-expand on one category - workphases. When 
+start time is implemented we will also like the ability to expand by start date
+so a column can have date buckets. Column expanding eventually will have a 
+more generalized group-by-tag feature. This is probably not an effort to 
+implement for this epic, but we should figure out where the work will live.
+
+**Where the drag-side work will live** (recorded 2026-09-21, from the
+Story 4 code-quality audit discussion of #7/#8 — the `CardList`
+consolidation and the `isCardList` predicate). The framing that keeps
+those two fixes stable: a bucket is a **facet on a sub-row, not a new
+region kind**. The layer stack (Board → Column/sub-row → Card →
+Descendants) is untouched by group-by; a date bucket is still `kind:
+'subrow'`. What varies per facet is the sub-row's *within-action write*
+— workphase today, a date range or label later. So the region-kind
+predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
+`CardList` never change for this; the four places that do:
+
+1. **Region identity** — `subrowRegionKey` / `subrowContainerId`'s
+   `<columnId>:<workphaseId>` format and `cardListStructureFromKey`'s
+   parse of it (`client/src/components/workflow/dragRegions.ts`). Becomes
+   `<columnId>:<bucketKey>` with the facet resolved from the column
+   definition. The audit's #4 (move `subrowContainerId` next to the key
+   builders) gives the format one owner first.
+2. **Item selection** — `useBoardDnd.ts`'s `regionItems`: today a
+   `kind === 'column' ? merged : byWorkphase` switch. A bucket sub-row is
+   "the column's items filtered by bucket," so the selector becomes a
+   fact the region carries (or a facet switch here), not a kind switch.
+   This is the one *positive* kind test the audit's #8 didn't list; it is
+   the site group-by touches.
+3. **List identity** — `Placement` (`boardDndUtils.ts`) carries
+   `workphaseId` / `parentId`, and `isIdentity`'s `sameList` reads "same
+   workphase = same list." Two date buckets in one column share a
+   workphase, so a bucket-to-bucket move would read as identity and
+   no-op. `Placement` gains the bucket; `isIdentity`, `toRequest` and
+   `placementFor`'s card-list branch compare and emit it. The ghost /
+   pending marker follows for free (§10: placement is all three), but
+   `itemListOps.ts`'s per-list selectors filter by bucket too.
+4. **Server** — the board response's `subRows[].workphase` shape becomes a
+   bucket, and `PATCH /items/:id/move` has to accept whatever a date/tag
+   bucket writes (a `startAt`? a label?) — which is also the open product
+   question: what a drop *into* a date bucket means for the item's date.
+
+Not to be pre-built in Epic 3.5. The point of recording it is that Stories
+4.1's `kind` discriminant plus the audit's #7/#8 leave the facet work
+confined to these four, rather than a branch in twelve places.
+
 ## Scope actually shipping alongside the move-endpoint work
 Decisions 1, 2, and 6's Tier 1 are the only ones with near-term implementation
 attached (the `PATCH /items/:id/move` / `PATCH /projects/:id/move` Zod
 schemas, their normalized error responses, and the matching MCP validation +
 new `move_project` tool). Decisions 3–5, 7, and 8 are conventions/principles
-to apply opportunistically or defer, not committed work items.
+to apply opportunistically or defer, not committed work items. Section 9 is
+an open data-model question with a recorded leaning, to be ruled alongside
+the done-column rework.
+

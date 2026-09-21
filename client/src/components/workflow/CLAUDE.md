@@ -28,9 +28,13 @@ this directory, then go to the wiki for the "why."
 
 ## Where each concern lives (pure, unit-tested modules)
 - `popSession.ts` — the pop state machine (locked / popped-out), two states per layer.
+  `placementRegion(session, regions)` is the one answer to "which region is the
+  placement against" — `placementFor` and the hook's release both read it.
 - `dragRegions.ts` — regions (Board/Column/sub-row/Card) and their pixel drop bands.
   Structural resolution (`resolveDragStructure`) runs once per drag; live rects
-  (`measureRegions`) run per sample.
+  (`measureRegions`) run per sample. `isCardList(region)` is the one kind predicate:
+  a column or sub-row — a flat list of Free items with bands and a workphase — vs.
+  anything else. Never write `kind !== 'card'` to mean it.
 - `dragClassification.ts` — classifies every item against the carried one, once per
   drag start: valid / cycle-forming / depth-capped / inert.
 - `itemListOps.ts` — list selectors, ordinal placements, the reindex fold-in, the

@@ -107,9 +107,10 @@ function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | n
 // the reverse: nothing under `components/workflow/` defines this height or
 // the list gap it's reserved alongside — they import both from here.
 export const SHORT_CARD_HEIGHT_PX = 96;
-// The card lists' own gap (`BoardColumn`'s merged list, `WorkphaseCardList`)
-// — standardized on one constant so the reservation math (net height never
-// changes, wiki §5) has one gap value to add in, not two.
+// The card lists' own gap (`CardList.tsx`, the one list every column,
+// sub-row and Unsorted group renders) — standardized on one constant so the
+// reservation math (net height never changes, wiki §5) has one gap value to
+// add in, not two.
 export const CARD_LIST_GAP_PX = 8;
 export const CARD_LIST_GAP_CLASS = 'gap-2';
 

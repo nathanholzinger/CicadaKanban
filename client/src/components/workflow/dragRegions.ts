@@ -62,10 +62,17 @@ interface RegionCommon {
   contentRect: Rect;
 }
 
-// A column/sub-row region — the context for Free items (§1). Board is its
-// parent layer unconditionally: `parentRegionKey` is always null, never a
-// branch elsewhere has to ask.
-export interface ColumnLikeRegion extends RegionCommon {
+// A card-list region — a merged column's list or an expanded column's
+// sub-row: a flat list of Free items (Cards), the context for Free items
+// (§1). Named for the property every consumer actually tests rather than
+// for the column it happens to resemble (audit epic-3-5-story-4 #8): Free
+// items are the ones with a workphase and a workflow-scoped position, which
+// is why this kind alone has bands, a target workphase, and an anchor+side
+// within-action. A Card region holds Stubs (attached — none of that
+// applies), and Story 6's Descendants region is a Stub *list*, still not a
+// card list. Board is a card list's parent layer unconditionally:
+// `parentRegionKey` is always null, never a branch elsewhere has to ask.
+export interface CardListRegion extends RegionCommon {
   kind: 'column' | 'subrow';
   /** The dnd-kit droppable id a drop in this region resolves against. */
   containerId: string;
@@ -115,7 +122,18 @@ export interface CardRegion extends RegionCommon {
   parentRegionKey: string;
 }
 
-export type DragRegion = ColumnLikeRegion | CardRegion;
+export type DragRegion = CardListRegion | CardRegion;
+
+// The one question every "which kind is this" site asks (audit
+// epic-3-5-story-4 #8): is this a card list — a flat list of Free items with
+// bands, a workphase to write, and an anchor+side reposition — or not?
+// Named by the property, so a site that needs a *different* property (a
+// sortable container for `over`, say — which Story 6's Descendants region
+// will also have) has to say so rather than ride a `kind !== 'card'` that
+// silently includes every kind added later.
+export function isCardList(region: DragRegion): region is CardListRegion {
+  return region.kind === 'column' || region.kind === 'subrow';
+}
 
 export const DRAG_REGION_ATTR = 'data-drag-region';
 // Story 8 re-plan: set alongside DRAG_REGION_ATTR on the same element, from
@@ -148,26 +166,21 @@ export function cardRegionKey(itemId: string): string {
 // after one, not only at drag start (F5's "recomputed per sample" cost was
 // this and the geometry below, conflated into one function; this is the
 // half that a drag's own duration can share across every sample instead).
-interface StructureCommon {
-  key: string;
+//
+// A structure entry is exactly its region minus the live facts, plus the
+// DOM handles those are read from (kept under one `dom` key so the facts
+// can be split off with a single rest) — `measureRegions` builds a region
+// by spreading the entry and adding geometry, never by re-listing each
+// kind's fields (audit epic-3-5-story-4 #8). A kind added later (Story
+// 5/6's `descendants`) gets its region for free once it has a resolver.
+interface DomHandles {
   element: HTMLElement;
   scrollAncestor: HTMLElement | null;
 }
-interface ColumnLikeStructure extends StructureCommon {
-  kind: 'column' | 'subrow';
-  containerId: string;
-  columnId: string;
-  coveredWorkphaseIds: string[];
-  targetWorkphaseId: string;
-  isTerminal: boolean;
-  parentRegionKey: null;
-}
-interface CardStructure extends StructureCommon {
-  kind: 'card';
-  attachToCardId: string;
-  parentRegionKey: string;
-}
-export type DragStructure = readonly (ColumnLikeStructure | CardStructure)[];
+type LiveFacts = 'rect' | 'contentRect';
+type CardListStructure = { dom: DomHandles } & Omit<CardListRegion, LiveFacts | 'cardCount' | 'boundsRect'>;
+type CardStructure = { dom: DomHandles } & Omit<CardRegion, LiveFacts>;
+export type DragStructure = readonly (CardListStructure | CardStructure)[];
 
 // Resolves every `[data-drag-region]` element under `root` into its
 // structural facts, joined with the column definitions for the workphase
@@ -189,7 +202,7 @@ export function resolveDragStructure(
   isValidCard?: (cardId: string) => boolean,
 ): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
-  const structure: (ColumnLikeStructure | CardStructure)[] = [];
+  const structure: (CardListStructure | CardStructure)[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(`[${DRAG_REGION_ATTR}]`)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
     if (!key) continue;
@@ -197,7 +210,7 @@ export function resolveDragStructure(
     const scrollAncestor = findVerticalScrollAncestor(el, root);
     const record = isCard
       ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, findParentRegionKey(el, root))
-      : columnLikeStructureFromKey(key, el, scrollAncestor, byId);
+      : cardListStructureFromKey(key, el, scrollAncestor, byId);
     if (record) structure.push(record);
   }
   return structure;
@@ -222,39 +235,23 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
   const regions: DragRegion[] = [];
   for (const s of structure) {
     if (s.key !== scope && s.parentRegionKey !== scope) continue;
-    const contentRect = layoutRect(s.element, s.kind === 'card');
+    const { dom, ...facts } = s;
+    const contentRect = layoutRect(dom.element, facts.kind === 'card');
     // Also the merged-column `boundsRect` source below (F6) — the same
     // scroll-ancestor element already resolved for clipping is exactly
     // `BoardColumn.tsx`'s own outer body, the one whose height the region
     // used to equal before the Story 3 follow-up narrowed it to content.
-    const scrollAncestorRect = s.scrollAncestor ? layoutRect(s.scrollAncestor, false) : null;
+    const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor, false) : null;
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
-    regions.push(
-      s.kind === 'card'
-        ? {
-            key: s.key,
-            kind: 'card',
-            rect,
-            contentRect,
-            attachToCardId: s.attachToCardId,
-            parentRegionKey: s.parentRegionKey,
-          }
-        : {
-            key: s.key,
-            kind: s.kind,
-            rect,
-            contentRect,
-            containerId: s.containerId,
-            columnId: s.columnId,
-            coveredWorkphaseIds: s.coveredWorkphaseIds,
-            targetWorkphaseId: s.targetWorkphaseId,
-            isTerminal: s.isTerminal,
-            cardCount: cardCountOf(s.element),
-            parentRegionKey: null,
-            boundsRect: s.kind === 'column' ? (scrollAncestorRect ?? contentRect) : undefined,
-          },
-    );
+    if (facts.kind === 'card') {
+      regions.push({ ...facts, rect, contentRect });
+      continue;
+    }
+    // A card list's two live facts beyond geometry: its rendered card count
+    // and (merged columns only) its outer bound.
+    const boundsRect = facts.kind === 'column' ? (scrollAncestorRect ?? contentRect) : undefined;
+    regions.push({ ...facts, rect, contentRect, cardCount: cardCountOf(dom.element), boundsRect });
   }
   return regions;
 }
@@ -325,7 +322,7 @@ function cardStructureFromKey(
   if (!isValidCard || !parentRegionKey) return null;
   const cardId = key.slice('card:'.length);
   if (!isValidCard(cardId)) return null;
-  return { key, kind: 'card', element: el, scrollAncestor, attachToCardId: cardId, parentRegionKey };
+  return { dom: { element: el, scrollAncestor }, key, kind: 'card', attachToCardId: cardId, parentRegionKey };
 }
 
 // The real card count a column/sub-row's own element carries
@@ -382,25 +379,25 @@ export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }
 
-function columnLikeStructureFromKey(
+// A card list's structural identity, from its key — the two kinds share
+// everything but the workphase facts, which is exactly what each literal
+// below is left spelling (audit epic-3-5-story-4 #8).
+function cardListStructureFromKey(
   key: string,
   el: HTMLElement,
   scrollAncestor: HTMLElement | null,
   columns: Map<string, DropColumn>,
-): ColumnLikeStructure | null {
+): CardListStructure | null {
   const [kind, columnId, workphaseId] = key.split(':');
   const column = columns.get(columnId);
   if (!column || column.broken) return null;
   const covered = column.subRows.map(r => r.workphase.id);
+  const base = { dom: { element: el, scrollAncestor }, key, columnId, parentRegionKey: null } as const;
   if (kind === 'column' && column.displayMode === 'merged') {
     return {
-      key,
+      ...base,
       kind: 'column',
-      element: el,
-      scrollAncestor,
-      parentRegionKey: null,
       containerId: column.id,
-      columnId,
       coveredWorkphaseIds: covered,
       targetWorkphaseId: column.entryWorkphaseId,
       isTerminal: Boolean(column.subRows[0]?.workphase.isTerminal),
@@ -409,13 +406,9 @@ function columnLikeStructureFromKey(
   if (kind === 'subrow' && workphaseId && covered.includes(workphaseId)) {
     const row = column.subRows.find(r => r.workphase.id === workphaseId);
     return {
-      key,
+      ...base,
       kind: 'subrow',
-      element: el,
-      scrollAncestor,
-      parentRegionKey: null,
       containerId: subrowContainerId(columnId, workphaseId),
-      columnId,
       coveredWorkphaseIds: [workphaseId],
       targetWorkphaseId: workphaseId,
       isTerminal: Boolean(row?.workphase.isTerminal),
@@ -471,7 +464,7 @@ export interface ShortCardMetrics {
   heightPx: number;
   gapPx: number;
 }
-export type BandRegion = Pick<ColumnLikeRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
+export type BandRegion = Pick<CardListRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
 
 // Story 4.1 Phase 1 — where the two band boundaries sit, in viewport
 // pixels, measured from `contentRect` (never the visible-clipped `rect`: a

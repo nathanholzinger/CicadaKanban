@@ -2,6 +2,7 @@
 // toRequest (placement → API request) and isIdentity (recognizes a no-op placement).
 
 import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
+import type { Item } from '../../types';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
 import type { Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
@@ -105,7 +106,7 @@ export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readon
 }
 
 // Encodes a droppable id for an expanded column's per-workphase sub-row —
-// the same id `dragRegions.ts::columnLikeStructureFromKey` sets as that
+// the same id `dragRegions.ts::cardListStructureFromKey` sets as that
 // region's own `containerId`, so the two only have to agree once.
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;
@@ -175,9 +176,16 @@ function anchorFor(
 // subsumes every prior per-case "nothing to write" (a covered-set member
 // in the middle band, TC-7.16; an empty or done region, TC-7.5/7.8) into
 // one rule. Same list: a `parentId` placement matching the item's current
-// parent, or a `workphaseId` one matching its current workphase (an
-// omitted `workphaseId` always means "unchanged" — nothing upstream ever
-// builds a Placement that names the list without changing it). Same
+// parent *and* the item currently attached to it — a detached child has
+// the parentId without the attachment (Epic 3: it's a Free Card in a
+// column list, not a Stub in that parent's), so re-attaching it to its own
+// parent is a genuine list change the server accepts as an attach toggle
+// (audit epic-3-5-story-4 #1); or a `workphaseId` one matching its current
+// workphase (an omitted `workphaseId` always means "unchanged" — nothing
+// upstream ever builds a Placement that names the list without changing
+// it). Story 5 replaces this whole comparison with the session's `origin`
+// — a detached child's origin is a workphase placement, so the two kinds
+// never match — and the `isAttached` read goes with it. Same
 // ordinal: `'existing'` always; `'first'`/`'last'`/an explicit anchor only
 // when `others` is empty, or the anchor isn't one of them — genuinely
 // nothing to order against, the same reason an empty/done region or a
@@ -186,19 +194,20 @@ function anchorFor(
 // anchor/first/last is never identity even if it happens to already
 // describe the same neighbor — the bands never checked that before
 // either, and this story changes no band or threshold.
-export function isIdentity(
-  item: { workphaseId: string | null; parentId: string | null },
-  placement: Placement,
-  others: readonly { id: string }[],
-): boolean {
+export type IdentitySubject = Pick<Item, 'workphaseId' | 'parentId' | 'isAttached'>;
+
+export function isIdentity(item: IdentitySubject, placement: Placement, others: readonly { id: string }[]): boolean {
   const sameList =
     'parentId' in placement
-      ? placement.parentId === item.parentId
+      ? placement.parentId === item.parentId && Boolean(item.isAttached)
       : (placement.workphaseId ?? item.workphaseId) === item.workphaseId;
   if (!sameList) return false;
-  if (placement.slot === 'existing') return true;
-  if (placement.slot === 'first' || placement.slot === 'last') return others.length === 0;
-  return !others.some(i => i.id === placement.slot.anchorId);
+  // Hoisted to a const so the narrowing survives into the `some` callback —
+  // a property path (`placement.slot`) doesn't narrow inside a closure.
+  const { slot } = placement;
+  if (slot === 'existing') return true;
+  if (slot === 'first' || slot === 'last') return others.length === 0;
+  return !others.some(i => i.id === slot.anchorId);
 }
 
 // The one adapter from the ghost's own terms (Placement: which list, what
@@ -211,7 +220,7 @@ export function isIdentity(
 // the placement itself (never a value re-derived from this request) is
 // what stays on as the pending marker (§10).
 export function toRequest(
-  item: { workphaseId: string | null; parentId: string | null },
+  item: IdentitySubject,
   placement: Placement | null,
   others: readonly { id: string }[],
 ): MoveItemInput | null {

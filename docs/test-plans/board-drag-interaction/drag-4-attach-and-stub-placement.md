@@ -75,6 +75,12 @@ done-parent legality — are [`../item-attachment/`](../item-attachment/)'s
 rules applied unmodified; cases here assert the gesture produces the
 right request and cross-reference the consequence.
 
+**Automation status (2026-09-21).** The Card-layer cases (TC-1, 5, 12,
+14–17) have no E2E and no `popSession` unit coverage — the Story 4 code
+audit's #3. Deferred as a block to **Epic 3.5 Story 10** (roadmap), which
+triages this whole suite once Stories 5–8 stop moving the thresholds; not
+a gap to fill story by story.
+
 | ID | Case | Priority | Automated |
 |---|---|---|---|
 | TC-1 | Zooming into a Card and releasing attaches as its last child, inheriting the parent's workphase | P0 | ⏳ pending triage |
@@ -117,7 +123,21 @@ fields land in one commit ([ATT-3.6](../item-attachment/att-3-reparent-placement
 Placing `X` as some item's *first* child is a different gesture — the
 manual tabbed-right placement at Descendants layer (TC-9).
 
-**Automation test:** —
+*And given* `X` is a **detached child of `P`** — Free, `X.parentId = P`
+already ([ATT-7.1](../item-attachment/att-7-detach-preserves-parent.md))
+— *then* the same gesture commits the same attach: `X` attached, last
+among `P`'s Stubs, workphase re-inherited
+([ATT-7.6](../item-attachment/att-7-detach-preserves-parent.md)). The
+client must not read "same `parentId`" as "already in this list" and
+set `X` back down — only `P`'s own *attached* Stub is at home there
+([DRAG-5.12](drag-5-detach-and-overflow.md)). *(Added 2026-09-21 from
+`docs/audits/code-quality-audit-epic-3-5-story-4.md` #1, where exactly
+that no-op was found.)*
+
+**Automation test:** — *(E2E deferred to Story 10 — see the roadmap.
+The client's request derivation for the detached-child clause is unit-
+covered: `boardDndUtils.test.ts` "a detached child re-attaching to its
+own parent is not identity" / "toRequest … detached child".)*
 
 ## TC-2 — Attach across projects triggers the project cascade
 

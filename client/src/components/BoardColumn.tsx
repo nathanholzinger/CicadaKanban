@@ -1,11 +1,11 @@
 // Droppable column — merged (one swimlane) or per-workphase expanded sub-rows.
 
 import { useDroppable } from '@dnd-kit/core';
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Column, Item, ItemType, Workphase } from '../types';
-import KanbanCard, { CARD_LIST_GAP_CLASS } from './KanbanCard';
+import CardList, { DROP_HIGHLIGHT_CLASS } from './CardList';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
@@ -13,7 +13,6 @@ import { subrowContainerId } from './workflow/boardDndUtils';
 import { columnRegionKey, subrowRegionKey } from './workflow/dragRegions';
 import { useDragSession, useIsCardBeingDragged } from './workflow/DragSessionContext';
 import InlineItemForm from './InlineItemForm';
-import { DragCarveFrame } from './BandGuides';
 import { DragHandleIcon } from './icons';
 
 const COLUMN_TITLE_BASE = 'truncate text-sm font-semibold tracking-wide text-zinc-300';
@@ -72,37 +71,15 @@ export default function BoardColumn({
   // A merged (not broken) column highlights as a drop target only while a card
   // is actively being dragged over it — expanded columns highlight per sub-row instead.
   const showDropHighlight = !column.broken && column.displayMode === 'merged' && isOver && isCardBeingDragged;
-  const regionKey = column.displayMode === 'merged' && !column.broken ? columnRegionKey(column.id) : undefined;
-  // Story 4.1 Phase 1: whether the active drag's own item is currently
-  // rendered as one of *this* column's own cards — by list membership, not
-  // by whether this column is the live hover target right now (DragCarveFrame's
-  // own `hasActiveItemRow` doc comment has the case that distinguishes them).
-  const mergedHasActiveItem = mergedItems.some(i => i.id === session?.activeItem.id);
-  // Computed once — used either bare or wrapped in DragCarveFrame below,
-  // and building it twice would double-register the same sortable ids. Its
-  // own flex/gap (mirroring WorkphaseCardList's `list`, and sharing its
-  // exact gap constant — Story 4.1 Phase 1's reservation math depends on
-  // it) is self-contained rather than relying on COLUMN_BODY_BASE's own
-  // gap-2 — DragCarveFrame's own wrap div sits between them and isn't
-  // itself a flex container, since its carve-out math depends on a plain
-  // `relative` box with no extra spacing.
-  const mergedCards = (
-    <div className={`flex flex-col ${CARD_LIST_GAP_CLASS}`}>
-      <SortableContext items={mergedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-        {mergedItems.map(item => (
-          <KanbanCard
-            key={item.id}
-            item={item}
-            itemTypes={itemTypes}
-            childCount={childCounts[item.id] ?? 0}
-            getAttachedChildren={getAttachedChildren}
-            defaultExpanded={defaultExpanded}
-            onCardClick={onCardClick}
-          />
-        ))}
-      </SortableContext>
-    </div>
-  );
+  // A merged column's list is one drag region (wiki board-drag-interaction
+  // §1). The list's own flex/gap is CardList's, self-contained rather than
+  // relying on COLUMN_BODY_BASE's gap-2 — DragCarveFrame's wrap div sits
+  // between them and isn't itself a flex container, since its carve-out
+  // math depends on a plain `relative` box with no extra spacing.
+  const mergedRegion =
+    column.displayMode === 'merged' && !column.broken
+      ? { key: columnRegionKey(column.id), isTerminal: columnIsTerminal, targetLabel: column.displayName }
+      : undefined;
 
   function handleItemSubmit(title: string, type: string | null): boolean {
     onCreateItem(column.entryWorkphaseId, title, type);
@@ -170,9 +147,7 @@ export default function BoardColumn({
           the column's available height — a short column no longer strands
           its bottom band far below the last card. */}
       <div className="relative flex min-h-[120px] flex-1 flex-col">
-        <div
-          className={`${COLUMN_BODY_BASE} ${showDropHighlight ? 'bg-zinc-700/40 ring-2 ring-blue-500/30' : 'bg-zinc-800/30'}`}
-        >
+        <div className={`${COLUMN_BODY_BASE} ${showDropHighlight ? DROP_HIGHLIGHT_CLASS : 'bg-zinc-800/30'}`}>
           {column.displayMode === 'expanded' ? (
             column.subRows.map(row => (
               <ExpandedSubRow
@@ -191,19 +166,15 @@ export default function BoardColumn({
             ))
           ) : (
             <>
-              {regionKey ? (
-                <DragCarveFrame
-                  regionKey={regionKey}
-                  cardCount={mergedItems.length}
-                  hasActiveItemRow={mergedHasActiveItem}
-                  isTerminal={columnIsTerminal}
-                  targetLabel={column.displayName}
-                >
-                  {mergedCards}
-                </DragCarveFrame>
-              ) : (
-                mergedCards
-              )}
+              <CardList
+                items={mergedItems}
+                itemTypes={itemTypes}
+                childCounts={childCounts}
+                getAttachedChildren={getAttachedChildren}
+                defaultExpanded={defaultExpanded}
+                onCardClick={onCardClick}
+                region={mergedRegion}
+              />
               {/* Story 8's own "Move to {name}" carve (above) takes over
                   this same message during a Card drag; a Stub drag never
                   reaches the pop machine at all (DragSessionContext.ts), so

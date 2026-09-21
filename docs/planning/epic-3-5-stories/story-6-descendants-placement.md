@@ -162,6 +162,36 @@ each is a **verify** before it's a change:
    `Item` or `Project`, only `{ id, parentId, depth }` rows and a
    `childrenOf` callback.
 
+### Open decision for this story — detached descendants in the section: absent, or greyed?
+
+*(Added 2026-09-21 from the Story 4 audit discussion. A Product Owner call
+about what the user expects, not a technical constraint — but the option
+space has one hard edge, recorded so it isn't rediscovered.)*
+
+A Card's section today shows **attached** descendants only
+(`getAttachedChildrenFrom` filters on `renderedIsStub`); a *detached*
+descendant is a Free Card elsewhere on the board, gets the green "these are
+yours" overlay while its ancestor is dragged (§4), and is listed and managed
+in the Sheet's ChildrenSection. So "absent" is the current state and has a
+home. The question is whether the section should *also* list detached
+descendants, dimmed, so the hierarchy reads complete from the Card.
+
+If "greyed" wins, two constraints follow from the data, not from taste:
+
+- **A greyed row can never be Top or Bottom.** Its position is
+  workflow-scope, not attached-siblings scope, so the server rejects an
+  anchor on it ("anchor outside the resulting scope", 400). §7.1's Top and
+  Bottom — "the item it will sit directly under / above" — would have to
+  skip over greyed rows, and `flattenHierarchy` would carry them as
+  non-candidates. The library's `Row` gains a flag, or the rows are
+  filtered before the gap is computed.
+- **It doesn't count toward the badge** (`computeChildCounts` counts
+  attached only) and it isn't a drag source from the section — its drag
+  starts in its own column, as a Card.
+
+Neither option changes anything Story 5 builds; the interim sibling-scoped
+within-action and the Descendants region are identical under both.
+
 ---
 
 ## Build order
@@ -258,6 +288,10 @@ over.rect)` — the event carries both) and passes `delta.x` as today.
   parent), TC-18 (over-cap → no request; a shallower state commits);
   DRAG-5 TC-9's tab-right and over-cap bullets. The gesture helper gains a
   `tabBy(n)` that moves the pointer horizontally by `n × INDENT`.
+- **Skipped Tests:** at this point we expect that DnD kinks have been worked out 
+  and we can fix and unskip previously flaky tests. First verify that the 
+  skipped tests are actually still testing something unique and haven't been
+  replaced by new tests that are already passing
 - **Wiki:** §7 "Not yet built" → built, with the seed rule (decision 3)
   recorded as the horizontal-offset definition; §1.1's Descendants row and
   §3's Card → Descendants sentence lose their "Story 6" markers; §3.1
@@ -269,6 +303,52 @@ over.rect)` — the event carries both) and passes `delta.x` as today.
 ---
 
 ## Risks / things to watch
+
+### From the Story 4 audit's #7/#8 fixes (2026-09-21) — read before Phase C
+
+The region model was tightened after this plan was written; three things
+it now assumes about a new kind:
+
+- **`isCardList` is the one kind predicate, and `descendants` is not a
+  card list.** Every former `kind !== 'card'` site in `useBoardDnd.ts` and
+  `popSession.ts` now reads `isCardList(region)` — a flat list of Free
+  items with bands and a workphase to write. A Descendants region is a
+  *Stub* list: don't add it to the predicate. But the six sites don't all
+  test the same property, and the audit's assumption that every one
+  simply excludes the new kind is probably wrong for half of them:
+  - **Card-list-only** (exclude Descendants, nothing to do): `hoverFor`'s
+    band (`popSession.ts`), `placementFor`'s main body (the workphase
+    placement — Descendants needs its own branch *before* it, and the
+    narrowing will demand one: `attachToCardId` stops typechecking on the
+    non-card-list branch), and the hook's `regionItems` (selects by
+    workphase).
+  - **"Has a sortable container" — a property Descendants shares**: the
+    collision session's `hoverContainerId` and `context` (`useBoardDnd.ts`
+    `collisionDetection`), `placementOver` at release, and the `others`
+    list for identity. Descendants has a `containerId`, a meaningful
+    `over` (the gap), and siblings to compare against. Decide per site:
+    either a second predicate (`hasSortableList`, true for card lists and
+    Descendants) or a Descendants branch. Not `isCardList`, and not a
+    re-widened `isCardList`.
+- **`measureRegions` spreads structural facts; it no longer lists fields
+  per kind.** A structure entry is `{ dom: { element, scrollAncestor } } &
+  Omit<Region, live facts>`. A `DescendantsRegion` interface + a
+  `descendantsStructureFromKey` resolver in `resolveDragStructure`'s
+  dispatch is the whole addition; the region then falls out of the spread
+  — unless it needs a live count like `cardCount`, in which case that's
+  the only extra line.
+- **`placementRegion` is shared** (`popSession.ts`, called by
+  `placementFor` and the hook's release). The projection's "which region"
+  reads it too; don't derive the key a third way.
+- **`CardList` is for Cards; the descendants section is not one.** Phase
+  B's flat section is its own list (Stub rows, a depth per row), and it
+  has no bands — so it does *not* go through `DragCarveFrame` (that
+  component is the band/reservation chrome, and the place a card list
+  gets its `[data-drag-region]`). The section registers
+  `DRAG_REGION_ATTR` the way a Card does today (`KanbanCard.tsx` sets
+  `card:<id>` on its own element), not the way a column does.
+  `DROP_HIGHLIGHT_CLASS` (`CardList.tsx`) is reusable if the section wants
+  the same "a row is over me" surface.
 
 - **The flat re-render changes how Stubs look** (decision 1). It's the
   right shape for the rule, but the PO hasn't seen it — Phase B before

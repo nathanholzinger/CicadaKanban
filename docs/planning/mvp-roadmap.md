@@ -92,6 +92,9 @@ A drag gesture to attach/detach directly on the board: dropping a card onto anot
 
 Work items gain a `kind` field (`kanban | quick`). Quick items display as checkbox lists rather than kanban cards. On completion, unattached quick items move to the Done column. Quick item buckets aggregate descendant quick items into a single moveable unit; the bucket auto-completes when all contained items are checked.
 
+We also intend to update the Status system. There will be 3 Hard-Coded statuses (final names TBD): [Backlog, Active, Done]
+Quick Items only use these 3 status. Kanban Items gain Workflow/Workphases that replaces or subdivides the Active Status
+
 ---
 
 ### Epic 5 — Tags & Type System

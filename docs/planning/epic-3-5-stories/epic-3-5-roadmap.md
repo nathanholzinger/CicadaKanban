@@ -221,6 +221,15 @@ Not in scope, still closed: §7's Descendants-layer placement inside a
 hierarchy (Story 6), and dragging an already-attached Stub at all
 (Story 5).
 
+**Automation deferred (recorded 2026-09-21):** the attach gesture has no
+client-side automated coverage — `docs/audits/code-quality-audit-epic-3-5-story-4.md`
+#3. Deliberately deferred to **Story 10** rather than fixed here, so the
+E2E is written once against settled thresholds instead of chased through
+Stories 5–8's tuning. The write itself is covered at the API
+(`server/tests/routes/items.hierarchy.test.ts`); the pure-function half of
+the audit's #1 fix (`isIdentity`, `toRequest`) is covered in
+`boardDndUtils.test.ts`.
+
 ---
 
 ### Story 4.1 — Drag-layer efficiency refactor (vestige removal)
@@ -261,7 +270,7 @@ row" rather than "add a branch in twelve places."
 every phase; one new E2E case (the reservation invariant); hands-on for the
 pinned ghost and the Phase 4 items.
 
-**Status: planned 2026-09-17, not started.**
+**Status: planned 2026-09-17**
 
 ---
 
@@ -368,6 +377,100 @@ omitting the flag keeps the current state).
 Last by design: nothing left to build on the server, but it adds a third
 drop-meaning to disambiguate in the UI, and that's only judgeable once the
 other gestures exist.
+
+---
+
+### Story 10 — DnD automation catch-up (no skipped Playwright tests)
+**Goal:** bring the drag automation suites up to the test-plan catalogs
+once the gesture has stopped moving, and decide — case by case — what the
+automation suite is *for*: which cases it asserts, which stay manual by
+rule, and which are precise enough to be flakier as automation than they
+are worth. Ends with **zero skipped Playwright tests** in `tests/`.
+
+**Why a story and not the checklist step.** This is the Definition of
+Done's standard test-reconciler pass (`.claude/guides/epic-done-checklist.md`
+§ Tests), pulled out as its own story as a special case: the pop clocks,
+carve-out bands and ghost geometry are being tuned hands-on through
+Stories 5–8, and a precise-move E2E written against today's values is
+expected to flake or go stale while that's happening. The current
+intention is to catch the tests up to the plan *once*, after fine-tuning,
+rather than re-chase them story by story. Cases that don't depend on
+precise cursor placement or timer margins (API tests, pure-function unit
+tests, classification/overlay assertions) are **not** covered by this
+deferral and keep landing with their stories.
+
+**In scope:**
+
+1. **Test-reconciler pass** over `docs/test-plans/board-drag-interaction/`
+   (DRAG-1…6, 82 active cases) and `docs/test-plans/item-attachment/`
+   (ATT-1…7), all currently ⏳ pending triage. Report saved to
+   `docs/audits/test-reconciliation-report-epic3-5.md`. Every case ends
+   mapped to a test or explicitly manual-only with a reason; §3.1's ruling
+   (automate reachability + the resulting write; threshold-timed cases are
+   manual by rule) is the triage rule, not a gap.
+
+2. **Deferred from the Story 4 audit, #3** (`docs/audits/code-quality-audit-epic-3-5-story-4.md`,
+   recorded 2026-09-21): Story 4's card-to-card attach gesture has no
+   client-side automated coverage at any level. Column → Card zoom-in,
+   `popDueAt`'s card fallback, `placementFor`'s Card branch, Card → column
+   pop-out via `parentRegionKey`, `useIsAttachTarget`, `AttachGhostRow` —
+   all exercised only by hand. `popSession.test.ts` has no `kind: 'card'`
+   region in any case (`dragFixtures.ts` says so); every E2E preset sets
+   `cardPopInDelayMs` ≥ 30 s so no spec ever zooms into a Card; DRAG-4's
+   Card-layer cases (4.1, 4.5, 4.12, 4.14–4.17) are all pending. The
+   audit's minimum fix, deferred here whole:
+   - *Unit* — a `cardRegion` fixture in `dragFixtures.ts` and a
+     `popSession.test.ts` describe for the Card layer: column-locked hover
+     on a valid card for `cardPopInDelayMs` zooms in; a Board-layer point
+     over a card never does (`childRegionAt(…, null)` excludes it);
+     popping out of a Card lands in its `parentRegionKey`, not Board;
+     `placementFor` returns `{ parentId, slot: 'last' }` regardless of
+     `over`. This half is not threshold-sensitive and could have landed
+     earlier; it's deferred with the rest because Story 5 makes the Card
+     layer a Stub drag's intermediate stop and Story 6 adds the layer
+     beneath it — the describe is cheaper written once against the final
+     shape.
+   - *E2E* — DRAG-4.1 (zoom in + release → `parentId`/`isAttached`
+     written, workphase inherited) and DRAG-4.17 (pop back out before
+     release → the column's reposition, no attach) with a
+     `SUSTAINED_CARD` preset in `drag-column-bands.spec.ts`'s style.
+   - *Not deferred:* the attach write itself is API-covered in
+     `items.hierarchy.test.ts` (TC-7.11, ATT-3.6, ATT-6.1, ATT-5.1, and
+     the detached-child re-attach from audit #1); the client's
+     `isIdentity`/`toRequest` half is unit-covered in
+     `boardDndUtils.test.ts`.
+
+3. **The six existing `test.skip`s** — `item-repositioning-cross-column-dnd.spec.ts`
+   1.a/2.a and `item-repositioning-cross-project-dnd.spec.ts`
+   1.a/2.a/2.b/4.b. All Epic 3.2-era "drag C onto card X → before X"
+   cases, skipped for a dnd-kit swap-preview precision problem (the drop
+   reproducibly lands on a different anchor). Their premise no longer
+   exists: under §6 a release over a Card is either the column's
+   anchor+side reposition (quick) or an attach (held) — DRAG-4.5
+   supersedes the interim "drop on X = before X" default. Re-derive them
+   against DRAG-3/DRAG-4.5, or delete them where the API twin already
+   pins the math (each has one). Un-skipping as-is is not an option.
+
+4. **Test-plan parameter drift.** `board-drag-interaction/INDEX.md` still
+   parameterizes the bands on `GHOST_H` (`ghostCardHeightPx`, 96px); Story
+   4.1 retired that panel value for the shortCard height + list gap.
+   Reconcile the names so a case can be read against the code again.
+
+5. **The flakiness call, made explicitly.** For each precise-move case
+   the reconciler proposes automating, decide whether a real pointer
+   sequence against pixel geometry and timer margins is worth keeping in
+   the suite, or whether the case is better served by a `dragGesture.ts`
+   improvement, a state-machine unit test, or a manual note. Record the
+   decision per case; "flaky, kept anyway" is not an allowed end state.
+
+**Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
+test:e2e` and `npm run test:unit` green; every DRAG/ATT case mapped or
+manual-only; the DoD's "No skipped or pending tests" and "All test-plan
+cases have a mapped automation test or manual acknowledgement" boxes
+checkable.
+
+**Depends on:** Stories 5–8 (the gesture and its thresholds stop moving);
+Story 9 if it implements a gesture. **Blocks:** the epic's ✅.
 
 ---
 

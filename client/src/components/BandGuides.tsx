@@ -71,22 +71,8 @@ const SINGLE_BAND_BORDER = 'rounded-lg border border-dashed border-zinc-600/50';
 
 interface DragCarveFrameProps {
   regionKey: string;
-  /** The region's own current *raw* card count — its rendered `items.length`, the active drag's own row included if it's currently one of them. */
-  cardCount: number;
-  /**
-   * Whether the active drag's own item is currently one of this region's
-   * rendered rows — either because a ghost genuinely just joined (this
-   * region is the live Board-layer hover target), or because it's resting
-   * unclaimed in its own, otherwise-empty origin region while the cursor
-   * is elsewhere entirely (wiki §5: with nowhere hovered, an item "is drawn
-   * where it already is"). Either way `children` already reserves exactly
-   * the space that row needs, since it's rendered at the same fixed
-   * shortCard height regardless of which of the two reasons applies — so
-   * this, not whether the region happens to be hovered right now, is what
-   * decides whether the dead-zone/label chrome collapses (Story 4.1 Phase
-   * 1): showing both at once would double the reservation.
-   */
-  hasActiveItemRow: boolean;
+  /** The rows `children` actually renders — the same array, so the counts below can't drift from the list (audit epic-3-5-story-4 #7: derived here once, not by each caller). */
+  items: readonly { id: string }[];
   isTerminal: boolean;
   /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
   targetLabel: string;
@@ -99,23 +85,26 @@ interface DragCarveFrameProps {
 // always "the region" `measureDragRegions` finds, in every branch below,
 // so a carve-out div is always a descendant of it rather than a sibling a
 // region-scoped lookup can't reach.
-export function DragCarveFrame({
-  regionKey,
-  cardCount,
-  hasActiveItemRow,
-  isTerminal,
-  targetLabel,
-  children,
-}: DragCarveFrameProps) {
+export function DragCarveFrame({ regionKey, items, isTerminal, targetLabel, children }: DragCarveFrameProps) {
   const session = useDragSession();
   const pop = session?.pop;
 
+  // Whether the active drag's own item is currently one of this region's
+  // rendered rows — by list membership, never by whether this region is
+  // the live hover target right now. Either because a ghost genuinely just
+  // joined (this region is the live Board-layer hover target), or because
+  // it's resting unclaimed in its own, otherwise-empty origin region while
+  // the cursor is elsewhere entirely (wiki §5: with nowhere hovered, an
+  // item "is drawn where it already is"). Either way `children` already
+  // reserves exactly the space that row needs, since it's rendered at the
+  // same fixed shortCard height regardless of which of the two reasons
+  // applies — so this is what decides whether the dead-zone/label chrome
+  // collapses (Story 4.1 Phase 1): showing both at once would double the
+  // reservation.
+  const hasActiveItemRow = items.some(i => i.id === session?.activeItem.id);
   // Ghost-exclusive: the count of *other* cards, excluding the active
-  // item's own row whenever it's currently here — never based on whether
-  // this region happens to be the live hover target right now, which is
-  // a different question `hasActiveItemRow` can disagree with (Story 4.1
-  // Phase 1 — see that prop's own comment for the case that caught this).
-  const otherCardCount = hasActiveItemRow ? cardCount - 1 : cardCount;
+  // item's own row whenever it's currently here.
+  const otherCardCount = hasActiveItemRow ? items.length - 1 : items.length;
 
   const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: otherCardCount };
   const wrap = (content: ReactNode, extraClassName = '') => (

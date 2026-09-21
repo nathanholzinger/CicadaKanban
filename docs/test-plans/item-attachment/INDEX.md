@@ -24,13 +24,15 @@ does.
 | [ATT-4 — Legal parent and depth cap](att-4-legal-parent-depth-cap.md) | 9 | 6 | 3 | 0 |
 | [ATT-5 — Cross-project reparenting](att-5-cross-project-reparenting.md) | 3 | 2 | 1 | 0 |
 | [ATT-6 — Attaching to a done parent](att-6-attaching-to-done-parent.md) | 3 | 1 | 2 | 0 |
-| [ATT-7 — Detaching preserves the parent](att-7-detach-preserves-parent.md) | 5 | 4 | 1 | 0 |
-| **Total** | **37** | **24** | **12** | **1** |
+| [ATT-7 — Detaching preserves the parent](att-7-detach-preserves-parent.md) | 6 | 5 | 1 | 0 |
+| **Total** | **38** | **25** | **12** | **1** |
 
 ## Status
 
-**All 37 cases are ⏳ pending triage.** None have been compared against
-existing automation yet — that's the Test Reconciler's pass. Several
+**37 of 38 cases are ⏳ pending triage.** None have been compared against
+existing automation yet — that's the Test Reconciler's pass (Epic 3.5
+Story 10). The exception is ATT-7.6, added 2026-09-21 from the Story 4
+audit's #1 finding and mapped to its test on the day. Several
 (ATT-1.4, ATT-3.2/3.3, ATT-5.3, ATT-7.2) are cross-references to cases
 already catalogued and automated under
 [`../item-positioning/`](../item-positioning/) and are expected to map to

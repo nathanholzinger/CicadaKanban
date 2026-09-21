@@ -24,9 +24,10 @@ import {
 import { classifyDragTargets, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
+  isCardList,
   measureRegions,
   resolveDragStructure,
-  type ColumnLikeRegion,
+  type CardListRegion,
   type DragRegion,
   type DragStructure,
   type Point,
@@ -36,6 +37,7 @@ import type { DragTuning } from './dragTuning';
 import {
   advancePopSession,
   placementFor,
+  placementRegion,
   popDueAt,
   startPopSession,
   type PlacementOver,
@@ -279,13 +281,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — rule 1: a mere hover, not yet a
         // pop, must never drive anything a release would act on.
-        hoverContainerId: hover && hover.kind !== 'card' ? hover.containerId : null,
+        hoverContainerId: hover && isCardList(hover) ? hover.containerId : null,
         // A locked Card context has no `over` either (decision 5, Story 4.1
         // Phase 0): its within-action is a constant append, never a
         // preview — today the target Card would otherwise be its own only
         // collision candidate, which could light the live side indicator on
         // it for no reason a release would ever honor.
-        context: context && context.kind !== 'card' ? { containerId: context.containerId, rect: context.rect } : null,
+        context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
       };
     }
     return resolveBoardCollisions(args, live);
@@ -336,21 +338,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // reference so passing it to both doesn't create a new one every render.
   const dragModifiers = useMemo(() => [clampToContext], [clampToContext]);
 
-  // The region `placementFor` will itself resolve `pop` against — the
-  // exact same key derivation, so a caller that also needs to know *which*
-  // region a placement came from (for `over`, for the "others" list below)
-  // reads the identical answer rather than a second, independently-typed
-  // guess (F3's whole reason for being).
-  function placementRegion(pop: PopSession | null, regions: readonly DragRegion[]): DragRegion | undefined {
-    if (!pop) return undefined;
-    const key = pop.contextKey === null ? (pop.hover?.regionKey ?? null) : pop.contextKey;
-    return key === null ? undefined : regions.find(r => r.key === key);
-  }
-
-  // Board layer only (a Card region never reaches a band resolution —
+  // Card lists only (a Card region never reaches a band resolution —
   // Story 4's within-action is a constant append, resolved without
   // consulting the region's rendered items at all).
-  function regionItems(region: ColumnLikeRegion): Item[] {
+  function regionItems(region: CardListRegion): Item[] {
     const { getMergedColumnItems, getWorkphaseItems } = latest.current;
     return region.kind === 'column'
       ? getMergedColumnItems(region.coveredWorkphaseIds, region.isTerminal)
@@ -509,7 +500,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // finding no collision at all, is a bare hover with nothing to anchor
     // beside.
     const placementOver: PlacementOver =
-      !region || region.kind === 'card'
+      !region || !isCardList(region)
         ? null
         : over && String(over.id) !== region.containerId
           ? { anchorId: String(over.id), side }
@@ -524,7 +515,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
           placementOver,
         )
       : null;
-    const others = region && region.kind !== 'card' ? regionItems(region).filter(i => i.id !== activeId) : [];
+    const others = region && isCardList(region) ? regionItems(region).filter(i => i.id !== activeId) : [];
     const input = toRequest(activeItem, placement, others);
     if (!input) {
       // Nothing to write — a null placement (drawn where it already is)

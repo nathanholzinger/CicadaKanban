@@ -12,6 +12,7 @@ refer to them as `ATT-7.n`.
 | TC-3 | On becoming Free, the item keeps the workphase it held and stops tracking its former parent | P0 | ⏳ pending triage |
 | TC-4 | On becoming Free, the item is eligible for `completedAt` | P1 | ⏳ pending triage |
 | TC-5 | A detach that lands inside a different parent's context is a reparent, not a detach | P0 | ⏳ pending triage |
+| TC-6 | Re-attaching a detached child to the parent it still names is a real attach, not a no-op | P0 | ✅ `server/tests/routes/items.hierarchy.test.ts` — "a detached child re-attached to the parent it still names…" |
 
 ---
 
@@ -83,3 +84,33 @@ resolved among `Q`'s siblings. It does **not** pass through a Free state
 with `parentId = P`, and `parentId` is not left at `P`.
 
 **Automation test:** —
+
+## TC-6 — Re-attaching a detached child to the parent it still names is a real attach, not a no-op
+
+**Priority:** P0 · **Automated:** ✅ `server/tests/routes/items.hierarchy.test.ts` — "a detached child re-attached to the parent it still names is a real attach"
+
+*Given* `X` detached from `P` (TC-1: flag clear, `parentId` still `P`,
+workflow-scoped position), *when* `X` is attached to `P` again — a request
+naming the parent it already names, with the flag set — *then* it is
+[ATT-1.7](att-1-free-attached-state.md)'s Free → Attached transition in
+full: `X` attached, workphase re-inherited from `P`, `positionScope =
+"attached-siblings"` with a fresh position resolved in `P`'s Stub scope
+(last, when no anchor is given), and a hierarchy activity entry recorded.
+The unchanged `parentId` does not make this a redundant request; the
+attachment flag is what changed, and the flag is the scope. Contrast the
+genuinely redundant case — an *already attached* child re-attached to the
+same parent — which is not a scope change, keeps its position, and logs
+nothing.
+
+*(Why it's catalogued: [ATT-1.2](att-1-free-attached-state.md) makes a
+detached child "exactly as Free as a top-level item," which implies this;
+but the Story 4 audit found the board client treating "same `parentId`"
+as "already here" and no-oping the gesture —
+`docs/audits/code-quality-audit-epic-3-5-story-4.md` #1. The drag-side
+half is [DRAG-4.1](../board-drag-interaction/drag-4-attach-and-stub-placement.md)'s
+detached-child clause.)*
+
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts` (the
+API consequence); `client/src/components/workflow/boardDndUtils.test.ts`
+"a detached child re-attaching to its own parent is not identity" (the
+client's request derivation). The E2E gesture is Story 10's.

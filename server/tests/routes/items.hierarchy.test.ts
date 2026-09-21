@@ -270,6 +270,26 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     expect(hierarchyEntries(s1.id)).toHaveLength(0); // nothing changed, nothing logged (§11a)
   });
 
+  // The same request body as above, but from a *detached* child: the parent
+  // is unchanged, the flag is not, and the flag is the scope. Pinned because
+  // the board client once read "same parentId" as "already here" and no-oped
+  // the gesture (audit epic-3-5-story-4 #1).
+  it('a detached child re-attached to the parent it still names is a real attach (ATT-7.6)', async () => {
+    const { project, todo, inProgress } = await setupWorkflow();
+    const { p, s1, s2 } = await cardWithTwoStubs(project.id, todo.id);
+    await move(s1.id, { isAttached: false, workphaseId: inProgress.id }); // detach, own workphase
+    expect(getRow(s1.id)).toMatchObject({ parentId: p.id, isAttached: 0, workphaseId: inProgress.id });
+
+    const res = await move(s1.id, { parentId: p.id, isAttached: true });
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBe(p.id);
+    expect(res.body.isAttached).toBe(1);
+    expect(res.body.workphaseId).toBe(todo.id); // re-inherited (ATT-1.7)
+    expect(res.body.positionScope).toBe('attached-siblings');
+    expect(res.body.position).toBeGreaterThan(s2.position); // last among P's Stubs — a fresh sibling-scoped position
+    expect(hierarchyEntries(s1.id).map(e => e.content)).toEqual(['Detached from "P"', 'Attached to "P"']);
+  });
+
   it('a Free item can be reparented and stay Free; without an anchor its position is untouched (wiki §4)', async () => {
     const { project, todo } = await setupWorkflow();
     const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });

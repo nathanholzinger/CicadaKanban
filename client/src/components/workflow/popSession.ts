@@ -8,8 +8,9 @@ import {
   childRegionAt,
   containsPoint,
   distanceOutside,
+  isCardList,
   type Band,
-  type ColumnLikeRegion,
+  type CardListRegion,
   type DragRegion,
   type Point,
   type Rect,
@@ -225,12 +226,11 @@ export function advancePopSession(
 
 // Board-layer hover, or a locked column/sub-row's hover on one of its own
 // Cards: keeps the entry time while the cursor stays in the same region,
-// returning the same object when nothing tracked has changed. Only a
-// column/sub-row candidate has a band (§5), read off the region's *live*
-// rect and card count now that the reservation is exact (Phase 1) — a
-// Card candidate's within-action is a constant, so there's nothing to
-// track but presence and duration (unified with the old, separate
-// `hoverForCard` in Phase 0).
+// returning the same object when nothing tracked has changed. Only a card
+// list has a band (§5), read off the region's *live* rect and card count
+// now that the reservation is exact (Phase 1) — any other candidate's
+// within-action is a constant, so there's nothing to track but presence
+// and duration (unified with the old, separate `hoverForCard` in Phase 0).
 function hoverFor(
   current: PopHover | null,
   region: DragRegion,
@@ -239,7 +239,7 @@ function hoverFor(
   now: number,
 ): PopHover {
   const staying = current?.regionKey === region.key ? current : null;
-  if (region.kind === 'card') {
+  if (!isCardList(region)) {
     return staying ?? { regionKey: region.key, since: now };
   }
   const since = staying?.since ?? now;
@@ -311,6 +311,19 @@ export function popDueAt(session: PopSession, regions: readonly DragRegion[], tu
 // side.
 export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'container' | null;
 
+// The region a placement is resolved against: the locked context, or — at
+// Board layer — the hovered region, whose band is the within-action there.
+// The one key derivation, shared with `useBoardDnd.ts`, which needs the
+// same region for `over` and the "others" list at release: a caller
+// reading the identical answer rather than a second, independently-typed
+// guess (Story 4.1 Phase 3 F3; the hook's own copy retired by audit
+// epic-3-5-story-4 #8). Null session (no drag) → undefined.
+export function placementRegion(session: PopSession | null, regions: readonly DragRegion[]): DragRegion | undefined {
+  if (!session) return undefined;
+  const key = session.contextKey === null ? (session.hover?.regionKey ?? null) : session.contextKey;
+  return key === null ? undefined : regions.find(r => r.key === key);
+}
+
 // The ghost (§10 ordinal preview, §5 band table): always the *locked*
 // context's own within-action when there is one — Column/sub-row: the
 // slot a real drop resolved to (`over`), or 'existing' while that's still
@@ -338,11 +351,14 @@ export function placementFor(
   priorPlacement: Placement | null = null,
   over: PlacementOver = null,
 ): Placement | null {
-  const key = session.contextKey === null ? (session.hover?.regionKey ?? null) : session.contextKey;
-  const region = key === null ? undefined : regions.find(r => r.key === key);
+  const region = placementRegion(session, regions);
   if (!region) return null;
 
-  if (region.kind === 'card') {
+  // Everything below is the card list's within-action; any other kind
+  // answers here. Today that's only a Card — the auto-drop, always its
+  // last child. (Story 6's Descendants kind will need its own branch, and
+  // the narrowing will say so: `attachToCardId` stops typechecking.)
+  if (!isCardList(region)) {
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
@@ -381,7 +397,7 @@ export function placementFor(
   return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
 }
 
-export function regionWorkphaseFor(region: ColumnLikeRegion, activeWorkphaseId: string | null): string {
+export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: string | null): string {
   const member = activeWorkphaseId !== null && region.coveredWorkphaseIds.includes(activeWorkphaseId);
   return member ? activeWorkphaseId : region.targetWorkphaseId;
 }

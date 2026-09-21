@@ -6,9 +6,10 @@ import {
   clipToVisible,
   containsPoint,
   distanceOutside,
+  isCardList,
   measureRegions,
   resolveDragStructure,
-  type ColumnLikeRegion,
+  type CardListRegion,
   type Rect,
 } from './dragRegions';
 import { rect, region, column } from '../../test/dragFixtures';
@@ -308,7 +309,7 @@ describe('resolveDragStructure / measureRegions', () => {
     document.body.appendChild(box);
 
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])]);
-    const [region] = measureRegions(structure, null) as [ColumnLikeRegion];
+    const [region] = measureRegions(structure, null) as [CardListRegion];
     expect(region.rect).toMatchObject({ top: 0, bottom: 120 });
     expect(region.boundsRect).toMatchObject({ top: 0, bottom: 400 });
   });
@@ -316,8 +317,33 @@ describe('resolveDragStructure / measureRegions', () => {
   it("a sub-row's boundsRect is undefined — its own rect already is its full bound, nothing to add", () => {
     buildScrolledSubrow(rect(0, 0, 300, 150), rect(0, 0, 300, 200));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
-    const [region] = measureRegions(structure, null) as [ColumnLikeRegion];
+    const [region] = measureRegions(structure, null) as [CardListRegion];
     expect(region.kind).toBe('subrow');
     expect(region.boundsRect).toBeUndefined();
+  });
+
+  it('a measured region carries no DOM handles — structural facts plus geometry, nothing else', () => {
+    buildScrolledSubrow(rect(0, 0, 300, 150), rect(0, 0, 300, 200));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
+    const [region] = measureRegions(structure, null);
+    expect(region).not.toHaveProperty('dom');
+    expect(region).not.toHaveProperty('element');
+  });
+});
+
+describe('isCardList', () => {
+  it('is true for a merged column and a sub-row, false for a Card (audit epic-3-5-story-4 #8)', () => {
+    expect(isCardList(region('column:col-1', rect(0, 0, 100, 100)))).toBe(true);
+    expect(isCardList(region('subrow:col-1:w1', rect(0, 0, 100, 100)))).toBe(true);
+    const r = rect(0, 0, 100, 40);
+    const card = {
+      key: 'card:item-1',
+      kind: 'card',
+      rect: r,
+      contentRect: r,
+      attachToCardId: 'item-1',
+      parentRegionKey: 'column:col-1',
+    } as const;
+    expect(isCardList(card)).toBe(false);
   });
 });

@@ -341,6 +341,11 @@ header looks wrong. One test where the two differ; one `popSession` case
 that enters a partially visible sub-row, scrolls, and asserts the band from
 the unclipped rect.
 
+**Status (2026-09-20):** superseded by Story 4.1 Phase 1 — the frozen rect
+is gone; `DragRegion` now carries `contentRect` (unclipped, what
+`bandBoundaries` reads) and `rect` (clipped, what `childRegionAt` hit-tests),
+which is the split proposed here with the names swapped.
+
 ### 12. The scroll-follow only runs on pointer samples — a stationary cursor during auto-scroll gets no translation until the next `pointermove` or a pending timer `[Correctness & Security]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:197–212` (`evaluateRef` called from `pointermove` and the pop timer only), `:410–415` (`resolveCardDrop` uses `session.hover.rect` from the last sample)
 
@@ -355,6 +360,13 @@ band. Pop-in is only delayed (the timer re-measures).
 Pin with a two-sample `popSession` case at the same pointer with different
 `scrollTop`, and an E2E that parks at a sub-row edge and asserts the guide
 tracks.
+
+**Status (2026-09-20):** reduced, not closed. Story 4.1 Phase 1 removed the
+frozen rect and made the carve-out layout-anchored, so nothing *drawn* goes
+stale during auto-scroll. `evaluatePop` still runs only on `pointermove`
+and the pop timer, so a release after a stationary auto-scroll resolves
+against `regionsRef` from the last sample. The `scroll` listener fix above
+still applies.
 
 ### 13. A re-drag of a pending item carries the *raw* `activeItem` — `workphaseId` / `position` from before the outstanding write — into every member decision and the `'existing'` / `'last'` choice `[Correctness & Security]` (what's left of Story 3 #1 bullet 2)
 **Files:** `client/src/components/workflow/useBoardDnd.ts:283`, `:308`, `:184`, `:406`, `:419`, `:423`; server rule `itemHierarchy.ts:243–250`
@@ -373,6 +385,11 @@ only; the outcome is a wrong-column write.
 `workphaseId: priorPlacement?.workphaseId ?? item.workphaseId`, `position: null`
 when `priorPlacement` exists — so member and slot follow what the board draws.
 
+**Status (2026-09-20):** still open at `ae06121` — carried forward as
+`code-quality-audit-epic-3-5-story-4.md` #12. Story 4.1 Phase 3 made the
+fix cheaper than the effective-snapshot above: read the live row from
+`latest.current.items` at release.
+
 ### 14. `dragRegions.ts`'s DOM/geometry seam (Story 3 #25) has grown past "if it grows" — now worth taking `[File Responsibility]`
 **File:** `client/src/components/workflow/dragRegions.ts:76–119` (DOM: `measureDragRegions`, `findVerticalScrollAncestor`) vs `:159–194` (pure: `regionAt`, `bandFor`, `distanceOutside`, `verticalDistance`) vs `:114–119` (`clipToVisible`, pure, serving the DOM half)
 
@@ -385,6 +402,13 @@ three `describe` blocks already fall on the two sides. **Fix:**
 `containsPoint` (from #2); `dragRegions.ts` keeps `DragRegion`,
 `measureDragRegions`, `findVerticalScrollAncestor`, `regionFromKey`, the key
 builders.
+
+**Status (2026-09-20):** re-evaluated, not carried forward. Story 4.1 Phase
+2 split the DOM half into `resolveDragStructure` (per drag) and
+`measureRegions` (per sample) inside the same file; the Story 4 audit's
+file-responsibility pass judged the result cohesive as "region geometry".
+The one real seam issue there now is the `dragRegions` ⟷ `boardDndUtils`
+import cycle (Story 4 audit #4).
 
 ### 15. The write tracker has become its own concept inside `useItemManagement` `[File Responsibility]`
 **File:** `client/src/components/workflow/useItemManagement.ts:20–36` (`ItemWriteTracker`, four methods), `:46–51` (`writeSeq` + `inFlight`), `:66–100`
@@ -443,6 +467,10 @@ out and back. #1's reference-compare fix avoids the clear altogether.
 `overflow-x-auto` → computed `overflow-y: auto` quirk is excluded). A style
 resolve per region per pointer move; worth knowing when Story 4 multiplies
 regions by cards.
+
+**Status (2026-09-20):** resolved by Story 4.1 Phase 2 —
+`findVerticalScrollAncestor` runs in `resolveDragStructure` (once per drag
+and per layer change), never per sample.
 
 ### 21. `sendItemMove` cases repeat the same arrange block ×4; the real tracker has no unit test `[Duplication & Abstraction]`
 `boardDndUtils.test.ts:467–470`, `:485–486`, `:504–508`, `:518–522`. The

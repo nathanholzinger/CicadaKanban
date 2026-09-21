@@ -195,8 +195,8 @@ describe('resolveDropSide', () => {
 // bandDropResolution's per-case nulls and resolveDropTarget's "same
 // workphase → reorder" branch alike: both were really this one rule.
 describe('isIdentity', () => {
-  const outsider = { workphaseId: 'w1', parentId: null };
-  const member = { workphaseId: 'w2', parentId: null };
+  const outsider = { workphaseId: 'w1', parentId: null, isAttached: 0 };
+  const member = { workphaseId: 'w2', parentId: null, isAttached: 0 };
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a different workphase is never identity, whatever the slot (DRAG-3.1/3.2/3.6)', () => {
@@ -234,13 +234,22 @@ describe('isIdentity', () => {
   });
 
   it("a parentId placement compares against the item's current parent, never its workphase", () => {
-    const child = { workphaseId: 'w1', parentId: 'card-1' };
-    expect(isIdentity(child, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
-    expect(isIdentity(child, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
-    // Story 4's narrowed scope: a Free Card being dragged is never already
-    // attached to the card it's hovering (that item would render as a
-    // non-draggable Stub instead) — attaching is always a new relationship.
+    const stub = { workphaseId: 'w1', parentId: 'card-1', isAttached: 1 };
+    expect(isIdentity(stub, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(stub, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
+    // A root-level Free Card has no parent to match at all.
     expect(isIdentity(outsider, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+  });
+
+  it("a detached child re-attaching to its own parent is not identity — same parentId, but it isn't in that parent's list (audit epic-3-5-story-4 #1)", () => {
+    // Epic 3's model: `parentId` set, `isAttached` off — a Free Card in a
+    // column, classified `valid` against its own parent (an ancestor is
+    // never a descendant), so it can zoom in. The parent's Stub list is a
+    // different list from the column it's in; "same parent" alone is not
+    // "same list."
+    const detachedChild = { workphaseId: 'w1', parentId: 'card-1', isAttached: 0 };
+    expect(isIdentity(detachedChild, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+    expect(isIdentity(detachedChild, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
   });
 });
 
@@ -249,8 +258,8 @@ describe('isIdentity', () => {
 // replacing resolveDropTarget + buildMoveInput's independent re-derivation
 // (F3).
 describe('toRequest', () => {
-  const outsider = { workphaseId: 'w1', parentId: null };
-  const member = { workphaseId: 'w2', parentId: null };
+  const outsider = { workphaseId: 'w1', parentId: null, isAttached: 0 };
+  const member = { workphaseId: 'w2', parentId: null, isAttached: 0 };
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a null placement sends nothing — drawn where it already is', () => {
@@ -305,6 +314,14 @@ describe('toRequest', () => {
 
   it('attach: parentId + isAttached, never an anchor — always an append (Story 4, no manual placement among Stubs until Story 6)', () => {
     expect(toRequest(outsider, { parentId: 'card-1', slot: 'last' }, [])).toEqual({
+      parentId: 'card-1',
+      isAttached: true,
+    });
+  });
+
+  it('re-attaching a detached child to its own parent sends the same attach request — the server treats a same-parent attach as a flag toggle and skips the depth check (audit epic-3-5-story-4 #1)', () => {
+    const detachedChild = { workphaseId: 'w1', parentId: 'card-1', isAttached: 0 };
+    expect(toRequest(detachedChild, { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
     });
