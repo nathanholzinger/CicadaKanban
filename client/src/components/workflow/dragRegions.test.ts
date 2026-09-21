@@ -2,14 +2,17 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   bandBoundaries,
   bandFor,
+  cardRegionKey,
   childRegionAt,
   clipToVisible,
   containsPoint,
+  descendantsRegionKey,
   distanceOutside,
   isCardList,
   measureRegions,
   resolveDragStructure,
   type CardListRegion,
+  type DescendantsRegion,
   type Rect,
 } from './dragRegions';
 import { rect, region, column } from '../../test/dragFixtures';
@@ -80,6 +83,26 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
     expect(childRegionAt(regions, { x: 150, y: 160 }, null)).toBeNull();
     expect(childRegionAt(regions, { x: 150, y: 179 }, null)).toBeNull();
     expect(childRegionAt(regions, { x: 150, y: 180 }, null)).toBe(subB2);
+  });
+});
+
+// Story 5, decision 3 (2026-09-21): a `descendants` region is never a
+// zoom-in candidate, even from its own Card's context — Story 6 is what
+// makes a Card's within-action a further pop-in rather than always the
+// auto-drop. The pop-out chain (contextRegion.parentRegionKey, read
+// directly by popSession.ts, never through this function) is unaffected.
+describe('childRegionAt excludes descendants regions (decision 3)', () => {
+  it("never returns a Card's own Descendants section, even while hovering squarely inside it", () => {
+    const P = 'card-p';
+    const descendantsP: DescendantsRegion = {
+      key: descendantsRegionKey(P),
+      rect: rect(0, 0, 100, 200),
+      contentRect: rect(0, 0, 100, 200),
+      kind: 'descendants',
+      cardId: P,
+      parentRegionKey: cardRegionKey(P),
+    };
+    expect(childRegionAt([descendantsP], { x: 50, y: 100 }, cardRegionKey(P))).toBeNull();
   });
 });
 
@@ -328,6 +351,77 @@ describe('resolveDragStructure / measureRegions', () => {
     const [region] = measureRegions(structure, null);
     expect(region).not.toHaveProperty('dom');
     expect(region).not.toHaveProperty('element');
+  });
+
+  // Story 5, decisions 2/3 — a `descendants:<cardId>` element only ever
+  // resolves for the drag's own `originCardId`; every other Card's section
+  // (even one that would otherwise be a perfectly valid element) resolves
+  // to nothing, which is what keeps it from ever becoming a zoom-in
+  // candidate this story (childRegionAt's own guard covers the case where
+  // it's the *origin's* own section, reached from the Card layer).
+  function buildCardWithDescendants(
+    columnId: string,
+    cardId: string,
+    cardRectValue: ReturnType<typeof rect>,
+    descendantsRectValue: ReturnType<typeof rect>,
+  ) {
+    const columnEl = document.createElement('div');
+    columnEl.setAttribute('data-drag-region', `column:${columnId}`);
+    mockRect(columnEl, rect(0, 0, 300, 400));
+    const cardEl = document.createElement('div');
+    cardEl.setAttribute('data-drag-region', `card:${cardId}`);
+    mockRect(cardEl, cardRectValue);
+    const descendantsEl = document.createElement('div');
+    descendantsEl.setAttribute('data-drag-region', `descendants:${cardId}`);
+    mockRect(descendantsEl, descendantsRectValue);
+    cardEl.appendChild(descendantsEl);
+    columnEl.appendChild(cardEl);
+    document.body.appendChild(columnEl);
+  }
+
+  it("resolves the origin's own Descendants section, parented to its Card", () => {
+    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+    const structure = resolveDragStructure(
+      document,
+      [column('col-1', ['w1'])],
+      id => id === 'card-p',
+      'card-p', // originCardId
+    );
+    const regions = measureRegions(structure, cardRegionKey('card-p'));
+    const descendants = regions.find(r => r.kind === 'descendants');
+    expect(descendants).toMatchObject({
+      key: descendantsRegionKey('card-p'),
+      kind: 'descendants',
+      cardId: 'card-p',
+      parentRegionKey: cardRegionKey('card-p'),
+    });
+  });
+
+  it("resolves nothing for a different Card's section, even though the element exists and isValidCard says yes", () => {
+    buildCardWithDescendants('col-1', 'card-q', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+    const structure = resolveDragStructure(
+      document,
+      [column('col-1', ['w1'])],
+      () => true,
+      'card-p', // originCardId — a *different* card than the one with the section
+    );
+    const regions = measureRegions(structure, cardRegionKey('card-q'));
+    expect(regions.find(r => r.kind === 'descendants')).toBeUndefined();
+  });
+
+  // Decision 2: the origin's own `card:` element resolves regardless of
+  // `isValidCard` — a Stub must be able to pop back out to its own Card
+  // even when that Card wouldn't be offered as a *target* for it.
+  it("resolves the origin's own card: region even when isValidCard rejects it", () => {
+    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+    const structure = resolveDragStructure(
+      document,
+      [column('col-1', ['w1'])],
+      () => false, // every card is an invalid target for this drag
+      'card-p',
+    );
+    const regions = measureRegions(structure, 'column:col-1');
+    expect(regions.find(r => r.key === cardRegionKey('card-p'))).toBeDefined();
   });
 });
 

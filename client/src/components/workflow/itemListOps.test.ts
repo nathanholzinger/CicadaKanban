@@ -135,6 +135,16 @@ describe('getAttachedChildrenFrom', () => {
   it('returns an empty list for an item with no attached children', () => {
     expect(getAttachedChildrenFrom(items, 'detached')).toEqual([]);
   });
+
+  // Story 5: a Stub previewing detach (`placement.parentId: null`) leaves
+  // its section immediately, the moment the drag pops out to the column —
+  // not only once the write lands. `renderedIsStub` reads the `parentId`
+  // key's presence, not its truthiness (a `null` still means "has an
+  // opinion"), which is exactly what this placement relies on.
+  it("a Stub previewing detach (parentId: null) leaves the parent's section", () => {
+    const detaching = placements([['late', { parentId: null, workphaseId: 'w1', slot: 'last' }]]);
+    expect(getAttachedChildrenFrom(items, 'root', detaching).map(i => i.id)).toEqual(['early']);
+  });
 });
 
 // Regression coverage for audit Finding #15: deleting an item previously
@@ -170,6 +180,16 @@ describe('computeChildCounts', () => {
       item('a1', { parentId: 'a' }),
     ]);
     expect(counts).toEqual({ root: 2, a: 1 });
+  });
+
+  // Story 5: the count drops the moment a Stub's placement previews
+  // detaching (`parentId: null`) — the same placement-aware read
+  // `getAttachedChildrenFrom` uses, so the footer's "N children" and the
+  // section's own rendered list can never disagree mid-drag.
+  it("a detaching Stub (placement parentId: null) drops out of its former parent's count", () => {
+    const items = [item('root'), item('a', { parentId: 'root' }), item('b', { parentId: 'root' })];
+    const detaching = placements([['a', { parentId: null, workphaseId: 'w1', slot: 'last' }]]);
+    expect(computeChildCounts(items, detaching)).toEqual({ root: 1 });
   });
 });
 

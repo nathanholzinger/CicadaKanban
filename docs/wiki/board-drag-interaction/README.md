@@ -1,21 +1,29 @@
 # Board Drag Interaction — Contexts, Popping & Drop Resolution
 
 **Build status:** Rules settled for Epic 3.5; Stories 2–6 build them.
-**§4 (target classification) implemented as of Story 2** — computed once
-at drag start (`client/src/components/workflow/dragClassification.ts`),
-shown as a `data-drop-state` attribute plus provisional overlays on every
-Card and Stub. **§1–§3 (contexts, popping), §5 (column bands) and §10
-(ordinal preview, reconciliation, per-item sequencing) implemented as of
-Story 3, re-planned and rebuilt for Story 4 (2026-09-16)** — the pop
-machine is `workflow/popSession.ts`, the regions `workflow/dragRegions.ts`,
-the placement layer `workflow/itemListOps.ts`, and every threshold and band
-is a dev/test-panel value (`workflow/dragTuning.ts`, toolbar → "Drag
-tuning"). **§6 (attach), narrowed, implemented as of Story 4** — a Card is
-now a full context (§1.1), but its *within-action* is a constant (always
-append as the last child, §6) rather than the full anchor+side ruleset;
-that ruleset — §7 (the Descendants layer's manual hierarchy placement) —
-and §8 (detach) are Stories 5/6's; dragging a Stub out of its parent, or
-placing it anywhere but last inside a Card, stays held closed until then.
+**§4 (target classification) implemented as of Story 2, full classification
+(no Stub exclusion) as of Story 5** — computed once at drag start
+(`client/src/components/workflow/dragClassification.ts`), shown as a
+`data-drop-state` attribute plus provisional overlays on every Card and
+Stub. **§1–§3 (contexts, popping), §5 (column bands) and §10 (ordinal
+preview, reconciliation, per-item sequencing) implemented as of Story 3,
+re-planned and rebuilt for Story 4 (2026-09-16)** — the pop machine is
+`workflow/popSession.ts`, the regions `workflow/dragRegions.ts`, the
+placement layer `workflow/itemListOps.ts`, and every threshold and band is
+a dev/test-panel value (`workflow/dragTuning.ts`, toolbar → "Drag tuning").
+**§6 (attach), narrowed, implemented as of Story 4** — a Card is now a
+full context (§1.1), but its *within-action* is a constant (always append
+as the last child, §6) rather than the full anchor+side ruleset. **§1's
+Descendants layer, §8 (detach) and §10's `parentId: null` preview
+implemented as of Story 5 (2026-09-21)** — a Stub's drag starts there
+(`descendantsRegionKey`, `dragRegions.ts`), pops out through the Card
+layer to the column that contains it exactly as §8 describes, and every
+item drag (Card or Stub) shares one dnd-kit registration
+(`data: {type: 'item', role}`, decision 4). **§7 (the Descendants layer's
+full manual hierarchy placement — gap + depth, beyond the interim direct-
+sibling reorder Story 5 built) is Story 6's**; placing a Stub anywhere but
+directly among its own siblings, or zooming into a Card's own Descendants
+section from the Card layer, stays held closed until then.
 
 **The 2026-09-16 re-plan is a genuine rule change, not just Story 4's
 build catching up to §6.** Working the story with the Product Owner
@@ -31,13 +39,17 @@ where the bare cursor happens to be resting. A hovered-but-not-locked
 region only ever matters at Board layer (§5) — which is also the only
 layer where the band guides (`BandGuides.tsx`) draw anything.
 
-**Stories 5/6 rules settled with the Product Owner (2026-09-17), not yet
-built:** a fourth layer, **Descendants**, one inside the Card (§1.1) — it
-is where a Stub's drag starts and where manual hierarchy placement lives,
-under a single depth-range rule shared with the project sidebar (§7,
-which replaces the earlier Stub-band draft entirely); the detach path is
-two one-layer pops (§8); and the overflow placeholder (§9) is no longer a
-settled rule — Story 7 decides whether it exists at all.
+**Stories 5/6 rules settled with the Product Owner (2026-09-17):** a
+fourth layer, **Descendants**, one inside the Card (§1.1) — it is where a
+Stub's drag starts and where manual hierarchy placement lives, under a
+single depth-range rule shared with the project sidebar (§7, which
+replaces the earlier Stub-band draft entirely); the detach path is two
+one-layer pops (§8); and the overflow placeholder (§9) is no longer a
+settled rule — Story 7 decides whether it exists at all. **Story 5
+(2026-09-21) builds the layer's origin, its two-pop exit, and the interim
+sibling-reorder within-action; §7's full gap + depth placement, and
+zooming into a Descendants section from the Card layer at all, are
+Story 6's.**
 
 **Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
 
@@ -79,11 +91,13 @@ something else. There are two kinds:
   sub-row that contains it (§1.1, Story 4). Its within-action is the
   auto-drop (§6).
 - **A Card's Descendants** — the context for its Stubs (its attached
-  descendants), one layer inside the Card (§1.1, Stories 5/6). Its
-  within-action is manual hierarchy placement (§7). *(Ruled 2026-09-17.
-  Earlier drafts named the Card itself as a Stub's context; under the
-  layer stack that would leave a Stub no way to be reordered by hand,
-  since the Card layer's within-action is the auto-drop.)*
+  descendants, **at every depth** — one Descendants layer per Card, never
+  one per Stub; §7.1's root), one layer inside the Card (§1.1, Stories
+  5/6). Its within-action is manual hierarchy placement (§7). *(Ruled
+  2026-09-17. Earlier drafts named the Card itself as a Stub's context;
+  under the layer stack that would leave a Stub no way to be reordered by
+  hand, since the Card layer's within-action is the auto-drop. The
+  every-depth reading ruled 2026-09-21, Story 5 decision 1.)*
 
 **A region is a bounded box.** Only the box counts — not the column's
 horizontal stripe above or below it. A column's header and footer, the
@@ -107,8 +121,11 @@ from Unsorted, which starts popped out with no context (§3). Nothing about
 the drag's start is a user choice. **A Free Card's drag never starts
 inside a Card** — only a column/sub-row, or (from Unsorted) nowhere; a
 Card is reachable only by zooming in (§1.1, §3). **A Stub's drag starts
-at its parent's Descendants layer** (§1.1, §8), so reordering it among
-its siblings costs no pop at all.
+at its *containing Card's* Descendants layer** — the nearest Free
+ancestor's section, whatever the Stub's depth beneath it: a grandchild's
+drag starts in the same section as its parent's, and popping out of it
+lands on that Card, never on the parent Stub (§1.1, §8; ruled 2026-09-21,
+Story 5 decision 1). Reordering it among its siblings costs no pop at all.
 
 **Why the sub-row and not the column, in expanded mode:** an expanded
 column exists precisely to make each workphase individually targetable. If
@@ -126,7 +143,7 @@ one moment it most needs to.
 | **Board** | (the top) | a column/sub-row | §5's band, on release |
 | **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — anchor + side |
 | **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (Story 6) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
-| **Descendants** (Stories 5/6) | its own Card, only; or where a Stub's drag starts | *(none)* | manual hierarchy placement — gap + depth (§7) |
+| **Descendants** (Stories 5/6) | its own Card, only; or where a Stub's drag starts (at any depth beneath that Card) | *(none)* | manual hierarchy placement — gap + depth (§7) |
 
 *(Three layers as built for Story 4; the Descendants row ruled
 2026-09-17.)* A Card with no attached children has no descendants
@@ -413,11 +430,11 @@ for its own ancestor.
   expanded column's outer wrapper (a drop must land on a specific sub-row).
   These are non-targets for *every* item, not just this one, which is what
   separates Inert from Depth-capped.
-- For a **Stub** drag, *until Story 5 opens the detach direction*: every
-  target outside its own parent's Stub list. Its siblings are Valid
-  (reposition targets); the parent Card, other Cards, and other Cards'
-  Stubs are Inert. Story 5 replaces this interim rule with the full
-  classification.
+- For a **Stub** drag: nothing — classified exactly like a Card would be
+  (DRAG-2.7), full stop. *(As of Story 5, 2026-09-21. The interim rule
+  through Story 4 — every target outside its own parent's Stub list Inert,
+  only its siblings Valid — retired here: `dragClassification.ts` no
+  longer branches on the dragged item's own attachment at all.)*
 
 **The depth cap reaches the board over the API.** `GET /boards/:id`
 carries `itemDepthCap`, the server's `ITEM_DEPTH_CAP`; the client never
@@ -683,13 +700,22 @@ cursor rests, nothing about the preview is left to promise otherwise.
 
 ## 7. The Descendants layer: manual hierarchy placement
 
-**Not yet built (Story 6).** The Descendants layer is one inside a Card
-(§1.1): a Free Card reaches it by zooming into the Card and then holding
-over its descendants section; a Stub's drag *starts* here (§1, §8). Its
-within-action is precise placement in the parent's hierarchy — the same
-ruleset as the project sidebar, deliberately, and Story 6 consolidates the
-two into one shared library. From the Card layer down the carried item is
-represented as a Stub-ghost.
+**§7.1–§7.2's full gap + depth ruleset below is not yet built (Story 6).**
+The layer itself is built (Story 5): it's one inside a Card (§1.1), a
+Stub's drag *starts* there (§1, §8), and its within-action, until Story 6,
+is the interim direct-sibling reorder — a Free Card reaching it by
+zooming into the Card and holding over its descendants section is still
+Story 6's, since `childRegionAt` never returns one as a zoom-in candidate
+yet (decision 3). The full ruleset below is precise placement in the
+parent's hierarchy — the same ruleset as the project sidebar,
+deliberately, and Story 6 consolidates the two into one shared library.
+From the Card layer down the **in-list ghost** is a Stub row; the
+**carried copy under the cursor stays the shortCard (§5a) at every
+layer** — one shape for the whole drag, and the Column ↔ Card boundary
+converts only the in-list representation, both ways (§8, DRAG-5.10,
+implemented as of Story 5). *(Ruled 2026-09-21, Story 5 decision 6; an
+earlier wording here — "represented as a Stub-ghost from the Card layer
+down" — meant the in-list ghost only.)*
 
 *(Ruled 2026-09-17, replacing the earlier draft of this section entirely.
 That draft had a Card-level Stub band — top half "first child," bottom
@@ -787,11 +813,13 @@ Top and Bottom. Whether the board ever shows a partial hierarchy is Story
 
 ## 8. Stub → out: detach
 
-**A Stub can be dragged out of its parent Card.** Its drag starts at the
-parent's Descendants layer (§1.1), so the common case — reordering it
-among its siblings, or moving it under a sibling — is the within-action
-there (§7) and needs no pop at all. Leaving the parent is a zoom-out, and
-by §1.1 rule 2 it is **two one-layer pops** (ruled 2026-09-17):
+**A Stub can be dragged out of its parent Card.** Its drag starts at its
+*containing Card's* Descendants layer (§1, §1.1) — for a grandchild that
+is still the Card's whole section, not its parent Stub's sub-list — so
+the common case — reordering it among its siblings, or moving it under a
+sibling — is the within-action there (§7) and needs no pop at all.
+Leaving the Card is a zoom-out, and by §1.1 rule 2 it is **two one-layer
+pops** (ruled 2026-09-17):
 
 1. **Descendants → Card** — the cursor rests outside the descendants
    section (still inside the Card's box) past the shared pop-out
@@ -832,8 +860,13 @@ wasn't already in. This matters for a parent sitting in a *non-entry*
 workphase of a merged column: detaching its child in place must not
 silently walk that child back to the entry workphase.
 
-This direction is currently held closed in the board's drag layer; Story 5
-opens it.
+**Implemented as of Story 5 (2026-09-21).** `useBoardDnd.ts::handleDragStart`
+routes a Stub drag to `descendantsRegionKey(containingCardId)` instead of
+the old `pop: null` bypass; the two pops fall out of `popSession.ts`'s
+existing layer-generic pop-out clock, unchanged, once a `descendants`
+region carries a real `parentRegionKey`; and `toRequest`
+(`boardDndUtils.ts`) sends the detach (`isAttached: false`, `parentId`
+untouched) once `placementFor`'s card-list branch previews the item Free.
 
 ## 9. Depth overflow
 
@@ -912,9 +945,19 @@ first-time workphase assignment) previews at `last` instead, matching the
 append fallback it will actually resolve to (item-positioning §2 addendum,
 §7.5; the position-sort's null-coerced-to-zero tie-break would otherwise
 draw it at the top, then have it land at the bottom — reconciliation #29,
-the mirror of the done-list fix below). The placement is the ghost during
-the drag and the pending marker (`data-pending`) after release; nothing in
-the item is touched until the response. An inversion is recorded in the
+the mirror of the done-list fix below). **The general rule behind #29
+(ruled 2026-09-21, Story 5 decision 5): the preview shows where the write
+will actually land the item.** So an item whose kept position is not
+*comparable* in the list it's previewing into — a Stub, numbered among
+its attached siblings, arriving Free in a column's workflow-wide list
+(§8) — likewise rests at `last`, never `existing`, matching the append
+fallback a detach without an anchor resolves to; hover displacement moves
+it from there exactly as for any Card. *(Implemented as of Story 5,
+2026-09-21 — `popSession.ts::noAnchorSlot`, keyed off whether the drag's
+own `origin` carries a `parentId`.)* The
+placement is the ghost during the drag and the pending marker
+(`data-pending`) after release; nothing in the item is touched until the
+response. An inversion is recorded in the
 dev/test panel's inversion log (kept across board reloads while the board
 is open) — the panel is where it surfaces; nothing goes to the console.
 

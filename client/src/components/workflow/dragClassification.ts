@@ -14,6 +14,14 @@ import { isStub } from '../../lib/isStub';
 // to it (DRAG-2.4). Stories 3/4/6 consult this map to decide what's
 // poppable and what a drop means; in this story it only drives the
 // `data-drop-state` attribute and the provisional overlays.
+//
+// Story 5 (2026-09-21): a Stub is classified on exactly the same terms as a
+// Card, below — the interim "everything outside its own parent's Stub list
+// is Inert" rule retires (DRAG-2.7). Full classification is what makes the
+// zoom-in reparent (TC-4) and Board-layer detach (TC-1–3) need no
+// classification code of their own: every Card and Stub is already valid/
+// cycle-forming/depth-capped for a Stub drag exactly as it would be for a
+// Free Card's.
 
 export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped' | 'inert';
 
@@ -50,11 +58,6 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
   const descendantIds = new Set(levels.flat());
   const height = levels.length;
 
-  // A Stub drag is confined to its parent's Stub list until Story 5 opens
-  // the detach direction: siblings are reposition targets, everything else
-  // is Inert for now (planning decision 2).
-  const stubDrag = isStub(active);
-
   for (const item of items) {
     if (item.id === activeId || descendantIds.has(item.id)) {
       // Descent is through the hierarchy, attachment irrelevant (DRAG-2.2),
@@ -64,12 +67,8 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
       if (item.id !== activeId && !isStub(item)) freeDescendantIds.add(item.id);
       continue;
     }
-    if (stubDrag) {
-      const isSibling = isStub(item) && item.parentId === active.parentId;
-      states.set(item.id, isSibling ? 'valid' : 'inert');
-      continue;
-    }
-    // Stubs are classified on their own merits, same as Cards (DRAG-2.7).
+    // A Stub is classified on exactly the same terms as a Card (DRAG-2.7,
+    // Story 5) — full classification, no separate "siblings only" branch.
     states.set(item.id, isWithinDepthCap(getDepth(item.id, items), height, cap) ? 'valid' : 'depth-capped');
   }
 

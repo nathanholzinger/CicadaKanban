@@ -28,6 +28,16 @@ export interface CollisionSession {
   hoverContainerId: string | null;
   /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), or while genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
+  /**
+   * Story 5: locked at a Descendants context, the `parentId` whose Stub
+   * rows are in-context collision candidates (decision 1's "direct
+   * siblings" scope) — read from the pop session's own `origin`, never
+   * from dnd-kit's `active.data.current` (decision 4: the active row's own
+   * `role`/`parentId` are exactly the fields that could lag a mid-drag
+   * remount, so no policy decision here depends on them). Null at every
+   * other context.
+   */
+  siblingScopeParentId: string | null;
 }
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
@@ -35,51 +45,71 @@ export interface CollisionSession {
 // §1–§3, §5–§6), which is why this is a factory over the live session
 // rather than a constant:
 //
-//   - Card drag, locked (a column/sub-row, or a Card): closestCorners over
-//     the context's container and the cards whose rect lies inside it —
-//     the in-context reorder, unchanged in feel from Epic 3.2. A Card
-//     context is never actually resolved this way (its within-action is a
-//     constant append — popSession.ts::placementFor's Card branch never
-//     reads `over`), but restricting candidates here is still what keeps
-//     dnd-kit from shifting a sibling against a hover rule 1 ignores.
-//   - Card drag, Board layer (popped out), hovering a region: `over` is
-//     that region's container and never a card in it, so the target
-//     column's sortable doesn't shift against a hover the band alone
-//     resolves; the ghost's index comes from the placement instead.
-//   - Card drag with no context and no hover (picked up in Unsorted,
-//     nothing hovered yet): nothing.
+//   - Card or Stub drag, locked (a column/sub-row, a Card, or a Descendants
+//     section): closestCorners over the context's container and the cards
+//     (or, at a Descendants context, the sibling rows) whose rect lies
+//     inside it — the in-context reorder, unchanged in feel from Epic 3.2.
+//     A Card context is never actually resolved this way (its within-
+//     action is a constant — popSession.ts::placementFor's Card branch
+//     never reads `over`), but restricting candidates here is still what
+//     keeps dnd-kit from shifting a sibling against a hover rule 1 ignores.
+//   - Card or Stub drag, Board layer (popped out), hovering a region:
+//     `over` is that region's container and never a card in it, so the
+//     target column's sortable doesn't shift against a hover the band
+//     alone resolves; the ghost's index comes from the placement instead.
+//   - Card or Stub drag with no context and no hover (picked up in
+//     Unsorted, nothing hovered yet): nothing.
 //
-// Epic 3.2 Part 3, unchanged: attached-child rows are only ever valid
-// collision targets for another attached-child drag under the *same* parent
-// — never for a card or column drag, and never for a different parent's
-// children (including, still, a Card drag locked into that parent's own
-// context — Story 4's narrowed scope has no anchor+side among Stubs to
-// resolve). dnd-kit has no notion of a nested child being "inside" the
-// dragged card, so it has to be told to ignore it here.
+// Decision 4 (2026-09-21): every item row registers `data: {type: 'item',
+// role: 'card' | 'stub', parentId?}`, never a type that differs between a
+// Stub's own row and a popped-out Card row for the *same* id — the one
+// hazard this collision closure exists to sidestep is `active.data.current`
+// lagging a mid-drag remount (a Stub's row unmounting from its Descendants
+// section, a Card row mounting in its place), so nothing below reads
+// `activeData.role`/`activeData.parentId` for a policy decision; every
+// "which kind of drag, which scope" question is answered from the pop
+// session's own state (`liveSession`, computed by `useBoardDnd.ts` from
+// `regionsRef`/`sessionRef`), never dnd-kit's. Only `activeData.type`
+// (`'item'` vs `'column'`, which never changes for either row) gates
+// whether the machine applies at all. `data?.role === 'stub'` on a
+// *droppable* row is safe to read here — that row isn't the one being
+// dragged, so it isn't the one at risk of a stale reference.
 export function resolveBoardCollisions(
   args: Parameters<CollisionDetection>[0],
   liveSession: CollisionSession | null,
 ): ReturnType<CollisionDetection> {
   const activeData = args.active.data.current;
-  const session = activeData?.type === 'card' ? liveSession : null;
+  const session = activeData?.type === 'item' ? liveSession : null;
 
   if (session?.hoverContainerId) {
     const container = args.droppableContainers.find(c => c.id === session.hoverContainerId);
     return container ? [{ id: container.id, data: { droppableContainer: container, value: 0 } }] : [];
   }
 
+  if (session && session.siblingScopeParentId !== null) {
+    const scopeParentId = session.siblingScopeParentId;
+    const droppableContainers = args.droppableContainers.filter(container => {
+      if (container.id === args.active.id) return false;
+      const data = container.data.current;
+      return data?.type === 'item' && data?.role === 'stub' && data?.parentId === scopeParentId;
+    });
+    return closestCorners({ ...args, droppableContainers });
+  }
+
   const droppableContainers = args.droppableContainers.filter(container => {
     if (container.id === args.active.id) return false; // never collide with self
     const data = container.data.current;
-    if (activeData?.type === 'attached-child') {
-      return data?.type === 'attached-child' && data?.parentId === activeData.parentId;
-    }
-    if (data?.type === 'attached-child') return false; // never a valid target for a card drag
+    if (data?.type === 'item' && data?.role === 'stub') return false; // never a valid target for a Card-layer or Board drop
     if (!session) return true; // column drag, or no machine in play
     if (!session.context) return false;
     if (container.id === session.context.containerId) return true;
     const rect = args.droppableRects.get(container.id);
-    return data?.type === 'card' && rect !== undefined && rectCenterInside(rect, session.context.rect);
+    return (
+      data?.type === 'item' &&
+      data?.role === 'card' &&
+      rect !== undefined &&
+      rectCenterInside(rect, session.context.rect)
+    );
   });
   return closestCorners({ ...args, droppableContainers });
 }
@@ -147,36 +177,31 @@ function anchorFor(
   return {};
 }
 
-// Decision 2 (2026-09-17): a placement that resolves to the list and
-// ordinal the item already occupies writes nothing, at every layer — this
-// subsumes every prior per-case "nothing to write" (a covered-set member
-// in the middle band, TC-7.16; an empty or done region, TC-7.5/7.8) into
-// one rule. Same list: a `parentId` placement matching the item's current
-// parent *and* the item currently attached to it — a detached child has
-// the parentId without the attachment (Epic 3: it's a Free Card in a
-// column list, not a Stub in that parent's), so re-attaching it to its own
-// parent is a genuine list change the server accepts as an attach toggle
-// (audit epic-3-5-story-4 #1); or a `workphaseId` one matching its current
-// workphase (an omitted `workphaseId` always means "unchanged" — nothing
-// upstream ever builds a Placement that names the list without changing
-// it). Story 5 replaces this whole comparison with the session's `origin`
-// — a detached child's origin is a workphase placement, so the two kinds
-// never match — and the `isAttached` read goes with it. Same
-// ordinal: `'existing'` always; `'first'`/`'last'`/an explicit anchor only
-// when `others` is empty, or the anchor isn't one of them — genuinely
-// nothing to order against, the same reason an empty/done region or a
-// stray self-reference (`others` excludes the active item, so its own id
-// can never match) used to resolve to no request. A non-trivial
+// Decision 2 (2026-09-17), replaced by Story 5 (2026-09-21): a placement
+// that resolves to the list and ordinal the item already occupies writes
+// nothing, at every layer — this subsumes every prior per-case "nothing to
+// write" (a covered-set member in the middle band, TC-7.16; an empty or
+// done region, TC-7.5/7.8) into one rule. Compared against the session's
+// own `origin` — where the drag genuinely started — rather than the raw
+// item's `(parentId, isAttached)`/`workphaseId` fields (the old
+// comparison, which mistook a *detached* child of X for X's own Stub;
+// audit epic-3-5-story-4 #1's `isAttached` guard is retired with it, since
+// a detached child's origin is a *workphase* placement and a re-attach's
+// is a *parent* one — the two kinds simply never match). Same list: both
+// name a `parentId` and it's the same one, or neither names a `parentId`
+// and the `workphaseId`s agree (an omitted `workphaseId` always means
+// "unchanged"). Same ordinal: `'existing'` always; `'first'`/`'last'`/an
+// explicit anchor only when `others` is empty, or the anchor isn't one of
+// them — genuinely nothing to order against, the same reason an empty/done
+// region or a stray self-reference (`others` excludes the active item, so
+// its own id can never match) used to resolve to no request. A non-trivial
 // anchor/first/last is never identity even if it happens to already
-// describe the same neighbor — the bands never checked that before
-// either, and this story changes no band or threshold.
-export type IdentitySubject = Pick<Item, 'workphaseId' | 'parentId' | 'isAttached'>;
-
-export function isIdentity(item: IdentitySubject, placement: Placement, others: readonly { id: string }[]): boolean {
+// describe the same neighbor — the bands never checked that before either.
+export function isIdentity(origin: Placement, placement: Placement, others: readonly { id: string }[]): boolean {
   const sameList =
     'parentId' in placement
-      ? placement.parentId === item.parentId && Boolean(item.isAttached)
-      : (placement.workphaseId ?? item.workphaseId) === item.workphaseId;
+      ? 'parentId' in origin && placement.parentId === origin.parentId
+      : (placement.workphaseId ?? origin.workphaseId) === origin.workphaseId;
   if (!sameList) return false;
   // Hoisted to a const so the narrowing survives into the `some` callback —
   // a property path (`placement.slot`) doesn't narrow inside a closure.
@@ -194,20 +219,38 @@ export function isIdentity(item: IdentitySubject, placement: Placement, others: 
 // (F3). `null` for a `null` placement (drawn where it already is) or an
 // identity (decision 2) alike — the caller sends nothing either way, and
 // the placement itself (never a value re-derived from this request) is
-// what stays on as the pending marker (§10).
+// what stays on as the pending marker (§10). `item` is only consulted for
+// its *current* `workphaseId`, to decide whether the field is even worth
+// sending — never for the identity check itself (that's `origin`'s job).
 export function toRequest(
-  item: IdentitySubject,
+  item: Pick<Item, 'workphaseId'>,
+  origin: Placement,
   placement: Placement | null,
   others: readonly { id: string }[],
 ): MoveItemInput | null {
-  if (!placement || isIdentity(item, placement, others)) return null;
+  if (!placement || isIdentity(origin, placement, others)) return null;
+  const workphaseId = placement.workphaseId !== item.workphaseId ? placement.workphaseId : undefined;
   if ('parentId' in placement) {
-    // Story 4: attach as the last Stub, inheriting the parent's workphase
-    // server-side — no anchor, no workphaseId of its own. Manual anchor +
-    // side placement among Stubs is Story 6.
+    if (placement.parentId === null) {
+      // Story 5: detaching (a card-list placement previewing Free,
+      // `parentId: null`) — the real `parentId` stays exactly what it
+      // already is (item-attachment §11: detach preserves the parent);
+      // only the attachment flag clears, and the position resolves in the
+      // workflow-wide scope like any Card's.
+      return { workphaseId, isAttached: false, ...anchorFor(placement.slot, others) };
+    }
+    if (typeof placement.slot === 'object') {
+      // Story 5 decision 1: a Descendants-layer sibling reorder — same
+      // parent as before, position-only, the pre-Story-5 attached-child
+      // sibling-reorder request unchanged (no parentId/isAttached: the
+      // attachment itself isn't changing, only the ordinal is).
+      return anchorFor(placement.slot, others);
+    }
+    // Attach as the last child, workphase inherited server-side: Story
+    // 4's Card auto-drop for an item from outside, or Story 5 TC-4's
+    // reparent into a different Card.
     return { parentId: placement.parentId, isAttached: true };
   }
-  const workphaseId = placement.workphaseId !== item.workphaseId ? placement.workphaseId : undefined;
   return { workphaseId, ...anchorFor(placement.slot, others) };
 }
 

@@ -69,21 +69,21 @@ describe('buildColumnForWorkphaseMap', () => {
 describe('resolveBoardCollisions', () => {
   it('never collides an item with itself', () => {
     const result = resolveBoardCollisions(
-      collisionArgs('card-a', { type: 'card' }, [{ id: 'card-a', data: { type: 'card' } }]),
+      collisionArgs('card-a', { type: 'item', role: 'card' }, [{ id: 'card-a', data: { type: 'item', role: 'card' } }]),
       null,
     );
     expect(result).toHaveLength(0);
   });
 
-  it('excludes attached-child containers from a card drag (the collision-hijack bug this guards against)', () => {
+  it('excludes Stub rows from a Card drag (the collision-hijack bug this guards against)', () => {
     // Regression: a card being dragged must never resolve onto its own (or
     // any) attached child, even when that child's rect happens to be
     // closest — this is exactly what let a nested "Cascading Kid" row
     // hijack its parent's cross-column drop once attached children became
     // draggable (Epic 3.2 Part 3).
     const result = resolveBoardCollisions(
-      collisionArgs('card-a', { type: 'card' }, [
-        { id: 'child-1', data: { type: 'attached-child', parentId: 'card-a' } },
+      collisionArgs('card-a', { type: 'item', role: 'card' }, [
+        { id: 'child-1', data: { type: 'item', role: 'stub', parentId: 'card-a' } },
         { id: 'col-1', data: { type: 'column' } },
       ]),
       null,
@@ -92,14 +92,39 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toContain('col-1');
   });
 
-  it('scopes an attached-child drag to siblings under the same parent only', () => {
+  // Story 5: the Descendants-context sibling scope comes from the *live
+  // session* (`siblingScopeParentId`, computed by useBoardDnd.ts from the
+  // pop session's own `origin`) — never from the active row's own `data`.
+  it("scopes a Descendants context's collisions to siblings sharing the session's own siblingScopeParentId", () => {
+    const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
     const result = resolveBoardCollisions(
-      collisionArgs('child-a', { type: 'attached-child', parentId: 'parent-1' }, [
-        { id: 'child-b', data: { type: 'attached-child', parentId: 'parent-1' } }, // true sibling
-        { id: 'child-c', data: { type: 'attached-child', parentId: 'parent-2' } }, // different parent
-        { id: 'col-1', data: { type: 'column' } }, // never a valid target for an attached-child drag
+      collisionArgs('child-a', { type: 'item', role: 'stub', parentId: 'parent-1' }, [
+        { id: 'child-b', data: { type: 'item', role: 'stub', parentId: 'parent-1' } }, // true sibling
+        { id: 'child-c', data: { type: 'item', role: 'stub', parentId: 'parent-2' } }, // different parent
+        { id: 'col-1', data: { type: 'column' } }, // never a valid target for a Descendants-context drag
       ]),
-      null,
+      session,
+    );
+    expect(result.map(r => r.id)).toEqual(['child-b']);
+  });
+
+  // Decision 4's own regression guard (2026-09-21): the hazard is a Stub's
+  // row unmounting from its Descendants section and remounting as a Card
+  // row for the *same* id mid-drag, so `active.data.current.role` could in
+  // principle lag one frame behind. Every policy decision here is keyed off
+  // `liveSession` (our own pure state) instead — this proves it, by feeding
+  // a deliberately *wrong* active role (`'card'`, as if the remount hadn't
+  // been picked up yet) alongside a live session that says otherwise, and
+  // asserting the outcome still matches the live session, not the stale
+  // active data.
+  it("never reads the active row's own role — a stale 'card' role alongside a live Descendants session still scopes correctly", () => {
+    const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
+    const result = resolveBoardCollisions(
+      collisionArgs('child-a', { type: 'item', role: 'card' }, [
+        { id: 'child-b', data: { type: 'item', role: 'stub', parentId: 'parent-1' } },
+        { id: 'child-c', data: { type: 'item', role: 'stub', parentId: 'parent-2' } },
+      ]),
+      session,
     );
     expect(result.map(r => r.id)).toEqual(['child-b']);
   });
@@ -109,15 +134,18 @@ describe('resolveBoardCollisions', () => {
     const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
     const containers: Container[] = [
       { id: 'col-a', data: { type: 'column' }, rect: rect(0, 0, 100, 400) },
-      { id: 'card-a1', data: { type: 'card' }, rect: rect(5, 10, 90, 50) },
+      { id: 'card-a1', data: { type: 'item', role: 'card' }, rect: rect(5, 10, 90, 50) },
       { id: 'col-b', data: { type: 'column' }, rect: rect(120, 0, 100, 400) },
-      { id: 'card-b1', data: { type: 'card' }, rect: rect(125, 10, 90, 50) },
-      { id: 'child-1', data: { type: 'attached-child', parentId: 'card-a1' }, rect: rect(10, 30, 80, 20) },
+      { id: 'card-b1', data: { type: 'item', role: 'card' }, rect: rect(125, 10, 90, 50) },
+      { id: 'child-1', data: { type: 'item', role: 'stub', parentId: 'card-a1' }, rect: rect(10, 30, 80, 20) },
     ];
 
     it('in-context: only the context container and the cards inside it are candidates', () => {
-      const session: CollisionSession = { hoverContainerId: null, context };
-      const ids = resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session).map(c => c.id);
+      const session: CollisionSession = { hoverContainerId: null, context, siblingScopeParentId: null };
+      const ids = resolveBoardCollisions(
+        collisionArgs('card-x', { type: 'item', role: 'card' }, containers),
+        session,
+      ).map(c => c.id);
       expect(ids).toContain('col-a');
       expect(ids).toContain('card-a1');
       expect(ids).not.toContain('col-b');
@@ -126,24 +154,19 @@ describe('resolveBoardCollisions', () => {
     });
 
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
-      const session: CollisionSession = { hoverContainerId: 'col-b', context };
+      const session: CollisionSession = { hoverContainerId: 'col-b', context, siblingScopeParentId: null };
       expect(
-        resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session).map(c => c.id),
+        resolveBoardCollisions(collisionArgs('card-x', { type: 'item', role: 'card' }, containers), session).map(
+          c => c.id,
+        ),
       ).toEqual(['col-b']);
     });
 
     it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
-      const session: CollisionSession = { hoverContainerId: null, context: null };
-      expect(resolveBoardCollisions(collisionArgs('card-x', { type: 'card' }, containers), session)).toHaveLength(0);
-    });
-
-    it('the machine only governs card drags — an attached-child drag is scoped to its siblings as before', () => {
-      const session: CollisionSession = { hoverContainerId: 'col-b', context };
-      const ids = resolveBoardCollisions(
-        collisionArgs('child-x', { type: 'attached-child', parentId: 'card-a1' }, containers),
-        session,
-      ).map(c => c.id);
-      expect(ids).toEqual(['child-1']);
+      const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: null };
+      expect(
+        resolveBoardCollisions(collisionArgs('card-x', { type: 'item', role: 'card' }, containers), session),
+      ).toHaveLength(0);
     });
   });
 });
@@ -189,92 +212,118 @@ describe('resolveDropSide', () => {
   });
 });
 
-// Story 4.1 Phase 3 — decision 2 (2026-09-17): a placement that resolves to
-// the item's own current list and ordinal writes nothing. Replaces
-// bandDropResolution's per-case nulls and resolveDropTarget's "same
-// workphase → reorder" branch alike: both were really this one rule.
+// Story 4.1 Phase 3 — decision 2 (2026-09-17), replaced by Story 5
+// (2026-09-21): a placement that resolves to the item's own *origin* list
+// and ordinal writes nothing. Replaces bandDropResolution's per-case nulls
+// and resolveDropTarget's "same workphase → reorder" branch alike: both
+// were really this one rule.
 describe('isIdentity', () => {
-  const outsider = { workphaseId: 'w1', parentId: null, isAttached: 0 };
-  const member = { workphaseId: 'w2', parentId: null, isAttached: 0 };
+  const freeOrigin: Placement = { workphaseId: 'w2', slot: 'existing' };
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a different workphase is never identity, whatever the slot (DRAG-3.1/3.2/3.6)', () => {
-    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(false);
-    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
-    expect(isIdentity(outsider, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
+    const outsiderOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+    expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(false);
+    expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
+    expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(
+      false,
+    );
   });
 
   it('same workphase, slot existing: always identity (middle band member, TC-7.16)', () => {
-    expect(isIdentity(member, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
     // An omitted workphaseId means "unchanged" — same rule, no literal to compare.
-    expect(isIdentity(member, { slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(freeOrigin, { slot: 'existing' }, others)).toBe(true);
   });
 
   it('same workphase, empty others: any slot is identity — nothing to order against (DRAG-3.10 / TC-7.5, DRAG-3.9 / TC-7.8)', () => {
-    expect(isIdentity(member, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
-    expect(isIdentity(member, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
-    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
   });
 
   it('same workphase, empty others, but a genuine outsider: not identity — the workphase itself is still changing', () => {
-    expect(isIdentity(outsider, { workphaseId: 'w2', slot: 'first' }, [])).toBe(false);
+    const outsiderOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+    expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(false);
   });
 
   it('same workphase, non-empty others, a real anchor found: not identity — a genuine reorder (DRAG-3.7 top/bottom)', () => {
-    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
-    expect(isIdentity(member, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
-    expect(isIdentity(member, { workphaseId: 'w2', slot: 'last' }, others)).toBe(false);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, others)).toBe(false);
   });
 
   it('same workphase, an anchor absent from others (hovering itself, or a stray id): identity — nothing sensible to order against', () => {
-    expect(isIdentity(member, { workphaseId: 'w2', slot: { anchorId: 'not-there', side: 'after' } }, others)).toBe(
+    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'not-there', side: 'after' } }, others)).toBe(
       true,
     );
   });
 
-  it("a parentId placement compares against the item's current parent, never its workphase", () => {
-    const stub = { workphaseId: 'w1', parentId: 'card-1', isAttached: 1 };
-    expect(isIdentity(stub, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
-    expect(isIdentity(stub, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
-    // A root-level Free Card has no parent to match at all.
-    expect(isIdentity(outsider, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+  it("a parentId placement compares against the origin's own parentId, never a workphase", () => {
+    const stubOrigin: Placement = { parentId: 'card-1', slot: 'existing' };
+    expect(isIdentity(stubOrigin, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(stubOrigin, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
+    // A Free Card's origin has no parentId key at all to match against.
+    expect(isIdentity(freeOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
   });
 
-  it("a detached child re-attaching to its own parent is not identity — same parentId, but it isn't in that parent's list (audit epic-3-5-story-4 #1)", () => {
-    // Epic 3's model: `parentId` set, `isAttached` off — a Free Card in a
-    // column, classified `valid` against its own parent (an ancestor is
-    // never a descendant), so it can zoom in. The parent's Stub list is a
-    // different list from the column it's in; "same parent" alone is not
-    // "same list."
-    const detachedChild = { workphaseId: 'w1', parentId: 'card-1', isAttached: 0 };
-    expect(isIdentity(detachedChild, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
-    expect(isIdentity(detachedChild, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
+  // Story 5 (2026-09-21): the origin comparison retires audit
+  // epic-3-5-story-4 #1's `isAttached` guard entirely — a detached child's
+  // origin is a *workphase* placement (its own, wherever it currently sits
+  // on the board), never a `parentId` one, so it can never collide with a
+  // re-attach's `parentId` placement the way the old raw-item comparison
+  // could.
+  it("a detached child re-attaching to its own former parent is not identity — its origin is a workphase placement, never that parent's", () => {
+    const detachedChildOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+    expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+    expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
+  });
+
+  // TC-12: a Stub released at its own containing Card's layer previews
+  // `origin` itself (popSession.ts) — proving that's recognized as identity
+  // here too, not just structurally equal by construction.
+  it("a Stub's own origin, placed back at itself, is identity — TC-12's set-back-down", () => {
+    const stubOrigin: Placement = { parentId: 'card-p', slot: 'existing' };
+    expect(isIdentity(stubOrigin, stubOrigin, others)).toBe(true);
   });
 });
 
-// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10: the request a resolved placement
-// turns into — the one adapter from the ghost's own terms to the item's,
-// replacing resolveDropTarget + buildMoveInput's independent re-derivation
-// (F3).
+// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10, and Story 5's TC-1/2/4/9: the
+// request a resolved placement turns into — the one adapter from the
+// ghost's own terms to the item's, replacing resolveDropTarget +
+// buildMoveInput's independent re-derivation (F3). `item` is now only
+// consulted for its own current `workphaseId` (whether the field is worth
+// sending); the identity check itself is `origin`'s job (`isIdentity`,
+// tested above).
 describe('toRequest', () => {
-  const outsider = { workphaseId: 'w1', parentId: null, isAttached: 0 };
-  const member = { workphaseId: 'w2', parentId: null, isAttached: 0 };
+  const originFor = (workphaseId: string): Placement => ({ workphaseId, slot: 'existing' });
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a null placement sends nothing — drawn where it already is', () => {
-    expect(toRequest(outsider, null, others)).toBeNull();
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), null, others)).toBeNull();
   });
 
   it('an identity sends nothing (decision 2)', () => {
-    expect(toRequest(member, { workphaseId: 'w2', slot: 'existing' }, others)).toBeNull();
+    expect(
+      toRequest({ workphaseId: 'w2' }, originFor('w2'), { workphaseId: 'w2', slot: 'existing' }, others),
+    ).toBeNull();
   });
 
   it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider / TC-7.16-shaped, middle band)', () => {
-    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'existing' }, others)).toEqual({ workphaseId: 'w2' });
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'existing' }, others)).toEqual({
+      workphaseId: 'w2',
+    });
   });
 
   it('cross-column with a specific anchor: workphaseId + anchor + side (TC-2.11)', () => {
-    expect(toRequest(outsider, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'after' } }, others)).toEqual({
+    expect(
+      toRequest(
+        { workphaseId: 'w1' },
+        originFor('w1'),
+        { workphaseId: 'w2', slot: { anchorId: 'A', side: 'after' } },
+        others,
+      ),
+    ).toEqual({
       workphaseId: 'w2',
       anchorId: 'A',
       side: 'after',
@@ -282,12 +331,12 @@ describe('toRequest', () => {
   });
 
   it("first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, 3.2)", () => {
-    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'A',
       side: 'before',
     });
-    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'last' }, others)).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'last' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'C',
       side: 'after',
@@ -295,35 +344,83 @@ describe('toRequest', () => {
   });
 
   it('empty others: first/last send a bare workphase move, no anchor to resolve (DRAG-3.10)', () => {
-    expect(toRequest(outsider, { workphaseId: 'w2', slot: 'first' }, [])).toEqual({ workphaseId: 'w2' });
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
+      workphaseId: 'w2',
+    });
   });
 
   it('same workphase, a real anchor: no workphaseId sent, just the anchor (in-context reorder, TC-2.11)', () => {
-    expect(toRequest(member, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toEqual({
+    expect(
+      toRequest(
+        { workphaseId: 'w2' },
+        originFor('w2'),
+        { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } },
+        others,
+      ),
+    ).toEqual({
       anchorId: 'A',
       side: 'before',
     });
   });
 
   it("a done region never anchors — DRAG-3.9/TC-7.8 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
-    expect(toRequest(outsider, { workphaseId: 'done', slot: 'existing' }, [{ id: 'D1' }, { id: 'D2' }])).toEqual({
+    expect(
+      toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'done', slot: 'existing' }, [
+        { id: 'D1' },
+        { id: 'D2' },
+      ]),
+    ).toEqual({
       workphaseId: 'done',
     });
   });
 
-  it('attach: parentId + isAttached, never an anchor — always an append (Story 4, no manual placement among Stubs until Story 6)', () => {
-    expect(toRequest(outsider, { parentId: 'card-1', slot: 'last' }, [])).toEqual({
+  it('attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside (Story 4/5 TC-4, no manual placement among Stubs until Story 6)', () => {
+    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
     });
   });
 
-  it('re-attaching a detached child to its own parent sends the same attach request — the server treats a same-parent attach as a flag toggle and skips the depth check (audit epic-3-5-story-4 #1)', () => {
-    const detachedChild = { workphaseId: 'w1', parentId: 'card-1', isAttached: 0 };
-    expect(toRequest(detachedChild, { parentId: 'card-1', slot: 'last' }, [])).toEqual({
-      parentId: 'card-1',
-      isAttached: true,
-    });
+  // Story 5 decision 1: a Descendants-layer sibling reorder — same parent
+  // as `origin`'s own, an anchor slot — sends only the anchor + side, the
+  // pre-Story-5 attached-child request shape unchanged. Nothing about the
+  // attachment itself is in this request; only the ordinal is.
+  it('a Descendants-layer sibling reorder (parentId matching origin, an anchor slot): sends only the anchor + side', () => {
+    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    expect(
+      toRequest({ workphaseId: 'w1' }, origin, { parentId: 'card-p', slot: { anchorId: 'S2', side: 'after' } }, [
+        { id: 'S1' },
+        { id: 'S2' },
+      ]),
+    ).toEqual({ anchorId: 'S2', side: 'after' });
+  });
+
+  // TC-1/2/3: detaching (`parentId: null` on the placement — the render-
+  // preview signal) never sends a `parentId` field at all — item-
+  // attachment §11's "detach preserves the parent," so the real parentId
+  // stays whatever it already is; only `isAttached: false` is explicit.
+  it('detach (parentId: null on the placement): isAttached false, plus the anchor/workphase resolution otherwise (TC-1)', () => {
+    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    expect(
+      toRequest(
+        { workphaseId: 'w1' },
+        origin,
+        { parentId: null, workphaseId: 'w2', slot: { anchorId: 'Q', side: 'after' } },
+        [],
+      ),
+    ).toEqual({ workphaseId: 'w2', isAttached: false, anchorId: 'Q', side: 'after' });
+  });
+
+  it('TC-2: detaching within the same covered set sends no workphaseId field at all', () => {
+    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    expect(
+      toRequest(
+        { workphaseId: 'w1' },
+        origin,
+        { parentId: null, workphaseId: 'w1', slot: { anchorId: 'Q', side: 'after' } },
+        [],
+      ),
+    ).toEqual({ isAttached: false, anchorId: 'Q', side: 'after' });
   });
 });
 

@@ -114,13 +114,15 @@ test.describe('drag-target classification', () => {
 
     // The classification is per-drag: gone once the drag is, and nothing moved.
     await expect(page.locator('[data-drop-state]')).toHaveCount(0);
-    await expect(page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'X', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'X', exact: true }),
+    ).toBeVisible();
     const reloaded = await (await request.get(`${API}/items/${x.id}`)).json();
     expect(reloaded.workphaseId).toBe(todo.id);
     expect(reloaded.parentId).toBeNull();
   });
 
-  test('a Stub drag classifies its siblings valid and everything else inert (interim until Story 5)', async ({
+  test('a Stub drag is classified exactly like a Card would be — no blanket exclusion (Story 5, DRAG-2.7)', async ({
     page,
     request,
     projectSidebar,
@@ -139,11 +141,15 @@ test.describe('drag-target classification', () => {
 
     await pickUp(page, target(page, s1.id).getByRole('button', { name: 'S1' }));
 
+    // The interim rule ("everything outside the parent's Stub list is
+    // Inert") retired with Story 5: P, Q and Q's own Stub are ordinary
+    // Valid targets now (P for the intermediate Card-layer stop, Q for the
+    // zoom-in reparent, TC-4) — only S1 itself is Cycle-forming.
     await expect(target(page, s2.id)).toHaveAttribute('data-drop-state', 'valid');
     await expect(target(page, s1.id)).toHaveAttribute('data-drop-state', 'cycle-forming');
-    await expect(target(page, p.id)).toHaveAttribute('data-drop-state', 'inert');
-    await expect(target(page, q.id)).toHaveAttribute('data-drop-state', 'inert');
-    await expect(target(page, sq.id)).toHaveAttribute('data-drop-state', 'inert');
+    await expect(target(page, p.id)).toHaveAttribute('data-drop-state', 'valid');
+    await expect(target(page, q.id)).toHaveAttribute('data-drop-state', 'valid');
+    await expect(target(page, sq.id)).toHaveAttribute('data-drop-state', 'valid');
 
     await cancel(page);
     await expect(page.locator('[data-drop-state]')).toHaveCount(0);

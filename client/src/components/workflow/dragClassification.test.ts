@@ -104,16 +104,21 @@ describe('classifyDragTargets — Card drag', () => {
   });
 });
 
-describe('classifyDragTargets — Stub drag (interim until Story 5)', () => {
-  it('siblings under the same parent are Valid; everything else is Inert', () => {
+describe('classifyDragTargets — Stub drag (Story 5, full classification, DRAG-2.7)', () => {
+  it('a Stub is classified exactly like a Card would be — its own parent, its siblings, and every other Card/Stub included, no blanket exclusion', () => {
     const items = [item('P'), item('S1', 'P'), item('S2', 'P'), item('Q'), item('SQ', 'Q'), item('V')];
     const { states } = classifyDragTargets('S1', items, CAP);
     expect(states.get('S1')).toBe('cycle-forming');
+    // The interim rule ("everything outside the parent's Stub list is
+    // Inert") retires: S1's own parent P is a legal reparent-to-root-ish
+    // target (S1 is already under it, well within depth), Q and its Stub
+    // are ordinary Valid targets (the zoom-in reparent, TC-4), and a
+    // sibling is Valid exactly as before.
     expect(states.get('S2')).toBe('valid');
-    expect(states.get('P')).toBe('inert');
-    expect(states.get('Q')).toBe('inert');
-    expect(states.get('SQ')).toBe('inert');
-    expect(states.get('V')).toBe('inert');
+    expect(states.get('P')).toBe('valid');
+    expect(states.get('Q')).toBe('valid');
+    expect(states.get('SQ')).toBe('valid');
+    expect(states.get('V')).toBe('valid');
   });
 
   it("a Stub's own descendants are still Cycle-forming, and its Free ones still marked", () => {
@@ -122,5 +127,13 @@ describe('classifyDragTargets — Stub drag (interim until Story 5)', () => {
     expect(states.get('S1a')).toBe('cycle-forming');
     expect(states.get('S1b')).toBe('cycle-forming');
     expect(freeDescendantIds).toEqual(new Set(['S1b']));
+  });
+
+  it.each([4, 6, 8])('depth-caps a target one level too deep for a Stub drag exactly like a Card, cap = %i', cap => {
+    const targets = chain('T', cap);
+    const items = [...targets, item('P'), item('S1', 'P')];
+    const { states } = classifyDragTargets('S1', items, cap);
+    expect(states.get(`T${cap - 1}`)).toBe('valid');
+    expect(states.get(`T${cap}`)).toBe('depth-capped');
   });
 });

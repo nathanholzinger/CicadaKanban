@@ -284,17 +284,22 @@ merged-column pop-out/exit-clock) left open there.
 
 ### Story 5 — Stub → out = detach
 **Plan / record:** [`story-5-stub-detach.md`](story-5-stub-detach.md)
-(planned 2026-09-17, not started — written against the post-4.1 code)
+(planned 2026-09-17; its seven planning decisions ratified by the Product
+Owner 2026-09-21 — 1/3/5/6 as rules, now in the wiki; 2/4/7 left to the
+Architect; **built 2026-09-21**, same day, against the post-4.1 code — see
+the plan doc's own "As built" section)
 
 **Goal:** the reverse direction. A Stub can be dragged out of its parent Card,
 becoming Free and landing where dropped, while keeping its parent relationship.
-Unblocks the drag-out path currently held closed in `useBoardDnd`.
+Unblocks the drag-out path — as built, no longer held closed in `useBoardDnd`.
 
 **Rules settled 2026-09-17** (Product Owner, with the test planner; wiki
 §1, §1.1, §6, §8 carry them — see "Decisions of 2026-09-17" below for the
 alternatives weighed):
-- A Stub's drag **starts at its parent's Descendants layer** (Story 6's
-  layer), so a sibling reorder is the within-action and costs no pop.
+- A Stub's drag **starts at its containing Card's Descendants layer**
+  (Story 6's layer; for a grandchild still the Card's whole section —
+  ruled 2026-09-21), so a sibling reorder is the within-action and costs
+  no pop.
 - Leaving the parent is **two one-layer pops**: Descendants → Card, then
   Card → the containing column. The intermediate Card-layer stop is a real
   state; a release there is the auto-drop, which for the Card's own Stub

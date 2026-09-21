@@ -14,6 +14,8 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
+import { getAncestors } from '../../lib/hierarchy';
+import { isStub } from '../../lib/isStub';
 import {
   resolveBoardCollisions,
   resolveDropSide,
@@ -24,6 +26,7 @@ import {
 import { classifyDragTargets, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
+  descendantsRegionKey,
   isCardList,
   measureRegions,
   resolveDragStructure,
@@ -47,6 +50,22 @@ import type { Placement, Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
 import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
+
+// Story 5 — a Stub's drag starts at its *containing Card's* Descendants
+// layer: the nearest Free ancestor, whatever the Stub's own depth beneath
+// it (wiki §1, §1.1, decision 1). Built on `getAncestors` (root..immediate-
+// parent order, cycle-safe — audit Finding #11) rather than a bespoke
+// parentId walk, so a corrupted parentId cycle in the data degrades the
+// same way it already does everywhere else in the hierarchy math. `null`
+// only if every ancestor up to a dangling/missing parentId is itself a
+// Stub, which the depth cap makes unreachable in practice.
+function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
+  const ancestors = getAncestors(item, items);
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    if (!isStub(ancestors[i])) return ancestors[i].id;
+  }
+  return null;
+}
 
 // Story 4.1 Phase 1: the reservation basis, sourced from the card module
 // (KanbanCard.tsx owns both — decision 3's "dependency points drag →
@@ -91,6 +110,8 @@ export interface BoardDndDeps {
   writes: ItemWriteTracker;
   getWorkphaseItems: (workphaseId: string, isTerminal?: boolean) => Item[];
   getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
+  /** Story 5: a Descendants region's own "others" list — the parent's other attached children, placement-aware. */
+  getAttachedChildren: (parentId: string) => Item[];
   findWorkphaseForItem: (itemId: string) => string | null;
   handleReorderColumns: (orders: { id: string; position: number }[]) => Promise<void>;
   loadBoard: () => Promise<void>;
@@ -109,6 +130,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // parent chains, scroll ancestors, column facts) — resolved once per
   // drag and again after each layer change, not on every pointer sample.
   const structureRef = useRef<DragStructure>([]);
+  // Story 5: the active drag's own containing Card, if it started as a
+  // Stub — threaded into every `resolveStructure` call (its Card/
+  // Descendants regions resolve regardless of `isValidCard`, decisions 2/3)
+  // without changing `resolveStructure`'s own call sites into needing the
+  // full session. Null for a Free Card drag, for the life of that drag.
+  const originCardIdRef = useRef<string | null>(null);
   const pointerRef = useRef<Point | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The ghost we last asked to be shown for the active drag's item — so the
@@ -188,7 +215,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
   function resolveStructure(classification: DragClassification): DragStructure {
     const root = latest.current.rootRef.current ?? document;
     const isValidCard = (cardId: string): boolean => classification.states.get(cardId) === 'valid';
-    structureRef.current = resolveDragStructure(root, latest.current.board?.columns ?? [], isValidCard);
+    structureRef.current = resolveDragStructure(
+      root,
+      latest.current.board?.columns ?? [],
+      isValidCard,
+      originCardIdRef.current ?? undefined,
+    );
     return structureRef.current;
   }
 
@@ -239,7 +271,15 @@ export function useBoardDnd(deps: BoardDndDeps) {
       updateSession({ ...current, pop });
       setGhost(
         current.activeItem.id,
-        placementFor(pop, regions, current.activeItem.workphaseId, current.activeItem.position, current.priorPlacement),
+        placementFor(
+          pop,
+          regions,
+          current.activeItem.workphaseId,
+          current.activeItem.position,
+          current.origin,
+          current.containingCardId,
+          current.priorPlacement,
+        ),
       );
     }
     clearPopTimer();
@@ -271,23 +311,33 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
   // dnd-kit calls this during its own render; it reads the mirrors.
   const collisionDetection = useCallback<CollisionDetection>(args => {
-    const pop = sessionRef.current?.pop;
+    const current = sessionRef.current;
+    const pop = current?.pop;
     let live: CollisionSession | null = null;
-    if (pop) {
+    if (pop && current) {
       const regions = regionsRef.current;
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
       const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
+      // Story 5: locked at a Descendants context, the in-context
+      // candidates are the section's rows sharing the *origin's* own real
+      // parentId (decision 1's "direct siblings" scope) — read off our own
+      // session state, never dnd-kit's `active.data.current`, which is
+      // exactly what decision 4 keeps from being load-bearing here.
+      const siblingScopeParentId =
+        context?.kind === 'descendants' && 'parentId' in current.origin ? (current.origin.parentId ?? null) : null;
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — rule 1: a mere hover, not yet a
         // pop, must never drive anything a release would act on.
         hoverContainerId: hover && isCardList(hover) ? hover.containerId : null,
-        // A locked Card context has no `over` either (decision 5, Story 4.1
-        // Phase 0): its within-action is a constant append, never a
-        // preview — today the target Card would otherwise be its own only
-        // collision candidate, which could light the live side indicator on
-        // it for no reason a release would ever honor.
+        // A locked Card or Descendants context has no `over` either
+        // (decision 5, Story 4.1 Phase 0; Story 5 for Descendants): its
+        // within-action is a constant, never a preview — today the target
+        // Card would otherwise be its own only collision candidate, which
+        // could light the live side indicator on it for no reason a
+        // release would ever honor.
         context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
+        siblingScopeParentId,
       };
     }
     return resolveBoardCollisions(args, live);
@@ -352,9 +402,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
       : getWorkphaseItems(region.targetWorkphaseId, region.isTerminal);
   }
 
+  // Story 5: a Descendants region's own sibling scope — the origin's real
+  // parent's other attached children (decision 1's "direct siblings," the
+  // same scope `resolveBoardCollisions`' `siblingScopeParentId` restricts
+  // collisions to). Null `parentId` (shouldn't arise — a Stub always has
+  // one) reads as no siblings at all rather than every top-level Card.
+  function siblingItems(parentId: string | null): Item[] {
+    return parentId ? latest.current.getAttachedChildren(parentId) : [];
+  }
+
   function handleDragStart(event: DragStartEvent) {
-    const type = event.active.data.current?.type;
-    if (type === 'column' || !board) return;
+    const data = event.active.data.current;
+    if (data?.type === 'column' || !board) return;
     const activeId = String(event.active.id);
     const activeItem = deps.items.find(i => i.id === activeId);
     if (!activeItem) return;
@@ -369,11 +428,43 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // The cap comes off the board response (never hard-coded client-side)
     // so the server's constant governs both enforcement points.
     const classification = classifyDragTargets(activeId, deps.items, board.itemDepthCap);
-    if (type !== 'card') {
-      // Story 4.1 Phase 3: `origin` is a Free/Stub-drag distinction (Story
-      // 5 sets a Stub's) — null here alongside `pop: null` rather than a
-      // value nothing in this drag's own path would ever consult.
-      updateSession({ activeItem, classification, pop: null, priorPlacement, origin: null });
+
+    const activator = event.activatorEvent as Partial<PointerEvent>;
+    pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
+
+    // Story 5: a Stub's drag starts at its containing Card's Descendants
+    // layer — deterministic, not hit-tested (unlike a Free Card's start
+    // below, which depends on where the cursor happened to pick it up).
+    // `isStub(activeItem)` reads the real, stored item — never dnd-kit's
+    // own `data.role`, which only exists to keep the *droppable* side
+    // (KanbanCard.tsx) legible and is never load-bearing here.
+    if (isStub(activeItem)) {
+      const containingCardId = containingCardIdOf(activeItem, deps.items);
+      if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
+      originCardIdRef.current = containingCardId;
+      resolveStructure(classification);
+      const startContextKey = descendantsRegionKey(containingCardId);
+      const regions = sampleRegions(startContextKey);
+      const pop = startPopSession(startContextKey);
+      // Story 4.1 Phase 3, extended by decision 2: where the drag
+      // genuinely started — the Stub's own real, direct parent (not
+      // necessarily `containingCardId`: a grandchild's direct parent is
+      // another Stub), at its already-sorted slot. What `placementFor`'s
+      // Card branch and `isIdentity` compare a resolved release against.
+      const origin: Placement = { parentId: activeItem.parentId, slot: 'existing' };
+      updateSession({ activeItem, classification, pop, priorPlacement, origin, containingCardId });
+      setGhost(
+        activeId,
+        placementFor(
+          pop,
+          regions,
+          activeItem.workphaseId,
+          activeItem.position,
+          origin,
+          containingCardId,
+          priorPlacement,
+        ),
+      );
       return;
     }
 
@@ -381,8 +472,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // (a Card is never a *starting* context — only reachable by zooming
     // in), the region the cursor (which is on the card) is in. Null from
     // Unsorted: nothing to lock to.
-    const activator = event.activatorEvent as Partial<PointerEvent>;
-    pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
+    originCardIdRef.current = null;
     resolveStructure(classification);
     const boardScope = sampleRegions(null);
     const startContextKey = childRegionAt(boardScope, pointerRef.current, null)?.key ?? null;
@@ -391,12 +481,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // Story 4.1 Phase 3: where the item genuinely started — a Free Card's
     // own list, at whatever ordinal the position sort already gives it.
     // What `isIdentity` ultimately compares a resolved release against, at
-    // every layer (decision 2); `toRequest`/`isIdentity` read the raw item
-    // directly today; `origin` itself is what Story 5 hands them for a
-    // Stub, whose "own data" isn't as simply the item's raw fields.
+    // every layer (decision 2).
     const origin: Placement = { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' };
-    updateSession({ activeItem, classification, pop, priorPlacement, origin });
-    setGhost(activeId, placementFor(pop, regions, activeItem.workphaseId, activeItem.position, priorPlacement));
+    updateSession({ activeItem, classification, pop, priorPlacement, origin, containingCardId: null });
+    setGhost(
+      activeId,
+      placementFor(pop, regions, activeItem.workphaseId, activeItem.position, origin, null, priorPlacement),
+    );
   }
 
   // The ghost's placement is otherwise only ever set here, on the machine's
@@ -465,62 +556,65 @@ export function useBoardDnd(deps: BoardDndDeps) {
     }
 
     if (!current) return;
-    const { activeItem } = current;
+    const { activeItem, origin, containingCardId } = current;
     // Resolved once, shared by every branch that anchors against `over` —
     // which half of the hovered card the dragged card's current position
     // falls in.
     const side = resolveDropSide(active.rect.current.translated, over?.rect);
 
-    // ── Attached-sibling reorder (Epic 3.2 Part 3) ──
-    // Position-only, scoped to the parent's other attached children — the
-    // server derives that scope from the anchor's own (parentId, isAttached)
-    // state. Never touches workphaseId; dragging a Stub *out* of its parent
-    // stays closed until Story 5.
-    if (type === 'attached-child') {
-      if (!over || activeId === String(over.id)) return;
-      const anchorId = String(over.id);
-      const pending: Placement = { slot: { anchorId, side } };
-      await sendItemMove(moveItem, activeId, { anchorId, side }, pending, deps.writes, deps.loadBoard);
-      return;
-    }
-
-    // ── Card drop: the ghost's own placement is the request (decision 1) ──
+    // ── Item drop: the ghost's own placement is the request (decision 1) ──
     // No fresh geometry at release — `regionsRef` already holds exactly
     // what the machine's own final state needs, scoped to `current.pop`'s
     // own contextKey/hover by the last sample (Phase 2). `over` only means
-    // anything while locked in a column/sub-row (Board-band and Card are
-    // the branches placementFor already had, unchanged); a bare container
-    // hover or a done region's own card both fall back to the same
-    // workphase-only slot placementFor's in-context branch already uses
-    // mid-drag, so `over` only ever narrows toward a specific anchor, never
-    // introduces a new kind of answer.
+    // anything while locked in a column/sub-row or a Descendants section
+    // (Board-band and Card are the branches `placementFor` already had,
+    // unchanged); a bare container hover or a done region's own card both
+    // fall back to the same no-anchor slot `placementFor`'s in-context
+    // branch already uses mid-drag, so `over` only ever narrows toward a
+    // specific anchor, never introduces a new kind of answer. Story 5's
+    // Stub drag ends the same way — the `attached-child` branch this used
+    // to have of its own is gone; `origin` is what tells `toRequest` apart
+    // a sibling reorder from a detach from an attach.
     const regions = regionsRef.current;
     const region = placementRegion(current.pop, regions);
-    // Release always gives a decisive answer while locked in a column/
-    // sub-row (`null` is reserved for placementFor's mid-drag calls,
-    // where there's genuinely nothing fresh yet to prefer over
-    // `priorPlacement`) — over resolving to anything but the context's
-    // own container is a specific anchor; the container itself, or dnd-kit
-    // finding no collision at all, is a bare hover with nothing to anchor
-    // beside.
-    const placementOver: PlacementOver =
-      !region || !isCardList(region)
-        ? null
-        : over && String(over.id) !== region.containerId
+    // Release always gives a decisive answer while locked anywhere (`null`
+    // is reserved for `placementFor`'s mid-drag calls, where there's
+    // genuinely nothing fresh yet to prefer over `priorPlacement`) — over
+    // resolving to anything but a column/sub-row's own container is a
+    // specific anchor; the container itself, or dnd-kit finding no
+    // collision at all, is a bare hover with nothing to anchor beside. A
+    // Descendants context has no "container" concept at all (its own
+    // droppable candidates are always specific sibling rows, never a bare
+    // wrapper — `resolveBoardCollisions`'s `siblingScopeParentId` filter),
+    // so any `over` there is already a specific anchor.
+    const placementOver: PlacementOver = !region
+      ? null
+      : region.kind === 'descendants'
+        ? over
           ? { anchorId: String(over.id), side }
-          : 'container';
-    const placement = current.pop
-      ? placementFor(
-          current.pop,
-          regions,
-          activeItem.workphaseId,
-          activeItem.position,
-          current.priorPlacement,
-          placementOver,
-        )
-      : null;
-    const others = region && isCardList(region) ? regionItems(region).filter(i => i.id !== activeId) : [];
-    const input = toRequest(activeItem, placement, others);
+          : null
+        : isCardList(region)
+          ? over && String(over.id) !== region.containerId
+            ? { anchorId: String(over.id), side }
+            : 'container'
+          : null;
+    const placement = placementFor(
+      current.pop,
+      regions,
+      activeItem.workphaseId,
+      activeItem.position,
+      origin,
+      containingCardId,
+      current.priorPlacement,
+      placementOver,
+    );
+    const others =
+      region?.kind === 'descendants'
+        ? siblingItems('parentId' in origin ? (origin.parentId ?? null) : null).filter(i => i.id !== activeId)
+        : region && isCardList(region)
+          ? regionItems(region).filter(i => i.id !== activeId)
+          : [];
+    const input = toRequest(activeItem, origin, placement, others);
     if (!input) {
       // Nothing to write — a null placement (drawn where it already is)
       // or an identity (decision 2): the ghost goes and the card is where

@@ -3,7 +3,13 @@ import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
 import { advancePopSession, isLocked, placementFor, popDueAt, startPopSession, type PopSession } from './popSession';
 import { rect, region } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
-import type { ShortCardMetrics } from './dragRegions';
+import {
+  cardRegionKey,
+  descendantsRegionKey,
+  type CardRegion,
+  type DescendantsRegion,
+  type ShortCardMetrics,
+} from './dragRegions';
 
 // docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
 // every threshold parameterized on the tuning value, never 0.5 s.
@@ -278,9 +284,17 @@ describe('popDueAt', () => {
 
 describe('placementFor', () => {
   const activeWorkphase = A.coveredWorkphaseIds[0];
+  // Every pre-Story-5 case here is a Free Card drag: `origin` names its own
+  // workphase, and `containingCardId` is null throughout (a Free Card never
+  // has one) — neither ever changes the outcome of these cases (both only
+  // ever matter for the Card/Descendants branches, exercised in their own
+  // describe block below), so one helper stands in for the item's own data.
+  const freeOrigin = (workphaseId: string): Placement => ({ workphaseId, slot: 'existing' });
 
   it('in-context: the item sorts where it already is, under its own workphase', () => {
-    expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1)).toEqual({
+    expect(
+      placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null),
+    ).toEqual({
       workphaseId: activeWorkphase,
       slot: 'existing',
     });
@@ -293,12 +307,26 @@ describe('placementFor', () => {
   describe('over (release, in-context)', () => {
     it('a specific card: the anchor + side dnd-kit resolved, under its own workphase (TC-2.11)', () => {
       expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null, { anchorId: 'card-x', side: 'after' }),
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, null, {
+          anchorId: 'card-x',
+          side: 'after',
+        }),
       ).toEqual({ workphaseId: activeWorkphase, slot: { anchorId: 'card-x', side: 'after' } });
     });
 
     it("the bare container: the same workphase-only fallback mid-drag already uses — there's no card to anchor beside", () => {
-      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null, 'container')).toEqual({
+      expect(
+        placementFor(
+          startPopSession(A.key),
+          regions,
+          activeWorkphase,
+          1,
+          freeOrigin(activeWorkphase),
+          null,
+          null,
+          'container',
+        ),
+      ).toEqual({
         workphaseId: activeWorkphase,
         slot: 'existing',
       });
@@ -307,7 +335,7 @@ describe('placementFor', () => {
     it('a done region never anchors, even onto one of its own cards — same fallback as a bare container (audit epic-3-5-story-3-reconciled #4)', () => {
       const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
       expect(
-        placementFor(startPopSession(done.key), [done], activeWorkphase, 1, null, {
+        placementFor(startPopSession(done.key), [done], activeWorkphase, 1, freeOrigin(activeWorkphase), null, null, {
           anchorId: 'done-card',
           side: 'before',
         }),
@@ -317,7 +345,7 @@ describe('placementFor', () => {
     it('a real drop always wins over priorPlacement — only the null (mid-drag) case defers to it', () => {
       const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
       expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, prior, {
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior, {
           anchorId: 'card-x',
           side: 'before',
         }),
@@ -326,15 +354,15 @@ describe('placementFor', () => {
   });
 
   it("DRAG-3.11: Board layer — the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
-    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
-    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
-    expect(placementFor(hoverAt(bBottom), regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(hoverAt(bBottom), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -346,7 +374,7 @@ describe('placementFor', () => {
       targetWorkphaseId: 'w1',
     });
     const s = hoverAt(bTop, [A, merged]);
-    expect(placementFor(s, [A, merged], 'w2', 1)).toEqual({ workphaseId: 'w2', slot: 'first' });
+    expect(placementFor(s, [A, merged], 'w2', 1, freeOrigin('w2'), null)).toEqual({ workphaseId: 'w2', slot: 'first' });
   });
 
   it("DRAG-3.9: Board layer — a done region previews no positioned insert in any band, whatever the item's own position", () => {
@@ -354,7 +382,7 @@ describe('placementFor', () => {
     for (const p of [bTop, bMiddle, bBottom]) {
       for (const position of [1, null]) {
         const s = hoverAt(p, [A, done]);
-        expect(placementFor(s, [A, done], activeWorkphase, position)).toEqual({
+        expect(placementFor(s, [A, done], activeWorkphase, position, freeOrigin(activeWorkphase), null)).toEqual({
           workphaseId: done.targetWorkphaseId,
           slot: 'existing',
         });
@@ -367,7 +395,7 @@ describe('placementFor', () => {
   // fallback instead of the position-sort's null-coerced top slot, in
   // either of the two places band resolution lands on 'existing'.
   it('#29: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
-    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, null)).toEqual({
+    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -376,19 +404,19 @@ describe('placementFor', () => {
       [bMiddle, OUT],
       [bMiddle, OUT + IN],
     ]);
-    expect(placementFor(poppedIn, regions, activeWorkphase, null)).toEqual({
+    expect(placementFor(poppedIn, regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
     // The edge bands are unaffected — they already name an explicit anchor.
-    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, null)).toEqual({
+    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
   });
 
   it('popped out over nothing: no placement — the card is drawn where it already is', () => {
-    expect(placementFor(poppedOut(), regions, activeWorkphase, 1)).toBeNull();
+    expect(placementFor(poppedOut(), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toBeNull();
   });
 
   // audit epic-3-5-story-3-reconciled #1: re-picking up an item whose
@@ -400,21 +428,29 @@ describe('placementFor', () => {
     const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
 
     it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
-      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, prior)).toBe(prior);
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior),
+      ).toBe(prior);
       // Even where the fresh computation would have said something else —
       // e.g. no position to keep, which alone would say 'last'.
-      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, null, prior)).toBe(prior);
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null, prior),
+      ).toBe(prior);
     });
 
     it('a Board-layer hovered band ignores it — a genuine new region still computes its own slot', () => {
-      expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1, prior)).toEqual({
+      expect(
+        placementFor(hoverAt(bTop), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior),
+      ).toEqual({
         workphaseId: B.targetWorkphaseId,
         slot: 'first',
       });
     });
 
     it('with no prior placement (the ordinary drag), in-context still computes the raw slot as before', () => {
-      expect(placementFor(startPopSession(A.key), regions, activeWorkphase, 1, null)).toEqual({
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, null),
+      ).toEqual({
         workphaseId: activeWorkphase,
         slot: 'existing',
       });
@@ -428,9 +464,98 @@ describe('placementFor', () => {
       [bMiddle, OUT + IN],
     ]);
     expect(s).toEqual(locked(B.key));
-    expect(placementFor(s, regions, activeWorkphase, 1)).toEqual({
+    expect(placementFor(s, regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
+    });
+  });
+
+  // Story 5 (2026-09-21): a Stub's own origin (`{parentId, slot: 'existing'}`)
+  // through the Card and Descendants branches — TC-1/2/4/5/9/12.
+  describe('a Stub drag (origin carries parentId)', () => {
+    const P = 'card-p';
+    const cardP: CardRegion = {
+      key: cardRegionKey(P),
+      rect: rect(0, 0, 100, 200),
+      contentRect: rect(0, 0, 100, 200),
+      kind: 'card',
+      attachToCardId: P,
+      parentRegionKey: A.key,
+    };
+    const otherCard: CardRegion = {
+      key: cardRegionKey('card-q'),
+      rect: rect(0, 0, 100, 200),
+      contentRect: rect(0, 0, 100, 200),
+      kind: 'card',
+      attachToCardId: 'card-q',
+      parentRegionKey: A.key,
+    };
+    const descendantsP: DescendantsRegion = {
+      key: descendantsRegionKey(P),
+      rect: rect(0, 0, 100, 200),
+      contentRect: rect(0, 0, 100, 200),
+      kind: 'descendants',
+      cardId: P,
+      parentRegionKey: cardRegionKey(P),
+    };
+    const origin: Placement = { parentId: P, slot: 'existing' };
+
+    it('TC-12: at its own containing Card, the within-action is origin itself — "set back down"', () => {
+      expect(placementFor(startPopSession(cardP.key), [cardP], null, null, origin, P)).toBe(origin);
+    });
+
+    it('TC-4: at a *different* Card, the within-action is attach as its last child', () => {
+      expect(placementFor(startPopSession(otherCard.key), [otherCard], null, null, origin, P)).toEqual({
+        parentId: 'card-q',
+        slot: 'last',
+      });
+    });
+
+    it("TC-9 (sibling bullets): at its own Descendants section, mid-drag (no `over` yet) sits at origin — dnd-kit's own sortable strategy draws the reorder", () => {
+      expect(placementFor(startPopSession(descendantsP.key), [descendantsP], null, null, origin, P)).toBe(origin);
+    });
+
+    it('TC-9 (sibling bullets): a real anchor releases as a plain sibling reorder — no parentId/isAttached opinion beyond the one already true', () => {
+      expect(
+        placementFor(startPopSession(descendantsP.key), [descendantsP], null, null, origin, P, null, {
+          anchorId: 's2',
+          side: 'after',
+        }),
+      ).toEqual({ parentId: P, slot: { anchorId: 's2', side: 'after' } });
+    });
+
+    it('TC-1/2/3: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot (decision 5)', () => {
+      // activeItemPosition is a real number here on purpose — a Stub's own
+      // attached-siblings-scope position, which must NOT be read as "a
+      // position to keep" once it's previewing into a workflow-wide list.
+      expect(placementFor(startPopSession(A.key), regions, null, 3, origin, P)).toEqual({
+        parentId: null,
+        workphaseId: activeWorkphase,
+        slot: 'last',
+      });
+    });
+
+    it("TC-1: a real anchor at the column layer resolves exactly like any Card's anchor+side", () => {
+      expect(
+        placementFor(startPopSession(A.key), regions, null, 3, origin, P, null, { anchorId: 'q', side: 'after' }),
+      ).toEqual({ parentId: null, workphaseId: activeWorkphase, slot: { anchorId: 'q', side: 'after' } });
+    });
+
+    it('TC-3: Board layer (genuinely popped out) also previews Free at the append slot', () => {
+      expect(placementFor(hoverAt(bMiddle), regions, null, 3, origin, P)).toEqual({
+        parentId: null,
+        workphaseId: B.targetWorkphaseId,
+        slot: 'last',
+      });
+    });
+
+    it('a terminal region still previews existing (nothing anchorable there) even for a detaching Stub', () => {
+      const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
+      expect(placementFor(startPopSession(done.key), [done], null, 3, origin, P)).toEqual({
+        parentId: null,
+        workphaseId: done.targetWorkphaseId,
+        slot: 'existing',
+      });
     });
   });
 });

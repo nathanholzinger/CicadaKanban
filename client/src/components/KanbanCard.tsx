@@ -9,7 +9,7 @@ import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { resolveDropSide } from './workflow/boardDndUtils';
-import { DRAG_REGION_ATTR, cardRegionKey } from './workflow/dragRegions';
+import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 import {
@@ -26,10 +26,15 @@ import {
 // useDndContext — no prop drilling through BoardColumn/BoardView — and
 // calls the exact same resolveDropSide function useBoardDnd's handleDragEnd
 // uses, so the line shown here is guaranteed to match what gets sent.
-function useLiveDropSide(itemId: string, expectedActiveTypes: readonly string[]): 'before' | 'after' | null {
+// Diagnostic-only, so reading `active.data.current?.role` here is fine even
+// though it's never load-bearing for a real collision/write decision
+// (decision 4) — a stale read during a mid-drag remount briefly mis-draws
+// this line at worst, never anything written.
+function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ('card' | 'stub')[]): 'before' | 'after' | null {
   const { active, over } = useDndContext();
   if (!active || !over || over.id !== itemId || active.id === itemId) return null;
-  if (!expectedActiveTypes.includes(active.data.current?.type)) return null;
+  if (active.data.current?.type !== 'item') return null;
+  if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
   return resolveDropSide(active.rect.current.translated, over.rect);
 }
 
@@ -63,8 +68,8 @@ const DROP_INDICATOR_AFTER =
 // #13): the live side indicator, the drag-target attributes/overlay, the
 // pending marker. The DragOverlay copy is the carried item itself — never a
 // target, never pending — so it gets none of it.
-function useDropTargetProps(itemId: string, activeTypes: readonly ('card' | 'attached-child')[], isOverlay = false) {
-  const dropSide = useLiveDropSide(itemId, activeTypes);
+function useDropTargetProps(itemId: string, activeRoles: readonly ('card' | 'stub')[], isOverlay = false) {
+  const dropSide = useLiveDropSide(itemId, activeRoles);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
   return {
@@ -158,7 +163,12 @@ export default function KanbanCard({
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    data: { type: 'card' },
+    // Decision 4 (2026-09-21): every item row registers `type: 'item'`,
+    // never a type that differs between a Stub's row and a popped-out Card
+    // row for the same id — see `resolveBoardCollisions`'s own comment for
+    // why. `role`/`parentId` are droppable-side facts only; nothing reads
+    // them off the *active* row.
+    data: { type: 'item', role: 'card' },
   });
   const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card'], isOverlay);
   // Story 4: forced open — independent of the user's own
@@ -167,16 +177,20 @@ export default function KanbanCard({
   // requiring a click the cursor can't make mid-drag.
   const isAttachTarget = useIsAttachTarget(item.id);
   const expanded = manualExpanded || isAttachTarget;
-  // The live *Card* drag this row's ghost belongs to, if any — `pop` is set
-  // only for a Card-type drag (handleDragStart), never for an ordinary Stub
-  // sibling-reorder, so this can't misidentify a Stub that's simply being
-  // dragged among its own real siblings as "the attach ghost" (that bug hid
-  // the dragged Stub's own row entirely — no `data-item-id` to find it by).
-  // Renders as a plain preview instead of a second, differently-typed
-  // sortable registration under its id once it *is* the ghost (Story 4
-  // planning, decision 3).
+  // Story 4 decision 7, extended by Story 5 (2026-09-21): this row is the
+  // active drag's own ghost — previewed attaching here, not a real Stub
+  // yet — iff its `origin`'s parent *wasn't* already this Card. Excludes a
+  // Stub's own home section (its origin's parent already is this Card),
+  // which `pop` being set for a Stub's own sibling reorder too (Step 1)
+  // would otherwise misidentify the same way 4.1's F3 landmine did for a
+  // Card — hiding the dragged row entirely, no `data-item-id` to find it
+  // by. Renders as a plain preview instead of a second, differently-typed
+  // sortable registration under its id once it *is* the ghost.
   const cardDragSession = useDragSession();
-  const attachGhostId = cardDragSession?.pop ? cardDragSession.activeItem.id : undefined;
+  const attachGhostId =
+    cardDragSession?.pop && (!('parentId' in cardDragSession.origin) || cardDragSession.origin.parentId !== item.id)
+      ? cardDragSession.activeItem.id
+      : undefined;
   // The DragOverlay copy and this same item's own in-list row while it's
   // the one being dragged (`isDragging`, from useSortable — true wherever
   // the item's pending Placement currently sorts it, its original slot
@@ -271,20 +285,28 @@ export default function KanbanCard({
           )}
 
           {/* Attached children, indented — draggable among siblings (Epic
-              3.2 Part 3); dragging one *out* of its parent stays blocked
-              until Epic 3.5 */}
+              3.2 Part 3); this wrapper doubles as the Card's Descendants
+              region (Story 5, §1.1) — where a Stub's drag starts and pops
+              back out to, one layer per Card, never one per Stub (decision
+              1). It only exists while there's something to render, which
+              is also exactly when a Stub's drag could ever have started
+              here (a childless Card's section is unreachable, §1.1). */}
           {attachedChildren.length > 0 && getAttachedChildren && (
-            <div className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3">
+            <div
+              className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3"
+              {...{ [DRAG_REGION_ATTR]: descendantsRegionKey(item.id) }}
+            >
               <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
                 {attachedChildren.map(child =>
-                  // Story 4: this row is the active Card drag's own
+                  // Story 4 decision 7: this row is the active drag's own
                   // ghost (previewed attaching here, not a real Stub yet) —
                   // rendered as a plain, non-sortable preview rather than a
-                  // second registration of the same id under a different drag
-                  // `type` (decision 3's risk: dnd-kit's `active.data.current`
-                  // is read fresh by the collision closure on every pass, so a
-                  // real Card being *also* registered here as `attached-child`
-                  // could make the pop machine see the wrong type mid-drag).
+                  // second registration of the same id under a different
+                  // drag `role` (decision 4's risk: dnd-kit's
+                  // `active.data.current` is read fresh by the collision
+                  // closure on every pass, so a real Card being *also*
+                  // registered here as a Stub row could make the pop
+                  // machine see the wrong role mid-drag).
                   child.id === attachGhostId ? (
                     <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} />
                   ) : (
@@ -337,28 +359,26 @@ interface AttachedChildRowProps {
 function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }: AttachedChildRowProps) {
   const resolvedType = resolveType(item.type, itemTypes);
   const grandchildren = getAttachedChildren(item.id);
-  // Epic 3.2 Part 3: draggable among siblings under the same parent — a
-  // self-contained SortableContext (see the parent's wrapper above and the
-  // recursive one below), not the board-level card DnD. `data.type:
-  // 'attached-child'` is what routes the drag to useBoardDnd's dedicated
-  // sibling-reorder branch instead of the board's card-move logic.
+  // Epic 3.2 Part 3, extended by Story 5: draggable among siblings under
+  // the same parent (decision 1's interim within-action) — a self-
+  // contained SortableContext (see the parent's wrapper above and the
+  // recursive one below), reached through the same pop machine as a Card
+  // now (Step 1), not a separate board-level path. `role: 'stub'` +
+  // `parentId` are what `resolveBoardCollisions`' `siblingScopeParentId`
+  // filter scopes collisions to true siblings by — without it, an attached
+  // child could collide with an unrelated card's attached child if their
+  // rects happen to be near each other. Decision 4: `type` stays `'item'`,
+  // the same as a Card row, so this id's registration never *looks* like a
+  // different drag type to dnd-kit once it pops out and remounts as one.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    // parentId lets boardCollisionDetection scope collisions to true
-    // siblings (same parent) — without it, an attached child could collide
-    // with an unrelated card's attached child if their rects happen to be
-    // near each other.
-    data: { type: 'attached-child', parentId: item.parentId },
+    data: { type: 'item', role: 'stub', parentId: item.parentId },
   });
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
   // — same attributes and overlay as a Card, so a test reads them alike.
-  // Both active types: a sibling Stub reorder, or (Story 4 planning) a
-  // foreign Card popped into this row's own parent, anchoring beside it.
-  const {
-    dropSide,
-    dataAttrs,
-    className: dropTargetClassName,
-  } = useDropTargetProps(item.id, ['card', 'attached-child']);
+  // Both active roles: a sibling Stub reorder, or a foreign Card popped
+  // into this row's own parent, anchoring beside it.
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card', 'stub']);
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (

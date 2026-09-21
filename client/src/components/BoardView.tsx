@@ -200,6 +200,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       writes,
       getWorkphaseItems,
       getMergedColumnItems,
+      getAttachedChildren,
       findWorkphaseForItem,
       handleReorderColumns,
       loadBoard,

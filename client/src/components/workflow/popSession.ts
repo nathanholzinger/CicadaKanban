@@ -34,12 +34,14 @@ import {
 //
 //   1. A release always commits the *locked* context's own within-action —
 //      Column/sub-row: anchor + side among its own items (dnd-kit's `over`,
-//      scoped to just those). Card: append as the last child, always (no
-//      band, no anchor — manual placement among Stubs is Story 6's
-//      Descendants layer). This holds regardless of where the bare cursor
-//      is: the overlay never visually leaves its context (bounded, exactly
-//      as Story 3 built it), so nothing shown ever promises a foreign
-//      region's band the way Story 3 let a quick glance imply.
+//      scoped to just those). Card: append as the last child for an item
+//      arriving from outside, or "set back down" for the drag's own
+//      containing Card (Story 5) — either way no band, no anchor; manual
+//      placement among Stubs is Story 6's Descendants layer. This holds
+//      regardless of where the bare cursor is: the overlay never visually
+//      leaves its context (bounded, exactly as Story 3 built it), so
+//      nothing shown ever promises a foreign region's band the way Story 3
+//      let a quick glance imply.
 //   2. Popping is always exactly one layer: zooming in reaches only the
 //      *next* layer down (Board → a column/sub-row; a column/sub-row → one
 //      of its own Cards — never a foreign column's Card, never two layers
@@ -62,10 +64,11 @@ import {
 // branch, parametric on `region.kind` and `region.parentRegionKey`
 // (`childRegionAt`, `popInDelayFor`) rather than a `card:`-prefix string
 // test (`isCardKey`, retired) or an `attachToCardId !== undefined` check
-// repeated at each call site — a Card is still the only kind with child
-// regions today (Story 5 adds a `descendants` kind), but nothing here
-// hard-codes that; it falls out of nothing else carrying a matching
-// `parentRegionKey` yet.
+// repeated at each call site. Story 5 adds a `descendants` kind — a Card's
+// own section, where a Stub's drag starts — but it's never a *zoom-in*
+// candidate yet (`childRegionAt`'s own guard, `dragRegions.ts`): Story 6 is
+// what makes a Card's within-action a further pop-in rather than always
+// the auto-drop.
 //
 // Story 4.1 Phase 1: the reservation is now exact (wiki §5 — a region's
 // `contentRect` never changes size whether or not it's the live hover
@@ -336,15 +339,48 @@ export function placementRegion(session: PopSession | null, regions: readonly Dr
   return key === null ? undefined : regions.find(r => r.key === key);
 }
 
+// Story 5 decision 5 (2026-09-21), generalizing wiki–code reconciliation
+// #29: the no-anchor fallback within a card-list region (no specific card
+// hovered — a bare container, a done region, or mid-drag before `over`
+// resolves). A terminal region's own rule always wins (nothing is
+// anchorable there either way). Otherwise, a position that isn't
+// comparable in *this* list's order — `nonComparable`, true for a Stub's
+// own kept slot once it's previewing into a workflow-wide list (its
+// `origin` carries a `parentId`, never a `workphaseId`) — rests at the
+// append slot instead of `workphaseOnlySlot`'s read of a position that
+// means nothing here, matching the append fallback a detach without an
+// anchor actually resolves to (item-positioning §7.5). A Free Card's
+// origin is unaffected: `workphaseOnlySlot` still answers for it exactly
+// as before (#29).
+function noAnchorSlot(
+  region: Pick<CardListRegion, 'isTerminal'>,
+  nonComparable: boolean,
+  activeItemPosition: number | null,
+): 'existing' | 'last' {
+  if (region.isTerminal) return 'existing';
+  return nonComparable ? 'last' : workphaseOnlySlot(activeItemPosition);
+}
+
 // The ghost (§10 ordinal preview, §5 band table): always the *locked*
 // context's own within-action when there is one — Column/sub-row: the
 // slot a real drop resolved to (`over`), or 'existing' while that's still
 // unknown (mid-drag, decision 1); Board layer: the hovered band's slot;
-// Card: always 'last' (Story 4's narrowed scope — no band, no anchor).
+// Card: 'last' for an item arriving from outside (Story 4's narrowed
+// scope — no band, no anchor), or `origin` itself for the drag's own
+// containing Card — "set back down," not "attach" (Story 5, §6/§8; TC-12).
 // Never previews a foreign region a mere hover hasn't actually reached
 // (rule 1): the ghost only ever shows what a drop right now would do.
 // Null when the card belongs nowhere and the cursor is over nothing: it's
 // drawn where it already is.
+//
+// `origin` is where the drag genuinely started (Story 4.1 Phase 3; Story 5
+// sets it for a Stub too) — a `parentId` key marks a Stub's origin, a
+// `workphaseId` key a Free Card's. `containingCardId` is Story 5's own
+// addition: the Stub's *section-root* Card (decision 1) — distinct from
+// `origin.parentId` for a grandchild, whose real direct parent is a Stub
+// further down, not the section root — so the Card-branch's "is this my
+// own restore point" test compares against this, never `origin.parentId`.
+// Null for a Free Card drag.
 //
 // `priorPlacement` is the item's placement from *before* this drag — set
 // only when picking up (or popping back into the context of) a re-dragged
@@ -360,37 +396,57 @@ export function placementFor(
   regions: readonly DragRegion[],
   activeWorkphaseId: string | null,
   activeItemPosition: number | null,
+  origin: Placement,
+  containingCardId: string | null,
   priorPlacement: Placement | null = null,
   over: PlacementOver = null,
 ): Placement | null {
   const region = placementRegion(session, regions);
   if (!region) return null;
 
-  // Everything below is the card list's within-action; any other kind
-  // answers here. Today that's only a Card — the auto-drop, always its
-  // last child. (Story 6's Descendants kind will need its own branch, and
-  // the narrowing will say so: `attachToCardId` stops typechecking.)
-  if (!isCardList(region)) {
+  // A Card's within-action: "set back down" for the drag's own containing
+  // Card (Story 5, `origin` itself — `region.attachToCardId ===
+  // containingCardId`), else attach as the last child (Story 4, or Story 5
+  // TC-4's reparent into a *different* Card).
+  if (region.kind === 'card') {
+    if (region.attachToCardId === containingCardId) return origin;
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
+  // A Descendants section's within-action, this story (decision 1): direct-
+  // sibling reorder, scoped to `origin`'s own real parent — the same policy
+  // `resolveBoardCollisions`' `siblingScopeParentId` restricts collisions
+  // to. `over` is always a specific sibling row here (no bare "container"
+  // concept for this kind — `handleDragEnd` never passes `'container'`);
+  // mid-drag, with `over` still null, dnd-kit's own sortable strategy
+  // already draws the reorder, so the ghost just sits at `origin` (or its
+  // `priorPlacement`, same reconciliation-#1 reasoning as any other
+  // context). Full gap+depth placement is Story 6's (§7).
+  if (region.kind === 'descendants') {
+    if (over === null || over === 'container') return priorPlacement ?? origin;
+    const parentId = 'parentId' in origin ? origin.parentId : null;
+    return { parentId, slot: { anchorId: over.anchorId, side: over.side } };
+  }
+
+  // Story 5: the moment a Stub's own list stops applying — any card-list
+  // region, reached from either layer below — the placement previews Free
+  // (itemListOps.ts::renderedIsStub already reads a `parentId: null` key
+  // this way); a Free Card's placement carries no such opinion, exactly as
+  // before Story 5.
+  const nonComparable = 'parentId' in origin;
+  const detach = nonComparable ? { parentId: null as string | null } : {};
+
   if (session.contextKey !== null) {
-    // A workphase-only fallback (no anchor): keeps the position it already
-    // has — unless it has none to keep, which takes the append fallback
-    // instead of the position-sort's null-coerced top slot (item-
-    // positioning §2 addendum, §7.5; wiki–code reconciliation #29, the
-    // mirror of #14). A done region never previews a positioned insert
-    // either way — uniform across its whole covered set
-    // (itemListOps.ts::getMergedColumnItemsFrom's own invariant), so this
-    // also covers a real drop onto one of its own (terminal) cards, same
-    // as the band path already never anchoring in a terminal region.
-    const fallback: Placement['slot'] = region.isTerminal ? 'existing' : workphaseOnlySlot(activeItemPosition);
+    const fallback = noAnchorSlot(region, nonComparable, activeItemPosition);
     if (over === null)
-      return priorPlacement ?? { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
+      return (
+        priorPlacement ?? { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback }
+      );
     if (over === 'container' || region.isTerminal) {
-      return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
+      return { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
     }
     return {
+      ...detach,
       workphaseId: regionWorkphaseFor(region, activeWorkphaseId),
       slot: { anchorId: over.anchorId, side: over.side },
     };
@@ -402,11 +458,11 @@ export function placementFor(
 
   let slot: Placement['slot'];
   if (region.isTerminal || !band || band === 'middle') {
-    slot = region.isTerminal ? 'existing' : workphaseOnlySlot(activeItemPosition);
+    slot = noAnchorSlot(region, nonComparable, activeItemPosition);
   } else {
     slot = band === 'top' ? 'first' : 'last';
   }
-  return { workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
+  return { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
 }
 
 export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: string | null): string {

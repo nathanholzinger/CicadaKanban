@@ -3,12 +3,16 @@
 Implementation plan for Epic 3.5 Story 5. Rules live in the wiki; this file
 is *how to build them* and becomes a historical record once done.
 
-**Status: planned 2026-09-17, not started.** Written against the code as it
-will stand after [Story 4.1](story-4-1-efficiency-refactor.md) — region
-`kind`s and a universal `parentRegionKey` (Phase 0), `origin` on the session
-and the release derived from a placement through `toRequest` + `isIdentity`
-(Phase 3). Where a step leans on a 4.1 phase it says which; the one place
-it could be built without 4.1 is called out and not recommended.
+**Status: planned 2026-09-17; decisions ratified 2026-09-21; built
+2026-09-21 (same day).** See "As built" at the bottom for what landed and
+where it departed from this plan. Written against the code as it stands
+after
+[Story 4.1](story-4-1-efficiency-refactor.md) (Phases 0–4 landed
+2026-09-18 — the prerequisite is met) — region `kind`s and a universal
+`parentRegionKey` (Phase 0), `origin` on the session and the release
+derived from a placement through `toRequest` + `isIdentity` (Phase 3).
+Where a step leans on a 4.1 phase it says which; the one place it could
+have been built without 4.1 is called out and no longer applies.
 
 - Story entry: [`epic-3-5-roadmap.md`](epic-3-5-roadmap.md) § Story 5
 - Rules: [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md)
@@ -135,6 +139,43 @@ flat hierarchy list, the sidebar consolidation — all Story 6.
 7. **Ghost identification in `KanbanCard` moves to origin + placement**
    (4.1's F3 landmine): a row is the attach ghost iff the active item's
    placement puts it under this parent *and* its `origin` didn't.
+
+**Ratified by the Product Owner, 2026-09-21.** Decisions **1, 3, 5, 6**
+carry rule content (where a drag starts, what's reachable this story,
+what the preview shows, what the carried copy looks like) and are
+settled; the wiki carries them as of this date — §1 and §8 (decision 1),
+§7 (decision 6), §10 (decision 5). Decisions **2, 4, 7** are
+implementation choices — the Architect's call, no objection recorded.
+Notes against the four rulings:
+
+- **On 1** — a grandchild's drag starts in the same section as its
+  parent's; there is one Descendants layer per Card, never one per Stub
+  (§7.1's root is the Card). Because the *within-action* stays direct-
+  sibling reorder until Story 6, a grandchild hovered over a non-sibling
+  row inside the section moves nothing and a release there is identity —
+  a known interim dead zone inside a region that is otherwise held, not a
+  bug to file during hands-on.
+- **On 3** — scope, not a rule change: in Story 5 a Free Card zoomed into a
+  Card with children still stops at the auto-drop. Story 6 opens the
+  layer.
+- **On 5** — the principle is #29's, restated generally: **the preview
+  shows where the write will actually land the item.** A detach without
+  an anchor resolves to the append fallback (item-positioning §7.5), so
+  the resting slot is `last`; hover displacement moves it from there
+  exactly as for any Card.
+- **On 6** — verified no golden-path change: `BoardView.tsx` already
+  renders one `isOverlay` shortCard for *every* session, Stub drags
+  included, so a sibling reorder looks today exactly as it will after
+  this story. Only the in-list ghost switches form at the Column ↔ Card
+  boundary (TC-10). The alternative (a Stub-row overlay at the inner
+  layers) stays off the table unless hands-on says otherwise.
+
+**Feel-checks the Product Owner owes after the build** (not gates on
+starting it): the brief Card-layer stop on the way out — if it reads as
+confusing, `popDistancePx` is the ruled lever (Risks below), not a
+special case; and Story 4.1's two still-open gates (Phase 1's shortCard /
+carve-out, Phase 4's short-merged-column exit clock), which this story's
+hands-on can cover in the same sitting.
 
 ---
 
@@ -306,4 +347,100 @@ forced-expand covers the zoom-in direction).
 
 ## As built
 
-*(Empty until the story is done.)*
+All four steps (Descendants region + Stub start, classification, pop-out
+and the representation switch, the write) plus decision 4's registration
+change are implemented and green on the full suite (client unit tests —
+230/230; client/root `tsc`, `eslint`, `prettier`; and the complete
+Playwright E2E run — 139 passed / 6 skipped, up from the established
+133/6 baseline by exactly the 6 new cases below) with zero net
+regressions. No behavior changed for a Free Card drag outside the
+registration rename (decision 4) — the existing catalog stayed the
+regression gate throughout.
+
+- **Region + start (Step 1).** `dragRegions.ts` gained a `descendants` kind
+  (`descendantsRegionKey`) and a fourth `resolveDragStructure` parameter,
+  `originCardId` — the Stub drag's own containing Card, which resolves its
+  `card:`/`descendants:` elements regardless of `isValidCard` (decision 2).
+  `childRegionAt` gained an explicit guard excluding `descendants` regions
+  from ever being returned as a zoom-in candidate (decision 3 — Story 6
+  opens that). `useBoardDnd.ts::handleDragStart` branches on
+  `isStub(activeItem)`: a Stub's `containingCardId` is found via
+  `getAncestors` (cycle-safe) walking up past every Stub ancestor to the
+  nearest Free one — a grandchild's drag starts in its Card's whole
+  section, never its parent Stub's sub-list. `KanbanCard.tsx`'s
+  attached-children wrapper carries `[DRAG_REGION_ATTR]:
+  descendantsRegionKey(item.id)` alongside its existing content.
+- **Classification (Step 2).** `dragClassification.ts`'s `stubDrag`
+  branch is deleted outright — a Stub is classified by the same
+  `isWithinDepthCap` walk as a Card, no special case at all.
+- **Pop-out and the representation switch (Step 3).** Structurally
+  nothing changed in `popSession.ts` — the pop-out chain falls out of
+  `parentRegionKey` and the existing shared clock, exactly as planned.
+  `placementFor` gained two new branches (`region.kind === 'card'` vs.
+  `'descendants'`, replacing the old blanket `!isCardList` case) and two
+  new parameters, `origin` and `containingCardId` — the Card branch
+  returns `origin` itself (the "set back down" preview, TC-12) when
+  `region.attachToCardId === containingCardId`, and the last-child attach
+  placement otherwise (TC-4); the Descendants branch resolves an in-context
+  anchor+side scoped to `origin`'s own real `parentId` (decision 1's
+  interim sibling reorder), or defers to `priorPlacement ?? origin`
+  mid-drag. A new private `noAnchorSlot` helper generalizes #29 (decision
+  5): a card-list region's no-anchor fallback rests at `'last'`, never
+  `workphaseOnlySlot`'s read of a position that isn't comparable there,
+  whenever `origin` carries a `parentId` (a Stub's own kept slot). Every
+  card-list placement for such an origin also carries an explicit
+  `parentId: null` — the render-preview signal `itemListOps.ts`'s
+  `renderedIsStub`/`computeChildCounts` already anticipated.
+- **The write (Step 4).** `boardDndUtils.ts`'s `isIdentity` and `toRequest`
+  now take the session's `origin` instead of the raw item's
+  `(parentId, isAttached)`/`workphaseId` fields — the audit
+  epic-3-5-story-4 #1 `isAttached` guard retires with it, since a detached
+  child's origin is a workphase placement and a re-attach's is a parent
+  one, so the two kinds simply never collide. `toRequest` branches three
+  ways on a `parentId` placement: `null` → detach (`isAttached: false`,
+  real `parentId` untouched, TC-1/2); an anchor-shaped `slot` → a plain
+  sibling reorder (`{anchorId, side}` only — the pre-Story-5
+  attached-child request unchanged, TC-9); otherwise → attach as last
+  child (TC-4). `useBoardDnd.ts::handleDragEnd`'s separate `attached-child`
+  branch is deleted; every item drag ends through the one unified path.
+- **Decision 4 (drag-type unification).** Every item row now registers
+  `data: {type: 'item', role: 'card' | 'stub', parentId?}` — `KanbanCard`'s
+  own row and `AttachedChildRow` alike — instead of `'card'`/
+  `'attached-child'`. `resolveBoardCollisions` (`boardDndUtils.ts`) reads
+  none of it off the *active* row; a new `CollisionSession.siblingScopeParentId`
+  field (computed by `useBoardDnd.ts` from the pop session's own `origin`,
+  never dnd-kit's `active.data.current`) drives the Descendants-context
+  scoping instead. Verified both by a real detach-then-immediate-redrag
+  E2E case and a unit test that feeds a deliberately stale active `role`
+  alongside a live session and confirms the outcome still follows the
+  session, not the stale data.
+- **Decision 7 (ghost identification).** `KanbanCard.tsx`'s `attachGhostId`
+  now also checks `origin`: a row previews as the attach ghost only when
+  the active drag's `origin` parent *isn't* this Card, so a Stub's own
+  sibling reorder (now running through the same `pop` session as a Card
+  drag, per Step 1) never misidentifies its own home section as an
+  in-progress attach — the exact shape of 4.1's F3 landmine, one layer up.
+- **Departures from the plan.** None structural. `reservationFor`'s
+  fourth `'none'` shape (audit epic-3-5-story-4 #9, landed before this
+  story) already covered the terminal-and-empty overlap this story's
+  Card-list branches lean on; nothing new was needed there.
+- **Tests.** Unit: `dragRegions.test.ts` (descendants registration, the
+  `originCardId` bypass, `childRegionAt`'s exclusion), `dragClassification.test.ts`
+  (full Stub classification, replacing the interim-rule case),
+  `popSession.test.ts` (`placementFor`'s Card/Descendants branches, TC-1/2/
+  4/9/12), `boardDndUtils.test.ts` (`isIdentity`/`toRequest` against
+  `origin`, the decision-4 stale-role regression, `resolveBoardCollisions`'
+  sibling scoping), `itemListOps.test.ts` (a detaching placement's
+  `parentId: null` leaving the section and the count following). E2E:
+  `tests/ui/drag-5-stub-detach.spec.ts` (TC-1/2/4/9 (sibling bullets)/10/12,
+  the grandchild-origin case, and the decision-4 redrag regression) plus
+  updates to `drag-target-classification.spec.ts`'s Stub case (DRAG-2.7).
+  TC-3 (cross-column detach via Board bands) and TC-5 (momentary excursion)
+  weren't separately automated — both exercise machinery (Board-layer
+  bands, the pop-out clock's "momentary doesn't count" rule) already
+  covered elsewhere for a Card, and TC-11's own two-pop cascade stays
+  manual per the plan (threshold-timed).
+- **Docs.** Wiki §1/§1.1/§4/§7/§8/§10 and the header build-status
+  paragraph updated to "built"; `epic-3-5-roadmap.md`'s Story 5 entry;
+  `workflow/CLAUDE.md`'s mental model and module list; the DRAG-1/2/5
+  test-plan tables and per-case automation notes.

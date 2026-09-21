@@ -19,8 +19,8 @@ import type { Placement, Placements } from './itemListOps';
 export interface DragSession {
   activeItem: Item;
   classification: DragClassification;
-  /** The pop machine — Card drags only; a Stub drag stays in its sibling list (Story 5 opens it). */
-  pop: PopSession | null;
+  /** The pop machine — every item drag runs it (Story 5: a Stub's own sibling reorder is the Descendants layer's within-action, not a bypass). */
+  pop: PopSession;
   /**
    * The item's placement as it stood *before* this drag touched it — null
    * for most drags, but a re-drag of an item whose earlier write is still
@@ -32,16 +32,27 @@ export interface DragSession {
   priorPlacement: Placement | null;
   /**
    * Story 4.1 Phase 3: where the item genuinely started — `{workphaseId,
-   * slot: 'existing'}` for a Free Card (Story 5 sets `{parentId, slot:
-   * 'existing'}` for a Stub). Unlike `priorPlacement` (a *pending* marker
-   * from an earlier, still-in-flight write), this is always set, and is
-   * what `isIdentity` compares a resolved release against — "same list,
-   * same ordinal" as where the drag began is the general form decision 2
-   * (2026-09-17) names: a release back into the item's own slot writes
-   * nothing, at every layer. Null only for a Stub drag (Story 5 opens it;
-   * `pop: null` already marks that case).
+   * slot: 'existing'}` for a Free Card, `{parentId, slot: 'existing'}` for
+   * a Stub (Story 5) — its own real, direct `parentId`, not necessarily
+   * `containingCardId` below (a grandchild's direct parent is another
+   * Stub). Unlike `priorPlacement` (a *pending* marker from an earlier,
+   * still-in-flight write), this is always set, and is what `isIdentity`
+   * compares a resolved release against — "same list, same ordinal" as
+   * where the drag began is the general form decision 2 (2026-09-17)
+   * names: a release back into the item's own slot writes nothing, at
+   * every layer.
    */
-  origin: Placement | null;
+  origin: Placement;
+  /**
+   * Story 5: the Stub drag's own containing Card — the nearest Free
+   * ancestor, whatever the Stub's depth beneath it (decision 1) — null for
+   * a Free Card drag. Distinct from `origin`'s own `parentId`: this is the
+   * section root `placementFor`'s Card-branch compares a locked Card
+   * region against to tell "this is where I started" (→ `origin`, set
+   * back down) from "this is a different Card" (→ attach as its last
+   * child), regardless of how many Stub generations sit in between.
+   */
+  containingCardId: string | null;
 }
 
 export const DragSessionContext = createContext<DragSession | null>(null);
@@ -79,7 +90,10 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
 // promise something a drop wouldn't deliver. A collapsed Card can't show
 // the ghost landing inside it, so KanbanCard uses this to force itself open
 // for as long as it's true, independent of the user's own expand/collapse
-// choice.
+// choice. Story 5: also true for the intermediate stop at a Stub's own
+// containing Card (its within-action there is "set back down," not
+// attach) — same forced-open need, since the Stub's own section has to
+// stay visible for the drag's own row to keep rendering somewhere sane.
 export function useIsAttachTarget(itemId: string): boolean {
   const pop = useContext(DragSessionContext)?.pop;
   return pop?.contextKey === cardRegionKey(itemId);

@@ -26,6 +26,13 @@
 // (or a Card) is additionally clipped to its column's visible scroll box
 // below: one scrolled fully out of view registers no region at all until it
 // scrolls back in.
+//
+// Story 5: a Card's Descendants section is also a region — `descendants:
+// <cardId>`, one layer inside its Card (§1.1) — but resolves only for the
+// drag's own `originCardId` (decisions 2/3): it's where a Stub's drag
+// starts, not yet a zoom-in target any drag can reach (Story 6 opens that).
+// `parentRegionKey` points at the Card's own region, so popping out lands
+// there (§8) the same way any nested region's does.
 
 export interface Rect {
   top: number;
@@ -43,7 +50,7 @@ export interface Point {
 
 export type Band = 'top' | 'middle' | 'bottom';
 
-export type RegionKind = 'column' | 'subrow' | 'card';
+export type RegionKind = 'column' | 'subrow' | 'card' | 'descendants';
 
 interface RegionCommon {
   /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `card:<id>` — also the DOM attribute value. */
@@ -120,7 +127,25 @@ export interface CardRegion extends RegionCommon {
   parentRegionKey: string;
 }
 
-export type DragRegion = CardListRegion | CardRegion;
+// Story 5 — a Card's Descendants region: the section of its attached
+// children (every depth beneath it, decision 1 — one per Card, never one
+// per Stub), where a Stub's drag starts and where a manual placement will
+// eventually live (Story 6, wiki §7). Registered only for the origin's own
+// section this story (decision 3) — `resolveDragStructure`'s `originCardId`
+// gate below — so it's never a stray zoom-in candidate for an unrelated
+// drag. Carries no workphase/card-count fields, same reasoning as
+// `CardRegion`: this story's within-action (sibling reorder) never consults
+// them, reading `parentId` off the session's own `origin` instead (a Stub's
+// siblings, not this region's own identity).
+export interface DescendantsRegion extends RegionCommon {
+  kind: 'descendants';
+  /** The Card whose descendants section this is — same id as the key's own suffix. */
+  cardId: string;
+  /** Always that Card's own `card:<id>` region — one layer up (§1.1). */
+  parentRegionKey: string;
+}
+
+export type DragRegion = CardListRegion | CardRegion | DescendantsRegion;
 
 // The one question every "which kind is this" site asks (audit
 // epic-3-5-story-4 #8): is this a card list — a flat list of Free items with
@@ -152,6 +177,12 @@ export function subrowRegionKey(columnId: string, workphaseId: string): string {
 // builders above so every region-key format has one owner.
 export function cardRegionKey(itemId: string): string {
   return `card:${itemId}`;
+}
+
+// Story 5: a Card's Descendants region key — the section a Stub's drag
+// starts in (§1, §1.1).
+export function descendantsRegionKey(cardId: string): string {
+  return `descendants:${cardId}`;
 }
 
 // Column-shape data, moved here from boardDndUtils.ts (audit
@@ -210,7 +241,8 @@ interface DomHandles {
 type LiveFacts = 'rect' | 'contentRect';
 type CardListStructure = { dom: DomHandles } & Omit<CardListRegion, LiveFacts | 'cardCount' | 'boundsRect'>;
 type CardStructure = { dom: DomHandles } & Omit<CardRegion, LiveFacts>;
-export type DragStructure = readonly (CardListStructure | CardStructure)[];
+type DescendantsStructure = { dom: DomHandles } & Omit<DescendantsRegion, LiveFacts>;
+export type DragStructure = readonly (CardListStructure | CardStructure | DescendantsStructure)[];
 
 // Resolves every `[data-drag-region]` element under `root` into its
 // structural facts, joined with the column definitions for the workphase
@@ -226,21 +258,33 @@ export type DragStructure = readonly (CardListStructure | CardStructure)[];
 // unresolvable column key already does — a Card region carries no
 // workphase of its own to resolve (§3.2 "invalid targets are never
 // poppable" falls out of this for free).
+//
+// `originCardId` is Story 5, decision 2/3: the Stub drag's own containing
+// Card, if this drag started as one — undefined for a Free Card drag. Its
+// `card:` region resolves regardless of `isValidCard` (a Stub's drag must
+// be able to pop back out to its own Card even when that Card wouldn't be
+// a valid *target* for it), and its `descendants:` element is the *only*
+// one that resolves at all this story — every other Card's section is not
+// yet a zoom-in candidate (Story 6 opens that).
 export function resolveDragStructure(
   root: ParentNode,
   columns: readonly DropColumn[],
   isValidCard?: (cardId: string) => boolean,
+  originCardId?: string,
 ): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
-  const structure: (CardListStructure | CardStructure)[] = [];
+  const structure: (CardListStructure | CardStructure | DescendantsStructure)[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(`[${DRAG_REGION_ATTR}]`)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
     if (!key) continue;
-    const isCard = key.startsWith('card:');
     const scrollAncestor = findVerticalScrollAncestor(el, root);
-    const record = isCard
-      ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, findParentRegionKey(el, root))
-      : cardListStructureFromKey(key, el, scrollAncestor, byId);
+    const parentRegionKey =
+      key.startsWith('card:') || key.startsWith('descendants:') ? findParentRegionKey(el, root) : null;
+    const record = key.startsWith('card:')
+      ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, parentRegionKey, originCardId)
+      : key.startsWith('descendants:')
+        ? descendantsStructureFromKey(key, el, scrollAncestor, parentRegionKey, originCardId)
+        : cardListStructureFromKey(key, el, scrollAncestor, byId);
     if (record) structure.push(record);
   }
   return structure;
@@ -274,7 +318,7 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
     const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor, false) : null;
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
-    if (facts.kind === 'card') {
+    if (facts.kind === 'card' || facts.kind === 'descendants') {
       regions.push({ ...facts, rect, contentRect });
       continue;
     }
@@ -341,18 +385,44 @@ function currentTranslate(el: HTMLElement): { dx: number; dy: number } {
 // `attachToCardId` alone; nothing else about a Card region is
 // special-cased separately. No `isValidCard` (a caller that hasn't wired
 // Story 4 up), an id it says is invalid for this drag, or no resolvable
-// parent region resolves to nothing at all.
+// parent region resolves to nothing at all — *unless* this is the Stub
+// drag's own containing Card (`originCardId`, Story 5 decision 2): that one
+// always resolves, since a Stub must be able to pop back out to its own
+// Card even when that Card isn't a valid *target* for it.
 function cardStructureFromKey(
   key: string,
   el: HTMLElement,
   scrollAncestor: HTMLElement | null,
   isValidCard: ((cardId: string) => boolean) | undefined,
   parentRegionKey: string | null,
+  originCardId: string | undefined,
 ): CardStructure | null {
-  if (!isValidCard || !parentRegionKey) return null;
+  if (!parentRegionKey) return null;
   const cardId = key.slice('card:'.length);
-  if (!isValidCard(cardId)) return null;
+  const isOrigin = cardId === originCardId;
+  if (!isOrigin && !(isValidCard && isValidCard(cardId))) return null;
   return { dom: { element: el, scrollAncestor }, key, kind: 'card', attachToCardId: cardId, parentRegionKey };
+}
+
+// Story 5, decisions 2/3 — a Descendants region's structural identity:
+// resolves *only* for the drag's own `originCardId`, regardless of
+// `isValidCard` (same reasoning as the Card bypass above — this section is
+// where the drag started, not a target being offered). Every other Card's
+// section resolves to nothing at all this story, which is what keeps
+// `childRegionAt` from a Card context returning one as a zoom-in candidate
+// (Story 6 opens that; see `childRegionAt`'s own guard below for the other
+// half of decision 3).
+function descendantsStructureFromKey(
+  key: string,
+  el: HTMLElement,
+  scrollAncestor: HTMLElement | null,
+  parentRegionKey: string | null,
+  originCardId: string | undefined,
+): DescendantsStructure | null {
+  if (!parentRegionKey) return null;
+  const cardId = key.slice('descendants:'.length);
+  if (cardId !== originCardId) return null;
+  return { dom: { element: el, scrollAncestor }, key, kind: 'descendants', cardId, parentRegionKey };
 }
 
 // The real card count a column/sub-row's own element carries
@@ -458,23 +528,33 @@ export function containsPoint(rect: Rect, point: Point): boolean {
 // column/sub-row regions when `parentKey` is null (every one of them has
 // `parentRegionKey: null`), or a locked column/sub-row's own Cards when
 // `parentKey` is its key (replaces the old `nonCardRegionAt`/`cardRegionAt`
-// pair — Story 4.1 Phase 0). A Card's own further zoom-in (Story 5's
-// `descendants` kind) reads the same way once it exists. Reachable only
-// from *this* parent — never a foreign column's Card, never two layers in
-// one hop (wiki §1.1 rule 2) — because nothing but a true child ever
-// carries a matching `parentRegionKey`. Null over a column's header/footer,
-// the gaps between columns or sub-rows, the space below the last sub-row, a
-// region currently scrolled out of view, or (at Board layer) always a Card:
-// a Card is never a Board-layer target in its own right (re-plan,
-// 2026-09-16) — the layer rule is one context change at a time, and no
-// column/sub-row ever carries a non-null `parentRegionKey` for this to
-// match against.
+// pair — Story 4.1 Phase 0). Reachable only from *this* parent — never a
+// foreign column's Card, never two layers in one hop (wiki §1.1 rule 2) —
+// because nothing but a true child ever carries a matching
+// `parentRegionKey`. Null over a column's header/footer, the gaps between
+// columns or sub-rows, the space below the last sub-row, a region currently
+// scrolled out of view, or (at Board layer) always a Card: a Card is never
+// a Board-layer target in its own right (re-plan, 2026-09-16) — the layer
+// rule is one context change at a time, and no column/sub-row ever carries
+// a non-null `parentRegionKey` for this to match against.
+//
+// A `descendants` region never comes back either, even from its own Card's
+// context (Story 5 decision 3, 2026-09-21): `resolveDragStructure` only
+// ever resolves one — the origin's own section — so this exclusion only
+// bites for that single case, where the Card is also the section's own
+// root and its section would otherwise satisfy `parentRegionKey ===
+// parentKey` while genuinely hovered. Zooming a locked Card *into* its
+// descendants section is Story 6's; until then a Card's within-action is
+// only ever the auto-drop (§6), never a further zoom-in.
 export function childRegionAt(
   regions: readonly DragRegion[],
   point: Point,
   parentKey: string | null,
 ): DragRegion | null {
-  return regions.find(r => r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ?? null;
+  return (
+    regions.find(r => r.kind !== 'descendants' && r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ??
+    null
+  );
 }
 
 function verticalDistance(y: number, rect: Rect): number {
