@@ -88,30 +88,6 @@ function rectCenterInside(rect: Rect, bounds: Rect): boolean {
   return containsPoint(bounds, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
 }
 
-export interface DropColumn {
-  id: string;
-  broken: boolean;
-  displayMode: 'merged' | 'expanded';
-  entryWorkphaseId: string;
-  subRows: Array<{ workphase: { id: string; isTerminal?: number | boolean } }>;
-}
-
-// Maps every covered workphase id -> the column that covers it.
-export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readonly C[]): Map<string, C> {
-  const map = new Map<string, C>();
-  for (const col of columns) {
-    for (const row of col.subRows) map.set(row.workphase.id, col);
-  }
-  return map;
-}
-
-// Encodes a droppable id for an expanded column's per-workphase sub-row —
-// the same id `dragRegions.ts::cardListStructureFromKey` sets as that
-// region's own `containerId`, so the two only have to agree once.
-export function subrowContainerId(columnId: string, workphaseId: string): string {
-  return `subrow::${columnId}::${workphaseId}`;
-}
-
 // Narrowed structural subset of dnd-kit's ClientRect — only what
 // resolveDropSide needs, so callers can pass either a real ClientRect or a
 // plain fixture without importing dnd-kit's type.

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import {
@@ -10,12 +10,15 @@ import {
   topQuarter,
   bottomQuarter,
   pastColumnEnd,
-  awaitDragState,
   gapBetween,
+  seedDragTuning,
+  awaitPoppedOut,
+  POP_OUT_ONLY,
 } from '../helpers/dragGesture';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
+import { fetchItem } from '../helpers/seed';
 import { API } from '../helpers/api';
-import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
+import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
 const PROJECT_NAME = 'Repositioning DnD Project';
 
@@ -50,15 +53,15 @@ const PROJECT_NAME = 'Repositioning DnD Project';
 // drag gesture today; both tests target the last card directly, same as
 // 3.b/4.b, and are expected to resolve identically (`before` that card).
 //
-// That dead end also surfaced a real, confirmed server bug along the way:
-// if collision *did* ever resolve to the bare column container for a
-// same-workphase reorder (anchorId: null), useBoardDnd.ts sends only
-// `{ scopeWorkphaseIds }` — no anchorId, position, or workphaseId. The
-// server's PATCH /items/:id/move validation
-// (server/src/routes/items.ts:318-321) requires at least one of those three
-// and 400s otherwise, silently failing the drop. Confirmed directly via a
-// probe request replaying that exact body — see the plan/conversation this
-// suite came from.
+// That dead end also surfaced a real, confirmed server bug along the way,
+// history now (audit epic-3-5-story-4 #5): pre-Story-4.1-Phase-3, if
+// collision *did* ever resolve to the bare column container for a
+// same-workphase reorder (anchorId: null), useBoardDnd.ts sent only
+// `{ scopeWorkphaseIds }` — no anchorId, position, or workphaseId — and the
+// server's PATCH /items/:id/move validation 400'd on it, silently failing
+// the drop (confirmed directly via a probe request replaying that exact
+// body). `scopeWorkphaseIds` is gone client-side since (api/items.ts); the
+// request path is `toRequest` now, and this exact shape is moot.
 
 let scenario: RepositioningScenario;
 
@@ -66,21 +69,15 @@ let scenario: RepositioningScenario;
 // has actually reached Board layer (docs/wiki/board-drag-interaction §1–§3,
 // re-planned 2026-09-16) — still locked to its origin column, a release
 // commits *that* column's own reorder instead, no matter what a bare hover
-// is resting on. Seeded short so the cross-column cases below (2, 4, 5) can
-// deliberately pop out; long enough on the pop-*in* side that resting in a
-// target column's own middle band never completes a second, unwanted pop
-// into full anchor+side placement before the test releases. `cardPopInDelayMs`
-// is a separate clock again (Story 4, re-plan 2026-09-16) — several cases
-// here (1.a/2.a skipped aside, 3.a/3.b/4.b) briefly hover a sibling card
-// in-context right before releasing, which is enough to accumulate toward
-// it even though none of these are about attaching; kept absurdly high for
-// the same reason. Same-column cases (1, 3) never leave their own context
-// at all, so none of this affects them either way.
-const TUNING = { ...DEFAULT_DRAG_TUNING, popDelayMs: 150, popInDelayMs: 30_000, cardPopInDelayMs: 30_000 };
-
-async function popOutFully(page: Page) {
-  await awaitDragState(page, 'popped-out', TUNING.popDelayMs + 2000);
-}
+// is resting on. `POP_OUT_ONLY` (tests/helpers/dragGesture.ts) is seeded
+// short on the pop-*out* side so the cross-column cases below (2, 4, 5) can
+// deliberately pop out, and absurdly high on the pop-*in* side (both the
+// band's own and `cardPopInDelayMs` — several cases here, 1.a/2.a skipped
+// aside, briefly hover a sibling card in-context right before releasing)
+// so nothing completes a second, unwanted pop before the test releases.
+// Same-column cases (1, 3) never leave their own context at all, so none
+// of this affects them either way.
+const TUNING = { ...DEFAULT_DRAG_TUNING, ...POP_OUT_ONLY };
 
 test.beforeEach(async ({ request, page, projectSidebar }) => {
   await resetAndSeedDb();
@@ -97,10 +94,7 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
     data: { boardId: boards[0].id, startWorkphaseId: scenario.colTwoPhase.id, endWorkphaseId: scenario.colTwoPhase.id },
   });
 
-  await page.addInitScript(
-    ([key, value]) => localStorage.setItem(key, value),
-    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(TUNING)] as const,
-  );
+  await seedDragTuning(page, POP_OUT_ONLY);
   await page.goto('/');
   await projectSidebar.select(PROJECT_NAME);
   await page.locator('main').getByRole('button', { name: 'Board' }).click();
@@ -112,8 +106,12 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
 // target mid-drag, and the known precision limits behind the skipped cases
 // below (1.a/2.a) and the pastColumnEnd dead end (1.b/2.b).
 
-async function getC(request: import('@playwright/test').APIRequestContext) {
-  return (await request.get(`${API}/items/${scenario.items.C.id}`)).json();
+async function popOutFully(page: import('@playwright/test').Page) {
+  await awaitPoppedOut(page, TUNING);
+}
+
+async function getC(request: APIRequestContext) {
+  return fetchItem(request, scenario.items.C.id);
 }
 
 test.describe('1: extreme boundary moves within column 1', () => {
@@ -145,10 +143,15 @@ test.describe('1: extreme boundary moves within column 1', () => {
     const colOne = page.getByRole('group', { name: 'Column One' });
     await dragTo(page, cardC, () => pastColumnEnd(colOne));
 
-    // The "past the end" gesture does reach the append case here — no
-    // anchor, so the server appends past the true last item in scope
-    // (workflow-wide: E is the global max, so this is the same flat +1.0
-    // degenerate case as the API suite's 1.b). Expected to pass.
+    // Not the append case the header comment's dead end went looking for
+    // (audit epic-3-5-story-4 #5): closestCorners still resolves this to
+    // card E (the same "past the end still hits the last card" heuristic),
+    // and resolveDropSide reads the dragged card's far-past-E center as
+    // 'after' — so the write anchors against E, side 'after', rather than
+    // going anchor-less. E is also the workflow-wide global max, so an
+    // anchored "after E" and a bare append land on the identical 6.0 the
+    // API suite's 1.b gets — same outcome, different mechanism. Expected
+    // to pass.
     await expect.poll(async () => (await getC(request)).position).toBe(6.0);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colOnePhase.id)).toBe('AEC');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ABDEC');

@@ -5,8 +5,9 @@
 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType } from '../types';
-import KanbanCard, { CARD_LIST_GAP_CLASS } from './KanbanCard';
+import KanbanCard from './KanbanCard';
 import { DragCarveFrame } from './BandGuides';
+import { CARD_LIST_GAP_CLASS } from './cardMetrics';
 
 // The droppable surface's "a card is over me" highlight — a sub-row's own
 // list applies it to itself (below); a merged column applies it to its body
@@ -63,16 +64,26 @@ export default function CardList({
   region,
 }: CardListProps) {
   const showDropHighlight = droppable && isOver && isCardBeingDragged;
-  let containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS}`;
-  if (droppable) {
-    const surface = showDropHighlight ? DROP_HIGHLIGHT_CLASS : 'bg-zinc-800/20';
-    containerClass = `${containerClass} p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${surface}`;
-  }
+  const droppableSurfaceClass = droppable
+    ? `p-1.5 rounded-lg min-h-[52px] transition-colors duration-200 ${showDropHighlight ? DROP_HIGHLIGHT_CLASS : 'bg-zinc-800/20'}`
+    : '';
+
+  // A droppable list that's also a drag region (an expanded column's
+  // sub-row) puts its padded/rounded surface chrome — and the droppable
+  // node ref itself — on DragCarveFrame's own wrap instead of this div, so
+  // the empty-zone label DragCarveFrame substitutes for `children` carries
+  // the identical padding rather than a bare, unpadded box (audit
+  // epic-3-5-story-4 #2: the two states used to differ by the padding
+  // alone — a real layout jump on an otherwise height-stable empty
+  // sub-row). A droppable list with no region (Unsorted, a broken column's
+  // sub-row) has no such substitution to matter for, so it keeps its own.
+  const chromeOnFrame = droppable && region !== undefined;
+  const containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS} ${chromeOnFrame ? '' : droppableSurfaceClass}`;
 
   // Built once — used either bare or wrapped below, and building it twice
   // would double-register the same sortable ids.
   const list = (
-    <div ref={droppable ? containerRef : undefined} className={containerClass}>
+    <div ref={chromeOnFrame ? undefined : droppable ? containerRef : undefined} className={containerClass}>
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
         {items.map(item => (
           <KanbanCard
@@ -96,6 +107,7 @@ export default function CardList({
       items={items}
       isTerminal={region.isTerminal}
       targetLabel={region.targetLabel}
+      droppable={chromeOnFrame ? { containerRef: containerRef!, className: droppableSurfaceClass } : undefined}
     >
       {list}
     </DragCarveFrame>

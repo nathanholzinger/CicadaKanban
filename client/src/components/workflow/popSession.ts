@@ -84,13 +84,19 @@ export interface PopHover {
    */
   since: number;
   /**
-   * Board layer only: the band a release would commit right now, and
-   * whether resting here past `popInDelayMs` pops the card in (exactly the
-   * middle band). Undefined for a locked column/sub-row's hover on one of
-   * its own Cards — that hover has no band at all, just a flat "long
-   * enough" duration check against `cardPopInDelayMs`.
+   * Board layer only: the band a release would commit right now (exactly
+   * the middle band is `poppable`, below). Undefined for a locked
+   * column/sub-row's hover on one of its own Cards — that hover has no
+   * band at all, just a flat "long enough" duration check.
    */
   band?: Band;
+  /**
+   * Whether resting here past its own `popInDelayFor` pops the candidate
+   * in. A card list candidate: the middle band. A Card candidate: always
+   * (audit epic-3-5-story-4 #11) — it has no band, so unconditionally
+   * poppable is the kind's own rule, set once here rather than re-derived
+   * at each call site that used to special-case `kind === 'card'`.
+   */
   poppable?: boolean;
 }
 
@@ -161,14 +167,7 @@ export function advancePopSession(
     if (!region) return session.hover ? { ...session, hover: null } : session;
     const hover = hoverFor(session.hover, region, pointer, metrics, now);
     if (hover.poppable && now - hover.since >= popInDelayFor(region.kind, tuning)) {
-      return advancePopSession(
-        { contextKey: region.key, hover: null, outsideSince: null },
-        pointer,
-        regions,
-        tuning,
-        metrics,
-        now,
-      );
+      return transitionTo(region.key, pointer, regions, tuning, metrics, now);
     }
     return hover === session.hover ? session : { ...session, hover };
   }
@@ -188,16 +187,8 @@ export function advancePopSession(
     const candidate = childRegionAt(regions, pointer, session.contextKey);
     if (candidate) {
       const hover = hoverFor(session.hover, candidate, pointer, metrics, now);
-      const gated = candidate.kind === 'card' ? true : hover.band === 'middle';
-      if (gated && now - hover.since >= popInDelayFor(candidate.kind, tuning)) {
-        return advancePopSession(
-          { contextKey: candidate.key, hover: null, outsideSince: null },
-          pointer,
-          regions,
-          tuning,
-          metrics,
-          now,
-        );
+      if (hover.poppable && now - hover.since >= popInDelayFor(candidate.kind, tuning)) {
+        return transitionTo(candidate.key, pointer, regions, tuning, metrics, now);
       }
       return hover === session.hover && session.outsideSince === null
         ? session
@@ -210,27 +201,46 @@ export function advancePopSession(
 
   const outsideSince = session.outsideSince ?? now;
   if (popOutDue(contextRegion, pointer, tuning, now, outsideSince)) {
-    return advancePopSession(
-      { contextKey: contextRegion?.parentRegionKey ?? null, hover: null, outsideSince: null },
-      pointer,
-      regions,
-      tuning,
-      metrics,
-      now,
-    );
+    return transitionTo(contextRegion?.parentRegionKey ?? null, pointer, regions, tuning, metrics, now);
   }
   return session.hover === null && session.outsideSince === outsideSince
     ? session
     : { ...session, hover: null, outsideSince };
 }
 
+// The three "pop into/out of `key`" recursive calls above, folded into one
+// (audit epic-3-5-story-4 #11) — a fresh session at `key`, re-evaluated
+// against this same pointer sample right away (see the header comment
+// above `advancePopSession` on why that re-evaluation can't wait for the
+// next `pointermove`).
+function transitionTo(
+  key: string | null,
+  pointer: Point,
+  regions: readonly DragRegion[],
+  tuning: DragTuning,
+  metrics: ShortCardMetrics,
+  now: number,
+): PopSession {
+  return advancePopSession(
+    { contextKey: key, hover: null, outsideSince: null },
+    pointer,
+    regions,
+    tuning,
+    metrics,
+    now,
+  );
+}
+
 // Board-layer hover, or a locked column/sub-row's hover on one of its own
 // Cards: keeps the entry time while the cursor stays in the same region,
 // returning the same object when nothing tracked has changed. Only a card
 // list has a band (§5), read off the region's *live* rect and card count
-// now that the reservation is exact (Phase 1) — any other candidate's
-// within-action is a constant, so there's nothing to track but presence
-// and duration (unified with the old, separate `hoverForCard` in Phase 0).
+// now that the reservation is exact (Phase 1); a Card candidate has no
+// band at all, so it's unconditionally `poppable` instead — the kind's own
+// rule, set once here (audit epic-3-5-story-4 #11) rather than re-derived
+// at each call site that used to gate on `candidate.kind === 'card'`
+// separately from reading `hover.poppable` (unified with the old, separate
+// `hoverForCard` in Phase 0).
 function hoverFor(
   current: PopHover | null,
   region: DragRegion,
@@ -240,7 +250,7 @@ function hoverFor(
 ): PopHover {
   const staying = current?.regionKey === region.key ? current : null;
   if (!isCardList(region)) {
-    return staying ?? { regionKey: region.key, since: now };
+    return staying ?? { regionKey: region.key, since: now, poppable: true };
   }
   const since = staying?.since ?? now;
   const band = bandFor(pointer.y, region, metrics);
@@ -289,17 +299,19 @@ function popOutDue(
 // of {a locked pop-out, a locked zoom-in, a Board-layer pop-in} is ever
 // pending at once (advancePopSession never sets both `hover` and
 // `outsideSince`), so there's no ambiguity about which clock this reports.
-// `regions` resolves the hovered candidate's own kind for `popInDelayFor` —
-// a locked hover falls back to `cardPopInDelayMs` if its region can't be
+// One expression over `hover.poppable` + `popInDelayFor` covers both layers
+// alike (audit epic-3-5-story-4 #11) — a Board-layer hover's own region is
+// always a column/sub-row (`popInDelayFor` resolves that to `popInDelayMs`
+// exactly as directly naming the constant used to), and a locked hover's is
+// always a Card today (`cardPopInDelayMs`); `regions` resolves which, and a
+// locked hover falls back to `cardPopInDelayMs` if its region can't be
 // found (the only kind a locked hover could be before Story 5 adds another).
 export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
-  if (session.contextKey !== null) {
-    if (session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
-    if (!session.hover) return null;
-    const candidate = regions.find(r => r.key === session.hover!.regionKey);
-    return session.hover.since + popInDelayFor(candidate?.kind ?? 'card', tuning);
-  }
-  return session.hover?.poppable ? session.hover.since + tuning.popInDelayMs : null;
+  if (session.contextKey !== null && session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
+  const hover = session.hover;
+  if (!hover?.poppable) return null;
+  const candidate = regions.find(r => r.key === hover.regionKey);
+  return hover.since + popInDelayFor(candidate?.kind ?? 'card', tuning);
 }
 
 // Story 4.1 Phase 3 — what a real drop in-context resolved to, distinct

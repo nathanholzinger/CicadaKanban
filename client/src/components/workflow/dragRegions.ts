@@ -1,8 +1,6 @@
 // Drag regions (Board/Column/sub-row/Card) and their pixel drop bands —
 // resolveDragStructure (structural, once per drag) + measureRegions (live rects, per sample).
 
-import { subrowContainerId, type DropColumn } from './boardDndUtils';
-
 // Epic 3.5 Story 3 — the *regions* a Card drag can be in (docs/wiki/board-
 // drag-interaction §1, §5): a merged column's body, or one sub-row of an
 // expanded column. Each is a context a drag can start in or pop into, and
@@ -86,11 +84,11 @@ export interface CardListRegion extends RegionCommon {
    * The number of real cards currently rendered in this column/sub-row.
    * Read straight off the DOM (`data-drag-card-count`, set by the React
    * side from the same `items` array it renders) rather than inferred from
-   * `contentRect`'s height, since a real card's height is only
-   * approximately `ghostCardHeightPx` (KanbanCard.tsx's collapsed-ghost
-   * styling narrows this but doesn't pin it exactly). Drives `bandFor`'s
-   * single-band collapse (0) and one-card exception (1) — see its own
-   * comment.
+   * `contentRect`'s height, since the region's *other* cards aren't
+   * fixed-height (only the ghost row is — `cardMetrics.ts`), so a count
+   * inferred from total height would still be unreliable. Drives
+   * `bandFor`'s single-band collapse (0) and one-card exception (1) — see
+   * its own comment.
    */
   cardCount: number;
   parentRegionKey: null;
@@ -154,6 +152,38 @@ export function subrowRegionKey(columnId: string, workphaseId: string): string {
 // builders above so every region-key format has one owner.
 export function cardRegionKey(itemId: string): string {
   return `card:${itemId}`;
+}
+
+// Column-shape data, moved here from boardDndUtils.ts (audit
+// epic-3-5-story-4 #4): DropColumn is resolveDragStructure's own input
+// shape, and subrowContainerId is the id an expanded column's sub-row
+// resolves its region's own `containerId` against
+// (cardListStructureFromKey, below) — both region-structural, so they
+// belong beside the region-key builders rather than behind an import
+// cycle (this file used to import subrowContainerId from boardDndUtils.ts,
+// which imported containsPoint/Rect back from here).
+export interface DropColumn {
+  id: string;
+  broken: boolean;
+  displayMode: 'merged' | 'expanded';
+  entryWorkphaseId: string;
+  subRows: Array<{ workphase: { id: string; isTerminal?: number | boolean } }>;
+}
+
+// Maps every covered workphase id -> the column that covers it.
+export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readonly C[]): Map<string, C> {
+  const map = new Map<string, C>();
+  for (const col of columns) {
+    for (const row of col.subRows) map.set(row.workphase.id, col);
+  }
+  return map;
+}
+
+// Encodes a droppable id for an expanded column's per-workphase sub-row —
+// the same id cardListStructureFromKey (below) sets as that region's own
+// `containerId`, so the two only have to agree once.
+export function subrowContainerId(columnId: string, workphaseId: string): string {
+  return `subrow::${columnId}::${workphaseId}`;
 }
 
 // Story 4.1 Phase 2 — everything about a region except its *live* geometry
@@ -259,10 +289,10 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
 // Reads a DOMRect's fields into a plain object — a real DOMRect's fields
 // are accessor properties on its prototype, not its own enumerable ones,
 // so `{ ...domRect }` silently drops every one of them (see clipToVisible's
-// history below). Every `Rect` downstream of this (clipped, translated,
-// frozen) is a plain object, so nothing else in this module — or
-// `translateRect`, which used to spread its input — has to remember the
-// hazard (audit epic-3-5-story-3-reconciled #2).
+// history below). Every `Rect` downstream of this (clipped, or
+// layout-corrected by `layoutRect`) is a plain object, so nothing else in
+// this module has to remember the hazard (audit
+// epic-3-5-story-3-reconciled #2).
 function toRect(domRect: DOMRect): Rect {
   const { top, left, right, bottom, width, height } = domRect;
   return { top, left, right, bottom, width, height };
@@ -454,8 +484,8 @@ function verticalDistance(y: number, rect: Rect): number {
 }
 
 // The two numbers the reservation math is built from — a fixed fact about
-// the shortCard component (`KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`) and the
-// card lists' own gap (`KanbanCard.tsx::CARD_LIST_GAP_PX`), never a tuning
+// the shortCard component (`cardMetrics.ts::SHORT_CARD_HEIGHT_PX`) and the
+// card lists' own gap (`cardMetrics.ts::CARD_LIST_GAP_PX`), never a tuning
 // bag: Story 4.1 Phase 1 made both fixed, so there's nothing left here to
 // find by feel. Passed in rather than imported so this pure module still
 // depends on nothing under `components/` — the caller (`popSession.ts`,
@@ -466,22 +496,60 @@ export interface ShortCardMetrics {
 }
 export type BandRegion = Pick<CardListRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
 
+// What §5's reservation looks like for a card list, everything short of
+// actual pixels-on-a-rect: the shape (which of the three cases below), the
+// label box's own height, and where a divider sits (positional only — the
+// same number `bandBoundaries` turns into an absolute boundary). Used to be
+// spelled independently here and in `BandGuides.tsx::DragCarveFrame`,
+// agreeing only by comment (audit epic-3-5-story-4 #9) — this is the one
+// place the formula lives now; both read `.shape`/`.zoneHeight`/`.edge`
+// rather than recomputing any of it.
+export interface Reservation {
+  /**
+   * 'positional': real cards, positions apply — two zones, a real divider.
+   * 'terminal': a done region with cards — one bottom-only zone, sized for
+   * the ghost that always previews last there. 'empty' / 'none': nothing
+   * else here — one zone spanning the whole region, only the label
+   * distinguishing a still-positional empty region from a done one with
+   * nothing in it yet (both render identically today).
+   */
+  shape: 'positional' | 'empty' | 'terminal' | 'none';
+  /** The label box's own height. */
+  zoneHeight: number;
+  /** Where the divider sits (and the band boundary resolves against) — positional only; 0 otherwise (nothing to divide). */
+  edge: number;
+}
+
+// Story 4.1 Phase 1 (Product Owner special rule, 2026-09-16) — a genuinely
+// empty region carves the full card height (`heightPx`), nothing to shift
+// out of the way; a region with exactly one card halves both edges instead
+// of the normal full height, so the card stays a real, unlabeled middle
+// band rather than being bisected into top/bottom with nothing left
+// between; a done region with cards reserves one bottom-only zone of
+// `heightPx + gapPx`, exactly where its ghost (which always previews last
+// there) lands.
+export function reservationFor(
+  region: Pick<CardListRegion, 'isTerminal' | 'cardCount'>,
+  metrics: ShortCardMetrics,
+): Reservation {
+  const { heightPx, gapPx } = metrics;
+  if (region.cardCount === 0) return { shape: region.isTerminal ? 'none' : 'empty', zoneHeight: heightPx, edge: 0 };
+  if (region.isTerminal) return { shape: 'terminal', zoneHeight: heightPx + gapPx, edge: 0 };
+  const edge = region.cardCount === 1 ? (heightPx + gapPx) / 2 : heightPx;
+  return { shape: 'positional', zoneHeight: (heightPx + gapPx) / 2, edge };
+}
+
 // Story 4.1 Phase 1 — where the two band boundaries sit, in viewport
 // pixels, measured from `contentRect` (never the visible-clipped `rect`: a
 // boundary scrolled out of view stays exactly where its content put it,
 // reachable only by scrolling to it — wiki §5). Null collapses to a single
 // band spanning the whole region: a done region (positions never apply,
 // wiki §5 closing note) or a genuinely empty one (nothing to be
-// before/after). Exactly one card halves the edge to `(heightPx + gapPx) /
-// 2` instead of the normal `heightPx` alone — full edges would meet at the
-// card's own midpoint and leave no middle band for it to be a real,
-// unlabeled "keep this position" target (Product Owner special rule,
-// 2026-09-16) — matching `BandGuides.tsx`'s own dead-zone math for the same
-// case, so the divider drawn there is the boundary resolved here.
+// before/after) — `reservationFor`'s non-'positional' shapes.
 export function bandBoundaries(region: BandRegion, metrics: ShortCardMetrics): { top: number; bottom: number } | null {
-  if (region.isTerminal || region.cardCount === 0) return null;
-  const edge = region.cardCount === 1 ? (metrics.heightPx + metrics.gapPx) / 2 : metrics.heightPx;
-  return { top: region.contentRect.top + edge, bottom: region.contentRect.bottom - edge };
+  const reservation = reservationFor(region, metrics);
+  if (reservation.shape !== 'positional') return null;
+  return { top: region.contentRect.top + reservation.edge, bottom: region.contentRect.bottom - reservation.edge };
 }
 
 // The vertical band a point falls in (§5): above `top` is the top band,

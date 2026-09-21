@@ -101,6 +101,13 @@ export async function seedPositionedItems<K extends string>(
   return items;
 }
 
+// GETs one item by id — spelled independently at least three times across
+// the drag/repositioning specs (`item`/`getC`/`getItem`, audit
+// epic-3-5-story-4 #6).
+export async function fetchItem(request: APIRequestContext, id: string) {
+  return (await request.get(`${API}/items/${id}`)).json();
+}
+
 // The workflow's auto-bootstrapped default board, resolved (columns + Unsorted)
 // — the `boards?workflowId=` → `boards/:id` two-step that every board-driven
 // spec repeated.

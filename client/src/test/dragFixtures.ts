@@ -1,7 +1,6 @@
 // rect/region test fixtures for drag geometry (Rect, CardListRegion, DropColumn).
 
-import type { CardListRegion, Rect } from '../components/workflow/dragRegions';
-import type { DropColumn } from '../components/workflow/boardDndUtils';
+import type { CardListRegion, DropColumn, Rect } from '../components/workflow/dragRegions';
 
 // Shared geometry fixtures for the Epic 3.5 drag tests (regions, the pop
 // machine, band resolution) — one place for the rect/region shape, same

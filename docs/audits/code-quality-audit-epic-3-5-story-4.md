@@ -116,10 +116,15 @@ empty-sub-row case to the invariant test (`seedPositionedItems` + a
 `POST /columns` spanning two workphases, as `drag-column-bands.spec.ts`
 already does for its expanded cases).
 
-**Status (2026-09-21):** open — not yet discussed. The prerequisite has
-landed: #7's `CardList.tsx` now owns the droppable padding, so the fix is
-the one-line move the cross-ref describes (the cross-ref means #7, not
-#8). The E2E case would be Story 10's, per #3.
+**Status (2026-09-21):** resolved as proposed, the second option —
+`CardList.tsx`'s `chromeOnFrame` puts the padded/rounded surface chrome
+*and* the droppable node ref on `DragCarveFrame`'s own wrap (`BandGuides.tsx`)
+instead of on the inner list div, applied uniformly in every branch
+(`droppable?.className`/`droppable?.containerRef`) — so the empty-zone
+label carries the identical padding the real list would. New E2E case
+added (`drag-column-bands.spec.ts`, an expanded column's own empty
+sub-row); confirmed failing (96 vs 108) with the fix reverted before
+landing it, so the case is a real regression tripwire, not a tautology.
 
 ### 3. Story 4's headline gesture has no automated coverage at any level — the path #1 lives in is untested end to end `[Correctness & Security]`
 **Files:** `client/src/components/workflow/popSession.test.ts` (no `kind: 'card'` region in any case; `client/src/test/dragFixtures.ts:22–24` says so); `client/src/components/workflow/dragRegions.test.ts` (shape only); `tests/ui/drag-column-bands.spec.ts:45`, `tests/ui/drag-target-classification.spec.ts:29`, `tests/ui/item-repositioning-cross-column-dnd.spec.ts:79`, `tests/ui/attached-children.spec.ts:191–195` (every preset sets `cardPopInDelayMs` ≥ 30 s so no test ever zooms into a Card); `docs/test-plans/board-drag-interaction/drag-4-attach-and-stub-placement.md:80–97` (all 17 cases "⏳ pending triage")
@@ -186,6 +191,18 @@ and `useBoardDnd.ts` all import keeps decision 3's "card owns its metrics"
 and lets `BandGuides.tsx` keep owning the drag chrome (`ACTIVE_CONTEXT_OUTLINE`)
 that `KanbanCard` reads one way.
 
+**Status (2026-09-21):** resolved as proposed, both edges. `DropColumn`,
+`buildColumnForWorkphaseMap`, `subrowContainerId` moved into
+`dragRegions.ts` beside the region-key builders; its own import from
+`boardDndUtils.ts` is gone (`boardDndUtils.ts` never used them itself,
+only defined them), and the importers (`boardDndUtils.test.ts`,
+`BoardColumn.tsx`, `dragFixtures.ts`) retarget to `dragRegions.ts`.
+`cardMetrics.ts` is the new leaf module; `KanbanCard.tsx`, `BandGuides.tsx`,
+`CardList.tsx` (post-#7, not `WorkphaseCardList.tsx`) and `useBoardDnd.ts`
+import from it, and `KanbanCard.tsx` no longer defines the constants at
+all. Its own cycle with `BandGuides.tsx` breaks as a side effect —
+`BandGuides.tsx` has nothing left to import from `KanbanCard.tsx` for.
+
 ### 5. Stale comments and docs the 4.1 drift sweep missed, plus a roadmap status line two days behind `[Consistency & Drift]`
 **Files and fixes:**
 - `client/src/components/workflow/dragRegions.ts:82–84` — `cardCount`'s doc says "a real card's height is only approximately `ghostCardHeightPx` (KanbanCard.tsx's collapsed-ghost styling narrows this but doesn't pin it exactly)". `ghostCardHeightPx` is gone and the ghost row *is* pinned. The reason the count still comes off the DOM is that the region's *other* cards aren't fixed-height, so inferring a count from `contentRect.height` would still be unreliable — say that instead.
@@ -195,6 +212,23 @@ that `KanbanCard` reads one way.
 - `tests/ui/item-repositioning-cross-column-dnd.spec.ts:53–61` — describes as current fact that a container-over reorder "sends only `{ scopeWorkphaseIds }` … silently failing the drop", cites `routes/items.ts:318–321`. The client no longer has `scopeWorkphaseIds` (`api/items.ts:55–60`) and the request path is `toRequest`. Either delete or reframe as pre-Phase-3 history. And `:148–151` ("no anchor, so the server appends") — 1.b passes because `closestCorners` picks card E and `resolveDropSide` says `after`; the write anchors, the outcome is the same 6.0. Say so, or the next reader will trust the wrong mechanism (Watch List #17 is the behavior question underneath).
 - `tests/ui/drag-column-bands.spec.ts:659–662` — "entering while a sibling region is still resizing would freeze Review's own band math … that freeze (deliberately) never re-reads live afterward." There is no freeze; the band reads the live `contentRect` every sample. The `stableBoxOf` wait is still right (the *carve-out* has to finish reflowing before its point is read), so keep the wait and fix the reason.
 - `docs/planning/epic-3-5-stories/epic-3-5-roadmap.md:264` — "**Status: planned 2026-09-17, not started.**" for Story 4.1, while `story-4-1-efficiency-refactor.md:8` says all phases implemented 2026-09-18 and this HEAD is that code. Also `:200–201` (Story 4 goal: "attaches it as a Stub *at the dropped slot*") — as built and per wiki §6 it's always last; the story doc's "As built" says so, the roadmap entry above it doesn't.
+
+**Status (2026-09-21):** resolved, all six lines. `dragRegions.ts`'s
+`cardCount`/`toRect` docs reworded to the current, accurate reasoning;
+`useBoardDnd.ts`'s header now names `boardDndUtils.ts`, and the F8 tween
+comment now says what Watch List #15 actually found (the clamp is
+idempotent, the tween isn't, and the divergence is cosmetic and bounded
+by `popSnapMs`). `item-repositioning-cross-column-dnd.spec.ts`'s two
+comments reframed: the `scopeWorkphaseIds` paragraph as pre-Phase-3
+history now that the shape is moot, and the `:148–151` one to name the
+real mechanism (`closestCorners` picks card E, `resolveDropSide` says
+`after` — an anchored write that happens to land on the same 6.0 a bare
+append would). `drag-column-bands.spec.ts`'s freeze language is gone,
+replaced with what's actually being waited for (a still-resizing
+sibling's stale box, not a frozen band). `epic-3-5-roadmap.md`'s Story
+4.1 status line now says Phases 0–4 implemented 2026-09-18, and Story 4's
+goal text drops "at the dropped slot" with an "As built: always last"
+line under it.
 
 ### 6. E2E drag scaffolding is spelled four times — the same finding as Story 2 #16 and Story 3 #7, now with one more copy `[Duplication & Abstraction]`
 **Files:** the `addInitScript(([key, value]) => localStorage.setItem(key, value), [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)])` seed — `tests/ui/drag-column-bands.spec.ts:119–126` (`seedTuning`), `tests/ui/drag-target-classification.spec.ts:28–34` (`seedNoPop`), `tests/ui/item-repositioning-cross-column-dnd.spec.ts:100–103`, `tests/ui/attached-children.spec.ts:191–195`; the "no pop" presets — `drag-column-bands.spec.ts:45–55` (`NO_CARD_POP`/`MOMENTARY`/`SUSTAINED`/`POP_OUT_ONLY`), `item-repositioning-cross-column-dnd.spec.ts:79` (byte-identical to `POP_OUT_ONLY`), `drag-target-classification.spec.ts:29` (60 s variant); `awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000)` — `drag-column-bands.spec.ts:137–139`, `item-repositioning-cross-column-dnd.spec.ts:81–83`, `attached-children.spec.ts:212`; `getByRole('article', { name, exact: true })` ~80 inline occurrences with a named `article()` helper defined twice (`drag-column-bands.spec.ts:145`, `item-repositioning-cross-project-dnd.spec.ts:71`); `(await request.get(`${API}/items/${id}`)).json()` ×3 (`item`/`getC`/`getItem`)
@@ -207,6 +241,16 @@ Promise<DragTuning>`, exported presets `NO_POP` / `POP_OUT_ONLY` /
 `SUSTAINED` (and #3's `SUSTAINED_CARD`), `awaitPoppedOut(page, tuning)`.
 A `tests/helpers/boardLocators.ts` with `article(page, title)` /
 `column(page, name)`; `fetchItem(request, id)` in `tests/helpers/seed.ts`.
+
+**Status (2026-09-21):** resolved as proposed. `dragGesture.ts` gained
+`seedDragTuning`, `NO_POP`/`POP_OUT_ONLY`/`SUSTAINED` (one `NEVER_MS`
+sentinel behind all three, replacing the inconsistent 30s/60s spellings —
+folds in #27's note too), and `awaitPoppedOut`; `boardLocators.ts`
+(`article`/`column`) and `seed.ts::fetchItem` are new. All four named
+specs, plus `item-repositioning-cross-project-dnd.spec.ts`'s own
+`article`/`getItem` pair (not separately named above but the same shape),
+now read the shared helpers instead of their own copies. `SUSTAINED_CARD`
+stays with #3, deferred whole to Story 10.
 
 ### 7. `BoardColumn`'s merged list is `WorkphaseCardList`'s list, a third copy of what audit #21 consolidated `[Duplication & Abstraction]` (cross-ref #2)
 **Files:** `client/src/components/BoardColumn.tsx:76–105, 194–206` vs `client/src/components/WorkphaseCardList.tsx:60–116`
@@ -297,6 +341,22 @@ arithmetic; the two "Move to {targetLabel}" single-zone divs
 (`BandGuides.tsx:153–162`, `173–181`) fold into one. Pure, unit-testable,
 and makes "the divider drawn is the boundary resolved" true by construction.
 
+**Status (2026-09-21):** resolved as proposed, with a fourth shape.
+`reservationFor({ isTerminal, cardCount }, metrics)` returns `{ shape,
+zoneHeight, edge }`; `bandBoundaries` collapses to null whenever
+`reservation.shape !== 'positional'` and otherwise reads `.edge`;
+`DragCarveFrame` reads `.shape`/`.zoneHeight`/`.edge` and no longer
+computes any of the three itself. `shape` is `'positional' | 'empty' |
+'terminal' | 'none'`, not the three named in the proposal — `cardCount ===
+0` splits into `'empty'` (not terminal) and `'none'` (terminal *and*
+empty), since a done-and-empty region is conceptually a different "nothing
+here" than a still-positional empty one even though both render
+identically today (one zone, height `h`); `DragCarveFrame` groups them by
+`shape !== 'positional'`, same as before. The two "Move to {targetLabel}"
+divs fold into one `SingleZone` component, bordered for
+`'empty'`/`'none'` and not for `'terminal'` (the one visual difference the
+original two divs carried).
+
 ### 10. `KanbanCard.tsx` renders the pills row twice and the type pill four times `[Duplication & Abstraction]` (Stub-row half → Covered by Story 6, below)
 **Files:** `client/src/components/KanbanCard.tsx:121–128` (`ShortCard`) and `:237–244` (full body) — identical eight lines; the `resolvedType && <span className={typePillClass(…)} style={typePillStyle(…)}>` pill at `:124`, `:240`, `:330`, `:394` (plus `ItemDetailPanel.tsx:258`), each preceded by its own `resolveType` call
 
@@ -304,6 +364,17 @@ and makes "the divider drawn is the boundary resolved" true by construction.
 internally, null for unknown) and a `CardPillsRow` in `KanbanCard.tsx`.
 The Card-body pair is untouched by Story 6 and should go now; the two Stub
 rows are Story 6's (see Covered by).
+
+**Status (2026-09-21):** resolved as proposed, in its own file rather
+than beside `pillUtils.ts` — `item-detail/TypePill.tsx` (a `.tsx`, since
+`pillUtils.ts` is a plain `.ts` and can't hold JSX), taking `item:
+Pick<Item, 'type'>` rather than the full item. `CardPillsRow` in
+`KanbanCard.tsx` wraps it with the depth pill; both `ShortCard` and the
+full body call it, and the two local `resolvedType`/`depth` locals they
+each computed are gone. `ItemDetailPanel.tsx:258` and the Stub-tier rows
+(`AttachGhostRow`/`AttachedChildRow`) are untouched, as scoped — the
+former has a deliberately different unresolved-type fallback, the latter
+are Story 6's per the Covered-by note.
 
 ### 11. `advancePopSession` still carries the zoom-in sequence twice, with the gate spelled two ways `[Duplication & Abstraction]` (small)
 **Files:** `client/src/components/workflow/popSession.ts:159–172` (Board) vs `:187–204` (locked): `childRegionAt → hoverFor → gate → popInDelayFor → recurse`. `hoverFor:247` sets `poppable = band === 'middle'` for column-like and leaves it `undefined` for a card; `:190` re-derives it inline (`candidate.kind === 'card' ? true : hover.band === 'middle'`). The transition call `advancePopSession({ contextKey: X, hover: null, outsideSince: null }, …)` ×3 (`:163–170`, `:192–199`, `:212–219`). `popDueAt:302` uses `tuning.popInDelayMs` directly while `:300` uses `popInDelayFor`.
@@ -315,6 +386,18 @@ expression over `hover.poppable` + `popInDelayFor`. Story 6's Descendants
 layer ("reached by holding … its own panel clock") is then a row in
 `hoverFor`/`popInDelayFor`, not an edit in the locked branch and
 `popDueAt` both.
+
+**Status (2026-09-21):** resolved as proposed. `hoverFor` returns
+`poppable: true` for a card candidate (a card list's stays `band ===
+'middle'`); both the Board-layer and locked branches of
+`advancePopSession` read `hover.poppable` — the inline `candidate.kind
+=== 'card' ? true : hover.band === 'middle'` gate is gone. `transitionTo`
+folds the three `{ contextKey, hover: null, outsideSince: null }` +
+recurse calls. `popDueAt` is one `hover.since + popInDelayFor(candidate?.kind
+?? 'card', tuning)` expression, guarded by `hover?.poppable`, covering
+both layers alike (the Board-layer branch no longer names
+`tuning.popInDelayMs` directly — `popInDelayFor` resolves to the same
+value there since the candidate is always a column/sub-row).
 
 ---
 

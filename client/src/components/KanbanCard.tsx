@@ -7,9 +7,11 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
+import TypePill from './item-detail/TypePill';
 import { resolveDropSide } from './workflow/boardDndUtils';
 import { DRAG_REGION_ATTR, cardRegionKey } from './workflow/dragRegions';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
+import { SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 import {
   useDragSession,
   useDropTargetState,
@@ -90,9 +92,22 @@ const CARD_BASE =
 // A card's type pill only renders when `item.type` resolves to a known
 // ItemType — an orphaned/unknown type reference hides the pill rather than
 // showing a raw id (unlike the item-detail sections, which fall back to the
-// raw id as label text).
+// raw id as label text). Still used directly by the Stub-tier rows below
+// (AttachGhostRow, AttachedChildRow) — TypePill (item-detail/TypePill.tsx)
+// only replaces the Card-tier's own two copies (audit epic-3-5-story-4 #10).
 function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | null {
   return typeId ? (itemTypes.find(t => t.id === typeId) ?? null) : null;
+}
+
+// The depth + type pills row, identical at both Card-tier renders — ShortCard
+// and the full body — before this (audit epic-3-5-story-4 #10).
+function CardPillsRow({ item, itemTypes }: { item: Pick<Item, 'type' | 'depth'>; itemTypes: ItemType[] }) {
+  return (
+    <div className="mb-2 flex items-center gap-1">
+      <span className={PILL_DEPTH}>{depthLabel(item.depth ?? 0)}</span>
+      <TypePill item={item} itemTypes={itemTypes} />
+    </div>
+  );
 }
 
 // Story 4.1 Phase 1 (decision 3) — shortCard: the Card's fixed-height
@@ -105,28 +120,14 @@ function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | n
 // dimming) stays on `KanbanCard`'s own wrapper, which chooses whether to
 // render this or the full body. The dependency points drag → card, never
 // the reverse: nothing under `components/workflow/` defines this height or
-// the list gap it's reserved alongside — they import both from here.
-export const SHORT_CARD_HEIGHT_PX = 96;
-// The card lists' own gap (`CardList.tsx`, the one list every column,
-// sub-row and Unsorted group renders) — standardized on one constant so the
-// reservation math (net height never changes, wiki §5) has one gap value to
-// add in, not two.
-export const CARD_LIST_GAP_PX = 8;
-export const CARD_LIST_GAP_CLASS = 'gap-2';
+// the list gap it's reserved alongside — both live in `cardMetrics.ts`
+// (audit epic-3-5-story-4 #4), a leaf module this file and BandGuides.tsx
+// each import rather than one importing the other for them.
 
 function ShortCard({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
-  const resolvedType = resolveType(item.type, itemTypes);
-  const depth = item.depth ?? 0;
   return (
     <>
-      <div className="mb-2 flex items-center gap-1">
-        <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
-        {resolvedType && (
-          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-            {resolvedType.name}
-          </span>
-        )}
-      </div>
+      <CardPillsRow item={item} itemTypes={itemTypes} />
       <p className="truncate text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
       {/* Always one line, even with no description — reserves the same
           space either way, which is the whole point of a fixed height. */}
@@ -191,9 +192,6 @@ export default function KanbanCard({
     ...(isGhostLike ? { height: SHORT_CARD_HEIGHT_PX } : {}),
   };
 
-  const depth = item.depth ?? 0;
-  const resolvedType = resolveType(item.type, itemTypes);
-
   let avatarBadgeClass = 'bg-cyan-500/20 text-cyan-300';
   if (item.assigneeType === 'agent') avatarBadgeClass = 'bg-amber-500/20 text-amber-300';
 
@@ -234,15 +232,7 @@ export default function KanbanCard({
         <ShortCard item={item} itemTypes={itemTypes} />
       ) : (
         <>
-          {/* Depth + type pills */}
-          <div className="mb-2 flex items-center gap-1">
-            <span className={PILL_DEPTH}>{depthLabel(depth)}</span>
-            {resolvedType && (
-              <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-                {resolvedType.name}
-              </span>
-            )}
-          </div>
+          <CardPillsRow item={item} itemTypes={itemTypes} />
 
           <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
 

@@ -1,5 +1,5 @@
 // The drag gesture's clocks, DOM measurement, and dnd-kit plumbing — composes
-// popSession.ts, dragRegions.ts, dragClassification.ts, itemListOps.ts.
+// popSession.ts, dragRegions.ts, boardDndUtils.ts, dragClassification.ts, itemListOps.ts.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
@@ -46,7 +46,7 @@ import {
 import type { Placement, Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
-import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../KanbanCard';
+import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
 
 // Story 4.1 Phase 1: the reservation basis, sourced from the card module
 // (KanbanCard.tsx owns both — decision 3's "dependency points drag →
@@ -309,10 +309,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // while only the visible copy was bounded — during the exit clock,
   // `closestCorners` could pick a card a column away from the visible copy,
   // and the live side line could flip to it too. Calling this twice (once
-  // for each context) is idempotent: `clampAxis` clamping an
-  // already-clamped value returns it unchanged, and both calls read the
-  // same `snap`/`overlayTranslate` refs, so the tween composes cleanly
-  // rather than double-easing.
+  // for each context) is idempotent for the *clamp*: `clampAxis` clamping
+  // an already-clamped value returns it unchanged. The snap tween isn't —
+  // both calls read the same `snap`/`overlayTranslate` refs, so for
+  // ≤`popSnapMs` after a pop the second application re-eases an
+  // already-eased point and its result is the one that sticks (audit
+  // epic-3-5-story-4 watch-list #15). Cosmetic: the window is ≤150ms by
+  // default and the collision rect only diverges from the drawn copy
+  // within it, never after.
   const clampToContext = useCallback<Modifier>(({ transform, draggingNodeRect }) => {
     const target = clampToCurrentContext(
       transform,

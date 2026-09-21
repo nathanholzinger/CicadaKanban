@@ -1,8 +1,7 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
 import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
-import { center, pickUp, hoverTo, release, awaitDragState } from '../helpers/dragGesture';
-import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
+import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 test.describe('attached children on the board', () => {
@@ -188,11 +187,7 @@ test.describe('attached children on the board', () => {
     // locked to Todo, and a release still locked there commits Todo's own
     // reorder, not a foreign column's band — so this needs an actual pop
     // out first, not just a quick hover.
-    const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 150 };
-    await page.addInitScript(
-      ([key, value]) => localStorage.setItem(key, value),
-      [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
-    );
+    const tuning = await seedDragTuning(page, { popDelayMs: 150 });
     await page.goto('/');
     await projectSidebar.select('Drag Cascade Project');
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
@@ -209,7 +204,7 @@ test.describe('attached children on the board', () => {
     const targetRegion = targetColumn.locator(`[${DRAG_REGION_ATTR}]`).first();
     await pickUp(page, card);
     await hoverTo(page, await center(targetRegion));
-    await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+    await awaitPoppedOut(page, tuning);
     await release(page);
 
     // UI: parent lands under "In Progress", child still nested under it.

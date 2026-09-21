@@ -2,8 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
 import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchDefaultBoard } from '../helpers/seed';
-import { pickUp, hoverTo, cancel, center } from '../helpers/dragGesture';
-import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/components/workflow/dragTuning';
+import { pickUp, hoverTo, cancel, center, seedDragTuning, NO_POP } from '../helpers/dragGesture';
 
 // Epic 3.5 Story 2 — docs/wiki/board-drag-interaction §4: every visible
 // target is classified against the carried item at drag start, and that
@@ -22,16 +21,9 @@ import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY } from '../../client/src/c
 // hoverTo calls can accumulate enough wall-clock time to cross the default
 // `cardPopInDelayMs` (or, for a genuine cross-column hover, `popDelayMs`/
 // `popInDelayMs`). This spec was never about pop timing at all
-// (classification never changes mid-drag, hover or not), so it seeds every
-// threshold absurdly high, the same way the momentary cases elsewhere do,
-// purely to keep an incidental pop from ever firing here.
-async function seedNoPop(page: Page): Promise<void> {
-  const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 60_000, popInDelayMs: 60_000, cardPopInDelayMs: 60_000 };
-  await page.addInitScript(
-    ([key, value]) => localStorage.setItem(key, value),
-    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
-  );
-}
+// (classification never changes mid-drag, hover or not), so it seeds
+// `NO_POP` (tests/helpers/dragGesture.ts) purely to keep an incidental pop
+// from ever firing here.
 
 const PROJECT = 'Drag Classification Project';
 
@@ -82,7 +74,7 @@ test.describe('drag-target classification', () => {
     // V: an unrelated Card in the other column, to hover across to.
     const v = await createItem(request, { title: 'V', projectId: project.id, workphaseId: inProgress.id });
 
-    await seedNoPop(page);
+    await seedDragTuning(page, NO_POP);
     await projectSidebar.openBoard(PROJECT);
     await expect(page.getByRole('article', { name: 'X', exact: true })).toBeVisible();
 

@@ -2,9 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
 import { rect, column } from '../../test/dragFixtures';
+import { buildColumnForWorkphaseMap, subrowContainerId } from './dragRegions';
 import {
-  buildColumnForWorkphaseMap,
-  subrowContainerId,
   resolveBoardCollisions,
   resolveDropSide,
   isIdentity,

@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
+import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY, type DragTuning } from '../../client/src/components/workflow/dragTuning';
 
 // The one recipe for driving this app's @dnd-kit board from Playwright
 // (extracted in Epic 3.5 Story 1 from three per-spec copies — see
@@ -185,4 +186,51 @@ export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
   const region = columnGroup.locator(`[${DRAG_REGION_ATTR}]:not([${DRAG_REGION_ATTR}^="card:"])`).last();
   const box = (await region.count()) > 0 ? await boxOf(region) : await boxOf(columnGroup);
   return { x: box.x + box.width / 2, y: box.y + box.height - 5 };
+}
+
+// Seeds the dev/test panel's own storage key with `override` merged over
+// the defaults, before the page loads — the one recipe for tuning a drag
+// gesture spec, previously spelled independently (down to the same
+// `addInitScript` body) in at least four specs (audit
+// epic-3-5-story-4 #6). Returns the merged tuning so a caller can still
+// compute a wait off the *configured* value, never a literal.
+export async function seedDragTuning(page: Page, override: Partial<DragTuning> = {}): Promise<DragTuning> {
+  const tuning = { ...DEFAULT_DRAG_TUNING, ...override };
+  await page.addInitScript(
+    ([key, value]) => localStorage.setItem(key, value),
+    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
+  );
+  return tuning;
+}
+
+// A threshold seeded far longer than any single hover in these gestures
+// could last, so an accidental pop under a slow run never fires — never a
+// value anything computes a wait *from* (audit epic-3-5-story-4 #6/#27:
+// this used to be spelled inconsistently, 30s in some presets and 60s in
+// others, with no reason for the difference).
+const NEVER_MS = 60_000;
+
+// Every threshold absurdly high: nothing pops, ever — a spec whose subject
+// isn't pop timing at all (drag-target classification; an in-context
+// reorder that merely brushes across another column) seeds this so an
+// incidental pop can't fire mid-gesture.
+export const NO_POP: Partial<DragTuning> = { popDelayMs: NEVER_MS, popInDelayMs: NEVER_MS, cardPopInDelayMs: NEVER_MS };
+// Re-plan (2026-09-16): a band only ever means anything at Board layer —
+// locked always commits its own context, regardless of a foreign hover
+// (docs/wiki/board-drag-interaction §1–§3). So a case that wants to reach a
+// *band* needs to actually get to Board layer first: a short pop-out delay,
+// paired with a pop-in delay long enough that resting in the target's own
+// middle band (also its pop-eligible zone) never completes a second,
+// unwanted pop before the case releases.
+export const POP_OUT_ONLY: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: NEVER_MS, cardPopInDelayMs: NEVER_MS };
+// Short enough for both clocks to run out while the cursor rests: pop out
+// of the origin context, then in to whichever one it's resting over.
+export const SUSTAINED: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: 150, cardPopInDelayMs: NEVER_MS };
+
+// Waits for a Card drag to actually reach Board layer — a band only ever
+// resolves a release from there (re-plan 2026-09-16). The cursor doesn't
+// have to move again: the pop timer fires on its own once `tuning.popDelayMs`
+// has elapsed.
+export async function awaitPoppedOut(page: Page, tuning: DragTuning) {
+  await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
 }

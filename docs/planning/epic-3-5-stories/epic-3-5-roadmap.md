@@ -198,10 +198,15 @@ started).
 **Plan / record:** [`story-4-card-to-card-attach.md`](story-4-card-to-card-attach.md)
 
 **Goal:** the headline gesture. Dropping a Card onto another Card attaches it
-as a Stub at the dropped slot, inheriting the parent's workphase. Covers the
-cross-project case and attaching to a done parent. Must not regress in-column
-reposition, which already works (Story 3) and is the baseline every attach
-mechanic has to coexist with.
+as a Stub, inheriting the parent's workphase. Covers the cross-project case
+and attaching to a done parent. Must not regress in-column reposition, which
+already works (Story 3) and is the baseline every attach mechanic has to
+coexist with.
+
+**As built:** always as the *last* Stub, never at the dropped slot — manual
+anchor+side placement among Stubs is Story 6's, not this story's (wiki §6;
+audit `code-quality-audit-epic-3-5-story-4.md` #5 flagged this line as still
+describing the pre-build intent).
 
 **Depends on:** Stories 1-3.
 
@@ -270,7 +275,10 @@ row" rather than "add a branch in twelve places."
 every phase; one new E2E case (the reservation invariant); hands-on for the
 pinned ghost and the Phase 4 items.
 
-**Status: planned 2026-09-17**
+**Status: Phases 0–4 implemented 2026-09-18** — see the plan doc's own
+"As built" section for the per-phase detail and the two hands-on
+Product-Owner feel-checks (Phase 1's shortCard/carve-out, Phase 4's
+merged-column pop-out/exit-clock) left open there.
 
 ---
 

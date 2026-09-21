@@ -3,8 +3,8 @@
 
 import type { ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
-import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR } from './workflow/dragRegions';
-import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './KanbanCard';
+import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR, reservationFor, type Reservation } from './workflow/dragRegions';
+import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 
 // Epic 3.5 Story 8 re-plan (2026-09-16) — the column drop bands, made
 // visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
@@ -49,10 +49,12 @@ import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './KanbanCard';
 // carves the *full* card height, not two halves (nothing to shift out of
 // the way); a region with exactly one card halves both edges instead of
 // the normal full height, so the card stays a real, unlabeled middle band
-// rather than being bisected into top/bottom with nothing left between —
-// matching `dragRegions.ts::bandBoundaries`'s own edge formula exactly, so
-// the divider drawn here is the boundary a release actually resolves
-// against.
+// rather than being bisected into top/bottom with nothing left between.
+// The shape/height/edge math itself lives in `dragRegions.ts::reservationFor`
+// now (audit epic-3-5-story-4 #9) — this file only turns its answer into
+// markup, so the divider drawn here is the boundary a release actually
+// resolves against (`dragRegions.ts::bandBoundaries`) by construction,
+// never by two independently-typed formulas agreeing by comment.
 //
 // Card (KanbanCard.tsx) draws the active-context outline directly on
 // itself; this file draws it for a column/sub-row instead, plus everything
@@ -77,6 +79,20 @@ interface DragCarveFrameProps {
   /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
   targetLabel: string;
   children: ReactNode;
+  /**
+   * Set when this region's own list is also the dnd-kit droppable (an
+   * expanded column's sub-row) — its padded/rounded surface chrome, and the
+   * droppable node ref itself, live on this frame's own wrap instead of on
+   * `children`'s own div, applied uniformly whether this renders the
+   * empty-zone label or `children` (audit epic-3-5-story-4 #2: the two used
+   * to differ by the padding alone, a 12px jump on an otherwise-height-
+   * stable empty sub-row). Omit for a region whose droppable, if any, is an
+   * ancestor (a merged column) or that isn't droppable at all.
+   */
+  droppable?: {
+    containerRef: (element: HTMLElement | null) => void;
+    className: string;
+  };
 }
 
 // Wraps a region's own card-list content (dead-zones-and-all at Board
@@ -85,7 +101,14 @@ interface DragCarveFrameProps {
 // always "the region" `measureDragRegions` finds, in every branch below,
 // so a carve-out div is always a descendant of it rather than a sibling a
 // region-scoped lookup can't reach.
-export function DragCarveFrame({ regionKey, items, isTerminal, targetLabel, children }: DragCarveFrameProps) {
+export function DragCarveFrame({
+  regionKey,
+  items,
+  isTerminal,
+  targetLabel,
+  children,
+  droppable,
+}: DragCarveFrameProps) {
   const session = useDragSession();
   const pop = session?.pop;
 
@@ -106,9 +129,16 @@ export function DragCarveFrame({ regionKey, items, isTerminal, targetLabel, chil
   // item's own row whenever it's currently here.
   const otherCardCount = hasActiveItemRow ? items.length - 1 : items.length;
 
+  // The droppable node ref and its padded surface chrome sit on this same
+  // wrap div, applied uniformly across every branch below — including the
+  // empty-zone label, which otherwise renders with none of it (#2).
   const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: otherCardCount };
   const wrap = (content: ReactNode, extraClassName = '') => (
-    <div {...regionAttrs} className={`relative ${extraClassName}`}>
+    <div
+      {...regionAttrs}
+      ref={droppable?.containerRef}
+      className={`relative ${droppable?.className ?? ''} ${extraClassName}`}
+    >
       {content}
     </div>
   );
@@ -130,65 +160,72 @@ export function DragCarveFrame({ regionKey, items, isTerminal, targetLabel, chil
     );
   }
 
-  // Board layer.
-  if (isTerminal || otherCardCount === 0) {
-    if (otherCardCount === 0) {
-      // Genuinely nothing *else* here. If the active item's own row isn't
-      // here either, there's truly nothing in `children` to show, so the
-      // label is the only cue there is. If it is, that row already reserves
-      // exactly the space the label would have — rendering it instead, same
-      // as the terminal-with-cards branch below, rather than doubling up.
-      if (!hasActiveItemRow) {
-        return wrap(
-          <div
-            aria-hidden="true"
-            data-carve-zone="single"
-            className={`${ZONE_LABEL} ${SINGLE_BAND_BORDER}`}
-            style={{ height: SHORT_CARD_HEIGHT_PX }}
-          >
-            Move to {targetLabel}
-          </div>,
-        );
-      }
-      return wrap(children);
-    }
-    // Terminal, with cards: a real bottom-only reservation now (Phase 1),
+  // Board layer — dragRegions.ts::reservationFor is the one place §5's
+  // shape/height/edge math lives (audit epic-3-5-story-4 #9); this only
+  // turns its answer into markup.
+  const reservation = reservationFor(
+    { isTerminal, cardCount: otherCardCount },
+    { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX },
+  );
+
+  if (reservation.shape !== 'positional') {
+    // 'empty' / 'none': genuinely nothing *else* here. If the active item's
+    // own row isn't here either, there's truly nothing in `children` to
+    // show, so the label is the only cue there is. If it is, that row
+    // already reserves exactly the space the label would have — rendering
+    // it instead, same as 'terminal' below, rather than doubling up.
+    if (reservation.shape !== 'terminal')
+      return hasActiveItemRow
+        ? wrap(children)
+        : wrap(<SingleZone reservation={reservation} targetLabel={targetLabel} />);
+    // 'terminal', with cards: a real bottom-only reservation (Phase 1),
     // sized for the ghost that always previews last there — not an
     // absolute overlay that let the ghost's entry grow the region.
     return wrap(
       <>
         {children}
-        {!hasActiveItemRow && (
-          <div
-            aria-hidden="true"
-            data-carve-zone="single"
-            className={ZONE_LABEL}
-            style={{ height: SHORT_CARD_HEIGHT_PX + CARD_LIST_GAP_PX }}
-          >
-            Move to {targetLabel}
-          </div>
-        )}
+        {!hasActiveItemRow && <SingleZone reservation={reservation} targetLabel={targetLabel} />}
       </>,
     );
   }
 
-  const zoneHeight = (SHORT_CARD_HEIGHT_PX + CARD_LIST_GAP_PX) / 2;
-  const edge = otherCardCount === 1 ? zoneHeight : SHORT_CARD_HEIGHT_PX;
   return wrap(
     <>
       {!hasActiveItemRow && (
-        <div aria-hidden="true" data-carve-zone="top" className={ZONE_LABEL} style={{ height: zoneHeight }}>
+        <div aria-hidden="true" data-carve-zone="top" className={ZONE_LABEL} style={{ height: reservation.zoneHeight }}>
           Move Top
         </div>
       )}
       {children}
       {!hasActiveItemRow && (
-        <div aria-hidden="true" data-carve-zone="bottom" className={ZONE_LABEL} style={{ height: zoneHeight }}>
+        <div
+          aria-hidden="true"
+          data-carve-zone="bottom"
+          className={ZONE_LABEL}
+          style={{ height: reservation.zoneHeight }}
+        >
           Move Bottom
         </div>
       )}
-      <div aria-hidden data-carve-divider="top" className={DIVIDER} style={{ top: edge }} />
-      <div aria-hidden data-carve-divider="bottom" className={DIVIDER} style={{ bottom: edge }} />
+      <div aria-hidden data-carve-divider="top" className={DIVIDER} style={{ top: reservation.edge }} />
+      <div aria-hidden data-carve-divider="bottom" className={DIVIDER} style={{ bottom: reservation.edge }} />
     </>,
+  );
+}
+
+// The one collapsed-band label — 'empty'/'none' get the standalone bordered
+// box (nothing else to show), 'terminal' sits unbordered right after real
+// cards (audit epic-3-5-story-4 #9: these were two near-identical divs).
+function SingleZone({ reservation, targetLabel }: { reservation: Reservation; targetLabel: string }) {
+  const bordered = reservation.shape !== 'terminal';
+  return (
+    <div
+      aria-hidden="true"
+      data-carve-zone="single"
+      className={bordered ? `${ZONE_LABEL} ${SINGLE_BAND_BORDER}` : ZONE_LABEL}
+      style={{ height: reservation.zoneHeight }}
+    >
+      Move to {targetLabel}
+    </div>
   );
 }
