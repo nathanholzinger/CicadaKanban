@@ -83,6 +83,26 @@ export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): 
   return ancestors;
 }
 
+// The nearest ancestor (nearest first — walking `getAncestors`' own
+// root-to-immediate-parent array backwards) satisfying `pred`, or null if
+// none does. The "walk backward through getAncestors" idiom itself —
+// repeated inline at `containingCardIdOf` (useBoardDnd.ts, nearest Free
+// ancestor) and `effectiveWorkflow` (App.tsx, nearest ancestor with its own
+// workflow) — audit epic-3-5-story-5 #10: one hierarchy math layer, per the
+// root CLAUDE.md's own rule, rather than the same reversed-index loop
+// duplicated per caller.
+export function findNearestAncestor<T extends TreeNode>(
+  node: T,
+  nodes: readonly T[],
+  pred: (node: T) => boolean,
+): T | null {
+  const ancestors = getAncestors(node, nodes);
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    if (pred(ancestors[i])) return ancestors[i];
+  }
+  return null;
+}
+
 // 1-based hierarchy depth: a root is at depth 1 (docs/wiki/item-attachment
 // §8's counting convention — the server's hierarchyDepth uses the same).
 // Built on getAncestors, so a dangling parentId reads as a root and a

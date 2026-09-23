@@ -65,6 +65,28 @@ export function workphaseOnlySlot(position: number | null): 'existing' | 'last' 
   return position === null ? 'last' : 'existing';
 }
 
+// Whether a Placement carries an opinion about parentage at all —
+// `'parentId' in placement`, not truthiness: an explicit null previews
+// detaching to Free, distinct from "no opinion, use the item's own data"
+// (the key omitted entirely). Every Story 5 origin/placement comparison
+// re-typed this same presence test independently (audit epic-3-5-story-5
+// #7) — this is the one spelling, as a type guard so a caller can go on to
+// read `.parentId` without re-testing.
+export function hasParentOpinion(p: Placement): p is Placement & { parentId: string | null } {
+  return 'parentId' in p;
+}
+
+// The convenience read for a caller that only wants the value: null for
+// "no opinion" and "explicit null" alike, which is exactly how every
+// `origin` comparison in the drag machine already treated the two — an
+// `origin` never carries an explicit null (a Stub's real parentId is never
+// null), so nothing here collapses a distinction origin comparisons ever
+// needed. Not for a `placement`, where the omitted-vs-null distinction is
+// still load-bearing (`hasParentOpinion` alone is the right test there).
+export function parentOpinionOf(p: Placement): string | null {
+  return hasParentOpinion(p) ? (p.parentId ?? null) : null;
+}
+
 export type Placements = ReadonlyMap<string, Placement>;
 
 const NO_PLACEMENTS: Placements = new Map();
@@ -83,7 +105,7 @@ export function renderedWorkphaseId(item: Item, placements: Placements): string 
 // placement is never intentionally cleared to null.
 function renderedParentId(item: Item, placements: Placements): string | null {
   const placement = placements.get(item.id);
-  return placement && 'parentId' in placement ? (placement.parentId ?? null) : item.parentId;
+  return placement && hasParentOpinion(placement) ? (placement.parentId ?? null) : item.parentId;
 }
 
 // Whether the item renders as a Stub — nested inside a parent Card — under
@@ -93,7 +115,7 @@ function renderedParentId(item: Item, placements: Placements): string | null {
 // own data does, via isStub.
 function renderedIsStub(item: Item, placements: Placements): boolean {
   const placement = placements.get(item.id);
-  if (placement && 'parentId' in placement) return placement.parentId != null;
+  if (placement && hasParentOpinion(placement)) return placement.parentId != null;
   return isStub(item);
 }
 

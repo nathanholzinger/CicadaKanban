@@ -44,6 +44,15 @@ a status tracker. Feature-specific rules (positioning, attachment, board drag,
 boards/columns/Unsorted) live in `docs/wiki/*/README.md` instead — `CLAUDE.md`
 only points to them.
 
+## What to Never Do Without Asking
+
+- Update anything under `docs/test-plans/` — automation-status columns,
+  per-case notes, marking a case built/superseded/covered. That's the
+  **Test Planner**/**Test Reconciler**'s call, not the Architect's, even
+  while writing a story plan's own "As built" section. Reference the plan
+  to ground a design decision in real business-case coverage; don't edit
+  it yourself unless explicitly instructed to.
+
 ## Key Architectural Decisions Already Made
 
 - Projects are the root entity; workflows belong to projects (not the other way around)

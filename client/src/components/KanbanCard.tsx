@@ -8,8 +8,9 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
-import { resolveDropSide } from './workflow/boardDndUtils';
+import { itemRowData, resolveDropSide, type ItemRowRole } from './workflow/boardDndUtils';
 import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
+import { parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 import {
@@ -30,7 +31,7 @@ import {
 // though it's never load-bearing for a real collision/write decision
 // (decision 4) — a stale read during a mid-drag remount briefly mis-draws
 // this line at worst, never anything written.
-function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ('card' | 'stub')[]): 'before' | 'after' | null {
+function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRole[]): 'before' | 'after' | null {
   const { active, over } = useDndContext();
   if (!active || !over || over.id !== itemId || active.id === itemId) return null;
   if (active.data.current?.type !== 'item') return null;
@@ -68,7 +69,7 @@ const DROP_INDICATOR_AFTER =
 // #13): the live side indicator, the drag-target attributes/overlay, the
 // pending marker. The DragOverlay copy is the carried item itself — never a
 // target, never pending — so it gets none of it.
-function useDropTargetProps(itemId: string, activeRoles: readonly ('card' | 'stub')[], isOverlay = false) {
+function useDropTargetProps(itemId: string, activeRoles: readonly ItemRowRole[], isOverlay = false) {
   const dropSide = useLiveDropSide(itemId, activeRoles);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
@@ -168,7 +169,7 @@ export default function KanbanCard({
     // row for the same id — see `resolveBoardCollisions`'s own comment for
     // why. `role`/`parentId` are droppable-side facts only; nothing reads
     // them off the *active* row.
-    data: { type: 'item', role: 'card' },
+    data: itemRowData('card'),
   });
   const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card'], isOverlay);
   // Story 4: forced open — independent of the user's own
@@ -188,7 +189,7 @@ export default function KanbanCard({
   // sortable registration under its id once it *is* the ghost.
   const cardDragSession = useDragSession();
   const attachGhostId =
-    cardDragSession?.pop && (!('parentId' in cardDragSession.origin) || cardDragSession.origin.parentId !== item.id)
+    cardDragSession?.pop && parentOpinionOf(cardDragSession.origin) !== item.id
       ? cardDragSession.activeItem.id
       : undefined;
   // The DragOverlay copy and this same item's own in-list row while it's
@@ -372,7 +373,7 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
   // different drag type to dnd-kit once it pops out and remounts as one.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    data: { type: 'item', role: 'stub', parentId: item.parentId },
+    data: itemRowData('stub', item.parentId),
   });
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
   // — same attributes and overlay as a Card, so a test reads them alike.

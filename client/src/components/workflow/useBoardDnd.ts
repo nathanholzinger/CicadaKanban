@@ -14,7 +14,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
-import { getAncestors } from '../../lib/hierarchy';
+import { findNearestAncestor } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';
 import {
   resolveBoardCollisions,
@@ -46,7 +46,7 @@ import {
   type PlacementOver,
   type PopSession,
 } from './popSession';
-import type { Placement, Placements } from './itemListOps';
+import { parentOpinionOf, type Placement, type Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
 import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
@@ -60,11 +60,7 @@ import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
 // only if every ancestor up to a dangling/missing parentId is itself a
 // Stub, which the depth cap makes unreachable in practice.
 function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
-  const ancestors = getAncestors(item, items);
-  for (let i = ancestors.length - 1; i >= 0; i--) {
-    if (!isStub(ancestors[i])) return ancestors[i].id;
-  }
-  return null;
+  return findNearestAncestor(item, items, n => !isStub(n))?.id ?? null;
 }
 
 // Story 4.1 Phase 1: the reservation basis, sourced from the card module
@@ -252,35 +248,43 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const now = performance.now();
     let regions = sampleRegions(current.pop.contextKey);
     let pop = advancePopSession(current.pop, pointer, regions, tuning, SHORT_CARD_METRICS, now);
-    if (pop.contextKey !== current.pop.contextKey) {
-      // A layer change: the sample above was scoped to the *old* layer, so
-      // a hover onto something only visible from the *new* one (a sibling
-      // region at Board, a Card inside the column just entered) can't have
-      // been seen yet. Re-resolve for the new scope and re-run this same
-      // sample against it, once, before anything downstream reads a region
-      // — including `popDueAt` below, which would otherwise schedule no
-      // further timer at all off a hover that was never actually looked
-      // for, stranding a timer-driven transition (no further pointermove
-      // ever arrives to self-correct it) the instant it lands.
+    // A layer change: the sample above was scoped to the *old* layer, so a
+    // hover onto something only visible from the *new* one (a sibling
+    // region at Board, a Card inside the column just entered) can't have
+    // been seen yet. Re-resolve for the new scope and re-run this same
+    // sample against it before anything downstream reads a region —
+    // including `popDueAt` below, which would otherwise schedule no
+    // further timer at all off a hover that was never actually looked for,
+    // stranding a timer-driven transition (no further pointermove ever
+    // arrives to self-correct it) the instant it lands.
+    //
+    // Audit epic-3-5-story-5 #2 (Story 4 #13, worsened by Story 5's third
+    // layer): a single re-resolve/re-sample/re-run only ever catches one
+    // hop. A yank far enough (or, with a Card layer now in the stack, a
+    // yank out of a Stub's section) to clear two thresholds in the same
+    // sample cascades `pop.contextKey` through an intermediate layer
+    // internally (`advancePopSession`'s own `transitionTo` recursion) that
+    // this `regions` sample was never scoped for — `pop.contextKey` ends up
+    // reporting the fully-cascaded layer while `regions` stays scoped to an
+    // intermediate stop `placementRegion` can't find anything in, silently
+    // dropping the ghost (and any release in that window) until the next
+    // pointer sample or timer self-corrects it. Looping the resample/rerun
+    // until the context truly stabilizes (not just once) catches every hop
+    // this same sample is due for; bounded by the layer count so a
+    // pathological oscillation can't spin forever. `startSnap` still runs
+    // once per hop, same as before.
+    let previousContextKey = current.pop.contextKey;
+    for (let hops = 0; pop.contextKey !== previousContextKey && hops < 4; hops++) {
       startSnap();
       resolveStructure(current.classification);
+      previousContextKey = pop.contextKey;
       regions = sampleRegions(pop.contextKey);
       pop = advancePopSession(pop, pointer, regions, tuning, SHORT_CARD_METRICS, now);
     }
     if (pop !== current.pop) {
-      updateSession({ ...current, pop });
-      setGhost(
-        current.activeItem.id,
-        placementFor(
-          pop,
-          regions,
-          current.activeItem.workphaseId,
-          current.activeItem.position,
-          current.origin,
-          current.containingCardId,
-          current.priorPlacement,
-        ),
-      );
+      const next = { ...current, pop };
+      updateSession(next);
+      setGhost(current.activeItem.id, placementForSession(next, regions));
     }
     clearPopTimer();
     const due = popDueAt(pop, regions, tuning);
@@ -323,8 +327,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // parentId (decision 1's "direct siblings" scope) — read off our own
       // session state, never dnd-kit's `active.data.current`, which is
       // exactly what decision 4 keeps from being load-bearing here.
-      const siblingScopeParentId =
-        context?.kind === 'descendants' && 'parentId' in current.origin ? (current.origin.parentId ?? null) : null;
+      const siblingScopeParentId = context?.kind === 'descendants' ? parentOpinionOf(current.origin) : null;
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — rule 1: a mere hover, not yet a
@@ -411,6 +414,56 @@ export function useBoardDnd(deps: BoardDndDeps) {
     return parentId ? latest.current.getAttachedChildren(parentId) : [];
   }
 
+  // Audit epic-3-5-story-5 #8: "which list is this release against" is one
+  // fact about the region — Story 6's own "has a sortable container"
+  // property — that `handleDragEnd` used to derive twice, twenty lines
+  // apart: once for `placementOver`'s anchor/bare-container distinction,
+  // again for `others`' candidate rows. One derivation, read by both; a
+  // card region (or no region at all) has no release list, `null` either
+  // way. `containerId: null` is exactly how a Descendants list (no bare-
+  // container concept) tells apart from a card list's own real container.
+  function releaseListFor(
+    region: DragRegion | undefined,
+    origin: Placement,
+  ): { rows: Item[]; containerId: string | null } | null {
+    if (!region) return null;
+    if (region.kind === 'descendants') return { rows: siblingItems(parentOpinionOf(origin)), containerId: null };
+    if (isCardList(region)) return { rows: regionItems(region), containerId: region.containerId };
+    return null;
+  }
+
+  // Audit epic-3-5-story-5 #9: `placementFor`'s eight positional arguments
+  // were unpacked from the session at four sites (each growing again
+  // whenever Story 5 added a parameter). `PlacementSubject` is the slice
+  // every one of those sites already had in hand — a full `DragSession`
+  // satisfies it structurally, so a call site just passes what it's got.
+  type PlacementSubject = Pick<DragSession, 'pop' | 'origin' | 'containingCardId' | 'priorPlacement'> & {
+    activeItem: Pick<Item, 'workphaseId' | 'position'>;
+  };
+  function placementForSession(
+    subject: PlacementSubject,
+    regions: readonly DragRegion[],
+    over: PlacementOver = null,
+  ): Placement | null {
+    return placementFor(
+      subject.pop,
+      regions,
+      subject.activeItem.workphaseId,
+      subject.activeItem.position,
+      subject.origin,
+      subject.containingCardId,
+      subject.priorPlacement,
+      over,
+    );
+  }
+
+  // Closes both of `handleDragStart`'s branches identically: commit the
+  // session, then set its own ghost from the same session's own placement.
+  function beginSession(session: DragSession, regions: readonly DragRegion[]) {
+    updateSession(session);
+    setGhost(session.activeItem.id, placementForSession(session, regions));
+  }
+
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current;
     if (data?.type === 'column' || !board) return;
@@ -452,18 +505,22 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // another Stub), at its already-sorted slot. What `placementFor`'s
       // Card branch and `isIdentity` compare a resolved release against.
       const origin: Placement = { parentId: activeItem.parentId, slot: 'existing' };
-      updateSession({ activeItem, classification, pop, priorPlacement, origin, containingCardId });
-      setGhost(
-        activeId,
-        placementFor(
-          pop,
-          regions,
-          activeItem.workphaseId,
-          activeItem.position,
-          origin,
-          containingCardId,
-          priorPlacement,
-        ),
+      // Audit epic-3-5-story-5 #1: a Stub's own stored `workphaseId` is a
+      // cache that goes stale the moment its containing Card is moved
+      // through a client-observed write this session (`completeItemWrite`
+      // upserts only the written row) — epic-4-decisions.md §9's own
+      // invariant ("an attached item's workphaseId always equals its
+      // nearest Free ancestor's") says the containing Card's *current* row
+      // is always the fresh one, since a parent move writes that row
+      // directly. Snapshotted onto `activeItem` itself, once, here — every
+      // downstream `placementFor`/`toRequest` call in this drag (mid-drag
+      // and at release alike) reads `session.activeItem.workphaseId` and
+      // gets the fresh value for free, rather than the Stub's own copy.
+      const containingCard = deps.items.find(i => i.id === containingCardId);
+      const freshActiveItem = containingCard ? { ...activeItem, workphaseId: containingCard.workphaseId } : activeItem;
+      beginSession(
+        { activeItem: freshActiveItem, classification, pop, priorPlacement, origin, containingCardId },
+        regions,
       );
       return;
     }
@@ -483,11 +540,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // What `isIdentity` ultimately compares a resolved release against, at
     // every layer (decision 2).
     const origin: Placement = { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' };
-    updateSession({ activeItem, classification, pop, priorPlacement, origin, containingCardId: null });
-    setGhost(
-      activeId,
-      placementFor(pop, regions, activeItem.workphaseId, activeItem.position, origin, null, priorPlacement),
-    );
+    beginSession({ activeItem, classification, pop, priorPlacement, origin, containingCardId: null }, regions);
   }
 
   // The ghost's placement is otherwise only ever set here, on the machine's
@@ -556,7 +609,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     }
 
     if (!current) return;
-    const { activeItem, origin, containingCardId } = current;
+    const { activeItem, origin } = current;
     // Resolved once, shared by every branch that anchors against `over` —
     // which half of the hovered card the dragged card's current position
     // falls in.
@@ -577,6 +630,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // a sibling reorder from a detach from an attach.
     const regions = regionsRef.current;
     const region = placementRegion(current.pop, regions);
+    const list = releaseListFor(region, origin);
     // Release always gives a decisive answer while locked anywhere (`null`
     // is reserved for `placementFor`'s mid-drag calls, where there's
     // genuinely nothing fresh yet to prefer over `priorPlacement`) — over
@@ -587,33 +641,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // droppable candidates are always specific sibling rows, never a bare
     // wrapper — `resolveBoardCollisions`'s `siblingScopeParentId` filter),
     // so any `over` there is already a specific anchor.
-    const placementOver: PlacementOver = !region
+    const placementOver: PlacementOver = !list
       ? null
-      : region.kind === 'descendants'
+      : list.containerId === null
         ? over
           ? { anchorId: String(over.id), side }
           : null
-        : isCardList(region)
-          ? over && String(over.id) !== region.containerId
-            ? { anchorId: String(over.id), side }
-            : 'container'
-          : null;
-    const placement = placementFor(
-      current.pop,
-      regions,
-      activeItem.workphaseId,
-      activeItem.position,
-      origin,
-      containingCardId,
-      current.priorPlacement,
-      placementOver,
-    );
-    const others =
-      region?.kind === 'descendants'
-        ? siblingItems('parentId' in origin ? (origin.parentId ?? null) : null).filter(i => i.id !== activeId)
-        : region && isCardList(region)
-          ? regionItems(region).filter(i => i.id !== activeId)
-          : [];
+        : over && String(over.id) !== list.containerId
+          ? { anchorId: String(over.id), side }
+          : 'container';
+    const placement = placementForSession(current, regions, placementOver);
+    const others = list ? list.rows.filter(i => i.id !== activeId) : [];
     const input = toRequest(activeItem, origin, placement, others);
     if (!input) {
       // Nothing to write — a null placement (drawn where it already is)

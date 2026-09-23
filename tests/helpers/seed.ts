@@ -3,8 +3,14 @@ import { API } from './api';
 
 type WorkflowTemplateName = 'flow' | 'quick';
 
-interface SeededProject { id: string; name: string }
-interface SeededWorkflow { id: string; workphases: Array<{ id: string; name: string }> }
+interface SeededProject {
+  id: string;
+  name: string;
+}
+interface SeededWorkflow {
+  id: string;
+  workphases: Array<{ id: string; name: string }>;
+}
 
 // "POST project -> GET workflow-templates -> find by name -> POST workflow"
 // was duplicated under 3 different names across tests/api and tests/ui —
@@ -19,9 +25,11 @@ export async function seedTemplatedWorkflow(
   const project = await (await request.post(`${API}/projects`, { data: { name } })).json();
   const templates = await (await request.get(`${API}/workflow-templates`)).json();
   const template = templates.find((t: { name: string }) => t.name === templateName);
-  const workflow = await (await request.post(`${API}/workflows`, {
-    data: { name, projectId: project.id, templateId: template.id },
-  })).json();
+  const workflow = await (
+    await request.post(`${API}/workflows`, {
+      data: { name, projectId: project.id, templateId: template.id },
+    })
+  ).json();
   return { project, workflow };
 }
 
@@ -32,9 +40,11 @@ export async function seedBareWorkflow(
   name: string,
 ): Promise<{ project: SeededProject; workflow: SeededWorkflow }> {
   const project = await (await request.post(`${API}/projects`, { data: { name } })).json();
-  const workflow = await (await request.post(`${API}/workflows`, {
-    data: { name, projectId: project.id },
-  })).json();
+  const workflow = await (
+    await request.post(`${API}/workflows`, {
+      data: { name, projectId: project.id },
+    })
+  ).json();
   return { project, workflow };
 }
 
@@ -108,13 +118,39 @@ export async function fetchItem(request: APIRequestContext, id: string) {
   return (await request.get(`${API}/items/${id}`)).json();
 }
 
+// The minimal shape every caller of `fetchDefaultBoard` actually reads off
+// the response — untyped before (audit epic-3-5-story-5 #13), which is why
+// `drag-5-stub-detach.spec.ts` had to re-annotate its own `.find` callback's
+// param inline, three times, to get at a column's `entryWorkphaseId`.
+export interface SeededColumn {
+  id: string;
+  entryWorkphaseId: string;
+  displayName: string;
+}
+export interface SeededBoard {
+  id: string;
+  columns: SeededColumn[];
+  itemDepthCap: number;
+}
+
 // The workflow's auto-bootstrapped default board, resolved (columns + Unsorted)
 // — the `boards?workflowId=` → `boards/:id` two-step that every board-driven
 // spec repeated.
-export async function fetchDefaultBoard(request: APIRequestContext, workflowId: string) {
+export async function fetchDefaultBoard(request: APIRequestContext, workflowId: string): Promise<SeededBoard> {
   const boards = await (await request.get(`${API}/boards?workflowId=${workflowId}`)).json();
   expect(boards.length, `workflow ${workflowId} has no board`).toBeGreaterThan(0);
   return (await request.get(`${API}/boards/${boards[0].id}`)).json();
+}
+
+// The column covering a given workphase — the `board.columns.find(c =>
+// c.entryWorkphaseId === workphaseId)` lookup `drag-5-stub-detach.spec.ts`
+// (audit epic-3-5-story-5 #13) and `drag-column-bands.spec.ts`'s own
+// `columnKeyOf` each re-rolled independently, re-annotating the untyped
+// callback param every time before `fetchDefaultBoard` had a return type.
+export function columnForWorkphase(board: SeededBoard, workphaseId: string): SeededColumn {
+  const found = board.columns.find(c => c.entryWorkphaseId === workphaseId);
+  if (!found) throw new Error(`No column covers workphase "${workphaseId}" as its entry`);
+  return found;
 }
 
 // Pulls named phases out of a workflow's `workphases` array, in the given

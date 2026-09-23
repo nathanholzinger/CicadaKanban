@@ -104,7 +104,7 @@ describe('classifyDragTargets — Card drag', () => {
   });
 });
 
-describe('classifyDragTargets — Stub drag (Story 5, full classification, DRAG-2.7)', () => {
+describe('classifyDragTargets — Stub drag (Story 5, full classification, DRAG-2.8)', () => {
   it('a Stub is classified exactly like a Card would be — its own parent, its siblings, and every other Card/Stub included, no blanket exclusion', () => {
     const items = [item('P'), item('S1', 'P'), item('S2', 'P'), item('Q'), item('SQ', 'Q'), item('V')];
     const { states } = classifyDragTargets('S1', items, CAP);

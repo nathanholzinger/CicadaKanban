@@ -1,6 +1,10 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
-import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY, type DragTuning } from '../../client/src/components/workflow/dragTuning';
+import {
+  DEFAULT_DRAG_TUNING,
+  DRAG_TUNING_STORAGE_KEY,
+  type DragTuning,
+} from '../../client/src/components/workflow/dragTuning';
 
 // The one recipe for driving this app's @dnd-kit board from Playwright
 // (extracted in Epic 3.5 Story 1 from three per-spec copies — see
@@ -196,10 +200,10 @@ export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
 // compute a wait off the *configured* value, never a literal.
 export async function seedDragTuning(page: Page, override: Partial<DragTuning> = {}): Promise<DragTuning> {
   const tuning = { ...DEFAULT_DRAG_TUNING, ...override };
-  await page.addInitScript(
-    ([key, value]) => localStorage.setItem(key, value),
-    [DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning)] as const,
-  );
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [
+    DRAG_TUNING_STORAGE_KEY,
+    JSON.stringify(tuning),
+  ] as const);
   return tuning;
 }
 
@@ -209,6 +213,24 @@ export async function seedDragTuning(page: Page, override: Partial<DragTuning> =
 // this used to be spelled inconsistently, 30s in some presets and 60s in
 // others, with no reason for the difference).
 const NEVER_MS = 60_000;
+
+// One named slack, added atop however many of the configured clocks a wait
+// has to cover — audit epic-3-5-story-5 #13: this used to be spelled
+// `* 2 + 3000`, `* 2 + 2000`, and `+ 2000` independently across specs (and
+// this file's own `awaitPoppedOut`), with three different slacks and none
+// named. Not tuned by feel like the clocks themselves — just enough margin
+// for the sample-driven cascade after the last clock's own due time to
+// actually land before Playwright's own wait gives up.
+const CLOCK_SLACK_MS = 2000;
+
+// A wait long enough to cover every one of `clocks` firing in sequence,
+// plus one slack margin — the one spelling of "these thresholds, back to
+// back, plus a little room," used wherever a spec waits past more than one
+// clock (a two- or three-layer pop cascade) rather than re-adding the same
+// margin at each call site.
+export function clocksMargin(...clocks: number[]): number {
+  return clocks.reduce((sum, ms) => sum + ms, 0) + CLOCK_SLACK_MS;
+}
 
 // Every threshold absurdly high: nothing pops, ever — a spec whose subject
 // isn't pop timing at all (drag-target classification; an in-context
@@ -222,7 +244,11 @@ export const NO_POP: Partial<DragTuning> = { popDelayMs: NEVER_MS, popInDelayMs:
 // paired with a pop-in delay long enough that resting in the target's own
 // middle band (also its pop-eligible zone) never completes a second,
 // unwanted pop before the case releases.
-export const POP_OUT_ONLY: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: NEVER_MS, cardPopInDelayMs: NEVER_MS };
+export const POP_OUT_ONLY: Partial<DragTuning> = {
+  popDelayMs: 150,
+  popInDelayMs: NEVER_MS,
+  cardPopInDelayMs: NEVER_MS,
+};
 // Short enough for both clocks to run out while the cursor rests: pop out
 // of the origin context, then in to whichever one it's resting over.
 export const SUSTAINED: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: 150, cardPopInDelayMs: NEVER_MS };
@@ -232,5 +258,5 @@ export const SUSTAINED: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: 1
 // have to move again: the pop timer fires on its own once `tuning.popDelayMs`
 // has elapsed.
 export async function awaitPoppedOut(page: Page, tuning: DragTuning) {
-  await awaitDragState(page, 'popped-out', tuning.popDelayMs + 2000);
+  await awaitDragState(page, 'popped-out', clocksMargin(tuning.popDelayMs));
 }

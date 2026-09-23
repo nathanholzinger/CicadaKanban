@@ -12,10 +12,9 @@ import {
   measureRegions,
   resolveDragStructure,
   type CardListRegion,
-  type DescendantsRegion,
   type Rect,
 } from './dragRegions';
-import { rect, region, column } from '../../test/dragFixtures';
+import { descendantsRegion, rect, region, column } from '../../test/dragFixtures';
 
 // A real browser's DOMRect exposes its fields as accessor getters on
 // `DOMRect.prototype`, not as the instance's own enumerable properties
@@ -94,14 +93,7 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
 describe('childRegionAt excludes descendants regions (decision 3)', () => {
   it("never returns a Card's own Descendants section, even while hovering squarely inside it", () => {
     const P = 'card-p';
-    const descendantsP: DescendantsRegion = {
-      key: descendantsRegionKey(P),
-      rect: rect(0, 0, 100, 200),
-      contentRect: rect(0, 0, 100, 200),
-      kind: 'descendants',
-      cardId: P,
-      parentRegionKey: cardRegionKey(P),
-    };
+    const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
     expect(childRegionAt([descendantsP], { x: 50, y: 100 }, cardRegionKey(P))).toBeNull();
   });
 });

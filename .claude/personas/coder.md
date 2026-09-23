@@ -67,3 +67,10 @@ those, don't duplicate them per-feature.
 - Change the `reorderProjects` / `reorderWorkPhases` / `reorderItems` API shape
 - Remove a workphase from the DB (it will break existing data)
 - Touch `server/src/mcp.ts` without checking if MCP tool schemas need updating
+- Update anything under `docs/test-plans/` — automation-status columns,
+  per-case notes, marking a case built/superseded. That's the **Test
+  Planner**/**Test Reconciler**'s call (see their persona/agent docs), not
+  yours, even when a change you just shipped makes a test-plan claim stale.
+  You may _reference_ the plan to confirm your tests meet the business-case
+  coverage it describes; flag a stale claim back rather than editing it
+  yourself, unless explicitly instructed to.

@@ -433,6 +433,14 @@ self-corrects. With `popDelayMs = 0` (the panel allows it) the recursion's
 rule 2 skip. **Fix:** loop the re-resolve/re-run until `contextKey`
 stabilises (bounded by the layer depth), `startSnap` once per hop.
 
+**Status (2026-09-21, at `fc9a22c`):** worsened, not resolved — promoted
+to Fix Now as `code-quality-audit-epic-3-5-story-5.md` #2. Story 5's
+third layer makes the two-hop (Descendants → Card → Column) the natural
+exit under `popDistancePx`, the exact lever the Story 5 plan hands the
+Product Owner for the Card-layer-stop feel check; the stranded window
+now clears the ghost (X snaps back into its section) and a release in it
+writes nothing. Same fix as proposed here.
+
 ### 14. A locked context whose region drops out of the sample pops to Board, not to its parent `[Correctness & Security]`
 **Files:** `client/src/components/workflow/popSession.ts:183–184, 213`
 
@@ -443,6 +451,11 @@ sub-row wheel-scrolled fully out of view so `clipToVisible` returns null),
 ?? null` — for a Card that's Board, skipping the column. Degenerate inputs;
 the fix is to read the parent key off `structureRef` (which survives a
 clipped-away rect) rather than the measured region.
+
+**Status (2026-09-21, at `fc9a22c`):** unchanged in kind, one layer
+worse in reach — a `descendants:P` context clipped out of view pops
+straight to Board, skipping Card and Column both (Story 5 audit #17).
+Same fix.
 
 ### 15. F8's "idempotent" claim holds for the clamp, not the snap tween `[Correctness & Security + Consistency & Drift]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:302–334`; dnd-kit 6.3.1 `core.esm.js:2959–2997, 3923–3937` (`DragOverlay` applies `modifiers` to the already-`DndContext`-modified transform)
@@ -481,6 +494,12 @@ because the fixture column is short. A Product Owner call: either
 meaning through the new path), or the wiki's §1.1 rule 1 gains a sentence
 saying a bare-container release is a no-op.
 
+**Status (2026-09-21, at `fc9a22c`):** still open for Cards. Story 5
+gives the same release a different answer for a Stub: a bare-container
+release at column layer is a detach-to-end (`noAnchorSlot` → `'last'`,
+decision 5), so the codebase now carries a precedent for "container =
+append" that the Product Owner's call can lean on either way.
+
 ### 18. `useBoardDnd.ts` (575 lines) still owns pure geometry its own header disclaims `[File Responsibility]` (Story 3 #3 / reconciled #10 lineage)
 **Files:** `client/src/components/workflow/useBoardDnd.ts:548–574` (`clampToCurrentContext`/`clampAxis` — pure over `(transform, rect, pop, regions)`, no React or dnd-kit runtime); `:502–516` (the `placementOver` derivation, inline in the event handler, while its type `PlacementOver` and its sibling `placementFor` are pure and unit-tested in `popSession.ts`)
 
@@ -494,6 +513,15 @@ guard, three teardown sequences at `:437–439`, `:447–449`, `:260–267`, thr
 do it alongside Story 5, which deletes the `attached-child` branch of
 `handleDragEnd`.
 
+**Status (2026-09-21, at `fc9a22c`):** not done; the hook grew 575 → 663
+lines. Story 5 deleted the `attached-child` branch as planned but added
+`containingCardIdOf`, the Stub start branch, `siblingScopeParentId`/
+`siblingItems`, and a third inline `placementOver` branch; none of
+`usePendingGhostGuard`/`endSession`/`resolvePlacementOver` exists and the
+clamp math is still local. Escalated as Story 5 audit #19, with #8/#9/#10
+there as the concrete first cuts; do before Story 6 Phase C adds
+per-sample projection state to the same hook.
+
 ### 19. `KanbanCard.tsx` (417 lines) now hosts the Card tier and the Stub tier `[File Responsibility]` (cross-ref #4, #10)
 **File:** `client/src/components/KanbanCard.tsx:27–86` (shared drop-target chrome: `useLiveDropSide`, `useDropTargetProps`, `DropSideIndicator`, `dropTargetClass`), `:116–135` (`ShortCard` — honors decision 3 in isolation), `:325–337` (`AttachGhostRow`), `:339–417` (`AttachedChildRow`, its own `useSortable`/`SortableContext`, `data.type: 'attached-child'`)
 
@@ -505,6 +533,14 @@ land:** `KanbanCard.tsx` keeps the Card tier (default export + `ShortCard`);
 to a small shared module both import — which also removes #4's
 `ACTIVE_CONTEXT_OUTLINE` cross-import if `cardMetrics.ts` isn't taken.
 
+**Status (2026-09-21, at `fc9a22c`):** not done before Story 5, and the
+timing is revised rather than the finding: Story 5's changes to the file
+(decision 4 on both rows, decision 7's `attachGhostId`, the `descendants:`
+attribute on the section wrapper) are additive within the existing tiers,
+and Story 6 Phase B rewrites both Stub rows into a flat DFS list — an
+extraction now would be re-extracted in a different shape next story.
+Recorded as Covered by Story 6 in the Story 5 audit.
+
 ### 20. `boardDndUtils.ts` — "Utils" now covers five things `[File Responsibility]` (Story 3 #4 lineage)
 **File:** `client/src/components/workflow/boardDndUtils.ts` (262 lines): collision policy (`:58–88`), column-shape data (`:90–112` — moves in #4), drop-side geometry (`:138–148`), the placement→request adapter (`:163–227` — what the header describes), and an async dispatcher with a `console.error` and tracker orchestration (`:243–261`)
 
@@ -512,14 +548,33 @@ Once #4 moves the column cluster out, what's left is two concepts. Not
 urgent; a rename or a `dragCollision.ts` / keep-`boardDndUtils.ts`-for-the-
 adapter split next time the file is touched.
 
+**Status (2026-09-21, at `fc9a22c`):** the condition was met (Story 5
+changed 163 lines here — `siblingScopeParentId`, `origin` on
+`isIdentity`/`toRequest`) and the split didn't happen. Carried as Story 5
+audit #21 with the same seam; the header still names only the adapter.
+
 ### 21. `tests/ui/drag-column-bands.spec.ts` (797 lines) spans three test-plan catalogs `[File Responsibility]`
 **File:** header cites `drag-1`, `drag-3`, *and* `drag-6`; the second `describe` (`:715–797`, DRAG-6.1/6.2/6.5) uses route-delay mocking and none of the carve-out helpers (`:172–261`) the rest of the file is built on. A `drag-preview-reconciliation.spec.ts` for the DRAG-6.x block would match the folder-aligned catalog; the DRAG-1.x cases interleaved through the first block are pop-through setup for DRAG-3.x and can stay.
 
 ### 22. Column facts derived in three places `[Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/dragRegions.ts:394–421` (`covered`, `isTerminal` from `subRows[0]`), `client/src/components/BoardColumn.tsx:63–71` (same two), `client/src/components/workflow/useBoardDnd.ts:353–358` (`regionItems` re-selects the list the column already rendered). `isIdentity` compares against `others = regionItems(region)` minus the item, so the hook's list and `BoardColumn`'s rendered list agree by convention. A `columnFacts(column)` beside `DropColumn` (post-#4, in `dragRegions.ts`) leaves one derivation. Low drift risk until Epic 7 rescopes `Column`.
 
+**Status (2026-09-21, at `fc9a22c`):** now four — Story 5's `siblingItems`
+(`useBoardDnd.ts:410–412`) is a fourth "rows this region renders" beside
+`regionItems`. Carried as Story 5 audit #24; leave until Story 6's
+all-rows change, don't add a fifth.
+
 ### 23. `session.pop != null` doubles as "this is a Card drag" at two sites `[Duplication & Abstraction]` (one site Covered by Story 5, below)
 **Files:** `client/src/components/KanbanCard.tsx:177` (`attachGhostId` — Story 5's plan names it); `client/src/components/BoardColumn.tsx:211` ("Drop cards here" guard, whose comment relies on "a Stub drag never reaches the pop machine"). Elsewhere (`useBoardDnd.ts:216, 252, 418`, `BandGuides.tsx:127`) `pop` means "machine running". Story 5 makes `pop` non-null for every item drag, inverting the first two. A `useIsCardDrag()` reading `session.origin` makes that a one-line flip; `BoardColumn.tsx:211` isn't in Story 5's plan — verify against the roadmap.
+
+**Status (2026-09-21, at `fc9a22c`):** site 1 resolved — `KanbanCard.tsx:
+189–193` now reads `origin` (decision 7), exactly the flip predicted. Site
+2 (`BoardColumn.tsx:181`, now `!session?.pop`) is vacuous rather than
+wrong: `pop` is non-optional, so the guard equals `!session` and the
+"Drop cards here" fallback hides during a Stub drag as it does during a
+Card drag, which is right — the carve takes over for both. Its comment
+("a Stub drag never reaches the pop machine") is false; Story 5 audit #5
+has the one-line simplification.
 
 ---
 
@@ -535,6 +590,12 @@ adapter split next time the file is touched.
 
 ### 24. `origin.workphaseId` is present-but-`undefined` for an Unsorted item
 `useBoardDnd.ts:402` — `{ workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' }`. Story 5 must not test it with `'workphaseId' in origin` the way `'parentId' in placement` is tested (`boardDndUtils.ts:195`, `:219`).
+
+**Status (2026-09-21, at `fc9a22c`):** resolved by absence — Story 5's
+`isIdentity` compares `workphaseId` by value (`boardDndUtils.ts:204`,
+`??`/`===`), and no `'workphaseId' in origin` exists anywhere in
+`client/src`; the Unsorted origin behaves identically to the old `null`
+comparison.
 
 ### 25. Anchoring against an item drawn by a pending placement whose DB row is still `position: null`
 Just dragged out of Done, write in flight, then anchored beside → server 400 "anchorId has no position" → `sendItemMove` logs, `fail`s, resyncs. The failure path is covered; the 400 is reachable.

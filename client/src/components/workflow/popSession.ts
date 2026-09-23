@@ -2,7 +2,7 @@
 // unit-tested. Rules: docs/wiki/board-drag-interaction/README.md.
 
 import type { DragTuning } from './dragTuning';
-import { workphaseOnlySlot, type Placement } from './itemListOps';
+import { hasParentOpinion, parentOpinionOf, workphaseOnlySlot, type Placement } from './itemListOps';
 import {
   bandFor,
   childRegionAt,
@@ -424,8 +424,7 @@ export function placementFor(
   // context). Full gap+depth placement is Story 6's (§7).
   if (region.kind === 'descendants') {
     if (over === null || over === 'container') return priorPlacement ?? origin;
-    const parentId = 'parentId' in origin ? origin.parentId : null;
-    return { parentId, slot: { anchorId: over.anchorId, side: over.side } };
+    return { parentId: parentOpinionOf(origin), slot: { anchorId: over.anchorId, side: over.side } };
   }
 
   // Story 5: the moment a Stub's own list stops applying — any card-list
@@ -433,36 +432,35 @@ export function placementFor(
   // (itemListOps.ts::renderedIsStub already reads a `parentId: null` key
   // this way); a Free Card's placement carries no such opinion, exactly as
   // before Story 5.
-  const nonComparable = 'parentId' in origin;
+  const nonComparable = hasParentOpinion(origin);
   const detach = nonComparable ? { parentId: null as string | null } : {};
+  // Audit epic-3-5-story-5 #9: the card-list placement literal below was
+  // spelled four times independently — a missing `...detach` on any one of
+  // the four would leave a Stub rendering as still-attached on one path
+  // only (its section keeps the row while the column also shows it), the
+  // exact silent failure the presence semantic in `hasParentOpinion` exists
+  // to guard against.
+  const cardListPlacement = (slot: Placement['slot']): Placement => ({
+    ...detach,
+    workphaseId: regionWorkphaseFor(region, activeWorkphaseId),
+    slot,
+  });
 
   if (session.contextKey !== null) {
     const fallback = noAnchorSlot(region, nonComparable, activeItemPosition);
-    if (over === null)
-      return (
-        priorPlacement ?? { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback }
-      );
-    if (over === 'container' || region.isTerminal) {
-      return { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot: fallback };
-    }
-    return {
-      ...detach,
-      workphaseId: regionWorkphaseFor(region, activeWorkphaseId),
-      slot: { anchorId: over.anchorId, side: over.side },
-    };
+    if (over === null) return priorPlacement ?? cardListPlacement(fallback);
+    if (over === 'container' || region.isTerminal) return cardListPlacement(fallback);
+    return cardListPlacement({ anchorId: over.anchorId, side: over.side });
   }
 
   // Board layer (popped out): the hovered band decides — unchanged.
   const band = session.hover?.band;
   if (!band && priorPlacement) return priorPlacement;
 
-  let slot: Placement['slot'];
   if (region.isTerminal || !band || band === 'middle') {
-    slot = noAnchorSlot(region, nonComparable, activeItemPosition);
-  } else {
-    slot = band === 'top' ? 'first' : 'last';
+    return cardListPlacement(noAnchorSlot(region, nonComparable, activeItemPosition));
   }
-  return { ...detach, workphaseId: regionWorkphaseFor(region, activeWorkphaseId), slot };
+  return cardListPlacement(band === 'top' ? 'first' : 'last');
 }
 
 export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: string | null): string {

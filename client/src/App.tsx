@@ -13,7 +13,7 @@ import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import NotificationsBell from './components/NotificationsBell';
-import { getAncestors } from './lib/hierarchy';
+import { findNearestAncestor, getAncestors } from './lib/hierarchy';
 
 export default function App() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -103,7 +103,12 @@ export default function App() {
     }
   }
 
-  async function handleReorderProject(id: string, parentId: string | null, prevId: string | null, nextId: string | null) {
+  async function handleReorderProject(
+    id: string,
+    parentId: string | null,
+    prevId: string | null,
+    nextId: string | null,
+  ) {
     try {
       const updated = await moveProject(id, { parentId, prevId, nextId });
       setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
@@ -123,12 +128,10 @@ export default function App() {
     if (!selectedProject) return null;
     const own = workflows.find(w => w.projectId === selectedProject.id);
     if (own) return { workflow: own, isInherited: false, ownerProject: selectedProject };
-    const ancestors = getAncestors(selectedProject, projects);
-    for (let i = ancestors.length - 1; i >= 0; i--) {
-      const inherited = workflows.find(w => w.projectId === ancestors[i].id);
-      if (inherited) return { workflow: inherited, isInherited: true, ownerProject: ancestors[i] };
-    }
-    return null;
+    const ownerProject = findNearestAncestor(selectedProject, projects, n => workflows.some(w => w.projectId === n.id));
+    if (!ownerProject) return null;
+    const inherited = workflows.find(w => w.projectId === ownerProject.id)!;
+    return { workflow: inherited, isInherited: true, ownerProject };
   })();
 
   const createProjectParentName = createProjectParentId

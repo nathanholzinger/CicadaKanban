@@ -1,15 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
 import { advancePopSession, isLocked, placementFor, popDueAt, startPopSession, type PopSession } from './popSession';
-import { rect, region } from '../../test/dragFixtures';
+import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
-import {
-  cardRegionKey,
-  descendantsRegionKey,
-  type CardRegion,
-  type DescendantsRegion,
-  type ShortCardMetrics,
-} from './dragRegions';
+import type { ShortCardMetrics } from './dragRegions';
 
 // docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
 // every threshold parameterized on the tuning value, never 0.5 s.
@@ -288,8 +282,7 @@ describe('placementFor', () => {
   // workphase, and `containingCardId` is null throughout (a Free Card never
   // has one) — neither ever changes the outcome of these cases (both only
   // ever matter for the Card/Descendants branches, exercised in their own
-  // describe block below), so one helper stands in for the item's own data.
-  const freeOrigin = (workphaseId: string): Placement => ({ workphaseId, slot: 'existing' });
+  // describe block below).
 
   it('in-context: the item sorts where it already is, under its own workphase', () => {
     expect(
@@ -474,31 +467,10 @@ describe('placementFor', () => {
   // through the Card and Descendants branches — TC-1/2/4/5/9/12.
   describe('a Stub drag (origin carries parentId)', () => {
     const P = 'card-p';
-    const cardP: CardRegion = {
-      key: cardRegionKey(P),
-      rect: rect(0, 0, 100, 200),
-      contentRect: rect(0, 0, 100, 200),
-      kind: 'card',
-      attachToCardId: P,
-      parentRegionKey: A.key,
-    };
-    const otherCard: CardRegion = {
-      key: cardRegionKey('card-q'),
-      rect: rect(0, 0, 100, 200),
-      contentRect: rect(0, 0, 100, 200),
-      kind: 'card',
-      attachToCardId: 'card-q',
-      parentRegionKey: A.key,
-    };
-    const descendantsP: DescendantsRegion = {
-      key: descendantsRegionKey(P),
-      rect: rect(0, 0, 100, 200),
-      contentRect: rect(0, 0, 100, 200),
-      kind: 'descendants',
-      cardId: P,
-      parentRegionKey: cardRegionKey(P),
-    };
-    const origin: Placement = { parentId: P, slot: 'existing' };
+    const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
+    const otherCard = cardRegion('card-q', rect(0, 0, 100, 200), A.key);
+    const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
+    const origin = stubOrigin(P);
 
     it('TC-12: at its own containing Card, the within-action is origin itself — "set back down"', () => {
       expect(placementFor(startPopSession(cardP.key), [cardP], null, null, origin, P)).toBe(origin);

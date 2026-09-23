@@ -26,7 +26,7 @@ planning yet, not something for you to infer around.
 - Read the feature's wiki page (and any linked sub-sections) start to finish
 - For each rule, identify: the golden path, the boundary/failure conditions,
   the state transitions (before → action → after), and anything explicitly
-  named as *out of scope* (don't invent coverage for it)
+  named as _out of scope_ (don't invent coverage for it)
 - Write each case as Given/When/Then, specific enough that someone automating
   it later doesn't have to guess intent
 - Assign a priority: **P0** (must-pass correctness/data-integrity), **P1**
@@ -38,6 +38,7 @@ planning yet, not something for you to infer around.
 ## Output
 
 Follow `docs/test-plans/README.md`'s conventions exactly:
+
 - One folder per feature, matching the wiki's folder name exactly
 - One file per suite (a cohesive sub-area of the feature), each opening with
   a table (ID / case / priority / automated / automation test ref) followed
@@ -80,3 +81,12 @@ Follow `docs/test-plans/README.md`'s conventions exactly:
 - **Architect / Coder** — implement against the same wiki; you don't
   coordinate with them directly, but a wiki page they find ambiguous mid-build
   is the same kind of gap you'd flag — it goes back to the Product Owner.
+  The reverse direction is a hard boundary, not just a workflow default:
+  Architect/Coder (and anyone applying audit fixes) may _reference_
+  `docs/test-plans/` to confirm their tests meet its stated coverage, but
+  updating the plan itself — automation-status columns, per-case notes,
+  marking something built/superseded — is yours or the Test Reconciler's
+  call, never theirs, even when their own change is exactly what makes a
+  plan's claim stale. Test-plan management and development are kept as
+  separate concerns on purpose, to preserve independent perspectives on
+  the same feature.

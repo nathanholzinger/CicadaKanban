@@ -4,9 +4,40 @@
 import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import type { Item } from '../../types';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
-import type { Placement } from './itemListOps';
+import { hasParentOpinion, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import { containsPoint, type Rect } from './dragRegions';
+
+// Decision 4 (2026-09-21) — every item row's dnd-kit registration, typed so
+// the invariant it introduced ("every item row registers `type: 'item'`,
+// never a type that differs between a Stub's row and a popped-out Card row
+// for the same id") holds by construction, not by convention alone: an
+// untyped literal lets `role: 'stubs'` compile without complaint (audit
+// epic-3-5-story-5 #11). `itemRowData`/`columnData` are the one write path;
+// `isCardRow`/`isStubRow` the one read path for a policy decision that
+// needs a specific role (both `useSortable` calls, the collision filter
+// below, and the test fixtures all go through these instead of re-typing
+// the literal).
+export type ItemRowRole = 'card' | 'stub';
+export type DragRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null } | { type: 'column' };
+
+export function itemRowData(role: ItemRowRole, parentId?: string | null): DragRowData {
+  return parentId !== undefined ? { type: 'item', role, parentId } : { type: 'item', role };
+}
+
+export function columnData(): DragRowData {
+  return { type: 'column' };
+}
+
+export function isCardRow(data: Record<string, unknown> | undefined): data is { type: 'item'; role: 'card' } {
+  return data?.type === 'item' && data?.role === 'card';
+}
+
+export function isStubRow(
+  data: Record<string, unknown> | undefined,
+): data is { type: 'item'; role: 'stub'; parentId?: string | null } {
+  return data?.type === 'item' && data?.role === 'stub';
+}
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
 // useBoardDnd so it can be unit tested — real drag gestures are deliberately
@@ -91,7 +122,7 @@ export function resolveBoardCollisions(
     const droppableContainers = args.droppableContainers.filter(container => {
       if (container.id === args.active.id) return false;
       const data = container.data.current;
-      return data?.type === 'item' && data?.role === 'stub' && data?.parentId === scopeParentId;
+      return isStubRow(data) && data.parentId === scopeParentId;
     });
     return closestCorners({ ...args, droppableContainers });
   }
@@ -99,17 +130,12 @@ export function resolveBoardCollisions(
   const droppableContainers = args.droppableContainers.filter(container => {
     if (container.id === args.active.id) return false; // never collide with self
     const data = container.data.current;
-    if (data?.type === 'item' && data?.role === 'stub') return false; // never a valid target for a Card-layer or Board drop
+    if (isStubRow(data)) return false; // never a valid target for a Card-layer or Board drop
     if (!session) return true; // column drag, or no machine in play
     if (!session.context) return false;
     if (container.id === session.context.containerId) return true;
     const rect = args.droppableRects.get(container.id);
-    return (
-      data?.type === 'item' &&
-      data?.role === 'card' &&
-      rect !== undefined &&
-      rectCenterInside(rect, session.context.rect)
-    );
+    return isCardRow(data) && rect !== undefined && rectCenterInside(rect, session.context.rect);
   });
   return closestCorners({ ...args, droppableContainers });
 }
@@ -198,10 +224,9 @@ function anchorFor(
 // anchor/first/last is never identity even if it happens to already
 // describe the same neighbor — the bands never checked that before either.
 export function isIdentity(origin: Placement, placement: Placement, others: readonly { id: string }[]): boolean {
-  const sameList =
-    'parentId' in placement
-      ? 'parentId' in origin && placement.parentId === origin.parentId
-      : (placement.workphaseId ?? origin.workphaseId) === origin.workphaseId;
+  const sameList = hasParentOpinion(placement)
+    ? hasParentOpinion(origin) && placement.parentId === origin.parentId
+    : (placement.workphaseId ?? origin.workphaseId) === origin.workphaseId;
   if (!sameList) return false;
   // Hoisted to a const so the narrowing survives into the `some` callback —
   // a property path (`placement.slot`) doesn't narrow inside a closure.
@@ -230,7 +255,7 @@ export function toRequest(
 ): MoveItemInput | null {
   if (!placement || isIdentity(origin, placement, others)) return null;
   const workphaseId = placement.workphaseId !== item.workphaseId ? placement.workphaseId : undefined;
-  if ('parentId' in placement) {
+  if (hasParentOpinion(placement)) {
     if (placement.parentId === null) {
       // Story 5: detaching (a card-list placement previewing Free,
       // `parentId: null`) — the real `parentId` stays exactly what it
@@ -239,17 +264,28 @@ export function toRequest(
       // workflow-wide scope like any Card's.
       return { workphaseId, isAttached: false, ...anchorFor(placement.slot, others) };
     }
-    if (typeof placement.slot === 'object') {
+    // Audit epic-3-5-story-5 #3: this branch used to key on the *slot's own
+    // shape* (`typeof slot === 'object'`) rather than the parent equality
+    // its own comment stated — a proxy that only held because Story 5's
+    // Descendants branch is the sole producer of an anchor-shaped slot
+    // alongside a `parentId`, and always sets `parentId: origin.parentId`.
+    // Story 6 breaks that coincidence (a reparent *with* placement among a
+    // different Card's Stubs also resolves to an anchor slot), so the real
+    // rule — same parent as `origin`'s own — is what decides a bare
+    // position-only reorder from a full reparent now.
+    if (hasParentOpinion(origin) && placement.parentId === origin.parentId) {
       // Story 5 decision 1: a Descendants-layer sibling reorder — same
       // parent as before, position-only, the pre-Story-5 attached-child
       // sibling-reorder request unchanged (no parentId/isAttached: the
       // attachment itself isn't changing, only the ordinal is).
       return anchorFor(placement.slot, others);
     }
-    // Attach as the last child, workphase inherited server-side: Story
-    // 4's Card auto-drop for an item from outside, or Story 5 TC-4's
-    // reparent into a different Card.
-    return { parentId: placement.parentId, isAttached: true };
+    // A genuinely different parent: attach (or reparent) with whatever
+    // placement it resolved to. `anchorFor` degrades to `{}` for `'last'`
+    // with no siblings, so Story 4's Card auto-drop for an item from
+    // outside is byte-identical; a real anchor slot here is Story 6's
+    // reparent-with-placement among a different Card's Stubs.
+    return { parentId: placement.parentId, isAttached: true, ...anchorFor(placement.slot, others) };
   }
   return { workphaseId, ...anchorFor(placement.slot, others) };
 }

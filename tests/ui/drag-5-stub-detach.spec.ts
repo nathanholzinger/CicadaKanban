@@ -1,7 +1,13 @@
-import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem, fetchDefaultBoard } from '../helpers/seed';
+import {
+  seedTemplatedWorkflow,
+  pickWorkphases,
+  seedItem,
+  fetchItem,
+  fetchDefaultBoard,
+  columnForWorkphase,
+} from '../helpers/seed';
 import {
   pickUp,
   hoverTo,
@@ -10,10 +16,11 @@ import {
   topQuarter,
   awaitDragContext,
   seedDragTuning,
+  clocksMargin,
   NO_POP,
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
-import { article, column } from '../helpers/boardLocators';
+import { article, column, itemRow } from '../helpers/boardLocators';
 import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // Epic 3.5 Story 5 — docs/wiki/board-drag-interaction §1, §1.1, §6, §8;
@@ -22,18 +29,12 @@ import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../clie
 // TC-11's own two-pop cascade timing stays manual (threshold-timed); these
 // assert reachability (`data-drag-context`) and write correctness.
 
-const createItem = seedItem;
-
-function stubRow(page: Page, itemId: string) {
-  return page.locator(`[data-item-id="${itemId}"]`);
-}
-
 test.describe('Stub detach — a Stub drags through the Descendants/Card/Column layers', () => {
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
   });
 
-  test("DRAG-1.1 / TC-9 (sibling bullets): a Stub's drag starts at its containing Card's Descendants layer, and a same-parent reorder commits with no pop at all", async ({
+  test("DRAG-1.1 / DRAG-5.9 (sibling bullets): a Stub's drag starts at its containing Card's Descendants layer, and a same-parent reorder commits with no pop at all", async ({
     page,
     request,
     projectSidebar,
@@ -41,21 +42,21 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const name = 'Stub Sibling Reorder Project';
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    const s1 = await createItem(request, { title: 'S1', parentId: p.id });
-    await createItem(request, { title: 'S2', parentId: p.id });
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const s1 = await seedItem(request, { title: 'S1', parentId: p.id });
+    await seedItem(request, { title: 'S2', parentId: p.id });
     // X starts *last*, not adjacent to S1 — a genuine two-hop move to the
     // front (TC-9's first bullet), rather than a move to a neighbor it's
     // already sitting beside (which the server would resolve to nearly the
     // same slot it already occupies).
-    const x = await createItem(request, { title: 'X', parentId: p.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
     const originalX = await fetchItem(request, x.id);
 
     await seedDragTuning(page, NO_POP); // nothing about this case is timing-dependent
     await projectSidebar.openBoard(name);
     await expect(article(page, 'P')).toBeVisible();
 
-    await pickUp(page, stubRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     // The drag starts already inside the Descendants layer — no pop needed
     // to reach it (contrast a Free Card, which always starts at Board/
     // Column layer and only reaches a Card by zooming in).
@@ -67,8 +68,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // the first pass settles targets the real, current layout (which of
     // S1/S2 ends up the resolved anchor is the sortable strategy's own
     // call, not this test's concern — a real anchor+side commit is).
-    await hoverTo(page, await topQuarter(stubRow(page, s1.id)));
-    await hoverTo(page, await topQuarter(stubRow(page, s1.id)));
+    await hoverTo(page, await topQuarter(itemRow(page, s1.id)));
+    await hoverTo(page, await topQuarter(itemRow(page, s1.id)));
     await release(page);
 
     const updated = await fetchItem(request, x.id);
@@ -80,7 +81,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     // Still nested — never became Free, never left the Card.
     await expect(article(page, 'P').getByText('X')).toBeVisible();
-    await expect(page.getByRole('article', { name: 'X', exact: true })).not.toBeVisible();
+    await expect(article(page, 'X')).not.toBeVisible();
   });
 
   test("decision 1: a grandchild Stub's drag starts in its containing Card's whole section, not its parent Stub's sub-list", async ({
@@ -91,15 +92,15 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const name = 'Grandchild Stub Project';
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    const s1 = await createItem(request, { title: 'S1', parentId: p.id });
-    const s1a = await createItem(request, { title: 'S1a', parentId: s1.id });
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const s1 = await seedItem(request, { title: 'S1', parentId: p.id });
+    const s1a = await seedItem(request, { title: 'S1a', parentId: s1.id });
 
     await seedDragTuning(page, NO_POP);
     await projectSidebar.openBoard(name);
     await expect(article(page, 'P').getByText('S1a')).toBeVisible();
 
-    await pickUp(page, stubRow(page, s1a.id).getByRole('button', { name: 'S1a' }));
+    await pickUp(page, itemRow(page, s1a.id).getByRole('button', { name: 'S1a' }));
     // The section is P's whole Descendants layer, not S1's — even though
     // S1a's real, direct parent is S1, not P.
     await awaitDragContext(page, descendantsRegionKey(p.id));
@@ -109,7 +110,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(unchanged.parentId).toBe(s1.id); // a release with nothing hovered writes nothing
   });
 
-  test('TC-12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
+  test('DRAG-5.12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
     page,
     request,
     projectSidebar,
@@ -117,10 +118,10 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const name = 'Stub Set Back Down Project';
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    await createItem(request, { title: 'S1', parentId: p.id });
-    const x = await createItem(request, { title: 'X', parentId: p.id });
-    await createItem(request, { title: 'S2', parentId: p.id });
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'S1', parentId: p.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
+    await seedItem(request, { title: 'S2', parentId: p.id });
     const before = await fetchItem(request, x.id);
 
     // A real, short pop-out threshold — but popInDelayMs/cardPopInDelayMs
@@ -128,7 +129,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, stubRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // A point inside P's own card body (its title area) but outside the
@@ -136,7 +137,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // there: the cursor never leaves the Card's own box, so the second
     // pop-out clock (Card → column) never even starts.
     await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
-    await awaitDragContext(page, cardRegionKey(p.id), tuning.popDelayMs + 2000);
+    await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
 
     await release(page);
 
@@ -147,7 +148,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(page, 'P').getByText('X')).toBeVisible();
   });
 
-  test('TC-1/TC-2/TC-10: two pops detach the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
+  test('DRAG-5.1 / 5.2 / 5.10: two pops detach the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
     page,
     request,
     projectSidebar,
@@ -156,20 +157,20 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
     const board = await fetchDefaultBoard(request, workflow.id);
-    const todoCol = board.columns.find((c: { entryWorkphaseId: string }) => c.entryWorkphaseId === todo.id);
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    const x = await createItem(request, { title: 'X', parentId: p.id });
+    const todoCol = columnForWorkphase(board, todo.id);
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
     // A second, unrelated Card — so the column has somewhere unambiguously
     // outside P's own (tall, 1-child) card to rest the cursor. P's card
     // shrinks the moment X's placement previews Free (its own nested row
     // leaves), which would otherwise make "past the column's content" land
     // back inside P itself.
-    const q = await createItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, stubRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // Q sits outside P's whole card, so both pop-outs eventually fire on
@@ -177,14 +178,14 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // (wiki §1.1 rule 2/3) — cardPopInDelayMs is never (POP_OUT_ONLY), so
     // resting on Q's card at column layer goes no further.
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
-    await awaitDragContext(page, columnRegionKey(todoCol.id), tuning.popDelayMs * 2 + 3000);
+    await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
 
     // TC-10: from the moment it's locked in the column, it's a Card — gone
     // from P's own section, present as its own article (scoped to the
     // column, since the floating DragOverlay copy also matches by role and
     // name mid-drag).
     await expect(article(page, 'P').getByText('X')).not.toBeVisible();
-    await expect(column(page, 'Todo').getByRole('article', { name: 'X', exact: true })).toBeVisible();
+    await expect(article(column(page, 'Todo'), 'X')).toBeVisible();
 
     await release(page);
 
@@ -195,10 +196,56 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(updated.position).not.toBeNull(); // now positioned in the workflow-wide scope
 
     await expect(article(page, 'P').getByText('X')).not.toBeVisible();
-    await expect(column(page, 'Todo').getByRole('article', { name: 'X', exact: true })).toBeVisible();
+    await expect(article(column(page, 'Todo'), 'X')).toBeVisible();
   });
 
-  test("TC-4: zoomed into a different Card instead, it reparents — attached as that Card's last child, never a detach that leaves parentId at P", async ({
+  // Audit epic-3-5-story-5 #2: a yank far enough to clear both the
+  // Descendants and Card layers' own pop-out distances in one pointer
+  // sample must cascade through every hop it's due for — not strand at the
+  // intermediate Card layer until a timer (disabled here — only the
+  // distance term can ever fire) self-corrects it. A release taken in that
+  // exact window is the regression's own symptom: the pre-fix code left
+  // `pop.contextKey` reporting the fully-cascaded layer while `regionsRef`
+  // stayed scoped to the intermediate one, so `placementRegion` found
+  // nothing and the release wrote nothing at all.
+  test('audit #2 regression: a yank past both pop-out distances in one sample cascades Descendants -> Card -> Column, and an immediate release detaches', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const name = 'Stub Cascade Distance Project';
+    const { project, workflow } = await seedTemplatedWorkflow(request, name);
+    const [todo] = pickWorkphases(workflow, 'Todo');
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
+    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+
+    // popDelayMs/popInDelayMs/cardPopInDelayMs are all NO_POP's "never"
+    // value — nothing here can advance on a timer, or on a second
+    // pointermove (there isn't one): only the loop fix can ever move past
+    // the first hop, and only the write path's own correctness (not a
+    // `data-drag-context` read, which reported the right layer even before
+    // the fix) proves it landed with a usable region.
+    await seedDragTuning(page, { ...NO_POP, popDistancePx: 10 });
+    await projectSidebar.openBoard(name);
+
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
+    await awaitDragContext(page, descendantsRegionKey(p.id));
+
+    // Well outside P's whole card — one hoverTo, one sample; the Card
+    // fully contains its own Descendants section, so a point this far past
+    // the Card is automatically far past the section too, and both hops'
+    // own distance thresholds clear in the same evaluation.
+    await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
+    await release(page);
+
+    const updated = await fetchItem(request, x.id);
+    expect(updated.isAttached).toBe(0);
+    expect(updated.parentId).toBe(p.id);
+    expect(updated.workphaseId).toBe(todo.id);
+  });
+
+  test("DRAG-5.4: zoomed into a different Card instead, it reparents — attached as that Card's last child, never a detach that leaves parentId at P", async ({
     page,
     request,
     projectSidebar,
@@ -207,10 +254,10 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
     const board = await fetchDefaultBoard(request, workflow.id);
-    const todoCol = board.columns.find((c: { entryWorkphaseId: string }) => c.entryWorkphaseId === todo.id);
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    const x = await createItem(request, { title: 'X', parentId: p.id });
-    const q = await createItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+    const todoCol = columnForWorkphase(board, todo.id);
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
+    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     // The first two pops (out of Descendants, out of the Card) run the
     // shared clock back to back, same as TC-1's own test; landing squarely
@@ -223,7 +270,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     });
     await projectSidebar.openBoard(name);
 
-    await pickUp(page, stubRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
@@ -233,9 +280,9 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // third clock (cardPopInDelayMs): the same reflow `dragTo`'s own header
     // comment documents, here caused by the drag itself rather than a
     // cross-column move.
-    await awaitDragContext(page, columnRegionKey(todoCol.id), tuning.popDelayMs * 2 + 2000);
+    await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
-    await awaitDragContext(page, cardRegionKey(q.id), tuning.cardPopInDelayMs + 2000);
+    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardPopInDelayMs));
 
     await release(page);
 
@@ -263,10 +310,10 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
     const board = await fetchDefaultBoard(request, workflow.id);
-    const todoCol = board.columns.find((c: { entryWorkphaseId: string }) => c.entryWorkphaseId === todo.id);
-    const p = await createItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    const x = await createItem(request, { title: 'X', parentId: p.id });
-    const other = await createItem(request, { title: 'Other', projectId: project.id, workphaseId: todo.id });
+    const todoCol = columnForWorkphase(board, todo.id);
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const x = await seedItem(request, { title: 'X', parentId: p.id });
+    const other = await seedItem(request, { title: 'Other', projectId: project.id, workphaseId: todo.id });
 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
@@ -275,12 +322,12 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // (outside P's whole card, unaffected by P's own shrink) rather than
     // "past the column's content," which P's tall, single-child card would
     // otherwise swallow entirely.
-    await pickUp(page, stubRow(page, x.id).getByRole('button', { name: 'X' }));
+    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
     await hoverTo(page, await atFraction(article(page, 'Other'), 0.5));
-    await awaitDragContext(page, columnRegionKey(todoCol.id), tuning.popDelayMs * 2 + 3000);
+    await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
     await release(page);
-    await expect(page.getByRole('article', { name: 'X', exact: true })).toBeVisible();
+    await expect(article(page, 'X')).toBeVisible();
 
     // Now drag X again — a plain Card, reordered against Other. If the
     // active row's own `data.current` had gone stale (still reading as a

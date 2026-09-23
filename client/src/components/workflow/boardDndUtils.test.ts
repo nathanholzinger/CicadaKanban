@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
-import { rect, column } from '../../test/dragFixtures';
+import { freeOrigin, rect, column, stubOrigin } from '../../test/dragFixtures';
 import { buildColumnForWorkphaseMap, subrowContainerId } from './dragRegions';
 import {
   resolveBoardCollisions,
   resolveDropSide,
   isIdentity,
+  itemRowData,
   toRequest,
   sendItemMove,
   type CollisionSession,
@@ -69,7 +70,7 @@ describe('buildColumnForWorkphaseMap', () => {
 describe('resolveBoardCollisions', () => {
   it('never collides an item with itself', () => {
     const result = resolveBoardCollisions(
-      collisionArgs('card-a', { type: 'item', role: 'card' }, [{ id: 'card-a', data: { type: 'item', role: 'card' } }]),
+      collisionArgs('card-a', itemRowData('card'), [{ id: 'card-a', data: itemRowData('card') }]),
       null,
     );
     expect(result).toHaveLength(0);
@@ -82,8 +83,8 @@ describe('resolveBoardCollisions', () => {
     // hijack its parent's cross-column drop once attached children became
     // draggable (Epic 3.2 Part 3).
     const result = resolveBoardCollisions(
-      collisionArgs('card-a', { type: 'item', role: 'card' }, [
-        { id: 'child-1', data: { type: 'item', role: 'stub', parentId: 'card-a' } },
+      collisionArgs('card-a', itemRowData('card'), [
+        { id: 'child-1', data: itemRowData('stub', 'card-a') },
         { id: 'col-1', data: { type: 'column' } },
       ]),
       null,
@@ -98,9 +99,9 @@ describe('resolveBoardCollisions', () => {
   it("scopes a Descendants context's collisions to siblings sharing the session's own siblingScopeParentId", () => {
     const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
     const result = resolveBoardCollisions(
-      collisionArgs('child-a', { type: 'item', role: 'stub', parentId: 'parent-1' }, [
-        { id: 'child-b', data: { type: 'item', role: 'stub', parentId: 'parent-1' } }, // true sibling
-        { id: 'child-c', data: { type: 'item', role: 'stub', parentId: 'parent-2' } }, // different parent
+      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
+        { id: 'child-b', data: itemRowData('stub', 'parent-1') }, // true sibling
+        { id: 'child-c', data: itemRowData('stub', 'parent-2') }, // different parent
         { id: 'col-1', data: { type: 'column' } }, // never a valid target for a Descendants-context drag
       ]),
       session,
@@ -120,9 +121,9 @@ describe('resolveBoardCollisions', () => {
   it("never reads the active row's own role — a stale 'card' role alongside a live Descendants session still scopes correctly", () => {
     const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
     const result = resolveBoardCollisions(
-      collisionArgs('child-a', { type: 'item', role: 'card' }, [
-        { id: 'child-b', data: { type: 'item', role: 'stub', parentId: 'parent-1' } },
-        { id: 'child-c', data: { type: 'item', role: 'stub', parentId: 'parent-2' } },
+      collisionArgs('child-a', itemRowData('card'), [
+        { id: 'child-b', data: itemRowData('stub', 'parent-1') },
+        { id: 'child-c', data: itemRowData('stub', 'parent-2') },
       ]),
       session,
     );
@@ -134,18 +135,17 @@ describe('resolveBoardCollisions', () => {
     const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
     const containers: Container[] = [
       { id: 'col-a', data: { type: 'column' }, rect: rect(0, 0, 100, 400) },
-      { id: 'card-a1', data: { type: 'item', role: 'card' }, rect: rect(5, 10, 90, 50) },
+      { id: 'card-a1', data: itemRowData('card'), rect: rect(5, 10, 90, 50) },
       { id: 'col-b', data: { type: 'column' }, rect: rect(120, 0, 100, 400) },
-      { id: 'card-b1', data: { type: 'item', role: 'card' }, rect: rect(125, 10, 90, 50) },
-      { id: 'child-1', data: { type: 'item', role: 'stub', parentId: 'card-a1' }, rect: rect(10, 30, 80, 20) },
+      { id: 'card-b1', data: itemRowData('card'), rect: rect(125, 10, 90, 50) },
+      { id: 'child-1', data: itemRowData('stub', 'card-a1'), rect: rect(10, 30, 80, 20) },
     ];
 
     it('in-context: only the context container and the cards inside it are candidates', () => {
       const session: CollisionSession = { hoverContainerId: null, context, siblingScopeParentId: null };
-      const ids = resolveBoardCollisions(
-        collisionArgs('card-x', { type: 'item', role: 'card' }, containers),
-        session,
-      ).map(c => c.id);
+      const ids = resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(
+        c => c.id,
+      );
       expect(ids).toContain('col-a');
       expect(ids).toContain('card-a1');
       expect(ids).not.toContain('col-b');
@@ -156,17 +156,13 @@ describe('resolveBoardCollisions', () => {
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
       const session: CollisionSession = { hoverContainerId: 'col-b', context, siblingScopeParentId: null };
       expect(
-        resolveBoardCollisions(collisionArgs('card-x', { type: 'item', role: 'card' }, containers), session).map(
-          c => c.id,
-        ),
+        resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(c => c.id),
       ).toEqual(['col-b']);
     });
 
     it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
       const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: null };
-      expect(
-        resolveBoardCollisions(collisionArgs('card-x', { type: 'item', role: 'card' }, containers), session),
-      ).toHaveLength(0);
+      expect(resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session)).toHaveLength(0);
     });
   });
 });
@@ -296,30 +292,31 @@ describe('isIdentity', () => {
 // sending); the identity check itself is `origin`'s job (`isIdentity`,
 // tested above).
 describe('toRequest', () => {
-  const originFor = (workphaseId: string): Placement => ({ workphaseId, slot: 'existing' });
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a null placement sends nothing — drawn where it already is', () => {
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), null, others)).toBeNull();
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), null, others)).toBeNull();
   });
 
   it('an identity sends nothing (decision 2)', () => {
     expect(
-      toRequest({ workphaseId: 'w2' }, originFor('w2'), { workphaseId: 'w2', slot: 'existing' }, others),
+      toRequest({ workphaseId: 'w2' }, freeOrigin('w2'), { workphaseId: 'w2', slot: 'existing' }, others),
     ).toBeNull();
   });
 
   it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider / TC-7.16-shaped, middle band)', () => {
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'existing' }, others)).toEqual({
-      workphaseId: 'w2',
-    });
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'existing' }, others)).toEqual(
+      {
+        workphaseId: 'w2',
+      },
+    );
   });
 
   it('cross-column with a specific anchor: workphaseId + anchor + side (TC-2.11)', () => {
     expect(
       toRequest(
         { workphaseId: 'w1' },
-        originFor('w1'),
+        freeOrigin('w1'),
         { workphaseId: 'w2', slot: { anchorId: 'A', side: 'after' } },
         others,
       ),
@@ -331,12 +328,12 @@ describe('toRequest', () => {
   });
 
   it("first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, 3.2)", () => {
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'A',
       side: 'before',
     });
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'last' }, others)).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'last' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'C',
       side: 'after',
@@ -344,7 +341,7 @@ describe('toRequest', () => {
   });
 
   it('empty others: first/last send a bare workphase move, no anchor to resolve (DRAG-3.10)', () => {
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
       workphaseId: 'w2',
     });
   });
@@ -353,7 +350,7 @@ describe('toRequest', () => {
     expect(
       toRequest(
         { workphaseId: 'w2' },
-        originFor('w2'),
+        freeOrigin('w2'),
         { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } },
         others,
       ),
@@ -365,7 +362,7 @@ describe('toRequest', () => {
 
   it("a done region never anchors — DRAG-3.9/TC-7.8 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
     expect(
-      toRequest({ workphaseId: 'w1' }, originFor('w1'), { workphaseId: 'done', slot: 'existing' }, [
+      toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'done', slot: 'existing' }, [
         { id: 'D1' },
         { id: 'D2' },
       ]),
@@ -375,7 +372,7 @@ describe('toRequest', () => {
   });
 
   it('attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside (Story 4/5 TC-4, no manual placement among Stubs until Story 6)', () => {
-    expect(toRequest({ workphaseId: 'w1' }, originFor('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
+    expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
     });
@@ -386,7 +383,7 @@ describe('toRequest', () => {
   // pre-Story-5 attached-child request shape unchanged. Nothing about the
   // attachment itself is in this request; only the ordinal is.
   it('a Descendants-layer sibling reorder (parentId matching origin, an anchor slot): sends only the anchor + side', () => {
-    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    const origin = stubOrigin('card-p');
     expect(
       toRequest({ workphaseId: 'w1' }, origin, { parentId: 'card-p', slot: { anchorId: 'S2', side: 'after' } }, [
         { id: 'S1' },
@@ -400,7 +397,7 @@ describe('toRequest', () => {
   // attachment §11's "detach preserves the parent," so the real parentId
   // stays whatever it already is; only `isAttached: false` is explicit.
   it('detach (parentId: null on the placement): isAttached false, plus the anchor/workphase resolution otherwise (TC-1)', () => {
-    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    const origin = stubOrigin('card-p');
     expect(
       toRequest(
         { workphaseId: 'w1' },
@@ -412,7 +409,7 @@ describe('toRequest', () => {
   });
 
   it('TC-2: detaching within the same covered set sends no workphaseId field at all', () => {
-    const origin: Placement = { parentId: 'card-p', slot: 'existing' };
+    const origin = stubOrigin('card-p');
     expect(
       toRequest(
         { workphaseId: 'w1' },
@@ -421,6 +418,27 @@ describe('toRequest', () => {
         [],
       ),
     ).toEqual({ isAttached: false, anchorId: 'Q', side: 'after' });
+  });
+
+  // Audit epic-3-5-story-5 #3: this branch used to key on the *slot's own
+  // shape* (`typeof slot === 'object'`), not the parent equality its own
+  // comment stated — a proxy that happened to hold because Story 5's own
+  // Descendants branch is the only producer of an anchor-shaped slot
+  // alongside a `parentId`, and it always sets `parentId: origin.parentId`.
+  // Story 6's reparent-with-placement (a different Card's Stubs) breaks
+  // that coincidence: a genuinely different parent, still an anchor slot —
+  // this must be a full reparent (parentId + isAttached + the anchor), not
+  // a bare position-only reorder that silently drops the attachment change.
+  it('a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder (Story 6 seam)', () => {
+    const origin = stubOrigin('card-p');
+    expect(
+      toRequest(
+        { workphaseId: 'w1' },
+        origin,
+        { parentId: 'card-q', slot: { anchorId: 'other-stub', side: 'before' } },
+        [{ id: 'other-stub' }],
+      ),
+    ).toEqual({ parentId: 'card-q', isAttached: true, anchorId: 'other-stub', side: 'before' });
   });
 });
 

@@ -431,7 +431,7 @@ for its own ancestor.
   These are non-targets for *every* item, not just this one, which is what
   separates Inert from Depth-capped.
 - For a **Stub** drag: nothing — classified exactly like a Card would be
-  (DRAG-2.7), full stop. *(As of Story 5, 2026-09-21. The interim rule
+  (DRAG-2.8), full stop. *(As of Story 5, 2026-09-21. The interim rule
   through Story 4 — every target outside its own parent's Stub list Inert,
   only its siblings Valid — retired here: `dragClassification.ts` no
   longer branches on the dragged item's own attachment at all.)*

@@ -442,5 +442,12 @@ regression gate throughout.
   manual per the plan (threshold-timed).
 - **Docs.** Wiki §1/§1.1/§4/§7/§8/§10 and the header build-status
   paragraph updated to "built"; `epic-3-5-roadmap.md`'s Story 5 entry;
-  `workflow/CLAUDE.md`'s mental model and module list; the DRAG-1/2/5
-  test-plan tables and per-case automation notes.
+  `workflow/CLAUDE.md`'s mental model and module list. The DRAG-1/2/5
+  test-plan tables' own automation-status columns and per-case notes are
+  *not* part of this story's build — updating them (marking a case built,
+  triaging ⏳ pending, adding a superseded-rule "was:" note) is the Test
+  Planner/Test Reconciler's call, not the Coder's or Architect's (see
+  their persona docs' "What to Never Do Without Asking"). Audit
+  epic-3-5-story-5 #5 caught an earlier draft of this bullet claiming
+  those tables were updated when they weren't — corrected here rather
+  than applied, per the same boundary.

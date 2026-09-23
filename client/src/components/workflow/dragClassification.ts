@@ -17,7 +17,9 @@ import { isStub } from '../../lib/isStub';
 //
 // Story 5 (2026-09-21): a Stub is classified on exactly the same terms as a
 // Card, below — the interim "everything outside its own parent's Stub list
-// is Inert" rule retires (DRAG-2.7). Full classification is what makes the
+// is Inert" rule retires (DRAG-2.8 — the Stub-*drag* half; DRAG-2.7 is the
+// separate "Stubs as targets" rule and is unaffected). Full classification
+// is what makes the
 // zoom-in reparent (TC-4) and Board-layer detach (TC-1–3) need no
 // classification code of their own: every Card and Stub is already valid/
 // cycle-forming/depth-capped for a Stub drag exactly as it would be for a
@@ -67,7 +69,7 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
       if (item.id !== activeId && !isStub(item)) freeDescendantIds.add(item.id);
       continue;
     }
-    // A Stub is classified on exactly the same terms as a Card (DRAG-2.7,
+    // A Stub is classified on exactly the same terms as a Card (DRAG-2.8,
     // Story 5) — full classification, no separate "siblings only" branch.
     states.set(item.id, isWithinDepthCap(getDepth(item.id, items), height, cap) ? 'valid' : 'depth-capped');
   }
