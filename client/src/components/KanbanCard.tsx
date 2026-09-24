@@ -19,7 +19,7 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
-import { itemRowData, resolveDropSide, type ItemRowRole } from './workflow/boardDndUtils';
+import { dropAnchorFor, itemRowData, type ItemRowRole } from './workflow/boardDndUtils';
 import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
@@ -37,18 +37,22 @@ import {
 // full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
 // is about to compute). Reads dnd-kit's live active/over state directly via
 // useDndContext — no prop drilling through BoardColumn/BoardView — and
-// calls the exact same resolveDropSide function useBoardDnd's handleDragEnd
-// uses, so the line shown here is guaranteed to match what gets sent.
+// calls the exact same dropAnchorFor function useBoardDnd's handleDragEnd
+// uses, so the line shown here is guaranteed to match what gets sent. In a
+// column (Option A + lean, on trial) the anchor is a neighbor of the ghost,
+// not necessarily the card dnd-kit says is `over`, so every row asks
+// whether it's the one named.
 // Diagnostic-only, so reading `active.data.current?.role` here is fine even
 // though it's never load-bearing for a real collision/write decision
 // (decision 4) — a stale read during a mid-drag remount briefly mis-draws
 // this line at worst, never anything written.
 function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRole[]): 'before' | 'after' | null {
   const { active, over } = useDndContext();
-  if (!active || !over || over.id !== itemId || active.id === itemId) return null;
+  if (!active || !over || active.id === itemId) return null;
   if (active.data.current?.type !== 'item') return null;
   if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
-  return resolveDropSide(active.rect.current.translated, over.rect);
+  const anchor = dropAnchorFor(active, over, SHORT_CARD_HEIGHT_PX);
+  return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
 // Epic 3.5 Story 2: provisional drag-target overlays (docs/wiki/board-drag-

@@ -10,19 +10,14 @@ import {
   type DragStartEvent,
   type DragEndEvent,
   type Modifier,
+  type Over,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { findNearestAncestor } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';
-import {
-  resolveBoardCollisions,
-  resolveDropSide,
-  sendItemMove,
-  toRequest,
-  type CollisionSession,
-} from './boardDndUtils';
+import { resolveBoardCollisions, dropAnchorFor, sendItemMove, toRequest, type CollisionSession } from './boardDndUtils';
 import { classifyDragTargets, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
@@ -686,10 +681,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     if (!current) return;
     const { activeItem, origin } = current;
-    // Resolved once, shared by every branch that anchors against `over` —
-    // which half of the hovered card the dragged card's current position
-    // falls in.
-    const side = resolveDropSide(active.rect.current.translated, over?.rect);
+    // Every branch that anchors against `over` takes its anchor from
+    // `dropAnchorFor`, the same function the live blue line reads.
+    const anchorOn = (o: Over): PlacementOver => dropAnchorFor(active, o, SHORT_CARD_HEIGHT_PX);
 
     // ── Item drop: the ghost's own placement is the request (decision 1) ──
     // No fresh geometry at release — `regionsRef` already holds exactly
@@ -724,15 +718,24 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // a `null` `over`: never send an anchor `toRequest` can't resolve
     // within origin's own parent scope (a 400, "anchor outside the
     // resulting scope"). True siblings are unaffected.
+    //
+    // Option A (on trial, 2026-09-24): in a column/sub-row, `over` can be the
+    // dragged card's own row (`resolveBoardCollisions`). That's "stay where
+    // the ghost is": no anchor, the same placement the ghost is drawn at
+    // mid-drag (the blue line still names a neighbor of that same slot). A
+    // ghost with no neighbor at all has nothing to anchor to: the bare
+    // container's slot.
     const placementOver: PlacementOver = !list
       ? null
       : list.containerId === null
         ? over && list.rows.some(r => r.id === String(over.id))
-          ? { anchorId: String(over.id), side }
+          ? anchorOn(over)
           : null
-        : over && String(over.id) !== list.containerId
-          ? { anchorId: String(over.id), side }
-          : 'container';
+        : !over || String(over.id) === list.containerId
+          ? 'container'
+          : String(over.id) === activeId
+            ? null
+            : (anchorOn(over) ?? 'container');
     const placement = placementForSession(current, regions, placementOver);
     const others = list ? list.rows.filter(i => i.id !== activeId) : [];
     const input = toRequest(activeItem, origin, placement, others);

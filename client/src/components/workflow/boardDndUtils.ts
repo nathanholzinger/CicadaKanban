@@ -1,7 +1,8 @@
 // Collision detection + request-shape helpers for the board drag gesture:
 // toRequest (placement → API request) and isIdentity (recognizes a no-op placement).
 
-import { closestCorners, type CollisionDetection } from '@dnd-kit/core';
+import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
+import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
 import type { Item } from '../../types';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
 import { hasParentOpinion, type Placement } from './itemListOps';
@@ -133,10 +134,15 @@ export function resolveBoardCollisions(
   }
 
   const droppableContainers = args.droppableContainers.filter(container => {
-    if (container.id === args.active.id) return false; // never collide with self
     const data = container.data.current;
     if (isStubRow(data)) return false; // never a valid target for a Card-layer or Board drop
-    if (!session) return true; // column drag, or no machine in play
+    // Option A (on trial, 2026-09-24): in a locked column/sub-row the dragged
+    // card's own row *is* a candidate, as in stock dnd-kit sortable: over its
+    // own slot, `over` is itself, nothing shuffles, and a release there is
+    // "stay" (`handleDragEnd`). Excluded, the ghost always jumped to a
+    // neighbor's slot, even at pickup. A column drag still never collides
+    // with itself.
+    if (!session) return container.id !== args.active.id; // column drag, or no machine in play
     if (!session.context) return false;
     if (container.id === session.context.containerId) return true;
     const rect = args.droppableRects.get(container.id);
@@ -183,6 +189,63 @@ export function resolveDropSide(
   const overCenterY = overRect.top + overRect.height / 2;
 
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
+}
+
+export interface DropAnchor {
+  anchorId: string;
+  side: 'before' | 'after';
+}
+
+// Option A + lean (on trial, 2026-09-24): the card a drop anchors to, and
+// which side of it — the one answer both the live blue line
+// (`KanbanCard.tsx`) and the release (`useBoardDnd.ts::handleDragEnd`) read,
+// so they can't disagree.
+//
+// Over a Card row (a column/sub-row's own list), dnd-kit's sortable shuffle
+// decides the ghost's slot, stock dnd-kit semantics (the drop lands where
+// the gap is), and the dragged copy only picks which neighbor names it:
+// above the ghost's middle, "after" the card above it; below, "before" the
+// card below it. Both name the same slot, so the ghost, the line and the
+// save always agree; the lean only chooses the neighbor (the future zoom-in
+// candidate). At the top or bottom of the list there's one neighbor; alone
+// in the list, none (null).
+//
+// The ghost's middle follows dnd-kit's vertical strategy: over its own
+// slot when `over` is itself, top-aligned to `over` when it moved up,
+// bottom-aligned when it moved down, at `ghostHeightPx` (the shortCard).
+// The order is read from `over`'s own sortable data — the same `items`
+// dnd-kit draws the shuffle from — never the active row's (decision 4: it
+// can lag a mid-drag remount).
+//
+// Anywhere else (a Descendants section's Stub rows, until Story 6 Phase D's
+// gap + depth rule; a card not in `over`'s list) it's still `over` itself,
+// on `resolveDropSide`'s which-half-of-`over` side.
+export function dropAnchorFor(
+  active: Pick<Active, 'id' | 'rect'>,
+  over: Over,
+  ghostHeightPx: number,
+): DropAnchor | null {
+  const translated = active.rect.current.translated;
+  const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
+  if (!isCardRow(over.data.current) || !hasSortableData(over)) return onOver();
+  const { items, index: overIndex } = over.data.current.sortable;
+  const activeIndex = items.indexOf(active.id);
+  if (activeIndex === -1) return onOver();
+
+  const { top, height } = over.rect;
+  const ghostCenterY =
+    activeIndex < overIndex
+      ? top + height - ghostHeightPx / 2
+      : activeIndex > overIndex
+        ? top + ghostHeightPx / 2
+        : top + height / 2;
+  const order = arrayMove(items, activeIndex, overIndex);
+  const above = order[overIndex - 1];
+  const below = order[overIndex + 1];
+  const leansUp = translated ? translated.top + translated.height / 2 < ghostCenterY : true;
+  if (above !== undefined && (leansUp || below === undefined)) return { anchorId: String(above), side: 'after' };
+  if (below !== undefined) return { anchorId: String(below), side: 'before' };
+  return null;
 }
 
 // Story 4.1 Phase 3 — the ghost's own placement is the request; nothing
