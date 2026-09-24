@@ -270,6 +270,17 @@ predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
    fact the region carries (or a facet switch here), not a kind switch.
    This is the one *positive* kind test the audit's #8 didn't list; it is
    the site group-by touches.
+   *Deferred here by Epic 3.5 Story 6.1 (ledger C-6b, 2026-09-24):* the
+   same card-list facts (covered workphases, `isTerminal`) are derived in
+   three places:
+   - `BoardColumn.tsx`, for the render;
+   - `dragRegions.ts::cardListStructureFromKey`, for the region;
+   - `regionItems`, for the release's `others` list.
+
+   All three call the same two selectors, so they agree only by
+   convention. Make them read one derivation when this point reshapes
+   item selection, or when the done-column rework settles `isTerminal`,
+   whichever comes first.
 3. **List identity** — `Placement` (`boardDndUtils.ts`) carries
    `workphaseId` / `parentId`, and `isIdentity`'s `sameList` reads "same
    workphase = same list." Two date buckets in one column share a

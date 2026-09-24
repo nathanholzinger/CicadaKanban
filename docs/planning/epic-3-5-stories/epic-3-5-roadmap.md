@@ -396,8 +396,10 @@ built here as phases.
 **Then:** one four-pass audit over Stories 6 and 6.1 together, as the Story
 4 audit covered 4 and 4.1. The epic-wide pass comes at epic close.
 
-**Status: method agreed 2026-09-24; not started. Begins after Story 6's
-sign-off.**
+**Status: method agreed 2026-09-24. Comparison done and the ledger
+ratified by the PO the same day: 45 findings — 32 adopted across four
+phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Not yet
+built.**
 
 ---
 
@@ -415,6 +417,16 @@ level no longer fits the sidebar or the overflow modal either.
 
 ~~**Needs attention** — the "see X children" hold threshold is unnamed.~~
 Moot until the story decides whether a modal exists.
+
+**To consider** (PO, 2026-09-24): if an overflow modal is in scope, align
+hierarchy dragging across its three surfaces: the project sidebar, a
+Card's Descendants section, and the modal. They already share
+`lib/hierarchyPlacement.ts` (Story 6). One difference is left on purpose:
+when the named row belongs to the dragged subtree, the board steps past
+it in dnd-kit's order (`travelingRowsFor`), and the sidebar maps it to
+"after the nearest eligible predecessor" (`resolveGap`). Story 6.1's
+ledger rejected merging the two for now (L1-7b); this is the natural
+place to revisit.
 
 ---
 
@@ -637,7 +649,19 @@ deferral and keep landing with their stories.
    4.1 retired that panel value for the shortCard height + list gap.
    Reconcile the names so a case can be read against the code again.
 
-6. **The flakiness call, made explicitly.** For each precise-move case
+6. **Deferred from Story 6.1** (ledger rows L1-1b and SW-5, 2026-09-24):
+   - **The quarter helpers.** `dragGesture.ts::topQuarter`/`bottomQuarter`/
+     `atFraction` aim at "which half of the card", a rule Option A retired
+     (the lean picks the side now). Re-aim the specs that use them (4 use
+     `topQuarter`, 1 `bottomQuarter`), or retire the helpers.
+   - **Seven unread `data-*` attributes.** Read them in a spec or delete
+     them: `data-drag-overlay-form`, `data-drag-zoom-candidate`,
+     `data-drag-zoom-phase`, `data-drag-projection` and
+     `data-placement-valid` (written ahead of this story's E2E), plus
+     `data-active-context` and `data-inversion-count`, which have no
+     reader at all.
+
+7. **The flakiness call, made explicitly.** For each precise-move case
    the reconciler proposes automating, decide whether a real pointer
    sequence against pixel geometry and timer margins is worth keeping in
    the suite, or whether the case is better served by a `dragGesture.ts`
