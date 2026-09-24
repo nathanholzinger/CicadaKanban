@@ -11,6 +11,7 @@ import {
   itemRowData,
   toRequest,
   sendItemMove,
+  travelingRowsFor,
   type CollisionSession,
 } from './boardDndUtils';
 import type { Placement } from './itemListOps';
@@ -118,6 +119,22 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toContain('grandchild-c');
     expect(result.map(r => r.id)).not.toContain('other-section-d');
     expect(result.map(r => r.id)).not.toContain('col-1');
+  });
+
+  // Option A, extended to Descendants (Story 6 Phase D hands-on, 2026-09-24):
+  // as at a column, holding still over its own slot must be `over` itself —
+  // excluded, the gap always jumped to a neighbor's, one off.
+  it("a Descendants context: the dragged Stub's own row is a candidate too", () => {
+    const sectionRect = rect(0, 0, 100, 400);
+    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const ids = resolveBoardCollisions(
+      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
+        { id: 'child-a', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) },
+        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 40, 90, 20) },
+      ]),
+      session,
+    ).map(c => c.id);
+    expect(ids).toContain('child-a');
   });
 
   // Decision 4's own regression guard (2026-09-21): the hazard is a Stub's
@@ -344,6 +361,49 @@ describe('dropAnchorFor', () => {
       anchorId: 'b',
       side: 'before',
     });
+  });
+
+  // Story 6 Phase D hands-on (2026-09-24): the dragged Stub's own child
+  // `xa` is still rendered right below it, but travels with it — named, the
+  // gap jumped to the section's end. The search steps past it.
+  it('steps past rows that travel with the dragged item', () => {
+    const items = ['s1', 'x', 'xa', 's3'];
+    const travels = (id: string) => id === 'x' || id === 'xa';
+    // Over its own slot (top 110, middle 160).
+    expect(dropAnchorFor(dragged('x', 170, 26), overRow('x', 110, items, 'stub'), travels)).toEqual({
+      anchorId: 's3',
+      side: 'before',
+    });
+    expect(dropAnchorFor(dragged('x', 150, 26), overRow('x', 110, items, 'stub'), travels)).toEqual({
+      anchorId: 's1',
+      side: 'after',
+    });
+    // Without it, leaning down names the child.
+    expect(dropAnchorFor(dragged('x', 170, 26), overRow('x', 110, items, 'stub'))).toEqual({
+      anchorId: 'xa',
+      side: 'before',
+    });
+  });
+});
+
+describe('travelingRowsFor', () => {
+  const classification = {
+    states: new Map([
+      ['x', 'cycle-forming'],
+      ['xa', 'cycle-forming'],
+      ['s1', 'valid'],
+    ] as const),
+  };
+
+  it("at a Descendants context: the dragged subtree (classification's cycle-forming set)", () => {
+    const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
+    expect(['x', 'xa', 's1'].map(id => travels?.(id))).toEqual([true, true, false]);
+  });
+
+  it('anywhere else: none — at a column a Free descendant is a real anchor', () => {
+    expect(travelingRowsFor({ pop: { contextKey: 'column:c1' }, classification })).toBeUndefined();
+    expect(travelingRowsFor({ pop: { contextKey: null }, classification })).toBeUndefined();
+    expect(travelingRowsFor(null)).toBeUndefined();
   });
 });
 

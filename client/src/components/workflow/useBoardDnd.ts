@@ -24,6 +24,7 @@ import {
   dropAnchorFor,
   sendItemMove,
   toRequest,
+  travelingRowsFor,
   type CollisionSession,
   type DropAnchor,
 } from './boardDndUtils';
@@ -795,7 +796,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // a frame late rather than not at all, but never leaves it stale.
   function handleDragMove(event: DragMoveEvent) {
     if (event.active.data.current?.type === 'column') return;
-    namedAnchorRef.current = event.over ? dropAnchorFor(event.active, event.over) : null;
+    const travels = travelingRowsFor(sessionRef.current);
+    namedAnchorRef.current = event.over ? dropAnchorFor(event.active, event.over, travels) : null;
     evaluateRef.current();
   }
 

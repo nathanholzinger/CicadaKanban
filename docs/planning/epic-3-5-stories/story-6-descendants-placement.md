@@ -17,8 +17,11 @@ with a section, `childRegionAt` zooms a locked Card into its own; the
 Descendants layer's own live projection (gap + depth, §7.1) is tracked on
 the session and resolved to a real placement at release
 (`resolvePlacement`), with §7.2's depth-cap exception wired through to a
-provisional invalid cue. The PO's sign-off on B+C+D together, and Phase E's
-wiki-status report, are next.**
+provisional invalid cue. The PO's Phase D hands-on (2026-09-24) found the
+chosen depth invisible and the gap one off. Both were fixed the same day,
+with a simple depth cue on the carried Stub (Phase D's hands-on finding,
+below). The PO's sign-off on B+C+D together, and Phase E's wiki-status
+report, are next.**
 Written
 against the code as it
 will stand after [Story 4.1](story-4-1-efficiency-refactor.md) and
@@ -186,10 +189,17 @@ each is a **verify** before it's a change:
    indents it; at release the placement is *resolved* from the projection
    (4.1 Phase 3's model — the release derives from a placement, the
    placement here derives from the projection).
+   *Amended 2026-09-24 (Phase D's hands-on finding): the carried copy is
+   indented to the projected depth too. The ghost row this decision
+   describes sits under the carried copy, so on its own it can't be seen.*
 5. **Subtree removal, both surfaces.** On the board the dragged item's
    children are already unrendered for the drag (§5a). In the sidebar the
    descendants stay drawn dimmed but leave `sortableItems` and the
    Top/Bottom candidates (fixes difference 2).
+   *Correction 2026-09-24 (Phase D's hands-on finding, item 3): true of a
+   Card drag, not a Stub's own. Its descendants stay rendered and sortable
+   below it in the flat section. They're out of the projection's rows, and
+   `dropAnchorFor` steps past them, so they're never Top or Bottom.*
 6. **The fourth clock is `descendantsPopInDelayMs`**, default equal to
    `cardPopInDelayMs` (800 ms), its own panel row — §3.1 already reserves
    the name and allows a shared value.
@@ -876,6 +886,88 @@ Free Card `X` to drag), covering:
 Zero console errors across the run. The scratch environment (its own
 backend on port 3098, its own DB file, its own frontend on port 5199) was
 torn down afterward; nothing here touched the dev database.
+
+**Hands-on finding, 2026-09-24: the chosen depth couldn't be seen, and the
+gap was one off.** In the PO's hands-on, a Stub couldn't be placed at a
+chosen depth. A probe in the test stack (a real drag, the file deleted
+afterward) found two causes, and a third while fixing them.
+
+1. **The gap was one off: an Option A leftover.**
+   - The Descendants branch of `boardDndUtils.ts::resolveBoardCollisions`
+     still excluded the dragged row. Option A (hands-on finding 2) removed
+     that exclusion for columns but not here.
+   - So `over` was never the dragged row's own slot, and the ghost jumped
+     into a neighbor's slot even while holding still.
+   - In the probe: P › S1, S2, S3. S2, held still and tabbed right, became
+     **S3's** child (gap "after S3") instead of S1's.
+   - **Fix:** the exclusion is gone. The dragged Stub's own row is a
+     candidate, as at a column. It's also the kind of leftover Story 6.1's
+     rule-change trace looks for, found early.
+2. **The depth changed, but nothing visible showed it.**
+   - Depth follows the raw pointer, not the carried copy. 6 px of sideways
+     travel changes one level (`DESCENDANTS_INDENT_PX`, rounded).
+   - The carried Stub is exactly the section's width
+     (`useBoardDnd.ts::overlayWidthFor`), so the clamp leaves it no
+     sideways travel at all. It sat at x=285 through ±30 px of pointer
+     movement.
+   - Decision 4's cue, the ghost row's indent (12 → 24 px in the probe),
+     sits at 30% opacity directly under the copy.
+   - **Fix, a simple depth cue** (decision 4 amended): at the Descendants
+     layer the carried Stub's visible box indents to the projected depth,
+     `(depth + 1) × DESCENDANTS_INDENT_PX`, the same geometry as a ghost
+     row, so its pill lines up with its would-be siblings.
+     - A 75 ms margin transition makes each snap read as a step.
+     - Over the cap, the copy carries the provisional invalid outline
+       (decision 7), because the ghost row that shows it is hidden.
+     - Only an inner box moves (`KanbanCard.tsx::overlayStubIndent`). The
+       overlay's root keeps its width and position, so nothing dnd-kit
+       measures changes.
+     - `BoardView.tsx` passes `session.projection` as a prop
+       (`overlayProjection`), since the overlay renders outside
+       `DragSessionContext`.
+   - The PO accepted it as good enough to test placement against. Story 8
+     tunes it (roadmap § Story 8: travel per level, pinned vs. following,
+     the snap, the over-cap look).
+3. **Found while fixing: a Stub with children lost its slot.**
+   - A dragged Stub's own descendants stay rendered, and sortable, below it
+     in the flat section. They're excluded from the projection's rows,
+     since they travel with it (§7.2; decision 5's "already unrendered" is
+     true for a Card drag, not for a Stub's own).
+   - Leaning down named its own child, `gapIndexFor` found no such row, and
+     the gap jumped to the section's end. In the probe, S2 (with child S2a)
+     set back down leaning down landed after S3.
+   - **Fix:** `dropAnchorFor` takes an optional `travels` predicate and
+     steps past those rows to the next one that stays.
+   - `boardDndUtils.ts::travelingRowsFor` supplies it (the classification's
+     cycle-forming set, the same one `excludeIdsFor` reads). It supplies it
+     **only at a Descendants context**: at a column, a Free descendant of
+     the dragged Card is a real anchor.
+   - The blue line (`KanbanCard.tsx::useLiveDropSide`) and the gap
+     (`useBoardDnd.ts::handleDragMove`) both read it, so they still agree.
+   - Nothing on screen yet shows that the branch is off-limits: the
+     children stay drawn at full strength. Carried to Story 8 (roadmap):
+     grey them out, or carry them with the copy.
+
+**Verified:**
+- **Unit** (`boardDndUtils.test.ts`, vitest 304/304):
+  - the dragged Stub's own row is a Descendants candidate;
+  - `dropAnchorFor` steps past traveling rows, and names them without the
+    predicate;
+  - `travelingRowsFor` applies only at a Descendants context.
+- **Probe** (test stack, deleted after):
+  - S2 held still and tabbed right → S1's child;
+  - S1a tabbed left → P's child between S1 and S2 (position 1.5);
+  - S2 with child S2a, set back down leaning either way → keeps its slot;
+  - tabbing past the cap → the copy steps to 72 px with the red outline,
+    and a release writes nothing;
+  - the overlay's root stayed at 285/246 px throughout while its inner
+    box stepped 12/24/…/72 px.
+- **Gate:** tsc (root and client), eslint and prettier clean on the
+  touched files. Full Playwright suite: 139 passed, 8 skipped, 1 failed.
+  The failure was a 30 s timeout in `drag-column-bands.spec.ts`'s
+  reservation-invariant case, a Board-layer path this change doesn't
+  touch. It passed 4/4 on repeat and in a full run of its file (16/16), so
+  the suite matches Phase D's 140 passed / 8 skipped.
 
 ### Phase E — Wiki report (the developer doesn't edit the wiki)
 

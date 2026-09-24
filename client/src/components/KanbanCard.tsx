@@ -19,7 +19,7 @@ import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
-import { dropAnchorFor, itemRowData, type ItemRowRole } from './workflow/boardDndUtils';
+import { dropAnchorFor, itemRowData, travelingRowsFor, type ItemRowRole } from './workflow/boardDndUtils';
 import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
@@ -31,6 +31,7 @@ import {
   useIsAttachTarget,
   useIsPending,
   useZoomCandidatePhase,
+  type DescendantsProjection,
   type DropTargetView,
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
@@ -50,10 +51,11 @@ import { useDragTuning } from './workflow/DragTuningContext';
 // this line at worst, never anything written.
 function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRole[]): 'before' | 'after' | null {
   const { active, over } = useDndContext();
+  const session = useDragSession();
   if (!active || !over || active.id === itemId) return null;
   if (active.data.current?.type !== 'item') return null;
   if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
-  const anchor = dropAnchorFor(active, over);
+  const anchor = dropAnchorFor(active, over, travelingRowsFor(session));
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
@@ -169,7 +171,24 @@ const CARD_BASE =
 // interactive. No CARD_BASE (that's the shortCard/full-card box) — a Stub
 // is a small pill-shaped row, not a padded card.
 const OVERLAY_STUB_CLASS =
-  'flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-1.5 py-1 shadow-2xl shadow-black/50';
+  'flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-1.5 py-1 shadow-2xl shadow-black/50 transition-[margin-left] duration-75';
+
+// Story 6 Phase D hands-on (2026-09-24), the simple depth cue: at the
+// Descendants layer the carried Stub's visible box indents to the projected
+// depth, on the same geometry as a ghost row (`AttachGhostRow`), so its
+// pill lines up with its would-be siblings. Only this inner box moves —
+// the overlay's own root keeps its width and position, so nothing dnd-kit
+// measures changes (the same constraint Story 8's zoom-in morph carries).
+// The ghost row that also shows the depth sits under this copy, hidden.
+// Over the cap, the copy carries the invalid outline for the same reason.
+// Provisional; Story 8 tunes it (roadmap).
+function overlayStubIndent(projection: DescendantsProjection | null): {
+  style: { marginLeft: number };
+  invalid: boolean;
+} {
+  if (!projection) return { style: { marginLeft: 0 }, invalid: false };
+  return { style: { marginLeft: (projection.depth + 1) * DESCENDANTS_INDENT_PX }, invalid: !projection.valid };
+}
 
 // DESCENDANTS_INDENT_PX now lives in cardMetrics.ts (Story 6 Phase D needs
 // it too, for the projection's own horizontal-delta-to-depth math). The
@@ -236,6 +255,8 @@ interface KanbanCardProps {
   overlayForm?: OverlayForm;
   /** isOverlay + overlayForm 'stub' only — a row's width in the context Card's section (useBoardDnd.ts::overlayWidthFor). */
   overlayWidthPx?: number | null;
+  /** isOverlay + overlayForm 'stub' only — the Descendants layer's live projection (null elsewhere), which indents the carried Stub to the depth it would land at. */
+  overlayProjection?: DescendantsProjection | null;
   onCardClick?: (id: string) => void;
 }
 
@@ -248,6 +269,7 @@ export default function KanbanCard({
   isOverlay = false,
   overlayForm = 'short-card',
   overlayWidthPx = null,
+  overlayProjection = null,
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
@@ -321,6 +343,7 @@ export default function KanbanCard({
   // in this component, `isOverlay` alone still means "the shortCard drag
   // copy," exactly as before this phase.
   const overlayIsStub = isOverlay && overlayForm === 'stub';
+  const overlayIndent = overlayStubIndent(overlayIsStub ? overlayProjection : null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -373,7 +396,7 @@ export default function KanbanCard({
       data-active-context={isAttachTarget ? true : undefined}
       className={
         overlayIsStub
-          ? OVERLAY_STUB_CLASS
+          ? 'relative'
           : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
       }
     >
@@ -382,7 +405,12 @@ export default function KanbanCard({
       {zoomCandidatePhase === 'cue' && <ZoomCue cueMs={dragTuning.cardPopInDelayMs} />}
 
       {overlayIsStub ? (
-        <StubBody item={item} itemTypes={itemTypes} />
+        <div
+          className={`${OVERLAY_STUB_CLASS} ${overlayIndent.invalid ? INVALID_PLACEMENT_CLASS : ''}`}
+          style={overlayIndent.style}
+        >
+          <StubBody item={item} itemTypes={itemTypes} />
+        </div>
       ) : isGhostLike ? (
         <ShortCard item={item} itemTypes={itemTypes} />
       ) : (

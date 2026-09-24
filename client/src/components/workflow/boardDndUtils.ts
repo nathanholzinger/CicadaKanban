@@ -8,6 +8,8 @@ import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
 import { hasParentOpinion, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import { containsPoint, type Rect } from './dragRegions';
+import type { DragClassification } from './dragClassification';
+import type { PopSession } from './popSession';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 
 // Decision 4 (2026-09-21) — every item row's dnd-kit registration, typed so
@@ -125,8 +127,12 @@ export function resolveBoardCollisions(
 
   if (session?.descendantsSectionRect) {
     const sectionRect = session.descendantsSectionRect;
+    // Option A, extended to Descendants (Story 6 Phase D hands-on,
+    // 2026-09-24): the dragged Stub's own row is a candidate too, as at a
+    // column. Excluded, `over` was never its own slot, so the gap always
+    // jumped to a neighbor's even when holding still, and a tab right made
+    // the item the *next* row's child instead of the previous one's.
     const droppableContainers = args.droppableContainers.filter(container => {
-      if (container.id === args.active.id) return false;
       if (!isStubRow(container.data.current)) return false;
       const rect = args.droppableRects.get(container.id);
       return rect !== undefined && rectCenterInside(rect, sectionRect);
@@ -230,7 +236,15 @@ export interface DropAnchor {
 // Anywhere else (a card not in `over`'s list, or `over` has no sortable
 // data at all) it's still `over` itself, on `resolveDropSide`'s
 // which-half-of-`over` side.
-export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): DropAnchor | null {
+//
+// `travels` (Story 6 Phase D hands-on, 2026-09-24): rows that move with
+// the dragged item, never a neighbor to name — see `travelingRowsFor`.
+// The search steps past them to the next row that stays.
+export function dropAnchorFor(
+  active: Pick<Active, 'id' | 'rect'>,
+  over: Over,
+  travels?: (id: string) => boolean,
+): DropAnchor | null {
   const translated = active.rect.current.translated;
   const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
   const overData = over.data.current;
@@ -248,12 +262,32 @@ export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): 
         ? top + ghostHeightPx / 2
         : top + height / 2;
   const order = arrayMove(items, activeIndex, overIndex);
-  const above = order[overIndex - 1];
-  const below = order[overIndex + 1];
+  const neighbor = (from: number, step: 1 | -1) => {
+    for (let i = from; i >= 0 && i < order.length; i += step) if (!travels?.(String(order[i]))) return order[i];
+    return undefined;
+  };
+  const above = neighbor(overIndex - 1, -1);
+  const below = neighbor(overIndex + 1, 1);
   const leansUp = translated ? translated.top + translated.height / 2 < ghostCenterY : true;
   if (above !== undefined && (leansUp || below === undefined)) return { anchorId: String(above), side: 'after' };
   if (below !== undefined) return { anchorId: String(below), side: 'before' };
   return null;
+}
+
+// The rows `dropAnchorFor` steps past, or none. Only at a Descendants
+// layer: a dragged Stub's own descendants stay rendered in the flat section
+// below it, but they travel with it (§7.2), so they're never Top or Bottom
+// (they're out of the projection's rows — `useBoardDnd.ts::excludeIdsFor`,
+// the same cycle-forming set). Named, the gap jumped to the section's end.
+// Never at a column: there a Free descendant of the dragged Card is a real
+// anchor. One predicate for the blue line (`KanbanCard.tsx`) and the gap
+// (`useBoardDnd.ts::handleDragMove`), so they can't disagree.
+export function travelingRowsFor(
+  session: { pop: Pick<PopSession, 'contextKey'>; classification: Pick<DragClassification, 'states'> } | null,
+): ((id: string) => boolean) | undefined {
+  if (!session?.pop.contextKey?.startsWith('descendants:')) return undefined;
+  const { states } = session.classification;
+  return id => states.get(id) === 'cycle-forming';
 }
 
 // Story 4.1 Phase 3 — the ghost's own placement is the request; nothing

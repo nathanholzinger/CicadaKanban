@@ -119,6 +119,7 @@ The baseline column, filled in now:
 | What gets written? Is it a no-op? | Nothing. `toRequest` / `isIdentity` |
 | When does a clock fire (pop-in, pop-out, dwell)? | Nothing. Custom (§3.1) |
 | Which element scrolls? | `getScrollableAncestors`. Kept apart on purpose (Story 4 audit #29, the `overflow-x-auto` quirk); re-check |
+| Which point does each trigger read: the cursor, the carried copy, or the ghost? | Both kinds exist in dnd-kit: `closestCorners` reads the copy's collision box, `pointerWithin` reads the cursor. Record per trigger which one it reads; the split is behind the jumps at a layer change (roadmap § Story 8, added 2026-09-24) |
 
 ### Lens 3 — Dry run of the next stories
 

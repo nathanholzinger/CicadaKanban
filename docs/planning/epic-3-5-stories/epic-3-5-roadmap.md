@@ -418,10 +418,19 @@ Moot until the story decides whether a modal exists.
 
 ---
 
-### Story 8 — Visual cue polish
-**Goal:** settle the final look of the relationship overlays and any other
-"this item relates to these items" cues. Explicitly deferred to late so the
-cues are tuned against real, working gestures.
+### Story 8 — Visual cue polish and feel tuning
+**Goal:** once every gesture works, settle how the drag looks and how it
+feels. That covers:
+- the final look of the relationship overlays and every other "this item
+  relates to these items" cue;
+- the provisional cues earlier stories shipped as stand-ins (the blue line,
+  the zoom-in cue, the depth cue, the over-cap outline);
+- anything that makes the gesture feel jumpy, or makes its own parts
+  disagree with each other.
+
+Deliberately late, so all of it is tuned against real, working gestures.
+*(Broadened 2026-09-24 from "visual cue polish" to include feel tuning:
+Story 6's hands-on found feel problems that aren't about any one cue's look.)*
 
 **Carried in from Story 6's hands-on (2026-09-24):**
 
@@ -450,6 +459,68 @@ cues are tuned against real, working gestures.
   construction if the target's own position never has to move out from
   under the cursor mid-cue — worth checking against this specific case
   once the morph's built, not just against the happy path.
+- **The depth cue at the Descendants layer deserves a tuning pass.** Story
+  6 ships a simple stand-in (the Phase D hands-on, 2026-09-24): the carried
+  Stub stays pinned to the section's width, and its visible box steps right
+  by one indent per level, so it shows the depth it will land at. It was
+  built to test placement against, not as the final look. To tune:
+  - **Travel per level.** 12 px is both the visual indent and the pointer
+    travel per level (`DESCENDANTS_INDENT_PX`), so a 6 px sideways wobble
+    while moving vertically changes the depth. It may want its own panel
+    value, or a dead band before a level changes.
+  - **Pinned vs. following.** Whether the carried copy should also move
+    sideways with the pointer, or stay pinned and only snap.
+  - **The snap itself.** Today it's a 75 ms margin transition. Also how
+    the over-cap state looks on the copy: today it's the ghost row's
+    provisional red dashed outline, reused.
+  - **The ghost row under the copy.** It shows the same depth but is
+    hidden under the carried copy — the same issue as the blue line above.
+- **Things jump at a layer change, and then the triggers disagree** (PO,
+  2026-09-24).
+  - **What moves.** Switching context (popping in or out, zooming into a
+    Card, entering a Descendants section) re-lays things out under a cursor
+    that hasn't moved:
+    - the carried copy changes form (Card ↔ Stub) and re-anchors;
+    - the item's row leaves one list and its ghost appears in another;
+    - the rows around it shift to make room.
+
+    The copy and the ghost end up offset from the cursor.
+  - **What reads what.** The triggers split by what they read:
+    - **the cursor:** the pop machine's regions and pop-out clock, and the
+      depth (pointer x);
+    - **the carried copy or its ghost:** dnd-kit's `over` (from the copy's
+      collision box), the lean, the named anchor, and so the zoom-in
+      candidate.
+
+    Once the two are apart, they can point at different things, and which
+    one wins depends on timing. The zoom-in shift above is one case of
+    this.
+  - **Directions to weigh:**
+    - keep the cursor on the copy through every layer change (the Stub form
+      already re-anchors under the cursor at Card → Stub; generalize that);
+    - don't move layout at the instant of a switch (for example, keep the
+      item's old row space until the drop instead of removing it);
+    - have every trigger read one reference point.
+  - Story 6.1's "who decides" table records which trigger reads which
+    point. That's the input to this.
+- **Picking up a Stub that has children** (PO, 2026-09-24).
+  - **What's there.** The guards are right: its descendants travel with
+    it, so it can't be dropped into its own branch (Story 6, Phase D's
+    hands-on finding, item 3).
+  - **What's missing.** Nothing on screen says so. The children stay drawn
+    at full strength where they were, while the Stub's ghost moves away
+    from them.
+  - **Options, smallest first:**
+    - **Grey them out** for the drag, so the branch reads as off-limits.
+      The project sidebar already dims a dragged project's descendants
+      (Story 6 decision 5). The change is small: the rows are the
+      classification's cycle-forming set, which today gets no overlay
+      style at all (`KanbanCard.tsx::dropTargetClass`).
+    - **Carry them visibly:** the children leave the section and ride with
+      the carried copy as a small stack. It's bigger than it looks.
+      Removing rows at pickup shifts layout under the cursor (the jump
+      problem above), and a taller, multi-row copy changes the box dnd-kit
+      measures for collisions.
 
 ---
 

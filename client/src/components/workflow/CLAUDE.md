@@ -31,8 +31,13 @@ this directory, then go to the wiki for the "why."
   via `lib/hierarchyPlacement.ts::resolvePlacement`; a foreign item's *first* entry
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
   same-section case — a Stub already home there). An over-cap tab state (§7.2) is
-  reachable but commits nothing on release, the one exception to §3.2. **Only at
-  Board layer** does the hover **band** (top/middle/bottom) decide.
+  reachable but commits nothing on release, the one exception to §3.2. A dragged
+  Stub's own descendants stay rendered below it but travel with it, so `dropAnchorFor`
+  steps past them (`travelingRowsFor` — Descendants only; at a column a Free
+  descendant is a real anchor). The carried Stub shows the projected depth by
+  indenting an inner box (`KanbanCard.tsx::overlayStubIndent`, provisional until
+  Story 8) — never its root, so nothing dnd-kit measures changes. **Only at Board
+  layer** does the hover **band** (top/middle/bottom) decide.
 - **Every item row shares one dnd-kit registration** (decision 4, 2026-09-21):
   `data: {type: 'item', role: 'card' | 'stub', parentId?}`, never a `type` that
   differs between a Stub's row and a popped-out Card row for the same id — the hazard
