@@ -20,8 +20,9 @@ the session and resolved to a real placement at release
 provisional invalid cue. The PO's Phase D hands-on (2026-09-24) found the
 chosen depth invisible and the gap one off. Both were fixed the same day,
 with a simple depth cue on the carried Stub (Phase D's hands-on finding,
-below). The PO's sign-off on B+C+D together, and Phase E's wiki-status
-report, are next.**
+below). Phase E's wiki-status report done 2026-09-24 (below) — every
+"Story 6" wiki marker still future-tensed is now built; no rule
+disagreement found. The PO's sign-off on B+C+D together is what's left.**
 Written
 against the code as it
 will stand after [Story 4.1](story-4-1-efficiency-refactor.md) and
@@ -971,6 +972,11 @@ afterward) found two causes, and a third while fixing them.
 
 ### Phase E — Wiki report (the developer doesn't edit the wiki)
 
+**Done 2026-09-24.** See "As built" below for the delivered report. The
+Product Owner authorized list 1's status changes to be applied directly
+(no separate review pass) since none of them changed a stated rule, only
+its tense; list 2 found no rule the wiki and the code disagree on.
+
 *(Reshaped 2026-09-23: the wiki is the Product Owner's to manage. E2E moved
 to Story 10; skipped tests were always Story 10's.)*
 
@@ -1087,4 +1093,81 @@ collapse behavior, its own tree fetch all stay).
 
 ## As built
 
-*(Empty until the story is done.)*
+**Phase E, 2026-09-24.** The report below was delivered with the hand-off
+and applied directly to the wiki — every item in list 1 was a pure status
+change (a passage already describing the now-built rule, just tensed as
+future), which the Product Owner authorized the developer to apply
+without a separate review pass; list 2 surfaces one carried-forward risk,
+not a rule the wiki and the code actually disagree on.
+
+### 1. Marked built in `docs/wiki/board-drag-interaction/README.md`
+
+- **Header build status** (top of file): §6's zoom-in target rule and
+  §7's full gap + depth ruleset are now "built in Story 6 (Phase D,
+  2026-09-24)," replacing the "is Story 6's" / "Planned next" framing.
+  What's left of Story 6 is named as the PO's sign-off, not a build step.
+- **§1.1's layer table**: the Card row's zoom-in target cell now reads
+  "its own descendants section (§7, Story 6)" instead of a bare
+  "(Story 6)" future marker.
+- **§2's "Replaces the rule as first built" note**: scope widened from
+  "columns and sub-rows only" to include Descendants (Phase D), plus a
+  pointer to `travelingRowsFor` for a dragged Stub's own subtree.
+- **§3's pop-in paragraph**: the Column → Card sentence now states the
+  dwell + cue mechanism as built (was "planned, not built"); the Card →
+  Descendants sentence drops its own "(Story 6)" marker.
+- **§3.1's clock section**: both the Column → Card two-stage clock and
+  the Card → Descendants fourth clock are now stated as built, with their
+  real field names (`cardZoomDwellMs`, `descendantsPopInDelayMs`); the
+  panel-values list gained both names (it still only listed
+  `cardPopInDelayMs`).
+- **§6's whole "Planned" block**: retitled "Built," past-tensed
+  throughout; the reset-rule parenthetical now says the PO's first choice
+  was confirmed in hands-on, not merely "to confirm."
+- **§6's auto-drop closing line**: "Any position among the parent's
+  children is Story 6's Descendants layer" → "...is the Descendants
+  layer's own job (§7, Story 6)."
+- **§7's opening paragraph**: fully rewritten from "not yet built" to
+  built, naming the shared library's real path
+  (`client/src/lib/hierarchyPlacement.ts`) and the lifted origin-only gate.
+
+No other file in `docs/wiki/` needed a status change — `item-attachment/`
+and `item-positioning/` have no stale Story 6 markers (checked directly;
+`item-positioning/` §7.1's "first/last as anchor + side" was already
+phrased generically enough to cover Story 6 without naming it). The
+project sidebar's own mentions throughout §7 already read correctly once
+§7 itself is marked built — none named a sidebar implementation detail
+(`findPrevSibling`, `computeProjection`, etc.) that would have gone stale.
+
+### 2. Where the wiki and the code might disagree
+
+**None found.** Every rule this story built — §7.1's gap + depth walk
+(worked example included), §7.2's exclusion and depth-cap exception,
+§6's dwell + cue and its reset rule, §3.1's two clocks — matches the wiki
+exactly, cross-checked against live behavior (Phase D's own hands-on) and
+against the hands-on finding above (the three bugs found there were gaps
+in the *code* against the *plan's own decisions*, not against anything
+the wiki claims — the wiki's §7.1/§7.2 never described `dropAnchorFor`'s
+own neighbor-search or the overlay's depth cue at that level of detail).
+
+**One carried-forward risk, not a disagreement, worth the PO's own
+awareness:** the plan's own Risks section (2026-09-17) flagged that a
+resolved parent's absolute depth is read over the *loaded* items only —
+a Card whose ancestor sits in a different, unloaded workflow (a
+cross-workflow reparent, allowed at the API) can make the client
+undercount depth and offer a tab state the server 400s. This is
+classification's own exposure (§4), inherited unchanged by §7.2's
+depth-cap check, not introduced here. The wiki's §3.2/§7.2 don't caveat
+it either, but they don't claim otherwise — there's nothing to correct,
+just a pre-existing edge the wiki is silent on. Unfixed by design (Story
+7's board-load question, or a later change); flagging it here rather
+than in the wiki itself, since it isn't a stated rule to amend.
+
+**Two other candidates the story named, checked and cleared:**
+- **Decision 3's seed rule against §7.1's "horizontal offset picks a
+  depth."** No mismatch — §7.1 states the general principle; which point
+  the offset is measured *from* (decision 3's seed) is an implementation
+  choice inside it, not a claim the wiki makes either way.
+- **The collapsed-Top first-child resolution (sidebar difference 6).**
+  Sidebar-only; confirmed the board still never collapses a node in a
+  Card's section (Phase B's flat render), so this never arises on the
+  board side Phase D touched.

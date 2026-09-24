@@ -11,23 +11,30 @@ re-planned and rebuilt for Story 4 (2026-09-16)** — the pop machine is
 `workflow/popSession.ts`, the regions `workflow/dragRegions.ts`, the
 placement layer `workflow/itemListOps.ts`, and every threshold and band is
 a dev/test-panel value (`workflow/dragTuning.ts`, toolbar → "Drag tuning").
-**§6 (attach), narrowed, implemented as of Story 4** — a Card is now a
-full context (§1.1), but its *within-action* is a constant (always append
-as the last child, §6) rather than the full anchor+side ruleset. **§1's
-Descendants layer, §8 (detach) and §10's `parentId: null` preview
-implemented as of Story 5 (2026-09-21)** — a Stub's drag starts there
-(`descendantsRegionKey`, `dragRegions.ts`), pops out through the Card
-layer to the column that contains it exactly as §8 describes, and every
-item drag (Card or Stub) shares one dnd-kit registration
-(`data: {type: 'item', role}`, decision 4). **§7 (the Descendants layer's
-full manual hierarchy placement — gap + depth, beyond the interim direct-
-sibling reorder Story 5 built) is Story 6's**; placing a Stub anywhere but
-directly among its own siblings, or zooming into a Card's own Descendants
-section from the Card layer, stays held closed until then. **Built so far
-in Story 6 (2026-09-23/24):** §5a's Stub-shaped carried copy from the Card
-layer down (Phase C), and §2's rule that a column drop lands exactly where
-the ghost is (a hands-on finding). Planned next: §6's zoom-in target
-change, then §7's gap + depth (Phase D).
+**§6 (attach) implemented as of Story 4, its zoom-in target rule built in
+Story 6 (2026-09-24)** — a Card is a full context (§1.1); its
+*within-action* is still a constant (always append as the last child,
+§6) — the full anchor+side ruleset lives one layer further in, at
+Descendants — but which Card is zoomed into is now the one the side
+highlight names, held through a dwell and a cue, rather than whichever
+box the cursor happens to rest in. **§1's Descendants layer, §8 (detach)
+and §10's `parentId: null` preview implemented as of Story 5
+(2026-09-21)** — a Stub's drag starts there (`descendantsRegionKey`,
+`dragRegions.ts`), pops out through the Card layer to the column that
+contains it exactly as §8 describes, and every item drag (Card or Stub)
+shares one dnd-kit registration (`data: {type: 'item', role}`,
+decision 4). **§7 (the Descendants layer's full manual hierarchy
+placement — gap + depth, beyond the interim direct-sibling reorder
+Story 5 built) built in Story 6 Phase D (2026-09-24)** — a Free Card, or
+a Stub detaching from elsewhere, can now zoom into any Valid Card's own
+Descendants section and land anywhere in its hierarchy, not only reorder
+among its own siblings; §7.2's depth-cap exception is wired through to a
+provisional invalid cue. **Built in Story 6 (2026-09-23/24):** §5a's
+Stub-shaped carried copy from the Card layer down (Phase C); §2's rule
+that a column drop lands exactly where the ghost is (a hands-on finding,
+brought onto Descendants too in Phase D); §6's zoom-in target change;
+§7's gap + depth (Phase D). What's left of Story 6 is the Product Owner's
+sign-off on Phases B–D together.
 
 **The 2026-09-16 re-plan is a genuine rule change, not just Story 4's
 build catching up to §6.** Working the story with the Product Owner
@@ -50,10 +57,10 @@ single depth-range rule shared with the project sidebar (§7, which
 replaces the earlier Stub-band draft entirely); the detach path is two
 one-layer pops (§8); and the overflow placeholder (§9) is no longer a
 settled rule — Story 7 decides whether it exists at all. **Story 5
-(2026-09-21) builds the layer's origin, its two-pop exit, and the interim
-sibling-reorder within-action; §7's full gap + depth placement, and
-zooming into a Descendants section from the Card layer at all, are
-Story 6's.**
+(2026-09-21) built the layer's origin, its two-pop exit, and the interim
+sibling-reorder within-action; Story 6 Phase D (2026-09-24) replaced that
+interim rule with §7's full gap + depth placement, and opened zooming
+into a Descendants section from the Card layer at all.**
 
 **Test suite:** [`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
 
@@ -146,7 +153,7 @@ one moment it most needs to.
 |---|---|---|---|
 | **Board** | (the top) | a column/sub-row | §5's band, on release |
 | **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — the ghost's slot, named by anchor + side (§2) |
-| **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (Story 6) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
+| **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (§7, Story 6) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
 | **Descendants** (Stories 5/6) | its own Card, only; or where a Stub's drag starts (at any depth beneath that Card) | *(none)* | manual hierarchy placement — gap + depth (§7) |
 
 *(Three layers as built for Story 4; the Descendants row ruled
@@ -277,10 +284,11 @@ While the item is in-context:
   away from the ghost. Found in Story 6's hands-on, 2026-09-24; built and
   merged the same day — `boardDndUtils.ts::dropAnchorFor`, the one
   function both the side highlight and the release read. **Scope: columns
-  and sub-rows only.** A Card's Descendants section keeps the which-half
-  rule until Story 6 Phase D brings it onto this one (§7.1). The project
-  sidebar is unchanged: it draws an indicator line and no ghost, so the
-  line is already its only cue and already matches the save.)*
+  and sub-rows at first; brought onto a Card's Descendants section too in
+  Story 6 Phase D (§7.1), including its own Stub rows a dragged Stub's
+  subtree travels past** (`travelingRowsFor`) **rather than names.** The
+  project sidebar is unchanged: it draws an indicator line and no ghost, so
+  the line is already its only cue and already matches the save.)*
 
 **A release always commits the in-context meaning above, no matter where
 the bare cursor is resting** (re-plan, 2026-09-16 — §1.1 rule 1). The card
@@ -314,13 +322,13 @@ each way moves exactly one layer of §1.1's stack:
   the cursor has stayed in that context's *region* past the pop-in
   threshold and is in the middle band (§5) when the clock runs out — any
   column, **including the one it just left**. From inside a locked
-  column/sub-row, the cursor resting on one of *that column's own* Cards
-  past its own (duration-only, §1.1 rule 3) threshold zooms into it instead
-  (§6) — never a foreign column's Card, and never reachable from Board
-  directly. *(Planned, not built: the target becomes the card the side
-  highlight names, after a dwell and a cue — §6.)* From inside a locked Card, the cursor resting on *that Card's*
+  column/sub-row, the cursor resting on the card the side highlight names,
+  past its own (duration-only, §1.1 rule 3) two-stage threshold (a dwell,
+  then a cue — §6), zooms into it instead — never a foreign column's
+  Card, and never reachable from Board directly. From inside a locked
+  Card, the cursor resting on *that Card's*
   descendants section past its own duration-only threshold zooms into
-  Descendants (§7, Story 6). Either way, the clock counts time in the region/Card, not in a
+  Descendants (§7). Either way, the clock counts time in the region/Card, not in a
   band: time spent in the top or bottom band of a column still counts
   toward its own pop-in, and sliding into the middle band after it pops in
   at once. The item is now positioned within the new context under its
@@ -382,15 +390,16 @@ Column/sub-row → Card** — its own, separate, duration-only clock
 one of the locked context's own Cards, fires once that alone has elapsed.
 Kept apart from `popInDelayMs` because this edge is the one that can mean
 a reparent — the tuning is free to make it a more deliberate hold than an
-ordinary column pop-in, though nothing requires it. *(Planned, not built
-— §6: this edge becomes two stages keyed on the relation the side
-highlight names, a silent dwell and then a visible cue. Suggested: a new
-panel value for the dwell (about 500 ms; `cardZoomDwellMs` proposed), and
-`cardPopInDelayMs` reused for the cue.)* **Pop-in, Card →
-Descendants** (Story 6, not built) — a fourth clock, duration-only,
-starting when the cursor rests on the locked Card's descendants section;
-its own panel value, to be named when built, and free to share a value
-with `cardPopInDelayMs` if the tuning finds no reason to differ. The cursor's region is
+ordinary column pop-in, though nothing requires it. **Built in Story 6
+(2026-09-24) — §6:** this edge is two stages keyed on the relation the
+side highlight names, a silent dwell (`cardZoomDwellMs`, default 500 ms)
+and then a visible cue (`cardPopInDelayMs`, now the cue's own length, not
+the whole hold — the total is their sum). **Pop-in, Card →
+Descendants, built in Story 6 Phase D (2026-09-24)** — a fourth clock,
+duration-only (`descendantsPopInDelayMs`, default equal to
+`cardPopInDelayMs`), starting when the cursor rests on the locked Card's
+descendants section — no dwell/cue split, since this edge names no
+specific neighbor to hold steady against. The cursor's region is
 the bounded box of §1 — outside every box, over Unsorted or a broken
 column, the cursor is nowhere and a release there writes nothing (subject
 to §2's "always the locked context's own within-action" once anything is
@@ -404,7 +413,8 @@ found by feel, and feel can only be compared by changing one number between
 two attempts without a rebuild. The panel also exposes the overlay colors
 of §4. *As built:* the panel's values persist in `localStorage` under
 `kanban_drag_tuning` — `popDelayMs`, `popDistancePx`, `popInDelayMs`,
-`cardPopInDelayMs`, `popSnapMs`, `overlayFreeDescendantColor`,
+`cardZoomDwellMs`, `cardPopInDelayMs`, `descendantsPopInDelayMs`,
+`popSnapMs`, `overlayFreeDescendantColor`,
 `overlayDepthCappedOpacity`, `activeContextOutlineColor` (§1.1's locked-
 layer outline) — and tests seed that key, so every case runs against the
 configured value. The panel is a tuning-phase tool for the humans doing the
@@ -727,8 +737,9 @@ of position among the parent's existing Stubs. This is the Card layer's
 
 Placing an item as some Stub's *first* child is a different gesture — the
 manual tabbed-right placement at Descendants layer (§7) — not a variant
-of the auto-drop. Any position among the parent's children is Story 6's
-Descendants layer, reached only by zooming one layer further in.
+of the auto-drop. Any position among the parent's children is the
+Descendants layer's own job (§7, Story 6), reached only by zooming one
+layer further in.
 
 This is the headline gesture of the epic. Its consequences — the attach,
 the reparent, the workphase inheritance, the `projectId` cascade if the two
@@ -750,13 +761,13 @@ general principles that happen to apply. The remaining work is making the
 moment of transition *legible* (Story 8's cue polish), not deciding what it
 means.
 
-**Planned — agreed with the Product Owner 2026-09-23, reset rule and cue
-decided 2026-09-24; not yet built (Story 6, next): the Card zoomed into
-is the one the side highlight names.** As built, the zoom-in target is
-whichever Card's box the cursor rests in. But a card under the cursor
-also slides aside to open the ghost's gap (§2), so resting on a card meant
-both "move out of the way" and "let me in," and the zoom-in clock kept
-restarting. The planned rule stops the two competing: cards always just
+**Built in Story 6 (agreed with the Product Owner 2026-09-23, reset rule
+and cue decided 2026-09-24): the Card zoomed into is the one the side
+highlight names.** As first built, the zoom-in target was whichever
+Card's box the cursor rested in. But a card under the cursor also slides
+aside to open the ghost's gap (§2), so resting on a card meant both "move
+out of the way" and "let me in," and the zoom-in clock kept restarting.
+The rule that replaced it stops the two competing: cards always just
 make room, and what matters is the **named relation** — which neighbor of
 the ghost the side highlight names, and on which side (§2, rule 3).
 Holding that relation steady is the signal.
@@ -786,11 +797,12 @@ zooming in by accident while repositioning (§2's bias).
   side when the ghost moves past it — always a visible reshuffle — so the
   cue only ever runs while nothing on screen is moving, and a release
   commits the same thing it would have when the cue started. Both also
-  reset on a pop-out and on a cancel. *(The PO's first choice, to confirm
-  in hands-on. The fallback, if this proves too unforgiving: reset only
-  when the named card changes, so a wobble across it keeps the cue
-  running — at the cost of the cue running through a reshuffle and a
-  release's meaning changing mid-cue with nothing to show it.)*
+  reset on a pop-out and on a cancel. *(The PO's first choice, confirmed
+  in hands-on 2026-09-24 — kept as built. The fallback, if this had proved
+  too unforgiving: reset only when the named card changes, so a wobble
+  across it keeps the cue running — at the cost of the cue running through
+  a reshuffle and a release's meaning changing mid-cue with nothing to
+  show it.)*
 - **An invalid target never starts the dwell.** A Cycle-forming or
   Depth-capped card (§4) can still be named for a reposition, but it is
   never a zoom-in candidate (§3.2).
@@ -814,16 +826,19 @@ cursor rests, nothing about the preview is left to promise otherwise.
 
 ## 7. The Descendants layer: manual hierarchy placement
 
-**§7.1–§7.2's full gap + depth ruleset below is not yet built (Story 6).**
-The layer itself is built (Story 5): it's one inside a Card (§1.1), a
-Stub's drag *starts* there (§1, §8), and its within-action, until Story 6,
-is the interim direct-sibling reorder — a Free Card reaching it by
-zooming into the Card and holding over its descendants section is still
-Story 6's, since `childRegionAt` never returns one as a zoom-in candidate
-yet (decision 3). The full ruleset below is precise placement in the
-parent's hierarchy — the same ruleset as the project sidebar,
-deliberately, and Story 6 consolidates the two into one shared library.
-From the Card layer down **both copies are Stub rows** — the in-list
+**§7.1–§7.2's full gap + depth ruleset below built in Story 6 Phase D
+(2026-09-24).** The layer itself was built in Story 5: it's one inside a
+Card (§1.1), a Stub's drag *starts* there (§1, §8). Its within-action was
+the interim direct-sibling reorder through Story 5; Phase D replaced that
+with the full ruleset below and opened the layer to a Free Card (or a
+detaching Stub) reaching it by zooming into any Valid Card and holding
+over its descendants section — `childRegionAt` now returns one as a
+zoom-in candidate, decision 3's own origin-only gate lifted (§7.1's own
+amended gap, decision 2, generalized the same day). The full ruleset
+below is precise placement in the parent's hierarchy — the same ruleset
+as the project sidebar, deliberately, and Story 6 consolidated the two
+into one shared library (`client/src/lib/hierarchyPlacement.ts`). From
+the Card layer down **both copies are Stub rows** — the in-list
 ghost and the carried copy under the cursor — and the Column ↔ Card
 boundary converts both, both ways (§5a, §8, DRAG-5.10). *(The in-list
 ghost's switch implemented as of Story 5; the carried copy's as of Story 6

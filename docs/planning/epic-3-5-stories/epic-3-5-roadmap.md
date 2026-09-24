@@ -334,8 +334,11 @@ names it), and changed the zoom-in candidate itself to the card the blue
 line names, held through a dwell + cue — all three ratified and merged
 2026-09-24. Phase D (the machine: §7.1's gap + depth, tracked as a live
 session projection and resolved at release; §7.2's depth-cap exception)
-built 2026-09-24. Next: the PO's sign-off on B+C+D together, then Phase
-E's wiki-status report)
+built 2026-09-24; the PO's own Phase D hands-on the same day found the
+gap one off and the chosen depth invisible, fixed with a depth cue on the
+carried Stub. Phase E's wiki-status report done 2026-09-24 — every
+"Story 6" wiki marker now reads built; no rule disagreement found. Next:
+the PO's sign-off on B+C+D together)
 
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
