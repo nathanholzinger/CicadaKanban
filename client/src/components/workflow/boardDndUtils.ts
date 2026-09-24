@@ -60,15 +60,19 @@ export interface CollisionSession {
   /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), or while genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
   /**
-   * Story 5: locked at a Descendants context, the `parentId` whose Stub
-   * rows are in-context collision candidates (decision 1's "direct
-   * siblings" scope) — read from the pop session's own `origin`, never
-   * from dnd-kit's `active.data.current` (decision 4: the active row's own
-   * `role`/`parentId` are exactly the fields that could lag a mid-drag
-   * remount, so no policy decision here depends on them). Null at every
-   * other context.
+   * Story 6 Phase B: locked at a Descendants context, that region's own
+   * measured rect — candidates are every Stub row (any depth) whose center
+   * falls inside it, the same rect-containment test the Card/Board-layer
+   * branch below already uses for its own in-context candidates. Replaces
+   * Story 5's interim `siblingScopeParentId` (an exact real-`parentId`
+   * match): the section now renders as one flat list (decision 1), so
+   * scoping by "is this row visually inside the section" is both simpler
+   * and matches §7.1's own "any row of the section, any depth" — the
+   * within-action itself (`placementFor`, `toRequest`) is what still keeps
+   * a release scoped to true siblings only, unchanged in this phase. Null
+   * at every other context.
    */
-  siblingScopeParentId: string | null;
+  descendantsSectionRect: Rect | null;
 }
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
@@ -117,12 +121,13 @@ export function resolveBoardCollisions(
     return container ? [{ id: container.id, data: { droppableContainer: container, value: 0 } }] : [];
   }
 
-  if (session && session.siblingScopeParentId !== null) {
-    const scopeParentId = session.siblingScopeParentId;
+  if (session?.descendantsSectionRect) {
+    const sectionRect = session.descendantsSectionRect;
     const droppableContainers = args.droppableContainers.filter(container => {
       if (container.id === args.active.id) return false;
-      const data = container.data.current;
-      return isStubRow(data) && data.parentId === scopeParentId;
+      if (!isStubRow(container.data.current)) return false;
+      const rect = args.droppableRects.get(container.id);
+      return rect !== undefined && rectCenterInside(rect, sectionRect);
     });
     return closestCorners({ ...args, droppableContainers });
   }

@@ -4,6 +4,7 @@ import {
   getWorkphaseItemsFrom,
   getMergedColumnItemsFrom,
   getAttachedChildrenFrom,
+  hierarchyRows,
   computeChildCounts,
   removeItemAndDescendants,
   applyItemWriteResponse,
@@ -144,6 +145,41 @@ describe('getAttachedChildrenFrom', () => {
   it("a Stub previewing detach (parentId: null) leaves the parent's section", () => {
     const detaching = placements([['late', { parentId: null, workphaseId: 'w1', slot: 'last' }]]);
     expect(getAttachedChildrenFrom(items, 'root', detaching).map(i => i.id)).toEqual(['early']);
+  });
+});
+
+// Epic 3.5 Story 6 Phase B: the whole descendants section as one flat DFS
+// list, for KanbanCard.tsx's single SortableContext.
+describe('hierarchyRows', () => {
+  const items = [
+    item('root'),
+    item('late', { parentId: 'root', position: 2 }),
+    item('early', { parentId: 'root', position: 1 }),
+    item('grandchild', { parentId: 'late' }),
+  ];
+  const childrenOf = (parentId: string) => getAttachedChildrenFrom(items, parentId);
+
+  it('walks every depth, parents before children, in position order', () => {
+    const rows = hierarchyRows('root', childrenOf);
+    expect(rows.map(r => ({ id: r.item.id, depth: r.depth }))).toEqual([
+      { id: 'early', depth: 0 },
+      { id: 'late', depth: 0 },
+      { id: 'grandchild', depth: 1 },
+    ]);
+  });
+
+  it('returns no rows for a card with no attached children', () => {
+    expect(hierarchyRows('detached-leaf', childrenOf)).toEqual([]);
+  });
+
+  // KanbanCard.tsx's own attach-ghost leaf: a `childrenOf` that returns []
+  // for a specific id stops the walk there without needing a real "exclude"
+  // set — the same technique it uses to keep the active drag's own preview
+  // row non-recursive.
+  it('never recurses into an id whose childrenOf callback returns none', () => {
+    const stopAtLate = (parentId: string) => (parentId === 'late' ? [] : getAttachedChildrenFrom(items, parentId));
+    const rows = hierarchyRows('root', stopAtLate);
+    expect(rows.map(r => r.item.id)).toEqual(['early', 'late']);
   });
 });
 

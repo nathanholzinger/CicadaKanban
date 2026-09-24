@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
-import { advancePopSession, isLocked, placementFor, popDueAt, startPopSession, type PopSession } from './popSession';
+import {
+  advancePopSession,
+  isLocked,
+  overlayFormFor,
+  placementFor,
+  placementRegion,
+  popDueAt,
+  startPopSession,
+  type PopSession,
+} from './popSession';
 import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
 import type { ShortCardMetrics } from './dragRegions';
@@ -529,5 +538,57 @@ describe('placementFor', () => {
         slot: 'existing',
       });
     });
+  });
+});
+
+// Story 6 Phase C: which form the carried copy draws as — a pure read of
+// `placementRegion`'s own result, per layer, and across a real pop-in and
+// pop-out (not just two isolated `startPopSession` fixtures) so the
+// transition itself is covered, not only its two endpoints.
+describe('overlayFormFor', () => {
+  const P = 'card-p';
+  const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
+  const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
+
+  it('no drag at all (undefined region): the shortCard', () => {
+    expect(overlayFormFor(undefined)).toBe('short-card');
+  });
+
+  it('Board layer, merely hovering a column (not yet locked): the shortCard', () => {
+    expect(overlayFormFor(placementRegion(hoverAt(bMiddle), regions))).toBe('short-card');
+  });
+
+  it('locked in a column/sub-row: the shortCard', () => {
+    expect(overlayFormFor(placementRegion(startPopSession(A.key), [A]))).toBe('short-card');
+  });
+
+  it('locked at a Card layer: the Stub', () => {
+    expect(overlayFormFor(placementRegion(startPopSession(cardP.key), [cardP]))).toBe('stub');
+  });
+
+  it('locked at a Descendants layer: the Stub', () => {
+    expect(overlayFormFor(placementRegion(startPopSession(descendantsP.key), [descendantsP]))).toBe('stub');
+  });
+
+  it('across a real pop-in (Column → Card) and pop-out (Card → Column), the form switches both ways', () => {
+    const allRegions = [...regions, cardP, descendantsP];
+    const inCard = { x: 50, y: 100 }; // inside cardP's rect
+    const outsideCard = { x: 500, y: 500 }; // outside every region
+
+    let s = startPopSession(A.key);
+    expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
+
+    // Zoom in to the Card (a Card candidate is unconditionally poppable —
+    // Story 4.1 Phase 0 — so resting past cardPopInDelayMs is enough).
+    s = advancePopSession(s, inCard, allRegions, tuning, metrics, 0);
+    s = advancePopSession(s, inCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs);
+    expect(s.contextKey).toBe(cardP.key);
+    expect(overlayFormFor(placementRegion(s, allRegions))).toBe('stub');
+
+    // Pop back out to the column: the shortCard again, symmetrically.
+    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs);
+    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs + OUT);
+    expect(s.contextKey).toBe(A.key);
+    expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
   });
 });

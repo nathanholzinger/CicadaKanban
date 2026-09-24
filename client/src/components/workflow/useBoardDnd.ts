@@ -27,6 +27,7 @@ import { classifyDragTargets, type DragClassification } from './dragClassificati
 import {
   childRegionAt,
   descendantsRegionKey,
+  hasDetachedElements,
   isCardList,
   measureRegions,
   resolveDragStructure,
@@ -39,17 +40,19 @@ import {
 import type { DragTuning } from './dragTuning';
 import {
   advancePopSession,
+  overlayFormFor,
   placementFor,
   placementRegion,
   popDueAt,
   startPopSession,
+  type OverlayForm,
   type PlacementOver,
   type PopSession,
 } from './popSession';
 import { parentOpinionOf, type Placement, type Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
-import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
+import { CARD_CONTENT_INSET_PX, CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
 
 // Story 5 — a Stub's drag starts at its *containing Card's* Descendants
 // layer: the nearest Free ancestor, whatever the Stub's own depth beneath
@@ -68,6 +71,24 @@ function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
 // card, never the reverse") and handed to the pure pop machine as plain
 // data, the same way `tuning` already is.
 const SHORT_CARD_METRICS: ShortCardMetrics = { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX };
+
+// Story 6 Phase C: how wide the carried Stub (`KanbanCard.tsx`'s own
+// `overlayIsStub` branch) draws — a row's own width in the context Card's
+// section, read off
+// whichever region is currently locked. A `descendants` region's rect
+// already *is* that width (a row spans its section's full box); a `card`
+// region's rect is the Card's own outer bound, so a row's width is that
+// minus the Card's own inset on both sides — the same number whether or
+// not the section itself has resolved (it hasn't yet for a childless Card,
+// or for a target Card the drag hasn't zoomed into; Phase D is what would
+// ever make a *different* Card's `descendants` region resolve here, and
+// this needs no change when it does).
+function overlayWidthFor(region: DragRegion | undefined): number | null {
+  if (!region) return null;
+  if (region.kind === 'descendants') return region.rect.width;
+  if (region.kind === 'card') return region.rect.width - 2 * CARD_CONTENT_INSET_PX;
+  return null;
+}
 
 // Drag-and-drop for the board's DndContext — the gesture layer of
 // docs/wiki/board-drag-interaction. The rules live in pure modules
@@ -124,7 +145,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const regionsRef = useRef<DragRegion[]>([]);
   // Story 4.1 Phase 2: the board's structural facts (elements, kinds,
   // parent chains, scroll ancestors, column facts) — resolved once per
-  // drag and again after each layer change, not on every pointer sample.
+  // drag, again after each layer change, and again when a sample finds one
+  // of its elements remounted; not on every pointer sample.
   const structureRef = useRef<DragStructure>([]);
   // Story 5: the active drag's own containing Card, if it started as a
   // Stub — threaded into every `resolveStructure` call (its Card/
@@ -132,6 +154,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // without changing `resolveStructure`'s own call sites into needing the
   // full session. Null for a Free Card drag, for the life of that drag.
   const originCardIdRef = useRef<string | null>(null);
+  // Story 6 Phase C: the overlay's own form at pickup — a Stub for a Stub's
+  // own drag (it starts at the Descendants layer), the shortCard for a Free
+  // Card drag (Board/Column layer). `clampToContext`'s re-anchor reads this
+  // once per drag to know whether the *current* form differs from the one
+  // the pointer's original offset was measured against — set fresh in every
+  // `handleDragStart` branch below, same as `originCardIdRef`, so it never
+  // needs an explicit reset elsewhere.
+  const pickupFormRef = useRef<OverlayForm>('short-card');
   const pointerRef = useRef<Point | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The ghost we last asked to be shown for the active drag's item — so the
@@ -204,10 +234,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // own classification in scope regardless.
   //
   // Story 4.1 Phase 2: structural (element ↔ key ↔ kind ↔ parent chain ↔
-  // scroll ancestor ↔ column facts) and re-resolved only per drag and after
-  // each layer change — a ghost migrating lists can remount the elements
-  // underneath a cached reference, which is exactly what a layer change is
-  // liable to cause.
+  // scroll ancestor ↔ column facts) and re-resolved per drag, after each
+  // layer change, and whenever `sampleRegions` finds a cached element gone
+  // from the document (the remount that follows a layer change lands after
+  // the layer change's own re-resolve — see `sampleRegions`).
   function resolveStructure(classification: DragClassification): DragStructure {
     const root = latest.current.rootRef.current ?? document;
     const isValidCard = (cardId: string): boolean => classification.states.get(cardId) === 'valid';
@@ -225,7 +255,19 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // current `contextKey`, so this is the context region itself plus its
   // own children (F5: Board never reads a Card region; a locked column
   // never reads another column's).
+  //
+  // Re-resolves first if React has remounted any cached element since the
+  // last resolve. A layer change re-resolves synchronously, *before* React
+  // renders the new layer, and that render can remount a column's Cards
+  // (Board layer's carve-out zones move them to a different child slot of
+  // `DragCarveFrame`). A detached element measures as an empty box, so its
+  // region silently dropped out: no Card in a column entered through Board
+  // layer could ever be zoomed into (found in the Story 6 hands-on,
+  // 2026-09-23). No session yet means the drag is starting and the
+  // structure was resolved a moment ago.
   function sampleRegions(scope: string | null): DragRegion[] {
+    const classification = sessionRef.current?.classification;
+    if (classification && hasDetachedElements(structureRef.current)) resolveStructure(classification);
     regionsRef.current = measureRegions(structureRef.current, scope);
     return regionsRef.current;
   }
@@ -322,25 +364,26 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const regions = regionsRef.current;
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
       const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
-      // Story 5: locked at a Descendants context, the in-context
-      // candidates are the section's rows sharing the *origin's* own real
-      // parentId (decision 1's "direct siblings" scope) — read off our own
-      // session state, never dnd-kit's `active.data.current`, which is
-      // exactly what decision 4 keeps from being load-bearing here.
-      const siblingScopeParentId = context?.kind === 'descendants' ? parentOpinionOf(current.origin) : null;
+      // Story 6 Phase B: locked at a Descendants context, the in-context
+      // candidates are every Stub row inside the section's own rect (any
+      // depth, decision 1's flat list) — read off the region we already
+      // measured, never dnd-kit's `active.data.current`, which is exactly
+      // what decision 4 keeps from being load-bearing here.
+      const descendantsSectionRect = context?.kind === 'descendants' ? context.rect : null;
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — rule 1: a mere hover, not yet a
         // pop, must never drive anything a release would act on.
         hoverContainerId: hover && isCardList(hover) ? hover.containerId : null,
-        // A locked Card or Descendants context has no `over` either
-        // (decision 5, Story 4.1 Phase 0; Story 5 for Descendants): its
-        // within-action is a constant, never a preview — today the target
-        // Card would otherwise be its own only collision candidate, which
-        // could light the live side indicator on it for no reason a
-        // release would ever honor.
+        // A locked Card context has no `over` either (decision 5, Story
+        // 4.1 Phase 0): its within-action is a constant, never a preview —
+        // today the target Card would otherwise be its own only collision
+        // candidate, which could light the live side indicator on it for
+        // no reason a release would ever honor. Descendants has its own
+        // branch above instead (a card-list container concept doesn't
+        // apply to it).
         context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
-        siblingScopeParentId,
+        descendantsSectionRect,
       };
     }
     return resolveBoardCollisions(args, live);
@@ -370,13 +413,39 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // epic-3-5-story-4 watch-list #15). Cosmetic: the window is ≤150ms by
   // default and the collision rect only diverges from the drawn copy
   // within it, never after.
-  const clampToContext = useCallback<Modifier>(({ transform, draggingNodeRect }) => {
-    const target = clampToCurrentContext(
+  //
+  // Story 6 Phase C: `reanchorOverlayTransform` runs first, before the
+  // clamp — the carried copy's own form switch (shortCard -> Stub, at the
+  // Card-layer boundary) shrinks the box out from under dnd-kit's own
+  // pointer-glued transform (dnd-kit tracks the *pickup* point, not a
+  // fraction of the box, so a box that shrinks leaves the pointer beside
+  // it, not on it). Targets `overlayWidthPx`/`STUB_ROW_HEIGHT_PX` — the
+  // same numbers the render side already uses to size the Stub — rather
+  // than dnd-kit's own `draggingNodeRect`: swapping the overlay's rendered
+  // shape leaves that measurement stuck for a stretch (its ResizeObserver
+  // is bound once, at the DragOverlay's *first* mount, to whatever the
+  // pickup form's content happened to be; verified against a live drag,
+  // not just @dnd-kit/core's source), so it can't be trusted as the
+  // target's own dimensions here. Folding the re-anchor in ahead of
+  // `clampToCurrentContext` means the clamp bounds where the copy will
+  // *actually* sit post-re-anchor, and the snap tween below (already
+  // triggered by the same contextKey change that changes the form)
+  // interpolates the whole move — position and re-anchor together — in one
+  // motion, exactly like any other pop.
+  const clampToContext = useCallback<Modifier>(({ transform, draggingNodeRect, activatorEvent, activeNodeRect }) => {
+    const pop = sessionRef.current?.pop ?? null;
+    const overlayRegion = placementRegion(pop, regionsRef.current);
+    const currentForm = overlayFormFor(overlayRegion);
+    const reanchored = reanchorOverlayTransform(
       transform,
-      draggingNodeRect,
-      sessionRef.current?.pop ?? null,
-      regionsRef.current,
+      activeNodeRect,
+      activatorEvent,
+      pointerRef.current,
+      pickupFormRef.current,
+      currentForm,
+      overlayWidthFor(overlayRegion),
     );
+    const target = clampToCurrentContext(reanchored, draggingNodeRect, pop, regionsRef.current);
     const tween = snap.current;
     let drawn = target;
     if (tween) {
@@ -495,6 +564,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const containingCardId = containingCardIdOf(activeItem, deps.items);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
       originCardIdRef.current = containingCardId;
+      // Story 6 Phase C: deterministically a Stub, same reasoning as the
+      // comment above (this branch's own drag always starts at the
+      // Descendants layer) — no region lookup needed to know it.
+      pickupFormRef.current = 'stub';
       resolveStructure(classification);
       const startContextKey = descendantsRegionKey(containingCardId);
       const regions = sampleRegions(startContextKey);
@@ -530,6 +603,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // in), the region the cursor (which is on the card) is in. Null from
     // Unsorted: nothing to lock to.
     originCardIdRef.current = null;
+    // Story 6 Phase C: deterministically the shortCard, same reasoning as
+    // the comment above (a Free Card never starts inside a Card).
+    pickupFormRef.current = 'short-card';
     resolveStructure(classification);
     const boardScope = sampleRegions(null);
     const startContextKey = childRegionAt(boardScope, pointerRef.current, null)?.key ?? null;
@@ -638,13 +714,20 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // specific anchor; the container itself, or dnd-kit finding no
     // collision at all, is a bare hover with nothing to anchor beside. A
     // Descendants context has no "container" concept at all (its own
-    // droppable candidates are always specific sibling rows, never a bare
-    // wrapper — `resolveBoardCollisions`'s `siblingScopeParentId` filter),
-    // so any `over` there is already a specific anchor.
+    // droppable candidates are never a bare wrapper), so any `over` there
+    // is already a specific row — but Story 6 Phase B widened *collision*
+    // to every row of the section, any depth (`descendantsSectionRect`),
+    // while this within-action is still Story 5's interim direct-sibling
+    // reorder (Phase D's own gap+depth rule replaces it). An `over` that
+    // isn't one of origin's true siblings — `list.rows`, exactly that set
+    // for a Descendants list — is treated as no anchor at all, the same as
+    // a `null` `over`: never send an anchor `toRequest` can't resolve
+    // within origin's own parent scope (a 400, "anchor outside the
+    // resulting scope"). True siblings are unaffected.
     const placementOver: PlacementOver = !list
       ? null
       : list.containerId === null
-        ? over
+        ? over && list.rows.some(r => r.id === String(over.id))
           ? { anchorId: String(over.id), side }
           : null
         : over && String(over.id) !== list.containerId
@@ -664,11 +747,102 @@ export function useBoardDnd(deps: BoardDndDeps) {
     await sendItemMove(moveItem, activeId, input, placement, deps.writes, deps.loadBoard);
   }
 
-  return { sensors, session, collisionDetection, dragModifiers, handleDragStart, handleDragEnd, handleDragCancel };
+  // Story 6 Phase C: which form `BoardView.tsx`'s `DragOverlay` should draw
+  // right now, and how wide a Stub-form draw should be — read off the same
+  // `session`/`regionsRef` pairing `collisionDetection` and
+  // `placementForSession` already use, so this agrees with the machine's
+  // own idea of "where the drag is" by construction, not by re-deriving it.
+  // `regionsRef.current` is safe to read at render time here: every call
+  // site that changes `session` (`beginSession`, `evaluatePop`'s hop loop)
+  // always samples regions into it first, in the same synchronous pass, so
+  // it already reflects this exact `session` by the time React re-renders.
+  const overlayRegion = session ? placementRegion(session.pop, regionsRef.current) : undefined;
+  const overlayForm = overlayFormFor(overlayRegion);
+  const overlayWidthPx = overlayWidthFor(overlayRegion);
+
+  return {
+    sensors,
+    session,
+    collisionDetection,
+    dragModifiers,
+    overlayForm,
+    overlayWidthPx,
+    handleDragStart,
+    handleDragEnd,
+    handleDragCancel,
+  };
 }
 
 type OverlayTransform = Parameters<Modifier>[0]['transform'];
 type OverlayRect = Parameters<Modifier>[0]['draggingNodeRect'];
+
+// Story 6 Phase C: a Stub row's rendered height — one line, `py-1` (4px
+// top/bottom) inside `OVERLAY_STUB_CLASS`/`AttachedChildRow`'s own row —
+// a fixed fact about the component (matches `SHORT_CARD_HEIGHT_PX`'s own
+// reasoning), not a value read off any measurement.
+const STUB_ROW_HEIGHT_PX = 26;
+
+// Story 6 Phase C: keeps the pointer on the carried copy across its own
+// form switch into a Stub (shortCard/Stub -> Stub, at the Card-layer
+// boundary) — dnd-kit's own transform only ever tracks the *pickup* point
+// (pure pointer delta since activation, independent of the dragged node's
+// size — verified against @dnd-kit/core's own source: the overlay case
+// never folds a node-rect delta into `transform`), so a box that shrinks
+// after pickup leaves that same point glued to the pointer while the
+// box's visible edges move out from under it — exactly the "grabbed near
+// the bottom edge" case the plan calls out.
+//
+// Targets `stubWidthPx` (the render side's own `overlayWidthFor`) and the
+// fixed `STUB_ROW_HEIGHT_PX` rather than dnd-kit's live `draggingNodeRect`
+// — see the call site's comment for why that measurement can't be trusted
+// here. `pickupRect` (`activeNodeRect`, the *source* row, never swapped
+// out mid-drag) stands in for "the overlay's own resting position," which
+// is what it's frozen at for the whole drag regardless of which form is
+// currently rendered (`PositionedOverlay`'s own `top`/`left`, verified
+// live: both equal the pickup rect's).
+//
+// Never compensates back *out* of Stub form (`currentForm !== 'stub'`):
+// growing larger while keeping the same pickup offset can never push the
+// pointer outside the (now bigger) box the way shrinking can, so the
+// natural, untouched transform already keeps the pointer on the copy —
+// this is also what keeps every drag that never reaches Stub form
+// byte-identical to before this phase. Nor while *already* in Stub form
+// at pickup (`pickupForm === 'stub'`, a Stub's own drag) — nothing shrunk
+// out from under anything, the natural offset is already right.
+//
+// Deliberately computes an absolute x/y from `pointerNow` instead of an
+// offset relative to the incoming `transform`: this same modifier array
+// runs *twice* per frame (F8, above — once inside `DndContext`'s own
+// transform tracking, again inside `DragOverlay`'s render, chained, the
+// second call's input being the first call's output), and `clampAxis` is
+// safe to re-apply because clamping an in-range value is a true no-op —
+// an *additive* compensation isn't, and would double itself on the second
+// call. Reading `pointerRef.current` (this hook's own tracked pointer,
+// independent of dnd-kit's modifier pipeline) instead of deriving "where
+// the pointer is" from `transform` sidesteps that: both chained calls
+// read the same live pointer and the same fixed target, so both compute
+// the identical absolute answer.
+function reanchorOverlayTransform(
+  transform: OverlayTransform,
+  pickupRect: OverlayRect,
+  pointerAtPickup: Event | null,
+  pointerNow: Point | null,
+  pickupForm: OverlayForm,
+  currentForm: OverlayForm,
+  stubWidthPx: number | null,
+): OverlayTransform {
+  if (currentForm !== 'stub' || pickupForm === 'stub') return transform;
+  if (!pickupRect || !pointerAtPickup || !pointerNow || stubWidthPx == null) return transform;
+  if (!('clientX' in pointerAtPickup) || !('clientY' in pointerAtPickup)) return transform;
+  const pickup = pointerAtPickup as PointerEvent;
+  const pickupOffsetX = pickup.clientX - pickupRect.left;
+  const fractionX = pickupRect.width > 0 ? pickupOffsetX / pickupRect.width : 0.5;
+  return {
+    ...transform,
+    x: pointerNow.x - pickupRect.left - fractionX * stubWidthPx,
+    y: pointerNow.y - pickupRect.top - STUB_ROW_HEIGHT_PX / 2,
+  };
+}
 
 // The overlay's translation clamped to the context's rect — sideways for a
 // merged column, either axis for a sub-row; untouched with no context.

@@ -189,23 +189,32 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleReorderColumns,
   } = useColumnManagement(activeBoardId, loadBoard);
 
-  const { sensors, session, collisionDetection, dragModifiers, handleDragStart, handleDragEnd, handleDragCancel } =
-    useBoardDnd({
-      board,
-      setBoard,
-      items,
-      tuning: dragTuning,
-      placements,
-      previewPlacement,
-      writes,
-      getWorkphaseItems,
-      getMergedColumnItems,
-      getAttachedChildren,
-      findWorkphaseForItem,
-      handleReorderColumns,
-      loadBoard,
-      rootRef: boardRootRef,
-    });
+  const {
+    sensors,
+    session,
+    collisionDetection,
+    dragModifiers,
+    overlayForm,
+    overlayWidthPx,
+    handleDragStart,
+    handleDragEnd,
+    handleDragCancel,
+  } = useBoardDnd({
+    board,
+    setBoard,
+    items,
+    tuning: dragTuning,
+    placements,
+    previewPlacement,
+    writes,
+    getWorkphaseItems,
+    getMergedColumnItems,
+    getAttachedChildren,
+    findWorkphaseForItem,
+    handleReorderColumns,
+    loadBoard,
+    rootRef: boardRootRef,
+  });
 
   // §4's overlay colors (plus the active-context outline) reach KanbanCard
   // and BandGuides as CSS custom properties, so the dev/test panel can
@@ -355,7 +364,20 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         </DragSessionContext>
 
         <DragOverlay modifiers={dragModifiers}>
-          {session ? <KanbanCard item={session.activeItem} itemTypes={itemTypes} isOverlay /> : null}
+          {session ? (
+            // Story 6 Phase C (Story 5 decision 6, reopened): `overlayForm`/
+            // `overlayWidthPx` decide the *shape this same instance* draws,
+            // not which component renders — see KanbanCard.tsx's file
+            // header for why a component-type swap here would break
+            // dnd-kit's own measurement of the overlay.
+            <KanbanCard
+              item={session.activeItem}
+              itemTypes={itemTypes}
+              isOverlay
+              overlayForm={overlayForm}
+              overlayWidthPx={overlayWidthPx}
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
 

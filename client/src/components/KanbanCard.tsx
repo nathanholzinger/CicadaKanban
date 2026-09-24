@@ -1,5 +1,16 @@
-// Draggable card. isGhostLike renders both drag copies as shortCard for the
-// drag's duration — see client/src/components/workflow/CLAUDE.md.
+// Draggable card. isGhostLike renders the in-list ghost (and, ordinarily,
+// the DragOverlay copy too) as shortCard for the drag's duration — see
+// client/src/components/workflow/CLAUDE.md. Story 6 Phase C (reopening
+// Story 5 decision 6): while locked at a Card or Descendants layer, the
+// DragOverlay copy is a Stub row instead (`overlayForm`/`overlayWidthPx`,
+// from `popSession.ts::overlayFormFor` via `useBoardDnd.ts`) — rendered by
+// *this same component instance*, not a separate one `BoardView.tsx`
+// swaps in: dnd-kit measures the DragOverlay's child once, on its own
+// mount, and never re-attaches that measurement if a *different*
+// component type takes its place (its ResizeObserver is left watching a
+// node that's already been removed) — so the Stub form has to be this
+// component changing its own rendered shape in place, the same way the
+// shortCard/full-card switch below already always has been.
 
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDndContext } from '@dnd-kit/core';
@@ -10,9 +21,10 @@ import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-det
 import TypePill from './item-detail/TypePill';
 import { itemRowData, resolveDropSide, type ItemRowRole } from './workflow/boardDndUtils';
 import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
-import { parentOpinionOf } from './workflow/itemListOps';
+import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX } from './cardMetrics';
+import type { OverlayForm } from './workflow/popSession';
 import {
   useDragSession,
   useDropTargetState,
@@ -69,7 +81,12 @@ const DROP_INDICATOR_AFTER =
 // #13): the live side indicator, the drag-target attributes/overlay, the
 // pending marker. The DragOverlay copy is the carried item itself — never a
 // target, never pending — so it gets none of it.
-function useDropTargetProps(itemId: string, activeRoles: readonly ItemRowRole[], isOverlay = false) {
+function useDropTargetProps(
+  itemId: string,
+  activeRoles: readonly ItemRowRole[],
+  isOverlay = false,
+  overlayForm: OverlayForm = 'short-card',
+) {
   const dropSide = useLiveDropSide(itemId, activeRoles);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
@@ -80,6 +97,9 @@ function useDropTargetProps(itemId: string, activeRoles: readonly ItemRowRole[],
       // The carried copy, for the E2E helper's "drag finished" wait — it
       // outlives the drag by dnd-kit's drop animation.
       'data-drag-overlay': isOverlay ? 'true' : undefined,
+      // Story 6 Phase C, for Story 10's E2E — which form this same carried
+      // copy is drawing as right now (popSession.ts::overlayFormFor).
+      'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
       'data-drop-state': dropTarget?.state,
       'data-pending': pending ? 'true' : undefined,
     },
@@ -94,6 +114,23 @@ function DropSideIndicator({ side }: { side: 'before' | 'after' | null }) {
 }
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
+
+// Story 6 Phase C: the carried copy's own "held" look while it's a Stub —
+// a shadow in place of a row's hover/press states, since this copy isn't
+// interactive. No CARD_BASE (that's the shortCard/full-card box) — a Stub
+// is a small pill-shaped row, not a padded card.
+const OVERLAY_STUB_CLASS =
+  'flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-1.5 py-1 shadow-2xl shadow-black/50';
+
+// Epic 3.5 Story 6 Phase B (decision 1) — the flat descendants section
+// replaced the nested `border-l pl-3` divs (one indent per DOM level) with
+// one number applied per row: depth 0 (a Card's direct Stub) still lands
+// 12px in, matching the single `pl-3` its own wrapper used to carry alone;
+// each level deeper adds another 12px, matching what an extra nested
+// wrapper used to add. The border-l guide lines are the one visible loss
+// (decision 1's own note) — a flat row has nothing to hang one from without
+// drawing its own, left for the Phase B hands-on to ask for if it's missed.
+const DESCENDANTS_INDENT_PX = 12;
 
 // A card's type pill only renders when `item.type` resolves to a known
 // ItemType — an orphaned/unknown type reference hides the pill rather than
@@ -149,6 +186,10 @@ interface KanbanCardProps {
   getAttachedChildren?: (parentId: string) => Item[];
   defaultExpanded?: boolean;
   isOverlay?: boolean;
+  /** isOverlay only — which drag copy to draw (popSession.ts::overlayFormFor). Ignored (shortCard) when isOverlay is false. */
+  overlayForm?: OverlayForm;
+  /** isOverlay + overlayForm 'stub' only — a row's width in the context Card's section (useBoardDnd.ts::overlayWidthFor). */
+  overlayWidthPx?: number | null;
   onCardClick?: (id: string) => void;
 }
 
@@ -159,6 +200,8 @@ export default function KanbanCard({
   getAttachedChildren,
   defaultExpanded = true,
   isOverlay = false,
+  overlayForm = 'short-card',
+  overlayWidthPx = null,
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
@@ -171,7 +214,11 @@ export default function KanbanCard({
     // them off the *active* row.
     data: itemRowData('card'),
   });
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card'], isOverlay);
+  const {
+    dropSide,
+    dataAttrs,
+    className: dropTargetClassName,
+  } = useDropTargetProps(item.id, ['card'], isOverlay, overlayForm);
   // Story 4: forced open — independent of the user's own
   // collapse choice — for as long as this Card is the live attach target,
   // so a drag actually reveals the ghost landing inside it rather than
@@ -200,25 +247,41 @@ export default function KanbanCard({
   // carve-out reservation (BandGuides.tsx) reserves exactly, not an
   // approximation of whatever the full card's footer happens to add.
   const isGhostLike = isOverlay || isDragging;
+  // Story 6 Phase C: the one place `overlayForm` matters — everywhere else
+  // in this component, `isOverlay` alone still means "the shortCard drag
+  // copy," exactly as before this phase.
+  const overlayIsStub = isOverlay && overlayForm === 'stub';
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    ...(isGhostLike ? { height: SHORT_CARD_HEIGHT_PX } : {}),
+    ...(isGhostLike && !overlayIsStub ? { height: SHORT_CARD_HEIGHT_PX } : {}),
+    ...(overlayIsStub ? { width: overlayWidthPx ?? undefined } : {}),
   };
 
   let avatarBadgeClass = 'bg-cyan-500/20 text-cyan-300';
   if (item.assigneeType === 'agent') avatarBadgeClass = 'bg-amber-500/20 text-amber-300';
 
   // Computed once (not called inline in JSX below) — getAttachedChildren
-  // returns a fresh array/sort every call, and calling it twice inline for
-  // both SortableContext's `items` and the `.map()` produced unstable
-  // references that fed a dnd-kit measurement loop during a real drag
-  // (matches this codebase's known "inline function call in JSX" gotcha).
-  // Story 4: placement-aware, so a Card being previewed as attaching here
-  // is already included at its slot (itemListOps.ts). None while
-  // ghost-like: a shortCard shows no children at all, not even collapsed.
-  const attachedChildren = !isGhostLike && expanded && childCount > 0 ? (getAttachedChildren?.(item.id) ?? []) : [];
+  // returns a fresh array/sort every call, and calling it inline for both
+  // SortableContext's `items` and the `.map()` produced unstable references
+  // that fed a dnd-kit measurement loop during a real drag (matches this
+  // codebase's known "inline function call in JSX" gotcha). Story 4:
+  // placement-aware, so a Card being previewed as attaching here is already
+  // included at its slot (itemListOps.ts). None while ghost-like: a
+  // shortCard shows no children at all, not even collapsed.
+  //
+  // Story 6 Phase B (decision 1): the whole section, every depth, as one
+  // flat DFS list — `hierarchyRows` recurses `getAttachedChildren` via
+  // `lib/hierarchyPlacement.ts::flattenHierarchy`. The active drag's own
+  // attach-preview ghost (`attachGhostId`) stays a leaf, matching
+  // `AttachGhostRow`'s own non-recursive rendering below — real children of
+  // the item being previewed here would need a recursive ghost tree this
+  // story doesn't build, so the walk simply doesn't descend into it.
+  const rows =
+    !isGhostLike && expanded && childCount > 0 && getAttachedChildren
+      ? hierarchyRows(item.id, parentId => (parentId === attachGhostId ? [] : getAttachedChildren(parentId)))
+      : [];
 
   return (
     <div
@@ -238,12 +301,18 @@ export default function KanbanCard({
       // context" (wiki §1.1) — the Card half of the active-context outline
       // BandGuides.tsx draws for a column/sub-row.
       data-active-context={isAttachTarget ? true : undefined}
-      className={`${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`}
+      className={
+        overlayIsStub
+          ? OVERLAY_STUB_CLASS
+          : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
+      }
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
 
-      {isGhostLike ? (
+      {overlayIsStub ? (
+        <StubBody item={item} itemTypes={itemTypes} />
+      ) : isGhostLike ? (
         <ShortCard item={item} itemTypes={itemTypes} />
       ) : (
         <>
@@ -285,20 +354,18 @@ export default function KanbanCard({
             </div>
           )}
 
-          {/* Attached children, indented — draggable among siblings (Epic
-              3.2 Part 3); this wrapper doubles as the Card's Descendants
-              region (Story 5, §1.1) — where a Stub's drag starts and pops
-              back out to, one layer per Card, never one per Stub (decision
-              1). It only exists while there's something to render, which
-              is also exactly when a Stub's drag could ever have started
-              here (a childless Card's section is unreachable, §1.1). */}
-          {attachedChildren.length > 0 && getAttachedChildren && (
-            <div
-              className="mt-2 space-y-1 border-l border-zinc-700/50 pl-3"
-              {...{ [DRAG_REGION_ATTR]: descendantsRegionKey(item.id) }}
-            >
-              <SortableContext items={attachedChildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                {attachedChildren.map(child =>
+          {/* The whole descendants section, every depth, one flat sortable
+              list (Story 6 Phase B, decision 1) — draggable among siblings
+              (Epic 3.2 Part 3, Story 5 §1). This wrapper doubles as the
+              Card's Descendants region (§1.1) — where a Stub's drag starts
+              and pops back out to, one layer per Card, never one per Stub.
+              It only exists while there's something to render, which is
+              also exactly when a Stub's drag could ever have started here
+              (a childless Card's section is unreachable, §1.1). */}
+          {rows.length > 0 && getAttachedChildren && (
+            <div className="mt-2 space-y-1" {...{ [DRAG_REGION_ATTR]: descendantsRegionKey(item.id) }}>
+              <SortableContext items={rows.map(r => r.item.id)} strategy={verticalListSortingStrategy}>
+                {rows.map(({ item: child, depth }) =>
                   // Story 4 decision 7: this row is the active drag's own
                   // ghost (previewed attaching here, not a real Stub yet) —
                   // rendered as a plain, non-sortable preview rather than a
@@ -309,13 +376,13 @@ export default function KanbanCard({
                   // registered here as a Stub row could make the pop
                   // machine see the wrong role mid-drag).
                   child.id === attachGhostId ? (
-                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} />
+                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={depth} />
                   ) : (
                     <AttachedChildRow
                       key={child.id}
                       item={child}
                       itemTypes={itemTypes}
-                      getAttachedChildren={getAttachedChildren}
+                      depth={depth}
                       onCardClick={onCardClick}
                     />
                   ),
@@ -329,23 +396,44 @@ export default function KanbanCard({
   );
 }
 
-// Story 4: a purely visual stand-in for the active drag's own
-// item once it's previewed attaching here — same slot, same small pill
-// treatment as a real AttachedChildRow, but no `useSortable`/`useDroppable`
-// registration of its own (see the call site's comment for why that
-// matters). Rendering `AttachedChildRow` itself for this row was the more
-// obvious choice; this is the one deliberate departure from "reuse the
-// existing sibling-reorder row" and exists only to sidestep that risk.
-function AttachGhostRow({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
+// Story 6 Phase C: the type pill + one-line title every Stub-tier render
+// shares — AttachGhostRow and AttachedChildRow below, and this same
+// component's own overlay-Stub branch above (`overlayIsStub`). Extracted
+// so the three can't drift apart from each other; each still owns its own
+// outer box (dashed ghost, sortable row, carried shadow), since that's
+// the one thing that's genuinely different between them.
+function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
   const resolvedType = resolveType(item.type, itemTypes);
   return (
-    <div className="flex items-center gap-1.5 rounded border border-dashed border-blue-500/50 bg-blue-500/10 px-1.5 py-1">
+    <>
       {resolvedType && (
         <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
           {resolvedType.name}
         </span>
       )}
       <span className="truncate text-xs text-zinc-300">{item.title}</span>
+    </>
+  );
+}
+
+// Story 4, `depth` added Story 6 Phase B: a purely visual stand-in for the
+// active drag's own item once it's previewed attaching here — same slot,
+// same small pill treatment as a real AttachedChildRow, but no
+// `useSortable`/`useDroppable` registration of its own (see the call
+// site's comment for why that matters — decision 4's uniform `role` field
+// narrowed the original hazard but never removed the deeper one: dnd-kit
+// doesn't support two simultaneous sortable registrations for one id, and
+// this row's real registration is still wherever it's actually being
+// dragged from). Rendering `AttachedChildRow` itself for this row was the
+// more obvious choice; this is the one deliberate departure from "reuse
+// the existing sibling-reorder row" and exists only to sidestep that risk.
+function AttachGhostRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded border border-dashed border-blue-500/50 bg-blue-500/10 px-1.5 py-1"
+      style={{ marginLeft: (depth + 1) * DESCENDANTS_INDENT_PX }}
+    >
+      <StubBody item={item} itemTypes={itemTypes} />
     </div>
   );
 }
@@ -353,34 +441,41 @@ function AttachGhostRow({ item, itemTypes }: { item: Item; itemTypes: ItemType[]
 interface AttachedChildRowProps {
   item: Item;
   itemTypes: ItemType[];
-  getAttachedChildren: (parentId: string) => Item[];
+  depth: number;
   onCardClick?: (id: string) => void;
 }
 
-function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }: AttachedChildRowProps) {
-  const resolvedType = resolveType(item.type, itemTypes);
-  const grandchildren = getAttachedChildren(item.id);
+// Story 6 Phase B: one row in the flat section, indented by `depth` — no
+// longer recursive (its own grandchildren used to nest here via a second
+// `SortableContext`; the parent's single flat list now carries every depth,
+// `KanbanCard.tsx`'s own `rows` already having walked the whole subtree).
+function AttachedChildRow({ item, itemTypes, depth, onCardClick }: AttachedChildRowProps) {
   // Epic 3.2 Part 3, extended by Story 5: draggable among siblings under
-  // the same parent (decision 1's interim within-action) — a self-
-  // contained SortableContext (see the parent's wrapper above and the
-  // recursive one below), reached through the same pop machine as a Card
-  // now (Step 1), not a separate board-level path. `role: 'stub'` +
-  // `parentId` are what `resolveBoardCollisions`' `siblingScopeParentId`
-  // filter scopes collisions to true siblings by — without it, an attached
-  // child could collide with an unrelated card's attached child if their
-  // rects happen to be near each other. Decision 4: `type` stays `'item'`,
-  // the same as a Card row, so this id's registration never *looks* like a
-  // different drag type to dnd-kit once it pops out and remounts as one.
+  // the same parent (the within-action until Story 6 Phase D's real
+  // gap+depth rule) — one shared `SortableContext` spanning the whole
+  // section now (decision 1), reached through the same pop machine as a
+  // Card (Step 1), not a separate board-level path. Decision 4: `type`
+  // stays `'item'`, the same as a Card row, so this id's registration
+  // never *looks* like a different drag type to dnd-kit once it pops out
+  // and remounts as one. `parentId` is this row's own real parent — no
+  // longer what scopes collisions (Phase B widened that to the whole
+  // section's rect, `resolveBoardCollisions`' `descendantsSectionRect`);
+  // kept for the same diagnostic/future-facing reasons every row's data
+  // carries it.
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     data: itemRowData('stub', item.parentId),
   });
-  // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.7)
+  // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.8)
   // — same attributes and overlay as a Card, so a test reads them alike.
   // Both active roles: a sibling Stub reorder, or a foreign Card popped
   // into this row's own parent, anchoring beside it.
   const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card', 'stub']);
-  const style = { transform: CSS.Transform.toString(transform), transition };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    paddingLeft: (depth + 1) * DESCENDANTS_INDENT_PX,
+  };
 
   return (
     <div
@@ -402,28 +497,8 @@ function AttachedChildRow({ item, itemTypes, getAttachedChildren, onCardClick }:
         }}
         className="flex w-full cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing"
       >
-        {resolvedType && (
-          <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-            {resolvedType.name}
-          </span>
-        )}
-        <span className="truncate text-xs text-zinc-300">{item.title}</span>
+        <StubBody item={item} itemTypes={itemTypes} />
       </button>
-      {grandchildren.length > 0 && (
-        <div className="space-y-1 border-l border-zinc-700/50 pl-3">
-          <SortableContext items={grandchildren.map(c => c.id)} strategy={verticalListSortingStrategy}>
-            {grandchildren.map(child => (
-              <AttachedChildRow
-                key={child.id}
-                item={child}
-                itemTypes={itemTypes}
-                getAttachedChildren={getAttachedChildren}
-                onCardClick={onCardClick}
-              />
-            ))}
-          </SortableContext>
-        </div>
-      )}
     </div>
   );
 }

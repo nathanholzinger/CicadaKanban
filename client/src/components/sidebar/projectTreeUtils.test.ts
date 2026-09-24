@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenTree,
   getDescendantIds,
+  eligibleRows,
+  fullChildrenOf,
+  resolveGap,
   computeProjection,
-  findPrevSibling,
-  findNextSibling,
+  siblingIdsFromAnchor,
   type FlatItem,
 } from './projectTreeUtils';
 import type { Project } from '../../types';
@@ -93,49 +95,124 @@ describe('getDescendantIds', () => {
   });
 });
 
-describe('computeProjection', () => {
-  // Shared fixture: A(depth0) -> [B(depth1), C(depth1)], D(depth0)
-  const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
+// Shared fixture: A(depth0) -> [B(depth1), C(depth1)], D(depth0)
+const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
 
-  it('resolves the parent by walking backward to the nearest item at projectedDepth - 1', () => {
-    const active = flat('C', 1, 'A');
-    const result = computeProjection(items, active, 2, 0);
-    expect(result).toEqual({ depth: 1, parentId: 'A' });
+describe('eligibleRows', () => {
+  it('is the flat list minus the excluded ids, still depth/parentId-correct', () => {
+    const rows = eligibleRows(items, new Set());
+    expect(rows).toEqual([
+      { id: 'A', parentId: null, depth: 0 },
+      { id: 'B', parentId: 'A', depth: 1 },
+      { id: 'C', parentId: 'A', depth: 1 },
+      { id: 'D', parentId: null, depth: 0 },
+    ]);
   });
 
-  it('clamps projected depth to previousItem.depth + 1 (max)', () => {
-    const active = flat('C', 1, 'A');
-    const result = computeProjection(items, active, 2, 14 * 10); // large rightward drag
-    expect(result).toEqual({ depth: 2, parentId: 'B' });
-  });
-
-  it('clamps projected depth to nextItem.depth (min) and reports a null parent at depth 0', () => {
-    const active = flat('D', 0, null);
-    const result = computeProjection(items, active, 3, -14 * 10); // large leftward drag
-    expect(result).toEqual({ depth: 0, parentId: null });
+  // Story 6 decision 5 (fixes difference 2): dragging A excludes it and its
+  // whole subtree from candidacy, even though B/C still render (dimmed).
+  it('excludes the active project and its descendants', () => {
+    const rows = eligibleRows(items, new Set(['A', 'B', 'C']));
+    expect(rows.map(r => r.id)).toEqual(['D']);
   });
 });
 
-describe('findPrevSibling / findNextSibling', () => {
-  const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
+describe('resolveGap', () => {
+  const rows = eligibleRows(items, new Set());
 
-  it('findPrevSibling finds the nearest match at the same depth/parent', () => {
-    expect(findPrevSibling(items, 2, { depth: 1, parentId: 'A' })).toEqual(items[1]);
+  it('an eligible over id resolves the ordinary before/after gap', () => {
+    expect(resolveGap(items, rows, new Set(), 'B', 'before')).toBe(1);
+    expect(resolveGap(items, rows, new Set(), 'C', 'after')).toBe(3);
   });
 
-  it('findPrevSibling returns null after passing a shallower-depth item', () => {
-    expect(findPrevSibling(items, 1, { depth: 1, parentId: 'A' })).toBeNull();
+  // Story 6 decision 5: dragging A, hovering over its own dimmed descendant
+  // B resolves to the single gap the whole A/B/C block collapsed to — not a
+  // dead zone (the old "nulls the projection" behavior).
+  it('an excluded (dimmed descendant) over id resolves to the gap the whole dragged block collapsed to', () => {
+    const excludeA = new Set(['A', 'B', 'C']);
+    const rowsWithoutA = eligibleRows(items, excludeA);
+    expect(resolveGap(items, rowsWithoutA, excludeA, 'B', 'before')).toBe(0);
+    expect(resolveGap(items, rowsWithoutA, excludeA, 'C', 'after')).toBe(0);
   });
 
-  it('findNextSibling finds the nearest match starting at overIndex, skipping deeper items', () => {
-    expect(findNextSibling(items, 1, { depth: 0, parentId: null })).toEqual(items[3]);
+  it('falls back to gap 0 when the dragged block has no eligible predecessor', () => {
+    // Drag D itself (imagine D were first and had descendants) — no row
+    // precedes it, so nothing eligible comes before the block.
+    const soloItems = [flat('D', 0, null), flat('D1', 1, 'D')];
+    const excludeD = new Set(['D', 'D1']);
+    const rowsWithoutD = eligibleRows(soloItems, excludeD);
+    expect(resolveGap(soloItems, rowsWithoutD, excludeD, 'D1', 'before')).toBe(0);
+  });
+});
+
+// A `childrenOf` over the fixture's real tree (A -> B, C; D), for
+// `computeProjection`'s `resolvePlacement` calls — same shape
+// `fullChildrenOf(projects)` returns, spelled directly since none of these
+// cases involve a collapsed node.
+function childrenOf(id: string | null): readonly string[] {
+  if (id === null) return ['A', 'D'];
+  if (id === 'A') return ['B', 'C'];
+  return [];
+}
+
+describe('computeProjection', () => {
+  const rows = eligibleRows(items, new Set());
+
+  it('resolves the parent by walking up to the ancestor at the projected depth', () => {
+    const gap = resolveGap(items, rows, new Set(), 'D', 'before'); // between C and D
+    const result = computeProjection(rows, gap, 1, 0, childrenOf, new Set());
+    expect(result).toEqual({ depth: 1, placement: { parentId: 'A', anchor: { id: 'C', side: 'after' } } });
   });
 
-  it('findNextSibling returns null after passing a shallower-depth item', () => {
-    expect(findNextSibling(items, 3, { depth: 1, parentId: 'A' })).toBeNull();
+  it('clamps projected depth to the gap’s own hi (tabbing far right)', () => {
+    const gap = resolveGap(items, rows, new Set(), 'D', 'before');
+    const result = computeProjection(rows, gap, 1, 14 * 10, childrenOf, new Set()); // large rightward drag
+    expect(result).toEqual({ depth: 2, placement: { parentId: 'C', anchor: null } });
   });
 
-  it('findNextSibling returns null when no sibling exists in range', () => {
-    expect(findNextSibling(items, 4, { depth: 0, parentId: null })).toBeNull();
+  it('clamps projected depth to the gap’s own lo (tabbing far left) and resolves the root parent', () => {
+    const gap = resolveGap(items, rows, new Set(), 'D', 'after'); // below everything
+    const result = computeProjection(rows, gap, 0, -14 * 10, childrenOf, new Set()); // large leftward drag
+    expect(result).toEqual({ depth: 0, placement: { parentId: null, anchor: { id: 'D', side: 'after' } } });
+  });
+});
+
+describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
+  it('returns a project’s real children regardless of collapse state', () => {
+    const root = project({ id: 'root' });
+    const child = project({ id: 'child', parentId: 'root' });
+    const childrenOfReal = fullChildrenOf([root, child]);
+    expect(childrenOfReal('root')).toEqual(['child']);
+  });
+
+  // The bug found 2026-09-23: `root` collapsed means `child` never enters
+  // `flatItems`/`eligibleRows`, so the gap right after `root` (Top + 1,
+  // "root's first child") has no next row to read a first child off of.
+  // `computeProjection` must still resolve `child` as the anchor, using
+  // `fullChildrenOf`, not `eligibleRows`' own map.
+  it('a collapsed Top still resolves Top + 1 to its real first child', () => {
+    const root = project({ id: 'root' });
+    const child = project({ id: 'child', parentId: 'root' });
+    const sibling = project({ id: 'sibling' });
+    const flatCollapsed = flattenTree([root, child, sibling], new Set()); // root collapsed
+    expect(flatCollapsed.map(i => i.id)).toEqual(['root', 'sibling']); // child never rendered
+
+    const rows = eligibleRows(flatCollapsed, new Set());
+    const childrenOfReal = fullChildrenOf([root, child, sibling]);
+    const gap = resolveGap(flatCollapsed, rows, new Set(), 'sibling', 'before'); // between root (Top) and sibling (Bottom)
+    const result = computeProjection(rows, gap, 0, 14, childrenOfReal, new Set()); // one tab right of root
+
+    expect(result).toEqual({ depth: 1, placement: { parentId: 'root', anchor: { id: 'child', side: 'before' } } });
+  });
+});
+
+describe('siblingIdsFromAnchor', () => {
+  it('an "after" anchor is the previous sibling; "before" is the next', () => {
+    expect(siblingIdsFromAnchor({ id: 'A', side: 'after' })).toEqual({ prevId: 'A', nextId: null });
+    expect(siblingIdsFromAnchor({ id: 'B', side: 'before' })).toEqual({ prevId: null, nextId: 'B' });
+  });
+
+  it('no anchor (the sole child of its parent) is neither', () => {
+    expect(siblingIdsFromAnchor(null)).toEqual({ prevId: null, nextId: null });
   });
 });

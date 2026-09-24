@@ -17,7 +17,8 @@ interface RowProps {
   selectedProjectId: string | null;
   isActive: boolean;
   isDescendantOfActive: boolean;
-  showIndicator: boolean;
+  /** 'before' draws the line above this row, 'after' below it (Story 6 decision 2's new "past the last item" gap), null draws nothing. */
+  indicatorSide: 'before' | 'after' | null;
   indicatorDepth: number;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;
@@ -31,7 +32,7 @@ export function SortableProjectRow({
   selectedProjectId,
   isActive,
   isDescendantOfActive,
-  showIndicator,
+  indicatorSide,
   indicatorDepth,
   expandedIds,
   onToggleExpand,
@@ -89,9 +90,9 @@ export function SortableProjectRow({
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {/* Drop indicator line */}
-      {showIndicator && (
+      {indicatorSide && (
         <div
-          className="pointer-events-none absolute -top-px right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500"
+          className={`pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500 ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
           style={{ marginLeft: 12 + indicatorDepth * INDENT_WIDTH }}
         />
       )}

@@ -8,6 +8,7 @@ import {
   containsPoint,
   descendantsRegionKey,
   distanceOutside,
+  hasDetachedElements,
   isCardList,
   measureRegions,
   resolveDragStructure,
@@ -306,6 +307,20 @@ describe('resolveDragStructure / measureRegions', () => {
 
     const board = measureRegions(structure, null);
     expect(board.map(r => r.key).sort()).toEqual(['column:col-1', 'column:col-2']);
+  });
+
+  // Found in the Story 6 hands-on (2026-09-23): Board layer's carve-out
+  // zones remount a column's Cards after a layer change has already
+  // resolved the structure, and a detached element measures as nothing.
+  it('hasDetachedElements: false while every cached element is in the document, true once one is replaced', () => {
+    buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true);
+    expect(hasDetachedElements(structure)).toBe(false);
+
+    const cardEl = document.querySelector('[data-drag-region="card:item-1"]')!;
+    cardEl.replaceWith(cardEl.cloneNode());
+    expect(hasDetachedElements(structure)).toBe(true);
+    expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
   });
 
   // Story 4.1 Phase 4 (F6) — a merged column's `boundsRect` is its own outer

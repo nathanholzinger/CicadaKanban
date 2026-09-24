@@ -339,6 +339,20 @@ export function placementRegion(session: PopSession | null, regions: readonly Dr
   return key === null ? undefined : regions.find(r => r.key === key);
 }
 
+// Story 6 Phase C (Story 5 decision 6, reopened 2026-09-23): which form the
+// carried copy (the DragOverlay) draws as — a Stub row, so it looks like
+// the rows it will be placed among, while locked at a Card or Descendants
+// layer; the shortCard everywhere else (Board, Column/sub-row, or popped
+// out). Reads `placementRegion`'s own result rather than a second,
+// independently-typed guess, so `BoardView.tsx`'s render and
+// `useBoardDnd.ts`'s overlay re-anchor modifier always agree on which form
+// is live right now — the same "one derivation, read by every caller"
+// reasoning as `placementRegion` itself.
+export type OverlayForm = 'stub' | 'short-card';
+export function overlayFormFor(region: DragRegion | undefined): OverlayForm {
+  return region?.kind === 'card' || region?.kind === 'descendants' ? 'stub' : 'short-card';
+}
+
 // Story 5 decision 5 (2026-09-21), generalizing wiki–code reconciliation
 // #29: the no-anchor fallback within a card-list region (no specific card
 // hovered — a bare container, a done region, or mid-drag before `over`
@@ -413,15 +427,17 @@ export function placementFor(
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
-  // A Descendants section's within-action, this story (decision 1): direct-
-  // sibling reorder, scoped to `origin`'s own real parent — the same policy
-  // `resolveBoardCollisions`' `siblingScopeParentId` restricts collisions
-  // to. `over` is always a specific sibling row here (no bare "container"
-  // concept for this kind — `handleDragEnd` never passes `'container'`);
-  // mid-drag, with `over` still null, dnd-kit's own sortable strategy
-  // already draws the reorder, so the ghost just sits at `origin` (or its
-  // `priorPlacement`, same reconciliation-#1 reasoning as any other
-  // context). Full gap+depth placement is Story 6's (§7).
+  // A Descendants section's within-action, until Story 6 Phase D: direct-
+  // sibling reorder, scoped to `origin`'s own real parent. `over` here is
+  // whatever `useBoardDnd.ts::handleDragEnd` already sanitized to a true
+  // sibling or nothing (Phase B widened *collision* itself to every row of
+  // the flat section, any depth — `resolveBoardCollisions`'s
+  // `descendantsSectionRect` — so this function no longer sees a stray
+  // non-sibling `over` at all; no bare "container" concept for this kind
+  // either way). Mid-drag, with `over` still null, dnd-kit's own sortable
+  // strategy already draws the reorder, so the ghost just sits at `origin`
+  // (or its `priorPlacement`, same reconciliation-#1 reasoning as any
+  // other context). Full gap+depth placement is Story 6 Phase D's (§7).
   if (region.kind === 'descendants') {
     if (over === null || over === 'container') return priorPlacement ?? origin;
     return { parentId: parentOpinionOf(origin), slot: { anchorId: over.anchorId, side: over.side } };

@@ -93,20 +93,30 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toContain('col-1');
   });
 
-  // Story 5: the Descendants-context sibling scope comes from the *live
-  // session* (`siblingScopeParentId`, computed by useBoardDnd.ts from the
-  // pop session's own `origin`) — never from the active row's own `data`.
-  it("scopes a Descendants context's collisions to siblings sharing the session's own siblingScopeParentId", () => {
-    const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
+  // Story 6 Phase B: the Descendants-context scope comes from the *live
+  // session's* own measured section rect (`descendantsSectionRect`,
+  // computed by useBoardDnd.ts from the locked region) — every Stub row
+  // inside it is a candidate, any depth and any real `parentId` (replacing
+  // Story 5's interim same-real-parent-only `siblingScopeParentId`; the
+  // within-action itself still keeps a release scoped to true siblings —
+  // `useBoardDnd.ts::handleDragEnd`'s own membership check, not this one).
+  // Never from the active row's own `data`.
+  it("scopes a Descendants context's collisions to every Stub row inside the section's rect, any real parent", () => {
+    const sectionRect = rect(0, 0, 100, 400);
+    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
     const result = resolveBoardCollisions(
       collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
-        { id: 'child-b', data: itemRowData('stub', 'parent-1') }, // true sibling
-        { id: 'child-c', data: itemRowData('stub', 'parent-2') }, // different parent
-        { id: 'col-1', data: { type: 'column' } }, // never a valid target for a Descendants-context drag
+        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) }, // inside, true sibling
+        { id: 'grandchild-c', data: itemRowData('stub', 'parent-2'), rect: rect(5, 40, 90, 20) }, // inside, different real parent — still a candidate
+        { id: 'other-section-d', data: itemRowData('stub', 'parent-3'), rect: rect(500, 0, 90, 20) }, // outside the rect — a different card's section
+        { id: 'col-1', data: { type: 'column' }, rect: rect(0, 0, 100, 400) }, // never a valid target for a Descendants-context drag
       ]),
       session,
     );
-    expect(result.map(r => r.id)).toEqual(['child-b']);
+    expect(result.map(r => r.id)).toContain('child-b');
+    expect(result.map(r => r.id)).toContain('grandchild-c');
+    expect(result.map(r => r.id)).not.toContain('other-section-d');
+    expect(result.map(r => r.id)).not.toContain('col-1');
   });
 
   // Decision 4's own regression guard (2026-09-21): the hazard is a Stub's
@@ -119,11 +129,12 @@ describe('resolveBoardCollisions', () => {
   // asserting the outcome still matches the live session, not the stale
   // active data.
   it("never reads the active row's own role — a stale 'card' role alongside a live Descendants session still scopes correctly", () => {
-    const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: 'parent-1' };
+    const sectionRect = rect(0, 0, 100, 400);
+    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
     const result = resolveBoardCollisions(
       collisionArgs('child-a', itemRowData('card'), [
-        { id: 'child-b', data: itemRowData('stub', 'parent-1') },
-        { id: 'child-c', data: itemRowData('stub', 'parent-2') },
+        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) },
+        { id: 'card-c', data: itemRowData('card'), rect: rect(5, 40, 90, 20) }, // never a candidate — a Card row, not a Stub
       ]),
       session,
     );
@@ -142,7 +153,7 @@ describe('resolveBoardCollisions', () => {
     ];
 
     it('in-context: only the context container and the cards inside it are candidates', () => {
-      const session: CollisionSession = { hoverContainerId: null, context, siblingScopeParentId: null };
+      const session: CollisionSession = { hoverContainerId: null, context, descendantsSectionRect: null };
       const ids = resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(
         c => c.id,
       );
@@ -154,14 +165,14 @@ describe('resolveBoardCollisions', () => {
     });
 
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
-      const session: CollisionSession = { hoverContainerId: 'col-b', context, siblingScopeParentId: null };
+      const session: CollisionSession = { hoverContainerId: 'col-b', context, descendantsSectionRect: null };
       expect(
         resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(c => c.id),
       ).toEqual(['col-b']);
     });
 
     it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
-      const session: CollisionSession = { hoverContainerId: null, context: null, siblingScopeParentId: null };
+      const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: null };
       expect(resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session)).toHaveLength(0);
     });
   });

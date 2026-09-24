@@ -222,11 +222,13 @@ export function subrowContainerId(columnId: string, workphaseId: string): string
 // scrolling ancestor (if any), and — column/sub-row only — the workphase
 // facts derived from the column definitions. None of this changes for the
 // life of a single drag except across a layer change, when a ghost
-// migrating lists can remount the DOM underneath a cached element
-// reference — the reason `resolveDragStructure` below runs again right
-// after one, not only at drag start (F5's "recomputed per sample" cost was
-// this and the geometry below, conflated into one function; this is the
-// half that a drag's own duration can share across every sample instead).
+// migrating lists (or Board layer's carve-out zones) can remount the DOM
+// underneath a cached element reference — the reason `resolveDragStructure`
+// below runs again after one, and whenever `hasDetachedElements` finds a
+// remount that landed later, not only at drag start (F5's "recomputed per
+// sample" cost was this and the geometry below, conflated into one
+// function; this is the half that a drag's own duration can share across
+// every sample instead).
 //
 // A structure entry is exactly its region minus the live facts, plus the
 // DOM handles those are read from (kept under one `dom` key so the facts
@@ -328,6 +330,13 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
     regions.push({ ...facts, rect, contentRect, cardCount: cardCountOf(dom.element), boundsRect });
   }
   return regions;
+}
+
+// Whether React has remounted any element `structure` cached since it was
+// resolved. A detached element measures as an empty box, so `measureRegions`
+// would drop its region without a sound; the caller re-resolves instead.
+export function hasDetachedElements(structure: DragStructure): boolean {
+  return structure.some(s => !s.dom.element.isConnected || s.dom.scrollAncestor?.isConnected === false);
 }
 
 // Reads a DOMRect's fields into a plain object — a real DOMRect's fields

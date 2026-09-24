@@ -4,6 +4,7 @@
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
 import { getDescendantIds } from '../../lib/hierarchy';
+import { flattenHierarchy } from '../../lib/hierarchyPlacement';
 import { isStub } from '../../lib/isStub';
 
 // Pure operations over the board's Item[] state — no React. Split out of
@@ -243,6 +244,33 @@ export function getAttachedChildrenFrom(
     .filter(item => renderedParentId(item, placements) === parentId && renderedIsStub(item, placements))
     .sort(byPositionThenCreatedAt);
   return applyPlacements(sorted, placements);
+}
+
+export interface HierarchyRow {
+  item: Item;
+  depth: number;
+}
+
+// Epic 3.5 Story 6 Phase B — a Card's whole descendants section as one
+// flat, depth-first list (decision 1), for `KanbanCard.tsx`'s single
+// `SortableContext` to render (replacing the recursive nested-list build).
+// `childrenOf` is the caller's own view of "this parent's children" —
+// ordinarily `getAttachedChildren` (placement-aware, so an item previewing
+// into the hierarchy already appears at its slot), never read directly by
+// this function beyond that one call shape. Built on
+// `lib/hierarchyPlacement.ts::flattenHierarchy` (`Row[]`, ids only) rather
+// than a hand-rolled walk — `byId` is filled as a side effect of the exact
+// same calls that function already makes, one pass, no re-fetching.
+export function hierarchyRows(cardId: string, childrenOf: (parentId: string) => readonly Item[]): HierarchyRow[] {
+  const byId = new Map<string, Item>();
+  const rows = flattenHierarchy(cardId, parentId => {
+    if (parentId === null) return [];
+    return childrenOf(parentId).map(item => {
+      byId.set(item.id, item);
+      return item.id;
+    });
+  });
+  return rows.map(r => ({ item: byId.get(r.id)!, depth: r.depth }));
 }
 
 // The server deletes an item's whole subtree, not just the one id (audit

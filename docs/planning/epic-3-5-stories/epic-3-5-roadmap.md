@@ -319,8 +319,15 @@ manual placement inside it — sequence the two accordingly, or build Story
 
 ### Story 6 — Stub → Stub hierarchy placement
 **Plan / record:** [`story-6-descendants-placement.md`](story-6-descendants-placement.md)
-(planned 2026-09-17, not started — the shared placement library, the flat
-descendants list, and the sidebar's two behavior differences it corrects)
+(planned 2026-09-17; its eight planning decisions ratified by the Product
+Owner 2026-09-23, decision 1 with a PO hands-on gate before the machine
+phase; in progress — Phase A (the shared placement library, the sidebar's
+three behavior differences corrected) and Phase B (the flat descendants
+list) built 2026-09-23; the Phase B hands-on added a new Phase C the same
+day, reopening Story 5 decision 6 so the carried copy is a Stub from the
+Card layer down, and the gate moved to after it; the machine phase is now
+D and the wiki report E. E2E deferred to Story 10, and the wiki reported
+on, not edited — both decided 2026-09-23)
 
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
@@ -464,12 +471,27 @@ deferral and keep landing with their stories.
    against DRAG-3/DRAG-4.5, or delete them where the API twin already
    pins the math (each has one). Un-skipping as-is is not an option.
 
-4. **Test-plan parameter drift.** `board-drag-interaction/INDEX.md` still
+4. **Deferred from Story 6** (decided 2026-09-23 — every case is a
+   precise-move one). DRAG-1.21 (a hold on the section →
+   `descendants:<P>`; pop-out → `card:<P>`; a hold on P *outside* the
+   section never zooms); DRAG-4 TC-8 (the states offered — assert
+   `data-drag-projection` while moving x by `INDENT` multiples read from
+   the client constant, never a literal), TC-9 / TC-10 / TC-11 (release
+   writes at gap + depth), TC-13 (a done parent), TC-18 (over-cap → no
+   request; a shallower state commits); DRAG-5 TC-9's tab-right and
+   over-cap bullets. `dragGesture.ts` gains a `tabBy(n)` that moves the
+   pointer horizontally by `n × INDENT`. Story 6 ships the
+   `data-drag-projection` hook these assert against. Also Story 6 Phase C's
+   carried Stub: the overlay's `data-drag-overlay-form` is `stub` once
+   zoomed into a Card and during a Stub's own drag, and `short-card` again
+   after a pop-out to a column.
+
+5. **Test-plan parameter drift.** `board-drag-interaction/INDEX.md` still
    parameterizes the bands on `GHOST_H` (`ghostCardHeightPx`, 96px); Story
    4.1 retired that panel value for the shortCard height + list gap.
    Reconcile the names so a case can be read against the code again.
 
-5. **The flakiness call, made explicitly.** For each precise-move case
+6. **The flakiness call, made explicitly.** For each precise-move case
    the reconciler proposes automating, decide whether a real pointer
    sequence against pixel geometry and timer margins is worth keeping in
    the suite, or whether the case is better served by a `dragGesture.ts`

@@ -136,6 +136,8 @@ flat hierarchy list, the sidebar consolidation — all Story 6.
    Stub-ghost from the Card layer down" is read as the in-list ghost.
    *(Alternative: the overlay renders as a Stub row while at Card or
    Descendants layer. Not recommended — one shape, one reservation.)*
+   **Reopened by the Product Owner 2026-09-23:** the alternative is now the
+   rule, built in [Story 6](story-6-descendants-placement.md) Phase C.
 7. **Ghost identification in `KanbanCard` moves to origin + placement**
    (4.1's F3 landmine): a row is the attach ghost iff the active item's
    placement puts it under this parent *and* its `origin` didn't.
