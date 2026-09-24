@@ -328,10 +328,14 @@ day, reopening Story 5 decision 6 so the carried copy is a Stub from the
 Card layer down, and the gate moved to after it; the machine phase is now
 D and the wiki report E. E2E deferred to Story 10, and the wiki reported
 on, not edited — both decided 2026-09-23. The B+C hands-on (2026-09-23/24)
-fixed the Card zoom-in after Board layer and changed how a column drop
-picks its anchor: the drop lands where the ghost is, and the lean picks
-which neighbor names it — ratified and merged 2026-09-24. Next, before the
-sign-off: the zoom-in candidate becomes the card the blue line names)
+fixed the Card zoom-in after Board layer, changed how a column drop picks
+its anchor (drop lands where the ghost is, the lean picks which neighbor
+names it), and changed the zoom-in candidate itself to the card the blue
+line names, held through a dwell + cue — all three ratified and merged
+2026-09-24. Phase D (the machine: §7.1's gap + depth, tracked as a live
+session projection and resolved at release; §7.2's depth-cap exception)
+built 2026-09-24. Next: the PO's sign-off on B+C+D together, then Phase
+E's wiki-status report)
 
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
@@ -364,6 +368,36 @@ reached by anchoring against a sibling.
 
 **Depends on:** Stories 1-3; Story 4.1 first; Story 5 for a Stub-started
 drag.
+
+---
+
+### Story 6.1 — Drag-layer refactor against stock dnd-kit (vestige removal after Story 6)
+**Plan / record:** [`story-6-1-library-first-refactor.md`](story-6-1-library-first-refactor.md)
+
+**Goal:** no rule changes. Story 6 was built hands-on, and several rules
+changed along the way. One of them reversed the drag layer's direction: the
+column slot, and then the zoom-in candidate, went back to dnd-kit (Option A
+and hands-on finding 3, 2026-09-24). This story removes what the earlier
+direction left behind, so the code reads as if the current rules had been
+the spec from the start, before Stories 7–10 build on it.
+
+It has the same purpose as Story 4.1, but a different method (agreed with
+the PO 2026-09-24). There's no clean-slate draft: the rule changes are
+dated, and a design from scratch would ignore the library the rules now
+lean on. Instead it uses three lenses:
+- a trace of each dated rule change;
+- a "who decides" table with stock dnd-kit as the baseline;
+- a dry run of Stories 7–10.
+
+The file splits that the Story 4 and 5 audits carried and never did are
+built here as phases.
+
+**Depends on:** Story 6. **Unblocks:** Stories 7–10.
+**Then:** one four-pass audit over Stories 6 and 6.1 together, as the Story
+4 audit covered 4 and 4.1. The epic-wide pass comes at epic close.
+
+**Status: method agreed 2026-09-24; not started. Begins after Story 6's
+sign-off.**
 
 ---
 
@@ -402,6 +436,20 @@ cues are tuned against real, working gestures.
   constraint carries over: nothing in the animation may change what
   dnd-kit measures (the carried copy's box, the cards' layout), or the
   named card changes mid-cue and cancels it.
+- **Current awkward behavior the morph should ideally solve** (found
+  building Story 6's finding 3, 2026-09-24): popping into a Card inserts
+  the carried item's attach-preview ghost row *inside* it and removes the
+  carried item's own row from the column list — if that row sat above the
+  target Card, the target shifts up by a full row height at the exact
+  instant the drag locks in, out from under a cursor that hasn't moved.
+  With the default `popDelayMs` a real hand likely self-corrects before the
+  pop-out clock notices, but it's a visible jump today, and it's what made
+  two `tests/ui/drag-card-zoom-in.spec.ts` cases too flaky to automate
+  meanwhile (skipped, with the full writeup, until this lands or the look
+  is otherwise confirmed fine by hand). The morph should settle it by
+  construction if the target's own position never has to move out from
+  under the cursor mid-cue — worth checking against this specific case
+  once the morph's built, not just against the happy path.
 
 ---
 

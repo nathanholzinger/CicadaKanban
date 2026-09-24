@@ -197,6 +197,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     overlayForm,
     overlayWidthPx,
     handleDragStart,
+    handleDragMove,
     handleDragEnd,
     handleDragCancel,
   } = useBoardDnd({
@@ -311,6 +312,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         collisionDetection={collisionDetection}
         modifiers={dragModifiers}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
@@ -319,13 +321,33 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
             <DragTuningContext value={dragTuning}>
               <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
                 {/* data-drag-state / data-drag-context / data-drag-band: the pop
-                    machine's state, for tests (wiki §1–§3, §5) */}
+                    machine's state, for tests (wiki §1–§3, §5).
+                    data-drag-zoom-candidate / data-drag-zoom-phase: Story 6,
+                    hands-on finding 3 — the card the blue line currently
+                    names as a zoom-in candidate, and which stage of the
+                    hold it's in, for Story 10's E2E. `hover.phase` is only
+                    ever set by this candidate kind (a Board-layer band
+                    hover never sets it), so gating on it also tells the two
+                    `hover` shapes apart.
+                    data-drag-projection: Story 6 Phase D, decision 7 — the
+                    Descendants layer's own live tab state
+                    ("<gap>:<depth>:<valid>"), for Story 10's E2E. Undefined
+                    whenever the drag isn't currently locked at a
+                    `descendants:` context (decision 4's "cleared on
+                    pop-out" — `session.projection` is null then too). */}
                 <div
                   ref={boardRootRef}
                   style={overlayVars}
                   data-drag-state={session?.pop ? popState(session.pop) : undefined}
                   data-drag-context={session?.pop?.contextKey ?? undefined}
                   data-drag-band={session?.pop?.hover?.band ?? undefined}
+                  data-drag-zoom-candidate={session?.pop?.hover?.phase ? session.pop.hover.regionKey : undefined}
+                  data-drag-zoom-phase={session?.pop?.hover?.phase}
+                  data-drag-projection={
+                    session?.projection
+                      ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
+                      : undefined
+                  }
                   className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
                 >
                   {board.columns.map(column => (

@@ -273,6 +273,23 @@ export function hierarchyRows(cardId: string, childrenOf: (parentId: string) => 
   return rows.map(r => ({ item: byId.get(r.id)!, depth: r.depth }));
 }
 
+// Epic 3.5 Story 6 Phase D — the `childrenOf` adapter `lib/hierarchyPlacement.ts`
+// itself needs (ids only), from the board's own accessor
+// (`getAttachedChildren`, the same one `hierarchyRows` above wraps for
+// rendering) — the one place `useBoardDnd.ts`'s live projection
+// (`flattenHierarchy`/`resolvePlacement`, §7) turns board data into the
+// library's table-generic shape. The board never collapses a node in this
+// section (Phase B's flat render shows every depth unconditionally), so
+// this same function serves both `flattenHierarchy`'s own rows and
+// `resolvePlacement`'s "Top's first child" lookup — unlike the project
+// sidebar's `eligibleRows`/`fullChildrenOf` split, whose collapse toggle
+// needs the real tree separately.
+export function descendantsChildrenOf(
+  getAttachedChildren: (parentId: string) => readonly Item[],
+): (parentId: string | null) => readonly string[] {
+  return parentId => (parentId === null ? [] : getAttachedChildren(parentId).map(item => item.id));
+}
+
 // The server deletes an item's whole subtree, not just the one id (audit
 // Finding #15) — dropping only `id` from client state left its descendants
 // stale, rendering as live top-level cards until a reload.

@@ -5,6 +5,7 @@ import {
   getMergedColumnItemsFrom,
   getAttachedChildrenFrom,
   hierarchyRows,
+  descendantsChildrenOf,
   computeChildCounts,
   removeItemAndDescendants,
   applyItemWriteResponse,
@@ -180,6 +181,30 @@ describe('hierarchyRows', () => {
     const stopAtLate = (parentId: string) => (parentId === 'late' ? [] : getAttachedChildrenFrom(items, parentId));
     const rows = hierarchyRows('root', stopAtLate);
     expect(rows.map(r => r.item.id)).toEqual(['early', 'late']);
+  });
+});
+
+// Story 6 Phase D: the library's own `childrenOf` adapter (ids only), fed
+// straight into `flattenHierarchy`/`resolvePlacement` by `useBoardDnd.ts`'s
+// live projection — the same `getAttachedChildren`-shaped accessor
+// `hierarchyRows` above wraps for rendering, just without resolving back
+// to Items.
+describe('descendantsChildrenOf', () => {
+  const items = [
+    item('root'),
+    item('late', { parentId: 'root', position: 2 }),
+    item('early', { parentId: 'root', position: 1 }),
+    item('grandchild', { parentId: 'late' }),
+  ];
+  const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(items, parentId);
+
+  it("maps a real parentId to its children's ids, in the same order getAttachedChildren gives them", () => {
+    expect(descendantsChildrenOf(getAttachedChildren)('root')).toEqual(['early', 'late']);
+    expect(descendantsChildrenOf(getAttachedChildren)('late')).toEqual(['grandchild']);
+  });
+
+  it("a null parentId (flattenHierarchy's own root-of-nothing convention) is always empty, never a lookup", () => {
+    expect(descendantsChildrenOf(getAttachedChildren)(null)).toEqual([]);
   });
 });
 

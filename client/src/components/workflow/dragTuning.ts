@@ -27,6 +27,27 @@ export interface DragTuning {
    * term: zooming in is never a fast yank, only zooming out is (Q4).
    */
   cardPopInDelayMs: number;
+  /**
+   * Story 6, hands-on finding 3 (2026-09-24): how long the drag must hold
+   * the *same* named relation (`boardDndUtils.ts::dropAnchorFor` — which
+   * neighbor of the ghost the side highlight names, and on which side)
+   * before the zoom-in cue even starts showing. A separate, earlier
+   * threshold than `cardPopInDelayMs`: that one is now the *cue's* own
+   * length (dwell, then cue, then the pop) rather than the whole hold, so
+   * an ordinary pause while repositioning — the common case — never shows
+   * anything before it's over.
+   */
+  cardZoomDwellMs: number;
+  /**
+   * Story 6 Phase D: how long the cursor must rest on a locked Card's own
+   * descendants section before the drag zooms into it — its own,
+   * duration-only clock (wiki §3.1's fourth clock), no dwell/cue split the
+   * way the Column → Card edge got in finding 3: the target here is
+   * always the same one section, never a choice between named neighbors,
+   * so there's nothing for a dwell to guard against. Decision 6's
+   * suggested default: the same value as `cardPopInDelayMs`.
+   */
+  descendantsPopInDelayMs: number;
   /** How long the card takes to travel from its clamped position to the cursor on a pop. 0 teleports. */
   popSnapMs: number;
   /** §4 overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
@@ -47,6 +68,8 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   popDistancePx: 0,
   popInDelayMs: 500,
   cardPopInDelayMs: 800,
+  cardZoomDwellMs: 500,
+  descendantsPopInDelayMs: 800,
   popSnapMs: 150,
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,

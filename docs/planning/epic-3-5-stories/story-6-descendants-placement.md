@@ -6,10 +6,19 @@ is *how to build them* and becomes a historical record once done.
 **Status: planned 2026-09-17; decisions ratified 2026-09-23; Phase A done
 2026-09-23 (library + sidebar), Phase B done 2026-09-23 (flat `KanbanCard`
 section), Phase C done 2026-09-23 (the carried copy becomes a Stub). The
-PO's hands-on of B+C is under way: its findings (below the gate) fixed the
-Card zoom-in after Board layer and replaced how a column drop picks its
-anchor (the ghost's slot decides, ratified 2026-09-24); the zoom-in
-candidate change is next, then the sign-off. Phases D–E not started.**
+PO's hands-on of B+C found three things (below the gate), all now built:
+the Card zoom-in after Board layer, a column drop's anchor picked from the
+ghost's slot (2026-09-24), and the zoom-in candidate itself — now the card
+the blue line names, held through a dwell + cue (2026-09-24). One watch
+item came out of the third: popping into a Card can visibly shift it,
+carried to Story 8 (roadmap). Phase D — the machine and the within-action —
+built 2026-09-24: `descendants:` regions now resolve for every Valid Card
+with a section, `childRegionAt` zooms a locked Card into its own; the
+Descendants layer's own live projection (gap + depth, §7.1) is tracked on
+the session and resolved to a real placement at release
+(`resolvePlacement`), with §7.2's depth-cap exception wired through to a
+provisional invalid cue. The PO's sign-off on B+C+D together, and Phase E's
+wiki-status report, are next.**
 Written
 against the code as it
 will stand after [Story 4.1](story-4-1-efficiency-refactor.md) and
@@ -604,9 +613,9 @@ caught none of them. They're handled here, before Phase D.
      points), §1.1's table, §10's opening, §7.1 (the amended gap); item-
      positioning §2 (the set-down example), §4 and §7.1 (wording). The test
      plans' wording for these cases is the Test Planner's.
-3. **Next, before the sign-off (agreed 2026-09-23; reset rule and cue
-   decided by the PO 2026-09-24; not built): the zoom-in candidate is the
-   card the blue line names.**
+3. **Built 2026-09-24 (agreed 2026-09-23; reset rule and cue decided by
+   the PO 2026-09-24): the zoom-in candidate is the card the blue line
+   names.**
    - The Card region hit test stops choosing the zoom-in target. Card
      regions keep their other jobs: bounding the carried copy once inside a
      Card, and the pop-out test.
@@ -680,6 +689,60 @@ caught none of them. They're handled here, before Phase D.
      ready to mark built, and §3's current "resting on one of that column's
      own Cards" wording as superseded.
 
+   **Built as written**, with the candidate resolved by looking the named
+   card up among the pop machine's own regions rather than the pointer
+   position: `popSession.ts::namedCardCandidate` reads
+   `boardDndUtils.ts::dropAnchorFor`'s answer (computed in `useBoardDnd.ts`
+   from dnd-kit's own `onDragMove`, since the hook isn't rendered under
+   `DndContext` and can't read `useDndContext()` the way the blue line
+   does), finds the region `card:<anchorId>` resolves to, and tracks `since`
+   + `side` + `phase` (`'dwell'` then `'cue'`, recomputed every sample so a
+   motionless hold still crosses the boundary) on the existing `PopHover`
+   shape. `dragTuning.ts` gained `cardZoomDwellMs` (default 500 ms) beside
+   `cardPopInDelayMs`, which is now the cue's own length — the total hold is
+   their sum, one lookup (`popInDelayFor('card', …)`) read by both the
+   pop-check and `popDueAt`. `popDueAt` schedules the dwell's own end as an
+   intermediate milestone (not just the final pop), so the cue can mount
+   with the timer alone, no pointermove required. An invalid target (§3.2)
+   never becomes a candidate for free — `resolveDragStructure` never
+   registers a `card:` region for one, so the lookup above simply finds
+   nothing, the same guarantee `childRegionAt`'s callers already had. The
+   cue itself (`KanbanCard.tsx::ZoomCue`, gated on a new
+   `useZoomCandidatePhase` hook) is a dashed outline plus a fill bar
+   animated via a static `@keyframes` (`index.css`) with the cue length as
+   its inline `animation-duration`, so the dev panel's tuning takes effect
+   live. `data-drag-zoom-candidate`/`data-drag-zoom-phase` on the board root
+   expose the candidate + phase for Story 10, in `data-drag-context`'s
+   style.
+
+   **Verified:** the unit table (`popSession.test.ts`, a new describe —
+   dwell → cue over a stationary hold; reset on a different named card;
+   reset on the same card's other side; an anchor naming a card with no
+   registered region never becomes a candidate; `popDueAt`'s two
+   milestones) plus the fix to the one existing test that simulated a
+   pop-in by hit test, now by named anchor instead (`overlayFormFor`'s
+   pop-in/pop-out case); full gate green (tsc/eslint/prettier clean, vitest
+   287/287); live, instrumented verification (temporary logging + a
+   `MutationObserver` trace against the existing `drag-card-zoom-in.spec.ts`
+   gestures, removed before commit) confirmed the candidate resolves to the
+   card the blue line names — not wherever the cursor happens to sit — and
+   holds correctly through both the dwell→cue transition and the final pop.
+
+   *One thing found live, carried to Story 8 (roadmap), not fixed here —
+   agreed with the PO 2026-09-24:* popping into a Card inserts the carried
+   item's attach-preview ghost row *inside* it and drops the carried item's
+   own row out of the column's list; if that row sat above the target Card,
+   the target shifts up by a full row height at the exact instant the drag
+   locks in. A `MutationObserver` trace confirmed the DOM genuinely reads
+   `card:<id>` for one `popDelayMs` window and then bounces back to the
+   column — not a logic bug, a real, visible jump whose blast radius this
+   story's own longer hold (dwell + cue, versus the old hit test's
+   instant commit-on-release) is what first made it matter. Two
+   `tests/ui/drag-card-zoom-in.spec.ts` cases are skipped rather than
+   chasing this with test-side timing (their own comment has the full
+   writeup) — Story 8's morph is expected to settle it by construction, so
+   it's a watch item, not a blocker for this story's own sign-off.
+
 ### Phase D — The machine and the within-action
 
 - `dragRegions.ts`: `descendants:` regions register for **every Valid Card
@@ -711,6 +774,108 @@ caught none of them. They're handled here, before Phase D.
   position math layer" guardrail if the library belongs in it): the flat
   section, the shared library, the fourth clock, the carried copy's form
   (Phase C) — with the code, not in Phase E.
+
+**Built 2026-09-24.** Built as written above, with the following found
+while building — each reasoned through and verified rather than assumed,
+in the same spirit as Phase C's own deviations:
+
+- **`boardDndUtils.ts::dropAnchorFor` had to widen to Stub rows, dropping
+  its `ghostHeightPx` parameter.** The plan's "the ghost's slot, as
+  `dropAnchorFor` finds them at Column layer" only works if the same
+  function's ghost-slot math (not its which-half fallback — the function's
+  own pre-Phase-D test named this exact gap: "over a Stub row (a
+  Descendants section, until Story 6 Phase D)... over itself, on the
+  which-half side") applies inside a Descendants section too. Widened the
+  row-kind check from `isCardRow` alone to `isCardRow || isStubRow`, and
+  the ghost's own height is no longer passed in — it's derived from which
+  kind of row `over` actually is (`SHORT_CARD_HEIGHT_PX` for a Card,
+  `STUB_ROW_HEIGHT_PX` for a Stub — moved to `cardMetrics.ts` alongside the
+  Card constant it mirrors), since that's a fact about what's sliding
+  through the list, not something every caller should have to know to
+  supply. Every existing call site (the live blue line, `handleDragEnd`'s
+  own anchor, Finding 3's named-card candidate) simplified by one argument.
+- **A foreign item's first entry into a Descendants section needed its own
+  branch in `popSession.ts::placementFor`**, not covered by "unchanged from
+  whatever placed the row" as literally written — that sentence describes
+  a Stub reordering within its *own* section, where `parentId` is
+  `parentOpinionOf(origin)`. A Free Card (or a Stub detaching from a
+  *different* Card) reaching a Descendants section for the first time has
+  no such opinion to read, and needs `region.cardId` instead — mirroring
+  the Card branch's own `attachToCardId === containingCardId` split one
+  layer up. `region.cardId === containingCardId` is the same test,
+  generalized.
+- **The same foreign item needed to stop being the static Card-layer ghost
+  once locked at Descendants.** Story 4's `AttachGhostRow` preview (no
+  `useSortable` registration) is right for the Card layer's constant
+  auto-drop, but the Descendants layer's own gap+depth rule needs
+  `dropAnchorFor`'s shuffle math to see the item as a real member of the
+  flat list — otherwise its own slot never participates in the sortable
+  order at all. `KanbanCard.tsx`'s `attachGhostId` now only applies while
+  `pop.contextKey === cardRegionKey(item.id)` (Card layer only); once
+  `contextKey` moves to this Card's own `descendants:` key, the row falls
+  through to the ordinary `AttachedChildRow` branch — the same one a
+  same-section Stub reorder already used, so no new rendering path was
+  needed, only a narrower gate on the old one.
+- **The rendered depth of the active row previews the projection
+  (decision 4's "indented to the projected depth"), for both cases above** —
+  `KanbanCard.tsx` overrides the one row whose id matches the active
+  drag's own, reading `session.projection.depth` instead of the row's
+  stored depth. The provisional invalid cue (decision 7) rides the same
+  row: a dashed red outline plus `data-placement-valid="false"` exactly
+  when that row's own tab state is over cap.
+- **§7.2's depth-cap check reads the resolved parent's absolute depth
+  live**, via `lib/hierarchy.ts::getDepth` over the loaded items — the
+  same predicate (`isWithinDepthCap`) classification already uses, fed the
+  *projection's* resolved parent rather than a fixed one, recomputed every
+  sample.
+- **The dragged subtree's exclusion (§7.2) reuses classification's own
+  cycle-forming set** (`excludeIdsFor`, `useBoardDnd.ts`) rather than a
+  second tree walk: `classifyDragTargets` already marks exactly `{the
+  active item} ∪ {its descendants}` as `'cycle-forming'`, which is §7.2's
+  own definition of what a Card's Descendants section must never offer as
+  a Top/Bottom candidate.
+
+**Verified by:** the unit tables on the shared placement library
+(`hierarchyPlacement.test.ts`, unchanged — Phase A's own coverage already
+carries §7.1/§7.2's rules) plus new cases in `popSession.test.ts`
+(`placementFor`'s foreign-entry branch, both same-section and
+cross-Card; a locked Card's own zoom-in into Descendants, reachable and
+duration-only, with no further child from there) and `itemListOps.test.ts`
+(`descendantsChildrenOf`); `dragRegions.test.ts` updated for the
+`childRegionAt`/`resolveDragStructure` widening; `boardDndUtils.test.ts`
+updated for `dropAnchorFor`'s generalization. Full gate green
+(tsc/eslint/prettier clean, vitest 300/300 — up from 287; full Playwright
+suite unchanged at 140 passed/8 skipped/148, confirming zero regressions
+from the core drag-machine changes touched here). Live, hands-on against a
+scratch DB (a tree matching §7.1's own worked example — `S1 › S1a › S1a1 ›
+S1a1a › S1a1a1`, then `S2` — plus a second Card `Q` with one child, and a
+Free Card `X` to drag), covering:
+
+- reachability, Column → Card(P) → Descendants(P), by holding;
+- a same-section placement (`X` dropped on `S1a1`'s own gap resolves to
+  "`S1a's` first child, before `S1a1`" — `2:2:true`, exactly the tab state
+  §7.1's rule predicts);
+- tab-depth choice at a gap with several states (`Top=S1a1a1`,
+  `Bottom=S2`, range `[0,5]`): no horizontal move lands at the shallowest
+  state (`5:0:true` → attaches to `P` itself, after `S1`); tabbing right
+  ~4 steps lands at `Top`'s own depth (`5:4:true` → attaches to `S1a1a`,
+  after `S1a1a1`) — confirming the seed (the entered gap's Top depth) and
+  the 12px-per-step horizontal read both measure correctly;
+- the depth-cap exception (§7.2, §3.2): tabbing to the deepest state in
+  that same gap (`Top`'s own first-child depth, `5:5:false`) shows
+  `data-placement-valid="false"` live, and a release there writes
+  **nothing** — `X` comes back exactly as it went in, confirming the one
+  ruled exception to "never enterable" holds at release, not just in the
+  cue;
+- a foreign item's first entry into a *different* Card's section (`X`
+  zoomed into `Q`, released on `Q`'s only child `T1`'s own gap) resolves
+  `0:0:true` → attached to `Q` itself, before `T1` — the "no Top" boundary,
+  and confirmation that a cross-Card reparent takes `region.cardId`, never
+  a stale relationship.
+
+Zero console errors across the run. The scratch environment (its own
+backend on port 3098, its own DB file, its own frontend on port 5199) was
+torn down afterward; nothing here touched the dev database.
 
 ### Phase E — Wiki report (the developer doesn't edit the wiki)
 

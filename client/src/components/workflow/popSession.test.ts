@@ -40,6 +40,8 @@ const gap = { x: 110, y: 200 };
 const tuning: DragTuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 300, popInDelayMs: 200 };
 const OUT = tuning.popDelayMs;
 const IN = tuning.popInDelayMs;
+const DWELL = tuning.cardZoomDwellMs;
+const CUE = tuning.cardPopInDelayMs;
 
 const locked = (key: string): PopSession => ({ contextKey: key, hover: null, outsideSince: null });
 const poppedOut = (): PopSession => ({ contextKey: null, hover: null, outsideSince: null });
@@ -197,6 +199,113 @@ describe('locked', () => {
     const oneCardB = region(B.key, rect(120, 0, 100, 400), { cardCount: 1 });
     const after = advancePopSession(entered, { x: 170, y: 70 }, [A, oneCardB, C], tuning, metrics, 10);
     expect(after.hover?.band).toBe('middle'); // the one-card edge is (96 + 8) / 2 = 52; 70 >= 52
+  });
+});
+
+// Story 6, hands-on finding 3 (2026-09-24): a locked column/sub-row's own
+// zoom-in candidate comes from the *named relation* (`dropAnchorFor`'s own
+// answer, handed in as `namedAnchor`), not a hit test — `inA` below is
+// deliberately nowhere near either card's own rect throughout, to prove
+// the physical pointer position no longer decides which Card is targeted.
+describe('locked column/sub-row: the named-card zoom-in candidate (Story 6, finding 3)', () => {
+  const P = cardRegion('p', rect(10, 10, 80, 40), A.key);
+  const Q = cardRegion('q', rect(10, 60, 80, 40), A.key);
+  const withCards = [A, B, C, P, Q];
+  const namedP = (side: 'before' | 'after' = 'after') => ({ anchorId: 'p', side });
+
+  it('holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
+    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    expect(s.hover).toEqual({ regionKey: P.key, since: 0, poppable: true, side: 'after', phase: 'dwell' });
+    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL, namedP());
+    expect(s.hover).toEqual({ regionKey: P.key, since: 0, poppable: true, side: 'after', phase: 'cue' });
+    expect(s.contextKey).toBe(A.key);
+  });
+
+  it('holding it through the cue pops into the named Card, wherever the bare cursor happens to be', () => {
+    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    const popped = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + CUE, namedP());
+    expect(popped.contextKey).toBe(P.key);
+  });
+
+  it('a different named card resets the hold from the dwell, even mid-cue', () => {
+    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 10, namedP());
+    expect(s.hover?.phase).toBe('cue');
+    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 20, { anchorId: 'q', side: 'after' });
+    expect(s.hover).toEqual({ regionKey: Q.key, since: DWELL + 20, poppable: true, side: 'after', phase: 'dwell' });
+  });
+
+  it("the same card on its other side resets the hold too — wiki §6's own reset rule", () => {
+    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP('after'));
+    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 10, namedP('after'));
+    expect(s.hover?.phase).toBe('cue');
+    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 20, namedP('before'));
+    expect(s.hover).toEqual({ regionKey: P.key, since: DWELL + 20, poppable: true, side: 'before', phase: 'dwell' });
+  });
+
+  it('nothing named (alone in the list, or hovering nothing): no candidate at all', () => {
+    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, null);
+    expect(s.hover).toBeNull();
+  });
+
+  it('§3.2: a card with no registered region — an invalid target, cycle-forming or depth-capped, that resolveDragStructure never resolves a region for — is never a candidate even though it can still be named for a reorder', () => {
+    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, {
+      anchorId: 'invalid',
+      side: 'after',
+    });
+    expect(s.hover).toBeNull();
+    expect(s.contextKey).toBe(A.key);
+  });
+
+  it('popDueAt schedules the dwell-end milestone first (so the cue can mount with the cursor perfectly still), then the final pop once the cue has started', () => {
+    const dwelling = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    expect(popDueAt(dwelling, withCards, tuning)).toBe(DWELL);
+    const cueing = advancePopSession(dwelling, inA, withCards, tuning, metrics, DWELL, namedP());
+    expect(popDueAt(cueing, withCards, tuning)).toBe(DWELL + CUE);
+  });
+});
+
+// Story 6 Phase D: a locked Card's own zoom-in into its Descendants
+// section — a plain, duration-only hold (no dwell/cue split; wiki §3.1's
+// fourth clock), found by `childRegionAt` now that a Descendants region is
+// no longer excluded from it (dragRegions.ts). Uses `descendantsPopInDelayMs`,
+// not `cardPopInDelayMs`/`cardZoomDwellMs`.
+describe('locked Card: zoom-in into its own Descendants section (Story 6 Phase D)', () => {
+  const P = cardRegion('p', rect(10, 10, 80, 200), A.key);
+  const descendantsP = descendantsRegion('p', rect(10, 60, 80, 140));
+  const withDescendants = [A, P, descendantsP];
+  const inDescendants = { x: 50, y: 100 };
+  const DESC = tuning.descendantsPopInDelayMs;
+
+  it('resting inside the section short of the threshold stays locked at Card', () => {
+    const first = advancePopSession(startPopSession(P.key), inDescendants, withDescendants, tuning, metrics, 0);
+    expect(first.hover).toEqual({ regionKey: descendantsP.key, since: 0, poppable: true });
+    const s = advancePopSession(first, inDescendants, withDescendants, tuning, metrics, DESC - 1);
+    expect(s.contextKey).toBe(P.key);
+  });
+
+  it('resting past the threshold zooms into the Descendants section, wherever the bare cursor happens to be', () => {
+    const first = advancePopSession(startPopSession(P.key), inDescendants, withDescendants, tuning, metrics, 0);
+    const s = advancePopSession(first, inDescendants, withDescendants, tuning, metrics, DESC);
+    expect(s.contextKey).toBe(descendantsP.key);
+  });
+
+  it('a childless Card (no Descendants region at all) never pops any further — the auto-drop is its only outcome', () => {
+    const s = advancePopSession(startPopSession(P.key), inDescendants, [A, P], tuning, metrics, DESC);
+    expect(s.contextKey).toBe(P.key);
+  });
+
+  it('once locked at Descendants, there is no further child to zoom into (the layer table\'s own "(none)")', () => {
+    const s = advancePopSession(
+      startPopSession(descendantsP.key),
+      inDescendants,
+      withDescendants,
+      tuning,
+      metrics,
+      DESC,
+    );
+    expect(s.contextKey).toBe(descendantsP.key);
+    expect(s.hover).toBeNull();
   });
 });
 
@@ -539,6 +648,53 @@ describe('placementFor', () => {
       });
     });
   });
+
+  // Story 6 Phase D — a Descendants section reached by a *foreign* item
+  // (never possible before this phase, since only the origin's own section
+  // ever resolved a `descendants:` region at all): `region.cardId` differs
+  // from `containingCardId` (null for a Free Card; a different Card for a
+  // Stub detaching and reparenting), so `parentId` is the section's own
+  // Card, not `parentOpinionOf(origin)` — mirroring the Card branch's own
+  // `attachToCardId === containingCardId` distinction one layer up.
+  describe('a Descendants section reached by a foreign item (Story 6 Phase D)', () => {
+    const Q = 'card-q';
+    const descendantsQ = descendantsRegion(Q, rect(0, 0, 100, 200));
+
+    it("a Free Card, mid-drag with no `over` yet: previews attaching as last child of the section's own Card", () => {
+      expect(
+        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, freeOrigin('w1'), null),
+      ).toEqual({ parentId: Q, slot: 'last' });
+    });
+
+    it("a Free Card, released on a specific row: the anchor, parented to the section's own Card", () => {
+      expect(
+        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, freeOrigin('w1'), null, null, {
+          anchorId: 's1',
+          side: 'before',
+        }),
+      ).toEqual({ parentId: Q, slot: { anchorId: 's1', side: 'before' } });
+    });
+
+    it('a Stub detaching from a *different* Card (containingCardId !== region.cardId): the same foreign-entry rule, not parentOpinionOf(origin)', () => {
+      const P = 'card-p';
+      const origin = stubOrigin(P);
+      expect(placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, P)).toEqual({
+        parentId: Q,
+        slot: 'last',
+      });
+      expect(
+        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, P, null, {
+          anchorId: 's1',
+          side: 'after',
+        }),
+      ).toEqual({ parentId: Q, slot: { anchorId: 's1', side: 'after' } });
+    });
+
+    it('the same Card as containingCardId is still the same-section rule (regression guard against always taking the foreign path)', () => {
+      const origin = stubOrigin(Q);
+      expect(placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, Q)).toBe(origin);
+    });
+  });
 });
 
 // Story 6 Phase C: which form the carried copy draws as — a pure read of
@@ -572,22 +728,25 @@ describe('overlayFormFor', () => {
 
   it('across a real pop-in (Column → Card) and pop-out (Card → Column), the form switches both ways', () => {
     const allRegions = [...regions, cardP, descendantsP];
-    const inCard = { x: 50, y: 100 }; // inside cardP's rect
+    const inCard = { x: 50, y: 100 }; // still inside column A throughout — irrelevant to *which* Card is targeted (finding 3)
     const outsideCard = { x: 500, y: 500 }; // outside every region
+    const namedAtP = { anchorId: P, side: 'after' as const };
+    const total = tuning.cardZoomDwellMs + tuning.cardPopInDelayMs;
 
     let s = startPopSession(A.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
 
-    // Zoom in to the Card (a Card candidate is unconditionally poppable —
-    // Story 4.1 Phase 0 — so resting past cardPopInDelayMs is enough).
-    s = advancePopSession(s, inCard, allRegions, tuning, metrics, 0);
-    s = advancePopSession(s, inCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs);
+    // Zoom in to the Card (Story 6, finding 3: the *named* relation
+    // dropAnchorFor answers with, held through the dwell and the cue —
+    // not a hit test on where the cursor physically rests).
+    s = advancePopSession(s, inCard, allRegions, tuning, metrics, 0, namedAtP);
+    s = advancePopSession(s, inCard, allRegions, tuning, metrics, total, namedAtP);
     expect(s.contextKey).toBe(cardP.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('stub');
 
     // Pop back out to the column: the shortCard again, symmetrically.
-    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs);
-    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, tuning.cardPopInDelayMs + OUT);
+    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, total);
+    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, total + OUT);
     expect(s.contextKey).toBe(A.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
   });

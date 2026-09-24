@@ -28,11 +28,13 @@
 // scrolls back in.
 //
 // Story 5: a Card's Descendants section is also a region — `descendants:
-// <cardId>`, one layer inside its Card (§1.1) — but resolves only for the
-// drag's own `originCardId` (decisions 2/3): it's where a Stub's drag
-// starts, not yet a zoom-in target any drag can reach (Story 6 opens that).
-// `parentRegionKey` points at the Card's own region, so popping out lands
-// there (§8) the same way any nested region's does.
+// <cardId>`, one layer inside its Card (§1.1). Story 5 resolved only the
+// drag's own `originCardId` (decisions 2/3), since it's where a Stub's drag
+// starts and wasn't yet a zoom-in target any drag could reach. Story 6
+// Phase D opens that: every Valid Card's own section resolves too, gated
+// the same way a `card:` region already is. `parentRegionKey` points at
+// the Card's own region, so popping out lands there (§8) the same way any
+// nested region's does.
 
 export interface Rect {
   top: number;
@@ -129,14 +131,16 @@ export interface CardRegion extends RegionCommon {
 
 // Story 5 — a Card's Descendants region: the section of its attached
 // children (every depth beneath it, decision 1 — one per Card, never one
-// per Stub), where a Stub's drag starts and where a manual placement will
-// eventually live (Story 6, wiki §7). Registered only for the origin's own
-// section this story (decision 3) — `resolveDragStructure`'s `originCardId`
-// gate below — so it's never a stray zoom-in candidate for an unrelated
-// drag. Carries no workphase/card-count fields, same reasoning as
-// `CardRegion`: this story's within-action (sibling reorder) never consults
-// them, reading `parentId` off the session's own `origin` instead (a Stub's
-// siblings, not this region's own identity).
+// per Stub), where a Stub's drag starts and where manual placement lives
+// (Story 6, wiki §7). Story 5 registered only the origin's own section
+// (decision 3); Story 6 Phase D widens that to every Valid Card with a
+// section at all (`resolveDragStructure`'s own `isValidCard` gate, the same
+// one a `card:` region already uses) — an invalid target (cycle-forming,
+// depth-capped) still resolves nothing, so it's never a zoom-in candidate
+// either, no separate check needed (§3.2). Carries no workphase/card-count
+// fields, same reasoning as `CardRegion`: the within-action (manual gap +
+// depth placement) reads `parentId` off the resolved placement instead of
+// this region's own identity.
 export interface DescendantsRegion extends RegionCommon {
   kind: 'descendants';
   /** The Card whose descendants section this is — same id as the key's own suffix. */
@@ -265,9 +269,9 @@ export type DragStructure = readonly (CardListStructure | CardStructure | Descen
 // Card, if this drag started as one — undefined for a Free Card drag. Its
 // `card:` region resolves regardless of `isValidCard` (a Stub's drag must
 // be able to pop back out to its own Card even when that Card wouldn't be
-// a valid *target* for it), and its `descendants:` element is the *only*
-// one that resolves at all this story — every other Card's section is not
-// yet a zoom-in candidate (Story 6 opens that).
+// a valid *target* for it), and (Story 6 Phase D) its `descendants:`
+// element resolves the same way — plus, now, any *other* Card's own
+// section too, gated on `isValidCard` like a `card:` region already is.
 export function resolveDragStructure(
   root: ParentNode,
   columns: readonly DropColumn[],
@@ -285,7 +289,7 @@ export function resolveDragStructure(
     const record = key.startsWith('card:')
       ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, parentRegionKey, originCardId)
       : key.startsWith('descendants:')
-        ? descendantsStructureFromKey(key, el, scrollAncestor, parentRegionKey, originCardId)
+        ? descendantsStructureFromKey(key, el, scrollAncestor, isValidCard, parentRegionKey, originCardId)
         : cardListStructureFromKey(key, el, scrollAncestor, byId);
     if (record) structure.push(record);
   }
@@ -413,24 +417,27 @@ function cardStructureFromKey(
   return { dom: { element: el, scrollAncestor }, key, kind: 'card', attachToCardId: cardId, parentRegionKey };
 }
 
-// Story 5, decisions 2/3 — a Descendants region's structural identity:
-// resolves *only* for the drag's own `originCardId`, regardless of
-// `isValidCard` (same reasoning as the Card bypass above — this section is
-// where the drag started, not a target being offered). Every other Card's
-// section resolves to nothing at all this story, which is what keeps
-// `childRegionAt` from a Card context returning one as a zoom-in candidate
-// (Story 6 opens that; see `childRegionAt`'s own guard below for the other
-// half of decision 3).
+// Story 5, decisions 2/3 — a Descendants region's structural identity: the
+// drag's own `originCardId` always resolves, regardless of `isValidCard`
+// (same reasoning as the Card bypass above — this section is where the
+// drag started, not a target being offered). Story 6 Phase D widens every
+// *other* Card's section to resolve too, on the same `isValidCard` gate a
+// `card:` region already uses — an invalid target (cycle-forming,
+// depth-capped) still resolves nothing, which is what keeps it from ever
+// becoming a zoom-in candidate (§3.2), the same guarantee `childRegionAt`'s
+// callers already had for a `card:` region.
 function descendantsStructureFromKey(
   key: string,
   el: HTMLElement,
   scrollAncestor: HTMLElement | null,
+  isValidCard: ((cardId: string) => boolean) | undefined,
   parentRegionKey: string | null,
   originCardId: string | undefined,
 ): DescendantsStructure | null {
   if (!parentRegionKey) return null;
   const cardId = key.slice('descendants:'.length);
-  if (cardId !== originCardId) return null;
+  const isOrigin = cardId === originCardId;
+  if (!isOrigin && !(isValidCard && isValidCard(cardId))) return null;
   return { dom: { element: el, scrollAncestor }, key, kind: 'descendants', cardId, parentRegionKey };
 }
 
@@ -547,23 +554,20 @@ export function containsPoint(rect: Rect, point: Point): boolean {
 // rule is one context change at a time, and no column/sub-row ever carries
 // a non-null `parentRegionKey` for this to match against.
 //
-// A `descendants` region never comes back either, even from its own Card's
-// context (Story 5 decision 3, 2026-09-21): `resolveDragStructure` only
-// ever resolves one — the origin's own section — so this exclusion only
-// bites for that single case, where the Card is also the section's own
-// root and its section would otherwise satisfy `parentRegionKey ===
-// parentKey` while genuinely hovered. Zooming a locked Card *into* its
-// descendants section is Story 6's; until then a Card's within-action is
-// only ever the auto-drop (§6), never a further zoom-in.
+// A `descendants` region is a candidate here too, as of Story 6 Phase D
+// (Story 5 decision 3 had excluded it: `resolveDragStructure` only ever
+// resolved the origin's own section, so a locked Card would otherwise have
+// found its own section satisfying `parentRegionKey === parentKey` while
+// genuinely hovered, with no within-action yet built for it). Now that a
+// Card's descendants section is a real zoom-in target (§7), this is exactly
+// how a locked Card's own within-action finds it — no separate lookup
+// needed, the same function every other layer's zoom-in already used.
 export function childRegionAt(
   regions: readonly DragRegion[],
   point: Point,
   parentKey: string | null,
 ): DragRegion | null {
-  return (
-    regions.find(r => r.kind !== 'descendants' && r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ??
-    null
-  );
+  return regions.find(r => r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ?? null;
 }
 
 function verticalDistance(y: number, rect: Rect): number {

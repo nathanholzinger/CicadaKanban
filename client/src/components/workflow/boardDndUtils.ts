@@ -8,6 +8,7 @@ import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
 import { hasParentOpinion, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import { containsPoint, type Rect } from './dragRegions';
+import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 
 // Decision 4 (2026-09-21) — every item row's dnd-kit registration, typed so
 // the invariant it introduced ("every item row registers `type: 'item'`,
@@ -196,38 +197,45 @@ export interface DropAnchor {
   side: 'before' | 'after';
 }
 
-// Option A + lean (2026-09-24): the card a drop anchors to, and
-// which side of it — the one answer both the live blue line
-// (`KanbanCard.tsx`) and the release (`useBoardDnd.ts::handleDragEnd`) read,
-// so they can't disagree.
+// Option A + lean (2026-09-24), generalized to Stub rows in Story 6 Phase D:
+// the card or Stub a drop anchors to, and which side of it — the one answer
+// the live blue line (`KanbanCard.tsx`), the release
+// (`useBoardDnd.ts::handleDragEnd`), and the Descendants layer's own
+// gap-tracking (`useBoardDnd.ts`'s projection) all read, so they can't
+// disagree.
 //
-// Over a Card row (a column/sub-row's own list), dnd-kit's sortable shuffle
-// decides the ghost's slot, stock dnd-kit semantics (the drop lands where
-// the gap is), and the dragged copy only picks which neighbor names it:
-// above the ghost's middle, "after" the card above it; below, "before" the
-// card below it. Both name the same slot, so the ghost, the line and the
-// save always agree; the lean only chooses the neighbor (the future zoom-in
-// candidate). At the top or bottom of the list there's one neighbor; alone
-// in the list, none (null).
+// Over an item row — a Card in a column/sub-row's own list, or a Stub in a
+// Card's flat Descendants section (§7.1's "the gap is wherever the rows
+// slide aside to make room, never a which-half-of-a-row reading") —
+// dnd-kit's sortable shuffle decides the ghost's slot, stock dnd-kit
+// semantics (the drop lands where the gap is), and the dragged copy only
+// picks which neighbor names it: above the ghost's middle, "after" the row
+// above it; below, "before" the row below it. Both name the same slot, so
+// the ghost, the line and the save always agree; the lean only chooses the
+// neighbor. At the top or bottom of the list there's one neighbor; alone in
+// the list, none (null).
+//
+// The ghost's own height is the hovered row's own kind — `SHORT_CARD_HEIGHT_PX`
+// over a Card row, `STUB_ROW_HEIGHT_PX` over a Stub row — never a value the
+// caller has to know to pass in: which list this is (a column's Cards or a
+// Descendants section's Stubs) already decides which ghost is sliding
+// through it, and `over`'s own row kind already carries that fact.
 //
 // The ghost's middle follows dnd-kit's vertical strategy: over its own
 // slot when `over` is itself, top-aligned to `over` when it moved up,
-// bottom-aligned when it moved down, at `ghostHeightPx` (the shortCard).
-// The order is read from `over`'s own sortable data — the same `items`
-// dnd-kit draws the shuffle from — never the active row's (decision 4: it
-// can lag a mid-drag remount).
+// bottom-aligned when it moved down. The order is read from `over`'s own
+// sortable data — the same `items` dnd-kit draws the shuffle from — never
+// the active row's (decision 4: it can lag a mid-drag remount).
 //
-// Anywhere else (a Descendants section's Stub rows, until Story 6 Phase D's
-// gap + depth rule; a card not in `over`'s list) it's still `over` itself,
-// on `resolveDropSide`'s which-half-of-`over` side.
-export function dropAnchorFor(
-  active: Pick<Active, 'id' | 'rect'>,
-  over: Over,
-  ghostHeightPx: number,
-): DropAnchor | null {
+// Anywhere else (a card not in `over`'s list, or `over` has no sortable
+// data at all) it's still `over` itself, on `resolveDropSide`'s
+// which-half-of-`over` side.
+export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): DropAnchor | null {
   const translated = active.rect.current.translated;
   const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
-  if (!isCardRow(over.data.current) || !hasSortableData(over)) return onOver();
+  const overData = over.data.current;
+  if (!(isCardRow(overData) || isStubRow(overData)) || !hasSortableData(over)) return onOver();
+  const ghostHeightPx = isStubRow(overData) ? STUB_ROW_HEIGHT_PX : SHORT_CARD_HEIGHT_PX;
   const { items, index: overIndex } = over.data.current.sortable;
   const activeIndex = items.indexOf(active.id);
   if (activeIndex === -1) return onOver();

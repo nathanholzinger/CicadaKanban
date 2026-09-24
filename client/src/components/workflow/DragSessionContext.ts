@@ -4,9 +4,26 @@
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
-import { cardRegionKey } from './dragRegions';
+import { cardRegionKey, descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
+
+// Epic 3.5 Story 6 Phase D (decision 4) — the Descendants layer's own §7.1
+// tab state: which gap the ghost sits in, which depth is currently chosen
+// within that gap's range, and whether the resulting parent is within the
+// depth cap (§7.2). Render state on the *session*, not a placement field —
+// mid-drag the placement stays whatever put the row in the list
+// (`popSession.ts::placementFor`'s own Descendants branch, Story 5's
+// table); this is the visual the indentation and the invalid cue read, and
+// what release resolves the real placement from
+// (`lib/hierarchyPlacement.ts::resolvePlacement`). `data-drag-projection`
+// on the board root exposes it as `"<gap>:<depth>:<valid>"` for Story 10's
+// E2E, the same style as `data-drag-context`.
+export interface DescendantsProjection {
+  gap: number;
+  depth: number;
+  valid: boolean;
+}
 
 // Everything about the drag in progress, in one value (audit
 // epic-3-5-story-2 #14): the carried item, what every target is to it
@@ -53,6 +70,14 @@ export interface DragSession {
    * child), regardless of how many Stub generations sit in between.
    */
   containingCardId: string | null;
+  /**
+   * Story 6 Phase D: the Descendants layer's own live tab state — null
+   * whenever the drag isn't currently locked at a `descendants:` context
+   * (cleared on pop-out, per decision 4). Seeded at the zoom-in transition
+   * (or at pickup, for a Stub's own drag) and refreshed on every sample
+   * while locked there (`useBoardDnd.ts`).
+   */
+  projection: DescendantsProjection | null;
 }
 
 export const DragSessionContext = createContext<DragSession | null>(null);
@@ -94,9 +119,25 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
 // containing Card (its within-action there is "set back down," not
 // attach) — same forced-open need, since the Stub's own section has to
 // stay visible for the drag's own row to keep rendering somewhere sane.
+// Story 6 Phase D: also true once the drag has zoomed *into* this Card's
+// own Descendants section — the section obviously has to stay rendered
+// through its own within-action, not just through the Card layer above it.
 export function useIsAttachTarget(itemId: string): boolean {
   const pop = useContext(DragSessionContext)?.pop;
-  return pop?.contextKey === cardRegionKey(itemId);
+  return pop?.contextKey === cardRegionKey(itemId) || pop?.contextKey === descendantsRegionKey(itemId);
+}
+
+// Story 6, hands-on finding 3 (2026-09-24): whether this Card is the
+// locked column/sub-row's current zoom-in candidate — the one the blue
+// line names — and which stage of the hold it's in. `'dwell'` shows
+// nothing new (the blue line already draws the relation); `'cue'` is when
+// the dashed outline + fill bar appear. `hover.phase` is only ever set by
+// this candidate kind (`popSession.ts::namedCardCandidate`), never by a
+// Board-layer band hover, so no extra check is needed to tell them apart.
+export function useZoomCandidatePhase(itemId: string): 'dwell' | 'cue' | null {
+  const hover = useContext(DragSessionContext)?.pop.hover;
+  if (!hover?.phase || hover.regionKey !== cardRegionKey(itemId)) return null;
+  return hover.phase;
 }
 
 // The ordinal placements (itemListOps.ts) — the live ghost and every

@@ -41,7 +41,9 @@ const POP_FIELDS: Field[] = [
   { kind: 'number', key: 'popDelayMs', label: 'Pop-out delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popDistancePx', label: 'Pop-out distance (px, 0 = off)', step: 10, min: 0 },
   { kind: 'number', key: 'popInDelayMs', label: 'Pop-in delay (ms)', step: 50, min: 0 },
-  { kind: 'number', key: 'cardPopInDelayMs', label: 'Card zoom-in delay (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'cardZoomDwellMs', label: 'Card zoom-in dwell (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'cardPopInDelayMs', label: 'Card zoom-in cue (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'descendantsPopInDelayMs', label: 'Descendants zoom-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
 const OVERLAY_FIELDS: Field[] = [
@@ -114,7 +116,12 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
         <h4 className={SECTION_LABEL}>Live</h4>
         <p>state: {pop ? popState(pop) : session ? '(stub drag)' : '—'}</p>
         <p>context: {pop?.contextKey ?? '—'}</p>
-        <p>hover: {pop?.hover ? `${pop.hover.regionKey}${pop.hover.band ? ` · ${pop.hover.band}` : ''}` : '—'}</p>
+        <p>
+          hover:{' '}
+          {pop?.hover
+            ? `${pop.hover.regionKey}${pop.hover.band ? ` · ${pop.hover.band}` : ''}${pop.hover.phase ? ` · ${pop.hover.side} · ${pop.hover.phase}` : ''}`
+            : '—'}
+        </p>
         <p data-inversion-count={inversions.length}>
           inversions: {inversions.length}
           {lastInversion && (

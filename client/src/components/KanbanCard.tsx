@@ -23,15 +23,17 @@ import { dropAnchorFor, itemRowData, type ItemRowRole } from './workflow/boardDn
 import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
-import { SHORT_CARD_HEIGHT_PX } from './cardMetrics';
+import { DESCENDANTS_INDENT_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 import type { OverlayForm } from './workflow/popSession';
 import {
   useDragSession,
   useDropTargetState,
   useIsAttachTarget,
   useIsPending,
+  useZoomCandidatePhase,
   type DropTargetView,
 } from './workflow/DragSessionContext';
+import { useDragTuning } from './workflow/DragTuningContext';
 
 // Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
 // full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
@@ -51,7 +53,7 @@ function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRo
   if (!active || !over || active.id === itemId) return null;
   if (active.data.current?.type !== 'item') return null;
   if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
-  const anchor = dropAnchorFor(active, over, SHORT_CARD_HEIGHT_PX);
+  const anchor = dropAnchorFor(active, over);
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
@@ -80,6 +82,11 @@ function dropTargetClass(view: DropTargetView | null): string {
 const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
 const DROP_INDICATOR_AFTER =
   'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+
+// Story 6 Phase D, decision 7 — the provisional invalid-tab-state cue
+// (§7.2): a dashed red outline on the active row's own preview while its
+// current depth choice would exceed the cap. Story 8 restyles.
+const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500/70';
 
 // The drag-time chrome a Card and a Stub share (audit epic-3-5-story-2
 // #13): the live side indicator, the drag-target attributes/overlay, the
@@ -116,6 +123,44 @@ function DropSideIndicator({ side }: { side: 'before' | 'after' | null }) {
   if (side === 'after') return <div className={DROP_INDICATOR_AFTER} />;
   return null;
 }
+
+// Story 6, hands-on finding 3 (2026-09-24): the zoom-in cue — shown only
+// once the dwell has elapsed (`useZoomCandidatePhase` returns `'cue'`; the
+// dwell itself shows nothing new beyond the blue line, wiki §6). Absolutely
+// positioned and `pointer-events-none`, the same way the locked-layer
+// outline and the blue line already are, so it can never feed back into
+// layout or collision. The fill bar's `animation-duration` is the cue's
+// own clock (`cardPopInDelayMs`, read live so the dev panel's tuning takes
+// effect without a rebuild) — a static `@keyframes` (index.css) driven by
+// inline style, since a Tailwind utility class can't parameterize a
+// runtime duration. No explicit `key`/reset is needed: this element only
+// exists while `phase === 'cue'`, so a reset (any change to the named
+// relation restarts at `'dwell'`, per `popSession.ts::namedCardCandidate`)
+// unmounts it and the *next* cue mounts a fresh instance, which is what
+// restarts the CSS animation from empty.
+const ZOOM_CUE_OUTLINE = 'pointer-events-none absolute inset-0 rounded-lg border-2 border-dashed border-blue-500/70';
+const ZOOM_CUE_TRACK =
+  'pointer-events-none absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-lg bg-blue-500/20';
+
+function ZoomCue({ cueMs }: { cueMs: number }) {
+  return (
+    <>
+      <div className={ZOOM_CUE_OUTLINE} />
+      <div className={ZOOM_CUE_TRACK}>
+        <div
+          className="h-full bg-blue-500"
+          style={{
+            animationName: 'cue-fill',
+            animationDuration: `${cueMs}ms`,
+            animationTimingFunction: 'linear',
+            animationFillMode: 'forwards',
+          }}
+        />
+      </div>
+    </>
+  );
+}
+
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
 
@@ -126,15 +171,12 @@ const CARD_BASE =
 const OVERLAY_STUB_CLASS =
   'flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-1.5 py-1 shadow-2xl shadow-black/50';
 
-// Epic 3.5 Story 6 Phase B (decision 1) — the flat descendants section
-// replaced the nested `border-l pl-3` divs (one indent per DOM level) with
-// one number applied per row: depth 0 (a Card's direct Stub) still lands
-// 12px in, matching the single `pl-3` its own wrapper used to carry alone;
-// each level deeper adds another 12px, matching what an extra nested
-// wrapper used to add. The border-l guide lines are the one visible loss
-// (decision 1's own note) — a flat row has nothing to hang one from without
-// drawing its own, left for the Phase B hands-on to ask for if it's missed.
-const DESCENDANTS_INDENT_PX = 12;
+// DESCENDANTS_INDENT_PX now lives in cardMetrics.ts (Story 6 Phase D needs
+// it too, for the projection's own horizontal-delta-to-depth math). The
+// border-l guide lines are the one visible loss from the old recursive
+// nesting (decision 1's own note) — a flat row has nothing to hang one
+// from without drawing its own, left for the Phase B hands-on to ask for
+// if it's missed.
 
 // A card's type pill only renders when `item.type` resolves to a known
 // ItemType — an orphaned/unknown type reference hides the pill rather than
@@ -229,6 +271,10 @@ export default function KanbanCard({
   // requiring a click the cursor can't make mid-drag.
   const isAttachTarget = useIsAttachTarget(item.id);
   const expanded = manualExpanded || isAttachTarget;
+  // Story 6, hands-on finding 3: this Card is the locked column/sub-row's
+  // current zoom-in candidate, and which stage of the hold it's in.
+  const zoomCandidatePhase = useZoomCandidatePhase(item.id);
+  const dragTuning = useDragTuning();
   // Story 4 decision 7, extended by Story 5 (2026-09-21): this row is the
   // active drag's own ghost — previewed attaching here, not a real Stub
   // yet — iff its `origin`'s parent *wasn't* already this Card. Excludes a
@@ -239,10 +285,30 @@ export default function KanbanCard({
   // by. Renders as a plain preview instead of a second, differently-typed
   // sortable registration under its id once it *is* the ghost.
   const cardDragSession = useDragSession();
+  // Story 6 Phase D: the static ghost above is Card layer's own auto-drop
+  // preview only. Once the drag has zoomed *past* Card layer into this
+  // Card's own Descendants section, the previewed row becomes a real
+  // sortable member of the flat list instead (rendered below via the
+  // ordinary `AttachedChildRow` branch) — dnd-kit's own shuffle needs it
+  // registered there for `dropAnchorFor` to read its slot, the same way
+  // any Stub already reordering within its own section is. `pop` is never
+  // optional once a session exists (`DragSessionContext.ts`), so checking
+  // `cardDragSession` itself is enough to also read `.pop`/`.origin` safely.
   const attachGhostId =
-    cardDragSession?.pop && parentOpinionOf(cardDragSession.origin) !== item.id
+    cardDragSession &&
+    cardDragSession.pop.contextKey === cardRegionKey(item.id) &&
+    parentOpinionOf(cardDragSession.origin) !== item.id
       ? cardDragSession.activeItem.id
       : undefined;
+  // Story 6 Phase D (decision 4): while locked at *this* Card's own
+  // Descendants layer, the previewed row's indentation follows the
+  // session's live projection ("the ghost row... indented to the
+  // projected depth") instead of its own stored depth — the one row whose
+  // eventual parent is still being chosen by the drag.
+  const descendantsProjection =
+    cardDragSession && cardDragSession.pop.contextKey === descendantsRegionKey(item.id)
+      ? cardDragSession.projection
+      : null;
   // The DragOverlay copy and this same item's own in-list row while it's
   // the one being dragged (`isDragging`, from useSortable — true wherever
   // the item's pending Placement currently sorts it, its original slot
@@ -313,6 +379,7 @@ export default function KanbanCard({
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
+      {zoomCandidatePhase === 'cue' && <ZoomCue cueMs={dragTuning.cardPopInDelayMs} />}
 
       {overlayIsStub ? (
         <StubBody item={item} itemTypes={itemTypes} />
@@ -369,7 +436,12 @@ export default function KanbanCard({
           {rows.length > 0 && getAttachedChildren && (
             <div className="mt-2 space-y-1" {...{ [DRAG_REGION_ATTR]: descendantsRegionKey(item.id) }}>
               <SortableContext items={rows.map(r => r.item.id)} strategy={verticalListSortingStrategy}>
-                {rows.map(({ item: child, depth }) =>
+                {rows.map(({ item: child, depth }) => {
+                  const isActiveRow = child.id === cardDragSession?.activeItem.id;
+                  // Story 6 Phase D (decision 4): the active drag's own row
+                  // previews the projected depth, not its stored one.
+                  const rowDepth = descendantsProjection && isActiveRow ? descendantsProjection.depth : depth;
+                  const invalid = Boolean(descendantsProjection && isActiveRow && !descendantsProjection.valid);
                   // Story 4 decision 7: this row is the active drag's own
                   // ghost (previewed attaching here, not a real Stub yet) —
                   // rendered as a plain, non-sortable preview rather than a
@@ -379,18 +451,19 @@ export default function KanbanCard({
                   // closure on every pass, so a real Card being *also*
                   // registered here as a Stub row could make the pop
                   // machine see the wrong role mid-drag).
-                  child.id === attachGhostId ? (
-                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={depth} />
+                  return child.id === attachGhostId ? (
+                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={rowDepth} />
                   ) : (
                     <AttachedChildRow
                       key={child.id}
                       item={child}
                       itemTypes={itemTypes}
-                      depth={depth}
+                      depth={rowDepth}
                       onCardClick={onCardClick}
+                      invalid={invalid}
                     />
-                  ),
-                )}
+                  );
+                })}
               </SortableContext>
             </div>
           )}
@@ -447,13 +520,22 @@ interface AttachedChildRowProps {
   itemTypes: ItemType[];
   depth: number;
   onCardClick?: (id: string) => void;
+  /**
+   * Story 6 Phase D, decision 7 (provisional look, Story 8 restyles): true
+   * only for the active drag's own row, and only while its current tab
+   * state (§7.2) would exceed the depth cap — a dashed red outline plus
+   * `data-placement-valid="false"`, the one exception to §3.2 ("a state
+   * that would exceed the cap is still reachable... a release in it
+   * commits nothing").
+   */
+  invalid?: boolean;
 }
 
 // Story 6 Phase B: one row in the flat section, indented by `depth` — no
 // longer recursive (its own grandchildren used to nest here via a second
 // `SortableContext`; the parent's single flat list now carries every depth,
 // `KanbanCard.tsx`'s own `rows` already having walked the whole subtree).
-function AttachedChildRow({ item, itemTypes, depth, onCardClick }: AttachedChildRowProps) {
+function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid = false }: AttachedChildRowProps) {
   // Epic 3.2 Part 3, extended by Story 5: draggable among siblings under
   // the same parent (the within-action until Story 6 Phase D's real
   // gap+depth rule) — one shared `SortableContext` spanning the whole
@@ -486,7 +568,8 @@ function AttachedChildRow({ item, itemTypes, depth, onCardClick }: AttachedChild
       ref={setNodeRef}
       style={style}
       {...dataAttrs}
-      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${dropTargetClassName}`}
+      data-placement-valid={invalid ? 'false' : undefined}
+      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${invalid ? INVALID_PLACEMENT_CLASS : ''} ${dropTargetClassName}`}
     >
       {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
