@@ -313,7 +313,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const todoCol = columnForWorkphase(board, todo.id);
     const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
     const x = await seedItem(request, { title: 'X', parentId: p.id });
-    const other = await seedItem(request, { title: 'Other', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'Other', projectId: project.id, workphaseId: todo.id });
 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
@@ -334,15 +334,18 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // Stub, or the collision closure still scoping to a Descendants
     // sibling list), this would either fail to move at all or collide with
     // the wrong candidates.
+    // Onto P, the column's first card: dnd-kit's shuffle gives the ghost
+    // P's slot, so X lands first wherever the detach left it (Option A,
+    // 2026-09-24 — the ghost's slot decides, not a side of the card hovered).
     await pickUp(page, article(page, 'X'));
     await awaitDragContext(page, columnRegionKey(todoCol.id));
-    await hoverTo(page, await atFraction(article(page, 'Other'), 0.15)); // top quarter -> anchor before
+    await hoverTo(page, await atFraction(article(page, 'P'), 0.5));
     await release(page);
 
     const reordered = await fetchItem(request, x.id);
-    const otherAfter = await fetchItem(request, other.id);
+    const pAfter = await fetchItem(request, p.id);
     expect(reordered.parentId).toBe(p.id); // preserved from the earlier detach
     expect(reordered.isAttached).toBe(0);
-    expect(reordered.position).toBeLessThan(otherAfter.position);
+    expect(reordered.position).toBeLessThan(pAfter.position);
   });
 });

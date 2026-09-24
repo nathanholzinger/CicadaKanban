@@ -136,10 +136,10 @@ export function resolveBoardCollisions(
   const droppableContainers = args.droppableContainers.filter(container => {
     const data = container.data.current;
     if (isStubRow(data)) return false; // never a valid target for a Card-layer or Board drop
-    // Option A (on trial, 2026-09-24): in a locked column/sub-row the dragged
-    // card's own row *is* a candidate, as in stock dnd-kit sortable: over its
-    // own slot, `over` is itself, nothing shuffles, and a release there is
-    // "stay" (`handleDragEnd`). Excluded, the ghost always jumped to a
+    // Option A (2026-09-24): in a locked column/sub-row the dragged card's
+    // own row *is* a candidate, as in stock dnd-kit sortable: over its own
+    // slot, `over` is itself and nothing shuffles (the lean still names a
+    // neighbor, `dropAnchorFor`). Excluded, the ghost always jumped to a
     // neighbor's slot, even at pickup. A column drag still never collides
     // with itself.
     if (!session) return container.id !== args.active.id; // column drag, or no machine in play
@@ -196,7 +196,7 @@ export interface DropAnchor {
   side: 'before' | 'after';
 }
 
-// Option A + lean (on trial, 2026-09-24): the card a drop anchors to, and
+// Option A + lean (2026-09-24): the card a drop anchors to, and
 // which side of it — the one answer both the live blue line
 // (`KanbanCard.tsx`) and the release (`useBoardDnd.ts::handleDragEnd`) read,
 // so they can't disagree.

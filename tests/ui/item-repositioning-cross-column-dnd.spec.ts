@@ -13,6 +13,7 @@ import {
   gapBetween,
   seedDragTuning,
   awaitPoppedOut,
+  setBackDownLeaning,
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
 import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
@@ -28,19 +29,18 @@ const PROJECT_NAME = 'Repositioning DnD Project';
 // to match current behavior — see that file's header comment for the full
 // rationale on why several of these are expected to fail).
 //
-// The side of an anchored drop is geometry, not the pointer: `resolveDropSide`
-// (boardDndUtils.ts) compares the *dragged card's* center against the
-// hovered card's center, so where the pointer sits on the target card only
-// matters through how far the carried card has travelled. "Drop C just
-// after A/B" is attempted at the literal pixel a user would aim for (the
-// card's bottom quarter), and whether that lands C's center below A/B's
-// depends on the two cards' heights and dnd-kit's live swap-preview
-// shifting the target — so 3.a and 4.a are expected to fail on ORDER as
-// well as on the position-scoping gap this suite's API sibling documents.
-// Since Epic 3.5 Story 3, 4.a is additionally governed by the pop machine:
-// C dropped in Column Two from Column One is a cross-region release, which
-// resolves by Column Two's band (top / middle / bottom of the column), not
-// by the hovered card at all, unless C has first popped into Column Two.
+// Where an in-column drop lands (Option A + lean, 2026-09-24): dnd-kit's
+// sortable shuffle decides the ghost's slot and the drop lands there; the
+// dragged copy, above or below the ghost's middle, only picks which
+// neighbor names that slot — "after" the card above or "before" the card
+// below (`dropAnchorFor`, boardDndUtils.ts). In Column One (A, C, E) the
+// two are one slot, but not in the workflow-wide order: B and D, in Column
+// Two, sit between them. That's what 3.a/3.b exercise — C set back down in
+// its own slot, leaning up ("after A", 1.5) or down ("before E", 4.5).
+// Since Epic 3.5 Story 3, 4.a is governed by the pop machine: C dropped in
+// Column Two from Column One is a cross-region release, which resolves by
+// Column Two's band (top / middle / bottom of the column), not by the
+// hovered card at all, unless C has first popped into Column Two.
 //
 // 1.b and 2.b surfaced a third, independent finding while writing this
 // suite: dnd-kit's closestCorners collision detection is a nearest-corner
@@ -210,34 +210,24 @@ test.describe('2: extreme boundary moves into column 2', () => {
 });
 
 test.describe('3: interior moves that stay in column 1 ("drop it back where it was")', () => {
-  test('3.a — drag C to the bottom quarter of card A', async ({ page, request }) => {
+  test('3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardA = page.getByRole('article', { name: 'Item A', exact: true });
-    await dragTo(page, cardC, () => bottomQuarter(cardA));
+    await setBackDownLeaning(page, cardC, 'up');
 
-    // In-context, `side` comes from `resolveDropSide`: 'after' only if C's
-    // *center* ends up below A's center. Aiming the pointer at A's bottom
-    // quarter doesn't guarantee that — the carried card's center is offset
-    // from the pointer, and dnd-kit's swap preview shifts A as C approaches
-    // — so this can resolve 'before' and fail to land C between A and B
-    // the way the API suite's 3.a does. Expected to fail on position
-    // and/or order (exact resolved value not asserted as meaningful here —
-    // see dragTo's header comment on drag-targeting precision limits).
+    // The same slot in Column One, but "after A" puts C between A and B in
+    // the workflow-wide order, matching the API suite's 3.a.
     await expect.poll(async () => (await getC(request)).position).toBe(1.5);
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colOnePhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colOnePhase.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('3.b — drag C to the top quarter of card E', async ({ page, request }) => {
+  test('3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
-    const cardE = page.getByRole('article', { name: 'Item E', exact: true });
-    await dragTo(page, cardC, () => topQuarter(cardE));
+    await setBackDownLeaning(page, cardC, 'down');
 
-    // "Before E" maps cleanly onto the existing before-only primitive, so
-    // this one isn't blocked by the drag-lockout bug the way 3.a is — the
-    // API suite's identical case (3.b) passes at 4.5. Included for
-    // completeness/symmetry with 3.a rather than a specific prediction.
+    // "Before E" puts C between D and E in the workflow-wide order,
+    // matching the API suite's 3.b.
     await expect.poll(async () => (await getC(request)).position).toBe(4.5);
     await expect.poll(async () => (await getC(request)).workphaseId).toBe(scenario.colOnePhase.id);
     expect(await columnOrder(request, scenario.workflow.id, scenario.colOnePhase.id)).toBe('ACE');

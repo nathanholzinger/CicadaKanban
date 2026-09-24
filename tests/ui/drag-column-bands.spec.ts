@@ -8,7 +8,6 @@ import {
   release,
   center,
   topQuarter,
-  bottomQuarter,
   boxOf,
   gapBetween,
   awaitDragState,
@@ -437,8 +436,11 @@ test.describe('Card → column drop bands', () => {
     await awaitDragContext(page, contextKey, popThrough(tuning));
     await awaitDragState(page, 'locked');
 
-    // In-context now: the hovered card decides, not the band (DRAG-1.5).
-    await hoverTo(page, await bottomQuarter(article(page, 'Item A')));
+    // In-context now: the ghost's slot decides, not the band (DRAG-1.5). X's
+    // ghost entered at its kept position, between B and C; moved up onto B,
+    // dnd-kit's shuffle puts it in B's slot, between A and B, and the drop
+    // lands there whichever neighbor the lean names (Option A, 2026-09-24).
+    await hoverTo(page, await center(article(page, 'Item B')));
     await release(page);
 
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('AXBC');

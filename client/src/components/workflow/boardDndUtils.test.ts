@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { CollisionDetection } from '@dnd-kit/core';
+import type { CollisionDetection, Over } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
 import { freeOrigin, rect, column, stubOrigin } from '../../test/dragFixtures';
 import { buildColumnForWorkphaseMap, subrowContainerId } from './dragRegions';
 import {
+  dropAnchorFor,
   resolveBoardCollisions,
   resolveDropSide,
   isIdentity,
@@ -164,6 +165,20 @@ describe('resolveBoardCollisions', () => {
       expect(ids).not.toContain('child-1');
     });
 
+    // Option A (2026-09-24): as in stock dnd-kit sortable, the dragged card's
+    // own row is an in-context candidate, so resting over its own slot is
+    // `over` itself and nothing shuffles. Only a column drag (no session)
+    // never collides with itself (the first case above).
+    it("in-context: the dragged card's own row is a candidate too", () => {
+      const session: CollisionSession = { hoverContainerId: null, context, descendantsSectionRect: null };
+      const own: Container = { id: 'card-x', data: itemRowData('card'), rect: rect(5, 70, 90, 50) };
+      const ids = resolveBoardCollisions(
+        collisionArgs('card-x', itemRowData('card'), [...containers, own]),
+        session,
+      ).map(c => c.id);
+      expect(ids).toContain('card-x');
+    });
+
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
       const session: CollisionSession = { hoverContainerId: 'col-b', context, descendantsSectionRect: null };
       expect(
@@ -216,6 +231,99 @@ describe('resolveDropSide', () => {
     // Active center at 152 vs. target center 150 — 2px over, past the
     // 1px tie band.
     expect(resolveDropSide(card(102), card(100))).toBe('after');
+  });
+});
+
+// Option A + lean (2026-09-24): in a column, dnd-kit's shuffle decides the
+// ghost's slot and the dragged copy's center, above or below the ghost's
+// middle, picks which neighbor names it. Cards 100 tall, `over` rects
+// unshifted (as dnd-kit measures them), a 60px ghost.
+describe('dropAnchorFor', () => {
+  const GHOST = 60;
+
+  function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' = 'card'): Over {
+    return {
+      id,
+      rect: { top, height: 100, bottom: top + 100, left: 0, right: 100, width: 100 },
+      disabled: false,
+      data: { current: { ...itemRowData(role), sortable: { containerId: 'col', index: items.indexOf(id), items } } },
+    } as unknown as Over;
+  }
+
+  function dragged(id: string, centerY: number) {
+    const translated = {
+      top: centerY - GHOST / 2,
+      height: GHOST,
+      bottom: centerY + GHOST / 2,
+      left: 0,
+      right: 100,
+      width: 100,
+    };
+    return { id, rect: { current: { initial: null, translated } } };
+  }
+
+  it('moving up onto B: the ghost takes B\'s slot top-aligned; up names "after A", down "before B" — one slot', () => {
+    const items = ['a', 'b', 'c', 'x'];
+    // Ghost top-aligned to B (top 110): middle at 140.
+    expect(dropAnchorFor(dragged('x', 125), overRow('b', 110, items), GHOST)).toEqual({ anchorId: 'a', side: 'after' });
+    expect(dropAnchorFor(dragged('x', 155), overRow('b', 110, items), GHOST)).toEqual({
+      anchorId: 'b',
+      side: 'before',
+    });
+  });
+
+  it('moving down onto C: the ghost takes C\'s slot bottom-aligned; up names "after C", down "before D"', () => {
+    const items = ['x', 'b', 'c', 'd'];
+    // Ghost bottom-aligned to C (220..320): middle at 290.
+    expect(dropAnchorFor(dragged('x', 275), overRow('c', 220, items), GHOST)).toEqual({ anchorId: 'c', side: 'after' });
+    expect(dropAnchorFor(dragged('x', 305), overRow('c', 220, items), GHOST)).toEqual({
+      anchorId: 'd',
+      side: 'before',
+    });
+  });
+
+  it('over its own slot, nothing shuffles, and the lean still names a neighbor (items from other workphases can sit between them, so the two differ)', () => {
+    const items = ['a', 'x', 'c'];
+    // Its own rect, 110..210: middle at 160.
+    expect(dropAnchorFor(dragged('x', 140), overRow('x', 110, items), GHOST)).toEqual({ anchorId: 'a', side: 'after' });
+    expect(dropAnchorFor(dragged('x', 180), overRow('x', 110, items), GHOST)).toEqual({
+      anchorId: 'c',
+      side: 'before',
+    });
+  });
+
+  it('at either end there is one neighbor, whichever way it leans', () => {
+    expect(dropAnchorFor(dragged('x', 10), overRow('a', 0, ['a', 'x']), GHOST)).toEqual({
+      anchorId: 'a',
+      side: 'before',
+    });
+    expect(dropAnchorFor(dragged('x', 90), overRow('a', 0, ['a', 'x']), GHOST)).toEqual({
+      anchorId: 'a',
+      side: 'before',
+    });
+    expect(dropAnchorFor(dragged('x', 120), overRow('b', 110, ['x', 'b']), GHOST)).toEqual({
+      anchorId: 'b',
+      side: 'after',
+    });
+    expect(dropAnchorFor(dragged('x', 200), overRow('b', 110, ['x', 'b']), GHOST)).toEqual({
+      anchorId: 'b',
+      side: 'after',
+    });
+  });
+
+  it('alone in its list: nothing to anchor to', () => {
+    expect(dropAnchorFor(dragged('x', 50), overRow('x', 0, ['x']), GHOST)).toBeNull();
+  });
+
+  it("over a Stub row (a Descendants section, until Story 6 Phase D), or a card not in over's list: over itself, on the which-half side", () => {
+    expect(dropAnchorFor(dragged('x', 125), overRow('b', 110, ['a', 'b', 'x'], 'stub'), GHOST)).toEqual({
+      anchorId: 'b',
+      side: 'before',
+    });
+    expect(dropAnchorFor(dragged('x', 190), overRow('b', 110, ['a', 'b']), GHOST)).toEqual({
+      anchorId: 'b',
+      side: 'after',
+    });
   });
 });
 

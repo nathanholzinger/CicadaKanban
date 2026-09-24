@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures';
 import type { Page } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-import { dragTo, center, topQuarter, bottomQuarter, pastColumnEnd } from '../helpers/dragGesture';
+import { dragTo, center, topQuarter, pastColumnEnd, setBackDownLeaning } from '../helpers/dragGesture';
 import { article } from '../helpers/boardLocators';
 import { fetchItem } from '../helpers/seed';
 import {
@@ -134,26 +134,23 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
 });
 
 test.describe('3: interior moves that stay in project 1a (collapse with group 2)', () => {
-  test('3.a — drag C to the bottom quarter of card A', async ({ page, request, projectSidebar }) => {
+  test('3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
-    await dragTo(page, article(page, 'Item C'), () => bottomQuarter(article(page, 'Item A')));
+    await setBackDownLeaning(page, article(page, 'Item C'), 'up');
 
-    // Same drag-lockout bug as Suite 2's 3.a: hovering A always resolves
-    // `side: 'before'`, so this can't reach "after A"'s 1.5. Expected to
-    // fail on position and/or order — see item-repositioning-cross-column-
-    // dnd.spec.ts's 3.a for the full explanation and the same caveat about
-    // exact resolved-value precision in this suite's drag mechanics.
+    // Project 1a's board shows A, C, E; B and D (project 1b) sit between
+    // them in the workflow-wide order. "After A" lands C between A and B —
+    // see item-repositioning-cross-column-dnd.spec.ts's header.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(1.5);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('3.b — drag C to the top quarter of card E', async ({ page, request, projectSidebar }) => {
+  test('3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
-    await dragTo(page, article(page, 'Item C'), () => topQuarter(article(page, 'Item E')));
+    await setBackDownLeaning(page, article(page, 'Item C'), 'down');
 
-    // "Before E" is the supported primitive, so this one isn't blocked by
-    // the lockout bug — the API suite's identical case (3.b) passes at 4.5.
+    // "Before E" lands C between D and E, the API suite's 3.b.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(4.5);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ABDCE');

@@ -327,7 +327,11 @@ list) built 2026-09-23; the Phase B hands-on added a new Phase C the same
 day, reopening Story 5 decision 6 so the carried copy is a Stub from the
 Card layer down, and the gate moved to after it; the machine phase is now
 D and the wiki report E. E2E deferred to Story 10, and the wiki reported
-on, not edited — both decided 2026-09-23)
+on, not edited — both decided 2026-09-23. The B+C hands-on (2026-09-23/24)
+fixed the Card zoom-in after Board layer and changed how a column drop
+picks its anchor: the drop lands where the ghost is, and the lean picks
+which neighbor names it — ratified and merged 2026-09-24. Next, before the
+sign-off: the zoom-in candidate becomes the card the blue line names)
 
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
@@ -384,6 +388,20 @@ Moot until the story decides whether a modal exists.
 **Goal:** settle the final look of the relationship overlays and any other
 "this item relates to these items" cues. Explicitly deferred to late so the
 cues are tuned against real, working gestures.
+
+**Carried in from Story 6's hands-on (2026-09-24):**
+
+- **The blue anchor line is partly hidden behind the dragged card.** Since
+  the drop lands where the ghost is and the dragged copy sits over the
+  ghost, the line (above or below the ghost) is often under the copy.
+- **The zoom-in morph.** Story 6 ships a simple cue for the Column → Card
+  zoom-in (the named card outlined, filling in). The full version, as the
+  PO pictured it: the target card expands, a dashed placeholder Stub grows
+  where the item will go, and the carried copy shrinks into a Stub and
+  drifts toward it, with the pop landing partway through the animation. One
+  constraint carries over: nothing in the animation may change what
+  dnd-kit measures (the carried copy's box, the cards' layout), or the
+  named card changes mid-cue and cancels it.
 
 ---
 
@@ -454,6 +472,11 @@ deferral and keep landing with their stories.
      written, workphase inherited) and DRAG-4.17 (pop back out before
      release → the column's reposition, no attach) with a
      `SUSTAINED_CARD` preset in `drag-column-bands.spec.ts`'s style.
+     *Since recorded:* `tests/ui/drag-card-zoom-in.spec.ts` (Story 6
+     hands-on, 2026-09-23) zooms into Cards and attaches, from a different
+     column and after popping out and back in, so "no spec ever zooms into
+     a Card" no longer holds. Story 6's zoom-in candidate change (the card
+     the blue line names) moves what these cases aim at.
    - *Not deferred:* the attach write itself is API-covered in
      `items.hierarchy.test.ts` (TC-7.11, ATT-3.6, ATT-6.1, ATT-5.1, and
      the detached-child re-attach from audit #1); the client's
@@ -470,6 +493,10 @@ deferral and keep landing with their stories.
    supersedes the interim "drop on X = before X" default. Re-derive them
    against DRAG-3/DRAG-4.5, or delete them where the API twin already
    pins the math (each has one). Un-skipping as-is is not an option.
+   *Since 2026-09-24* (Story 6 hands-on finding 2): a column drop lands
+   where the ghost is, so "drag C onto X" is deterministic now (the ghost
+   takes X's slot). The precision problem these were skipped for may be
+   gone, so re-check before deleting any.
 
 4. **Deferred from Story 6** (decided 2026-09-23 — every case is a
    precise-move one). DRAG-1.21 (a hold on the section →

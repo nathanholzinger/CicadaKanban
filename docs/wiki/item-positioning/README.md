@@ -157,6 +157,16 @@ Requesting `after A` resolves between A and B → renders `A, X, C, E`.
 Requesting `before C` resolves between B and C → renders `A, X, C, E`. Same
 picture, and it's the one the client predicted.
 
+The flip side: the two relations are the same *rendered* slot but not the
+same *true* slot, so the choice of anchor is never cosmetic. With the same
+view, dragging `C` and setting it back down where it was saves "after A"
+(landing between A and B) if the carried card leans up, or "before E"
+(landing between D and E) if it leans down
+([`../board-drag-interaction/`](../board-drag-interaction/) §2). Both
+render `A, C, E`, but `C` has moved relative to the unseen `B` and `D` —
+which is why a set-down with a neighbor to name is a real write, not a
+no-op.
+
 This holds under stacked operations too — an item may be positioned against
 an anchor whose own value is still in flight, because the ordinal
 relationship doesn't depend on either number.
@@ -216,9 +226,9 @@ guarantee. Once interleaved by normal use, items stay interleaved.
 "same-visual-group reorder" (position-only, `workphaseId` untouched) or a
 "genuine cross-column move" (workphaseId reassigned) is decided by **"is
 the active item's current workphaseId already a member of the target
-column's covered set"** — not by which specific workphase the hovered card
+column's covered set"** — not by which specific workphase the anchor card
 belongs to. If yes: position-only reorder regardless of which covered
-workphase the active/hovered item happens to be in. If no: snaps to
+workphase the active item or its anchor happens to be in. If no: snaps to
 `entryWorkphaseId` (generic drop on column body) or the precise hovered
 workphaseId (expanded mode). Expanded/single-workphase columns are
 unaffected — covered-set membership degenerates to exact equality there.
@@ -387,9 +397,9 @@ number is not.** §2's narrow-view hazard is about the *number*: a midpoint
 computed from two visible neighbors can leapfrog an unseen item between
 them. Choosing an anchor has no such hazard — the server still resolves
 against that anchor's *true* neighbor, so nothing is jumped. Picking the
-first visible item is no different in kind from picking the item the cursor
-happens to be over; every drag already chooses its anchor from what's on
-screen.
+first visible item is no different in kind from picking a neighbor of the
+ghost ([`../board-drag-interaction/`](../board-drag-interaction/) §2);
+every drag already chooses its anchor from what's on screen.
 
 **Why "first visible" is the *right* anchor, not merely an acceptable one.**
 If the view is narrower than the true order — an unseen item Z sits before

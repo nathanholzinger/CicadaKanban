@@ -719,11 +719,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // within origin's own parent scope (a 400, "anchor outside the
     // resulting scope"). True siblings are unaffected.
     //
-    // Option A (on trial, 2026-09-24): in a column/sub-row, `over` can be the
-    // dragged card's own row (`resolveBoardCollisions`). That's "stay where
-    // the ghost is": no anchor, the same placement the ghost is drawn at
-    // mid-drag (the blue line still names a neighbor of that same slot). A
-    // ghost with no neighbor at all has nothing to anchor to: the bare
+    // Option A + lean (2026-09-24): in a column/sub-row the release sends
+    // exactly the anchor the blue line names, `over` being the dragged
+    // card's own row included (`resolveBoardCollisions`: the ghost resting
+    // in its own slot). "After the card above" and "before the card below"
+    // look the same in this column but can differ in the workflow-wide
+    // order when items from other workphases sit between them
+    // (item-positioning §2), so "stay" would contradict the line. A ghost
+    // with no neighbor at all has nothing to anchor to: the bare
     // container's slot.
     const placementOver: PlacementOver = !list
       ? null
@@ -733,9 +736,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
           : null
         : !over || String(over.id) === list.containerId
           ? 'container'
-          : String(over.id) === activeId
-            ? null
-            : (anchorOn(over) ?? 'container');
+          : (anchorOn(over) ?? 'container');
     const placement = placementForSession(current, regions, placementOver);
     const others = list ? list.rows.filter(i => i.id !== activeId) : [];
     const input = toRequest(activeItem, origin, placement, others);

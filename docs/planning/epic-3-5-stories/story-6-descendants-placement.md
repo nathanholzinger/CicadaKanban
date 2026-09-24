@@ -5,9 +5,12 @@ is *how to build them* and becomes a historical record once done.
 
 **Status: planned 2026-09-17; decisions ratified 2026-09-23; Phase A done
 2026-09-23 (library + sidebar), Phase B done 2026-09-23 (flat `KanbanCard`
-section), Phase C done 2026-09-23 (the carried copy becomes a Stub); the PO
-hands-on gate on Phases B+C together has not happened yet; Phases D–E not
-started.** Written
+section), Phase C done 2026-09-23 (the carried copy becomes a Stub). The
+PO's hands-on of B+C is under way: its findings (below the gate) fixed the
+Card zoom-in after Board layer and replaced how a column drop picks its
+anchor (the ghost's slot decides, ratified 2026-09-24); the zoom-in
+candidate change is next, then the sign-off. Phases D–E not started.**
+Written
 against the code as it
 will stand after [Story 4.1](story-4-1-efficiency-refactor.md) and
 [Story 5](story-5-stub-detach.md): the Descendants region exists as a
@@ -149,6 +152,13 @@ each is a **verify** before it's a change:
    before the machine phase (Phase D since 2026-09-23's renumbering).**
 2. **Gap = `over` row + side** (n + 1 gaps), side from `resolveDropSide`
    as at Column layer. The sidebar adopts it too (fixes difference 1).
+   *Amended 2026-09-24 for the board (hands-on finding 2, below the gate):
+   the gap is the ghost's slot, from dnd-kit's shuffle, so Top and Bottom
+   are the ghost's neighbors, the same neighbors `dropAnchorFor` names at
+   Column layer. The library is unchanged: `gapIndexFor(rows, anchorId,
+   side)` returns the same gap for "after Top" and "before Bottom". The
+   sidebar keeps `over` + `resolveDropSide`: it draws no ghost row, so its
+   indicator line is its only cue, and it already matches the save.*
 3. **Depth = seed + horizontal delta**, clamped to the gap's range:
    `depth = seedDepth + round((pointerX − seedX) / INDENT)`. Seed: a
    Stub's own depth and pickup x (sidebar-identical); for an item entering
@@ -255,8 +265,8 @@ makes that section the place you pick a depth, which needs the rows in
 view. From the Card layer down, the carried copy looks like the Stubs it
 will be placed among. At Board and Column layers it stays the shortCard.
 
-Built in Phase C. Wiki §5a and §7 still state the old rule. Updating them
-is the PO's; Phase E's report lists them.
+Built in Phase C. Wiki §5a and §7 updated by the PO 2026-09-24 (§5 now
+says shortCard "at this layer").
 
 ---
 
@@ -531,10 +541,10 @@ both over for a hands-on and wait for confirmation of:
 
 Anything the hands-on asks for lands in Phase B or C before Phase D begins.
 
-**Hands-on findings, 2026-09-23.** The PO's hands-on of Phases B and C
-turned up two bugs in the Card zoom-in. Both are older than this story
-(Stories 4–5 code) and neither was caught by E2E. Both are fixed here,
-before Phase D.
+**Hands-on findings, 2026-09-23 and 24.** The PO's hands-on of Phases B
+and C turned up two problems with the Card zoom-in and one with column
+placement. All three are older than this story (Stories 3–5 code), and E2E
+caught none of them. They're handled here, before Phase D.
 
 1. **Fixed: no Card zoom-in after passing through Board layer.** A drag
    that entered a column from Board layer (a different column, or its own
@@ -554,12 +564,121 @@ before Phase D.
      before the fix and passes after.
    - Gate after the fix: typecheck, lint and prettier clean; vitest
      273/273; Playwright 142 passed, 6 skipped, 148 total.
-2. **Open, next: the zoom-in hit box ignores a displaced card.**
-   - `dragRegions.ts::layoutRect` subtracts dnd-kit's sortable transform
-     from a Card's rect, so the hit box stays where the card sat before it
-     moved to make room for the ghost, not where it's drawn.
-   - E2E aims in the same pre-transform space (`dragGesture.ts::boxOf`),
-     which is why no test caught it.
+2. **Resolved another way: a column drop lands where the ghost is (Option
+   A + lean). Ratified by the PO and merged 2026-09-24.**
+   - *The finding.* The zoom-in hit box ignored a displaced card:
+     `dragRegions.ts::layoutRect` subtracts dnd-kit's sortable transform,
+     so the hit box stays where the card sat before it moved to make room.
+     Measuring the drawn card instead was tried and rejected in the
+     hands-on. Once the pointer is over a card, dnd-kit slides it away, so
+     the zoom-in clock kept restarting: resting on a card meant both "move
+     out of the way" and "let me in".
+   - *What that exposed.* The ghost wasn't a reliable cue. The release took
+     its side from `resolveDropSide` (which half of the hovered card the
+     dragged copy's center is in), while dnd-kit drew the gap from list
+     order, so a drop could land a slot away from the ghost. Stock dnd-kit
+     drops where the gap is.
+   - *Decided.* In a column/sub-row, **dnd-kit's shuffle decides the ghost's
+     slot, and the drop lands there.** The dragged copy, above or below the
+     ghost's middle, picks which neighbor names the slot: "after" the card
+     above or "before" the card below, shown by the blue line. One function,
+     `boardDndUtils.ts::dropAnchorFor`, feeds both the line and the release.
+   - The dragged card's own row is a collision candidate again, as in stock
+     dnd-kit, so resting over its own slot shuffles nothing. A release there
+     still sends the anchor the line names: the two neighbors are one slot
+     in the column but can differ in the workflow-wide order
+     (item-positioning §2). That is what the item-repositioning suites'
+     3.a/3.b exercise.
+   - Card lists only. A Descendants section keeps `resolveDropSide` until
+     Phase D (decision 2's amendment).
+   - `layoutRect` is unchanged, so the zoom-in hit box still stands where
+     the card was before it shifted. Finding 3 replaces it.
+   - Tests: unit cases for `dropAnchorFor` and the own-row candidate
+     (`boardDndUtils.test.ts`). Six E2E cases re-aimed at the new rule:
+     DRAG-3.4, the decision-4 re-drag, and item-repositioning 3.a/3.b in
+     both suites, now via `dragGesture.ts::setBackDownLeaning`. Gate:
+     typecheck and lint clean; vitest 280/280; Playwright 142 passed, 6
+     skipped, 148 total.
+   - The wiki is the PO's to update; notes were handed over 2026-09-24 and
+     the PO applied them the same day: board-drag §2 (the rule, five
+     points), §1.1's table, §10's opening, §7.1 (the amended gap); item-
+     positioning §2 (the set-down example), §4 and §7.1 (wording). The test
+     plans' wording for these cases is the Test Planner's.
+3. **Next, before the sign-off (agreed 2026-09-23; reset rule and cue
+   decided by the PO 2026-09-24; not built): the zoom-in candidate is the
+   card the blue line names.**
+   - The Card region hit test stops choosing the zoom-in target. Card
+     regions keep their other jobs: bounding the carried copy once inside a
+     Card, and the pop-out test.
+   - **Friction is intended.** Reparenting is the less common action, so
+     zooming in should take a deliberate hold. Erring toward too hard is
+     fine, and better than zooming in by accident while repositioning (§2's
+     "assume reposition" bias).
+   - **Two clocks, both panel values.** First a dwell (about 500 ms) on the
+     same named relation before anything shows, so a pause while
+     repositioning stays a reposition. Then the cue (about 800–1000 ms),
+     ending in the pop. Suggested: a new `cardZoomDwellMs` for the dwell,
+     and the existing `cardPopInDelayMs` (800 ms) for the cue.
+   - **An invalid target never starts the dwell.** A cycle-forming or
+     depth-capped card (§3.2) can still be named by the blue line for a
+     reorder, but it isn't a zoom-in candidate.
+   - **What resets both clocks: try Option 2 first.** Reset whenever the
+     named relation changes: a different card, or the same card on its
+     other side. "Same card, other side" only happens when the ghost moves
+     past the named card, so it's always a visible reshuffle. Resetting there
+     keeps the cue to moments when nothing on screen is moving, so a release
+     commits the same thing it would have when the cue started. Also reset
+     on pop-out and on Escape. A release before the pop commits the
+     reposition.
+     - *Option 1, left open:* reset only when the named card changes, so a
+       wobble across that card keeps the cue running. Revisit only if the
+       hands-on finds Option 2 too unforgiving. Its costs: the cue runs
+       through a reshuffle, and what a release commits changes mid-cue with
+       nothing to show it.
+     - *Watch:* resting on the ghost's middle flips the named card back and
+       forth, which resets under either option. If that bites, add a dead
+       band as a panel value: the lean must cross a few pixels past the
+       middle before it flips.
+   - **The cue, simple for now.** Nothing new shows during the dwell beyond
+     today's blue line. When the cue starts, the named card gets:
+     - a **dashed outline** in the attach-preview blue, the same dashed
+       style as the placeholder Stub row a Card shows once you're inside
+       it;
+     - a **thin bar along its inside bottom edge**, filling left to right
+       over the cue's length.
+
+     When the bar is full the pop happens, and today's visuals take over:
+     the dashed outline becomes the solid locked-layer outline, the card
+     opens with its dashed placeholder Stub, and the carried copy turns into
+     a Stub (Phase C). Why this cue:
+     - The named card sits beside the ghost, so its outline isn't hidden
+       under the dragged copy the way the blue line is.
+     - Dashed-to-solid reuses two looks that already mean "attach preview"
+       and "locked here".
+     - The fill shows how long to keep holding, and that letting go before
+       it's full still just reorders.
+
+     Accepted by the PO as good enough for this stage: it's there to test
+     the two clocks and the reset rule, and it stands in for Story 8's morph
+     so the morph can be pictured in its place. The dashed outline marks
+     where the card will expand, the fill marks the morph's progress, and
+     the pop at the end marks where the morph will hand over.
+   - **The cue must never feed back into collision.** Draw it as one
+     absolutely positioned, `pointer-events-none` overlay inside the card,
+     the way the locked-layer outline and the blue line already are, so
+     nothing changes size or layout. Drive the fill with a CSS animation
+     whose duration is the cue clock, keyed on the named relation so a reset
+     restarts it from empty.
+   - **The full morph is Story 8's:** the card expanding, a dashed
+     placeholder Stub growing, the carried copy shrinking toward it, with
+     the pop landing partway through.
+   - Expose the candidate and its phase (dwell or cue) on the board root
+     for Story 10's E2E, in the same style as `data-drag-context`.
+   - **Wiki:** board-drag §6 carries the rule as planned, not built (PO,
+     2026-09-24), with pointers from §3's pop-in and §3.1's card clock.
+     When it's built, the Phase E report lists those three passages as
+     ready to mark built, and §3's current "resting on one of that column's
+     own Cards" wording as superseded.
 
 ### Phase D — The machine and the within-action
 
@@ -576,8 +695,9 @@ before Phase D.
   Card) — extend the predicate.
 - **Projection** on the session (decision 4): set at the zoom-in
   transition (seed per decision 3) and on every sample while at
-  Descendants layer, from dnd-kit's `over` + side (a ref written in
-  `onDragMove`) and the pointer's x. Cleared on pop-out.
+  Descendants layer, from the ghost's slot (its neighbors in dnd-kit's
+  shuffled order, as `dropAnchorFor` finds them at Column layer; decision
+  2's amendment) and the pointer's x. Cleared on pop-out.
 - `placementFor(…)` at Descendants layer, mid-drag: unchanged from
   whatever placed the row (Story 5's table) — the projection carries the
   visual. **At release:** `resolvePlacement(rows, projection.gap,
@@ -610,13 +730,14 @@ hand-off and copy it into "As built" below. Two lists:
 2. **Where the wiki and the code now disagree.** Any rule or behavior the
    wiki states that the built code doesn't do, or does differently: the
    section, what the wiki says, what the code does, and which side looks
-   wrong. One is known: §5a and §7 say the carried copy stays a shortCard
-   at every layer, and Phase C makes it a Stub from the Card layer down
-   (Story 5 decision 6, reopened 2026-09-23; the code is right). Candidates
+   wrong. *(The one known at planning — §5a/§7's carried copy — was fixed
+   by the PO 2026-09-24.)* Candidates
    to check (not presumed mismatches): the seed rule (decision 3) against
    §7.1's bare "horizontal offset picks a depth"; the collapsed-Top
    first-child resolution (sidebar difference 6); the loaded-items depth
    undercount (Risks); and anything else the Phase B/C hands-on changed.
+   The column-placement change (hands-on finding 2) already went to the PO
+   as notes on 2026-09-24; list only what those notes didn't cover.
 
 Test-plan statuses (DRAG-4, DRAG-1.21) are Story 10's reconciler pass, not
 this phase.

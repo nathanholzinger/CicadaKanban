@@ -133,16 +133,36 @@ export async function center(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.5);
 }
 
-// These aim at the literal top/bottom quarter a user would target for "drop
-// before/after this card" — the in-context anchor + side resolution
-// (resolveDropSide reads which half of the hovered card the dragged card's
-// center is in).
+// The top/bottom quarter of a card. In a column/sub-row these no longer
+// pick a side of the card hovered (Option A + lean, 2026-09-24): dnd-kit's
+// shuffle decides the ghost's slot, so aim at the card whose slot the ghost
+// should take, and the drop lands there. In a Descendants section (Stub
+// rows, until Story 6 Phase D) they still pick a side of the hovered row —
+// `resolveDropSide`, which half of it the dragged card's center is in.
 export async function topQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.15);
 }
 
 export async function bottomQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.85);
+}
+
+// How far past the ghost's middle `setBackDownLeaning` carries the dragged
+// copy — well clear of the middle either way, well short of the next card.
+const LEAN_PX = 15;
+
+// Option A + lean (2026-09-24): pick a card up and set it back down in its
+// own slot, the dragged copy just above or below the ghost's middle. The
+// card's own row is `over` (nothing shuffles), and the lean picks which
+// neighbor the drop names: up, "after" the card above; down, "before" the
+// card below. One slot in the column, but not in the workflow-wide order
+// when items from another workphase sit between the two neighbors
+// (docs/wiki/item-positioning §2) — which is what a case using this is for.
+export async function setBackDownLeaning(page: Page, card: Locator, lean: 'up' | 'down') {
+  const home = await center(card);
+  await pickUp(page, card);
+  await hoverTo(page, { x: home.x, y: home.y + (lean === 'up' ? -LEAN_PX : LEAN_PX) });
+  await release(page);
 }
 
 // The point midway across the horizontal gap between two side-by-side

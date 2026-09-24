@@ -15,8 +15,12 @@ this directory, then go to the wiki for the "why."
   roaming inside) or **popped out** (cursor left past a delay/distance threshold,
   card follows the cursor at the parent layer).
 - **A release always commits the locked layer's own within-action** — never a foreign
-  region's — regardless of where the bare cursor rests. Column/sub-row: dnd-kit's
-  `over` decides anchor+side. Card: `origin` itself ("set back down") for the drag's
+  region's — regardless of where the bare cursor rests. Column/sub-row: the drop lands
+  where the ghost is — dnd-kit's sortable shuffle decides its slot (the dragged card's
+  own row is a collision candidate, as in stock dnd-kit), and the dragged copy, above or
+  below the ghost's middle, picks which neighbor names it: "after" the card above,
+  "before" the card below (`boardDndUtils.ts::dropAnchorFor`, the one function the blue
+  line and the release both read; 2026-09-24). Card: `origin` itself ("set back down") for the drag's
   own containing Card, else append as the last child (an item from outside, or a
   Story 5 reparent — full anchor+side placement _among_ a Card's Stubs is Story 6's).
   Descendants: the interim within-action is a same-parent sibling reorder, scoped to

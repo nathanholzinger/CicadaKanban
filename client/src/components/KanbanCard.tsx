@@ -39,7 +39,7 @@ import {
 // useDndContext — no prop drilling through BoardColumn/BoardView — and
 // calls the exact same dropAnchorFor function useBoardDnd's handleDragEnd
 // uses, so the line shown here is guaranteed to match what gets sent. In a
-// column (Option A + lean, on trial) the anchor is a neighbor of the ghost,
+// column (Option A + lean, 2026-09-24) the anchor is a neighbor of the ghost,
 // not necessarily the card dnd-kit says is `over`, so every row asks
 // whether it's the one named.
 // Diagnostic-only, so reading `active.data.current?.role` here is fine even

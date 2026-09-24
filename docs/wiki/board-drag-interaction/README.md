@@ -23,7 +23,11 @@ item drag (Card or Stub) shares one dnd-kit registration
 full manual hierarchy placement — gap + depth, beyond the interim direct-
 sibling reorder Story 5 built) is Story 6's**; placing a Stub anywhere but
 directly among its own siblings, or zooming into a Card's own Descendants
-section from the Card layer, stays held closed until then.
+section from the Card layer, stays held closed until then. **Built so far
+in Story 6 (2026-09-23/24):** §5a's Stub-shaped carried copy from the Card
+layer down (Phase C), and §2's rule that a column drop lands exactly where
+the ghost is (a hands-on finding). Planned next: §6's zoom-in target
+change, then §7's gap + depth (Phase D).
 
 **The 2026-09-16 re-plan is a genuine rule change, not just Story 4's
 build catching up to §6.** Working the story with the Product Owner
@@ -141,7 +145,7 @@ one moment it most needs to.
 | Layer | Reached from | Zoom-in target | Within-action |
 |---|---|---|---|
 | **Board** | (the top) | a column/sub-row | §5's band, on release |
-| **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — anchor + side |
+| **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — the ghost's slot, named by anchor + side (§2) |
 | **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (Story 6) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
 | **Descendants** (Stories 5/6) | its own Card, only; or where a Stub's drag starts (at any depth beneath that Card) | *(none)* | manual hierarchy placement — gap + depth (§7) |
 
@@ -241,6 +245,42 @@ While the item is in-context:
   box already is its full bound) and are unaffected either way.
 - A **ghost** shows the slot it would land in, and a **side highlight** on
   a neighboring item shows which item it is anchoring to and on which side.
+  In a column or sub-row, **a release lands the item exactly where the
+  ghost is** (ruled by the Product Owner 2026-09-24):
+  1. **The ghost's slot follows the list's standard shuffle** — the
+     neighboring cards slide aside to open a gap wherever the carried card
+     is, the ordinary sortable-list behavior, not a custom rule.
+  2. **The dragged card's own slot counts too.** Resting over the place it
+     was picked up from opens no gap anywhere else; nothing shuffles.
+  3. **The slot is saved by naming one of its two neighbors** — "after"
+     the card above the ghost, or "before" the card below it. Which one
+     depends on where the carried card sits relative to the ghost's
+     middle: above it names the card above; below it names the card
+     below. The side highlight sits on the named neighbor.
+  4. **At either end of the list there is only one neighbor**, so it is
+     always the one named. A ghost alone in its list names nothing, and
+     the release takes the column's no-anchor slot (§5's middle-band
+     meaning, with §10's #29 rule for an item with no comparable position
+     to keep).
+  5. **Setting a card back down in its own slot is not a no-op** when it
+     has a neighbor. On screen, "after the card above" and "before the
+     card below" are the same slot; in the workflow-wide order they can
+     differ, because items this view doesn't show can sit between the two
+     neighbors ([`../item-positioning/`](../item-positioning/) §2). So the
+     release saves the named anchor, and the item may move relative to
+     those unseen items. Only a card alone in its list, set back down, has
+     nothing to name and writes nothing (§10).
+
+  *(Replaces the rule as first built, never stated here: the side came
+  from which half of the hovered card the carried card's center was in,
+  while the gap was drawn from list order — so a drop could land one slot
+  away from the ghost. Found in Story 6's hands-on, 2026-09-24; built and
+  merged the same day — `boardDndUtils.ts::dropAnchorFor`, the one
+  function both the side highlight and the release read. **Scope: columns
+  and sub-rows only.** A Card's Descendants section keeps the which-half
+  rule until Story 6 Phase D brings it onto this one (§7.1). The project
+  sidebar is unchanged: it draws an indicator line and no ghost, so the
+  line is already its only cue and already matches the save.)*
 
 **A release always commits the in-context meaning above, no matter where
 the bare cursor is resting** (re-plan, 2026-09-16 — §1.1 rule 1). The card
@@ -277,7 +317,8 @@ each way moves exactly one layer of §1.1's stack:
   column/sub-row, the cursor resting on one of *that column's own* Cards
   past its own (duration-only, §1.1 rule 3) threshold zooms into it instead
   (§6) — never a foreign column's Card, and never reachable from Board
-  directly. From inside a locked Card, the cursor resting on *that Card's*
+  directly. *(Planned, not built: the target becomes the card the side
+  highlight names, after a dwell and a cue — §6.)* From inside a locked Card, the cursor resting on *that Card's*
   descendants section past its own duration-only threshold zooms into
   Descendants (§7, Story 6). Either way, the clock counts time in the region/Card, not in a
   band: time spent in the top or bottom band of a column still counts
@@ -341,7 +382,11 @@ Column/sub-row → Card** — its own, separate, duration-only clock
 one of the locked context's own Cards, fires once that alone has elapsed.
 Kept apart from `popInDelayMs` because this edge is the one that can mean
 a reparent — the tuning is free to make it a more deliberate hold than an
-ordinary column pop-in, though nothing requires it. **Pop-in, Card →
+ordinary column pop-in, though nothing requires it. *(Planned, not built
+— §6: this edge becomes two stages keyed on the relation the side
+highlight names, a silent dwell and then a visible cue. Suggested: a new
+panel value for the dwell (about 500 ms; `cardZoomDwellMs` proposed), and
+`cardPopInDelayMs` reused for the cue.)* **Pop-in, Card →
 Descendants** (Story 6, not built) — a fourth clock, duration-only,
 starting when the cursor rests on the locked Card's descendants section;
 its own panel value, to be named when built, and free to share a value
@@ -486,7 +531,7 @@ governed by reservation, not a live measurement — and the reservation is
 *exact* (Story 4.1 Phase 1): a region's total rendered height never
 changes whether or not it's the live hover target. Both drag copies — the
 floating DragOverlay and the in-list ghost row — render as a fixed-height
-**shortCard** (§5a), so the geometry below is built from two fixed facts
+**shortCard** at this layer (§5a), so the geometry below is built from two fixed facts
 about that component, never a value found by feel: its height (`h` —
 `KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`) and the card lists' own shared gap
 (`gap` — `CARD_LIST_GAP_PX`). Three shapes, read off the region's live
@@ -614,11 +659,27 @@ labeled; done/terminal handling gets a fuller rework in Epic 4
 
 ## 5a. The dragged card's own visual collapse
 
-**Both visible copies of a Card being dragged — the floating DragOverlay
-copy and the in-place row at its own slot — render as shortCard**, a fixed-
-height compact mode, for the life of the drag, regardless of which layer
-it's locked into or whether it's genuinely popped out (Story 4.1 Phase 1;
-named and settled with the Product Owner 2026-09-17). shortCard is a Card
+**At Board and Column/sub-row layers, both visible copies of a Card being
+dragged — the floating DragOverlay copy and the in-list ghost row — render
+as shortCard**, a fixed-height compact mode (Story 4.1 Phase 1; named and
+settled with the Product Owner 2026-09-17). These are the only layers with
+bands (§5), so the carve-out reservation always has shortCard's one exact
+height to reserve.
+
+**From the Card layer down — Card and Descendants — both copies are a Stub
+row instead**, like the rows the item will be placed among (ruled by the
+Product Owner 2026-09-23, reopening Story 5 decision 6; built in Story 6
+Phase C). The carried copy switches at the zoom-in from a column into a
+Card and switches back at the pop-out to a column; a Stub's own drag starts
+at the Descendants layer, so it is a Stub from pickup. It is as wide as a
+row in that Card's section, keeps a "held" treatment (a shadow) so it reads
+as carried rather than as one of the rows, and stays under the pointer
+through the switch in both directions. **Why:** a shortCard held inside a
+Card's box covers most of the descendants section, hiding exactly the rows
+the user is placing among — and at Descendants layer (§7) the rows are
+where a depth is chosen.
+
+shortCard is a Card
 *mode*, not a fifth representation tier alongside Stub/Card/Sheet/
 Headline — a compact Card on the board is still the board's draggable
 unit, and it's built as a presentational body with no knowledge of
@@ -689,6 +750,59 @@ general principles that happen to apply. The remaining work is making the
 moment of transition *legible* (Story 8's cue polish), not deciding what it
 means.
 
+**Planned — agreed with the Product Owner 2026-09-23, reset rule and cue
+decided 2026-09-24; not yet built (Story 6, next): the Card zoomed into
+is the one the side highlight names.** As built, the zoom-in target is
+whichever Card's box the cursor rests in. But a card under the cursor
+also slides aside to open the ghost's gap (§2), so resting on a card meant
+both "move out of the way" and "let me in," and the zoom-in clock kept
+restarting. The planned rule stops the two competing: cards always just
+make room, and what matters is the **named relation** — which neighbor of
+the ghost the side highlight names, and on which side (§2, rule 3).
+Holding that relation steady is the signal.
+
+**Friction is intended.** Reparenting is the rarer action, so zooming in
+takes a deliberate hold. Erring toward too hard is fine — better than
+zooming in by accident while repositioning (§2's bias).
+
+- **First a dwell, with nothing new shown** beyond the side highlight
+  itself, so an ordinary pause while repositioning stays a reposition.
+- **Then a visible cue on the named card, ending in the pop.** Provisional
+  look: a dashed outline in the attach-preview blue (the same dashed style
+  as the placeholder Stub a Card shows once you're inside it), and a thin
+  bar along the card's inside bottom edge filling left to right over the
+  cue's length. When the bar is full the pop happens and the locked-layer
+  visuals take over: the dashed outline becomes the solid outline (§1.1),
+  the card opens with its placeholder Stub, and the carried copy becomes a
+  Stub (§5a). The fill says how long to keep holding, and that letting go
+  before it's full still just repositions. The full morph (the card
+  opening, the placeholder growing, the carried copy shrinking toward it)
+  is Story 8's.
+- **The cue never moves or resizes anything.** Nothing on screen changes
+  shape while it runs, so it can't shift the ghost or change which card is
+  named.
+- **Both clocks reset whenever the named relation changes**: a different
+  card, or the same card on its other side. The same card only changes
+  side when the ghost moves past it — always a visible reshuffle — so the
+  cue only ever runs while nothing on screen is moving, and a release
+  commits the same thing it would have when the cue started. Both also
+  reset on a pop-out and on a cancel. *(The PO's first choice, to confirm
+  in hands-on. The fallback, if this proves too unforgiving: reset only
+  when the named card changes, so a wobble across it keeps the cue
+  running — at the cost of the cue running through a reshuffle and a
+  release's meaning changing mid-cue with nothing to show it.)*
+- **An invalid target never starts the dwell.** A Cycle-forming or
+  Depth-capped card (§4) can still be named for a reposition, but it is
+  never a zoom-in candidate (§3.2).
+- **A release before the pop commits the reposition** (§1.1 rule 1:
+  nothing has been entered yet).
+
+Both stages are durations, so §1.1 rule 3 (zooming in is duration-only)
+still holds, and both are panel values tuned like every other (§3.1).
+The Card's own box keeps its other jobs: bounding the carried copy once
+inside, and deciding when the drag pops back out. A ghost alone in its
+list names no card, so there is nothing to zoom into from there.
+
 **As built:** the carried card keeps following the cursor while locked
 into the target Card's context (bounded to its box, same "clamped, not
 frozen" treatment as any other locked context, §2) — it's the *ghost*
@@ -709,13 +823,14 @@ Story 6's, since `childRegionAt` never returns one as a zoom-in candidate
 yet (decision 3). The full ruleset below is precise placement in the
 parent's hierarchy — the same ruleset as the project sidebar,
 deliberately, and Story 6 consolidates the two into one shared library.
-From the Card layer down the **in-list ghost** is a Stub row; the
-**carried copy under the cursor stays the shortCard (§5a) at every
-layer** — one shape for the whole drag, and the Column ↔ Card boundary
-converts only the in-list representation, both ways (§8, DRAG-5.10,
-implemented as of Story 5). *(Ruled 2026-09-21, Story 5 decision 6; an
-earlier wording here — "represented as a Stub-ghost from the Card layer
-down" — meant the in-list ghost only.)*
+From the Card layer down **both copies are Stub rows** — the in-list
+ghost and the carried copy under the cursor — and the Column ↔ Card
+boundary converts both, both ways (§5a, §8, DRAG-5.10). *(The in-list
+ghost's switch implemented as of Story 5; the carried copy's as of Story 6
+Phase C, 2026-09-23. Story 5 decision 6, ruled 2026-09-21, had kept the
+carried copy a shortCard at every layer; the Product Owner reopened it
+2026-09-23 after the Phase B hands-on, because the shortCard covered the
+rows being placed among.)*
 
 *(Ruled 2026-09-17, replacing the earlier draft of this section entirely.
 That draft had a Card-level Stub band — top half "first child," bottom
@@ -731,6 +846,11 @@ first, retired trial build and no longer exist.)*
 With full context of the hierarchy, the ghost sits in a **gap** between
 two rendered items, chosen by vertical position: **Top**, the item it will
 sit directly under, and **Bottom**, the item it will sit directly above.
+On the board these are **the ghost's two neighbors in the same list
+shuffle as a column's** (§2) — the gap is wherever the rows slide aside to
+make room, never a which-half-of-a-row reading (Story 6 decision 2,
+amended 2026-09-24). The project sidebar draws an indicator line instead
+of a ghost, so there the line's position is the gap.
 **Horizontal offset** then picks a depth from a range of discrete tab
 states — depth counted the way the rest of this wiki counts it, increasing
 as you tab **right** (deeper):
@@ -882,7 +1002,9 @@ unchanged inside any surface that shows the hierarchy.
 
 **The board previews a drop ordinally: the item is placed at the ghost's
 index, with no position value invented for it.** The number is the server's
-to produce, and the client waits for it without guessing.
+to produce, and the client waits for it without guessing. In a column or
+sub-row the saved anchor is always one of the ghost's own neighbors (§2),
+so the preview and the write can't disagree about the slot.
 
 This is correct rather than merely close enough — see
 [`../item-positioning/`](../item-positioning/) §2, "Client-side role," for
