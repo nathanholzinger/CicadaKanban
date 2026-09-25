@@ -13,29 +13,26 @@
 // shortCard/full-card switch below already always has been. The Stub
 // tier's own rows (StubBody, AttachGhostRow, AttachedChildRow) live in
 // StubRows.tsx, and the drag-time chrome this and they share
-// (useDropTargetProps, DropSideIndicator, ZoomCue) in dragChrome.tsx
-// (Story 6.1 Phase 1, C-5).
+// (useItemRow, DropSideIndicator, ZoomCue) in dragChrome.tsx.
 
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState } from 'react';
 import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
-import { itemRowData } from './workflow/dragCollision';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
+  useCardContextLayer,
   useDragSession,
-  useIsAttachTarget,
   useZoomCandidatePhase,
   type DescendantsProjection,
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useDropTargetProps } from './dragChrome';
+import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
 import { AttachGhostRow, AttachedChildRow, StubBody } from './StubRows';
 
 const CARD_BASE =
@@ -131,21 +128,15 @@ export default function KanbanCard({
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    // Decision 4 (2026-09-21): every item row registers `type: 'item'`,
-    // never a type that differs between a Stub's row and a popped-out Card
-    // row for the same id — see `resolveBoardCollisions`'s own comment for
-    // why. `role`/`parentId` are droppable-side facts only; nothing reads
-    // them off the *active* row.
-    data: itemRowData('card'),
-  });
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, isOverlay, overlayForm);
+  const { setNodeRef, attributes, listeners, isDragging, dropSide, sortableStyle, dataAttrs, chromeClassName } =
+    useItemRow(item.id, 'card', { isOverlay, overlayForm });
+  // Which of this Card's layers the drag is locked at, if either.
+  const contextLayer = useCardContextLayer(item.id);
   // Story 4: forced open — independent of the user's own
-  // collapse choice — for as long as this Card is the live attach target,
-  // so a drag actually reveals the ghost landing inside it rather than
-  // requiring a click the cursor can't make mid-drag.
-  const isAttachTarget = useIsAttachTarget(item.id);
+  // collapse choice — for as long as the drag is locked at this Card or its
+  // section, so a drag actually reveals the ghost landing inside it rather
+  // than requiring a click the cursor can't make mid-drag.
+  const isAttachTarget = contextLayer !== null;
   const expanded = manualExpanded || isAttachTarget;
   // Story 6, hands-on finding 3: this Card is the locked column/sub-row's
   // current zoom-in candidate, and which stage of the hold it's in.
@@ -171,9 +162,7 @@ export default function KanbanCard({
   // optional once a session exists (`DragSessionContext.ts`), so checking
   // `cardDragSession` itself is enough to also read `.pop`/`.origin` safely.
   const attachGhostId =
-    cardDragSession &&
-    cardDragSession.pop.contextKey === cardRegionKey(item.id) &&
-    parentOpinionOf(cardDragSession.origin) !== item.id
+    cardDragSession && contextLayer === 'card' && parentOpinionOf(cardDragSession.origin) !== item.id
       ? cardDragSession.activeItem.id
       : undefined;
   // Story 6 Phase D (decision 4): while locked at *this* Card's own
@@ -181,10 +170,7 @@ export default function KanbanCard({
   // session's live projection ("the ghost row... indented to the
   // projected depth") instead of its own stored depth — the one row whose
   // eventual parent is still being chosen by the drag.
-  const descendantsProjection =
-    cardDragSession && cardDragSession.pop.contextKey === descendantsRegionKey(item.id)
-      ? cardDragSession.projection
-      : null;
+  const descendantsProjection = cardDragSession && contextLayer === 'descendants' ? cardDragSession.projection : null;
   // The DragOverlay copy and this same item's own in-list row while it's
   // the one being dragged (`isDragging`, from useSortable — true wherever
   // the item's pending Placement currently sorts it, its original slot
@@ -200,8 +186,7 @@ export default function KanbanCard({
   const overlayIndent = overlayStubIndent(overlayIsStub ? overlayProjection : null);
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    ...sortableStyle,
     ...(isGhostLike && !overlayIsStub ? { height: SHORT_CARD_HEIGHT_PX } : {}),
     ...(overlayIsStub ? { width: overlayWidthPx ?? undefined } : {}),
   };
@@ -257,7 +242,7 @@ export default function KanbanCard({
       className={
         overlayIsStub
           ? 'relative'
-          : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
+          : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${chromeClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
       }
     >
       {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}

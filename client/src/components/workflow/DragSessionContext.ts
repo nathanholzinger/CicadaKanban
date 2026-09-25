@@ -5,7 +5,7 @@
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
-import { cardRegionKey, descendantsRegionKey } from './dragRegions';
+import { cardRegionKey, parseRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
 import type { ResolvedPlacement } from '../../lib/hierarchyPlacement';
@@ -117,24 +117,19 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
   return { state, isFreeDescendant: session.classification.freeDescendantIds.has(itemId) };
 }
 
-// Story 4: whether this Card is the pop machine's live attach target right
-// now — the drag has popped fully into it. Merely being hovered toward
-// that (before the zoom-in threshold fires) does *not* count (re-plan,
-// 2026-09-16, rule 1): a release right now would still commit the column's
-// own within-action, not attach here, so showing this cue early would
-// promise something a drop wouldn't deliver. A collapsed Card can't show
-// the ghost landing inside it, so KanbanCard uses this to force itself open
-// for as long as it's true, independent of the user's own expand/collapse
-// choice. Story 5: also true for the intermediate stop at a Stub's own
-// containing Card (its within-action there is "set back down," not
-// attach) — same forced-open need, since the Stub's own section has to
-// stay visible for the drag's own row to keep rendering somewhere sane.
-// Story 6 Phase D: also true once the drag has zoomed *into* this Card's
-// own Descendants section — the section obviously has to stay rendered
-// through its own within-action, not just through the Card layer above it.
-export function useIsAttachTarget(itemId: string): boolean {
-  const pop = useContext(DragSessionContext)?.pop;
-  return pop?.contextKey === cardRegionKey(itemId) || pop?.contextKey === descendantsRegionKey(itemId);
+// Which of this Card's own layers the drag is locked at: its Card layer,
+// its Descendants section, or neither (null). Merely being hovered toward a
+// zoom-in (before the threshold fires) doesn't count (rule 1): a release
+// right now would still commit the column's within-action. KanbanCard reads
+// it three ways — forced open while either layer is locked (a collapsed Card
+// can't show the ghost landing inside it, nor keep a Stub's own section
+// drawn), the attach ghost at the Card layer, and the projected depth in the
+// section.
+export function useCardContextLayer(itemId: string): 'card' | 'descendants' | null {
+  const contextKey = useContext(DragSessionContext)?.pop.contextKey;
+  const parsed = contextKey ? parseRegionKey(contextKey) : null;
+  if (!parsed || parsed.id !== itemId) return null;
+  return parsed.kind === 'card' || parsed.kind === 'descendants' ? parsed.kind : null;
 }
 
 // Story 6, hands-on finding 3 (2026-09-24): whether this Card is the

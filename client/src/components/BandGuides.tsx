@@ -5,7 +5,7 @@ import { Fragment, type ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
 import { DRAG_CARD_COUNT_ATTR, dragRegionProps } from './workflow/dragRegions';
 import { reservationFor, type Reservation } from './workflow/dragBands';
-import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
+import { SHORT_CARD_METRICS } from './cardMetrics';
 
 // Epic 3.5 Story 3's carve-out addendum (2026-09-16) — the column drop bands, made
 // visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
@@ -170,10 +170,7 @@ export function DragCarveFrame({
   // Board layer — dragRegions.ts::reservationFor is the one place §5's
   // shape/height/edge math lives (audit epic-3-5-story-4 #9); this only
   // turns its answer into markup.
-  const reservation = reservationFor(
-    { isTerminal, cardCount: otherCardCount },
-    { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX },
-  );
+  const reservation = reservationFor({ isTerminal, cardCount: otherCardCount }, SHORT_CARD_METRICS);
 
   if (reservation.shape !== 'positional') {
     // 'empty' / 'none': genuinely nothing *else* here. If the active item's

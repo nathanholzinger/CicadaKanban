@@ -3,6 +3,7 @@ import {
   CARD_LIST_REGION_SELECTOR,
   cardRegionKey,
   childRegionAt,
+  clipToVisible,
   columnRegionKey,
   containsPoint,
   descendantsCardIdOf,
@@ -17,6 +18,7 @@ import {
   subrowContainerId,
   subrowRegionKey,
   type CardListRegion,
+  type Rect,
 } from './dragRegions';
 import { descendantsRegion, rect, region, column } from '../../test/dragFixtures';
 
@@ -387,5 +389,73 @@ describe('isCardList', () => {
       parentRegionKey: 'column:col-1',
     } as const;
     expect(isCardList(card)).toBe(false);
+  });
+});
+
+// A real browser's DOMRect exposes its fields as accessor getters on
+// `DOMRect.prototype`, not as the instance's own enumerable properties
+// (unlike jsdom's, and unlike a plain-object fixture) — so `{ ...domRect }`
+// silently drops every field instead of throwing. This is what actually
+// caught it: every sub-row region resolved with `left`/`right`/`width`
+// missing, so no point could ever match it. Shared by every test below that
+// needs to prove a Rect-shaped function doesn't re-introduce the hazard
+// (audit epic-3-5-story-3-reconciled #2 — it moved from being `clipToVisible`'s
+// problem alone to being every `Rect`-touching function's, until `toRect`
+// became the one place a DOMRect is read).
+function fakeDomRect(values: Rect): Rect {
+  return Object.create({
+    get top() {
+      return values.top;
+    },
+    get bottom() {
+      return values.bottom;
+    },
+    get left() {
+      return values.left;
+    },
+    get right() {
+      return values.right;
+    },
+    get width() {
+      return values.width;
+    },
+    get height() {
+      return values.height;
+    },
+  });
+}
+
+// Reconciliation #20/#21: a sub-row is clipped to its column's visible
+// scroll box, not just bounded by its own extent.
+describe('clipToVisible', () => {
+  const bounds = rect(0, 100, 200, 200); // the scroll ancestor's own visible box, y 100..300
+
+  it('clips the part of the rect outside the visible box, on either edge or both', () => {
+    const partlyAbove = rect(0, 50, 200, 100); // y 50..150
+    expect(clipToVisible(partlyAbove, bounds)).toEqual({ ...partlyAbove, top: 100, bottom: 150, height: 50 });
+
+    const partlyBelow = rect(0, 250, 200, 100); // y 250..350
+    expect(clipToVisible(partlyBelow, bounds)).toEqual({ ...partlyBelow, bottom: 300, height: 50 });
+
+    const taller = rect(0, 50, 200, 300); // y 50..350 — taller than the box on both sides
+    expect(clipToVisible(taller, bounds)).toEqual({ ...taller, top: 100, bottom: 300, height: 200 });
+  });
+
+  it('is null once none of the rect is left visible', () => {
+    expect(clipToVisible(rect(0, 310, 200, 50), bounds)).toBeNull(); // fully below
+    expect(clipToVisible(rect(0, 0, 200, 90), bounds)).toBeNull(); // fully above
+  });
+
+  it('keeps left/right/width from a DOMRect-shaped object, not just a plain one', () => {
+    const domRect = fakeDomRect(rect(10, 50, 80, 200)); // left 10, top 50, width 80, height 200 -> bottom 250
+    expect({ ...domRect }).toEqual({}); // confirms the shape actually exercises the hazard
+    expect(clipToVisible(domRect, bounds)).toEqual({
+      top: 100,
+      bottom: 250,
+      left: 10,
+      right: 90,
+      width: 80,
+      height: 150,
+    });
   });
 });

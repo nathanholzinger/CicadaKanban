@@ -6,7 +6,14 @@
 // `{ parentId, anchor }` back into `onReorderProject`'s prevId/nextId pair.
 
 import type { Project } from '../../types';
-import { flattenHierarchy, gapIndexFor, type Row, type Anchor } from '../../lib/hierarchyPlacement';
+import {
+  flattenHierarchyOf,
+  gapIndexFor,
+  toRows,
+  type AnchorRelation,
+  type DropSide,
+  type Row,
+} from '../../lib/hierarchyPlacement';
 
 export interface FlatItem {
   id: string;
@@ -51,23 +58,17 @@ function childrenByParent(projects: readonly Project[]): Map<string | null, Proj
   return childMap;
 }
 
+// The render list: the shared walk, with a collapsed project's children left
+// out of it. A collapsed project still reports that it has some.
 export function flattenTree(projects: Project[], expandedIds: Set<string>): FlatItem[] {
   const childMap = childrenByParent(projects);
-  const result: FlatItem[] = [];
-
-  function walk(parentId: string | null, depth: number) {
-    const children = childMap.get(parentId) ?? [];
-    for (const p of children) {
-      const kids = childMap.get(p.id) ?? [];
-      const hasChildren = kids.length > 0;
-      const collapsed = hasChildren && !expandedIds.has(p.id);
-      result.push({ id: p.id, depth, parentId, project: p, hasChildren, collapsed });
-      if (!collapsed) walk(p.id, depth + 1);
-    }
-  }
-
-  walk(null, 0);
-  return result;
+  const childrenOf = (parentId: string | null) => childMap.get(parentId) ?? [];
+  const shownChildrenOf = (parentId: string | null) =>
+    parentId === null || expandedIds.has(parentId) ? childrenOf(parentId) : [];
+  return flattenHierarchyOf(null, shownChildrenOf).map(({ id, parentId, depth, item: project }) => {
+    const hasChildren = childrenOf(id).length > 0;
+    return { id, depth, parentId, project, hasChildren, collapsed: hasChildren && !expandedIds.has(id) };
+  });
 }
 
 // The library's `childrenOf` over the *real* tree, ignoring collapse state
@@ -88,17 +89,10 @@ export { getDescendantIds } from '../../lib/hierarchy';
 // (collapsed subtrees already left `flatItems`, same as before Story 6),
 // minus `exclude` (Story 6 decision 5: the active project and its whole
 // subtree, never a Top/Bottom candidate — fixes difference 2, "descendant-
-// blocking instead of subtree removal"). The sidebar's root is virtual
-// (`rootId: null`): a real top-level project already carries `parentId:
-// null`, so `flattenHierarchy`'s own depth-0 rows read that back for free.
+// blocking instead of subtree removal"). `flatItems` is already the walk's
+// own output, so this only drops the dragged subtree.
 export function eligibleRows(flatItems: readonly FlatItem[], exclude: ReadonlySet<string>): Row[] {
-  const byParent = new Map<string | null, string[]>();
-  for (const item of flatItems) {
-    const list = byParent.get(item.parentId) ?? [];
-    list.push(item.id);
-    byParent.set(item.parentId, list);
-  }
-  return flattenHierarchy(null, parentId => byParent.get(parentId) ?? [], exclude);
+  return toRows(flatItems, exclude);
 }
 
 // Decision 2: the gap is `over` row + side (n + 1 gaps — fixes difference
@@ -129,7 +123,7 @@ export function resolveGap(
   rows: readonly Row[],
   exclude: ReadonlySet<string>,
   overId: string,
-  side: 'before' | 'after',
+  side: DropSide,
 ): number {
   if (!exclude.has(overId)) return gapIndexFor(rows, overId, side);
   const overIdx = flatItems.findIndex(i => i.id === overId);
@@ -155,7 +149,8 @@ export function resolveGap(
 // `findNextSibling` scans (each anchor was always exactly one relation, so
 // the second lookup only ever confirmed "null," never found anything a
 // depth/parentId scan wouldn't already have named directly).
-export function siblingIdsFromAnchor(anchor: Anchor | null): { prevId: string | null; nextId: string | null } {
+export function siblingIdsFromAnchor(anchor: AnchorRelation | null): { prevId: string | null; nextId: string | null } {
   if (!anchor) return { prevId: null, nextId: null };
-  return anchor.side === 'after' ? { prevId: anchor.id, nextId: null } : { prevId: null, nextId: anchor.id };
+  const { anchorId, side } = anchor;
+  return side === 'after' ? { prevId: anchorId, nextId: null } : { prevId: null, nextId: anchorId };
 }

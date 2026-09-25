@@ -21,6 +21,10 @@ export const SHORT_CARD_HEIGHT_PX = 96;
 // height never changes, wiki §5) has one gap value to add in, not two.
 export const CARD_LIST_GAP_PX = 8;
 export const CARD_LIST_GAP_CLASS = 'gap-2';
+// The two numbers the band math reserves from, in the shape
+// `dragBands.ts::ShortCardMetrics` reads — the pop machine and the carve-out
+// guides (BandGuides.tsx) pass this one value.
+export const SHORT_CARD_METRICS = { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX };
 // The Card's own outer inset (CARD_BASE in KanbanCard.tsx: a 1px border plus
 // `p-3`'s 12px padding) — a descendants-section row spans the Card's full
 // content width, so this is what turns a measured Card region's own

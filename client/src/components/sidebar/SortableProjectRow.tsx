@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
+import { DROP_INDICATOR_LINE } from '../dragChrome';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
@@ -18,7 +20,7 @@ interface RowProps {
   isActive: boolean;
   isDescendantOfActive: boolean;
   /** 'before' draws the line above this row, 'after' below it (Story 6 decision 2's new "past the last item" gap), null draws nothing. */
-  indicatorSide: 'before' | 'after' | null;
+  indicatorSide: DropSide | null;
   indicatorDepth: number;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;
@@ -92,7 +94,7 @@ export function SortableProjectRow({
       {/* Drop indicator line */}
       {indicatorSide && (
         <div
-          className={`pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500 ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
+          className={`${DROP_INDICATOR_LINE} ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
           style={{ marginLeft: projectRowIndentPx(indicatorDepth) }}
         />
       )}

@@ -5,7 +5,7 @@ import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
 import type { DragSession } from './workflow/DragSessionContext';
 import { popState } from './workflow/popSession';
-import type { Inversion } from './workflow/itemListOps';
+import type { Inversion } from './workflow/itemWriteReconciliation';
 
 // Epic 3.5 Story 3 — the dev/test panel docs/wiki/board-drag-interaction
 // §3.1 names as a required deliverable: every threshold and band of the

@@ -607,7 +607,7 @@ deferral and keep landing with their stories.
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no
    client-side automated coverage at any level. Column → Card zoom-in,
    `popDueAt`'s card fallback, `placementFor`'s Card branch, Card → column
-   pop-out via `parentRegionKey`, `useIsAttachTarget`, `AttachGhostRow` —
+   pop-out via `parentRegionKey`, `useCardContextLayer`, `AttachGhostRow` —
    all exercised only by hand. `popSession.test.ts` has no `kind: 'card'`
    region in any case (`dragFixtures.ts` says so); every E2E preset sets
    `cardPopInDelayMs` ≥ 30 s so no spec ever zooms into a Card; DRAG-4's

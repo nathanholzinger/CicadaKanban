@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   flattenHierarchy,
+  flattenHierarchyOf,
+  toRows,
   gapIndexFor,
   ownSlotOf,
   depthRangeFor,
@@ -54,6 +56,41 @@ describe('flattenHierarchy', () => {
   });
 });
 
+// A caller's own record, carried through the walk.
+const record = (id: string) => ({ id, title: `title ${id}` });
+
+describe('flattenHierarchyOf', () => {
+  it('carries each record on its row, in the same walk', () => {
+    const nodes = flattenHierarchyOf('P', id => childrenOf(id).map(record));
+    expect(nodes.map(n => n.id)).toEqual(['S1', 'S1a', 'S1a1', 'S2']);
+    expect(nodes[1]).toEqual({ id: 'S1a', parentId: 'S1', depth: 1, item: record('S1a') });
+  });
+
+  it('a corrupted parentId cycle ends the walk instead of recursing forever', () => {
+    // A's child B lists A (and the root) as its children again.
+    const cycle: Record<string, string[]> = { P: ['A'], A: ['B'], B: ['A', 'P'] };
+    const nodes = flattenHierarchyOf('P', id => (cycle[id ?? ''] ?? []).map(record));
+    expect(nodes.map(n => n.id)).toEqual(['A', 'B']);
+  });
+});
+
+describe('toRows', () => {
+  const nodes = flattenHierarchy('P', childrenOf);
+
+  it('drops an excluded row and everything beneath it, nothing else', () => {
+    expect(toRows(nodes, new Set(['S1a'])).map(r => r.id)).toEqual(['S1', 'S2']);
+  });
+
+  it('with nothing excluded, the rows as they are', () => {
+    expect(toRows(nodes)).toEqual(nodes);
+  });
+
+  it('keeps only the row fields', () => {
+    const [first] = toRows(flattenHierarchyOf('P', id => childrenOf(id).map(record)));
+    expect(first).toEqual({ id: 'S1', parentId: 'P', depth: 0 });
+  });
+});
+
 describe('gapIndexFor', () => {
   const rows = flattenHierarchy('P', childrenOf);
 
@@ -86,7 +123,7 @@ describe('ownSlotOf', () => {
       'S1',
       ['S1', 'S1a', 'S1a1'],
       { gap: 0, depth: 0 },
-      { parentId: 'P', anchor: { id: 'S2', side: 'before' } },
+      { parentId: 'P', anchor: { anchorId: 'S2', side: 'before' } },
     ],
     [
       "S1a, S1's only child (carrying S1a1)",
@@ -96,7 +133,7 @@ describe('ownSlotOf', () => {
       { parentId: 'S1', anchor: null },
     ],
     ['S1a1, a grandchild', 'S1a1', ['S1a1'], { gap: 2, depth: 2 }, { parentId: 'S1a', anchor: null }],
-    ['S2, last', 'S2', ['S2'], { gap: 3, depth: 0 }, { parentId: 'P', anchor: { id: 'S1', side: 'after' } }],
+    ['S2, last', 'S2', ['S2'], { gap: 3, depth: 0 }, { parentId: 'P', anchor: { anchorId: 'S1', side: 'after' } }],
   ] as const)('%s: its own gap and depth, which resolve to its own slot', (_, id, subtree, slot, ownPlacement) => {
     expect(ownSlotOf(all, id)).toEqual(slot);
     const exclude = new Set<string>(subtree);
@@ -148,21 +185,21 @@ describe('resolvePlacement — TC-9 / TC-10’s worked gap', () => {
   it('TC-9: Top’s own depth (2) is Top’s sibling, after Top’s whole subtree', () => {
     expect(resolvePlacement(rows, gap, 2, 'P', childrenOf)).toEqual({
       parentId: 'S1a',
-      anchor: { id: 'S1a1', side: 'after' },
+      anchor: { anchorId: 'S1a1', side: 'after' },
     });
   });
 
   it('TC-10: one tab left (depth 1) is a sibling of Top’s parent, after its subtree', () => {
     expect(resolvePlacement(rows, gap, 1, 'P', childrenOf)).toEqual({
       parentId: 'S1',
-      anchor: { id: 'S1a', side: 'after' },
+      anchor: { anchorId: 'S1a', side: 'after' },
     });
   });
 
   it('TC-10: two tabs left (depth 0, Bottom’s depth) is a sibling of Top’s grandparent', () => {
     expect(resolvePlacement(rows, gap, 0, 'P', childrenOf)).toEqual({
       parentId: 'P',
-      anchor: { id: 'S1', side: 'after' },
+      anchor: { anchorId: 'S1', side: 'after' },
     });
   });
 });
@@ -174,14 +211,14 @@ describe('resolvePlacement — TC-11’s boundaries', () => {
   it('above the first item: first child of the root, before S1', () => {
     expect(resolvePlacement(rows, 0, 0, 'P', childrenOf)).toEqual({
       parentId: 'P',
-      anchor: { id: 'S1', side: 'before' },
+      anchor: { anchorId: 'S1', side: 'before' },
     });
   });
 
   it('below the last item at depth 0: sibling after S2, under P', () => {
     expect(resolvePlacement(rows, rows.length, 0, 'P', childrenOf)).toEqual({
       parentId: 'P',
-      anchor: { id: 'S2', side: 'after' },
+      anchor: { anchorId: 'S2', side: 'after' },
     });
   });
 
@@ -193,7 +230,7 @@ describe('resolvePlacement — TC-11’s boundaries', () => {
     const gap = gapIndexFor(rows, 'S1a', 'before');
     expect(resolvePlacement(rows, gap, 1, 'P', childrenOf)).toEqual({
       parentId: 'S1',
-      anchor: { id: 'S1a', side: 'before' },
+      anchor: { anchorId: 'S1a', side: 'before' },
     });
   });
 
@@ -229,7 +266,7 @@ describe('resolvePlacement — a Top whose children are hidden from rows (a coll
     const gap = gapIndexFor(rows, 'B', 'before'); // between A (Top) and B (Bottom)
     expect(resolvePlacement(rows, gap, 1, null, fullChildrenOf)).toEqual({
       parentId: 'A',
-      anchor: { id: 'A1', side: 'before' },
+      anchor: { anchorId: 'A1', side: 'before' },
     });
   });
 
@@ -237,7 +274,7 @@ describe('resolvePlacement — a Top whose children are hidden from rows (a coll
     const gap = gapIndexFor(rows, 'B', 'before');
     expect(resolvePlacement(rows, gap, 1, null, fullChildrenOf, new Set(['A1']))).toEqual({
       parentId: 'A',
-      anchor: { id: 'A2', side: 'before' },
+      anchor: { anchorId: 'A2', side: 'before' },
     });
   });
 });
@@ -288,7 +325,7 @@ describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', 
     for (let depth = lo; depth <= hi; depth++) {
       const placement = resolvePlacement(withoutDraggedSubtree, gap, depth, 'P', childrenOf, exclude);
       expect(placement.parentId).not.toBe('S1a');
-      expect(placement.anchor?.id).not.toBe('S1a1');
+      expect(placement.anchor?.anchorId).not.toBe('S1a1');
     }
   });
 });
@@ -305,7 +342,7 @@ describe('computeProjection', () => {
 
   it('resolves depth from the seed plus delta/indent, then the same placement resolvePlacement would', () => {
     const result = computeProjection(rows, gap, 2, 0, 10, 'P', childrenOf);
-    expect(result).toEqual({ depth: 2, placement: { parentId: 'S1a', anchor: { id: 'S1a1', side: 'after' } } });
+    expect(result).toEqual({ depth: 2, placement: { parentId: 'S1a', anchor: { anchorId: 'S1a1', side: 'after' } } });
   });
 
   it('rounds the raw depth from deltaX/indentPx before clamping', () => {
@@ -321,7 +358,7 @@ describe('computeProjection', () => {
 
   it("clamps to the gap's own lo when the delta pushes past it", () => {
     const result = computeProjection(rows, gap, 2, -500, 10, 'P', childrenOf); // huge leftward delta
-    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { id: 'S1', side: 'after' } } });
+    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { anchorId: 'S1', side: 'after' } } });
   });
 
   it('excludes the dragged subtree from the resolved placement too', () => {
@@ -329,6 +366,6 @@ describe('computeProjection', () => {
     const withoutDraggedSubtree = flattenHierarchy('P', childrenOf, exclude);
     const g = gapIndexFor(withoutDraggedSubtree, 'S2', 'before');
     const result = computeProjection(withoutDraggedSubtree, g, 0, 0, 10, 'P', childrenOf, exclude);
-    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { id: 'S1', side: 'after' } } });
+    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { anchorId: 'S1', side: 'after' } } });
   });
 });

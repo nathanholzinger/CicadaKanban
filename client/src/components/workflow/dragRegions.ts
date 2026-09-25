@@ -37,8 +37,6 @@
 // the Card's own region, so popping out lands there (§8) the same way any
 // nested region's does.
 
-import { clipToVisible } from './dragBands';
-
 export interface Rect {
   top: number;
   left: number;
@@ -406,6 +404,20 @@ export function hasNewRegionElements(root: ParentNode, seen: ReadonlySet<Element
 function toRect(domRect: DOMRect): Rect {
   const { top, left, right, bottom, width, height } = domRect;
   return { top, left, right, bottom, width, height };
+}
+
+// Clips `rect` vertically to `bounds` (a scrolling ancestor's own visible
+// box) — null when nothing of it remains visible. Horizontal is left
+// alone: the board scrolls whole columns sideways, never a fraction of one.
+// The hazard `toRect` (above) guards at the boundary: this was the
+// function that caught it, back when it read `el.getBoundingClientRect()`
+// directly and spread it — every sub-row region resolved with
+// `left`/`right`/`width` missing, so no point could ever match it.
+export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
+  const top = Math.max(rect.top, bounds.top);
+  const bottom = Math.min(rect.bottom, bounds.bottom);
+  if (bottom <= top) return null;
+  return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }
 
 // The element's painted box. Used to carry a correction for a Card

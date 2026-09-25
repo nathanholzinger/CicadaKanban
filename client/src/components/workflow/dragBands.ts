@@ -1,10 +1,8 @@
 // The reservation/band math for a card-list region (docs/wiki/board-drag-
 // interaction §5) — reservationFor/bandBoundaries/bandFor turn a region's
 // own isTerminal/cardCount into pixel boundaries; distanceOutside is the
-// pop threshold's optional distance term; clipToVisible clips a region's
-// rect to a scrolling ancestor's visible box. Moved out of dragRegions.ts
-// (Story 6.1 Phase 1, C-4): this is the board's own §5 policy, not a fact
-// about what a region *is* structurally.
+// pop threshold's optional distance term. The board's own §5 policy, not a
+// fact about what a region *is* structurally (that's dragRegions.ts).
 
 import type { CardListRegion, Point, Rect } from './dragRegions';
 
@@ -108,18 +106,4 @@ export function distanceOutside(point: Point, rect: Rect): number {
   const dx = distanceFromRange(point.x, rect.left, rect.right);
   const dy = distanceFromRange(point.y, rect.top, rect.bottom);
   return Math.hypot(dx, dy);
-}
-
-// Clips `rect` vertically to `bounds` (a scrolling ancestor's own visible
-// box) — null when nothing of it remains visible. Horizontal is left
-// alone: the board scrolls whole columns sideways, never a fraction of one.
-// The hazard `dragRegions.ts::toRect` guards at the boundary: this was the
-// function that caught it, back when it read `el.getBoundingClientRect()`
-// directly and spread it — every sub-row region resolved with
-// `left`/`right`/`width` missing, so no point could ever match it.
-export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
-  const top = Math.max(rect.top, bounds.top);
-  const bottom = Math.min(rect.bottom, bounds.bottom);
-  if (bottom <= top) return null;
-  return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }

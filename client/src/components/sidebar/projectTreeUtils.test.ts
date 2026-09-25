@@ -171,14 +171,17 @@ describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
     const gap = resolveGap(flatCollapsed, rows, new Set(), 'sibling', 'before'); // between root (Top) and sibling (Bottom)
     const result = computeProjection(rows, gap, 0, 14, INDENT_WIDTH, null, childrenOfReal, new Set()); // one tab right of root
 
-    expect(result).toEqual({ depth: 1, placement: { parentId: 'root', anchor: { id: 'child', side: 'before' } } });
+    expect(result).toEqual({
+      depth: 1,
+      placement: { parentId: 'root', anchor: { anchorId: 'child', side: 'before' } },
+    });
   });
 });
 
 describe('siblingIdsFromAnchor', () => {
   it('an "after" anchor is the previous sibling; "before" is the next', () => {
-    expect(siblingIdsFromAnchor({ id: 'A', side: 'after' })).toEqual({ prevId: 'A', nextId: null });
-    expect(siblingIdsFromAnchor({ id: 'B', side: 'before' })).toEqual({ prevId: null, nextId: 'B' });
+    expect(siblingIdsFromAnchor({ anchorId: 'A', side: 'after' })).toEqual({ prevId: 'A', nextId: null });
+    expect(siblingIdsFromAnchor({ anchorId: 'B', side: 'before' })).toEqual({ prevId: null, nextId: 'B' });
   });
 
   it('no anchor (the sole child of its parent) is neither', () => {

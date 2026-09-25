@@ -4,6 +4,8 @@
 // C-2): the transition machine (advancePopSession et al.) and the
 // placement rules are two separate halves.
 
+import type { Item } from '../../types';
+import type { AnchorRelation } from '../../lib/hierarchyPlacement';
 import { hasParentOpinion, workphaseOnlySlot, type Placement } from './itemListOps';
 import type { CardListRegion, DragRegion } from './dragRegions';
 import type { PopSession } from './popSession';
@@ -65,7 +67,17 @@ function noAnchorSlot(
 // `{anchorId, side}` is release onto a specific card, `dropAnchorFor`'s own
 // anchor + lean (Option A + the lean, 2026-09-24 — `resolveDropSide` is now
 // only its fallback for a non-row `over`).
-export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'container' | null;
+export type PlacementOver = AnchorRelation | 'container' | null;
+
+// The drag a placement is for — the slice of a `DragSession` `placementFor`
+// reads, so a session passes as it is.
+export interface PlacementSubject {
+  pop: PopSession;
+  activeItem: Pick<Item, 'workphaseId' | 'position'>;
+  origin: Placement;
+  containingCardId: string | null;
+  priorPlacement: Placement | null;
+}
 
 // The ghost (§10 ordinal preview, §5 band table): always the *locked*
 // context's own within-action when there is one — Column/sub-row: the
@@ -101,15 +113,12 @@ export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'co
 // for a Card context, or once `over` names a real resolved drop: there's
 // nothing left to jump.
 export function placementFor(
-  session: PopSession,
+  subject: PlacementSubject,
   regions: readonly DragRegion[],
-  activeWorkphaseId: string | null,
-  activeItemPosition: number | null,
-  origin: Placement,
-  containingCardId: string | null,
-  priorPlacement: Placement | null = null,
   over: PlacementOver = null,
 ): Placement | null {
+  const { pop: session, origin, containingCardId, priorPlacement } = subject;
+  const { workphaseId: activeWorkphaseId, position: activeItemPosition } = subject.activeItem;
   const region = placementRegion(session, regions);
   if (!region) return null;
 

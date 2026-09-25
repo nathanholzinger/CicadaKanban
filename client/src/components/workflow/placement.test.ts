@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { advancePopSession, startPopSession } from './popSession';
-import { overlayFormFor, placementFor, placementRegion, resolvePlacementOver } from './placement';
+import { advancePopSession, startPopSession, type PopSession } from './popSession';
+import {
+  overlayFormFor,
+  placementFor,
+  placementRegion,
+  resolvePlacementOver,
+  type PlacementSubject,
+} from './placement';
 import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
 import {
@@ -27,12 +33,23 @@ describe('placementFor', () => {
   // workphase, and `containingCardId` is null throughout (a Free Card never
   // has one) — neither ever changes the outcome of these cases (both only
   // ever matter for the Card/Descendants branches, exercised in their own
-  // describe block below).
+  // describe block below). `subject` builds that drag — a Free Card of
+  // `activeWorkphase` at position 1, its own origin — with any field overridden.
+  interface SubjectFields {
+    workphaseId?: string | null;
+    position?: number | null;
+    origin?: Placement;
+    containingCardId?: string | null;
+    priorPlacement?: Placement | null;
+  }
+  const subject = (pop: PopSession, fields: SubjectFields = {}): PlacementSubject => {
+    const { workphaseId = activeWorkphase, position = 1, containingCardId = null, priorPlacement = null } = fields;
+    const origin = fields.origin ?? freeOrigin(workphaseId ?? activeWorkphase);
+    return { pop, activeItem: { workphaseId, position }, origin, containingCardId, priorPlacement };
+  };
 
   it('in-context: the item sorts where it already is, under its own workphase', () => {
-    expect(
-      placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null),
-    ).toEqual({
+    expect(placementFor(subject(startPopSession(A.key)), regions)).toEqual({
       workphaseId: activeWorkphase,
       slot: 'existing',
     });
@@ -45,7 +62,7 @@ describe('placementFor', () => {
   describe('over (release, in-context)', () => {
     it('a specific card: the anchor + side dnd-kit resolved, under its own workphase (TC-2.11)', () => {
       expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, null, {
+        placementFor(subject(startPopSession(A.key)), regions, {
           anchorId: 'card-x',
           side: 'after',
         }),
@@ -53,18 +70,7 @@ describe('placementFor', () => {
     });
 
     it("the bare container: the same workphase-only fallback mid-drag already uses — there's no card to anchor beside", () => {
-      expect(
-        placementFor(
-          startPopSession(A.key),
-          regions,
-          activeWorkphase,
-          1,
-          freeOrigin(activeWorkphase),
-          null,
-          null,
-          'container',
-        ),
-      ).toEqual({
+      expect(placementFor(subject(startPopSession(A.key)), regions, 'container')).toEqual({
         workphaseId: activeWorkphase,
         slot: 'existing',
       });
@@ -73,7 +79,7 @@ describe('placementFor', () => {
     it('a done region never anchors, even onto one of its own cards — same fallback as a bare container (audit epic-3-5-story-3-reconciled #4)', () => {
       const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
       expect(
-        placementFor(startPopSession(done.key), [done], activeWorkphase, 1, freeOrigin(activeWorkphase), null, null, {
+        placementFor(subject(startPopSession(done.key)), [done], {
           anchorId: 'done-card',
           side: 'before',
         }),
@@ -83,7 +89,7 @@ describe('placementFor', () => {
     it('a real drop always wins over priorPlacement — only the null (mid-drag) case defers to it', () => {
       const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
       expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior, {
+        placementFor(subject(startPopSession(A.key), { priorPlacement: prior }), regions, {
           anchorId: 'card-x',
           side: 'before',
         }),
@@ -92,15 +98,15 @@ describe('placementFor', () => {
   });
 
   it("DRAG-3.11: Board layer — the hovered band picks the slot — first, existing, last — under the region's target workphase", () => {
-    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(hoverAt(bTop)), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
-    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(hoverAt(bMiddle)), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
-    expect(placementFor(hoverAt(bBottom), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(hoverAt(bBottom)), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -112,7 +118,7 @@ describe('placementFor', () => {
       targetWorkphaseId: 'w1',
     });
     const s = hoverAt(bTop, [A, merged]);
-    expect(placementFor(s, [A, merged], 'w2', 1, freeOrigin('w2'), null)).toEqual({ workphaseId: 'w2', slot: 'first' });
+    expect(placementFor(subject(s, { workphaseId: 'w2' }), [A, merged])).toEqual({ workphaseId: 'w2', slot: 'first' });
   });
 
   it("DRAG-3.9: Board layer — a done region previews no positioned insert in any band, whatever the item's own position", () => {
@@ -120,7 +126,7 @@ describe('placementFor', () => {
     for (const p of [bTop, bMiddle, bBottom]) {
       for (const position of [1, null]) {
         const s = hoverAt(p, [A, done]);
-        expect(placementFor(s, [A, done], activeWorkphase, position, freeOrigin(activeWorkphase), null)).toEqual({
+        expect(placementFor(subject(s, { position }), [A, done])).toEqual({
           workphaseId: done.targetWorkphaseId,
           slot: 'existing',
         });
@@ -133,7 +139,7 @@ describe('placementFor', () => {
   // fallback instead of the position-sort's null-coerced top slot, in
   // either of the two places band resolution lands on 'existing'.
   it('#29: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
-    expect(placementFor(hoverAt(bMiddle), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(hoverAt(bMiddle), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
@@ -142,21 +148,19 @@ describe('placementFor', () => {
       [bMiddle, OUT],
       [bMiddle, OUT + IN],
     ]);
-    expect(placementFor(poppedIn, regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(poppedIn, { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
     // The edge bands are unaffected — they already name an explicit anchor.
-    expect(placementFor(hoverAt(bTop), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(hoverAt(bTop), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'first',
     });
   });
 
   it('popped out over nothing: no placement — the card is drawn where it already is', () => {
-    expect(
-      placementFor(startPopSession(null), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null),
-    ).toBeNull();
+    expect(placementFor(subject(startPopSession(null)), regions)).toBeNull();
   });
 
   // re-picking up an item whose
@@ -168,14 +172,12 @@ describe('placementFor', () => {
     const prior: Placement = { workphaseId: activeWorkphase, slot: { anchorId: 'other-item', side: 'after' } };
 
     it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
-      expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior),
-      ).toBe(prior);
+      expect(placementFor(subject(startPopSession(A.key), { priorPlacement: prior }), regions)).toBe(prior);
       // Even where the fresh computation would have said something else —
       // e.g. no position to keep, which alone would say 'last'.
-      expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null, prior),
-      ).toBe(prior);
+      expect(placementFor(subject(startPopSession(A.key), { position: null, priorPlacement: prior }), regions)).toBe(
+        prior,
+      );
     });
 
     // X's move to B is pending, so
@@ -184,7 +186,9 @@ describe('placementFor', () => {
     it("locked in a list the prior placement doesn't draw it in, it gives way to that list's own slot", () => {
       const inB = B.targetWorkphaseId;
       const pendingInB: Placement = { workphaseId: inB, slot: { anchorId: 'other-item', side: 'after' } };
-      expect(placementFor(startPopSession(A.key), regions, inB, 1, freeOrigin(inB), null, pendingInB)).toEqual({
+      expect(
+        placementFor(subject(startPopSession(A.key), { workphaseId: inB, priorPlacement: pendingInB }), regions),
+      ).toEqual({
         workphaseId: A.targetWorkphaseId,
         slot: 'existing',
       });
@@ -192,31 +196,26 @@ describe('placementFor', () => {
 
     it("a pending attach (the prior names a parent) never stands in for a card list's ghost", () => {
       const attaching: Placement = { parentId: 'card-y', slot: 'last' };
-      expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, attaching),
-      ).toEqual({ workphaseId: activeWorkphase, slot: 'existing' });
+      expect(placementFor(subject(startPopSession(A.key), { priorPlacement: attaching }), regions)).toEqual({
+        workphaseId: activeWorkphase,
+        slot: 'existing',
+      });
     });
 
     it('a pending detach (parentId: null) into this list still stands in', () => {
       const detached: Placement = { parentId: null, workphaseId: activeWorkphase, slot: 'last' };
-      expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, detached),
-      ).toBe(detached);
+      expect(placementFor(subject(startPopSession(A.key), { priorPlacement: detached }), regions)).toBe(detached);
     });
 
     it('a Board-layer hovered band ignores it — a genuine new region still computes its own slot', () => {
-      expect(
-        placementFor(hoverAt(bTop), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, prior),
-      ).toEqual({
+      expect(placementFor(subject(hoverAt(bTop), { priorPlacement: prior }), regions)).toEqual({
         workphaseId: B.targetWorkphaseId,
         slot: 'first',
       });
     });
 
     it('with no prior placement (the ordinary drag), in-context still computes the raw slot as before', () => {
-      expect(
-        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, null),
-      ).toEqual({
+      expect(placementFor(subject(startPopSession(A.key)), regions)).toEqual({
         workphaseId: activeWorkphase,
         slot: 'existing',
       });
@@ -230,7 +229,7 @@ describe('placementFor', () => {
       [bMiddle, OUT + IN],
     ]);
     expect(s).toEqual(startPopSession(B.key));
-    expect(placementFor(s, regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
+    expect(placementFor(subject(s), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',
     });
@@ -244,27 +243,29 @@ describe('placementFor', () => {
     const otherCard = cardRegion('card-q', rect(0, 0, 100, 200), A.key);
     const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
     const origin = stubOrigin(P);
+    const stub = (pop: PopSession, position: number | null) =>
+      subject(pop, { workphaseId: null, position, origin, containingCardId: P });
 
     it('TC-12: at its own containing Card, the within-action is origin itself — "set back down"', () => {
-      expect(placementFor(startPopSession(cardP.key), [cardP], null, null, origin, P)).toBe(origin);
+      expect(placementFor(stub(startPopSession(cardP.key), null), [cardP])).toBe(origin);
     });
 
     it('TC-4: at a *different* Card, the within-action is attach as its last child', () => {
-      expect(placementFor(startPopSession(otherCard.key), [otherCard], null, null, origin, P)).toEqual({
+      expect(placementFor(stub(startPopSession(otherCard.key), null), [otherCard])).toEqual({
         parentId: 'card-q',
         slot: 'last',
       });
     });
 
     it("TC-9 (sibling bullets): at its own Descendants section, mid-drag (this branch never actually sees a real `over` — release there goes through releaseDescendants instead, Story 6 Phase D) sits at origin — dnd-kit's own sortable strategy draws the reorder", () => {
-      expect(placementFor(startPopSession(descendantsP.key), [descendantsP], null, null, origin, P)).toBe(origin);
+      expect(placementFor(stub(startPopSession(descendantsP.key), null), [descendantsP])).toBe(origin);
     });
 
     it('TC-1/2/3: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot (decision 5)', () => {
       // activeItemPosition is a real number here on purpose — a Stub's own
       // attached-siblings-scope position, which must NOT be read as "a
       // position to keep" once it's previewing into a workflow-wide list.
-      expect(placementFor(startPopSession(A.key), regions, null, 3, origin, P)).toEqual({
+      expect(placementFor(stub(startPopSession(A.key), 3), regions)).toEqual({
         parentId: null,
         workphaseId: activeWorkphase,
         slot: 'last',
@@ -272,13 +273,15 @@ describe('placementFor', () => {
     });
 
     it("TC-1: a real anchor at the column layer resolves exactly like any Card's anchor+side", () => {
-      expect(
-        placementFor(startPopSession(A.key), regions, null, 3, origin, P, null, { anchorId: 'q', side: 'after' }),
-      ).toEqual({ parentId: null, workphaseId: activeWorkphase, slot: { anchorId: 'q', side: 'after' } });
+      expect(placementFor(stub(startPopSession(A.key), 3), regions, { anchorId: 'q', side: 'after' })).toEqual({
+        parentId: null,
+        workphaseId: activeWorkphase,
+        slot: { anchorId: 'q', side: 'after' },
+      });
     });
 
     it('TC-3: Board layer (genuinely popped out) also previews Free at the append slot', () => {
-      expect(placementFor(hoverAt(bMiddle), regions, null, 3, origin, P)).toEqual({
+      expect(placementFor(stub(hoverAt(bMiddle), 3), regions)).toEqual({
         parentId: null,
         workphaseId: B.targetWorkphaseId,
         slot: 'last',
@@ -287,7 +290,7 @@ describe('placementFor', () => {
 
     it('a terminal region still previews existing (nothing anchorable there) even for a detaching Stub', () => {
       const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
-      expect(placementFor(startPopSession(done.key), [done], null, 3, origin, P)).toEqual({
+      expect(placementFor(stub(startPopSession(done.key), 3), [done])).toEqual({
         parentId: null,
         workphaseId: done.targetWorkphaseId,
         slot: 'existing',
@@ -310,14 +313,23 @@ describe('placementFor', () => {
 
     it("a Free Card, mid-drag: previews attaching as last child of the section's own Card", () => {
       expect(
-        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, freeOrigin('w1'), null),
+        placementFor(
+          subject(startPopSession(descendantsQ.key), { workphaseId: null, position: null, origin: freeOrigin('w1') }),
+          [descendantsQ],
+        ),
       ).toEqual({ parentId: Q, slot: 'last' });
     });
 
     it('a Stub detaching from a *different* Card (containingCardId !== region.cardId): the same foreign-entry rule, not parentOpinionOf(origin)', () => {
       const P = 'card-p';
       const origin = stubOrigin(P);
-      expect(placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, P)).toEqual({
+      const fromP = subject(startPopSession(descendantsQ.key), {
+        workphaseId: null,
+        position: null,
+        origin,
+        containingCardId: P,
+      });
+      expect(placementFor(fromP, [descendantsQ])).toEqual({
         parentId: Q,
         slot: 'last',
       });
@@ -325,7 +337,17 @@ describe('placementFor', () => {
 
     it('the same Card as containingCardId is still the same-section rule (regression guard against always taking the foreign path)', () => {
       const origin = stubOrigin(Q);
-      expect(placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, Q)).toBe(origin);
+      expect(
+        placementFor(
+          subject(startPopSession(descendantsQ.key), {
+            workphaseId: null,
+            position: null,
+            origin,
+            containingCardId: Q,
+          }),
+          [descendantsQ],
+        ),
+      ).toBe(origin);
     });
   });
 });

@@ -78,7 +78,7 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   `itemPositionScope.ts` / `itemTree.ts` are table-generic (items + projects). Extend
   those, never duplicate inline. Client `lib/hierarchyPlacement.ts` is the sibling
   layer one level up — a Card's descendants section's own gap + depth rule
-  (`flattenHierarchy`/`resolvePlacement`, Epic 3.5 Story 6 §7), shared by the board's
+  (`flattenHierarchyOf`/`resolvePlacement`, Epic 3.5 Story 6 §7), shared by the board's
   Descendants layer and the project sidebar. Table-generic the same way (`{id,
   parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
   walk inline either.
@@ -88,7 +88,7 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   at the route level.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
   may carry `reindexed: {id, position}[]`. Every write path folds it through
-  `client/src/components/workflow/itemListOps.ts::completeItemWrite`.
+  `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **`types.ts` is manually synced with `schema.ts`** — no codegen. Update both.

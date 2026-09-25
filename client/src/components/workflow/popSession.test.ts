@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { DragTuning } from './dragTuning';
 import { advancePopSession, isLocked, popDueAt, startPopSession } from './popSession';
 import { cardRegion, descendantsRegion, rect, region } from '../../test/dragFixtures';
@@ -170,7 +171,7 @@ describe('locked column/sub-row: the named-card zoom-in candidate (Story 6, find
   const P = cardRegion('p', rect(10, 10, 80, 40), A.key);
   const Q = cardRegion('q', rect(10, 60, 80, 40), A.key);
   const withCards = [A, B, C, P, Q];
-  const namedP = (side: 'before' | 'after' = 'after') => ({ anchorId: 'p', side });
+  const namedP = (side: DropSide = 'after') => ({ anchorId: 'p', side });
 
   it('holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
     let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());

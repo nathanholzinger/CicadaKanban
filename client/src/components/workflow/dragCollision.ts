@@ -1,11 +1,12 @@
 // Row-data typing, collision detection, and anchor naming for the board drag
-// gesture: itemRowData/columnData/isCardRow/isStubRow, resolveBoardCollisions,
-// and dropAnchorFor (the anchor + lean). Moved out of boardDndUtils.ts (Story
-// 6.1 Phase 1, C-3) — the request-shape half (toRequest/isIdentity/
-// sendItemMove) is dragRequest.ts.
+// gesture: itemRowData/columnData and their readers (isItemData/isColumnData/
+// isCardRow/isStubRow), resolveBoardCollisions, and dropAnchorFor/
+// namedAnchorFor (the anchor + lean). The request-shape half
+// (toRequest/isIdentity/sendItemMove) is dragRequest.ts.
 
 import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
 import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
+import type { AnchorRelation, DropSide } from '../../lib/hierarchyPlacement';
 import { containsPoint, descendantsCardIdOf, type Rect } from './dragRegions';
 import type { DragClassification } from './dragClassification';
 import type { PopSession } from './popSession';
@@ -17,12 +18,13 @@ import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 // for the same id") holds by construction, not by convention alone: an
 // untyped literal lets `role: 'stubs'` compile without complaint (audit
 // epic-3-5-story-5 #11). `itemRowData`/`columnData` are the one write path;
-// `isCardRow`/`isStubRow` the one read path for a policy decision that
-// needs a specific role (both `useSortable` calls, the collision filter
-// below, and the test fixtures all go through these instead of re-typing
+// `isItemData`/`isColumnData`/`isCardRow`/`isStubRow` the one read path
+// (both `useSortable` calls, the collision filter below, the hook's
+// handlers and the test fixtures all go through these instead of re-typing
 // the literal).
 export type ItemRowRole = 'card' | 'stub';
-export type DragRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null } | { type: 'column' };
+export type ItemRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null };
+export type DragRowData = ItemRowData | { type: 'column' };
 
 export function itemRowData(role: ItemRowRole, parentId?: string | null): DragRowData {
   return parentId !== undefined ? { type: 'item', role, parentId } : { type: 'item', role };
@@ -32,14 +34,22 @@ export function columnData(): DragRowData {
   return { type: 'column' };
 }
 
-export function isCardRow(data: Record<string, unknown> | undefined): data is { type: 'item'; role: 'card' } {
-  return data?.type === 'item' && data?.role === 'card';
+// Which kind of drag a dnd-kit `data` belongs to: an item row (Card or
+// Stub alike) or a column.
+export function isItemData(data: Record<string, unknown> | undefined): data is ItemRowData {
+  return data?.type === 'item';
 }
 
-export function isStubRow(
-  data: Record<string, unknown> | undefined,
-): data is { type: 'item'; role: 'stub'; parentId?: string | null } {
-  return data?.type === 'item' && data?.role === 'stub';
+export function isColumnData(data: Record<string, unknown> | undefined): data is { type: 'column' } {
+  return data?.type === 'column';
+}
+
+export function isCardRow(data: Record<string, unknown> | undefined): data is ItemRowData & { role: 'card' } {
+  return isItemData(data) && data.role === 'card';
+}
+
+export function isStubRow(data: Record<string, unknown> | undefined): data is ItemRowData & { role: 'stub' } {
+  return isItemData(data) && data.role === 'stub';
 }
 
 // Pure drop-resolution for the board's drag-and-drop, extracted from
@@ -108,8 +118,7 @@ export function resolveBoardCollisions(
   args: Parameters<CollisionDetection>[0],
   liveSession: CollisionSession | null,
 ): ReturnType<CollisionDetection> {
-  const activeData = args.active.data.current;
-  const session = activeData?.type === 'item' ? liveSession : null;
+  const session = isItemData(args.active.data.current) ? liveSession : null;
 
   if (session?.hoverContainerId) {
     const container = args.droppableContainers.find(c => c.id === session.hoverContainerId);
@@ -180,7 +189,7 @@ const SIDE_TIE_EPSILON_PX = 1;
 export function resolveDropSide(
   activeRect: VerticalRect | null | undefined,
   overRect: VerticalRect | null | undefined,
-): 'before' | 'after' {
+): DropSide {
   if (!activeRect || !overRect) return 'before';
 
   const activeCenterY = activeRect.top + activeRect.height / 2;
@@ -189,14 +198,9 @@ export function resolveDropSide(
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
 }
 
-export interface DropAnchor {
-  anchorId: string;
-  side: 'before' | 'after';
-}
-
 // Option A + lean (2026-09-24), generalized to Stub rows in Story 6 Phase D:
 // the card or Stub a drop anchors to, and which side of it — the one answer
-// the live blue line (`KanbanCard.tsx`), the release
+// the live blue line (`dragChrome.tsx`), the release
 // (`useBoardDnd.ts::handleDragEnd`), and the Descendants layer's own
 // gap-tracking (`useBoardDnd.ts`'s projection) all read, so they can't
 // disagree.
@@ -246,11 +250,11 @@ export function dropAnchorFor(
   active: Pick<Active, 'id' | 'rect'>,
   over: Over,
   travels?: (id: string) => boolean,
-): DropAnchor | null {
+): AnchorRelation | null {
   const translated = active.rect.current.translated;
   const overData = over.data.current;
-  if (!(isCardRow(overData) || isStubRow(overData))) return null;
-  const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
+  if (!isItemData(overData)) return null;
+  const onOver = (): AnchorRelation => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
   if (!hasSortableData(over)) return onOver();
   const ghostHeightPx = isStubRow(overData) ? STUB_ROW_HEIGHT_PX : SHORT_CARD_HEIGHT_PX;
   const { items, index: overIndex } = over.data.current.sortable;
@@ -286,10 +290,26 @@ export function dropAnchorFor(
 // descendant of the dragged Card is a real anchor. One predicate for the
 // blue line (`KanbanCard.tsx`) and the gap (`useBoardDnd.ts::handleDragMove`),
 // so they can't disagree.
-export function travelingRowsFor(
-  session: { pop: Pick<PopSession, 'contextKey'>; classification: Pick<DragClassification, 'subtreeIds'> } | null,
-): ((id: string) => boolean) | undefined {
+export function travelingRowsFor(session: AnchorSession | null): ((id: string) => boolean) | undefined {
   if (!session || !descendantsCardIdOf(session.pop.contextKey)) return undefined;
   const { subtreeIds } = session.classification;
   return id => subtreeIds.has(id);
+}
+
+// The slice of a drag session the anchor reads.
+export type AnchorSession = {
+  pop: Pick<PopSession, 'contextKey'>;
+  classification: Pick<DragClassification, 'subtreeIds'>;
+};
+
+// The row a drop names right now, asked the one way every reader asks it:
+// the blue line (`dragChrome.tsx`), the pop machine's zoom-in candidate and
+// the Descendants gap (`useBoardDnd.ts::handleDragMove`), and the release.
+// So all of them step past the same traveling rows. No `over`, no anchor.
+export function namedAnchorFor(
+  active: Pick<Active, 'id' | 'rect'>,
+  over: Over | null,
+  session: AnchorSession | null,
+): AnchorRelation | null {
+  return over ? dropAnchorFor(active, over, travelingRowsFor(session)) : null;
 }

@@ -1,17 +1,20 @@
-// The drag-time chrome a Card and a Stub share (audit epic-3-5-story-2 #13):
-// the live side indicator, the drag-target attributes/overlay, the pending
-// marker, and the zoom-in cue. Split out of KanbanCard.tsx (Story 6.1 Phase
-// 1, C-5) — the Card tier's own render stays there.
+// The drag-time chrome a Card and a Stub share: an item row's registration
+// and drop-target chrome (`useItemRow`), the live side indicator, and the
+// zoom-in cue. The Card tier's own render is KanbanCard.tsx, the Stub tier's
+// StubRows.tsx.
 
 import { useDndContext } from '@dnd-kit/core';
-import { dropAnchorFor, travelingRowsFor } from './workflow/dragCollision';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { DropSide } from '../lib/hierarchyPlacement';
+import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
 import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
 import type { OverlayForm } from './workflow/placement';
 
 // The live drop-side indicator (Epic 3.2 addendum). Reads dnd-kit's live
 // active/over state directly via useDndContext — no prop drilling through
-// BoardColumn/BoardView — and calls the exact same dropAnchorFor function
-// useBoardDnd's handleDragEnd uses, so the line shown here always matches
+// BoardColumn/BoardView — and names the anchor the way useBoardDnd's
+// handleDragEnd does (`namedAnchorFor`), so the line shown here always matches
 // what gets sent, at every row dropAnchorFor could ever name (a Card row or
 // a Stub row, whichever the active drag happens to be — Story 6.1 Phase 3,
 // L1-13: no longer narrowed to a caller-declared subset of roles, which
@@ -21,12 +24,11 @@ import type { OverlayForm } from './workflow/placement';
 // 2026-09-24) the anchor is a neighbor of the ghost, not necessarily the
 // card dnd-kit says is `over`, so every row asks whether it's the one
 // named.
-function useLiveDropSide(itemId: string): 'before' | 'after' | null {
+function useLiveDropSide(itemId: string): DropSide | null {
   const { active, over } = useDndContext();
   const session = useDragSession();
-  if (!active || !over || active.id === itemId) return null;
-  if (active.data.current?.type !== 'item') return null;
-  const anchor = dropAnchorFor(active, over, travelingRowsFor(session));
+  if (!active || active.id === itemId || !isItemData(active.data.current)) return null;
+  const anchor = namedAnchorFor(active, over, session);
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
@@ -52,30 +54,52 @@ function dropTargetClass(view: DropTargetView | null): string {
   return '';
 }
 
-const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
-const DROP_INDICATOR_AFTER =
-  'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+// The blue drop line, less its vertical offset — the board's rows and the
+// project sidebar's (`SortableProjectRow.tsx`) draw the same line.
+export const DROP_INDICATOR_LINE = 'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+const DROP_INDICATOR_BEFORE = `${DROP_INDICATOR_LINE} -top-1`;
+const DROP_INDICATOR_AFTER = `${DROP_INDICATOR_LINE} -bottom-1`;
 
 // Story 6 Phase D, decision 7 — the provisional invalid-tab-state cue
 // (§7.2): a dashed red outline on the active row's own preview while its
 // current depth choice would exceed the cap. Story 8 restyles.
 export const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500/70';
 
-// The drag-time chrome a Card and a Stub share (audit epic-3-5-story-2
-// #13): the live side indicator, the drag-target attributes/overlay, the
-// pending marker. The DragOverlay copy is the carried item itself — never a
-// target, never pending — so it gets none of it.
-// The one non-component export beside DropSideIndicator/ZoomCue (Story 6.1
-// Phase 1, C-5): it belongs next to the indicator that draws its `dropSide`.
-// Fast Refresh reloads this file in full instead of hot-swapping it, a dev
-// convenience only, so the rule is suppressed rather than the file split.
+interface ItemRowOptions {
+  /** A Stub row's own parent, carried on its registration. */
+  parentId?: string | null;
+  /** The DragOverlay copy: the carried item itself — never a target, never pending — so it gets none of the chrome. */
+  isOverlay?: boolean;
+  /** isOverlay only — which form the carried copy draws as. */
+  overlayForm?: OverlayForm;
+}
+
+// One item row's dnd-kit registration and drag chrome, for a Card row and a
+// Stub row alike: the sortable registration (`itemRowData` — every item row
+// registers `type: 'item'`, decision 4) and its transform, the drop-target
+// attributes and overlay, the pending marker, and the dimming while this row
+// is the one being dragged. The row draws `DropSideIndicator` for
+// `dropSide` itself. The one non-component export beside the components: it
+// belongs next to the indicator. Fast Refresh reloads this file in full
+// instead of hot-swapping it, a dev convenience only, so the rule is
+// suppressed rather than the file split.
 // eslint-disable-next-line react-refresh/only-export-components
-export function useDropTargetProps(itemId: string, isOverlay = false, overlayForm: OverlayForm = 'short-card') {
+export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
+  const { parentId, isOverlay = false, overlayForm = 'short-card' } = options;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: itemId,
+    data: itemRowData(role, parentId),
+  });
   const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
   return {
+    attributes,
+    listeners,
+    setNodeRef,
+    isDragging,
     dropSide,
+    sortableStyle: { transform: CSS.Transform.toString(transform), transition },
     dataAttrs: {
       'data-item-id': isOverlay ? undefined : itemId,
       // The carried copy, for the E2E helper's "drag finished" wait — it
@@ -87,11 +111,11 @@ export function useDropTargetProps(itemId: string, isOverlay = false, overlayFor
       'data-drop-state': dropTarget?.state,
       'data-pending': pending ? 'true' : undefined,
     },
-    className: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''}`,
+    chromeClassName: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''}`,
   };
 }
 
-export function DropSideIndicator({ side }: { side: 'before' | 'after' | null }) {
+export function DropSideIndicator({ side }: { side: DropSide | null }) {
   if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} />;
   if (side === 'after') return <div className={DROP_INDICATOR_AFTER} />;
   return null;

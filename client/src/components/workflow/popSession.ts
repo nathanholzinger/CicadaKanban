@@ -13,13 +13,10 @@ import {
   type RegionKind,
 } from './dragRegions';
 import { bandFor, distanceOutside, type Band, type ShortCardMetrics } from './dragBands';
-// Story 6, hands-on finding 3 (2026-09-24) — `DropAnchor` is plain data
-// (`{anchorId, side}`, no dnd-kit types), so importing its *type* here
-// doesn't compromise this module's "no dnd-kit" promise; only the hook
-// that owns the gesture ever constructs one (from dnd-kit's own live
-// `active`/`over`, via `dropAnchorFor`) and hands it in as a plain value,
-// the same way `pointer`/`regions`/`tuning` already arrive.
-import type { DropAnchor } from './dragCollision';
+// The named anchor arrives as plain data (`{anchorId, side}`): the hook
+// builds it from dnd-kit's live `active`/`over` and hands it in, the way
+// `pointer`/`regions`/`tuning` arrive, so this module never touches dnd-kit.
+import type { AnchorRelation, DropSide } from '../../lib/hierarchyPlacement';
 
 // Epic 3.5 Story 3, re-planned for Story 4 (2026-09-16) — the pop state
 // machine (docs/wiki/board-drag-interaction §1–§3, §5–§6). Pure: a session
@@ -122,7 +119,7 @@ export interface PopHover {
    * though `regionKey` alone wouldn't show it, so this is part of the
    * reset key, compared alongside `regionKey`.
    */
-  side?: 'before' | 'after';
+  side?: DropSide;
   /**
    * Locked column/sub-row only: which stage of the hold this candidate is
    * in — `'dwell'` (nothing shown yet) until `cardZoomDwellMs` elapses,
@@ -218,7 +215,7 @@ export function advancePopSession(
   // only consulted from a locked column/sub-row, below. Defaulted so every
   // existing call site (Board layer, a locked Card, a locked Descendants
   // section) is unaffected.
-  namedAnchor: DropAnchor | null = null,
+  namedAnchor: AnchorRelation | null = null,
   parentKeyOf: ParentKeyOf = NO_PARENT_LOOKUP,
 ): PopSession {
   if (session.contextKey === null) {
@@ -290,7 +287,7 @@ function transitionTo(
   tuning: DragTuning,
   metrics: ShortCardMetrics,
   now: number,
-  namedAnchor: DropAnchor | null,
+  namedAnchor: AnchorRelation | null,
   parentKeyOf: ParentKeyOf,
 ): PopSession {
   return advancePopSession(
@@ -351,7 +348,7 @@ function hoverForChildRegion(
 // moment).
 function namedCardCandidate(
   current: PopHover | null,
-  namedAnchor: DropAnchor | null,
+  namedAnchor: AnchorRelation | null,
   regions: readonly DragRegion[],
   tuning: DragTuning,
   now: number,

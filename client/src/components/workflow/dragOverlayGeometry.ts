@@ -17,7 +17,7 @@ import type { Modifier } from '@dnd-kit/core';
 import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
 import type { DragRegion, Point } from './dragRegions';
 import type { PopSession } from './popSession';
-import type { OverlayForm } from './placement';
+import { overlayFormFor, placementRegion, type OverlayForm } from './placement';
 
 export type OverlayTransform = Parameters<Modifier>[0]['transform'];
 export type OverlayRect = Parameters<Modifier>[0]['draggingNodeRect'];
@@ -37,6 +37,20 @@ export function overlayWidthFor(region: DragRegion | undefined): number | null {
   if (region.kind === 'descendants') return region.rect.width;
   if (region.kind === 'card') return region.rect.width - 2 * CARD_CONTENT_INSET_PX;
   return null;
+}
+
+// Which form the carried copy draws as right now, and how wide: one
+// derivation for the render (`BoardView.tsx`'s `DragOverlay`) and the
+// re-anchor modifier, so they can't disagree. A width only for the Stub form.
+export interface OverlayShape {
+  form: OverlayForm;
+  widthPx: number | null;
+}
+
+export function overlayShapeFor(pop: PopSession | null, regions: readonly DragRegion[]): OverlayShape {
+  const region = placementRegion(pop, regions);
+  const form = overlayFormFor(region);
+  return { form, widthPx: form === 'stub' ? overlayWidthFor(region) : null };
 }
 
 // Story 6 Phase C: keeps the pointer on the carried copy across its own

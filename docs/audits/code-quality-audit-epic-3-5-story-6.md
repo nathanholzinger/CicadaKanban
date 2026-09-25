@@ -545,12 +545,35 @@ overlay geometry out, `resolvePlacementOver`, `endSession`,
 The rest (refs mirrored for dnd-kit's closures, the clocks, DOM
 measurement) is real glue and stays.
 
+**Status:** Fixed (2026-09-25) — `useBoardDnd.ts` is 776 lines (1091 before
+this batch, after #1–#3 and #9 landed in it).
+- The projection went to `descendantsProjection.ts` as a pure module rather
+  than a hook, since nothing in it needs React:
+  `advanceProjection(state, sample)` (seed, gap, depth, cap check),
+  `sameProjection`, `descendantsReleasePlacement`. The hook keeps one
+  `ProjectionState` ref. `descendantsProjection.test.ts` tests it directly
+  (10 cases, #2's own-slot seed and #20's re-entry among them).
+- `usePendingGhostGuard.ts`: a pure move.
+- `useSnapTween.ts`: `start`/`draw`/`cancel`, with the tween's refs and
+  its re-render tick; the module-scope `cancelSnap` is gone.
+- `beginDragAt(start)` closes both `handleDragStart` branches, with
+  `beginSession` folded in. The start context, the pickup form and the
+  origin Card all follow from `containingCardId`.
+
 ### 13. `itemListOps.ts` (440) — write reconciliation is a clean one-way seam `[File Responsibility]`
 `:334–441` (`applyItemWriteResponse`, `upsertItem`, `freeItemOrder`,
 `findInversion`, `withPlacement`, `completeItemWrite`) only consumes the
 file's placement and selector primitives, and is the contract root
 `CLAUDE.md` names by path. Moving it to `itemWriteReconciliation.ts` makes
 that contract findable (update root `CLAUDE.md`'s pointer with it).
+
+**Status:** Fixed (2026-09-25) — `workflow/itemWriteReconciliation.ts`
+holds the section (plus `ItemListState`, `EMPTY_ITEM_LIST_STATE`,
+`Inversion`), importing `itemListOps.ts`'s placements and sort one way. Its
+tests moved to `itemWriteReconciliation.test.ts`. Root `CLAUDE.md`,
+`workflow/CLAUDE.md` and the `items.ts`, `ItemDetailPanel.tsx` and
+`useItemManagement.ts` comments point there now. The wiki's two citations
+(`item-positioning/README.md:11`, `:303`) went to the PO.
 
 ### 14. `placementFor` keeps an 8-argument positional signature — reopens Story 5 #9's declined half `[Duplication & Abstraction]`
 `placement.ts:100–109`, adapted only by the hook-private
@@ -561,6 +584,11 @@ fix declined the subject-object form as "premature ahead of Story 6's
 projection shape". Story 6 has landed, so that reason no longer applies.
 **Fix:** move `PlacementSubject` into `placement.ts` and make
 `placementFor(subject, regions, over = null)` the real signature.
+
+**Status:** Fixed (2026-09-25) — `PlacementSubject` lives in `placement.ts`
+and `placementFor(subject, regions, over = null)` is the signature;
+`placementForSession` is gone. `placement.test.ts`'s 32 calls build their
+subject with one `subject(pop, fields)` helper.
 
 ### 15. Board and sidebar walk the tree with different code — and neither walk has a cycle guard `[Duplication & Abstraction]`
 **Sites:**
@@ -581,6 +609,14 @@ hold it for Story 7's three-surface alignment
 (`epic-3-5-roadmap.md:424–432`). That depends on whether Story 7 builds
 an overflow modal at all, and the duplicated walk already breaks a
 `CLAUDE.md` rule.
+
+**Status:** Fixed (2026-09-25) — `lib/hierarchyPlacement.ts::flattenHierarchyOf`
+(the walk, carrying the caller's record, with a seen-set cycle guard) and
+`toRows(nodes, exclude)`; `flattenHierarchy` is now the ids-only form over
+the two. `hierarchyRows` is `flattenHierarchyOf` (no side-effect map;
+`HierarchyRow = HierarchyNode<Item>`), with its `childrenOf` adapter spelled
+once. `flattenTree` leaves a collapsed project's children out of
+`childrenOf`, and `eligibleRows` is `toRows`.
 
 ### 16. Smaller structural fixes `[Duplication & Abstraction + File Responsibility]`
 
@@ -631,6 +667,29 @@ an overflow modal at all, and the duplicated walk already breaks a
   back from the policy module. Move it into `dragRegions.ts`.
 - **`ProjectSidebar.tsx` (227 lines)** holds the tree render plus its own
   full drag machine (`:55–163`). → `useProjectDragReorder`.
+
+**Status:** Fixed (2026-09-25), all eleven:
+- `dragOverlayGeometry.ts::overlayShapeFor` — read by the modifier and the
+  render.
+- `dragCollision.ts::namedAnchorFor` — `handleDragMove`, the release and
+  `useLiveDropSide`.
+- `DragSessionContext.ts::useCardContextLayer` — replaces
+  `useIsAttachTarget` and `KanbanCard.tsx`'s two key comparisons.
+- `isItemData`/`isColumnData` — the hook's three handlers,
+  `resolveBoardCollisions` and `useLiveDropSide`; the tests build column
+  data with `columnData()`.
+- `DropSide`/`AnchorRelation` in `lib/hierarchyPlacement.ts` — `DropAnchor`,
+  the two inline relations and the library's `Anchor` (`id` → `anchorId`)
+  are one type. `api/items.ts`'s request type keeps its own union as the
+  wire shape.
+- `dragChrome.tsx::useItemRow` — `KanbanCard` and `AttachedChildRow`;
+  `useDropTargetProps` folded in.
+- `DROP_INDICATOR_LINE` — both board lines and the sidebar's.
+- `cardMetrics.ts::SHORT_CARD_METRICS` — the hook and `BandGuides.tsx`.
+- `clipToVisible` → `dragRegions.ts`, with its tests.
+- `sidebar/useProjectDragReorder.ts` — `ProjectSidebar.tsx` is 100 lines.
+  The dragged subtree is derived state rather than a ref, so both of its
+  `react-hooks/refs` suppressions are gone.
 
 ---
 

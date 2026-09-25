@@ -6,7 +6,11 @@ import {
   dropAnchorFor,
   resolveBoardCollisions,
   resolveDropSide,
+  columnData,
+  isColumnData,
+  isItemData,
   itemRowData,
+  namedAnchorFor,
   travelingRowsFor,
   type CollisionSession,
 } from './dragCollision';
@@ -57,7 +61,7 @@ describe('resolveBoardCollisions', () => {
     const result = resolveBoardCollisions(
       collisionArgs('card-a', itemRowData('card'), [
         { id: 'child-1', data: itemRowData('stub', 'card-a') },
-        { id: 'col-1', data: { type: 'column' } },
+        { id: 'col-1', data: columnData() },
       ]),
       null,
     );
@@ -81,7 +85,7 @@ describe('resolveBoardCollisions', () => {
         { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) }, // inside, true sibling
         { id: 'grandchild-c', data: itemRowData('stub', 'parent-2'), rect: rect(5, 40, 90, 20) }, // inside, different real parent — still a candidate
         { id: 'other-section-d', data: itemRowData('stub', 'parent-3'), rect: rect(500, 0, 90, 20) }, // outside the rect — a different card's section
-        { id: 'col-1', data: { type: 'column' }, rect: rect(0, 0, 100, 400) }, // never a valid target for a Descendants-context drag
+        { id: 'col-1', data: columnData(), rect: rect(0, 0, 100, 400) }, // never a valid target for a Descendants-context drag
       ]),
       session,
     );
@@ -133,9 +137,9 @@ describe('resolveBoardCollisions', () => {
   describe('under the pop machine', () => {
     const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
     const containers: Container[] = [
-      { id: 'col-a', data: { type: 'column' }, rect: rect(0, 0, 100, 400) },
+      { id: 'col-a', data: columnData(), rect: rect(0, 0, 100, 400) },
       { id: 'card-a1', data: itemRowData('card'), rect: rect(5, 10, 90, 50) },
-      { id: 'col-b', data: { type: 'column' }, rect: rect(120, 0, 100, 400) },
+      { id: 'col-b', data: columnData(), rect: rect(120, 0, 100, 400) },
       { id: 'card-b1', data: itemRowData('card'), rect: rect(125, 10, 90, 50) },
       { id: 'child-1', data: itemRowData('stub', 'card-a1'), rect: rect(10, 30, 80, 20) },
     ];
@@ -370,6 +374,46 @@ describe('dropAnchorFor', () => {
       anchorId: 'xa',
       side: 'before',
     });
+  });
+
+  // The one call shape every reader uses: the blue line, the pop machine and
+  // the release.
+  describe('namedAnchorFor', () => {
+    const items = ['s1', 'x', 'xa', 's3'];
+    const session = (contextKey: string) => ({
+      pop: { contextKey },
+      classification: { subtreeIds: new Set(['x', 'xa']) },
+    });
+
+    it("at a Descendants context, steps past the dragged item's subtree", () => {
+      const over = overRow('x', 110, items, 'stub');
+      expect(namedAnchorFor(dragged('x', 170), over, session('descendants:p'))).toEqual({
+        anchorId: 's3',
+        side: 'before',
+      });
+    });
+
+    it('at a column, a Free descendant is a real anchor', () => {
+      expect(namedAnchorFor(dragged('x', 170), overRow('x', 110, items), session('column:c1'))).toEqual({
+        anchorId: 'xa',
+        side: 'before',
+      });
+    });
+
+    it('with nothing under the drag, no anchor', () => {
+      expect(namedAnchorFor(dragged('x', 170), null, session('column:c1'))).toBeNull();
+    });
+  });
+});
+
+describe('isItemData / isColumnData', () => {
+  it("tell an item row (Card or Stub alike) from a column by the registration's type", () => {
+    expect(isItemData(itemRowData('card'))).toBe(true);
+    expect(isItemData(itemRowData('stub', 'p'))).toBe(true);
+    expect(isItemData(columnData())).toBe(false);
+    expect(isColumnData(columnData())).toBe(true);
+    expect(isColumnData(itemRowData('card'))).toBe(false);
+    expect(isItemData(undefined)).toBe(false);
   });
 });
 

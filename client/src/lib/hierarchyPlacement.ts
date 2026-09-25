@@ -20,40 +20,74 @@ export interface Row {
   depth: number;
 }
 
-export interface Anchor {
-  id: string;
-  side: 'before' | 'after';
+// Which side of a row an item lands on.
+export type DropSide = 'before' | 'after';
+
+// "Before/after this row" — the relation a drop names, a ghost is drawn at,
+// and a move request carries. The one spelling for the board and the sidebar.
+export interface AnchorRelation {
+  anchorId: string;
+  side: DropSide;
 }
 
 export interface ResolvedPlacement {
   parentId: string | null;
-  anchor: Anchor | null;
+  anchor: AnchorRelation | null;
 }
 
-// DFS over `childrenOf`, parents before children — the render order both
-// surfaces already draw in. `exclude` is §7.2's "the dragged item carries
-// its whole subtree": the active row is never removed from `childrenOf`
-// itself (that's each caller's own affair — the board's Phase B already
-// omits it before calling this; the sidebar's decision 5 wants it dimmed and
-// drawn, but never a Top/Bottom candidate), so this file removes exactly the
-// excluded ids without walking into their children, and never checks that
-// they're really the active id's own descendants — the caller decides what
-// "the dragged subtree" means for its own data.
+// A walked row carrying the caller's own record (an Item, a Project).
+export type HierarchyNode<T> = Row & { item: T };
+
+// The one tree walk: DFS over `childrenOf`, parents before children — the
+// render order both surfaces draw in. What a caller wants left out of the
+// walk (a collapsed project's children, an attach ghost's) it leaves out of
+// `childrenOf`. `seen` stops a corrupted parentId cycle in the data from
+// recursing forever, as `hierarchy.ts`'s walks do: an id already walked
+// (the root included) is skipped.
+export function flattenHierarchyOf<T extends { id: string }>(
+  rootId: string | null,
+  childrenOf: (parentId: string | null) => readonly T[],
+): HierarchyNode<T>[] {
+  const nodes: HierarchyNode<T>[] = [];
+  const seen = new Set<string | null>([rootId]);
+  function walk(parentId: string | null, depth: number) {
+    for (const item of childrenOf(parentId)) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      nodes.push({ id: item.id, parentId, depth, item });
+      walk(item.id, depth + 1);
+    }
+  }
+  walk(rootId, 0);
+  return nodes;
+}
+
+// Plain rows, minus `exclude` and everything beneath it — §7.2's "the
+// dragged item carries its whole subtree", so none of it is ever a Top or
+// Bottom candidate. The walk puts a parent before its children, so a row is
+// dropped exactly when it's excluded or its parent was. Whether `exclude` is
+// really the active item's own subtree is the caller's call.
+export function toRows(nodes: readonly Row[], exclude: ReadonlySet<string> = new Set()): Row[] {
+  const dropped = new Set<string>();
+  const rows: Row[] = [];
+  for (const { id, parentId, depth } of nodes) {
+    if (exclude.has(id) || (parentId !== null && dropped.has(parentId))) {
+      dropped.add(id);
+      continue;
+    }
+    rows.push({ id, parentId, depth });
+  }
+  return rows;
+}
+
+// The walk over ids alone, as rows.
 export function flattenHierarchy(
   rootId: string | null,
   childrenOf: (parentId: string | null) => readonly string[],
   exclude: ReadonlySet<string> = new Set(),
 ): Row[] {
-  const rows: Row[] = [];
-  function walk(parentId: string | null, depth: number) {
-    for (const id of childrenOf(parentId)) {
-      if (exclude.has(id)) continue;
-      rows.push({ id, parentId, depth });
-      walk(id, depth + 1);
-    }
-  }
-  walk(rootId, 0);
-  return rows;
+  const nodes = flattenHierarchyOf(rootId, parentId => childrenOf(parentId).map(id => ({ id })));
+  return toRows(nodes, exclude);
 }
 
 // Decision 2: the gap is `over` row + side (n + 1 gaps, never just "above
@@ -61,7 +95,7 @@ export function flattenHierarchy(
 // row. `overId` not found in `rows` (nothing recognized — dnd-kit found no
 // collision, or `over` is the active row itself) falls back to "below
 // everything," the more conservative of the two boundary states.
-export function gapIndexFor(rows: readonly Row[], overId: string, side: 'before' | 'after'): number {
+export function gapIndexFor(rows: readonly Row[], overId: string, side: DropSide): number {
   const idx = rows.findIndex(r => r.id === overId);
   if (idx === -1) return rows.length;
   return side === 'before' ? idx : idx + 1;
@@ -132,13 +166,13 @@ export function resolvePlacement(
 ): ResolvedPlacement {
   const top = rows[gap - 1];
   const bottom = rows[gap];
-  if (!top) return { parentId: rootId, anchor: bottom ? { id: bottom.id, side: 'before' } : null };
+  if (!top) return { parentId: rootId, anchor: bottom ? { anchorId: bottom.id, side: 'before' } : null };
   if (depth === top.depth + 1) {
     const firstChildId = childrenOf(top.id).find(id => !exclude.has(id)) ?? null;
-    return { parentId: top.id, anchor: firstChildId ? { id: firstChildId, side: 'before' } : null };
+    return { parentId: top.id, anchor: firstChildId ? { anchorId: firstChildId, side: 'before' } : null };
   }
   const ancestor = ancestorAt(rows, top, depth);
-  return { parentId: ancestor.parentId, anchor: { id: ancestor.id, side: 'after' } };
+  return { parentId: ancestor.parentId, anchor: { anchorId: ancestor.id, side: 'after' } };
 }
 
 export interface Projection {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   clampAxis,
   clampToCurrentContext,
+  overlayShapeFor,
   overlayWidthFor,
   reanchorOverlayTransform,
   type OverlayTransform,
@@ -105,6 +106,23 @@ describe('overlayWidthFor', () => {
   it('is null for a card list (the carried copy is a shortCard there) and with no region', () => {
     expect(overlayWidthFor(region('column:c1', rect(0, 0, 240, 100)))).toBeNull();
     expect(overlayWidthFor(undefined)).toBeNull();
+  });
+});
+
+describe('overlayShapeFor', () => {
+  const cardP = cardRegion('p', rect(0, 0, 240, 100), 'column:c1');
+  const descendantsP = descendantsRegion('p', rect(0, 0, 240, 100));
+  const columnC1 = region('column:c1', rect(0, 0, 240, 400));
+
+  it("locked at a Card or its section: the Stub, at a row's width", () => {
+    const cardWidth = 240 - 2 * CARD_CONTENT_INSET_PX;
+    expect(overlayShapeFor(startPopSession(cardP.key), [cardP])).toEqual({ form: 'stub', widthPx: cardWidth });
+    expect(overlayShapeFor(startPopSession(descendantsP.key), [descendantsP])).toEqual({ form: 'stub', widthPx: 240 });
+  });
+
+  it('anywhere else, or with no drag: the shortCard, with no width', () => {
+    expect(overlayShapeFor(startPopSession(columnC1.key), [columnC1])).toEqual({ form: 'short-card', widthPx: null });
+    expect(overlayShapeFor(null, [columnC1])).toEqual({ form: 'short-card', widthPx: null });
   });
 });
 

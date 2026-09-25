@@ -1,20 +1,18 @@
 // Item state atom + per-item write tracker (sequences writes so a stale response
-// can't clobber a newer one — see itemListOps.ts::completeItemWrite).
+// can't clobber a newer one — see itemWriteReconciliation.ts::completeItemWrite).
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';
 import { createItem, type ItemWriteResponse } from '../../api/items';
 import {
-  EMPTY_ITEM_LIST_STATE,
-  completeItemWrite,
   computeChildCounts,
   getAttachedChildrenFrom,
   getMergedColumnItemsFrom,
   getWorkphaseItemsFrom,
   removeItemAndDescendants,
-  withPlacement,
   type Placement,
 } from './itemListOps';
+import { EMPTY_ITEM_LIST_STATE, completeItemWrite, withPlacement } from './itemWriteReconciliation';
 
 // A position write in flight, tracked per item so a stale response can never
 // land last (wiki board-drag-interaction §10, DRAG-6.5): `begin` records the

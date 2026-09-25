@@ -3,13 +3,10 @@
 // Split out of KanbanCard.tsx (Story 6.1 Phase 1, C-5): the Card tier's own render
 // stays there; this is everything a Descendants-section row renders as.
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import type { Item, ItemType } from '../types';
 import TypePill from './item-detail/TypePill';
-import { itemRowData } from './workflow/dragCollision';
 import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
-import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useDropTargetProps } from './dragChrome';
+import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useItemRow } from './dragChrome';
 
 // Story 6 Phase C: the type pill + one-line title every Stub-tier render
 // shares — AttachGhostRow and AttachedChildRow below, and KanbanCard's own
@@ -81,22 +78,15 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
   // section's rect, `resolveBoardCollisions`' `descendantsSectionRect`);
   // kept for the same diagnostic/future-facing reasons every row's data
   // carries it.
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    data: itemRowData('stub', item.parentId),
-  });
+  //
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.8)
   // — same attributes and overlay as a Card, so a test reads them alike.
   // The live drop side shows for either kind of active drag: a sibling
   // Stub reorder, or a foreign Card popped into this row's own parent,
-  // anchoring beside it (Story 6.1 Phase 3, L1-13 — no role filter left to
-  // narrow it either way).
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id);
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    paddingLeft: descendantsIndentPx(depth),
-  };
+  // anchoring beside it.
+  const { setNodeRef, attributes, listeners, isDragging, dropSide, sortableStyle, dataAttrs, chromeClassName } =
+    useItemRow(item.id, 'stub', { parentId: item.parentId });
+  const style = { ...sortableStyle, paddingLeft: descendantsIndentPx(depth) };
 
   return (
     <div
@@ -104,7 +94,7 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
       style={style}
       {...dataAttrs}
       data-placement-valid={invalid ? 'false' : undefined}
-      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${invalid ? INVALID_PLACEMENT_CLASS : ''} ${dropTargetClassName}`}
+      className={`relative rounded ${invalid ? INVALID_PLACEMENT_CLASS : ''} ${chromeClassName}`}
     >
       {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
       <DropSideIndicator side={dropSide} />

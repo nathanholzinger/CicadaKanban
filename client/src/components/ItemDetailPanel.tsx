@@ -32,7 +32,7 @@ interface ItemDetailPanelProps {
   itemTypes: ItemType[];
   onClose: () => void;
   // Receive the raw write response so a disclosed reindex reaches the board
-  // (`itemListOps.ts::completeItemWrite` folds it in).
+  // (`itemWriteReconciliation.ts::completeItemWrite` folds it in).
   onUpdate: (item: ItemWriteResponse) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
