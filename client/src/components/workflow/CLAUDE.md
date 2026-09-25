@@ -200,7 +200,9 @@ this directory, then go to the wiki for the "why."
   Use `dragGesture.ts`
   (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
   — never hand-roll a drag or read `boundingBox()` directly for a drop target.
-- The board root carries `data-drag-state` (`locked`/`popped-out`), `data-drag-context`,
-  and (Story 6 Phase D) `data-drag-projection` (`"<gap>:<depth>:<valid>"`, present only
-  while locked at a `descendants:` context) for tests; Cards/Stubs carry `data-item-id`
-  - `data-drop-state` + (the active row only, while over cap) `data-placement-valid`.
+- The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
+  `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
+  `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and
+  its hold stage), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, present only
+  while locked at a `descendants:` context). Cards/Stubs carry `data-item-id` and
+  `data-drop-state`, plus `data-placement-valid` on the active row while over cap.

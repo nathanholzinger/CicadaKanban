@@ -15,8 +15,8 @@ export interface ReindexedPosition {
 // Every item write (POST / PUT / PATCH move) answers with the fresh row and,
 // only when a lazy reindex renumbered other rows in the same transaction,
 // the `reindexed` collection covering every one of them (the written item
-// included). Absent means no reindex fired. Apply it with
-// useItemManagement's applyItemWriteResponse — never merge the row alone.
+// included). Absent means no reindex fired. Fold it in with
+// `itemListOps.ts::completeItemWrite` — never merge the row alone.
 export type ItemWriteResponse = Item & { reindexed?: ReindexedPosition[] };
 
 export function createItem(data: {

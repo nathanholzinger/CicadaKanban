@@ -96,10 +96,10 @@ rule — the test plan carries no case for it.
 detection, when resolved, then it behaves as anchor = that card, side =
 `before`."
 
-**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
-`resolveDropSide` (7 cases) — is pure-function coverage of a mechanism the
-new gesture may or may not keep; the Test Reconciler should decide whether
-it maps to any DRAG case.)*
+**Automation test:** *(previous mapping — `dragCollision.test.ts` ›
+`resolveDropSide` (7 cases, split out of the retired `boardDndUtils.test.ts`)
+— is pure-function coverage of a mechanism the new gesture may or may not
+keep; the Test Reconciler should decide whether it maps to any DRAG case.)*
 
 ## TC-X.6 — An item excludes its own stale row from its own scope query
 

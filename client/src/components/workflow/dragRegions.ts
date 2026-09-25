@@ -234,14 +234,10 @@ export function descendantsCardIdOf(key: string | null): string | null {
 // the old "anything but `card:`" selector swept in Story 5's sections.
 export const CARD_LIST_REGION_SELECTOR = `[${DRAG_REGION_ATTR}^="column:"], [${DRAG_REGION_ATTR}^="subrow:"]`;
 
-// Column-shape data, moved here from boardDndUtils.ts (audit
-// epic-3-5-story-4 #4): DropColumn is resolveDragStructure's own input
-// shape, and subrowContainerId is the id an expanded column's sub-row
-// resolves its region's own `containerId` against
-// (cardListStructureFromKey, below) — both region-structural, so they
-// belong beside the region-key builders rather than behind an import
-// cycle (this file used to import subrowContainerId from boardDndUtils.ts,
-// which imported containsPoint/Rect back from here).
+// Column-shape data: DropColumn is resolveDragStructure's own input shape,
+// and subrowContainerId is the id an expanded column's sub-row resolves its
+// region's own `containerId` against (cardListStructure, below) — both
+// region-structural, so they live beside the region-key builders.
 export interface DropColumn {
   id: string;
   broken: boolean;
@@ -251,7 +247,7 @@ export interface DropColumn {
 }
 
 // Encodes a droppable id for an expanded column's per-workphase sub-row —
-// the same id cardListStructureFromKey (below) sets as that region's own
+// the same id cardListStructure (below) sets as that region's own
 // `containerId`, so the two only have to agree once.
 export function subrowContainerId(columnId: string, workphaseId: string): string {
   return `subrow::${columnId}::${workphaseId}`;

@@ -337,7 +337,7 @@ function hoverForChildRegion(
 // — is what keeps an invalid target (cycle-forming, depth-capped) from
 // ever becoming a candidate at all, with no separate validity check of its
 // own: `resolveDragStructure` never registers a `card:` region for one in
-// the first place (`cardStructureFromKey`'s own `isValidCard` gate), so it
+// the first place (`cardScopedStructure`'s own `isValidCard` gate), so it
 // simply isn't found here — the exact "named for a reorder, never a
 // zoom-in candidate" rule (§3.2), already how `childRegionAt`'s own callers
 // got it for free.

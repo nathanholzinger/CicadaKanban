@@ -32,7 +32,7 @@ interface ItemDetailPanelProps {
   itemTypes: ItemType[];
   onClose: () => void;
   // Receive the raw write response so a disclosed reindex reaches the board
-  // (Epic 3.5, useItemManagement's applyItemWriteResponse).
+  // (`itemListOps.ts::completeItemWrite` folds it in).
   onUpdate: (item: ItemWriteResponse) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;

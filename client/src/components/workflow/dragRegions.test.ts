@@ -150,9 +150,10 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(measureRegions(structure, null)).toEqual([]);
   });
 
-  // Story 4.1 Phase 0's one region-shape case per kind — column/sub-row
-  // shape is already exercised throughout this file via the `region()`
-  // fixture; this is the only place a `kind: 'card'` region is built.
+  // A Card's region built from the DOM, so `resolveDragStructure` and
+  // `measureRegions` produce the `kind: 'card'` shape end to end
+  // (`dragFixtures.ts::cardRegion` builds one directly where the DOM isn't
+  // the subject).
   function buildCardInColumn(
     columnId: string,
     columnRectValue: ReturnType<typeof rect>,

@@ -1,24 +1,22 @@
-// Item list selectors + ordinal placements: the ghost is a Placement, not a position.
-// completeItemWrite folds a write's `reindexed` disclosure into every list. (wiki §5a/§10)
+// Pure operations over the board's Item[] state — no React, so the hook only
+// closes over state and these stay unit-testable:
+//   - the *ordinal placement* layer (docs/wiki/board-drag-interaction §10,
+//     item-positioning §2 "Client-side role"): a dragged or just-dropped item
+//     is shown at a slot in a list without any position value being invented
+//     for it. `position` is never touched client-side; the number is the
+//     server's to produce;
+//   - the list *selectors*: which items a column, sub-row or Stub list
+//     renders, in what order;
+//   - a Card's descendants section as flat hierarchy rows (`hierarchyRows`,
+//     `descendantsChildrenOf`), the input the shared placement library reads;
+//   - write reconciliation: `completeItemWrite` folds a write's `reindexed`
+//     disclosure into every list (item-positioning §5a).
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
 import { getDescendantIds } from '../../lib/hierarchy';
 import { flattenHierarchy } from '../../lib/hierarchyPlacement';
 import { isStub } from '../../lib/isStub';
-
-// Pure operations over the board's Item[] state — no React. Split out of
-// useItemManagement.ts (audit epic-3-5-story-2 #15) so the hook only closes
-// over state and the reducers here stay unit-testable.
-//
-// Two layers live here:
-//   - the list *selectors* (which items a column/sub-row/Stub list renders,
-//     in what order), and
-//   - the *ordinal placement* layer of Epic 3.5 Story 3 (docs/wiki/board-
-//     drag-interaction §10, item-positioning §2 "Client-side role"): a
-//     dragged or just-dropped item is shown at a slot in a list without any
-//     position value being invented for it. `position` is never touched
-//     client-side; the number is the server's to produce.
 
 // ── Ordinal placement ──────────────────────────────────────────────────────
 
@@ -56,12 +54,7 @@ export interface Placement {
 // append fallback instead: the server does the same thing for the same
 // reason (item-positioning §2 addendum, §7.5) — a position to keep sorts as
 // 'existing'; none (a reopened done item, a first assignment) takes the
-// append slot instead of the position-sort's null-coerced top ordering
-// (wiki–code reconciliation #29, the mirror of #14). One definition, shared
-// by `placementFor`'s non-terminal in-context/middle-band case and
-// `pendingPlacementFor`'s bare-workphase-change case — they used to answer
-// this with two independently-typed copies of the same rule (audit
-// epic-3-5-story-3-reconciled #3).
+// append slot instead of the position-sort's null-coerced top ordering.
 export function workphaseOnlySlot(position: number | null): 'existing' | 'last' {
   return position === null ? 'last' : 'existing';
 }
@@ -176,7 +169,7 @@ function byCompletedAtThenCreatedAt(a: Item, b: Item): number {
   return at(a) - at(b) || a.createdAt - b.createdAt;
 }
 
-// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below — the two differ 
+// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below — the two differ
 // only in what counts as "belongs to this column," supplied via `matchesWorkphase`.
 //
 // Stubs render nested inside their parent's Card (see getAttachedChildrenFrom)

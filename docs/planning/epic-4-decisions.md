@@ -259,11 +259,10 @@ predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
 `CardList` never change for this; the four places that do:
 
 1. **Region identity** — `subrowRegionKey` / `subrowContainerId`'s
-   `<columnId>:<workphaseId>` format and `cardListStructureFromKey`'s
-   parse of it (`client/src/components/workflow/dragRegions.ts`). Becomes
-   `<columnId>:<bucketKey>` with the facet resolved from the column
-   definition. The audit's #4 (move `subrowContainerId` next to the key
-   builders) gives the format one owner first.
+   `<columnId>:<workphaseId>` format and `parseRegionKey`'s parse of it
+   (`client/src/components/workflow/dragRegions.ts`, the format's one
+   owner). Becomes `<columnId>:<bucketKey>` with the facet resolved from the
+   column definition.
 2. **Item selection** — `useBoardDnd.ts`'s `regionItems`: today a
    `kind === 'column' ? merged : byWorkphase` switch. A bucket sub-row is
    "the column's items filtered by bucket," so the selector becomes a
@@ -274,14 +273,14 @@ predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
    same card-list facts (covered workphases, `isTerminal`) are derived in
    three places:
    - `BoardColumn.tsx`, for the render;
-   - `dragRegions.ts::cardListStructureFromKey`, for the region;
+   - `dragRegions.ts::cardListStructure`, for the region;
    - `regionItems`, for the release's `others` list.
 
    All three call the same two selectors, so they agree only by
    convention. Make them read one derivation when this point reshapes
    item selection, or when the done-column rework settles `isTerminal`,
    whichever comes first.
-3. **List identity** — `Placement` (`boardDndUtils.ts`) carries
+3. **List identity** — `Placement` (`itemListOps.ts`) carries
    `workphaseId` / `parentId`, and `isIdentity`'s `sameList` reads "same
    workphase = same list." Two date buckets in one column share a
    workphase, so a bucket-to-bucket move would read as identity and

@@ -565,8 +565,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     evaluateRef.current = evaluatePop;
   });
 
-  // Pointer tracking for the life of a Card drag — every item drag runs the
-  // pop machine (Story 5), so `pop` is never absent once `session` is.
+  // Pointer tracking for the life of an item drag — every item drag runs the
+  // pop machine, so `pop` is never absent once `session` is.
   const machineActive = session !== null;
   useEffect(() => {
     if (!machineActive) return;

@@ -492,6 +492,19 @@ Use `startPopSession` directly.
 
   The file is now `dragRequest.test.ts` / `dragCollision.test.ts`.
 
+**Status:** Fixed (2026-09-25), the developer-owned part — every citation,
+status line, header and Story 5 #5 leftover above, plus:
+- the names #5's renames left stale (`cardListStructureFromKey` in
+  `dragRegions.ts` and `epic-4-decisions.md`, `cardStructureFromKey` in
+  `popSession.ts`);
+- `ItemDetailPanel.tsx`'s copy of the `items.ts` citation;
+- the spec's four other bare TC ids (all six now `DRAG-5.N`).
+
+`NO_POP` now sets every pop clock, the zoom dwell and the Descendants
+clock included, so its comment is true as written. The PO's sign-off on
+Story 6 B+C+D is recorded in the roadmap and the plan. Both route-to-owner
+lists went to the user to hand on.
+
 ---
 
 ## Fix Now — structural (#12–16)
@@ -652,6 +665,9 @@ mean editing them twice. But Story 10's roadmap entry
 (`epic-3-5-roadmap.md:555`) doesn't name this yet. **Route to whoever owns
 the roadmap** to add it there. Until it's named, it isn't Covered: #6 is
 what happens to an unnamed Covered-by.
+
+**Status:** Routed (2026-09-25) — Story 10's in-scope item 7 in
+`epic-3-5-roadmap.md`, carrying every bullet above.
 
 ---
 

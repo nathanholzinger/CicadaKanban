@@ -136,8 +136,10 @@ that no-op was found.)*
 
 **Automation test:** — *(E2E deferred to Story 10 — see the roadmap.
 The client's request derivation for the detached-child clause is unit-
-covered: `boardDndUtils.test.ts` "a detached child re-attaching to its
-own parent is not identity" / "toRequest … detached child".)*
+covered in `dragRequest.test.ts`: "a detached child re-attaching to its
+own former parent is not identity" (`isIdentity`) / "detach (parentId:
+null on the placement): isAttached false, plus the anchor/workphase
+resolution otherwise" (`toRequest`).)*
 
 ## TC-2 — Attach across projects triggers the project cascade
 

@@ -337,8 +337,8 @@ session projection and resolved at release; §7.2's depth-cap exception)
 built 2026-09-24; the PO's own Phase D hands-on the same day found the
 gap one off and the chosen depth invisible, fixed with a depth cue on the
 carried Stub. Phase E's wiki-status report done 2026-09-24 — every
-"Story 6" wiki marker now reads built; no rule disagreement found. Next:
-the PO's sign-off on B+C+D together)
+"Story 6" wiki marker now reads built; no rule disagreement found. The PO
+signed off on B+C+D together, recorded 2026-09-25)
 
 **Goal:** placement *within* the descendant hierarchy — the **Descendants
 layer**, one inside the Card — using the same ruleset as the project
@@ -401,8 +401,9 @@ built here as phases.
 
 **Status: method agreed 2026-09-24. Comparison done and the ledger
 ratified by the PO the same day: 45 findings — 32 adopted across four
-phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Not yet
-built.**
+phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Built
+2026-09-24 (Phases 0–3); the joint Story 6 + 6.1 audit followed
+(`docs/audits/code-quality-audit-epic-3-5-story-6.md`).**
 
 ---
 
@@ -537,6 +538,27 @@ Story 6's hands-on found feel problems that aren't about any one cue's look.)*
       problem above), and a taller, multi-row copy changes the box dnd-kit
       measures for collisions.
 
+**Carried in from the Story 6 + 6.1 audit fixes (2026-09-25):**
+
+- **Stub rows come in two heights.** A type pill makes a Stub row 5 px
+  taller: a sortable row is 24 px, or 29 with a pill; the ghost row and
+  the carried copy are 26 px, or 31. The drag math reads the pill-less
+  heights (`cardMetrics.ts::STUB_ROW_HEIGHT_PX`,
+  `CARRIED_STUB_HEIGHT_PX`), so on a typed row the lean's ghost middle and
+  the carried copy's re-anchor sit up to 2.5 px off. Giving every Stub row
+  one height, pill or not, would make both exact. It's a look decision
+  (audit #8).
+- **The Card layer is a pass-through for a Card with children** (PO,
+  2026-09-25). After a zoom into a Card, the pointer usually rests over
+  its descendants section, so about 0.8 s later
+  (`descendantsPopInDelayMs`) the drag goes one layer deeper. The Card
+  layer's own drop (attach as the last child) holds only while the pointer
+  stays on the Card outside its section. A childless Card has no section,
+  so its drop always happens at the Card layer. The PO has found this fine
+  in use, and is weighing whether the Card layer's stop is worth keeping
+  for a Card with children. Skipping it would change wiki §1.1's layer
+  stack, so it's a rule decision as well as a feel one.
+
 ---
 
 ### Story 9 — Free-item reparent keeping Free status (gesture only)
@@ -601,7 +623,11 @@ deferral and keep landing with their stories.
      earlier; it's deferred with the rest because Story 5 makes the Card
      layer a Stub drag's intermediate stop and Story 6 adds the layer
      beneath it — the describe is cheaper written once against the final
-     shape.
+     shape. *Since recorded:* the `cardRegion` fixture exists, and
+     `popSession.test.ts` / `placement.test.ts` now build Card regions (the
+     zoom-in candidate, the zoom into a Card's Descendants section, a
+     pop-out from a context the sample lacks, a Stub drag's placements).
+     Check the four cases above against them before writing new ones.
    - *E2E* — DRAG-4.1 (zoom in + release → `parentId`/`isAttached`
      written, workphase inherited) and DRAG-4.17 (pop back out before
      release → the column's reposition, no attach) with a
@@ -615,7 +641,7 @@ deferral and keep landing with their stories.
      `items.hierarchy.test.ts` (TC-7.11, ATT-3.6, ATT-6.1, ATT-5.1, and
      the detached-child re-attach from audit #1); the client's
      `isIdentity`/`toRequest` half is unit-covered in
-     `boardDndUtils.test.ts`.
+     `dragRequest.test.ts`.
 
 3. **The six existing `test.skip`s** — `item-repositioning-cross-column-dnd.spec.ts`
    1.a/2.a and `item-repositioning-cross-project-dnd.spec.ts`
@@ -664,7 +690,25 @@ deferral and keep landing with their stories.
      `data-active-context` and `data-inversion-count`, which have no
      reader at all.
 
-7. **The flakiness call, made explicitly.** For each precise-move case
+7. **E2E specs that bypass helpers that exist** (Story 6 + 6.1 audit #17,
+   `docs/audits/code-quality-audit-epic-3-5-story-6.md`). This story
+   re-touches each of these specs anyway, so fold them in then:
+   - `drag-column-bands.spec.ts` re-rolls what `dragGesture.ts` and
+     `seed.ts` provide: `popThrough` and its hard-coded `+ 2000` margins
+     redo `clocksMargin` / `awaitPoppedOut`, `columnKeyOf` redoes
+     `columnForWorkphase`, and one locator redoes `dragMachine`.
+   - A column's drag-region element is located four ways, and two of them
+     are both called `regionOf` with different meanings
+     (`drag-column-bands.spec.ts`, `drag-card-zoom-in.spec.ts`). → one
+     `boardLocators.ts::dragRegion(scope, key?)`.
+   - `item-repositioning-cross-column-dnd.spec.ts` re-rolls `article` /
+     `column` about 30 times.
+   - `drag-5-stub-detach.spec.ts` repeats
+     `itemRow(...).getByRole('button')` seven times.
+   - The two skipped zoom-in cases in `drag-card-zoom-in.spec.ts` differ
+     only by target column: one parameterized case.
+
+8. **The flakiness call, made explicitly.** For each precise-move case
    the reconciler proposes automating, decide whether a real pointer
    sequence against pixel geometry and timer margins is worth keeping in
    the suite, or whether the case is better served by a `dragGesture.ts`

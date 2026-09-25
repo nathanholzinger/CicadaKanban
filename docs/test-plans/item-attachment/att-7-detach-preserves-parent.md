@@ -111,6 +111,7 @@ half is [DRAG-4.1](../board-drag-interaction/drag-4-attach-and-stub-placement.md
 detached-child clause.)*
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts` (the
-API consequence); `client/src/components/workflow/boardDndUtils.test.ts`
-"a detached child re-attaching to its own parent is not identity" (the
-client's request derivation). The E2E gesture is Story 10's.
+API consequence); `client/src/components/workflow/dragRequest.test.ts`
+"a detached child re-attaching to its own former parent is not identity"
+(`isIdentity` — the client's request derivation). The E2E gesture is
+Story 10's.

@@ -254,11 +254,17 @@ export function clocksMargin(...clocks: number[]): number {
   return clocks.reduce((sum, ms) => sum + ms, 0) + CLOCK_SLACK_MS;
 }
 
-// Every threshold absurdly high: nothing pops, ever — a spec whose subject
+// Every pop clock absurdly high: nothing pops, ever — a spec whose subject
 // isn't pop timing at all (drag-target classification; an in-context
 // reorder that merely brushes across another column) seeds this so an
 // incidental pop can't fire mid-gesture.
-export const NO_POP: Partial<DragTuning> = { popDelayMs: NEVER_MS, popInDelayMs: NEVER_MS, cardPopInDelayMs: NEVER_MS };
+export const NO_POP: Partial<DragTuning> = {
+  popDelayMs: NEVER_MS,
+  popInDelayMs: NEVER_MS,
+  cardZoomDwellMs: NEVER_MS,
+  cardPopInDelayMs: NEVER_MS,
+  descendantsPopInDelayMs: NEVER_MS,
+};
 // Re-plan (2026-09-16): a band only ever means anything at Board layer —
 // locked always commits its own context, regardless of a foreign hover
 // (docs/wiki/board-drag-interaction §1–§3). So a case that wants to reach a

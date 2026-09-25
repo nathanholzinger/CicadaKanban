@@ -22,7 +22,8 @@ chosen depth invisible and the gap one off. Both were fixed the same day,
 with a simple depth cue on the carried Stub (Phase D's hands-on finding,
 below). Phase E's wiki-status report done 2026-09-24 (below) — every
 "Story 6" wiki marker still future-tensed is now built; no rule
-disagreement found. The PO's sign-off on B+C+D together is what's left.**
+disagreement found. The PO signed off on B+C+D together (recorded
+2026-09-25).**
 Written
 against the code as it
 will stand after [Story 4.1](story-4-1-efficiency-refactor.md) and

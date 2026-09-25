@@ -242,8 +242,12 @@ ATT-3.8.)*
 **Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
 `applyItemMove` › "falls back to loadBoard and never calls setItems when
 the move is rejected" / "updates items via setItems on a successful move" —
-covered the old resync premise, not this rule; it should be re-pointed at
-DRAG-6.6 by the Test Reconciler.)*
+covered the old resync premise, not this rule. `applyItemMove` is now
+`sendItemMove` in `dragRequest.test.ts` ("DRAG-6.6: a rejected move fails
+the write (the guess is dropped) and resyncs via loadBoard" / "begins the
+write with its pending placement, completes it with the response, and
+never calls loadBoard"); it should be re-pointed at DRAG-6.6 by the Test
+Reconciler.)*
 
 ### Tight-gap → reindex
 

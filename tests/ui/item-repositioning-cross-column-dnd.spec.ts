@@ -33,7 +33,7 @@ const PROJECT_NAME = 'Repositioning DnD Project';
 // sortable shuffle decides the ghost's slot and the drop lands there; the
 // dragged copy, above or below the ghost's middle, only picks which
 // neighbor names that slot — "after" the card above or "before" the card
-// below (`dropAnchorFor`, boardDndUtils.ts). In Column One (A, C, E) the
+// below (`dragCollision.ts::dropAnchorFor`). In Column One (A, C, E) the
 // two are one slot, but not in the workflow-wide order: B and D, in Column
 // Two, sit between them. That's what 3.a/3.b exercise — C set back down in
 // its own slot, leaning up ("after A", 1.5) or down ("before E", 4.5).

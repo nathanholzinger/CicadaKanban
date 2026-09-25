@@ -64,8 +64,11 @@ dnd context), then the drag is rejected/no-ops."
 **Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
 `boardCollisionDetection` › "excludes attached-child containers from a card
 drag" and "scopes an attached-child drag to siblings under the same parent
-only" — now asserts behavior the wiki no longer describes; expected to be
-retired or inverted when the replacing cases are automated.)*
+only" — retired as predicted: `boardCollisionDetection` is now
+`resolveBoardCollisions` in `dragCollision.test.ts`, and those two named
+cases no longer exist under any name, superseded by "scopes a Descendants
+context's collisions to every Stub row inside the section's rect, any real
+parent" — the Story 6 model this case's DRAG-2.7 supersedes.)*
 
 ## TC-3.4 — New attached child positioned among true siblings
 

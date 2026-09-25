@@ -114,7 +114,7 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
 
       <div className="space-y-1 font-mono text-[11px] text-zinc-400">
         <h4 className={SECTION_LABEL}>Live</h4>
-        <p>state: {pop ? popState(pop) : session ? '(stub drag)' : '—'}</p>
+        <p>state: {pop ? popState(pop) : '—'}</p>
         <p>context: {pop?.contextKey ?? '—'}</p>
         <p>
           hover:{' '}

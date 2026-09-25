@@ -26,7 +26,7 @@ import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../clie
 // Epic 3.5 Story 5 — docs/wiki/board-drag-interaction §1, §1.1, §6, §8;
 // decisions ratified 2026-09-21. Cases from
 // docs/test-plans/board-drag-interaction/drag-5-detach-and-overflow.md.
-// TC-11's own two-pop cascade timing stays manual (threshold-timed); these
+// DRAG-5.11's own two-pop cascade timing stays manual (threshold-timed); these
 // assert reachability (`data-drag-context`) and write correctness.
 
 test.describe('Stub detach — a Stub drags through the Descendants/Card/Column layers', () => {
@@ -46,7 +46,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const s1 = await seedItem(request, { title: 'S1', parentId: p.id });
     await seedItem(request, { title: 'S2', parentId: p.id });
     // X starts *last*, not adjacent to S1 — a genuine two-hop move to the
-    // front (TC-9's first bullet), rather than a move to a neighbor it's
+    // front (DRAG-5.9's first bullet), rather than a move to a neighbor it's
     // already sitting beside (which the server would resolve to nearly the
     // same slot it already occupies).
     const x = await seedItem(request, { title: 'X', parentId: p.id });
@@ -180,7 +180,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
 
-    // TC-10: from the moment it's locked in the column, it's a Card — gone
+    // DRAG-5.10: from the moment it's locked in the column, it's a Card — gone
     // from P's own section, present as its own article (scoped to the
     // column, since the floating DragOverlay copy also matches by role and
     // name mid-drag).
@@ -192,7 +192,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const updated = await fetchItem(request, x.id);
     expect(updated.isAttached).toBe(0); // detached
     expect(updated.parentId).toBe(p.id); // item-attachment §11: parent preserved
-    expect(updated.workphaseId).toBe(todo.id); // TC-2: already covered — no workphase change
+    expect(updated.workphaseId).toBe(todo.id); // DRAG-5.2: already covered — no workphase change
     expect(updated.position).not.toBeNull(); // now positioned in the workflow-wide scope
 
     await expect(article(page, 'P').getByText('X')).not.toBeVisible();
@@ -260,7 +260,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     // The first two pops (out of Descendants, out of the Card) run the
-    // shared clock back to back, same as TC-1's own test; landing squarely
+    // shared clock back to back, same as DRAG-5.1's own test; landing squarely
     // on Q the whole time lets the third clock (cardPopInDelayMs, the
     // zoom-in into Q) start the moment the second pop lands.
     const tuning = await seedDragTuning(page, {
@@ -318,7 +318,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
-    // Detach X — same cascade as TC-1's own test above, resting on "Other"
+    // Detach X — same cascade as DRAG-5.1's own test above, resting on "Other"
     // (outside P's whole card, unaffected by P's own shrink) rather than
     // "past the column's content," which P's tall, single-child card would
     // otherwise swallow entirely.
