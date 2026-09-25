@@ -95,8 +95,11 @@ export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'co
 // the raw item would use its stale pre-write position/workphase and
 // visibly jump the ghost the instant the item is picked up, or again the
 // moment it pops back into the context it started in (audit
-// epic-3-5-story-3-reconciled #1). Not consulted for a Card context, or
-// once `over` names a real resolved drop: there's nothing left to jump.
+// epic-3-5-story-3-reconciled #1). Only in the list it draws the item in,
+// though (`drawsInList`, audit epic-3-5-story-6 #3 / Story 5 #14): locked
+// in any other, it left the ghost behind in the old list. Not consulted
+// for a Card context, or once `over` names a real resolved drop: there's
+// nothing left to jump.
 export function placementFor(
   session: PopSession,
   regions: readonly DragRegion[],
@@ -165,7 +168,9 @@ export function placementFor(
 
   if (session.contextKey !== null) {
     const fallback = noAnchorSlot(region, nonComparable, activeItemPosition);
-    if (over === null) return priorPlacement ?? cardListPlacement(fallback);
+    if (over === null) {
+      return priorPlacement && drawsInList(priorPlacement, region) ? priorPlacement : cardListPlacement(fallback);
+    }
     if (over === 'container' || region.isTerminal) return cardListPlacement(fallback);
     return cardListPlacement({ anchorId: over.anchorId, side: over.side });
   }
@@ -178,6 +183,14 @@ export function placementFor(
     return cardListPlacement(noAnchorSlot(region, nonComparable, activeItemPosition));
   }
   return cardListPlacement(band === 'top' ? 'first' : 'last');
+}
+
+// Whether `placement` draws the item in this card list: Free (no parent
+// opinion, or detaching to none) under a workphase the region covers.
+// Every card-list placement names its workphase (`cardListPlacement`).
+function drawsInList(placement: Placement, region: CardListRegion): boolean {
+  if (hasParentOpinion(placement) && placement.parentId !== null) return false;
+  return placement.workphaseId !== undefined && region.coveredWorkphaseIds.includes(placement.workphaseId);
 }
 
 export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: string | null): string {

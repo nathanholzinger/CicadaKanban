@@ -15,12 +15,46 @@ import {
   completeItemWrite,
   withPlacement,
   workphaseOnlySlot,
+  renderedIsStub,
+  renderedParentId,
+  renderedWorkphaseId,
   EMPTY_ITEM_LIST_STATE,
   type Placement,
 } from './itemListOps';
 
 const item = makeItem;
 const placements = (entries: Array<[string, Placement]>) => new Map(entries);
+
+// A drag starts from these, the same reads the render draws with, so a re-drag of an item whose 
+// write is still in flight starts from where it's drawn rather than its stored row.
+describe('rendered reads (what a drag starts from)', () => {
+  const free = item('x', { isAttached: 0, workphaseId: 'w1' });
+  const stub = item('s', { parentId: 'p', workphaseId: 'w1' });
+
+  it('with no placement, the stored row', () => {
+    const none = placements([]);
+    expect([renderedIsStub(free, none), renderedParentId(free, none), renderedWorkphaseId(free, none)]).toEqual([
+      false,
+      null,
+      'w1',
+    ]);
+    expect([renderedIsStub(stub, none), renderedParentId(stub, none)]).toEqual([true, 'p']);
+  });
+
+  it('a pending move to another workphase: that workphase', () => {
+    expect(renderedWorkphaseId(free, placements([['x', { workphaseId: 'w2', slot: 'last' }]]))).toBe('w2');
+  });
+
+  it('a pending attach: a Stub of the new parent', () => {
+    const attaching = placements([['x', { parentId: 'y', slot: 'last' }]]);
+    expect([renderedIsStub(free, attaching), renderedParentId(free, attaching)]).toEqual([true, 'y']);
+  });
+
+  it('a pending detach (parentId: null): Free, under the workphase it detaches to', () => {
+    const detaching = placements([['s', { parentId: null, workphaseId: 'w2', slot: 'last' }]]);
+    expect([renderedIsStub(stub, detaching), renderedWorkphaseId(stub, detaching)]).toEqual([false, 'w2']);
+  });
+});
 
 describe('getWorkphaseItemsFrom', () => {
   const items = [

@@ -67,6 +67,18 @@ export function gapIndexFor(rows: readonly Row[], overId: string, side: 'before'
   return side === 'before' ? idx : idx + 1;
 }
 
+// Where a row already sits, as a gap and a depth: what a drag of that row
+// starts from, so a release before any movement resolves to its own slot
+// (audit epic-3-5-story-6 #2: the board used to start a Stub's drag at the
+// section's last gap). `rows` is the section *with* the dragged subtree.
+// That subtree is one contiguous block starting at `id` (a DFS), so every
+// row above `id` survives the exclusion, and `id`'s index here is its gap
+// among the rows that remain. Null when `id` isn't a row.
+export function ownSlotOf(rows: readonly Row[], id: string): { gap: number; depth: number } | null {
+  const idx = rows.findIndex(r => r.id === id);
+  return idx === -1 ? null : { gap: idx, depth: rows[idx].depth };
+}
+
 // §7.1's range = [Bottom's depth … Top's depth + 1]. Top is the row just
 // above the gap (what the item will sit directly under), Bottom the row
 // just below (what it will sit directly above) — either may be absent at

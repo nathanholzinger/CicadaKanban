@@ -229,6 +229,12 @@ export default function KanbanCard({
     !isGhostLike && expanded && childCount > 0 && getAttachedChildren
       ? hierarchyRows(item.id, parentId => (parentId === attachGhostId ? [] : getAttachedChildren(parentId)))
       : [];
+  // A childless Card has no Descendants layer. Zooming into one still
+  // opens it and shows the carried item's ghost Stub (Card layer's own
+  // within-action, attach as its child), but a section holding only that
+  // ghost isn't a region: entering it would offer one slot at depth 0, the
+  // same drop Card layer already makes.
+  const sectionIsRegion = rows.some(r => r.item.id !== attachGhostId);
 
   return (
     <div
@@ -308,15 +314,17 @@ export default function KanbanCard({
           )}
 
           {/* The whole descendants section, every depth, one flat sortable
-              list (Story 6 Phase B, decision 1) — draggable among siblings
-              (Epic 3.2 Part 3, Story 5 §1). This wrapper doubles as the
-              Card's Descendants region (§1.1) — where a Stub's drag starts
+              list — draggable among siblings. This wrapper doubles as the
+              Card's Descendants region — where a Stub's drag starts
               and pops back out to, one layer per Card, never one per Stub.
-              It only exists while there's something to render, which is
-              also exactly when a Stub's drag could ever have started here
-              (a childless Card's section is unreachable, §1.1). */}
+              It only exists while there's something to render, and is a
+              region only while it holds a real child (`sectionIsRegion`,
+              above). */}
           {rows.length > 0 && getAttachedChildren && (
-            <div className="mt-2 space-y-1" {...dragRegionProps(descendantsRegionKey(item.id))}>
+            <div
+              className="mt-2 space-y-1"
+              {...(sectionIsRegion ? dragRegionProps(descendantsRegionKey(item.id)) : {})}
+            >
               <SortableContext items={rows.map(r => r.item.id)} strategy={verticalListSortingStrategy}>
                 {rows.map(({ item: child, depth }) => {
                   const isActiveRow = child.id === cardDragSession?.activeItem.id;

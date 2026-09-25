@@ -103,8 +103,10 @@ export function renderedWorkphaseId(item: Item, placements: Placements): string 
 // placement's `parentId` can be an explicit `null` (would become Free), so
 // this checks the key's presence rather than truthiness — the same
 // distinction `renderedWorkphaseId` doesn't need, since a workphase
-// placement is never intentionally cleared to null.
-function renderedParentId(item: Item, placements: Placements): string | null {
+// placement is never intentionally cleared to null. Exported, with
+// `renderedIsStub` below, for a drag's own start (`useBoardDnd.ts`, audit
+// epic-3-5-story-6 #3): a drag starts from the item as it's drawn.
+export function renderedParentId(item: Item, placements: Placements): string | null {
   const placement = placements.get(item.id);
   return placement && hasParentOpinion(placement) ? (placement.parentId ?? null) : item.parentId;
 }
@@ -114,7 +116,7 @@ function renderedParentId(item: Item, placements: Placements): string | null {
 // decides this for preview purposes (a non-null value previews attaching;
 // Story 5's detach previews null, i.e. Free); with no opinion, the item's
 // own data does, via isStub.
-function renderedIsStub(item: Item, placements: Placements): boolean {
+export function renderedIsStub(item: Item, placements: Placements): boolean {
   const placement = placements.get(item.id);
   if (placement && hasParentOpinion(placement)) return placement.parentId != null;
   return isStub(item);
@@ -174,12 +176,11 @@ function byCompletedAtThenCreatedAt(a: Item, b: Item): number {
   return at(a) - at(b) || a.createdAt - b.createdAt;
 }
 
-// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below (audit
-// Finding #25) — the two differ only in what counts as "belongs to this
-// column," supplied via `matchesWorkphase`.
+// Shared by getWorkphaseItemsFrom/getMergedColumnItemsFrom below — the two differ 
+// only in what counts as "belongs to this column," supplied via `matchesWorkphase`.
 //
 // Stubs render nested inside their parent's Card (see getAttachedChildrenFrom)
-// instead of as top-level board cards. `isTerminal` (Epic 3.2 Part 6): a
+// instead of as top-level board cards. `isTerminal`: a
 // done workphase's items have no stored position — ordered by completedAt
 // instead. Kept as an explicit param since it picks the sort key for the
 // whole batch, including when the batch is empty.

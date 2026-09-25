@@ -61,7 +61,10 @@ this directory, then go to the wiki for the "why."
 
 - `popSession.ts` — the pop state machine (locked / popped-out), two states per layer.
   No placement rules of its own (Story 6.1 Phase 1, C-2) — `placement.ts` reads its
-  `PopSession` but never writes it.
+  `PopSession` but never writes it. A pop-out is always one layer, even from a context
+  the sample has no region for (clipped out of view): the hook passes `parentKeyOf`, a
+  structural lookup, and a zero `popDelayMs` pops on the sample _after_ the exit,
+  never inside a transition's own re-evaluation (audit epic-3-5-story-6 #19).
 - `placement.ts` — the machine's placement rules: `placementRegion(session, regions)`
   is the one answer to "which region is the placement against" — `placementFor` and
   the hook's release both read it. `overlayFormFor` reads the same result to decide
@@ -71,14 +74,21 @@ this directory, then go to the wiki for the "why."
   already-resolved `overId`/anchor rather than an `Over`.
 - `dragRegions.ts` — regions (Board/Column/sub-row/Card/Descendants). Structural
   resolution (`resolveDragStructure`) runs once per drag; live rects (`measureRegions`)
-  run per sample. `isCardList(region)` is the one kind predicate: a column or sub-row
-  — a flat list of Free items with bands and a workphase — vs. anything else. Never
-  write `kind !== 'card'` to mean it. A `descendants` region resolves for the drag's
-  own `originCardId` unconditionally, and for any other Valid Card too (Story 6 Phase
-  D) — the same `isValidCard` gate a `card:` region already uses, which is also what
+  run per sample. The hook re-resolves after each layer change, and whenever a sample
+  finds a region element detached (`hasDetachedElements`) or newly mounted
+  (`hasNewRegionElements`): a layer change resolves _before_ React renders it, so a
+  collapsed Card forced open by a zoom-in mounts its section only afterwards (audit
+  epic-3-5-story-6 #1). `isCardList(region)` is the one kind predicate: a column or
+  sub-row — a flat list of Free items with bands and a workphase — vs. anything else.
+  Never write `kind !== 'card'` to mean it. A `descendants` region resolves for the
+  drag's own `originCardId` unconditionally, and for any other Valid Card too (Story 6
+  Phase D) — the same `isValidCard` gate a `card:` region already uses, which is also what
   keeps an invalid target (cycle-forming, depth-capped) from ever becoming a zoom-in
-  candidate, no separate check needed. `childRegionAt` finds it from a locked Card's
-  own context. `dragRegionProps(key)` is the one "register this element as a drag
+  candidate, no separate check needed. `KanbanCard.tsx` registers a section as a
+  region only while it holds a real child (§1.1: a childless Card has no Descendants
+  layer — zooming into one shows the carried item's ghost Stub at Card layer, and the
+  release attaches it). `childRegionAt` finds it from a locked Card's own context.
+  `dragRegionProps(key)` is the one "register this element as a drag
   region" idiom, spread onto a region's own root element. `layoutRect` is a plain
   `getBoundingClientRect` for every kind (Story 6.1 Phase 3, L1-8) — the sortable-shift
   correction it used to carry for a `card` region existed only for a hit test Story 6's
@@ -135,10 +145,15 @@ this directory, then go to the wiki for the "why."
   `kanban_drag_tuning`. `descendantsPopInDelayMs` (Story 6 Phase D) is the fourth
   clock, Card → Descendants — duration-only, no dwell/cue split.
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
-  plumbing. Also owns the Descendants layer's live projection (seed at pickup or at
-  the zoom-in transition, refreshed every sample from the named neighbor + pointer x,
-  cleared on pop-out) and its own release path (`releaseDescendants`) — the one
-  mid-drag/release asymmetry in the file: the _ghost_ still comes from
+  plumbing. A drag starts from the item as the board draws it
+  (`itemListOps.ts::renderedIsStub`/`renderedParentId`/`renderedWorkphaseId`), never
+  the stored row alone: the two differ for a re-drag of an item whose write is still
+  in flight (audit epic-3-5-story-6 #3). Also owns the Descendants layer's live
+  projection (seeded on every entry into a section — the drag's own section at the
+  dragged row's own slot and depth, `lib/hierarchyPlacement.ts::ownSlotOf`, any other
+  at its last gap — refreshed every sample from the named neighbor + pointer x,
+  cleared on pop-out and at drag end) and its own release path (`releaseDescendants`)
+  — the one mid-drag/release asymmetry in the file: the _ghost_ still comes from
   `placement.ts::placementFor`'s Descendants branch (a static preview — `origin`/
   `priorPlacement` for the same section, an append for a foreign item — since `over`
   never resolves there any more), the _release_ reads `projection.resolved` directly
@@ -147,7 +162,9 @@ this directory, then go to the wiki for the "why."
   ghost's own pending-write reconciliation (#22) — `setGhost`/`restorePriorPlacement`
   and the reassert effect, as one hook taking `sessionRef` and `deps`. `endSession()`
   is the one end of a drag (clear the pop timer, cancel the snap, clear the
-  session), called by `handleDragCancel` and `handleDragEnd`. The pointer effect's
+  session), called by `handleDragCancel` and `handleDragEnd`. `resyncBoard` ends a
+  live drag before every reload the hook asks for: a reload unmounts the `DndContext`
+  without an `onDragCancel` (audit epic-3-5-story-6 #18). The pointer effect's
   cleanup shares the two clock steps but not the session write:
   `clearPopTimer`/`cancelSnap` sit at module scope, taking their refs, so an effect
   can call them without listing them as dependencies.

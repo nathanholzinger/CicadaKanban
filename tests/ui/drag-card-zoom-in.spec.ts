@@ -34,6 +34,9 @@ import { DRAG_REGION_ATTR, cardRegionKey, columnRegionKey } from '../../client/s
 // entered through Board layer measured as nothing and could never be
 // zoomed into. A drag that never reaches Board layer (a Stub's pops out
 // of its own Card, DRAG-5.4) doesn't remount anything and never hit it.
+// The remount itself is gone since (`DragCarveFrame` renders the cards in
+// one keyed slot, audit epic-3-5-story-6 #1); the hook still re-reads the
+// structure when a region element detaches or newly mounts.
 //
 // `cardPopInDelayMs` is long enough that the column-layer state is still
 // there to observe (and to re-aim from) before the Card zoom-in fires. The

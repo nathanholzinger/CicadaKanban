@@ -5,8 +5,10 @@ import {
   containsPoint,
   descendantsRegionKey,
   hasDetachedElements,
+  hasNewRegionElements,
   isCardList,
   measureRegions,
+  regionElements,
   resolveDragStructure,
   subrowContainerId,
   type CardListRegion,
@@ -178,9 +180,6 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(board.map(r => r.key).sort()).toEqual(['column:col-1', 'column:col-2']);
   });
 
-  // Found in the Story 6 hands-on (2026-09-23): Board layer's carve-out
-  // zones remount a column's Cards after a layer change has already
-  // resolved the structure, and a detached element measures as nothing.
   it('hasDetachedElements: false while every cached element is in the document, true once one is replaced', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true);
@@ -190,6 +189,20 @@ describe('resolveDragStructure / measureRegions', () => {
     cardEl.replaceWith(cardEl.cloneNode());
     expect(hasDetachedElements(structure)).toBe(true);
     expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
+  });
+
+  it('hasNewRegionElements: false for every element seen at resolve (one that resolved to nothing included), true once one mounts', () => {
+    buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
+    const seen = new Set(regionElements(document));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => false);
+    expect(structure.some(s => s.kind === 'card')).toBe(false); // an invalid Card: seen, never resolved
+    expect(hasNewRegionElements(document, seen)).toBe(false);
+
+    const section = document.createElement('div');
+    section.setAttribute('data-drag-region', descendantsRegionKey('item-1'));
+    document.querySelector(`[data-drag-region="${cardRegionKey('item-1')}"]`)!.appendChild(section);
+    expect(hasNewRegionElements(document, seen)).toBe(true);
+    expect(hasNewRegionElements(document, new Set(regionElements(document)))).toBe(false);
   });
 
   // Story 4.1 Phase 4 (F6) — a merged column's `boundsRect` is its own outer

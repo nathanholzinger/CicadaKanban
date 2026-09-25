@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   flattenHierarchy,
   gapIndexFor,
+  ownSlotOf,
   depthRangeFor,
   resolvePlacement,
   computeProjection,
@@ -71,6 +72,40 @@ describe('gapIndexFor', () => {
 
   it('an unrecognized over id falls back to the conservative "below everything"', () => {
     expect(gapIndexFor(rows, 'ghost', 'before')).toBe(rows.length);
+  });
+});
+
+// Audit epic-3-5-story-6 #2: a drag starts at the dragged row's own slot, so
+// a release before any movement resolves back to where it was.
+describe('ownSlotOf', () => {
+  const all = flattenHierarchy('P', childrenOf);
+
+  it.each([
+    [
+      'S1, first (carrying S1a, S1a1)',
+      'S1',
+      ['S1', 'S1a', 'S1a1'],
+      { gap: 0, depth: 0 },
+      { parentId: 'P', anchor: { id: 'S2', side: 'before' } },
+    ],
+    [
+      "S1a, S1's only child (carrying S1a1)",
+      'S1a',
+      ['S1a', 'S1a1'],
+      { gap: 1, depth: 1 },
+      { parentId: 'S1', anchor: null },
+    ],
+    ['S1a1, a grandchild', 'S1a1', ['S1a1'], { gap: 2, depth: 2 }, { parentId: 'S1a', anchor: null }],
+    ['S2, last', 'S2', ['S2'], { gap: 3, depth: 0 }, { parentId: 'P', anchor: { id: 'S1', side: 'after' } }],
+  ] as const)('%s: its own gap and depth, which resolve to its own slot', (_, id, subtree, slot, ownPlacement) => {
+    expect(ownSlotOf(all, id)).toEqual(slot);
+    const exclude = new Set<string>(subtree);
+    const rows = flattenHierarchy('P', childrenOf, exclude);
+    expect(resolvePlacement(rows, slot.gap, slot.depth, 'P', childrenOf, exclude)).toEqual(ownPlacement);
+  });
+
+  it("is null for an id that isn't a row", () => {
+    expect(ownSlotOf(all, 'ghost')).toBeNull();
   });
 });
 

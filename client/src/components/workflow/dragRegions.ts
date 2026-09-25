@@ -227,25 +227,22 @@ export function subrowContainerId(columnId: string, workphaseId: string): string
   return `subrow::${columnId}::${workphaseId}`;
 }
 
-// Story 4.1 Phase 2 — everything about a region except its *live* geometry
+// Everything about a region except its *live* geometry
 // and card count: which element it is, its kind and parent chain, its
 // scrolling ancestor (if any), and — column/sub-row only — the workphase
 // facts derived from the column definitions. None of this changes for the
 // life of a single drag except across a layer change, when a ghost
-// migrating lists (or Board layer's carve-out zones) can remount the DOM
-// underneath a cached element reference — the reason `resolveDragStructure`
-// below runs again after one, and whenever `hasDetachedElements` finds a
-// remount that landed later, not only at drag start (F5's "recomputed per
-// sample" cost was this and the geometry below, conflated into one
-// function; this is the half that a drag's own duration can share across
-// every sample instead).
+// migrating lists can remount the DOM underneath a cached element
+// reference, or a Card forced open mounts its section — the reason
+// `resolveDragStructure` below runs again after one, and whenever
+// `hasDetachedElements`/`hasNewRegionElements` find a change that landed
+// later, not only at drag start.
 //
 // A structure entry is exactly its region minus the live facts, plus the
 // DOM handles those are read from (kept under one `dom` key so the facts
 // can be split off with a single rest) — `measureRegions` builds a region
-// by spreading the entry and adding geometry, never by re-listing each
-// kind's fields (audit epic-3-5-story-4 #8). A kind added later (Story
-// 5/6's `descendants`) gets its region for free once it has a resolver.
+// by spreading the entry and adding geometry, never by re-listing each kind's
+// fields. A kind added later gets its region for free once it has a resolver.
 interface DomHandles {
   element: HTMLElement;
   scrollAncestor: HTMLElement | null;
@@ -286,7 +283,7 @@ export function resolveDragStructure(
 ): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
   const structure: (CardListStructure | CardStructure | DescendantsStructure)[] = [];
-  for (const el of root.querySelectorAll<HTMLElement>(`[${DRAG_REGION_ATTR}]`)) {
+  for (const el of regionElements(root)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
     if (!key) continue;
     const scrollAncestor = findVerticalScrollAncestor(el, root);
@@ -342,11 +339,28 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
   return regions;
 }
 
+// Every element registered as a drag region under `root` — the one query
+// `resolveDragStructure` reads and `hasNewRegionElements` compares against.
+export function regionElements(root: ParentNode): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(`[${DRAG_REGION_ATTR}]`)];
+}
+
 // Whether React has remounted any element `structure` cached since it was
 // resolved. A detached element measures as an empty box, so `measureRegions`
 // would drop its region without a sound; the caller re-resolves instead.
 export function hasDetachedElements(structure: DragStructure): boolean {
   return structure.some(s => !s.dom.element.isConnected || s.dom.scrollAncestor?.isConnected === false);
+}
+
+// The other half of the same staleness check: whether a region element has
+// mounted since the structure was resolved. `seen` is every region element
+// present at that resolve (`regionElements`), including the ones that
+// resolved to nothing (an invalid Card), so those don't read as new on every
+// sample. A zoom-in re-resolves *before* React renders the layer it entered,
+// so an element that mounts because of that zoom-in lands after it: a
+// collapsed Card, forced open, mounts its Descendants section only then.
+export function hasNewRegionElements(root: ParentNode, seen: ReadonlySet<Element>): boolean {
+  return regionElements(root).some(el => !seen.has(el));
 }
 
 // Reads a DOMRect's fields into a plain object — a real DOMRect's fields

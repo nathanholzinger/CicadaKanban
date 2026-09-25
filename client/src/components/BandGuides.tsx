@@ -1,7 +1,7 @@
 // The drop bands made visible while a Card is carried: dashed boundary lines per
 // region + the hovered band tinted. (Epic 3.5)
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
 import { DRAG_CARD_COUNT_ATTR, dragRegionProps } from './workflow/dragRegions';
 import { reservationFor, type Reservation } from './workflow/dragBands';
@@ -142,8 +142,14 @@ export function DragCarveFrame({
       {content}
     </div>
   );
+  // The region's own cards, in one keyed slot that every branch below
+  // renders them through. Board layer puts a carve-out zone *before* them,
+  // and React matches unkeyed children by index. Without the key every
+  // Card in the region would remount on the way into and out of Board layer —
+  // reseting each one's hand-set expand/collapse to the board's default
+  const cards = <Fragment key="cards">{children}</Fragment>;
 
-  if (!session) return wrap(children);
+  if (!session) return wrap(cards);
   const pop = session.pop;
 
   const isActiveContext = pop.contextKey === regionKey;
@@ -152,10 +158,10 @@ export function DragCarveFrame({
     // anywhere (rule: nothing but the current 3 actions gets a cue). The
     // active-context outline is a separate, unrelated concern that still
     // draws on whichever one is locked.
-    if (!isActiveContext) return wrap(children);
+    if (!isActiveContext) return wrap(cards);
     return wrap(
       <>
-        {children}
+        {cards}
         <div aria-hidden className={`pointer-events-none absolute inset-0 rounded-xl ${ACTIVE_CONTEXT_OUTLINE}`} />
       </>,
     );
@@ -176,15 +182,13 @@ export function DragCarveFrame({
     // already reserves exactly the space the label would have — rendering
     // it instead, same as 'terminal' below, rather than doubling up.
     if (reservation.shape !== 'terminal')
-      return hasActiveItemRow
-        ? wrap(children)
-        : wrap(<SingleZone reservation={reservation} targetLabel={targetLabel} />);
+      return hasActiveItemRow ? wrap(cards) : wrap(<SingleZone reservation={reservation} targetLabel={targetLabel} />);
     // 'terminal', with cards: a real bottom-only reservation (Phase 1),
     // sized for the ghost that always previews last there — not an
     // absolute overlay that let the ghost's entry grow the region.
     return wrap(
       <>
-        {children}
+        {cards}
         {!hasActiveItemRow && <SingleZone reservation={reservation} targetLabel={targetLabel} />}
       </>,
     );
@@ -197,7 +201,7 @@ export function DragCarveFrame({
           Move Top
         </div>
       )}
-      {children}
+      {cards}
       {!hasActiveItemRow && (
         <div
           aria-hidden="true"

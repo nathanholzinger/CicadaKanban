@@ -261,6 +261,18 @@ still open for a future pass. `dragFixtures.ts:21–23`'s own stale
 comment was incidentally fixed as part of #12's work below (adding the
 `card:`-keyed fixture it said nothing needed).
 
+**Status (2026-09-25, at `4c0cb34`):** most of the remainder went with
+Story 6.1's header and comment sweep (L1-12): `BoardColumn.tsx`,
+`popSession.ts`'s layer list and `popInDelayFor` note, `dragRegions.ts`'s
+and `DragSessionContext.ts`'s headers, and `BandGuides.tsx`. The 6.1 ledger
+had no row for the rest, and four lines are still stale:
+- `DragTuningPanel.tsx:117`'s unreachable `'(stub drag)'`;
+- `itemListOps.ts:62`'s `pendingPlacementFor`;
+- `dragRegions.test.ts:127`'s "only place a `kind: 'card'` region is built";
+- `useBoardDnd.ts:506`'s "Card drag".
+
+Carried as `code-quality-audit-epic-3-5-story-6.md` #11.
+
 ### 6. The new E2E spec breaks the fully-qualified case-id convention `[Consistency & Drift]`
 **File:** `tests/ui/drag-5-stub-detach.spec.ts:36`, `:112`, `:150`, `:201` (and `:86`, `:257` which cite decisions rather than cases)
 
@@ -443,6 +455,11 @@ prefer `priorPlacement` only when it names the region's own list
 (prior) && prior.workphaseId ∈ region.coveredWorkphaseIds` for a card
 list) — one more reason for #7's helpers.
 
+**Status (2026-09-25, at `4c0cb34`):** still open. After 6.1's split the
+lines are `placement.ts:143`, `:168`, `:175`. Folded into
+`code-quality-audit-epic-3-5-story-6.md` #3 (Fix Now), the in-flight
+re-drag family, with #15 below and Story 4 #12. Fixed there (2026-09-25).
+
 ### 15. A re-drag of a Stub whose detach or reparent is still in flight starts from stale real data — the wrong start layer, possibly a phantom one `[Correctness & Security]` (Story 4 #12 / reconciled #22 family)
 **Files:** `client/src/components/workflow/useBoardDnd.ts:441–469` (`isStub(activeItem)` and `containingCardIdOf` read `deps.items`); `tests/ui/drag-5-stub-detach.spec.ts:257–300` (the decision-4 regression waits on `toBeVisible()` — satisfied by the *preview* — then picks up)
 
@@ -462,6 +479,13 @@ localhost response beats `pickUp`. **Fix:** derive the start from the
 `workphaseId`, take the Free path; a string `parentId` is the Stub's
 parent. Same root as Story 4 #12 (the drag-start snapshot); fix them
 together.
+
+**Status (2026-09-25, at `4c0cb34`):** still open, and it gained a worse
+face. With Story 6's Descendants release, a release within `popDelayMs`
+of a phantom start can send a re-attach under a Stub of the old parent
+that the user never asked for. Folded into
+`code-quality-audit-epic-3-5-story-6.md` #3 (Fix Now). Fixed there
+(2026-09-25).
 
 ### 16. A Descendants release with no `over` re-sends `priorPlacement`, contradicting the "release is always decisive" comment `[Correctness & Security]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:580–600` (descendants → `over ? {…} : null`), `client/src/components/workflow/popSession.ts:426`
@@ -488,6 +512,11 @@ Same degenerate input as before (`clipToVisible` null for a section
 wheel-scrolled fully out of its column body), one more layer skipped —
 Card and Column both. Same fix: read the parent key off `structureRef`
 (which survives a clipped-away rect), not the measured region.
+
+**Status (2026-09-25, at `4c0cb34`):** still open, with a new
+`popDelayMs = 0` variant. Carried as `code-quality-audit-epic-3-5-story-6.md`
+#19, marked as needing a disposition. Fixed there (2026-09-25), both
+variants.
 
 ### 18. `layoutRect`'s sortable-transform correction is gated on `kind === 'card'`; a `descendants` element is nested *inside* the sortable Card `[Correctness & Security]` (Story 6 landmine)
 **Files:** `client/src/components/workflow/dragRegions.ts:313` (`layoutRect(dom.element, facts.kind === 'card')`), `:358–364`, `:374–381` (`currentTranslate` reads only the element's own computed transform)

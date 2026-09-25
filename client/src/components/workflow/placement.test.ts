@@ -183,13 +183,13 @@ describe('placementFor', () => {
     expect(placementFor(poppedOut(), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toBeNull();
   });
 
-  // audit epic-3-5-story-3-reconciled #1: re-picking up an item whose
+  // re-picking up an item whose
   // earlier write is still pending (or popping back into the context it
   // started in) must not recompute a fresh slot from the raw, possibly
   // stale item — that jumps the ghost. The prior placement wins whenever
-  // there's no hover to say otherwise.
+  // there's no hover to say otherwise, in the list it draws the item in.
   describe('priorPlacement (a re-dragged item)', () => {
-    const prior: Placement = { workphaseId: 'wp-elsewhere', slot: { anchorId: 'other-item', side: 'after' } };
+    const prior: Placement = { workphaseId: activeWorkphase, slot: { anchorId: 'other-item', side: 'after' } };
 
     it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
       expect(
@@ -200,6 +200,32 @@ describe('placementFor', () => {
       expect(
         placementFor(startPopSession(A.key), regions, activeWorkphase, null, freeOrigin(activeWorkphase), null, prior),
       ).toBe(prior);
+    });
+
+    // X's move to B is pending, so
+    // it's drawn in B (and its drag reads B's workphase, as drawn). Carried
+    // back and locked in A, the ghost is A's to draw, not left behind in B.
+    it("locked in a list the prior placement doesn't draw it in, it gives way to that list's own slot", () => {
+      const inB = B.targetWorkphaseId;
+      const pendingInB: Placement = { workphaseId: inB, slot: { anchorId: 'other-item', side: 'after' } };
+      expect(placementFor(startPopSession(A.key), regions, inB, 1, freeOrigin(inB), null, pendingInB)).toEqual({
+        workphaseId: A.targetWorkphaseId,
+        slot: 'existing',
+      });
+    });
+
+    it("a pending attach (the prior names a parent) never stands in for a card list's ghost", () => {
+      const attaching: Placement = { parentId: 'card-y', slot: 'last' };
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, attaching),
+      ).toEqual({ workphaseId: activeWorkphase, slot: 'existing' });
+    });
+
+    it('a pending detach (parentId: null) into this list still stands in', () => {
+      const detached: Placement = { parentId: null, workphaseId: activeWorkphase, slot: 'last' };
+      expect(
+        placementFor(startPopSession(A.key), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null, detached),
+      ).toBe(detached);
     });
 
     it('a Board-layer hovered band ignores it — a genuine new region still computes its own slot', () => {

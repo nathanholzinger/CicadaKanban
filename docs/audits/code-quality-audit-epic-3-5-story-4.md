@@ -417,6 +417,13 @@ latency on localhost. Phase 3 made the fix a one-liner rather than the
 items.find(i => i.id === activeId) ?? activeItem` at `:517–528` (and for the
 mid-drag `placementFor` inputs at `:240`).
 
+**Status (2026-09-25, at `4c0cb34`):** still open, fourth audit. Promoted
+to Fix Now as `code-quality-audit-epic-3-5-story-6.md` #3, together with
+Story 5 #14 and #15 (same root). The one-liner above no longer suffices:
+`deps.items` is itself the stale source while the write is in flight. The
+fix is to derive the drag's starting facts from `priorPlacement` (the
+rendered state) when `writes.isPending`. Fixed there (2026-09-25).
+
 ### 13. The layer-change re-sample runs exactly once; a two-hop transition in one sample leaves `regionsRef`/`pop` in mismatched scopes `[Correctness & Security]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:219–245`; `client/src/components/workflow/popSession.ts:210–220`
 
@@ -457,6 +464,13 @@ worse in reach — a `descendants:P` context clipped out of view pops
 straight to Board, skipping Card and Column both (Story 5 audit #17).
 Same fix.
 
+**Status (2026-09-25, at `4c0cb34`):** still open, third audit, with a new
+variant: `popDelayMs = 0` (the panel's `min`) makes `transitionTo`'s
+recursion treat the new context as missing and pop straight to Board.
+Carried as `code-quality-audit-epic-3-5-story-6.md` #19, marked as needing
+a disposition rather than another carry. Fixed there (2026-09-25), both
+variants.
+
 ### 15. F8's "idempotent" claim holds for the clamp, not the snap tween `[Correctness & Security + Consistency & Drift]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:302–334`; dnd-kit 6.3.1 `core.esm.js:2959–2997, 3923–3937` (`DragOverlay` applies `modifiers` to the already-`DndContext`-modified transform)
 
@@ -468,6 +482,12 @@ collision rect and the drawn copy diverge slightly), and the Phase 4
 hands-on gate hasn't run — check the snap feel against pre-F8 when it does.
 The comment fix is in #5.
 
+**Status (2026-09-25, at `4c0cb34`):** unchanged. The clamp and 6.1's
+re-anchor are idempotent across both modifier passes, but the tween still
+eases twice. Now **Covered by Story 8**: `epic-3-5-roadmap.md:443–444`
+("anything that … makes its own parts disagree"). Check it in that story's
+feel pass.
+
 ### 16. `loadBoard` unmounts the `DndContext`; a resync landing during a later drag strands the session `[Correctness & Security]` (Story 3 #16 lineage)
 **Files:** `client/src/components/BoardView.tsx:105–142, 235–241`
 
@@ -478,6 +498,13 @@ dnd-kit is torn down with no `onDragEnd`/`onDragCancel`, `session` stays
 non-null, and the remounted board shows the overlays and the `DragOverlay`
 copy until another drag. Narrow; noted because the resync path is
 newer than the previous audit's look at this.
+
+**Status (2026-09-25, at `4c0cb34`):** unchanged. Now also
+`usePendingGhostGuard`'s reassert effect re-adds the orphaned ghost into
+the reloaded placements, and the pop machine keeps moving it with the
+button released. Carried as `code-quality-audit-epic-3-5-story-6.md` #18,
+marked as needing a disposition (fix, or a recorded acceptance) rather than
+another carry. Fixed there (2026-09-25).
 
 ### 17. An in-context release onto the bare container is now a no-op — a behavior change hidden inside Phase 3's "expected none" `[Correctness & Security]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:511–516`; `client/src/components/workflow/popSession.ts:360–364`; `tests/ui/item-repositioning-cross-column-dnd.spec.ts:143–155`
@@ -499,6 +526,14 @@ gives the same release a different answer for a Stub: a bare-container
 release at column layer is a detach-to-end (`noAnchorSlot` → `'last'`,
 decision 5), so the codebase now carries a precedent for "container =
 append" that the Product Owner's call can lean on either way.
+
+**Status (2026-09-25, at `4c0cb34`):** answered by Story 6's Option A
+ruling (2026-09-24): the drop lands where the ghost is. When `over` is the
+bare container, dnd-kit's sortable strategy doesn't shift anything, so the
+ghost stays in the Card's own slot. The no-op release matches it, which is
+the rule-consistent answer. `resolvePlacementOver` + `noAnchorSlot` give
+`'existing'` → identity. The PO may still want the wiki to say so
+explicitly.
 
 ### 18. `useBoardDnd.ts` (575 lines) still owns pure geometry its own header disclaims `[File Responsibility]` (Story 3 #3 / reconciled #10 lineage)
 **Files:** `client/src/components/workflow/useBoardDnd.ts:548–574` (`clampToCurrentContext`/`clampAxis` — pure over `(transform, rect, pop, regions)`, no React or dnd-kit runtime); `:502–516` (the `placementOver` derivation, inline in the event handler, while its type `PlacementOver` and its sibling `placementFor` are pure and unit-tested in `popSession.ts`)

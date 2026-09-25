@@ -158,6 +158,15 @@ export interface PopSession {
   outsideSince: number | null;
 }
 
+// The parent of a context the machine can't see (audit epic-3-5-story-6
+// #19): its region missing from the sample, clipped out of view, so its own
+// `parentRegionKey` can't be read off it. The owner passes a structural
+// lookup (the parent chain doesn't depend on what's visible); without one,
+// a pop-out from a context it can't see lands on Board, skipping every layer
+// between (§1.1 rule 2).
+export type ParentKeyOf = (contextKey: string) => string | null;
+const NO_PARENT_LOOKUP: ParentKeyOf = () => null;
+
 export function startPopSession(contextKey: string | null): PopSession {
   return { contextKey, hover: null, outsideSince: null };
 }
@@ -210,6 +219,7 @@ export function advancePopSession(
   // existing call site (Board layer, a locked Card, a locked Descendants
   // section) is unaffected.
   namedAnchor: DropAnchor | null = null,
+  parentKeyOf: ParentKeyOf = NO_PARENT_LOOKUP,
 ): PopSession {
   if (session.contextKey === null) {
     // Board layer: a Card is never a target here (rule 2) — only a
@@ -220,7 +230,7 @@ export function advancePopSession(
     if (!region) return session.hover ? { ...session, hover: null } : session;
     const hover = hoverFor(session.hover, region, pointer, metrics, now);
     if (hover.poppable && now - hover.since >= popInDelayFor(region.kind, tuning)) {
-      return transitionTo(region.key, pointer, regions, tuning, metrics, now, namedAnchor);
+      return transitionTo(region.key, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
     }
     return hover === session.hover ? session : { ...session, hover };
   }
@@ -247,7 +257,7 @@ export function advancePopSession(
     if (hover) {
       const candidateKind = regions.find(r => r.key === hover.regionKey)?.kind ?? 'card';
       if (hover.poppable && now - hover.since >= popInDelayFor(candidateKind, tuning)) {
-        return transitionTo(hover.regionKey, pointer, regions, tuning, metrics, now, namedAnchor);
+        return transitionTo(hover.regionKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
       }
       return hover === session.hover && session.outsideSince === null
         ? session
@@ -259,8 +269,9 @@ export function advancePopSession(
   }
 
   const outsideSince = session.outsideSince ?? now;
-  if (popOutDue(contextRegion, pointer, tuning, now, outsideSince)) {
-    return transitionTo(contextRegion?.parentRegionKey ?? null, pointer, regions, tuning, metrics, now, namedAnchor);
+  if (popOutDue(contextRegion, pointer, tuning, now, session.outsideSince)) {
+    const parentKey = contextRegion ? contextRegion.parentRegionKey : parentKeyOf(session.contextKey);
+    return transitionTo(parentKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
   }
   return session.hover === null && session.outsideSince === outsideSince
     ? session
@@ -280,6 +291,7 @@ function transitionTo(
   metrics: ShortCardMetrics,
   now: number,
   namedAnchor: DropAnchor | null,
+  parentKeyOf: ParentKeyOf,
 ): PopSession {
   return advancePopSession(
     { contextKey: key, hover: null, outsideSince: null },
@@ -289,6 +301,7 @@ function transitionTo(
     metrics,
     now,
     namedAnchor,
+    parentKeyOf,
   );
 }
 
@@ -406,14 +419,22 @@ function containmentRect(region: DragRegion): Rect {
   return region.kind === 'column' && region.boundsRect ? region.boundsRect : region.rect;
 }
 
+// `outsideSince` is the pop-out clock as this sample found it: null when
+// the cursor has only just left. The time term needs a clock an *earlier*
+// sample started, so a zero `popDelayMs` pops on the next sample, never the
+// one that noticed the exit (audit epic-3-5-story-6 #19). A transition's own
+// re-evaluation reads the new context against regions sampled for the old
+// one, where the new context is missing (so "outside"), and a zero delay
+// used to pop straight on from there, cascading to Board in one sample. The
+// owner's next sample, scoped to the new context, is the real read.
 function popOutDue(
   contextRegion: DragRegion | undefined,
   pointer: Point,
   tuning: DragTuning,
   now: number,
-  outsideSince: number,
+  outsideSince: number | null,
 ): boolean {
-  if (now - outsideSince >= tuning.popDelayMs) return true;
+  if (outsideSince !== null && now - outsideSince >= tuning.popDelayMs) return true;
   if (tuning.popDistancePx <= 0) return false;
   return (
     contextRegion !== undefined && distanceOutside(pointer, containmentRect(contextRegion)) >= tuning.popDistancePx

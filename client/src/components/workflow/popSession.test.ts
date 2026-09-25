@@ -287,6 +287,49 @@ describe('locked Card: zoom-in into its own Descendants section (Story 6 Phase D
   });
 });
 
+// Audit epic-3-5-story-6 #19 (Story 4 #14 → Story 5 #17): a pop-out is one
+// layer (§1.1 rule 2) even when the context has no region in the sample.
+describe('popping out of a context the sample has no region for', () => {
+  const P = cardRegion('p', rect(10, 10, 80, 200), A.key);
+  const descendantsP = descendantsRegion('p', rect(10, 60, 80, 140));
+  // The owner's structural lookup: the stack doesn't change with what's visible.
+  const parentKeyOf = (key: string) => (key === descendantsP.key ? P.key : key === P.key ? A.key : null);
+
+  it('a context clipped out of view pops to its structural parent, not straight to Board', () => {
+    // Locked at card:p, scrolled out of its column's view: only the column is measured.
+    const exited = advancePopSession(locked(P.key), inA, [A], tuning, metrics, 0, null, parentKeyOf);
+    const s = advancePopSession(exited, inA, [A], tuning, metrics, OUT, null, parentKeyOf);
+    expect(s.contextKey).toBe(A.key);
+  });
+
+  it('popDelayMs = 0: the exit only starts the clock, then pops one layer, not through to Board', () => {
+    const zero: DragTuning = { ...tuning, popDelayMs: 0 };
+    const sectionScope = [descendantsP]; // sampled while locked at the section: no card:p
+    const aboveSection = { x: 50, y: 30 }; // inside card:p, above its section
+    const exited = advancePopSession(
+      locked(descendantsP.key),
+      aboveSection,
+      sectionScope,
+      zero,
+      metrics,
+      0,
+      null,
+      parentKeyOf,
+    );
+    expect(exited.contextKey).toBe(descendantsP.key);
+    const s = advancePopSession(exited, aboveSection, sectionScope, zero, metrics, 1, null, parentKeyOf);
+    expect(s.contextKey).toBe(P.key);
+
+    // The owner's next sample is scoped to the Card: it pops again only if
+    // the pointer really is outside it.
+    const cardScope = [P, descendantsP];
+    expect(advancePopSession(s, aboveSection, cardScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBe(P.key);
+    expect(advancePopSession(s, { x: 300, y: 300 }, cardScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBe(
+      A.key,
+    );
+  });
+});
+
 describe('popped out', () => {
   const outInB = run([
     [bMiddle, 0],
