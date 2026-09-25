@@ -55,10 +55,16 @@ import {
   type PlacementOver,
   type PopSession,
 } from './popSession';
-import { descendantsChildrenOf, parentOpinionOf, type Placement, type Placements } from './itemListOps';
+import { descendantsChildrenOf, type Placement, type Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DescendantsProjection, DragSession } from './DragSessionContext';
-import { CARD_CONTENT_INSET_PX, CARD_LIST_GAP_PX, DESCENDANTS_INDENT_PX, SHORT_CARD_HEIGHT_PX } from '../cardMetrics';
+import {
+  CARD_CONTENT_INSET_PX,
+  CARD_LIST_GAP_PX,
+  DESCENDANTS_INDENT_PX,
+  SHORT_CARD_HEIGHT_PX,
+  STUB_ROW_HEIGHT_PX,
+} from '../cardMetrics';
 
 // Story 5 — a Stub's drag starts at its *containing Card's* Descendants
 // layer: the nearest Free ancestor, whatever the Stub's own depth beneath
@@ -111,13 +117,14 @@ function overlayWidthFor(region: DragRegion | undefined): number | null {
 
 // Drag-and-drop for the board's DndContext — the gesture layer of
 // docs/wiki/board-drag-interaction. The rules live in pure modules
-// (popSession.ts, dragRegions.ts, boardDndUtils.ts, itemListOps.ts); this
-// hook owns the clocks, the DOM measurements, and the dnd-kit plumbing:
+// (popSession.ts, dragRegions.ts, boardDndUtils.ts, itemListOps.ts,
+// lib/hierarchyPlacement.ts); this hook owns the clocks, the DOM
+// measurements, and the dnd-kit plumbing:
 //
-//   - the pointer is tracked with a window listener for the life of a Card
-//     drag, and every sample runs the pop machine against freshly measured
-//     regions (a pop that needs no movement — the cursor resting — fires
-//     from a timer);
+//   - the pointer is tracked with a window listener for the life of any
+//     item drag (Card or Stub alike, Story 5), and every sample runs the
+//     pop machine against freshly measured regions (a pop that needs no
+//     movement — the cursor resting — fires from a timer);
 //   - the machine's state is mirrored into a ref so the closures dnd-kit
 //     calls during *its* render can read it: the collision detection (which
 //     decides `over`) and the clamp modifier (which clamps the card to its
@@ -127,9 +134,11 @@ function overlayWidthFor(region: DragRegion | undefined): number | null {
 //   - the ghost is an ordinal placement (§10) over the list selectors —
 //     nothing in `items` is mutated during a drag, so cancel is just
 //     clearing it;
-//   - a release resolves in-context through dnd-kit's `over` (anchor +
-//     side) or, in another region, through that region's band (§5), and
-//     the write goes out with its pending placement attached.
+//   - a release resolves in-context through `dropAnchorFor`'s own anchor +
+//     lean (a column/sub-row), through §7's gap + depth rule against the
+//     session's own live projection (a Descendants section,
+//     `releaseDescendants`), or, popped out, through that region's band
+//     (§5) — and the write goes out with its pending placement attached.
 //
 // Position values are never computed here (item-positioning §2): the
 // request carries relative intent and the server's number lands through the
@@ -148,7 +157,6 @@ export interface BoardDndDeps {
   getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
   /** Story 5: a Descendants region's own "others" list — the parent's other attached children, placement-aware. */
   getAttachedChildren: (parentId: string) => Item[];
-  findWorkphaseForItem: (itemId: string) => string | null;
   handleReorderColumns: (orders: { id: string; position: number }[]) => Promise<void>;
   loadBoard: () => Promise<void>;
   /** The element the regions are measured under (the DndContext's wrapper). */
@@ -456,8 +464,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     evaluateRef.current = evaluatePop;
   });
 
-  // Pointer tracking for the life of a Card drag.
-  const machineActive = session?.pop != null;
+  // Pointer tracking for the life of a Card drag — every item drag runs the
+  // pop machine (Story 5), so `pop` is never absent once `session` is.
+  const machineActive = session !== null;
   useEffect(() => {
     if (!machineActive) return;
     const onPointerMove = (event: PointerEvent) => {
@@ -594,29 +603,16 @@ export function useBoardDnd(deps: BoardDndDeps) {
       : getWorkphaseItems(region.targetWorkphaseId, region.isTerminal);
   }
 
-  // Story 5: a Descendants region's own sibling scope — the origin's real
-  // parent's other attached children (decision 1's "direct siblings," the
-  // same scope `resolveBoardCollisions`' `siblingScopeParentId` restricts
-  // collisions to). Null `parentId` (shouldn't arise — a Stub always has
-  // one) reads as no siblings at all rather than every top-level Card.
-  function siblingItems(parentId: string | null): Item[] {
-    return parentId ? latest.current.getAttachedChildren(parentId) : [];
-  }
-
   // Audit epic-3-5-story-5 #8: "which list is this release against" is one
-  // fact about the region — Story 6's own "has a sortable container"
-  // property — that `handleDragEnd` used to derive twice, twenty lines
-  // apart: once for `placementOver`'s anchor/bare-container distinction,
-  // again for `others`' candidate rows. One derivation, read by both; a
-  // card region (or no region at all) has no release list, `null` either
-  // way. `containerId: null` is exactly how a Descendants list (no bare-
-  // container concept) tells apart from a card list's own real container.
-  function releaseListFor(
-    region: DragRegion | undefined,
-    origin: Placement,
-  ): { rows: Item[]; containerId: string | null } | null {
+  // fact about the region that `handleDragEnd` used to derive twice, twenty
+  // lines apart: once for `placementOver`'s anchor/bare-container
+  // distinction, again for `others`' candidate rows. One derivation, read
+  // by both. Card-list regions only, since Story 6.1 Phase 0 (L1-5): a
+  // Descendants release resolves through `releaseDescendants` instead
+  // (Story 6 Phase D), before this is ever called; a Card region (or no
+  // region at all) has no release list either, `null` both ways.
+  function releaseListFor(region: DragRegion | undefined): { rows: Item[]; containerId: string } | null {
     if (!region) return null;
-    if (region.kind === 'descendants') return { rows: siblingItems(parentOpinionOf(origin)), containerId: null };
     if (isCardList(region)) return { rows: regionItems(region), containerId: region.containerId };
     return null;
   }
@@ -933,52 +929,41 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const region = placementRegion(current.pop, regions);
 
     // Story 6 Phase D — release at the Descendants layer: §7's full gap +
-    // depth rule, not the interim direct-sibling anchor `releaseListFor`/
-    // `placementOver` below still resolve mid-drag (decision 4's own
-    // "the projection carries the visual" — the ghost's *list position*
-    // stayed Story 5's throughout the hold; only the *release* changes).
+    // depth rule, resolved fresh here against the session's own live
+    // projection — not the static preview
+    // `popSession.ts::placementFor`'s own Descendants branch still shows
+    // mid-drag (decision 4's own "the projection carries the visual" — the
+    // ghost's *list position* stayed Story 5's throughout the hold; only
+    // the *release* changes). `releaseListFor`/`placementOver` below are
+    // card-list-only (Story 6.1 Phase 0, L1-5) — a Descendants release
+    // never reaches them.
     if (region?.kind === 'descendants') {
       await releaseDescendants(current, region, activeId);
       return;
     }
 
-    const list = releaseListFor(region, origin);
-    // Release always gives a decisive answer while locked anywhere (`null`
-    // is reserved for `placementFor`'s mid-drag calls, where there's
-    // genuinely nothing fresh yet to prefer over `priorPlacement`) — over
-    // resolving to anything but a column/sub-row's own container is a
-    // specific anchor; the container itself, or dnd-kit finding no
-    // collision at all, is a bare hover with nothing to anchor beside. A
-    // Descendants context has no "container" concept at all (its own
-    // droppable candidates are never a bare wrapper), so any `over` there
-    // is already a specific row — but Story 6 Phase B widened *collision*
-    // to every row of the section, any depth (`descendantsSectionRect`),
-    // while this within-action is still Story 5's interim direct-sibling
-    // reorder (Phase D's own gap+depth rule replaces it). An `over` that
-    // isn't one of origin's true siblings — `list.rows`, exactly that set
-    // for a Descendants list — is treated as no anchor at all, the same as
-    // a `null` `over`: never send an anchor `toRequest` can't resolve
-    // within origin's own parent scope (a 400, "anchor outside the
-    // resulting scope"). True siblings are unaffected.
+    const list = releaseListFor(region);
+    // Release always gives a decisive answer while locked in a column/
+    // sub-row (`null` is reserved for `placementFor`'s mid-drag calls,
+    // where there's genuinely nothing fresh yet to prefer over
+    // `priorPlacement`) — over resolving to anything but the column/
+    // sub-row's own container is a specific anchor; the container itself,
+    // or dnd-kit finding no collision at all, is a bare hover with nothing
+    // to anchor beside.
     //
-    // Option A + lean (2026-09-24): in a column/sub-row the release sends
-    // exactly the anchor the blue line names, `over` being the dragged
-    // card's own row included (`resolveBoardCollisions`: the ghost resting
-    // in its own slot). "After the card above" and "before the card below"
-    // look the same in this column but can differ in the workflow-wide
-    // order when items from other workphases sit between them
-    // (item-positioning §2), so "stay" would contradict the line. A ghost
-    // with no neighbor at all has nothing to anchor to: the bare
-    // container's slot.
+    // Option A + lean (2026-09-24): the release sends exactly the anchor
+    // the blue line names, `over` being the dragged card's own row
+    // included (`resolveBoardCollisions`: the ghost resting in its own
+    // slot). "After the card above" and "before the card below" look the
+    // same in this column but can differ in the workflow-wide order when
+    // items from other workphases sit between them (item-positioning §2),
+    // so "stay" would contradict the line. A ghost with no neighbor at all
+    // has nothing to anchor to: the bare container's slot.
     const placementOver: PlacementOver = !list
       ? null
-      : list.containerId === null
-        ? over && list.rows.some(r => r.id === String(over.id))
-          ? anchorOn(over)
-          : null
-        : !over || String(over.id) === list.containerId
-          ? 'container'
-          : (anchorOn(over) ?? 'container');
+      : !over || String(over.id) === list.containerId
+        ? 'container'
+        : (anchorOn(over) ?? 'container');
     const placement = placementForSession(current, regions, placementOver);
     const others = list ? list.rows.filter(i => i.id !== activeId) : [];
     const input = toRequest(activeItem, origin, placement, others);
@@ -1022,12 +1007,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
 type OverlayTransform = Parameters<Modifier>[0]['transform'];
 type OverlayRect = Parameters<Modifier>[0]['draggingNodeRect'];
-
-// Story 6 Phase C: a Stub row's rendered height — one line, `py-1` (4px
-// top/bottom) inside `OVERLAY_STUB_CLASS`/`AttachedChildRow`'s own row —
-// a fixed fact about the component (matches `SHORT_CARD_HEIGHT_PX`'s own
-// reasoning), not a value read off any measurement.
-const STUB_ROW_HEIGHT_PX = 26;
 
 // Story 6 Phase C: keeps the pointer on the carried copy across its own
 // form switch into a Stub (shortCard/Stub -> Stub, at the Card-layer

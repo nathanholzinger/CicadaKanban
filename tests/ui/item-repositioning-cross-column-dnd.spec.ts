@@ -146,9 +146,10 @@ test.describe('1: extreme boundary moves within column 1', () => {
     // Not the append case the header comment's dead end went looking for
     // (audit epic-3-5-story-4 #5): closestCorners still resolves this to
     // card E (the same "past the end still hits the last card" heuristic),
-    // and resolveDropSide reads the dragged card's far-past-E center as
-    // 'after' — so the write anchors against E, side 'after', rather than
-    // going anchor-less. E is also the workflow-wide global max, so an
+    // and dropAnchorFor's own lean — the dragged card's center sitting well
+    // below E's own bottom-aligned ghost slot (Option A + the lean,
+    // 2026-09-24) — names E, side 'after' — so the write anchors against E,
+    // side 'after', rather than going anchor-less. E is also the workflow-wide global max, so an
     // anchored "after E" and a bare append land on the identical 6.0 the
     // API suite's 1.b gets — same outcome, different mechanism. Expected
     // to pass.
@@ -246,7 +247,8 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
     // 2026-09-16). Popping out while the pointer rests *outside* Column
     // Two (the gap) rather than already inside it matters here: Column Two
     // only carves out its own top/bottom dead zone once it's a Board-layer
-    // region no one is hovering yet (Story 8) — arriving already inside it
+    // region no one is hovering yet (Story 3's carve-out addendum,
+    // 2026-09-16) — arriving already inside it
     // the moment it *becomes* one skips straight to "hovered", freezing
     // its band math against a shape one card-height short of what it
     // assumes.
@@ -281,8 +283,8 @@ test.describe('4: interior moves into column 2 that land in C\'s existing gap', 
     await popOutFully(page);
     // topQuarter, not center: with only 2 cards in Column Two, the middle
     // band's own bottom boundary deliberately cuts across D's own center
-    // (Story 8's "the divider bisects the last rendered card" rule for a
-    // 2+-card region) — D's exact center is the one point guaranteed to
+    // (Story 3's carve-out addendum's "the divider bisects the last
+    // rendered card" rule for a 2+-card region) — D's exact center is the one point guaranteed to
     // sit right on that line, not safely inside the band either side of it.
     await hoverTo(page, await topQuarter(cardD));
     await release(page);

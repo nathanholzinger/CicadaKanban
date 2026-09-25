@@ -23,8 +23,8 @@ export function rect(left: number, top: number, width: number, height: number): 
 // to name it); the workphase facts default to one covered workphase named
 // after the key. `contentRect` defaults to the same rect (no clipping — the
 // common case a geometry-only test wants); `cardCount` defaults to 2, the
-// "normal" band shape, so a fixture that doesn't care about Story 8's
-// single-band/one-card exceptions doesn't have to spell it out;
+// "normal" band shape, so a fixture that doesn't care about Story 3's
+// carve-out addendum's single-band/one-card exceptions doesn't have to spell it out;
 // `parentRegionKey` is always null — Board is every card list's parent.
 // `cardRegion`/`descendantsRegion` below cover the other two kinds — see
 // dragRegions.test.ts's own DOM-built cases where the structural

@@ -1,4 +1,4 @@
-// Drag regions (Board/Column/sub-row/Card) and their pixel drop bands —
+// Drag regions (Board/Column/sub-row/Card/Descendants) and their pixel drop bands —
 // resolveDragStructure (structural, once per drag) + measureRegions (live rects, per sample).
 
 // Epic 3.5 Story 3 — the *regions* a Card drag can be in (docs/wiki/board-
@@ -55,7 +55,7 @@ export type Band = 'top' | 'middle' | 'bottom';
 export type RegionKind = 'column' | 'subrow' | 'card' | 'descendants';
 
 interface RegionCommon {
-  /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `card:<id>` — also the DOM attribute value. */
+  /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `card:<id>` / `descendants:<id>` — also the DOM attribute value. */
   key: string;
   rect: Rect;
   /**
@@ -163,7 +163,7 @@ export function isCardList(region: DragRegion): region is CardListRegion {
 }
 
 export const DRAG_REGION_ATTR = 'data-drag-region';
-// Story 8 re-plan: set alongside DRAG_REGION_ATTR on the same element, from
+// Story 3's carve-out addendum (2026-09-16): set alongside DRAG_REGION_ATTR on the same element, from
 // the same `items`/`mergedItems` array the column/sub-row actually renders
 // — the one place that count is already known, rather than re-deriving it
 // by walking the DOM for card-shaped children.
@@ -203,15 +203,6 @@ export interface DropColumn {
   displayMode: 'merged' | 'expanded';
   entryWorkphaseId: string;
   subRows: Array<{ workphase: { id: string; isTerminal?: number | boolean } }>;
-}
-
-// Maps every covered workphase id -> the column that covers it.
-export function buildColumnForWorkphaseMap<C extends DropColumn>(columns: readonly C[]): Map<string, C> {
-  const map = new Map<string, C>();
-  for (const col of columns) {
-    for (const row of col.subRows) map.set(row.workphase.id, col);
-  }
-  return map;
 }
 
 // Encodes a droppable id for an expanded column's per-workphase sub-row —
@@ -324,6 +315,11 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
     const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor, false) : null;
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
+    // Spelled on `kind` directly, not `!isCardList(facts)`: `facts` is missing
+    // its live fields at this point (`Omit<..., LiveFacts | 'cardCount' |
+    // 'boundsRect'>`), and none of that partial union is structurally
+    // assignable to `CardListRegion`, so a negated type-guard call can't
+    // narrow it out — the discriminant check is what actually type-checks.
     if (facts.kind === 'card' || facts.kind === 'descendants') {
       regions.push({ ...facts, rect, contentRect });
       continue;
@@ -471,7 +467,7 @@ function findParentRegionKey(el: HTMLElement, root: ParentNode): string | null {
 // The nearest ancestor that scrolls vertically, bounded to `root` — never
 // reaching past it to the document's own scrolling element, whatever a real
 // browser's default there happens to compute to. Every column/sub-row
-// region (Story 8 re-plan) sits inside its column body's own
+// region (Story 3's carve-out addendum, 2026-09-16) sits inside its column body's own
 // `overflow-y-auto`, so this always finds that one.
 function findVerticalScrollAncestor(el: HTMLElement, root: ParentNode): HTMLElement | null {
   for (let node = el.parentElement; node && node !== root; node = node.parentElement) {
@@ -542,17 +538,18 @@ export function containsPoint(rect: Rect, point: Point): boolean {
 
 // Which of `parentKey`'s own children contains the point — Board's own
 // column/sub-row regions when `parentKey` is null (every one of them has
-// `parentRegionKey: null`), or a locked column/sub-row's own Cards when
-// `parentKey` is its key (replaces the old `nonCardRegionAt`/`cardRegionAt`
-// pair — Story 4.1 Phase 0). Reachable only from *this* parent — never a
-// foreign column's Card, never two layers in one hop (wiki §1.1 rule 2) —
-// because nothing but a true child ever carries a matching
-// `parentRegionKey`. Null over a column's header/footer, the gaps between
-// columns or sub-rows, the space below the last sub-row, a region currently
-// scrolled out of view, or (at Board layer) always a Card: a Card is never
-// a Board-layer target in its own right (re-plan, 2026-09-16) — the layer
-// rule is one context change at a time, and no column/sub-row ever carries
-// a non-null `parentRegionKey` for this to match against.
+// `parentRegionKey: null`), or a locked Card's own Descendants section when
+// `parentKey` is its key (Story 6 Phase D). Reachable only from *this*
+// parent — never a foreign column's Card, never two layers in one hop (wiki
+// §1.1 rule 2) — because nothing but a true child ever carries a matching
+// `parentRegionKey`. Never called with a column/sub-row key any more: a
+// locked column/sub-row's own zoom-in candidate is the *named relation*
+// instead (Story 6, hands-on finding 3 — `popSession.ts::namedCardCandidate`,
+// reading `dropAnchorFor`'s own answer), not a hit test here. Null over a
+// column's header/footer, the gaps between columns or sub-rows, the space
+// below the last sub-row, a region currently scrolled out of view, or (at
+// Board layer) always a Card: a Card is never a Board-layer target in its
+// own right (re-plan, 2026-09-16).
 //
 // A `descendants` region is a candidate here too, as of Story 6 Phase D
 // (Story 5 decision 3 had excluded it: `resolveDragStructure` only ever

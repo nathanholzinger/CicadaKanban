@@ -133,12 +133,13 @@ export async function center(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.5);
 }
 
-// The top/bottom quarter of a card. In a column/sub-row these no longer
-// pick a side of the card hovered (Option A + lean, 2026-09-24): dnd-kit's
-// shuffle decides the ghost's slot, so aim at the card whose slot the ghost
-// should take, and the drop lands there. In a Descendants section (Stub
-// rows, until Story 6 Phase D) they still pick a side of the hovered row —
-// `resolveDropSide`, which half of it the dragged card's center is in.
+// The top/bottom quarter of a card or Stub row. These no longer pick a side
+// of the row hovered, anywhere (Option A + the lean, 2026-09-24; Story 6
+// Phase D generalized it from columns/sub-rows to a Descendants section
+// too): dnd-kit's shuffle decides the ghost's slot, so aim at the row whose
+// slot the ghost should take, and the drop lands there —
+// `dropAnchorFor`'s own lean, not a raw which-half read (`resolveDropSide`
+// is now only its fallback for a non-row `over`).
 export async function topQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.15);
 }

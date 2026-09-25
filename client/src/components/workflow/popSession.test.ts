@@ -601,17 +601,8 @@ describe('placementFor', () => {
       });
     });
 
-    it("TC-9 (sibling bullets): at its own Descendants section, mid-drag (no `over` yet) sits at origin — dnd-kit's own sortable strategy draws the reorder", () => {
+    it("TC-9 (sibling bullets): at its own Descendants section, mid-drag (this branch never actually sees a real `over` — release there goes through releaseDescendants instead, Story 6 Phase D) sits at origin — dnd-kit's own sortable strategy draws the reorder", () => {
       expect(placementFor(startPopSession(descendantsP.key), [descendantsP], null, null, origin, P)).toBe(origin);
-    });
-
-    it('TC-9 (sibling bullets): a real anchor releases as a plain sibling reorder — no parentId/isAttached opinion beyond the one already true', () => {
-      expect(
-        placementFor(startPopSession(descendantsP.key), [descendantsP], null, null, origin, P, null, {
-          anchorId: 's2',
-          side: 'after',
-        }),
-      ).toEqual({ parentId: P, slot: { anchorId: 's2', side: 'after' } });
     });
 
     it('TC-1/2/3: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot (decision 5)', () => {
@@ -653,26 +644,19 @@ describe('placementFor', () => {
   // (never possible before this phase, since only the origin's own section
   // ever resolved a `descendants:` region at all): `region.cardId` differs
   // from `containingCardId` (null for a Free Card; a different Card for a
-  // Stub detaching and reparenting), so `parentId` is the section's own
-  // Card, not `parentOpinionOf(origin)` — mirroring the Card branch's own
-  // `attachToCardId === containingCardId` distinction one layer up.
+  // Stub detaching and reparenting), so the mid-drag ghost previews
+  // attaching as the section's own Card's last child — mirroring the Card
+  // branch's own `attachToCardId === containingCardId` distinction one
+  // layer up. This branch never actually sees a real `over` (release goes
+  // through `releaseDescendants` instead, Story 6.1 Phase 0 L1-5).
   describe('a Descendants section reached by a foreign item (Story 6 Phase D)', () => {
     const Q = 'card-q';
     const descendantsQ = descendantsRegion(Q, rect(0, 0, 100, 200));
 
-    it("a Free Card, mid-drag with no `over` yet: previews attaching as last child of the section's own Card", () => {
+    it("a Free Card, mid-drag: previews attaching as last child of the section's own Card", () => {
       expect(
         placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, freeOrigin('w1'), null),
       ).toEqual({ parentId: Q, slot: 'last' });
-    });
-
-    it("a Free Card, released on a specific row: the anchor, parented to the section's own Card", () => {
-      expect(
-        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, freeOrigin('w1'), null, null, {
-          anchorId: 's1',
-          side: 'before',
-        }),
-      ).toEqual({ parentId: Q, slot: { anchorId: 's1', side: 'before' } });
     });
 
     it('a Stub detaching from a *different* Card (containingCardId !== region.cardId): the same foreign-entry rule, not parentOpinionOf(origin)', () => {
@@ -682,12 +666,6 @@ describe('placementFor', () => {
         parentId: Q,
         slot: 'last',
       });
-      expect(
-        placementFor(startPopSession(descendantsQ.key), [descendantsQ], null, null, origin, P, null, {
-          anchorId: 's1',
-          side: 'after',
-        }),
-      ).toEqual({ parentId: Q, slot: { anchorId: 's1', side: 'after' } });
     });
 
     it('the same Card as containingCardId is still the same-section rule (regression guard against always taking the foreign path)', () => {

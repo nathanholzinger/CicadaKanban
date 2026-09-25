@@ -1,5 +1,6 @@
-// Collision detection + request-shape helpers for the board drag gesture:
-// toRequest (placement → API request) and isIdentity (recognizes a no-op placement).
+// Collision detection, anchor naming, and request-shape helpers for the board
+// drag gesture: resolveBoardCollisions, dropAnchorFor (the anchor + lean),
+// toRequest (placement → API request), and isIdentity (recognizes a no-op).
 
 import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
 import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
@@ -315,9 +316,17 @@ function anchorFor(
 
 // Decision 2 (2026-09-17), replaced by Story 5 (2026-09-21): a placement
 // that resolves to the list and ordinal the item already occupies writes
-// nothing, at every layer — this subsumes every prior per-case "nothing to
-// write" (a covered-set member in the middle band, TC-7.16; an empty or
-// done region, TC-7.5/7.8) into one rule. Compared against the session's
+// nothing — this subsumes every prior per-case "nothing to write" (a
+// covered-set member in the middle band, TC-7.16; an empty or done region,
+// TC-7.5/7.8) into one rule. Narrowed by Option A + the lean (2026-09-24):
+// at a column/sub-row or Descendants layer, a real, non-trivial anchor is
+// never identity even in the item's own slot (the last sentence below) —
+// the release there always sends the anchor `dropAnchorFor` named, since
+// "after the card above" and "before the card below" can genuinely differ
+// once other workphases' items sit between them in the workflow-wide order
+// (item-positioning §2), so "stay" would contradict the line. Identity
+// still holds at Card layer ("set back down"), the terminal/bare-container
+// fallbacks, and a null placement. Compared against the session's
 // own `origin` — where the drag genuinely started — rather than the raw
 // item's `(parentId, isAttached)`/`workphaseId` fields (the old
 // comparison, which mistook a *detached* child of X for X's own Stub;
@@ -409,11 +418,10 @@ export function toRequest(
 // itself is rightly discarded (a newer write for the same item supersedes
 // it), but the pairs are real, committed renumbering of other rows that a
 // silently-dropped response would otherwise take with it. Every board-
-// gesture write path goes through here (Card drops via `toRequest`,
-// attached-sibling reorders with a bare anchor) so the contract can't
-// drift between them (audit epic-3-5-story-2 #4). `moveItem` is
-// dependency-injected so a test can substitute a rejecting stub without
-// mocking the module.
+// gesture write path — Card, Stub, and Descendants releases alike — goes
+// through `toRequest` and then here, so the contract can't drift between
+// them (audit epic-3-5-story-2 #4). `moveItem` is dependency-injected so a
+// test can substitute a rejecting stub without mocking the module.
 export async function sendItemMove(
   moveItem: (id: string, data: MoveItemInput) => Promise<ItemWriteResponse>,
   activeId: string,

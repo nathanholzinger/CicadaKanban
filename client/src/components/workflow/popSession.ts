@@ -2,7 +2,7 @@
 // unit-tested. Rules: docs/wiki/board-drag-interaction/README.md.
 
 import type { DragTuning } from './dragTuning';
-import { hasParentOpinion, parentOpinionOf, workphaseOnlySlot, type Placement } from './itemListOps';
+import { hasParentOpinion, workphaseOnlySlot, type Placement } from './itemListOps';
 import {
   bandFor,
   cardRegionKey,
@@ -37,16 +37,18 @@ import type { DropAnchor } from './boardDndUtils';
 //
 // The board is a strict stack of layers, never more than one deep from
 // where you are: **Board** (`contextKey === null`) → **Column/sub-row** →
-// **Card**. Three rules, settled with the Product Owner before this build
-// (2026-09-16), replace Story 3's flatter model:
+// **Card** → **Descendants** (Story 6, one Card's own section). Three
+// rules, settled with the Product Owner before this build (2026-09-16),
+// replace Story 3's flatter model:
 //
 //   1. A release always commits the *locked* context's own within-action —
 //      Column/sub-row: anchor + side among its own items (dnd-kit's `over`,
 //      scoped to just those). Card: append as the last child for an item
 //      arriving from outside, or "set back down" for the drag's own
 //      containing Card (Story 5) — either way no band, no anchor; manual
-//      placement among Stubs is Story 6's Descendants layer. This holds
-//      regardless of where the bare cursor is: the overlay never visually
+//      placement among Stubs is the Descendants layer one further in (§7,
+//      Story 6 Phase D). This holds regardless of where the bare cursor is:
+//      the overlay never visually
 //      leaves its context (bounded, exactly as Story 3 built it), so
 //      nothing shown ever promises a foreign region's band the way Story 3
 //      let a quick glance imply.
@@ -146,10 +148,13 @@ export interface PopSession {
   contextKey: string | null;
   /**
    * Board layer: the cursor is hovering a column/sub-row, tracked for its
-   * band and its own zoom-in clock. Locked in a column/sub-row: the cursor
-   * is resting on one of *its* Cards, tracked toward zooming into it (no
-   * band). Null otherwise — including always, while locked into a Card:
-   * Story 4 has no further zoom-in of its own yet.
+   * band and its own zoom-in clock. Locked in a column/sub-row: the *named*
+   * card (Story 6, finding 3 — `dropAnchorFor`'s own answer, not the
+   * cursor's physical position) is tracked toward zooming into it (no
+   * band). Locked in a Card: the cursor resting on its own Descendants
+   * section, by a plain hit test this time (Story 6 Phase D). Null
+   * otherwise — including always, while locked into Descendants: the layer
+   * table's own "(none)," no further child to zoom into.
    */
   hover: PopHover | null;
   /** Locked only: when the cursor left the context — the pop-out clock. Null while it's inside. */
@@ -230,10 +235,10 @@ export function advancePopSession(
   // column/sub-row, so a locked one always pops to Board with no branch);
   // and is it resting on one of *this* context's own child regions long
   // enough to pop into it. A locked column/sub-row's own child is a Card,
-  // found by the *named relation* now (Story 6, finding 3), not a hit test
-  // — `childRegionAt` still finds a locked Card's own child (Story 6 Phase
-  // D's Descendants zoom-in; always null until then, `childRegionAt`'s own
-  // guard).
+  // found by the *named relation* now (Story 6, finding 3), not a hit test;
+  // `childRegionAt` is what finds a locked Card's own child instead — its
+  // Descendants section (Story 6 Phase D), the one case this hit test still
+  // serves.
   const contextRegion = regions.find(r => r.key === session.contextKey);
   const inside = contextRegion !== undefined && containsPoint(containmentRect(contextRegion), pointer);
 
@@ -352,15 +357,18 @@ function namedCardCandidate(
     : { regionKey: region.key, since, poppable: true, side: namedAnchor.side, phase };
 }
 
-// Board-layer hover, or a locked column/sub-row's hover on one of its own
-// Cards: keeps the entry time while the cursor stays in the same region,
-// returning the same object when nothing tracked has changed. Only a card
-// list has a band (§5), read off the region's *live* rect and card count
-// now that the reservation is exact (Phase 1); a Card candidate has no
-// band at all, so it's unconditionally `poppable` instead — the kind's own
-// rule, set once here (audit epic-3-5-story-4 #11) rather than re-derived
-// at each call site that used to gate on `candidate.kind === 'card'`
-// separately from reading `hover.poppable` (unified with the old, separate
+// Board-layer hover, or (via `hoverForChildRegion`, Story 6 Phase D) a
+// locked Card's hover on its own Descendants section — a locked
+// column/sub-row's own Card candidate no longer comes through here at all
+// (Story 6, finding 3: that's `namedCardCandidate` instead). Keeps the
+// entry time while the cursor stays in the same region, returning the same
+// object when nothing tracked has changed. Only a card list has a band
+// (§5), read off the region's *live* rect and card count now that the
+// reservation is exact (Phase 1); a Descendants candidate has no band at
+// all, so it's unconditionally `poppable` instead — the kind's own rule,
+// set once here (audit epic-3-5-story-4 #11) rather than re-derived at each
+// call site that used to gate on `candidate.kind === 'card'` separately
+// from reading `hover.poppable` (unified with the old, separate
 // `hoverForCard` in Phase 0).
 function hoverFor(
   current: PopHover | null,
@@ -420,13 +428,15 @@ function popOutDue(
 // of {a locked pop-out, a locked zoom-in, a Board-layer pop-in} is ever
 // pending at once (advancePopSession never sets both `hover` and
 // `outsideSince`), so there's no ambiguity about which clock this reports.
-// One expression over `hover.poppable` + `popInDelayFor` covers both layers
+// One expression over `hover.poppable` + `popInDelayFor` covers every layer
 // alike (audit epic-3-5-story-4 #11) — a Board-layer hover's own region is
 // always a column/sub-row (`popInDelayFor` resolves that to `popInDelayMs`
 // exactly as directly naming the constant used to), and a locked hover's is
-// always a Card today (`cardPopInDelayMs`); `regions` resolves which, and a
+// either a Card (`cardPopInDelayMs`, `namedCardCandidate`) or, one layer
+// further in, its own Descendants section (`descendantsPopInDelayMs`,
+// Story 6 Phase D, `hoverForChildRegion`); `regions` resolves which, and a
 // locked hover falls back to `cardPopInDelayMs` if its region can't be
-// found (the only kind a locked hover could be before Story 5 adds another).
+// found (the shallower of the two).
 export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
   if (session.contextKey !== null && session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
   const hover = session.hover;
@@ -447,8 +457,9 @@ export function popDueAt(session: PopSession, regions: readonly DragRegion[], tu
 // slot, the ghost just sits at 'existing'). `null` is the mid-drag case,
 // or release over genuinely nothing. `'container'` is release onto the
 // bare column/sub-row container — no specific card to anchor beside.
-// `{anchorId, side}` is release onto a specific card, `resolveDropSide`'s
-// side.
+// `{anchorId, side}` is release onto a specific card, `dropAnchorFor`'s own
+// anchor + lean (Option A + the lean, 2026-09-24 — `resolveDropSide` is now
+// only its fallback for a non-row `over`).
 export type PlacementOver = { anchorId: string; side: 'before' | 'after' } | 'container' | null;
 
 // The region a placement is resolved against: the locked context, or — at
@@ -552,42 +563,29 @@ export function placementFor(
     return { parentId: region.attachToCardId, slot: 'last' };
   }
 
-  // A Descendants section's within-action, mid-drag: unchanged from Story
-  // 5's table (decision 4 — "the projection carries the visual," not the
-  // list ordering). `over` here is whatever `useBoardDnd.ts::handleDragEnd`
-  // (mid-drag: the collision closure's own `descendantsSectionRect` scope)
-  // already resolved to a row of *this* section, any depth, or nothing.
-  // Two cases, mirroring the Card branch above:
+  // A Descendants section's within-action, mid-drag only: release there
+  // goes through `useBoardDnd.ts::releaseDescendants` instead (Story 6
+  // Phase D's full §7 gap + depth rule, against the session's own live
+  // projection) — this branch never actually sees a real `over` (Story 6.1
+  // Phase 0, L1-5: `handleDragEnd` returns from the Descendants branch
+  // before this function is ever called with one). Two cases, mirroring the
+  // Card branch above:
   //
   //   - **Same section** (`region.cardId === containingCardId` — a Stub of
   //     this Card, or one of its own descendants, reordering within the
-  //     section it's already in): `parentId` stays the item's own real
-  //     parent (`parentOpinionOf(origin)`, not necessarily `region.cardId`
-  //     itself — a grandchild's real parent is another Stub). With no
-  //     `over` yet, dnd-kit's own sortable strategy already draws the
-  //     reorder, so the ghost just sits at `origin` (or `priorPlacement`,
-  //     same reconciliation-#1 reasoning as any other context).
+  //     section it's already in): the ghost sits at `origin` (or
+  //     `priorPlacement`, same reconciliation-#1 reasoning as any other
+  //     context) — dnd-kit's own sortable strategy already draws the
+  //     reorder among the section's rows.
   //   - **A foreign item** (Story 6 Phase D — a Free Card, or a Stub
   //     detached from a *different* Card, zooming into this section for
-  //     the first time): `parentId` is `region.cardId` itself — this is a
-  //     reparent, same as the Card layer's own auto-drop one layer up.
-  //     There's no `origin`/`priorPlacement` restore point here (nothing
-  //     to "set back down" to), so a bare hover with no `over` yet starts
-  //     at `'last'`, the Card layer's own append convention.
-  //
-  // Either way this is still Story 5's *interim* ordering — a direct-
-  // sibling anchor, not yet the resolved gap+depth placement. Phase D's own
-  // full §7 placement (`resolvePlacement`, keyed on the session's live
-  // projection) replaces this at *release* only
-  // (`useBoardDnd.ts::handleDragEnd`); this function's Descendants branch
-  // stays the mid-drag ghost's rule.
+  //     the first time): there's no `origin`/`priorPlacement` restore point
+  //     here (nothing to "set back down" to), so the ghost previews
+  //     attaching as `region.cardId`'s last child — the Card layer's own
+  //     append convention, one layer up.
   if (region.kind === 'descendants') {
-    const sameSection = region.cardId === containingCardId;
-    const parentId = sameSection ? parentOpinionOf(origin) : region.cardId;
-    if (over === null || over === 'container') {
-      return sameSection ? (priorPlacement ?? origin) : { parentId, slot: 'last' };
-    }
-    return { parentId, slot: { anchorId: over.anchorId, side: over.side } };
+    if (region.cardId === containingCardId) return priorPlacement ?? origin;
+    return { parentId: region.cardId, slot: 'last' };
   }
 
   // Story 5: the moment a Stub's own list stops applying — any card-list

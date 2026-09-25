@@ -89,7 +89,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     getWorkphaseItems,
     getMergedColumnItems,
     getAttachedChildren,
-    findWorkphaseForItem,
     handleCreateItem,
     handleItemUpdated,
     handleItemDeleted,
@@ -211,7 +210,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     getWorkphaseItems,
     getMergedColumnItems,
     getAttachedChildren,
-    findWorkphaseForItem,
     handleReorderColumns,
     loadBoard,
     rootRef: boardRootRef,
@@ -338,11 +336,11 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                 <div
                   ref={boardRootRef}
                   style={overlayVars}
-                  data-drag-state={session?.pop ? popState(session.pop) : undefined}
-                  data-drag-context={session?.pop?.contextKey ?? undefined}
-                  data-drag-band={session?.pop?.hover?.band ?? undefined}
-                  data-drag-zoom-candidate={session?.pop?.hover?.phase ? session.pop.hover.regionKey : undefined}
-                  data-drag-zoom-phase={session?.pop?.hover?.phase}
+                  data-drag-state={session ? popState(session.pop) : undefined}
+                  data-drag-context={session?.pop.contextKey ?? undefined}
+                  data-drag-band={session?.pop.hover?.band ?? undefined}
+                  data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
+                  data-drag-zoom-phase={session?.pop.hover?.phase}
                   data-drag-projection={
                     session?.projection
                       ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`

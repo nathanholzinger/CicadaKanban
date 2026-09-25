@@ -8,7 +8,8 @@ Becomes a historical record once done.
 
 **Status: method agreed with the Product Owner 2026-09-24. Comparison
 done and every disposition ratified by the PO 2026-09-24 (the ledger
-below); the build order is ready. Not yet built.** The deliberation is in
+below); the build order is ready. Phase 0 done 2026-09-24 (below);
+Phases 1–3 remain.** The deliberation is in
 [`story-6-1-comparison.md`](story-6-1-comparison.md); this file holds the
 outcomes.
 
@@ -342,6 +343,26 @@ C-12.
 - **Comment passages** named in L1-1a, L1-2, L1-4, L1-5, L1-10, L1-11
   and L1-12, including `workflow/CLAUDE.md`'s `tabStates` mention and its
   "(Story 5's interim ordering)".
+
+**Done 2026-09-24.** Every item above landed except one: `measureRegions`'
+`facts.kind === 'card' || facts.kind === 'descendants'` check stays
+spelled directly rather than routing through `!isCardList(facts)` — tried
+first, but `facts` at that point is missing its live fields (`Omit<...,
+'rect' | 'contentRect' | 'cardCount' | 'boundsRect'>`), and none of that
+partial union is structurally assignable to `CardListRegion`, so a negated
+type-guard call can't narrow it (confirmed against `tsc`: the `!isCardList`
+form loses cardCount from the card-list branch). Left as the direct
+discriminant check, with a comment explaining why. The rename sweep for
+L1-11 also went a little wider than the ledger's "about 15": three more
+mislabeled "Story 8" mentions turned up in files the comparison doc didn't
+list (`item-repositioning-cross-column-dnd.spec.ts` ×2,
+`drag-target-classification.spec.ts` ×1) — same category, same fix,
+folded in rather than left half-done. Full suites green throughout: `tsc`
+(root + client), eslint, prettier, both unit suites (317 server + 301
+client), and the full Playwright suite (140 passed, 8 skipped, matching
+the pre-existing baseline) against the already-running test servers
+(port 3002/5174, `test.db`, `ENABLE_TEST_ROUTES=true` — never `kanban.db`).
+No wiki passage named a symbol this phase deleted or moved.
 
 ### Phase 1 — Mechanical splits (no behavior change)
 

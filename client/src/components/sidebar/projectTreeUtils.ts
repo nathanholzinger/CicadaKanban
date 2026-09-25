@@ -121,8 +121,12 @@ export function eligibleRows(flatItems: readonly FlatItem[], exclude: ReadonlySe
 // `overId === ` the active item's own id is deliberately **not** handled
 // here — dnd-kit can report the active row itself as `over` while the
 // pointer rests on it; the caller keeps the last known projection rather
-// than resolving a fresh one for that sample (the same case
-// `lib/hierarchyPlacement.ts`'s board callers hit and handle the same way).
+// than resolving a fresh one for that sample. The board no longer hits this
+// case the same way (Option A, 2026-09-24): its own `dropAnchorFor` names a
+// neighbor by the lean even over the dragged row's own slot, since the
+// sidebar stays on `over` + `resolveDropSide` with no ghost shuffle by
+// design (decision 2's amendment) — ceding a fresh answer here only when
+// dnd-kit's own collision genuinely can't tell above from below.
 export function resolveGap(
   flatItems: readonly FlatItem[],
   rows: readonly Row[],

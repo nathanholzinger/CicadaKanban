@@ -124,10 +124,6 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     return getAttachedChildrenFrom(items, parentId, placements);
   }
 
-  function findWorkphaseForItem(itemId: string): string | null {
-    return items.find(i => i.id === itemId)?.workphaseId ?? null;
-  }
-
   // Every write path lands through completeItemWrite so a reindex the server
   // disclosed is applied the same way whether the write came from the
   // board, the Sheet, or an inline create.
@@ -165,7 +161,6 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     getWorkphaseItems,
     getMergedColumnItems,
     getAttachedChildren,
-    findWorkphaseForItem,
     handleCreateItem,
     handleItemUpdated,
     handleItemDeleted,

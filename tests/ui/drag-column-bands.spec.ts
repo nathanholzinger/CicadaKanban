@@ -122,7 +122,7 @@ function columnKeyOf(s: Scenario, workphaseId: string): string {
   return columnRegionKey(s.columns.find(c => c.entryWorkphaseId === workphaseId)!.id);
 }
 
-// Story 8 re-plan (2026-09-16): a band is content-anchored pixels now
+// Story 3's carve-out addendum (2026-09-16): a band is content-anchored pixels now
 // (dragRegions.ts::bandFor), sized by the shortCard's own fixed height and
 // the card lists' shared gap (KanbanCard.tsx, Story 4.1 Phase 1 — no longer
 // a tunable) and the region's own card count/terminal-ness — never a
@@ -161,8 +161,8 @@ function carveDivider(region: Locator, edge: 'top' | 'bottom'): Locator {
 }
 
 // Landing on the top/bottom carve-out itself makes *this* region the live
-// hover target, which is exactly what collapses that carve-out (Story 8:
-// a real ghost takes the reservation over) — pulling the rest of the
+// hover target, which is exactly what collapses that carve-out (Story 3's
+// addendum: a real ghost takes the reservation over) — pulling the rest of the
 // region's content up to fill the space the two dead zones held, and (in
 // an expanded column) possibly nudging a sibling sub-row's own scroll
 // position too. A point aimed at the dead zone's own (pre-collapse)
@@ -215,7 +215,7 @@ async function bandDivider(region: Locator, edge: 'top' | 'bottom'): Promise<Poi
 // A point in In Progress's own middle band — used as the *first* move from
 // a different locked origin (DRAG-3.4, "locked to each context in turn"),
 // before the drag has necessarily reached Board layer at all, so it can't
-// read the carve-out or the divider off (Story 8: neither renders until
+// read the carve-out or the divider off (Story 3's addendum: neither renders until
 // then). The region's own dead center is a safe stand-in instead: with
 // this fixture's 3 small cards, half its total height (carve-outs and all)
 // falls nowhere near either edge whatever `ghostCardHeightPx` is configured
@@ -248,15 +248,15 @@ test.describe('Card → column drop bands', () => {
 
     // X starts locked to Todo; a band only resolves a release once the drag
     // has actually reached Board layer (re-plan 2026-09-16) — and In
-    // Progress's own carve-out (Story 8) only renders there too, so it has
-    // to pop out first before reading the top one off, then land squarely
-    // inside it.
+    // Progress's own carve-out (Story 3's addendum) only renders there too,
+    // so it has to pop out first before reading the top one off, then land
+    // squarely inside it.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);
     await settleOnTopBand(page, regionOf(inProgress));
     // The live ghost previews X first, in the hovered column's own list —
-    // Story 8's replacement for the retired tinted band highlight.
+    // Story 3's addendum's replacement for the retired tinted band highlight.
     await expect.poll(() => titlesIn(inProgress)).toEqual(['Item X', 'Item A', 'Item B', 'Item C']);
     await release(page);
 
@@ -393,8 +393,8 @@ test.describe('Card → column drop bands', () => {
     // popInDelayMs (seeded absurdly high) could ever complete a pop-in.
     // Under a pop that would anchor against it; without one it's the
     // band's meaning, and the card under the cursor is ignored. The middle
-    // band's own bounds come from the divider lines themselves (Story 8
-    // re-plan) — content-anchored pixels, not a fraction of the region.
+    // band's own bounds come from the divider lines themselves (Story 3's
+    // carve-out addendum) — content-anchored pixels, not a fraction of the region.
     const region = regionOf(inProgress);
     const middle = { from: (await bandDivider(region, 'top')).y, to: (await bandDivider(region, 'bottom')).y };
     let hovered: string | null = null;
@@ -517,8 +517,8 @@ test.describe('Card → column drop bands', () => {
     await awaitDragState(page, 'locked');
 
     // From In Progress, on to Review (empty): out, then in, again. Review's
-    // own carve-out (Story 8) only renders at Board layer, so pop out of
-    // In Progress — via the gap, never Review's own bounds directly — before
+    // own carve-out (Story 3's addendum) only renders at Board layer, so
+    // pop out of In Progress — via the gap, never Review's own bounds directly — before
     // reading it off.
     await hoverTo(page, await gapBetween(inProgress, review));
     await awaitPoppedOut(page, tuning);
@@ -607,8 +607,8 @@ test.describe('Card → column drop bands', () => {
 
     // DRAG-3.6 — X (an outsider, in Todo) to the top band: the entry
     // workphase. X starts locked to Todo, so this also has to pop out to
-    // Board layer first — merged's own carve-out (Story 8) only renders
-    // there too — before reading the top one off.
+    // Board layer first — merged's own carve-out (Story 3's addendum) only
+    // renders there too — before reading the top one off.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, merged));
     await awaitPoppedOut(page, tuning);
@@ -631,8 +631,8 @@ test.describe('Card → column drop bands', () => {
 
     // X from Todo into the Review sub-row's top band: before Y, exactly
     // Review. X starts locked to Todo, so it also has to pop out to Board
-    // layer first — reviewRow's own carve-out (Story 8) only renders there,
-    // and only once reviewRow itself isn't already the live hover target —
+    // layer first — reviewRow's own carve-out (Story 3's addendum) only
+    // renders there, and only once reviewRow itself isn't already the live hover target —
     // so the approach reaches Board layer *before* reading it off, via a
     // point in the gap left of the column, at the row's own height (going
     // straight in would cross the In Progress sub-row first, inserting the
@@ -688,8 +688,8 @@ test.describe('Card → column drop bands', () => {
     const todo = column(page, 'Todo');
     const done = column(page, 'Done');
 
-    // X starts locked to Todo; Done's own single-band carve-out (Story 8)
-    // only renders once genuinely at Board layer, so pop out first — via
+    // X starts locked to Todo; Done's own single-band carve-out (Story 3's
+    // addendum) only renders once genuinely at Board layer, so pop out first — via
     // any point outside Todo, not necessarily Done itself — before reading
     // it off.
     await pickUp(page, article(page, 'Item X'));
@@ -750,8 +750,8 @@ test.describe('ordinal preview and reconciliation', () => {
     const todo = column(page, 'Todo');
     const inProgress = column(page, 'In Progress');
 
-    // X starts locked to Todo; In Progress's own carve-out (Story 8) only
-    // renders once genuinely at Board layer, so pop out first.
+    // X starts locked to Todo; In Progress's own carve-out (Story 3's
+    // addendum) only renders once genuinely at Board layer, so pop out first.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);
@@ -784,7 +784,7 @@ test.describe('ordinal preview and reconciliation', () => {
 
     // Write 1: X after C (bottom band) — X starts locked to Todo, so this
     // pops out to Board layer first (re-plan 2026-09-16), and In Progress's
-    // own carve-out (Story 8) only renders there too.
+    // own carve-out (Story 3's addendum) only renders there too.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);

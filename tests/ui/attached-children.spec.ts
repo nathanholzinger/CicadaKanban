@@ -199,8 +199,9 @@ test.describe('attached children on the board', () => {
     // tests/helpers/dragGesture.ts.
     const targetColumn = page.getByRole('group', { name: 'In Progress' });
     // The region itself, not the group's own center — In Progress is empty,
-    // and an empty region's carve-out (Story 8) is a fixed, small band near
-    // the top of the column body, not the whole available column height.
+    // and an empty region's carve-out (Story 3's addendum, 2026-09-16) is a
+    // fixed, small band near the top of the column body, not the whole
+    // available column height.
     const targetRegion = targetColumn.locator(`[${DRAG_REGION_ATTR}]`).first();
     await pickUp(page, card);
     await hoverTo(page, await center(targetRegion));

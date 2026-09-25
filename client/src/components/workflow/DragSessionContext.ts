@@ -1,5 +1,6 @@
 // The whole drag's context: activeItem, classification, pop, priorPlacement, origin,
-// plus PlacementsContext. useDropTargetState/useIsPending read it without prop drilling.
+// containingCardId, projection, plus PlacementsContext. useDropTargetState/
+// useIsPending read it without prop drilling.
 
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';

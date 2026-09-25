@@ -28,7 +28,7 @@ this directory, then go to the wiki for the "why."
   depth rule — the named neighbor picks the **gap**, horizontal offset from a seeded
   depth picks the **depth** (`useBoardDnd.ts`'s live projection,
   `DragSessionContext.ts::DescendantsProjection`), and release resolves the placement
-  via `lib/hierarchyPlacement.ts::resolvePlacement`; a foreign item's *first* entry
+  via `lib/hierarchyPlacement.ts::resolvePlacement`; a foreign item's _first_ entry
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
   same-section case — a Stub already home there). An over-cap tab state (§7.2) is
   reachable but commits nothing on release, the one exception to §3.2. A dragged
@@ -73,8 +73,7 @@ this directory, then go to the wiki for the "why."
 - `lib/hierarchyPlacement.ts` — the Descendants layer's own placement rule (§7),
   table-generic and shared with the project sidebar: `flattenHierarchy` (a Card's
   descendants as `Row[]`, the dragged subtree excluded), `gapIndexFor`/
-  `depthRangeFor`/`resolvePlacement` (§7.1's gap + depth walk), `tabStates` (every
-  reachable state in a gap, validity injected by the caller). Pure, no React, no
+  `depthRangeFor`/`resolvePlacement` (§7.1's gap + depth walk). Pure, no React, no
   dnd-kit — never imports `Item`. `useBoardDnd.ts`'s live projection and
   `useBoardDnd.ts::releaseDescendants` are its board-side callers;
   `itemListOps.ts::descendantsChildrenOf` is the `getAttachedChildren` adapter both
@@ -84,8 +83,9 @@ this directory, then go to the wiki for the "why."
   exactly like a Card (Story 5) — no interim exclusion.
 - `itemListOps.ts` — list selectors, ordinal placements, the reindex fold-in, the
   inversion tripwire.
-- `boardDndUtils.ts` — collision detection + request-shape helpers (`toRequest`,
-  `isIdentity`).
+- `boardDndUtils.ts` — collision detection, anchor naming, and request-shape helpers:
+  `resolveBoardCollisions`, `dropAnchorFor`/`travelingRowsFor` (the anchor + lean),
+  row-data typing (`itemRowData`/`isCardRow`/`isStubRow`), `toRequest`, `isIdentity`.
 - `dragTuning.ts` — every threshold/band/overlay value, tunable at runtime via
   `DragTuningPanel.tsx` (toolbar → "Drag tuning"), persisted in `localStorage` under
   `kanban_drag_tuning`. `descendantsPopInDelayMs` (Story 6 Phase D) is the fourth
@@ -94,9 +94,11 @@ this directory, then go to the wiki for the "why."
   plumbing. Also owns the Descendants layer's live projection (seed at pickup or at
   the zoom-in transition, refreshed every sample from the named neighbor + pointer x,
   cleared on pop-out) and its own release path (`releaseDescendants`) — the one
-  mid-drag/release asymmetry in the file: the *ghost* still comes from
-  `popSession.ts::placementFor`'s Descendants branch (Story 5's interim ordering),
-  the *release* from `resolvePlacement` against the final projection.
+  mid-drag/release asymmetry in the file: the _ghost_ still comes from
+  `popSession.ts::placementFor`'s Descendants branch (a static preview — `origin`/
+  `priorPlacement` for the same section, an append for a foreign item — since `over`
+  never resolves there any more), the _release_ from `resolvePlacement` against the
+  final projection.
 - `DragSessionContext.ts` — the whole drag's state (`activeItem`, `classification`,
   `pop`, `priorPlacement`, `origin`, `containingCardId`, `projection`) plus
   `PlacementsContext`, read via `useDropTargetState(itemId)`/`useIsPending` — no prop
@@ -119,4 +121,4 @@ this directory, then go to the wiki for the "why."
 - The board root carries `data-drag-state` (`locked`/`popped-out`), `data-drag-context`,
   and (Story 6 Phase D) `data-drag-projection` (`"<gap>:<depth>:<valid>"`, present only
   while locked at a `descendants:` context) for tests; Cards/Stubs carry `data-item-id`
-  + `data-drop-state` + (the active row only, while over cap) `data-placement-valid`.
+  - `data-drop-state` + (the active row only, while over cap) `data-placement-valid`.

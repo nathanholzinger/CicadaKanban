@@ -476,6 +476,11 @@ about it. **Fix:** map a null `over` in a Descendants context to `origin`
 at the call site, or add an explicit `'origin'` `PlacementOver` value —
 folds into #8.
 
+**Status:** Superseded (2026-09-24) — Story 6 Phase D's `releaseDescendants`
+replaced this whole path with §7's gap + depth rule; Story 6.1 Phase 0
+(L1-5/C-7) deleted the now-unreachable branch and its `popSession.test.ts`
+cases.
+
 ### 17. Story 4 #14 is now a three-layer skip: a `descendants:P` context whose section is clipped out of view pops straight to Board `[Correctness & Security]`
 **Files:** `client/src/components/workflow/popSession.ts:186–187`, `:207` (`contextRegion?.parentRegionKey ?? null`)
 
@@ -594,6 +599,10 @@ Unsorted registers no column region, so `findParentRegionKey` returns null for `
 
 ### 28. Decision 1's "grandchild dead zone is identity" holds only when the grandchild has no siblings
 With a sibling under the same Stub parent, `closestCorners` over the scoped rows (`boardDndUtils.ts:89–97`) returns the nearest sibling wherever the cursor is in the section, so a release over a non-sibling row still writes `{anchorId: sibling, side}`. Consistent with Story 4 #26 (a real anchor is never identity); not what `story-5-stub-detach.md:150–157` says. A wording fix in the plan, not code.
+
+**Status:** Superseded (2026-09-24) — Story 6 Phase D's §7 gap + depth rule
+replaced sibling-only Descendants placement entirely; Story 6.1 Phase 0
+(C-12) records this as a status line only, no code left to fix.
 
 ### 29. `handleDragStart` returns silently on malformed data
 `useBoardDnd.ts:443` — dnd-kit keeps an active drag with no session and no overlay, no console trace. Unreachable with the depth cap; a `console.warn` would make it diagnosable.

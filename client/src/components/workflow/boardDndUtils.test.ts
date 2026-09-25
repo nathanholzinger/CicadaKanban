@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CollisionDetection, Over } from '@dnd-kit/core';
 import { makeItem } from '../../test/itemFixture';
-import { freeOrigin, rect, column, stubOrigin } from '../../test/dragFixtures';
-import { buildColumnForWorkphaseMap, subrowContainerId } from './dragRegions';
+import { freeOrigin, rect, stubOrigin } from '../../test/dragFixtures';
+import { subrowContainerId } from './dragRegions';
 import {
   dropAnchorFor,
   resolveBoardCollisions,
@@ -45,27 +45,9 @@ function collisionArgs(
   };
 }
 
-// Board fixture: merged col-1 covers [todo, review], expanded col-2 covers
-// [dev, qa], broken col-3 covers [old].
-const columns = [
-  column('col-1', ['todo', 'review']),
-  column('col-2', ['dev', 'qa'], { displayMode: 'expanded' }),
-  column('col-3', ['old'], { broken: true }),
-];
-const columnMap = buildColumnForWorkphaseMap(columns);
-
 describe('subrowContainerId', () => {
   it('encodes column and workphase into the droppable id', () => {
     expect(subrowContainerId('col-2', 'qa')).toBe('subrow::col-2::qa');
-  });
-});
-
-describe('buildColumnForWorkphaseMap', () => {
-  it('maps every covered workphase to its column', () => {
-    expect(columnMap.get('todo')?.id).toBe('col-1');
-    expect(columnMap.get('review')?.id).toBe('col-1');
-    expect(columnMap.get('qa')?.id).toBe('col-2');
-    expect(columnMap.has('elsewhere')).toBe(false);
   });
 });
 

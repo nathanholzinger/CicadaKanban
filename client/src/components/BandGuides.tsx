@@ -6,7 +6,7 @@ import { useDragSession } from './workflow/DragSessionContext';
 import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR, reservationFor, type Reservation } from './workflow/dragRegions';
 import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 
-// Epic 3.5 Story 8 re-plan (2026-09-16) — the column drop bands, made
+// Epic 3.5 Story 3's carve-out addendum (2026-09-16) — the column drop bands, made
 // visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
 // percentage-of-height overlay to a content-anchored, space-reserving one.
 // These are Board layer's own cues, and only Board layer's: while a Card is
@@ -110,7 +110,6 @@ export function DragCarveFrame({
   droppable,
 }: DragCarveFrameProps) {
   const session = useDragSession();
-  const pop = session?.pop;
 
   // Whether the active drag's own item is currently one of this region's
   // rendered rows — by list membership, never by whether this region is
@@ -143,7 +142,8 @@ export function DragCarveFrame({
     </div>
   );
 
-  if (!pop) return wrap(children);
+  if (!session) return wrap(children);
+  const pop = session.pop;
 
   const isActiveContext = pop.contextKey === regionKey;
   if (pop.contextKey !== null) {

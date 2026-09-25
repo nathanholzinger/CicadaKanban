@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  flattenHierarchy,
-  gapIndexFor,
-  depthRangeFor,
-  resolvePlacement,
-  tabStates,
-  type Row,
-} from './hierarchyPlacement';
+import { flattenHierarchy, gapIndexFor, depthRangeFor, resolvePlacement, type Row } from './hierarchyPlacement';
 
 // DRAG-4 TC-8's tree, rooted at Card `P`:
 //   S1        (0)
@@ -19,7 +12,6 @@ function childrenOf(id: string | null): readonly string[] {
   if (id === 'S1a') return ['S1a1'];
   return [];
 }
-const NONE = new Set<string>();
 
 function byId(rows: readonly Row[], id: string): Row {
   const row = rows.find(r => r.id === id);
@@ -208,24 +200,35 @@ describe('resolvePlacement — a Top whose children are hidden from rows (a coll
   });
 });
 
-// TC-18 — validity is per state, injected by the caller; a cycle is
-// structurally unreachable because the dragged subtree never appears in rows.
-describe('tabStates', () => {
+// TC-18 — validity is per state, injected by the caller (production never
+// enumerates a whole gap at once — the board/sidebar each resolve one depth
+// per sample — so this drives the same two production functions a caller
+// actually uses, `depthRangeFor` for the range and `resolvePlacement` per
+// depth, rather than a test-only wrapper over them (Story 6.1 Phase 0,
+// SW-3 — `tabStates`/`TabState` had no production caller and are gone).
+describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', () => {
   const rows = flattenHierarchy('P', childrenOf);
 
   it('enumerates every depth in the gap’s range with its resolved placement', () => {
     const gap = gapIndexFor(rows, 'S2', 'before');
-    const states = tabStates(rows, gap, 'P', childrenOf, NONE, () => true);
-    expect(states.map(s => s.depth)).toEqual([0, 1, 2, 3]);
-    expect(states.every(s => s.valid)).toBe(true);
-    expect(states.find(s => s.depth === 3)?.placement).toEqual({ parentId: 'S1a1', anchor: null });
+    const { lo, hi } = depthRangeFor(rows, gap);
+    const depths = [];
+    for (let depth = lo; depth <= hi; depth++) depths.push(depth);
+    expect(depths).toEqual([0, 1, 2, 3]);
+    expect(resolvePlacement(rows, gap, 3, 'P', childrenOf)).toEqual({ parentId: 'S1a1', anchor: null });
   });
 
-  it('marks only the states the injected predicate rejects — validity is per state, not per gap', () => {
+  it('validity is per state, decided by the caller from the resolved parentId — not per gap', () => {
     const gap = gapIndexFor(rows, 'S2', 'before');
-    // A depth-cap stand-in: only S1a1 itself (the deepest tab state's parent) is over cap.
-    const states = tabStates(rows, gap, 'P', childrenOf, NONE, parentId => parentId !== 'S1a1');
-    expect(states.map(s => ({ depth: s.depth, valid: s.valid }))).toEqual([
+    const { lo, hi } = depthRangeFor(rows, gap);
+    // A depth-cap stand-in: only S1a1 itself (the deepest state's parent) is over cap.
+    const isValid = (parentId: string | null) => parentId !== 'S1a1';
+    const states = [];
+    for (let depth = lo; depth <= hi; depth++) {
+      const { parentId } = resolvePlacement(rows, gap, depth, 'P', childrenOf);
+      states.push({ depth, valid: isValid(parentId) });
+    }
+    expect(states).toEqual([
       { depth: 0, valid: true },
       { depth: 1, valid: true },
       { depth: 2, valid: true },
@@ -233,13 +236,17 @@ describe('tabStates', () => {
     ]);
   });
 
-  it('excludes the dragged subtree, so no state can ever resolve a cycle', () => {
+  it('excludes the dragged subtree, so no depth can ever resolve a cycle', () => {
     // X = S1a, dragged with its own child S1a1 — both removed from candidacy.
     const exclude = new Set(['S1a', 'S1a1']);
     const withoutDraggedSubtree = flattenHierarchy('P', childrenOf, exclude);
     expect(withoutDraggedSubtree.map(r => r.id)).toEqual(['S1', 'S2']);
     const gap = gapIndexFor(withoutDraggedSubtree, 'S2', 'before');
-    const states = tabStates(withoutDraggedSubtree, gap, 'P', childrenOf, exclude, () => true);
-    expect(states.every(s => s.placement.parentId !== 'S1a' && s.placement.anchor?.id !== 'S1a1')).toBe(true);
+    const { lo, hi } = depthRangeFor(withoutDraggedSubtree, gap);
+    for (let depth = lo; depth <= hi; depth++) {
+      const placement = resolvePlacement(withoutDraggedSubtree, gap, depth, 'P', childrenOf, exclude);
+      expect(placement.parentId).not.toBe('S1a');
+      expect(placement.anchor?.id).not.toBe('S1a1');
+    }
   });
 });

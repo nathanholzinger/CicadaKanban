@@ -85,9 +85,9 @@ test.describe('drag-target classification', () => {
         await expect(itemRow(page, id).first()).toHaveAttribute('data-drop-state', 'cycle-forming'); // DRAG-2.2
       }
       // S is X's own attached child, so it renders only nested inside X's
-      // own card — and Story 8 collapses that card's attached children
-      // while it's the one being dragged (a fixed, small ghost height for
-      // the carve-out math), so S isn't in the DOM at all right now, never
+      // own card — and Story 3's carve-out addendum (2026-09-16) collapses
+      // that card's attached children while it's the one being dragged (a
+      // fixed, small ghost height for the carve-out math), so S isn't in the DOM at all right now, never
       // mind classified. D and D1 above are unaffected: D is detached (its
       // own card, not nested under X), so neither it nor its own child D1
       // depends on X's collapse.

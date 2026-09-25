@@ -30,12 +30,6 @@ export interface ResolvedPlacement {
   anchor: Anchor | null;
 }
 
-export interface TabState {
-  depth: number;
-  placement: ResolvedPlacement;
-  valid: boolean;
-}
-
 // DFS over `childrenOf`, parents before children — the render order both
 // surfaces already draw in. `exclude` is §7.2's "the dragged item carries
 // its whole subtree": the active row is never removed from `childrenOf`
@@ -133,28 +127,4 @@ export function resolvePlacement(
   }
   const ancestor = ancestorAt(rows, top, depth);
   return { parentId: ancestor.parentId, anchor: { id: ancestor.id, side: 'after' } };
-}
-
-// Every reachable tab state in `gap`, for rendering (the ghost's tab-right/
-// tab-left states) and for unit coverage of a whole gap at once. `isValid`
-// is injected (decision: the library takes one, the sidebar passes "always
-// valid") and reads only the resolved `parentId` — §7.2's depth-cap check is
-// against the *resolved parent's absolute depth*, which only the caller's
-// own dataset can look up (`isWithinDepthCap(getDepth(parentId), ...)` on
-// the board); this file has no absolute depth of its own to offer it.
-export function tabStates(
-  rows: readonly Row[],
-  gap: number,
-  rootId: string | null,
-  childrenOf: (parentId: string | null) => readonly string[],
-  exclude: ReadonlySet<string>,
-  isValid: (parentId: string | null) => boolean,
-): TabState[] {
-  const { lo, hi } = depthRangeFor(rows, gap);
-  const states: TabState[] = [];
-  for (let depth = lo; depth <= hi; depth++) {
-    const placement = resolvePlacement(rows, gap, depth, rootId, childrenOf, exclude);
-    states.push({ depth, placement, valid: isValid(placement.parentId) });
-  }
-  return states;
 }
