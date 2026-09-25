@@ -28,13 +28,24 @@ export const CARD_LIST_GAP_CLASS = 'gap-2';
 // yet (Story 6 Phase C's carried Stub, locked at Card layer without ever
 // having reached a Descendants zoom-in).
 export const CARD_CONTENT_INSET_PX = 13;
-// A Stub row's rendered height (Story 6 Phase C: `useBoardDnd.ts`'s overlay
-// re-anchor; Phase D: `dragCollision.ts::dropAnchorFor`'s own ghost-height
-// choice for a Stub row's slot, the Descendants-layer counterpart to
-// SHORT_CARD_HEIGHT_PX above) — one line, `py-1` (4px top/bottom) inside
-// `KanbanCard.tsx`'s `OVERLAY_STUB_CLASS`/`StubRows.tsx`'s `AttachedChildRow` — a fixed fact
-// about the component, not a value read off any measurement.
-export const STUB_ROW_HEIGHT_PX = 26;
+// The Stub tier's two row heights, measured (2026-09-25) rather than
+// derived from the classes. A sortable row in a Descendants
+// section (`StubRows.tsx::AttachedChildRow`, the dragged item's own row there
+// included) is 24px; the bordered ones (`AttachGhostRow`, `KanbanCard.tsx`'s
+// carried Stub) are 26px — the title line (`text-xs`, 16px) plus `py-1`,
+// plus the border. A type pill adds 5px to either: it's 21px tall (10px text
+// at the inherited 1.5 line height, `py-0.5`, a 1px border), taller than the
+// title. The readers use the pill-less heights, so on a typed row they sit
+// 2.5px off its true middle: `dragCollision.ts::dropAnchorFor`'s ghost
+// middle (`STUB_ROW_HEIGHT_PX`, the Descendants-layer counterpart to
+// SHORT_CARD_HEIGHT_PX above) and `dragOverlayGeometry.ts`'s re-anchor
+// (`CARRIED_STUB_HEIGHT_PX`). Evening the rows out is a look change, Story
+// 8's call.
+export const STUB_ROW_HEIGHT_PX = 24;
+export const CARRIED_STUB_HEIGHT_PX = 26;
+// The box all three Stub rows share, so the heights above stay true of each
+// — each row adds only its own border, fill and states.
+export const STUB_ROW_BOX_CLASS = 'flex items-center gap-1.5 rounded px-1.5 py-1';
 // Epic 3.5 Story 6 Phase B (decision 1) — the flat descendants section's own
 // per-row indent: depth 0 (a Card's direct Stub) lands 12px in, matching the
 // single `pl-3` its old recursive wrapper carried alone; each level deeper
@@ -44,3 +55,14 @@ export const STUB_ROW_HEIGHT_PX = 26;
 // side (`StubRows.tsx`'s rows, `KanbanCard.tsx`'s carried Stub) and the
 // gesture side alike.
 export const DESCENDANTS_INDENT_PX = 12;
+
+// A section row's indent at `depth` (0 = a Card's direct Stub): the one
+// spelling every board render of it uses — the rows, the ghost row and the
+// carried Stub — so the carried copy's pill lines up with its would-be
+// siblings by construction, not by three copies agreeing. Margin vs.
+// padding stays each site's own choice. The
+// projection's pointer travel per level (`computeProjection`'s `indentPx`)
+// reads the constant itself: Story 8 may give it a number of its own.
+export function descendantsIndentPx(depth: number): number {
+  return (depth + 1) * DESCENDANTS_INDENT_PX;
+}

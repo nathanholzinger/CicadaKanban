@@ -6,36 +6,21 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Item, ItemType } from '../types';
-import { typePillClass, typePillStyle } from './item-detail/pillUtils';
+import TypePill from './item-detail/TypePill';
 import { itemRowData } from './workflow/dragCollision';
-import { DESCENDANTS_INDENT_PX } from './cardMetrics';
+import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useDropTargetProps } from './dragChrome';
-
-// A card's type pill only renders when `item.type` resolves to a known
-// ItemType — an orphaned/unknown type reference hides the pill rather than
-// showing a raw id (unlike the item-detail sections, which fall back to the
-// raw id as label text). Still used directly by the Stub-tier rows below
-// (AttachGhostRow, AttachedChildRow) — TypePill (item-detail/TypePill.tsx)
-// only replaces the Card-tier's own two copies (audit epic-3-5-story-4 #10).
-function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | null {
-  return typeId ? (itemTypes.find(t => t.id === typeId) ?? null) : null;
-}
 
 // Story 6 Phase C: the type pill + one-line title every Stub-tier render
 // shares — AttachGhostRow and AttachedChildRow below, and KanbanCard's own
 // overlay-Stub branch. Extracted so the three can't drift apart from each
 // other; each still owns its own outer box (dashed ghost, sortable row,
-// carried shadow), since that's the one thing that's genuinely different
-// between them.
+// carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the Card tier's own
+// `TypePill`, hidden for an unknown type the same way.
 export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
-  const resolvedType = resolveType(item.type, itemTypes);
   return (
     <>
-      {resolvedType && (
-        <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-          {resolvedType.name}
-        </span>
-      )}
+      <TypePill item={item} itemTypes={itemTypes} />
       <span className="truncate text-xs text-zinc-300">{item.title}</span>
     </>
   );
@@ -55,8 +40,8 @@ export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[
 export function AttachGhostRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
   return (
     <div
-      className="flex items-center gap-1.5 rounded border border-dashed border-blue-500/50 bg-blue-500/10 px-1.5 py-1"
-      style={{ marginLeft: (depth + 1) * DESCENDANTS_INDENT_PX }}
+      className={`${STUB_ROW_BOX_CLASS} border border-dashed border-blue-500/50 bg-blue-500/10`}
+      style={{ marginLeft: descendantsIndentPx(depth) }}
     >
       <StubBody item={item} itemTypes={itemTypes} />
     </div>
@@ -110,7 +95,7 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    paddingLeft: (depth + 1) * DESCENDANTS_INDENT_PX,
+    paddingLeft: descendantsIndentPx(depth),
   };
 
   return (
@@ -132,7 +117,7 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
           e.stopPropagation();
           if (!isDragging) onCardClick?.(item.id);
         }}
-        className="flex w-full cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing"
+        className={`${STUB_ROW_BOX_CLASS} w-full cursor-grab text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing`}
       >
         <StubBody item={item} itemTypes={itemTypes} />
       </button>

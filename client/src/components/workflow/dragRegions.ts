@@ -204,6 +204,36 @@ export function descendantsRegionKey(cardId: string): string {
   return `descendants:${cardId}`;
 }
 
+// The one reader of the formats the builders above write — never parse a
+// key by hand with `startsWith`/`slice`/`split`. `id` is
+// the column's, the Card's, or (a Descendants key) the section's own Card's;
+// a sub-row key also names its workphase. Null for anything that isn't a
+// region key.
+export type ParsedRegionKey =
+  { kind: 'column' | 'card' | 'descendants'; id: string } | { kind: 'subrow'; id: string; workphaseId: string };
+
+export function parseRegionKey(key: string): ParsedRegionKey | null {
+  const [kind, id, workphaseId, ...rest] = key.split(':');
+  if (!id || rest.length > 0) return null;
+  if (kind === 'subrow') return workphaseId ? { kind, id, workphaseId } : null;
+  if (workphaseId !== undefined) return null;
+  return kind === 'column' || kind === 'card' || kind === 'descendants' ? { kind, id } : null;
+}
+
+// The Card whose Descendants section `key` names, or null for any other key
+// (or none): the "is this context a section, and whose" question the hook
+// and the collision code both ask.
+export function descendantsCardIdOf(key: string | null): string | null {
+  const parsed = key === null ? null : parseRegionKey(key);
+  return parsed?.kind === 'descendants' ? parsed.id : null;
+}
+
+// Every card-list (column/sub-row) region element, and nothing nested in
+// one — a Card and its Descendants section register regions inside a
+// column too. Positive, so a region kind added later isn't swept in the way
+// the old "anything but `card:`" selector swept in Story 5's sections.
+export const CARD_LIST_REGION_SELECTOR = `[${DRAG_REGION_ATTR}^="column:"], [${DRAG_REGION_ATTR}^="subrow:"]`;
+
 // Column-shape data, moved here from boardDndUtils.ts (audit
 // epic-3-5-story-4 #4): DropColumn is resolveDragStructure's own input
 // shape, and subrowContainerId is the id an expanded column's sub-row
@@ -285,15 +315,22 @@ export function resolveDragStructure(
   const structure: (CardListStructure | CardStructure | DescendantsStructure)[] = [];
   for (const el of regionElements(root)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
-    if (!key) continue;
+    const parsed = key ? parseRegionKey(key) : null;
+    if (!key || !parsed) continue;
     const scrollAncestor = findVerticalScrollAncestor(el, root);
-    const parentRegionKey =
-      key.startsWith('card:') || key.startsWith('descendants:') ? findParentRegionKey(el, root) : null;
-    const record = key.startsWith('card:')
-      ? cardStructureFromKey(key, el, scrollAncestor, isValidCard, parentRegionKey, originCardId)
-      : key.startsWith('descendants:')
-        ? descendantsStructureFromKey(key, el, scrollAncestor, isValidCard, parentRegionKey, originCardId)
-        : cardListStructureFromKey(key, el, scrollAncestor, byId);
+    const dom = { element: el, scrollAncestor };
+    const record =
+      parsed.kind === 'card' || parsed.kind === 'descendants'
+        ? cardScopedStructure(
+            parsed.kind,
+            parsed.id,
+            key,
+            dom,
+            findParentRegionKey(el, root),
+            isValidCard,
+            originCardId,
+          )
+        : cardListStructure(parsed, key, dom, byId);
     if (record) structure.push(record);
   }
   return structure;
@@ -394,52 +431,31 @@ function layoutRect(el: HTMLElement): Rect {
   return toRect(el.getBoundingClientRect());
 }
 
-// Story 4: a Card region's structural identity — enough for
-// `childRegionAt`'s lookup and `placementFor`'s attach branch, keyed off
-// `attachToCardId` alone; nothing else about a Card region is
-// special-cased separately. No `isValidCard` (a caller that hasn't wired
-// Story 4 up), an id it says is invalid for this drag, or no resolvable
-// parent region resolves to nothing at all — *unless* this is the Stub
-// drag's own containing Card (`originCardId`, Story 5 decision 2): that one
-// always resolves, since a Stub must be able to pop back out to its own
-// Card even when that Card isn't a valid *target* for it.
-function cardStructureFromKey(
+// A Card region's (Story 4) or a Descendants region's (Story 5) structural
+// identity — the two differ only in kind and the name of the Card id's
+// field.
+// No `isValidCard` (a caller that hasn't wired Story 4 up), an id it says is
+// invalid for this drag, or no resolvable parent region resolves to nothing
+// at all: an invalid target (cycle-forming, depth-capped) is never a zoom-in
+// candidate (§3.2), with no separate check. The one exception is the Stub
+// drag's own containing Card (`originCardId`, Story 5 decisions 2/3): its
+// Card and its section always resolve, since a Stub starts there and must
+// be able to pop back out to its own Card even when that Card isn't a valid
+// *target* for it. Story 6 Phase D opened every other Valid Card's section.
+function cardScopedStructure(
+  kind: 'card' | 'descendants',
+  cardId: string,
   key: string,
-  el: HTMLElement,
-  scrollAncestor: HTMLElement | null,
-  isValidCard: ((cardId: string) => boolean) | undefined,
+  dom: DomHandles,
   parentRegionKey: string | null,
-  originCardId: string | undefined,
-): CardStructure | null {
-  if (!parentRegionKey) return null;
-  const cardId = key.slice('card:'.length);
-  const isOrigin = cardId === originCardId;
-  if (!isOrigin && !(isValidCard && isValidCard(cardId))) return null;
-  return { dom: { element: el, scrollAncestor }, key, kind: 'card', attachToCardId: cardId, parentRegionKey };
-}
-
-// Story 5, decisions 2/3 — a Descendants region's structural identity: the
-// drag's own `originCardId` always resolves, regardless of `isValidCard`
-// (same reasoning as the Card bypass above — this section is where the
-// drag started, not a target being offered). Story 6 Phase D widens every
-// *other* Card's section to resolve too, on the same `isValidCard` gate a
-// `card:` region already uses — an invalid target (cycle-forming,
-// depth-capped) still resolves nothing, which is what keeps it from ever
-// becoming a zoom-in candidate (§3.2), the same guarantee `childRegionAt`'s
-// callers already had for a `card:` region.
-function descendantsStructureFromKey(
-  key: string,
-  el: HTMLElement,
-  scrollAncestor: HTMLElement | null,
   isValidCard: ((cardId: string) => boolean) | undefined,
-  parentRegionKey: string | null,
   originCardId: string | undefined,
-): DescendantsStructure | null {
+): CardStructure | DescendantsStructure | null {
   if (!parentRegionKey) return null;
-  const cardId = key.slice('descendants:'.length);
-  const isOrigin = cardId === originCardId;
-  if (!isOrigin && !(isValidCard && isValidCard(cardId))) return null;
-  return { dom: { element: el, scrollAncestor }, key, kind: 'descendants', cardId, parentRegionKey };
+  if (cardId !== originCardId && !isValidCard?.(cardId)) return null;
+  return kind === 'card'
+    ? { dom, key, kind, attachToCardId: cardId, parentRegionKey }
+    : { dom, key, kind, cardId, parentRegionKey };
 }
 
 // The real card count a column/sub-row's own element carries
@@ -482,21 +498,21 @@ function findVerticalScrollAncestor(el: HTMLElement, root: ParentNode): HTMLElem
   return null;
 }
 
-// A card list's structural identity, from its key — the two kinds share
-// everything but the workphase facts, which is exactly what each literal
-// below is left spelling (audit epic-3-5-story-4 #8).
-function cardListStructureFromKey(
+// A card list's structural identity, from its parsed key — the two kinds
+// share everything but the workphase facts, which is exactly what each
+// literal below is left spelling (audit epic-3-5-story-4 #8).
+function cardListStructure(
+  parsed: ParsedRegionKey,
   key: string,
-  el: HTMLElement,
-  scrollAncestor: HTMLElement | null,
+  dom: DomHandles,
   columns: Map<string, DropColumn>,
 ): CardListStructure | null {
-  const [kind, columnId, workphaseId] = key.split(':');
+  const columnId = parsed.id;
   const column = columns.get(columnId);
   if (!column || column.broken) return null;
   const covered = column.subRows.map(r => r.workphase.id);
-  const base = { dom: { element: el, scrollAncestor }, key, columnId, parentRegionKey: null } as const;
-  if (kind === 'column' && column.displayMode === 'merged') {
+  const base = { dom, key, columnId, parentRegionKey: null } as const;
+  if (parsed.kind === 'column' && column.displayMode === 'merged') {
     return {
       ...base,
       kind: 'column',
@@ -506,7 +522,8 @@ function cardListStructureFromKey(
       isTerminal: Boolean(column.subRows[0]?.workphase.isTerminal),
     };
   }
-  if (kind === 'subrow' && workphaseId && covered.includes(workphaseId)) {
+  if (parsed.kind === 'subrow' && covered.includes(parsed.workphaseId)) {
+    const { workphaseId } = parsed;
     const row = column.subRows.find(r => r.workphase.id === workphaseId);
     return {
       ...base,

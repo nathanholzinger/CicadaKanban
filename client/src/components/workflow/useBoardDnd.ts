@@ -18,7 +18,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
-import { findNearestAncestor, getDepth, getSubtreeHeight } from '../../lib/hierarchy';
+import { findNearestAncestor } from '../../lib/hierarchy';
 import { gapIndexFor, computeProjection, ownSlotOf } from '../../lib/hierarchyPlacement';
 import { isStub } from '../../lib/isStub';
 import {
@@ -30,9 +30,10 @@ import {
 } from './dragCollision';
 import { sendItemMove, toRequest } from './dragRequest';
 import { overlayWidthFor, reanchorOverlayTransform, clampToCurrentContext } from './dragOverlayGeometry';
-import { classifyDragTargets, isWithinDepthCap, type DragClassification } from './dragClassification';
+import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
+  descendantsCardIdOf,
   descendantsRegionKey,
   hasDetachedElements,
   hasNewRegionElements,
@@ -247,16 +248,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // drag alongside the other per-drag refs, though the very next
   // `onDragMove` overwrites it regardless.
   const namedAnchorRef = useRef<DropAnchor | null>(null);
-  // Story 6 Phase D, §7.2: the dragged item's own subtree (itself included)
-  // — never a Top/Bottom candidate at any Card's Descendants layer. Read
-  // once at drag start off `classification.subtreeIds` (Story 6.1 Phase 2,
-  // L1-7a: the one derivation, `dragClassification.ts`'s own), reused at
-  // every Card's section for the life of the drag (the set is drag-global,
-  // not per-Card).
-  const excludeIdsRef = useRef<ReadonlySet<string>>(new Set());
-  // Story 6 Phase D, §7.2: the dragged subtree's own height — the depth-cap
-  // check's other input (`isWithinDepthCap`), computed once at drag start.
-  const subtreeHeightRef = useRef<number>(0);
   // Story 6 Phase D, decision 3: the Descendants layer's own seed — the
   // depth and pointer-x the live projection's `depth = seedDepth +
   // round(deltaX / INDENT)` measures from, and the gap it holds until
@@ -347,7 +338,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // own re-resolve — see `sampleRegions`).
   function resolveStructure(classification: DragClassification): DragStructure {
     const root = latest.current.rootRef.current ?? document;
-    const isValidCard = (cardId: string): boolean => classification.states.get(cardId) === 'valid';
+    const isValidCard = (cardId: string): boolean => isValidParent(classification, cardId);
     structureRef.current = resolveDragStructure(
       root,
       latest.current.board?.columns ?? [],
@@ -405,16 +396,22 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // (`placement.ts`'s append). Both used to seed at the last gap, a Stub's
   // own pickup with its own depth clamped into that gap's range: a jittery
   // click moved it to the end of its level, or reparented a grandchild.
-  function updateDescendantsProjection(previousContextKey: string | null, pop: PopSession, activeId: string) {
+  function updateDescendantsProjection(
+    previousContextKey: string | null,
+    pop: PopSession,
+    classification: DragClassification,
+  ) {
     const key = pop.contextKey;
-    if (!key || !key.startsWith('descendants:')) {
+    const cardId = descendantsCardIdOf(key);
+    if (!cardId) {
       projectionSeedRef.current = null;
       projectionRef.current = null;
       return;
     }
-    const cardId = key.slice('descendants:'.length);
-    const { getAttachedChildren, items, board } = latest.current;
-    const exclude = excludeIdsRef.current;
+    const { getAttachedChildren } = latest.current;
+    // §7.2: the dragged item and its whole subtree are never a Top/Bottom
+    // candidate at any section.
+    const exclude = classification.subtreeIds;
     // Story 6.1 Phase 2 (L3-1/C-6a): the section's own rows, off the same
     // walk `KanbanCard.tsx`'s render uses (`itemListOps.ts::hierarchyRows`)
     // rather than a second, independent `flattenHierarchy` build — filtered
@@ -429,7 +426,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     if (key !== previousContextKey) {
       const seedX = pointerRef.current?.x ?? 0;
-      const own = cardId === originCardIdRef.current ? ownSlotOf(allRows, activeId) : null;
+      const own = cardId === originCardIdRef.current ? ownSlotOf(allRows, classification.activeId) : null;
       projectionSeedRef.current = own
         ? { seedGap: own.gap, seedDepth: own.depth, seedX }
         : { seedGap: rows.length, seedDepth: rows[rows.length - 1]?.depth ?? 0, seedX };
@@ -465,12 +462,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
       descendantsChildrenOf(getAttachedChildren),
       exclude,
     );
-    // §7.2: the depth cap against the *resolved* parent's absolute depth —
-    // the same predicate classification already uses, fed the placement's
-    // own answer rather than a fixed one.
-    const cap = board?.itemDepthCap ?? Number.POSITIVE_INFINITY;
-    const parentDepth = getDepth(placement.parentId ?? cardId, items);
-    const valid = isWithinDepthCap(parentDepth, subtreeHeightRef.current, cap);
+    // §7.2: the depth cap against the *resolved* parent — the same answer,
+    // from the same drag-start snapshot, as the gate that decides whether
+    // this section was a region at all.
+    const valid = isValidParent(classification, placement.parentId ?? cardId);
     // Story 6.1 Phase 2: `resolved` rides along on the projection so
     // `releaseDescendants` can send it directly, instead of rebuilding the
     // rows and calling `resolvePlacement` a second time at release.
@@ -550,7 +545,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
         parentKeyOf,
       );
     }
-    updateDescendantsProjection(priorContextKey, pop, current.activeItem.id);
+    updateDescendantsProjection(priorContextKey, pop, current.classification);
     // Story 6 Phase D: the projection can change (a fresh gap or depth
     // choice) on a sample where `pop` itself doesn't — a locked
     // Descendants context has no further child region, so
@@ -651,7 +646,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // Card-layer boundary) shrinks the box out from under dnd-kit's own
   // pointer-glued transform (dnd-kit tracks the *pickup* point, not a
   // fraction of the box, so a box that shrinks leaves the pointer beside
-  // it, not on it). Targets `overlayWidthPx`/`STUB_ROW_HEIGHT_PX` — the
+  // it, not on it). Targets `overlayWidthPx`/`CARRIED_STUB_HEIGHT_PX` — the
   // same numbers the render side already uses to size the Stub — rather
   // than dnd-kit's own `draggingNodeRect`: swapping the overlay's rendered
   // shape leaves that measurement stuck for a stretch (its ResizeObserver
@@ -787,13 +782,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // The cap comes off the board response (never hard-coded client-side)
     // so the server's constant governs both enforcement points.
     const classification = classifyDragTargets(activeId, deps.items, board.itemDepthCap);
-    // Story 6 Phase D, §7.2: the dragged subtree, never a Top/Bottom
-    // candidate at any Card's Descendants layer this drag might reach —
-    // read once here off `classification.subtreeIds` (Story 6.1 Phase 2,
-    // L1-7a), reused for every Card's section for the life of the drag
-    // (not per-Card).
-    excludeIdsRef.current = classification.subtreeIds;
-    subtreeHeightRef.current = getSubtreeHeight(activeId, deps.items);
 
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
@@ -842,7 +830,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // Story 6 Phase D, decision 3: a Stub's own drag seeds the projection
       // at its own slot and depth, as an entry into its own section (null:
       // there's no previous context at pickup).
-      updateDescendantsProjection(null, pop, activeId);
+      updateDescendantsProjection(null, pop, classification);
       beginSession(
         {
           activeItem: freshActiveItem,
@@ -878,7 +866,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const origin: Placement = { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' };
     // A Free Card never starts locked at Descendants, so this only ever
     // clears the projection refs, which `endSession` already cleared.
-    updateDescendantsProjection(null, pop, activeId);
+    updateDescendantsProjection(null, pop, classification);
     beginSession(
       {
         activeItem,
@@ -954,23 +942,35 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // root is always the real `region.cardId`, never the sidebar's virtual
   // `null` root) — the fallback exists only so `getAttachedChildren` never
   // sees `null`.
-  async function releaseDescendants(session: DragSession, region: DescendantsRegion, activeId: string) {
-    const { activeItem, origin } = session;
+  async function releaseDescendants(session: DragSession, region: DescendantsRegion) {
     const projection = session.projection;
     if (!projection || !projection.valid) {
-      restorePriorPlacement(session);
+      await commitRelease(session, null, []);
       return;
     }
-    const { getAttachedChildren } = latest.current;
     const resolved = projection.resolved;
     const resolvedParentId = resolved.parentId ?? region.cardId;
-    const others = getAttachedChildren(resolvedParentId).filter(i => i.id !== activeId);
     const placement: Placement = {
       parentId: resolvedParentId,
       slot: resolved.anchor ? { anchorId: resolved.anchor.id, side: resolved.anchor.side } : 'first',
     };
-    const input = toRequest(activeItem, origin, placement, others);
-    if (!input) {
+    await commitRelease(session, placement, latest.current.getAttachedChildren(resolvedParentId));
+  }
+
+  // The one release tail, for a Descendants release and `handleDragEnd`'s
+  // card-list and Card releases alike: `placement` against the target list's
+  // other rows becomes the request (`dragRequest.ts::toRequest`, then
+  // `sendItemMove`). Nothing to write — a null placement (drawn where it
+  // already is, or an over-cap state), or an identity (decision 2) — means
+  // the ghost goes and the item is where it was, or, if it had a pending
+  // marker from an earlier write still in flight, that comes back instead
+  // (#22). The restore sits here with the send so no release path can drop
+  // it.
+  async function commitRelease(session: DragSession, placement: Placement | null, targetRows: readonly Item[]) {
+    const activeId = session.activeItem.id;
+    const others = targetRows.filter(i => i.id !== activeId);
+    const input = toRequest(session.activeItem, session.origin, placement, others);
+    if (!input || !placement) {
       restorePriorPlacement(session);
       return;
     }
@@ -1005,7 +1005,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
     }
 
     if (!current) return;
-    const { activeItem, origin } = current;
     // Every branch that anchors against `over` takes its anchor from
     // `dropAnchorFor`, the same function the live blue line reads.
     const anchorOn = (o: Over): PlacementOver => dropAnchorFor(active, o);
@@ -1036,7 +1035,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // card-list-only (Story 6.1 Phase 0, L1-5) — a Descendants release
     // never reaches them.
     if (region?.kind === 'descendants') {
-      await releaseDescendants(current, region, activeId);
+      await releaseDescendants(current, region);
       return;
     }
 
@@ -1061,17 +1060,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // this same anchor/bare-container distinction, factored out.
     const placementOver = resolvePlacementOver(list, over ? String(over.id) : null, over ? anchorOn(over) : null);
     const placement = placementForSession(current, regions, placementOver);
-    const others = list ? list.rows.filter(i => i.id !== activeId) : [];
-    const input = toRequest(activeItem, origin, placement, others);
-    if (!input) {
-      // Nothing to write — a null placement (drawn where it already is)
-      // or an identity (decision 2): the ghost goes and the card is where
-      // it was, or, if it had a pending marker from an earlier write still
-      // in flight, that comes back instead (#22).
-      restorePriorPlacement(current);
-      return;
-    }
-    await sendItemMove(moveItem, activeId, input, placement, deps.writes, resyncBoard);
+    await commitRelease(current, placement, list?.rows ?? []);
   }
 
   // Story 6 Phase C: which form `BoardView.tsx`'s `DragOverlay` should draw

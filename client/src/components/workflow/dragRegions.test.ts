@@ -1,16 +1,21 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
+  CARD_LIST_REGION_SELECTOR,
   cardRegionKey,
   childRegionAt,
+  columnRegionKey,
   containsPoint,
+  descendantsCardIdOf,
   descendantsRegionKey,
   hasDetachedElements,
   hasNewRegionElements,
   isCardList,
   measureRegions,
+  parseRegionKey,
   regionElements,
   resolveDragStructure,
   subrowContainerId,
+  subrowRegionKey,
   type CardListRegion,
 } from './dragRegions';
 import { descendantsRegion, rect, region, column } from '../../test/dragFixtures';
@@ -34,6 +39,27 @@ const regions = [colA, subB1, subB2];
 // column/sub-row's own Cards, `parentKey` set) is the same function; see
 // the `resolveDragStructure / measureRegions` describe block below for a
 // Card-kind region.
+describe('parseRegionKey', () => {
+  it.each([
+    [columnRegionKey('c1'), { kind: 'column', id: 'c1' }],
+    [subrowRegionKey('c1', 'w1'), { kind: 'subrow', id: 'c1', workphaseId: 'w1' }],
+    [cardRegionKey('i1'), { kind: 'card', id: 'i1' }],
+    [descendantsRegionKey('i1'), { kind: 'descendants', id: 'i1' }],
+  ])('reads back %s', (key, parsed) => {
+    expect(parseRegionKey(key)).toEqual(parsed);
+  });
+
+  it.each(['', 'column:', 'subrow:c1', 'card:i1:extra', 'board:x', 'nonsense'])('is null for %j', key => {
+    expect(parseRegionKey(key)).toBeNull();
+  });
+
+  it("descendantsCardIdOf names a section's own Card, and nothing for any other key", () => {
+    expect(descendantsCardIdOf(descendantsRegionKey('i1'))).toBe('i1');
+    expect(descendantsCardIdOf(cardRegionKey('i1'))).toBeNull();
+    expect(descendantsCardIdOf(null)).toBeNull();
+  });
+});
+
 describe('childRegionAt (Board layer: parentKey null)', () => {
   it('hits the region containing the point', () => {
     expect(childRegionAt(regions, { x: 50, y: 200 }, null)).toBe(colA);
@@ -189,6 +215,20 @@ describe('resolveDragStructure / measureRegions', () => {
     cardEl.replaceWith(cardEl.cloneNode());
     expect(hasDetachedElements(structure)).toBe(true);
     expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
+  });
+
+  // `pastColumnEnd` (tests/helpers/dragGesture.ts) aims at a column's last
+  // card-list region; a Card's Descendants section sits after the column's
+  // own element in document order.
+  it('CARD_LIST_REGION_SELECTOR finds the column/sub-row regions, never a Card or a section nested in one', () => {
+    buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
+    const section = document.createElement('div');
+    section.setAttribute('data-drag-region', descendantsRegionKey('item-1'));
+    document.querySelector(`[data-drag-region="${cardRegionKey('item-1')}"]`)!.appendChild(section);
+    const found = [...document.querySelectorAll(CARD_LIST_REGION_SELECTOR)].map(el =>
+      el.getAttribute('data-drag-region'),
+    );
+    expect(found).toEqual([columnRegionKey('col-1')]);
   });
 
   it('hasNewRegionElements: false for every element seen at resolve (one that resolved to nothing included), true once one mounts', () => {

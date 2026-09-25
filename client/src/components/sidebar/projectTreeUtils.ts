@@ -18,6 +18,16 @@ export interface FlatItem {
 }
 
 export const INDENT_WIDTH = 14;
+// A row's own left inset at depth 0. Unrelated to the board's 12px Stub
+// indent (`cardMetrics.ts`): the two are equal by coincidence (both `px-3`).
+const ROW_BASE_INSET_PX = 12;
+
+// A row's content inset at `depth` — one spelling for the row's own padding
+// and its drop indicator's start, so the line always begins where the row's
+// content does.
+export function projectRowIndentPx(depth: number): number {
+  return ROW_BASE_INSET_PX + depth * INDENT_WIDTH;
+}
 
 // parentId -> its children, sorted the way the server orders siblings
 // (position, then createdAt) — shared by `flattenTree` (the render list,

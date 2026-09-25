@@ -1,48 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
-import { advancePopSession, isLocked, popDueAt, startPopSession, type PopSession } from './popSession';
+import type { DragTuning } from './dragTuning';
+import { advancePopSession, isLocked, popDueAt, startPopSession } from './popSession';
 import { cardRegion, descendantsRegion, rect, region } from '../../test/dragFixtures';
-import type { ShortCardMetrics } from './dragBands';
+import {
+  POP_TEST_METRICS as metrics,
+  POP_TEST_TUNING as tuning,
+  runPop,
+  threeColumnBoard,
+} from '../../test/popFixtures';
 
 // docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
 // every threshold parameterized on the tuning value, never 0.5 s.
 
-// Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
-// tall; column C further right, all fixture-default 2-card regions.
-// `metrics.heightPx` (96) is chosen to match the old `ghostCardHeightPx`
-// default so every 2+-card boundary below (B's top band y < 96, bottom
-// band y > 304) reads the same as it always has — the one-card edge is the
-// only formula `gapPx` actually enters into (dragRegions.test.ts covers
-// that case; nothing here uses a one-card region).
-const A = region('column:a', rect(0, 0, 100, 400));
-const B = region('column:b', rect(120, 0, 100, 400));
-const C = region('column:c', rect(240, 0, 100, 400));
-const regions = [A, B, C];
-const metrics: ShortCardMetrics = { heightPx: 96, gapPx: 8 };
+// The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin.
+const { A, B, C, regions, points } = threeColumnBoard();
+const { inA, bTop, bMiddle, bBottom, cMiddle, gap } = points;
 
-const inA = { x: 50, y: 200 };
-const bTop = { x: 170, y: 40 };
-const bMiddle = { x: 170, y: 200 };
-const bBottom = { x: 170, y: 360 };
-const cMiddle = { x: 290, y: 200 };
-const gap = { x: 110, y: 200 };
-
-const tuning: DragTuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 300, popInDelayMs: 200 };
 const OUT = tuning.popDelayMs;
 const IN = tuning.popInDelayMs;
 const DWELL = tuning.cardZoomDwellMs;
 const CUE = tuning.cardPopInDelayMs;
 
-const locked = (key: string): PopSession => ({ contextKey: key, hover: null, outsideSince: null });
-const poppedOut = (): PopSession => ({ contextKey: null, hover: null, outsideSince: null });
-
-function run(steps: Array<[{ x: number; y: number }, number]>, start = startPopSession(A.key)): PopSession {
-  return steps.reduce((s, [pointer, now]) => advancePopSession(s, pointer, regions, tuning, metrics, now), start);
-}
-
 describe('locked', () => {
   it('DRAG-1.1: starts locked in the origin context with nothing tracked', () => {
-    expect(startPopSession(A.key)).toEqual(locked(A.key));
+    expect(startPopSession(A.key)).toEqual({ contextKey: A.key, hover: null, outsideSince: null });
     expect(isLocked(startPopSession(A.key))).toBe(true);
   });
 
@@ -52,12 +33,12 @@ describe('locked', () => {
   });
 
   it('leaving the context starts the pop-out clock — into a gap as much as into another column, and neither is tracked beyond that (re-plan 2026-09-16, rule 1: nothing about a foreign region matters until an actual pop)', () => {
-    expect(run([[gap, 100]])).toEqual({ ...locked(A.key), outsideSince: 100 });
-    expect(run([[bTop, 100]])).toEqual({ ...locked(A.key), outsideSince: 100 });
+    expect(runPop([[gap, 100]])).toEqual({ ...startPopSession(A.key), outsideSince: 100 });
+    expect(runPop([[bTop, 100]])).toEqual({ ...startPopSession(A.key), outsideSince: 100 });
   });
 
   it('DRAG-1.3 (momentary): coming back inside before THRESHOLD resets the clock', () => {
-    const s = run([
+    const s = runPop([
       [bMiddle, 100],
       [inA, 200],
       [bMiddle, 250 + OUT],
@@ -67,7 +48,7 @@ describe('locked', () => {
   });
 
   it('DRAG-1.3 (sustained): outside for >= THRESHOLD pops out — the card belongs to nothing and the pop-in clock starts now', () => {
-    const almost = run([
+    const almost = runPop([
       [bMiddle, 100],
       [bMiddle, 100 + OUT - 1],
     ]);
@@ -88,15 +69,15 @@ describe('locked', () => {
 
   it('pops out in a gap too, with nothing hovered', () => {
     expect(
-      run([
+      runPop([
         [gap, 0],
         [gap, OUT],
       ]),
-    ).toEqual(poppedOut());
+    ).toEqual(startPopSession(null));
   });
 
   it('DRAG-1.4: the clock runs wherever the cursor is outside, from whenever it first left — wandering to a different foreign point never restarts it, nor tracks anything about that point', () => {
-    const s = run([
+    const s = runPop([
       [bTop, 0],
       [bBottom, OUT - 10],
     ]);
@@ -128,18 +109,18 @@ describe('locked', () => {
 
     it('below the last card but still inside the outer body: still locked, nothing tracked', () => {
       const s = advancePopSession(startPopSession(M.key), { x: 50, y: 200 }, [M], tuning, metrics, 0);
-      expect(s).toEqual(locked(M.key));
+      expect(s).toEqual(startPopSession(M.key));
     });
 
     it('past the outer body too: the pop-out clock starts, same as any other region', () => {
       const s = advancePopSession(startPopSession(M.key), { x: 50, y: 450 }, [M], tuning, metrics, 0);
-      expect(s).toEqual({ ...locked(M.key), outsideSince: 0 });
+      expect(s).toEqual({ ...startPopSession(M.key), outsideSince: 0 });
     });
 
     it('a sub-row has no boundsRect to speak of — its own rect stays the containment test', () => {
       const sub = region('subrow:m:w1', shortRect);
       const s = advancePopSession(startPopSession(sub.key), { x: 50, y: 200 }, [sub], tuning, metrics, 0);
-      expect(s).toEqual({ ...locked(sub.key), outsideSince: 0 });
+      expect(s).toEqual({ ...startPopSession(sub.key), outsideSince: 0 });
     });
 
     it('the distance term also measures against the outer body for a merged column', () => {
@@ -160,7 +141,7 @@ describe('locked', () => {
   // ("so the ghost's own insertion can't move the band") no longer holds —
   // it now can, on purpose, because nothing needs protecting against it.
   it("Board layer: the band reads the region's live rect on every sample, not one frozen at entry", () => {
-    const entered = advancePopSession(poppedOut(), { x: 170, y: 110 }, regions, tuning, metrics, 0);
+    const entered = advancePopSession(startPopSession(null), { x: 170, y: 110 }, regions, tuning, metrics, 0);
     expect(entered.hover?.band).toBe('middle'); // 110 is within B's original 96..304 middle band
     // B's rect has genuinely moved (a real scroll, or a sibling reflowing
     // next to it — nothing here has to tell the two apart anymore): its
@@ -172,7 +153,7 @@ describe('locked', () => {
   });
 
   it("Board layer: the band also reads the region's live card count on every sample — the one-card exception can no longer go stale while a region is the hover target", () => {
-    const entered = advancePopSession(poppedOut(), { x: 170, y: 70 }, regions, tuning, metrics, 0);
+    const entered = advancePopSession(startPopSession(null), { x: 170, y: 70 }, regions, tuning, metrics, 0);
     expect(entered.hover?.band).toBe('top'); // the 2-card edge is 96; 70 < 96
     const oneCardB = region(B.key, rect(120, 0, 100, 400), { cardCount: 1 });
     const after = advancePopSession(entered, { x: 170, y: 70 }, [A, oneCardB, C], tuning, metrics, 10);
@@ -297,7 +278,7 @@ describe('popping out of a context the sample has no region for', () => {
 
   it('a context clipped out of view pops to its structural parent, not straight to Board', () => {
     // Locked at card:p, scrolled out of its column's view: only the column is measured.
-    const exited = advancePopSession(locked(P.key), inA, [A], tuning, metrics, 0, null, parentKeyOf);
+    const exited = advancePopSession(startPopSession(P.key), inA, [A], tuning, metrics, 0, null, parentKeyOf);
     const s = advancePopSession(exited, inA, [A], tuning, metrics, OUT, null, parentKeyOf);
     expect(s.contextKey).toBe(A.key);
   });
@@ -307,7 +288,7 @@ describe('popping out of a context the sample has no region for', () => {
     const sectionScope = [descendantsP]; // sampled while locked at the section: no card:p
     const aboveSection = { x: 50, y: 30 }; // inside card:p, above its section
     const exited = advancePopSession(
-      locked(descendantsP.key),
+      startPopSession(descendantsP.key),
       aboveSection,
       sectionScope,
       zero,
@@ -331,14 +312,14 @@ describe('popping out of a context the sample has no region for', () => {
 });
 
 describe('popped out', () => {
-  const outInB = run([
+  const outInB = runPop([
     [bMiddle, 0],
     [bMiddle, OUT],
   ]);
 
   it('follows the cursor: over nothing there is no hover, and no pop pending', () => {
     const s = advancePopSession(outInB, gap, regions, tuning, metrics, OUT + 1);
-    expect(s).toEqual(poppedOut());
+    expect(s).toEqual(startPopSession(null));
     expect(popDueAt(s, regions, tuning)).toBeNull();
   });
 
@@ -346,7 +327,7 @@ describe('popped out', () => {
     const almost = advancePopSession(outInB, bMiddle, regions, tuning, metrics, OUT + IN - 1);
     expect(almost.contextKey).toBeNull();
     const back = advancePopSession(almost, bMiddle, regions, tuning, metrics, OUT + IN);
-    expect(back).toEqual(locked(B.key));
+    expect(back).toEqual(startPopSession(B.key));
   });
 
   it('the pop-in clock starts at the pop-out, not at the region entry — the popped-out state is always reachable', () => {
@@ -355,18 +336,18 @@ describe('popped out', () => {
   });
 
   it('can pop back into the column it just left', () => {
-    const s = run(
+    const s = runPop(
       [
         [inA, OUT + 1],
         [inA, OUT + 1 + IN],
       ],
       outInB,
     );
-    expect(s).toEqual(locked(A.key));
+    expect(s).toEqual({ contextKey: A.key, hover: null, outsideSince: null });
   });
 
   it('the top and bottom bands never pop in, however long; moving to another column restarts the clock', () => {
-    const top = run(
+    const top = runPop(
       [
         [bTop, OUT + 1],
         [bTop, OUT + 10 * IN],
@@ -389,28 +370,30 @@ describe('popped out', () => {
     const s = startPopSession(null);
     expect(isLocked(s)).toBe(false);
     expect(
-      run(
+      runPop(
         [
           [bMiddle, 0],
           [bMiddle, IN],
         ],
         s,
       ),
-    ).toEqual(locked(B.key));
+    ).toEqual(startPopSession(B.key));
   });
 });
 
 describe('popDueAt', () => {
   it('locked: the pop-out clock while outside, nothing inside', () => {
-    expect(popDueAt(run([[bTop, 100]]), regions, tuning)).toBe(100 + OUT);
-    expect(popDueAt(run([[gap, 100]]), regions, tuning)).toBe(100 + OUT);
+    expect(popDueAt(runPop([[bTop, 100]]), regions, tuning)).toBe(100 + OUT);
+    expect(popDueAt(runPop([[gap, 100]]), regions, tuning)).toBe(100 + OUT);
     expect(popDueAt(startPopSession(A.key), regions, tuning)).toBeNull();
   });
 
   it('popped out: the pop-in clock only from a middle band', () => {
-    expect(popDueAt(advancePopSession(poppedOut(), bMiddle, regions, tuning, metrics, 100), regions, tuning)).toBe(
-      100 + IN,
-    );
-    expect(popDueAt(advancePopSession(poppedOut(), bTop, regions, tuning, metrics, 100), regions, tuning)).toBeNull();
+    expect(
+      popDueAt(advancePopSession(startPopSession(null), bMiddle, regions, tuning, metrics, 100), regions, tuning),
+    ).toBe(100 + IN);
+    expect(
+      popDueAt(advancePopSession(startPopSession(null), bTop, regions, tuning, metrics, 100), regions, tuning),
+    ).toBeNull();
   });
 });

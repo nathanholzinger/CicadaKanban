@@ -89,7 +89,10 @@ this directory, then go to the wiki for the "why."
   layer — zooming into one shows the carried item's ghost Stub at Card layer, and the
   release attaches it). `childRegionAt` finds it from a locked Card's own context.
   `dragRegionProps(key)` is the one "register this element as a drag
-  region" idiom, spread onto a region's own root element. `layoutRect` is a plain
+  region" idiom, spread onto a region's own root element. `parseRegionKey` is the one
+  reader of a key (`descendantsCardIdOf` for "is this context a section, and whose"),
+  and `CARD_LIST_REGION_SELECTOR` the one DOM selector for column/sub-row regions —
+  never `startsWith`/`slice`/`split` a key by hand. `layoutRect` is a plain
   `getBoundingClientRect` for every kind (Story 6.1 Phase 3, L1-8) — the sortable-shift
   correction it used to carry for a `card` region existed only for a hit test Story 6's
   hands-on finding 3 already retired; probed live first (frame-by-frame, an adjacent
@@ -123,7 +126,10 @@ this directory, then go to the wiki for the "why."
   dragged item and its whole subtree (§7.2), one derivation (Story 6.1 Phase 2, L1-7a)
   read by both `useBoardDnd.ts`'s own exclusion and `dragCollision.ts::travelingRowsFor`
   rather than each re-deriving it by filtering `states` for `'cycle-forming'`. A Stub is
-  classified exactly like a Card (Story 5) — no interim exclusion.
+  classified exactly like a Card (Story 5) — no interim exclusion. `isValidParent` is
+  the one "legal parent?" answer: the region gate (a Card or section resolving as a
+  region at all) and the Descendants layer's over-cap cue both read it, off this same
+  drag-start snapshot.
 - `itemListOps.ts` — list selectors, ordinal placements, the reindex fold-in, the
   inversion tripwire. `hierarchyRows` (Story 6 Phase B, generalized in Story 6.1 Phase 2,
   L3-1/C-6a) is the one walk of a Card's whole descendants section, carrying each row's
@@ -139,7 +145,9 @@ this directory, then go to the wiki for the "why."
   an anchor; a real row with no sortable data yet still falls back to `resolveDropSide`.
 - `dragRequest.ts` — the request-shape half of the same split: `toRequest` (placement
   → API request), `isIdentity` (recognizes a no-op), `sendItemMove` (the one "send,
-  fold in, or resync" block).
+  fold in, or resync" block). Every release reaches both through
+  `useBoardDnd.ts::commitRelease`, which also restores the pre-drag marker when there's
+  nothing to write.
 - `dragTuning.ts` — every threshold/band/overlay value, tunable at runtime via
   `DragTuningPanel.tsx` (toolbar → "Drag tuning"), persisted in `localStorage` under
   `kanban_drag_tuning`. `descendantsPopInDelayMs` (Story 6 Phase D) is the fourth
@@ -186,7 +194,10 @@ this directory, then go to the wiki for the "why."
 - E2E specs seed drag tuning via `tests/helpers/dragGesture.ts::seedDragTuning`
   (presets `NO_POP`/`POP_OUT_ONLY`/`SUSTAINED`) and read thresholds back from the
   value it returns, never a literal; import region keys from `dragRegions.ts` rather
-  than re-spelling `column:`/`subrow:`/`descendants:`. Use `dragGesture.ts`
+  than re-spelling `column:`/`subrow:`/`descendants:`. Unit tests of the pop machine
+  and placement share one board and runner (`client/src/test/popFixtures.ts`:
+  `threeColumnBoard`, `POP_TEST_TUNING`/`POP_TEST_METRICS`, `runPop`, `hoverAt`).
+  Use `dragGesture.ts`
   (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
   — never hand-roll a drag or read `boundingBox()` directly for a drop target.
 - The board root carries `data-drag-state` (`locked`/`popped-out`), `data-drag-context`,

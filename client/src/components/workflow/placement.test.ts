@@ -1,51 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
-import { advancePopSession, startPopSession, type PopSession } from './popSession';
+import { advancePopSession, startPopSession } from './popSession';
 import { overlayFormFor, placementFor, placementRegion, resolvePlacementOver } from './placement';
 import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
-import type { ShortCardMetrics } from './dragBands';
+import {
+  POP_TEST_METRICS as metrics,
+  POP_TEST_TUNING as tuning,
+  hoverAt,
+  runPop,
+  threeColumnBoard,
+} from '../../test/popFixtures';
 
 // docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
 // every threshold parameterized on the tuning value, never 0.5 s.
 
-// Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
-// tall; column C further right, all fixture-default 2-card regions.
-// `metrics.heightPx` (96) is chosen to match the old `ghostCardHeightPx`
-// default so every 2+-card boundary below (B's top band y < 96, bottom
-// band y > 304) reads the same as it always has.
-const A = region('column:a', rect(0, 0, 100, 400));
-const B = region('column:b', rect(120, 0, 100, 400));
-const C = region('column:c', rect(240, 0, 100, 400));
-const regions = [A, B, C];
-const metrics: ShortCardMetrics = { heightPx: 96, gapPx: 8 };
+// The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin.
+const { A, B, regions, points } = threeColumnBoard();
+const { bTop, bMiddle, bBottom } = points;
 
-const bTop = { x: 170, y: 40 };
-const bMiddle = { x: 170, y: 200 };
-const bBottom = { x: 170, y: 360 };
-
-const tuning: DragTuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 300, popInDelayMs: 200 };
 const OUT = tuning.popDelayMs;
 const IN = tuning.popInDelayMs;
-
-const locked = (key: string): PopSession => ({ contextKey: key, hover: null, outsideSince: null });
-const poppedOut = (): PopSession => ({ contextKey: null, hover: null, outsideSince: null });
-
-// Board layer, fresh: hovering `point` from a standing start (re-plan
-// 2026-09-16 — a locked drag's release no longer depends on a foreign
-// region's band at all, so every case that exercises the band has to
-// actually be at Board layer, not merely glancing at one while still
-// locked elsewhere).
-function hoverAt(
-  point: { x: number; y: number },
-  regionsArg: readonly ReturnType<typeof region>[] = regions,
-): PopSession {
-  return advancePopSession(poppedOut(), point, regionsArg, tuning, metrics, 0);
-}
-
-function run(steps: Array<[{ x: number; y: number }, number]>, start = startPopSession(A.key)): PopSession {
-  return steps.reduce((s, [pointer, now]) => advancePopSession(s, pointer, regions, tuning, metrics, now), start);
-}
 
 describe('placementFor', () => {
   const activeWorkphase = A.coveredWorkphaseIds[0];
@@ -163,7 +137,7 @@ describe('placementFor', () => {
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
     });
-    const poppedIn = run([
+    const poppedIn = runPop([
       [bMiddle, 0],
       [bMiddle, OUT],
       [bMiddle, OUT + IN],
@@ -180,7 +154,9 @@ describe('placementFor', () => {
   });
 
   it('popped out over nothing: no placement — the card is drawn where it already is', () => {
-    expect(placementFor(poppedOut(), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toBeNull();
+    expect(
+      placementFor(startPopSession(null), regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null),
+    ).toBeNull();
   });
 
   // re-picking up an item whose
@@ -248,12 +224,12 @@ describe('placementFor', () => {
   });
 
   it('after popping in, the new context is where the item sorts', () => {
-    const s = run([
+    const s = runPop([
       [bMiddle, 0],
       [bMiddle, OUT],
       [bMiddle, OUT + IN],
     ]);
-    expect(s).toEqual(locked(B.key));
+    expect(s).toEqual(startPopSession(B.key));
     expect(placementFor(s, regions, activeWorkphase, 1, freeOrigin(activeWorkphase), null)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'existing',

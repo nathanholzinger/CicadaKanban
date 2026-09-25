@@ -6,7 +6,7 @@
 
 import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
 import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
-import { containsPoint, type Rect } from './dragRegions';
+import { containsPoint, descendantsCardIdOf, type Rect } from './dragRegions';
 import type { DragClassification } from './dragClassification';
 import type { PopSession } from './popSession';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
@@ -289,7 +289,7 @@ export function dropAnchorFor(
 export function travelingRowsFor(
   session: { pop: Pick<PopSession, 'contextKey'>; classification: Pick<DragClassification, 'subtreeIds'> } | null,
 ): ((id: string) => boolean) | undefined {
-  if (!session?.pop.contextKey?.startsWith('descendants:')) return undefined;
+  if (!session || !descendantsCardIdOf(session.pop.contextKey)) return undefined;
   const { subtreeIds } = session.classification;
   return id => subtreeIds.has(id);
 }

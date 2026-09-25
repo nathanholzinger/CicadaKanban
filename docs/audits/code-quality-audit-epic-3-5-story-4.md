@@ -376,6 +376,10 @@ each computed are gone. `ItemDetailPanel.tsx:258` and the Stub-tier rows
 former has a deliberately different unresolved-type fallback, the latter
 are Story 6's per the Covered-by note.
 
+**Status (2026-09-25):** the Stub half fell through Story 6 and 6.1; fixed
+as `code-quality-audit-epic-3-5-story-6.md` #6 (`StubBody` renders
+`TypePill`).
+
 ### 11. `advancePopSession` still carries the zoom-in sequence twice, with the gate spelled two ways `[Duplication & Abstraction]` (small)
 **Files:** `client/src/components/workflow/popSession.ts:159–172` (Board) vs `:187–204` (locked): `childRegionAt → hoverFor → gate → popInDelayFor → recurse`. `hoverFor:247` sets `poppable = band === 'middle'` for column-like and leaves it `undefined` for a card; `:190` re-derives it inline (`candidate.kind === 'card' ? true : hover.band === 'middle'`). The transition call `advancePopSession({ contextKey: X, hover: null, outsideSince: null }, …)` ×3 (`:163–170`, `:192–199`, `:212–219`). `popDueAt:302` uses `tuning.popInDelayMs` directly while `:300` uses `popInDelayFor`.
 

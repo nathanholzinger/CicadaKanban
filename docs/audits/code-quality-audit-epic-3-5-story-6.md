@@ -275,6 +275,15 @@ One remaining client/server difference: the server skips the cap for a
 same-parent move (`itemHierarchy.ts:127`) and the client doesn't. That only
 matters for data already over the cap. Note it in the predicate's comment.
 
+**Status:** Fixed (2026-09-25) — `dragClassification.ts::isValidParent` is
+the one answer, read by `resolveStructure`'s region gate and the
+projection's over-cap cue, both off the drag-start classification. The
+projection now takes the classification itself, so `subtreeHeightRef`,
+`excludeIdsRef` and its read of live items and a live cap are gone. The
+same-parent client/server difference is noted in the predicate's comment.
+`lib/hierarchy.ts::getSubtreeHeight` now has no production caller; it stays,
+as tested shared library code.
+
 ### 5. Region keys have one builder and five hand-rolled parsers — and `pastColumnEnd` already aims at the wrong element once a column has Stubs `[Duplication & Abstraction + Correctness & Security]`
 **Files:**
 - Builders: `client/src/components/workflow/dragRegions.ts:187–205`. Its own comment at `:195–196` says "every region-key format has one owner".
@@ -305,6 +314,13 @@ Stubs. The first spec that does will silently test something else.
   (`:392–429`, identical bodies apart from prefix, kind and id-field name)
   into one `cardScopedStructure(kind, …)`.
 
+**Status:** Fixed (2026-09-25) — `dragRegions.ts::parseRegionKey` and
+`descendantsCardIdOf` replace every hand parser: the structure resolver, the
+hook's projection, `travelingRowsFor` and `dragFixtures.ts::region`. The two
+Card-scoped structure builders fold into `cardScopedStructure`.
+`CARD_LIST_REGION_SELECTOR` (positive: `column:` and `subrow:`) now feeds
+`pastColumnEnd`.
+
 ### 6. `StubBody` re-implements `TypePill` — Story 4 #10's Stub half was "Covered by Story 6" and neither Story 6 nor 6.1's ledger picked it up `[Duplication & Abstraction + Consistency & Drift]`
 **Files:**
 - `client/src/components/StubRows.tsx:20–22` (`resolveType`), `:30–42` (the pill span)
@@ -323,6 +339,9 @@ plus its title span. Delete `resolveType` and both stale comments.
 6's rewrite didn't do it, and 6.1's "Inputs already known" listed only the
 structural carries, so it never got a ledger row. A Covered-by tag is only
 safe if the target story's plan names the item.
+
+**Status:** Fixed (2026-09-25) — `StubBody` renders `TypePill`;
+`resolveType` and both stale comments are gone.
 
 ### 7. The depth → indent formula is re-spelled at every site — three on the board, two on the sidebar `[Duplication & Abstraction]`
 **Files:**
@@ -343,6 +362,12 @@ or the carried Stub stops lining up with the rows.
   separate argument.
 - Don't share one formula across the two surfaces. Their two 12s are
   unrelated `px-3` coincidences.
+
+**Status:** Fixed (2026-09-25) — `cardMetrics.ts::descendantsIndentPx`
+(the rows, the ghost row, the carried Stub) and
+`projectTreeUtils.ts::projectRowIndentPx` with a named `ROW_BASE_INSET_PX`
+(the row's padding and its drop line), kept separate as recommended. The
+projection's pointer travel still reads the raw constants.
 
 ### 8. `STUB_ROW_HEIGHT_PX = 26` matches only one of the four rows it claims to describe, and the box classes it depends on are spelled three times `[Duplication & Abstraction + Correctness & Security]` (small)
 **Files:**
@@ -375,6 +400,16 @@ rows Story 8 restyles.
   `CARD_LIST_GAP_CLASS` with `CARD_LIST_GAP_PX`).
 - Import the constants in `dragCollision.test.ts` instead of `96` / `26`.
 
+**Status:** Fixed (2026-09-25) — measured on the test stack, matching the
+table above: a sortable row is 24px (29 with a type pill), a bordered ghost
+row or carried copy 26px (31). Split into `STUB_ROW_HEIGHT_PX = 24` (the
+lean's ghost) and `CARRIED_STUB_HEIGHT_PX = 26` (the re-anchor), with
+`STUB_ROW_BOX_CLASS` shared by all three rows and the comment stating the
+table. The pill's 5px isn't threaded through the two pure readers (≤2.5px
+off center on a typed row); making every row one height regardless of the
+pill is a look change, left to Story 8. `dragCollision.test.ts` computes the
+ghost middles from the constants. Re-measured after the change: identical.
+
 ### 9. The release tail is written twice — the no-op restore isn't inside the "one contract" `[Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:878–888` (`releaseDescendants`) and `:975–985` (`handleDragEnd`)
 
@@ -390,6 +425,11 @@ sendItemMove` "so the contract can't drift". But the restore-on-no-op half
 strands a re-dragged item's marker on that path only.
 
 **Fix:** `commitRelease(session, placement, targetRows)`.
+
+**Status:** Fixed (2026-09-25) — `useBoardDnd.ts::commitRelease(session,
+placement, targetRows)` holds the whole tail, the no-write restore included.
+`releaseDescendants`'s over-cap no-op goes through it too, as a null
+placement.
 
 ### 10. The pop-machine test preamble was copied into `placement.test.ts` by the C-2 split `[Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/popSession.test.ts:10–41` and `placement.test.ts:12–48`
@@ -407,6 +447,11 @@ done, fold it.
 `dragFixtures.ts`): `threeColumnBoard()`, `POP_TEST_TUNING`,
 `POP_TEST_METRICS`, `runPop(steps, start?)`, `hoverAt(point, regions?)`.
 Use `startPopSession` directly.
+
+**Status:** Fixed (2026-09-25) — `client/src/test/popFixtures.ts`:
+`threeColumnBoard()` (the regions and the shared points), `POP_TEST_TUNING`,
+`POP_TEST_METRICS`, `runPop` and `hoverAt`. Both suites import it, and
+`locked`/`poppedOut` became `startPopSession` calls. Same 73 tests.
 
 ### 11. Stale citations and comments — the 6.1 renames, plus Story 5 #5's four leftovers `[Consistency & Drift + File Responsibility]`
 **Developer-owned:**

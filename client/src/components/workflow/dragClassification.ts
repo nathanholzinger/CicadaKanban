@@ -60,6 +60,19 @@ export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap
   return targetDepth + 1 + subtreeHeight <= cap;
 }
 
+// Whether `id` is a legal parent for the carried item, off the drag-start
+// snapshot (DRAG-2.4) — the one answer both the region gate (does a Card, or
+// its Descendants section, resolve as a region at all) and the Descendants
+// layer's over-cap cue read, so the two can't disagree about the same
+// parent. Cycle-forming ids are never valid either, though the projection
+// never resolves to one: the dragged subtree is out of its rows. One
+// client/server difference: the server skips the cap when the parent
+// doesn't change (`itemHierarchy.ts`), and this doesn't, which only matters
+// for data already over the cap.
+export function isValidParent(classification: Pick<DragClassification, 'states'>, id: string): boolean {
+  return classification.states.get(id) === 'valid';
+}
+
 export function classifyDragTargets(activeId: string, items: readonly Item[], cap: number): DragClassification {
   const active = items.find(i => i.id === activeId);
   const states = new Map<string, DropTargetState>();

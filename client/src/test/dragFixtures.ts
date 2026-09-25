@@ -7,7 +7,7 @@ import type {
   DropColumn,
   Rect,
 } from '../components/workflow/dragRegions';
-import { cardRegionKey, descendantsRegionKey } from '../components/workflow/dragRegions';
+import { cardRegionKey, descendantsRegionKey, parseRegionKey } from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
 
 // Shared geometry fixtures for the Epic 3.5 drag tests (regions, the pop
@@ -30,13 +30,14 @@ export function rect(left: number, top: number, width: number, height: number): 
 // dragRegions.test.ts's own DOM-built cases where the structural
 // resolution itself (not just the region shape) is what's under test.
 export function region(key: string, r: Rect, overrides: Partial<CardListRegion> = {}): CardListRegion {
+  const parsed = parseRegionKey(key);
   return {
     key,
-    kind: key.startsWith('subrow:') ? 'subrow' : 'column',
+    kind: parsed?.kind === 'subrow' ? 'subrow' : 'column',
     containerId: key,
     rect: r,
     contentRect: r,
-    columnId: key.split(':')[1],
+    columnId: parsed?.id ?? key,
     coveredWorkphaseIds: ['wp-' + key],
     targetWorkphaseId: 'wp-' + key,
     isTerminal: false,

@@ -136,8 +136,9 @@ export function toRequest(
 // it), but the pairs are real, committed renumbering of other rows that a
 // silently-dropped response would otherwise take with it. Every board-
 // gesture write path — Card, Stub, and Descendants releases alike — goes
-// through `toRequest` and then here, so the contract can't drift between
-// them (audit epic-3-5-story-2 #4). `moveItem` is dependency-injected so a
+// through `toRequest` and then here, by way of one caller
+// (`useBoardDnd.ts::commitRelease`, which also owns the no-write restore),
+// so the contract can't drift between them. `moveItem` is dependency-injected so a
 // test can substitute a rejecting stub without mocking the module.
 export async function sendItemMove(
   moveItem: (id: string, data: MoveItemInput) => Promise<ItemWriteResponse>,

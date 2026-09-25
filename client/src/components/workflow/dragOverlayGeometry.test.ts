@@ -7,7 +7,7 @@ import {
   type OverlayTransform,
 } from './dragOverlayGeometry';
 import { startPopSession } from './popSession';
-import { CARD_CONTENT_INSET_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
+import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
 import { cardRegion, descendantsRegion, rect, region } from '../../test/dragFixtures';
 
 // The DragOverlay's own geometry (Story 6.1 Phase 2, C-1/L3-3). Every
@@ -128,7 +128,7 @@ describe('reanchorOverlayTransform', () => {
     );
     // The Stub's own box, drawn at the overlay's resting rect plus the transform.
     expect(pickupRect.left + result.x + 0.25 * stubWidth).toBe(pointerNow.x);
-    expect(pickupRect.top + result.y + STUB_ROW_HEIGHT_PX / 2).toBe(pointerNow.y);
+    expect(pickupRect.top + result.y + CARRIED_STUB_HEIGHT_PX / 2).toBe(pointerNow.y);
     expect(result.scaleX).toBe(incoming.scaleX);
     expect(result.scaleY).toBe(incoming.scaleY);
   });

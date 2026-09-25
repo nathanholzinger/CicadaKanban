@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
-import { classifyDragTargets, isWithinDepthCap } from './dragClassification';
+import { classifyDragTargets, isValidParent, isWithinDepthCap } from './dragClassification';
 
 // Cases follow docs/test-plans/board-drag-interaction/drag-2-target-
 // classification.md (DRAG-2.n). Every depth case parameterizes on `cap`
@@ -28,6 +28,21 @@ describe('isWithinDepthCap', () => {
     expect(isWithinDepthCap(CAP - 1, 0, CAP)).toBe(true); // exactly cap
     expect(isWithinDepthCap(CAP, 0, CAP)).toBe(false); // one deeper target
     expect(isWithinDepthCap(CAP - 1, 1, CAP)).toBe(false); // one more level under the mover
+  });
+});
+
+// The one parent-legality answer: the region gate and the Descendants
+// layer's over-cap cue both read it, off the same drag-start snapshot.
+describe('isValidParent', () => {
+  it('is true only for a Valid target — never depth-capped, cycle-forming, or unknown', () => {
+    // X carries a one-level subtree (X1), so a parent at depth CAP - 1 is one too deep.
+    const items = [item('X'), item('X1', 'X'), ...chain('d', CAP - 1), item('T')];
+    const classification = classifyDragTargets('X', items, CAP);
+    expect(isValidParent(classification, 'T')).toBe(true);
+    expect(isValidParent(classification, `d${CAP - 2}`)).toBe(true);
+    expect(isValidParent(classification, `d${CAP - 1}`)).toBe(false); // depth-capped
+    expect(isValidParent(classification, 'X1')).toBe(false); // cycle-forming
+    expect(isValidParent(classification, 'ghost')).toBe(false); // not on the board at drag start
   });
 });
 

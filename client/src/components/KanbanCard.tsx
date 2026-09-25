@@ -26,7 +26,7 @@ import { itemRowData } from './workflow/dragCollision';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
-import { DESCENDANTS_INDENT_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
+import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
   useDragSession,
@@ -44,14 +44,14 @@ const CARD_BASE =
 // Story 6 Phase C: the carried copy's own "held" look while it's a Stub —
 // a shadow in place of a row's hover/press states, since this copy isn't
 // interactive. No CARD_BASE (that's the shortCard/full-card box) — a Stub
-// is a small pill-shaped row, not a padded card.
-const OVERLAY_STUB_CLASS =
-  'flex items-center gap-1.5 rounded border border-zinc-600 bg-zinc-800 px-1.5 py-1 shadow-2xl shadow-black/50 transition-[margin-left] duration-75';
+// is a small pill-shaped row, not a padded card, on the Stub rows' own box.
+const OVERLAY_STUB_CLASS = `${STUB_ROW_BOX_CLASS} border border-zinc-600 bg-zinc-800 shadow-2xl shadow-black/50 transition-[margin-left] duration-75`;
 
 // Story 6 Phase D hands-on (2026-09-24), the simple depth cue: at the
 // Descendants layer the carried Stub's visible box indents to the projected
-// depth, on the same geometry as a ghost row (`StubRows.tsx::AttachGhostRow`),
-// so its pill lines up with its would-be siblings. Only this inner box
+// depth, through the same `descendantsIndentPx` as a ghost row
+// (`StubRows.tsx::AttachGhostRow`), so its pill lines up with its would-be
+// siblings. Only this inner box
 // moves — the overlay's own root keeps its width and position, so nothing
 // dnd-kit measures changes (the same constraint Story 8's zoom-in morph
 // carries). The ghost row that also shows the depth sits under this copy,
@@ -62,7 +62,7 @@ function overlayStubIndent(projection: DescendantsProjection | null): {
   invalid: boolean;
 } {
   if (!projection) return { style: { marginLeft: 0 }, invalid: false };
-  return { style: { marginLeft: (projection.depth + 1) * DESCENDANTS_INDENT_PX }, invalid: !projection.valid };
+  return { style: { marginLeft: descendantsIndentPx(projection.depth) }, invalid: !projection.valid };
 }
 
 // The depth + type pills row, identical at both Card-tier renders — ShortCard

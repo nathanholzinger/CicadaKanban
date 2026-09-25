@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { FlatItem } from './projectTreeUtils';
-import { INDENT_WIDTH } from './projectTreeUtils';
+import { projectRowIndentPx } from './projectTreeUtils';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
@@ -93,13 +93,13 @@ export function SortableProjectRow({
       {indicatorSide && (
         <div
           className={`pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500 ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
-          style={{ marginLeft: 12 + indicatorDepth * INDENT_WIDTH }}
+          style={{ marginLeft: projectRowIndentPx(indicatorDepth) }}
         />
       )}
 
       <div
         className={`group flex items-center gap-1 rounded-lg transition-colors select-none ${rowOpacityClass()} ${rowBackgroundClass()}`}
-        style={{ padding: `6px 12px 6px ${12 + item.depth * INDENT_WIDTH}px` }}
+        style={{ padding: `6px 12px 6px ${projectRowIndentPx(item.depth)}px` }}
       >
         {/* Drag handle */}
         <button

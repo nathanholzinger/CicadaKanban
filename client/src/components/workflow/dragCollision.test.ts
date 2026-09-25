@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CollisionDetection, Over } from '@dnd-kit/core';
 import { rect } from '../../test/dragFixtures';
+import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 import {
   dropAnchorFor,
   resolveBoardCollisions,
@@ -225,8 +226,11 @@ describe('resolveDropSide', () => {
 // ghost's slot and the dragged copy's center, above or below the ghost's
 // middle, picks which neighbor names it. Rows 100 tall, `over` rects
 // unshifted (as dnd-kit measures them); the ghost's own height is no longer
-// a parameter — it's `SHORT_CARD_HEIGHT_PX` (96) over a Card row,
-// `STUB_ROW_HEIGHT_PX` (26) over a Stub row, read off `over`'s own kind.
+// a parameter — it's `SHORT_CARD_HEIGHT_PX` over a Card row,
+// `STUB_ROW_HEIGHT_PX` over a Stub row, read off `over`'s own kind, so a
+// case that depends on it computes the ghost's middle from the constant.
+// Only the dragged copy's center is compared,
+// never its height.
 describe('dropAnchorFor', () => {
   function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' = 'card'): Over {
     return {
@@ -237,23 +241,19 @@ describe('dropAnchorFor', () => {
     } as unknown as Over;
   }
 
-  function dragged(id: string, centerY: number, ghostHeightPx: number) {
-    const translated = {
-      top: centerY - ghostHeightPx / 2,
-      height: ghostHeightPx,
-      bottom: centerY + ghostHeightPx / 2,
-      left: 0,
-      right: 100,
-      width: 100,
-    };
+  function dragged(id: string, centerY: number) {
+    const translated = { top: centerY - 10, height: 20, bottom: centerY + 10, left: 0, right: 100, width: 100 };
     return { id, rect: { current: { initial: null, translated } } };
   }
 
   it('moving up onto B: the ghost takes B\'s slot top-aligned; up names "after A", down "before B" — one slot', () => {
     const items = ['a', 'b', 'c', 'x'];
-    // Ghost (96, a Card row) top-aligned to B (top 110): middle at 158.
-    expect(dropAnchorFor(dragged('x', 140, 96), overRow('b', 110, items))).toEqual({ anchorId: 'a', side: 'after' });
-    expect(dropAnchorFor(dragged('x', 175, 96), overRow('b', 110, items))).toEqual({
+    const ghostMiddle = 110 + SHORT_CARD_HEIGHT_PX / 2; // a Card row's ghost, top-aligned to B (top 110)
+    expect(dropAnchorFor(dragged('x', ghostMiddle - 15), overRow('b', 110, items))).toEqual({
+      anchorId: 'a',
+      side: 'after',
+    });
+    expect(dropAnchorFor(dragged('x', ghostMiddle + 15), overRow('b', 110, items))).toEqual({
       anchorId: 'b',
       side: 'before',
     });
@@ -261,9 +261,12 @@ describe('dropAnchorFor', () => {
 
   it('moving down onto C: the ghost takes C\'s slot bottom-aligned; up names "after C", down "before D"', () => {
     const items = ['x', 'b', 'c', 'd'];
-    // Ghost (96) bottom-aligned to C (220..320): middle at 272.
-    expect(dropAnchorFor(dragged('x', 260, 96), overRow('c', 220, items))).toEqual({ anchorId: 'c', side: 'after' });
-    expect(dropAnchorFor(dragged('x', 285, 96), overRow('c', 220, items))).toEqual({
+    const ghostMiddle = 320 - SHORT_CARD_HEIGHT_PX / 2; // bottom-aligned to C (220..320)
+    expect(dropAnchorFor(dragged('x', ghostMiddle - 12), overRow('c', 220, items))).toEqual({
+      anchorId: 'c',
+      side: 'after',
+    });
+    expect(dropAnchorFor(dragged('x', ghostMiddle + 12), overRow('c', 220, items))).toEqual({
       anchorId: 'd',
       side: 'before',
     });
@@ -272,34 +275,34 @@ describe('dropAnchorFor', () => {
   it('over its own slot, nothing shuffles, and the lean still names a neighbor (items from other workphases can sit between them, so the two differ)', () => {
     const items = ['a', 'x', 'c'];
     // Its own rect, 110..210: middle at 160.
-    expect(dropAnchorFor(dragged('x', 140, 96), overRow('x', 110, items))).toEqual({ anchorId: 'a', side: 'after' });
-    expect(dropAnchorFor(dragged('x', 180, 96), overRow('x', 110, items))).toEqual({
+    expect(dropAnchorFor(dragged('x', 140), overRow('x', 110, items))).toEqual({ anchorId: 'a', side: 'after' });
+    expect(dropAnchorFor(dragged('x', 180), overRow('x', 110, items))).toEqual({
       anchorId: 'c',
       side: 'before',
     });
   });
 
   it('at either end there is one neighbor, whichever way it leans', () => {
-    expect(dropAnchorFor(dragged('x', 10, 96), overRow('a', 0, ['a', 'x']))).toEqual({
+    expect(dropAnchorFor(dragged('x', 10), overRow('a', 0, ['a', 'x']))).toEqual({
       anchorId: 'a',
       side: 'before',
     });
-    expect(dropAnchorFor(dragged('x', 90, 96), overRow('a', 0, ['a', 'x']))).toEqual({
+    expect(dropAnchorFor(dragged('x', 90), overRow('a', 0, ['a', 'x']))).toEqual({
       anchorId: 'a',
       side: 'before',
     });
-    expect(dropAnchorFor(dragged('x', 120, 96), overRow('b', 110, ['x', 'b']))).toEqual({
+    expect(dropAnchorFor(dragged('x', 120), overRow('b', 110, ['x', 'b']))).toEqual({
       anchorId: 'b',
       side: 'after',
     });
-    expect(dropAnchorFor(dragged('x', 200, 96), overRow('b', 110, ['x', 'b']))).toEqual({
+    expect(dropAnchorFor(dragged('x', 200), overRow('b', 110, ['x', 'b']))).toEqual({
       anchorId: 'b',
       side: 'after',
     });
   });
 
   it('alone in its list: nothing to anchor to', () => {
-    expect(dropAnchorFor(dragged('x', 50, 96), overRow('x', 0, ['x']))).toBeNull();
+    expect(dropAnchorFor(dragged('x', 50), overRow('x', 0, ['x']))).toBeNull();
   });
 
   // Story 6.1 Phase 3 (L1-3): a bare container is never a row to anchor
@@ -313,11 +316,11 @@ describe('dropAnchorFor', () => {
       disabled: false,
       data: { current: {} },
     } as unknown as Over;
-    expect(dropAnchorFor(dragged('x', 50, 96), bareContainer)).toBeNull();
+    expect(dropAnchorFor(dragged('x', 50), bareContainer)).toBeNull();
   });
 
   it("over a card not in over's list: over itself, on the which-half side", () => {
-    expect(dropAnchorFor(dragged('x', 190, 96), overRow('b', 110, ['a', 'b']))).toEqual({
+    expect(dropAnchorFor(dragged('x', 190), overRow('b', 110, ['a', 'b']))).toEqual({
       anchorId: 'b',
       side: 'after',
     });
@@ -326,21 +329,22 @@ describe('dropAnchorFor', () => {
   // Story 6 Phase D: a Descendants section's flat list is the same ghost-
   // slot rule, now with the Stub row's own (shorter) ghost height —
   // §7.1's "the gap is wherever the rows slide aside to make room."
-  it('over a Stub row: the same shuffle-slot rule, with the Stub ghost height (26px)', () => {
+  it("over a Stub row: the same shuffle-slot rule, with a Stub row's own ghost height", () => {
     const items = ['a', 'b', 'c', 'x'];
-    // Ghost (26, a Stub row) top-aligned to B (top 110): middle at 123.
-    expect(dropAnchorFor(dragged('x', 115, 26), overRow('b', 110, items, 'stub'))).toEqual({
+    const ghostMiddle = 110 + STUB_ROW_HEIGHT_PX / 2; // a Stub row's ghost, top-aligned to B (top 110)
+    expect(dropAnchorFor(dragged('x', ghostMiddle - 6), overRow('b', 110, items, 'stub'))).toEqual({
       anchorId: 'a',
       side: 'after',
     });
-    expect(dropAnchorFor(dragged('x', 130, 26), overRow('b', 110, items, 'stub'))).toEqual({
+    // Past a Stub ghost's middle, though still above where a Card ghost's would be.
+    expect(dropAnchorFor(dragged('x', ghostMiddle + 6), overRow('b', 110, items, 'stub'))).toEqual({
       anchorId: 'b',
       side: 'before',
     });
   });
 
   it("over a Stub row not in over's own sortable list: over itself, on the which-half side", () => {
-    expect(dropAnchorFor(dragged('x', 125, 26), overRow('b', 110, ['a', 'b'], 'stub'))).toEqual({
+    expect(dropAnchorFor(dragged('x', 125), overRow('b', 110, ['a', 'b'], 'stub'))).toEqual({
       anchorId: 'b',
       side: 'before',
     });
@@ -353,16 +357,16 @@ describe('dropAnchorFor', () => {
     const items = ['s1', 'x', 'xa', 's3'];
     const travels = (id: string) => id === 'x' || id === 'xa';
     // Over its own slot (top 110, middle 160).
-    expect(dropAnchorFor(dragged('x', 170, 26), overRow('x', 110, items, 'stub'), travels)).toEqual({
+    expect(dropAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'), travels)).toEqual({
       anchorId: 's3',
       side: 'before',
     });
-    expect(dropAnchorFor(dragged('x', 150, 26), overRow('x', 110, items, 'stub'), travels)).toEqual({
+    expect(dropAnchorFor(dragged('x', 150), overRow('x', 110, items, 'stub'), travels)).toEqual({
       anchorId: 's1',
       side: 'after',
     });
     // Without it, leaning down names the child.
-    expect(dropAnchorFor(dragged('x', 170, 26), overRow('x', 110, items, 'stub'))).toEqual({
+    expect(dropAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'))).toEqual({
       anchorId: 'xa',
       side: 'before',
     });

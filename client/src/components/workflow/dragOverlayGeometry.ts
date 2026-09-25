@@ -14,7 +14,7 @@
 // the dragged node's initial position, never an absolute screen coordinate.
 
 import type { Modifier } from '@dnd-kit/core';
-import { CARD_CONTENT_INSET_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
+import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
 import type { DragRegion, Point } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { OverlayForm } from './placement';
@@ -50,7 +50,7 @@ export function overlayWidthFor(region: DragRegion | undefined): number | null {
 // the bottom edge" case the plan calls out.
 //
 // Targets `stubWidthPx` (the render side's own `overlayWidthFor`) and the
-// fixed `STUB_ROW_HEIGHT_PX` rather than dnd-kit's live `draggingNodeRect`
+// fixed `CARRIED_STUB_HEIGHT_PX` rather than dnd-kit's live `draggingNodeRect`
 // — see the call site's comment for why that measurement can't be trusted
 // here. `pickupRect` (`activeNodeRect`, the *source* row, never swapped
 // out mid-drag) stands in for "the overlay's own resting position," which
@@ -97,7 +97,7 @@ export function reanchorOverlayTransform(
   return {
     ...transform,
     x: pointerNow.x - pickupRect.left - fractionX * stubWidthPx,
-    y: pointerNow.y - pickupRect.top - STUB_ROW_HEIGHT_PX / 2,
+    y: pointerNow.y - pickupRect.top - CARRIED_STUB_HEIGHT_PX / 2,
   };
 }
 
