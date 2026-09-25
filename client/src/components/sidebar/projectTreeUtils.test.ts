@@ -5,10 +5,11 @@ import {
   eligibleRows,
   fullChildrenOf,
   resolveGap,
-  computeProjection,
   siblingIdsFromAnchor,
+  INDENT_WIDTH,
   type FlatItem,
 } from './projectTreeUtils';
+import { computeProjection } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
 
 function project(overrides: Partial<Project> & { id: string }): Project {
@@ -145,38 +146,6 @@ describe('resolveGap', () => {
   });
 });
 
-// A `childrenOf` over the fixture's real tree (A -> B, C; D), for
-// `computeProjection`'s `resolvePlacement` calls — same shape
-// `fullChildrenOf(projects)` returns, spelled directly since none of these
-// cases involve a collapsed node.
-function childrenOf(id: string | null): readonly string[] {
-  if (id === null) return ['A', 'D'];
-  if (id === 'A') return ['B', 'C'];
-  return [];
-}
-
-describe('computeProjection', () => {
-  const rows = eligibleRows(items, new Set());
-
-  it('resolves the parent by walking up to the ancestor at the projected depth', () => {
-    const gap = resolveGap(items, rows, new Set(), 'D', 'before'); // between C and D
-    const result = computeProjection(rows, gap, 1, 0, childrenOf, new Set());
-    expect(result).toEqual({ depth: 1, placement: { parentId: 'A', anchor: { id: 'C', side: 'after' } } });
-  });
-
-  it('clamps projected depth to the gap’s own hi (tabbing far right)', () => {
-    const gap = resolveGap(items, rows, new Set(), 'D', 'before');
-    const result = computeProjection(rows, gap, 1, 14 * 10, childrenOf, new Set()); // large rightward drag
-    expect(result).toEqual({ depth: 2, placement: { parentId: 'C', anchor: null } });
-  });
-
-  it('clamps projected depth to the gap’s own lo (tabbing far left) and resolves the root parent', () => {
-    const gap = resolveGap(items, rows, new Set(), 'D', 'after'); // below everything
-    const result = computeProjection(rows, gap, 0, -14 * 10, childrenOf, new Set()); // large leftward drag
-    expect(result).toEqual({ depth: 0, placement: { parentId: null, anchor: { id: 'D', side: 'after' } } });
-  });
-});
-
 describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
   it('returns a project’s real children regardless of collapse state', () => {
     const root = project({ id: 'root' });
@@ -200,7 +169,7 @@ describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
     const rows = eligibleRows(flatCollapsed, new Set());
     const childrenOfReal = fullChildrenOf([root, child, sibling]);
     const gap = resolveGap(flatCollapsed, rows, new Set(), 'sibling', 'before'); // between root (Top) and sibling (Bottom)
-    const result = computeProjection(rows, gap, 0, 14, childrenOfReal, new Set()); // one tab right of root
+    const result = computeProjection(rows, gap, 0, 14, INDENT_WIDTH, null, childrenOfReal, new Set()); // one tab right of root
 
     expect(result).toEqual({ depth: 1, placement: { parentId: 'root', anchor: { id: 'child', side: 'before' } } });
   });

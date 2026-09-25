@@ -20,10 +20,10 @@ import {
   eligibleRows,
   fullChildrenOf,
   resolveGap,
-  computeProjection,
   siblingIdsFromAnchor,
+  INDENT_WIDTH,
 } from './sidebar/projectTreeUtils';
-import type { Projection } from './sidebar/projectTreeUtils';
+import { computeProjection, type Projection } from '../lib/hierarchyPlacement';
 import { resolveDropSide } from './workflow/dragCollision';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 import { PlusIcon, ICON_BUTTON_SM } from './icons';
@@ -123,7 +123,7 @@ export default function ProjectSidebar({
 
     const side = resolveDropSide(active.rect.current.translated, over.rect);
     const g = resolveGap(flatItems, rows, exclude, overId, side);
-    const proj = computeProjection(rows, g, activeItem.depth, delta.x, childrenOf, exclude);
+    const proj = computeProjection(rows, g, activeItem.depth, delta.x, INDENT_WIDTH, null, childrenOf, exclude);
     setProjected(proj);
     setGap(g);
   }

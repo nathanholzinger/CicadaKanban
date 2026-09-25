@@ -39,6 +39,17 @@ export interface DragClassification {
    * no separate cue.
    */
   freeDescendantIds: ReadonlySet<string>;
+  /**
+   * Story 6 Phase D, §7.2: the dragged item and its whole subtree — never
+   * a Top/Bottom candidate at any Card's Descendants layer. One
+   * derivation (Story 6.1 Phase 2, L1-7a): `useBoardDnd.ts`'s own
+   * `excludeIdsRef` and `dragCollision.ts::travelingRowsFor` used to each
+   * re-derive this same set by filtering `states` for `'cycle-forming'` —
+   * two independent spellings of "activeId ∪ its descendants," which this
+   * function already computes internally (`descendantIds`) and now
+   * exposes directly instead of discarding.
+   */
+  subtreeIds: ReadonlySet<string>;
 }
 
 // The whole depth rule (wiki item-attachment §8): a target at depth D is a
@@ -53,13 +64,14 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
   const active = items.find(i => i.id === activeId);
   const states = new Map<string, DropTargetState>();
   const freeDescendantIds = new Set<string>();
-  if (!active) return { activeId, states, freeDescendantIds };
+  if (!active) return { activeId, states, freeDescendantIds, subtreeIds: new Set([activeId]) };
 
   // Computed once per drag, not per target — one walk yields both the
   // subtree (for cycle-forming) and its height (for the depth rule).
   const levels = getDescendantLevels(activeId, items);
   const descendantIds = new Set(levels.flat());
   const height = levels.length;
+  const subtreeIds = new Set([activeId, ...descendantIds]);
 
   for (const item of items) {
     if (item.id === activeId || descendantIds.has(item.id)) {
@@ -75,5 +87,5 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
     states.set(item.id, isWithinDepthCap(getDepth(item.id, items), height, cap) ? 'valid' : 'depth-capped');
   }
 
-  return { activeId, states, freeDescendantIds };
+  return { activeId, states, freeDescendantIds, subtreeIds };
 }

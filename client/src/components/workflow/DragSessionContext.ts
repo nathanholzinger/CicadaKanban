@@ -8,6 +8,7 @@ import type { DragClassification, DropTargetState } from './dragClassification';
 import { cardRegionKey, descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
+import type { ResolvedPlacement } from '../../lib/hierarchyPlacement';
 
 // Epic 3.5 Story 6 Phase D (decision 4) — the Descendants layer's own §7.1
 // tab state: which gap the ghost sits in, which depth is currently chosen
@@ -24,6 +25,14 @@ export interface DescendantsProjection {
   gap: number;
   depth: number;
   valid: boolean;
+  /**
+   * Story 6.1 Phase 2: the last sample's own resolved `{parentId, anchor}`
+   * — `useBoardDnd.ts::releaseDescendants` sends this directly rather than
+   * rebuilding the section's rows and calling `resolvePlacement` a second
+   * time at release. Kept even while `!valid`; the release path never
+   * reads it in that case (it restores the prior placement instead).
+   */
+  resolved: ResolvedPlacement;
 }
 
 // Everything about the drag in progress, in one value (audit

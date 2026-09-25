@@ -63,7 +63,10 @@ this directory, then go to the wiki for the "why."
 - `placement.ts` — the machine's placement rules: `placementRegion(session, regions)`
   is the one answer to "which region is the placement against" — `placementFor` and
   the hook's release both read it. `overlayFormFor` reads the same result to decide
-  which form the carried copy draws as (Stub vs. shortCard).
+  which form the carried copy draws as (Stub vs. shortCard). `resolvePlacementOver`
+  (Story 6.1 Phase 2) is the release-only anchor/bare-container distinction, beside
+  `placementFor`'s own mid-drag half — dnd-kit-free, so it takes the caller's own
+  already-resolved `overId`/anchor rather than an `Over`.
 - `dragRegions.ts` — regions (Board/Column/sub-row/Card/Descendants). Structural
   resolution (`resolveDragStructure`) runs once per drag; live rects (`measureRegions`)
   run per sample. `isCardList(region)` is the one kind predicate: a column or sub-row
@@ -83,16 +86,32 @@ this directory, then go to the wiki for the "why."
 - `lib/hierarchyPlacement.ts` — the Descendants layer's own placement rule (§7),
   table-generic and shared with the project sidebar: `flattenHierarchy` (a Card's
   descendants as `Row[]`, the dragged subtree excluded), `gapIndexFor`/
-  `depthRangeFor`/`resolvePlacement` (§7.1's gap + depth walk). Pure, no React, no
-  dnd-kit — never imports `Item`. `useBoardDnd.ts`'s live projection and
-  `useBoardDnd.ts::releaseDescendants` are its board-side callers;
-  `itemListOps.ts::descendantsChildrenOf` is the `getAttachedChildren` adapter both
-  need.
+  `depthRangeFor`/`resolvePlacement` (§7.1's gap + depth walk), and `computeProjection`
+  — the depth step itself (seed + pointer delta / indent, clamped, then resolved),
+  generalized in Story 6.1 Phase 2 from the sidebar's own copy (`indentPx`/`rootId` are
+  now the caller's own numbers, never a second spelling of the same formula). Pure, no
+  React, no dnd-kit — never imports `Item`. `useBoardDnd.ts`'s live projection is its
+  board-side caller; `itemListOps.ts::descendantsChildrenOf` is the
+  `getAttachedChildren` adapter its own internal `resolvePlacement` call needs.
+- `dragOverlayGeometry.ts` — the DragOverlay's own geometry (Story 6.1 Phase 2, C-1/
+  L3-3, split out of `useBoardDnd.ts`): `overlayWidthFor` (a Stub row's width in its
+  context Card's section), `reanchorOverlayTransform` (keeps the pointer on the copy
+  across its own form switch into a Stub), `clampToCurrentContext`/`clampAxis` (§2's
+  "bounded by its context"). Pure — no React; takes a dnd-kit `Modifier`'s own args
+  shape, the same posture `dragCollision.ts` already has toward dnd-kit's other types.
 - `dragClassification.ts` — classifies every item against the carried one, once per
-  drag start: valid / cycle-forming / depth-capped / inert. A Stub is classified
-  exactly like a Card (Story 5) — no interim exclusion.
+  drag start: valid / cycle-forming / depth-capped / inert, plus `subtreeIds` — the
+  dragged item and its whole subtree (§7.2), one derivation (Story 6.1 Phase 2, L1-7a)
+  read by both `useBoardDnd.ts`'s own exclusion and `dragCollision.ts::travelingRowsFor`
+  rather than each re-deriving it by filtering `states` for `'cycle-forming'`. A Stub is
+  classified exactly like a Card (Story 5) — no interim exclusion.
 - `itemListOps.ts` — list selectors, ordinal placements, the reindex fold-in, the
-  inversion tripwire.
+  inversion tripwire. `hierarchyRows` (Story 6 Phase B, generalized in Story 6.1 Phase 2,
+  L3-1/C-6a) is the one walk of a Card's whole descendants section, carrying each row's
+  own `parentId` alongside its `item`/`depth` — `KanbanCard.tsx`'s render reads every
+  row; `useBoardDnd.ts`'s live projection filters the dragged subtree out of the same
+  list and maps it down to `lib/hierarchyPlacement.ts`'s `Row` shape, rather than
+  walking the tree a second time with its own exclude set.
 - `dragCollision.ts` — collision detection and anchor naming, split out of
   `boardDndUtils.ts` (Story 6.1 Phase 1, C-3): `resolveBoardCollisions`,
   `dropAnchorFor`/`travelingRowsFor` (the anchor + lean), row-data typing
@@ -111,15 +130,25 @@ this directory, then go to the wiki for the "why."
   mid-drag/release asymmetry in the file: the _ghost_ still comes from
   `placement.ts::placementFor`'s Descendants branch (a static preview — `origin`/
   `priorPlacement` for the same section, an append for a foreign item — since `over`
-  never resolves there any more), the _release_ from `resolvePlacement` against the
-  final projection.
+  never resolves there any more), the _release_ reads `projection.resolved` directly
+  (Story 6.1 Phase 2 — the live projection's own last-sample answer, no second
+  `resolvePlacement` call). `usePendingGhostGuard` (private to this file) is the
+  ghost's own pending-write reconciliation (#22) — `setGhost`/`restorePriorPlacement`
+  and the reassert effect, as one hook taking `sessionRef` and `deps`. `endSession()`
+  is the one end of a drag (clear the pop timer, cancel the snap, clear the
+  session), called by `handleDragCancel` and `handleDragEnd`. The pointer effect's
+  cleanup shares the two clock steps but not the session write:
+  `clearPopTimer`/`cancelSnap` sit at module scope, taking their refs, so an effect
+  can call them without listing them as dependencies.
 - `DragSessionContext.ts` — the whole drag's state (`activeItem`, `classification`,
   `pop`, `priorPlacement`, `origin`, `containingCardId`, `projection`) plus
   `PlacementsContext`, read via `useDropTargetState(itemId)`/`useIsPending` — no prop
   drilling. `pop`/`origin` are non-optional as of Story 5 — every item drag runs the
   machine; `containingCardId` is null for a Free Card drag, the section-root Card for
   a Stub's; `projection` (`DescendantsProjection`, Story 6 Phase D) is null whenever
-  the drag isn't currently locked at a `descendants:` context.
+  the drag isn't currently locked at a `descendants:` context, and (Story 6.1 Phase 2)
+  carries the last sample's own resolved `{parentId, anchor}` (`resolved`) alongside
+  `gap`/`depth`/`valid`, so `useBoardDnd.ts::releaseDescendants` never rebuilds it.
 
 ## Testing conventions
 

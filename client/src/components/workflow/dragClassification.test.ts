@@ -45,9 +45,13 @@ describe('classifyDragTargets — Card drag', () => {
       item('D1', 'D'), // D's child
       item('V'),
     ];
-    const { states } = classifyDragTargets('X', items, CAP);
+    const { states, subtreeIds } = classifyDragTargets('X', items, CAP);
     for (const id of ['X', 'S', 'D', 'D1']) expect(states.get(id)).toBe('cycle-forming');
     expect(states.get('V')).toBe('valid');
+    // Story 6.1 Phase 2 (L1-7a): the one derivation of "the dragged
+    // subtree" — the same set the cycle-forming states above encode,
+    // exposed directly rather than re-derived by filtering them.
+    expect(subtreeIds).toEqual(new Set(['X', 'S', 'D', 'D1']));
   });
 
   it('only the Free descendants carry the relationship marker (DRAG-2.5)', () => {

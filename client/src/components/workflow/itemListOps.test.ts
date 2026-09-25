@@ -162,10 +162,10 @@ describe('hierarchyRows', () => {
 
   it('walks every depth, parents before children, in position order', () => {
     const rows = hierarchyRows('root', childrenOf);
-    expect(rows.map(r => ({ id: r.item.id, depth: r.depth }))).toEqual([
-      { id: 'early', depth: 0 },
-      { id: 'late', depth: 0 },
-      { id: 'grandchild', depth: 1 },
+    expect(rows.map(r => ({ id: r.item.id, parentId: r.parentId, depth: r.depth }))).toEqual([
+      { id: 'early', parentId: 'root', depth: 0 },
+      { id: 'late', parentId: 'root', depth: 0 },
+      { id: 'grandchild', parentId: 'late', depth: 1 },
     ]);
   });
 

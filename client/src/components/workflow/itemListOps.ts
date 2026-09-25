@@ -248,6 +248,8 @@ export function getAttachedChildrenFrom(
 
 export interface HierarchyRow {
   item: Item;
+  /** The row's own walk parentId — the real Card/Stub id it renders under, which for a placement-previewed row can differ from `item.parentId`'s stored data. */
+  parentId: string | null;
   depth: number;
 }
 
@@ -261,6 +263,17 @@ export interface HierarchyRow {
 // `lib/hierarchyPlacement.ts::flattenHierarchy` (`Row[]`, ids only) rather
 // than a hand-rolled walk — `byId` is filled as a side effect of the exact
 // same calls that function already makes, one pass, no re-fetching.
+//
+// Story 6.1 Phase 2 (L3-1/C-6a): the one section walk, read two ways —
+// `KanbanCard.tsx`'s render wants every row, `item` and all;
+// `useBoardDnd.ts`'s live projection wants the same rows minus the dragged
+// subtree, mapped down to `lib/hierarchyPlacement.ts`'s `Row` shape
+// (`{id, parentId, depth}`) for `gapIndexFor`/`resolvePlacement`. Carrying
+// `parentId` here (never read off `item.parentId`, which is the item's
+// stored data, not necessarily this walk's own parent once a placement
+// preview differs from it) is what lets the hook filter-and-map this same
+// list instead of re-walking the tree a second time with its own `exclude`
+// set — one walk, not two, and they can no longer disagree.
 export function hierarchyRows(cardId: string, childrenOf: (parentId: string) => readonly Item[]): HierarchyRow[] {
   const byId = new Map<string, Item>();
   const rows = flattenHierarchy(cardId, parentId => {
@@ -270,7 +283,7 @@ export function hierarchyRows(cardId: string, childrenOf: (parentId: string) => 
       return item.id;
     });
   });
-  return rows.map(r => ({ item: byId.get(r.id)!, depth: r.depth }));
+  return rows.map(r => ({ item: byId.get(r.id)!, parentId: r.parentId, depth: r.depth }));
 }
 
 // Epic 3.5 Story 6 Phase D — the `childrenOf` adapter `lib/hierarchyPlacement.ts`

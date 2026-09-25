@@ -268,15 +268,16 @@ export function dropAnchorFor(
 // The rows `dropAnchorFor` steps past, or none. Only at a Descendants
 // layer: a dragged Stub's own descendants stay rendered in the flat section
 // below it, but they travel with it (§7.2), so they're never Top or Bottom
-// (they're out of the projection's rows — `useBoardDnd.ts::excludeIdsFor`,
-// the same cycle-forming set). Named, the gap jumped to the section's end.
-// Never at a column: there a Free descendant of the dragged Card is a real
-// anchor. One predicate for the blue line (`KanbanCard.tsx`) and the gap
-// (`useBoardDnd.ts::handleDragMove`), so they can't disagree.
+// (they're out of the projection's rows — `classification.subtreeIds`,
+// Story 6.1 Phase 2's one derivation of the dragged subtree). Named, the
+// gap jumped to the section's end. Never at a column: there a Free
+// descendant of the dragged Card is a real anchor. One predicate for the
+// blue line (`KanbanCard.tsx`) and the gap (`useBoardDnd.ts::handleDragMove`),
+// so they can't disagree.
 export function travelingRowsFor(
-  session: { pop: Pick<PopSession, 'contextKey'>; classification: Pick<DragClassification, 'states'> } | null,
+  session: { pop: Pick<PopSession, 'contextKey'>; classification: Pick<DragClassification, 'subtreeIds'> } | null,
 ): ((id: string) => boolean) | undefined {
   if (!session?.pop.contextKey?.startsWith('descendants:')) return undefined;
-  const { states } = session.classification;
-  return id => states.get(id) === 'cycle-forming';
+  const { subtreeIds } = session.classification;
+  return id => subtreeIds.has(id);
 }

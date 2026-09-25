@@ -9,7 +9,8 @@ Becomes a historical record once done.
 **Status: method agreed with the Product Owner 2026-09-24. Comparison
 done and every disposition ratified by the PO 2026-09-24 (the ledger
 below); the build order is ready. Phase 0 done 2026-09-24 (below); Phase
-1 done 2026-09-24 (below); Phases 2–3 remain.** The deliberation is in
+1 done 2026-09-24 (below); Phase 2 done 2026-09-24 (below); Phase 3
+remains.** The deliberation is in
 [`story-6-1-comparison.md`](story-6-1-comparison.md); this file holds the
 outcomes.
 
@@ -344,7 +345,10 @@ C-12.
   and L1-12, including `workflow/CLAUDE.md`'s `tabStates` mention and its
   "(Story 5's interim ordering)".
 
-**Done 2026-09-24.** Every item above landed. C-9 landed late, with Phase
+**Done 2026-09-24.** Every item above landed. SW-6 landed late, with Phase
+2's commit: it missed three guards in `useBoardDnd.ts` that treat `pop` as
+optional (`!current?.pop` in the reassert effect and in `evaluatePop`, and
+`collisionDetection`'s `pop && current`). C-9 landed late too, with Phase
 1's commit: `measureRegions`' `facts` has no live rects yet, so it isn't a
 `DragRegion` and couldn't be passed to `isCardList(region: DragRegion)`.
 `isCardList` now takes anything with a `kind`
@@ -426,7 +430,57 @@ its imports and its file.**
 - the region-attribute idiom at its three sites;
 - `workflow/CLAUDE.md`'s module map, rewritten.
 
-### Phase 2 — The hook (no behavior change)
+### Phase 2 — The hook (no behavior change) — done 2026-09-24
+
+**Done 2026-09-24.** Every item below landed. The overlay geometry's unit
+table came late, before Phase 2's commit. "Unit table" had been read as a
+table of coordinate spaces in the module's header, so the module shipped
+with no test file. `dragOverlayGeometry.test.ts` now covers all four
+functions, including the rule that running them twice gives the same
+answer (the modifier chain runs twice per frame, F8). The header's table
+is renamed "Coordinate spaces". "The three teardowns" are
+the three sites Story 5 audit #19 named as the "teardown trio":
+`handleDragCancel`, `handleDragEnd`'s top, and the pointer-tracking
+effect's cleanup.
+- `endSession()` (clear the pop timer, cancel the snap, clear the
+  session) replaces the full sequence at the first two.
+- The cleanup doesn't call `endSession()`. It runs after the session is
+  already null, or on unmount, and never wrote the session, so calling it
+  there would add a write that never existed.
+- The cleanup used to write out the bodies of `clearPopTimer` and
+  `cancelSnap` inline, because as hook-local functions they would have
+  been dependencies `react-hooks/exhaustive-deps` asks the effect to list.
+  Both now live at module scope and take their refs
+  (`clearPopTimer(popTimer)`, `cancelSnap(snapFrame, snap)`). A `useRef`
+  result is never a listed dependency, so the cleanup calls them too.
+
+All three sites now share the clock steps, and only the two real ends of a
+drag clear the session. `KanbanCard.tsx` needed no
+edit at all for the "one section rows function" item — its own
+`hierarchyRows(...)` call site is byte-identical before and after, since
+only the function's return shape (each row's own `parentId`, alongside
+`item`/`depth`) grew; the render side already wanted every row, so nothing
+there had to change to keep it that way.
+
+Full suites green throughout: `tsc` (root + client), eslint (0 warnings
+after `usePendingGhostGuard` picked up its own `latest` ref, mirroring the
+rest of the file's established pattern, instead of reading `deps` directly
+across the hook-extraction boundary), prettier, both unit suites (317
+server + 308 client — +7 over Phase 1, all in the tests this phase's new/
+generalized functions needed: `resolvePlacementOver`, and
+`computeProjection`'s move into `lib/hierarchyPlacement.ts`), and the full
+Playwright suite (140 passed, 8 skipped, matching the baseline) against
+the already-running test servers (port 3002/5174, `test.db`,
+`ENABLE_TEST_ROUTES=true` — never `kanban.db`). The 15 changed client
+files were CRLF in the working tree, which fails `prettier --check` with
+no content difference; they're normalized to LF. After the late
+unit table and SW-6 guards: 338 client unit tests (+30), and the full
+Playwright suite unchanged (140 passed, 8 skipped). `workflow/CLAUDE.md`'s
+module map is updated for `dragOverlayGeometry.ts`, the generalized
+`lib/hierarchyPlacement.ts::computeProjection`, `dragClassification.ts`'s
+`subtreeIds`, `itemListOps.ts::hierarchyRows`'s new field,
+`placement.ts::resolvePlacementOver`, and `useBoardDnd.ts`'s
+`usePendingGhostGuard`/`endSession`/`releaseDescendants` changes.
 
 C-1 (with L3-3), L2-1, L2-2, L3-1 / C-6a, L1-7a.
 
@@ -444,7 +498,8 @@ C-1 (with L3-3), L2-1, L2-2, L3-1 / C-6a, L1-7a.
 - **One derivation of "the dragged subtree"** in `dragClassification.ts`,
   read by both `excludeIds` and `travelingRowsFor`.
 - **`resolvePlacementOver`** moves beside `placementFor`.
-- **One `endSession()`** replaces the three teardowns.
+- **One `endSession()`** replaces the three teardowns (Story 5 audit
+  #19's "teardown trio": cancel, end, and the pointer effect's cleanup).
 - **`usePendingGhostGuard`**: `setGhost`, `wantedPlacementRef`, the
   reassert effect, `restorePriorPlacement`.
 
@@ -455,7 +510,7 @@ C-1 (with L3-3), L2-1, L2-2, L3-1 / C-6a, L1-7a.
 - `KanbanCard.tsx`'s own `hierarchyRows(...)` walk and the hook's two
   `flattenHierarchy(...)` builds, replaced by the one function;
 - the second spelling of the cycle-forming set;
-- the three teardown sequences;
+- the three written-out teardown sequences (two full, one clock-only);
 - the pure math at the bottom of `useBoardDnd.ts`.
 
 ### Phase 3 — Geometry, test-first (visible; hands-on)

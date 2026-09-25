@@ -128,3 +128,35 @@ export function resolvePlacement(
   const ancestor = ancestorAt(rows, top, depth);
   return { parentId: ancestor.parentId, anchor: { id: ancestor.id, side: 'after' } };
 }
+
+export interface Projection {
+  depth: number;
+  placement: ResolvedPlacement;
+}
+
+// §7.1's depth step, generalized (Story 6.1 Phase 2, L2-1): the sidebar's
+// own `computeProjection` and the board's inline copy in
+// `useBoardDnd.ts::updateDescendantsProjection` were the same formula
+// spelled twice, differing only in the one axis-specific number
+// (`indentPx` — the sidebar's row indent, the board's
+// `DESCENDANTS_INDENT_PX`) and the root (`null` for the sidebar's virtual
+// top, a real Card id on the board). Depth never resets between samples —
+// `seedDepth` is the drag's own seed (at pickup, or at a zoom-in
+// transition), `deltaX` the pointer's travel from wherever that seed was
+// taken, so a caller re-derives the same absolute depth every sample
+// regardless of how many times the gap itself has changed underneath it.
+export function computeProjection(
+  rows: readonly Row[],
+  gap: number,
+  seedDepth: number,
+  deltaX: number,
+  indentPx: number,
+  rootId: string | null,
+  childrenOf: (parentId: string | null) => readonly string[],
+  exclude: ReadonlySet<string> = new Set(),
+): Projection {
+  const { lo, hi } = depthRangeFor(rows, gap);
+  const raw = seedDepth + Math.round(deltaX / indentPx);
+  const depth = Math.max(lo, Math.min(hi, raw));
+  return { depth, placement: resolvePlacement(rows, gap, depth, rootId, childrenOf, exclude) };
+}

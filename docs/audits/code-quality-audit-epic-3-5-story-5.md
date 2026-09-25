@@ -524,6 +524,23 @@ prologue, the pointer-effect cleanup at `:302–309`) → one `endSession()`;
 zoom-in transition and on every sample") adds more per-sample state to
 this same hook.
 
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 2 (C-1, with L3-3). The
+named extractions landed:
+- the overlay geometry (`overlayWidthFor`, `reanchorOverlayTransform`,
+  `clampToCurrentContext`, `clampAxis`) is its own pure module,
+  `dragOverlayGeometry.ts`, with its unit table in
+  `dragOverlayGeometry.test.ts`. It didn't go to `dragRegions.ts`, since
+  it's an overlay concern, not a region one;
+- `resolvePlacementOver` sits beside `placementFor`, in `placement.ts`
+  after #20's split;
+- `endSession()` replaces the teardown trio's two full sequences, and the
+  pointer effect's cleanup shares its clock steps;
+- `usePendingGhostGuard` holds `setGhost`, `wantedPlacementRef`, the
+  reassert effect and `restorePriorPlacement`;
+- the Descendants depth step is `lib/hierarchyPlacement.ts::computeProjection`.
+
+The file is 1,013 lines (1,122 before Story 6.1).
+
 ### 20. `placementFor` is a four-way per-kind dispatcher; `popSession.ts` now holds two independently substantial halves `[File Responsibility]`
 **File:** `client/src/components/workflow/popSession.ts:394–466` (~73-line body: Card `:411–414`, Descendants `:416–429` with its own `over` sub-branches, shared `nonComparable`/`detach` setup `:436–437`, in-context card list `:439–453`, Board-layer card list `:455–465`); file 471 lines
 
@@ -535,6 +552,12 @@ transition/timing machine (~237 lines). Story 6 Phase C extends the
 Descendants branch with `resolvePlacement(rows, gap, depth, P)`; make the
 seam first.
 
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 1 (C-2). `placement.ts`
+(206 lines) holds `placementRegion`, `noAnchorSlot`, `placementFor`,
+`regionWorkphaseFor`, `PlacementOver` and `overlayFormFor`, plus Phase 2's
+`resolvePlacementOver`. `popSession.ts` (450 lines) is the transition and
+timing machine only.
+
 ### 21. `boardDndUtils.ts` — Story 4 #20's "next time the file is touched" condition was met (163 lines changed) and the split didn't happen `[File Responsibility]`
 **File:** `client/src/components/workflow/boardDndUtils.ts` (289 lines): collision policy + `CollisionSession` (`:26–119`), drop-side geometry (`:121–155`), the placement→request adapter (`:157–255`), the async dispatcher (`:257–289`). The 2-line header names only the adapter.
 
@@ -544,6 +567,14 @@ seam first.
 (or `dragRequest.ts`) for `anchorFor`/`isIdentity`/`toRequest`/
 `sendItemMove`, matching what the header already claims. Fold #11's
 `DragRowData` into the collision half.
+
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 1 (C-3).
+`boardDndUtils.ts` is gone:
+- `dragCollision.ts` holds the row-data typing (#11's `DragRowData`
+  included), `resolveBoardCollisions`/`CollisionSession`, and the anchor
+  naming (`resolveDropSide`, `dropAnchorFor`, `travelingRowsFor`);
+- `dragRequest.ts` holds `anchorFor`, `isIdentity`, `toRequest` and
+  `sendItemMove`.
 
 ### 22. `dragRegions.ts` (654 lines) — the band/clip math is the one separable piece `[File Responsibility]`
 **File:** types + `isCardList` (`:37–160`), keys + column-shape data (`:168–218`), structure resolution + DOM helpers (`:220–518`), live measurement (`:293–331`), hit-testing (`:520–558`), band/reservation/clip math (`:560–654`)
@@ -555,6 +586,12 @@ convention. The sixth — `reservationFor`/`bandBoundaries`/`bandFor`/
 dependency, imported by `popSession.ts` purely as math — would read
 better as `dragBands.ts`. Not urgent; Story 6 adds a resolver (the
 established pattern), not band math.
+
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 1 (C-4). `dragBands.ts`
+holds `reservationFor`, `bandBoundaries`, `bandFor`, `distanceOutside`,
+`clipToVisible` and their types. `verticalDistance` folded into
+`distanceOutside` in the move (Story 4 #27). `dragRegions.ts` is 564
+lines.
 
 ### 23. Region-kind branching after the fourth kind: twenty sites, most tabled; a fifth kind is a resolver, a prefix in the parent gate, and one release branch `[Duplication & Abstraction]`
 **Files:** `isCardList` ×6, `popInDelayFor` ×3, `hoverFor`, `measureRegions`' spread (all fine); not tabled: `dragRegions.ts:281–287` (`startsWith('card:') || startsWith('descendants:')` for "has a parent" plus a three-way resolver ternary), `:313` (`kind === 'card'`), `:321` (`card || descendants` — `!isCardList` re-spelled), `useBoardDnd.ts:650` (`kind !== 'column'`), and #8's trio
@@ -580,11 +617,37 @@ The hook re-selects what the components already rendered, per kind;
 all-rows change and Epic 4's §11 are the next edits — leave until then,
 but don't add a fifth.
 
+**Status:** Descendants half fixed, card-list half deferred (2026-09-24).
+- Story 6.1 Phase 0 deleted `siblingItems` (L1-5). Phase 2 (C-6a) made
+  `itemListOps.ts::hierarchyRows` the one walk of a Card's section:
+  `KanbanCard.tsx` renders it, and the hook's projection filters the
+  dragged subtree out of the same list.
+- The card-list half (C-6b: `regionItems`, `BoardColumn.tsx`'s lists,
+  `cardListStructureFromKey`'s column facts) is deferred to Epic 4. Its
+  done-column rework and §11 group-by reshape exactly those lines; the
+  deferral is noted in `epic-4-decisions.md` §11.
+
 ### 25. Region-attribute registration idiom ×3 `[Duplication & Abstraction]` (cosmetic)
 `KanbanCard.tsx:234` (`{...(isOverlay ? {} : { [DRAG_REGION_ATTR]: … })}`), `:297` (`{...{ [DRAG_REGION_ATTR]: … }}`), `BandGuides.tsx:135`. A `dragRegionProps(key | undefined)` in `dragRegions.ts` is one line and makes "how an element registers" one function; it would also fix `BandGuides.tsx:100`'s claim in #5 by making it true again.
 
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 1 (C-10).
+`dragRegions.ts::dragRegionProps(key)` is the one registration idiom, used
+by `KanbanCard.tsx` (the Card and Descendants regions) and
+`BandGuides.tsx`. `BandGuides.tsx`'s comment now calls itself the
+column/sub-row site of `dragRegionProps`, which also retires #5's
+`BandGuides.tsx:99–100` bullet.
+
 ### 26. Two names for one value, and four optional-chains on an invariant this commit retired `[Consistency & Drift]`
 `containingCardId` (`DragSessionContext.ts`, the session field) and `originCardId` (`dragRegions.ts` params, `useBoardDnd.ts::originCardIdRef`) name the literal same value, computed once in `handleDragStart`; each side is well-commented, nothing bridges them. Possibly deliberate (domain vs. geometry vocabulary) — flagging, not asserting. And `useBoardDnd.ts:250`, `:294`, `:504`, `KanbanCard.tsx:191`, `DragSessionContext.ts:99` still guard `pop` as if it could be absent independent of `session`; none is a bug, all invite new logic on the false premise.
+
+**Status:** Naming half rejected; optional-chain half fixed (2026-09-24).
+- Story 6.1 rejected the rename (C-11): each name reads right in its own
+  module. Reopen if a future audit raises or elevates it.
+- Phase 0 (SW-6) removed the guards that treat `pop` as optional in
+  `BoardView.tsx`, `BoardColumn.tsx`, `BandGuides.tsx`, `KanbanCard.tsx`
+  and the pointer effect. It missed three in `useBoardDnd.ts`, which were
+  fixed with Phase 2's commit: the reassert effect and `evaluatePop` now
+  guard on `!current`, and `collisionDetection` on `current` alone.
 
 ---
 

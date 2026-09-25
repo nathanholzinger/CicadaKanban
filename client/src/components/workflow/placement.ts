@@ -184,3 +184,23 @@ export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: st
   const member = activeWorkphaseId !== null && region.coveredWorkphaseIds.includes(activeWorkphaseId);
   return member ? activeWorkphaseId : region.targetWorkphaseId;
 }
+
+// Story 6.1 Phase 2 (the carried structural finding, Story 4 audit #18 →
+// Story 5 audit #19): the anchor/bare-container distinction
+// `useBoardDnd.ts::handleDragEnd` resolves at release, beside `placementFor`
+// (the mid-drag half of the same "which region, which anchor" question).
+// `overId`/`anchor` are the caller's own already-resolved facts — dnd-kit's
+// `Over`'s id, and `dropAnchorFor`'s own answer — so this file stays
+// dnd-kit-free, never importing `Over` itself. `null` `overId` covers both
+// "no drop at all" and the release-only cases `placementFor`'s own callers
+// never see mid-drag. `list` is `useBoardDnd.ts::releaseListFor`'s own
+// return shape, narrowed to the one field this needs.
+export function resolvePlacementOver(
+  list: { containerId: string } | null,
+  overId: string | null,
+  anchor: PlacementOver,
+): PlacementOver {
+  if (!list) return null;
+  if (overId === null || overId === list.containerId) return 'container';
+  return anchor ?? 'container';
+}

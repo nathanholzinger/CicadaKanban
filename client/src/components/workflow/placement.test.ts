@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './dragTuning';
 import { advancePopSession, startPopSession, type PopSession } from './popSession';
-import { overlayFormFor, placementFor, placementRegion } from './placement';
+import { overlayFormFor, placementFor, placementRegion, resolvePlacementOver } from './placement';
 import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
 import type { ShortCardMetrics } from './dragBands';
@@ -380,5 +380,35 @@ describe('overlayFormFor', () => {
     s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, total + OUT);
     expect(s.contextKey).toBe(A.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
+  });
+});
+
+// Story 6.1 Phase 2 (carried structural finding, Story 4 audit #18 → Story
+// 5 audit #19): the release-only anchor/bare-container distinction, beside
+// placementFor's own mid-drag half.
+describe('resolvePlacementOver', () => {
+  const list = { containerId: 'column:a' };
+
+  it('no release list at all (no region resolved): null', () => {
+    expect(resolvePlacementOver(null, 'card-x', { anchorId: 'card-x', side: 'after' })).toBeNull();
+  });
+
+  it('no drop (over is null): the bare container', () => {
+    expect(resolvePlacementOver(list, null, null)).toBe('container');
+  });
+
+  it("over resolves to the list's own container: the bare container, even with an anchor computed", () => {
+    expect(resolvePlacementOver(list, 'column:a', { anchorId: 'card-x', side: 'after' })).toBe('container');
+  });
+
+  it('over names a specific card: the anchor', () => {
+    expect(resolvePlacementOver(list, 'card-x', { anchorId: 'card-x', side: 'before' })).toEqual({
+      anchorId: 'card-x',
+      side: 'before',
+    });
+  });
+
+  it('over names a card but the anchor came back null (e.g. alone in the list): the bare container', () => {
+    expect(resolvePlacementOver(list, 'card-x', null)).toBe('container');
   });
 });

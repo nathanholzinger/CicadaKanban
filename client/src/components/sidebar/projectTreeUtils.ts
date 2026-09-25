@@ -6,15 +6,7 @@
 // `{ parentId, anchor }` back into `onReorderProject`'s prevId/nextId pair.
 
 import type { Project } from '../../types';
-import {
-  flattenHierarchy,
-  gapIndexFor,
-  depthRangeFor,
-  resolvePlacement,
-  type Row,
-  type Anchor,
-  type ResolvedPlacement,
-} from '../../lib/hierarchyPlacement';
+import { flattenHierarchy, gapIndexFor, type Row, type Anchor } from '../../lib/hierarchyPlacement';
 
 export interface FlatItem {
   id: string;
@@ -23,11 +15,6 @@ export interface FlatItem {
   project: Project;
   hasChildren: boolean;
   collapsed: boolean;
-}
-
-export interface Projection {
-  depth: number;
-  placement: ResolvedPlacement;
 }
 
 export const INDENT_WIDTH = 14;
@@ -147,20 +134,11 @@ export function resolveGap(
 // separate min/max computed from the immediate neighbors — `depthRangeFor`
 // is the one range now, shared with the board). `childrenOf` is
 // `fullChildrenOf(projects)`, never `eligibleRows`'s own map — difference
-// 6's collapsed-Top fix needs the real tree, not the rendered rows.
-export function computeProjection(
-  rows: readonly Row[],
-  gap: number,
-  seedDepth: number,
-  deltaX: number,
-  childrenOf: (parentId: string | null) => readonly string[],
-  exclude: ReadonlySet<string>,
-): Projection {
-  const { lo, hi } = depthRangeFor(rows, gap);
-  const raw = seedDepth + Math.round(deltaX / INDENT_WIDTH);
-  const depth = Math.max(lo, Math.min(hi, raw));
-  return { depth, placement: resolvePlacement(rows, gap, depth, null, childrenOf, exclude) };
-}
+// 6's collapsed-Top fix needs the real tree, not the rendered rows. The
+// depth step itself (`lib/hierarchyPlacement.ts::computeProjection`) is
+// generalized and shared with the board's own live projection (Story 6.1
+// Phase 2, L2-1) — this module supplies `INDENT_WIDTH` and the sidebar's
+// virtual `null` root, the two things that used to make this its own copy.
 
 // `onReorderProject`'s prevId/nextId pair, straight off the one relation
 // `resolvePlacement` already resolved — replaces the old `findPrevSibling`/

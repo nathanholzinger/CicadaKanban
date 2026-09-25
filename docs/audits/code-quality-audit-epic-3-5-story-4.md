@@ -522,6 +522,13 @@ clamp math is still local. Escalated as Story 5 audit #19, with #8/#9/#10
 there as the concrete first cuts; do before Story 6 Phase C adds
 per-sample projection state to the same hook.
 
+**Status (2026-09-24, Story 6.1):** resolved through Story 5 audit #19,
+in Story 6.1 Phase 2 (C-1). The clamp math is in `dragOverlayGeometry.ts`
+(an overlay concern, so not `dragRegions.ts`), `resolvePlacementOver` is
+in `placement.ts` beside `placementFor`, and `usePendingGhostGuard` and
+`endSession()` exist. The clamp math's unit table is
+`dragOverlayGeometry.test.ts`.
+
 ### 19. `KanbanCard.tsx` (417 lines) now hosts the Card tier and the Stub tier `[File Responsibility]` (cross-ref #4, #10)
 **File:** `client/src/components/KanbanCard.tsx:27–86` (shared drop-target chrome: `useLiveDropSide`, `useDropTargetProps`, `DropSideIndicator`, `dropTargetClass`), `:116–135` (`ShortCard` — honors decision 3 in isolation), `:325–337` (`AttachGhostRow`), `:339–417` (`AttachedChildRow`, its own `useSortable`/`SortableContext`, `data.type: 'attached-child'`)
 
@@ -541,6 +548,12 @@ and Story 6 Phase B rewrites both Stub rows into a flat DFS list — an
 extraction now would be re-extracted in a different shape next story.
 Recorded as Covered by Story 6 in the Story 5 audit.
 
+**Status (2026-09-24, Story 6.1):** resolved in Story 6.1 Phase 1 (C-5),
+after Story 6 Phase B settled the Stub rows. `KanbanCard.tsx` keeps the
+Card tier; `StubRows.tsx` takes `StubBody`, `AttachGhostRow` and
+`AttachedChildRow`; `dragChrome.tsx` takes the chrome both tiers share
+(`useDropTargetProps`, `DropSideIndicator`, `ZoomCue`, the cue classes).
+
 ### 20. `boardDndUtils.ts` — "Utils" now covers five things `[File Responsibility]` (Story 3 #4 lineage)
 **File:** `client/src/components/workflow/boardDndUtils.ts` (262 lines): collision policy (`:58–88`), column-shape data (`:90–112` — moves in #4), drop-side geometry (`:138–148`), the placement→request adapter (`:163–227` — what the header describes), and an async dispatcher with a `console.error` and tracker orchestration (`:243–261`)
 
@@ -553,6 +566,10 @@ changed 163 lines here — `siblingScopeParentId`, `origin` on
 `isIdentity`/`toRequest`) and the split didn't happen. Carried as Story 5
 audit #21 with the same seam; the header still names only the adapter.
 
+**Status (2026-09-24, Story 6.1):** resolved through Story 5 audit #21,
+in Story 6.1 Phase 1 (C-3): `boardDndUtils.ts` split into
+`dragCollision.ts` and `dragRequest.ts`.
+
 ### 21. `tests/ui/drag-column-bands.spec.ts` (797 lines) spans three test-plan catalogs `[File Responsibility]`
 **File:** header cites `drag-1`, `drag-3`, *and* `drag-6`; the second `describe` (`:715–797`, DRAG-6.1/6.2/6.5) uses route-delay mocking and none of the carve-out helpers (`:172–261`) the rest of the file is built on. A `drag-preview-reconciliation.spec.ts` for the DRAG-6.x block would match the folder-aligned catalog; the DRAG-1.x cases interleaved through the first block are pop-through setup for DRAG-3.x and can stay.
 
@@ -563,6 +580,10 @@ audit #21 with the same seam; the header still names only the adapter.
 (`useBoardDnd.ts:410–412`) is a fourth "rows this region renders" beside
 `regionItems`. Carried as Story 5 audit #24; leave until Story 6's
 all-rows change, don't add a fifth.
+
+**Status (2026-09-24, Story 6.1):** through Story 5 audit #24, Story
+6.1 made the Descendants rows one walk (Phase 2, C-6a). The column facts
+this finding names are deferred to Epic 4 (C-6b), which reshapes them.
 
 ### 23. `session.pop != null` doubles as "this is a Card drag" at two sites `[Duplication & Abstraction]` (one site Covered by Story 5, below)
 **Files:** `client/src/components/KanbanCard.tsx:177` (`attachGhostId` — Story 5's plan names it); `client/src/components/BoardColumn.tsx:211` ("Drop cards here" guard, whose comment relies on "a Stub drag never reaches the pop machine"). Elsewhere (`useBoardDnd.ts:216, 252, 418`, `BandGuides.tsx:127`) `pop` means "machine running". Story 5 makes `pop` non-null for every item drag, inverting the first two. A `useIsCardDrag()` reading `session.origin` makes that a one-line flip; `BoardColumn.tsx:211` isn't in Story 5's plan — verify against the roadmap.
@@ -609,6 +630,10 @@ Just dragged out of Done, write in flight, then anchored beside → server 400 "
 - `dragFixtures.ts::region` infers `kind` from the key prefix (a second copy of the key grammar) and there's no `cardRegion` fixture — #3 adds one; Story 5's `'descendants'` needs a row there too.
 - `verticalDistance` + its inline horizontal twin (`dragRegions.ts:457–461` vs `:510`) — story-3-reconciled #22, unchanged.
 - The `cardPopInDelayMs: 30_000` "absurdly high" sentinel — a numeric ceiling standing in for a disable; folds into #6's presets.
+
+**Status (2026-09-24, Story 6.1):** the `verticalDistance` bullet only.
+It folded into `dragBands.ts::distanceOutside` in Story 6.1 Phase 1
+(C-4). The other bullets weren't in Story 6.1's scope.
 
 ### 28. Sidebar vs board — sizing for Story 6
 No board-side counterpart to `projectTreeUtils.ts::computeProjection` / `findPrevSibling` / `findNextSibling` / `INDENT_WIDTH` exists; `ProjectSidebar.tsx:106–138` sends `(id, parentId, prevSiblingId, nextSiblingId)` rather than `toRequest`'s shape. Story 6's consolidation is a lift-and-adapt (one source), not a de-duplication. Only overlaps today: the drop-line classes above and the `isDragging ? {} : transform` sortable idiom (`SortableProjectRow.tsx:51–56` vs `KanbanCard.tsx:187–191`, which differ deliberately).

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { flattenHierarchy, gapIndexFor, depthRangeFor, resolvePlacement, type Row } from './hierarchyPlacement';
+import {
+  flattenHierarchy,
+  gapIndexFor,
+  depthRangeFor,
+  resolvePlacement,
+  computeProjection,
+  type Row,
+} from './hierarchyPlacement';
 
 // DRAG-4 TC-8's tree, rooted at Card `P`:
 //   S1        (0)
@@ -248,5 +255,45 @@ describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', 
       expect(placement.parentId).not.toBe('S1a');
       expect(placement.anchor?.id).not.toBe('S1a1');
     }
+  });
+});
+
+// Story 6.1 Phase 2 (L2-1): the depth step itself, generalized from the
+// sidebar's own `computeProjection` (which used to spell this same formula
+// a second time, `INDENT_WIDTH`/`null` root the only real differences) —
+// the board's `useBoardDnd.ts::updateDescendantsProjection` and the
+// sidebar's `ProjectSidebar.tsx` both call this now, supplying their own
+// `indentPx`/`rootId`.
+describe('computeProjection', () => {
+  const rows = flattenHierarchy('P', childrenOf);
+  const gap = gapIndexFor(rows, 'S2', 'before'); // between S1a1 (Top, depth 2) and S2 (Bottom, depth 0) — range 0..3
+
+  it('resolves depth from the seed plus delta/indent, then the same placement resolvePlacement would', () => {
+    const result = computeProjection(rows, gap, 2, 0, 10, 'P', childrenOf);
+    expect(result).toEqual({ depth: 2, placement: { parentId: 'S1a', anchor: { id: 'S1a1', side: 'after' } } });
+  });
+
+  it('rounds the raw depth from deltaX/indentPx before clamping', () => {
+    // 14px indent, a 20px rightward delta rounds to +1 step from the seed.
+    const result = computeProjection(rows, gap, 1, 20, 14, 'P', childrenOf);
+    expect(result.depth).toBe(2);
+  });
+
+  it("clamps to the gap's own hi when the delta pushes past it", () => {
+    const result = computeProjection(rows, gap, 2, 500, 10, 'P', childrenOf); // huge rightward delta
+    expect(result).toEqual({ depth: 3, placement: { parentId: 'S1a1', anchor: null } });
+  });
+
+  it("clamps to the gap's own lo when the delta pushes past it", () => {
+    const result = computeProjection(rows, gap, 2, -500, 10, 'P', childrenOf); // huge leftward delta
+    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { id: 'S1', side: 'after' } } });
+  });
+
+  it('excludes the dragged subtree from the resolved placement too', () => {
+    const exclude = new Set(['S1a', 'S1a1']);
+    const withoutDraggedSubtree = flattenHierarchy('P', childrenOf, exclude);
+    const g = gapIndexFor(withoutDraggedSubtree, 'S2', 'before');
+    const result = computeProjection(withoutDraggedSubtree, g, 0, 0, 10, 'P', childrenOf, exclude);
+    expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { id: 'S1', side: 'after' } } });
   });
 });

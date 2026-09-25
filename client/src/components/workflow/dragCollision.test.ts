@@ -356,15 +356,9 @@ describe('dropAnchorFor', () => {
 });
 
 describe('travelingRowsFor', () => {
-  const classification = {
-    states: new Map([
-      ['x', 'cycle-forming'],
-      ['xa', 'cycle-forming'],
-      ['s1', 'valid'],
-    ] as const),
-  };
+  const classification = { subtreeIds: new Set(['x', 'xa']) };
 
-  it("at a Descendants context: the dragged subtree (classification's cycle-forming set)", () => {
+  it("at a Descendants context: the dragged subtree (classification's own subtreeIds)", () => {
     const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
     expect(['x', 'xa', 's1'].map(id => travels?.(id))).toEqual([true, true, false]);
   });
