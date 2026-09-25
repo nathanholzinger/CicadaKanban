@@ -224,22 +224,34 @@ export interface DropAnchor {
 // sortable data — the same `items` dnd-kit draws the shuffle from — never
 // the active row's (decision 4: it can lag a mid-drag remount).
 //
-// Anywhere else (a card not in `over`'s list, or `over` has no sortable
-// data at all) it's still `over` itself, on `resolveDropSide`'s
-// which-half-of-`over` side.
+// A card/Stub row not in `over`'s own sortable list, or one with no
+// sortable data at all, is still `over` itself, on `resolveDropSide`'s
+// which-half-of-`over` side — `over` naming anything else (no row) is its
+// own case below.
 //
 // `travels` (Story 6 Phase D hands-on, 2026-09-24): rows that move with
 // the dragged item, never a neighbor to name — see `travelingRowsFor`.
 // The search steps past them to the next row that stays.
+//
+// `over` naming anything but a card/Stub row — the bare column/sub-row
+// container itself, at rest or between shuffles — is no anchor at all
+// (Story 6.1 Phase 3, L1-3): there's no row there to draw the blue line on
+// or anchor a release beside. Every caller already treats `null` this way
+// (`resolvePlacementOver`'s own `overId === list.containerId` case already
+// wins before an anchor would even be read; `useLiveDropSide`'s
+// `anchor?.anchorId === itemId` can never match a container's id against a
+// real item's). A real row with no sortable data yet is still named via
+// `resolveDropSide`'s which-half fallback, unchanged.
 export function dropAnchorFor(
   active: Pick<Active, 'id' | 'rect'>,
   over: Over,
   travels?: (id: string) => boolean,
 ): DropAnchor | null {
   const translated = active.rect.current.translated;
-  const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
   const overData = over.data.current;
-  if (!(isCardRow(overData) || isStubRow(overData)) || !hasSortableData(over)) return onOver();
+  if (!(isCardRow(overData) || isStubRow(overData))) return null;
+  const onOver = (): DropAnchor => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
+  if (!hasSortableData(over)) return onOver();
   const ghostHeightPx = isStubRow(overData) ? STUB_ROW_HEIGHT_PX : SHORT_CARD_HEIGHT_PX;
   const { items, index: overIndex } = over.data.current.sortable;
   const activeIndex = items.indexOf(active.id);

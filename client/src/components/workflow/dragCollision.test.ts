@@ -302,6 +302,20 @@ describe('dropAnchorFor', () => {
     expect(dropAnchorFor(dragged('x', 50, 96), overRow('x', 0, ['x']))).toBeNull();
   });
 
+  // Story 6.1 Phase 3 (L1-3): a bare container is never a row to anchor
+  // beside — no card/Stub data at all, the shape a locked column/sub-row's
+  // own container droppable (or the pop machine's Board-layer hover
+  // container) registers.
+  it('over a bare container (no row data): nothing to anchor to', () => {
+    const bareContainer = {
+      id: 'column-container',
+      rect: { top: 0, height: 400, bottom: 400, left: 0, right: 100, width: 100 },
+      disabled: false,
+      data: { current: {} },
+    } as unknown as Over;
+    expect(dropAnchorFor(dragged('x', 50, 96), bareContainer)).toBeNull();
+  });
+
   it("over a card not in over's list: over itself, on the which-half side", () => {
     expect(dropAnchorFor(dragged('x', 190, 96), overRow('b', 110, ['a', 'b']))).toEqual({
       anchorId: 'b',

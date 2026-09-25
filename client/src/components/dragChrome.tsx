@@ -4,29 +4,28 @@
 // 1, C-5) — the Card tier's own render stays there.
 
 import { useDndContext } from '@dnd-kit/core';
-import { dropAnchorFor, travelingRowsFor, type ItemRowRole } from './workflow/dragCollision';
+import { dropAnchorFor, travelingRowsFor } from './workflow/dragCollision';
 import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
 import type { OverlayForm } from './workflow/placement';
 
-// Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
-// full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
-// is about to compute). Reads dnd-kit's live active/over state directly via
-// useDndContext — no prop drilling through BoardColumn/BoardView — and
-// calls the exact same dropAnchorFor function useBoardDnd's handleDragEnd
-// uses, so the line shown here is guaranteed to match what gets sent. In a
-// column (Option A + lean, 2026-09-24) the anchor is a neighbor of the ghost,
-// not necessarily the card dnd-kit says is `over`, so every row asks
-// whether it's the one named.
-// Diagnostic-only, so reading `active.data.current?.role` here is fine even
-// though it's never load-bearing for a real collision/write decision
-// (decision 4) — a stale read during a mid-drag remount briefly mis-draws
-// this line at worst, never anything written.
-function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRole[]): 'before' | 'after' | null {
+// The live drop-side indicator (Epic 3.2 addendum). Reads dnd-kit's live
+// active/over state directly via useDndContext — no prop drilling through
+// BoardColumn/BoardView — and calls the exact same dropAnchorFor function
+// useBoardDnd's handleDragEnd uses, so the line shown here always matches
+// what gets sent, at every row dropAnchorFor could ever name (a Card row or
+// a Stub row, whichever the active drag happens to be — Story 6.1 Phase 3,
+// L1-13: no longer narrowed to a caller-declared subset of roles, which
+// used to hide the line whenever the active drag's own row read a role
+// outside that subset — including a Stub leaving its Card into a column,
+// exactly the case it most needed to show). In a column (Option A + lean,
+// 2026-09-24) the anchor is a neighbor of the ghost, not necessarily the
+// card dnd-kit says is `over`, so every row asks whether it's the one
+// named.
+function useLiveDropSide(itemId: string): 'before' | 'after' | null {
   const { active, over } = useDndContext();
   const session = useDragSession();
   if (!active || !over || active.id === itemId) return null;
   if (active.data.current?.type !== 'item') return null;
-  if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
   const anchor = dropAnchorFor(active, over, travelingRowsFor(session));
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
@@ -71,13 +70,8 @@ export const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500
 // Fast Refresh reloads this file in full instead of hot-swapping it, a dev
 // convenience only, so the rule is suppressed rather than the file split.
 // eslint-disable-next-line react-refresh/only-export-components
-export function useDropTargetProps(
-  itemId: string,
-  activeRoles: readonly ItemRowRole[],
-  isOverlay = false,
-  overlayForm: OverlayForm = 'short-card',
-) {
-  const dropSide = useLiveDropSide(itemId, activeRoles);
+export function useDropTargetProps(itemId: string, isOverlay = false, overlayForm: OverlayForm = 'short-card') {
+  const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
   return {

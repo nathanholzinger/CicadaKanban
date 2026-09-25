@@ -102,9 +102,11 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
   });
   // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.8)
   // — same attributes and overlay as a Card, so a test reads them alike.
-  // Both active roles: a sibling Stub reorder, or a foreign Card popped
-  // into this row's own parent, anchoring beside it.
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card', 'stub']);
+  // The live drop side shows for either kind of active drag: a sibling
+  // Stub reorder, or a foreign Card popped into this row's own parent,
+  // anchoring beside it (Story 6.1 Phase 3, L1-13 — no role filter left to
+  // narrow it either way).
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -119,7 +121,7 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
       data-placement-valid={invalid ? 'false' : undefined}
       className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${invalid ? INVALID_PLACEMENT_CLASS : ''} ${dropTargetClassName}`}
     >
-      {/* Diagnostic-grade live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
+      {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
 
       <button

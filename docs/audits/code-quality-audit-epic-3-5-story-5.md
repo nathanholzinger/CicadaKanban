@@ -505,6 +505,22 @@ ancestor, or the section rect could be derived from `card:P`'s corrected
 rect plus the wrapper's offset. Roadmap doesn't name it under Story 6;
 verify there.
 
+**Status:** Fixed (2026-09-24) — Story 6.1 Phase 3 (C-8, "goes away with
+L1-8"). The correction itself is gone: Story 6 hands-on finding 3 had
+already retired the hit test it existed for (a locked column/sub-row's
+zoom-in candidate is the named relation, `dropAnchorFor`'s own answer,
+never a Card region hit test), leaving no reader left that needed a Card's
+rect to agree with dnd-kit's own transform-blind collision math.
+`layoutRect` now always returns the plain painted rect for every kind, so
+the asymmetry this finding describes — a `card` region corrected, a
+nested `descendants` region not — can't recur: neither is corrected.
+Probed live first (frame-by-frame, an adjacent and a multi-card shuffle):
+the target Card's transform already reads `none` on the very same frame
+its region becomes the locked context, confirming the two remaining
+readers of a Card's rect (the locked-context "still inside" test,
+`popSession.ts`; the overlay clamp, `dragOverlayGeometry.ts`) never
+actually observed a mid-shift Card while locked in, before or after.
+
 ### 19. `useBoardDnd.ts` grew from 575 to 663 lines; none of the three extractions Story 4 #18 slated "alongside Story 5" happened `[File Responsibility]` (escalated)
 **File:** `client/src/components/workflow/useBoardDnd.ts` — `containingCardIdOf` (`:62–68`, pure), the Stub/Card start branching (`:414–491`), `siblingScopeParentId`/`siblingItems` (`:326–341`, `:405–412`), `placementOver` with a third inline branch (`:590–600`), the clamp math still local (`:637–663`)
 

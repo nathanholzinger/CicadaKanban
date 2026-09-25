@@ -282,7 +282,7 @@ While the item is in-context:
   from which half of the hovered card the carried card's center was in,
   while the gap was drawn from list order — so a drop could land one slot
   away from the ghost. Found in Story 6's hands-on, 2026-09-24; built and
-  merged the same day — `boardDndUtils.ts::dropAnchorFor`, the one
+  merged the same day — `dragCollision.ts::dropAnchorFor`, the one
   function both the side highlight and the release read. **Scope: columns
   and sub-rows at first; brought onto a Card's Descendants section too in
   Story 6 Phase D (§7.1), including its own Stub rows a dragged Stub's
@@ -999,8 +999,8 @@ silently walk that child back to the entry workphase.
 routes a Stub drag to `descendantsRegionKey(containingCardId)` instead of
 the old `pop: null` bypass; the two pops fall out of `popSession.ts`'s
 existing layer-generic pop-out clock, unchanged, once a `descendants`
-region carries a real `parentRegionKey`; and `toRequest`
-(`boardDndUtils.ts`) sends the detach (`isAttached: false`, `parentId`
+region carries a real `parentRegionKey`; and `dragRequest.ts::toRequest`
+sends the detach (`isAttached: false`, `parentId`
 untouched) once `placementFor`'s card-list branch previews the item Free.
 
 ## 9. Depth overflow

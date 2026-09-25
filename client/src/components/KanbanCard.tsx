@@ -140,11 +140,7 @@ export default function KanbanCard({
     // them off the *active* row.
     data: itemRowData('card'),
   });
-  const {
-    dropSide,
-    dataAttrs,
-    className: dropTargetClassName,
-  } = useDropTargetProps(item.id, ['card'], isOverlay, overlayForm);
+  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, isOverlay, overlayForm);
   // Story 4: forced open — independent of the user's own
   // collapse choice — for as long as this Card is the live attach target,
   // so a drag actually reveals the ghost landing inside it rather than
@@ -258,7 +254,7 @@ export default function KanbanCard({
           : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
       }
     >
-      {/* Diagnostic-grade live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
+      {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
       {zoomCandidatePhase === 'cue' && <ZoomCue cueMs={dragTuning.cardPopInDelayMs} />}
 

@@ -21,7 +21,9 @@ this directory, then go to the wiki for the "why."
   and the dragged copy, above or below the ghost's middle, picks which neighbor names
   it: "after" the row above, "before" the row below
   (`dragCollision.ts::dropAnchorFor`, the one function the blue line and the release
-  both read, generalized to Stub rows in Story 6 Phase D). Card: `origin` itself ("set
+  both read, generalized to Stub rows in Story 6 Phase D, no longer narrowed by the
+  active drag's own role since Story 6.1 Phase 3, L1-13 — a bare, non-row `over` names
+  no anchor at all, L1-3). Card: `origin` itself ("set
   back down") for the drag's own containing Card, else append as the last child (an
   item from outside, or a Story 5 reparent — full anchor+side placement _among_ a
   Card's Stubs happens one layer further in, at Descendants). Descendants: §7's gap +
@@ -77,7 +79,14 @@ this directory, then go to the wiki for the "why."
   keeps an invalid target (cycle-forming, depth-capped) from ever becoming a zoom-in
   candidate, no separate check needed. `childRegionAt` finds it from a locked Card's
   own context. `dragRegionProps(key)` is the one "register this element as a drag
-  region" idiom, spread onto a region's own root element.
+  region" idiom, spread onto a region's own root element. `layoutRect` is a plain
+  `getBoundingClientRect` for every kind (Story 6.1 Phase 3, L1-8) — the sortable-shift
+  correction it used to carry for a `card` region existed only for a hit test Story 6's
+  hands-on finding 3 already retired; probed live first (frame-by-frame, an adjacent
+  and a multi-card shuffle) that a Card's transform always reads `none` by the same
+  frame it becomes the locked context, so its two remaining rect readers (the
+  locked-context "still inside" test in `popSession.ts`, the overlay clamp in
+  `dragOverlayGeometry.ts`) never actually saw the correction change anything.
 - `dragBands.ts` — the pixel drop-band math (§5), split out of `dragRegions.ts` (Story
   6.1 Phase 1, C-4): `reservationFor`/`bandBoundaries`/`bandFor` turn a region's own
   `isTerminal`/`cardCount` into boundaries; `distanceOutside` is the pop threshold's
@@ -115,7 +124,9 @@ this directory, then go to the wiki for the "why."
 - `dragCollision.ts` — collision detection and anchor naming, split out of
   `boardDndUtils.ts` (Story 6.1 Phase 1, C-3): `resolveBoardCollisions`,
   `dropAnchorFor`/`travelingRowsFor` (the anchor + lean), row-data typing
-  (`itemRowData`/`isCardRow`/`isStubRow`).
+  (`itemRowData`/`isCardRow`/`isStubRow`). `dropAnchorFor` returns `null` for a
+  non-row `over` (Story 6.1 Phase 3, L1-3) — a bare column/sub-row container is never
+  an anchor; a real row with no sortable data yet still falls back to `resolveDropSide`.
 - `dragRequest.ts` — the request-shape half of the same split: `toRequest` (placement
   → API request), `isIdentity` (recognizes a no-op), `sendItemMove` (the one "send,
   fold in, or resync" block).

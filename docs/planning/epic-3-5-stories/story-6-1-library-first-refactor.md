@@ -6,11 +6,13 @@ had been there from the start. Same purpose as
 [Story 4.1](story-4-1-efficiency-refactor.md), different method (below).
 Becomes a historical record once done.
 
-**Status: method agreed with the Product Owner 2026-09-24. Comparison
-done and every disposition ratified by the PO 2026-09-24 (the ledger
-below); the build order is ready. Phase 0 done 2026-09-24 (below); Phase
-1 done 2026-09-24 (below); Phase 2 done 2026-09-24 (below); Phase 3
-remains.** The deliberation is in
+**Status: done 2026-09-24.** Method agreed with the Product Owner
+2026-09-24. Comparison done and every disposition ratified by the PO
+2026-09-24 (the ledger below). Phase 0 done 2026-09-24 (below); Phase 1
+done 2026-09-24 (below); Phase 2 done 2026-09-24 (below); Phase 3 done
+2026-09-24, its own PO eyeball-check gate cleared the same day (below).
+Next: the four-pass audit over Stories 6 and 6.1 (see "After Phase 3").
+The deliberation is in
 [`story-6-1-comparison.md`](story-6-1-comparison.md); this file holds the
 outcomes.
 
@@ -513,7 +515,47 @@ C-1 (with L3-3), L2-1, L2-2, L3-1 / C-6a, L1-7a.
 - the three written-out teardown sequences (two full, one clock-only);
 - the pure math at the bottom of `useBoardDnd.ts`.
 
-### Phase 3 — Geometry, test-first (visible; hands-on)
+### Phase 3 — Geometry, test-first (visible; hands-on) — done 2026-09-24
+
+**Code done 2026-09-24; the PO eyeball-check gate below cleared the same
+day.**
+Probed first, live (frame-by-frame, an adjacent 2-item swap and a
+multi-card shuffle past two neighbors): at the exact frame a Column → Card
+pop-in lands, the target Card's transform already reads `none` — the
+painted rect and the sortable-transform-corrected rect were never
+observably different at any moment the Card-context inside test
+(`popSession.ts`) or the overlay clamp (`dragOverlayGeometry.ts`) reads
+one, in either scenario. `dragRegions.ts::layoutRect` now always returns
+the plain painted rect (`currentTranslate`/`size`/the `isCard` parameter
+deleted); `dropAnchorFor` returns `null` for a non-row `over` instead of
+naming the container itself (L1-3); `useLiveDropSide` dropped its
+`expectedActiveRoles` parameter, so the blue line now matches
+`dropAnchorFor`'s own answer unconditionally rather than a caller-declared
+role subset (L1-13) — this was hiding the line exactly in checklist item 4
+below (a Stub leaving its Card into a column), since `KanbanCard.tsx` only
+ever declared `['card']`. The "Diagnostic-grade" framing on
+`dragChrome.tsx::useLiveDropSide`'s own header is gone with it: the
+function no longer reads `active.data.current?.role` at all, so the
+paragraph explaining why that stale read was safe no longer has anything
+to explain.
+
+Full suites green: `tsc` (root + client), eslint, prettier, both unit
+suites (317 server + 339 client — +1 over Phase 2, the new "over a bare
+container" case in `dragCollision.test.ts`), and the full Playwright suite
+(140 passed, 8 skipped, matching the baseline — one run hit 2 unrelated
+failures in `boards-layer.spec.ts`, board/workphase delete UI, nothing
+this phase touched; both passed in isolation and on a clean re-run of the
+full suite, a flake under sequential load, not a regression) against the
+already-running test servers (port 3002/5174, `test.db`,
+`ENABLE_TEST_ROUTES=true` — never `kanban.db`).
+`workflow/CLAUDE.md`'s module map is updated for `dragRegions.ts::layoutRect`,
+`dragCollision.ts::dropAnchorFor`, and the mental-model bullet's own note on
+`dropAnchorFor`/the blue line. Story 5 audit #18 gets its own status line
+(C-8, "goes away with L1-8").
+
+The suites passing was never the bar for this phase — below is the
+checklist of felt, visible behavior only a human eyeballing a real drag
+could confirm; see "Gate cleared" after the checklist.
 
 L1-8 (with C-8), L1-3, L1-13.
 
@@ -556,10 +598,19 @@ Hand the checklist over with the phase:
 Anything that looks off gets recorded here, and goes back to the PO as a
 decision before any fix.
 
+**Gate cleared 2026-09-24** — the PO ran the checklist against the real
+app and confirmed all five items fine. Phase 3, and Story 6.1, are done.
+
 ### After Phase 3
 
 - **Report to the PO** any wiki passage that names a symbol this story
-  deleted or moved (report only; the wiki is the PO's).
+  deleted or moved (report only; the wiki is the PO's). **Done 2026-09-24:**
+  two stale citations in `docs/wiki/board-drag-interaction/README.md`,
+  both naming the pre-Phase-1 module `boardDndUtils.ts` (Story 6.1 Phase 1,
+  C-3 moved it): line 285's `boardDndUtils.ts::dropAnchorFor` (now
+  `dragCollision.ts::dropAnchorFor`), and line 1003's `toRequest
+  (boardDndUtils.ts)` (now `dragRequest.ts::toRequest`). Reported only —
+  not edited here.
 - **Hand off to the four-pass audit** over Stories 6 and 6.1, with this
   ledger for the merge step only (see "The ledger, and what the audit
   gets").

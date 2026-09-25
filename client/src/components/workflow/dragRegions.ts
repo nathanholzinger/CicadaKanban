@@ -322,12 +322,12 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
   for (const s of structure) {
     if (s.key !== scope && s.parentRegionKey !== scope) continue;
     const { dom, ...facts } = s;
-    const contentRect = layoutRect(dom.element, facts.kind === 'card');
+    const contentRect = layoutRect(dom.element);
     // Also the merged-column `boundsRect` source below (F6) — the same
     // scroll-ancestor element already resolved for clipping is exactly
     // `BoardColumn.tsx`'s own outer body, the one whose height the region
     // used to equal before the Story 3 follow-up narrowed it to content.
-    const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor, false) : null;
+    const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor) : null;
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
     if (!isCardList(facts)) {
@@ -361,42 +361,23 @@ function toRect(domRect: DOMRect): Rect {
   return { top, left, right, bottom, width, height };
 }
 
-// The element's box, in the same coordinate space dnd-kit's own collision
-// math uses throughout a drag — not necessarily the *painted* box
-// `getBoundingClientRect` reports. A sortable item dnd-kit is currently
-// shifting to make room for a neighbor carries a live CSS transform, which
-// `getBoundingClientRect` faithfully includes; dnd-kit's own sortable
-// strategy does *not* re-measure while animating one (the same mismatch
-// `tests/helpers/dragGesture.ts::boxOf` corrects for), so a Card region
-// measured naively would disagree with dnd-kit's own idea of where that
-// Card collides. Columns and sub-rows never carry this transform (only list
-// *items* do), so `isCard` gates the correction rather than applying it
-// uniformly (Story 4.1 Phase 0 — `currentTranslate`'s own
-// `getComputedStyle` call is skipped entirely for a kind that can never
-// need it, not just a no-op once run).
-function layoutRect(el: HTMLElement, isCard: boolean): Rect {
-  const rect = toRect(el.getBoundingClientRect());
-  if (!isCard) return rect;
-  const { dx, dy } = currentTranslate(el);
-  if (dx === 0 && dy === 0) return rect;
-  return { top: rect.top - dy, bottom: rect.bottom - dy, left: rect.left - dx, right: rect.right - dx, ...size(rect) };
-}
-
-function size(rect: Rect): Pick<Rect, 'width' | 'height'> {
-  return { width: rect.width, height: rect.height };
-}
-
-// The translation dnd-kit's sortable strategy has currently applied to
-// `el`, read back out of the computed style (`CSS.Transform.toString`'s
-// `translate3d` resolves to a matrix/matrix3d) rather than trusted from a
-// prop.
-function currentTranslate(el: HTMLElement): { dx: number; dy: number } {
-  const transform = getComputedStyle(el).transform;
-  if (!transform || transform === 'none') return { dx: 0, dy: 0 };
-  const match = /matrix(3d)?\(([^)]+)\)/.exec(transform);
-  if (!match) return { dx: 0, dy: 0 };
-  const values = match[2].split(',').map(Number);
-  return match[1] ? { dx: values[12], dy: values[13] } : { dx: values[4], dy: values[5] };
+// The element's painted box. Used to carry a correction for a Card
+// region's own live sortable-shift transform — needed only while a Card's
+// rect was hit-tested against dnd-kit's own (transform-blind) collision
+// math. Story 6.1 Phase 3 (L1-8) retired that hit test (the zoom-in
+// candidate is the named relation, `dropAnchorFor`'s own answer, never a
+// rect test), and a Card region's rect now has exactly two remaining
+// readers — the locked-context "still inside" test (`popSession.ts`) and
+// the overlay clamp (`dragOverlayGeometry.ts`) — both about where the Card
+// is actually drawn right now, which is what a plain
+// `getBoundingClientRect` already gives. Probed live against a real
+// shuffle before deleting the correction: the target Card's transform
+// already reads `none` on the very same frame its region becomes the
+// locked context, in both an adjacent and a multi-card shuffle — the two
+// rects were never observably different at any moment this function's
+// result is read.
+function layoutRect(el: HTMLElement): Rect {
+  return toRect(el.getBoundingClientRect());
 }
 
 // Story 4: a Card region's structural identity — enough for
