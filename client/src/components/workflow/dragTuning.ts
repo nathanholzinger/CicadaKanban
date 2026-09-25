@@ -29,7 +29,7 @@ export interface DragTuning {
   cardPopInDelayMs: number;
   /**
    * Story 6, hands-on finding 3 (2026-09-24): how long the drag must hold
-   * the *same* named relation (`boardDndUtils.ts::dropAnchorFor` — which
+   * the *same* named relation (`dragCollision.ts::dropAnchorFor` — which
    * neighbor of the ghost the side highlight names, and on which side)
    * before the zoom-in cue even starts showing. A separate, earlier
    * threshold than `cardPopInDelayMs`: that one is now the *cue's* own

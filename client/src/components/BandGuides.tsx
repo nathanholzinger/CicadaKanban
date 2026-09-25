@@ -3,7 +3,8 @@
 
 import type { ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
-import { DRAG_CARD_COUNT_ATTR, DRAG_REGION_ATTR, reservationFor, type Reservation } from './workflow/dragRegions';
+import { DRAG_CARD_COUNT_ATTR, dragRegionProps } from './workflow/dragRegions';
+import { reservationFor, type Reservation } from './workflow/dragBands';
 import { CARD_LIST_GAP_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
 
 // Epic 3.5 Story 3's carve-out addendum (2026-09-16) — the column drop bands, made
@@ -96,11 +97,11 @@ interface DragCarveFrameProps {
 }
 
 // Wraps a region's own card-list content (dead-zones-and-all at Board
-// layer) — the one place §5's band geometry becomes pixels, and the one
-// place `[DRAG_REGION_ATTR]` is applied: this component's own root is
-// always "the region" `measureDragRegions` finds, in every branch below,
-// so a carve-out div is always a descendant of it rather than a sibling a
-// region-scoped lookup can't reach.
+// layer) — the one place §5's band geometry becomes pixels, and the
+// column/sub-row site of `dragRegionProps` (`dragRegions.ts`): this
+// component's own root is always "the region" `measureDragRegions` finds,
+// in every branch below, so a carve-out div is always a descendant of it
+// rather than a sibling a region-scoped lookup can't reach.
 export function DragCarveFrame({
   regionKey,
   items,
@@ -131,7 +132,7 @@ export function DragCarveFrame({
   // The droppable node ref and its padded surface chrome sit on this same
   // wrap div, applied uniformly across every branch below — including the
   // empty-zone label, which otherwise renders with none of it (#2).
-  const regionAttrs = { [DRAG_REGION_ATTR]: regionKey, [DRAG_CARD_COUNT_ATTR]: otherCardCount };
+  const regionAttrs = { ...dragRegionProps(regionKey), [DRAG_CARD_COUNT_ATTR]: otherCardCount };
   const wrap = (content: ReactNode, extraClassName = '') => (
     <div
       {...regionAttrs}

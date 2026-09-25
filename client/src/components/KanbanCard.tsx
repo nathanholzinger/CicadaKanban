@@ -3,165 +3,40 @@
 // client/src/components/workflow/CLAUDE.md. Story 6 Phase C (reopening
 // Story 5 decision 6): while locked at a Card or Descendants layer, the
 // DragOverlay copy is a Stub row instead (`overlayForm`/`overlayWidthPx`,
-// from `popSession.ts::overlayFormFor` via `useBoardDnd.ts`) — rendered by
+// from `placement.ts::overlayFormFor` via `useBoardDnd.ts`) — rendered by
 // *this same component instance*, not a separate one `BoardView.tsx`
 // swaps in: dnd-kit measures the DragOverlay's child once, on its own
 // mount, and never re-attaches that measurement if a *different*
 // component type takes its place (its ResizeObserver is left watching a
 // node that's already been removed) — so the Stub form has to be this
 // component changing its own rendered shape in place, the same way the
-// shortCard/full-card switch below already always has been.
+// shortCard/full-card switch below already always has been. The Stub
+// tier's own rows (StubBody, AttachGhostRow, AttachedChildRow) live in
+// StubRows.tsx, and the drag-time chrome this and they share
+// (useDropTargetProps, DropSideIndicator, ZoomCue) in dragChrome.tsx
+// (Story 6.1 Phase 1, C-5).
 
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useDndContext } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import type { Item, ItemType } from '../types';
-import { PILL_DEPTH, depthLabel, typePillClass, typePillStyle } from './item-detail/pillUtils';
+import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
-import { dropAnchorFor, itemRowData, travelingRowsFor, type ItemRowRole } from './workflow/boardDndUtils';
-import { DRAG_REGION_ATTR, cardRegionKey, descendantsRegionKey } from './workflow/dragRegions';
+import { itemRowData } from './workflow/dragCollision';
+import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { DESCENDANTS_INDENT_PX, SHORT_CARD_HEIGHT_PX } from './cardMetrics';
-import type { OverlayForm } from './workflow/popSession';
+import type { OverlayForm } from './workflow/placement';
 import {
   useDragSession,
-  useDropTargetState,
   useIsAttachTarget,
-  useIsPending,
   useZoomCandidatePhase,
   type DescendantsProjection,
-  type DropTargetView,
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-
-// Diagnostic-grade live drop-side indicator (Epic 3.2 addendum — not the
-// full polished Epic 3.5 hover cue, just enough to see what handleDragEnd
-// is about to compute). Reads dnd-kit's live active/over state directly via
-// useDndContext — no prop drilling through BoardColumn/BoardView — and
-// calls the exact same dropAnchorFor function useBoardDnd's handleDragEnd
-// uses, so the line shown here is guaranteed to match what gets sent. In a
-// column (Option A + lean, 2026-09-24) the anchor is a neighbor of the ghost,
-// not necessarily the card dnd-kit says is `over`, so every row asks
-// whether it's the one named.
-// Diagnostic-only, so reading `active.data.current?.role` here is fine even
-// though it's never load-bearing for a real collision/write decision
-// (decision 4) — a stale read during a mid-drag remount briefly mis-draws
-// this line at worst, never anything written.
-function useLiveDropSide(itemId: string, expectedActiveRoles: readonly ItemRowRole[]): 'before' | 'after' | null {
-  const { active, over } = useDndContext();
-  const session = useDragSession();
-  if (!active || !over || active.id === itemId) return null;
-  if (active.data.current?.type !== 'item') return null;
-  if (!expectedActiveRoles.includes(active.data.current?.role)) return null;
-  const anchor = dropAnchorFor(active, over, travelingRowsFor(session));
-  return anchor?.anchorId === itemId ? anchor.side : null;
-}
-
-// Epic 3.5 Story 2: provisional drag-target overlays (docs/wiki/board-drag-
-// interaction §4). The *classification* is settled and exposed as
-// `data-drop-state` for tests; the look — palette, weight, animation — is
-// deliberately rough until Story 8 tunes it against real gestures. Green:
-// a Free descendant of the carried item ("these are yours"). Dimmed: a real
-// target this item can't use (depth-capped). Valid and Inert draw nothing.
-// The color and the dim level are CSS custom properties BoardView sets from
-// the dev/test panel (Story 3).
-const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';
-const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
-// Epic 3.5 Story 3: a write is in flight for this item — it's drawn at the
-// slot it was dropped in, and its position is the server's to confirm
-// (wiki §10). Test surface: `data-pending`.
-const PENDING = 'animate-pulse';
-
-function dropTargetClass(view: DropTargetView | null): string {
-  if (!view) return '';
-  if (view.isFreeDescendant) return OVERLAY_FREE_DESCENDANT;
-  if (view.state === 'depth-capped') return OVERLAY_DEPTH_CAPPED;
-  return '';
-}
-
-const DROP_INDICATOR_BEFORE = 'pointer-events-none absolute -top-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
-const DROP_INDICATOR_AFTER =
-  'pointer-events-none absolute -bottom-1 right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
-
-// Story 6 Phase D, decision 7 — the provisional invalid-tab-state cue
-// (§7.2): a dashed red outline on the active row's own preview while its
-// current depth choice would exceed the cap. Story 8 restyles.
-const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500/70';
-
-// The drag-time chrome a Card and a Stub share (audit epic-3-5-story-2
-// #13): the live side indicator, the drag-target attributes/overlay, the
-// pending marker. The DragOverlay copy is the carried item itself — never a
-// target, never pending — so it gets none of it.
-function useDropTargetProps(
-  itemId: string,
-  activeRoles: readonly ItemRowRole[],
-  isOverlay = false,
-  overlayForm: OverlayForm = 'short-card',
-) {
-  const dropSide = useLiveDropSide(itemId, activeRoles);
-  const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
-  const pending = useIsPending(isOverlay ? '' : itemId);
-  return {
-    dropSide,
-    dataAttrs: {
-      'data-item-id': isOverlay ? undefined : itemId,
-      // The carried copy, for the E2E helper's "drag finished" wait — it
-      // outlives the drag by dnd-kit's drop animation.
-      'data-drag-overlay': isOverlay ? 'true' : undefined,
-      // Story 6 Phase C, for Story 10's E2E — which form this same carried
-      // copy is drawing as right now (popSession.ts::overlayFormFor).
-      'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
-      'data-drop-state': dropTarget?.state,
-      'data-pending': pending ? 'true' : undefined,
-    },
-    className: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''}`,
-  };
-}
-
-function DropSideIndicator({ side }: { side: 'before' | 'after' | null }) {
-  if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} />;
-  if (side === 'after') return <div className={DROP_INDICATOR_AFTER} />;
-  return null;
-}
-
-// Story 6, hands-on finding 3 (2026-09-24): the zoom-in cue — shown only
-// once the dwell has elapsed (`useZoomCandidatePhase` returns `'cue'`; the
-// dwell itself shows nothing new beyond the blue line, wiki §6). Absolutely
-// positioned and `pointer-events-none`, the same way the locked-layer
-// outline and the blue line already are, so it can never feed back into
-// layout or collision. The fill bar's `animation-duration` is the cue's
-// own clock (`cardPopInDelayMs`, read live so the dev panel's tuning takes
-// effect without a rebuild) — a static `@keyframes` (index.css) driven by
-// inline style, since a Tailwind utility class can't parameterize a
-// runtime duration. No explicit `key`/reset is needed: this element only
-// exists while `phase === 'cue'`, so a reset (any change to the named
-// relation restarts at `'dwell'`, per `popSession.ts::namedCardCandidate`)
-// unmounts it and the *next* cue mounts a fresh instance, which is what
-// restarts the CSS animation from empty.
-const ZOOM_CUE_OUTLINE = 'pointer-events-none absolute inset-0 rounded-lg border-2 border-dashed border-blue-500/70';
-const ZOOM_CUE_TRACK =
-  'pointer-events-none absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-lg bg-blue-500/20';
-
-function ZoomCue({ cueMs }: { cueMs: number }) {
-  return (
-    <>
-      <div className={ZOOM_CUE_OUTLINE} />
-      <div className={ZOOM_CUE_TRACK}>
-        <div
-          className="h-full bg-blue-500"
-          style={{
-            animationName: 'cue-fill',
-            animationDuration: `${cueMs}ms`,
-            animationTimingFunction: 'linear',
-            animationFillMode: 'forwards',
-          }}
-        />
-      </div>
-    </>
-  );
-}
+import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useDropTargetProps } from './dragChrome';
+import { AttachGhostRow, AttachedChildRow, StubBody } from './StubRows';
 
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
@@ -175,36 +50,19 @@ const OVERLAY_STUB_CLASS =
 
 // Story 6 Phase D hands-on (2026-09-24), the simple depth cue: at the
 // Descendants layer the carried Stub's visible box indents to the projected
-// depth, on the same geometry as a ghost row (`AttachGhostRow`), so its
-// pill lines up with its would-be siblings. Only this inner box moves —
-// the overlay's own root keeps its width and position, so nothing dnd-kit
-// measures changes (the same constraint Story 8's zoom-in morph carries).
-// The ghost row that also shows the depth sits under this copy, hidden.
-// Over the cap, the copy carries the invalid outline for the same reason.
-// Provisional; Story 8 tunes it (roadmap).
+// depth, on the same geometry as a ghost row (`StubRows.tsx::AttachGhostRow`),
+// so its pill lines up with its would-be siblings. Only this inner box
+// moves — the overlay's own root keeps its width and position, so nothing
+// dnd-kit measures changes (the same constraint Story 8's zoom-in morph
+// carries). The ghost row that also shows the depth sits under this copy,
+// hidden. Over the cap, the copy carries the invalid outline for the same
+// reason. Provisional; Story 8 tunes it (roadmap).
 function overlayStubIndent(projection: DescendantsProjection | null): {
   style: { marginLeft: number };
   invalid: boolean;
 } {
   if (!projection) return { style: { marginLeft: 0 }, invalid: false };
   return { style: { marginLeft: (projection.depth + 1) * DESCENDANTS_INDENT_PX }, invalid: !projection.valid };
-}
-
-// DESCENDANTS_INDENT_PX now lives in cardMetrics.ts (Story 6 Phase D needs
-// it too, for the projection's own horizontal-delta-to-depth math). The
-// border-l guide lines are the one visible loss from the old recursive
-// nesting (decision 1's own note) — a flat row has nothing to hang one
-// from without drawing its own, left for the Phase B hands-on to ask for
-// if it's missed.
-
-// A card's type pill only renders when `item.type` resolves to a known
-// ItemType — an orphaned/unknown type reference hides the pill rather than
-// showing a raw id (unlike the item-detail sections, which fall back to the
-// raw id as label text). Still used directly by the Stub-tier rows below
-// (AttachGhostRow, AttachedChildRow) — TypePill (item-detail/TypePill.tsx)
-// only replaces the Card-tier's own two copies (audit epic-3-5-story-4 #10).
-function resolveType(typeId: string | null, itemTypes: ItemType[]): ItemType | null {
-  return typeId ? (itemTypes.find(t => t.id === typeId) ?? null) : null;
 }
 
 // The depth + type pills row, identical at both Card-tier renders — ShortCard
@@ -251,7 +109,7 @@ interface KanbanCardProps {
   getAttachedChildren?: (parentId: string) => Item[];
   defaultExpanded?: boolean;
   isOverlay?: boolean;
-  /** isOverlay only — which drag copy to draw (popSession.ts::overlayFormFor). Ignored (shortCard) when isOverlay is false. */
+  /** isOverlay only — which drag copy to draw (placement.ts::overlayFormFor). Ignored (shortCard) when isOverlay is false. */
   overlayForm?: OverlayForm;
   /** isOverlay + overlayForm 'stub' only — a row's width in the context Card's section (useBoardDnd.ts::overlayWidthFor). */
   overlayWidthPx?: number | null;
@@ -388,7 +246,7 @@ export default function KanbanCard({
       // Story 4: a Card is a drag region too (wiki §1, §1.1) — a zoom-in
       // target only from the column/sub-row that contains it, never on the
       // DragOverlay's own floating copy.
-      {...(isOverlay ? {} : { [DRAG_REGION_ATTR]: cardRegionKey(item.id) })}
+      {...(isOverlay ? {} : dragRegionProps(cardRegionKey(item.id)))}
       onClick={() => !isDragging && onCardClick?.(item.id)}
       // isAttachTarget doubles as "this Card is the pop machine's current
       // context" (wiki §1.1) — the Card half of the active-context outline
@@ -400,7 +258,7 @@ export default function KanbanCard({
           : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${dropTargetClassName} ${isAttachTarget ? ACTIVE_CONTEXT_OUTLINE : ''}`
       }
     >
-      {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
+      {/* Diagnostic-grade live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
       {zoomCandidatePhase === 'cue' && <ZoomCue cueMs={dragTuning.cardPopInDelayMs} />}
 
@@ -462,7 +320,7 @@ export default function KanbanCard({
               also exactly when a Stub's drag could ever have started here
               (a childless Card's section is unreachable, §1.1). */}
           {rows.length > 0 && getAttachedChildren && (
-            <div className="mt-2 space-y-1" {...{ [DRAG_REGION_ATTR]: descendantsRegionKey(item.id) }}>
+            <div className="mt-2 space-y-1" {...dragRegionProps(descendantsRegionKey(item.id))}>
               <SortableContext items={rows.map(r => r.item.id)} strategy={verticalListSortingStrategy}>
                 {rows.map(({ item: child, depth }) => {
                   const isActiveRow = child.id === cardDragSession?.activeItem.id;
@@ -497,123 +355,6 @@ export default function KanbanCard({
           )}
         </>
       )}
-    </div>
-  );
-}
-
-// Story 6 Phase C: the type pill + one-line title every Stub-tier render
-// shares — AttachGhostRow and AttachedChildRow below, and this same
-// component's own overlay-Stub branch above (`overlayIsStub`). Extracted
-// so the three can't drift apart from each other; each still owns its own
-// outer box (dashed ghost, sortable row, carried shadow), since that's
-// the one thing that's genuinely different between them.
-function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
-  const resolvedType = resolveType(item.type, itemTypes);
-  return (
-    <>
-      {resolvedType && (
-        <span className={typePillClass(item.type, itemTypes)} style={typePillStyle(item.type, itemTypes)}>
-          {resolvedType.name}
-        </span>
-      )}
-      <span className="truncate text-xs text-zinc-300">{item.title}</span>
-    </>
-  );
-}
-
-// Story 4, `depth` added Story 6 Phase B: a purely visual stand-in for the
-// active drag's own item once it's previewed attaching here — same slot,
-// same small pill treatment as a real AttachedChildRow, but no
-// `useSortable`/`useDroppable` registration of its own (see the call
-// site's comment for why that matters — decision 4's uniform `role` field
-// narrowed the original hazard but never removed the deeper one: dnd-kit
-// doesn't support two simultaneous sortable registrations for one id, and
-// this row's real registration is still wherever it's actually being
-// dragged from). Rendering `AttachedChildRow` itself for this row was the
-// more obvious choice; this is the one deliberate departure from "reuse
-// the existing sibling-reorder row" and exists only to sidestep that risk.
-function AttachGhostRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
-  return (
-    <div
-      className="flex items-center gap-1.5 rounded border border-dashed border-blue-500/50 bg-blue-500/10 px-1.5 py-1"
-      style={{ marginLeft: (depth + 1) * DESCENDANTS_INDENT_PX }}
-    >
-      <StubBody item={item} itemTypes={itemTypes} />
-    </div>
-  );
-}
-
-interface AttachedChildRowProps {
-  item: Item;
-  itemTypes: ItemType[];
-  depth: number;
-  onCardClick?: (id: string) => void;
-  /**
-   * Story 6 Phase D, decision 7 (provisional look, Story 8 restyles): true
-   * only for the active drag's own row, and only while its current tab
-   * state (§7.2) would exceed the depth cap — a dashed red outline plus
-   * `data-placement-valid="false"`, the one exception to §3.2 ("a state
-   * that would exceed the cap is still reachable... a release in it
-   * commits nothing").
-   */
-  invalid?: boolean;
-}
-
-// Story 6 Phase B: one row in the flat section, indented by `depth` — no
-// longer recursive (its own grandchildren used to nest here via a second
-// `SortableContext`; the parent's single flat list now carries every depth,
-// `KanbanCard.tsx`'s own `rows` already having walked the whole subtree).
-function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid = false }: AttachedChildRowProps) {
-  // Epic 3.2 Part 3, extended by Story 5: draggable among siblings under
-  // the same parent (the within-action until Story 6 Phase D's real
-  // gap+depth rule) — one shared `SortableContext` spanning the whole
-  // section now (decision 1), reached through the same pop machine as a
-  // Card (Step 1), not a separate board-level path. Decision 4: `type`
-  // stays `'item'`, the same as a Card row, so this id's registration
-  // never *looks* like a different drag type to dnd-kit once it pops out
-  // and remounts as one. `parentId` is this row's own real parent — no
-  // longer what scopes collisions (Phase B widened that to the whole
-  // section's rect, `resolveBoardCollisions`' `descendantsSectionRect`);
-  // kept for the same diagnostic/future-facing reasons every row's data
-  // carries it.
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    data: itemRowData('stub', item.parentId),
-  });
-  // Stubs are classified individually during a Card drag (wiki §4, DRAG-2.8)
-  // — same attributes and overlay as a Card, so a test reads them alike.
-  // Both active roles: a sibling Stub reorder, or a foreign Card popped
-  // into this row's own parent, anchoring beside it.
-  const { dropSide, dataAttrs, className: dropTargetClassName } = useDropTargetProps(item.id, ['card', 'stub']);
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    paddingLeft: (depth + 1) * DESCENDANTS_INDENT_PX,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...dataAttrs}
-      data-placement-valid={invalid ? 'false' : undefined}
-      className={`relative rounded ${isDragging ? 'opacity-30' : ''} ${invalid ? INVALID_PLACEMENT_CLASS : ''} ${dropTargetClassName}`}
-    >
-      {/* Diagnostic-grade live drop-side indicator — see useLiveDropSide */}
-      <DropSideIndicator side={dropSide} />
-
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        onClick={e => {
-          e.stopPropagation();
-          if (!isDragging) onCardClick?.(item.id);
-        }}
-        className="flex w-full cursor-grab items-center gap-1.5 rounded px-1.5 py-1 text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing"
-      >
-        <StubBody item={item} itemTypes={itemTypes} />
-      </button>
     </div>
   );
 }

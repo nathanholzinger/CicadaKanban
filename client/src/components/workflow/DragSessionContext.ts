@@ -31,7 +31,7 @@ export interface DescendantsProjection {
 // (Story 2), and the pop machine's state (Story 3). Provided by BoardView
 // for the life of a drag and null otherwise; read by Cards, Stubs and
 // columns through the hooks below — a context rather than props for the
-// same reason KanbanCard's useLiveDropSide reads useDndContext directly: it
+// same reason dragChrome.tsx's useLiveDropSide reads useDndContext directly: it
 // would otherwise drill through BoardColumn / WorkphaseCardList /
 // UnsortedBucket for values only the leaves need.
 export interface DragSession {

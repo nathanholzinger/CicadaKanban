@@ -9,7 +9,7 @@ import CardList, { DROP_HIGHLIGHT_CLASS } from './CardList';
 import ConfirmDeleteButton from './ConfirmDeleteButton';
 import { COUNT_BADGE, AttentionBadge } from './boardBadges';
 import WorkphaseCardList from './WorkphaseCardList';
-import { columnData } from './workflow/boardDndUtils';
+import { columnData } from './workflow/dragCollision';
 import { columnRegionKey, subrowContainerId, subrowRegionKey } from './workflow/dragRegions';
 import { useDragSession, useIsCardBeingDragged } from './workflow/DragSessionContext';
 import InlineItemForm from './InlineItemForm';

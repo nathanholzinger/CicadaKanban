@@ -1,5 +1,6 @@
 // The drag gesture's clocks, DOM measurement, and dnd-kit plumbing — composes
-// popSession.ts, dragRegions.ts, boardDndUtils.ts, dragClassification.ts, itemListOps.ts.
+// popSession.ts, placement.ts, dragRegions.ts, dragBands.ts, dragCollision.ts,
+// dragRequest.ts, dragClassification.ts, itemListOps.ts.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
@@ -22,12 +23,11 @@ import { isStub } from '../../lib/isStub';
 import {
   resolveBoardCollisions,
   dropAnchorFor,
-  sendItemMove,
-  toRequest,
   travelingRowsFor,
   type CollisionSession,
   type DropAnchor,
-} from './boardDndUtils';
+} from './dragCollision';
+import { sendItemMove, toRequest } from './dragRequest';
 import { classifyDragTargets, isWithinDepthCap, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
@@ -41,20 +41,11 @@ import {
   type DragRegion,
   type DragStructure,
   type Point,
-  type ShortCardMetrics,
 } from './dragRegions';
+import type { ShortCardMetrics } from './dragBands';
 import type { DragTuning } from './dragTuning';
-import {
-  advancePopSession,
-  overlayFormFor,
-  placementFor,
-  placementRegion,
-  popDueAt,
-  startPopSession,
-  type OverlayForm,
-  type PlacementOver,
-  type PopSession,
-} from './popSession';
+import { advancePopSession, popDueAt, startPopSession, type PopSession } from './popSession';
+import { overlayFormFor, placementFor, placementRegion, type OverlayForm, type PlacementOver } from './placement';
 import { descendantsChildrenOf, type Placement, type Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DescendantsProjection, DragSession } from './DragSessionContext';
@@ -117,9 +108,9 @@ function overlayWidthFor(region: DragRegion | undefined): number | null {
 
 // Drag-and-drop for the board's DndContext — the gesture layer of
 // docs/wiki/board-drag-interaction. The rules live in pure modules
-// (popSession.ts, dragRegions.ts, boardDndUtils.ts, itemListOps.ts,
-// lib/hierarchyPlacement.ts); this hook owns the clocks, the DOM
-// measurements, and the dnd-kit plumbing:
+// (popSession.ts, placement.ts, dragRegions.ts, dragBands.ts,
+// dragCollision.ts, dragRequest.ts, itemListOps.ts, lib/hierarchyPlacement.ts);
+// this hook owns the clocks, the DOM measurements, and the dnd-kit plumbing:
 //
 //   - the pointer is tracked with a window listener for the life of any
 //     item drag (Card or Stub alike, Story 5), and every sample runs the
@@ -190,8 +181,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // needs an explicit reset elsewhere.
   const pickupFormRef = useRef<OverlayForm>('short-card');
   // Story 6, hands-on finding 3 (2026-09-24): the live named relation
-  // (`boardDndUtils.ts::dropAnchorFor`'s own answer) — the same one the
-  // blue line already draws (`KanbanCard.tsx::useLiveDropSide`), computed
+  // (`dragCollision.ts::dropAnchorFor`'s own answer) — the same one the
+  // blue line already draws (`dragChrome.tsx::useLiveDropSide`), computed
   // here from dnd-kit's own `onDragMove` (`handleDragMove`, below) since
   // this hook isn't rendered under `DndContext` and so can't read
   // `useDndContext()` the way a Card row does. Fed into `advancePopSession`
@@ -931,7 +922,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // Story 6 Phase D — release at the Descendants layer: §7's full gap +
     // depth rule, resolved fresh here against the session's own live
     // projection — not the static preview
-    // `popSession.ts::placementFor`'s own Descendants branch still shows
+    // `placement.ts::placementFor`'s own Descendants branch still shows
     // mid-drag (decision 4's own "the projection carries the visual" — the
     // ghost's *list position* stayed Story 5's throughout the hold; only
     // the *release* changes). `releaseListFor`/`placementOver` below are

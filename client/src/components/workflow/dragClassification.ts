@@ -6,8 +6,9 @@ import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';
 
 // Epic 3.5 Story 2 — what every item on the board *is* to the item being
-// carried (docs/wiki/board-drag-interaction §4). Pure, like boardDndUtils:
-// no dnd-kit runtime, so it's unit-testable against plain Item[] fixtures.
+// carried (docs/wiki/board-drag-interaction §4). Pure, like dragCollision.ts/
+// dragRequest.ts: no dnd-kit runtime, so it's unit-testable against plain
+// Item[] fixtures.
 //
 // Computed once at drag start and never again for the gesture — the item
 // being carried doesn't change mid-drag, so neither does what any target is

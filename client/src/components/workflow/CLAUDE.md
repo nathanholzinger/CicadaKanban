@@ -20,7 +20,7 @@ this directory, then go to the wiki for the "why."
   slot (the dragged row's own slot is a collision candidate too, as in stock dnd-kit),
   and the dragged copy, above or below the ghost's middle, picks which neighbor names
   it: "after" the row above, "before" the row below
-  (`boardDndUtils.ts::dropAnchorFor`, the one function the blue line and the release
+  (`dragCollision.ts::dropAnchorFor`, the one function the blue line and the release
   both read, generalized to Stub rows in Story 6 Phase D). Card: `origin` itself ("set
   back down") for the drag's own containing Card, else append as the last child (an
   item from outside, or a Story 5 reparent — full anchor+side placement _among_ a
@@ -47,7 +47,7 @@ this directory, then go to the wiki for the "why."
   instead — never `role`/`parentId` off the _active_ row, only off a _droppable_ one.
 - **The ghost is a `Placement`, never a position** (`itemListOps.ts`). Nothing in
   `items` mutates during a drag. On release the placement becomes the pending marker;
-  `boardDndUtils.ts::toRequest` turns it into the actual API request, and `isIdentity`
+  `dragRequest.ts::toRequest` turns it into the actual API request, and `isIdentity`
   recognizes a no-op (covered-set member dropped back on its own workphase) so nothing
   is sent.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
@@ -58,18 +58,28 @@ this directory, then go to the wiki for the "why."
 ## Where each concern lives (pure, unit-tested modules)
 
 - `popSession.ts` — the pop state machine (locked / popped-out), two states per layer.
-  `placementRegion(session, regions)` is the one answer to "which region is the
-  placement against" — `placementFor` and the hook's release both read it.
-- `dragRegions.ts` — regions (Board/Column/sub-row/Card/Descendants) and their pixel
-  drop bands. Structural resolution (`resolveDragStructure`) runs once per drag; live
-  rects (`measureRegions`) run per sample. `isCardList(region)` is the one kind
-  predicate: a column or sub-row — a flat list of Free items with bands and a
-  workphase — vs. anything else. Never write `kind !== 'card'` to mean it. A
-  `descendants` region resolves for the drag's own `originCardId` unconditionally, and
-  for any other Valid Card too (Story 6 Phase D) — the same `isValidCard` gate a
-  `card:` region already uses, which is also what keeps an invalid target (cycle-
-  forming, depth-capped) from ever becoming a zoom-in candidate, no separate check
-  needed. `childRegionAt` finds it from a locked Card's own context.
+  No placement rules of its own (Story 6.1 Phase 1, C-2) — `placement.ts` reads its
+  `PopSession` but never writes it.
+- `placement.ts` — the machine's placement rules: `placementRegion(session, regions)`
+  is the one answer to "which region is the placement against" — `placementFor` and
+  the hook's release both read it. `overlayFormFor` reads the same result to decide
+  which form the carried copy draws as (Stub vs. shortCard).
+- `dragRegions.ts` — regions (Board/Column/sub-row/Card/Descendants). Structural
+  resolution (`resolveDragStructure`) runs once per drag; live rects (`measureRegions`)
+  run per sample. `isCardList(region)` is the one kind predicate: a column or sub-row
+  — a flat list of Free items with bands and a workphase — vs. anything else. Never
+  write `kind !== 'card'` to mean it. A `descendants` region resolves for the drag's
+  own `originCardId` unconditionally, and for any other Valid Card too (Story 6 Phase
+  D) — the same `isValidCard` gate a `card:` region already uses, which is also what
+  keeps an invalid target (cycle-forming, depth-capped) from ever becoming a zoom-in
+  candidate, no separate check needed. `childRegionAt` finds it from a locked Card's
+  own context. `dragRegionProps(key)` is the one "register this element as a drag
+  region" idiom, spread onto a region's own root element.
+- `dragBands.ts` — the pixel drop-band math (§5), split out of `dragRegions.ts` (Story
+  6.1 Phase 1, C-4): `reservationFor`/`bandBoundaries`/`bandFor` turn a region's own
+  `isTerminal`/`cardCount` into boundaries; `distanceOutside` is the pop threshold's
+  optional distance term; `clipToVisible` clips a region's rect to a scrolling
+  ancestor's visible box.
 - `lib/hierarchyPlacement.ts` — the Descendants layer's own placement rule (§7),
   table-generic and shared with the project sidebar: `flattenHierarchy` (a Card's
   descendants as `Row[]`, the dragged subtree excluded), `gapIndexFor`/
@@ -83,9 +93,13 @@ this directory, then go to the wiki for the "why."
   exactly like a Card (Story 5) — no interim exclusion.
 - `itemListOps.ts` — list selectors, ordinal placements, the reindex fold-in, the
   inversion tripwire.
-- `boardDndUtils.ts` — collision detection, anchor naming, and request-shape helpers:
-  `resolveBoardCollisions`, `dropAnchorFor`/`travelingRowsFor` (the anchor + lean),
-  row-data typing (`itemRowData`/`isCardRow`/`isStubRow`), `toRequest`, `isIdentity`.
+- `dragCollision.ts` — collision detection and anchor naming, split out of
+  `boardDndUtils.ts` (Story 6.1 Phase 1, C-3): `resolveBoardCollisions`,
+  `dropAnchorFor`/`travelingRowsFor` (the anchor + lean), row-data typing
+  (`itemRowData`/`isCardRow`/`isStubRow`).
+- `dragRequest.ts` — the request-shape half of the same split: `toRequest` (placement
+  → API request), `isIdentity` (recognizes a no-op), `sendItemMove` (the one "send,
+  fold in, or resync" block).
 - `dragTuning.ts` — every threshold/band/overlay value, tunable at runtime via
   `DragTuningPanel.tsx` (toolbar → "Drag tuning"), persisted in `localStorage` under
   `kanban_drag_tuning`. `descendantsPopInDelayMs` (Story 6 Phase D) is the fourth
@@ -95,7 +109,7 @@ this directory, then go to the wiki for the "why."
   the zoom-in transition, refreshed every sample from the named neighbor + pointer x,
   cleared on pop-out) and its own release path (`releaseDescendants`) — the one
   mid-drag/release asymmetry in the file: the _ghost_ still comes from
-  `popSession.ts::placementFor`'s Descendants branch (a static preview — `origin`/
+  `placement.ts::placementFor`'s Descendants branch (a static preview — `origin`/
   `priorPlacement` for the same section, an append for a foreign item — since `over`
   never resolves there any more), the _release_ from `resolvePlacement` against the
   final projection.

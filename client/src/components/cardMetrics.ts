@@ -29,10 +29,10 @@ export const CARD_LIST_GAP_CLASS = 'gap-2';
 // having reached a Descendants zoom-in).
 export const CARD_CONTENT_INSET_PX = 13;
 // A Stub row's rendered height (Story 6 Phase C: `useBoardDnd.ts`'s overlay
-// re-anchor; Phase D: `boardDndUtils.ts::dropAnchorFor`'s own ghost-height
+// re-anchor; Phase D: `dragCollision.ts::dropAnchorFor`'s own ghost-height
 // choice for a Stub row's slot, the Descendants-layer counterpart to
 // SHORT_CARD_HEIGHT_PX above) — one line, `py-1` (4px top/bottom) inside
-// `KanbanCard.tsx`'s `OVERLAY_STUB_CLASS`/`AttachedChildRow` — a fixed fact
+// `KanbanCard.tsx`'s `OVERLAY_STUB_CLASS`/`StubRows.tsx`'s `AttachedChildRow` — a fixed fact
 // about the component, not a value read off any measurement.
 export const STUB_ROW_HEIGHT_PX = 26;
 // Epic 3.5 Story 6 Phase B (decision 1) — the flat descendants section's own
@@ -41,5 +41,6 @@ export const STUB_ROW_HEIGHT_PX = 26;
 // adds another 12px. Shared with Phase D's projection math
 // (`useBoardDnd.ts`'s `deltaX / DESCENDANTS_INDENT_PX`, decision 3's
 // horizontal-offset-picks-a-depth rule) — one number, read by the render
-// side (`KanbanCard.tsx`) and the gesture side alike.
+// side (`StubRows.tsx`'s rows, `KanbanCard.tsx`'s carried Stub) and the
+// gesture side alike.
 export const DESCENDANTS_INDENT_PX = 12;

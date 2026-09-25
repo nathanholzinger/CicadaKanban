@@ -24,7 +24,7 @@ import {
   siblingIdsFromAnchor,
 } from './sidebar/projectTreeUtils';
 import type { Projection } from './sidebar/projectTreeUtils';
-import { resolveDropSide } from './workflow/boardDndUtils';
+import { resolveDropSide } from './workflow/dragCollision';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 import { PlusIcon, ICON_BUTTON_SM } from './icons';
 

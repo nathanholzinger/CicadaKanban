@@ -55,7 +55,7 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
 // Story 4.1 Phase 3: `scopeWorkphaseIds` (widened the anchor/append scope to
 // a merged column's covered set for a same-visual-group reorder with no
 // anchor) is gone from this type — every positional reorder now anchors
-// (boardDndUtils.ts::toRequest), so nothing client-side ever needed the
+// (dragRequest.ts::toRequest), so nothing client-side ever needed the
 // wider scope on its own. The server keeps accepting it on the wire; no
 // migration there.
 export interface MoveItemInput {

@@ -104,9 +104,9 @@ export function stubOrigin(parentId: string): Placement {
 
 // A merged column covering the given workphases — override any field,
 // including `subRows` (for an expanded column, or per-row facts like
-// `isTerminal`), for a differently-shaped board fixture. Shared by
-// boardDndUtils.test.ts and dragRegions.test.ts, which each built this
-// independently (audit epic-3-5-story-3-reconciled #8).
+// `isTerminal`), for a differently-shaped board fixture. Used by
+// dragRegions.test.ts's own structural-resolution cases (audit
+// epic-3-5-story-3-reconciled #8).
 export function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
     id,

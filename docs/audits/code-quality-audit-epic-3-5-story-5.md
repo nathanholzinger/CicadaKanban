@@ -566,6 +566,12 @@ partition the kinds the same way today; a table would couple them. Keep
 #8 folded so a fifth kind is three edits, not five; `:321` should read
 `!isCardList(facts)`.
 
+**Status:** Fixed (2026-09-24) — Story 6.1 (C-9, landed with Phase 1's
+commit): `isCardList` now takes anything with a `kind`, so
+`measureRegions` reads `!isCardList(facts)` on a structure entry that has
+no live rects yet. `:321` was the finding's only fix; the rest of it asked
+for no change.
+
 ### 24. Story 4 #22 carried forward — column facts now derived in four places `[Duplication & Abstraction]`
 **Files:** `client/src/components/workflow/useBoardDnd.ts:398–412` (`regionItems` + `siblingItems`), `client/src/components/BoardColumn.tsx:61–69`, `client/src/components/workflow/dragRegions.ts:494–503`, `client/src/components/KanbanCard.tsx:220` (the section's own `getAttachedChildren(item.id)`)
 

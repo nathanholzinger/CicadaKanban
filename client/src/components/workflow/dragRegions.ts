@@ -1,5 +1,6 @@
-// Drag regions (Board/Column/sub-row/Card/Descendants) and their pixel drop bands —
-// resolveDragStructure (structural, once per drag) + measureRegions (live rects, per sample).
+// Drag regions (Board/Column/sub-row/Card/Descendants) — resolveDragStructure
+// (structural, once per drag) + measureRegions (live rects, per sample). The
+// pixel drop-band math (§5) is dragBands.ts (Story 6.1 Phase 1, C-4).
 
 // Epic 3.5 Story 3 — the *regions* a Card drag can be in (docs/wiki/board-
 // drag-interaction §1, §5): a merged column's body, or one sub-row of an
@@ -36,6 +37,8 @@
 // the Card's own region, so popping out lands there (§8) the same way any
 // nested region's does.
 
+import { clipToVisible } from './dragBands';
+
 export interface Rect {
   top: number;
   left: number;
@@ -49,8 +52,6 @@ export interface Point {
   x: number;
   y: number;
 }
-
-export type Band = 'top' | 'middle' | 'bottom';
 
 export type RegionKind = 'column' | 'subrow' | 'card' | 'descendants';
 
@@ -157,8 +158,12 @@ export type DragRegion = CardListRegion | CardRegion | DescendantsRegion;
 // Named by the property, so a site that needs a *different* property (a
 // sortable container for `over`, say — which Story 6's Descendants region
 // will also have) has to say so rather than ride a `kind !== 'card'` that
-// silently includes every kind added later.
-export function isCardList(region: DragRegion): region is CardListRegion {
+// silently includes every kind added later. Typed by `kind` alone, so a
+// structure entry that has no live rects yet (`measureRegions`) can ask it
+// too (Story 6.1, C-9).
+export function isCardList<T extends Pick<DragRegion, 'kind'>>(
+  region: T,
+): region is Extract<T, { kind: CardListRegion['kind'] }> {
   return region.kind === 'column' || region.kind === 'subrow';
 }
 
@@ -168,6 +173,16 @@ export const DRAG_REGION_ATTR = 'data-drag-region';
 // — the one place that count is already known, rather than re-deriving it
 // by walking the DOM for card-shaped children.
 export const DRAG_CARD_COUNT_ATTR = 'data-drag-card-count';
+
+// The one spelling of "register this element as a drag region," replacing
+// three independent `{[DRAG_REGION_ATTR]: key}` literals (Story 6.1 Phase
+// 1, C-10 — audit epic-3-5-story-5 #25's registration idiom, ×3: KanbanCard.tsx's
+// Card and Descendants regions, BandGuides.tsx's column/sub-row one).
+// BandGuides.tsx still spreads DRAG_CARD_COUNT_ATTR alongside this — that
+// attribute has only ever had the one site.
+export function dragRegionProps(key: string): Record<string, string> {
+  return { [DRAG_REGION_ATTR]: key };
+}
 
 export function columnRegionKey(columnId: string): string {
   return `column:${columnId}`;
@@ -315,12 +330,7 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
     const scrollAncestorRect = dom.scrollAncestor ? layoutRect(dom.scrollAncestor, false) : null;
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
-    // Spelled on `kind` directly, not `!isCardList(facts)`: `facts` is missing
-    // its live fields at this point (`Omit<..., LiveFacts | 'cardCount' |
-    // 'boundsRect'>`), and none of that partial union is structurally
-    // assignable to `CardListRegion`, so a negated type-guard call can't
-    // narrow it out — the discriminant check is what actually type-checks.
-    if (facts.kind === 'card' || facts.kind === 'descendants') {
+    if (!isCardList(facts)) {
       regions.push({ ...facts, rect, contentRect });
       continue;
     }
@@ -477,20 +487,6 @@ function findVerticalScrollAncestor(el: HTMLElement, root: ParentNode): HTMLElem
   return null;
 }
 
-// Clips `rect` vertically to `bounds` (a scrolling ancestor's own visible
-// box) — null when nothing of it remains visible. Horizontal is left
-// alone: the board scrolls whole columns sideways, never a fraction of one.
-// The hazard `toRect` above now guards at the boundary: this was the
-// function that caught it, back when it read `el.getBoundingClientRect()`
-// directly and spread it — every sub-row region resolved with
-// `left`/`right`/`width` missing, so no point could ever match it.
-export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
-  const top = Math.max(rect.top, bounds.top);
-  const bottom = Math.min(rect.bottom, bounds.bottom);
-  if (bottom <= top) return null;
-  return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
-}
-
 // A card list's structural identity, from its key — the two kinds share
 // everything but the workphase facts, which is exactly what each literal
 // below is left spelling (audit epic-3-5-story-4 #8).
@@ -530,7 +526,7 @@ function cardListStructureFromKey(
 }
 
 // Whether `point` lies inside `rect`, inclusive of the edges — the one
-// containment test, shared by `childRegionAt` below and `boardDndUtils.ts`'s
+// containment test, shared by `childRegionAt` below and `dragCollision.ts`'s
 // in-context collision filter (audit epic-3-5-story-3-reconciled #2).
 export function containsPoint(rect: Rect, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
@@ -565,100 +561,4 @@ export function childRegionAt(
   parentKey: string | null,
 ): DragRegion | null {
   return regions.find(r => r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ?? null;
-}
-
-function verticalDistance(y: number, rect: Rect): number {
-  if (y < rect.top) return rect.top - y;
-  if (y > rect.bottom) return y - rect.bottom;
-  return 0;
-}
-
-// The two numbers the reservation math is built from — a fixed fact about
-// the shortCard component (`cardMetrics.ts::SHORT_CARD_HEIGHT_PX`) and the
-// card lists' own gap (`cardMetrics.ts::CARD_LIST_GAP_PX`), never a tuning
-// bag: Story 4.1 Phase 1 made both fixed, so there's nothing left here to
-// find by feel. Passed in rather than imported so this pure module still
-// depends on nothing under `components/` — the caller (`popSession.ts`,
-// itself handed the values by `useBoardDnd.ts`) is what points drag → card.
-export interface ShortCardMetrics {
-  heightPx: number;
-  gapPx: number;
-}
-export type BandRegion = Pick<CardListRegion, 'contentRect' | 'isTerminal' | 'cardCount'>;
-
-// What §5's reservation looks like for a card list, everything short of
-// actual pixels-on-a-rect: the shape (which of the three cases below), the
-// label box's own height, and where a divider sits (positional only — the
-// same number `bandBoundaries` turns into an absolute boundary). Used to be
-// spelled independently here and in `BandGuides.tsx::DragCarveFrame`,
-// agreeing only by comment (audit epic-3-5-story-4 #9) — this is the one
-// place the formula lives now; both read `.shape`/`.zoneHeight`/`.edge`
-// rather than recomputing any of it.
-export interface Reservation {
-  /**
-   * 'positional': real cards, positions apply — two zones, a real divider.
-   * 'terminal': a done region with cards — one bottom-only zone, sized for
-   * the ghost that always previews last there. 'empty' / 'none': nothing
-   * else here — one zone spanning the whole region, only the label
-   * distinguishing a still-positional empty region from a done one with
-   * nothing in it yet (both render identically today).
-   */
-  shape: 'positional' | 'empty' | 'terminal' | 'none';
-  /** The label box's own height. */
-  zoneHeight: number;
-  /** Where the divider sits (and the band boundary resolves against) — positional only; 0 otherwise (nothing to divide). */
-  edge: number;
-}
-
-// Story 4.1 Phase 1 (Product Owner special rule, 2026-09-16) — a genuinely
-// empty region carves the full card height (`heightPx`), nothing to shift
-// out of the way; a region with exactly one card halves both edges instead
-// of the normal full height, so the card stays a real, unlabeled middle
-// band rather than being bisected into top/bottom with nothing left
-// between; a done region with cards reserves one bottom-only zone of
-// `heightPx + gapPx`, exactly where its ghost (which always previews last
-// there) lands.
-export function reservationFor(
-  region: Pick<CardListRegion, 'isTerminal' | 'cardCount'>,
-  metrics: ShortCardMetrics,
-): Reservation {
-  const { heightPx, gapPx } = metrics;
-  if (region.cardCount === 0) return { shape: region.isTerminal ? 'none' : 'empty', zoneHeight: heightPx, edge: 0 };
-  if (region.isTerminal) return { shape: 'terminal', zoneHeight: heightPx + gapPx, edge: 0 };
-  const edge = region.cardCount === 1 ? (heightPx + gapPx) / 2 : heightPx;
-  return { shape: 'positional', zoneHeight: (heightPx + gapPx) / 2, edge };
-}
-
-// Story 4.1 Phase 1 — where the two band boundaries sit, in viewport
-// pixels, measured from `contentRect` (never the visible-clipped `rect`: a
-// boundary scrolled out of view stays exactly where its content put it,
-// reachable only by scrolling to it — wiki §5). Null collapses to a single
-// band spanning the whole region: a done region (positions never apply,
-// wiki §5 closing note) or a genuinely empty one (nothing to be
-// before/after) — `reservationFor`'s non-'positional' shapes.
-export function bandBoundaries(region: BandRegion, metrics: ShortCardMetrics): { top: number; bottom: number } | null {
-  const reservation = reservationFor(region, metrics);
-  if (reservation.shape !== 'positional') return null;
-  return { top: region.contentRect.top + reservation.edge, bottom: region.contentRect.bottom - reservation.edge };
-}
-
-// The vertical band a point falls in (§5): above `top` is the top band,
-// below `bottom` is the bottom band, the middle otherwise (or the whole
-// region, collapsed). A point outside the rect clamps to the nearer edge's
-// band, same as before — the boundaries are absolute pixels now, not
-// fractions, so no clamping arithmetic is needed to get that for free.
-export function bandFor(y: number, region: BandRegion, metrics: ShortCardMetrics): Band {
-  const boundaries = bandBoundaries(region, metrics);
-  if (!boundaries) return 'middle';
-  if (y < boundaries.top) return 'top';
-  if (y > boundaries.bottom) return 'bottom';
-  return 'middle';
-}
-
-// How far a point sits outside a rect (0 inside) — the optional distance
-// term of the pop threshold (§3.1).
-export function distanceOutside(point: Point, rect: Rect): number {
-  const dx = point.x < rect.left ? rect.left - point.x : point.x > rect.right ? point.x - rect.right : 0;
-  const dy = verticalDistance(point.y, rect);
-  return Math.hypot(dx, dy);
 }

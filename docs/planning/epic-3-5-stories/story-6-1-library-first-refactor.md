@@ -8,8 +8,8 @@ Becomes a historical record once done.
 
 **Status: method agreed with the Product Owner 2026-09-24. Comparison
 done and every disposition ratified by the PO 2026-09-24 (the ledger
-below); the build order is ready. Phase 0 done 2026-09-24 (below);
-Phases 1–3 remain.** The deliberation is in
+below); the build order is ready. Phase 0 done 2026-09-24 (below); Phase
+1 done 2026-09-24 (below); Phases 2–3 remain.** The deliberation is in
 [`story-6-1-comparison.md`](story-6-1-comparison.md); this file holds the
 outcomes.
 
@@ -344,15 +344,13 @@ C-12.
   and L1-12, including `workflow/CLAUDE.md`'s `tabStates` mention and its
   "(Story 5's interim ordering)".
 
-**Done 2026-09-24.** Every item above landed except one: `measureRegions`'
-`facts.kind === 'card' || facts.kind === 'descendants'` check stays
-spelled directly rather than routing through `!isCardList(facts)` — tried
-first, but `facts` at that point is missing its live fields (`Omit<...,
-'rect' | 'contentRect' | 'cardCount' | 'boundsRect'>`), and none of that
-partial union is structurally assignable to `CardListRegion`, so a negated
-type-guard call can't narrow it (confirmed against `tsc`: the `!isCardList`
-form loses cardCount from the card-list branch). Left as the direct
-discriminant check, with a comment explaining why. The rename sweep for
+**Done 2026-09-24.** Every item above landed. C-9 landed late, with Phase
+1's commit: `measureRegions`' `facts` has no live rects yet, so it isn't a
+`DragRegion` and couldn't be passed to `isCardList(region: DragRegion)`.
+`isCardList` now takes anything with a `kind`
+(`<T extends Pick<DragRegion, 'kind'>>`, narrowing to
+`Extract<T, { kind: CardListRegion['kind'] }>`), so `!isCardList(facts)`
+type-checks with no cast. Existing callers are unchanged. The rename sweep for
 L1-11 also went a little wider than the ledger's "about 15": three more
 mislabeled "Story 8" mentions turned up in files the comparison doc didn't
 list (`item-repositioning-cross-column-dnd.spec.ts` ×2,
@@ -364,7 +362,37 @@ the pre-existing baseline) against the already-running test servers
 (port 3002/5174, `test.db`, `ENABLE_TEST_ROUTES=true` — never `kanban.db`).
 No wiki passage named a symbol this phase deleted or moved.
 
-### Phase 1 — Mechanical splits (no behavior change)
+### Phase 1 — Mechanical splits (no behavior change) — done 2026-09-24
+
+**Done 2026-09-24.** Every new module landed as listed, with two small
+deviations, both mechanical:
+- `react-refresh/only-export-components` flags every non-component
+  export in a `.tsx` file that also exports a component: Fast Refresh then
+  reloads the file in full instead of hot-swapping it. `dragChrome.tsx`
+  first had three flagged exports; two were exported more widely than they
+  needed to be:
+  - `useLiveDropSide` had no importer outside the file, so it's no longer
+    exported;
+  - `overlayStubIndent` has one user, `KanbanCard.tsx`'s overlay branch, so
+    it isn't chrome a Card and a Stub share, and it moved there,
+    unexported. The module list below had it wrong.
+
+  The one left, `useDropTargetProps`, is shared by both tiers and belongs
+  next to `DropSideIndicator`, which draws what it returns. It carries a
+  one-line suppression with its reason; splitting the file for a
+  dev-convenience rule wasn't worth breaking that grouping.
+- `boardDndUtils.test.ts`'s `subrowContainerId` describe block tested a
+  `dragRegions.ts` export (misplaced in the older file, historically) —
+  moved to `dragRegions.test.ts`, the file that actually owns the function
+  under test, rather than orphaned in either `dragCollision.test.ts` or
+  `dragRequest.test.ts`.
+
+Full suites green throughout: `tsc` (root + client), eslint, prettier, both
+unit suites (317 server + 301 client, same counts as Phase 0 — no test
+gained or lost by the split), and the full Playwright suite (140 passed, 8
+skipped, matching the baseline) against the already-running test servers
+(port 3002/5174, `test.db`, `ENABLE_TEST_ROUTES=true` — never `kanban.db`).
+`workflow/CLAUDE.md`'s module map is rewritten for the new files.
 
 C-2, C-3, C-4, C-5 (with L3-2 and C-10).
 
@@ -381,8 +409,9 @@ New modules:
   `distanceOutside`, `clipToVisible`, and their types.
 - `StubRows.tsx`: `StubBody`, `AttachGhostRow`, `AttachedChildRow`.
 - `dragChrome.tsx`: `useLiveDropSide`, `useDropTargetProps`,
-  `dropTargetClass`, `DropSideIndicator`, `ZoomCue`, `overlayStubIndent`,
-  and the cue class constants.
+  `dropTargetClass`, `DropSideIndicator`, `ZoomCue`, and the cue class
+  constants. (`overlayStubIndent` stays in `KanbanCard.tsx`, its only user;
+  see the Done note.)
 - `dragRegions.ts` gains `dragRegionProps(key)`.
 
 Tests move with their modules. **The gate is that no test changes except
