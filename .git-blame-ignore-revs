@@ -1,0 +1,9 @@
+# Commits that change formatting only. `git blame` skips them once each clone
+# runs this one-time setup:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub reads this file on its own.
+
+# Prettier sweep to the shared config
+f8ca72eeb1f1ba6dd4f540577d57853f1aabbcdc
