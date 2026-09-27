@@ -255,7 +255,51 @@ These lists are filled in as the batches land.
   - changes to Open questions.
 
   A3 can start each feature as soon as its batch is committed.
+
+  **board-drag-interaction (batch 2):**
+  - **Moved:** the zoom-in target rule, from the body of §6 into a new **§6.1 "Which Card is zoomed into"**. §6 keeps the auto-drop and the pinned ghost. Cases for the dwell, the cue, the reset rule and invalid targets should cite §6.1.
+  - **Reworded enough to re-check:**
+    - §3.1: the clocks are restated as they stand. Column → Card is two stages (dwell, then cue), and Card → Descendants has its own clock.
+    - §10: the preview's placement is described in words, not as a data shape. The no-position and not-comparable cases are now two bullets.
+    - §4: "a Stub drag is classified exactly like a Card drag".
+    - §5a: the drop expansion is "instant", and whether it animates is an Open question.
+  - **Removed as test policy, not product rules.** §3.1's paragraph on what automated tests assert: reachability and the resulting write, never a threshold value, with threshold-dependent cases staying manual. If it's still wanted, it belongs in the test-plans README or `testing-strategy.md`.
+  - **Test IDs removed from the page:** DRAG-2.8, DRAG-5.10 and ATT-4.8. Direction runs test plan → wiki.
+  - **Looks moved to Open questions:** the classification overlays (§4), band guides (§5), the zoom-in cue (§6.1), and the invalid tab-state cue (§3.2, §7.2). Assert that each cue appears, not how it looks.
+  - **Open questions:** added "whether the drop expansion animates" and "where the tuning panel lives". Depth overflow and free-item reparent are unchanged apart from the story references.
+  - **The opening note** now says feel is a rule too, and that testability is the test plans' call (D6).
 - **To A4 (Coder), per page:** each removed mechanism passage, quoted or summarized, with the wiki section it served. A4 either places it by A1 D5, with an index pointer to that section (Coder F2), or drops it as already covered. A4's drag-layer segment can start as soon as batch 2 is committed.
+
+  **board-drag-interaction (batch 2)**, as `wiki board-drag-interaction §N` → what was removed:
+  - **The page header (the build-status map):**
+    - the pop machine is `popSession.ts`, the regions `dragRegions.ts`, the placement layer `itemListOps.ts`, and the thresholds and bands `dragTuning.ts`;
+    - classification is shown as a `data-drop-state` attribute;
+    - every item drag, Card or Stub, shares one dnd-kit registration (`data: {type: 'item', role}`).
+  - **§1:** region lookup is simple containment, through one lookup for every layer (`childRegionAt`). A sub-row is clipped to its column's visible scroll box when regions are measured (`measureRegions`).
+  - **§1.1:** the band guides are drawn by `BandGuides.tsx`. The locked-layer outline is drawn by `BandGuides.tsx` for a column or sub-row and by `KanbanCard.tsx` for a Card, both keyed on the locked context key.
+  - **§2:**
+    - the carried card's clamp is `clampToCurrentContext`;
+    - one function, `dragCollision.ts::dropAnchorFor`, feeds both the side highlight and the release (the page keeps "they always name the same card");
+    - in a descendants section, the dragged Stub's traveling rows come from `travelingRowsFor`.
+  - **§3.1:** the panel values persist in `localStorage` under `kanban_drag_tuning`, and tests seed that key so every case runs against the configured value.
+  - **§4:** classification lives in `dragClassification.ts`. The depth cap comes from the server's `ITEM_DEPTH_CAP` through `GET /boards/:id`'s `itemDepthCap`, never hard-coded on the client.
+  - **§5:**
+    - `h` is `KanbanCard.tsx::SHORT_CARD_HEIGHT_PX`, and `gap` is `CARD_LIST_GAP_PX`;
+    - the band math (`dragRegions.ts`) and the carve-out render (`BandGuides.tsx`) read the same two numbers.
+  - **§5a:** shortCard is a presentational body with no knowledge of dragging, so it can be reused outside a drag.
+  - **§7:** the board's descendants section and the project sidebar share one placement library (`client/src/lib/hierarchyPlacement.ts`; root `CLAUDE.md` already says so). `childRegionAt` returns a descendants section as a zoom-in candidate.
+  - **§8:**
+    - a Stub drag starts in its containing Card's descendants region (`useBoardDnd.ts::handleDragStart` → `descendantsRegionKey`);
+    - the two pops come from `popSession.ts`'s layer-generic pop-out clock, through the region's `parentRegionKey`;
+    - `dragRequest.ts::toRequest` sends the detach once `placementFor` previews the item Free.
+  - **§10:**
+    - per-item response sequencing: `ItemWriteTracker.complete` reports `needsResync`, and `sendItemMove` reloads the board when it's set;
+    - a re-drag stashes the pending placement at drag start and restores it on cancel;
+    - the ghost is cleared reactively when its placement goes missing mid-drag;
+    - the preview placement's shape is `{ workphaseId?, slot }`, with the slot `first`, `last`, `existing` or `{ anchorId, side }`;
+    - the no-anchor slot is `popSession.ts::noAnchorSlot`, keyed on whether the origin carries a `parentId`;
+    - the pending marker is the `data-pending` attribute, which E2E tests read;
+    - the done-list comparator is `byCompletedAtThenCreatedAt`.
 - **To Nathan:**
   - questions the sweep raised: rules that may be stale or unclear;
   - deferred ideas taken out of the wiki, for the roadmap. So far:
@@ -263,6 +307,12 @@ These lists are filled in as the batches land.
     - generation tagging for done items;
     - an "inbox" status bucket;
     - sorting a column by a computed field;
+    - from board-drag: a board-density option that reuses shortCard;
+    - from board-drag: the done/terminal column rework, which the Epic 4 roadmap already carries;
+    - from board-drag: a "combined function" of duration and distance for the pop thresholds, a tuning idea;
+  - **questions from board-drag:** none about the rules themselves. Two small fixes, both behavior-neutral:
+    - §5's opening cited "§2 rule 1", which doesn't exist. It now cites §1.1 rule 1, the rule it quotes.
+    - §10's "item-positioning §2 addendum, §7.5" was plain text, so the checker read it as this page's §7.5. It's now a link.
   - **follow-up story:** write boards-columns-unsorted out in full, and give it a test plan.
 - **To the Architect:**
   - the persona text (batch 1), drafted below;
@@ -424,3 +474,18 @@ files or `.claude/`; a change you need there is a handoff.
   - **A third side to a disagreement.** A case that misread a clear page is fixed by the Test Planner, with no ruling needed.
   - **Point 5, same reading:** a Planned rule's case cites the Planned rule's own section, and the replaced passage's case is deleted at build.
 - **Nathan's ruling on feel (D6, README):** feel belongs in the wiki, and a test case can be written to a feel ("the drag feels smooth"). The Test Planner judges which cases reduce to precise assertions and which stay manual. The README's "the test plans don't catalogue feel" is removed. Batch 2 rewrites board-drag's opening note to match. Nathan is passing this ruling to the Test Planner.
+
+**2026-09-27, batch 2 (board-drag-interaction):**
+- **D8 confirmed by Nathan:** deducing versus deciding, with the Architect's three conditions. The persona draft's bullet and its "and what follows from them" stand as written.
+- **Swept to 0 checker hits** (from 200). Section numbers unchanged, plus one new anchor, **§6.1 "Which Card is zoomed into"**. The zoom-in rule moved there from §6's body, so that cases and code pointers can cite it exactly. Listed as a move in the A3 handoff.
+- **Rejected alternatives kept as present-tense "why not X":**
+  - §1, the Card as a Stub's context;
+  - §1.1 rule 1, a bare hover committing a foreign region, which absorbs the old preamble's reason for the layer stack;
+  - §2, the half of the hovered card;
+  - §3, one-way or direct-transfer popping;
+  - §5, a frozen region rect;
+  - §6.1, the Card under the cursor, and reset-only-on-card-change;
+  - §7, a band on the Card.
+- **The "provisional" values and "as built" asides** became plain rules, or Open questions for the looks (D5).
+- **Removed as test policy:** §3.1's paragraph on what automated tests assert (A3 handoff).
+- **Edited in place, not rewritten,** so the diff shows only changed lines, for the no-rule-change review (D1).
