@@ -423,7 +423,6 @@ test.describe('Card → column drop bands', () => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, SUSTAINED);
     await openBoard(page, projectSidebar);
-    const inProgress = column(page, 'In Progress');
     const contextKey = columnKeyOf(s, s.phase.inProgress.id);
 
     await pickUp(page, article(page, 'Item X'));

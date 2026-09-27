@@ -165,7 +165,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // shrinks the moment X's placement previews Free (its own nested row
     // leaves), which would otherwise make "past the column's content" land
     // back inside P itself.
-    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
@@ -218,7 +218,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const [todo] = pickWorkphases(workflow, 'Todo');
     const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
     const x = await seedItem(request, { title: 'X', parentId: p.id });
-    const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     // popDelayMs/popInDelayMs/cardPopInDelayMs are all NO_POP's "never"
     // value — nothing here can advance on a timer, or on a second

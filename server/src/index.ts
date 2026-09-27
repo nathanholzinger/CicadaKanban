@@ -53,6 +53,7 @@ if (process.env.ENABLE_TEST_ROUTES === 'true') {
 // and any route that throws synchronously without its own try/catch ends up
 // here too. Registered last so it only ever sees errors the routes above
 // didn't already handle.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express treats a handler as error middleware only when it declares all four parameters
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });

@@ -195,7 +195,7 @@ test.describe('workphase delete notice', () => {
 
   test('reports resized and removed columns after deleting workphases', async ({ page, request, projectSidebar }) => {
     const { workflow } = await seedBareWorkflow(request, 'Workphase Delete Project');
-    const [todo, inProgress, done] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Done']);
+    const [todo, , done] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Done']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     await request.post(`${API}/columns`, {
       data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: done.id },

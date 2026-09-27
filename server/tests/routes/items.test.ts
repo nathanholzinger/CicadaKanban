@@ -463,7 +463,7 @@ describe('Epic 3.2 — position resolution', () => {
     const { project, todo } = await setupTwoPhases();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id }); // 1.0
     const x = await createItem({ projectId: project.id, workphaseId: todo.id }); // 2.0
-    const b = await createItem({ projectId: project.id, workphaseId: todo.id }); // 3.0
+    await createItem({ projectId: project.id, workphaseId: todo.id }); // b: 3.0
     // Force x to sit numerically between a and b — if x's own (pre-move) row
     // weren't excluded from its scope query, resolving "after a" would find
     // x itself as the closest neighbor and anchor against its stale value.

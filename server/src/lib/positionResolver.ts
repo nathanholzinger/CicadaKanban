@@ -6,7 +6,6 @@
 import { eq, gt, lt, asc, desc, and, isNotNull, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { Tx } from '../db/index.js';
-import { db } from '../db/index.js';
 import { coarsestFit } from './coarsestFit.js';
 
 const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new position to be placed. If it doesn't then something else went wrong that retries shouldn't fix

@@ -62,9 +62,9 @@ describe('pure range helpers', () => {
   it('computeUnsorted reports uncovered workphases and invalid item references', () => {
     const columnsForBoard = [{ startWorkphaseId: 'a', endWorkphaseId: 'b' }];
     const workflowItems = [
-      { id: 'i1', workphaseId: 'a' } as any,
-      { id: 'i2', workphaseId: 'z' } as any, // not a real workphase in this workflow
-      { id: 'i3', workphaseId: null } as any,
+      { id: 'i1', workphaseId: 'a' },
+      { id: 'i2', workphaseId: 'z' }, // not a real workphase in this workflow
+      { id: 'i3', workphaseId: null },
     ];
     const { uncovered, invalidItems } = computeUnsorted(phases, columnsForBoard, rankMap, workflowItems);
     expect(uncovered.map(w => w.id)).toEqual(['c', 'd']);

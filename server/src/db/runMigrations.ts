@@ -45,23 +45,6 @@ function seedWorkflowTemplates(now: number) {
   return { quickId, flowId };
 }
 
-function applyTemplateToWorkflow(workflowId: string, templateId: string, now: number) {
-  const templatePhases = db.select().from(workflowTemplatePhases).all()
-    .filter(p => p.templateId === templateId);
-
-  for (const phase of templatePhases) {
-    db.insert(workphases).values({
-      id: randomUUID(),
-      workflowId,
-      name: phase.name,
-      position: phase.position,
-      triggersNotification: phase.triggersNotification,
-      isTerminal: phase.isTerminal,
-      createdAt: now,
-    }).run();
-  }
-}
-
 export function runMigrations() {
   sqlite.pragma('foreign_keys = OFF');
   migrate(db, { migrationsFolder });

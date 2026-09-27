@@ -44,7 +44,7 @@ const ROOT_NAME = 'Cross Project DnD';
 
 let scenario: CrossProjectRepositioningScenario;
 
-test.beforeEach(async ({ request, page, projectSidebar }) => {
+test.beforeEach(async ({ request, page }) => {
   await resetAndSeedDb();
   scenario = await seedCrossProjectRepositioningScenario(request, ROOT_NAME);
 
