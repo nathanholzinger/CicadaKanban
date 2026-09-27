@@ -61,6 +61,9 @@ helpers, and `routes/boards.ts::createDefaultBoard`.
 
 - **Stack, data model and run commands:** root `CLAUDE.md`
 - **Testing layers, and what stays manual:** `.claude/guides/testing-strategy.md`
+- **Tests for a test-plan case:** start the test's title with the case's ID
+  (`docs/test-plans/README.md`). Deleting such a test, or dropping the ID from its
+  title, goes in the story's handoff.
 - **DB migrations:** `cd server && npm run db:generate` to generate; add to
   `server/drizzle/` and apply via `npm run db:migrate`
 

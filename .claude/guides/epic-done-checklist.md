@@ -13,9 +13,7 @@ The sections run in the order the work happens: stories, then the test-plan pass
 - [ ] **The end-of-epic test-plan pass.** The Test Planner re-reads each feature the epic touched against the finished wiki, adds, revises or deletes cases, and regroups suites where the story-by-story passes split them awkwardly (`docs/test-plans/README.md`).
 - [ ] If that pass moved cases between suites, their tests are re-titled with the new IDs before the Reconciler runs. Otherwise it reports false gaps.
 - [ ] **One Reconciler run** after that (`.claude/agents/test-reconciler.md`), with its report saved in `docs/audits/`. Its quality-flagged mappings and candidate cases are resolved, or routed to a destination that names them.
-- [ ] Every test-plan case in the features the epic touched has a mapped automated test, or is approved as manual-only. There are two exceptions:
-  - cases whose passage is still marked Planned;
-  - cases routed by ID to a later story whose plan or roadmap entry names them.
+- [ ] Every test-plan case in the features the epic touched is `Automated` or `Manual`, except `Planned` cases, and `Open` cases routed by ID to a later story whose plan or roadmap entry names them. None is `Pending PO`.
 - [ ] A code coverage goal of 80%+ has been attempted. It's a holistic sanity check, separate from the hard per-file thresholds in `server/vitest.config.ts`, and deliberately not a blanket rule: some code is legitimately awkward to test. But we should know *why* if we don't meet 80%.
 - [ ] No skipped or pending tests left over from this epic.
 - [ ] `npm run check` passes, and so does `npm run test:e2e`.

@@ -19,7 +19,7 @@ What happens when a story's code is complete, in order, and what must hold befor
    - **The story's audit** (`.claude/guides/audit-workflow.md`).
 4. **Land the remaining code work:**
    - the audit's Fix Now findings, in batches, each ending with the gate and a stop for review and commit;
-   - tests for the cases in Scope that don't have one yet.
+   - tests for the cases in Scope that are still `Open`, each starting its title with the case's ID (`docs/test-plans/README.md`).
 5. **Run the Reconciler once**, against the finished code. Running it earlier would map a test layout that step 4 is still changing.
    - It confirms the Scope's cases.
    - It checks the whole catalog for cases whose test is gone, since a story can delete the only test for a case it never scoped.
@@ -29,9 +29,9 @@ What happens when a story's code is complete, in order, and what must hold befor
 ## Before sign-off
 
 - `npm run check` passes, and so does `npm run test:e2e`.
-- Every test-plan case in the story's Scope has an automated test, or is approved as manual-only, or has been routed by ID to a later story whose plan or roadmap entry names it.
-- Every case the Reconciler found without its test has one again, or is routed the same way.
-- No Open question is still waiting on the PO.
+- Every test-plan case in the story's Scope is `Automated` or `Manual`, or has been routed by ID to a later story whose plan or roadmap entry names it.
+- Every case the Reconciler moved from `Automated` to `Open` has its test again, or is routed the same way.
+- No Open question is still waiting on the PO, and no case in the Scope is `Pending PO`.
 - Every Inbound deferral is done, or re-routed to a destination that names it.
 - The audit is closed out as `.claude/guides/audit-workflow.md` describes: every required finding has a disposition, and every route out of it has landed in a plan.
 - The handoff has been applied by each owner: the wiki, the test plans, and root `CLAUDE.md`.

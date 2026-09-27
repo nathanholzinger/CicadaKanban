@@ -41,4 +41,4 @@ There's no CI; everything runs locally.
   - An automated drag test asserts that a gesture is *reachable*, and that the write it makes is correct.
   - It never asserts a duration.
   - A case whose pass depends on a tunable threshold is manual, and may stay manual once the values settle, since feel is a judgment.
-- **Anything else manual** is approved case by case in the test-plan catalog.
+- **Anything else manual** is decided case by case in the test-plan catalog (`docs/test-plans/README.md`).

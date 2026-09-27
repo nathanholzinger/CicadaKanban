@@ -26,7 +26,7 @@ The owner edits the doc. Everyone else hands changes off (see Handoffs).
 | Doc | Kind | Owner | Other roles |
 |---|---|---|---|
 | `docs/wiki/**` | living | PO | Hand changes off to the PO |
-| `docs/test-plans/**` | living | Test Planner | Hand changes off to the Test Planner |
+| `docs/test-plans/**` | living | Test Planner | The Test Reconciler writes each case's status and Automation test line. Everyone else hands changes off to the Test Planner |
 | Code comments and module headers | living | Whoever changes the code, in the same change | — |
 | A directory's `CLAUDE.md` | living | Whoever changes code in that directory, in the same change | — |
 | Root `CLAUDE.md` | living | Architect | May fix a statement their own change made false, in the same change, and list it in the handoff |

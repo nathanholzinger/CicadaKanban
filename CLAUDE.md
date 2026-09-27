@@ -96,6 +96,8 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   `client/src/test/itemFixture.ts::makeItem`.
 - **Never hand-roll a drag or read `boundingBox()` in an E2E spec** — use
   `tests/helpers/dragGesture.ts`.
+- **A test that covers a test-plan case starts its title with the case's ID**
+  (`DRAG-5.5: …`) — see `docs/test-plans/README.md`.
 - **DB owns referential integrity** (CASCADE/SET NULL in `schema.ts`), **app owns
   behavior**. An item's dependent-row cleanup (labels, activity log, notifications,
   attachments, chat) is DB-owned via `ON DELETE CASCADE` (migration `0009`) — a new
