@@ -131,3 +131,20 @@ Each batch ends with its own check and a stop for Nathan's review and commit.
   - `prettier-preemptive-practice.md` names the new `format:check` scripts and the root config.
 
 **Architect:** the memory pass rewrites the two toolchain-gotcha entries this story makes stale: "`tests/` has no Prettier config" and "the root tsc doesn't cover `tests/`".
+
+## Amendments
+
+**2026-09-26, Nathan's answers to the Coder's questions:**
+- **D4: `format:check` excludes Markdown.**
+  - Both `format:check` scripts list their globs explicitly (`ts`, `tsx`, `js`, `mjs`, `json`) rather than checking `.`. That keeps `docs/`, `.claude/` and every `CLAUDE.md` out of the sweep.
+  - `.prettierignore` also lists `package-lock.json`.
+  - The sweep's file count is re-measured with these globs.
+- **D4: both Prettier configs set `endOfLine: "auto"`.**
+  - Git already converts line endings to LF on commit (`.gitattributes` has `* text=auto`), and the baseline was measured with line endings ignored.
+  - The root `.prettierrc` therefore holds four settings. `client/.prettierrc` adds the same line, so the two configs still differ only by the Tailwind plugin.
+- **D3: the server's type-check covers its config files.** `tsconfig.test.json` also includes `vitest.config.ts` and `drizzle.config.ts`.
+
+**2026-09-26, the Coder's implementation notes:**
+- **Batch 1 adds `typescript` as a root dev dependency.** `typecheck:e2e` needs it, and A1 D8 will find it already installed.
+- **The root ESLint config is `eslint.config.mjs`,** because the root package is `"type": "commonjs"` and an ESM `eslint.config.js` wouldn't load there. The server's config stays `eslint.config.js`, since the server package is `"type": "module"`.
+- **Batch 3's sanity check is `prettier --debug-check`** on the reformatted files. It confirms each file's syntax tree is unchanged after formatting. `git diff -w` couldn't show that, because quote, parenthesis and trailing-comma changes aren't whitespace.

@@ -31,6 +31,7 @@ A3 does three things:
 - **Precise-move drag E2E tests.** Writing them stays with Epic 3.5 Story 10 (D10).
 - **The wiki.** Gaps found during the sweep go to the PO as Pending PO questions (D1).
 - **`testing-strategy.md`.** It's stale, but it belongs to the Architect (see Handoff).
+- **A catalog for `boards-columns-unsorted`** (D11).
 
 ## Decisions
 
@@ -183,7 +184,7 @@ A1's history rule applies. That means no provenance, no "used to", no dates, no 
 **Automation test:** `tests/ui/….spec.ts`
 ```
 
-- **Each case names its wiki section** on its status line, in the `wiki <page> §N` form (A1 D3), with one entry per section.
+- **Each case names its wiki section** on its status line, in the `wiki <page> §N` form (A1 D3), with one entry per section. The wiki's own in-page forms (a bare `§N`, or a relative link followed by `§N`; A2 D9) don't apply in test plans. A2 left that call to A3.
   - When the PO's handoff says a section changed, a search finds every case derived from it.
   - A `Pending PO` case has no `**Rule:**` field. That absence is its marker.
 - **A title states the rule, never the bug.** A regression case may say which mistake it guards against, in the present tense ("… so hovering over a covered member never snaps it to the entry workphase"). It doesn't say where or when the mistake was found.
@@ -217,6 +218,7 @@ It leaves out two things:
   - **Every case in the story's Scope is `Automated` or `Manual`,** or is listed by ID in a later story's Scope. A routing counts only once the destination names it, as with audit deferrals (A1 D11).
   - **No case in the story's Scope is `Pending PO`.**
   - **Every `Open` case in the catalog is listed in some story's Scope.** This catches coverage that a story's refactor broke outside its own Scope.
+- **A tech-debt story that deleted, moved or split test files** runs the Reconciler's catalog-wide check before it closes, and the last condition above applies to it. Refactor stories are where coverage gets lost: TC-4.4 lost its test in one.
 - **Epic close: the end-of-epic pass (NZ4).**
   - The Test Planner re-reads each feature the epic touched against the finished wiki, and adds, revises or deletes cases.
   - Suites may be regrouped (D4's ID rule applies).
@@ -237,11 +239,11 @@ It defers only drag automation that depends on precise cursor placement or timer
 - **A3 routes the rest to Story 10, by ID.** These are gaps that need a precise-move or timer-dependent drag E2E. Story 10's entry names them before the batch signs off.
 - **Nathan may route an oversized set of gaps** to its own named tech-debt story instead. The same naming rule applies.
 
-### D11. `boards-columns-unsorted`: only once its page is hardened
+### D11. `boards-columns-unsorted` gets no catalog in A3
 
 - **The situation:** the wiki page is a TODO capture, not hardened rules, and the feature has no catalog.
 - **The rule:** the Test Planner doesn't derive cases from an unhardened page (the persona's "stop and flag").
-- **So:** batch 6 runs only if A2 hardens the page. Otherwise A3 skips it, and the Handoff asks for a roadmap entry.
+- **So:** A3 has no batch for it. A2 brings the page to the standard without writing it out, and hands Nathan a follow-up story to write it out in full and give it a test plan (A2 Handoff). That story owns the catalog.
 
 ### D12. Changes to personas, agents and guides
 
@@ -265,9 +267,10 @@ The Test Planner drafts these, and the Architect applies them (A1 D2).
   - *Proposed Manual (needs approval)*;
   - *Unbacked → Open*.
 
-**The standards guide** (A1 D2, A1 D3):
+**The standards guide** (A1 D2, A1 D8):
 - **The test-plan row:** "Owner: Test Planner. The Reconciler writes each case's status and Automation test line. Other roles hand changes off."
-- **The reference rule:** "Test plan → test file: a file-level pointer that only the Reconciler writes. The test carries the case's qualified ID in its title."
+- **The checker list** gains `case-id`: "case IDs that don't match a case in the catalog."
+- **The reference rule stays as A1 wrote it.** It defers to `docs/test-plans/README.md` for how a case and its tests point at each other, so the rule lives in one place.
 
 **`story-done-checklist.md`:** D9's sign-off conditions, and the Test Planner's step 3 duties.
 
@@ -284,8 +287,8 @@ Each batch ends with its checks, then stops for Nathan's review and commit. Feat
 
 **Order:**
 - **Batches 1 and 2** run together, alongside A2.
-- **Batches 3–6 follow, one feature each.** Each starts once A2 has swept that feature's page. A feature's Test Planner pass can overlap the previous feature's Coder step, since they touch different files.
-- **Batch 7** closes out.
+- **Batches 3–5 follow, one feature each.** Each starts once A2 has swept that feature's page. A feature's Test Planner pass can overlap the previous feature's Coder step, since they touch different files.
+- **Batch 6** closes out.
 
 ### Batch 1: the rules (Test Planner; the Architect applies `.claude/`)
 
@@ -307,7 +310,7 @@ Each batch ends with its checks, then stops for Nathan's review and commit. Feat
 - `case-id`'s tests use fixtures and cover a hit, a clean case and an ignored case;
 - `--rules` is tested.
 
-### Batches 3–6: one feature each
+### Batches 3–5: one feature each
 
 Every feature follows the same steps.
 
@@ -358,9 +361,8 @@ Every feature follows the same steps.
   - reduce the 54 pointers that name individual tests to file-level ones;
   - remove the "previous mapping" notes;
   - retitle TC-4.3, whose title names a bug.
-- **Batch 6, `boards-columns-unsorted`** (new): only if A2 hardens the page (D11). It gets a new prefix, and its cases are derived from scratch.
 
-### Batch 7: close-out
+### Batch 6: close-out
 
 **Work:** one Reconciler run over the whole catalog, which covers:
 - the catalog-wide unbacked and unknown-ID checks;
@@ -381,10 +383,10 @@ What it finds is resolved in this batch.
 | `.claude/guides/documentation-standards.md`, `story-done-checklist.md`, `epic-done-checklist.md` | 1 | D12 | Test Planner drafts, Architect applies |
 | `.claude/personas/coder.md`, root `CLAUDE.md` | 1 | one line each (D5) | Architect |
 | `scripts/check-docs/**` | 2 | `case-id`, `--rules` | Coder |
-| `docs/test-plans/<feature>/**` | 3–6 | swept | Test Planner; the Reconciler writes the two fields |
-| Test files the Reconciler maps | 3–7 | titles stamped; provenance stripped from touched titles | Coder |
-| New tests for gaps closed in A3 | 3–7 | new | Coder |
-| `docs/audits/test-reconciliation-a3-<feature>.md`, `…-a3-close.md` | 3–7 | new reports | Reconciler |
+| `docs/test-plans/<feature>/**` | 3–5 | swept | Test Planner; the Reconciler writes the two fields |
+| Test files the Reconciler maps | 3–6 | titles stamped; provenance stripped from touched titles | Coder |
+| New tests for gaps closed in A3 | 3–6 | new | Coder |
+| `docs/audits/test-reconciliation-a3-<feature>.md`, `…-a3-close.md` | 3–6 | new reports | Reconciler |
 
 ## Acceptance
 
@@ -396,7 +398,7 @@ What it finds is resolved in this batch.
 - **The catalog:**
   - `check:docs -- docs/test-plans` reports zero hits;
   - no ⏳, ✅, ❌ or ⏸ remains, and no case is `Pending PO`;
-  - batch 7's run confirms that every `Automated` case has at least one test carrying its ID;
+  - batch 6's run confirms that every `Automated` case has at least one test carrying its ID;
   - every `Open` case is named by ID in Story 10's roadmap entry or in another named destination;
   - TC-4.4 is either `Automated`, with a test that asserts the snapping rule, or `Open` and routed.
 - **The tests:**
@@ -409,7 +411,6 @@ What it finds is resolved in this batch.
 - **To the Architect:**
   - **Story 10's roadmap entry:** narrow item 1 to the IDs A3 routed there. Item 5 is done.
   - **`testing-strategy.md`:** it describes the test suite as of Epic 1.5 and predates D3. Rewrite it or retire it. A1 batch 4 only strips its provenance.
-  - **A roadmap entry for the `boards-columns-unsorted` catalog,** if batch 6 was skipped.
 - **To the PO:** the drag INDEX's flag 14 lists edits owed to the "Placement rules for a Hierarchy" design doc. It goes when the flag list is removed. The design doc is transient, and wiki §7 already carries the agreed wording. Please confirm nothing is lost.
 - **To A4 (the Coder):** test comments in the files A3 touched are still A4's.
 - **To every later story:** the flow is D9's, with one Reconciler run at close.

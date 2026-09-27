@@ -147,12 +147,14 @@ How to write the marker on a page belongs in the wiki README (A2). **The PO revi
 |---|---|
 | `transient-id` | Any of the following, matched in its ID shape (`Story 6`, `Epic 3.5`, `Phase D`), never the bare word, since Epic, Story and Task are item types in the app: story, epic and phase IDs; audit findings (`audit … #12`, `finding 3`); ledger IDs (`L1-7a`, `C-2`); plan decision IDs (`decision 4`); ISO dates |
 | `bare-section` | A `§N` not written as `wiki <page> §N`. Doesn't apply inside `docs/wiki/`; see `wiki-pointer` |
-| `wiki-pointer` | A section reference whose page or section doesn't exist. Everywhere this means `wiki <page> §N`. Inside `docs/wiki/` two more forms are valid: a bare `§N` refers to the same page, and a relative link followed by `§N` refers to the linked page. Whether test plans get the same in-doc forms is A3's call |
-| `symbol-ref` | `file::symbol` where the file can't be found, or the symbol isn't in it |
+| `wiki-pointer` | A section reference whose page or section doesn't exist. Everywhere this means `wiki <page> §N`, where N may be a subsection or an inserted section (`7.1`, `5a`, `11a`). Inside `docs/wiki/` two more forms are valid: a bare `§N` refers to the same page, and a relative link followed by `§N` refers to the linked page. Test plans use only `wiki <page> §N` (A3 D8), so `bare-section` applies to them |
+| `symbol-ref` | `file::symbol` where the file can't be found, the symbol isn't in it, or the file part matches more than one file. The file part is the name alone when it's unique, or else the shortest unique path suffix (`api/items.ts::…`) |
 | `bare-case-id` | `TC-n` with no suite part, in test titles and comments |
 | `claude-ref` | A code comment that names `.claude/` or a `CLAUDE.md` file |
-| `transient-link` | A living doc referencing a file under `docs/planning/`, `docs/audits/` or `docs/archive/`, by link or by path. Naming one of those folders, for example to say where closed docs go, isn't a reference |
+| `transient-link` | A living doc referencing a file under `docs/planning/`, `docs/audits/` or `docs/archive/`, by link or by path. It runs over Markdown, code comments and test titles alike. It also matches the bare file name of a file that exists in one of those folders, since comments often cite a decisions doc by name alone. Naming one of the folders, for example to say where closed docs go, isn't a reference |
 | `wiki-code-name` | In `docs/wiki/**` only: a file path or a `::` name. Relative links to wiki pages or to `../../test-plans/…`, and API routes such as `PATCH /items/:id/move`, are not code names. This is A2's acceptance check. |
+
+**Placeholders:** a name in angle brackets (`<page>`, `<file>::<symbol>`) is never a reference, so the guides can describe the formats in prose.
 
 **Ignore marker:** `check-docs-ignore-next-line <rule-id>[, <rule-id>] -- <reason>`, inside a `//` or `<!-- -->` comment. It covers one line at a time, and the reason is required.
 
@@ -375,3 +377,40 @@ Changes made after Nathan approved the decisions. They're already folded into th
 - **Handoff line (D10), from A2 D9:** "wiki sections added, moved or removed", which the PO fills in at close.
 - **Deferrals (D10, D11), from A5 D6:** when a deferral's destination plan isn't written yet, the destination's roadmap entry names it. Whoever writes the plan later moves it into Inbound deferrals.
 - **`transient-link` (D8), clarified while writing batch 1:** it flags references to files in the transient folders, not the folder names. The standards guide has to name the folders in order to describe them.
+- **The PO's batch 1 review, all seven points taken, in the guides:**
+  - **What's in force:** a Planned passage's replaced rule stays in force until the marker comes off.
+  - **Clearing markers:** at close, only passages the handoff lists as built lose their marker.
+  - **Handoffs:** a handoff is a request, and the owner decides. D10's "rules decided or changed" becomes "behavior decisions made while building, for the PO to rule on".
+  - **Rulings during a story:** they go into the wiki straight away, recorded in Amendments.
+  - **Page names:** part of the anchor contract; a rename or split carries an old → new map.
+  - **Feature folders:** a stable anchor.
+  - **History:** the rule forbids narration of how the doc or the code used to be, not describing a state change.
+
+  The back-pointer on a replaced passage should use a phrase other than `**Planned:**`. That's for the PO to change in A2 D4.
+- **The Test Planner's batch 1 review, all seven points taken, in the checklists and the standards guide:**
+  - **Step 3:** the Test Planner's pass applies the handoff wherever it lands, and adds new or reopened cases to Scope.
+  - **Step 5:** the Reconciler also checks the whole catalog for cases whose test is gone, and re-checks only the gaps it sent back.
+  - **Sign-off:** a new lost-coverage condition.
+  - **Tech-debt stories:** the same check whenever the story deleted, moved or split test files.
+  - **Epic test condition:** exceptions for Planned and routed cases.
+  - **Regrouped suites:** tests are re-titled before the Reconciler runs.
+  - **Archiving:** the Reconciler report is archived with the plan and audit, and "explicitly deferred" becomes "routed to a destination that names it".
+- **D8, from A3 D8:** test plans use only `wiki <page> §N`, not the wiki's in-page forms.
+- **The Auditor's batch 1 review of `code-comments.md`, all eight points taken:**
+  - **`prettier-ignore`:** it takes its reason on the line above. Prettier ignores the directive if any text follows it, which the Auditor verified in a scratch file.
+  - **Rule (a):** also bans paths into planning, audit and archive docs. D8's `transient-link` runs over code comments and test titles, and the guide's table maps it.
+  - **Coupling comments:** written as "also read by `<file>::<symbol>`", never as a complete list.
+  - **Module headers:** required for every non-test module; test files only where the name doesn't say what they cover.
+  - **Test titles:** they follow the comment rules.
+  - **The "not checkable" list:** it's now the drift pass's whole checklist, with three items added.
+  - **Rule (f):** a ruling without its reason doesn't count.
+  - **Placeholders:** D8 now says angle-bracket placeholders are never references.
+- **The Coder's batch 1 review of `code-comments.md`.** Four of its seven points overlapped the Auditor's review. The other three:
+  - **Ambiguous file names:** `<file>::<symbol>` uses the file name alone when it's unique, or else the shortest unique path. The 12 client `api/` files share names with server route files, and there are two `index.ts` files. `symbol-ref` reports an ambiguous name (D8).
+  - **Transient-doc pointers by name:** rule (a) bans pointers to plans, decisions docs, audits and reports by file name as well as by path, and `transient-link` matches bare names of files in those folders (D8).
+  - **Section numbers:** N may be a subsection or an inserted section (D8).
+  - **Plus a line:** a coupling comment says where to look; confirm with a search before acting on it.
+- **Module headers, a conflict between the reviews, decided by the Architect:**
+  - **The Coder's rule:** a header only where the file name doesn't say what the file owns, plus every shared-logic module (`server/src/lib/`, `client/src/lib/`, the drag modules in `workflow/`).
+  - **The Auditor's rule for tests:** a test file only where its name doesn't say what it covers.
+  - **Why:** this keeps "no comment is the default", and saves A4 about 41 headers on files like `api/labels.ts`. The Coder updates A4's scope to match.
