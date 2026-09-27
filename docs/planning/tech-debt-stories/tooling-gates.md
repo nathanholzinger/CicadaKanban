@@ -145,6 +145,17 @@ Each batch ends with its own check and a stop for Nathan's review and commit.
 - **D3: the server's type-check covers its config files.** `tsconfig.test.json` also includes `vitest.config.ts` and `drizzle.config.ts`.
 
 **2026-09-26, the Coder's implementation notes:**
-- **Batch 1 adds `typescript` as a root dev dependency.** `typecheck:e2e` needs it, and A1 D8 will find it already installed.
+- **Batch 1 adds `typescript` as a root dev dependency.** The root type-check script needs it, and A1 D8 will find it already installed.
 - **The root ESLint config is `eslint.config.mjs`,** because the root package is `"type": "commonjs"` and an ESM `eslint.config.js` wouldn't load there. The server's config stays `eslint.config.js`, since the server package is `"type": "module"`.
 - **Batch 3's sanity check is `prettier --debug-check`** on the reformatted files. It confirms each file's syntax tree is unchanged after formatting. `git diff -w` couldn't show that, because quote, parenthesis and trailing-comma changes aren't whitespace.
+
+**2026-09-26, what batches 2–4 shipped that differs from the plan:**
+- **Dependency versions.**
+  - ESLint and its rule sets installed at newer minors than the client's: `eslint` 10.11 against 10.2, and `typescript-eslint` 8.70 against 8.58. The majors match, so the recommended rule sets are the same.
+  - `prettier` is pinned exactly to `3.9.4`, at the root and in the client, because Prettier's output can change between minor versions. With both pinned, an `npm update` in one package can't make the two halves format differently.
+  - The client's ESLint minors get aligned at its next dependency bump, not in this story.
+- **The one ESLint suppression** is Express's four-argument error middleware in `server/src/index.ts`. Express recognizes error middleware by the number of parameters, so the unused `_next` has to stay. The other 11 findings were fixed.
+- **`client/.prettierignore` is new.** Prettier reads ignore files only from the directory it runs in, so the client's `format:check` needs its own copy to skip `dist`, `coverage` and `package-lock.json`.
+- **Script names:** each gate has one script per package: `typecheck:*`, `lint:*` and `format:check:*`, each with `client`, `server` and `root` variants. D3's `typecheck:e2e` became `typecheck:root`, because the root package covers more than the specs: its own config files now, and A1's `scripts/` next.
+- **The sweep:** Prettier reformatted 61 files, and 59 reached the commit. Two differed only in line endings, which Git normalizes to LF. `git blame` with the ignore file still attributes 2 of `runMigrations.ts`'s 92 swept lines to the sweep. Those are lines the reformat created, such as a `.run();` split onto its own line, which have no earlier version.
+- **Batch 4's checks:** `npm run check` exits 0 in about 45 seconds. A full Playwright run against the test servers gave 140 passed and 8 skipped in 1.9 minutes, matching the baseline.

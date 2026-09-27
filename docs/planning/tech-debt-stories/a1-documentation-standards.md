@@ -323,7 +323,7 @@ Each batch ends with the checks listed for it, then stops for Nathan's review an
 |---|---|---|---|
 | `.claude/guides/documentation-standards.md`, `code-comments.md`, `story-plan-template.md`, `story-done-checklist.md` | 1 | new | Architect |
 | `.claude/guides/epic-done-checklist.md` | 1 | revised | Architect |
-| `scripts/check-docs/**`, root `package.json` (scripts, the `typescript` devDependency), plus the root tsconfig and ESLint config from `tooling-gates.md` extended to cover `scripts/` | 2 | new | Coder |
+| `scripts/check-docs/**`, root `package.json` scripts. The root type-check, ESLint `files` and `format:check` globs from `tooling-gates.md` each extend to `scripts/`. Likely a `scripts/tsconfig.json` (`module: nodenext`, `erasableSyntaxOnly`) called from the root type-check, since the root tsconfig is CommonJS. `typescript` is already a root dev dependency | 2 | new | Coder |
 | `CLAUDE.md` | 3 | swept | Architect |
 | `client/src/components/workflow/CLAUDE.md`, plus the module headers that receive its moved rationale | 3 | swept | Coder |
 | `.claude/guides/audit-workflow.md`, `.claude/personas/auditor.md`, `.claude/agents/auditor-*.md` | 4 | D11 | Auditor drafts, Architect applies |

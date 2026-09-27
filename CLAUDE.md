@@ -174,7 +174,9 @@ npm run dev
 - Frontend: `http://localhost:5174`
 - API: `http://localhost:3001`
 - Drizzle Studio (DB browser): `cd server && npm run db:studio`
-- E2E tests: `npm run test:e2e` (from project root)
+- Gates: `npm run check` (from project root) — type-check, lint, format check and unit
+  tests across `client/`, `server/` and `tests/`
+- E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`
 
 ---
 
