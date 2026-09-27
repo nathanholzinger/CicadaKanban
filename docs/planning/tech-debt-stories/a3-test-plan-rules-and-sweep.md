@@ -30,13 +30,11 @@ A3 does three things:
 - **Test comments.** They belong to A4. A3 edits test titles only.
 - **Precise-move drag E2E tests.** Writing them stays with Epic 3.5 Story 10 (D10).
 - **The wiki.** Gaps found during the sweep go to the PO as Pending PO questions (D1).
-- **`testing-strategy.md`.** It's stale, but it belongs to the Architect (see Handoff).
 - **A catalog for `boards-columns-unsorted`** (D11).
 
 ## Decisions
 
-These answer every question the work below depends on. Each one names the round-table items or A1 decisions it builds on. Three go beyond what the round table settled, and are flagged for Nathan:
-- D3's line on which tests need approval;
+These answer every question the work below depends on. Each one names the round-table items or A1 decisions it builds on. Two go beyond what the round table settled, and are flagged for Nathan:
 - D4's switch to qualified IDs inside suite files;
 - D8's INDEX files without counts.
 
@@ -66,7 +64,7 @@ Five statuses replace ⏳ / ✅ / ❌ / ⏸:
 | `Open` | The rule is live, and no approved test or manual approval exists yet. | Test Planner: for a new case, from `Planned` or `Pending PO`, or from a `Manual` case whose reason no longer holds. Reconciler: from `Automated`, when the test is gone. |
 | `Pending PO` | The case was inferred where the wiki is silent (D1). | Test Planner |
 | `Automated` | At least one test carries the case's ID and asserts it (D3, D5). | Reconciler |
-| `Manual` | Nathan approved it as manual-only, with a present-tense reason. | Reconciler, after approval |
+| `Manual` | Manual by the standing threshold rule, or approved by Nathan, with a present-tense reason (D3). | Reconciler |
 
 - **`Planned` follows the wiki marker, not the story.**
   - When the PO removes a marker at story close, the Test Planner moves that section's cases to `Open`.
@@ -78,18 +76,20 @@ Five statuses replace ⏳ / ✅ / ❌ / ⏸:
 
 ### D3. Which tests count for a case, and which need approval
 
-*(NZ4)*
+*(NZ4, `testing-strategy.md`)*
 
-- **A test through a public surface needs no approval.** That means:
+This follows the layer rule in `testing-strategy.md`: a rule a user or an API caller can see gets a test through that surface.
+
+- **A test through a surface needs no approval.** That means:
   - a Playwright UI test (`tests/ui/`);
   - a Playwright API test (`tests/api/`);
-  - a server route test that drives the app over HTTP (`server/tests/routes/`).
+  - a server route test (`server/tests/routes/`).
 - **A test of internal code needs Nathan's approval.** This covers a test that calls a client module or a server `lib/` function directly.
   - The Reconciler proposes the mapping in its report, and writes the pointer only once Nathan approves.
   - A later run treats an existing internal pointer as approved.
-- **Manual-only needs Nathan's approval,** either one case at a time or for a named category. An example category: "every DRAG case whose pass depends on a pop clock."
-
-**For Nathan:** NZ4 asks for "a Playwright representative, or an approved Vitest one". Counting `server/tests/routes/` as a public surface widens that. Those tests are Vitest, but they go through the HTTP layer against a real database, which is the layer NZ4 cares about. If you'd rather they need approval too, the first bullet drops them.
+- **Manual-only:**
+  - **By standing rule, no approval needed.** A case whose pass depends on a tunable drag threshold is manual (`testing-strategy.md`, "What stays manual"). Its reachable part and its write are separate cases, which can be automated.
+  - **Anything else needs Nathan's approval,** one case at a time or for a named category.
 
 ### D4. Case IDs
 
@@ -128,7 +128,7 @@ Five statuses replace ⏳ / ✅ / ❌ / ⏸:
 *(TP F3, Architect F3, NZ11)*
 
 - **Where it may write in `docs/test-plans/`:**
-  - each case's status: `Open` ↔ `Automated`, and `Manual` after approval;
+  - each case's status: `Open` ↔ `Automated`, and `Manual` under the standing threshold rule or after approval (D3);
   - each case's `**Automation test:**` line.
 
   Nothing else: no case text, no priorities, never `Planned` or `Pending PO`, and it never deletes a case.
@@ -272,12 +272,7 @@ The Test Planner drafts these, and the Architect applies them (A1 D2).
 - **The checker list** gains `case-id`: "case IDs that don't match a case in the catalog."
 - **The reference rule stays as A1 wrote it.** It defers to `docs/test-plans/README.md` for how a case and its tests point at each other, so the rule lives in one place.
 
-**`story-done-checklist.md`:** D9's sign-off conditions, and the Test Planner's step 3 duties.
-
-**`epic-done-checklist.md`, the Tests section:**
-- the end-of-epic pass, then one Reconciler run;
-- "all cases mapped or manual" becomes D9's epic condition;
-- the report goes to `docs/audits/`.
+**`story-done-checklist.md` and `epic-done-checklist.md`:** A1 already landed the structure of D9: step 3's pass, step 5's catalog-wide check, the lost-coverage condition, the tech-debt check, and the epic's exceptions for Planned and routed cases. What's left for A3 is restating their test conditions in D2's vocabulary.
 
 **`coder.md` and root `CLAUDE.md`:** one line each. A test that covers a test-plan case starts its title with the case's qualified ID; see `docs/test-plans/README.md`.
 
@@ -326,7 +321,7 @@ Every feature follows the same steps.
 
    → **Stop 1.**
    - Nathan reviews the Test Planner's pass.
-   - He approves internal mappings and `Manual`.
+   - He approves internal mappings, and any `Manual` outside the standing threshold rule (D3).
    - He rules on each gap: close it in A3, or route it (D10).
    - `Pending PO` questions go to the PO.
 3. **The Coder.**
@@ -349,7 +344,7 @@ Every feature follows the same steps.
 
 - **Batch 3, `board-drag-interaction`** (82 active cases, 7 superseded):
   - Story 10 item 5's parameter drift;
-  - the threshold-timed cases (part of DRAG-1.3; DRAG-1.11, 1.14, 1.18, 1.19 and 5.11): propose each as `Manual`, or split it;
+  - the threshold-timed cases (part of DRAG-1.3; DRAG-1.11, 1.14, 1.18, 1.19 and 5.11): `Manual` under the standing rule (D3), with any reachable part or write split into its own case;
   - remove the INDEX's model preamble and its list of flags for the PO.
 - **Batch 4, `item-attachment`** (38 cases):
   - derive cases for the six rules the INDEX lists as settled but still without a case;
@@ -410,7 +405,6 @@ What it finds is resolved in this batch.
 
 - **To the Architect:**
   - **Story 10's roadmap entry:** narrow item 1 to the IDs A3 routed there. Item 5 is done.
-  - **`testing-strategy.md`:** it describes the test suite as of Epic 1.5 and predates D3. Rewrite it or retire it. A1 batch 4 only strips its provenance.
 - **To the PO:** the drag INDEX's flag 14 lists edits owed to the "Placement rules for a Hierarchy" design doc. It goes when the flag list is removed. The design doc is transient, and wiki §7 already carries the agreed wording. Please confirm nothing is lost.
 - **To A4 (the Coder):** test comments in the files A3 touched are still A4's.
 - **To every later story:** the flow is D9's, with one Reconciler run at close.

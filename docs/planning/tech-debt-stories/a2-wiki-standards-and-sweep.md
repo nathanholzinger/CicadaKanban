@@ -1,6 +1,6 @@
 # A2 — Wiki Standards and Sweep
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Product Owner · **Ready for:** Nathan's review
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Product Owner · **Approved:** by Nathan, 2026-09-26 · **Sequenced:** after A1. Each page batch releases its feature to A3 and A4.
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, and A1's plan (`a1-documentation-standards.md`). Tags like "PO F8" point to round-table items; "A1 D6" points to A1's decisions. This plan is transient, so it may cite them. The wiki it produces cites no round-table item, story or date.
 
@@ -75,7 +75,7 @@ After A2, A3 and A4 sweep against wiki pages that won't shift under them.
 *(PO #4, PO F6. The marker's contract between roles is A1 D6's; this is only its format.)*
 
 - **Format.** `**Planned:**` opens the paragraph or bullet that states the unbuilt rule. If the rule replaces a current passage, it says "Replaces §N's '<short quote>'."
-- **When the replaced passage is in another section,** that passage also gets a one-line `**Planned:**` note naming the section its replacement is in. A reader of either one finds the other, and both come off together.
+- **When the replaced passage is in another section,** that passage gets a one-line note in a fixed form: `*Replaced by §N once built.*` Across pages, the §N is written as a link followed by §N. The note is a pointer, not a marker: the passage stays in force until the Planned marker comes off. A reader of either passage finds the other, and both notes come off together.
 - **A partial build** states the current rule for the part that's built and marks the rest Planned.
 - **When it goes in.** A rule is written in as Planned when Nathan ratifies it, not when it's built. That's what lets the Test Planner work in parallel with the Coder.
 - **When it comes off.** At story close (A1 D9 step 2). The passage it replaces is deleted in the same edit.
@@ -116,7 +116,7 @@ After A2, A3 and A4 sweep against wiki pages that won't shift under them.
 
 - **Where rules come from.** Nathan's rulings, whether given directly or through a ratified story plan, a hands-on finding or an audit ruling. Never from reading code. A rule counts as built because the story's handoff says so and its tests pass.
 - **Deciding versus deducing (PO F2). Nathan to confirm:**
-  - **The answer follows from rules already in the wiki:** the PO writes it in and lists it under the story handoff's "rules decided", so Nathan sees it.
+  - **The answer follows from rules already in the wiki:** the PO writes it in and records it in the plan's Amendments as the PO's deduction, so Nathan sees it.
   - **It's a new choice:** the PO sets out the options and trade-offs for Nathan, then writes in his ruling.
 
   I recommend confirming it as written.
@@ -126,8 +126,7 @@ After A2, A3 and A4 sweep against wiki pages that won't shift under them.
   - Coder handoff items that turn out to be new decisions;
   - Reconciler findings where a test asserts a rule the wiki doesn't state.
 - **Consequences (NZ1).** When writing a rule, the PO checks it against the rules on the same page and on the Related pages it touches, and writes any interaction in. The Test Planner's edge-case questions are the backstop, not the first check.
-- **Timing.** Ratified rules go in as Planned when they're ratified (D4). At story close, the PO applies the handoff before the audit runs (A1 D9 step 2).
-- **Telling the other roles.** New Planned passages go in the story's Scope. Sections that were moved or removed go in its handoff (D7).
+- **Pointers, not restatement.** The standards guide and the story checklist already hold the Planned marker's contract, the timing of rulings, "a handoff is a request; the owner decides", and the close order. The persona already points to the standards guide. The persona text adds only what's specific to the PO, and points to the rest.
 - **Boundaries.** The PO edits the wiki and its own sections of story plans. It never edits code, test plans or `.claude/`.
 - **Persona text to remove or correct:**
   - the "build-status line" convention;
@@ -135,13 +134,28 @@ After A2, A3 and A4 sweep against wiki pages that won't shift under them.
   - "open questions … stay in the decisions doc until they resolve". Product questions go in the wiki's Open questions (D5), and deliberation goes in planning docs.
   - "the Test Planner never reads … decision docs". The Test Planner reads story plans for scope (NZ1).
 
-### D9. What A2 needs from A1
+### D9. What A2 needed from A1: all landed
 
-- **A1 batch 1's guides, approved.** The wiki README points to the standards guide for doc types, ownership and reference direction rather than restating them. A1 batch 1's review is also where the PO reviews A1 D6's marker contract. This plan only sets how the marker is written on a page (D4).
-- **A1 batch 2's checker, with two changes to A1 D8.** *The Architect should fold these into A1 before batch 2 starts:*
-  1. **In `docs/wiki`, a bare §N is a same-page reference, and a relative link followed by §N is a cross-page one.** Both are valid, and the checker confirms the section exists. Without this change, `bare-section` flags about 220 lines across three pages. The test plans may need the same treatment; that's A3's call.
-  2. **`wiki-code-name` doesn't treat these as code paths:** relative links to wiki pages or to `../../test-plans/…`, and API routes such as `PATCH /items/:id/move`.
-- **One change to A1 D10's handoff section:** a line the PO fills in at close, "Wiki sections added, moved or removed" (D7, D8).
+- **The guides.** The wiki README points to the standards guide for doc types, ownership and reference direction rather than restating them. The PO reviewed the marker's contract in A1 batch 1; this plan only sets how the marker is written on a page (D4).
+- **The checker's handling of wiki references.** In `docs/wiki`, a bare §N counts as a same-page reference, and a relative link followed by §N as a cross-page one. `wiki-pointer` confirms the section exists. `wiki-code-name` ignores links to wiki pages and test plans, and API routes. **Verified on 2026-09-27:** a run over `docs/wiki` produces no `bare-section` hits, and every `wiki-code-name` hit is a real code name.
+- **The template's handoff line** "Wiki sections added, moved or removed", which the PO fills in at close.
+
+**Baseline**, from `npm run check:docs -- docs/wiki` on 2026-09-27: 247 hits.
+
+| Rule | Hits |
+|---|---|
+| `transient-id` | 214 |
+| `wiki-code-name` | 29 |
+| `transient-link` | 2 |
+| `wiki-pointer` | 2 |
+
+| Page | Hits |
+|---|---|
+| board-drag-interaction | 200 |
+| item-positioning | 25 |
+| item-attachment | 16 |
+| README | 5 |
+| boards-columns-unsorted | 1 |
 
 ## Work, in batches
 
@@ -173,6 +187,8 @@ Each batch ends with its checks, then stops for Nathan's review and commit. A pa
 ### Batch 2: board-drag-interaction
 
 About 1,126 lines. Lines 3–63 are build history. Roughly 116 lines carry provenance and 22 name code. The Open questions cite Stories 7 and 8. It goes first because Story 7 works in §9, and because A4's first segment is the drag layer.
+
+It also holds the baseline's two `wiki-pointer` hits. §10's "item-positioning §2 addendum, §7.5" names another page in plain text, so the checker reads it as a same-page reference. The sweep turns it into a link.
 
 ### Batch 3: item-attachment
 
@@ -216,7 +232,7 @@ No code, test plans or other `.claude/` files change.
 
 ## Acceptance
 
-- **The checker:** `npm run check:docs -- docs/wiki` reports zero hits, and every remaining exception carries an ignore marker and a reason.
+- **The checker:** `npm run check:docs -- docs/wiki` reports zero hits, and every remaining exception carries an ignore marker and a reason. Zero hits is necessary but not sufficient. The checker can't see mechanism described without code names, or history without IDs, so Nathan's batch review covers those (D2, D3).
 - **Status:** no page carries a build-status line, and `**Planned:**` is the only status token in the wiki.
 - **Anchors:** every section number that existed before A2 still exists, or is listed in the handoff as removed. item-positioning gains §2.1 and §5.1.
 - **Behavior-neutral:** Nathan's review of each batch found no rule change, and every doubt the sweep raised is on the question list.
@@ -247,3 +263,12 @@ These lists are filled in as the batches land.
 - **To the Architect:**
   - the persona text (batch 1);
   - the A1 changes in D9, before A1's batch 2 starts.
+
+## Amendments
+
+**2026-09-27, A1's close folded in:**
+- **D4, the back-pointer on a replaced passage:** it becomes `*Replaced by §N once built.*`, not a second `**Planned:**`. The standards guide now says the replaced passage stays in force and the note is not a marker. A1 handed this change back to A2.
+- **D8:** a PO deduction is recorded in the plan's Amendments. A1 renamed the handoff's "rules decided" line to "behavior decisions made while building, for the PO to rule on", which is the Coder's line, not the PO's. The Timing and "telling the other roles" bullets now live in the standards guide and the story checklist, so the persona points to them instead.
+- **D9:** A1 has landed everything this plan needed from it. Added the checker's baseline over `docs/wiki`.
+- **Batch 2:** it fixes the plain-text cross-page reference behind the baseline's two `wiki-pointer` hits.
+- **Acceptance:** zero checker hits is necessary but not sufficient. Nathan's review covers what the checker can't see.
