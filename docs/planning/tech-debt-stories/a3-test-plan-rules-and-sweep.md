@@ -194,7 +194,7 @@ A1's history rule applies. That means no provenance, no "used to", no dates, no 
   - A `Pending PO` case has no `**Rule:**` field. That absence is its marker.
 - **A title states the rule, never the bug.** A regression case may say which mistake it guards against, in the present tense ("… so hovering over a covered member never snaps it to the entry workphase"). It doesn't say where or when the mistake was found.
 - **No build status** in suite headers or INDEX files. The statuses carry it (D2).
-- **No restating the wiki's model.** A preamble holds only what cases need and the wiki doesn't give, such as a shared setup ("the tree of DRAG-4.8"). Tunable values go by the names the wiki uses, never as literals.
+- **No restating the wiki's model.** A preamble holds only what cases need and the wiki doesn't give, such as a shared setup ("the tree of DRAG-4.8"). A value the wiki names, whether a tunable (`popDelayMs`) or a limit (`CAP`), goes by its name, never as a literal.
 - **A `Manual` case is still as specific as its rule allows.** Its *Then* says what the person checking looks for, so two people checking it would judge the same thing.
 
 **An INDEX file** holds two things:
@@ -323,7 +323,7 @@ Each batch ends with its checks, then stops for Nathan's review and commit. Feat
 Every feature follows the same steps.
 
 1. **The Test Planner's pass.**
-   - Re-derive the cases from the swept wiki page: add, revise and delete.
+   - Re-derive the cases from the whole swept wiki page: add, revise and delete. A2's handoff for the page is where to start, not the whole diff. It lists what the sweep changed, and the catalogs predate earlier rule changes too.
    - Apply D8's layout, and set `Planned`, `Open` or `Pending PO`.
    - Delete superseded cases.
    - Leave the status and pointer lines of `✅` cases for the Reconciler, which rewrites both in step 4.

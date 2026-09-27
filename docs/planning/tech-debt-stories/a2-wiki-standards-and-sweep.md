@@ -268,6 +268,15 @@ These lists are filled in as the batches land.
   - **Looks moved to Open questions:** the classification overlays (§4), band guides (§5), the zoom-in cue (§6.1), and the invalid tab-state cue (§3.2, §7.2). Assert that each cue appears, not how it looks.
   - **Open questions:** added "whether the drop expansion animates" and "where the tuning panel lives". Depth overflow and free-item reparent are unchanged apart from the story references.
   - **The opening note** now says feel is a rule too, and that testability is the test plans' call (D6).
+
+  **item-attachment (batch 3):** no moves and no new anchors.
+  - **§8, reworded:**
+    - the formula's `draggedSubtreeHeight` is now `H`, "the dragged item's subtree height". The rule is the same.
+    - "`CAP` is a single named constant with one definition" is now "the UI and the API always enforce the same `CAP`".
+  - **Removed as test policy (§8):** "Derived test cases parameterize on `CAP` rather than hard-coding 6". It's the same kind of note as board-drag §3.1's, and belongs in the test-plans README if it's still wanted.
+  - **§9:** the forward reference to a future "move to project" UI is gone. The rule it sat beside, that nothing is nulled or remapped, is unchanged.
+  - **Open questions:** story references and the "an earlier note warned" aside are gone. "Explicitly not MVP" is dropped from "Beyond the cap".
+  - **The Test suite link** loses its stale "(not yet written)".
 - **To A4 (Coder), per page:** each removed mechanism passage, quoted or summarized, with the wiki section it served. A4 either places it by A1 D5, with an index pointer to that section (Coder F2), or drops it as already covered. A4's drag-layer segment can start as soon as batch 2 is committed.
 
   **board-drag-interaction (batch 2)**, as `wiki board-drag-interaction §N` → what was removed:
@@ -300,6 +309,10 @@ These lists are filled in as the batches land.
     - the no-anchor slot is `popSession.ts::noAnchorSlot`, keyed on whether the origin carries a `parentId`;
     - the pending marker is the `data-pending` attribute, which E2E tests read;
     - the done-list comparator is `byCompletedAtThenCreatedAt`.
+
+  **item-attachment (batch 3):**
+  - **The page header:** one server primitive, `server/src/lib/itemHierarchy.ts`, sits behind `POST /items`, `PUT /items/:id` and `PATCH /items/:id/move`. Root `CLAUDE.md`'s "one hierarchy-write primitive" guardrail probably covers it already. §7's "on the write means every write" keeps the behavior.
+  - **§8:** the cap is one constant, `ITEM_DEPTH_CAP`, defined server-side and shared with the UI. How it reaches the board is in board-drag §4's entry above.
 - **To Nathan:**
   - questions the sweep raised: rules that may be stale or unclear;
   - deferred ideas taken out of the wiki, for the roadmap. So far:
@@ -310,6 +323,11 @@ These lists are filled in as the batches land.
     - from board-drag: a board-density option that reuses shortCard;
     - from board-drag: the done/terminal column rework, which the Epic 4 roadmap already carries;
     - from board-drag: a "combined function" of duration and distance for the pop thresholds, a tuning idea;
+  - **from item-attachment:**
+    - the "move to project" UI that remaps workphases on top of the accepting cross-workflow API, which the Epic 7 roadmap carries;
+    - Dossier being post-MVP;
+    - pagination or folders beyond the cap being "not MVP".
+  - **questions from item-attachment:** none.
   - **questions from board-drag:** none about the rules themselves. Two small fixes, both behavior-neutral:
     - §5's opening cited "§2 rule 1", which doesn't exist. It now cites §1.1 rule 1, the rule it quotes.
     - §10's "item-positioning §2 addendum, §7.5" was plain text, so the checker read it as this page's §7.5. It's now a link.
@@ -489,3 +507,9 @@ files or `.claude/`; a change you need there is a handoff.
 - **The "provisional" values and "as built" asides** became plain rules, or Open questions for the looks (D5).
 - **Removed as test policy:** §3.1's paragraph on what automated tests assert (A3 handoff).
 - **Edited in place, not rewritten,** so the diff shows only changed lines, for the no-rule-change review (D1).
+
+**2026-09-27, batch 3 (item-attachment):**
+- **Swept to 0 checker hits** (from 16). Section numbers unchanged; no moves and no new anchors.
+- **§8's formula** now uses `H` in place of the code-style `draggedSubtreeHeight`, with the same definition in words.
+- **Removed as test policy:** §8's "derived test cases parameterize on `CAP`" (A3 handoff), for consistency with board-drag §3.1.
+- **Forward references dropped:** "Story 7", "Story 9", "Epic 7's move-to-project UI", "post-MVP" and "not MVP". The ones that are real plans went to Nathan's list for the roadmap.

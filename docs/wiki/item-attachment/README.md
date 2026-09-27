@@ -1,16 +1,6 @@
 # Item Attachment & Hierarchy Placement
 
-**Build status:** The Free/Attached state model and its consequences are
-**implemented as of Epic 3**. The reparenting-placement rules (§4–§8),
-§1's parentless-attach rejection, §9's cross-project and cross-workflow
-acceptance, §11's reparent-to-root, and §11a's activity log are
-**implemented as of Epic 3.5 Story 1** — one server primitive
-(`server/src/lib/itemHierarchy.ts`) behind `POST /items`, `PUT /items/:id`,
-and `PATCH /items/:id/move`. Only the *board gesture* that drives them is
-still to come (Stories 2–6). `CAP` is defined server-side
-(`ITEM_DEPTH_CAP`); how the UI shares it is Story 2's.
-
-**Test suite:** [`../../test-plans/item-attachment/`](../../test-plans/item-attachment/) *(not yet written)*
+**Test suite:** [`../../test-plans/item-attachment/`](../../test-plans/item-attachment/)
 
 **Related:** [`../item-positioning/`](../item-positioning/) (what a position
 means and how it resolves) · [`../board-drag-interaction/`](../board-drag-interaction/)
@@ -61,9 +51,8 @@ choice about whether this item's status tracks its parent's.
 - An Attached child **inherits its parent's effective workphase**, and a
   parent's workphase change cascades to every attached descendant.
 - An Attached child **never receives `completedAt` and always keeps its
-  position**, regardless of whether the workphase it inherited is terminal.
-  (This is Epic 3.2's model, unchanged by Epic 3.5 — see
-  [`../item-positioning/`](../item-positioning/) §6.)
+  position**, regardless of whether the workphase it inherited is terminal
+  ([`../item-positioning/`](../item-positioning/) §6).
 - **A Stub under a done parent reads as done by derivation**, from the
   terminal workphase it inherited. Nothing extra is stored to say so, and
   nothing needs to be un-stored when the parent reopens.
@@ -113,8 +102,8 @@ a Free item reparented without the flag is still Free under its new
 parent; an Attached one is still Attached. Nothing attaches by default.
 A Free reparent with no anchor leaves the position alone (its scope is
 workflow-wide and didn't change); with an anchor it repositions like any
-other Free item. Whether the *board gesture* offers this is Story 9's
-question — the API rule is settled here.
+other Free item. Whether the *board gesture* offers this is open (Open
+questions); the API rule is settled here.
 
 ## 5. Reparent first, then resolve the position
 
@@ -177,11 +166,11 @@ server knows about produces a gesture that looks like it worked and didn't.
 **A target at depth `D` is a legal parent only if:**
 
 ```
-D + 1 + draggedSubtreeHeight <= CAP
+D + 1 + H <= CAP
 ```
 
-with **root items at depth 1**, and `draggedSubtreeHeight` counting the
-levels *below* the dragged item (a leaf being dragged has height 0).
+with **root items at depth 1**, and `H` the dragged item's subtree height:
+the levels *below* the dragged item (a leaf being dragged has height 0).
 
 The moving item brings its whole subtree with it, so the cap is checked
 against the deepest leaf that would result — not against the dragged item
@@ -194,12 +183,11 @@ and nothing else — not the direction of the move, not the item's current
 depth. A subtree that is already taller than the cap therefore fails the
 check for every target, including a root; it can be moved only by
 dismantling it. This is deliberate: over-cap data can only arise from a
-later change to `CAP` (Story 7) or from data the UI/API never produced,
-and a direction-aware exception would cost the UI and the API a second
-clause each to stay in agreement. Deeper-hierarchy traversal is a later
-feature; the cap isn't the place to pre-build for it.
+later change to `CAP` or from data the UI/API never produced, and a
+direction-aware exception would cost the UI and the API a second clause
+each to stay in agreement.
 
-**`CAP` is provisionally 6, pending Story 7's empirical determination.**
+**`CAP` is provisionally 6.** Its real value is open (Open questions).
 
 The cap is a **display** constraint, not a data constraint: it exists
 because indented hierarchy has to stay legible in the project sidebar and
@@ -209,10 +197,8 @@ wrong. Grounding for the provisional 6: the sidebar is 240px wide, indents
 its label — roughly twenty characters. Depth 8 leaves ~130px, which is
 where it stops reading as a label and starts reading as a truncation.
 
-**`CAP` is a single named constant with one definition**, consumed by both
-the UI and the API. Story 7 changes its value; nothing else should need to
-change with it. Derived test cases parameterize on it rather than hard-
-coding 6.
+**The UI and the API always enforce the same `CAP`**: one value, shared by
+both, so changing it changes it everywhere at once.
 
 **The cap does not retroactively invalidate existing data.** It gates
 *writes*; a tree that is already deeper than the cap (created before the
@@ -245,9 +231,8 @@ every `workphaseId` in the moved subtree is left exactly as it was. An
 item whose workphase isn't in its project's workflow is what a board's
 **Unsorted → "Unknown status"** bucket exists to show; it renders there
 until a user re-files it into a workphase of the new workflow. Nothing is
-nulled and nothing is remapped — remapping is Epic 7's "move to project"
-UI, which will run on top of this same accepting API rather than replace
-it. The one exception is an *attached* item, which never keeps its own
+nulled and nothing is remapped. The one exception is an *attached* item,
+which never keeps its own
 workphase anyway: it inherits the new parent's, and its attached
 descendants cascade with it, exactly as §2 says. Only items that keep
 their own workphase — a Free moving item, and every detached descendant
@@ -326,29 +311,24 @@ none of it is stored):
 - **Sheet** — the full item detail view. The only place non-positional data
   is edited.
 - **Headline** — an item's line in an Inbox list view (title + priority
-  tags). Pre-existing design-doc term.
+  tags).
 
-*Dossier* — a hypothetical richer-than-Sheet view — is named but explicitly
-undesigned and post-MVP.
+*Dossier* — a hypothetical richer-than-Sheet view — is named but
+undesigned.
 
 ---
 
 ## Open questions
 
-Not settled. **Do not derive test cases from anything in this section.**
-Everything *outside* this section is settled and derivable — including the
-depth cap, whose *rule* is settled and whose *value* is provisional.
+Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
-- **Free-item reparent *as a board gesture* (Story 9).** The API supports
-  it (§4) and Story 1 builds that. What's open is whether the board offers
-  a drop that means "reparent but stay Free" — it would be a third meaning
-  the UI must disambiguate against attach-on-drop and reposition-on-drop.
-  Undecided whether to build, defer, or conclude it isn't a board action
-  that makes sense. *(An earlier note here warned that a reparent without
-  an explicit "stay detached" would silently attach; it doesn't — the API
-  keeps the current state when the flag is omitted, §4.)*
-- **`CAP`'s real value (Story 7).** 6 is a provisional working number
-  derived from sidebar arithmetic, not from looking at real hierarchies.
+- **Free-item reparent *as a board gesture*.** The API supports it (§4).
+  What's open is whether the board offers a drop that means "reparent but
+  stay Free" — a third meaning the UI would have to disambiguate against
+  attach-on-drop and reposition-on-drop. Undecided whether to build it,
+  defer it, or conclude it isn't a board action that makes sense.
+- **`CAP`'s real value.** 6 is a provisional working number derived from
+  sidebar arithmetic (§8), not from looking at real hierarchies.
 - **Beyond the cap.** Trees deep enough that per-level indentation fits
   neither the sidebar nor the expanded-hierarchy modal have no answer yet.
-  A pagination/folder scheme would be needed; explicitly not MVP.
+  A pagination or folder scheme would be needed.
