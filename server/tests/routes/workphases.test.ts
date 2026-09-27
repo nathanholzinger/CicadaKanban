@@ -46,7 +46,9 @@ describe('PUT /api/workphases/:id', () => {
     const phase = await createWorkphase(workflow.id, { name: 'Todo' });
 
     const res = await request(app).put(`/api/workphases/${phase.id}`).send({
-      name: 'In Progress', triggersNotification: true, isTerminal: false,
+      name: 'In Progress',
+      triggersNotification: true,
+      isTerminal: false,
     });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('In Progress');
@@ -111,7 +113,11 @@ describe('PUT /api/workphases/:id', () => {
       expect(res.status).toBe(200);
 
       const [ra, rb, rc] = await Promise.all(
-        [a, b, c].map((i) => request(app).get(`/api/items/${i.id}`).then((r) => r.body)),
+        [a, b, c].map(i =>
+          request(app)
+            .get(`/api/items/${i.id}`)
+            .then(r => r.body),
+        ),
       );
       expect(ra.position).toBeNull();
       expect(rb.position).toBeNull();
@@ -137,7 +143,11 @@ describe('PUT /api/workphases/:id', () => {
       expect(res.status).toBe(200);
 
       const [ra, rb, rc] = await Promise.all(
-        [a, b, c].map((i) => request(app).get(`/api/items/${i.id}`).then((r) => r.body)),
+        [a, b, c].map(i =>
+          request(app)
+            .get(`/api/items/${i.id}`)
+            .then(r => r.body),
+        ),
       );
       expect(ra.completedAt).toBeNull();
       expect(rb.completedAt).toBeNull();
@@ -147,20 +157,24 @@ describe('PUT /api/workphases/:id', () => {
       expect(rb.position).toBeLessThan(rc.position);
     });
 
-    it('does not touch an attached child\'s position/completedAt when its parent\'s workphase flips terminal', async () => {
+    it("does not touch an attached child's position/completedAt when its parent's workphase flips terminal", async () => {
       const project = await createProject();
       const workflow = await createWorkflow(project.id);
       const review = await createWorkphase(workflow.id, { name: 'Review' });
       const parent = await createItem({ projectId: project.id, workphaseId: review.id, title: 'Parent' });
       const childRes = await request(app).post('/api/items').send({
-        title: 'Child', parentId: parent.id, projectId: project.id,
+        title: 'Child',
+        parentId: parent.id,
+        projectId: project.id,
       });
       const child = childRes.body;
       expect(child.position).not.toBeNull();
 
       await request(app).put(`/api/workphases/${review.id}`).send({ isTerminal: true });
 
-      const reloaded = await request(app).get(`/api/items/${child.id}`).then((r) => r.body);
+      const reloaded = await request(app)
+        .get(`/api/items/${child.id}`)
+        .then(r => r.body);
       expect(reloaded.position).toBe(child.position);
       expect(reloaded.completedAt).toBeNull();
     });
@@ -179,9 +193,14 @@ describe('PATCH /api/workphases/reorder', () => {
     const a = await createWorkphase(workflow.id, { name: 'A' });
     const b = await createWorkphase(workflow.id, { name: 'B' });
 
-    const res = await request(app).patch('/api/workphases/reorder').send({
-      workphaseOrders: [{ id: a.id, position: 5 }, { id: b.id, position: 1 }],
-    });
+    const res = await request(app)
+      .patch('/api/workphases/reorder')
+      .send({
+        workphaseOrders: [
+          { id: a.id, position: 5 },
+          { id: b.id, position: 1 },
+        ],
+      });
     expect(res.status).toBe(200);
   });
 
@@ -190,9 +209,11 @@ describe('PATCH /api/workphases/reorder', () => {
     const workflow = await createWorkflow(project.id);
     const a = await createWorkphase(workflow.id, { name: 'A' });
 
-    const res = await request(app).patch('/api/workphases/reorder').send({
-      workphaseOrders: [{ id: a.id, position: 'first' }],
-    });
+    const res = await request(app)
+      .patch('/api/workphases/reorder')
+      .send({
+        workphaseOrders: [{ id: a.id, position: 'first' }],
+      });
     expect(res.status).toBe(400);
   });
 
@@ -201,9 +222,14 @@ describe('PATCH /api/workphases/reorder', () => {
     const workflow = await createWorkflow(project.id);
     const a = await createWorkphase(workflow.id, { name: 'A' });
 
-    const res = await request(app).patch('/api/workphases/reorder').send({
-      workphaseOrders: [{ id: a.id, position: 1 }, { id: 'ghost', position: 2 }],
-    });
+    const res = await request(app)
+      .patch('/api/workphases/reorder')
+      .send({
+        workphaseOrders: [
+          { id: a.id, position: 1 },
+          { id: 'ghost', position: 2 },
+        ],
+      });
     expect(res.status).toBe(404);
     expect(res.body.missingIds).toEqual(['ghost']);
   });
@@ -277,7 +303,7 @@ describe('DELETE /api/workphases/:id', () => {
     expect(resolved.endWorkphaseId).toBe(done.id);
   });
 
-  it('deleting a column\'s sole covered workphase deletes the column and reports it (200)', async () => {
+  it("deleting a column's sole covered workphase deletes the column and reports it (200)", async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const todo = await createWorkphase(workflow.id, { name: 'Todo' });

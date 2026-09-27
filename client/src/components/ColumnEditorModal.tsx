@@ -74,9 +74,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
         <div className="space-y-3 px-6 py-4">
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className={FIELD_LABEL}>
-                From
-              </label>
+              <label className={FIELD_LABEL}>From</label>
               <select
                 value={startWorkphaseId}
                 onChange={e => handleStartChange(e.target.value)}
@@ -110,9 +108,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
           </p>
 
           <div>
-            <label className={FIELD_LABEL}>
-              Display mode
-            </label>
+            <label className={FIELD_LABEL}>Display mode</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -132,9 +128,7 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
           </div>
 
           <div>
-            <label className={FIELD_LABEL}>
-              Name (optional)
-            </label>
+            <label className={FIELD_LABEL}>Name (optional)</label>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
@@ -147,18 +141,10 @@ export default function ColumnEditorModal({ workphases, column, onSubmit, onClos
         </div>
 
         <div className="flex justify-end gap-2 border-t border-zinc-800 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className={BTN_MODAL_CANCEL}
-          >
+          <button type="button" onClick={onClose} className={BTN_MODAL_CANCEL}>
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={saving || !startWorkphaseId || !endWorkphaseId}
-            className={BTN_MODAL_PRIMARY}
-          >
+          <button type="submit" disabled={saving || !startWorkphaseId || !endWorkphaseId} className={BTN_MODAL_PRIMARY}>
             {column ? 'Save' : 'Add column'}
           </button>
         </div>

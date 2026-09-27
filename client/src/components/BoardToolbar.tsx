@@ -112,10 +112,7 @@ export default function BoardToolbar({
 
         {!readOnly && (
           <>
-            <button
-              onClick={() => setCreatingBoard(v => !v)}
-              className={BTN_ADD_TRIGGER}
-            >
+            <button onClick={() => setCreatingBoard(v => !v)} className={BTN_ADD_TRIGGER}>
               + New board
             </button>
             {activeBoardId && (
@@ -140,10 +137,7 @@ export default function BoardToolbar({
             <button onClick={onAddColumn} className={BTN_ADD_TRIGGER}>
               + Add column
             </button>
-            <button
-              onClick={onToggleWorkphaseManager}
-              className={BTN_ADD_TRIGGER}
-            >
+            <button onClick={onToggleWorkphaseManager} className={BTN_ADD_TRIGGER}>
               Manage workphases
             </button>
           </>
@@ -163,7 +157,11 @@ export default function BoardToolbar({
 
         {/* Always available, read-only boards included: the drag gesture works
             everywhere and its tuning is a per-browser setting, not board data. */}
-        <button onClick={onToggleDragTuning} className={BTN_ADD_TRIGGER} title="Drag gesture thresholds, bands, overlays">
+        <button
+          onClick={onToggleDragTuning}
+          className={BTN_ADD_TRIGGER}
+          title="Drag gesture thresholds, bands, overlays"
+        >
           Drag tuning
         </button>
 

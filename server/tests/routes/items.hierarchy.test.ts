@@ -211,7 +211,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     expect([getRow(s1.id).position, getRow(s2.id).position]).toEqual([1.0, 2.0]); // siblings untouched
   });
 
-  it('reparents while attached against the NEW parent\'s scope, never the old (TC-7.12, ATT-3.5)', async () => {
+  it("reparents while attached against the NEW parent's scope, never the old (TC-7.12, ATT-3.5)", async () => {
     const { project, todo } = await setupWorkflow();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
     await createItem({ projectId: project.id, parentId: a.id, title: 'A1' });
@@ -383,7 +383,13 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
     const { p: q, s1: q1 } = await cardWithTwoStubs(p2.id, inProgress.id, 'Q');
     const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
     const x1 = await createItem({ projectId: p1.id, parentId: x.id, title: 'X1' });
-    const x2 = await createItem({ projectId: p1.id, parentId: x.id, title: 'X2', isAttached: false, workphaseId: todo.id });
+    const x2 = await createItem({
+      projectId: p1.id,
+      parentId: x.id,
+      title: 'X2',
+      isAttached: false,
+      workphaseId: todo.id,
+    });
     const x2a = await createItem({ projectId: p1.id, parentId: x2.id, title: 'X2a' });
     const x2Position = getRow(x2.id).position;
 
@@ -418,7 +424,13 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
       const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
       const x = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'X' });
       const x1 = await createItem({ projectId: a.project.id, parentId: x.id, title: 'X1' });
-      const x2 = await createItem({ projectId: a.project.id, parentId: x.id, title: 'X2', isAttached: false, workphaseId: a.todo.id });
+      const x2 = await createItem({
+        projectId: a.project.id,
+        parentId: x.id,
+        title: 'X2',
+        isAttached: false,
+        workphaseId: a.todo.id,
+      });
       expect(getRow(x2.id).position).not.toBeNull();
 
       const res = await move(x.id, { parentId: pb.id, isAttached: false });
@@ -438,13 +450,19 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
       expect(boardRes.body.unsorted.needsAttention).toBe(true);
     });
 
-    it('an attached reparent inherits the new workflow\'s workphase; only detached descendants are left foreign', async () => {
+    it("an attached reparent inherits the new workflow's workphase; only detached descendants are left foreign", async () => {
       const a = await setupWorkflow('A');
       const b = await setupWorkflow('B');
       const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
       const x = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'X' });
       const x1 = await createItem({ projectId: a.project.id, parentId: x.id, title: 'X1' });
-      const x2 = await createItem({ projectId: a.project.id, parentId: x.id, title: 'X2', isAttached: false, workphaseId: a.todo.id });
+      const x2 = await createItem({
+        projectId: a.project.id,
+        parentId: x.id,
+        title: 'X2',
+        isAttached: false,
+        workphaseId: a.todo.id,
+      });
 
       const res = await move(x.id, { parentId: pb.id, isAttached: true });
       expect(res.status).toBe(200);
@@ -499,7 +517,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
         expect(getRow(x.id)).toEqual(before);
       });
 
-      it('still allows a same-workflow reparent that names a workphaseId, and a re-file into the project\'s own workflow', async () => {
+      it("still allows a same-workflow reparent that names a workphaseId, and a re-file into the project's own workflow", async () => {
         const { todo, inProgress, p1, p2 } = await setupSiblingProjects();
         const q = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'Q' });
         const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
@@ -596,7 +614,9 @@ describe('reindex disclosure (wiki item-positioning §5)', () => {
 
   it('PUT and POST disclose the same way', async () => {
     const { project, todo, a, b } = await setupNearThreshold();
-    const created = await request(app).post('/api/items').send({ projectId: project.id, workphaseId: todo.id, title: 'C' });
+    const created = await request(app)
+      .post('/api/items')
+      .send({ projectId: project.id, workphaseId: todo.id, title: 'C' });
     expect(created.status).toBe(201);
     expect(created.body.reindexed).toEqual([
       { id: a.id, position: 1 },
@@ -638,7 +658,9 @@ describe('PUT /items/:id and POST /items share the guards (wiki §7 "every write
   it('POST enforces the depth cap: a child at depth CAP is fine, CAP + 1 is refused', async () => {
     const { project, todo } = await setupWorkflow();
     const deepest = await createChain(project.id, todo.id, ITEM_DEPTH_CAP);
-    const res = await request(app).post('/api/items').send({ projectId: project.id, parentId: deepest.id, title: 'too deep' });
+    const res = await request(app)
+      .post('/api/items')
+      .send({ projectId: project.id, parentId: deepest.id, title: 'too deep' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/exceeds the cap/);
   });

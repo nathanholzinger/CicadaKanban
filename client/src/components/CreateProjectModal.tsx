@@ -82,18 +82,10 @@ export default function CreateProjectModal({ parentName, onClose, onCreate }: Cr
         {error && <p className="text-xs text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className={BTN_MODAL_CANCEL}
-          >
+          <button type="button" onClick={onClose} className={BTN_MODAL_CANCEL}>
             Cancel
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className={BTN_MODAL_PRIMARY}
-          >
+          <button type="submit" disabled={saving} className={BTN_MODAL_PRIMARY}>
             {saving ? 'Creating…' : isSubproject ? 'Create subproject' : 'Create project'}
           </button>
         </div>

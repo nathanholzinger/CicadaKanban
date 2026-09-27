@@ -1,7 +1,13 @@
 import type { APIRequestContext, Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedPositionedItems, fetchDefaultBoard, fetchItem } from '../helpers/seed';
+import {
+  seedTemplatedWorkflow,
+  pickWorkphases,
+  seedPositionedItems,
+  fetchDefaultBoard,
+  fetchItem,
+} from '../helpers/seed';
 import {
   pickUp,
   hoverTo,
@@ -483,7 +489,7 @@ test.describe('Card → column drop bands', () => {
     expect(x.workphaseId).toBe(s.phase.todo.id);
   });
 
-  test('popped out, a release in a column is still that column\'s band', async ({ page, request, projectSidebar }) => {
+  test("popped out, a release in a column is still that column's band", async ({ page, request, projectSidebar }) => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, { popDelayMs: 150, popInDelayMs: 30_000 });
     await openBoard(page, projectSidebar);
@@ -502,7 +508,11 @@ test.describe('Card → column drop bands', () => {
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
   });
 
-  test('a card is locked to each context it pops into in turn — In Progress, then Review', async ({ page, request, projectSidebar }) => {
+  test('a card is locked to each context it pops into in turn — In Progress, then Review', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, SUSTAINED);
     await openBoard(page, projectSidebar);
@@ -530,7 +540,11 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.X.id)).position).toBe(2.5);
   });
 
-  test('DRAG-1.3 (momentary): brushing across another column while reordering never leaves the context', async ({ page, request, projectSidebar }) => {
+  test('DRAG-1.3 (momentary): brushing across another column while reordering never leaves the context', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const s = await seed(request);
     await seedDragTuning(page, NO_POP);
     await openBoard(page, projectSidebar);
@@ -679,7 +693,11 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.C.id)).workphaseId).toBe(s.phase.review.id);
   });
 
-  test('DRAG-3.9: a done column produces no anchor — every band is a workphase-only move', async ({ page, request, projectSidebar }) => {
+  test('DRAG-3.9: a done column produces no anchor — every band is a workphase-only move', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await request.patch(`${API}/items/${s.items.A.id}/move`, { data: { workphaseId: s.phase.done.id } });

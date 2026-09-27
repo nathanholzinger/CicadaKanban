@@ -14,7 +14,16 @@ import { buildRankMap } from '../../src/lib/workphaseOrder.js';
 // ── Pure helpers (no DB) ─────────────────────────────────────────────────────
 
 function phase(id: string, position: number) {
-  return { id, position, name: id, workflowId: 'w', agentId: null, triggersNotification: 0, isTerminal: 0, createdAt: 0 };
+  return {
+    id,
+    position,
+    name: id,
+    workflowId: 'w',
+    agentId: null,
+    triggersNotification: 0,
+    isTerminal: 0,
+    createdAt: 0,
+  };
 }
 
 describe('pure range helpers', () => {
@@ -100,7 +109,9 @@ describe('POST /api/columns', () => {
   it('returns 404 for a non-existent board', async () => {
     const { todo, done } = await setupCleanBoard();
     const res = await request(app).post('/api/columns').send({
-      boardId: 'does-not-exist', startWorkphaseId: todo.id, endWorkphaseId: done.id,
+      boardId: 'does-not-exist',
+      startWorkphaseId: todo.id,
+      endWorkphaseId: done.id,
     });
     expect(res.status).toBe(404);
   });
@@ -108,7 +119,9 @@ describe('POST /api/columns', () => {
   it('creates a column spanning a range, defaulting displayMode to merged', async () => {
     const { board, todo, done } = await setupCleanBoard();
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: todo.id, endWorkphaseId: done.id,
+      boardId: board.id,
+      startWorkphaseId: todo.id,
+      endWorkphaseId: done.id,
     });
     expect(res.status).toBe(201);
     expect(res.body.displayMode).toBe('merged');
@@ -118,7 +131,9 @@ describe('POST /api/columns', () => {
   it('rejects an inverted range', async () => {
     const { board, todo, done } = await setupCleanBoard();
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: done.id, endWorkphaseId: todo.id,
+      boardId: board.id,
+      startWorkphaseId: done.id,
+      endWorkphaseId: todo.id,
     });
     expect(res.status).toBe(400);
   });
@@ -129,7 +144,9 @@ describe('POST /api/columns', () => {
     const foreignPhase = await createWorkphase(otherWorkflow.id, { name: 'Foreign' });
 
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: todo.id, endWorkphaseId: foreignPhase.id,
+      boardId: board.id,
+      startWorkphaseId: todo.id,
+      endWorkphaseId: foreignPhase.id,
     });
     expect(res.status).toBe(400);
   });
@@ -141,7 +158,9 @@ describe('POST /api/columns', () => {
     expect(first.id).toBeTruthy();
 
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: inProgress.id, endWorkphaseId: done.id,
+      boardId: board.id,
+      startWorkphaseId: inProgress.id,
+      endWorkphaseId: done.id,
     });
     expect(res.status).toBe(400);
     expect(res.body.conflictingColumnId).toBe(first.id);
@@ -152,7 +171,10 @@ describe('POST /api/columns', () => {
 
     await createColumn(board.id, todo.id, todo.id);
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: inProgress.id, endWorkphaseId: done.id, displayMode: 'expanded',
+      boardId: board.id,
+      startWorkphaseId: inProgress.id,
+      endWorkphaseId: done.id,
+      displayMode: 'expanded',
     });
     expect(res.status).toBe(201);
     expect(res.body.displayMode).toBe('expanded');
@@ -226,9 +248,11 @@ describe('PATCH /api/columns/reorder', () => {
     const { board, todo } = await setupCleanBoard();
     const col = await createColumn(board.id, todo.id, todo.id);
 
-    const res = await request(app).patch('/api/columns/reorder').send({
-      columnOrders: [{ id: col.id, position: 'first' }],
-    });
+    const res = await request(app)
+      .patch('/api/columns/reorder')
+      .send({
+        columnOrders: [{ id: col.id, position: 'first' }],
+      });
     expect(res.status).toBe(400);
   });
 
@@ -236,9 +260,14 @@ describe('PATCH /api/columns/reorder', () => {
     const { board, todo } = await setupCleanBoard();
     const col = await createColumn(board.id, todo.id, todo.id);
 
-    const res = await request(app).patch('/api/columns/reorder').send({
-      columnOrders: [{ id: col.id, position: 1 }, { id: 'ghost', position: 2 }],
-    });
+    const res = await request(app)
+      .patch('/api/columns/reorder')
+      .send({
+        columnOrders: [
+          { id: col.id, position: 1 },
+          { id: 'ghost', position: 2 },
+        ],
+      });
     expect(res.status).toBe(404);
     expect(res.body.missingIds).toEqual(['ghost']);
   });
@@ -248,9 +277,14 @@ describe('PATCH /api/columns/reorder', () => {
     const colA = await createColumn(board.id, todo.id, todo.id);
     const colB = await createColumn(board.id, done.id, done.id);
 
-    const res = await request(app).patch('/api/columns/reorder').send({
-      columnOrders: [{ id: colA.id, position: 5 }, { id: colB.id, position: 1 }],
-    });
+    const res = await request(app)
+      .patch('/api/columns/reorder')
+      .send({
+        columnOrders: [
+          { id: colA.id, position: 5 },
+          { id: colB.id, position: 1 },
+        ],
+      });
     expect(res.status).toBe(200);
 
     const detail = await request(app).get(`/api/boards/${board.id}`);
@@ -288,7 +322,9 @@ describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
   it('POST rejects a range spanning a terminal and non-terminal workphase', async () => {
     const { board, inProgress, done } = await setupWithTerminal();
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: inProgress.id, endWorkphaseId: done.id,
+      boardId: board.id,
+      startWorkphaseId: inProgress.id,
+      endWorkphaseId: done.id,
     });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/terminal/i);
@@ -297,7 +333,9 @@ describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
   it('POST allows a range entirely within terminal workphases', async () => {
     const { board, done } = await setupWithTerminal();
     const res = await request(app).post('/api/columns').send({
-      boardId: board.id, startWorkphaseId: done.id, endWorkphaseId: done.id,
+      boardId: board.id,
+      startWorkphaseId: done.id,
+      endWorkphaseId: done.id,
     });
     expect(res.status).toBe(201);
   });

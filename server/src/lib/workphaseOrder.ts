@@ -29,7 +29,9 @@ export function buildRankMap(orderedWorkphases: Workphase[]): Map<string, number
 // column-range math repeats (though not every caller needs the rank map;
 // workflows.ts GET /:id, for one, only uses `workphases`).
 export function getOrderedWorkphases(workflowId: string): { workphases: Workphase[]; rankMap: Map<string, number> } {
-  const ordered = db.select().from(workphases)
+  const ordered = db
+    .select()
+    .from(workphases)
     .where(eq(workphases.workflowId, workflowId))
     .orderBy(workphases.position)
     .all();

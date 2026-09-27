@@ -48,21 +48,23 @@ router.post('/', (req, res) => {
   // the whole scope (positionResolver.ts's magnitude-threshold trigger),
   // which writes one row at a time — without an enclosing transaction each
   // of those writes would auto-commit individually.
-  db.transaction((tx) => {
+  db.transaction(tx => {
     // Resolved via the shared positioning library (not a raw Date.now()
     // stamp) so a brand-new sibling under an old, contaminated position
     // group immediately triggers that group's magnitude-threshold self-heal.
     const scope = projectPositionScope(parentId);
     const position = resolveAppendPosition(projects, scope, tx);
-    tx.insert(projects).values({
-      id,
-      parentId: resolvedParentId,
-      name,
-      description: description || null,
-      position,
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    tx.insert(projects)
+      .values({
+        id,
+        parentId: resolvedParentId,
+        name,
+        description: description || null,
+        position,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
   });
 
   const created = db.select().from(projects).where(eq(projects.id, id)).get();
@@ -91,12 +93,15 @@ router.put('/:id', (req, res) => {
 
   // No `position` field here — positions are only ever resolved through
   // PATCH /:id/move (never a raw client-supplied number, see positionResolver.ts).
-  db.update(projects).set({
-    name: name ?? project.name,
-    description: description !== undefined ? description : project.description,
-    parentId: 'parentId' in req.body ? (parentId ?? null) : project.parentId,
-    updatedAt: Date.now(),
-  }).where(eq(projects.id, req.params.id)).run();
+  db.update(projects)
+    .set({
+      name: name ?? project.name,
+      description: description !== undefined ? description : project.description,
+      parentId: 'parentId' in req.body ? (parentId ?? null) : project.parentId,
+      updatedAt: Date.now(),
+    })
+    .where(eq(projects.id, req.params.id))
+    .run();
   const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
   res.json(updated);
 });
@@ -109,8 +114,12 @@ function deleteProjectById(id: string, tx: Tx) {
   for (const child of children) deleteProjectById(child.id, tx);
 
   // Gather this project's workflow ids upfront
-  const workflowIds = tx.select({ id: workflows.id })
-    .from(workflows).where(eq(workflows.projectId, id)).all().map(w => w.id);
+  const workflowIds = tx
+    .select({ id: workflows.id })
+    .from(workflows)
+    .where(eq(workflows.projectId, id))
+    .all()
+    .map(w => w.id);
 
   // Items to remove: owned by this project ONLY — not also every item merely
   // sitting in one of this project's workphases (audit Finding #14). A
@@ -124,8 +133,12 @@ function deleteProjectById(id: string, tx: Tx) {
   // resolves to. Each deleted item's dependent rows (itemLabels,
   // activityLog, notifications, attachments, chat threads/messages) are
   // removed by ON DELETE CASCADE, so deleting the items is enough.
-  const allItemIds = tx.select({ id: items.id })
-    .from(items).where(eq(items.projectId, id)).all().map(i => i.id);
+  const allItemIds = tx
+    .select({ id: items.id })
+    .from(items)
+    .where(eq(items.projectId, id))
+    .all()
+    .map(i => i.id);
 
   if (allItemIds.length > 0) {
     tx.delete(items).where(inArray(items.id, allItemIds)).run();
@@ -137,8 +150,12 @@ function deleteProjectById(id: string, tx: Tx) {
   if (workflowIds.length > 0) {
     tx.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
 
-    const workflowBoardIds = tx.select({ id: boards.id })
-      .from(boards).where(inArray(boards.workflowId, workflowIds)).all().map(b => b.id);
+    const workflowBoardIds = tx
+      .select({ id: boards.id })
+      .from(boards)
+      .where(inArray(boards.workflowId, workflowIds))
+      .all()
+      .map(b => b.id);
     deleteBoardsById(workflowBoardIds, tx);
 
     tx.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
@@ -239,7 +256,7 @@ router.patch('/:id/move', (req, res) => {
     }
   }
 
-  db.transaction((tx) => {
+  db.transaction(tx => {
     const scope = projectPositionScope(targetParentId, req.params.id);
 
     let position: number;
@@ -255,11 +272,14 @@ router.patch('/:id/move', (req, res) => {
       position = resolveAppendPosition(projects, scope, tx);
     }
 
-    tx.update(projects).set({
-      parentId: targetParentId,
-      position,
-      updatedAt: Date.now(),
-    }).where(eq(projects.id, req.params.id)).run();
+    tx.update(projects)
+      .set({
+        parentId: targetParentId,
+        position,
+        updatedAt: Date.now(),
+      })
+      .where(eq(projects.id, req.params.id))
+      .run();
   });
 
   const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
@@ -272,7 +292,7 @@ router.delete('/:id', (req, res) => {
   if (!project) return;
 
   try {
-    db.transaction((tx) => deleteProjectById(req.params.id, tx));
+    db.transaction(tx => deleteProjectById(req.params.id, tx));
     res.status(204).send();
   } catch (err) {
     console.error('Failed to delete project:', err);

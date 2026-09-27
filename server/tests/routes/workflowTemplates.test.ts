@@ -16,9 +16,7 @@ describe('GET /api/workflow-templates', () => {
   it('returns "flow" workphases ordered by position with correct flags', async () => {
     const res = await request(app).get('/api/workflow-templates');
     const flow = res.body.find((t: { name: string }) => t.name === 'flow');
-    expect(flow.workphases.map((p: { name: string }) => p.name)).toEqual([
-      'Todo', 'In Progress', 'Review', 'Done',
-    ]);
+    expect(flow.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
     expect(flow.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
     expect(flow.workphases.find((p: { name: string }) => p.name === 'Done').isTerminal).toBe(1);
   });

@@ -4,13 +4,17 @@ import { API } from '../helpers/api';
 test.beforeAll(async ({ request }) => {
   await request.post(`${API}/test/reset`);
 
-  const parent = await (await request.post(`${API}/projects`, {
-    data: { name: 'Parent Project', description: 'A top-level project' },
-  })).json();
+  const parent = await (
+    await request.post(`${API}/projects`, {
+      data: { name: 'Parent Project', description: 'A top-level project' },
+    })
+  ).json();
 
-  const child = await (await request.post(`${API}/projects`, {
-    data: { name: 'Child Project', parentId: parent.id },
-  })).json();
+  const child = await (
+    await request.post(`${API}/projects`, {
+      data: { name: 'Child Project', parentId: parent.id },
+    })
+  ).json();
 
   await request.post(`${API}/projects`, {
     data: { name: 'Grandchild Project', parentId: child.id },
@@ -90,7 +94,11 @@ test('a project can be deleted from its own page', async ({ page, projectSidebar
 // another would leave the prompt showing under the new project's heading.
 // ConfirmDeleteInline is now keyed on project.id, remounting (and resetting)
 // it on every switch.
-test('starting a project self-delete and navigating away does not leak the confirm prompt to a different project', async ({ page, projectSidebar, request }) => {
+test('starting a project self-delete and navigating away does not leak the confirm prompt to a different project', async ({
+  page,
+  projectSidebar,
+  request,
+}) => {
   await request.post(`${API}/projects`, { data: { name: 'Leak Source' } });
   await request.post(`${API}/projects`, { data: { name: 'Leak Target' } });
   await page.reload();
@@ -241,4 +249,3 @@ test('a root project can be reparented to become a subproject', async ({ page, p
 
   await expect(page.locator('nav').getByRole('button', { name: 'Adopt Parent' })).toBeVisible();
 });
-

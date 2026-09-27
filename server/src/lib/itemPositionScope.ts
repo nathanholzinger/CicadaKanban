@@ -44,10 +44,9 @@ export function classifyPositionScope(
 // function doesn't re-query per row. Was two near-identical copies of this
 // function, differing only in that lookup strategy (items.ts's per-item
 // query was an N+1 boards.ts's map already avoided) — audit Finding #17.
-export function withPositionScope<T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null }>(
-  item: T,
-  isTerminalOf: (workphaseId: string) => boolean | null,
-): T & { positionScope: PositionScope } {
+export function withPositionScope<
+  T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null },
+>(item: T, isTerminalOf: (workphaseId: string) => boolean | null): T & { positionScope: PositionScope } {
   const workphaseIsTerminal = item.workphaseId ? isTerminalOf(item.workphaseId) : null;
   const positionScope = classifyPositionScope(
     { isAttached: Boolean(item.isAttached), parentId: item.parentId, workphaseId: item.workphaseId },
@@ -107,7 +106,11 @@ export function positionScopeFor(
 // doesn't exist.
 export function workflowIdForWorkphase(workphaseId: string, tx?: Tx): string | null {
   const e = tx ?? db;
-  const workphase = e.select({ workflowId: workphases.workflowId }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  const workphase = e
+    .select({ workflowId: workphases.workflowId })
+    .from(workphases)
+    .where(eq(workphases.id, workphaseId))
+    .get();
   return workphase?.workflowId ?? null;
 }
 

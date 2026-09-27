@@ -7,7 +7,9 @@ import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 const router = Router();
 
 router.get('/', (_req, res) => {
-  const rows = db.select().from(notifications)
+  const rows = db
+    .select()
+    .from(notifications)
     .where(eq(notifications.isRead, 0))
     .orderBy(desc(notifications.createdAt))
     .all();

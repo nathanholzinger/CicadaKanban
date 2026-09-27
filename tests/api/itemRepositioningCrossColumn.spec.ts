@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
+import {
+  seedRepositioningScenario,
+  columnOrder,
+  fullOrder,
+  type RepositioningScenario,
+} from '../helpers/itemRepositioningScenario';
 import { API as BASE } from '../helpers/api';
 
 // 8 WHEN/THEN cases for item repositioning (grouped into 4 pairs), driven
@@ -113,7 +118,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
   });
 });
 
-test.describe('4: interior moves into column 2 that land in C\'s existing gap', () => {
+test.describe("4: interior moves into column 2 that land in C's existing gap", () => {
   test('4.a — move C to after B', async ({ request }) => {
     await moveC(request, { anchorId: scenario.items.B.id, side: 'after', workphaseId: scenario.colTwoPhase.id });
 

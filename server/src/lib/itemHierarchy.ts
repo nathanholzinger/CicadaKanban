@@ -64,7 +64,12 @@ type ResultingState = {
 
 type ParentRow = { id: string; title: string; projectId: string | null; workphaseId: string | null };
 
-const parentProjection = { id: items.id, title: items.title, projectId: items.projectId, workphaseId: items.workphaseId };
+const parentProjection = {
+  id: items.id,
+  title: items.title,
+  projectId: items.projectId,
+  workphaseId: items.workphaseId,
+};
 
 function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
   return (tx ?? db).select(parentProjection).from(items).where(eq(items.id, parentId)).get();
@@ -165,7 +170,11 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     // have their own (audit Finding #7). Checked against the *resulting*
     // state: an anchor among the new parent's children is legal even
     // though the subject isn't in that scope yet (positioning §7.1).
-    const anchorScope = { isAttached: Boolean(anchor.isAttached), parentId: anchor.parentId, workphaseId: anchor.workphaseId };
+    const anchorScope = {
+      isAttached: Boolean(anchor.isAttached),
+      parentId: anchor.parentId,
+      workphaseId: anchor.workphaseId,
+    };
     const subjectScope = {
       isAttached: resulting.isAttachedWithParent,
       parentId: resulting.parentId,
@@ -181,11 +190,20 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
 
 function isTerminal(workphaseId: string | null, tx: Tx): boolean {
   if (!workphaseId) return false;
-  const row = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, workphaseId)).get();
+  const row = tx
+    .select({ isTerminal: workphases.isTerminal })
+    .from(workphases)
+    .where(eq(workphases.id, workphaseId))
+    .get();
   return Boolean(row?.isTerminal);
 }
 
-function hierarchyChangeContent(item: ItemRow, resulting: ResultingState, oldParent?: ParentRow, newParent?: ParentRow): string {
+function hierarchyChangeContent(
+  item: ItemRow,
+  resulting: ResultingState,
+  oldParent?: ParentRow,
+  newParent?: ParentRow,
+): string {
   const wasAttached = Boolean(item.isAttached) && Boolean(item.parentId);
   const oldName = oldParent ? `"${oldParent.title}"` : 'none';
   const newName = newParent ? `"${newParent.title}"` : 'none';
@@ -201,7 +219,11 @@ function hierarchyChangeContent(item: ItemRow, resulting: ResultingState, oldPar
 // Applies a validated request inside `tx`. Returns the reindex disclosure
 // (wiki item-positioning §5) for the caller's response — empty when no
 // reindex fired, which is the overwhelmingly common case.
-export function applyHierarchyRequest(tx: Tx, item: ItemRow, req: HierarchyRequest): { reindexed: ReindexedPosition[] } {
+export function applyHierarchyRequest(
+  tx: Tx,
+  item: ItemRow,
+  req: HierarchyRequest,
+): { reindexed: ReindexedPosition[] } {
   const now = Date.now();
   const oldParent = item.parentId ? getParent(item.parentId, tx) : undefined;
   const newParent = typeof req.parentId === 'string' ? getParent(req.parentId, tx) : oldParent;
@@ -243,14 +265,17 @@ export function applyHierarchyRequest(tx: Tx, item: ItemRow, req: HierarchyReque
     // operation for an attached item (wiki §4). A Free item with no
     // workphase at all has no scope to append into (positionScope "none").
     updates.position =
-      resulting.isAttachedWithParent || resulting.workphaseId ? resolveAppendPosition(items, scope(), tx, reindexed) : null;
+      resulting.isAttachedWithParent || resulting.workphaseId
+        ? resolveAppendPosition(items, scope(), tx, reindexed)
+        : null;
   } else if (req.workphaseId !== undefined && resulting.workphaseId) {
     // A workphaseId-only move keeps an existing position (positioning §2
     // addendum — position is workflow-wide, so it's still comparable). A
     // same-workphase "move" with no anchor is a reorder-to-end, and an item
     // with no position to keep (reopened done item, first assignment) needs
     // a fresh one — both take the append fallback.
-    if (!(workphaseChanged && item.position !== null)) updates.position = resolveAppendPosition(items, scope(), tx, reindexed);
+    if (!(workphaseChanged && item.position !== null))
+      updates.position = resolveAppendPosition(items, scope(), tx, reindexed);
   }
   // Otherwise (a Free reparent with no anchor, a no-op re-attach): the scope
   // didn't change and nothing asked for placement — position is left alone.
@@ -277,7 +302,10 @@ export function applyHierarchyRequest(tx: Tx, item: ItemRow, req: HierarchyReque
     // detached ones included (wiki §9).
     const descendantIds = walkItemDescendants(item.id, { tx });
     if (descendantIds.length > 0) {
-      tx.update(items).set({ projectId: resulting.projectId, updatedAt: now }).where(inArray(items.id, descendantIds)).run();
+      tx.update(items)
+        .set({ projectId: resulting.projectId, updatedAt: now })
+        .where(inArray(items.id, descendantIds))
+        .run();
     }
   }
   if (workphaseChanged) cascadeWorkphaseToAttachedDescendants(item.id, tx);
@@ -293,7 +321,13 @@ export function applyHierarchyRequest(tx: Tx, item: ItemRow, req: HierarchyReque
       toAttached: resulting.isAttachedWithParent,
       ...(projectChanged ? { fromProjectId: item.projectId, toProjectId: resulting.projectId } : {}),
     };
-    logActivity(item.id, 'hierarchy_change', hierarchyChangeContent(item, resulting, oldParent, newParent), metadata, tx);
+    logActivity(
+      item.id,
+      'hierarchy_change',
+      hierarchyChangeContent(item, resulting, oldParent, newParent),
+      metadata,
+      tx,
+    );
   }
   if (workphaseChanged) {
     const oldWorkphase = item.workphaseId
@@ -340,7 +374,8 @@ function nullForeignWorkphasePositions(tx: Tx, rootId: string, resulting: Result
   const workflowOfWorkphase = new Map<string, string | null>();
   const isForeign = (workphaseId: string | null): boolean => {
     if (!workphaseId) return false;
-    if (!workflowOfWorkphase.has(workphaseId)) workflowOfWorkphase.set(workphaseId, workflowIdForWorkphase(workphaseId, tx));
+    if (!workflowOfWorkphase.has(workphaseId))
+      workflowOfWorkphase.set(workphaseId, workflowIdForWorkphase(workphaseId, tx));
     return workflowOfWorkphase.get(workphaseId) !== targetWorkflowId;
   };
 
@@ -348,7 +383,12 @@ function nullForeignWorkphasePositions(tx: Tx, rootId: string, resulting: Result
   if (!resulting.isAttachedWithParent && isForeign(resulting.workphaseId)) toNull.push(rootId);
   const descendantIds = walkItemDescendants(rootId, { tx });
   if (descendantIds.length > 0) {
-    const projection = { id: items.id, isAttached: items.isAttached, workphaseId: items.workphaseId, position: items.position };
+    const projection = {
+      id: items.id,
+      isAttached: items.isAttached,
+      workphaseId: items.workphaseId,
+      position: items.position,
+    };
     const rows = tx.select(projection).from(items).where(inArray(items.id, descendantIds)).all();
     for (const row of rows) {
       if (!row.isAttached && row.position !== null && isForeign(row.workphaseId)) toNull.push(row.id);

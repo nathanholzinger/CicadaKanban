@@ -78,8 +78,11 @@ describe('GET /api/boards/:id', () => {
     expect(col.broken).toBe(false);
     expect(col.entryWorkphaseId).toBe(todo.id);
     expect(col.subRows.map((r: { workphase: { id: string } }) => r.workphase.id)).toEqual([todo.id, inProgress.id]);
-    expect(col.subRows.find((r: { workphase: { id: string } }) => r.workphase.id === todo.id).items
-      .map((i: { id: string }) => i.id)).toEqual([item1.id]);
+    expect(
+      col.subRows
+        .find((r: { workphase: { id: string } }) => r.workphase.id === todo.id)
+        .items.map((i: { id: string }) => i.id),
+    ).toEqual([item1.id]);
 
     expect(res.body.unsorted.needsAttention).toBe(true);
     expect(res.body.unsorted.uncovered.map((r: { workphase: { id: string } }) => r.workphase.id)).toEqual([done.id]);
@@ -174,9 +177,14 @@ describe('GET /api/boards/:id', () => {
     const col = await createColumn(board.id, todo.id, inProgress.id);
 
     // Reorder so 'In Progress' now sorts before 'Todo' — inverts col's range
-    await request(app).patch('/api/workphases/reorder').send({
-      workphaseOrders: [{ id: todo.id, position: 2 }, { id: inProgress.id, position: 1 }],
-    });
+    await request(app)
+      .patch('/api/workphases/reorder')
+      .send({
+        workphaseOrders: [
+          { id: todo.id, position: 2 },
+          { id: inProgress.id, position: 1 },
+        ],
+      });
 
     const res = await request(app).get(`/api/boards/${board.id}`);
     const resolved = res.body.columns.find((c: { id: string }) => c.id === col.id);
@@ -197,7 +205,7 @@ describe('POST /api/boards', () => {
     expect(res.status).toBe(404);
   });
 
-  it('bootstraps a new board with 1:1 columns matching the workflow\'s current workphases', async () => {
+  it("bootstraps a new board with 1:1 columns matching the workflow's current workphases", async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     await createWorkphase(workflow.id, { name: 'Todo' });

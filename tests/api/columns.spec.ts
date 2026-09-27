@@ -10,16 +10,22 @@ test.beforeAll(async () => {
 // exist yet at creation time), leaving the whole range free for these tests.
 async function setupBareBoard(request: import('@playwright/test').APIRequestContext, name: string) {
   const project = await (await request.post(`${BASE}/projects`, { data: { name } })).json();
-  const workflow = await (await request.post(`${BASE}/workflows`, {
-    data: { name, projectId: project.id },
-  })).json();
+  const workflow = await (
+    await request.post(`${BASE}/workflows`, {
+      data: { name, projectId: project.id },
+    })
+  ).json();
   const boards = await (await request.get(`${BASE}/boards?workflowId=${workflow.id}`)).json();
 
   const phases: Array<{ id: string; name: string }> = [];
   for (const phaseName of ['Todo', 'In Progress', 'Done']) {
-    phases.push(await (await request.post(`${BASE}/workphases`, {
-      data: { workflowId: workflow.id, name: phaseName },
-    })).json());
+    phases.push(
+      await (
+        await request.post(`${BASE}/workphases`, {
+          data: { workflowId: workflow.id, name: phaseName },
+        })
+      ).json(),
+    );
   }
   return { board: boards[0], phases };
 }
@@ -41,9 +47,11 @@ test('POST /api/columns creates a merged range column', async ({ request }) => {
 
 test('POST /api/columns rejects an overlapping range with the conflicting column id', async ({ request }) => {
   const { board, phases } = await setupBareBoard(request, 'Column Overlap Project');
-  const first = await (await request.post(`${BASE}/columns`, {
-    data: { boardId: board.id, startWorkphaseId: phases[0].id, endWorkphaseId: phases[1].id },
-  })).json();
+  const first = await (
+    await request.post(`${BASE}/columns`, {
+      data: { boardId: board.id, startWorkphaseId: phases[0].id, endWorkphaseId: phases[1].id },
+    })
+  ).json();
 
   const res = await request.post(`${BASE}/columns`, {
     data: { boardId: board.id, startWorkphaseId: phases[1].id, endWorkphaseId: phases[2].id },
@@ -56,15 +64,24 @@ test('POST /api/columns rejects an overlapping range with the conflicting column
 
 test('PATCH /api/columns/reorder persists the new order on the board', async ({ request }) => {
   const { board, phases } = await setupBareBoard(request, 'Column Reorder Project');
-  const colA = await (await request.post(`${BASE}/columns`, {
-    data: { boardId: board.id, startWorkphaseId: phases[0].id, endWorkphaseId: phases[0].id },
-  })).json();
-  const colB = await (await request.post(`${BASE}/columns`, {
-    data: { boardId: board.id, startWorkphaseId: phases[2].id, endWorkphaseId: phases[2].id },
-  })).json();
+  const colA = await (
+    await request.post(`${BASE}/columns`, {
+      data: { boardId: board.id, startWorkphaseId: phases[0].id, endWorkphaseId: phases[0].id },
+    })
+  ).json();
+  const colB = await (
+    await request.post(`${BASE}/columns`, {
+      data: { boardId: board.id, startWorkphaseId: phases[2].id, endWorkphaseId: phases[2].id },
+    })
+  ).json();
 
   const res = await request.patch(`${BASE}/columns/reorder`, {
-    data: { columnOrders: [{ id: colA.id, position: 5 }, { id: colB.id, position: 1 }] },
+    data: {
+      columnOrders: [
+        { id: colA.id, position: 5 },
+        { id: colB.id, position: 1 },
+      ],
+    },
   });
   expect(res.ok()).toBeTruthy();
 

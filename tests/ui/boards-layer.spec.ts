@@ -19,7 +19,11 @@ test.describe('multi-board management', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('Delete board is hidden when it is the only board on the workflow', async ({ page, request, projectSidebar }) => {
+  test('Delete board is hidden when it is the only board on the workflow', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     await seedBareWorkflow(request, 'Single Board Project');
     await page.goto('/');
     await projectSidebar.select('Single Board Project');
@@ -29,7 +33,11 @@ test.describe('multi-board management', () => {
     await expect(page.getByRole('button', { name: 'Delete board' })).not.toBeVisible();
   });
 
-  test('creates a second board bootstrapped 1:1, and switches between boards', async ({ page, request, projectSidebar }) => {
+  test('creates a second board bootstrapped 1:1, and switches between boards', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     await createTemplatedWorkflow(request, 'Multi Board Project');
 
     await page.goto('/');
@@ -78,10 +86,16 @@ test.describe('column range configuration', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('creates a merged column spanning two workphases, moving their items out of Unsorted', async ({ page, request, projectSidebar }) => {
+  test('creates a merged column spanning two workphases, moving their items out of Unsorted', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Merged Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Review', 'Done']);
-    await request.post(`${API}/items`, { data: { title: 'Merge target item', projectId: project.id, workphaseId: todo.id } });
+    await request.post(`${API}/items`, {
+      data: { title: 'Merge target item', projectId: project.id, workphaseId: todo.id },
+    });
 
     await page.goto('/');
     await projectSidebar.select('Merged Column Project');
@@ -105,11 +119,17 @@ test.describe('column range configuration', () => {
     void inProgress;
   });
 
-  test('creates an expanded column and each workphase renders as its own sub-row', async ({ page, request, projectSidebar }) => {
+  test('creates an expanded column and each workphase renders as its own sub-row', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Expanded Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     await request.post(`${API}/items`, { data: { title: 'Todo item', projectId: project.id, workphaseId: todo.id } });
-    await request.post(`${API}/items`, { data: { title: 'In Progress item', projectId: project.id, workphaseId: inProgress.id } });
+    await request.post(`${API}/items`, {
+      data: { title: 'In Progress item', projectId: project.id, workphaseId: inProgress.id },
+    });
 
     await page.goto('/');
     await projectSidebar.select('Expanded Column Project');
@@ -133,8 +153,11 @@ test.describe('column range configuration', () => {
     const { workflow } = await seedBareWorkflow(request, 'Overlap Reject Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     await request.post(`${API}/columns`, {
-      data: { boardId: (await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json())[0].id,
-        startWorkphaseId: todo.id, endWorkphaseId: todo.id },
+      data: {
+        boardId: (await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json())[0].id,
+        startWorkphaseId: todo.id,
+        endWorkphaseId: todo.id,
+      },
     });
 
     await page.goto('/');
@@ -170,7 +193,12 @@ test.describe('broken column detection', () => {
 
     // Invert their order — the column's start now sorts after its end
     await request.patch(`${API}/workphases/reorder`, {
-      data: { workphaseOrders: [{ id: todo.id, position: 2 }, { id: inProgress.id, position: 1 }] },
+      data: {
+        workphaseOrders: [
+          { id: todo.id, position: 2 },
+          { id: inProgress.id, position: 1 },
+        ],
+      },
     });
 
     await page.goto('/');
@@ -255,7 +283,11 @@ test.describe('board and column lifecycle', () => {
     await expect(main.getByRole('button', { name: 'Delete board' })).not.toBeVisible();
   });
 
-  test("editing a column's range via the modal pulls a workphase out of Unsorted", async ({ page, request, projectSidebar }) => {
+  test("editing a column's range via the modal pulls a workphase out of Unsorted", async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Column Edit Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
@@ -288,7 +320,11 @@ test.describe('board and column lifecycle', () => {
     await expect(page.getByRole('group', { name: 'Unsorted' })).not.toBeVisible();
   });
 
-  test('deleting a column returns its workphases to Unsorted with their items', async ({ page, request, projectSidebar }) => {
+  test('deleting a column returns its workphases to Unsorted with their items', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Column Delete Project');
     const [todo] = await addWorkphases(request, workflow.id, ['Todo']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
@@ -321,15 +357,24 @@ test.describe('board and column lifecycle', () => {
     const { workflow } = await seedBareWorkflow(request, 'Column Reorder UI Project');
     const [todo, done] = await addWorkphases(request, workflow.id, ['Todo', 'Done']);
     const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    const colA = await (await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
-    })).json();
-    const colB = await (await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: done.id, endWorkphaseId: done.id },
-    })).json();
+    const colA = await (
+      await request.post(`${API}/columns`, {
+        data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
+      })
+    ).json();
+    const colB = await (
+      await request.post(`${API}/columns`, {
+        data: { boardId: boards[0].id, startWorkphaseId: done.id, endWorkphaseId: done.id },
+      })
+    ).json();
 
     await request.patch(`${API}/columns/reorder`, {
-      data: { columnOrders: [{ id: colA.id, position: 2 }, { id: colB.id, position: 1 }] },
+      data: {
+        columnOrders: [
+          { id: colA.id, position: 2 },
+          { id: colB.id, position: 1 },
+        ],
+      },
     });
 
     await page.goto('/');

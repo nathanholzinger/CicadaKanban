@@ -7,7 +7,12 @@ import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertWithinDepthCap, hierarchyDepth, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
-import { isTerminalLookup, positionScopeFor, withPositionScope, workflowIdForWorkphase } from '../lib/itemPositionScope.js';
+import {
+  isTerminalLookup,
+  positionScopeFor,
+  withPositionScope,
+  workflowIdForWorkphase,
+} from '../lib/itemPositionScope.js';
 import { applyHierarchyRequest, validateHierarchyRequest, type HierarchyRequest } from '../lib/itemHierarchy.js';
 import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';

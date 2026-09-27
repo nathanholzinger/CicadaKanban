@@ -75,7 +75,9 @@ test('PUT /api/projects/:id rejects setting a project as its own parent', async 
 
 test('PUT /api/projects/:id rejects setting a descendant as parent', async ({ request }) => {
   const parent = await (await request.post(`${BASE}/projects`, { data: { name: 'Cycle Parent' } })).json();
-  const child = await (await request.post(`${BASE}/projects`, { data: { name: 'Cycle Child', parentId: parent.id } })).json();
+  const child = await (
+    await request.post(`${BASE}/projects`, { data: { name: 'Cycle Child', parentId: parent.id } })
+  ).json();
 
   const res = await request.put(`${BASE}/projects/${parent.id}`, { data: { parentId: child.id } });
 

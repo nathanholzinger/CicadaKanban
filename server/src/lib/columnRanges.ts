@@ -54,8 +54,7 @@ export function columnsOverlap(a: ColumnRange, b: ColumnRange, rankMap: Map<stri
 }
 
 type ColumnRangeValidation =
-  | { ok: true }
-  | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
+  { ok: true } | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
 
 // The three-step range check (both endpoints belong to this workflow, start
 // doesn't come after end, doesn't overlap a sibling column) — was hand-copied
@@ -101,7 +100,11 @@ export function validateColumnRange(
   const hasTerminal = covered.some(w => w.isTerminal);
   const hasNonTerminal = covered.some(w => !w.isTerminal);
   if (hasTerminal && hasNonTerminal) {
-    return { ok: false, status: 400, body: { error: 'A column cannot span both a terminal (done) and a non-terminal workphase' } };
+    return {
+      ok: false,
+      status: 400,
+      body: { error: 'A column cannot span both a terminal (done) and a non-terminal workphase' },
+    };
   }
 
   return { ok: true };
@@ -152,7 +155,9 @@ export function shrinkColumnsForDeletedWorkphase(
 
   // Includes the doomed workphase so each column's original coverage can be
   // computed before it's gone.
-  const originalWorkphases = client.select().from(workphases)
+  const originalWorkphases = client
+    .select()
+    .from(workphases)
     .where(eq(workphases.workflowId, workflowId))
     .orderBy(workphases.position)
     .all();
@@ -175,7 +180,8 @@ export function shrinkColumnsForDeletedWorkphase(
     const newStart = remaining[0].id;
     const newEnd = remaining[remaining.length - 1].id;
     if (newStart !== col.startWorkphaseId || newEnd !== col.endWorkphaseId) {
-      client.update(columns)
+      client
+        .update(columns)
         .set({ startWorkphaseId: newStart, endWorkphaseId: newEnd })
         .where(eq(columns.id, col.id))
         .run();
@@ -207,7 +213,9 @@ export function findColumnsMixingTerminalAfterFlip(
   const allColumns = client.select().from(columns).where(inArray(columns.boardId, boardIds)).all();
   if (allColumns.length === 0) return [];
 
-  const orderedWorkphases = client.select().from(workphases)
+  const orderedWorkphases = client
+    .select()
+    .from(workphases)
     .where(eq(workphases.workflowId, workflowId))
     .orderBy(workphases.position)
     .all()

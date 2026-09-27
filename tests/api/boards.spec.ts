@@ -16,8 +16,12 @@ test('creating a workflow bootstraps one board with 1:1 merged columns', async (
   expect(boards.length).toBe(1);
 
   const detail = await (await request.get(`${BASE}/boards/${boards[0].id}`)).json();
-  expect(detail.columns.map((c: { displayName: string }) => c.displayName))
-    .toEqual(['Todo', 'In Progress', 'Review', 'Done']);
+  expect(detail.columns.map((c: { displayName: string }) => c.displayName)).toEqual([
+    'Todo',
+    'In Progress',
+    'Review',
+    'Done',
+  ]);
   expect(detail.columns.every((c: { displayMode: string }) => c.displayMode === 'merged')).toBe(true);
 });
 
@@ -25,9 +29,11 @@ test('GET /api/boards/:id returns the resolved column shape with items and unsor
   const { project, workflow } = await seedTemplatedWorkflow(request, 'Board Shape Project');
   const [todo] = pickWorkphases(workflow, 'Todo');
 
-  const item = await (await request.post(`${BASE}/items`, {
-    data: { title: 'Shape Item', projectId: project.id, workphaseId: todo.id },
-  })).json();
+  const item = await (
+    await request.post(`${BASE}/items`, {
+      data: { title: 'Shape Item', projectId: project.id, workphaseId: todo.id },
+    })
+  ).json();
 
   const boards = await (await request.get(`${BASE}/boards?workflowId=${workflow.id}`)).json();
   const board = await (await request.get(`${BASE}/boards/${boards[0].id}`)).json();
@@ -48,9 +54,11 @@ test('deleting the last remaining board is rejected; a non-last board deletes cl
   const last = await request.delete(`${BASE}/boards/${boards[0].id}`);
   expect(last.status()).toBe(409);
 
-  const second = await (await request.post(`${BASE}/boards`, {
-    data: { workflowId: workflow.id, name: 'Second Board' },
-  })).json();
+  const second = await (
+    await request.post(`${BASE}/boards`, {
+      data: { workflowId: workflow.id, name: 'Second Board' },
+    })
+  ).json();
   const del = await request.delete(`${BASE}/boards/${second.id}`);
   expect(del.status()).toBe(204);
 

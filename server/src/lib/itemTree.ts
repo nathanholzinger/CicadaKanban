@@ -42,7 +42,13 @@ function isSelfRefDescendant(
 // The "can't be your own parent" + "can't reparent into your own subtree"
 // guard, copy-pasted into projects PUT, projects reorder, and items PUT.
 // Returns an error message to send as a 400, or null if the reparent is valid.
-export function assertValidReparent(table: SelfRefTable, id: string, parentId: string, selfLabel: string, tx?: Tx): string | null {
+export function assertValidReparent(
+  table: SelfRefTable,
+  id: string,
+  parentId: string,
+  selfLabel: string,
+  tx?: Tx,
+): string | null {
   if (parentId === id) return `A ${selfLabel} cannot be its own parent`;
   if (isSelfRefDescendant(table, id, parentId, tx)) return 'Cannot reparent to a descendant';
   return null;
@@ -138,8 +144,11 @@ function walkItemDescendantLevels(
   while (frontier.length > 0) {
     const next: ItemChild[] = [];
     for (const id of frontier) {
-      const children = e.select({ id: items.id, isAttached: items.isAttached })
-        .from(items).where(eq(items.parentId, id)).all();
+      const children = e
+        .select({ id: items.id, isAttached: items.isAttached })
+        .from(items)
+        .where(eq(items.parentId, id))
+        .all();
       for (const child of children) {
         if (visited.has(child.id)) continue;
         visited.add(child.id);

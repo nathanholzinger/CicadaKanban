@@ -16,7 +16,12 @@ import {
   setBackDownLeaning,
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
-import { seedRepositioningScenario, columnOrder, fullOrder, type RepositioningScenario } from '../helpers/itemRepositioningScenario';
+import {
+  seedRepositioningScenario,
+  columnOrder,
+  fullOrder,
+  type RepositioningScenario,
+} from '../helpers/itemRepositioningScenario';
 import { fetchItem } from '../helpers/seed';
 import { API } from '../helpers/api';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
@@ -236,7 +241,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
   });
 });
 
-test.describe('4: interior moves into column 2 that land in C\'s existing gap', () => {
+test.describe("4: interior moves into column 2 that land in C's existing gap", () => {
   test('4.a — drag C to the bottom quarter of card B', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const cardB = page.getByRole('article', { name: 'Item B', exact: true });
@@ -309,7 +314,11 @@ test.describe('5: an abandoned drop must not strand the cross-column preview', (
   // Column Two with the server still on Column One, and the next drag of C
   // snapshotted the wrong workphase (audit code-quality-audit-epic-3-5-
   // story-2 #1).
-  test('5.a — hover C over Column Two, then release on an Unknown-status card', async ({ page, request, projectSidebar }) => {
+  test('5.a — hover C over Column Two, then release on an Unknown-status card', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     // An item with no workphase surfaces in Unsorted → Unknown status.
     const u = await request.post(`${API}/items`, { data: { title: 'Item U', projectId: scenario.project.id } });
     expect(u.ok()).toBe(true);

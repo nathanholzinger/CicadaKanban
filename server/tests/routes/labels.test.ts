@@ -4,7 +4,9 @@ import { app } from '../../src/index.js';
 import { createProject, createItem } from '../fixtures.js';
 
 async function createLabel(overrides: Record<string, unknown> = {}) {
-  const res = await request(app).post('/api/labels').send({ name: 'Bug', color: '#ff0000', ...overrides });
+  const res = await request(app)
+    .post('/api/labels')
+    .send({ name: 'Bug', color: '#ff0000', ...overrides });
   return res.body;
 }
 

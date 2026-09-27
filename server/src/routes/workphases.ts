@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { findColumnsMixingTerminalAfterFlip, shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
-import { nextPosition, resolveAppendPosition } from "../lib/positionResolver.js";
+import { nextPosition, resolveAppendPosition } from '../lib/positionResolver.js';
 import { positionScopeFor } from '../lib/itemPositionScope.js';
 
 const router = Router();
@@ -26,22 +26,26 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const existing = db.select().from(workphases)
+  const existing = db
+    .select()
+    .from(workphases)
     .where(eq(workphases.workflowId, workflowId))
     .orderBy(workphases.position)
     .all();
 
   const id = randomUUID();
 
-  db.insert(workphases).values({
-    id,
-    workflowId,
-    name,
-    position: nextPosition(existing),
-    triggersNotification: triggersNotification ? 1 : 0,
-    isTerminal: isTerminal ? 1 : 0,
-    createdAt: Date.now(),
-  }).run();
+  db.insert(workphases)
+    .values({
+      id,
+      workflowId,
+      name,
+      position: nextPosition(existing),
+      triggersNotification: triggersNotification ? 1 : 0,
+      isTerminal: isTerminal ? 1 : 0,
+      createdAt: Date.now(),
+    })
+    .run();
 
   const created = db.select().from(workphases).where(eq(workphases.id, id)).get();
   res.status(201).json(created);
@@ -70,16 +74,13 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  db.transaction((tx) => {
+  db.transaction(tx => {
     tx.update(workphases)
       .set({
         name: name ?? workphase.name,
-        triggersNotification: triggersNotification !== undefined
-          ? (triggersNotification ? 1 : 0)
-          : workphase.triggersNotification,
-        isTerminal: isTerminal !== undefined
-          ? (isTerminal ? 1 : 0)
-          : workphase.isTerminal,
+        triggersNotification:
+          triggersNotification !== undefined ? (triggersNotification ? 1 : 0) : workphase.triggersNotification,
+        isTerminal: isTerminal !== undefined ? (isTerminal ? 1 : 0) : workphase.isTerminal,
       })
       .where(eq(workphases.id, req.params.id))
       .run();
@@ -111,14 +112,18 @@ function backfillItemsForTerminalFlip(tx: Tx, workphaseId: string, newIsTerminal
     // completedAt-ascending sort doesn't collapse every item to the same
     // "0" tie — position is cleared, matching the single-item terminal
     // transition in items.ts's PATCH /:id/move.
-    const activeItems = tx.select({ id: items.id })
+    const activeItems = tx
+      .select({ id: items.id })
       .from(items)
       .where(and(eq(items.workphaseId, workphaseId), notAttachedWithParent))
       .orderBy(asc(items.position))
       .all();
     const now = Date.now();
     activeItems.forEach((item, index) => {
-      tx.update(items).set({ position: null, completedAt: now + index, updatedAt: now }).where(eq(items.id, item.id)).run();
+      tx.update(items)
+        .set({ position: null, completedAt: now + index, updatedAt: now })
+        .where(eq(items.id, item.id))
+        .run();
     });
   } else {
     // Was terminal, now active: give each item a fresh workflow-wide
@@ -126,7 +131,8 @@ function backfillItemsForTerminalFlip(tx: Tx, workphaseId: string, newIsTerminal
     // the item that "finished" first reopens at the front) — the same
     // append-and-clear-completedAt rule items.ts's PATCH /:id/move applies
     // when reopening a single done item.
-    const doneItems = tx.select({ id: items.id })
+    const doneItems = tx
+      .select({ id: items.id })
       .from(items)
       .where(and(eq(items.workphaseId, workphaseId), notAttachedWithParent))
       .orderBy(asc(items.completedAt))
@@ -152,7 +158,7 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  db.transaction((tx) => applyReorderEntries(workphases, validation.entries, tx));
+  db.transaction(tx => applyReorderEntries(workphases, validation.entries, tx));
   res.json({ success: true });
 });
 

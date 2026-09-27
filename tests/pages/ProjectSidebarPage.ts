@@ -34,6 +34,8 @@ export class ProjectSidebarPage {
   }
 
   async toggle(name: string) {
-    await this.row(name).getByTitle(/Collapse|Expand/).click();
+    await this.row(name)
+      .getByTitle(/Collapse|Expand/)
+      .click();
   }
 }

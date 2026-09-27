@@ -9,37 +9,90 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { createDefaultBoard } from '../routes/boards.js';
 
-const migrationsFolder = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../drizzle',
-);
+const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../drizzle');
 
 function seedWorkflowTemplates(now: number) {
   const quickId = randomUUID();
-  db.insert(workflowTemplates).values({
-    id: quickId,
-    name: 'quick',
-    description: 'Simple two-step workflow for quick tasks',
-    createdAt: now,
-  }).run();
-  db.insert(workflowTemplatePhases).values([
-    { id: randomUUID(), templateId: quickId, name: 'Todo',  position: 1.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
-    { id: randomUUID(), templateId: quickId, name: 'Done',  position: 2.0, triggersNotification: 0, isTerminal: 1, createdAt: now },
-  ]).run();
+  db.insert(workflowTemplates)
+    .values({
+      id: quickId,
+      name: 'quick',
+      description: 'Simple two-step workflow for quick tasks',
+      createdAt: now,
+    })
+    .run();
+  db.insert(workflowTemplatePhases)
+    .values([
+      {
+        id: randomUUID(),
+        templateId: quickId,
+        name: 'Todo',
+        position: 1.0,
+        triggersNotification: 0,
+        isTerminal: 0,
+        createdAt: now,
+      },
+      {
+        id: randomUUID(),
+        templateId: quickId,
+        name: 'Done',
+        position: 2.0,
+        triggersNotification: 0,
+        isTerminal: 1,
+        createdAt: now,
+      },
+    ])
+    .run();
 
   const flowId = randomUUID();
-  db.insert(workflowTemplates).values({
-    id: flowId,
-    name: 'flow',
-    description: 'Standard development workflow',
-    createdAt: now,
-  }).run();
-  db.insert(workflowTemplatePhases).values([
-    { id: randomUUID(), templateId: flowId, name: 'Todo',        position: 1.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
-    { id: randomUUID(), templateId: flowId, name: 'In Progress', position: 2.0, triggersNotification: 0, isTerminal: 0, createdAt: now },
-    { id: randomUUID(), templateId: flowId, name: 'Review',      position: 3.0, triggersNotification: 1, isTerminal: 0, createdAt: now },
-    { id: randomUUID(), templateId: flowId, name: 'Done',        position: 4.0, triggersNotification: 0, isTerminal: 1, createdAt: now },
-  ]).run();
+  db.insert(workflowTemplates)
+    .values({
+      id: flowId,
+      name: 'flow',
+      description: 'Standard development workflow',
+      createdAt: now,
+    })
+    .run();
+  db.insert(workflowTemplatePhases)
+    .values([
+      {
+        id: randomUUID(),
+        templateId: flowId,
+        name: 'Todo',
+        position: 1.0,
+        triggersNotification: 0,
+        isTerminal: 0,
+        createdAt: now,
+      },
+      {
+        id: randomUUID(),
+        templateId: flowId,
+        name: 'In Progress',
+        position: 2.0,
+        triggersNotification: 0,
+        isTerminal: 0,
+        createdAt: now,
+      },
+      {
+        id: randomUUID(),
+        templateId: flowId,
+        name: 'Review',
+        position: 3.0,
+        triggersNotification: 1,
+        isTerminal: 0,
+        createdAt: now,
+      },
+      {
+        id: randomUUID(),
+        templateId: flowId,
+        name: 'Done',
+        position: 4.0,
+        triggersNotification: 0,
+        isTerminal: 1,
+        createdAt: now,
+      },
+    ])
+    .run();
 
   console.log('Seeded workflow templates: "quick" and "flow"');
   return { quickId, flowId };
@@ -62,30 +115,26 @@ export function runMigrations() {
   const unassignedWorkflows = db.select().from(workflows).where(isNull(workflows.projectId)).all();
   if (unassignedWorkflows.length > 0) {
     const defaultProjectId = randomUUID();
-    db.insert(projects).values({
-      id: defaultProjectId,
-      parentId: null,
-      name: 'Default Project',
-      description: 'Auto-created to house pre-existing workflows',
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    db.insert(projects)
+      .values({
+        id: defaultProjectId,
+        parentId: null,
+        name: 'Default Project',
+        description: 'Auto-created to house pre-existing workflows',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
-    sqlite.prepare(
-      `UPDATE workflows SET project_id = ? WHERE project_id IS NULL`
-    ).run(defaultProjectId);
+    sqlite.prepare(`UPDATE workflows SET project_id = ? WHERE project_id IS NULL`).run(defaultProjectId);
 
-    sqlite.prepare(
-      `UPDATE items SET project_id = ? WHERE project_id IS NULL`
-    ).run(defaultProjectId);
+    sqlite.prepare(`UPDATE items SET project_id = ? WHERE project_id IS NULL`).run(defaultProjectId);
 
     console.log(`Migrated ${unassignedWorkflows.length} existing workflow(s) into "Default Project"`);
   }
 
   // ── Phase 3: Initialize project positions from created_at for any without one ─
-  const updated = sqlite.prepare(
-    `UPDATE projects SET position = created_at WHERE position IS NULL`
-  ).run();
+  const updated = sqlite.prepare(`UPDATE projects SET position = created_at WHERE position IS NULL`).run();
   if (updated.changes > 0) {
     console.log(`Initialized position for ${updated.changes} project(s)`);
   }

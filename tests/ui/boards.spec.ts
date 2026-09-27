@@ -13,17 +13,21 @@ test.describe('board basics', () => {
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
 
-    const project = await (await request.post(`${API}/projects`, {
-      data: { name: 'My First Project', description: 'Board test project' },
-    })).json();
+    const project = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'My First Project', description: 'Board test project' },
+      })
+    ).json();
     projectId = project.id;
 
     const templates = await (await request.get(`${API}/workflow-templates`)).json();
     const flow = templates.find((t: { name: string }) => t.name === 'flow');
 
-    const workflow = await (await request.post(`${API}/workflows`, {
-      data: { name: 'My First Project', projectId: project.id, templateId: flow.id },
-    })).json();
+    const workflow = await (
+      await request.post(`${API}/workflows`, {
+        data: { name: 'My First Project', projectId: project.id, templateId: flow.id },
+      })
+    ).json();
 
     const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
     todoWorkphaseId = todo.id;
@@ -65,7 +69,7 @@ test.describe('board basics', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Typeless API item' })
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Typeless API item' }),
     ).toBeVisible();
   });
 
@@ -90,21 +94,27 @@ test.describe('items visibility with inherited workflow', () => {
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
 
-    const parent = await (await request.post(`${API}/projects`, {
-      data: { name: 'Parent Project' },
-    })).json();
+    const parent = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Parent Project' },
+      })
+    ).json();
     parentId = parent.id;
 
-    const child = await (await request.post(`${API}/projects`, {
-      data: { name: 'Child Project', parentId: parent.id },
-    })).json();
+    const child = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Child Project', parentId: parent.id },
+      })
+    ).json();
 
     const templates = await (await request.get(`${API}/workflow-templates`)).json();
     const flow = templates.find((t: { name: string }) => t.name === 'flow');
 
-    const workflow = await (await request.post(`${API}/workflows`, {
-      data: { name: 'Parent Project', projectId: parent.id, templateId: flow.id },
-    })).json();
+    const workflow = await (
+      await request.post(`${API}/workflows`, {
+        data: { name: 'Parent Project', projectId: parent.id, templateId: flow.id },
+      })
+    ).json();
 
     const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
     const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
@@ -126,7 +136,7 @@ test.describe('items visibility with inherited workflow', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' })
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' }),
     ).toBeVisible();
   });
 
@@ -136,7 +146,7 @@ test.describe('items visibility with inherited workflow', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' })
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' }),
     ).not.toBeVisible();
   });
 
@@ -146,7 +156,7 @@ test.describe('items visibility with inherited workflow', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' })
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' }),
     ).toBeVisible();
   });
 
@@ -156,7 +166,7 @@ test.describe('items visibility with inherited workflow', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' })
+      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' }),
     ).toBeVisible();
   });
 
@@ -177,14 +187,14 @@ test.describe('items visibility with inherited workflow', () => {
     await projectSidebar.select('Parent Project');
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
     await expect(
-      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' })
+      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' }),
     ).toBeVisible();
 
     // Verify on child board
     await projectSidebar.select('Child Project');
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
     await expect(
-      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' })
+      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' }),
     ).toBeVisible();
   });
 });
@@ -197,9 +207,11 @@ test.describe('inherited workflow is read-only', () => {
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
 
-    const parent = await (await request.post(`${API}/projects`, {
-      data: { name: 'Owning Project' },
-    })).json();
+    const parent = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Owning Project' },
+      })
+    ).json();
 
     await request.post(`${API}/projects`, {
       data: { name: 'Inheriting Project', parentId: parent.id },
@@ -260,13 +272,17 @@ test.describe('child project with own workflow', () => {
   test.beforeAll(async ({ request }) => {
     await request.post(`${API}/test/reset`);
 
-    const parent = await (await request.post(`${API}/projects`, {
-      data: { name: 'Parent With Workflow' },
-    })).json();
+    const parent = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Parent With Workflow' },
+      })
+    ).json();
 
-    const child = await (await request.post(`${API}/projects`, {
-      data: { name: 'Child With Own Workflow', parentId: parent.id },
-    })).json();
+    const child = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Child With Own Workflow', parentId: parent.id },
+      })
+    ).json();
 
     const templates = await (await request.get(`${API}/workflow-templates`)).json();
     const quick = templates.find((t: { name: string }) => t.name === 'quick');
@@ -276,9 +292,11 @@ test.describe('child project with own workflow', () => {
       data: { name: 'Parent With Workflow', projectId: parent.id, templateId: flow.id },
     });
 
-    const childWorkflow = await (await request.post(`${API}/workflows`, {
-      data: { name: 'Child With Own Workflow', projectId: child.id, templateId: quick.id },
-    })).json();
+    const childWorkflow = await (
+      await request.post(`${API}/workflows`, {
+        data: { name: 'Child With Own Workflow', projectId: child.id, templateId: quick.id },
+      })
+    ).json();
 
     const childTodo = childWorkflow.workphases.find((p: { name: string }) => p.name === 'Todo');
     childTodoWorkphaseId = childTodo.id;
@@ -308,9 +326,11 @@ test.describe('workflow creation', () => {
     await request.post(`${API}/test/reset`);
 
     // Source project whose workflow can be copied
-    const source = await (await request.post(`${API}/projects`, {
-      data: { name: 'Source Project' },
-    })).json();
+    const source = await (
+      await request.post(`${API}/projects`, {
+        data: { name: 'Source Project' },
+      })
+    ).json();
 
     const templates = await (await request.get(`${API}/workflow-templates`)).json();
     const flow = templates.find((t: { name: string }) => t.name === 'flow');
@@ -361,7 +381,10 @@ test.describe('workflow creation', () => {
 
     await page.getByRole('button', { name: /Set up a Workflow/ }).click();
     // The copy section shows "Source Project" as a copyable workflow
-    await page.getByRole('dialog').getByRole('button', { name: /Source Project/ }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Source Project/ })
+      .click();
 
     // Should get the same workphases as Source Project's flow workflow
     await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
@@ -377,7 +400,11 @@ test.describe('workflow creation', () => {
   // SetupWorkflowModal's submit() has no catch, so that failure is a silent
   // unhandled rejection: no message ever tells the user the workflow wasn't
   // created. Expected to fail until that catch (and an error message) is added.
-  test('copying from a project deleted after the page loaded surfaces an error, not a silent no-op', async ({ page, projectSidebar, request }) => {
+  test('copying from a project deleted after the page loaded surfaces an error, not a silent no-op', async ({
+    page,
+    projectSidebar,
+    request,
+  }) => {
     const source = await (await request.post(`${API}/projects`, { data: { name: 'Stale Copy Source' } })).json();
     const templates = await (await request.get(`${API}/workflow-templates`)).json();
     const flow = templates.find((t: { name: string }) => t.name === 'flow');
@@ -407,7 +434,10 @@ test.describe('workflow creation', () => {
 
     // The now-deleted "Stale Copy Source" still shows up as a copy option —
     // the client never learned it (or its workflow) was gone.
-    await page.getByRole('dialog').getByRole('button', { name: /Stale Copy Source/ }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Stale Copy Source/ })
+      .click();
 
     // Expected: the failure surfaces visibly in the dialog instead of vanishing.
     await expect(page.getByRole('dialog').getByText(/failed|does not reference/i)).toBeVisible();

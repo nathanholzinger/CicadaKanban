@@ -9,7 +9,7 @@ import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { ITEM_DEPTH_CAP } from '../lib/itemTree.js';
-import { nextPosition } from "../lib/positionResolver.js";
+import { nextPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, type PositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
 type Workphase = typeof workphases.$inferSelect;
@@ -34,27 +34,31 @@ export function createDefaultBoard(
     const existingBoards = e.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
 
     const boardId = randomUUID();
-    e.insert(boards).values({
-      id: boardId,
-      workflowId,
-      name,
-      position: nextPosition(existingBoards),
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    e.insert(boards)
+      .values({
+        id: boardId,
+        workflowId,
+        name,
+        position: nextPosition(existingBoards),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
     const sorted = [...workflowWorkphases].sort((a, b) => a.position - b.position);
     sorted.forEach((phase, i) => {
-      e.insert(columns).values({
-        id: randomUUID(),
-        boardId,
-        name: null,
-        startWorkphaseId: phase.id,
-        endWorkphaseId: phase.id,
-        displayMode: 'merged',
-        position: i + 1.0,
-        createdAt: now,
-      }).run();
+      e.insert(columns)
+        .values({
+          id: randomUUID(),
+          boardId,
+          name: null,
+          startWorkphaseId: phase.id,
+          endWorkphaseId: phase.id,
+          displayMode: 'merged',
+          position: i + 1.0,
+          createdAt: now,
+        })
+        .run();
     });
 
     return e.select().from(boards).where(eq(boards.id, boardId)).get()!;
@@ -79,7 +83,11 @@ const router = Router();
 router.get('/', (req, res) => {
   const { workflowId } = req.query;
   const allBoards = workflowId
-    ? db.select().from(boards).where(eq(boards.workflowId, String(workflowId))).all()
+    ? db
+        .select()
+        .from(boards)
+        .where(eq(boards.workflowId, String(workflowId)))
+        .all()
     : db.select().from(boards).all();
   res.json(allBoards);
 });
@@ -91,10 +99,7 @@ router.get('/:id', (req, res) => {
 
   const { workphases: workflowWorkphases, rankMap } = getOrderedWorkphases(board.workflowId);
 
-  const boardColumns = db.select().from(columns)
-    .where(eq(columns.boardId, board.id))
-    .orderBy(columns.position)
-    .all();
+  const boardColumns = db.select().from(columns).where(eq(columns.boardId, board.id)).orderBy(columns.position).all();
 
   // Every item whose project's effective workflow is this one — scoped by
   // project (not by workphase membership) so that items with a null/misaligned
@@ -178,11 +183,14 @@ router.put('/:id', (req, res) => {
   let nextShowAttachedChildren = board.showAttachedChildren;
   if (showAttachedChildren !== undefined) nextShowAttachedChildren = showAttachedChildren ? 1 : 0;
 
-  db.update(boards).set({
-    name: name ?? board.name,
-    showAttachedChildren: nextShowAttachedChildren,
-    updatedAt: Date.now(),
-  }).where(eq(boards.id, req.params.id)).run();
+  db.update(boards)
+    .set({
+      name: name ?? board.name,
+      showAttachedChildren: nextShowAttachedChildren,
+      updatedAt: Date.now(),
+    })
+    .where(eq(boards.id, req.params.id))
+    .run();
 
   const updated = db.select().from(boards).where(eq(boards.id, req.params.id)).get();
   res.json(updated);

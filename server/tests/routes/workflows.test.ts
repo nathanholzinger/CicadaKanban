@@ -41,7 +41,12 @@ describe('GET /api/workflows/:id', () => {
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
     const root = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'Root' });
-    const child = await createItem({ projectId: project.id, workphaseId: workphase.id, parentId: root.id, title: 'Child' });
+    const child = await createItem({
+      projectId: project.id,
+      workphaseId: workphase.id,
+      parentId: root.id,
+      title: 'Child',
+    });
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(200);
@@ -79,7 +84,12 @@ describe('GET /api/workflows/:id', () => {
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
     const root = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'Root' });
-    const child = await createItem({ projectId: project.id, workphaseId: workphase.id, parentId: root.id, title: 'Child' });
+    const child = await createItem({
+      projectId: project.id,
+      workphaseId: workphase.id,
+      parentId: root.id,
+      title: 'Child',
+    });
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     const items = res.body.items as Array<{ id: string; positionScope: string }>;
@@ -111,14 +121,18 @@ describe('POST /api/workflows', () => {
 
   it('returns 400 with a specific message when templateId does not reference an existing template', async () => {
     const project = await createProject();
-    const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id, templateId: 'does-not-exist' });
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: 'does-not-exist' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/templateId/);
   });
 
   it('returns 400 with a specific message when sourceWorkflowId does not reference an existing workflow', async () => {
     const project = await createProject();
-    const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id, sourceWorkflowId: 'does-not-exist' });
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, sourceWorkflowId: 'does-not-exist' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/sourceWorkflowId/);
   });
@@ -127,12 +141,12 @@ describe('POST /api/workflows', () => {
     const project = await createProject();
     const flow = await findTemplateByName('flow');
     const res = await request(app).post('/api/workflows').send({
-      name: 'From Template', projectId: project.id, templateId: flow.id,
+      name: 'From Template',
+      projectId: project.id,
+      templateId: flow.id,
     });
     expect(res.status).toBe(201);
-    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual([
-      'Todo', 'In Progress', 'Review', 'Done',
-    ]);
+    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
     expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
 
     // A default board is bootstrapped 1:1 with the just-created workphases
@@ -140,7 +154,10 @@ describe('POST /api/workflows', () => {
     expect(boardsRes.body).toHaveLength(1);
     const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
     expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual([
-      'Todo', 'In Progress', 'Review', 'Done',
+      'Todo',
+      'In Progress',
+      'Review',
+      'Done',
     ]);
   });
 
@@ -151,7 +168,9 @@ describe('POST /api/workflows', () => {
     await createWorkphase(source.id, { name: 'Done' });
 
     const res = await request(app).post('/api/workflows').send({
-      name: 'Cloned', projectId: project.id, sourceWorkflowId: source.id,
+      name: 'Cloned',
+      projectId: project.id,
+      sourceWorkflowId: source.id,
     });
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
@@ -236,14 +255,20 @@ describe('DELETE /api/workflows/:id', () => {
     expect(itemRes.body.workphaseId).toBeNull();
   });
 
-  it('deletes a workflow with a null projectId without touching any project\'s items', async () => {
+  it("deletes a workflow with a null projectId without touching any project's items", async () => {
     // workflow.projectId is only reachable as null by seeding directly — the
     // POST route requires projectId, so the API can never produce this state.
     const orphanId = randomUUID();
     const now = Date.now();
-    db.insert(workflows).values({
-      id: orphanId, projectId: null, name: 'Orphan', createdAt: now, updatedAt: now,
-    }).run();
+    db.insert(workflows)
+      .values({
+        id: orphanId,
+        projectId: null,
+        name: 'Orphan',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
     const res = await request(app).delete(`/api/workflows/${orphanId}`);
     expect(res.status).toBe(204);

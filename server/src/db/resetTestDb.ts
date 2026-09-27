@@ -1,8 +1,21 @@
 import { db, sqlite } from './index.js';
 import {
-  projects, workflows, workflowTemplates, workflowTemplatePhases,
-  workphases, items, itemLabels, labels, attachments, activityLog,
-  notifications, chatThreads, chatMessages, agents, boards, columns,
+  projects,
+  workflows,
+  workflowTemplates,
+  workflowTemplatePhases,
+  workphases,
+  items,
+  itemLabels,
+  labels,
+  attachments,
+  activityLog,
+  notifications,
+  chatThreads,
+  chatMessages,
+  agents,
+  boards,
+  columns,
 } from './schema.js';
 import { runMigrations } from './runMigrations.js';
 

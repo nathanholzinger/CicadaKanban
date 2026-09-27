@@ -7,7 +7,7 @@ import { validateColumnRange } from '../lib/columnRanges.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
-import { nextPosition } from "../lib/positionResolver.js";
+import { nextPosition } from '../lib/positionResolver.js';
 
 const router = Router();
 
@@ -35,16 +35,18 @@ router.post('/', (req, res) => {
 
   const id = randomUUID();
 
-  db.insert(columns).values({
-    id,
-    boardId,
-    name: name || null,
-    startWorkphaseId,
-    endWorkphaseId,
-    displayMode: displayMode === 'expanded' ? 'expanded' : 'merged',
-    position: nextPosition(siblingColumns),
-    createdAt: Date.now(),
-  }).run();
+  db.insert(columns)
+    .values({
+      id,
+      boardId,
+      name: name || null,
+      startWorkphaseId,
+      endWorkphaseId,
+      displayMode: displayMode === 'expanded' ? 'expanded' : 'merged',
+      position: nextPosition(siblingColumns),
+      createdAt: Date.now(),
+    })
+    .run();
 
   const created = db.select().from(columns).where(eq(columns.id, id)).get();
   res.status(201).json(created);
@@ -62,7 +64,11 @@ router.put('/:id', (req, res) => {
   const board = db.select().from(boards).where(eq(boards.id, column.boardId)).get()!;
   const { workphases: orderedWorkphases, rankMap } = getOrderedWorkphases(board.workflowId);
 
-  const siblingColumns = db.select().from(columns).where(eq(columns.boardId, column.boardId)).all()
+  const siblingColumns = db
+    .select()
+    .from(columns)
+    .where(eq(columns.boardId, column.boardId))
+    .all()
     .filter(c => c.id !== column.id);
   const range = { startWorkphaseId: nextStart, endWorkphaseId: nextEnd };
   const validation = validateColumnRange(range, rankMap, siblingColumns, orderedWorkphases);
@@ -75,12 +81,15 @@ router.put('/:id', (req, res) => {
   if (displayMode === 'expanded') nextDisplayMode = 'expanded';
   else if (displayMode === 'merged') nextDisplayMode = 'merged';
 
-  db.update(columns).set({
-    name: name !== undefined ? name : column.name,
-    startWorkphaseId: nextStart,
-    endWorkphaseId: nextEnd,
-    displayMode: nextDisplayMode,
-  }).where(eq(columns.id, req.params.id)).run();
+  db.update(columns)
+    .set({
+      name: name !== undefined ? name : column.name,
+      startWorkphaseId: nextStart,
+      endWorkphaseId: nextEnd,
+      displayMode: nextDisplayMode,
+    })
+    .where(eq(columns.id, req.params.id))
+    .run();
 
   const updated = db.select().from(columns).where(eq(columns.id, req.params.id)).get();
   res.json(updated);
@@ -96,7 +105,7 @@ router.patch('/reorder', (req, res) => {
     return;
   }
 
-  db.transaction((tx) => applyReorderEntries(columns, validation.entries, tx));
+  db.transaction(tx => applyReorderEntries(columns, validation.entries, tx));
   res.json({ success: true });
 });
 

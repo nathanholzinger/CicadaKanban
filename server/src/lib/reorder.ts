@@ -13,8 +13,7 @@ interface ReorderEntry {
 type ReorderableTable = SQLiteTable & { id: SQLiteColumn; position: SQLiteColumn };
 
 export type ReorderValidation =
-  | { ok: true; entries: ReorderEntry[] }
-  | { ok: false; status: number; body: { error: string; missingIds?: string[] } };
+  { ok: true; entries: ReorderEntry[] } | { ok: false; status: number; body: { error: string; missingIds?: string[] } };
 
 // Shared validation step for the four `PATCH /reorder` endpoints (items,
 // workphases, columns, projects' id/position pairing). Was previously two
@@ -41,17 +40,31 @@ export function validateReorder(table: ReorderableTable, orders: unknown, entity
   }
 
   const hasInvalid = orders.some(
-    (o) => typeof o?.id !== 'string' || typeof o?.position !== 'number' || !Number.isFinite(o.position),
+    o => typeof o?.id !== 'string' || typeof o?.position !== 'number' || !Number.isFinite(o.position),
   );
   if (hasInvalid) {
-    return { ok: false, status: 400, body: { error: 'Each entry must have a string id and a finite numeric position' } };
+    return {
+      ok: false,
+      status: 400,
+      body: { error: 'Each entry must have a string id and a finite numeric position' },
+    };
   }
 
   const entries = orders as ReorderEntry[];
   const existingIds = new Set(
-    db.select({ id: table.id }).from(table).where(inArray(table.id, entries.map((o) => o.id))).all().map((r) => r.id),
+    db
+      .select({ id: table.id })
+      .from(table)
+      .where(
+        inArray(
+          table.id,
+          entries.map(o => o.id),
+        ),
+      )
+      .all()
+      .map(r => r.id),
   );
-  const missingIds = entries.map((o) => o.id).filter((id) => !existingIds.has(id));
+  const missingIds = entries.map(o => o.id).filter(id => !existingIds.has(id));
   if (missingIds.length > 0) {
     return { ok: false, status: 404, body: { error: `One or more ${entityLabel}s not found`, missingIds } };
   }
@@ -69,6 +82,9 @@ export function applyReorderEntries(
   extraSet: Record<string, unknown> = {},
 ): void {
   for (const { id, position } of entries) {
-    tx.update(table).set({ position, ...extraSet }).where(eq(table.id, id)).run();
+    tx.update(table)
+      .set({ position, ...extraSet })
+      .where(eq(table.id, id))
+      .run();
   }
 }

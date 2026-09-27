@@ -92,7 +92,7 @@ test.describe('1: extreme boundary moves within project 1a', () => {
     expect(await fullOrder(request, scenario.workflow.id)).toBe('CABDE');
   });
 
-  test('1.b — drag C past the end of project 1a\'s board', async ({ page, request, projectSidebar }) => {
+  test("1.b — drag C past the end of project 1a's board", async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
     const column = page.getByRole('group', { name: 'Shared Phase' });
     await dragTo(page, article(page, 'Item C'), () => pastColumnEnd(column));
@@ -112,12 +112,18 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
     // of project1b's items within the root's full list) — API suite's
     // identical case (2.a) passes at 1.5.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(1.5);
-    await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).projectId).toBe(scenario.project1a.id);
+    await expect
+      .poll(async () => (await fetchItem(request, scenario.items.C.id)).projectId)
+      .toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test.skip('2.b — from the root board, drag C onto card E (same gap as "after D")', async ({ page, request, projectSidebar }) => {
+  test.skip('2.b — from the root board, drag C onto card E (same gap as "after D")', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     await goToBoard(page, projectSidebar, scenario.rootProject.name);
     await dragTo(page, article(page, 'Item C'), () => topQuarter(article(page, 'Item E')));
 
@@ -127,7 +133,9 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
     // limitation, worse over a longer distance. API suite's identical case
     // (2.b) passes at 4.5.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(4.5);
-    await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).projectId).toBe(scenario.project1a.id);
+    await expect
+      .poll(async () => (await fetchItem(request, scenario.items.C.id)).projectId)
+      .toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ABDCE');
   });
@@ -164,7 +172,9 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
     await dragTo(page, article(page, 'Item B'), () => pastColumnEnd(column));
 
     await expect.poll(async () => (await fetchItem(request, scenario.items.B.id)).position).toBe(6.0);
-    await expect.poll(async () => (await fetchItem(request, scenario.items.B.id)).projectId).toBe(scenario.project1b.id);
+    await expect
+      .poll(async () => (await fetchItem(request, scenario.items.B.id)).projectId)
+      .toBe(scenario.project1b.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE'); // unaffected
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACDEB');
 
@@ -185,7 +195,9 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
     // longest single-drag distance in this suite. API suite's identical
     // case (4.b) passes at 0.5.
     await expect.poll(async () => (await fetchItem(request, scenario.items.D.id)).position).toBe(0.5);
-    await expect.poll(async () => (await fetchItem(request, scenario.items.D.id)).projectId).toBe(scenario.project1b.id);
+    await expect
+      .poll(async () => (await fetchItem(request, scenario.items.D.id)).projectId)
+      .toBe(scenario.project1b.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE'); // unaffected
     expect(await fullOrder(request, scenario.workflow.id)).toBe('DABCE');
 

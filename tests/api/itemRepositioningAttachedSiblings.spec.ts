@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-import { seedAttachedSiblingsScenario, siblingOrder, type AttachedSiblingsScenario } from '../helpers/itemRepositioningScenario';
+import {
+  seedAttachedSiblingsScenario,
+  siblingOrder,
+  type AttachedSiblingsScenario,
+} from '../helpers/itemRepositioningScenario';
 import { API as BASE } from '../helpers/api';
 
 // 3 WHEN/THEN cases exercising anchor+side resolution against the
@@ -65,7 +69,9 @@ test('C before A — becomes the new true first sibling (TC-2.5-equivalent)', as
   await expectIsolationUnaffected(request);
 });
 
-test('C after A / C before B — same true-neighbor midpoint from either anchor (TC-2.1-equivalent)', async ({ request }) => {
+test('C after A / C before B — same true-neighbor midpoint from either anchor (TC-2.1-equivalent)', async ({
+  request,
+}) => {
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'after' });
   const afterA = await getItem(request, scenario.items.C.id);
   expect(afterA.position).toBe(1.5);

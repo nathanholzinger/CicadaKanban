@@ -24,12 +24,14 @@ router.post('/', (req, res) => {
   const id = randomUUID();
   const now = Date.now();
 
-  db.insert(itemTypes).values({
-    id,
-    name: name.trim(),
-    color: color ?? null,
-    createdAt: now,
-  }).run();
+  db.insert(itemTypes)
+    .values({
+      id,
+      name: name.trim(),
+      color: color ?? null,
+      createdAt: now,
+    })
+    .run();
 
   const created = db.select().from(itemTypes).where(eq(itemTypes.id, id)).get();
   res.status(201).json(created);

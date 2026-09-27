@@ -14,7 +14,10 @@ router.get('/', (_req, res) => {
 
 router.post('/', (req, res) => {
   const { name, color } = req.body;
-  if (!name || !color) { res.status(400).json({ error: 'name and color are required' }); return; }
+  if (!name || !color) {
+    res.status(400).json({ error: 'name and color are required' });
+    return;
+  }
   const id = randomUUID();
   db.insert(labels).values({ id, name, color, createdAt: Date.now() }).run();
   const created = db.select().from(labels).where(eq(labels.id, id)).get();
@@ -29,7 +32,8 @@ router.delete('/:id', (req, res) => {
 
 // Item label assignments
 router.get('/item/:itemId', (req, res) => {
-  const rows = db.select({ label: labels })
+  const rows = db
+    .select({ label: labels })
     .from(itemLabels)
     .innerJoin(labels, eq(itemLabels.labelId, labels.id))
     .where(eq(itemLabels.itemId, req.params.itemId))
@@ -40,7 +44,10 @@ router.get('/item/:itemId', (req, res) => {
 
 router.post('/item/:itemId', (req, res) => {
   const { labelId } = req.body;
-  if (!labelId) { res.status(400).json({ error: 'labelId is required' }); return; }
+  if (!labelId) {
+    res.status(400).json({ error: 'labelId is required' });
+    return;
+  }
   if (!getByIdOrNotFound(items, req.params.itemId, res, 'Item not found')) return;
   if (!getByIdOrNotFound(labels, labelId, res, 'Label not found')) return;
   try {
@@ -58,10 +65,7 @@ router.post('/item/:itemId', (req, res) => {
 
 router.delete('/item/:itemId/:labelId', (req, res) => {
   db.delete(itemLabels)
-    .where(and(
-      eq(itemLabels.itemId, req.params.itemId),
-      eq(itemLabels.labelId, req.params.labelId),
-    ))
+    .where(and(eq(itemLabels.itemId, req.params.itemId), eq(itemLabels.labelId, req.params.labelId)))
     .run();
   res.status(204).send();
 });

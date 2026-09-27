@@ -3,7 +3,9 @@ import { classifyPositionScope } from '../../src/lib/itemPositionScope.js';
 
 describe('classifyPositionScope', () => {
   it('classifies an attached child with a parent as attached-siblings', () => {
-    expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, false)).toBe('attached-siblings');
+    expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, false)).toBe(
+      'attached-siblings',
+    );
   });
 
   it('classifies an attached child as attached-siblings even under a terminal cascade (TC-6.6)', () => {
@@ -12,7 +14,9 @@ describe('classifyPositionScope', () => {
     // (cascaded) workphase turned terminal — its scope stays (parentId,
     // isAttached), per Part 6's "attached children keep their position"
     // exception.
-    expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, true)).toBe('attached-siblings');
+    expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, true)).toBe(
+      'attached-siblings',
+    );
   });
 
   it('classifies a null-workphase item as none (unsorted, not currently ordered) (TC-2.16)', () => {

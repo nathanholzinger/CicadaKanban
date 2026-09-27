@@ -20,9 +20,11 @@ describe('apiJson/apiVoid/apiRequest', () => {
     expect(result).toEqual({ id: '1', name: 'X' });
   });
 
-  it('apiJson throws the server\'s real `{ error }` message on failure, not the fallback', async () => {
+  it("apiJson throws the server's real `{ error }` message on failure, not the fallback", async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(400, { error: 'title is required' })));
-    await expect(apiJson('/items', { method: 'POST', body: {} }, 'Failed to create item')).rejects.toThrow('title is required');
+    await expect(apiJson('/items', { method: 'POST', body: {} }, 'Failed to create item')).rejects.toThrow(
+      'title is required',
+    );
   });
 
   it('apiJson falls back to the given message when the error body is missing the `error` field', async () => {
@@ -41,9 +43,13 @@ describe('apiJson/apiVoid/apiRequest', () => {
   });
 
   it('apiVoid still surfaces the real error message on failure', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(409, { error: "Cannot delete a workflow's last remaining board" })));
-    await expect(apiVoid('/boards/1', { method: 'DELETE' }, 'Failed to delete board'))
-      .rejects.toThrow("Cannot delete a workflow's last remaining board");
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(409, { error: "Cannot delete a workflow's last remaining board" })),
+    );
+    await expect(apiVoid('/boards/1', { method: 'DELETE' }, 'Failed to delete board')).rejects.toThrow(
+      "Cannot delete a workflow's last remaining board",
+    );
   });
 
   it('apiRequest returns the raw Response so a caller can branch on status (e.g. deleteWorkphase)', async () => {

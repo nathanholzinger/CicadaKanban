@@ -23,7 +23,13 @@ interface ConfirmDeleteInlineProps {
 // variant is a genuine third shape, left alone per the audit's own call —
 // fold it in only if this component (or ConfirmDeleteButton) grows a
 // matching mode, don't force it now.
-export default function ConfirmDeleteInline({ trigger, prompt, onDelete, className, deletingClassName }: ConfirmDeleteInlineProps) {
+export default function ConfirmDeleteInline({
+  trigger,
+  prompt,
+  onDelete,
+  className,
+  deletingClassName,
+}: ConfirmDeleteInlineProps) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 

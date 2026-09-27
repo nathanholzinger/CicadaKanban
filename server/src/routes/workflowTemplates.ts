@@ -11,7 +11,9 @@ router.get('/', (_req, res) => {
   const templates = db.select().from(workflowTemplates).all();
   const result = templates.map(t => ({
     ...t,
-    workphases: db.select().from(workflowTemplatePhases)
+    workphases: db
+      .select()
+      .from(workflowTemplatePhases)
       .where(eq(workflowTemplatePhases.templateId, t.id))
       .orderBy(workflowTemplatePhases.position)
       .all(),
@@ -23,7 +25,9 @@ router.get('/', (_req, res) => {
 router.get('/:id', (req, res) => {
   const template = getByIdOrNotFound(workflowTemplates, req.params.id, res, 'Workflow template not found');
   if (!template) return;
-  const templatePhases = db.select().from(workflowTemplatePhases)
+  const templatePhases = db
+    .select()
+    .from(workflowTemplatePhases)
     .where(eq(workflowTemplatePhases.templateId, req.params.id))
     .orderBy(workflowTemplatePhases.position)
     .all();
