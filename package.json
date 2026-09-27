@@ -19,7 +19,11 @@
     "lint:client": "npm --prefix client run lint",
     "lint:server": "npm --prefix server run lint",
     "lint:e2e": "eslint .",
-    "lint": "npm run lint:client && npm run lint:server && npm run lint:e2e"
+    "lint": "npm run lint:client && npm run lint:server && npm run lint:e2e",
+    "format:check:client": "npm --prefix client run format:check",
+    "format:check:server": "prettier --check \"server/**/*.{ts,js,mjs,json}\"",
+    "format:check:e2e": "prettier --check \"tests/**/*.ts\" \"*.{ts,js,mjs,json}\"",
+    "format:check": "npm run format:check:client && npm run format:check:server && npm run format:check:e2e"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +35,7 @@
     "@types/node": "^26.0.1",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
+    "prettier": "3.9.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1"
   }

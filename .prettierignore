@@ -1,0 +1,6 @@
+node_modules
+dist
+coverage
+tests/output
+server/drizzle
+package-lock.json
