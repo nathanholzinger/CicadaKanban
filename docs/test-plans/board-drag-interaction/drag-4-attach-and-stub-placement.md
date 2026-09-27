@@ -1,9 +1,8 @@
 # DRAG-4 — Card → Card attach (Card layer) and hierarchy placement (Descendants layer)
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §6, §7 (§7 hardened 2026-09-17 from the Product Owner's "Placement rules for a Hierarchy"; Story 6, not built)
+**Next ID:** DRAG-4.19
 
-**Suite ID:** `DRAG-4`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `DRAG-4.n`.
+**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §6, §7 (§7 hardened 2026-09-17 from the Product Owner's "Placement rules for a Hierarchy"; Story 6, not built)
 
 **Two layers, two within-actions.** A Card zoomed into another Card is at
 **Card layer**, whose within-action is the **auto-drop** — no band, no
@@ -17,7 +16,7 @@ anchor, no choice of slot, wherever inside the Card the cursor rests:
 
 The auto-drop is a different gesture from **manually** dragging a Stub to
 sit directly beneath a line item at Descendants layer, which lands it as
-that item's **first child** (TC-9). Last-by-auto vs. first-by-hand are
+that item's **first child** (DRAG-4.9). Last-by-auto vs. first-by-hand are
 two cases, not one rule. *(Product Owner, 2026-09-17.)*
 
 Zooming one layer further, into the Card's descendants section
@@ -61,7 +60,7 @@ depth from a range of discrete tab states:
 
 **Superseded here (2026-09-16):** the Stub *bands* — `FIRST_CHILD_BAND` /
 `LAST_CHILD_BAND` / `POP_BAND` — are gone; a Card's within-action has no
-band. TC-4, TC-6 and TC-7 stay in place as ⏸ superseded.
+band. DRAG-4.4, DRAG-4.6 and DRAG-4.7 stay in place as ⏸ superseded.
 
 **Parameterization.** `CARD_POP_IN` (Column → Card, duration-only) and
 `DESC_POP_IN` (Card → Descendants, duration-only, Story 6), plus
@@ -75,7 +74,7 @@ done-parent legality — are [`../item-attachment/`](../item-attachment/)'s
 rules applied unmodified; cases here assert the gesture produces the
 right request and cross-reference the consequence.
 
-**Automation status (2026-09-21).** The Card-layer cases (TC-1, 5, 12,
+**Automation status (2026-09-21).** The Card-layer cases (DRAG-4.1, 5, 12,
 14–17) have no E2E and no `popSession` unit coverage — the Story 4 code
 audit's #3. Deferred as a block to **Epic 3.5 Story 10** (roadmap), which
 triages this whole suite once Stories 5–8 stop moving the thresholds; not
@@ -83,34 +82,34 @@ a gap to fill story by story.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Zooming into a Card and releasing attaches as its last child, inheriting the parent's workphase | P0 | ⏳ pending triage |
-| TC-2 | Attach across projects triggers the project cascade | P1 | ⏳ pending triage |
-| TC-3 | Attach onto a done Card is allowed | P1 | ⏳ pending triage |
-| TC-4 | ~~Attach at a slot: the anchor is one of the new parent's Stubs~~ | — | ⏸ superseded |
-| TC-5 | Same geometry, two meanings: quick release inserts between, a hold attaches | P0 | ⏳ pending triage |
-| TC-6 | ~~`FIRST_CHILD_BAND` quick release → first child; `LAST_CHILD_BAND` quick release → last child~~ | — | ⏸ superseded |
-| TC-7 | ~~In the overlap, time decides: release commits the quick-drop, holding pops~~ | — | ⏸ superseded |
-| TC-8 | Descendants placement — vertical position picks the gap; the depth range is `[Bottom … Top + 1]` | P0 | ⏳ pending triage |
-| TC-9 | Descendants placement — Top's depth → sibling after Top's subtree; Top + 1 → Top's first child | P0 | ⏳ pending triage |
-| TC-10 | Descendants placement — shallower levels walk Top's ancestors; the shallowest is "before Bottom" | P0 | ⏳ pending triage |
-| TC-11 | Descendants placement — boundaries: first gap, last gap, Bottom is Top's child, empty hierarchy, clamping | P1 | ⏳ pending triage |
-| TC-12 | Attach into a Card with no Stubs makes the item its sole child | P1 | ⏳ pending triage |
-| TC-13 | Placement inside a done Card's Stub list works normally | P1 | ⏳ pending triage |
-| TC-14 | The auto-drop is invariant to where inside the Card the cursor rests | P0 | ⏳ pending triage |
-| TC-15 | A cross-column attach costs three pops; the destination column's band plays no part | P0 | ⏳ pending triage |
-| TC-16 | The ghost shows only the within-action's result: a Stub at the last slot, wherever the cursor is | P1 | ⏳ pending triage |
-| TC-17 | Popping out of the Card before release cancels the attach; the release is the column's reposition | P0 | ⏳ pending triage |
-| TC-18 | Descendants placement — an over-cap tab state is reachable, marked, and a no-op on drop; a cycle is unreachable | P0 | ⏳ pending triage |
+| DRAG-4.1 | Zooming into a Card and releasing attaches as its last child, inheriting the parent's workphase | P0 | ⏳ pending triage |
+| DRAG-4.2 | Attach across projects triggers the project cascade | P1 | ⏳ pending triage |
+| DRAG-4.3 | Attach onto a done Card is allowed | P1 | ⏳ pending triage |
+| DRAG-4.4 | ~~Attach at a slot: the anchor is one of the new parent's Stubs~~ | — | ⏸ superseded |
+| DRAG-4.5 | Same geometry, two meanings: quick release inserts between, a hold attaches | P0 | ⏳ pending triage |
+| DRAG-4.6 | ~~`FIRST_CHILD_BAND` quick release → first child; `LAST_CHILD_BAND` quick release → last child~~ | — | ⏸ superseded |
+| DRAG-4.7 | ~~In the overlap, time decides: release commits the quick-drop, holding pops~~ | — | ⏸ superseded |
+| DRAG-4.8 | Descendants placement — vertical position picks the gap; the depth range is `[Bottom … Top + 1]` | P0 | ⏳ pending triage |
+| DRAG-4.9 | Descendants placement — Top's depth → sibling after Top's subtree; Top + 1 → Top's first child | P0 | ⏳ pending triage |
+| DRAG-4.10 | Descendants placement — shallower levels walk Top's ancestors; the shallowest is "before Bottom" | P0 | ⏳ pending triage |
+| DRAG-4.11 | Descendants placement — boundaries: first gap, last gap, Bottom is Top's child, empty hierarchy, clamping | P1 | ⏳ pending triage |
+| DRAG-4.12 | Attach into a Card with no Stubs makes the item its sole child | P1 | ⏳ pending triage |
+| DRAG-4.13 | Placement inside a done Card's Stub list works normally | P1 | ⏳ pending triage |
+| DRAG-4.14 | The auto-drop is invariant to where inside the Card the cursor rests | P0 | ⏳ pending triage |
+| DRAG-4.15 | A cross-column attach costs three pops; the destination column's band plays no part | P0 | ⏳ pending triage |
+| DRAG-4.16 | The ghost shows only the within-action's result: a Stub at the last slot, wherever the cursor is | P1 | ⏳ pending triage |
+| DRAG-4.17 | Popping out of the Card before release cancels the attach; the release is the column's reposition | P0 | ⏳ pending triage |
+| DRAG-4.18 | Descendants placement — an over-cap tab state is reachable, marked, and a no-op on drop; a cycle is unreachable | P0 | ⏳ pending triage |
 
 ---
 
-## TC-1 — Zooming into a Card and releasing attaches as its last child, inheriting the parent's workphase
+## DRAG-4.1 — Zooming into a Card and releasing attaches as its last child, inheriting the parent's workphase
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* Free Card `X` in workphase `W1`, and Card `P` in `W2` with Stubs
 `S1, S2`, *when* `X` is dragged, locked into `P`'s column (popping out
-and in if it started elsewhere — TC-15), the cursor rests on `P` for ≥
+and in if it started elsewhere — DRAG-4.15), the cursor rests on `P` for ≥
 `CARD_POP_IN` ([DRAG-1.17](drag-1-contexts-and-popping.md)), and the user
 releases, *then* the committed change is: `X.parentId = P`, `X`
 attached, `X.workphaseId = W2`, `X` positioned as the **last** of `P`'s
@@ -121,7 +120,7 @@ and `X` now renders as a Stub inside `P`. `P`'s row is untouched
 fields land in one commit ([ATT-3.6](../item-attachment/att-3-reparent-placement-atomicity.md)).
 
 Placing `X` as some item's *first* child is a different gesture — the
-manual tabbed-right placement at Descendants layer (TC-9).
+manual tabbed-right placement at Descendants layer (DRAG-4.9).
 
 *And given* `X` is a **detached child of `P`** — Free, `X.parentId = P`
 already ([ATT-7.1](../item-attachment/att-7-detach-preserves-parent.md))
@@ -141,19 +140,19 @@ own former parent is not identity" (`isIdentity`) / "detach (parentId:
 null on the placement): isAttached false, plus the anchor/workphase
 resolution otherwise" (`toRequest`).)*
 
-## TC-2 — Attach across projects triggers the project cascade
+## DRAG-4.2 — Attach across projects triggers the project cascade
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 Cross-reference [ATT-5.1](../item-attachment/att-5-cross-project-reparenting.md)
 / [ATT-5.2](../item-attachment/att-5-cross-project-reparenting.md). *Given*
 `X` in project `P1` and `P` in project `P2` (same workflow, both on the
-board), *when* `X` is attached to `P` by drag (TC-1), *then* `X` and its
+board), *when* `X` is attached to `P` by drag (DRAG-4.1), *then* `X` and its
 entire descendant subtree read `projectId = P2`.
 
 **Automation test:** —
 
-## TC-3 — Attach onto a done Card is allowed
+## DRAG-4.3 — Attach onto a done Card is allowed
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -167,20 +166,20 @@ committed: `X` inherits the terminal workphase, receives no
 
 **Automation test:** —
 
-## TC-4 — ~~Attach at a slot: the anchor is one of the new parent's Stubs~~
+## DRAG-4.4 — ~~Attach at a slot: the anchor is one of the new parent's Stubs~~
 
 **Priority:** — · **Automated:** ⏸ superseded
 
 **Was:** with `X` popped into `P`'s context and released hovering the
 lower half of `S1`, the request carried `{anchorId: S1, side: after}` and
 the server placed `X` between `S1` and `S2`. **Superseded by** §6 as built
-(2026-09-16): the Card layer's within-action is the auto-drop (TC-1,
-TC-14). An anchored slot among a parent's Stubs is reached only at
-Descendants layer (TC-8–TC-10).
+(2026-09-16): the Card layer's within-action is the auto-drop (DRAG-4.1,
+DRAG-4.14). An anchored slot among a parent's Stubs is reached only at
+Descendants layer (DRAG-4.8–DRAG-4.10).
 
 **Automation test:** —
 
-## TC-5 — Same geometry, two meanings: quick release inserts between, a hold attaches
+## DRAG-4.5 — Same geometry, two meanings: quick release inserts between, a hold attaches
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -191,7 +190,7 @@ the commit is a reposition — `X` anchored against `A` or `B`,
 `X.parentId` unchanged — insertion is the default. *And when* the user
 instead holds there with the cursor on `B` for ≥ `CARD_POP_IN` and then
 releases, *then* the commit is an attach to `B` as its last child
-(TC-1). The pop threshold separates the two, not aim; the neighbors'
+(DRAG-4.1). The pop threshold separates the two, not aim; the neighbors'
 sliding apart for the ghost reads as "insert here" and is exactly what it
 means until the hold completes.
 
@@ -201,19 +200,19 @@ guarded.)*
 
 **Automation test:** —
 
-## TC-6 — ~~`FIRST_CHILD_BAND` quick release → first child; `LAST_CHILD_BAND` quick release → last child~~
+## DRAG-4.6 — ~~`FIRST_CHILD_BAND` quick release → first child; `LAST_CHILD_BAND` quick release → last child~~
 
 **Priority:** — · **Automated:** ⏸ superseded
 
 **Was:** a Card over `P`'s top half released quickly attached as first
 child; over the bottom half, as last child. **Superseded by** §6 as built
 and the design doc's layer table: the Card layer has no bands; a release
-is always the auto-drop (TC-1, TC-14). Any other slot is Descendants
-placement (TC-8–TC-10).
+is always the auto-drop (DRAG-4.1, DRAG-4.14). Any other slot is Descendants
+placement (DRAG-4.8–DRAG-4.10).
 
 **Automation test:** —
 
-## TC-7 — ~~In the overlap, time decides: release commits the quick-drop, holding pops~~
+## DRAG-4.7 — ~~In the overlap, time decides: release commits the quick-drop, holding pops~~
 
 **Priority:** — · **Automated:** ⏸ superseded
 
@@ -226,7 +225,7 @@ by holding in a band.
 
 **Automation test:** —
 
-## TC-8 — Descendants placement — vertical position picks the gap; the depth range is `[Bottom … Top + 1]`
+## DRAG-4.8 — Descendants placement — vertical position picks the gap; the depth range is `[Bottom … Top + 1]`
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -243,8 +242,8 @@ S2        (0)
 *when* the ghost's vertical position places it in the gap between
 `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *then* exactly the tab
 states at depths **0, 1, 2, 3** are offered — `[Bottom's depth …
-Top's depth + 1]` — and each commits a different placement (TC-9,
-TC-10): depth 3 → child of `S1a1`; 2 → sibling after `S1a1`; 1 →
+Top's depth + 1]` — and each commits a different placement (DRAG-4.9,
+DRAG-4.10): depth 3 → child of `S1a1`; 2 → sibling after `S1a1`; 1 →
 sibling after `S1a` (after its subtree); 0 → sibling after `S1`, which
 is the same placement as before `S2`. No state shallower than `S2`'s
 depth is offered: it would make `X` `S2`'s ancestor, and an item chooses
@@ -257,11 +256,11 @@ travel with it.
 
 **Automation test:** —
 
-## TC-9 — Descendants placement — Top's depth → sibling after Top's subtree; Top + 1 → Top's first child
+## DRAG-4.9 — Descendants placement — Top's depth → sibling after Top's subtree; Top + 1 → Top's first child
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
-*(Story 6.)* *Given* the tree of TC-8 and the ghost in the gap between
+*(Story 6.)* *Given* the tree of DRAG-4.8 and the ghost in the gap between
 `S1a1` (Top, depth 2) and `S2` (Bottom), *when* `X` is released
 **aligned with Top** (depth 2), *then* `X` is Top's sibling positioned
 after Top's entire subtree: `X.parentId = S1a`, attached, `{anchorId:
@@ -275,18 +274,18 @@ against one of those children, never directly under the parent.
 Top is always the item *rendered* immediately above the ghost. So for an
 item with descendants — `S1a`, whose child `S1a1` renders directly
 beneath it — "sibling after `S1a`" is not reached from the gap directly
-under `S1a` (that gap offers only "first child of `S1a`", TC-8); it is
+under `S1a` (that gap offers only "first child of `S1a`", DRAG-4.8); it is
 reached from the gap below the **last item of `S1a`'s subtree**, tabbed
-to `S1a`'s depth (TC-10's walk). "After Top" always means after Top's
+to `S1a`'s depth (DRAG-4.10's walk). "After Top" always means after Top's
 whole subtree.
 
 **Automation test:** —
 
-## TC-10 — Descendants placement — shallower levels walk Top's ancestors; the shallowest is "before Bottom"
+## DRAG-4.10 — Descendants placement — shallower levels walk Top's ancestors; the shallowest is "before Bottom"
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
-*(Story 6.)* *Given* the tree of TC-8 and the ghost in the gap between
+*(Story 6.)* *Given* the tree of DRAG-4.8 and the ghost in the gap between
 `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *when* `X` is released
 **tabbed once left** of Top (depth 1), *then* `X` is a sibling of Top's
 parent, positioned after that parent's subtree: `X.parentId = S1`,
@@ -304,11 +303,11 @@ is what makes "last child of `S1`" placeable at all.
 
 **Automation test:** —
 
-## TC-11 — Descendants placement — boundaries: first gap, last gap, Bottom is Top's child, empty hierarchy, clamping
+## DRAG-4.11 — Descendants placement — boundaries: first gap, last gap, Bottom is Top's child, empty hierarchy, clamping
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
-*(Story 6.)* *Given* the tree of TC-8:
+*(Story 6.)* *Given* the tree of DRAG-4.8:
 
 - **Above the first item** (no Top; Bottom = `S1`): one state, depth 0
   → `X.parentId = P`, `{anchorId: S1, side: before}` — first child of the
@@ -320,10 +319,10 @@ is what makes "last child of `S1`" placeable at all.
   `S2`) through `S2a`'s depth (sibling after `S2a`) to `S2a` + 1 (child
   of `S2a`).
 - **Bottom is Top's child** (gap between `S1` and `S1a`): exactly one
-  state — depth 1, first child of `S1`, before `S1a` (TC-8).
+  state — depth 1, first child of `S1`, before `S1a` (DRAG-4.8).
 - **Empty hierarchy**: not reachable as a Descendants layer — a `P` with
   no Stubs has no descendants section ([DRAG-1.21](drag-1-contexts-and-popping.md));
-  the Card layer's auto-drop makes `X` the sole child (TC-12). In the
+  the Card layer's auto-drop makes `X` the sole child (DRAG-4.12). In the
   project sidebar, where the empty root *is* reachable, the one state is
   the root's sole child.
 - **Clamping**: an offset further left than Bottom's depth resolves as
@@ -335,7 +334,7 @@ is what makes "last child of `S1`" placeable at all.
 
 **Automation test:** —
 
-## TC-12 — Attach into a Card with no Stubs makes the item its sole child
+## DRAG-4.12 — Attach into a Card with no Stubs makes the item its sole child
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -343,26 +342,26 @@ Cross-reference [TC-7.7](../item-positioning/part-7-board-placement-intents.md).
 *Given* `P` with no Stubs, *when* `X` zooms into `P` and is released,
 *then* the request is attach-to-`P` with no anchor and the position
 resolves via the append fallback in the new (empty) scope — the auto-drop
-of TC-1 with nothing to be last *after*. A `P` with no children has no
+of DRAG-4.1 with nothing to be last *after*. A `P` with no children has no
 descendants section, so Descendants layer is not reachable from it and
 the auto-drop is the only outcome ([DRAG-1.21](drag-1-contexts-and-popping.md)).
 
 **Automation test:** —
 
-## TC-13 — Placement inside a done Card's Stub list works normally
+## DRAG-4.13 — Placement inside a done Card's Stub list works normally
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 Cross-reference [TC-7.15](../item-positioning/part-7-board-placement-intents.md).
 *Given* `P` done (terminal workphase) with Stubs `S1, S2` that retain
-their positions, *when* `X` is auto-dropped (TC-1) or placed among them
-via Descendants placement (TC-8–TC-10), *then* the requests are produced
+their positions, *when* `X` is auto-dropped (DRAG-4.1) or placed among them
+via Descendants placement (DRAG-4.8–DRAG-4.10), *then* the requests are produced
 and accepted exactly as for a non-done parent — the Stubs are anchorable;
 `P`'s terminality is irrelevant to its Stubs' scope.
 
 **Automation test:** —
 
-## TC-14 — The auto-drop is invariant to where inside the Card the cursor rests
+## DRAG-4.14 — The auto-drop is invariant to where inside the Card the cursor rests
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -379,7 +378,7 @@ invariance holds and the auto-drop is "set back down" —
 
 **Automation test:** —
 
-## TC-15 — A cross-column attach costs three pops; the destination column's band plays no part
+## DRAG-4.15 — A cross-column attach costs three pops; the destination column's band plays no part
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -390,14 +389,14 @@ Board), rests in `C2`'s middle band ≥ `POP_IN` (into `C2`), rests on `P`
 ≥ `CARD_POP_IN` (into `P`), and the user releases, *then* the commit is
 attach to `P` as last child with `X.workphaseId = W3` — inherited from
 `P`, **not** `C2`'s entry workphase `W2`, and with no band anchor from
-`C2`. The write is TC-1's; only the path differs. *And when* the cursor
+`C2`. The write is DRAG-4.1's; only the path differs. *And when* the cursor
 rests on `P` from Board layer without `C2`'s pop-in having fired, *then*
 a release commits `C2`'s band meaning ([DRAG-3](drag-3-card-column-bands.md)),
 not an attach ([DRAG-1.17](drag-1-contexts-and-popping.md)).
 
 **Automation test:** —
 
-## TC-16 — The ghost shows only the within-action's result: a Stub at the last slot, wherever the cursor is
+## DRAG-4.16 — The ghost shows only the within-action's result: a Stub at the last slot, wherever the cursor is
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -408,12 +407,12 @@ cursor to `S1` or `S2` — and `X` is absent from its origin column's list
 (the gap closes, as in any cross-list move). The carried card itself
 still follows the cursor, bounded to `P`'s box. The ghost is only ever
 shown in the position/workphase/hierarchy the release would commit
-(TC-14), so nothing in the preview promises a slot the release can't
+(DRAG-4.14), so nothing in the preview promises a slot the release can't
 deliver.
 
 **Automation test:** —
 
-## TC-17 — Popping out of the Card before release cancels the attach; the release is the column's reposition
+## DRAG-4.17 — Popping out of the Card before release cancels the attach; the release is the column's reposition
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -425,12 +424,12 @@ back as a Card-ghost in `C`'s list — and a release hovering the lower
 half of `C`'s Card `Q` commits `{anchorId: Q, side: after}` with
 `X.parentId` unchanged and `X` still Free. No attach request is made.
 *And when* the cursor leaves `P` but returns before `POP_OUT`, *then* `X`
-is still at Card layer and a release attaches (TC-1) — the excursion was
+is still at Card layer and a release attaches (DRAG-4.1) — the excursion was
 momentary.
 
 **Automation test:** —
 
-## TC-18 — Descendants placement — an over-cap tab state is reachable, marked, and a no-op on drop; a cycle is unreachable
+## DRAG-4.18 — Descendants placement — an over-cap tab state is reachable, marked, and a no-op on drop; a cycle is unreachable
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -445,13 +444,13 @@ invalid cue (look TBD, Story 8), and a release in that state **commits
 nothing** — no request; `X` is set back down where it was picked up
 (or, for an `X` brought in from outside, remains where the drag's
 current placement had it, unwritten). *And when* the user tabs to a
-shallower state that fits, *then* that state commits normally (TC-9,
-TC-10). Validity is per *state*, not per gap — the cap is checked
+shallower state that fits, *then* that state commits normally (DRAG-4.9,
+DRAG-4.10). Validity is per *state*, not per gap — the cap is checked
 against `X`'s deepest descendant, not `X` alone.
 
 *And given* `X` has descendants, *then* no tab state in any gap makes `X`
 a descendant of itself: `X`'s subtree travels with it and is excluded
-from the Top/Bottom candidates (TC-8), so a cycle is structurally
+from the Top/Bottom candidates (DRAG-4.8), so a cycle is structurally
 unreachable — no cue is needed, the state simply does not exist.
 Classification was computed at drag start and does not change inside the
 hierarchy ([DRAG-2.4](drag-2-target-classification.md)).

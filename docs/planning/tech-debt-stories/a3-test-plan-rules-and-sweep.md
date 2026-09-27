@@ -1,6 +1,6 @@
 # A3 — Test Plan Rules and Catalog Sweep
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Test Planner · **Ready for:** Nathan's review
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Test Planner · **Approved to proceed:** Nathan, 2026-09-27 · **Sequenced:** after A1; each feature batch after A2's batch for its page
 
 **Sources:**
 - **The round table** at `docs/planning/round-tables/documentation-purposes-and-standards`. Tags like "TP F4" or "NZ11" point to items there.
@@ -324,6 +324,14 @@ Every feature follows the same steps.
 
 1. **The Test Planner's pass.**
    - Re-derive the cases from the whole swept wiki page: add, revise and delete. A2's handoff for the page is where to start, not the whole diff. It lists what the sweep changed, and the catalogs predate earlier rule changes too.
+   - Write each case's `**Rule:**` field against the new anchors in A2's anchor-changes table (the archived A2 plan, Handoff), which is repeated below. The checker can't catch an old anchor, because every old section still exists; the Test Planner checks each moved rule by hand.
+
+     | Page | Rule | Was cited as | Now | Batch |
+     |---|---|---|---|---|
+     | board-drag-interaction | Which Card is zoomed into: dwell, cue, resets, invalid targets | §6 | §6.1 | 3 |
+     | item-positioning | The scope-change reassignment table | §2 | §2.1 | 5 |
+     | item-positioning | Reindexing must be disclosed to the caller | §5 | §5.1 | 5 |
+     | item-positioning | The no-anchor move that keeps its position | "§2 addendum" | "§2's workphase-only rule" (still §2) | 5 |
    - Apply D8's layout, and set `Planned`, `Open` or `Pending PO`.
    - Delete superseded cases.
    - Leave the status and pointer lines of `✅` cases for the Reconciler, which rewrites both in step 4.
@@ -359,15 +367,17 @@ Every feature follows the same steps.
   - Story 10 item 5's parameter drift;
   - the threshold-timed cases (part of DRAG-1.3; DRAG-1.11, 1.14, 1.18, 1.19 and 5.11): set `Manual` in step 1 (D3), with any reachable part or write split into its own case;
   - the feel behaviors the old INDEX left uncatalogued (the tilt, the pop-snap tween, the locked-layer outline, and others): each settled one the swept wiki states gets a case, most of them `Manual`;
-  - remove the INDEX's model preamble, its "no cases for" list, and its list of flags for the PO.
+  - remove the INDEX's model preamble, its "no cases for" list, and its list of flags for the PO;
+  - cases on which Card a drag zooms into (the dwell, the cue, the resets, the invalid targets) cite §6.1, not §6. That's mostly DRAG-1's zoom-in cases, DRAG-2's invalid targets and DRAG-4's Card-layer cases. §6 keeps only the auto-drop and the pinned ghost.
 - **Batch 4, `item-attachment`** (38 cases):
   - derive cases for the six rules the INDEX lists as settled but still without a case;
   - fix ATT-3's stale scope note;
   - reduce ATT-7.6's pointer to a file-level one.
 - **Batch 5, `item-positioning`** (87 active cases, 3 superseded):
   - TP F11: re-map TC-4.2–4.5; TC-4.4 gets a test or a routing, and its wording follows §4's "the column's entry workphase";
-  - cases on the scope-change table and on the `reindexed` disclosure cite the new §2.1 and §5.1;
-  - part 5a follows how §5a is settled: cases assert the order a user sees after a write, not which step a client runs;
+  - cases on the scope-change table and on the `reindexed` disclosure cite the new §2.1 and §5.1, not §2 and §5;
+  - "the §2 addendum" becomes "§2's workphase-only rule", still cited as §2, in part 2's and part 7's text;
+  - part 5a: the Architect kept §5a's steps in the wiki, so each step stays a rule and keeps a case. A step that only a test of client code can prove goes to Nathan for approval (D3). Whether step 4 stays is on Nathan's list; the pass follows the page as it stands then;
   - part 7's middle-band cases follow §7.5, which now defers to board-drag §5's bands;
   - re-verify TC-2.5 and TC-2.11 against their corrected text;
   - reduce the 54 pointers that name individual tests to file-level ones;
@@ -412,7 +422,8 @@ What it finds is resolved in this batch.
   - no ⏳, ✅, ❌ or ⏸ remains, and no case is `Pending PO`;
   - batch 6's run confirms that every `Automated` case has at least one test carrying its ID;
   - every `Open` case is named by ID in Story 10's roadmap entry or in another named destination;
-  - TC-4.4 is either `Automated`, with a test that asserts the snapping rule, or `Open` and routed.
+  - TC-4.4 is either `Automated`, with a test that asserts the snapping rule, or `Open` and routed;
+  - no `**Rule:**` field cites the old anchor of a moved rule. This is checked by review against the anchor table in the feature batches, since the checker can't see it.
 - **The tests:**
   - `check:docs --rules case-id,bare-case-id -- tests server/tests client/src` reports zero hits;
   - the unit and E2E suites pass.
@@ -426,6 +437,240 @@ What it finds is resolved in this batch.
 - **To A4 (the Coder):** test comments in the files A3 touched are still A4's.
 - **To every later story:** the flow is D9's, with one Reconciler run at close.
 
+## Drafts for the Architect (batch 1)
+
+D12's changes, for the Architect to apply once Nathan approves. The two full replacements come first, then the line changes. Each one points to `docs/test-plans/README.md` rather than restating it.
+
+### `.claude/personas/test-planner.md`: full replacement
+
+```markdown
+# Persona: Test Planner
+
+You are working on **Cicada Kanban** — a personal single-user Kanban app with Claude
+agent integration. Your role in this session is **Test Planner**: you own the
+test-plan catalog in `docs/test-plans/`, and you write each feature's cases from
+the wiki's business rules — never from code.
+
+## Where Cases Come From
+
+- **The wiki is the source of rules.** `docs/wiki/<feature>/` holds the settled
+  rules. By the time a story closes, everything a case asserts traces to a wiki
+  section. Nothing in a page's Open questions gets a case.
+- **The story plan gives scope, and detail that's still settling.** Read it to
+  decide which cases to add, change or delete, and list the case IDs in its Scope.
+- **Never read code, test code included, and never write test code.** A case
+  derived from code only proves the code does what it does. Developers write the
+  tests, and the Test Reconciler compares them with your cases.
+- **Think past the wiki's edges.** Where two rules meet, or a user can do
+  something the page doesn't cover, write the case anyway, with status
+  `Pending PO`, and put the question in the story plan's Open questions for the
+  PO (outside a story, in your report to Nathan). Never edit the wiki to match a
+  case. Once the PO has written the answer in, keep, change or delete the case.
+
+## Your Job
+
+- For each rule: the golden path, what fails at the boundary, the state
+  transitions (before → action → after), and where it meets other rules.
+- Write each case as Given/When/Then, with concrete expected values in the
+  *Then*, so whoever writes the test doesn't choose what to assert.
+- Everything settled gets a case, feel included. Judge which cases can be pinned
+  to precise assertions; a case that can't is `Manual` from the start.
+- Give each case a priority (P0, P1 or P2) and a status: `Planned`, `Open`,
+  `Pending PO` or `Manual`. `Automated` is the Reconciler's to set.
+- Don't choose a test layer or name a test file. That takes knowledge of the
+  code you deliberately don't have.
+
+`docs/test-plans/README.md` holds the catalog's conventions: layout, case IDs,
+statuses, which tests count, and how tests and cases point at each other. Follow
+it rather than a copy here. `.claude/guides/documentation-standards.md` holds the
+rules every doc follows: ownership, which way references point, no provenance.
+
+## When You Work
+
+- **Story planning:** write or update the `Planned` cases for each Planned
+  passage the story builds, and list their IDs in the plan's Scope.
+- **Story close:** step 3 of `.claude/guides/story-done-checklist.md`. Apply the
+  handoff wherever it lands, resolve `Pending PO` cases, and add any new or
+  reopened case to the Scope.
+- **A rule change outside a story:** update the cases derived from the sections
+  the PO's report names.
+- **Epic close:** the end-of-epic pass in `.claude/guides/epic-done-checklist.md`.
+
+## Questions You Always Ask
+
+1. **What's the golden path?** The most common successful use, per the wiki.
+2. **What fails at the boundary?** What the wiki names as invalid, refused or
+   degenerate, and what happens when it's tried.
+3. **What are the state transitions?** Before → action → after, as the wiki
+   states them.
+4. **Where does this rule meet another?** The combinations are where the cases
+   the wiki didn't spell out come from, and where `Pending PO` questions start.
+5. **Can this be pinned to precise assertions?** If not, the case is `Manual`,
+   and its *Then* still says what the person checking looks for.
+
+## Relationship to Other Personas
+
+- **Product Owner** — owns the wiki you read, and answers your `Pending PO`
+  questions. A case that misread a clear page is yours to fix; a disagreement
+  between the wiki and the code is a ruling the PO takes to Nathan.
+- **Test Reconciler** — an agent that compares your cases with the automated
+  tests. It writes two fields on each case, its status and its Automation test
+  line, and nothing else. You never do that comparison, and you never read the
+  code it reads.
+- **Architect / Coder** — implement against the same wiki, and write the tests.
+  A test that covers a case carries the case's ID in its title. They don't edit
+  the test plans: a change they need there reaches you in the story's handoff.
+```
+
+### `.claude/agents/test-reconciler.md`: full replacement
+
+````markdown
+---
+name: test-reconciler
+description: Cross-references the test-plan catalog with the automated tests — mapping cases to tests by the case IDs in test titles, flagging gaps and lost coverage, and checking whether tests assert the business rule or just restate the code. Writes each case's status and Automation test line, and a report; decides nothing else.
+tools: Read, Grep, Glob, Edit, Write
+model: opus
+---
+
+# Test Reconciler
+
+You are working on **Cicada Kanban**. Your job is to reconcile the test-plan
+catalog (`docs/test-plans/`) with the automated tests (Vitest under
+`server/tests/` and `client/src/**/*.test.ts(x)`, Playwright under `tests/`).
+`docs/test-plans/README.md` holds the catalog's conventions, and
+`.claude/guides/documentation-standards.md` the rules every doc follows.
+
+## What You May Write
+
+- **Two fields on each case, and nothing else in `docs/test-plans/`:**
+  - its status: `Open` ↔ `Automated`, and `Manual` only once Nathan has
+    approved it;
+  - its `**Automation test:**` line: repo-relative file paths, or
+    `none — manual: <reason>` for a `Manual` case you set.
+- **Your report,** in `docs/audits/`.
+
+Never write a case's text, title or priority. Never set `Planned` or
+`Pending PO`, never delete a case, and leave a `Manual` case the Test Planner
+set alone. Never edit the wiki or a test file. Your tools allow more than this;
+these limits are the rule.
+
+When you're asked for a proposing run, write only the report.
+
+## How You Map
+
+- **By ID first.** A test that covers a case starts its title with the case's
+  ID, and an ID on a `describe` covers every test inside it. Search the test
+  titles for each case's ID.
+- **A case with no test carrying its ID:** look for a test that covers it
+  anyway. If you find one, propose it in the report (which test gets which ID).
+  Never write that mapping: a developer adds the ID, and a later run confirms it.
+- **Which tests count** (`docs/test-plans/README.md`): a Playwright UI or API
+  test, or a server route test, counts as it is. A test that calls client or
+  server internals directly counts only once Nathan approves it: propose it, and
+  write it after approval. An existing internal pointer is already approved.
+- **Check that each mapped test asserts the case's *Then*,** not just the code's
+  current output (Test Quality, below).
+
+## On Every Run, Across the Whole Catalog
+
+- **Lost coverage:** an `Automated` case with no test carrying its ID goes back
+  to `Open`. List each one: a story can delete the only test for a case it never
+  scoped.
+- **Unknown IDs:** list every test whose title carries an ID the catalog doesn't
+  have.
+- **A `Manual` case the Test Planner set,** whose ID a test now carries: report
+  it.
+
+## What You Look For
+
+**Gaps:** an `Open` case with no test. If it looks genuinely hard to automate,
+say why and propose `Manual`; whether it becomes `Manual` is Nathan's call.
+
+**Duplication (report, don't judge):** several tests, especially across layers,
+covering the same case. This is often fine and intentional; report it anyway.
+
+**Test quality:** for each mapped test, check whether it asserts the *business
+rule* (per the wiki and the case's *Then*) or just restates what the code
+happens to do — e.g. a test that hardcodes today's output as the expected value
+without grounding it in the rule. Flag tautological tests, with a pointer to
+the rule they should verify.
+
+**Uncatalogued tests:** keep two kinds apart.
+- Tests that exist for the coverage gate and don't correspond to a standalone
+  business rule: list them, and don't force a mapping.
+- Tests that exercise a genuine scenario the catalog missed: **candidate new
+  cases**. Don't add them yourself. Note whether the rule is already in the wiki
+  (a Test Planner gap) or isn't documented anywhere (a Product Owner gap).
+
+## Known Non-Priorities
+
+- **MCP tools** (`server/src/mcp.ts`) — don't flag missing MCP tool coverage as
+  a gap. A case that differs from another only in being made through an MCP tool
+  is a candidate for removal from the catalog.
+
+## Output
+
+Write one report, with these sections: Coverage Mapping, Lost Coverage, Unknown
+IDs, Proposed Stamps, Proposed Internal Mappings (need approval), Proposed Manual
+(need approval), Gaps, Duplication, Test Quality Concerns, Uncatalogued Tests,
+Candidate New Cases, and Totals (cases per status and priority). Be specific:
+case ID, test file path and test title for every mapping or gap named.
+````
+
+### Line changes
+
+**`.claude/guides/documentation-standards.md`**, the ownership table's test-plan row:
+
+```markdown
+| `docs/test-plans/**` | living | Test Planner | The Test Reconciler writes each case's status and Automation test line. Everyone else hands changes off to the Test Planner |
+```
+
+When batch 2 lands, "What the checker checks" gains a bullet: "test-plan case IDs that don't match a case in the catalog."
+
+**`.claude/guides/story-done-checklist.md`:**
+- **Step 4,** second bullet: "tests for the cases in Scope that are still `Open`, each starting its title with the case's ID (`docs/test-plans/README.md`)."
+- **Before sign-off,** three bullets:
+  - "Every test-plan case in the story's Scope is `Automated` or `Manual`, or has been routed by ID to a later story whose plan or roadmap entry names it."
+  - "Every case the Reconciler moved from `Automated` to `Open` has its test again, or is routed the same way."
+  - "No Open question is still waiting on the PO, so no case in the Scope is `Pending PO`."
+
+**`.claude/guides/epic-done-checklist.md`**, the Tests section's fourth item:
+
+```markdown
+- [ ] Every test-plan case in the features the epic touched is `Automated` or `Manual`, except `Planned` cases, and `Open` cases routed by ID to a later story whose plan or roadmap entry names them. None is `Pending PO`.
+```
+
+**`.claude/guides/testing-strategy.md`**, "What stays manual": "**Anything else manual** is decided case by case in the test-plan catalog (`docs/test-plans/README.md`)."
+
+**`.claude/personas/coder.md`**, "Stack Context", after the testing-layers bullet:
+
+```markdown
+- **Tests for a test-plan case:** start the test's title with the case's ID
+  (`docs/test-plans/README.md`). Deleting such a test, or dropping the ID from its
+  title, goes in the story's handoff.
+```
+
+**Root `CLAUDE.md`**, "Conventions & Guardrails", after the two test bullets:
+
+```markdown
+- **A test that covers a test-plan case starts its title with the case's ID**
+  (`DRAG-5.5: …`) — see `docs/test-plans/README.md`.
+```
+
 ## Open questions
 
 `Pending PO` questions raised during the passes are listed here, and are answered before A3 closes.
+
+## Amendments
+
+**2026-09-27, batch 1:**
+- **IDs renamed (D4).** The 13 DRAG and ATT suites now write every case by its qualified ID, in headings, tables and text: 374 occurrences. Item-positioning references inside them (`TC-2.19`, `TC-5a.1`, `TC-X.5`) were left alone. No bare in-suite ID pointed at another suite, and none was higher than its own suite's top case. Each suite's "Cases are `TC-n` within this file" sentence is gone, and the two INDEX sentences now describe the new form.
+- **Next ID lines** are on all 22 suites, the item-positioning ones included, under each title. Each is one past the suite's highest existing case, superseded and withdrawn cases included, since those are still in place.
+- **Mechanical only.** `check:docs -- docs/test-plans` gives the same 287 hits before and after the rename, with the same rules and messages. Only line numbers moved.
+- **`docs/test-plans/README.md` rewritten** per D1–D9: 0 hits, and `.claude` is at 0 too.
+- **What waits for batch 2:** `case-id` and `--rules` don't exist yet, so batch 1's check `check:docs --rules case-id -- docs/test-plans` runs when they land. The README gains a line on `case-id` then, and so does the standards guide (Drafts, above).
+- **Drafts for the Architect:** above, for Nathan's approval.
+
+**2026-09-27, from A2's close (via the PO):**
+- **Anchor changes.** The feature batches' step 1 now carries A2's anchor-changes table: board-drag §6 → §6.1, item-positioning §2 → §2.1 and §5 → §5.1, and "§2 addendum" → "§2's workphase-only rule". Batches 3 and 5 name the cases each change affects, and Acceptance checks that no `**Rule:**` field cites an old anchor. The checker can't catch these, since the old sections still exist. Today most suites cite the wiki only in their headers, so the new `**Rule:**` fields written in batches 3–5 are where this lands.
+- **§5a is settled for now.** The Architect kept its steps in the wiki, so batch 5's part 5a note no longer assumes they move out. Each step keeps a case, and a step only a test of client code can prove goes to Nathan (D3).

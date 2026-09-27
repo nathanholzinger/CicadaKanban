@@ -1,9 +1,8 @@
 # DRAG-3 — Card → column region: drop bands (Board layer)
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §5, §5a
+**Next ID:** DRAG-3.20
 
-**Suite ID:** `DRAG-3`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `DRAG-3.n`.
+**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §5, §5a
 
 **Board layer only.** The bands are Board layer's within-action
 ([DRAG-1](drag-1-contexts-and-popping.md) §1.1): they govern a release only
@@ -38,7 +37,7 @@ and have no band. Pop clocks are `POP_OUT` and `POP_IN` as defined in
 
 "Released without popping in" means a release at Board layer before
 `POP_IN` has fired for this region. It commits the band's meaning; only a
-completed pop in reaches in-context placement (TC-4).
+completed pop in reaches in-context placement (DRAG-3.4).
 
 Every band produces one of the request shapes catalogued in
 [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md);
@@ -46,34 +45,34 @@ cases here assert *which* request a release produces, and cross-reference
 Part 7 for the number the server then resolves. The dashed guide lines,
 the band tint and the locked-layer outline are visual (Story 8) and have
 no cases; the band *labels* and the dragged card's collapse have one P2
-case each (TC-18, TC-19), flagged in INDEX as droppable if they're judged
+case each (DRAG-3.18, DRAG-3.19), flagged in INDEX as droppable if they're judged
 visual too.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Top band → `{anchorId: first item in the region, side: before}` | P0 | ⏳ pending triage |
-| TC-2 | Bottom band → `{anchorId: last item in the region, side: after}` | P0 | ⏳ pending triage |
-| TC-3 | Middle band, released without popping in → workphase-only move, position kept | P0 | ⏳ pending triage |
-| TC-4 | Middle band, held past `POP_IN` → pop in, then anchor+side hovering | P0 | ⏳ pending triage |
-| TC-5 | The dividers sit `GHOST_H` from each content edge, and move with the configured value | P1 | ⏳ pending triage |
-| TC-6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | ⏳ pending triage |
-| TC-7 | A drop into a merged column by an item already in its covered set leaves the workphase alone | P0 | ⏳ pending triage |
-| TC-8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row | P0 | ⏳ pending triage |
-| TC-9 | Done column: a single band; any release is workphase-only with no anchor | P0 | ⏳ pending triage |
-| TC-10 | Empty region: a single band; any release is a workphase-only move | P1 | ⏳ pending triage |
-| TC-11 | Ghost placement is ordinal and follows the band's meaning | P1 | ⏳ pending triage |
-| TC-12 | Middle band, item already in this region → nothing is written | P0 | ⏳ pending triage |
-| TC-13 | A band is measured against the region's content rect as it was on entry, not the live rect | P1 | ⏳ pending triage |
-| TC-14 | The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow | P1 | ⏳ pending triage |
-| TC-15 | Exactly one card: the dividers halve, so the card keeps a middle band | P1 | ⏳ pending triage |
-| TC-16 | Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable | P1 | ⏳ pending triage |
-| TC-17 | Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked | P2 | ⏳ pending triage |
-| TC-18 | Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}" | P2 | ⏳ pending triage |
-| TC-19 | Both copies of the dragged card render collapsed; its attached children are unrendered for the drag | P2 | ⏳ pending triage |
+| DRAG-3.1 | Top band → `{anchorId: first item in the region, side: before}` | P0 | ⏳ pending triage |
+| DRAG-3.2 | Bottom band → `{anchorId: last item in the region, side: after}` | P0 | ⏳ pending triage |
+| DRAG-3.3 | Middle band, released without popping in → workphase-only move, position kept | P0 | ⏳ pending triage |
+| DRAG-3.4 | Middle band, held past `POP_IN` → pop in, then anchor+side hovering | P0 | ⏳ pending triage |
+| DRAG-3.5 | The dividers sit `GHOST_H` from each content edge, and move with the configured value | P1 | ⏳ pending triage |
+| DRAG-3.6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | ⏳ pending triage |
+| DRAG-3.7 | A drop into a merged column by an item already in its covered set leaves the workphase alone | P0 | ⏳ pending triage |
+| DRAG-3.8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row | P0 | ⏳ pending triage |
+| DRAG-3.9 | Done column: a single band; any release is workphase-only with no anchor | P0 | ⏳ pending triage |
+| DRAG-3.10 | Empty region: a single band; any release is a workphase-only move | P1 | ⏳ pending triage |
+| DRAG-3.11 | Ghost placement is ordinal and follows the band's meaning | P1 | ⏳ pending triage |
+| DRAG-3.12 | Middle band, item already in this region → nothing is written | P0 | ⏳ pending triage |
+| DRAG-3.13 | A band is measured against the region's content rect as it was on entry, not the live rect | P1 | ⏳ pending triage |
+| DRAG-3.14 | The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow | P1 | ⏳ pending triage |
+| DRAG-3.15 | Exactly one card: the dividers halve, so the card keeps a middle band | P1 | ⏳ pending triage |
+| DRAG-3.16 | Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable | P1 | ⏳ pending triage |
+| DRAG-3.17 | Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked | P2 | ⏳ pending triage |
+| DRAG-3.18 | Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}" | P2 | ⏳ pending triage |
+| DRAG-3.19 | Both copies of the dragged card render collapsed; its attached children are unrendered for the drag | P2 | ⏳ pending triage |
 
 ---
 
-## TC-1 — Top band → `{anchorId: first item in the region, side: before}`
+## DRAG-3.1 — Top band → `{anchorId: first item in the region, side: before}`
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -81,14 +80,14 @@ visual too.
 order is `A, B, C`, *when* the cursor is above the top divider and the
 user releases without popping in, *then* the request is `{anchorId: A,
 side: before}` — plus a workphase change to the region's workphase if `X`
-isn't already a covered member (TC-6/TC-7). `A` is the first item of the
+isn't already a covered member (DRAG-3.6/DRAG-3.7). `A` is the first item of the
 client's rendered order under the tie-break
 ([TC-7.3](../item-positioning/part-7-board-placement-intents.md)).
 Server-side result: [TC-7.1](../item-positioning/part-7-board-placement-intents.md).
 
 **Automation test:** —
 
-## TC-2 — Bottom band → `{anchorId: last item in the region, side: after}`
+## DRAG-3.2 — Bottom band → `{anchorId: last item in the region, side: after}`
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -99,7 +98,7 @@ Server-side result: [TC-7.2](../item-positioning/part-7-board-placement-intents.
 
 **Automation test:** —
 
-## TC-3 — Middle band, released without popping in → workphase-only move, position kept
+## DRAG-3.3 — Middle band, released without popping in → workphase-only move, position kept
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -120,7 +119,7 @@ column change is what matters and the exact position isn't.
 
 **Automation test:** —
 
-## TC-4 — Middle band, held past `POP_IN` → pop in, then anchor+side hovering
+## DRAG-3.4 — Middle band, held past `POP_IN` → pop in, then anchor+side hovering
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -139,7 +138,7 @@ band-time cases.
 
 **Automation test:** —
 
-## TC-5 — The dividers sit `GHOST_H` from each content edge, and move with the configured value
+## DRAG-3.5 — The dividers sit `GHOST_H` from each content edge, and move with the configured value
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -147,7 +146,7 @@ band-time cases.
 cards, *when* a release occurs just above the top divider (`GHOST_H − 1`
 below the content's top edge), just below it (`GHOST_H + 1`), just above
 the bottom divider, and just below it, *then* each resolves to the band
-the configured value places it in — TC-1 / TC-3 / TC-3 / TC-2
+the configured value places it in — DRAG-3.1 / DRAG-3.3 / DRAG-3.3 / DRAG-3.2
 respectively — and changing `GHOST_H` moves those outcomes accordingly.
 Both dividers derive from this one value; there is no separately tunable
 top or bottom boundary. The provisional 96px is a starting point, not a
@@ -155,7 +154,7 @@ constant.
 
 **Automation test:** —
 
-## TC-6 — A drop into a merged column from outside its covered set takes the entry workphase
+## DRAG-3.6 — A drop into a merged column from outside its covered set takes the entry workphase
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -163,12 +162,12 @@ constant.
 `entryWorkphaseId`) and a Card `X` currently in `W1`, *when* `X` is
 released in the column at Board layer by any band, *then* the request's
 workphase is `W2` — the first workphase in the column's range — combined
-with the band's placement (TC-1/2/3). Cross-reference
+with the band's placement (DRAG-3.1/2/3). Cross-reference
 [TC-4.4](../item-positioning/part-4-merged-column.md).
 
 **Automation test:** —
 
-## TC-7 — A drop into a merged column by an item already in its covered set leaves the workphase alone
+## DRAG-3.7 — A drop into a merged column by an item already in its covered set leaves the workphase alone
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -179,11 +178,11 @@ carries the band's anchor+side and **no** workphase change — `X` stays in
 `W3`. Membership in the covered set is what decides, not which specific
 workphase the hovered or bounding card is in. Cross-reference
 [TC-4.2](../item-positioning/part-4-merged-column.md). (The middle band
-for a covered member is TC-12.)
+for a covered member is DRAG-3.12.)
 
 **Automation test:** —
 
-## TC-8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row
+## DRAG-3.8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -197,7 +196,7 @@ sub-row's bottom divider, *then* `{anchorId: D, side: after}`, workphase
 
 **Automation test:** —
 
-## TC-9 — Done column: a single band; any release is workphase-only with no anchor
+## DRAG-3.9 — Done column: a single band; any release is workphase-only with no anchor
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -218,7 +217,7 @@ rework in Epic 4.
 
 **Automation test:** —
 
-## TC-10 — Empty region: a single band; any release is a workphase-only move
+## DRAG-3.10 — Empty region: a single band; any release is a workphase-only move
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -231,7 +230,7 @@ around, so the region is one band spanning its own height. Server side:
 
 **Automation test:** —
 
-## TC-11 — Ghost placement is ordinal and follows the band's meaning
+## DRAG-3.11 — Ghost placement is ordinal and follows the band's meaning
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -248,7 +247,7 @@ no position previews at the end instead
 
 **Automation test:** —
 
-## TC-12 — Middle band, item already in this region → nothing is written
+## DRAG-3.12 — Middle band, item already in this region → nothing is written
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -265,16 +264,16 @@ release there is an anchor+side reposition,
 *In an expanded column* the region is the sub-row, so "already in this
 region" means already in that sub-row's exact workphase: `X` from the
 `W2` sub-row released in the `W3` sub-row's middle band is a workphase
-change to `W3` (TC-3, TC-8), not a set-down. *(Reading flagged for the
+change to `W3` (DRAG-3.3, DRAG-3.8), not a set-down. *(Reading flagged for the
 Product Owner — see INDEX.)*
 
-Contrast TC-3 (an item from elsewhere takes the workphase) and TC-7 (a
+Contrast DRAG-3.3 (an item from elsewhere takes the workphase) and DRAG-3.7 (a
 covered member in the top or bottom band still gets the band's
 anchor+side).
 
 **Automation test:** —
 
-## TC-13 — A band is measured against the region's content rect as it was on entry, not the live rect
+## DRAG-3.13 — A band is measured against the region's content rect as it was on entry, not the live rect
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -289,11 +288,11 @@ drop must not change the band it is about to be resolved by.
 
 **Automation test:** —
 
-## TC-14 — The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow
+## DRAG-3.14 — The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
-*Given* a region `R` with a frozen rect from the cursor's entry (TC-13),
+*Given* a region `R` with a frozen rect from the cursor's entry (DRAG-3.13),
 *when* `R`'s own top edge moves by `Δ` while the cursor stays over `R` —
 because the column scrolled (auto-scroll during the drag, or otherwise),
 **or** because a sibling region in the same scrolling body reserved or
@@ -310,24 +309,24 @@ sub-row alike — both sit in the same kind of scrolling body.
 
 **Automation test:** —
 
-## TC-15 — Exactly one card: the dividers halve, so the card keeps a middle band
+## DRAG-3.15 — Exactly one card: the dividers halve, so the card keeps a middle band
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* a region rendering exactly one card `A`, *when* a Card `X` at
 Board layer is released `GHOST_H / 2 − 1` below the content's top edge,
-*then* the request is `{anchorId: A, side: before}` (TC-1); released
-`GHOST_H / 2 + 1` below it, *then* the middle band's meaning (TC-3 — or
-TC-12 if `X` is a covered member); and symmetrically at the bottom edge,
-`{anchorId: A, side: after}` (TC-2) below the halved divider. With the
+*then* the request is `{anchorId: A, side: before}` (DRAG-3.1); released
+`GHOST_H / 2 + 1` below it, *then* the middle band's meaning (DRAG-3.3 — or
+DRAG-3.12 if `X` is a covered member); and symmetrically at the bottom edge,
+`{anchorId: A, side: after}` (DRAG-3.2) below the halved divider. With the
 normal full-`GHOST_H` dividers the single card would be bisected with
 nothing left on either side of the cut; halving keeps a real middle band.
 *And given* a second card is added to the region, *then* the dividers
-revert to the full `GHOST_H` offsets (TC-5).
+revert to the full `GHOST_H` offsets (DRAG-3.5).
 
 **Automation test:** —
 
-## TC-16 — Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable
+## DRAG-3.16 — Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -340,13 +339,13 @@ resolves by the **middle** band — the top divider is `GHOST_H` from the
 drawn nor reachable until the region (or the page) scrolls to it.
 *And when* the region scrolls so that the content's top edge comes into
 view, *then* a release within `GHOST_H` of it resolves by the top band
-(TC-1). Whether the cursor is *in* `R` at all is still the visible-clip
+(DRAG-3.1). Whether the cursor is *in* `R` at all is still the visible-clip
 rule of [DRAG-1.10](drag-1-contexts-and-popping.md); this case is about
 where the dividers sit once it is.
 
 **Automation test:** —
 
-## TC-17 — Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked
+## DRAG-3.17 — Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 
@@ -363,7 +362,7 @@ to Board restores it.
 
 **Automation test:** —
 
-## TC-18 — Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}"
+## DRAG-3.18 — Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}"
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 
@@ -378,7 +377,7 @@ asserted as text; their look is Story 8's.
 
 **Automation test:** —
 
-## TC-19 — Both copies of the dragged card render collapsed; its attached children are unrendered for the drag
+## DRAG-3.19 — Both copies of the dragged card render collapsed; its attached children are unrendered for the drag
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 

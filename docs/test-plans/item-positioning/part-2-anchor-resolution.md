@@ -1,5 +1,7 @@
 # Part 2 — Anchor+side position resolution
 
+**Next ID:** TC-2.31
+
 **Wiki:** [`../../wiki/item-positioning/#2-position-resolution-anchor--side`](../../wiki/item-positioning/README.md#2-position-resolution-anchor--side)
 
 | ID | Case | Priority | Automated |

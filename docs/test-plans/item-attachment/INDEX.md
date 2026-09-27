@@ -5,9 +5,8 @@
 implementation code or existing test files were consulted when deriving
 these — see `../README.md` for why.
 
-**Suite IDs:** `ATT-1` … `ATT-7`. Cases are `TC-n` inside each suite file;
-from outside a suite, refer to a case as `ATT-<suite>.<n>` (e.g.
-`ATT-4.5`).
+**Suite IDs:** `ATT-1` … `ATT-7`. A case is written by its full ID, `<suite>.<n>` (e.g.
+`ATT-4.5`), in its own suite file as everywhere else.
 
 The wiki page is gesture-agnostic; every case here holds identically
 whether the change arrives by drag, the Sheet's checkbox, the child badge,

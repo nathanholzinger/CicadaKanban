@@ -1,5 +1,7 @@
 # Part 7 — Placement intents added by the board gesture
 
+**Next ID:** TC-7.17
+
 **Wiki:** [`../../wiki/item-positioning/#7-placement-intents-added-by-the-board-gesture-epic-35`](../../wiki/item-positioning/README.md#7-placement-intents-added-by-the-board-gesture-epic-35)
 
 **Added by Epic 3.5.** These cases are the *positioning* half of the board

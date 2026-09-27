@@ -1,9 +1,8 @@
 # ATT-3 — Reparent placement and atomic commit
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §4, §5, §6
+**Next ID:** ATT-3.9
 
-**Suite ID:** `ATT-3`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-3.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §4, §5, §6
 
 §4–§5's *numeric* consequences (which number comes out, and from which
 scope) are catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md)
@@ -16,18 +15,18 @@ question; no case here covers it.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Reparenting an Attached item always resolves a replacement position — "keep" is not an option | P0 | ⏳ pending triage |
-| TC-2 | Placement is always before/after an anchor; first/last are that same form | P1 | ⏳ pending triage |
-| TC-3 | An empty target has no anchor and takes the append fallback | P1 | ⏳ pending triage |
-| TC-4 | A coincidentally-equal resolved position is still a real re-resolution | P2 | ⏳ pending triage |
-| TC-5 | The new parent is in effect before the position is resolved | P0 | ⏳ pending triage |
-| TC-6 | One gesture, one commit: every field and the cascade land together | P0 | ⏳ pending triage |
-| TC-7 | On failure, nothing changed | P0 | ⏳ pending triage |
-| TC-8 | A rejected change is answered by resync, never by keeping the guess | P1 | ⏳ pending triage |
+| ATT-3.1 | Reparenting an Attached item always resolves a replacement position — "keep" is not an option | P0 | ⏳ pending triage |
+| ATT-3.2 | Placement is always before/after an anchor; first/last are that same form | P1 | ⏳ pending triage |
+| ATT-3.3 | An empty target has no anchor and takes the append fallback | P1 | ⏳ pending triage |
+| ATT-3.4 | A coincidentally-equal resolved position is still a real re-resolution | P2 | ⏳ pending triage |
+| ATT-3.5 | The new parent is in effect before the position is resolved | P0 | ⏳ pending triage |
+| ATT-3.6 | One gesture, one commit: every field and the cascade land together | P0 | ⏳ pending triage |
+| ATT-3.7 | On failure, nothing changed | P0 | ⏳ pending triage |
+| ATT-3.8 | A rejected change is answered by resync, never by keeping the guess | P1 | ⏳ pending triage |
 
 ---
 
-## TC-1 — Reparenting an Attached item always resolves a replacement position — "keep" is not an option
+## ATT-3.1 — Reparenting an Attached item always resolves a replacement position — "keep" is not an option
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -42,7 +41,7 @@ unchanged. Cross-reference [TC-2.21](../item-positioning/part-2-anchor-resolutio
 
 **Automation test:** —
 
-## TC-2 — Placement is always before/after an anchor; first/last are that same form
+## ATT-3.2 — Placement is always before/after an anchor; first/last are that same form
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -55,7 +54,7 @@ in list" the last with `side = after`. No other placement form exists.
 
 **Automation test:** —
 
-## TC-3 — An empty target has no anchor and takes the append fallback
+## ATT-3.3 — An empty target has no anchor and takes the append fallback
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -66,7 +65,7 @@ resolves via the append fallback in the new (empty) scope.
 
 **Automation test:** —
 
-## TC-4 — A coincidentally-equal resolved position is still a real re-resolution
+## ATT-3.4 — A coincidentally-equal resolved position is still a real re-resolution
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 
@@ -80,7 +79,7 @@ not the same thing as keeping it.
 
 **Automation test:** —
 
-## TC-5 — The new parent is in effect before the position is resolved
+## ATT-3.5 — The new parent is in effect before the position is resolved
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -94,7 +93,7 @@ number that looks valid and is drawn from the wrong list — silently wrong.
 
 **Automation test:** —
 
-## TC-6 — One gesture, one commit: every field and the cascade land together
+## ATT-3.6 — One gesture, one commit: every field and the cascade land together
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -110,7 +109,7 @@ projects, `projectId` on `X` and its subtree lands in the same commit
 
 **Automation test:** —
 
-## TC-7 — On failure, nothing changed
+## ATT-3.7 — On failure, nothing changed
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -126,7 +125,7 @@ position from its old sibling list, or moved while `X1` stayed behind in
 
 **Automation test:** —
 
-## TC-8 — A rejected change is answered by resync, never by keeping the guess
+## ATT-3.8 — A rejected change is answered by resync, never by keeping the guess
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 

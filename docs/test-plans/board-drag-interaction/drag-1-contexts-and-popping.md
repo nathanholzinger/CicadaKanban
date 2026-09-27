@@ -1,9 +1,8 @@
 # DRAG-1 — Contexts, the layer stack, and popping
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §1, §1.1, §2, §3 (the Descendants layer hardened 2026-09-17; Stories 5/6, not built)
+**Next ID:** DRAG-1.22
 
-**Suite ID:** `DRAG-1`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `DRAG-1.n`.
+**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §1, §1.1, §2, §3 (the Descendants layer hardened 2026-09-17; Stories 5/6, not built)
 
 **What's in scope here.** Per the wiki's own note, only drop *resolution*
 is catalogued — given a release after this cursor behavior, what change is
@@ -56,7 +55,7 @@ Card (reachable only from its own column/sub-row). Everything else — a
 column's header and footer, the board toolbar, the gap between columns,
 the gaps between sub-rows and the space below the last one, Unsorted, a
 broken column — is **nowhere**. Nowhere matters only at Board layer
-(TC-9); once anything is locked, rule 1 governs (TC-16).
+(DRAG-1.9); once anything is locked, rule 1 governs (DRAG-1.16).
 
 **Automation split (§3.1 ruling, 2026-09-15).** Automated tests assert
 *reachability* — that it is possible to pop out, pop in, zoom into a Card,
@@ -69,31 +68,31 @@ set.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | A drag starts in exactly one layer, determined by the item and its column's display mode — never inside a Card | P0 | ⏳ pending triage |
-| TC-2 | In-context release at Column layer is a reposition: anchor+side, workphase and parent unchanged | P0 | ⏳ pending triage |
-| TC-3 | A sustained cursor signal outside the locked context pops out one layer; a momentary one does not | P0 | ⏳ pending triage |
-| TC-4 | Brushing past a Card while reordering never attaches | P0 | ⏳ pending triage |
-| TC-5 | After a pop in, a release commits the new layer's within-action | P0 | ⏳ pending triage |
-| TC-6 | Expanded mode: a sibling sub-row is a different context, reachable only through Board | P0 | ⏳ pending triage |
-| TC-7 | A cycle-forming target is never poppable | P0 | ⏳ pending triage |
-| TC-8 | A depth-capped target is never poppable | P0 | ⏳ pending triage |
-| TC-9 | Board layer: nowhere is no region — releasing there writes nothing | P0 | ⏳ pending triage |
-| TC-10 | A region is clipped to what is visible | P1 | ⏳ pending triage |
-| TC-11 | The Board → Column pop-in clock counts time in the region and fires from the middle band | P1 | ⏳ pending triage |
-| TC-12 | A popped-out card can pop back into the column it just left | P1 | ⏳ pending triage |
-| TC-13 | A drag picked up from Unsorted starts at Board layer, with no context | P1 | ⏳ pending triage |
-| TC-14 | Pop-out by distance: when enabled, either clock or distance satisfies, at every layer | P2 | ⏳ pending triage |
-| TC-15 | ~~A Card's region is hit-tested before the column that contains it~~ | — | ⏸ superseded |
-| TC-16 | Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests | P0 | ⏳ pending triage |
-| TC-17 | Rule 2: a pop moves exactly one layer — Board never reaches a Card directly; a Card pops out to its column | P0 | ⏳ pending triage |
-| TC-18 | Rule 3: zooming in is duration-only — distance never satisfies a zoom-in | P1 | ⏳ pending triage |
-| TC-19 | A distant yank out of a Card cascades through two pops, one layer at a time | P1 | ⏳ pending triage |
-| TC-20 | Only the locked column/sub-row's own Cards are zoom-in targets | P0 | ⏳ pending triage |
-| TC-21 | Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card | P1 | ⏳ pending triage |
+| DRAG-1.1 | A drag starts in exactly one layer, determined by the item and its column's display mode — never inside a Card | P0 | ⏳ pending triage |
+| DRAG-1.2 | In-context release at Column layer is a reposition: anchor+side, workphase and parent unchanged | P0 | ⏳ pending triage |
+| DRAG-1.3 | A sustained cursor signal outside the locked context pops out one layer; a momentary one does not | P0 | ⏳ pending triage |
+| DRAG-1.4 | Brushing past a Card while reordering never attaches | P0 | ⏳ pending triage |
+| DRAG-1.5 | After a pop in, a release commits the new layer's within-action | P0 | ⏳ pending triage |
+| DRAG-1.6 | Expanded mode: a sibling sub-row is a different context, reachable only through Board | P0 | ⏳ pending triage |
+| DRAG-1.7 | A cycle-forming target is never poppable | P0 | ⏳ pending triage |
+| DRAG-1.8 | A depth-capped target is never poppable | P0 | ⏳ pending triage |
+| DRAG-1.9 | Board layer: nowhere is no region — releasing there writes nothing | P0 | ⏳ pending triage |
+| DRAG-1.10 | A region is clipped to what is visible | P1 | ⏳ pending triage |
+| DRAG-1.11 | The Board → Column pop-in clock counts time in the region and fires from the middle band | P1 | ⏳ pending triage |
+| DRAG-1.12 | A popped-out card can pop back into the column it just left | P1 | ⏳ pending triage |
+| DRAG-1.13 | A drag picked up from Unsorted starts at Board layer, with no context | P1 | ⏳ pending triage |
+| DRAG-1.14 | Pop-out by distance: when enabled, either clock or distance satisfies, at every layer | P2 | ⏳ pending triage |
+| DRAG-1.15 | ~~A Card's region is hit-tested before the column that contains it~~ | — | ⏸ superseded |
+| DRAG-1.16 | Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests | P0 | ⏳ pending triage |
+| DRAG-1.17 | Rule 2: a pop moves exactly one layer — Board never reaches a Card directly; a Card pops out to its column | P0 | ⏳ pending triage |
+| DRAG-1.18 | Rule 3: zooming in is duration-only — distance never satisfies a zoom-in | P1 | ⏳ pending triage |
+| DRAG-1.19 | A distant yank out of a Card cascades through two pops, one layer at a time | P1 | ⏳ pending triage |
+| DRAG-1.20 | Only the locked column/sub-row's own Cards are zoom-in targets | P0 | ⏳ pending triage |
+| DRAG-1.21 | Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card | P1 | ⏳ pending triage |
 
 ---
 
-## TC-1 — A drag starts in exactly one layer, determined by the item and its column's display mode — never inside a Card
+## DRAG-1.1 — A drag starts in exactly one layer, determined by the item and its column's display mode — never inside a Card
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -105,7 +104,7 @@ starting layer and context are:
 - a Free item (Card) in an **expanded** column → Column layer; the
   context is the individual sub-row the item is rendered in, not the
   column;
-- an item picked up from **Unsorted** → Board layer, no context (TC-13);
+- an item picked up from **Unsorted** → Board layer, no context (DRAG-1.13);
 - an Attached item (Stub) → the **Descendants** layer of its parent Card
   (Story 5), so that its within-action is placement among the hierarchy
   it already belongs to — a sibling reorder needs no pop. *(Product Owner
@@ -113,13 +112,13 @@ starting layer and context are:
   predates the layer model and is to be corrected.)*
 
 A Free Card's drag **never starts inside a Card**; a Card is reachable only
-by zooming in from the column/sub-row that contains it (TC-17). The
+by zooming in from the column/sub-row that contains it (DRAG-1.17). The
 starting layer is determined entirely by what the item already is and how
 its column is displayed; no input from the user selects it.
 
 **Automation test:** —
 
-## TC-2 — In-context release at Column layer is a reposition: anchor+side, workphase and parent unchanged
+## DRAG-1.2 — In-context release at Column layer is a reposition: anchor+side, workphase and parent unchanged
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -129,14 +128,14 @@ within the column's list box, hovering the lower half of `A`, *then* the
 committed change is a reposition: `{anchorId: A, side: after}`,
 `workphaseId` unchanged, `parentId` and attachment unchanged. This is the
 Column layer's within-action, and by rule 1 it is what *every* release
-while locked here commits (TC-16).
+while locked here commits (DRAG-1.16).
 
 The default assumption is reposition until the user demonstrates
 otherwise.
 
 **Automation test:** —
 
-## TC-3 — A sustained cursor signal outside the locked context pops out one layer; a momentary one does not
+## DRAG-1.3 — A sustained cursor signal outside the locked context pops out one layer; a momentary one does not
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -145,16 +144,16 @@ context — into another column, a sibling sub-row, or nowhere — and stays
 out continuously for ≥ `POP_OUT`, *then* the item pops **out** to Board:
 it belongs to no context and follows the cursor freely. It does not yet
 belong to whatever region the cursor is in; entering one is a separate
-act (TC-5, TC-11).
+act (DRAG-1.5, DRAG-1.11).
 
 *And given* the same setup, *when* the cursor leaves the context but
 returns before `POP_OUT` elapses, *then* no pop occurs, the pop-out clock
 resets, and the drag is still locked in its original context — a release
-then is an in-context reposition (TC-2).
+then is an in-context reposition (DRAG-1.2).
 
 Leaving and entering are separate, deliberate acts, and the popped-out
 state between them is a real place to be. The same clock governs a pop
-out of a Card to its column (TC-17) and, in Story 6, out of Descendants.
+out of a Card to its column (DRAG-1.17) and, in Story 6, out of Descendants.
 
 Assert *that* a sustained signal pops and a momentary one doesn't,
 parameterized on `POP_OUT` — never on the provisional literal.
@@ -165,7 +164,7 @@ the values lock.
 
 **Automation test:** —
 
-## TC-4 — Brushing past a Card while reordering never attaches
+## DRAG-1.4 — Brushing past a Card while reordering never attaches
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -180,7 +179,7 @@ and hovering *on* a card is too until the hold completes
 
 **Automation test:** —
 
-## TC-5 — After a pop in, a release commits the new layer's within-action
+## DRAG-1.5 — After a pop in, a release commits the new layer's within-action
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -197,7 +196,7 @@ the commit is the new layer's within-action and nothing else:
   **last child** ([DRAG-4.1](drag-4-attach-and-stub-placement.md)) —
   regardless of where inside the Card the cursor is
   ([DRAG-4.14](drag-4-attach-and-stub-placement.md)).
-- **Card → Descendants** (Story 6, TC-21): a release commits the
+- **Card → Descendants** (Story 6, DRAG-1.21): a release commits the
   hierarchy placement at the ghost's gap and tab depth
   ([DRAG-4.8–4.11](drag-4-attach-and-stub-placement.md)).
 
@@ -206,7 +205,7 @@ auto-placements available only at Board layer.
 
 **Automation test:** —
 
-## TC-6 — Expanded mode: a sibling sub-row is a different context, reachable only through Board
+## DRAG-1.6 — Expanded mode: a sibling sub-row is a different context, reachable only through Board
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -215,24 +214,24 @@ auto-placements available only at Board layer.
 cursor moves into the `W2` sub-row and releases before `POP_OUT` elapses,
 *then* the commit is `W1`'s in-context reposition at the ghost's current
 slot — `X.workphaseId` stays `W1`. The bare cursor being over `W2`
-changes nothing (rule 1, TC-16); `W2`'s band is not what a release means
+changes nothing (rule 1, DRAG-1.16); `W2`'s band is not what a release means
 while `W1` is locked.
 
 *And when* the cursor rests in the `W2` sub-row for ≥ `POP_OUT`, *then*
 `X` pops out to Board — from which `W2`'s band meaning is available on
 release ([DRAG-3.8](drag-3-card-column-bands.md)), and staying ≥ `POP_IN`
 in `W2`'s middle band pops into the `W2` sub-row for anchor+side
-placement there (TC-5). Either way the result is a genuine workphase
+placement there (DRAG-1.5). Either way the result is a genuine workphase
 change to exactly `W2`, reached by popping — never an in-context
 reposition that happened to cross a line.
 
 Sibling sub-rows of one column are separate contexts; moving between them
 is two pops, out and in. The gap between the two sub-rows is nowhere
-(TC-9).
+(DRAG-1.9).
 
 **Automation test:** —
 
-## TC-7 — A cycle-forming target is never poppable
+## DRAG-1.7 — A cycle-forming target is never poppable
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -248,7 +247,7 @@ The user never watches the item settle and bounce back.
 
 **Automation test:** —
 
-## TC-8 — A depth-capped target is never poppable
+## DRAG-1.8 — A depth-capped target is never poppable
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -262,7 +261,7 @@ target for *other* drags whose subtree fits.
 
 **Automation test:** —
 
-## TC-9 — Board layer: nowhere is no region — releasing there writes nothing
+## DRAG-1.9 — Board layer: nowhere is no region — releasing there writes nothing
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -282,18 +281,18 @@ target for *other* drags whose subtree fits.
 is made, the item's `workphaseId`, `position`, `parentId` and attachment
 are all unchanged, and it is rendered back where it started. *And when* a
 card locked in a column rests with its cursor over any of these for ≥
-`POP_OUT`, *then* it pops out to Board (TC-3) — but a release *before*
-that pop commits the locked column's reposition, not nothing (TC-16).
+`POP_OUT`, *then* it pops out to Board (DRAG-1.3) — but a release *before*
+that pop commits the locked column's reposition, not nothing (DRAG-1.16).
 
 **Automation test:** —
 
-## TC-10 — A region is clipped to what is visible
+## DRAG-1.10 — A region is clipped to what is visible
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* an expanded column whose sub-rows overflow its viewport, with
 sub-row `W3` scrolled out of view, *when* a Board-layer Card's cursor is
-where `W3`'s box *would* be, *then* the cursor is nowhere (TC-9): the
+where `W3`'s box *would* be, *then* the cursor is nowhere (DRAG-1.9): the
 pop-in clock does not start, and a release writes nothing. *When* the
 column scrolls so that `W3` comes into view under the cursor, *then* `W3`
 is a region from that moment — the pop-in clock starts, and a release
@@ -303,7 +302,7 @@ resolves by `W3`'s band. You can only be in what you can see. (Whether a
 
 **Automation test:** —
 
-## TC-11 — The Board → Column pop-in clock counts time in the region and fires from the middle band
+## DRAG-1.11 — The Board → Column pop-in clock counts time in the region and fires from the middle band
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -317,7 +316,7 @@ band ([DRAG-3](drag-3-card-column-bands.md)):
 - *When* the cursor stays in `R`'s top band for ≥ `POP_IN` and then slides
   into the middle band, *then* the card pops in **at once** — time in the
   top or bottom band counted toward the clock — and is thereafter
-  positioned in-context (TC-5).
+  positioned in-context (DRAG-1.5).
 - *When* the cursor leaves `R` before `POP_IN` and enters `R` again,
   *then* the clock starts over from the re-entry.
 
@@ -329,11 +328,11 @@ rests.
 
 **Automation note:** threshold-timed — stays manual until the values lock
 (§3.1 ruling, 2026-09-15). The automatable core is that it is *possible*
-to pop in and that the resulting write is in-context (TC-5).
+to pop in and that the resulting write is in-context (DRAG-1.5).
 
 **Automation test:** —
 
-## TC-12 — A popped-out card can pop back into the column it just left
+## DRAG-1.12 — A popped-out card can pop back into the column it just left
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -352,7 +351,7 @@ down ([DRAG-3.12](drag-3-card-column-bands.md)).
 
 **Automation test:** —
 
-## TC-13 — A drag picked up from Unsorted starts at Board layer, with no context
+## DRAG-1.13 — A drag picked up from Unsorted starts at Board layer, with no context
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -361,18 +360,18 @@ picked up, *then* the drag begins at Board layer: no context, no bounding,
 the card follows the cursor freely from the first movement, and no
 pop-out clock is involved. From there:
 
-- a release over Unsorted, or anywhere else that is nowhere (TC-9), writes
+- a release over Unsorted, or anywhere else that is nowhere (DRAG-1.9), writes
   nothing;
 - a release in a column region's band commits that band's meaning
   ([DRAG-3.1–3.3](drag-3-card-column-bands.md)), including the workphase
   change into that column;
 - resting in a region ≥ `POP_IN` in its middle band pops the item in
-  (TC-11), after which placement is in-context (TC-5), and from there a
-  Card can be zoomed into (TC-17) — never straight from Board.
+  (DRAG-1.11), after which placement is in-context (DRAG-1.5), and from there a
+  Card can be zoomed into (DRAG-1.17) — never straight from Board.
 
 **Automation test:** —
 
-## TC-14 — Pop-out by distance: when enabled, either clock or distance satisfies, at every layer
+## DRAG-1.14 — Pop-out by distance: when enabled, either clock or distance satisfies, at every layer
 
 **Priority:** P2 · **Automated:** ⏳ pending triage
 
@@ -380,7 +379,7 @@ pop-out clock is involved. From there:
 moves at least that far outside the locked context's rect before
 `POP_OUT` has elapsed, *then* the item pops out one layer immediately —
 either signal satisfies. This holds for a column/sub-row (out to Board)
-and for a Card (out to its column, TC-17) alike: one shared pop-out rule.
+and for a Card (out to its column, DRAG-1.17) alike: one shared pop-out rule.
 *And given* `POP_OUT_DISTANCE` set to `0` (its shipped value), *when* the
 cursor moves any distance outside the context in less than `POP_OUT`,
 *then* no pop occurs — distance is disabled and only the clock decides.
@@ -390,7 +389,7 @@ cursor moves any distance outside the context in less than `POP_OUT`,
 
 **Automation test:** —
 
-## TC-15 — ~~A Card's region is hit-tested before the column that contains it~~
+## DRAG-1.15 — ~~A Card's region is hit-tested before the column that contains it~~
 
 **Priority:** — · **Automated:** ⏸ superseded
 
@@ -401,11 +400,11 @@ the Card and a release resolved by the Card's bands (2026-09-15 draft of
 region at all — Board-layer band resolution never considers Card geometry,
 so a column's own top/bottom bands are always reachable regardless of what
 Card is drawn there. A Card becomes a region only for the drag locked into
-the column/sub-row that contains it. See TC-17 and TC-20.
+the column/sub-row that contains it. See DRAG-1.17 and DRAG-1.20.
 
 **Automation test:** —
 
-## TC-16 — Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests
+## DRAG-1.16 — Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -427,17 +426,17 @@ still `P`'s within-action: attach `X` as `P`'s last child
 
 The card is bounded by its context and never visually leaves it, so
 nothing shown ever promises a foreign region's meaning. Reaching any
-other meaning requires an actual pop first (TC-3), never a glance.
+other meaning requires an actual pop first (DRAG-1.3), never a glance.
 
 **Automation test:** —
 
-## TC-17 — Rule 2: a pop moves exactly one layer — Board never reaches a Card directly; a Card pops out to its column
+## DRAG-1.17 — Rule 2: a pop moves exactly one layer — Board never reaches a Card directly; a Card pops out to its column
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* a Card `X` at Board layer and a Valid target Card `P` in column
 `C`, *when* the cursor rests on `P` for any duration, *then* what happens
-is `C`'s own pop-in (≥ `POP_IN`, middle band — TC-11), landing at Column
+is `C`'s own pop-in (≥ `POP_IN`, middle band — DRAG-1.11), landing at Column
 layer with `X` bounded by `C`; only *then* does the `CARD_POP_IN` clock
 start against `P`. There is no Board → Card hop, and a release at Board
 layer with the cursor on `P` commits `C`'s band meaning
@@ -448,7 +447,7 @@ outside `P`'s box for ≥ `POP_OUT`, *then* `X` pops out to **`C`** —
 locked at Column layer, bounded by `C`'s list box, ghost back among `C`'s
 cards — **not** to Board. A release now is `C`'s reposition; the attach
 is not committed ([DRAG-4.17](drag-4-attach-and-stub-placement.md)).
-Reaching Board from here takes a second `POP_OUT` (TC-19).
+Reaching Board from here takes a second `POP_OUT` (DRAG-1.19).
 
 *And given* `X` zoomed into `P`, and `P`'s sibling Card `Q` in the same
 column, *when* the cursor moves onto `Q`, *then* nothing zooms into `Q`
@@ -457,7 +456,7 @@ rested on `Q` ≥ `CARD_POP_IN` — there is no direct sibling-to-sibling hop.
 
 **Automation test:** —
 
-## TC-18 — Rule 3: zooming in is duration-only — distance never satisfies a zoom-in
+## DRAG-1.18 — Rule 3: zooming in is duration-only — distance never satisfies a zoom-in
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -475,7 +474,7 @@ hold; zooming out never changes what anything is.
 
 **Automation test:** —
 
-## TC-19 — A distant yank out of a Card cascades through two pops, one layer at a time
+## DRAG-1.19 — A distant yank out of a Card cascades through two pops, one layer at a time
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -497,7 +496,7 @@ rule.
 
 **Automation test:** —
 
-## TC-20 — Only the locked column/sub-row's own Cards are zoom-in targets
+## DRAG-1.20 — Only the locked column/sub-row's own Cards are zoom-in targets
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -516,7 +515,7 @@ from `W2`.
 
 **Automation test:** —
 
-## TC-21 — Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card
+## DRAG-1.21 — Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -541,7 +540,7 @@ auto-drop: last child for an `X` that came from outside `P`, set back
 down for a Stub of `P`'s own ([DRAG-5.12](drag-5-detach-and-overflow.md)).
 There is no two-layer skip; a decisive pull away from the
 whole Card reaches the column by cascading through the Card layer's own
-pop-out (TC-19, [DRAG-5.11](drag-5-detach-and-overflow.md)). *(Product
+pop-out (DRAG-1.19, [DRAG-5.11](drag-5-detach-and-overflow.md)). *(Product
 Owner ruling, 2026-09-17.)*
 
 A `P` with no attached children has no descendants section, so its

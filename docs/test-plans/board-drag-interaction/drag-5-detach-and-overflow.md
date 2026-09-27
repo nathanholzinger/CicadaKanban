@@ -1,9 +1,8 @@
 # DRAG-5 — Stub → out: detach, and the depth-overflow placeholder
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §8 (hardened 2026-09-17; Story 5, not built), §9 (open question — Story 7)
+**Next ID:** DRAG-5.13
 
-**Suite ID:** `DRAG-5`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `DRAG-5.n`.
+**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §8 (hardened 2026-09-17; Story 5, not built), §9 (open question — Story 7)
 
 **Supersedes** [`TC-3.3`](../item-positioning/part-3-attached-sibling-reorder.md)
 (the Epic 3.2 "drag out of parent is blocked" guard). The attachment-side
@@ -19,36 +18,36 @@ clock (or `POP_OUT_DISTANCE`): Descendants → Card (cursor outside the
 descendants section), then Card → the column that contains it (cursor
 outside the Card's box). There is no two-layers-at-once rule; a decisive
 pull away from the whole Card is expected to satisfy both in quick
-succession through the distance term (TC-11,
+succession through the distance term (DRAG-5.11,
 [DRAG-1.19](drag-1-contexts-and-popping.md)). The intermediate stop at
 the parent's Card layer is a real state, though not one the user is
 expected to linger in: a release there is the Card layer's auto-drop,
 which for a Stub picked up **from within this same Card** means **set it
-back down where it was picked up — nothing is written** (TC-12).
+back down where it was picked up — nothing is written** (DRAG-5.12).
 
 **Withdrawn (Product Owner, 2026-09-17):** the overflow placeholder
-cases TC-6–TC-8. Story 7 will decide whether an overflow modal exists at
+cases DRAG-5.6–DRAG-5.8. Story 7 will decide whether an overflow modal exists at
 all or the hierarchy is simply restricted to the depth the UI can
 display; nothing is planned for §9 until then.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | A Stub popped out to the column becomes Free and is positioned by the column's within-action | P0 | ⏳ pending triage |
-| TC-2 | Detaching in place keeps the inherited workphase — even a non-entry workphase of a merged column | P0 | ⏳ pending triage |
-| TC-3 | Detaching into a different column goes through Board and takes that column's workphase per its band | P0 | ⏳ pending triage |
-| TC-4 | A Stub zoomed into a different Card is a reparent — attached as that Card's last child | P0 | ⏳ pending triage |
-| TC-5 | A momentary excursion out of the parent does not detach | P0 | ⏳ pending triage |
-| TC-6 | ~~Dragging a Stub over "see X children" and holding opens the overflow modal mid-drag~~ | — | ⏸ withdrawn |
-| TC-7 | ~~Placement inside the overflow modal follows the hierarchy ruleset unchanged~~ | — | ⏸ withdrawn |
-| TC-8 | ~~Clicking "see X children" opens the same modal~~ | — | ⏸ withdrawn |
-| TC-9 | A Stub drag's within-action is hierarchy placement — reorder and reparent inside the parent need no detach | P0 | ⏳ pending triage |
-| TC-10 | A detached Stub is represented as a Card from the column layer on | P1 | ⏳ pending triage |
-| TC-11 | A decisive pull away from the Card cascades Descendants → Card → column, one layer at a time | P1 | ⏳ pending triage |
-| TC-12 | A Stub released at its own parent's Card layer is set back down where it was picked up — nothing is written | P0 | ⏳ pending triage |
+| DRAG-5.1 | A Stub popped out to the column becomes Free and is positioned by the column's within-action | P0 | ⏳ pending triage |
+| DRAG-5.2 | Detaching in place keeps the inherited workphase — even a non-entry workphase of a merged column | P0 | ⏳ pending triage |
+| DRAG-5.3 | Detaching into a different column goes through Board and takes that column's workphase per its band | P0 | ⏳ pending triage |
+| DRAG-5.4 | A Stub zoomed into a different Card is a reparent — attached as that Card's last child | P0 | ⏳ pending triage |
+| DRAG-5.5 | A momentary excursion out of the parent does not detach | P0 | ⏳ pending triage |
+| DRAG-5.6 | ~~Dragging a Stub over "see X children" and holding opens the overflow modal mid-drag~~ | — | ⏸ withdrawn |
+| DRAG-5.7 | ~~Placement inside the overflow modal follows the hierarchy ruleset unchanged~~ | — | ⏸ withdrawn |
+| DRAG-5.8 | ~~Clicking "see X children" opens the same modal~~ | — | ⏸ withdrawn |
+| DRAG-5.9 | A Stub drag's within-action is hierarchy placement — reorder and reparent inside the parent need no detach | P0 | ⏳ pending triage |
+| DRAG-5.10 | A detached Stub is represented as a Card from the column layer on | P1 | ⏳ pending triage |
+| DRAG-5.11 | A decisive pull away from the Card cascades Descendants → Card → column, one layer at a time | P1 | ⏳ pending triage |
+| DRAG-5.12 | A Stub released at its own parent's Card layer is set back down where it was picked up — nothing is written | P0 | ⏳ pending triage |
 
 ---
 
-## TC-1 — A Stub popped out to the column becomes Free and is positioned by the column's within-action
+## DRAG-5.1 — A Stub popped out to the column becomes Free and is positioned by the column's within-action
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -61,19 +60,19 @@ committed change is: `X`'s attachment cleared, `X.parentId` still `P`
 ([ATT-7.1](../item-attachment/att-7-detach-preserves-parent.md)), and `X`
 positioned in the workflow-wide scope via `{anchorId: Q, side: after}`
 ([TC-7.13](../item-positioning/part-7-board-placement-intents.md)). `X`
-now renders as a Card (TC-10). Moving a Stub out of a Card is an
+now renders as a Card (DRAG-5.10). Moving a Stub out of a Card is an
 un-attach, never a reparent.
 
 **Automation test:** —
 
-## TC-2 — Detaching in place keeps the inherited workphase — even a non-entry workphase of a merged column
+## DRAG-5.2 — Detaching in place keeps the inherited workphase — even a non-entry workphase of a merged column
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* a merged column covering `W2, W3` (`W2` is the entry workphase),
 `P` in `W3`, and Stub `X` attached to `P` (so `X.workphaseId = W3`),
 *when* `X` is detached by popping out to `P`'s column and releasing there
-(TC-1), *then* the request carries **no** workphase change and after the
+(DRAG-5.1), *then* the request carries **no** workphase change and after the
 commit `X.workphaseId` is still `W3`. `X` was already a member of the
 column's covered set, so this is a position-only reorder by the
 covered-set rule ([TC-4.2](../item-positioning/part-4-merged-column.md));
@@ -83,13 +82,13 @@ to `W2`.
 
 **Automation test:** —
 
-## TC-3 — Detaching into a different column goes through Board and takes that column's workphase per its band
+## DRAG-5.3 — Detaching into a different column goes through Board and takes that column's workphase per its band
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* Stub `X` attached to `P` in column `C1`, and a different column
 `C2` whose covered set does not include `X`'s inherited workphase, *when*
-`X` pops out to `C1` (TC-1), then out of `C1` to Board (≥ `POP_OUT`
+`X` pops out to `C1` (DRAG-5.1), then out of `C1` to Board (≥ `POP_OUT`
 outside `C1`'s list box — [DRAG-1.3](drag-1-contexts-and-popping.md)),
 and is released in one of `C2`'s bands, *then* the commit is a detach
 plus whatever that band means in `C2` ([DRAG-3](drag-3-card-column-bands.md)):
@@ -105,13 +104,13 @@ not anything in `C2`.
 
 **Automation test:** —
 
-## TC-4 — A Stub zoomed into a different Card is a reparent — attached as that Card's last child
+## DRAG-5.4 — A Stub zoomed into a different Card is a reparent — attached as that Card's last child
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 Cross-reference [ATT-7.5](../item-attachment/att-7-detach-preserves-parent.md).
 *Given* Stub `X` attached to `P`, and a different Valid Card `Q` in the
-same column, *when* `X` pops out to the column (TC-1), the cursor rests
+same column, *when* `X` pops out to the column (DRAG-5.1), the cursor rests
 on `Q` for ≥ `CARD_POP_IN` ([DRAG-1.17](drag-1-contexts-and-popping.md)),
 and the user releases, *then* the commit is a reparent: `X.parentId =
 Q`, attached, workphase inherited from `Q`, positioned as `Q`'s **last
@@ -124,7 +123,7 @@ same way after Board and that column's pop-in
 
 **Automation test:** —
 
-## TC-5 — A momentary excursion out of the parent does not detach
+## DRAG-5.5 — A momentary excursion out of the parent does not detach
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -142,7 +141,7 @@ during the excursion commits the same thing
 
 **Automation test:** —
 
-## TC-6 — ~~Dragging a Stub over "see X children" and holding opens the overflow modal mid-drag~~
+## DRAG-5.6 — ~~Dragging a Stub over "see X children" and holding opens the overflow modal mid-drag~~
 
 **Priority:** — · **Automated:** ⏸ withdrawn
 
@@ -154,27 +153,27 @@ until then.
 
 **Automation test:** —
 
-## TC-7 — ~~Placement inside the overflow modal follows the hierarchy ruleset unchanged~~
+## DRAG-5.7 — ~~Placement inside the overflow modal follows the hierarchy ruleset unchanged~~
 
 **Priority:** — · **Automated:** ⏸ withdrawn
 
 **Was:** inside the modal, releases resolved by the same three-way
-ruleset as the board. **Withdrawn 2026-09-17** with TC-6. If a modal
+ruleset as the board. **Withdrawn 2026-09-17** with DRAG-5.6. If a modal
 does exist, [DRAG-4.8–4.11](drag-4-attach-and-stub-placement.md) apply
 inside it unchanged.
 
 **Automation test:** —
 
-## TC-8 — ~~Clicking "see X children" opens the same modal~~
+## DRAG-5.8 — ~~Clicking "see X children" opens the same modal~~
 
 **Priority:** — · **Automated:** ⏸ withdrawn
 
 **Was:** a click (no drag) on the placeholder opened the same modal.
-**Withdrawn 2026-09-17** with TC-6.
+**Withdrawn 2026-09-17** with DRAG-5.6.
 
 **Automation test:** —
 
-## TC-9 — A Stub drag's within-action is hierarchy placement — reorder and reparent inside the parent need no detach
+## DRAG-5.9 — A Stub drag's within-action is hierarchy placement — reorder and reparent inside the parent need no detach
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -202,23 +201,23 @@ costs no pop at all.
 
 **Automation test:** —
 
-## TC-10 — A detached Stub is represented as a Card from the column layer on
+## DRAG-5.10 — A detached Stub is represented as a Card from the column layer on
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* Stub `X` attached to `P`, *when* `X` pops out to `P`'s column
-(TC-1), *then* from that moment the carried item and its ghost are a
+(DRAG-5.1), *then* from that moment the carried item and its ghost are a
 **Card** in the column's list — no longer a Stub inside `P` — and `X` is
 absent from `P`'s descendants section for the rest of the drag; the
 Column ↔ Card boundary converts the representation both ways. *And when*
-`X` then zooms into a Card `Q` (TC-4), *then* it is a Stub-ghost again,
+`X` then zooms into a Card `Q` (DRAG-5.4), *then* it is a Stub-ghost again,
 inside `Q`. *And when* the drag is cancelled (or released where nothing is
 written, [DRAG-1.9](drag-1-contexts-and-popping.md)) after `X` has popped
 out, *then* `X` renders back as `P`'s Stub, unchanged.
 
 **Automation test:** —
 
-## TC-11 — A decisive pull away from the Card cascades Descendants → Card → column, one layer at a time
+## DRAG-5.11 — A decisive pull away from the Card cascades Descendants → Card → column, one layer at a time
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -229,11 +228,11 @@ once ≥ `POP_OUT_DISTANCE` outside `P`'s descendants section *and* ≥
 layer (first pop) and, the Card's own pop-out threshold being evaluated
 fresh against the same distant cursor, at once pops out to the column
 (second pop) — arriving locked in the column, represented as a Card
-(TC-10), with a release committing the column's reposition and the
-detach (TC-1). Both pops occur, in that order; no rule skips a layer.
+(DRAG-5.10), with a release committing the column's reposition and the
+detach (DRAG-5.1). Both pops occur, in that order; no rule skips a layer.
 *And when* instead the cursor stops inside `P`'s box but outside its
 descendants section, *then* only the first pop occurs, `X` is at `P`'s
-Card layer, and a release sets it back down — nothing written (TC-12).
+Card layer, and a release sets it back down — nothing written (DRAG-5.12).
 *And given* `POP_OUT_DISTANCE` is `0`, *then* the same cascade takes two
 full `POP_OUT` durations back to back.
 
@@ -241,7 +240,7 @@ full `POP_OUT` durations back to back.
 
 **Automation test:** —
 
-## TC-12 — A Stub released at its own parent's Card layer is set back down where it was picked up — nothing is written
+## DRAG-5.12 — A Stub released at its own parent's Card layer is set back down where it was picked up — nothing is written
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 

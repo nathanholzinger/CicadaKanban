@@ -1,5 +1,7 @@
 # Part 5 — Reindex mechanism
 
+**Next ID:** TC-5.15
+
 **Wiki:** [`../../wiki/item-positioning/#5-reindexing-precision--magnitude`](../../wiki/item-positioning/README.md#5-reindexing-precision--magnitude)
 
 | ID | Case | Priority | Automated |

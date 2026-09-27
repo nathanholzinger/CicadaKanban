@@ -1,18 +1,17 @@
 # ATT-2 — Reparenting is one-way
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §3
+**Next ID:** ATT-2.3
 
-**Suite ID:** `ATT-2`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-2.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §3
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | A hierarchy change is a write to the moving item; the target's row is untouched | P0 | ⏳ pending triage |
-| TC-2 | Legality is evaluated from the moving item's point of view | P0 | ⏳ pending triage |
+| ATT-2.1 | A hierarchy change is a write to the moving item; the target's row is untouched | P0 | ⏳ pending triage |
+| ATT-2.2 | Legality is evaluated from the moving item's point of view | P0 | ⏳ pending triage |
 
 ---
 
-## TC-1 — A hierarchy change is a write to the moving item; the target's row is untouched
+## ATT-2.1 — A hierarchy change is a write to the moving item; the target's row is untouched
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -26,7 +25,7 @@ may choose a new parent; an item may never choose a new child.
 
 **Automation test:** —
 
-## TC-2 — Legality is evaluated from the moving item's point of view
+## ATT-2.2 — Legality is evaluated from the moving item's point of view
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 

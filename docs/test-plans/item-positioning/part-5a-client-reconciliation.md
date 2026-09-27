@@ -1,5 +1,7 @@
 # Part 5a — Client reconciliation order
 
+**Next ID:** TC-5a.6
+
 **Wiki:** [`../../wiki/item-positioning/#5a-client-reconciliation-order`](../../wiki/item-positioning/README.md#5a-client-reconciliation-order)
 
 **Added by Epic 3.5.** Applies to any client holding a locally-ordered

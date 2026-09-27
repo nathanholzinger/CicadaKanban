@@ -1,19 +1,18 @@
 # ATT-6 — Attaching to a done parent
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §10
+**Next ID:** ATT-6.4
 
-**Suite ID:** `ATT-6`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-6.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §10
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Attaching to a done parent is allowed and follows the ordinary attach consequences | P0 | ⏳ pending triage |
-| TC-2 | The child then reads as done by derivation, with nothing stored on it | P1 | ⏳ pending triage |
-| TC-3 | Reopening the parent makes the child read not-done, with nothing written or cleared on the child | P1 | ⏳ pending triage |
+| ATT-6.1 | Attaching to a done parent is allowed and follows the ordinary attach consequences | P0 | ⏳ pending triage |
+| ATT-6.2 | The child then reads as done by derivation, with nothing stored on it | P1 | ⏳ pending triage |
+| ATT-6.3 | Reopening the parent makes the child read not-done, with nothing written or cleared on the child | P1 | ⏳ pending triage |
 
 ---
 
-## TC-1 — Attaching to a done parent is allowed and follows the ordinary attach consequences
+## ATT-6.1 — Attaching to a done parent is allowed and follows the ordinary attach consequences
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -32,18 +31,18 @@ for the anchored placement inside a done Card.
 
 **Automation test:** —
 
-## TC-2 — The child then reads as done by derivation, with nothing stored on it
+## ATT-6.2 — The child then reads as done by derivation, with nothing stored on it
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
-*Given* `X` attached to done parent `P` per TC-1, *when* `X` is read,
+*Given* `X` attached to done parent `P` per ATT-6.1, *when* `X` is read,
 *then* its effective workphase is `W_done` — it reads as done — and this
 is solely a consequence of the inherited `workphaseId`; `completedAt` is
 `null` and no other field on `X` records done-ness.
 
 **Automation test:** —
 
-## TC-3 — Reopening the parent makes the child read not-done, with nothing written or cleared on the child
+## ATT-6.3 — Reopening the parent makes the child read not-done, with nothing written or cleared on the child
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 

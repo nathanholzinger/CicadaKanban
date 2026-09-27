@@ -1,5 +1,7 @@
 # Part 3 — Attached-child sibling reorder
 
+**Next ID:** TC-3.6
+
 **Wiki:** [`../../wiki/item-positioning/#3-attached-child-sibling-reordering`](../../wiki/item-positioning/README.md#3-attached-child-sibling-reordering)
 
 | ID | Case | Priority | Automated |

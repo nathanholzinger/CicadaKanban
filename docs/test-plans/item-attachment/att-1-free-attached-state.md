@@ -1,9 +1,8 @@
 # ATT-1 — Free / Attached state model
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §1, §2, §12
+**Next ID:** ATT-1.8
 
-**Suite ID:** `ATT-1`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-1.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §1, §2, §12
 
 These rules were implemented in Epic 3 and are restated by the wiki as the
 foundation the Epic 3.5 rules build on. Cases here exist so the state
@@ -13,17 +12,17 @@ consequence was already catalogued.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | A top-level item is always Free | P1 | ⏳ pending triage |
-| TC-2 | A detached child is Free — exactly as Free as a top-level item | P0 | ⏳ pending triage |
-| TC-3 | An Attached child inherits its parent's workphase, and the cascade reaches every attached descendant | P0 | ⏳ pending triage |
-| TC-4 | An Attached child never receives `completedAt` and keeps its position under a terminal inheritance | P0 | ⏳ pending triage |
-| TC-5 | A Stub under a done parent reads as done by derivation, with nothing stored | P1 | ⏳ pending triage |
-| TC-6 | A detached child is not affected by its parent moving | P0 | ⏳ pending triage |
-| TC-7 | The three state consequences always move together | P0 | ⏳ pending triage |
+| ATT-1.1 | A top-level item is always Free | P1 | ⏳ pending triage |
+| ATT-1.2 | A detached child is Free — exactly as Free as a top-level item | P0 | ⏳ pending triage |
+| ATT-1.3 | An Attached child inherits its parent's workphase, and the cascade reaches every attached descendant | P0 | ⏳ pending triage |
+| ATT-1.4 | An Attached child never receives `completedAt` and keeps its position under a terminal inheritance | P0 | ⏳ pending triage |
+| ATT-1.5 | A Stub under a done parent reads as done by derivation, with nothing stored | P1 | ⏳ pending triage |
+| ATT-1.6 | A detached child is not affected by its parent moving | P0 | ⏳ pending triage |
+| ATT-1.7 | The three state consequences always move together | P0 | ⏳ pending triage |
 
 ---
 
-## TC-1 — A top-level item is always Free
+## ATT-1.1 — A top-level item is always Free
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -42,7 +41,7 @@ asserts only the outcome; see the flagged questions in
 
 **Automation test:** —
 
-## TC-2 — A detached child is Free — exactly as Free as a top-level item
+## ATT-1.2 — A detached child is Free — exactly as Free as a top-level item
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -56,19 +55,19 @@ behavior; only its place in the hierarchy differs.
 
 **Automation test:** —
 
-## TC-3 — An Attached child inherits its parent's workphase, and the cascade reaches every attached descendant
+## ATT-1.3 — An Attached child inherits its parent's workphase, and the cascade reaches every attached descendant
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 *Given* `P` with attached child `C1`, `C1` with attached child `C2`, and
 `C1` also with a *detached* child `D`, *when* `P`'s workphase changes,
 *then* `C1` and `C2` take the new workphase (every attached descendant, at
-every depth), and `D` does not (TC-6). An attached child's effective
+every depth), and `D` does not (ATT-1.6). An attached child's effective
 workphase is always its parent's.
 
 **Automation test:** —
 
-## TC-4 — An Attached child never receives `completedAt` and keeps its position under a terminal inheritance
+## ATT-1.4 — An Attached child never receives `completedAt` and keeps its position under a terminal inheritance
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -81,7 +80,7 @@ a terminal workphase and the cascade applies, *then* the child's
 
 **Automation test:** — *(expected to map to the same tests as TC-6.5/6.6)*
 
-## TC-5 — A Stub under a done parent reads as done by derivation, with nothing stored
+## ATT-1.5 — A Stub under a done parent reads as done by derivation, with nothing stored
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -95,7 +94,7 @@ child in either direction beyond the cascaded `workphaseId`.
 
 **Automation test:** —
 
-## TC-6 — A detached child is not affected by its parent moving
+## ATT-1.6 — A detached child is not affected by its parent moving
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -107,7 +106,7 @@ are all exactly unchanged.
 
 **Automation test:** —
 
-## TC-7 — The three state consequences always move together
+## ATT-1.7 — The three state consequences always move together
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 

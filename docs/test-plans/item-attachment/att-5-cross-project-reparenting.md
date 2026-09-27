@@ -1,9 +1,8 @@
 # ATT-5 — Cross-project reparenting
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §9
+**Next ID:** ATT-5.4
 
-**Suite ID:** `ATT-5`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-5.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §9
 
 **Supersedes** [`TC-X.3`](../item-positioning/cross-cutting-regression.md)
 (the Epic 3.2 same-project constraint).
@@ -18,13 +17,13 @@ project is on a different workflow.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Reparenting across two projects on the same workflow is accepted | P0 | ⏳ pending triage |
-| TC-2 | The new project cascades to the entire descendant subtree, detached descendants included | P0 | ⏳ pending triage |
-| TC-3 | Position is re-resolved in the same workflow scope — the project change adds nothing | P1 | ⏳ pending triage |
+| ATT-5.1 | Reparenting across two projects on the same workflow is accepted | P0 | ⏳ pending triage |
+| ATT-5.2 | The new project cascades to the entire descendant subtree, detached descendants included | P0 | ⏳ pending triage |
+| ATT-5.3 | Position is re-resolved in the same workflow scope — the project change adds nothing | P1 | ⏳ pending triage |
 
 ---
 
-## TC-1 — Reparenting across two projects on the same workflow is accepted
+## ATT-5.1 — Reparenting across two projects on the same workflow is accepted
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -38,7 +37,7 @@ project is not a disqualifier.
 
 **Automation test:** —
 
-## TC-2 — The new project cascades to the entire descendant subtree, detached descendants included
+## ATT-5.2 — The new project cascades to the entire descendant subtree, detached descendants included
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -59,7 +58,7 @@ workflow `W`.
 
 **Automation test:** —
 
-## TC-3 — Position is re-resolved in the same workflow scope — the project change adds nothing
+## ATT-5.3 — Position is re-resolved in the same workflow scope — the project change adds nothing
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 

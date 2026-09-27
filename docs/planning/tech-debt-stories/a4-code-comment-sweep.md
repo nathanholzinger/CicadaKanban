@@ -5,6 +5,7 @@
 **Source:**
 - the round table at `docs/planning/round-tables/documentation-purposes-and-standards` (tags like "Coder F4" or "Architect F6");
 - A1's plan, `a1-documentation-standards.md` (tags like "A1 D7");
+- A2's plan, archived at `docs/archive/a2-wiki-standards-and-sweep.md`. Its Handoff holds the anchor-changes table (D10) and the removed-mechanism lists (D5);
 - the Story 6 audit.
 
 This plan is transient, so it may cite all three. The comments it produces are living, so they cite none of them.
@@ -77,7 +78,7 @@ Two kinds of mismatch go to the PO as possible wiki gaps:
 - a section that states a rule, with no enforcing code and no `**Planned:**` marker;
 - a rule I find enforced in code that no section states.
 
-The PO accepted the index job on one condition: the checker only confirms that a section exists, not that it still holds the rule. So whenever A2's handoff names a rule that moved to a different section, I move the pointers to match.
+The PO accepted the index job on one condition: the checker only confirms that a section exists, not that it still holds the rule. So whenever A2's handoff names a rule that moved to a different section, I move the pointers to match. D10 lists the ones A2 moved.
 
 ### D5. Placing what the wiki sweep removes
 
@@ -87,7 +88,7 @@ A2 ends each page's sweep with a list of the implementation passages it took out
 - **root:** belongs in root `CLAUDE.md`, so it's handed to the Architect;
 - **dropped:** no longer true of the code.
 
-The disposition table lives in this plan's Handoff section while the story is open. The wiki sweep never waits on it: each passage stays in A2's handoff list until the matching batch runs.
+The disposition table lives in this plan's Handoff section while the story is open. A2 has closed, so the passages are read from its archived plan. The quoted code names there are leads, not facts: some were already stale in the old page text.
 
 ### D6. The Story 6 audit's rulings, written at their sites
 
@@ -149,6 +150,7 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 ### D8. What each batch must pass
 
 - **The checker.** `npm run check:docs -- <the batch's paths>` reports zero hits. Any remaining exception carries an ignore marker with a reason.
+- **Moved sections.** Every D10 site in the batch's files cites the new number. The checker can't see this, so the batch summary lists them.
 - **No code changed.** For every touched file, I transpile the old and new versions with comments removed and compare them. They must match, except for test-title strings in batches 4a and 4b. This is a scratch check: I report it in the batch summary but don't commit it.
 - **The usual gates:**
   - `npm run typecheck`, `npm run lint` and `npm run test:unit`;
@@ -169,12 +171,40 @@ Batch 5 then changes the root `lint` script to run `check:docs` before the clien
 
 If A2 or A3 hasn't finished by the time 4b does, batch 5 waits and A4 stays open until then. It's a one-line change.
 
+### D10. Pointers to wiki sections that A2 moved
+
+A2 moved three rules into new subsections. A comment that cites the old number still passes the checker, because §2, §5 and §6 all still exist. So this list is the checklist: each site is re-pointed in the batch that owns its file, as part of its D2 rewrite. The line numbers are from 2026-09-27; if they've drifted, search for the pointer.
+
+- **board-drag-interaction §6 → §6.1**, which Card is zoomed into (the dwell, the cue, the reset rule, invalid targets):
+  - **1a:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
+  - **1b:** `dragCollision.ts` line 85's range, the same way.
+  - **1c:** `dragChrome.tsx` line 126.
+  - **4a:** the `popSession.test.ts` title at line 198.
+  - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it.
+
+  §6 keeps the auto-drop and the pinned ghost, so a pointer to those stays, e.g. `placement.ts` line 88's "set back down".
+- **item-positioning §2 → §2.1**, the scope-change table:
+  - **3:** `itemHierarchy.ts` lines 237 and 263.
+  - **4a:** `items.hierarchy.test.ts` line 11.
+
+  §2 keeps anchor + side resolution, the client-side role and the workphase-only rule, so pointers to those stay.
+- **item-positioning §5 → §5.1**, reindexing must be disclosed to the caller:
+  - **2:** `api/items.ts` line 9.
+  - **3:** `positionResolver.ts` lines 25 and 50, `itemHierarchy.ts` line 220, `routes/items.ts` line 73.
+  - **4a:** `items.hierarchy.test.ts` lines 12 and 584 (a `describe` title), `positionResolver.test.ts` lines 99 and 103 (a `describe` title), `dragRequest.test.ts` line 296, `itemWriteReconciliation.test.ts` line 16.
+
+  §5 keeps the reindex itself and its two triggers.
+- **"§2 addendum" → "§2's workphase-only rule"**, still §2. The word "addendum" goes when these are rewritten: `itemListOps.ts` line 53 (1b); `routes/items.ts` line 39, `itemHierarchy.ts` line 272 and `itemPositionScope.ts` line 30 (3). "Story 3's carve-out addendum" is a different thing: provenance on board-drag §5's bands, handled like any other tag.
+
+That's 20 sites to re-point, 2 header ranges and 1 to check. Batch 1c's D4 table and batch 3's use the new numbers from the start.
+
 ## Work, in batches
 
-Each batch does four things, then stops for review and commit:
+Each batch does five things, then stops for review and commit:
 - sweeps its files per D2 and D3;
 - writes the D6 rulings whose sites are in those files;
 - places the D5 passages whose homes are in those files;
+- re-points the D10 sites in those files;
 - runs D8's checks.
 
 - **1a–1c, board drag.** The D7 files, plus the placements from A2's board-drag-interaction handoff, some of which land in `workflow/CLAUDE.md`. 1c ends with D4's index-pointer table for board-drag-interaction.
@@ -204,6 +234,7 @@ Each batch does four things, then stops for review and commit:
 - **The checker:** `npm run check:docs` over its default scope reports zero hits, and every exception carries an ignore marker with a reason. `npm run lint` runs it.
 - **No code changed:** every batch's comparison was clean. Unit tests, typecheck and lint pass, and the E2E suite passed in 4b.
 - **Index pointers:** every section of the four wiki pages that states a rule the code enforces has one pointer at its main enforcement site (D4's tables).
+- **Moved sections:** every D10 site cites its new section.
 - **Rulings:** all sixteen D6 rulings have a disposition. Each is either written, or "no comment" with the reason.
 - **Placements:** every passage in A2's handoff lists has a D5 disposition.
 - **No four-pass audit of its own.** No code is restructured (A1 D10). The swept comments get reviewed by the next audit whose range covers A4's commits.

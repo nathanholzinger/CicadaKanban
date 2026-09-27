@@ -1,9 +1,8 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §10
+**Next ID:** DRAG-6.12
 
-**Suite ID:** `DRAG-6`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `DRAG-6.n`.
+**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §10
 
 The generic client rules — ordinal preview, pending-is-not-null, the
 four-step reconciliation order, the tie-break — are catalogued in
@@ -16,27 +15,27 @@ response sequencing, and failure resync.
 
 The re-drag picture (reconciliation #22) and the stale-response resync
 (#15) were built in the Story 3 follow-up (2026-09-15) and are now settled
-rules — TC-7–TC-9. A placement can also carry a `parentId` (Story 4's
+rules — DRAG-6.7–DRAG-6.9. A placement can also carry a `parentId` (Story 4's
 attach ghost — [DRAG-4.16](drag-4-attach-and-stub-placement.md)); the
 reconciliation rules below apply to it unchanged.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | The board applies the drop's placement synchronously on release, before the request is sent, with no position invented | P0 | ⏳ pending triage |
-| TC-2 | The previewed item is marked pending; its `position` is left alone and is not `null` | P0 | ⏳ pending triage |
-| TC-3 | On the response: reindex → position → clear pending → inversion check → re-sort only if needed | P0 | ⏳ pending triage |
-| TC-4 | An inversion is surfaced in the panel's inversion log, not silently repaired | P1 | ⏳ pending triage |
-| TC-5 | Re-dragging a pending item: responses are sequenced per item so a stale one can't land last | P0 | ⏳ pending triage |
-| TC-6 | A failed drop resyncs the board from the server; the guess is never kept | P0 | ⏳ pending triage |
-| TC-7 | A stale response carrying reindex pairs triggers a resync rather than a guess | P1 | ⏳ pending triage |
-| TC-8 | Cancelling a re-drag restores the still-pending marker rather than clearing it | P1 | ⏳ pending triage |
-| TC-9 | A response landing mid-drag of the same item does not leave the ghost missing | P1 | ⏳ pending triage |
-| TC-10 | `existing` never means "no position": an item with none previews at `last` | P1 | ⏳ pending triage |
-| TC-11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | ⏳ pending triage |
+| DRAG-6.1 | The board applies the drop's placement synchronously on release, before the request is sent, with no position invented | P0 | ⏳ pending triage |
+| DRAG-6.2 | The previewed item is marked pending; its `position` is left alone and is not `null` | P0 | ⏳ pending triage |
+| DRAG-6.3 | On the response: reindex → position → clear pending → inversion check → re-sort only if needed | P0 | ⏳ pending triage |
+| DRAG-6.4 | An inversion is surfaced in the panel's inversion log, not silently repaired | P1 | ⏳ pending triage |
+| DRAG-6.5 | Re-dragging a pending item: responses are sequenced per item so a stale one can't land last | P0 | ⏳ pending triage |
+| DRAG-6.6 | A failed drop resyncs the board from the server; the guess is never kept | P0 | ⏳ pending triage |
+| DRAG-6.7 | A stale response carrying reindex pairs triggers a resync rather than a guess | P1 | ⏳ pending triage |
+| DRAG-6.8 | Cancelling a re-drag restores the still-pending marker rather than clearing it | P1 | ⏳ pending triage |
+| DRAG-6.9 | A response landing mid-drag of the same item does not leave the ghost missing | P1 | ⏳ pending triage |
+| DRAG-6.10 | `existing` never means "no position": an item with none previews at `last` | P1 | ⏳ pending triage |
+| DRAG-6.11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | ⏳ pending triage |
 
 ---
 
-## TC-1 — The board applies the drop's placement synchronously on release, before the request is sent, with no position invented
+## DRAG-6.1 — The board applies the drop's placement synchronously on release, before the request is sent, with no position invented
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -53,12 +52,12 @@ its pre-drop order after the release.
 
 **Automation test:** —
 
-## TC-2 — The previewed item is marked pending; its `position` is left alone and is not `null`
+## DRAG-6.2 — The previewed item is marked pending; its `position` is left alone and is not `null`
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
 Cross-reference [TC-2.30](../item-positioning/part-2-anchor-resolution.md).
-*Given* the preview in TC-1, *when* the board's state is inspected while
+*Given* the preview in DRAG-6.1, *when* the board's state is inspected while
 the write is in flight, *then* `X` carries a pending marker, `X.position`
 equals its pre-drop value, and `X.position` is not `null`. Nothing in the
 item itself is touched until the response; the placement is layered over
@@ -67,7 +66,7 @@ during that window, *then* `X` does not jump to the top of the column.
 
 **Automation test:** —
 
-## TC-3 — On the response: reindex → position → clear pending → inversion check → re-sort only if needed
+## DRAG-6.3 — On the response: reindex → position → clear pending → inversion check → re-sort only if needed
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -83,7 +82,7 @@ list where `X` is an ordinary positioned item.
 
 **Automation test:** —
 
-## TC-4 — An inversion is surfaced in the panel's inversion log, not silently repaired
+## DRAG-6.4 — An inversion is surfaced in the panel's inversion log, not silently repaired
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -99,7 +98,7 @@ vanished on the next reload would defeat it.
 
 **Automation test:** —
 
-## TC-5 — Re-dragging a pending item: responses are sequenced per item so a stale one can't land last
+## DRAG-6.5 — Re-dragging a pending item: responses are sequenced per item so a stale one can't land last
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -110,11 +109,11 @@ responses arrive in either order — including write 2's before write 1's —
 and its ordinal slot), and write 1's response, if it arrives later, is
 not applied over it: its row for `X` is discarded. Responses are
 sequenced per item; a stale one can't be applied last. (If the stale
-response also carried reindex pairs, TC-7 applies.)
+response also carried reindex pairs, DRAG-6.7 applies.)
 
 **Automation test:** —
 
-## TC-6 — A failed drop resyncs the board from the server; the guess is never kept
+## DRAG-6.6 — A failed drop resyncs the board from the server; the guess is never kept
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -137,15 +136,15 @@ enforcement points have drifted ([ATT-4.9](../item-attachment/att-4-legal-parent
 
 **Automation test:** —
 
-## TC-7 — A stale response carrying reindex pairs triggers a resync rather than a guess
+## DRAG-6.7 — A stale response carrying reindex pairs triggers a resync rather than a guess
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
-*Given* the two-writes-in-flight setup of TC-5, where write 1's response
+*Given* the two-writes-in-flight setup of DRAG-6.5, where write 1's response
 arrives *after* write 2's and carries a reindex collection (other items'
 positions rewritten by the server — [`../item-positioning/`](../item-positioning/)
 §5a), *when* the stale response is received, *then* `X`'s own row from it
-is discarded (TC-5) **and** the board resyncs its item state from the
+is discarded (DRAG-6.5) **and** the board resyncs its item state from the
 server instead of applying the reindex pairs — the client does not guess
 whether those pairs are still current after write 2. After the resync the
 board matches the server, including every reindexed item.
@@ -157,7 +156,7 @@ its row is the whole handling; no resync is needed.
 
 **Automation test:** —
 
-## TC-8 — Cancelling a re-drag restores the still-pending marker rather than clearing it
+## DRAG-6.8 — Cancelling a re-drag restores the still-pending marker rather than clearing it
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -176,13 +175,13 @@ restore: `X` sits at its authoritative position with no marker.
 
 **Automation test:** —
 
-## TC-9 — A response landing mid-drag of the same item does not leave the ghost missing
+## DRAG-6.9 — A response landing mid-drag of the same item does not leave the ghost missing
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* `X` pending from write 1 and being re-dragged (ghost at the
 drag's current placement), *when* write 1's response lands mid-drag,
-*then* the response is reconciled normally (TC-3, TC-5) **and** the ghost
+*then* the response is reconciled normally (DRAG-6.3, DRAG-6.5) **and** the ghost
 is restored at the drag's current placement without waiting for any
 further cursor movement or state change — the board corrects the missing
 placement reactively, so at most a single render shows `X` without one.
@@ -193,7 +192,7 @@ reconciled board.
 
 **Automation test:** —
 
-## TC-10 — `existing` never means "no position": an item with none previews at `last`
+## DRAG-6.10 — `existing` never means "no position": an item with none previews at `last`
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -209,7 +208,7 @@ picture before and after the response is the same one.
 
 **Automation test:** —
 
-## TC-11 — A done list previews an incoming item as the newest completion, not the oldest
+## DRAG-6.11 — A done list previews an incoming item as the newest completion, not the oldest
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 

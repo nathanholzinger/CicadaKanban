@@ -1,9 +1,8 @@
 # ATT-4 — What makes a target a legal parent, and the depth cap
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §7, §8
+**Next ID:** ATT-4.10
 
-**Suite ID:** `ATT-4`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-4.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §7, §8
 
 **Parameterization:** every depth-cap case is written against the named
 constant `CAP` (provisionally 6), never a literal. Root items are at depth
@@ -15,19 +14,19 @@ not only attached ones.
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | A parent reference naming no item is rejected, not stored | P0 | ⏳ pending triage |
-| TC-2 | The moving item itself is not a legal parent | P0 | ⏳ pending triage |
-| TC-3 | A descendant of the moving item is not a legal parent | P0 | ⏳ pending triage |
-| TC-4 | Depth cap boundary: exactly `CAP` is legal, `CAP + 1` is not | P0 | ⏳ pending triage |
-| TC-5 | Subtree height is the deepest resulting leaf, detached descendants included | P0 | ⏳ pending triage |
-| TC-6 | Root depth is 1 and a leaf's height is 0 | P1 | ⏳ pending triage |
-| TC-7 | The cap gates moves, not existing data | P1 | ⏳ pending triage |
-| TC-8 | `CAP` is one constant: changing it moves both enforcement points together | P1 | ⏳ pending triage |
-| TC-9 | The UI and the API agree on every target's legality | P0 | ⏳ pending triage |
+| ATT-4.1 | A parent reference naming no item is rejected, not stored | P0 | ⏳ pending triage |
+| ATT-4.2 | The moving item itself is not a legal parent | P0 | ⏳ pending triage |
+| ATT-4.3 | A descendant of the moving item is not a legal parent | P0 | ⏳ pending triage |
+| ATT-4.4 | Depth cap boundary: exactly `CAP` is legal, `CAP + 1` is not | P0 | ⏳ pending triage |
+| ATT-4.5 | Subtree height is the deepest resulting leaf, detached descendants included | P0 | ⏳ pending triage |
+| ATT-4.6 | Root depth is 1 and a leaf's height is 0 | P1 | ⏳ pending triage |
+| ATT-4.7 | The cap gates moves, not existing data | P1 | ⏳ pending triage |
+| ATT-4.8 | `CAP` is one constant: changing it moves both enforcement points together | P1 | ⏳ pending triage |
+| ATT-4.9 | The UI and the API agree on every target's legality | P0 | ⏳ pending triage |
 
 ---
 
-## TC-1 — A parent reference naming no item is rejected, not stored
+## ATT-4.1 — A parent reference naming no item is rejected, not stored
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -38,7 +37,7 @@ dangling reference is never stored.
 
 **Automation test:** —
 
-## TC-2 — The moving item itself is not a legal parent
+## ATT-4.2 — The moving item itself is not a legal parent
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -48,7 +47,7 @@ rejected and `A` is unchanged. Cross-reference
 
 **Automation test:** —
 
-## TC-3 — A descendant of the moving item is not a legal parent
+## ATT-4.3 — A descendant of the moving item is not a legal parent
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -62,7 +61,7 @@ evaluated from the moving item's side ([ATT-2.2](att-2-reparenting-is-one-way.md
 
 **Automation test:** —
 
-## TC-4 — Depth cap boundary: exactly `CAP` is legal, `CAP + 1` is not
+## ATT-4.4 — Depth cap boundary: exactly `CAP` is legal, `CAP + 1` is not
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -78,7 +77,7 @@ Parameterize on `CAP`; do not hard-code 6.
 
 **Automation test:** —
 
-## TC-5 — Subtree height is the deepest resulting leaf, detached descendants included
+## ATT-4.5 — Subtree height is the deepest resulting leaf, detached descendants included
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -92,7 +91,7 @@ would admit a tree that ends up past the cap.
 
 **Automation test:** —
 
-## TC-6 — Root depth is 1 and a leaf's height is 0
+## ATT-4.6 — Root depth is 1 and a leaf's height is 0
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -103,7 +102,7 @@ counting convention the formula depends on.
 
 **Automation test:** —
 
-## TC-7 — The cap gates moves, not existing data
+## ATT-4.7 — The cap gates moves, not existing data
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -111,7 +110,7 @@ counting convention the formula depends on.
 cap existed, or imported), *when* its items are read, listed on a board,
 or shown in the sidebar, *then* they load and are operable — the data is
 valid and readable, and nothing rejects or hides it. *And when* a move is
-attempted that would push a resulting leaf past `CAP` (TC-4), *then* that
+attempted that would push a resulting leaf past `CAP` (ATT-4.4), *then* that
 move — and only a move — is refused.
 
 *(The wiki says "only a gesture that would *increase* depth past the cap
@@ -124,20 +123,20 @@ past the cap is refused.)*
 
 **Automation test:** —
 
-## TC-8 — `CAP` is one constant: changing it moves both enforcement points together
+## ATT-4.8 — `CAP` is one constant: changing it moves both enforcement points together
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
 *Given* the single named `CAP` constant, *when* its value is changed
 (e.g. from 6 to 5) and nothing else is touched, *then* both the API's
-acceptance boundary (TC-4) and the UI's Depth-capped classification
+acceptance boundary (ATT-4.4) and the UI's Depth-capped classification
 ([DRAG-2.3](../board-drag-interaction/drag-2-target-classification.md))
 move to the new value — the same fixture that was accepted at the old
 value's boundary is now rejected/classified Depth-capped at the new one.
 
 **Automation test:** —
 
-## TC-9 — The UI and the API agree on every target's legality
+## ATT-4.9 — The UI and the API agree on every target's legality
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 

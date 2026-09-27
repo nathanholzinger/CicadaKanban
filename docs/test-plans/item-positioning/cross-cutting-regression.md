@@ -1,5 +1,7 @@
 # Cross-cutting / regression guards
 
+**Next ID:** TC-X.7
+
 Explicitly "already correct, don't break" behaviors named in the design —
 see [`../../wiki/item-positioning/#already-correct-not-touched-by-this-feature`](../../wiki/item-positioning/README.md#already-correct-not-touched-by-this-feature).
 

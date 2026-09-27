@@ -1,5 +1,7 @@
 # Part 4 — Merged-column interleaving + drag-bug fix
 
+**Next ID:** TC-4.6
+
 **Wiki:** [`../../wiki/item-positioning/#4-merged-column-interleaving`](../../wiki/item-positioning/README.md#4-merged-column-interleaving)
 
 | ID | Case | Priority | Automated |

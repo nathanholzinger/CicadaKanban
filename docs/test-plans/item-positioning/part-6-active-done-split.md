@@ -1,5 +1,7 @@
 # Part 6 — Active/done split
 
+**Next ID:** TC-6.10
+
 **Wiki:** [`../../wiki/item-positioning/#6-activedone-split`](../../wiki/item-positioning/README.md#6-activedone-split)
 
 | ID | Case | Priority | Automated |

@@ -1,22 +1,21 @@
 # ATT-7 — Detaching preserves the parent relationship
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §11
+**Next ID:** ATT-7.7
 
-**Suite ID:** `ATT-7`. Cases are `TC-n` within this file; from elsewhere,
-refer to them as `ATT-7.n`.
+**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §11
 
 | ID | Case | Priority | Automated |
 |---|---|---|---|
-| TC-1 | Detaching clears the attachment flag and leaves `parentId` in place | P0 | ⏳ pending triage |
-| TC-2 | On becoming Free, the item takes a workflow-scoped board position | P0 | ⏳ pending triage |
-| TC-3 | On becoming Free, the item keeps the workphase it held and stops tracking its former parent | P0 | ⏳ pending triage |
-| TC-4 | On becoming Free, the item is eligible for `completedAt` | P1 | ⏳ pending triage |
-| TC-5 | A detach that lands inside a different parent's context is a reparent, not a detach | P0 | ⏳ pending triage |
-| TC-6 | Re-attaching a detached child to the parent it still names is a real attach, not a no-op | P0 | ✅ `server/tests/routes/items.hierarchy.test.ts` — "a detached child re-attached to the parent it still names…" |
+| ATT-7.1 | Detaching clears the attachment flag and leaves `parentId` in place | P0 | ⏳ pending triage |
+| ATT-7.2 | On becoming Free, the item takes a workflow-scoped board position | P0 | ⏳ pending triage |
+| ATT-7.3 | On becoming Free, the item keeps the workphase it held and stops tracking its former parent | P0 | ⏳ pending triage |
+| ATT-7.4 | On becoming Free, the item is eligible for `completedAt` | P1 | ⏳ pending triage |
+| ATT-7.5 | A detach that lands inside a different parent's context is a reparent, not a detach | P0 | ⏳ pending triage |
+| ATT-7.6 | Re-attaching a detached child to the parent it still names is a real attach, not a no-op | P0 | ✅ `server/tests/routes/items.hierarchy.test.ts` — "a detached child re-attached to the parent it still names…" |
 
 ---
 
-## TC-1 — Detaching clears the attachment flag and leaves `parentId` in place
+## ATT-7.1 — Detaching clears the attachment flag and leaves `parentId` in place
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -28,7 +27,7 @@ explicit act that a detach never performs.
 
 **Automation test:** —
 
-## TC-2 — On becoming Free, the item takes a workflow-scoped board position
+## ATT-7.2 — On becoming Free, the item takes a workflow-scoped board position
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -41,7 +40,7 @@ list.
 
 **Automation test:** —
 
-## TC-3 — On becoming Free, the item keeps the workphase it held and stops tracking its former parent
+## ATT-7.3 — On becoming Free, the item keeps the workphase it held and stops tracking its former parent
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -57,7 +56,7 @@ back to a merged column's entry workphase — is
 
 **Automation test:** —
 
-## TC-4 — On becoming Free, the item is eligible for `completedAt`
+## ATT-7.4 — On becoming Free, the item is eligible for `completedAt`
 
 **Priority:** P1 · **Automated:** ⏳ pending triage
 
@@ -72,7 +71,7 @@ same change.
 
 **Automation test:** —
 
-## TC-5 — A detach that lands inside a different parent's context is a reparent, not a detach
+## ATT-7.5 — A detach that lands inside a different parent's context is a reparent, not a detach
 
 **Priority:** P0 · **Automated:** ⏳ pending triage
 
@@ -85,11 +84,11 @@ with `parentId = P`, and `parentId` is not left at `P`.
 
 **Automation test:** —
 
-## TC-6 — Re-attaching a detached child to the parent it still names is a real attach, not a no-op
+## ATT-7.6 — Re-attaching a detached child to the parent it still names is a real attach, not a no-op
 
 **Priority:** P0 · **Automated:** ✅ `server/tests/routes/items.hierarchy.test.ts` — "a detached child re-attached to the parent it still names is a real attach"
 
-*Given* `X` detached from `P` (TC-1: flag clear, `parentId` still `P`,
+*Given* `X` detached from `P` (ATT-7.1: flag clear, `parentId` still `P`,
 workflow-scoped position), *when* `X` is attached to `P` again — a request
 naming the parent it already names, with the flag set — *then* it is
 [ATT-1.7](att-1-free-attached-state.md)'s Free → Attached transition in

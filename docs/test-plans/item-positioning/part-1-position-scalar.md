@@ -1,5 +1,7 @@
 # Part 1 — Position remains a single item-owned scalar
 
+**Next ID:** TC-1.2
+
 **Wiki:** [`../../wiki/item-positioning/#1-position-is-a-single-item-owned-scalar`](../../wiki/item-positioning/README.md#1-position-is-a-single-item-owned-scalar)
 
 | ID | Case | Priority | Automated |

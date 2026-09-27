@@ -12,9 +12,8 @@ the wiki the same day, so the wiki is again the sole source. Stories 7–9
 no cases. No implementation code or existing test files were consulted —
 see `../README.md` for why.
 
-**Suite IDs:** `DRAG-1` … `DRAG-6`. Cases are `TC-n` inside each suite
-file; from outside a suite, refer to a case as `DRAG-<suite>.<n>` (e.g.
-`DRAG-3.9`).
+**Suite IDs:** `DRAG-1` … `DRAG-6`. A case is written by its full ID, `<suite>.<n>` (e.g.
+`DRAG-3.9`), in its own suite file as everywhere else.
 
 ## The model the cases are written against
 
