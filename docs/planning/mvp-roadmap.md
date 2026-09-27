@@ -87,6 +87,13 @@ A drag gesture to attach/detach directly on the board: dropping a card onto anot
 
 ---
 
+### Epic 3.8 — API Contract — Zod + OpenAPI (tech-debt epic)
+**Why here:** Epic 4 onward adds API surface, and every request/response shape is currently hand-declared in up to five places (route checks, `client/src/types.ts`, MCP `inputSchema`, Bruno, tests). Settling one source first means new endpoints are born on it instead of being migrated later.
+
+One Zod schema per request and response shape drives validation, server types, a published OpenAPI document (the API's documentation), the client's types and MCP validation. Plan: `docs/planning/tech-debt-stories/api-contract-zod-openapi.md`.
+
+---
+
 ### Epic 4 — Quick Items
 **Why fourth:** A high-value daily-use feature with relatively contained scope. Quick items are structurally distinct enough from kanban items to need their own treatment, but they build on the work item model and column structure established in Epics 1–3.
 

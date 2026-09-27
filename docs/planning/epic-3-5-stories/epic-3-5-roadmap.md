@@ -45,9 +45,9 @@ rationale in `epic-3-5-decisions.md`.
 - **Invalid targets are never poppable** — the UI must not allow popping into
   a context that would fail on drop.
 - **No Zod in this epic.** Request validation stays hand-rolled the way the
-  existing routes do it. Zod lands in Epic 4 (see
-  `docs/planning/epic-4-decisions.md`) and will pick up the move endpoints
-  then — Story 1 should not adopt it early.
+  existing routes do it. Zod lands in the API contract epic that follows
+  this one (`docs/planning/tech-debt-stories/api-contract-zod-openapi.md`),
+  which starts with the move endpoints.
 
 ---
 
