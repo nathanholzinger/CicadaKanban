@@ -2,11 +2,13 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": ["e2e/**/*", "playwright.config.ts"]
+  "include": ["tests/**/*", "playwright.config.ts"],
+  "exclude": ["tests/output"]
 }
