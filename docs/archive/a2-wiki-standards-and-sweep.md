@@ -248,7 +248,18 @@ No code, test plans or other `.claude/` files change.
 
 These lists are filled in as the batches land.
 
-- **To A3 (Test Planner), per page:**
+**Anchor changes, for A3 and A4 alike.** Test cases *and* code comments that cite these rules re-point to the new anchors. The checker can't catch the old citations, because §2, §5 and §6 all still exist.
+
+| Page | Rule | Was cited as | Now |
+|---|---|---|---|
+| board-drag-interaction | Which Card is zoomed into: dwell, cue, resets, invalid targets | §6 | §6.1 |
+| item-positioning | The scope-change reassignment table | §2 | §2.1 |
+| item-positioning | Reindexing must be disclosed to the caller | §5 | §5.1 |
+| item-positioning | The no-anchor move that keeps its position | "§2 addendum" | "§2's workphase-only rule" (still §2) |
+
+The Coder has recorded the code sites (about 16), and the Architect's search found the same set. The Test Planner has the case side in A3's batch 5 list.
+
+- **To A3 (Test Planner), per page.** The anchor changes are in the table above.
   - sections reworded enough that their cases should be re-checked;
   - sections that lost mechanism, and the test-plan parts derived from them. item-positioning §5 and §5a are expected to affect parts 5 and 5a.
   - new subsection numbers;
@@ -291,13 +302,14 @@ These lists are filled in as the batches land.
     Part 5a's cases that assert *which code* runs a step lose their source. Those belong with unit tests.
   - **§3, rewritten as a PO deduction (D8).** It said dragging a child out of its parent "stays blocked" until a later epic, which contradicts board-drag §7 and §8. It now says the on-board reorder, attach and detach are the drag gesture's job, pointing there.
   - **§7.5:** the "middle 60% of a column" band is now "the column's middle band", pointing to board-drag §5, whose bands aren't percentages.
-  - **§4:** `entryWorkphaseId` is now "the column's entry workphase". TC-4.4 in part 4, the coverage gap in TP F11, is the case that names it.
+  - **§4:** now reads "the column's entry workphase, its `entryWorkphaseId`". The field name is back: the Coder and the Architect confirmed it's an API field on every column in `GET /boards/:id`, so it's a behavior surface. TC-4.4 can use either form.
+  - **TC-5a.3** ("nothing is rebuilt when nothing changed") has no rule left, because Nathan dropped §5a's step 4. It becomes a unit test or leaves the catalog. §5a's steps now read: apply the pairs, then the written item, and only then compare. Board-drag §10's restatement matches.
   - **§5:** the magnitude formula's `currentScopeItemCount` is now `n`, defined in words.
   - **Removed:** §1's deferred "personal boards" note, §6's "explicitly deferred" bullet, and the two closing sections scoped to an epic. None held a rule that isn't stated elsewhere.
   - **Open questions:** added with the standard line; none open.
 
   **boards-columns-unsorted (batch 4):** it has no test plan, so there's nothing to re-check. It gains a title, a scope paragraph and an Open questions section.
-- **To A4 (Coder), per page:** each removed mechanism passage, quoted or summarized, with the wiki section it served. A4 either places it by A1 D5, with an index pointer to that section (Coder F2), or drops it as already covered. A4's drag-layer segment can start as soon as batch 2 is committed.
+- **To A4 (Coder), per page.** Re-point code citing the rules in the anchor-changes table above. The entries below list each removed mechanism passage, quoted or summarized, with the wiki section it served. **Treat the quoted names as leads, not facts.** Some were already stale in the old page text: `completeItemWrite` lives in `itemWriteReconciliation.ts`, not `itemListOps.ts`, and the short-card height is in `cardMetrics.ts`. A4 either places it by A1 D5, with an index pointer to that section (Coder F2), or drops it as already covered. A4's drag-layer segment can start as soon as batch 2 is committed.
 
   **board-drag-interaction (batch 2)**, as `wiki board-drag-interaction §N` → what was removed:
   - **The page header (the build-status map):**
@@ -366,20 +378,32 @@ These lists are filled in as the batches land.
   - **from item-positioning:** its deferred ideas were already on this list (personal boards, generation tagging, the inbox bucket, sorting by a computed field). Nothing new.
   - **item-positioning, two PO deductions (D8)** recorded in Amendments. §3's "blocked" and §7.5's "middle 60%" contradicted board-drag §5, §7 and §8, so they now follow board-drag.
   - **boards-columns-unsorted:** brought to the standard. Writing it out in full is still the follow-up story above.
+  - **Ruled 2026-09-27: yes, step 4 is dropped (applied).** The question was: drop item-positioning §5a's step 4? "Re-sort only if an inversion was found" is a rule for any client, but in ours the list order is always computed from positions, and the inversion check only logs. Sorting a list with no inversion changes nothing, so "re-sort only if" and "always re-sort" can't be told apart. Nothing observable changes, but dropping it removes a "must" for other clients, so it's a rule change under D1. **The Architect proposes dropping it, and I recommend yes.** If you rule yes, §5a's steps become:
+
+    > 1. **Apply every reindex pair you hold.**
+    > 2. **Then assign the written item's authoritative position.**
+    > 3. **Only then compare anything.** The order follows `position` and the tie-break.
+    >
+    > **The order matters.** A comparison made before the pairs land mixes old values with new ones, and reports an order that was never wrong. On the board, that would be a false entry in the inversion log.
+
+    The outcome rule above the steps (the server's order, no reload, no correctly ordered row moves) is unchanged either way.
+  - **Input for the boards follow-up story**, from the Coder and the Architect. Rules the code has that the page doesn't state, which the README's "what isn't allowed is a rule too" says it should:
+    - `DELETE /boards/:id` refuses a workflow's last board with a 409;
+    - `POST` and `PUT /api/columns` return a 400 for a range whose start comes after its end, or whose workphases aren't in the board's workflow;
+    - `unsorted` also carries `needsAttention`, which the page doesn't describe.
+  - **Ruled 2026-09-27: yes.** The Architect adds "don't hard-code `CAP`" to `testing-strategy.md`. The question was where test policy lives. Board-drag §3.1's removed paragraph already lives in `workflow/CLAUDE.md` and `testing-strategy.md`. Item-attachment's "parameterize on `CAP`" has no home on the code side. The Architect offers to add a line to `testing-strategy.md`, and I'd take it, so no unit test hard-codes 6 before the cap's real value is decided. The test-plan side is the Test Planner's call.
   - **questions from board-drag:** none about the rules themselves. Two small fixes, both behavior-neutral:
     - §5's opening cited "§2 rule 1", which doesn't exist. It now cites §1.1 rule 1, the rule it quotes.
     - §10's "item-positioning §2 addendum, §7.5" was plain text, so the checker read it as this page's §7.5. It's now a link.
-  - **follow-up story:** write boards-columns-unsorted out in full, and give it a test plan.
+  - **follow-up story:** write boards-columns-unsorted out in full, and give it a test plan. The Test Planner asks that it include getting the real API response field names (such as the broken flag's) from the Architect, since API cases need them on the page.
 - **To the Architect:**
   - the persona text (batch 1), drafted below;
   - from the Test Planner's review of the README: the template's handoff line and step 2 of `story-done-checklist.md` say "sections added, **changed**, moved or removed". A ruling that rewords a rule where it stands is what makes a case wrong, and today's wording doesn't list it.
   - ~~the A1 changes in D9~~: landed in A1.
-  - **§5a, the D2 judgment call, is proposed as done in batch 4. Please confirm or redirect.**
-    - It's kept as a wiki rule, because it's a contract for any client that holds an ordered list: the steps, why the order matters, and the tie-break in words.
-    - This client's mechanism is removed and listed in the A4 handoff.
-    - The board's inversion check stays in words, pointing to board-drag §10.
-    - If it should move out of the wiki entirely, part 5a's test plan loses its source, and the Test Planner needs to know.
-  - **boards-columns-unsorted:** the stub names the column range and the broken flag in plain words, because I couldn't confirm their API field names without reading code (D1). If the page should use the API names, please give them.
+  - **Done (2026-09-27):** the persona is applied from the draft, and "changed" is added to the template's handoff line and to step 2 of `story-done-checklist.md`. `check:docs -- .claude` reports 0 hits.
+  - **Still open at close: the applied persona needs one line changed**, from the Test Planner's review. The Architect applied the draft before this change. The PO checked the applied file on 2026-09-27: it matches the draft word for word except that line. The draft below is already updated. The Test Planner line becomes: "derives cases from the wiki, and reads story plans for scope and for detail still settling. Where the wiki is silent, they write the case as Pending PO and ask you; the story can't close until you've answered."
+  - **§5a, the D2 judgment call, now narrowed to one question.** Following the Test Planner's review, §5a's *rule* is the observable outcome: after a successful write that returns positions, the list shows the server's order with no reload, and no correctly ordered row moves. The exceptions are board-drag §10's. The four steps are now "why it holds". The part 5a test plan keeps its source either way. **Your call:** do the numbered steps stay on the page as the reason, or move into code comments? If they move, §5a keeps the outcome, the inversion check and the tie-break. **Answered:** keep them in the wiki. They're a contract a caller relies on. The Architect proposes dropping step 4, which is now a question for Nathan.
+  - ~~**boards-columns-unsorted:** the API field names~~ were given by the Coder and the Architect, and the page now uses them: `startWorkphaseId` / `endWorkphaseId`, `broken`, `unsorted` (`uncovered`, `invalidItems`).
 
 ### Persona draft for the Architect (batch 1)
 
@@ -460,9 +484,10 @@ wiki.
 - **Architect** — your counterpart on technical trade-offs; you own "what the
   user needs," they own "how it's technically shaped." Plan features together
   when a decision genuinely spans both.
-- **Test Planner** — derives cases from the wiki, reading story plans only for
-  scope. Where the wiki is silent, they raise a Pending PO question instead of
-  guessing, so an incomplete or ambiguous page blocks their work.
+- **Test Planner** — derives cases from the wiki, and reads story plans for
+  scope and for detail still settling. Where the wiki is silent, they write
+  the case as Pending PO and ask you; the story can't close until you've
+  answered.
 - **Test Reconciler** — may find a test asserting a rule the wiki doesn't state.
   That reaches you as a question; whether the rule goes in is a ruling.
 - **Coder** — implements against the wiki. Behavior decisions they make while
@@ -574,3 +599,41 @@ files or `.claude/`; a change you need there is a handoff.
   - database column names and the migration file are removed (D2);
   - the TODO becomes the scope paragraph's "only the core rules so far";
   - writing it out in full stays with Nathan (Handoff).
+
+**2026-09-27, the Test Planner's review of batches 2–4, taken in full:**
+- **item-positioning §5a:** the rule is now the observable outcome. After a successful write that returns positions, the list shows the server's order with no reload, and no correctly ordered row moves. The exceptions (a failed write, and a stale response carrying reindex pairs) point to board-drag §10. The four steps become "why it holds", and "the order is the rule" becomes "the order matters". This is a PO deduction (D8): it follows from §5a's own steps and "re-sort only if an inversion was found", and it's the outcome the PO wrote in the round table (PO F4). Whether the steps stay on the page is left to the Architect.
+- **board-drag §5a:** "the ghost expands back to full height instantly" had been written as a rule, but it was a placeholder; the original text said it was not decided as final. The body now says the ghost returns to full height and that how isn't a rule yet. Open questions keeps "today it's instant".
+- **The persona's Test Planner line** is updated in the draft and handed to the Architect, who has already applied the persona.
+- **The boards follow-up story** now includes getting the API field names from the Architect.
+
+These edits land after `aa8b952` (batch 4's commit), for the next commit.
+
+**2026-09-27, the Coder's and the Architect's reviews of batches 2–4:**
+- **The Handoff gains a shared "anchor changes" table** that both the A3 and A4 lists point to. Moves and new anchors had reached only the A3 list, but code comments cite the same sections. In future plans, anchor changes go in one place that every consumer reads.
+- **The A4 list notes that quoted code names are leads.** Some were stale in the old page text.
+- **API field names on the pages.** These came from the Coder and the Architect; the PO read no code (D1).
+  - boards-columns-unsorted names `startWorkphaseId` / `endWorkphaseId`, `broken` and `unsorted` (`uncovered`, `invalidItems`).
+  - item-positioning §4 restores `entryWorkphaseId` beside "the column's entry workphase".
+  - Both are behavior surfaces (D2).
+- **§5a:** the Architect keeps the steps in the wiki. Dropping step 4 is on Nathan's list with the PO's recommendation; the page is unchanged until he rules (D1).
+- **The Coder checked the PO's deductions and §5a against the code:** §3, §7.5 and every sentence of §5a match it.
+- **New input for the boards follow-up story:** the last-board 409, the column-range 400s, and the undescribed `needsAttention`.
+
+**2026-09-27, close-out:**
+- **Nathan's rulings:**
+  - §5a's step 4 is dropped (D1). item-positioning §5a's steps and reason now use the Architect's wording, and board-drag §10's restatement of the order matches.
+  - The Architect adds "don't hard-code `CAP`" to `testing-strategy.md`.
+- **The persona, checked against the final draft:**
+  - identical except the Test Planner line, which still has the old text;
+  - `check:docs` reports 0 hits on it.
+- **Acceptance:**
+  - `npm run check:docs -- docs/wiki` reports 0 hits;
+  - no build-status lines remain, and no `**Planned:**` markers were needed (D1);
+  - every section number that existed before A2 still exists, plus board-drag §6.1 and item-positioning §2.1 and §5.1;
+  - the README is rewritten and the persona applied, both approved by Nathan;
+  - the handoff lists are complete.
+- **Carried by other stories:**
+  - the persona's Test Planner line (the Architect);
+  - the anchor re-pointing and the removed-mechanism placement (A4);
+  - the test-plan sweep (A3);
+  - the boards write-up (a follow-up story).

@@ -34,7 +34,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
   - passages superseded;
   - implementation passages to place in a module header, a site comment or a directory `CLAUDE.md`;
   - test-plan cases whose tests were deleted or lost their case ID;
-  - wiki sections added, moved or removed *(the PO fills this in at close)*.
+  - wiki sections added, changed, moved or removed *(the PO fills this in at close)*.
 
 ```markdown
 # <Epic> Story <N> — <title>
@@ -59,7 +59,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
 - **Passages superseded:**
 - **Implementation passages to place:**
 - **Test-plan cases affected:**
-- **Wiki sections added, moved or removed** (PO, at close):
+- **Wiki sections added, changed, moved or removed** (PO, at close):
 ```
 
 ## A tech-debt story

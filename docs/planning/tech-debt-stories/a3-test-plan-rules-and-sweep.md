@@ -365,7 +365,10 @@ Every feature follows the same steps.
   - fix ATT-3's stale scope note;
   - reduce ATT-7.6's pointer to a file-level one.
 - **Batch 5, `item-positioning`** (87 active cases, 3 superseded):
-  - TP F11: re-map TC-4.2–4.5; TC-4.4 gets a test or a routing;
+  - TP F11: re-map TC-4.2–4.5; TC-4.4 gets a test or a routing, and its wording follows §4's "the column's entry workphase";
+  - cases on the scope-change table and on the `reindexed` disclosure cite the new §2.1 and §5.1;
+  - part 5a follows how §5a is settled: cases assert the order a user sees after a write, not which step a client runs;
+  - part 7's middle-band cases follow §7.5, which now defers to board-drag §5's bands;
   - re-verify TC-2.5 and TC-2.11 against their corrected text;
   - reduce the 54 pointers that name individual tests to file-level ones;
   - remove the "previous mapping" notes;

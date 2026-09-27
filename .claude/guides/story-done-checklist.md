@@ -8,7 +8,7 @@ What happens when a story's code is complete, in order, and what must hold befor
 2. **Update the wiki.** The PO applies the handoff:
    - rulings on the handoff's behavior decisions go in;
    - the `**Planned:**` markers come off the passages the handoff lists as built, and the passages they replace are deleted;
-   - sections added, moved or removed are recorded in the handoff.
+   - sections added, changed, moved or removed are recorded in the handoff.
 
    This lands before the audit, because the audit checks code against the wiki.
 3. **Run two passes in parallel:**

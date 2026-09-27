@@ -568,8 +568,8 @@ description, many attached children, an assignee footer). shortCard fixes
 both drag copies to one exact height, which is what makes §5's carve-out
 reservation *exact* rather than an approximation.
 
-**On drop, the ghost expands back to full height instantly.** Whether it
-should animate is open (Open questions).
+**On drop, the ghost returns to full height.** How it gets there isn't a
+rule yet (Open questions).
 
 ## 6. Card → Card: attach
 
@@ -846,9 +846,9 @@ specifically *not* set to `null` — null already means "not ordered by
 position" (a done item), and would sort the pending item to the top of the
 list. Same reference as above.
 
-**On the response**, in this order: apply any reindex collection, assign the
-authoritative position, clear the pending marker, then check for inversions
-— and re-sort only if one is found. The order matters; see
+**On the response**, in this order: apply any reindex pairs, assign the
+authoritative position, clear the pending marker, and only then check for
+inversions. The order matters; see
 [`../item-positioning/`](../item-positioning/) §5a.
 
 **An inversion is a tripwire, not routine maintenance.** Given the property

@@ -212,7 +212,8 @@ the active item's current workphaseId already a member of the target
 column's covered set"** — not by which specific workphase the anchor card
 belongs to. If yes: position-only reorder regardless of which covered
 workphase the active item or its anchor happens to be in. If no: snaps to
-the column's entry workphase (generic drop on column body) or the precise
+the column's entry workphase, its `entryWorkphaseId` (generic drop on
+column body), or the precise
 hovered workphaseId (expanded mode). Expanded/single-workphase columns are
 unaffected — covered-set membership degenerates to exact equality there.
 
@@ -279,19 +280,25 @@ Shape of the disclosure:
 
 ## 5a. Client reconciliation order
 
-**This order is for any client that holds a locally ordered list**, and it
-applies to every write that returns positions — a board move, a sibling
-reorder, an inline create, a Sheet edit. On receiving a response to a
-position write, in this order:
+**After a successful write that returns positions, the list shows the order
+the server saved** — without a reload, and without moving any row that was
+already correctly ordered. This holds for every such write: a board move, a
+sibling reorder, an inline create, a Sheet edit, including one that
+triggers a reindex. The exceptions are
+[board-drag-interaction](../board-drag-interaction/) §10's: a failed write,
+or a stale response that carried reindex pairs, resyncs the board instead.
 
-1. **Apply the reindex collection**, if populated.
-2. **Assign the written item's authoritative position.**
-3. **Check for inversions** among items with real positions.
-4. **Re-sort only if an inversion was found.**
+**Why it holds:** a client that holds a locally ordered list takes each
+response to a position write in this order:
 
-**The order is the rule.** Checking before applying the reindex makes the
-check fire on data that was never inconsistent, and "fix" it by reordering
-correct rows.
+1. **Apply every reindex pair it holds.**
+2. **Then assign the written item's authoritative position.**
+3. **Only then compare anything.** The order follows `position` and the
+   tie-break below.
+
+**The order matters.** A comparison made before the pairs land mixes old
+values with new ones, and reports an order that was never wrong. On the
+board, that would be a false entry in the inversion log.
 
 **On the board, the inversion check runs only for a write the board
 previewed** — a Sheet edit that reassigns a position made no ordinal claim.
