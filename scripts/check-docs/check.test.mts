@@ -57,6 +57,7 @@ describe('transient-id', () => {
   it('counts a bare finding number in code, but not in Markdown, where it can be a list item', () => {
     assert.deepEqual(rulesIn('.claude/guides/x.md', 'As signal #6 below shows.'), []);
     assert.deepEqual(rulesIn('docs/test-plans/x/README.md', 'Built for reconciliation #22.'), ['transient-id']);
+    assert.deepEqual(rulesIn('.claude/guides/x.md', 'The ghost guard (#22) keeps it.'), ['transient-id']);
   });
 
   it('never reads strings as comments', () => {

@@ -44,7 +44,7 @@ projects (tree — unlimited depth via parent_id self-ref)
 | `items` | Kanban cards — tree via `parent_id`, derive workflow via `workphase → workflow` (no `workflow_id` on items directly) |
 | `item_types` | Descriptive labels: Epic, Story, Task (seeded) |
 | `agents` | Claude agent registrations (`claude_project_id`, `surface`, `repo_path`) |
-| `labels` / `item_labels` | Flat global tags, many-to-many (Epic 6 will rework this — see [[project_epic6_labels_rework]]) |
+| `labels` / `item_labels` | Flat global tags, many-to-many. Provisional: the tag system is due to be replaced, so fix bugs here but don't consolidate or refactor it |
 | `chat_threads` / `chat_messages` | Agent conversation threads — **schema only, no API/UI yet** |
 | `attachments` | External file links per item — **schema only, no UI yet** |
 | `activity_log` | Audit trail on items |
@@ -53,9 +53,9 @@ projects (tree — unlimited depth via parent_id self-ref)
 ### Architecture decisions
 - **Workflow inheritance:** a project with no workflow inherits from its nearest
   ancestor that has one (computed at runtime, `client/src/App.tsx`).
-- **Boards are project-owned (decided 2026-07-15, lands in Epic 7):** boards will be
-  rescoped from workflow-owned to project-owned, paired with URL routing. Until then
-  the code reflects workflow-owned boards. See Epic 7 in `docs/planning/mvp-roadmap.md`.
+- **Boards belong to workflows in the code, but they're due to become project-owned,**
+  paired with URL routing. Don't add new code that depends on a board's workflow
+  ownership where a project would serve.
 - **Positioning:** `workphases.position`/`columns.position` are simple append-at-end
   math (`nextPosition` in `server/src/lib/positionResolver.ts`). `items.position`/
   `projects.position` share a table-generic, server-resolved anchor+side system in the
@@ -78,7 +78,7 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   `itemPositionScope.ts` / `itemTree.ts` are table-generic (items + projects). Extend
   those, never duplicate inline. Client `lib/hierarchyPlacement.ts` is the sibling
   layer one level up — a Card's descendants section's own gap + depth rule
-  (`flattenHierarchyOf`/`resolvePlacement`, Epic 3.5 Story 6 §7), shared by the board's
+  (`flattenHierarchyOf`/`resolvePlacement`, wiki board-drag-interaction §7), shared by the board's
   Descendants layer and the project sidebar. Table-generic the same way (`{id,
   parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
   walk inline either.
@@ -99,13 +99,28 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
 - **DB owns referential integrity** (CASCADE/SET NULL in `schema.ts`), **app owns
   behavior**. An item's dependent-row cleanup (labels, activity log, notifications,
   attachments, chat) is DB-owned via `ON DELETE CASCADE` (migration `0009`) — a new
-  item-dependent table needs one FK, not a mirrored delete loop. Board+column cascade
-  and the workflow-delete chain are still hand-rolled (`server/src/lib/boardCascade.ts`)
-  — next conversion candidates. The `parent_id` subtree walk stays app-side by design
-  (soft ref, "are you sure" delete).
+  item-dependent table needs one FK, not a mirrored delete loop. The board+column cascade
+  and the workflow-delete chain are hand-rolled (`server/src/lib/boardCascade.ts`) and
+  are candidates for the same conversion. The `parent_id` subtree walk stays app-side by
+  design (soft ref, "are you sure" delete).
 - **Board-scoped drag/drop conventions** (pop machine, drop bands, pure modules) live in
   `client/src/components/workflow/CLAUDE.md` — loaded automatically when working in
   that directory.
+
+---
+
+## Docs and Process
+
+- **Documentation and comments** follow `.claude/guides/documentation-standards.md`:
+  who owns which doc, which way references point, and no provenance in living docs.
+  Code comments follow `.claude/guides/code-comments.md`. `npm run check:docs` checks
+  the mechanical rules.
+- **Never edit a living doc you don't own** (the wiki, the test plans). Hand the change
+  off in the story plan instead.
+- **Closing a story:** `.claude/guides/story-done-checklist.md`. Plans follow
+  `.claude/guides/story-plan-template.md`.
+- **`docs/archive/` holds closed plans, audits and reports.** They're frozen and out of
+  date by design. Skip them unless asked.
 
 ---
 
@@ -139,23 +154,24 @@ KanbanApp/
 ├── .mcp.json           ← MCP server config (points to server/src/mcp.ts)
 ├── .claude/
 │   ├── agents/          ← subagent definitions (harness-discovered path, don't relocate)
-│   ├── guides/          ← pattern/library guides (testing, drizzle, react, tailwind, error-handling, prettier, audit workflow)
+│   ├── guides/          ← documentation standards, code comments, story plans and checklists, audit workflow, pattern/library guides
 │   └── personas/
 ├── docs/
-│   ├── planning/        ← mvp-roadmap.md, epic-N-decisions.md (canonical decisions per epic)
-│   ├── audits/          ← code-quality-audit-epicN.md (past audit results)
-│   ├── walkthroughs/    ← epicN-codebase-walkthrough.md (design rationale narratives)
+│   ├── planning/        ← roadmaps, story plans, decisions docs — open work (transient)
+│   ├── audits/          ← open audit and Reconciler reports (transient)
+│   ├── archive/         ← closed plans, audits, reports and walkthroughs (frozen — skip unless asked)
 │   ├── wiki/            ← feature-organized source of truth (hardened, testable rules) — read before touching positioning, attachment, board drag, or boards/columns/Unsorted
 │   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/
+├── scripts/             ← repo tooling (check-docs)
 ├── server/src/          ← see module headers in lib/*.ts for what each shared module owns
-├── client/src/          ← see client/CLAUDE.md and module headers in components/workflow/*.ts
+├── client/src/          ← see module headers; the drag layer's conventions are in components/workflow/CLAUDE.md
 ├── tests/               ← Playwright E2E (api/, helpers/, pages/, ui/)
 └── bruno/               ← saved HTTP requests (manual API testing)
 ```
 
-Module-level comments in `server/src/lib/*.ts` and `client/src/components/workflow/*.ts`
-describe what each file owns — read the file header before assuming a helper doesn't
-exist yet.
+Module headers in `server/src/lib/`, `client/src/lib/` and
+`client/src/components/workflow/` describe what each file owns — read the file header
+before assuming a helper doesn't exist yet.
 
 ---
 

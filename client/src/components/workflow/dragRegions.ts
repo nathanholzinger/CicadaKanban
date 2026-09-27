@@ -420,21 +420,14 @@ export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }
 
-// The element's painted box. Used to carry a correction for a Card
-// region's own live sortable-shift transform — needed only while a Card's
-// rect was hit-tested against dnd-kit's own (transform-blind) collision
-// math. Story 6.1 Phase 3 (L1-8) retired that hit test (the zoom-in
-// candidate is the named relation, `dropAnchorFor`'s own answer, never a
-// rect test), and a Card region's rect now has exactly two remaining
-// readers — the locked-context "still inside" test (`popSession.ts`) and
-// the overlay clamp (`dragOverlayGeometry.ts`) — both about where the Card
-// is actually drawn right now, which is what a plain
-// `getBoundingClientRect` already gives. Probed live against a real
-// shuffle before deleting the correction: the target Card's transform
-// already reads `none` on the very same frame its region becomes the
-// locked context, in both an adjacent and a multi-card shuffle — the two
-// rects were never observably different at any moment this function's
-// result is read.
+// The element's painted box, for every region kind. A Card region's rect is read by
+// `popSession.ts::containmentRect` (the locked-context "still inside" test) and
+// `dragOverlayGeometry.ts::clampToCurrentContext` (the overlay clamp); both want where
+// the Card is drawn right now. The sortable shuffle's transform on a Card already reads
+// `none` by the frame its region becomes the locked context, so the painted box and the
+// layout box agree whenever either reads it. No zoom-in candidate is chosen by a rect
+// test (that's `dragCollision.ts::dropAnchorFor`'s named relation), so nothing needs the
+// transform backed out.
 function layoutRect(el: HTMLElement): Rect {
   return toRect(el.getBoundingClientRect());
 }

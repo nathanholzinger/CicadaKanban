@@ -84,10 +84,12 @@ const TRANSIENT_IDS: readonly [RegExp, string][] = [
   [/\bC-\d+\b/g, 'a ledger ID'],
   [/\bdecisions?\s+\d+[a-z]?\b/gi, 'a plan decision ID'],
   [/\b\d{4}-\d{2}-\d{2}\b/g, 'a date'],
+  [/(?<=[(/])#\d{1,2}(?!\w)/g, 'an audit finding number'],
 ];
 
 // In code, a bare hash-and-number can only be an audit finding. Markdown uses that form for
-// its own numbered lists, so there it has to come with a word like "audit".
+// its own numbered lists, so there it has to come with a word like "audit", or sit right
+// after an opening parenthesis or a slash, the way audit tags are written.
 const CODE_TRANSIENT_IDS: readonly [RegExp, string][] = [
   ...TRANSIENT_IDS,
   [/(?<![\w&#])#\d{1,2}(?!\w)/g, 'an audit finding number'],

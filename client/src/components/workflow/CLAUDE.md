@@ -1,19 +1,19 @@
 # Board Drag Gesture — Working Notes
 
-Full rules and rationale: `docs/wiki/board-drag-interaction/README.md` (contexts,
-popping, drop resolution) and `docs/wiki/item-attachment/README.md` (attach/detach
-consequences). This file is the survival kit — read it before changing anything in
-this directory, then go to the wiki for the "why."
+The rules and their reasons are in the wiki's `board-drag-interaction` page (contexts,
+popping, drop resolution) and its `item-attachment` page (what attaching and detaching
+do). This file is the map: read it before changing anything in this directory, then go
+to the wiki for the "why". What each module owns in detail is in its own header.
 
 ## The mental model
 
 - **Board → a Column/sub-row → one of its own Cards → its own Descendants section**
   is a strict stack, never more than one layer deep from wherever the cursor is. A
   drag starts in exactly one **context** — a Free item's pickup region for a Card, or
-  (Story 5) `descendantsRegionKey(containingCardId)` deterministically for a Stub,
-  never hit-tested — and is either **locked** to it (DragOverlay clamped, cursor
-  roaming inside) or **popped out** (cursor left past a delay/distance threshold,
-  card follows the cursor at the parent layer).
+  `descendantsRegionKey(containingCardId)` for a Stub, deterministically, never
+  hit-tested — and is either **locked** to it (DragOverlay clamped, cursor roaming
+  inside) or **popped out** (cursor left past a delay/distance threshold, card follows
+  the cursor at the parent layer).
 - **A release always commits the locked layer's own within-action** — never a foreign
   region's — regardless of where the bare cursor rests. Column/sub-row and Descendants
   alike: the drop lands where the ghost is — dnd-kit's sortable shuffle decides its
@@ -22,24 +22,25 @@ this directory, then go to the wiki for the "why."
   it: "after" the row above, "before" the row below
   (`dragCollision.ts::dropAnchorFor`, which every reader — the blue line, the pop
   machine, the release — asks the same way, through `namedAnchorFor`; a bare, non-row
-  `over` names no anchor at all). Card: `origin` itself ("set
-  back down") for the drag's own containing Card, else append as the last child (an
-  item from outside, or a Story 5 reparent — full anchor+side placement _among_ a
-  Card's Stubs happens one layer further in, at Descendants). Descendants: §7's gap +
-  depth rule — the named neighbor picks the **gap**, horizontal offset from a seeded
-  depth picks the **depth** (`descendantsProjection.ts`,
+  `over` names no anchor at all). Card: `origin` itself ("set back down") for the
+  drag's own containing Card, else append as the last child (an item from outside,
+  including a Stub from another Card's section — full anchor + side placement _among_
+  a Card's Stubs happens one layer further in, at Descendants). Descendants: the gap +
+  depth rule (wiki board-drag-interaction §7) — the named neighbor picks the **gap**,
+  horizontal offset from a seeded depth picks the **depth** (`descendantsProjection.ts`,
   `DragSessionContext.ts::DescendantsProjection`), and release resolves the placement
   via `lib/hierarchyPlacement.ts::resolvePlacement`; a foreign item's _first_ entry
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
-  same-section case — a Stub already home there). An over-cap tab state (§7.2) is
-  reachable but commits nothing on release, the one exception to §3.2. A dragged
-  Stub's own descendants stay rendered below it but travel with it, so `dropAnchorFor`
-  steps past them (`travelingRowsFor` — Descendants only; at a column a Free
-  descendant is a real anchor). The carried Stub shows the projected depth by
-  indenting an inner box (`KanbanCard.tsx::overlayStubIndent`, provisional until
-  Story 8) — never its root, so nothing dnd-kit measures changes. **Only at Board
-  layer** does the hover **band** (top/middle/bottom) decide.
-- **Every item row shares one dnd-kit registration** (decision 4, 2026-09-21):
+  same-section case — a Stub already home there). An over-cap tab state is reachable
+  but commits nothing on release, the one exception to "a release always commits"
+  (wiki board-drag-interaction §3.2, §7.2). A dragged Stub's own descendants stay
+  rendered below it but travel with it, so `dropAnchorFor` steps past them
+  (`travelingRowsFor` — Descendants only; at a column a Free descendant is a real
+  anchor). The carried Stub shows the projected depth by indenting an inner box
+  (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
+  nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**
+  (top/middle/bottom) decide.
+- **Every item row shares one dnd-kit registration:**
   `data: {type: 'item', role: 'card' | 'stub', parentId?}`, never a `type` that
   differs between a Stub's row and a popped-out Card row for the same id — the hazard
   that guards against is `active.data.current` lagging a mid-drag remount as a Stub's
@@ -54,148 +55,90 @@ this directory, then go to the wiki for the "why."
   is sent.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
   may carry `reindexed: {id, position}[]`; every write path folds it through
-  `itemWriteReconciliation.ts::completeItemWrite` (pairs first, written item last) before clearing
-  the placement.
+  `itemWriteReconciliation.ts::completeItemWrite` (pairs first, written item last)
+  before clearing the placement.
 
-## Where each concern lives (pure, unit-tested modules)
+## Where each concern lives
 
-- `popSession.ts` — the pop state machine (locked / popped-out), two states per layer.
-  No placement rules of its own (Story 6.1 Phase 1, C-2) — `placement.ts` reads its
-  `PopSession` but never writes it. A pop-out is always one layer, even from a context
-  the sample has no region for (clipped out of view): the hook passes `parentKeyOf`, a
-  structural lookup, and a zero `popDelayMs` pops on the sample _after_ the exit,
-  never inside a transition's own re-evaluation (audit epic-3-5-story-6 #19).
-- `placement.ts` — the machine's placement rules: `placementRegion(session, regions)`
-  is the one answer to "which region is the placement against" — `placementFor` and
-  the hook's release both read it; `placementFor(subject, regions, over)` takes the
-  drag as one `PlacementSubject`, which a `DragSession` satisfies as is.
-  `overlayFormFor` reads the same result to decide which form the carried copy draws
-  as (Stub vs. shortCard). `resolvePlacementOver`
-  (Story 6.1 Phase 2) is the release-only anchor/bare-container distinction, beside
-  `placementFor`'s own mid-drag half — dnd-kit-free, so it takes the caller's own
-  already-resolved `overId`/anchor rather than an `Over`.
-- `dragRegions.ts` — regions (Board/Column/sub-row/Card/Descendants). Structural
-  resolution (`resolveDragStructure`) runs once per drag; live rects (`measureRegions`,
-  clipped to a scrolling ancestor's visible box by `clipToVisible`) run per sample. The hook re-resolves after each layer change, and whenever a sample
-  finds a region element detached (`hasDetachedElements`) or newly mounted
-  (`hasNewRegionElements`): a layer change resolves _before_ React renders it, so a
-  collapsed Card forced open by a zoom-in mounts its section only afterwards (audit
-  epic-3-5-story-6 #1). `isCardList(region)` is the one kind predicate: a column or
-  sub-row — a flat list of Free items with bands and a workphase — vs. anything else.
-  Never write `kind !== 'card'` to mean it. A `descendants` region resolves for the
-  drag's own `originCardId` unconditionally, and for any other Valid Card too (Story 6
-  Phase D) — the same `isValidCard` gate a `card:` region already uses, which is also what
-  keeps an invalid target (cycle-forming, depth-capped) from ever becoming a zoom-in
-  candidate, no separate check needed. `KanbanCard.tsx` registers a section as a
-  region only while it holds a real child (§1.1: a childless Card has no Descendants
-  layer — zooming into one shows the carried item's ghost Stub at Card layer, and the
-  release attaches it). `childRegionAt` finds it from a locked Card's own context.
-  `dragRegionProps(key)` is the one "register this element as a drag
-  region" idiom, spread onto a region's own root element. `parseRegionKey` is the one
-  reader of a key (`descendantsCardIdOf` for "is this context a section, and whose"),
-  and `CARD_LIST_REGION_SELECTOR` the one DOM selector for column/sub-row regions —
-  never `startsWith`/`slice`/`split` a key by hand. `layoutRect` is a plain
-  `getBoundingClientRect` for every kind (Story 6.1 Phase 3, L1-8) — the sortable-shift
-  correction it used to carry for a `card` region existed only for a hit test Story 6's
-  hands-on finding 3 already retired; probed live first (frame-by-frame, an adjacent
-  and a multi-card shuffle) that a Card's transform always reads `none` by the same
-  frame it becomes the locked context, so its two remaining rect readers (the
-  locked-context "still inside" test in `popSession.ts`, the overlay clamp in
-  `dragOverlayGeometry.ts`) never actually saw the correction change anything.
-- `dragBands.ts` — the pixel drop-band math (§5): `reservationFor`/`bandBoundaries`/
-  `bandFor` turn a region's own `isTerminal`/`cardCount` into boundaries, from the one
-  `cardMetrics.ts::SHORT_CARD_METRICS` value the pop machine and the carve-out guides
-  both pass; `distanceOutside` is the pop threshold's optional distance term.
-- `lib/hierarchyPlacement.ts` — the Descendants layer's own placement rule (§7),
-  table-generic and shared with the project sidebar: `flattenHierarchyOf` (the one
-  tree walk, cycle-guarded, carrying each caller's own record — the board's
-  `hierarchyRows` and the sidebar's `flattenTree` are both built on it), `toRows` (plain
-  rows minus the dragged subtree), `flattenHierarchy` (the ids-only walk), `gapIndexFor`/
-  `depthRangeFor`/`resolvePlacement` (§7.1's gap + depth walk), and `computeProjection`
-  — the depth step itself (seed + pointer delta / indent, clamped, then resolved),
-  generalized in Story 6.1 Phase 2 from the sidebar's own copy (`indentPx`/`rootId` are
-  now the caller's own numbers, never a second spelling of the same formula). Pure, no
-  React, no dnd-kit — never imports `Item`. `DropSide`/`AnchorRelation` are the one
-  spelling of "before/after this row" for both surfaces, the placement slot and the
-  move request alike. `descendantsProjection.ts` is its board-side caller;
-  `itemListOps.ts::descendantsChildrenOf` is the `getAttachedChildren` adapter its own
-  internal `resolvePlacement` call needs.
-- `descendantsProjection.ts` — the Descendants layer's live projection (§7.1),
-  `advanceProjection(state, sample)`: seeded on every entry into a section — the drag's
-  own section at the dragged row's own slot and depth (`ownSlotOf`), any other at its
-  last gap — then the gap follows the named neighbor and the depth the pointer's x;
-  outside a section, none. `descendantsReleasePlacement` is what a release there
-  writes (nothing over the cap). The hook keeps the state between samples.
-- `dragOverlayGeometry.ts` — the DragOverlay's own geometry (Story 6.1 Phase 2, C-1/
-  L3-3, split out of `useBoardDnd.ts`): `overlayWidthFor` (a Stub row's width in its
-  context Card's section) and `overlayShapeFor` (the form and that width together — the
-  one answer the render and the re-anchor both read), `reanchorOverlayTransform` (keeps the pointer on the copy
-  across its own form switch into a Stub), `clampToCurrentContext`/`clampAxis` (§2's
-  "bounded by its context"). Pure — no React; takes a dnd-kit `Modifier`'s own args
-  shape, the same posture `dragCollision.ts` already has toward dnd-kit's other types.
-- `dragClassification.ts` — classifies every item against the carried one, once per
-  drag start: valid / cycle-forming / depth-capped / inert, plus `subtreeIds` — the
-  dragged item and its whole subtree (§7.2), one derivation (Story 6.1 Phase 2, L1-7a)
-  read by both `descendantsProjection.ts`'s exclusion and `dragCollision.ts::travelingRowsFor`
-  rather than each re-deriving it by filtering `states` for `'cycle-forming'`. A Stub is
-  classified exactly like a Card (Story 5) — no interim exclusion. `isValidParent` is
-  the one "legal parent?" answer: the region gate (a Card or section resolving as a
-  region at all) and the Descendants layer's over-cap cue both read it, off this same
-  drag-start snapshot.
-- `itemListOps.ts` — list selectors and ordinal placements. `hierarchyRows` is the one
-  walk of a Card's whole descendants section, each row carrying its walk's own
-  `parentId` alongside its `item`/`depth` — `KanbanCard.tsx`'s render reads every row;
-  `descendantsProjection.ts` drops the dragged subtree from the same list (`toRows`)
-  rather than walking the tree a second time.
-- `itemWriteReconciliation.ts` — a write's response folded into the item state:
-  `applyItemWriteResponse` (the reindexed pairs, then the written row),
-  `completeItemWrite` (that, then the pending placement cleared and the inversion
-  tripwire run), `withPlacement`. Reads `itemListOps.ts`, never the reverse.
-- `dragCollision.ts` — collision detection and anchor naming: `resolveBoardCollisions`,
-  `dropAnchorFor`/`travelingRowsFor` (the anchor + lean), `namedAnchorFor` (the one call
-  shape every reader uses), and row-data typing — written by `itemRowData`/`columnData`,
-  read only through `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`, never
-  `data.type` by hand. `dropAnchorFor` returns `null` for a non-row `over` — a bare
-  column/sub-row container is never an anchor; a real row with no sortable data yet
-  still falls back to `resolveDropSide`.
-- `dragRequest.ts` — the request-shape half of the same split: `toRequest` (placement
-  → API request), `isIdentity` (recognizes a no-op), `sendItemMove` (the one "send,
-  fold in, or resync" block). Every release reaches both through
-  `useBoardDnd.ts::commitRelease`, which also restores the pre-drag marker when there's
-  nothing to write.
-- `dragTuning.ts` — every threshold/band/overlay value, tunable at runtime via
-  `DragTuningPanel.tsx` (toolbar → "Drag tuning"), persisted in `localStorage` under
-  `kanban_drag_tuning`. `descendantsPopInDelayMs` (Story 6 Phase D) is the fourth
-  clock, Card → Descendants — duration-only, no dwell/cue split.
+The drag gesture's pure, unit-tested modules:
+
+- `popSession.ts` — the pop state machine: locked or popped out at each layer, and the
+  clocks that move a drag between them. It holds no placement rules.
+- `placement.ts` — the ghost's placement at every layer, and which form the carried
+  copy draws as.
+- `dragRegions.ts` — the regions (Board/Column/sub-row/Card/Descendants): their keys,
+  their structure (resolved once per drag), and their live rects (measured per sample).
+- `dragBands.ts` — the pixel band and reservation math for a card-list region.
+- `dragCollision.ts` — row-data typing, collision detection, and naming the anchor a
+  drop lands beside.
+- `dragRequest.ts` — turning a placement into the API request, and sending it.
+- `dragClassification.ts` — classifying every item against the carried one, once per
+  drag start.
+- `descendantsProjection.ts` — the Descendants layer's live gap and depth.
+- `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
+  across a form switch, and its clamp to the current context.
+- `itemListOps.ts` — list selectors and ordinal placements over the board's items.
+- `itemWriteReconciliation.ts` — folding an item write's response into the item state.
+- `dragTuning.ts` — every tunable threshold, band and overlay value, and where they
+  persist.
+
+The hooks and contexts that run it:
+
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
-  plumbing. A drag starts from the item as the board draws it
-  (`itemListOps.ts::renderedIsStub`/`renderedParentId`/`renderedWorkphaseId`), never
-  the stored row alone: the two differ for a re-drag of an item whose write is still
-  in flight. `beginDragAt` is the one start for a Card's drag and a Stub's alike. It
-  holds the Descendants projection's state (`descendantsProjection.ts`) and releases a
-  section through `releaseDescendants` — the one mid-drag/release asymmetry in the
-  file: the _ghost_ still comes from `placement.ts::placementFor`'s Descendants branch
-  (a static preview — `origin`/`priorPlacement` for the same section, an append for a
-  foreign item), the _release_ writes the projection's own resolved placement.
-  `endSession()` is the one end of a drag (clear the pop timer, cancel the snap, clear
-  the session), called by `handleDragCancel` and `handleDragEnd`. `resyncBoard` ends a
-  live drag before every reload the hook asks for: a reload unmounts the `DndContext`
-  without an `onDragCancel`.
-- `usePendingGhostGuard.ts` — the ghost against pending writes (#22):
-  `setGhost`/`restorePriorPlacement` and the reassert effect, taking `sessionRef` and
-  the hook's deps.
-- `useSnapTween.ts` — §3's snap: `start` on a pop, `draw` as the clamp modifier's last
-  step, `cancel` at a drag's end.
-- `DragSessionContext.ts` — the whole drag's state (`activeItem`, `classification`,
-  `pop`, `priorPlacement`, `origin`, `containingCardId`, `projection`) plus
-  `PlacementsContext`, read via `useDropTargetState(itemId)`/`useIsPending`/
-  `useCardContextLayer(itemId)` (which of a Card's own layers is locked) — no prop
-  drilling. `pop`/`origin` are non-optional as of Story 5 — every item drag runs the
-  machine; `containingCardId` is null for a Free Card drag, the section-root Card for
-  a Stub's; `projection` (`DescendantsProjection`, Story 6 Phase D) is null whenever
-  the drag isn't currently locked at a `descendants:` context, and (Story 6.1 Phase 2)
-  carries the last sample's own resolved `{parentId, anchor}` (`resolved`) alongside
-  `gap`/`depth`/`valid`, so a release never rebuilds it.
+  plumbing.
+- `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
+  props.
+- `DragTuningContext.ts` — the live tuning values, for the components that draw
+  thresholds and bands.
+- `usePendingGhostGuard.ts` — keeps the ghost in place while an earlier write is
+  still pending.
+- `useSnapTween.ts` — the eased snap when a pop moves the carried copy's clamp target.
+
+The board's own state, outside the gesture:
+
+- `useItemManagement.ts` — the item state and the per-item write tracker.
+- `useBoardManagement.ts`, `useColumnManagement.ts`, `useWorkphaseManagement.ts` —
+  board, column and workphase CRUD for `BoardView.tsx`.
+
+Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
+depth rule, shared with the project sidebar; `components/dragChrome.tsx` holds a row's
+drag registration and its live drop-side line.
+
+## One way to do each of these
+
+- **Which region the placement is against:** `placement.ts::placementRegion`. The
+  mid-drag ghost and the release both read it.
+- **What kind a region is:** `dragRegions.ts::isCardList` — a column or sub-row (a
+  flat list of Free items with bands and a workphase) against anything else. Never
+  write `kind !== 'card'` to mean it.
+- **Registering an element as a drag region:** `dragRegions.ts::dragRegionProps`,
+  spread onto the region's own root element.
+- **Reading a region key:** `dragRegions.ts::parseRegionKey`, with `descendantsCardIdOf`
+  for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
+  column/sub-row DOM query. Never `startsWith`, `slice` or `split` a key by hand.
+- **Row data:** written only by `dragCollision.ts::itemRowData`/`columnData`, read
+  only through `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`. Never read
+  `data.type` by hand.
+- **The anchor a drop names:** `dragCollision.ts::namedAnchorFor`, the one call shape
+  the blue line, the pop machine and the release all use.
+- **The rows that travel with the dragged item:** `dragClassification.ts`'s
+  `subtreeIds`, read by both the projection's exclusion and
+  `dragCollision.ts::travelingRowsFor`. Never re-derive it by filtering for
+  cycle-forming states.
+- **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
+  gate and the over-cap cue both read it, so they can't disagree.
+- **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
+  projection drops the dragged subtree from the same list rather than walking again.
+- **Starting and ending a drag:** `useBoardDnd.ts::beginDragAt` starts a Card's drag
+  and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`
+  is the one end.
+- **Sending a move:** `dragRequest.ts::sendItemMove`, the one "send, fold in, or
+  resync" block, reached through `useBoardDnd.ts::commitRelease`.
+- **Short-card sizing:** `cardMetrics.ts::SHORT_CARD_METRICS`, the one value the pop
+  machine and the band guides both pass to `dragBands.ts`.
+- **Which way dependencies run:** `placement.ts` reads the pop machine's session but
+  never writes it; `itemWriteReconciliation.ts` reads `itemListOps.ts`, never the
+  reverse.
 
 ## Testing conventions
 
