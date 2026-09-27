@@ -277,6 +277,26 @@ These lists are filled in as the batches land.
   - **§9:** the forward reference to a future "move to project" UI is gone. The rule it sat beside, that nothing is nulled or remapped, is unchanged.
   - **Open questions:** story references and the "an earlier note warned" aside are gone. "Explicitly not MVP" is dropped from "Beyond the cap".
   - **The Test suite link** loses its stale "(not yet written)".
+
+  **item-positioning (batch 4):**
+  - **New anchors:** §2.1 "Scope-change reassignment principle" and §5.1 "Reindexing must be disclosed to the caller". Cases on the scope-change table or the `reindexed` disclosure should cite them.
+  - **Renamed in the text:** "§2's addendum" is now "§2's workphase-only rule", which is the no-anchor move that keeps its position.
+  - **Pointer fixes.** The tie-break is stated in §5a, but §2 and §7.1 cited "§5's tie-break". They now cite §5a.
+  - **§5a, reshaped (see D2 and the Architect's entry):**
+    - kept as a rule for any client that holds an ordered list, with its four steps and "the order is the rule";
+    - which write paths it covers is stated in words: board move, sibling reorder, inline create, Sheet edit;
+    - how the board detects an inversion is in words;
+    - the tie-break is in words: `position`, a missing one counting as 0, then `createdAt`.
+
+    Part 5a's cases that assert *which code* runs a step lose their source. Those belong with unit tests.
+  - **§3, rewritten as a PO deduction (D8).** It said dragging a child out of its parent "stays blocked" until a later epic, which contradicts board-drag §7 and §8. It now says the on-board reorder, attach and detach are the drag gesture's job, pointing there.
+  - **§7.5:** the "middle 60% of a column" band is now "the column's middle band", pointing to board-drag §5, whose bands aren't percentages.
+  - **§4:** `entryWorkphaseId` is now "the column's entry workphase". TC-4.4 in part 4, the coverage gap in TP F11, is the case that names it.
+  - **§5:** the magnitude formula's `currentScopeItemCount` is now `n`, defined in words.
+  - **Removed:** §1's deferred "personal boards" note, §6's "explicitly deferred" bullet, and the two closing sections scoped to an epic. None held a rule that isn't stated elsewhere.
+  - **Open questions:** added with the standard line; none open.
+
+  **boards-columns-unsorted (batch 4):** it has no test plan, so there's nothing to re-check. It gains a title, a scope paragraph and an Open questions section.
 - **To A4 (Coder), per page:** each removed mechanism passage, quoted or summarized, with the wiki section it served. A4 either places it by A1 D5, with an index pointer to that section (Coder F2), or drops it as already covered. A4's drag-layer segment can start as soon as batch 2 is committed.
 
   **board-drag-interaction (batch 2)**, as `wiki board-drag-interaction §N` → what was removed:
@@ -313,6 +333,21 @@ These lists are filled in as the batches land.
   **item-attachment (batch 3):**
   - **The page header:** one server primitive, `server/src/lib/itemHierarchy.ts`, sits behind `POST /items`, `PUT /items/:id` and `PATCH /items/:id/move`. Root `CLAUDE.md`'s "one hierarchy-write primitive" guardrail probably covers it already. §7's "on the write means every write" keeps the behavior.
   - **§8:** the cap is one constant, `ITEM_DEPTH_CAP`, defined server-side and shared with the UI. How it reaches the board is in board-drag §4's entry above.
+
+  **item-positioning (batch 4):**
+  - **The page header:** the client's apply order is `applyItemWriteResponse`, used on every item-write path. The inversion tripwire, the ordinal preview and the pending marker live in `client/src/components/workflow/itemListOps.ts` (`applyPlacements`, `completeItemWrite`). Root `CLAUDE.md` already names `completeItemWrite` as the fold-in point.
+  - **§1:** `items.position` is a nullable `REAL` column.
+  - **§2.1:** the no-scope-change cascade row is `cascadeWorkphaseToAttachedDescendants`.
+  - **§5:** one shared server-side primitive does every reindex.
+  - **§5a:**
+    - step 4 has no separate mechanism in this client: the render order is derived from `position` on every render, so applying the pairs *is* the re-sort;
+    - the tie-break expression is `(a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt`.
+  - **§6:** the split reads `workphases.isTerminal`, and `items.completedAt` is the stored column.
+
+  **boards-columns-unsorted (batch 4):**
+  - the column range is stored as `start_workphase_id` / `end_workphase_id`;
+  - pre-existing workflows got their first board through a backfill in `runMigrations.ts`;
+  - an item's workphase column is `items.workphase_id`.
 - **To Nathan:**
   - questions the sweep raised: rules that may be stale or unclear;
   - deferred ideas taken out of the wiki, for the roadmap. So far:
@@ -328,6 +363,9 @@ These lists are filled in as the batches land.
     - Dossier being post-MVP;
     - pagination or folders beyond the cap being "not MVP".
   - **questions from item-attachment:** none.
+  - **from item-positioning:** its deferred ideas were already on this list (personal boards, generation tagging, the inbox bucket, sorting by a computed field). Nothing new.
+  - **item-positioning, two PO deductions (D8)** recorded in Amendments. §3's "blocked" and §7.5's "middle 60%" contradicted board-drag §5, §7 and §8, so they now follow board-drag.
+  - **boards-columns-unsorted:** brought to the standard. Writing it out in full is still the follow-up story above.
   - **questions from board-drag:** none about the rules themselves. Two small fixes, both behavior-neutral:
     - §5's opening cited "§2 rule 1", which doesn't exist. It now cites §1.1 rule 1, the rule it quotes.
     - §10's "item-positioning §2 addendum, §7.5" was plain text, so the checker read it as this page's §7.5. It's now a link.
@@ -336,6 +374,12 @@ These lists are filled in as the batches land.
   - the persona text (batch 1), drafted below;
   - from the Test Planner's review of the README: the template's handoff line and step 2 of `story-done-checklist.md` say "sections added, **changed**, moved or removed". A ruling that rewords a rule where it stands is what makes a case wrong, and today's wording doesn't list it.
   - ~~the A1 changes in D9~~: landed in A1.
+  - **§5a, the D2 judgment call, is proposed as done in batch 4. Please confirm or redirect.**
+    - It's kept as a wiki rule, because it's a contract for any client that holds an ordered list: the steps, why the order matters, and the tie-break in words.
+    - This client's mechanism is removed and listed in the A4 handoff.
+    - The board's inversion check stays in words, pointing to board-drag §10.
+    - If it should move out of the wiki entirely, part 5a's test plan loses its source, and the Test Planner needs to know.
+  - **boards-columns-unsorted:** the stub names the column range and the broken flag in plain words, because I couldn't confirm their API field names without reading code (D1). If the page should use the API names, please give them.
 
 ### Persona draft for the Architect (batch 1)
 
@@ -513,3 +557,20 @@ files or `.claude/`; a change you need there is a handoff.
 - **§8's formula** now uses `H` in place of the code-style `draggedSubtreeHeight`, with the same definition in words.
 - **Removed as test policy:** §8's "derived test cases parameterize on `CAP`" (A3 handoff), for consistency with board-drag §3.1.
 - **Forward references dropped:** "Story 7", "Story 9", "Epic 7's move-to-project UI", "post-MVP" and "not MVP". The ones that are real plans went to Nathan's list for the roadmap.
+
+**2026-09-27, batch 4 (item-positioning and boards-columns-unsorted):**
+- **Swept to 0 checker hits** (from 25 and 1). **`npm run check:docs -- docs/wiki` now reports 0 hits across the whole wiki.**
+- **item-positioning:**
+  - gains §2.1 and §5.1 (D7), and an Open questions section, which it lacked;
+  - loses its two closing sections scoped to an epic (D3);
+  - every existing number is unchanged.
+- **§5a:** proposed as a rule for any client, with the mechanism removed. It's awaiting the Architect's confirmation (Handoff).
+- **PO deductions (D8)**, naming the rules they follow from:
+  - **§3** said dragging a child out of its parent "stays blocked". Now it says that reorder, attach and detach on the board are the drag gesture's job. Follows from board-drag §7 (the Descendants layer's placement) and §8 (detach).
+  - **§7.5** said the middle band is "the middle 60% of a column". Now it says "the column's middle band". Follows from board-drag §5: bands are pixel carve-outs, not a percentage.
+- **Pointer fixes:** "§5's tie-break" is now §5a (in §2 and §7.1), where the tie-break is actually stated. "§2 addendum" is now "§2's workphase-only rule".
+- **boards-columns-unsorted:**
+  - gains a title, a scope paragraph, a Related line and Open questions;
+  - database column names and the migration file are removed (D2);
+  - the TODO becomes the scope paragraph's "only the core rules so far";
+  - writing it out in full stays with Nathan (Handoff).

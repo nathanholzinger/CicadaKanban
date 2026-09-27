@@ -1,16 +1,5 @@
 # Item Positioning & Board-Scoped Ordering
 
-**Build status:** §1–§6 implemented (Epic 3.2). §7, §5's "Reindexing must
-be disclosed to the caller," and §2's cross-workflow scope-change row
-implemented as of Epic 3.5 Story 1 (server side — the disclosure is an
-optional `reindexed: {id, position}[]` field on every item-write response).
-§5a's apply order (pairs, then the written item) implemented in Story 2
-(`applyItemWriteResponse`, on every item-write path). §5a's inversion
-tripwire and §2's amended "Client-side role" (the ordinal preview /
-pending marker) implemented in Story 3 (`client/src/components/workflow/
-itemListOps.ts` — `applyPlacements`, `completeItemWrite`). **Fully
-implemented.**
-
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
 **Related:** [`../item-attachment/`](../item-attachment/) (what a legal
@@ -21,13 +10,10 @@ parent is, and what attaching means) · [`../board-drag-interaction/`](../board-
 
 ## 1. Position is a single item-owned scalar
 
-`items.position` is one nullable `REAL` value per item — not a per-board
-value. Boards read it; they never own their own copy. This is the same
-kind of fact as `items.workphaseId` (an item's current state), just a
-second axis of it. A future "personal boards" concept (team-shared vs. an
-individual's divergent ordering) is a deliberately deferred idea, not
-built — if it ever is, it's an additive sparse override table that falls
-back to this scalar, not a migration away from it.
+An item's `position` is one nullable number — not a per-board value.
+Boards read it; they never own their own copy. This is the same kind of
+fact as the item's `workphaseId` (its current state), just a second axis
+of it.
 
 ## 2. Position resolution: anchor + side
 
@@ -87,10 +73,10 @@ symmetric `round(anchor.position - 1.0)` — instead a coarsest-fit insert
 between `0.0` (a virtual floor) and the anchor's position. This keeps a
 repeatedly-prepended item's position bounded above zero instead of
 drifting negative without limit, which would otherwise collide with the
-`position ?? 0` tie-break sentinel used when sorting alongside unpositioned
-items (§5). A workphaseId-only move with no anchor at all (dropping an item
-into a different workphase, no specific target card) does **not** go
-through this path — see the addendum below. Item creation with no explicit
+tie-break's treatment of a missing position as 0 when sorting alongside
+unpositioned items (§5a). A workphaseId-only move with no anchor at all
+(dropping an item into a different workphase, no specific target card)
+does **not** go through this path — see the workphase-only rule below. Item creation with no explicit
 position, and a same-workphase reorder/append with no specific target card,
 both still do.
 
@@ -98,12 +84,11 @@ both still do.
 Because scope is workflow-wide (never workphase-narrow — see above), this
 only fires when the *whole workflow* has no positioned items yet, or a
 parent has no children yet — never merely because one particular workphase
-is currently empty while others in the same workflow aren't. (An earlier
-design considered a rank-aware bootstrap — anchoring an empty workphase to
-its nearest non-empty neighbor by rank — to avoid two independently-empty
-*workphases* colliding at `1.0`; that concern doesn't apply once scope is
-workflow-wide rather than workphase-wide, so it was dropped rather than
-built.)
+is currently empty while others in the same workflow aren't. Why not a
+rank-aware bootstrap, anchoring an empty workphase to its nearest
+non-empty neighbor by rank: it would only matter if two independently
+empty *workphases* could collide at `1.0`, and with a workflow-wide scope
+they can't.
 
 **A workphaseId-only move with no anchor keeps the item's existing
 position, unchanged** — a distinct, deliberate exception to steps 4/5
@@ -127,21 +112,19 @@ existing `position: number | null` (unchanged shape), a derived field —
 the whole workflow, see above), or `"none"` (not currently ordered — either
 a detached/root item in a terminal/done workphase, see §6, or one with no
 `workphaseId` at all, e.g. its workphase was deleted out from under it and
-`workphaseId` went `SET NULL`). Both land on the same value because neither
+its `workphaseId` was cleared). Both land on the same value because neither
 has a meaningful comparison scope, even though the reason differs (ordered-
-by-`completedAt` vs. not ordered at all). Purely computed at serialization
-time, never stored. Tells a client (or a human reading the API) what an
+by-`completedAt` vs. not ordered at all). Computed whenever the item is
+read, never stored. Tells a client (or a human reading the API) what an
 item's `position` is actually comparable against.
 
 **Client-side role: the client never computes a position value, not even
 for display.** Optimistic feedback is **ordinal** — the item is shown at an
 index in the rendered list — and the number arrives from the server.
 
-*(Amended by Epic 3.5. Epic 3.2 left the door open to running
-`positionBetween`/`computeDropPosition` client-side for optimistic visual
-feedback. That's now explicitly ruled out: a plausible-but-wrong number
+Why not compute a number for display only: a plausible-but-wrong number
 held in client state is a number something will eventually be tempted to
-send, and it buys nothing — see below.)*
+send, and it buys nothing (see below).
 
 **Why ordinal is sufficient, and why it's correct rather than approximate:**
 the server places an item strictly between its anchor and that anchor's
@@ -174,7 +157,7 @@ relationship doesn't depend on either number.
 **A pending item must not be represented as `position: null`.** Null is
 already load-bearing: it means "not ordered by position" — a done item
 ordered by `completedAt` (§6), or an item with no workphase at all — and
-the tie-break below coerces it to `0`, sorting nulls to the *front*. A
+the tie-break (§5a) counts it as `0`, sorting nulls to the *front*. A
 pending item marked null would be indistinguishable from a done one and
 would jump to the top of the list the moment anything re-sorted. Pending
 needs its own marker; `position` stays untouched until the real value
@@ -182,7 +165,7 @@ lands.
 
 Reconciliation on the response, and what to do when a reindex fires: §5a.
 
-### Scope-change reassignment principle
+### 2.1 Scope-change reassignment principle
 
 Assign a fresh position via the append fallback exactly when an operation
 changes an item's *relevant comparison scope* without an explicit anchor —
@@ -192,18 +175,18 @@ never when the scope is unchanged:
 |---|---|---|
 | Attach ↔ detach toggle | Yes (parent-scoped ↔ workflow-scoped) | Fresh position |
 | Reparent while staying attached | Yes (old parent's siblings → new parent's) | Fresh position |
-| `cascadeWorkphaseToAttachedDescendants` | No (still parent-scoped regardless of workphaseId) | Position untouched — unchanged from today |
-| Workphase change, no anchor | No (workflow-scoped either way) | Position kept — the addendum above |
-| Cross-workflow reparent, for each subtree item keeping its own workphase (Epic 3.5, §7.3) | Yes (old workflow's scope → none) | Position nulled; re-filing later assigns a fresh one via the no-position path |
+| A parent's workphase change cascading to its attached descendants | No (still parent-scoped regardless of workphaseId) | Position untouched |
+| Workphase change, no anchor | No (workflow-scoped either way) | Position kept (§2's workphase-only rule) |
+| Cross-workflow reparent, for each subtree item keeping its own workphase (§7.3) | Yes (old workflow's scope → none) | Position nulled; re-filing later assigns a fresh one via the no-position path |
 | Active → done transition | N/A — see §6 | Position dropped entirely, not reassigned |
 
 ## 3. Attached-child sibling reordering
 
 Attached children are a **locally-sortable list** scoped to one parent's
 children — reordering siblings under the same parent, using the anchor +
-side mechanism above. This is **not** wired into the board-level drag
-context — dragging a child *out* of its parent stays blocked until Epic
-3.5, which owns the cross-boundary attach/detach gesture.
+side mechanism above. On the board, that reorder and the cross-boundary
+attach and detach are the drag gesture's job
+([board-drag-interaction](../board-drag-interaction/) §7 and §8).
 
 A new attached child's position is scoped to `(parentId, isAttached)` —
 not to `workphaseId` — via the same append-fallback logic as everything
@@ -229,14 +212,14 @@ the active item's current workphaseId already a member of the target
 column's covered set"** — not by which specific workphase the anchor card
 belongs to. If yes: position-only reorder regardless of which covered
 workphase the active item or its anchor happens to be in. If no: snaps to
-`entryWorkphaseId` (generic drop on column body) or the precise hovered
-workphaseId (expanded mode). Expanded/single-workphase columns are
+the column's entry workphase (generic drop on column body) or the precise
+hovered workphaseId (expanded mode). Expanded/single-workphase columns are
 unaffected — covered-set membership degenerates to exact equality there.
 
 ## 5. Reindexing (precision + magnitude)
 
-One shared server-side primitive: **reindex a given set of items to clean
-sequential values, preserving current relative order.**
+**A reindex resets a given set of items to clean sequential values,
+preserving their current relative order.**
 
 **Two triggers, both lazy and reactive** — never a scheduled job, never a
 whole-project sweep:
@@ -244,8 +227,8 @@ whole-project sweep:
 1. **Tight-gap:** an insert-between search exhausts precision (§2) →
    reindex just that local comparison scope, then retry.
 2. **Magnitude threshold:** an append's value would cross
-   `max(1000, currentScopeItemCount + 100)` → reindex the relevant scope
-   first, then append. The threshold scales with scope size (1000 as a
+   `max(1000, n + 100)`, where `n` is the number of items in the scope →
+   reindex the relevant scope first, then append. The threshold scales with scope size (1000 as a
    floor) so a scope that genuinely holds 1200+ items doesn't reindex on
    every single append.
 
@@ -256,11 +239,10 @@ scopes from drifting into overlapping ranges and colliding later.
 
 **Done items are excluded entirely** — see §6.
 
-### Reindexing must be disclosed to the caller
+### 5.1 Reindexing must be disclosed to the caller
 
-**Added by Epic 3.5; implemented in Story 1** as an optional `reindexed`
-field on the item-write responses (`POST /items`, `PUT /items/:id`,
-`PATCH /items/:id/move`).
+The disclosure is an optional `reindexed` field on the item-write
+responses (`POST /items`, `PUT /items/:id`, `PATCH /items/:id/move`).
 
 **A response to a write that triggered a reindex must carry the renumbered
 positions.** A reindex changes rows the caller never asked about, so a
@@ -297,23 +279,10 @@ Shape of the disclosure:
 
 ## 5a. Client reconciliation order
 
-**Added by Epic 3.5.** Steps 1–2 implemented in Story 2
-(`applyItemWriteResponse`, used by the board move, the attached-sibling
-reorder, inline create, and the Sheet's PUT alike); steps 3–4 in Story 3
-(`client/src/components/workflow/itemListOps.ts`'s `completeItemWrite`),
-where the ordinal preview gives an inversion something to be checked
-against: the board-wide rendered order of positioned Free items *with the
-pending placement* is compared to the order *after* the response with the
-placement cleared, and a difference is counted and surfaced in the dev/test
-panel — nothing goes to the console. Note that this
-client derives its render order from `position` on every render, so
-applying the pairs *is* the re-sort — step 4 has no separate mechanism
-here. The check only runs for a write the board previewed; a Sheet edit
-that reassigns a position made no ordinal claim. Applies to any client
-holding a locally-ordered list, though the board drag is what exercises it
-— see [`../board-drag-interaction/`](../board-drag-interaction/) §10.
-
-On receiving a response to a position write, in this order:
+**This order is for any client that holds a locally ordered list**, and it
+applies to every write that returns positions — a board move, a sibling
+reorder, an inline create, a Sheet edit. On receiving a response to a
+position write, in this order:
 
 1. **Apply the reindex collection**, if populated.
 2. **Assign the written item's authoritative position.**
@@ -324,13 +293,19 @@ On receiving a response to a position write, in this order:
 check fire on data that was never inconsistent, and "fix" it by reordering
 correct rows.
 
-Any client-side sort must use §5's tie-break verbatim — `position`, then
-`createdAt` — or it will diverge from the server on exact ties.
+**On the board, the inversion check runs only for a write the board
+previewed** — a Sheet edit that reassigns a position made no ordinal claim.
+The board compares the rendered order of positioned Free items with the
+pending placement to the order after the response, with the placement
+cleared; a difference is recorded in the tuning panel's inversion log, and
+nothing goes to the console
+([board-drag-interaction](../board-drag-interaction/) §10).
 
-**Tie-break:** wherever items are sorted client-side, secondary sort key
-`(a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt` —
-cheap, deterministic, prevents an exact-tie's order from depending on
-unspecified DB row order.
+**Tie-break:** wherever items are sorted, the order is `position` — a
+missing one counting as 0 — then `createdAt`. It's cheap, deterministic,
+and keeps an exact tie's order from depending on unspecified database row
+order. A client that sorts any other way will diverge from the server on
+exact ties.
 
 ## 6. Active/done split
 
@@ -342,9 +317,9 @@ right). Active churns (bounded count, unboundedly growing magnitude —
 genuinely disproportionate, needs reindexing). Done accumulates (magnitude
 and count grow together — never disproportionate, needs nothing).
 
-- The active/done split needs no new field — `workphases.isTerminal`
-  (already exists) fully determines it.
-- **`items.completedAt`** (nullable timestamp): set when a detached/root
+- The active/done split needs no new field — a workphase's terminal flag
+  fully determines it.
+- **`completedAt`** (nullable timestamp): set when a detached/root
   item's effective workphase transitions to terminal; cleared (set null)
   if it transitions back to non-terminal (reopened).
 - **Done items (detached/root items whose workphase is terminal) get no
@@ -359,19 +334,10 @@ and count grow together — never disproportionate, needs nothing).
   terminal and a non-terminal workphase together — active and done items
   must never be directly compared in one sorted list, since done's
   ordering isn't position-based at all.
-- **Explicitly deferred, not built now:** a "generation" tagging scheme
-  (per-recalculation epoch marker + composite `(generation, position)`
-  sort) would let done items also be periodically compacted later, if
-  `completedAt`-based ordering ever stops being sufficient at scale.
-  Cleanly layerable on top later — not needed now. Also set aside: a third
-  "inbox" status bucket (pre-workflow items) — may overlap with Epic 6's
-  "Inbox" concept, worth a naming check whenever it's actually scoped.
 
-## 7. Placement intents added by the board gesture (Epic 3.5)
+## 7. Placement intents from the board gesture
 
-**Server side implemented in Epic 3.5 Story 1** (the client half — which
-band sends which request — is Stories 3–6). These extend §2's resolution
-model; they don't replace any part of it.
+These extend §2's resolution model; they don't replace any part of it.
 
 ### 7.1 First-in-list and last-in-list are anchor + side, chosen by the client
 
@@ -388,7 +354,7 @@ rendered list**:
 column in merged mode, the individual sub-row in expanded mode, or a
 parent's Stub list — exactly as
 [`../board-drag-interaction/`](../board-drag-interaction/) §1 defines it.
-"First" and "last" are read off the client's rendered order, using §5's
+"First" and "last" are read off the client's rendered order, using §5a's
 tie-break, so an exact tie can't make the client and server disagree about
 which item is first.
 
@@ -416,9 +382,9 @@ same slot and both degrade to the existing anchor-free paths, unchanged:
 
 - Into a **column region** with no items: a workphaseId-only move, which
   keeps the item's position if it has one, or takes the append fallback if
-  it doesn't (§2 addendum).
+  it doesn't (§2's workphase-only rule).
 - Into a **parent's empty Stub list**: an attach/reparent with no anchor,
-  which is a scope change and takes the append fallback (§2 table).
+  which is a scope change and takes the append fallback (§2.1).
 
 **Done columns:** the visible first/last items there have no position and
 so cannot be anchors (§7.4). The bands do not produce an anchor request in a
@@ -446,11 +412,10 @@ derived from the new parent, so resolving first would resolve against the
 scope being left. Rationale and the Free-item exception:
 [`../item-attachment/`](../item-attachment/) §4–§5.
 
-The scope-change table in §2 gains no new rows from the *gesture* — a
-gesture-driven attach, detach, or reparent lands on exactly the rows
-already there. What's new is only that a single request can now carry the
-scope change and the placement together. (The one row the epic does add
-comes from the API-only cross-workflow case, §7.3.)
+§2.1's scope-change table has no rows of its own for the *gesture* — a
+gesture-driven attach, detach, or reparent lands on the rows already
+there. A single request can carry the scope change and the placement
+together. (The cross-workflow row comes from the API-only case, §7.3.)
 
 ### 7.3 Cross-project reparenting doesn't change the comparison scope
 
@@ -480,8 +445,8 @@ the same treatment §6 gives a done item, for the same reason. It also
 means re-filing needs no new rule: when a user later moves the item into
 a workphase of the new workflow, it has no position to keep and takes the
 append fallback through §2's existing "no existing position" path, like a
-reopened done item or a first-time assignment. The scope-change table in
-§2 gains this as its one new row from the epic.
+reopened done item or a first-time assignment. It's the cross-workflow
+row of §2.1's scope-change table.
 
 ### 7.4 Done columns accept drops, but never positioned inserts
 
@@ -498,9 +463,11 @@ normally.
 
 ### 7.5 The column's middle band is §2's workphaseId-only move
 
-The gesture's "middle 60% of a column" band means *take this workphase,
-keep your position* — which is precisely §2's addendum: a workphaseId-only
-move with no anchor keeps the item's existing position, unchanged.
+The gesture's middle band on a column
+([board-drag-interaction](../board-drag-interaction/) §5) means *take this
+workphase, keep your position* — which is precisely §2's workphase-only
+rule: a workphaseId-only move with no anchor keeps the item's existing
+position, unchanged.
 
 This is a consistency worth stating rather than a new rule. The band exists
 because that behavior is useful to reach deliberately; the behavior exists
@@ -509,29 +476,10 @@ change. The same §2 exception still applies — an item with **no** position
 to keep (a reopened done item, a first-time workphase assignment) still
 gets a fresh one via the append fallback.
 
-## Explicitly out of scope for this feature (as currently scoped)
+---
 
-- Per-board position table / personal boards (§1 — deferred idea)
-- Generation-tagging for done-item recalculation (§6 — deferred, layerable
-  later)
-- A third "inbox" status bucket (§6 — not needed for this fix)
-- Column sort-by-computed-field (e.g. "time in column") and its
-  drag-while-sorted behavior — no sort feature exists yet to attach it to
-- The board-level attach/detach drag gesture itself — the contexts, pop
-  model, drop bands, and target classification now live in
-  [`../board-drag-interaction/`](../board-drag-interaction/), and what a
-  legal parent is lives in [`../item-attachment/`](../item-attachment/).
-  Epic 3.2 shipped a minimal functional default (dropping on card X
-  resolves to anchor X, side `before`) with no new UI; §7 above is the
-  positioning half of what Epic 3.5 layers on top
+## Open questions
 
-## Already correct, not touched by this feature
+Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
-Detached-child free positioning within a workphase, cycle prevention, and
-the same-project reparent constraint — all pre-existing and already
-correct as of Epic 3.2; that epic doesn't change them.
-
-**Superseded since:** the same-project reparent constraint is deliberately
-lifted by Epic 3.5 — see §7.3 and [`../item-attachment/`](../item-attachment/)
-§9. Cycle prevention is unchanged and is now stated as a validity rule in
-[`../item-attachment/`](../item-attachment/) §7.
+None open.
