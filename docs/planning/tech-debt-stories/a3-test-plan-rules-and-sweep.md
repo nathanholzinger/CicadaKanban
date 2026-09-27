@@ -18,7 +18,7 @@ A3 does three things:
   - what a test plan holds.
 - **It sweeps the catalog, one feature at a time,** against the swept wiki. Every case ends up current, in the new format, and in one of three states:
   - backed by a test that carries its ID;
-  - approved as manual-only;
+  - manual-only, by the Test Planner's judgment or Nathan's approval (D3);
   - routed by ID to a named story.
 - **It closes the known coverage gap** in item-positioning (TP F11).
 
@@ -60,14 +60,15 @@ Five statuses replace ⏳ / ✅ / ❌ / ⏸:
 
 | Status | Means | Set by |
 |---|---|---|
-| `Planned` | Its wiki section carries `**Planned:**`. It can't be built yet. | Test Planner |
-| `Open` | The rule is live, and no approved test or manual approval exists yet. | Test Planner: for a new case, from `Planned` or `Pending PO`, or from a `Manual` case whose reason no longer holds. Reconciler: from `Automated`, when the test is gone. |
+| `Planned` | The passage it derives from carries `**Planned:**`. It can't be built yet. | Test Planner |
+| `Open` | The rule is live. The case has no test yet, and isn't `Manual`. | Test Planner: for a new case, from `Planned` or `Pending PO`, or from a `Manual` case whose reason no longer holds. Reconciler: from `Automated`, when the test is gone. |
 | `Pending PO` | The case was inferred where the wiki is silent (D1). | Test Planner |
 | `Automated` | At least one test carries the case's ID and asserts it (D3, D5). | Reconciler |
-| `Manual` | Manual by the standing threshold rule, or approved by Nathan, with a present-tense reason (D3). | Reconciler |
+| `Manual` | Checked by hand, for a present-tense reason (D3). | Test Planner, when the case can't be reduced to precise assertions. Reconciler, once Nathan approves a case that could be automated but isn't worth it. |
 
 - **`Planned` follows the wiki marker, not the story.**
-  - When the PO removes a marker at story close, the Test Planner moves that section's cases to `Open`.
+  - The marker sits on a passage, not a section, so a section can hold both `Planned` and live cases.
+  - When the PO removes a marker at story close, the Test Planner moves that passage's cases to `Open`.
   - The Reconciler moves them to `Automated` once tests carry their IDs.
 - **A `Planned` case that will replace a live one says so on its status line:** `Planned, replaces DRAG-3.4`. Both cases stay until the build lands; then the old case is deleted.
 - **When behavior is removed, its case is deleted.** No tombstone, no "was" text (NZ12). D4 keeps the ID from being reused.
@@ -76,7 +77,7 @@ Five statuses replace ⏳ / ✅ / ❌ / ⏸:
 
 ### D3. Which tests count for a case, and which need approval
 
-*(NZ4, `testing-strategy.md`)*
+*(NZ4, `testing-strategy.md`, Nathan on the Test Planner's wiki README review)*
 
 This follows the layer rule in `testing-strategy.md`: a rule a user or an API caller can see gets a test through that surface.
 
@@ -87,9 +88,13 @@ This follows the layer rule in `testing-strategy.md`: a rule a user or an API ca
 - **A test of internal code needs Nathan's approval.** This covers a test that calls a client module or a server `lib/` function directly.
   - The Reconciler proposes the mapping in its report, and writes the pointer only once Nathan approves.
   - A later run treats an existing internal pointer as approved.
-- **Manual-only:**
-  - **By standing rule, no approval needed.** A case whose pass depends on a tunable drag threshold is manual (`testing-strategy.md`, "What stays manual"). Its reachable part and its write are separate cases, which can be automated.
-  - **Anything else needs Nathan's approval,** one case at a time or for a named category.
+- **Manual-only has two routes:**
+  - **The Test Planner's call, made from the wiki when the case is written.**
+    - Everything the wiki states as settled gets a case, feel included: "the drag reads as one continuous motion" is a case.
+    - A case whose outcome can't be reduced to precise assertions is `Manual` from the start.
+    - This also covers a case whose pass depends on a tunable drag threshold (`testing-strategy.md`, "What stays manual").
+    - Where part of such a rule can be pinned, such as reaching the gesture or the write it makes, that part becomes its own case and can be automated.
+  - **Nathan's call.** A case that could be automated but isn't worth it (too flaky, or too costly) becomes `Manual` only with Nathan's approval, one case at a time or for a named category. The Reconciler proposes it.
 
 ### D4. Case IDs
 
@@ -128,7 +133,7 @@ This follows the layer rule in `testing-strategy.md`: a rule a user or an API ca
 *(TP F3, Architect F3, NZ11)*
 
 - **Where it may write in `docs/test-plans/`:**
-  - each case's status: `Open` ↔ `Automated`, and `Manual` under the standing threshold rule or after approval (D3);
+  - each case's status: `Open` ↔ `Automated`, and `Manual` once Nathan approves it (D3). It leaves a `Manual` case set by the Test Planner alone, and reports it if a test starts carrying that case's ID;
   - each case's `**Automation test:**` line.
 
   Nothing else: no case text, no priorities, never `Planned` or `Pending PO`, and it never deletes a case.
@@ -184,26 +189,30 @@ A1's history rule applies. That means no provenance, no "used to", no dates, no 
 **Automation test:** `tests/ui/….spec.ts`
 ```
 
-- **Each case names its wiki section** on its status line, in the `wiki <page> §N` form (A1 D3), with one entry per section. The wiki's own in-page forms (a bare `§N`, or a relative link followed by `§N`; A2 D9) don't apply in test plans. A2 left that call to A3.
+- **Each case names its wiki section** on its status line, in the `wiki <page> §N` form (A1 D3), with one entry per section. It names the most specific section that holds the rule: `§3.2`, not `§3`. The wiki's own in-page forms (a bare `§N`, or a relative link followed by `§N`; A2 D9) don't apply in test plans. A2 left that call to A3.
   - When the PO's handoff says a section changed, a search finds every case derived from it.
   - A `Pending PO` case has no `**Rule:**` field. That absence is its marker.
 - **A title states the rule, never the bug.** A regression case may say which mistake it guards against, in the present tense ("… so hovering over a covered member never snaps it to the entry workphase"). It doesn't say where or when the mistake was found.
 - **No build status** in suite headers or INDEX files. The statuses carry it (D2).
 - **No restating the wiki's model.** A preamble holds only what cases need and the wiki doesn't give, such as a shared setup ("the tree of DRAG-4.8"). Tunable values go by the names the wiki uses, never as literals.
+- **A `Manual` case is still as specific as its rule allows.** Its *Then* says what the person checking looks for, so two people checking it would judge the same thing.
 
-**An INDEX file** holds three things:
+**An INDEX file** holds two things:
 - the wiki page's name;
-- the list of suites, with one line on what each covers;
-- a *Not catalogued* list: things the wiki states that the catalog deliberately doesn't test, each with a present-tense reason. For example, the drag's tilt and tween are judged by feel. Things the wiki lists as open questions need no mention.
+- the list of suites, with one line on what each covers.
 
-It leaves out two things:
+It leaves out three things:
 - **Counts.** Two roles now write statuses, so a hand-kept total would drift with every edit. The Reconciler's report prints the totals on each run.
 - **Open-question or "flagged for the PO" lists.** Open questions go in the story plan (D1). Resolved ones are deleted.
+- **A "not catalogued" list.** Everything the wiki states as settled gets a case (D3). The wiki's open questions get none, and the wiki already marks them.
 
 **The README** holds everything above, plus:
-- the standing exclusions: MCP-only entry points, visual look, and literal values for tunables;
+- how feel, and rules that depend on a tunable value, become cases, and when those cases are `Manual` (D3). The wiki README leaves this to the test-plans README;
+- the one standing exclusion: no case differs from another only in being made through an MCP tool, since a rule the wiki states once holds on every surface;
 - the priorities;
-- the rule that when a test for a case fails, the PO rules on whether the wiki or the code is wrong (PO #9).
+- **when a test for a case fails:**
+  - if the case misread a clear page, the Test Planner fixes the case;
+  - otherwise the PO rules on whether the wiki or the code is wrong (PO #9).
 
 ### D9. The Test Planner in the story and epic flow
 
@@ -211,9 +220,10 @@ It leaves out two things:
 
 - **Story planning.** For each Planned passage the story builds, the Test Planner writes or updates its `Planned` cases, and lists their IDs in the story plan's Scope.
 - **Story close, step 3.** The Test Planner applies the living-docs handoff:
-  - `Planned` → `Open` for sections whose markers came off;
+  - `Planned` → `Open` for passages whose markers came off;
   - cases revised for changed rules, or deleted for removed ones;
   - `Pending PO` cases resolved from the PO's rulings.
+- **A rule change outside a story.** The PO's report names the sections it touched, and the Test Planner updates the cases derived from them.
 - **Sign-off conditions**, in D2's vocabulary. These replace A1 D9's wording:
   - **Every case in the story's Scope is `Automated` or `Manual`,** or is listed by ID in a later story's Scope. A routing counts only once the destination names it, as with audit deferrals (A1 D11).
   - **No case in the story's Scope is `Pending PO`.**
@@ -254,8 +264,9 @@ The Test Planner drafts these, and the Architect applies them (A1 D2).
 **`test-planner.md`:**
 - inputs: the wiki for rules and the story plan for scope (D1). Still no code;
 - an inferred case becomes `Pending PO`, with a question in the story plan (D1);
-- the Test Planner writes `Planned`, `Open` and `Pending PO`, never `Automated` or `Manual` (D2);
-- touchpoints: story planning, story close and epic close (D9);
+- the Test Planner writes `Planned`, `Open` and `Pending PO`, plus `Manual` for a case that can't be reduced to precise assertions. It never writes `Automated` (D2, D3);
+- feel is catalogued: the Test Planner judges which cases can be pinned to precise assertions (D3);
+- touchpoints: story planning, story close, epic close, and a rule change outside a story (D9);
 - point to `docs/test-plans/README.md` instead of restating its conventions;
 - drop "every case starts life as ⏳ pending triage", and drop the INDEX counts.
 
@@ -273,6 +284,8 @@ The Test Planner drafts these, and the Architect applies them (A1 D2).
 - **The reference rule stays as A1 wrote it.** It defers to `docs/test-plans/README.md` for how a case and its tests point at each other, so the rule lives in one place.
 
 **`story-done-checklist.md` and `epic-done-checklist.md`:** A1 already landed the structure of D9: step 3's pass, step 5's catalog-wide check, the lost-coverage condition, the tech-debt check, and the epic's exceptions for Planned and routed cases. What's left for A3 is restating their test conditions in D2's vocabulary.
+
+**`testing-strategy.md`, "What stays manual":** "Anything else manual is approved case by case" becomes "decided case by case in the test-plan catalog", since the Test Planner makes some of those calls (D3).
 
 **`coder.md` and root `CLAUDE.md`:** one line each. A test that covers a test-plan case starts its title with the case's qualified ID; see `docs/test-plans/README.md`.
 
@@ -321,7 +334,7 @@ Every feature follows the same steps.
 
    → **Stop 1.**
    - Nathan reviews the Test Planner's pass.
-   - He approves internal mappings, and any `Manual` outside the standing threshold rule (D3).
+   - He approves internal mappings, and any `Manual` the Reconciler proposes (D3). The Test Planner's own `Manual` calls are part of the pass he reviews.
    - He rules on each gap: close it in A3, or route it (D10).
    - `Pending PO` questions go to the PO.
 3. **The Coder.**
@@ -344,8 +357,9 @@ Every feature follows the same steps.
 
 - **Batch 3, `board-drag-interaction`** (82 active cases, 7 superseded):
   - Story 10 item 5's parameter drift;
-  - the threshold-timed cases (part of DRAG-1.3; DRAG-1.11, 1.14, 1.18, 1.19 and 5.11): `Manual` under the standing rule (D3), with any reachable part or write split into its own case;
-  - remove the INDEX's model preamble and its list of flags for the PO.
+  - the threshold-timed cases (part of DRAG-1.3; DRAG-1.11, 1.14, 1.18, 1.19 and 5.11): set `Manual` in step 1 (D3), with any reachable part or write split into its own case;
+  - the feel behaviors the old INDEX left uncatalogued (the tilt, the pop-snap tween, the locked-layer outline, and others): each settled one the swept wiki states gets a case, most of them `Manual`;
+  - remove the INDEX's model preamble, its "no cases for" list, and its list of flags for the PO.
 - **Batch 4, `item-attachment`** (38 cases):
   - derive cases for the six rules the INDEX lists as settled but still without a case;
   - fix ATT-3's stale scope note;
@@ -375,7 +389,7 @@ What it finds is resolved in this batch.
 | `docs/test-plans/README.md` | 1 | rewritten | Test Planner |
 | `docs/test-plans/{board-drag-interaction,item-attachment}/**` | 1 | IDs renamed, Next ID lines added | Test Planner |
 | `.claude/personas/test-planner.md`, `.claude/agents/test-reconciler.md` | 1 | D12 | Test Planner drafts, Architect applies |
-| `.claude/guides/documentation-standards.md`, `story-done-checklist.md`, `epic-done-checklist.md` | 1 | D12 | Test Planner drafts, Architect applies |
+| `.claude/guides/documentation-standards.md`, `story-done-checklist.md`, `epic-done-checklist.md`, `testing-strategy.md` | 1 | D12 | Test Planner drafts, Architect applies |
 | `.claude/personas/coder.md`, root `CLAUDE.md` | 1 | one line each (D5) | Architect |
 | `scripts/check-docs/**` | 2 | `case-id`, `--rules` | Coder |
 | `docs/test-plans/<feature>/**` | 3–5 | swept | Test Planner; the Reconciler writes the two fields |
