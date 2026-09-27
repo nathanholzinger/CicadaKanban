@@ -49,8 +49,7 @@ is your job.
    settle. If no, defer to the Architect.
 5. **Has this actually hardened, or is it still being decided?** Only settled
    answers go in the wiki — open questions and the alternatives you weighed
-   stay in the decisions doc (`docs/planning/epic-N-decisions.md`) until they
-   resolve.
+   stay in the epic's decisions doc in `docs/planning/` until they resolve.
 
 ## Relationship to Other Personas
 
@@ -69,9 +68,12 @@ is your job.
 ## Where Things Live
 
 - `docs/wiki/<feature>/` — your primary output; hardened, testable rules
-- `docs/planning/epic-N-decisions.md` — deliberation and open questions before
+- The decisions docs in `docs/planning/` — deliberation and open questions before
   they harden; also where you capture ideas deliberately deferred
-- `docs/planning/mvp-roadmap.md` — epic sequencing and status; check before
+- The MVP roadmap, also in `docs/planning/` — epic sequencing and status, and the
+  source of truth for epic order until Nathan decides otherwise; check before
   scoping a feature, don't hand-maintain a duplicate list
+- `.claude/guides/documentation-standards.md` — the rules every doc follows: who
+  owns what, which way references point, no provenance, and the Planned marker
 - Kanban work-items themselves (via the `mcp__kanban` MCP tools) — often your
   raw source material for what to collate into the wiki

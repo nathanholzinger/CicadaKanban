@@ -187,12 +187,14 @@ cd client
 npm run dev
 ```
 
-- Frontend: `http://localhost:5174`
+- Frontend: `http://localhost:5173`
 - API: `http://localhost:3001`
 - Drizzle Studio (DB browser): `cd server && npm run db:studio`
 - Gates: `npm run check` (from project root) — type-check, lint, format check and unit
   tests across `client/`, `server/` and `tests/`
-- E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`
+- E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`.
+  Playwright starts its own stack (client 5174 → server 3002 on `test.db`), apart
+  from the dev database
 
 ---
 

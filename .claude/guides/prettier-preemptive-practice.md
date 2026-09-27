@@ -1,17 +1,10 @@
 # Prettier-Preemptive Practice — Manual Line-Break Guidelines
 
-Reference for the epic-3/3.2 prettier pass (scope: every file touched between
-`epic-3-complete` and the current working tree — `git diff --stat
-epic-3-complete..HEAD --name-only`). Before running `prettier --write` on a
-file, walk its lines over 120 chars (the configured `printWidth`, see
-`client/.prettierrc`) and decide, per line: does this need a **manual
-restructure** because the line is doing too much, or is it just **long** and
-safe to hand straight to prettier?
+Prettier formats every package: the root `.prettierrc` covers `server/` and `tests/`, and `client/.prettierrc` adds the Tailwind plugin for the client. `npm run format:check` checks all three, and runs as part of `npm run check`. Markdown is deliberately left out.
 
-Only `client/` has prettier installed and configured today — `server/` and
-the root `tests/` package don't. This pass covers files in both, so the
-120-char discipline below applies everywhere in scope even where the
-formatter itself won't run automatically yet.
+Prettier only wraps; it can't tell a line that's doing too much from one that's merely long. Before handing a file to `prettier --write`, walk its lines over 120 characters (the configured `printWidth`) and decide, line by line: does it need a **manual restructure** because it's doing too much, or is it just **long** and safe to hand straight to Prettier?
+
+The examples quote code as it looked when each signal was spotted. They illustrate the signal; the named files may read differently now.
 
 ---
 
@@ -21,11 +14,8 @@ A naive byte-length check overcounts any line with multi-byte UTF-8
 characters — most commonly the box-drawing banner comments used throughout
 this codebase (`// ─────────────────────────`). Each `─` is 3 bytes but 1
 displayed character, so a byte-counting tool can flag a 40-character comment
-as 120+ chars wide. Confirmed while drafting this guide: an initial pass
-using `awk`'s byte-based `length()` reported dozens of false positives in
-`tests/ui/boards.spec.ts` and `boards-layer.spec.ts` purely from section
-banners; re-measuring by actual character count dropped the true count from
-~250 flagged lines to 221. Use your editor's ruler, or count Unicode
+as 120+ chars wide. `awk`'s `length()` counts bytes, so it produces exactly
+these false positives on the specs' section banners. Use your editor's ruler, or count Unicode
 codepoints (not bytes) if scripting it — never trust a `wc -c`-style byte
 count against a line with box-drawing or other non-ASCII characters.
 
@@ -57,7 +47,7 @@ params only once chain-breaking alone has been ruled out as sufficient.
 
 ### 1. A query is embedded directly inside a branch condition instead of named
 
-**The gap** — `server/src/routes/workflows.ts:96`:
+**The gap** — `server/src/routes/workflows.ts`:
 ```ts
 if (sourceWorkflowId && !db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, sourceWorkflowId)).get()) {
 ```
@@ -65,7 +55,7 @@ The line buries a full Drizzle query inside an `if` — you have to parse the
 whole query just to find the boolean it resolves to, and there's nothing to
 log or set a breakpoint on if this branch misbehaves later.
 
-**Done right (same file class)** — `server/src/routes/items.ts:174-176`:
+**Done right (same file class)** — `server/src/routes/items.ts`:
 ```ts
 const targetWorkphase = tx.select({ isTerminal: workphases.isTerminal }).from(workphases).where(eq(workphases.id, resolvedWorkphaseId)).get();
 if (targetWorkphase?.isTerminal) {
@@ -81,7 +71,7 @@ reformat — prettier will never do this for you, and reformatting the
 one-liner in place just produces a longer-but-still-buried line.
 
 **Preserve short-circuit laziness when the original guarded the query with
-`&&`.** `workflows.ts:96` in its original form was `if (sourceWorkflowId &&
+`&&`.** `workflows.ts` in its original form was `if (sourceWorkflowId &&
 !db.select(...).get())` — the query only ran when `sourceWorkflowId` was
 truthy. A first-pass extraction that writes `const sourceWorkflowExists =
 Boolean(db.select(...).get())` unconditionally, then `if (sourceWorkflowId &&
@@ -98,7 +88,7 @@ wasn't given.
 
 ### 2. A `className` line's conditional logic is buried under a long static class list
 
-**The gap** — `client/src/components/KanbanCard.tsx:86`:
+**The gap** — `client/src/components/KanbanCard.tsx`:
 ```tsx
 className={`hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} `}
 ```
@@ -110,8 +100,7 @@ this line that can actually change behavior — is the hardest part to spot.
 `client/src/components/item-detail/pillUtils.ts` extracts exactly this kind
 of static-class pile into named constants (`BTN_MODAL_CANCEL`,
 `INPUT_LG_RING`, etc.) precisely because it was independently re-typed
-inline across several modal components (see that file's own comments citing
-audit finding #10). The same move applies here: hoist the static base string
+inline across several modal components. The same move applies here: hoist the static base string
 to a local `const` (or a shared constant if it's reused), and leave only the
 conditional pieces inline so the JSX reads as "base classes, plus X when
 dragging, plus Y when overlay" instead of one undifferentiated wall of text.
@@ -122,7 +111,7 @@ template literal's contents completely untouched no matter how long — static,
 one ternary, or several. So "just long, prettier will handle it" is never a
 real option here; the only choice is leave-as-is or manually extract. That
 also means a single ternary isn't automatically safe to skip: three lines in
-`ItemDetailPanel.tsx` (`:188` backdrop, `:194` panel, `:285` description
+`ItemDetailPanel.tsx` (the backdrop, the panel and the description
 hover) each had exactly one ternary but were 144-294 characters, almost
 entirely static classes. Extracted the static base into a named constant
 (`BACKDROP_BASE`, `PANEL_BASE`, `DESCRIPTION_DISPLAY_BASE`) in all three for
@@ -137,7 +126,7 @@ format-only signal #3 (single string literal); extracting doesn't add
 anything when there's no logic to separate out, so just accept the length.
 
 **The dynamic part doesn't have to be a conditional to trigger this** —
-`client/src/components/AgentsModal.tsx:168` had a plain lookup
+`client/src/components/AgentsModal.tsx` had a plain lookup
 (`${surfaceBadgeColors[agent.surface] ?? ''}`), not a ternary, and the line
 was still long enough that the static classes alone (~90 chars) plus deep
 JSX indentation were already past budget before the dynamic part added
@@ -149,14 +138,14 @@ actual cause before deciding what to touch.
 
 ### 3. An inline object type is long, and/or the same shape appears more than once
 
-**The gap** — `server/src/routes/items.ts:378`:
+**The gap** — `server/src/routes/items.ts`:
 ```ts
 let anchor: { isAttached: number; parentId: string | null; workphaseId: string | null; position: number | null } | undefined;
 ```
 This 4-field shape is restated almost verbatim three lines later in the
 `.select({...})` that populates it, and a near-identical shape constrains
 `withPositionScope`'s generic parameter in
-`server/src/lib/itemPositionScope.ts:47`:
+`server/src/lib/itemPositionScope.ts`:
 ```ts
 export function withPositionScope<T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null }>(
 ```
@@ -170,7 +159,7 @@ worth a second look regardless of line length if you spot it.
 
 ### 4. An inline object-literal argument is what's pushing a call over the limit
 
-**The gap** — `server/src/routes/items.ts:378` (pre-fix):
+**The gap** — `server/src/routes/items.ts` (pre-fix):
 ```ts
 scopeUpdates.position = resolveAppendPosition(
   items,
@@ -207,7 +196,7 @@ yes, extract it. If the line is still going to wrap regardless, leave it.
 **The same principle applies beyond object-literal arguments** — any inline
 computed expression embedded in a template literal, once verified that
 prettier won't touch it (it never reflows a template literal's `${...}`
-content, in JSX or plain TS alike — confirmed both ways). `server/src/mcp.ts:169`:
+content, in JSX or plain TS alike — confirmed both ways). `server/src/mcp.ts`:
 ```ts
 if (!match) throw new Error(`Unknown item type: "${args!.type}". Available: ${itemTypes.map(t => t.name).join(', ')}`);
 ```
@@ -222,7 +211,7 @@ if (!match) {
 ### 5. A function signature is accumulating positional parameters, especially same-typed ones
 
 **Borderline example (not yet worth changing)** —
-`server/src/lib/itemTree.ts:42`:
+`server/src/lib/itemTree.ts`:
 ```ts
 export function assertValidReparent(table: SelfRefTable, id: string, parentId: string, selfLabel: string, tx?: Tx): string | null {
 ```
@@ -243,8 +232,8 @@ wraps it across several lines.
 
 `select().from().where().get()/.all()/.run()` is one logical operation — the
 length comes from the query builder's fluent API, not from the line doing
-several things. Examples: `items.ts:174` (`targetWorkphase`), `items.ts:275`
-(`newParent`), `itemPositionScope.ts:110` (`workflowIdForWorkphase`'s body).
+several things. Examples: `items.ts` (`targetWorkphase`), `items.ts`
+(`newParent`), `itemPositionScope.ts` (`workflowIdForWorkphase`'s body).
 Let prettier break the `.select({...})` object or method chain across lines;
 don't hand-restructure the query itself. (If the *identical* chain shows up
 in more than one file, that's a Duplication & Abstraction finding for the
@@ -252,18 +241,18 @@ audit passes — not a line-length concern to solve here.)
 
 ### 2. An object literal or `.select({...})` projection lists several fields that are all genuinely part of one row
 
-Example: `items.ts:381-382`'s 4-field anchor select. The field count reflects
+Example: `items.ts`'s 4-field anchor select. The field count reflects
 the row's real shape (what the code actually needs back), not scope creep —
 letting prettier break the `{ ... }` onto one field per line is the correct
 outcome, no manual trimming needed.
 
 ### 3. The entire line is one string literal that can't be shortened without changing what it says
 
-Examples: `server/tests/routes/workphases.test.ts:100`'s `it('backfills
+Examples: `server/tests/routes/workphases.test.ts`'s `it('backfills
 items on a non-terminal -> terminal flip, preserving their position order as
 completedAt order, and clears position', ...)` test description;
-`server/src/mcp.ts:81`'s 251-character MCP tool-parameter `description`
-field; `pillUtils.ts:51`'s `INPUT_LG_RING` Tailwind constant (itself the
+`server/src/mcp.ts`'s 251-character MCP tool-parameter `description`
+field; `pillUtils.ts`'s `INPUT_LG_RING` Tailwind constant (itself the
 *correctly extracted* end state of signal #2 above — all static classes, no
 embedded logic). None of these have a "too much in one line" problem to fix;
 the content itself is the length. Leave them for prettier, which mostly
@@ -271,7 +260,7 @@ leaves a single-string-literal line untouched anyway.
 
 ### 4. An import statement enumerates every symbol the file genuinely uses
 
-Example: `server/src/routes/workflows.ts:3` imports 8 named exports from
+Example: `server/src/routes/workflows.ts` imports 8 named exports from
 `schema.ts`. Prettier already wraps import lists one-per-line past
 `printWidth` — no manual intervention needed. (If a single file needs 10+
 imports from *one* module, that's more likely a File Responsibility signal
@@ -280,7 +269,7 @@ audit lens, not this one.)
 
 ### 5. A single declarative statement with one attached option
 
-Example: `server/src/db/schema.ts:196`:
+Example: `server/src/db/schema.ts`:
 ```ts
 itemId: text('item_id').notNull().references(() => items.id, { onDelete: 'cascade' }),
 ```
@@ -314,7 +303,7 @@ chain, the answer is usually no, so don't extract preemptively.
 
 ### 7. Prose inside a `//` or `/** */` comment
 
-Example: `server/src/lib/positionResolver.ts:7-9`, trailing rationale
+Example: `server/src/lib/positionResolver.ts`, trailing rationale
 comments up to 168 characters. **Prettier does not rewrap comment text at
 all** — running the formatter leaves these exactly as long as they already
 are. If a long comment is genuinely hard to read, soft-wrapping it onto
@@ -339,27 +328,15 @@ choice applies to, since prettier isn't going to touch it either way.
 | Test request body / fixture-call object, chained or single-argument call | Just long — verify with real prettier, don't eyeball | Let it wrap/explode; extract only if it collapses another argument |
 | Import list naming everything the file uses | Just long | Let prettier wrap it |
 | One declarative statement, one attached option | Just long | Let prettier wrap it |
-| Long `//` or `/** */` comment | Not prettier's concern | Manually soft-wrap if it's genuinely hard to read, independent of this pass |
+| Long `//` or `/** */` comment | Not prettier's concern | Manually soft-wrap if it's genuinely hard to read |
 
 ---
 
 ## Process
 
-1. `git diff --stat epic-3-complete..HEAD --name-only` — filter to
-   `.ts`/`.tsx`, excluding `node_modules`.
-2. Per file, find lines over 120 **displayed characters** (not bytes — see
-   measurement note above).
-3. Classify each flagged line against the signals above. When it's genuinely
-   ambiguous, default to "just long" — this pass is preemptive triage, not a
-   rewrite; don't restructure a line whose only sin is length. When you're
-   tempted to reason about what prettier "would do" from how the code already
-   looks, don't — hand-formatted code is not proof of prettier's output.
-   Verify against the real binary instead: `cd client && npx prettier
-   --config .prettierrc <path-to-file>` prints the formatted result without
-   writing it.
-4. Apply manual restructures first, file by file.
-5. Run `npx prettier --write` (from `client/`, the only package with it
-   configured today) over the fileset once manual breaks are in. For
-   `server/`/`tests/` files, apply the same `printWidth: 120` / `singleQuote`
-   / `arrowParens: avoid` conventions by hand, or raise adding a shared
-   root-level `.prettierrc` as a follow-up rather than solving it mid-pass.
+1. In the files you changed, find lines over 120 **displayed characters**, not bytes (see the measurement note above).
+2. Classify each flagged line against the signals above.
+   - When it's genuinely ambiguous, default to "just long". This is triage, not a rewrite: don't restructure a line whose only sin is length.
+   - Don't reason about what Prettier "would do" from how the code already looks. Hand-formatted code is no proof of Prettier's output. Check with the real binary instead: `npx prettier <path-to-file>` prints the formatted result without writing it, using the nearest config.
+3. Apply the manual restructures first.
+4. Run `npx prettier --write` on the files: from `client/` for client files, and from the repo root for `server/` and `tests/`. `npm run format:check` then confirms the result.

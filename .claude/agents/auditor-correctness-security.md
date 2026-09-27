@@ -7,42 +7,32 @@ model: opus
 
 # Auditor Pass: Correctness & Security
 
-Read `.claude/personas/auditor.md` first for shared context, output format, and
-known deferred items.
+Read `.claude/personas/auditor.md` first for shared context and output format.
 
-This pass traces logic line by line. Your lens is: **does this code do what it
-claims to do, and can it be made to misbehave.** Do not flag naming, file
-size, or duplication — those belong to other passes.
+This pass traces logic line by line. Your lens is: **does this code do what it claims to do, and can it be made to misbehave?** Don't flag naming, file size or duplication; those belong to other passes.
 
-## What You Look For
+## What you look for
 
 **Correctness:**
-- Logic bugs (off-by-one in position calculation, missing null checks, orphaned records)
-- DB mutations without rollback in multi-step operations
-- FK constraints that aren't enforced and where this could cause problems
+- **Logic bugs:** an off-by-one in a position calculation, a missing null check, orphaned records.
+- **DB mutations without rollback** in multi-step operations.
+- **FK constraints that aren't enforced** where that could cause problems.
 
-**Security surface (local app, low stakes but still):**
-- No SQL injection via raw string interpolation (Drizzle ORM protects against this,
-  but verify custom queries)
-- `ENABLE_TEST_ROUTES` guard — confirm it cannot be enabled in production accidentally
+**Security surface** (a local app, so low stakes, but still):
+- **No SQL injection through raw string interpolation.** Drizzle ORM protects against this, but verify any custom queries.
+- **The `ENABLE_TEST_ROUTES` guard** can't be switched on in production by accident.
 
 **Graceful failure:**
-- Errors aren't silently swallowed — no empty `catch {}`, no catch block that
-  discards the error without logging or returning anything useful
-- The actual cause reaches somewhere useful when something fails — server log
-  at minimum, not necessarily the client response — never a bare 500 with no
-  trace anywhere of what actually broke
-- For each mutation/branch, is there an identifiable answer to "what happens
-  if this fails" (missing record, invalid input, constraint violation) — not
-  full TDD, just: was the failure path considered, or does it just fall
-  through to a framework default
-- Out of scope for this pass: which status code is "more correct" (400 vs 422
-  style nitpicks) — that's not what's being audited here
+- **Errors aren't silently swallowed:** no empty `catch {}`, and no catch block that discards the error without logging it or returning anything useful.
+- **The actual cause reaches somewhere useful when something fails.** A server log is the minimum; it needn't be the client response. Never a bare 500 with no trace anywhere of what broke.
+- **Each mutation and branch has an answer to "what happens if this fails":** a missing record, invalid input, a constraint violation. This isn't full TDD. The question is whether the failure path was considered, or just falls through to a framework default.
+- **Out of scope:** which status code is "more correct", such as 400 versus 422.
+
+**Comments that record a ruling.** A comment that says code is deliberately separate, or looks wrong but isn't, answers the question it names (`.claude/guides/code-comments.md`, rule (f)). Raise that question again only if you have new evidence, and cite the comment's reason when you do.
 
 ## Guides to read for this pass
 
-- `.claude/guides/drizzle-sqlite-patterns.md` §Transaction boundaries
-- `.claude/guides/drizzle-sqlite-patterns.md` §N+1 avoidance
-- `.claude/guides/drizzle-sqlite-patterns.md` §Self-referential FK caveat
-- `.claude/guides/error-handling-patterns.md` (full guide — small enough that
-  splitting it into per-section pointers isn't worth it yet)
+- `.claude/guides/drizzle-sqlite-patterns.md`, the "Transaction Boundaries", "N+1 Avoidance" and "Self-Referential FK Caveat" sections.
+- `.claude/guides/error-handling-patterns.md`, all of it. It's small enough that splitting it into per-section pointers isn't worth it.
+- `.claude/guides/code-comments.md`, rule (f).
+- `.claude/guides/documentation-standards.md`, only if a finding turns on a doc. Judging docs and comments is the drift pass's job.

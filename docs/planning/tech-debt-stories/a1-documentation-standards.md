@@ -414,3 +414,17 @@ Changes made after Nathan approved the decisions. They're already folded into th
   - **The Coder's rule:** a header only where the file name doesn't say what the file owns, plus every shared-logic module (`server/src/lib/`, `client/src/lib/`, the drag modules in `workflow/`).
   - **The Auditor's rule for tests:** a test file only where its name doesn't say what it covers.
   - **Why:** this keeps "no comment is the default", and saves A4 about 41 headers on files like `api/labels.ts`. The Coder updates A4's scope to match.
+
+**2026-09-27, batch 4 went past "strip the provenance" in three places:**
+- **`testing-strategy.md` rewritten, not trimmed.**
+  - **Why:** it was an early snapshot (7 specs, 50 cases, a gaps table, a CI sketch) that nothing references. Stripping six IDs would have left a living guide whose inventory is wrong.
+  - **What it holds now:** the layers, where tests live, the coverage-gate policy, what stays manual, and how E2E stays off the dev database. Those rules previously lived only in agent memory (`architecture_testing`).
+- **`prettier-preemptive-practice.md`:**
+  - the intro and Process no longer describe a one-off pass, and they name the root config and `format:check`;
+  - 20 `file:line` citations lose their line numbers, since the formatting sweep had already moved most of those lines;
+  - one line says the examples are illustrations.
+
+  `error-handling-patterns.md` loses its one line citation too.
+- **Root `CLAUDE.md`:** the dev client runs on 5173, not 5174; only Playwright's stack uses 5174, pointed at `test.db`.
+
+The Auditor's six drafts were applied as written, after checking that every guide section they cite by name exists.

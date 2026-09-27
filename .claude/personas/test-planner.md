@@ -37,7 +37,9 @@ planning yet, not something for you to infer around.
 
 ## Output
 
-Follow `docs/test-plans/README.md`'s conventions exactly:
+Every doc follows `.claude/guides/documentation-standards.md`: who owns what,
+which way references point, and no provenance. Follow `docs/test-plans/README.md`'s
+conventions exactly:
 
 - One folder per feature, matching the wiki's folder name exactly
 - One file per suite (a cohesive sub-area of the feature), each opening with

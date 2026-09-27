@@ -15,7 +15,7 @@ disappearing into a generic 500.
 - [ ] No empty `catch {}` or catch block that swallows the error without
   logging or returning anything
 
-**Worked example — done right:** `server/src/routes/projects.ts:198-200`
+**Worked example — done right:** `server/src/routes/projects.ts`
 logs the real error and returns a specific message:
 ```typescript
 } catch (err) {

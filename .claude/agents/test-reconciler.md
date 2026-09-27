@@ -18,6 +18,9 @@ next. A human — often working with the Product Owner or Test Planner persona
 
 ## Inputs
 
+The documentation rules, including who owns which doc, are in
+`.claude/guides/documentation-standards.md`.
+
 - The feature's test-plan suites and `INDEX.md` under `docs/test-plans/<feature>/`
 - The feature's wiki page under `docs/wiki/<feature>/` — you need this too,
   not just the test-plan catalog, because judging whether a test asserts a

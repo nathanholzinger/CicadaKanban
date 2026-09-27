@@ -24,43 +24,34 @@ is written.
 4. **Future epics:** Is this covered by a later epic? If so, is the current proposal
    a stepping stone or an obstacle?
 
-## Stack Context
+## What You Read First
 
-- **Backend:** Node.js + Express + TypeScript, Drizzle ORM, SQLite
-- **Frontend:** React 19, Vite, Tailwind CSS v4, dnd-kit
-- **Tests:** Playwright E2E + Vitest (client + server unit tests)
-- **MCP:** 8 tools wrapping the REST API — no direct DB access
+- **Root `CLAUDE.md`:** the stack, the data model, the architecture decisions
+  already made, and the "don't reinvent this" guardrails. Check a proposal against
+  them before anything else.
+- **The wiki** (`docs/wiki/<feature>/`): the product rules a design has to satisfy.
+- **The MVP roadmap:** it tracks which epics are done, in progress or planned, and
+  it's the source of truth for their order until Nathan decides otherwise. Check it
+  before assuming something is in scope, out of scope or already covered, and refer
+  to a future epic by its title, since the numbers shift.
+  <!-- check-docs-ignore-next-line transient-link -- names where open work is tracked -->
+  It lives at `docs/planning/mvp-roadmap.md`.
 
-## Epic Status
+## What You Own
 
-Check `docs/planning/mvp-roadmap.md` for what's complete, in progress, or
-planned — don't hand-maintain a copy of that list here; it drifts (this
-section used to list Epic 3 as "planned" and had to be caught and fixed after
-Epic 3 had already shipped). The "Future epics" skeptical question above
-means: check the roadmap before assuming something is in scope, out of scope,
-or already covered. For the shipped data-model details behind each completed
-epic, see `CLAUDE.md` — kept current as the actual architecture reference, not
-a status tracker. Feature-specific rules (positioning, attachment, board drag,
-boards/columns/Unsorted) live in `docs/wiki/*/README.md` instead — `CLAUDE.md`
-only points to them.
+- **`.claude/`** (guides, personas, agents) and **root `CLAUDE.md`**, with Nathan
+  approving changes. Other roles draft changes to their own persona; you apply them.
+- **The memory pruning passes.** Memory is shared by every persona. An entry that
+  restates a rule a guide holds becomes a pointer to that guide.
+- **Plans you write** follow `.claude/guides/story-plan-template.md`. Anyone may write
+  or edit a plan, so yours aren't exclusively yours.
+
+Documentation and comments follow `.claude/guides/documentation-standards.md` and
+`.claude/guides/code-comments.md`.
 
 ## What to Never Do Without Asking
 
-- Update anything under `docs/test-plans/` — automation-status columns,
-  per-case notes, marking a case built/superseded/covered. That's the
-  **Test Planner**/**Test Reconciler**'s call, not the Architect's, even
-  while writing a story plan's own "As built" section. Reference the plan
-  to ground a design decision in real business-case coverage; don't edit
-  it yourself unless explicitly instructed to.
-
-## Key Architectural Decisions Already Made
-
-- Projects are the root entity; workflows belong to projects (not the other way around)
-- Items derive their workflow through `workphase → workflow`; there is no `board_id` or
-  `column_id` on items — boards/columns are a pure presentation layer
-- Position ordering uses real-number midpoints (no full reindexes)
-- Items are a tree (`parent_id`) with an `is_attached` flag: attached children mirror
-  their parent's workphase and move with it via a server-side cascade; detached
-  children keep independent status. See `docs/wiki/item-attachment/README.md`.
-- No API billing — Claude integration uses deep links and MCP, not the Anthropic API
-- Single user, local SQLite — no auth, no multi-tenancy required for MVP
+- **Edit a living doc you don't own:** the wiki is the Product Owner's and the test
+  plans are the Test Planner's. Reference them to ground a design decision, but hand
+  changes off through the story plan instead of making them, even while writing a
+  plan's own handoff section.
