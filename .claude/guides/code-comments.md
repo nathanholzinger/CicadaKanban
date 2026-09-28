@@ -106,6 +106,7 @@ An exported function whose contract isn't obvious from its name and types may ca
 | (a) IDs and dates | `transient-id` |
 | (a) pointers to plans, decisions docs, audits or reports | `transient-link` |
 | (a) unqualified case numbers in tests | `bare-case-id` |
+| (a) a case ID that isn't in the test-plan catalog | `case-id` |
 | (c) bare section numbers | `bare-section` |
 | (c) a pointer to a page or section that doesn't exist | `wiki-pointer` |
 | (e) a `<file>::<symbol>` that doesn't resolve, or names an ambiguous file | `symbol-ref` |

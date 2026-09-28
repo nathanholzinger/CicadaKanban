@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { declaredNames, headingSections } from './repoIndex.mts';
+import { isSuiteFile } from './files.mts';
+import { caseHeadings, declaredNames, headingSections } from './repoIndex.mts';
 
 describe('headingSections', () => {
   it('reads numbered headings of every depth and form, outside fences', () => {
@@ -15,6 +16,33 @@ describe('headingSections', () => {
       '## Open questions',
     ].join('\n');
     assert.deepEqual([...headingSections(text)], ['8', '1.1', '5a']);
+  });
+});
+
+describe('caseHeadings', () => {
+  it('reads the level-2 headings that open with a case ID, outside fences', () => {
+    const text = [
+      '# DRAG-5 — Detach',
+      '**Next ID:** DRAG-5.4',
+      '## DRAG-5.1 — A Stub becomes Free',
+      '### DRAG-5.2 — Not a case heading',
+      '## TC-5a.1 — Pairs first',
+      '## TC-X.2 — A guard',
+      '```',
+      '## DRAG-5.3 — Inside a fence',
+      '```',
+      '## Open questions',
+    ].join('\n');
+    assert.deepEqual(caseHeadings(text), ['DRAG-5.1', 'TC-5a.1', 'TC-X.2']);
+  });
+});
+
+describe('isSuiteFile', () => {
+  it('takes every test-plan Markdown file but the README and INDEX files', () => {
+    assert.ok(isSuiteFile('docs/test-plans/item-attachment/att-4-legal-parent-depth-cap.md'));
+    assert.ok(!isSuiteFile('docs/test-plans/README.md'));
+    assert.ok(!isSuiteFile('docs/test-plans/item-attachment/INDEX.md'));
+    assert.ok(!isSuiteFile('docs/wiki/item-attachment/README.md'));
   });
 });
 

@@ -15,9 +15,12 @@ export const RULE_IDS = [
   'claude-ref',
   'transient-link',
   'wiki-code-name',
+  'case-id',
 ] as const;
 
 export type RuleId = (typeof RULE_IDS)[number];
+
+export const isRuleId = (name: string): name is RuleId => (RULE_IDS as readonly string[]).includes(name);
 
 /** `ignore-marker` reports a marker that is malformed or covers nothing. */
 export type FindingRule = RuleId | 'ignore-marker';
@@ -35,6 +38,7 @@ export interface FileContext {
   inWiki: boolean;
   /** The page this file is, when it's a wiki page's README. */
   wikiPage: string | null;
+  inTestPlans: boolean;
 }
 
 type Hit = (rule: RuleId, at: number, message: string) => void;
@@ -64,6 +68,7 @@ export function checkSegment(
     claudeRefs(text, hit);
   }
   if (!isCode && context.inWiki) wikiCodeNames(text, hit);
+  if (isCode || context.inTestPlans) caseIds(text, context, index, hit);
   return findings;
 }
 
@@ -281,4 +286,43 @@ function wikiCodeNames(text: string, hit: Hit): void {
   for (const { at, found, what } of firstMatches(visible, CODE_NAMES)) {
     hit('wiki-code-name', at, `"${found}" is ${what}; the wiki describes behavior, not code`);
   }
+}
+
+// ── case-id ────────────────────────────────────────────────────────────────────
+
+const NEXT_ID_LINE = /^\*\*Next ID:\*\*\s*/;
+
+function caseIds(text: string, context: FileContext, index: RepoIndex, hit: Hit): void {
+  if (!index.caseIdPattern) return;
+  const ownCases = index.suiteCases(context.path);
+  const nextIdAt = ownCases ? NEXT_ID_LINE.exec(text)?.[0].length : undefined;
+  for (const match of text.matchAll(index.caseIdPattern)) {
+    const id = match[0];
+    if (ownCases && match.index === nextIdAt) checkNextId(id, ownCases, match.index, hit);
+    else if (!index.hasCase(id)) hit('case-id', match.index, `no case "${id}" in the test-plan catalog`);
+  }
+}
+
+// A suite's Next ID names a case that doesn't exist yet, by design. It's checked the other
+// way instead: it has to be past every case the suite already has, so no ID is reused.
+function checkNextId(id: string, ownCases: readonly string[], at: number, hit: Hit): void {
+  const { suite, number } = splitCaseId(id);
+  const sameSuite = ownCases.map(splitCaseId).filter(own => own.suite === suite);
+  if (ownCases.length > 0 && sameSuite.length === 0) {
+    hit('case-id', at, `Next ID ${id} names another suite; this file's cases are ${splitCaseId(ownCases[0]).suite}`);
+    return;
+  }
+  const highest = sameSuite.reduce<number>((max, own) => Math.max(max, own.number), 0);
+  if (number <= highest) {
+    hit(
+      'case-id',
+      at,
+      `Next ID ${id} must be past ${suite}.${highest}, this suite's highest case; IDs are never reused`,
+    );
+  }
+}
+
+function splitCaseId(id: string): { suite: string; number: number } {
+  const dot = id.lastIndexOf('.');
+  return { suite: id.slice(0, dot), number: Number(id.slice(dot + 1)) };
 }

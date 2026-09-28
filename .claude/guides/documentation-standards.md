@@ -134,9 +134,10 @@ How the marker is written on a page is the wiki README's.
 - story, epic, phase, audit, ledger and decision IDs, and dates;
 - section pointers in the wrong form, or pointing at a section that doesn't exist;
 - `<file>::<symbol>` references that don't resolve;
-- references to files in the transient folders.
+- references to files in the transient folders;
+- test-plan case IDs that don't match a case in the catalog, and a suite's Next ID that would reuse one.
 
-`.claude/guides/code-comments.md` lists its rules and their IDs.
+`.claude/guides/code-comments.md` lists its rules and their IDs. `--rules <id>,…` limits a run to the named rules.
 
 **A genuine exception carries an ignore marker** on the line above, with a reason:
 

@@ -1,12 +1,12 @@
 // What the rules look up in the rest of the repo: each wiki page's section numbers, the
-// code files a `file::symbol` reference can name and the symbols each declares, and the
-// transient docs a living doc must not point at.
+// code files a `file::symbol` reference can name and the symbols each declares, the
+// transient docs a living doc must not point at, and the test-plan catalog's case IDs.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { scriptKindOf } from './extract.mts';
-import { TRANSIENT_DIR, isSkippedDir, walkFiles } from './files.mts';
+import { TRANSIENT_DIR, isSkippedDir, isSuiteFile, walkFiles } from './files.mts';
 
 export interface RepoIndex {
   /** Undefined when no wiki page has that name. */
@@ -17,6 +17,11 @@ export interface RepoIndex {
   isTransientFile(rel: string): boolean;
   /** Matches the name of a transient doc that no living file shares; null when there are none. */
   transientNamePattern: RegExp | null;
+  /** Matches an ID-shaped token under any prefix the catalog uses; null when there's no catalog. */
+  caseIdPattern: RegExp | null;
+  hasCase(id: string): boolean;
+  /** The case IDs a suite file's headings declare; undefined for any other file. */
+  suiteCases(file: string): readonly string[] | undefined;
 }
 
 export interface IndexSource {
@@ -27,11 +32,17 @@ export interface IndexSource {
   transientFiles: readonly string[];
   /** Names of files outside the transient folders, so a shared name like README.md never matches. */
   otherFileNames: ReadonlySet<string>;
+  /** Test-plan suite file → its text. */
+  suites: ReadonlyMap<string, string>;
 }
 
 const CODE_FILE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
 const SECTION_HEADING = /^#{1,6}\s+§?(\d+[a-z]?(?:\.\d+)*)\.?(?:\s|$)/;
 const WIKI_PAGE_README = /^docs\/wiki\/([^/]+)\/README\.md$/;
+
+/** After a case ID's prefix: the suite part (digits with an optional letter, or one capital), then the number. */
+const CASE_ID_TAIL = String.raw`-(?:\d+[a-z]?|[A-Z])\.\d+`;
+const CASE_HEADING = new RegExp(String.raw`^##\s+([A-Z]+${CASE_ID_TAIL})(?=\s|$)`);
 
 export function buildIndex(source: IndexSource): RepoIndex {
   const sections = new Map([...source.wikiPages].map(([page, text]) => [page, headingSections(text)]));
@@ -40,6 +51,9 @@ export function buildIndex(source: IndexSource): RepoIndex {
   const transientNames = [...new Set(source.transientFiles.map(file => path.posix.basename(file)))]
     .filter(name => !source.otherFileNames.has(name))
     .sort((a, b) => b.length - a.length);
+  const suiteCases = new Map([...source.suites].map(([file, text]) => [file, caseHeadings(text)]));
+  const cases = new Set([...suiteCases.values()].flat());
+  const prefixes = [...new Set([...cases].map(id => id.slice(0, id.indexOf('-'))))].sort((a, b) => b.length - a.length);
 
   return {
     wikiSections: page => sections.get(page),
@@ -57,6 +71,12 @@ export function buildIndex(source: IndexSource): RepoIndex {
       transientNames.length === 0
         ? null
         : new RegExp(`(?<![\\w/.-])(?:${transientNames.map(escapeRegExp).join('|')})(?![\\w-])`, 'g'),
+    caseIdPattern:
+      prefixes.length === 0
+        ? null
+        : new RegExp(String.raw`(?<![\w-])(?:${prefixes.join('|')})${CASE_ID_TAIL}(?!\w|\.\d)`, 'g'),
+    hasCase: id => cases.has(id),
+    suiteCases: file => suiteCases.get(file),
   };
 }
 
@@ -74,6 +94,7 @@ export function loadIndex(root: string): RepoIndex {
     readCode: read,
     transientFiles: all.filter(file => TRANSIENT_DIR.test(file)),
     otherFileNames: new Set(all.filter(file => !TRANSIENT_DIR.test(file)).map(file => path.posix.basename(file))),
+    suites: new Map(all.filter(isSuiteFile).map(file => [file, read(file)])),
   });
 }
 
@@ -88,6 +109,21 @@ export function headingSections(text: string): Set<string> {
     }
     const section = inFence ? undefined : SECTION_HEADING.exec(line)?.[1];
     if (section) found.add(section);
+  }
+  return found;
+}
+
+/** The case IDs a suite declares: each level-2 heading that opens with one, outside fences. */
+export function caseHeadings(text: string): string[] {
+  const found: string[] = [];
+  let inFence = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (/^ {0,3}(?:`{3,}|~{3,})/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    const id = inFence ? undefined : CASE_HEADING.exec(line)?.[1];
+    if (id) found.push(id);
   }
   return found;
 }

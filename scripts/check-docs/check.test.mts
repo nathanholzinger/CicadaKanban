@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { checkFile } from './check.mts';
-import { buildIndex } from './repoIndex.mts';
+import { buildIndex, type IndexSource } from './repoIndex.mts';
+
+const lines = (...parts: string[]): string => parts.join('\n');
 
 const code = new Map([
   ['server/src/lib/itemTree.ts', 'export function assertWithinDepthCap() {}'],
@@ -9,7 +11,9 @@ const code = new Map([
   ['server/src/routes/items.ts', 'export const router = {};'],
 ]);
 
-const index = buildIndex({
+const DRAG_SUITE = 'docs/test-plans/board-drag-interaction/drag-5-detach.md';
+
+const source: IndexSource = {
   wikiPages: new Map([
     ['item-attachment', '# Item attachment\n\n## 8. Depth cap\n\n## 11a. Hierarchy changes are logged\n'],
     ['board-drag-interaction', '## 2. Contexts\n\n## 5a. Collapse\n\n### 7.1 Gap and depth\n'],
@@ -22,9 +26,15 @@ const index = buildIndex({
     'docs/archive/code-quality-audit-epic1.md',
   ],
   otherFileNames: new Set(['README.md']),
-});
+  suites: new Map([
+    [DRAG_SUITE, lines('# DRAG-5 — Detach', '', '**Next ID:** DRAG-5.3', '', '## DRAG-5.1 — A', '', '## DRAG-5.2 — B')],
+    ['docs/test-plans/item-positioning/part-5a.md', '## TC-5a.1 — Pairs first'],
+    ['docs/test-plans/item-positioning/cross-cutting.md', '## TC-X.2 — A guard'],
+  ]),
+};
 
-const lines = (...parts: string[]): string => parts.join('\n');
+const index = buildIndex(source);
+
 const rulesIn = (file: string, text: string): string[] => checkFile(file, text, index).map(finding => finding.rule);
 const IGNORE = (rules: string, reason = 'a fixture'): string => `// check-docs-ignore-next-line ${rules} -- ${reason}`;
 const IGNORE_MD = (rules: string): string => `<!-- check-docs-ignore-next-line ${rules} -- a fixture -->`;
@@ -166,7 +176,7 @@ describe('bare-case-id', () => {
   });
 
   it('accepts qualified case IDs', () => {
-    assert.deepEqual(rulesIn(TEST, "it('DRAG-5.5 and TC-4.3: moves a card', () => {});"), []);
+    assert.deepEqual(rulesIn(TEST, "it('DRAG-5.1 and TC-5a.1: moves a card', () => {});"), []);
   });
 
   it('does not apply to Markdown', () => {
@@ -236,6 +246,81 @@ describe('wiki-code-name', () => {
 
   it('honors an ignore marker', () => {
     assert.deepEqual(rulesIn(page, lines(IGNORE_MD('wiki-code-name'), 'The cap lives in itemTree.ts.')), []);
+  });
+});
+
+describe('case-id', () => {
+  const INDEX_FILE = 'docs/test-plans/board-drag-interaction/INDEX.md';
+
+  it('flags an ID no case heading declares, in a title, a comment and a test plan', () => {
+    assert.deepEqual(rulesIn(TEST, "it('DRAG-5.4: detaches', () => {});"), ['case-id']);
+    assert.deepEqual(rulesIn(CODE, '// covers DRAG-7.1'), ['case-id']);
+    assert.deepEqual(rulesIn(INDEX_FILE, 'Also see DRAG-5.9.'), ['case-id']);
+  });
+
+  it('accepts every ID the catalog declares, whatever its suite part', () => {
+    assert.deepEqual(rulesIn(TEST, "it('DRAG-5.1, DRAG-5.2, TC-5a.1 and TC-X.2: moves a card', () => {});"), []);
+  });
+
+  it('takes its prefixes from the catalog, so a new suite works without a code change', () => {
+    assert.deepEqual(rulesIn(CODE, '// BCU-1.2'), []);
+    const withBoards = buildIndex({
+      ...source,
+      suites: new Map([...source.suites, ['docs/test-plans/boards/bcu-1.md', '## BCU-1.1 — A board']]),
+    });
+    assert.deepEqual(
+      checkFile(CODE, '// BCU-1.1 and BCU-1.2', withBoards).map(finding => finding.message),
+      ['no case "BCU-1.2" in the test-plan catalog'],
+    );
+  });
+
+  it('leaves bare case numbers, placeholders and the tail of a range alone', () => {
+    assert.deepEqual(rulesIn(INDEX_FILE, 'Cases DRAG-5.1–5.9 are `<suite>.<n>`; see TC-4.'), []);
+  });
+
+  it('checks Markdown only in the test plans', () => {
+    assert.deepEqual(rulesIn('.claude/guides/x.md', 'For example, DRAG-9.9.'), []);
+  });
+
+  it("exempts a suite's Next ID from the lookup, and checks it's past every case", () => {
+    assert.deepEqual(rulesIn(DRAG_SUITE, '**Next ID:** DRAG-5.3'), []);
+    const [finding] = checkFile(DRAG_SUITE, '**Next ID:** DRAG-5.2', index);
+    assert.equal(finding.rule, 'case-id');
+    assert.match(finding.message, /must be past DRAG-5\.2, this suite's highest case/);
+  });
+
+  it('flags a Next ID that names another suite', () => {
+    assert.deepEqual(rulesIn(DRAG_SUITE, '**Next ID:** DRAG-6.1'), ['case-id']);
+  });
+
+  it('exempts only the Next ID line of a suite file', () => {
+    assert.deepEqual(rulesIn(INDEX_FILE, '**Next ID:** DRAG-5.3'), ['case-id']);
+    assert.deepEqual(rulesIn(DRAG_SUITE, 'The next case is DRAG-5.3.'), ['case-id']);
+  });
+
+  it('honors an ignore marker', () => {
+    assert.deepEqual(rulesIn(TEST, lines(IGNORE('case-id'), "it('DRAG-5.4: a fixture', () => {});")), []);
+  });
+});
+
+describe('limiting a run to some rules', () => {
+  const rulesOnly = (text: string, ...only: string[]): string[] =>
+    checkFile(CODE, text, index, new Set(only)).map(finding => finding.rule);
+
+  it('reports only the named rules', () => {
+    assert.deepEqual(rulesOnly('// Story 4 covers DRAG-9.9', 'case-id'), ['case-id']);
+    assert.deepEqual(rulesOnly('// Story 4 covers DRAG-9.9', 'case-id', 'transient-id'), ['transient-id', 'case-id']);
+  });
+
+  it("still applies a marker for a rule it doesn't report", () => {
+    assert.deepEqual(rulesOnly(lines(IGNORE('transient-id'), '// Story 4 covers DRAG-9.9'), 'case-id'), ['case-id']);
+  });
+
+  it('reports a marker problem only when the marker names a rule being reported, or an unknown one', () => {
+    const unused = lines(IGNORE('transient-id'), 'const a = 1;');
+    assert.deepEqual(rulesOnly(unused, 'case-id'), []);
+    assert.deepEqual(rulesOnly(unused, 'transient-id'), ['ignore-marker']);
+    assert.deepEqual(rulesOnly(lines(IGNORE('case-idd'), 'const a = 1;'), 'case-id'), ['ignore-marker']);
   });
 });
 

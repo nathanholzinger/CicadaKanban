@@ -98,6 +98,7 @@ test.describe('DRAG-4.9, DRAG-4.10: placement between two rows', …)
 - **A case's `**Automation test:**` line lists repo-relative file paths,** not individual tests. For a `Manual` case, it reads `none — manual: <reason>`.
 - **The ID in the test's title is the reference that matters.** It runs from the side that changes more to the side that changes less, so moving or splitting a test file carries it along. The file path is a convenience the Reconciler keeps current.
 - **Deleting a test that carries an ID, or dropping the ID from its title,** goes in the story's living-docs handoff. The developer doesn't edit the plan.
+- **`npm run check:docs` checks the IDs themselves.** It flags a case ID, in a test title, a code comment or the test plans, that isn't a case in the catalog; a bare `TC-n` in a test title or comment; and a suite's `**Next ID:**` that isn't past every case in that suite. It can't tell whether a case still has a test; the Reconciler checks that.
 
 ## What the Reconciler writes
 

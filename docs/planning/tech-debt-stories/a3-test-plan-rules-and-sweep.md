@@ -157,6 +157,14 @@ This follows the layer rule in `testing-strategy.md`: a rule a user or an API ca
 | Rule `case-id` | Flags an ID-shaped token that isn't a case in the catalog. It checks test titles, code comments and `docs/test-plans/**`. The catalog is the source of truth: the rule reads case headings (`## <ID> — …`) from the suite files, and takes the ID shapes from their prefixes. It catches a typo in a title, a test still carrying a deleted case's ID, and a cross-reference to a deleted case. |
 | Flag `--rules <id>[,<id>]` | Limits a run to the named rules. This lets a batch check test titles before A4 has swept the comments beside them. |
 
+**Details for the Coder:**
+- **Suite files** are every `.md` under `docs/test-plans/` except `README.md` and the `INDEX.md` files. A case heading is a line `## <ID> — <title>`.
+- **ID shapes today:** `DRAG-<n>.<n>`, `ATT-<n>.<n>`, and item-positioning's `TC-<part>.<n>`, where the part is digits with an optional lowercase letter (`5a`) or `X`. Take the prefixes from the headings rather than hard-coding them, so a new catalog's prefix works without a code change.
+- **Not ID-shaped:** a bare `TC-n`, which is `bare-case-id`'s; an angle-bracket placeholder such as `<suite>.<n>`; and the tail of a range, such as the `4.11` in `DRAG-4.8–4.11`, which has no prefix. Anything inside a fenced block is skipped, as with every rule.
+- **A suite's `**Next ID:**` line is exempt from the lookup,** because it names an ID that doesn't exist yet by design. The rule checks it the other way instead: its number must be higher than every case heading in the same suite. That makes D4's "never reused" partly mechanical.
+- **`--rules`** takes rule IDs separated by commas, and an unknown ID is a usage error: exit 2, like a bad path. The ignore marker accepts `case-id`.
+- **The expected result today:** `check:docs --rules case-id -- docs/test-plans` should report zero hits, since batch 1 left every reference pointing at a heading that exists. That's batch 1's deferred check. Test titles may already give hits; those belong to the feature batches, not batch 2.
+
 **"An `Automated` case with no test" is not a lint rule.** The fix is a status change that only the Reconciler may make. A lint failure on it would block the Coder on a field they can't edit, so the Reconciler checks it instead (D6).
 
 ### D8. What a test plan holds
@@ -674,3 +682,25 @@ When batch 2 lands, "What the checker checks" gains a bullet: "test-plan case ID
 **2026-09-27, from A2's close (via the PO):**
 - **Anchor changes.** The feature batches' step 1 now carries A2's anchor-changes table: board-drag §6 → §6.1, item-positioning §2 → §2.1 and §5 → §5.1, and "§2 addendum" → "§2's workphase-only rule". Batches 3 and 5 name the cases each change affects, and Acceptance checks that no `**Rule:**` field cites an old anchor. The checker can't catch these, since the old sections still exist. Today most suites cite the wiki only in their headers, so the new `**Rule:**` fields written in batches 3–5 are where this lands.
 - **§5a is settled for now.** The Architect kept its steps in the wiki, so batch 5's part 5a note no longer assumes they move out. Each step keeps a case, and a step only a test of client code can prove goes to Nathan (D3).
+
+**2026-09-27, before batch 2:**
+- **Batch 2 goes to a Coder session,** as planned (Nathan). The Test Planner writes no code, and tooling is no exception.
+- **D7 gains the details a Coder would otherwise guess:** which files are suite files, the ID shapes, what isn't ID-shaped, `--rules`'s error behavior, and the zero hits expected on `docs/test-plans`.
+- **The `**Next ID:**` exemption.** A dry run by grep showed every other reference in the catalog resolves to a heading, but the 22 `**Next ID:**` values don't, by design. D7 exempts that line, and checks it's above every case in its suite instead.
+
+**2026-09-27, batch 2 (Coder):**
+- **`case-id` and `--rules` landed as D7 describes.** The catalog is read from the suite files' `## <ID>` headings, and the ID shapes come from the prefixes those headings use (today `DRAG`, `ATT` and `TC`).
+- **Batch 1's deferred check passes.** `npm run check:docs -- --rules case-id -- docs/test-plans` reports 0 hits. Over the whole default scope, all 1,074 case-ID references resolve: 890 in the test plans (the 22 Next ID lines included) and 184 in code.
+- **The npm form.** `npm run check:docs -- --rules <ids> -- <paths>`. npm keeps options that come before its own `--` for itself, so the first `--` is needed. The second is optional.
+- **Two calls D7 left open:**
+  - **`--rules` and ignore markers.** Every rule still runs and every marker is applied; only the report is narrowed. A marker problem is reported only when the marker names a rule being reported, or an unknown rule, which may be a typo of one. A title-only run is never blocked by a marker belonging to A4's comments.
+  - **A Next ID that names another suite** (for example, `DRAG-6.n` in the DRAG-5 file) is flagged, since "past every case" can't be judged across suites.
+- **Handoff:**
+  - **To the Architect:** the standards guide's "What the checker checks" gains its bullet, as drafted above. `code-comments.md`'s "What the checker enforces" table also needs a `case-id` row, a case ID in a test title or comment that isn't in the catalog; the drafts don't cover that.
+  - **To the Test Planner:** the README's line on `case-id` (batch 1's note), and `--rules` if it's worth naming there.
+
+**2026-09-27, batch 2 follow-up (Test Planner):**
+- **Batch 1's deferred check, re-run:** `check:docs -- --rules case-id -- docs/test-plans` reports 0 hits. Repo-wide, `case-id` also reports 0. `bare-case-id` reports 34, all unqualified `TC-n` in existing test titles, which the feature batches' Coder step qualifies (step 3).
+- **The README's "How tests and cases point at each other"** gains the checker's line: an unknown case ID, a bare `TC-n` in a test, and a Next ID that isn't past its suite's cases. It adds that the checker can't tell whether a case still has a test, which is the Reconciler's job. It checks at 0 hits.
+- **`--rules` isn't named in the README.** It's how the checker is run, not a catalog convention, and the checker's own docs cover it.
+- **The Architect's two lines have both landed:** the standards guide's checker bullet and `code-comments.md`'s `case-id` row.

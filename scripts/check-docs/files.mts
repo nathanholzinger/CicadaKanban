@@ -39,6 +39,11 @@ export function isCode(rel: string): boolean {
   return !rel.endsWith('.md');
 }
 
+/** A test-plan suite: every Markdown file under `docs/test-plans/` but the README and INDEX files. */
+export function isSuiteFile(rel: string): boolean {
+  return rel.startsWith('docs/test-plans/') && rel.endsWith('.md') && !/(?:^|\/)(?:README|INDEX)\.md$/.test(rel);
+}
+
 /** Every file under `startRel` (the repo root when empty), skipping directories `skip` names. */
 export function walkFiles(root: string, startRel: string, skip: (rel: string) => boolean): string[] {
   const files: string[] = [];
