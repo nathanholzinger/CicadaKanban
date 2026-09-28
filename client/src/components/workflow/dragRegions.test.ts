@@ -73,7 +73,7 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
     expect(childRegionAt(regions, { x: 110, y: 200 }, null)).toBeNull();
   });
 
-  it('is a bounded box (reconciliation #20): above or below it is nowhere, not the column', () => {
+  it('is a bounded box: above or below it is nowhere, not the column', () => {
     expect(childRegionAt(regions, { x: 50, y: -40 }, null)).toBeNull();
     expect(childRegionAt(regions, { x: 50, y: 900 }, null)).toBeNull();
   });
@@ -90,7 +90,7 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
 // within-action existed for it yet). The pop-out chain
 // (contextRegion.parentRegionKey, read directly by popSession.ts, never
 // through this function) is unaffected either way.
-describe("childRegionAt finds a Card's own Descendants section (Story 6 Phase D)", () => {
+describe("childRegionAt finds a Card's own Descendants section", () => {
   it('returns it while hovering squarely inside it', () => {
     const P = 'card-p';
     const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
@@ -138,7 +138,7 @@ describe('resolveDragStructure / measureRegions', () => {
     document.body.innerHTML = '';
   });
 
-  it("clips a sub-row's region to its column's visible scroll box", () => {
+  it("DRAG-1.10: clips a sub-row's region to its column's visible scroll box", () => {
     buildScrolledSubrow(rect(0, 150, 300, 150), rect(0, 0, 300, 200)); // sub-row y 150..300, box y 0..200
     const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
     const regions = measureRegions(structure, null); // Board scope: every column/sub-row
@@ -146,7 +146,7 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(regions[0].rect).toMatchObject({ top: 150, bottom: 200, height: 50 });
   });
 
-  it('a sub-row scrolled fully out of view registers no region at all', () => {
+  it('DRAG-1.10: a sub-row scrolled fully out of view registers no region at all', () => {
     buildScrolledSubrow(rect(0, 400, 300, 150), rect(0, 0, 300, 200)); // sub-row y 400..550, box y 0..200
     const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
     expect(measureRegions(structure, null)).toEqual([]);
@@ -186,7 +186,7 @@ describe('resolveDragStructure / measureRegions', () => {
     });
   });
 
-  it('an id isValidCard rejects resolves no region at all — same as an unresolvable column key', () => {
+  it('DRAG-1.7, DRAG-1.8: an id isValidCard rejects resolves no region at all — same as an unresolvable column key', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => false);
     const regions = measureRegions(structure, 'column:col-1');
@@ -253,7 +253,7 @@ describe('resolveDragStructure / measureRegions', () => {
   // already resolved as the scroll ancestor for clipping), never the
   // content-sized region `rect` stays. A short column with room below its
   // last card is exactly the case that used to strand the exit clock.
-  it("a merged column's boundsRect is its own outer body, taller than the content-sized region", () => {
+  it("DRAG-1.25: a merged column's boundsRect is its own outer body, taller than the content-sized region", () => {
     const box = document.createElement('div');
     box.style.overflowY = 'auto';
     mockRect(box, rect(0, 0, 300, 400)); // the outer body — y 0..400
@@ -269,7 +269,7 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(region.boundsRect).toMatchObject({ top: 0, bottom: 400 });
   });
 
-  it("a sub-row's boundsRect is undefined — its own rect already is its full bound, nothing to add", () => {
+  it("DRAG-1.25: a sub-row's boundsRect is undefined — its own rect already is its full bound, nothing to add", () => {
     buildScrolledSubrow(rect(0, 0, 300, 150), rect(0, 0, 300, 200));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'], { displayMode: 'expanded' })]);
     const [region] = measureRegions(structure, null) as [CardListRegion];
@@ -376,7 +376,7 @@ describe('resolveDragStructure / measureRegions', () => {
 });
 
 describe('isCardList', () => {
-  it('is true for a merged column and a sub-row, false for a Card (audit epic-3-5-story-4 #8)', () => {
+  it('is true for a merged column and a sub-row, false for a Card', () => {
     expect(isCardList(region('column:col-1', rect(0, 0, 100, 100)))).toBe(true);
     expect(isCardList(region('subrow:col-1:w1', rect(0, 0, 100, 100)))).toBe(true);
     const r = rect(0, 0, 100, 40);
@@ -427,7 +427,7 @@ function fakeDomRect(values: Rect): Rect {
 
 // Reconciliation #20/#21: a sub-row is clipped to its column's visible
 // scroll box, not just bounded by its own extent.
-describe('clipToVisible', () => {
+describe('DRAG-1.10: clipToVisible', () => {
   const bounds = rect(0, 100, 200, 200); // the scroll ancestor's own visible box, y 100..300
 
   it('clips the part of the rect outside the visible box, on either edge or both', () => {

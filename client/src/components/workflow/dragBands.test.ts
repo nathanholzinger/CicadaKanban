@@ -47,7 +47,7 @@ describe('bandFor', () => {
     expect(bandFor(295, empty, metrics)).toBe('middle');
   });
 
-  it('exactly one card halves the edge to (heightPx + gapPx) / 2, leaving it a real, unlabeled middle band', () => {
+  it('DRAG-3.15: exactly one card halves the edge to (heightPx + gapPx) / 2, leaving it a real, unlabeled middle band', () => {
     const oneCard = { contentRect, isTerminal: false, cardCount: 1 };
     expect(bandBoundaries(oneCard, metrics)).toEqual({ top: 124, bottom: 276 }); // (40 + 8) / 2 = 24
     expect(bandFor(123, oneCard, metrics)).toBe('top');

@@ -143,7 +143,7 @@ test.describe('1: extreme boundary moves within column 1', () => {
     expect(await fullOrder(request, scenario.workflow.id)).toBe('CABDE');
   });
 
-  test('1.b — drag C below card E, into the empty column space', async ({ page, request }) => {
+  test('DRAG-1.23: 1.b — drag C below card E, into the empty column space', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const colOne = page.getByRole('group', { name: 'Column One' });
     await dragTo(page, cardC, () => pastColumnEnd(colOne));
@@ -216,7 +216,7 @@ test.describe('2: extreme boundary moves into column 2', () => {
 });
 
 test.describe('3: interior moves that stay in column 1 ("drop it back where it was")', () => {
-  test('3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request }) => {
+  test('DRAG-1.24: 3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     await setBackDownLeaning(page, cardC, 'up');
 
@@ -228,7 +228,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request }) => {
+  test('DRAG-1.24: 3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     await setBackDownLeaning(page, cardC, 'down');
 
@@ -314,7 +314,7 @@ test.describe('5: an abandoned drop must not strand the cross-column preview', (
   // Column Two with the server still on Column One, and the next drag of C
   // snapshotted the wrong workphase (audit code-quality-audit-epic-3-5-
   // story-2 #1).
-  test('5.a — hover C over Column Two, then release on an Unknown-status card', async ({
+  test('DRAG-1.9: 5.a — hover C over Column Two, then release on an Unknown-status card', async ({
     page,
     request,
     projectSidebar,

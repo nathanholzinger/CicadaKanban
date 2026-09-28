@@ -40,5 +40,6 @@ There's no CI; everything runs locally.
 - **Drag feel and timing.** The drag thresholds (pop delays, bands) are tuned by feel through the drag tuning panel, so they change.
   - An automated drag test asserts that a gesture is *reachable*, and that the write it makes is correct.
   - It never asserts a duration.
-  - A case whose pass depends on a tunable threshold is manual, and may stay manual once the values settle, since feel is a judgment.
+  - **A clock's logic is automated in the pop state machine** (`popSession.ts`): what counts toward a clock, what resets it, and which band fires. The test passes the threshold in as a parameter, so its pass doesn't depend on the tuned value. This is an approved category of internal test (`docs/test-plans/README.md`).
+  - A case whose pass depends on the tuned values themselves is manual, and may stay manual once the values settle, since whether they feel right is a judgment.
 - **Anything else manual** is decided case by case in the test-plan catalog (`docs/test-plans/README.md`).

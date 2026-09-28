@@ -135,6 +135,16 @@ is legible on the board itself, not only from the tuning panel's text
 readout. Its color is a tuning-panel value, `activeContextOutlineColor`
 (§3.1).
 
+**A drag leaves every Card's list of Stubs as the user set it**,
+collapsed or expanded, through every layer change and after the release.
+The exceptions:
+
+- **The carried Card's own Stubs aren't shown while it's dragged** (§5a).
+  After the release, its list is back as the user set it.
+- **A Card the drag zooms into opens** (§6.1). If the drag leaves it
+  again, it goes back to how the user set it. If the item is attached into
+  it, it stays open, so the item's new place is in view.
+
 ## 2. Default assumption: reposition in place
 
 **A drag is assumed to be a reposition within its current context until the
@@ -199,6 +209,13 @@ While the item is in-context:
      release saves the named anchor, and the item may move relative to
      those unseen items. Only a card alone in its list, set back down, has
      nothing to name and writes nothing (§10).
+  6. **A done column or sub-row has no slot to choose.** Its Free items
+     carry no position and are ordered by completion (§5's done columns;
+     [`../item-positioning/`](../item-positioning/) §7.4), so the ghost
+     doesn't follow rule 1's shuffle. It stays where a release will land
+     the item (§10): an item from another column, as the newest
+     completion; a card already in the list, in its own slot. Released
+     there, that card is being set back down, and nothing is written.
 
   **Why not the half of the hovered card:** the gap is drawn from list
   order, so choosing the side by which half of a card the carried card's
@@ -350,14 +367,13 @@ candidate, so no tab state can make an item its own descendant.
 ## 4. Target classification at drag start
 
 **When a drag begins, every visible target is classified against the item
-being carried**, and that classification is shown. Four states:
+being carried**, and that classification is shown. Three states:
 
 | State | Meaning |
 |---|---|
 | **Valid** | A legal drop for this item. |
 | **Cycle-forming** | The target is the dragged item, or one of its descendants. |
 | **Depth-capped** | Legal parent-wise, but the resulting depth would exceed `CAP`. |
-| **Inert** | Not a target for this drag at all. |
 
 **Classification is computed once, at drag start.** The item being carried
 doesn't change mid-gesture, so neither does what any target *is* to it.
@@ -367,14 +383,12 @@ This is a per-drag property, not a per-hover one.
 even when it would also fail the depth cap — it is never a "real target"
 for its own ancestor.
 
-**What is Inert:**
+**A place that's no target at all isn't classified.** The Unsorted
+bucket, a broken column and an expanded column's outer wrapper are nowhere
+(§1, §3.1): no drag enters them, and a release there writes nothing, for
+every item alike.
 
-- For a **Card** drag: the Unsorted bucket, a broken column, and an
-  expanded column's outer wrapper (a drop must land on a specific sub-row).
-  These are non-targets for *every* item, not just this one, which is what
-  separates Inert from Depth-capped.
-- For a **Stub** drag: the same — a Stub drag is classified exactly like
-  a Card drag, full stop.
+**A Stub drag is classified exactly like a Card drag**, full stop.
 
 **The depth cap reaches the board over the API.** `GET /boards/:id`
 carries `itemDepthCap`, the cap the API itself enforces, so the board and
@@ -406,8 +420,8 @@ expanded mode; the bands are measured against whichever one applies:
 
 | Band | Meaning |
 |---|---|
-| **Top** (above the top divider) | Position **before the first item** in the column. The ghost renders at the top of the list and the band is tinted. |
-| **Bottom** (below the bottom divider) | Position **after the last item** in the column. The ghost renders at the bottom of the list and the band is tinted. |
+| **Top** (above the top divider) | Position **before the first item** in the column. The ghost renders at the top of the list. |
+| **Bottom** (below the bottom divider) | Position **after the last item** in the column. The ghost renders at the bottom of the list. |
 | **Middle** (between the dividers) | **No position change.** An item from elsewhere takes the column's workphase and keeps the position it already has; the ghost renders wherever that existing position places it in this column's order. An item **already in this column or sub-row** — a covered-set member of the region it is released in (§8) — released here is simply being set back down — nothing is written. In an expanded column the region is the sub-row, so a member of sub-row `W2` released in sub-row `W3`'s middle band is a workphase change to `W3`, not a set-down. |
 
 **Bands are pixel carve-outs anchored to the region's real content, never a
@@ -492,8 +506,9 @@ read on every sample has nothing to get wrong.
 
 **The bands are shown only at Board layer:** while
 genuinely popped out, every column/sub-row draws two subtle dashed lines
-at the boundaries, and the one the cursor is in tints the band the cursor
-is in — drawn from the same live rect the drop resolves against. The
+at the boundaries, drawn from the same live rect the drop resolves
+against. Which band a release resolves by is the ghost's to show (the
+table above). The
 moment the drag is locked into anything — a column/sub-row *or* a Card —
 every guide disappears: there are no bands to cue there (§2), and the
 absence of lines says so. Their look isn't a rule yet (Open
@@ -674,6 +689,12 @@ deliberately. From the Card layer down **both copies are Stub rows** — the
 in-list ghost and the carried copy under the cursor — and the Column ↔
 Card boundary converts both, both ways (§5a, §8).
 
+**Zooming in doesn't move the ghost.** At the zoom into Descendants, the
+ghost starts where the Card layer showed it: in the last gap, as `P`'s
+last child, for an item from outside (§6); in its own slot, for `P`'s own
+Stub coming back in (§8). The cursor moves it from there. So a release
+right after the zoom commits what it would have at the Card layer.
+
 Why not a band on the Card (top half for first child, bottom half for
 last child, a middle to hold): a Card's within-action is the auto-drop
 (§6), and placement here is a **range** of depths, not three fixed
@@ -729,20 +750,41 @@ the last item of `S1a`'s subtree, tabbed to `S1a`'s depth.
 
 - **Above the first item** (no Top): one state, at Bottom's depth — the
   first child of the root.
-- **Below the last item** (no Bottom): every state from the root's depth
-  up to Top's depth + 1. If the last item is nested, that includes a
-  sibling placement after each of its ancestors.
+- **Below the last item** (no Bottom): every state from the shallowest
+  level, the root's own children, up to Top's depth + 1. If the last item
+  is nested, that includes a sibling placement after each of its
+  ancestors.
 - **An empty hierarchy** (no Top, no Bottom): one state — the root's sole
   child. On the board this never arises as a Descendants layer (a
-  childless Card has none, §1.1); in the project sidebar it does.
+  childless Card has none, §1.1). In the project sidebar it arises when
+  the dragged project's subtree holds every project, since that subtree
+  is never a candidate (§7.2): for example, a sidebar with one top-level
+  project.
 - **Offsets past either end clamp** to the nearest valid state. No offset
   produces "no state."
 
-**The root, per context.** The range is floored at the hierarchy's root:
-the project in the sidebar; on the board, the Card `P` whose Descendants
-layer this is, so the shallowest level anywhere is *`P`'s own children*.
-An item can never be tabbed out of `P` — leaving `P` is a zoom-out (§8),
-not a tab state.
+**The root, per context.** The range is floored at the hierarchy's root,
+so the shallowest level anywhere is the root's own children:
+
+- **In the project sidebar,** the root is the top of the tree, above every
+  project. Its children are the top-level projects, those with no parent,
+  so no project can be tabbed shallower than the top level.
+- **On the board,** the root is the Card `P` whose Descendants layer this
+  is, so the shallowest level is *`P`'s own children*. An item can never
+  be tabbed out of `P` — leaving `P` is a zoom-out (§8), not a tab state.
+
+**The project sidebar always has full context.** A collapsed project hides
+its subtree from view, not from placement: the sidebar places against the
+real tree. Tabbed right of a collapsed Top, a project goes ahead of Top's
+real first child; aligned with it, after Top's whole subtree, shown or
+not.
+
+**An item set back down in its own gap, at its own depth, writes
+nothing.** That gap and depth resolve to the slot it was picked up from
+(§2, rule 2). In a column the same set-down still saves its anchor,
+because items the view doesn't show can sit between the neighbors (§2,
+rule 5). With full context nothing between Top and Bottom is unseen, so
+the release can't move the item, and there is nothing to save.
 
 ### 7.2 What travels with the item, and what's invalid
 
@@ -763,11 +805,8 @@ up. This is the one exception to §3.2's "never enterable," for the
 reason given there. Sibling states in the same gap that do fit stay
 valid; validity is per state, never per gap.
 
-**Without full context** — a hierarchy the UI knows is partial — only the
-basic anchor+side relation against a visible item is offered; the walk
-and the concatenation above depend on knowing nothing is missing between
-Top and Bottom. Whether the board ever shows a partial hierarchy is open
-(§9).
+Whether a Card on the board always shows its whole hierarchy, as §7.1
+needs, is open (Open questions).
 
 ## 8. Stub → out: detach
 
@@ -914,7 +953,8 @@ stamp on the write.
 Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
 - **The look of the drag's cues.** The classification overlays (§4), the
-  band guides (§5), the zoom-in cue (§6.1) and the invalid tab-state cue
+  band guides (§5, including whether the band under the cursor gets a
+  highlight of its own), the zoom-in cue (§6.1) and the invalid tab-state cue
   (§3.2, §7.2) each have a working placeholder; their final palette,
   weight and animation are best tuned against real gestures rather than
   guessed up front. Today's zoom-in cue is a dashed outline in the
@@ -927,11 +967,21 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   instant.
 - **Where the tuning panel lives, and who sees it (§3.1).** Today it opens
   from the board toolbar ("Drag tuning").
-- **Depth overflow (§9).** Whether a too-deep hierarchy gets a "see X
-  children" placeholder that opens a wider modal on click or on a held
-  drag-over, or the hierarchy is simply capped at what the UI can display.
-  Until decided, the board is assumed to show a Card's hierarchy with full
-  context (§7.2).
+- **Whether a Card shows its whole hierarchy (§7, §9).** §7.1's walk
+  depends on knowing nothing is missing between Top and Bottom. The
+  project sidebar always has the whole tree (§7.1). A Card on the board
+  may not, and the board may not know when it doesn't. A hierarchy too
+  deep to show is one such case: it could get a "see X children"
+  placeholder that opens a wider modal on click or on a held drag-over,
+  or be capped at what the UI can display. Where a Card's section can't
+  be trusted to be complete, placement there would change, for example to
+  offering only an anchor and side against a visible Stub, and so would a
+  set-down in its own gap (§7.1). Until this is decided, a Card's
+  descendants section follows §7 as written.
+- **Zooming into a Card in a done column (§2, rule 6; §6.1).** The Card
+  zoomed into is the one the side highlight names, a neighbor of the
+  ghost. A done list's ghost doesn't move, so only the Cards beside it
+  could be named.
 - **Free-item reparent as a board gesture.** Would add a third
   drop-meaning to disambiguate here. See
   [`../item-attachment/`](../item-attachment/) Open questions.

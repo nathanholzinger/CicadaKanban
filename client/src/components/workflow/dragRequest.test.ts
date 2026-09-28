@@ -29,7 +29,7 @@ describe('isIdentity', () => {
     expect(isIdentity(freeOrigin, { slot: 'existing' }, others)).toBe(true);
   });
 
-  it('same workphase, empty others: any slot is identity — nothing to order against (DRAG-3.10 / TC-7.5, DRAG-3.9 / TC-7.8)', () => {
+  it('same workphase, empty others: any slot is identity — nothing to order against (TC-7.5, TC-7.8)', () => {
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
@@ -72,16 +72,16 @@ describe('isIdentity', () => {
     expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
   });
 
-  // TC-12: a Stub released at its own containing Card's layer previews
+  // DRAG-5.12: a Stub released at its own containing Card's layer previews
   // `origin` itself (popSession.ts) — proving that's recognized as identity
   // here too, not just structurally equal by construction.
-  it("a Stub's own origin, placed back at itself, is identity — TC-12's set-back-down", () => {
+  it("DRAG-5.12: a Stub's own origin, placed back at itself, is identity — the set-back-down", () => {
     const stubOrigin: Placement = { parentId: 'card-p', slot: 'existing' };
     expect(isIdentity(stubOrigin, stubOrigin, others)).toBe(true);
   });
 });
 
-// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10, and Story 5's TC-1/2/4/9: the
+// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10, and DRAG-5.1, DRAG-5.2, DRAG-5.4, DRAG-5.9: the
 // request a resolved placement turns into — the one adapter from the
 // ghost's own terms to the item's, replacing resolveDropTarget +
 // buildMoveInput's independent re-derivation (F3). `item` is now only
@@ -95,7 +95,7 @@ describe('toRequest', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), null, others)).toBeNull();
   });
 
-  it('an identity sends nothing (decision 2)', () => {
+  it('an identity sends nothing', () => {
     expect(
       toRequest({ workphaseId: 'w2' }, freeOrigin('w2'), { workphaseId: 'w2', slot: 'existing' }, others),
     ).toBeNull();
@@ -168,7 +168,7 @@ describe('toRequest', () => {
     });
   });
 
-  it('attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside (Story 4/5 TC-4, no manual placement among Stubs until Story 6)', () => {
+  it('DRAG-4.1, DRAG-5.4: attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
@@ -179,7 +179,7 @@ describe('toRequest', () => {
   // as `origin`'s own, an anchor slot — sends only the anchor + side, the
   // pre-Story-5 attached-child request shape unchanged. Nothing about the
   // attachment itself is in this request; only the ordinal is.
-  it('a Descendants-layer sibling reorder (parentId matching origin, an anchor slot): sends only the anchor + side', () => {
+  it('DRAG-5.5: a Descendants-layer sibling reorder (parentId matching origin, an anchor slot): sends only the anchor + side', () => {
     const origin = stubOrigin('card-p');
     expect(
       toRequest({ workphaseId: 'w1' }, origin, { parentId: 'card-p', slot: { anchorId: 'S2', side: 'after' } }, [
@@ -189,11 +189,11 @@ describe('toRequest', () => {
     ).toEqual({ anchorId: 'S2', side: 'after' });
   });
 
-  // TC-1/2/3: detaching (`parentId: null` on the placement — the render-
+  // DRAG-5.1, DRAG-5.2, DRAG-5.3: detaching (`parentId: null` on the placement — the render-
   // preview signal) never sends a `parentId` field at all — item-
   // attachment §11's "detach preserves the parent," so the real parentId
   // stays whatever it already is; only `isAttached: false` is explicit.
-  it('detach (parentId: null on the placement): isAttached false, plus the anchor/workphase resolution otherwise (TC-1)', () => {
+  it('DRAG-5.1: detach (parentId: null on the placement): isAttached false, plus the anchor/workphase resolution otherwise', () => {
     const origin = stubOrigin('card-p');
     expect(
       toRequest(
@@ -205,7 +205,7 @@ describe('toRequest', () => {
     ).toEqual({ workphaseId: 'w2', isAttached: false, anchorId: 'Q', side: 'after' });
   });
 
-  it('TC-2: detaching within the same covered set sends no workphaseId field at all', () => {
+  it('DRAG-5.2: detaching within the same covered set sends no workphaseId field at all', () => {
     const origin = stubOrigin('card-p');
     expect(
       toRequest(
@@ -226,7 +226,7 @@ describe('toRequest', () => {
   // that coincidence: a genuinely different parent, still an anchor slot —
   // this must be a full reparent (parentId + isAttached + the anchor), not
   // a bare position-only reorder that silently drops the attachment change.
-  it('a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder (Story 6 seam)', () => {
+  it('a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder', () => {
     const origin = stubOrigin('card-p');
     expect(
       toRequest(
@@ -295,7 +295,7 @@ describe('sendItemMove', () => {
   // for real, and losing them silently is the exact wrong-looking-
   // consistent failure item-positioning §5 warns about. The tracker is the
   // one that knows staleness; this only has to act on what it reports.
-  it("#15: a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
+  it("a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();

@@ -34,7 +34,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await request.post(`${API}/test/reset`);
   });
 
-  test("DRAG-1.1 / DRAG-5.9 (sibling bullets): a Stub's drag starts at its containing Card's Descendants layer, and a same-parent reorder commits with no pop at all", async ({
+  test("DRAG-1.1, DRAG-5.9: a Stub's drag starts at its containing Card's Descendants layer, and a same-parent reorder commits with no pop at all", async ({
     page,
     request,
     projectSidebar,
@@ -84,7 +84,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(page, 'X')).not.toBeVisible();
   });
 
-  test("decision 1: a grandchild Stub's drag starts in its containing Card's whole section, not its parent Stub's sub-list", async ({
+  test("DRAG-1.1, DRAG-5.13: a grandchild Stub's drag starts in its containing Card's whole section, not its parent Stub's sub-list", async ({
     page,
     request,
     projectSidebar,
@@ -148,7 +148,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(page, 'P').getByText('X')).toBeVisible();
   });
 
-  test('DRAG-5.1 / 5.2 / 5.10: two pops detach the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
+  test('DRAG-5.1, DRAG-5.10: two pops detach the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
     page,
     request,
     projectSidebar,
@@ -208,7 +208,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
   // `pop.contextKey` reporting the fully-cascaded layer while `regionsRef`
   // stayed scoped to the intermediate one, so `placementRegion` found
   // nothing and the release wrote nothing at all.
-  test('audit #2 regression: a yank past both pop-out distances in one sample cascades Descendants -> Card -> Column, and an immediate release detaches', async ({
+  test('DRAG-5.11, DRAG-1.14: a yank past both pop-out distances in one sample cascades Descendants -> Card -> Column, and an immediate release detaches', async ({
     page,
     request,
     projectSidebar,
@@ -245,7 +245,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(updated.workphaseId).toBe(todo.id);
   });
 
-  test("DRAG-5.4: zoomed into a different Card instead, it reparents — attached as that Card's last child, never a detach that leaves parentId at P", async ({
+  test("DRAG-5.4, DRAG-4.12: zoomed into a different Card instead, it reparents — attached as that Card's last child, never a detach that leaves parentId at P", async ({
     page,
     request,
     projectSidebar,
@@ -301,7 +301,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
   // regression reintroducing a type/role mismatch) ever left that id
   // confused about what kind of row it now is, the *very next* drag of the
   // same item — an ordinary reorder — would be the first thing to break.
-  test('decision 4 regression: immediately after a detach, the same item drags and reorders normally as a Card', async ({
+  test('immediately after a detach, the same item drags and reorders normally as a Card', async ({
     page,
     request,
     projectSidebar,

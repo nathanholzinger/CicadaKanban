@@ -37,7 +37,7 @@ function useLiveDropSide(itemId: string): DropSide | null {
 // `data-drop-state` for tests; the look — palette, weight, animation — is
 // deliberately rough until Story 8 tunes it against real gestures. Green:
 // a Free descendant of the carried item ("these are yours"). Dimmed: a real
-// target this item can't use (depth-capped). Valid and Inert draw nothing.
+// target this item can't use (depth-capped). Valid draws nothing.
 // The color and the dim level are CSS custom properties BoardView sets from
 // the dev/test panel (Story 3).
 const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';

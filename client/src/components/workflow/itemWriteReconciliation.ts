@@ -90,7 +90,7 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // A write's response, in §5a's order: apply the reindex collection, assign
 // the written item, clear its pending placement, then check for an
 // inversion — the check runs on a list where the item is an ordinary
-// positioned row (DRAG-6.3). Re-sorting is implicit: render order is
+// positioned row (TC-5a.1). Re-sorting is implicit: render order is
 // derived from `position` every render, so applying the rows *is* the
 // re-sort (TC-5a.3 — nothing is rebuilt when nothing changed). The tripwire
 // only fires for a write the board previewed; a Sheet edit that reassigns a

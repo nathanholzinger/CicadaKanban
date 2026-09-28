@@ -305,7 +305,7 @@ describe('dropAnchorFor', () => {
     });
   });
 
-  it('alone in its list: nothing to anchor to', () => {
+  it('DRAG-4.23: alone in its list: nothing to anchor to', () => {
     expect(dropAnchorFor(dragged('x', 50), overRow('x', 0, ['x']))).toBeNull();
   });
 
@@ -357,7 +357,7 @@ describe('dropAnchorFor', () => {
   // Story 6 Phase D hands-on (2026-09-24): the dragged Stub's own child
   // `xa` is still rendered right below it, but travels with it — named, the
   // gap jumped to the section's end. The search steps past it.
-  it('steps past rows that travel with the dragged item', () => {
+  it('DRAG-4.8: steps past rows that travel with the dragged item', () => {
     const items = ['s1', 'x', 'xa', 's3'];
     const travels = (id: string) => id === 'x' || id === 'xa';
     // Over its own slot (top 110, middle 160).

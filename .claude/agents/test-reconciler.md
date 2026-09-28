@@ -52,8 +52,12 @@ When you're asked for a proposing run, write only the report.
   test, or a server route test, counts as it is. A test that calls client or
   server internals directly counts only once Nathan approves it: propose it, and
   write it after approval. An existing internal pointer is already approved.
-- **Check that each mapped test asserts the case's *Then*,** not just the code's
-  current output (Test Quality, below).
+- **Check that the mapped tests, alone or together, assert all of the case's 
+  *Then*,** and that each asserts the rule, not just the code's current output
+  (Test Quality, below). Tests and cases map many-to-many. Where the tests
+  assert only part of a case, leave it `Open` and name the part they miss. How
+  the gap closes is a judgment call made later, not yours
+  (`docs/test-plans/README.md`).
 
 ## On Every Run, Across the Whole Catalog
 

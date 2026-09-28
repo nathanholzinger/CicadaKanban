@@ -33,6 +33,12 @@ export interface DescendantsProjection {
    * reads it in that case (it restores the prior placement instead).
    */
   resolved: ResolvedPlacement;
+  /**
+   * The dragged Stub's own gap and depth, in its own Card's section: where
+   * it already is. A release here writes nothing (wiki
+   * board-drag-interaction §7.1).
+   */
+  atOwnSlot: boolean;
 }
 
 // Everything about the drag in progress, in one value (audit

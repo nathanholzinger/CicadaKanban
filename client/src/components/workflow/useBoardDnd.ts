@@ -649,7 +649,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
   // A release at the Descendants layer (§7.1's gap + depth rule): the last
   // sample's own resolved placement, not `over`'s bare anchor. Over the cap
-  // (§7.2) there's nothing to write, the same path as a null placement.
+  // (§7.2), or at the Stub's own gap and depth, there's nothing to write, the
+  // same path as a null placement.
   async function releaseDescendants(session: DragSession, region: DescendantsRegion) {
     const placement = descendantsReleasePlacement(session.projection, region.cardId);
     const targetRows = placement ? latest.current.getAttachedChildren(placement.parentId) : [];

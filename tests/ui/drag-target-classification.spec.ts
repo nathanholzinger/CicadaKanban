@@ -32,7 +32,7 @@ test.describe('drag-target classification', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('every visible target is classified at pickup, stays classified while hovering, and clears on cancel', async ({
+  test('DRAG-2.1, DRAG-2.2, DRAG-2.3, DRAG-2.4, DRAG-2.7, DRAG-2.10: every visible target is classified at pickup, stays classified while hovering, and clears on cancel', async ({
     page,
     request,
     projectSidebar,
@@ -116,7 +116,7 @@ test.describe('drag-target classification', () => {
     expect(reloaded.parentId).toBeNull();
   });
 
-  test('a Stub drag is classified exactly like a Card would be — no blanket exclusion (Story 5, DRAG-2.8)', async ({
+  test('DRAG-2.8: a Stub drag is classified exactly like a Card would be — no blanket exclusion', async ({
     page,
     request,
     projectSidebar,
@@ -135,10 +135,9 @@ test.describe('drag-target classification', () => {
 
     await pickUp(page, itemRow(page, s1.id).getByRole('button', { name: 'S1' }));
 
-    // The interim rule ("everything outside the parent's Stub list is
-    // Inert") retired with Story 5: P, Q and Q's own Stub are ordinary
-    // Valid targets now (P for the intermediate Card-layer stop, Q for the
-    // zoom-in reparent, TC-4) — only S1 itself is Cycle-forming.
+    // P, Q and Q's own Stub are ordinary Valid targets (P for the
+    // intermediate Card-layer stop, Q for the zoom-in reparent, DRAG-5.4);
+    // only S1 itself is Cycle-forming.
     await expect(itemRow(page, s2.id)).toHaveAttribute('data-drop-state', 'valid');
     await expect(itemRow(page, s1.id)).toHaveAttribute('data-drop-state', 'cycle-forming');
     await expect(itemRow(page, p.id)).toHaveAttribute('data-drop-state', 'valid');

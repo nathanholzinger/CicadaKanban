@@ -1,393 +1,225 @@
-# DRAG-3 — Card → column region: drop bands (Board layer)
+# DRAG-3 — Board-layer drop bands, and the dragged card's shape
 
-**Next ID:** DRAG-3.20
+**Next ID:** DRAG-3.25
 
-**Wiki:** [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md) §5, §5a
+**Terms.** Cases are at Board layer unless they say otherwise. `h` is shortCard's height, and `gap` is the card lists' shared gap: fixed facts about the card component, not tuning-panel values. *Released without popping in* means a release at Board layer before the region's pop in has fired. Each band produces a request shape catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md); cases here assert which request a release produces.
 
-**Board layer only.** The bands are Board layer's within-action
-([DRAG-1](drag-1-contexts-and-popping.md) §1.1): they govern a release only
-while the drag is genuinely popped out (or was picked up from Unsorted).
-While the drag is locked in a column/sub-row or a Card, a bare hover over
-some other region's band means nothing — the locked layer's within-action
-is what a release commits ([DRAG-1.16](drag-1-contexts-and-popping.md)).
-Every case below starts "at Board layer."
-
-**Parameterization (§5, reworked 2026-09-16).** Bands are no longer a
-percentage of the rendered slice. The one tunable is `GHOST_H`
-(`ghostCardHeightPx`, provisionally 96px), a pixel height measured against
-the region's **real content** (never the visible-scrolled slice):
-
-- **Two or more cards:** the top divider sits `GHOST_H` below the content's
-  top edge and the bottom divider `GHOST_H` above its bottom edge. Above
-  the top divider is the **top band**; below the bottom divider the
-  **bottom band**; between them the **middle band**. (The dividers
-  deliberately bisect the first and last rendered card; where the line
-  crosses a card is cosmetic, what a release above or below it means is
-  not.)
-- **Exactly one card:** the dividers sit `GHOST_H / 2` from each edge, so
-  the card keeps a real middle band.
-- **Empty region, or a terminal (done) region regardless of card count:**
-  a single band spanning the region's height — no top/bottom distinction.
-
-The region is the column's list box in merged mode and a single sub-row in
-expanded mode ([DRAG-1.1](drag-1-contexts-and-popping.md)); header, footer
-and the gaps around sub-rows are nowhere ([DRAG-1.9](drag-1-contexts-and-popping.md))
-and have no band. Pop clocks are `POP_OUT` and `POP_IN` as defined in
-[DRAG-1](drag-1-contexts-and-popping.md).
-
-"Released without popping in" means a release at Board layer before
-`POP_IN` has fired for this region. It commits the band's meaning; only a
-completed pop in reaches in-context placement (DRAG-3.4).
-
-Every band produces one of the request shapes catalogued in
-[`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md);
-cases here assert *which* request a release produces, and cross-reference
-Part 7 for the number the server then resolves. The dashed guide lines,
-the band tint and the locked-layer outline are visual (Story 8) and have
-no cases; the band *labels* and the dragged card's collapse have one P2
-case each (DRAG-3.18, DRAG-3.19), flagged in INDEX as droppable if they're judged
-visual too.
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| DRAG-3.1 | Top band → `{anchorId: first item in the region, side: before}` | P0 | ⏳ pending triage |
-| DRAG-3.2 | Bottom band → `{anchorId: last item in the region, side: after}` | P0 | ⏳ pending triage |
-| DRAG-3.3 | Middle band, released without popping in → workphase-only move, position kept | P0 | ⏳ pending triage |
-| DRAG-3.4 | Middle band, held past `POP_IN` → pop in, then anchor+side hovering | P0 | ⏳ pending triage |
-| DRAG-3.5 | The dividers sit `GHOST_H` from each content edge, and move with the configured value | P1 | ⏳ pending triage |
-| DRAG-3.6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | ⏳ pending triage |
-| DRAG-3.7 | A drop into a merged column by an item already in its covered set leaves the workphase alone | P0 | ⏳ pending triage |
-| DRAG-3.8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row | P0 | ⏳ pending triage |
-| DRAG-3.9 | Done column: a single band; any release is workphase-only with no anchor | P0 | ⏳ pending triage |
-| DRAG-3.10 | Empty region: a single band; any release is a workphase-only move | P1 | ⏳ pending triage |
-| DRAG-3.11 | Ghost placement is ordinal and follows the band's meaning | P1 | ⏳ pending triage |
-| DRAG-3.12 | Middle band, item already in this region → nothing is written | P0 | ⏳ pending triage |
-| DRAG-3.13 | A band is measured against the region's content rect as it was on entry, not the live rect | P1 | ⏳ pending triage |
-| DRAG-3.14 | The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow | P1 | ⏳ pending triage |
-| DRAG-3.15 | Exactly one card: the dividers halve, so the card keeps a middle band | P1 | ⏳ pending triage |
-| DRAG-3.16 | Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable | P1 | ⏳ pending triage |
-| DRAG-3.17 | Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked | P2 | ⏳ pending triage |
-| DRAG-3.18 | Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}" | P2 | ⏳ pending triage |
-| DRAG-3.19 | Both copies of the dragged card render collapsed; its attached children are unrendered for the drag | P2 | ⏳ pending triage |
+| DRAG-3.1 | Top band → `{anchorId: first item in the region, side: before}` | P0 | Automated |
+| DRAG-3.2 | Bottom band → `{anchorId: last item in the region, side: after}` | P0 | Automated |
+| DRAG-3.3 | Middle band, released without popping in → a workphase-only move that keeps the position | P0 | Automated |
+| DRAG-3.4 | Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor | P0 | Automated |
+| DRAG-3.5 | With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned | P1 | Open |
+| DRAG-3.6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | Automated |
+| DRAG-3.7 | A drop into a merged column by a covered-set member leaves the workphase alone | P0 | Automated |
+| DRAG-3.8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row | P0 | Automated |
+| DRAG-3.9 | A done region is a single band; any release is a workphase-only move with no anchor | P0 | Automated |
+| DRAG-3.10 | An empty region is a single band; any release is a workphase-only move | P1 | Automated |
+| DRAG-3.11 | The ghost's placement is ordinal and follows the band's meaning | P1 | Open |
+| DRAG-3.12 | Middle band, item already in this region → nothing is written | P0 | Open |
+| DRAG-3.15 | Exactly one card: the divider halves, so the card keeps a middle band | P1 | Automated |
+| DRAG-3.16 | Bands are measured against the real content, not the visible slice | P1 | Open |
+| DRAG-3.17 | The reservation is exact: a region's height never changes with hovering, and the reservation collapses when locked | P2 | Open |
+| DRAG-3.18 | Band labels name the within-action: "Move Top", "Move Bottom", "Move to {name}" | P2 | Open |
+| DRAG-3.19 | At Board and Column layers, both copies of a dragged Card are shortCard, and its attached children are unrendered | P2 | Open |
+| DRAG-3.20 | Band guides show only at Board layer | P2 | Open |
+| DRAG-3.21 | A band reads the region's live content on every sample | P1 | Automated |
+| DRAG-3.22 | From the Card layer down, both copies of the dragged item are Stub rows | P2 | Open |
+| DRAG-3.23 | A Card popped into a done column is released as a workphase change with no anchor | P0 | Open |
+| DRAG-3.24 | A card set back down inside its own done column: the ghost stays in its slot, and nothing is written | P1 | Open |
 
 ---
 
 ## DRAG-3.1 — Top band → `{anchorId: first item in the region, side: before}`
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a Card `X` at Board layer over a column region whose rendered
-order is `A, B, C`, *when* the cursor is above the top divider and the
-user releases without popping in, *then* the request is `{anchorId: A,
-side: before}` — plus a workphase change to the region's workphase if `X`
-isn't already a covered member (DRAG-3.6/DRAG-3.7). `A` is the first item of the
-client's rendered order under the tie-break
-([TC-7.3](../item-positioning/part-7-board-placement-intents.md)).
-Server-side result: [TC-7.1](../item-positioning/part-7-board-placement-intents.md).
+*Given* Card `X` at Board layer over a region rendering `A, B, C`, *when* the cursor is above the top divider and the user releases without popping in, *then* the request is `{anchorId: A, side: before}`, plus a change to the region's workphase if `X` isn't already a covered member ([DRAG-3.6](drag-3-card-column-bands.md), [DRAG-3.7](drag-3-card-column-bands.md)). `A` is first in the client's rendered order under the tie-break ([TC-7.3](../item-positioning/part-7-board-placement-intents.md)). The server's result is [TC-7.1](../item-positioning/part-7-board-placement-intents.md).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
 ## DRAG-3.2 — Bottom band → `{anchorId: last item in the region, side: after}`
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* the same region `A, B, C`, *when* the cursor is below the bottom
-divider and the user releases without popping in, *then* the request is
-`{anchorId: C, side: after}` (plus the workphase change if applicable).
-Server-side result: [TC-7.2](../item-positioning/part-7-board-placement-intents.md).
+*Given* the same region rendering `A, B, C`, *when* the cursor is below the bottom divider and the user releases without popping in, *then* the request is `{anchorId: C, side: after}`, plus the workphase change if it applies. The server's result is [TC-7.2](../item-positioning/part-7-board-placement-intents.md).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-## DRAG-3.3 — Middle band, released without popping in → workphase-only move, position kept
+## DRAG-3.3 — Middle band, released without popping in → a workphase-only move that keeps the position
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a Card `X` with position `p` at Board layer over a column region
-`X` is not a covered member of, *when* the cursor is between the
-dividers and the user releases before `POP_IN` has fired, *then* the
-request is a workphaseId-only move — no `anchorId`, no `side` — and after
-the server responds `X.workphaseId` is the region's workphase and
-`X.position` is exactly `p`
-([TC-2.24](../item-positioning/part-2-anchor-resolution.md) /
-[TC-7.16](../item-positioning/part-7-board-placement-intents.md)). If `X`
-had no position (a reopened done item), it receives one via the append
-fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)) and
-previews at the end ([DRAG-6.10](drag-6-preview-reconciliation.md)).
+*Given* Card `X` with position `p` at Board layer over a region `X` isn't a covered member of, *when* the cursor is between the dividers and the user releases without popping in, *then* the request is a workphase-only move, with no `anchorId` and no `side`. After the response, `X.workphaseId` is the region's workphase and `X.position` is exactly `p` ([TC-2.24](../item-positioning/part-2-anchor-resolution.md), [TC-7.16](../item-positioning/part-7-board-placement-intents.md)). An `X` with no position gets one by the append fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)), and previews last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
-The band is the quick auto-placement — "move it here" — for when the
-column change is what matters and the exact position isn't.
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-**Automation test:** —
+## DRAG-3.4 — Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor
 
-## DRAG-3.4 — Middle band, held past `POP_IN` → pop in, then anchor+side hovering
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+*Given* the setup of [DRAG-3.3](drag-3-card-column-bands.md), over a region rendering `A, B, C`, *when* the cursor stays in the middle band for `popInDelayMs`, *then* `X` pops into the column, and from then on it is placed by anchor and side ([DRAG-1.2](drag-1-contexts-and-popping.md)), not by band. A release with the ghost between `B` and `C` and the side highlight on `B` commits `{anchorId: B, side: after}`, plus the workphase change if it applies. Releasing without holding, or after popping out but before popping in, commits the band's meaning instead.
 
-*Given* the same setup, *when* the cursor rests in the middle band for ≥
-`POP_IN`, *then* `X` pops into the column and is thereafter positioned by
-ordinary anchor+side hovering ([DRAG-1.5](drag-1-contexts-and-popping.md)):
-a release hovering the lower half of `B` commits `{anchorId: B, side:
-after}` (plus workphase change if applicable), not the band's meaning. A
-cross-column in-context placement from a locked column costs both clocks
-— `POP_OUT` out of the old context, then `POP_IN` here — run back to back
-when the cursor simply rests.
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-The pop-in clock counts time anywhere in the region, but fires only from
-the middle band — see [DRAG-1.11](drag-1-contexts-and-popping.md) for the
-band-time cases.
+## DRAG-3.5 — With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned
 
-**Automation test:** —
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-## DRAG-3.5 — The dividers sit `GHOST_H` from each content edge, and move with the configured value
-
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-*Given* `GHOST_H` set to a specific value and a region with two or more
-cards, *when* a release occurs just above the top divider (`GHOST_H − 1`
-below the content's top edge), just below it (`GHOST_H + 1`), just above
-the bottom divider, and just below it, *then* each resolves to the band
-the configured value places it in — DRAG-3.1 / DRAG-3.3 / DRAG-3.3 / DRAG-3.2
-respectively — and changing `GHOST_H` moves those outcomes accordingly.
-Both dividers derive from this one value; there is no separately tunable
-top or bottom boundary. The provisional 96px is a starting point, not a
-constant.
+*Given* a region with two or more cards, not terminal and not the hover target, *when* a release happens just above the top divider (less than `h` below the content's top edge) and just below it (more than `h` below), *then* they resolve by the top band ([DRAG-3.1](drag-3-card-column-bands.md)) and the middle band ([DRAG-3.3](drag-3-card-column-bands.md)) respectively, and the same holds mirrored at the bottom divider ([DRAG-3.2](drag-3-card-column-bands.md)). Each dead zone outside the list is `(h + gap) / 2` tall. Every divider position and dead-zone height comes from `h` and `gap`; no tuning-panel value moves them. That the top divider cuts through the first card (and the bottom one through the last) is intended.
 
 **Automation test:** —
 
 ## DRAG-3.6 — A drop into a merged column from outside its covered set takes the entry workphase
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a merged column covering `W2, W3` (`W2` first in range —
-`entryWorkphaseId`) and a Card `X` currently in `W1`, *when* `X` is
-released in the column at Board layer by any band, *then* the request's
-workphase is `W2` — the first workphase in the column's range — combined
-with the band's placement (DRAG-3.1/2/3). Cross-reference
-[TC-4.4](../item-positioning/part-4-merged-column.md).
+*Given* a merged column covering `W2, W3`, with `W2` first in its range (the column's entry workphase), and Card `X` in `W1`, *when* `X` is released in the column at Board layer, in any band, *then* the request's workphase is `W2`, combined with the band's placement ([DRAG-3.1](drag-3-card-column-bands.md), [DRAG-3.2](drag-3-card-column-bands.md), [DRAG-3.3](drag-3-card-column-bands.md)). See [TC-4.4](../item-positioning/part-4-merged-column.md).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-## DRAG-3.7 — A drop into a merged column by an item already in its covered set leaves the workphase alone
+## DRAG-3.7 — A drop into a merged column by a covered-set member leaves the workphase alone
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
-*Given* the same merged column and a Card `X` currently in `W3` (a
-covered member, not the entry workphase), *when* `X` is released in the
-column at Board layer via the top or bottom band, *then* the request
-carries the band's anchor+side and **no** workphase change — `X` stays in
-`W3`. Membership in the covered set is what decides, not which specific
-workphase the hovered or bounding card is in. Cross-reference
-[TC-4.2](../item-positioning/part-4-merged-column.md). (The middle band
-for a covered member is DRAG-3.12.)
+*Given* the same merged column, and Card `X` in `W3` (a covered member, not the entry workphase), *when* `X` is released in the column at Board layer in the top or bottom band, *then* the request carries the band's anchor and side and **no** workphase change: `X` stays in `W3`. Membership of the covered set decides it, not which workphase a neighboring card is in. See [TC-4.2](../item-positioning/part-4-merged-column.md). A covered member in the middle band is [DRAG-3.12](drag-3-card-column-bands.md).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-## DRAG-3.8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first/last of the sub-row
+## DRAG-3.8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* an expanded column with sub-rows `W2` (rendering `A, B`) and `W3`
-(rendering `C, D`), and a Card `X` at Board layer, *when* `X` is released
-above the `W3` sub-row's top divider, *then* the request is `{anchorId:
-C, side: before}` with workphase `W3` — first item *of that sub-row*,
-exact workphase, no range ambiguity. *And when* released below the `W3`
-sub-row's bottom divider, *then* `{anchorId: D, side: after}`, workphase
-`W3`. Each sub-row carves its own dividers from its own content.
+*Given* an expanded column with sub-rows `W2` (rendering `A, B`) and `W3` (rendering `C, D`), and Card `X` at Board layer, *when* `X` is released above the `W3` sub-row's top divider, *then* the request is `{anchorId: C, side: before}` with workphase `W3`: the first item of that sub-row, in exactly that workphase. *When* it is released below the `W3` sub-row's bottom divider, *then* the request is `{anchorId: D, side: after}`, workphase `W3`. Each sub-row carves its own bands from its own content.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-## DRAG-3.9 — Done column: a single band; any release is workphase-only with no anchor
+## DRAG-3.9 — A done region is a single band; any release is a workphase-only move with no anchor
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a done column (terminal covered set) rendering `D1, D2` by
-`completedAt`, *when* a Card `X` at Board layer is released anywhere in
-its region — top edge, bottom edge, over `D1`, over `D2` — *then* the
-request is the same workphaseId-only move with no `anchorId` in every
-case, and the server resolves it as a workphase change with `completedAt`
-set and `position` dropped. Server side:
-[TC-7.8](../item-positioning/part-7-board-placement-intents.md). A
-terminal region presents a **single band** unconditionally, regardless of
-card count — there is nothing to place a positioned insert against.
+*Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, *when* Card `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-7.8](../item-positioning/part-7-board-placement-intents.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)).
 
-The column still accepts card-drops and attach-drops (zooming into a done
-*Card* in it — [DRAG-4.3](drag-4-attach-and-stub-placement.md)); it just
-never produces a positioned insert. Done/terminal handling gets a fuller
-rework in Epic 4.
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-**Automation test:** —
+## DRAG-3.10 — An empty region is a single band; any release is a workphase-only move
 
-## DRAG-3.10 — Empty region: a single band; any release is a workphase-only move
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+*Given* a column region with no items, *when* Card `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server's result is [TC-7.5](../item-positioning/part-7-board-placement-intents.md) or [TC-7.6](../item-positioning/part-7-board-placement-intents.md).
 
-*Given* a column region with no items, *when* a Card at Board layer is
-released anywhere in it, *then* the request is a workphaseId-only move
-with no anchor — there is no "first" or "last" to carve two dead zones
-around, so the region is one band spanning its own height. Server side:
-[TC-7.5](../item-positioning/part-7-board-placement-intents.md) /
-[TC-7.6](../item-positioning/part-7-board-placement-intents.md).
+**Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
-**Automation test:** —
+## DRAG-3.11 — The ghost's placement is ordinal and follows the band's meaning
 
-## DRAG-3.11 — Ghost placement is ordinal and follows the band's meaning
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-*Given* a Card `X` with position `p` at Board layer over a region
-rendering `A, B, C` whose positions bracket `p` between `A` and `B`,
-*when* the cursor is in the top band, *then* the ghost is rendered at
-index 0; in the bottom band, at the end; in the middle band, at index 1
-— where `p` already falls in this region's order. In every case the
-ghost's index is computed from the rendered order and `X`'s *existing*
-position; no position value is invented
-([TC-2.27](../item-positioning/part-2-anchor-resolution.md)). An `X` with
-no position previews at the end instead
-([DRAG-6.10](drag-6-preview-reconciliation.md)).
+*Given* Card `X` with position `p` at Board layer over a region rendering `A, B, C`, where `p` falls between `A`'s and `B`'s positions, *when* the cursor is in the top band, *then* the ghost is at index 0; in the bottom band, at the end; in the middle band, at index 1, where `p` already falls in this region's order. The ghost's index comes from the rendered order and `X`'s existing position; no position value is invented ([TC-2.27](../item-positioning/part-2-anchor-resolution.md)). An `X` with no position previews at the end instead ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
 **Automation test:** —
 
 ## DRAG-3.12 — Middle band, item already in this region → nothing is written
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-*Given* a merged column covering `W2, W3` and a Card `X` currently in
-`W3` (a covered-set member — [`../../wiki/board-drag-interaction/`](../../wiki/board-drag-interaction/README.md)
-§8's rule), *when* `X` is dragged, popped out of the column to Board,
-brought back into its middle band and released before popping in, *then*
-**nothing is written**: no request is made, `X.workphaseId` stays `W3` and
-`X.position` is unchanged — the item is simply being set back down.
-(While `X` is still locked in the column there are no bands at all; a
-release there is an anchor+side reposition,
-[DRAG-1.2](drag-1-contexts-and-popping.md).)
+*Given* a merged column covering `W2, W3`, and Card `X` in `W3`, a covered-set member, *when* `X` is popped out of the column to Board, brought back into its middle band and released without popping in, *then* **nothing is written**: no request is made, `X.workphaseId` stays `W3`, and `X.position` is unchanged. The item is simply being set back down.
 
-*In an expanded column* the region is the sub-row, so "already in this
-region" means already in that sub-row's exact workphase: `X` from the
-`W2` sub-row released in the `W3` sub-row's middle band is a workphase
-change to `W3` (DRAG-3.3, DRAG-3.8), not a set-down. *(Reading flagged for the
-Product Owner — see INDEX.)*
-
-Contrast DRAG-3.3 (an item from elsewhere takes the workphase) and DRAG-3.7 (a
-covered member in the top or bottom band still gets the band's
-anchor+side).
+*In an expanded column* the region is the sub-row, so "already in this region" means already in that sub-row's exact workphase: `X` from sub-row `W2`, released in sub-row `W3`'s middle band, is a workphase change to `W3` ([DRAG-3.3](drag-3-card-column-bands.md), [DRAG-3.8](drag-3-card-column-bands.md)), not a set-down.
 
 **Automation test:** —
 
-## DRAG-3.13 — A band is measured against the region's content rect as it was on entry, not the live rect
+## DRAG-3.15 — Exactly one card: the divider halves, so the card keeps a middle band
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a Card `X` at Board layer whose cursor enters a region `R` in
-`R`'s bottom band as measured against `R`'s content rect at the moment
-of entry, *when* the ghost's own insertion grows `R`'s list so that the
-cursor's position now falls in the *live* rect's middle band, and the
-user releases without moving, *then* the release still resolves by the
-bottom band — the frozen rect. The frozen rect is held for as long as the
-cursor stays in `R`; leaving and re-entering `R` freezes a fresh one. The
-drop must not change the band it is about to be resolved by.
+*Given* a region rendering exactly one card, `A`, *when* Card `X` at Board layer is released less than `(h + gap) / 2` below the content's top edge, *then* the request is `{anchorId: A, side: before}` ([DRAG-3.1](drag-3-card-column-bands.md)). Released further in, it is the middle band's meaning ([DRAG-3.3](drag-3-card-column-bands.md), or [DRAG-3.12](drag-3-card-column-bands.md) for a covered member). The bottom edge is the mirror image, `{anchorId: A, side: after}`. With the normal dividers `h` from each edge, the one card would be cut with nothing left in the middle. *And given* a second card joins the region, *then* the dividers go back to `h` from each edge ([DRAG-3.5](drag-3-card-column-bands.md)).
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/dragBands.test.ts`, `client/src/components/workflow/popSession.test.ts`
 
-## DRAG-3.14 — The frozen rect follows the region's own top edge — a real scroll or a sibling's reflow
+## DRAG-3.16 — Bands are measured against the real content, not the visible slice
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-*Given* a region `R` with a frozen rect from the cursor's entry (DRAG-3.13),
-*when* `R`'s own top edge moves by `Δ` while the cursor stays over `R` —
-because the column scrolled (auto-scroll during the drag, or otherwise),
-**or** because a sibling region in the same scrolling body reserved or
-released its carve-out and reflowed `R` downward or upward with no scroll
-at all — *then* the frozen rect moves by `Δ` with the content it belongs
-to: the dividers are the frozen dividers translated by however far `R`'s
-top edge moved, not left behind at their pre-move screen position. A
-release after the move resolves by the band the cursor is in *relative to
-the moved rect*. The freeze is against the hovered region's own insertion
-only (which grows its bottom edge, never its top).
-
-This holds for a merged column's list box and an expanded column's
-sub-row alike — both sit in the same kind of scrolling body.
+*Given* a long region `R` whose content overflows its scroll box, scrolled so that the content's top edge, and the top divider with it, is out of view above, *when* Card `X` at Board layer is released at the very top of the visible slice, *then* it resolves by the **middle** band. The top divider sits `h` below the content's top edge, which is out of view, and the top band is neither drawn nor reachable until the region scrolls to it. *When* the region scrolls so that the content's top edge is in view, *then* a release within `h` of it resolves by the top band ([DRAG-3.1](drag-3-card-column-bands.md)). Whether the cursor is in `R` at all is [DRAG-1.10](drag-1-contexts-and-popping.md)'s rule.
 
 **Automation test:** —
 
-## DRAG-3.15 — Exactly one card: the dividers halve, so the card keeps a middle band
+## DRAG-3.17 — The reservation is exact: a region's height never changes with hovering, and the reservation collapses when locked
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-*Given* a region rendering exactly one card `A`, *when* a Card `X` at
-Board layer is released `GHOST_H / 2 − 1` below the content's top edge,
-*then* the request is `{anchorId: A, side: before}` (DRAG-3.1); released
-`GHOST_H / 2 + 1` below it, *then* the middle band's meaning (DRAG-3.3 — or
-DRAG-3.12 if `X` is a covered member); and symmetrically at the bottom edge,
-`{anchorId: A, side: after}` (DRAG-3.2) below the halved divider. With the
-normal full-`GHOST_H` dividers the single card would be bisected with
-nothing left on either side of the cut; halving keeps a real middle band.
-*And given* a second card is added to the region, *then* the dividers
-revert to the full `GHOST_H` offsets (DRAG-3.5).
+*Given* a drag at Board layer, *when* each region's total height is measured, first while the cursor is elsewhere and then while the region is the hover target, *then* the two heights are equal, for every shape:
+
+- **with one or more cards (not terminal):** two zones of `(h + gap) / 2` outside the list when not hovered; when hovered, the zones collapse and the ghost row takes their place;
+- **empty:** one zone of `h`; when hovered, the ghost alone;
+- **done, with cards:** one bottom zone of `h + gap`.
+
+*When* the drag locks into anything, a column, sub-row or Card, *then* every region's reservation is gone, collapsed and not merely hidden, and cards render next to each other with no reserved space. Popping back out to Board restores it.
 
 **Automation test:** —
 
-## DRAG-3.16 — Bands are measured against real content, not the visible slice; a scrolled-away divider is unreachable
+## DRAG-3.18 — Band labels name the within-action: "Move Top", "Move Bottom", "Move to {name}"
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
 
-*Given* a long region `R` whose content overflows its scroll box, scrolled
-so that its content's top edge — and with it the top divider — is out of
-view above the visible slice, *when* a Card `X` at Board layer is
-released at the very top of the *visible* slice, *then* the release
-resolves by the **middle** band — the top divider is `GHOST_H` from the
-*content's* top edge, which is above the fold; the top band is neither
-drawn nor reachable until the region (or the page) scrolls to it.
-*And when* the region scrolls so that the content's top edge comes into
-view, *then* a release within `GHOST_H` of it resolves by the top band
-(DRAG-3.1). Whether the cursor is *in* `R` at all is still the visible-clip
-rule of [DRAG-1.10](drag-1-contexts-and-popping.md); this case is about
-where the dividers sit once it is.
+*Given* a drag at Board layer:
+
+- *given* a region with one or more cards, not terminal and not the hover target, *then* its top zone reads **"Move Top"** and its bottom zone **"Move Bottom"**, and the middle band has no label;
+- *given* an empty region, *then* its one zone reads **"Move to {name}"**, the region's name;
+- *given* a done region with cards, *then* its bottom zone reads **"Move to {name}"**, the workphase's name;
+- *given* a region that is the hover target, *then* its zones, and their labels, give way to the ghost.
+
+The labels are asserted as text; their look is open.
 
 **Automation test:** —
 
-## DRAG-3.17 — Every region reserves `GHOST_H` at Board layer; net height is constant; the reservation collapses when locked
+## DRAG-3.19 — At Board and Column layers, both copies of a dragged Card are shortCard, and its attached children are unrendered
 
-**Priority:** P2 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
 
-*Given* a drag at Board layer, *when* the region heights are measured,
-*then* every column/sub-row region is exactly `GHOST_H` taller than its
-resting height — as two half-height dead zones at its top and bottom
-edges when it is not the hover target, and as the ghost's own slot when
-it is — so a region's total height is the same whether or not the cursor
-is over it, and does not change as the drag moves around the board.
-*And when* the drag locks into any layer (a column/sub-row or a Card),
-*then* the reservation is gone from every region — collapsed, not merely
-hidden — and cards render adjacent with no reserved gap; popping back out
-to Board restores it.
+*Given* Card `X` with a long description, an assignee and attached children `S1, S2`, *when* `X` is dragged at Board or Column layer, *then* both its carried copy and its in-list ghost render as shortCard: one pills row, the title on one line, the description clamped to exactly one line (with the line kept even when `X` has no description), no assignee footer, and no attached-children indicator or count. Both copies are the same fixed height whatever `X` contains.
+
+`S1` and `S2` aren't rendered anywhere for as long as `X` is being dragged: not inside `X`'s copies, not dimmed, simply absent. *When* `X` is dropped, *then* it returns to full height, and `S1` and `S2` render inside it again.
 
 **Automation test:** —
 
-## DRAG-3.18 — Band labels name the within-action: "Move Top" / "Move Bottom" / "Move to {name}"
+## DRAG-3.20 — Band guides show only at Board layer
 
-**Priority:** P2 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §1.1
 
-*Given* a drag at Board layer, *when* a region is not the hover target,
-*then* its top dead zone reads **"Move Top"** and its bottom dead zone
-**"Move Bottom"**; its middle band carries no label. *And given* an empty
-region, or a terminal region, *then* its single band reads **"Move to
-{name}"** — the region's own name (a sub-row's workphase name; a terminal
-region is labeled by its workphase's name). *And given* a region with
-exactly one card, *then* the card's middle band is unlabeled. Labels are
-asserted as text; their look is Story 8's.
+*Given* a drag at Board layer, *then* every column and sub-row region shows its two band dividers ([DRAG-3.5](drag-3-card-column-bands.md)). Which band a release resolves by is shown by the ghost, not by the guides ([DRAG-3.11](drag-3-card-column-bands.md)). *When* the drag locks into a column, sub-row or Card, *then* no region shows any dividers. This case asserts where guides appear, not how they look.
 
 **Automation test:** —
 
-## DRAG-3.19 — Both copies of the dragged card render collapsed; its attached children are unrendered for the drag
+## DRAG-3.21 — A band reads the region's live content on every sample
 
-**Priority:** P2 · **Automated:** ⏳ pending triage
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a Card `X` with a multi-line description and attached children
-`S1, S2`, *when* `X` is being dragged — at any layer — *then* both its
-floating copy and its in-place row render collapsed: title on one line,
-description clamped to one line (the line reserved even when `X` has no
-description), and the attached-children indicator and count absent. `S1`
-and `S2` are **not rendered anywhere** for the life of the drag — not
-inside `X`'s collapsed copies, not dimmed, simply absent — and reappear
-inside `X` on release. On drop, `X` expands back to full height at once.
+*Given* Card `X` at Board layer over region `R`, *when* `R`'s content moves under a still cursor (the column scrolls, or a sibling region above it reflows), *then* a release resolves by the band the cursor is in relative to `R`'s content as it is now: where the dividers are drawn at that moment. The ghost appearing in `R` doesn't move `R`'s content, since it takes over `R`'s reservation without changing `R`'s height; that's [DRAG-3.17](drag-3-card-column-bands.md)'s rule.
+
+**Automation test:** `client/src/components/workflow/popSession.test.ts`
+
+## DRAG-3.22 — From the Card layer down, both copies of the dragged item are Stub rows
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
+
+*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. *When* `X` pops back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
+
+**Automation test:** —
+
+## DRAG-3.23 — A Card popped into a done column is released as a workphase change with no anchor
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
+
+*Given* Card `X` in workphase `W1`, popped into a done column, *when* the user releases anywhere in the column, *then* the request is a workphase-only move to the done workphase, with no anchor: a Free done item has no position, so it can't be named as an anchor. The server sets `X.completedAt` and drops `X.position`, and `X` previews and lands as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)).
+
+**Automation test:** —
+
+## DRAG-3.24 — A card set back down inside its own done column: the ghost stays in its slot, and nothing is written
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
+
+*Given* a done column rendering `D1, X, D2` by `completedAt`, where `X` is a Free item with no position, *when* `X` is picked up and the cursor moves up and down the column's list, *then* the ghost stays in `X`'s own slot, between `D1` and `D2`, and no card shuffles: a done list has no slot to choose. *When* the user releases anywhere in the column, *then* `X` is being set back down, and no request is sent: its workphase, `completedAt` and place in the list are unchanged.
 
 **Automation test:** —

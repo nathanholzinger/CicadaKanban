@@ -14,8 +14,7 @@ const item = makeItem;
 const placements = (entries: Array<[string, Placement]>) => new Map(entries);
 
 // Epic 3.5 Story 2 — the client half of docs/wiki/item-positioning §5/§5a
-// (reindex disclosure). Cross-reference TC-5a.1/5a.2 and DRAG-6.3's
-// apply-order half.
+// (reindex disclosure). Cross-reference TC-5a.1 and TC-5a.2.
 describe('applyItemWriteResponse', () => {
   const list = () => [
     item('A', { position: 1.0 }),
@@ -106,7 +105,7 @@ describe('freeItemOrder / findInversion', () => {
   });
 });
 
-// DRAG-6.3 / TC-5a.1–5a.3: the reconciliation step, in order.
+// TC-5a.1–5a.3: the reconciliation step, in order.
 describe('completeItemWrite', () => {
   // The exact object `writes.begin` would have stashed for this write — the
   // reducer only clears/tripwires when the item's current placement is

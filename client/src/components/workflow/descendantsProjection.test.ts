@@ -56,16 +56,30 @@ describe('advanceProjection', () => {
       depth: 0,
       valid: true,
       resolved: { parentId: P, anchor: { anchorId: 'S1', side: 'after' } },
+      atOwnSlot: true,
     });
   });
 
-  it("a foreign item enters at the section's last gap, at the last row's depth", () => {
-    const foreign = sample({ classification: classifyDragTargets('X', items, 10), originCardId: null });
-    expect(advanceProjection(NO_PROJECTION, foreign).projection).toEqual({
-      gap: 3,
+  it("DRAG-4.30: a foreign item enters at the section's last gap as the Card's last child, even under a nested last row", () => {
+    // S3 gains a child, so the last row is nested at depth 1.
+    const nested = [...items, makeItem('S3a', { parentId: 'S3', position: 1 })];
+    const foreign = sample({
+      classification: classifyDragTargets('X', nested, 10),
+      originCardId: null,
+      getAttachedChildren: parentId => getAttachedChildrenFrom(nested, parentId),
+    });
+    const { projection } = advanceProjection(NO_PROJECTION, foreign);
+    expect(projection).toEqual({
+      gap: 4,
       depth: 0,
       valid: true,
       resolved: { parentId: P, anchor: { anchorId: 'S3', side: 'after' } },
+      atOwnSlot: false,
+    });
+    // A release right away commits the Card layer's own attach: last among P's children.
+    expect(descendantsReleasePlacement(projection, P)).toEqual({
+      parentId: P,
+      slot: { anchorId: 'S3', side: 'after' },
     });
   });
 
@@ -76,14 +90,14 @@ describe('advanceProjection', () => {
     expect(tabbed.seed).toBe(entered.seed);
   });
 
-  it('the named row moves the gap; a sample naming none keeps it', () => {
+  it('DRAG-4.8: the named row moves the gap; a sample naming none keeps it', () => {
     const entered = advanceProjection(NO_PROJECTION, sample());
     const moved = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
     expect(moved.projection?.gap).toBe(2);
     expect(advanceProjection(moved, held()).projection?.gap).toBe(2);
   });
 
-  it('over the cap the state is still offered, marked invalid', () => {
+  it('DRAG-4.18: over the cap the state is still offered, marked invalid', () => {
     // S1 sits at depth 2, so S2 under it would be at depth 3.
     const entered = advanceProjection(NO_PROJECTION, sample({ cap: 2 }));
     expect(entered.projection?.valid).toBe(true);
@@ -91,32 +105,47 @@ describe('advanceProjection', () => {
     expect(tabbed.projection).toMatchObject({ depth: 1, valid: false });
   });
 
-  it('leaving the section clears it; coming back reseeds at the own slot, wherever the pointer is now', () => {
+  it('DRAG-4.30: leaving the section clears it; coming back reseeds at the own slot, wherever the pointer is now', () => {
     const entered = advanceProjection(NO_PROJECTION, sample());
     const moved = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
     const left = advanceProjection(moved, held({ contextKey: cardRegionKey(P) }));
     expect(left).toEqual(NO_PROJECTION);
     const back = advanceProjection(left, sample({ previousContextKey: cardRegionKey(P), pointerX: START_X + 300 }));
     expect(back.projection).toMatchObject({ gap: 1, depth: 0 });
+    expect(descendantsReleasePlacement(back.projection, P)).toBeNull();
   });
 });
 
 describe('descendantsReleasePlacement', () => {
   it('sends the resolved parent and anchor', () => {
-    const { projection } = advanceProjection(NO_PROJECTION, sample());
+    const entered = advanceProjection(NO_PROJECTION, sample());
+    const { projection } = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
     expect(descendantsReleasePlacement(projection, P)).toEqual({
       parentId: P,
-      slot: { anchorId: 'S1', side: 'after' },
+      slot: { anchorId: 'S3', side: 'after' },
     });
   });
 
-  it("with no anchor, the resolved parent's first child", () => {
+  it("DRAG-4.29, DRAG-4.30: writes nothing at the Stub's own gap and depth, however it got back there", () => {
+    const entered = advanceProjection(NO_PROJECTION, sample());
+    expect(descendantsReleasePlacement(entered.projection, P)).toBeNull();
+    // Away to another gap and back again: its own slot, so still nothing.
+    const moved = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
+    const back = advanceProjection(moved, held({ namedAnchor: { anchorId: 'S1', side: 'after' } }));
+    expect(back.projection).toMatchObject({ gap: 1, depth: 0 });
+    expect(descendantsReleasePlacement(back.projection, P)).toBeNull();
+    // Its own gap at another depth is a real move.
+    const tabbed = advanceProjection(entered, held({ pointerX: START_X + DESCENDANTS_INDENT_PX }));
+    expect(descendantsReleasePlacement(tabbed.projection, P)).toEqual({ parentId: 'S1', slot: 'first' });
+  });
+
+  it("DRAG-4.9: with no anchor, the resolved parent's first child", () => {
     const entered = advanceProjection(NO_PROJECTION, sample());
     const { projection } = advanceProjection(entered, held({ pointerX: START_X + DESCENDANTS_INDENT_PX }));
     expect(descendantsReleasePlacement(projection, P)).toEqual({ parentId: 'S1', slot: 'first' });
   });
 
-  it('writes nothing over the cap, or with no projection', () => {
+  it('DRAG-4.18: writes nothing over the cap, or with no projection', () => {
     const entered = advanceProjection(NO_PROJECTION, sample({ cap: 2 }));
     const { projection } = advanceProjection(entered, held({ cap: 2, pointerX: START_X + DESCENDANTS_INDENT_PX }));
     expect(descendantsReleasePlacement(projection, P)).toBeNull();

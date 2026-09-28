@@ -595,13 +595,29 @@ deferral and keep landing with their stories.
 
 **In scope:**
 
-1. **Test-reconciler pass** over `docs/test-plans/board-drag-interaction/`
-   (DRAG-1…6, 82 active cases) and `docs/test-plans/item-attachment/`
-   (ATT-1…7), all currently ⏳ pending triage. Report saved to
-   `docs/audits/test-reconciliation-report-epic3-5.md`. Every case ends
-   mapped to a test or explicitly manual-only with a reason; §3.1's ruling
-   (automate reachability + the resulting write; threshold-timed cases are
-   manual by rule) is the triage rule, not a gap.
+1. **The cases A3 routed here.** A3 re-derived the catalogs from the swept
+   wiki and ran the Reconciler over them. Each case below is `Open` and
+   routed here by ID. Each one ends `Automated`, or `Manual` with Nathan's
+   approval (`docs/test-plans/README.md`). The story closes with the
+   standard Reconciler run (story-done checklist step 5); there's no
+   separate reconciliation pass.
+   - **board-drag-interaction, 66 cases** (A3 batch 3). What each test
+     asserts is in the Gaps section and Addendum of
+     `docs/audits/test-reconciliation-a3-board-drag-interaction.md`, which
+     moves to `docs/archive/` when A3 closes. Its "Confirming run" section
+     lists the 18 tests that carry a case's ID but assert only part of it:
+     extend those tests rather than writing new ones.
+     - DRAG-1.1, 1.2, 1.5, 1.6, 1.9, 1.12, 1.13, 1.14, 1.16, 1.17, 1.18,
+       1.19, 1.20, 1.21, 1.22, 1.24, 1.26, 1.27, 1.28, 1.31, 1.33;
+     - DRAG-2.4, 2.5, 2.6, 2.8, 2.9;
+     - DRAG-3.5, 3.11, 3.12, 3.16, 3.17, 3.18, 3.19, 3.20, 3.22, 3.23,
+       3.24;
+     - DRAG-4.1, 4.3, 4.5, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.20,
+       4.21, 4.22, 4.32, 4.33;
+     - DRAG-5.1, 5.2, 5.3, 5.9, 5.10, 5.11, 5.13, 5.14;
+     - DRAG-6.2, 6.4, 6.6, 6.7, 6.8, 6.9, 6.11.
+   - **item-attachment and item-positioning:** added when A3's batches 4
+     and 5 route their gaps.
 
 2. **Deferred from the Story 4 audit, #3** (`docs/audits/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no
@@ -610,8 +626,9 @@ deferral and keep landing with their stories.
    pop-out via `parentRegionKey`, `useCardContextLayer`, `AttachGhostRow` —
    all exercised only by hand. `popSession.test.ts` has no `kind: 'card'`
    region in any case (`dragFixtures.ts` says so); every E2E preset sets
-   `cardPopInDelayMs` ≥ 30 s so no spec ever zooms into a Card; DRAG-4's
-   Card-layer cases (4.1, 4.5, 4.12, 4.14–4.17) are all pending. The
+   `cardPopInDelayMs` ≥ 30 s so no spec ever zooms into a Card; the
+   Card-layer cases, DRAG-4.1, 4.5, 4.12 and 4.14–4.17, are all routed
+   here (item 1). The
    audit's minimum fix, deferred here whole:
    - *Unit* — a `cardRegion` fixture in `dragFixtures.ts` and a
      `popSession.test.ts` describe for the Card layer: column-locked hover
@@ -661,22 +678,25 @@ deferral and keep landing with their stories.
 4. **Deferred from Story 6** (decided 2026-09-23 — every case is a
    precise-move one). DRAG-1.21 (a hold on the section →
    `descendants:<P>`; pop-out → `card:<P>`; a hold on P *outside* the
-   section never zooms); DRAG-4 TC-8 (the states offered — assert
+   section never zooms); DRAG-4.8 (the states offered — assert
    `data-drag-projection` while moving x by `INDENT` multiples read from
-   the client constant, never a literal), TC-9 / TC-10 / TC-11 (release
-   writes at gap + depth), TC-13 (a done parent), TC-18 (over-cap → no
-   request; a shallower state commits); DRAG-5 TC-9's tab-right and
-   over-cap bullets. `dragGesture.ts` gains a `tabBy(n)` that moves the
+   the client constant, never a literal), DRAG-4.9 / 4.10 / 4.11 (release
+   writes at gap + depth), DRAG-4.13 (a done parent), DRAG-4.18 (over-cap
+   → no request; a shallower state commits); DRAG-5.9's tab-right and
+   over-cap bullets. *Since A3:* Nathan approved internal tests for
+   DRAG-4.8–4.11 and 4.18, so they're no longer gaps. Whether they get an
+   E2E anyway is item 8's call. The parts those tests don't cover were split
+   out as DRAG-4.32 (the over-cap cue, from 4.18) and DRAG-4.33 (the states
+   below a nested last item, from 4.11), and are routed here with DRAG-1.21,
+   4.13 and 5.9. `dragGesture.ts` gains a `tabBy(n)` that moves the
    pointer horizontally by `n × INDENT`. Story 6 ships the
    `data-drag-projection` hook these assert against. Also Story 6 Phase C's
    carried Stub: the overlay's `data-drag-overlay-form` is `stub` once
    zoomed into a Card and during a Stub's own drag, and `short-card` again
    after a pop-out to a column.
 
-5. **Test-plan parameter drift.** `board-drag-interaction/INDEX.md` still
-   parameterizes the bands on `GHOST_H` (`ghostCardHeightPx`, 96px); Story
-   4.1 retired that panel value for the shortCard height + list gap.
-   Reconcile the names so a case can be read against the code again.
+5. **Test-plan parameter drift.** ✅ Done in A3 batch 3: the bands cases
+   now use shortCard's `h` and `gap` in place of `GHOST_H`.
 
 6. **Deferred from Story 6.1** (ledger rows L1-1b and SW-5, 2026-09-24):
    - **The quarter helpers.** `dragGesture.ts::topQuarter`/`bottomQuarter`/
@@ -716,9 +736,8 @@ deferral and keep landing with their stories.
    decision per case; "flaky, kept anyway" is not an allowed end state.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
-test:e2e` and `npm run test:unit` green; every DRAG/ATT case mapped or
-manual-only; the DoD's "No skipped or pending tests" and "All test-plan
-cases have a mapped automation test or manual acknowledgement" boxes
+test:e2e` and `npm run test:unit` green; every case routed here (item 1)
+is `Automated` or `Manual`; the epic-done checklist's Tests items
 checkable.
 
 **Depends on:** Stories 5–8 (the gesture and its thresholds stop moving);

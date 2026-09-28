@@ -375,7 +375,7 @@ describe('selectors with placements', () => {
 });
 
 describe('workphaseOnlySlot', () => {
-  it('keeps the position sort when there is a position to keep, appends otherwise', () => {
+  it('DRAG-6.10: keeps the position sort when there is a position to keep, appends otherwise', () => {
     expect(workphaseOnlySlot(3)).toBe('existing');
     expect(workphaseOnlySlot(null)).toBe('last');
   });

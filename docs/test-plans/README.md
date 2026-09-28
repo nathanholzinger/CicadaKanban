@@ -43,7 +43,7 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 ```
 
 - **`**Rule:**`** names the most specific wiki section the case derives from, as `wiki <page> §N`: `wiki board-drag-interaction §3.2` rather than `wiki board-drag-interaction §3`. A case that derives from several sections names each one in full. When a section changes, a search for it finds every case derived from it. A `Pending PO` case has no Rule field; the absence is its marker. The wiki's own in-page reference forms aren't used here.
-- **`**Automation test:**`** sits below the Given/When/Then, so the rule reads on its own first. Only the Reconciler writes it.
+- **`**Automation test:**`** sits below the Given/When/Then, so the rule reads on its own first. The Reconciler writes it, with one exception: on a case the Test Planner makes `Manual`, the Test Planner writes its `none — manual: <reason>` line.
 - **A preamble** holds only what several cases need and the wiki doesn't give, such as a shared setup. It doesn't restate the wiki's rules or its model.
 
 ## Writing a case
@@ -62,27 +62,35 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 - **A case is written by its full ID everywhere,** in its own suite file as in every other place. A search for an ID then finds the case, every test that carries it, and every reference to it.
 - **IDs are never reused.** Each suite's `**Next ID:**` line gives the next number; the Test Planner uses it and advances it. Gaps in the numbering are expected.
 - **When a case's behavior is removed, the case is deleted.** No tombstone, and no "was" note. The ID stays retired.
-- **A case that moves to another suite gets a new ID.** That happens only in the end-of-epic pass. The epic's close-out lists old → new IDs, and a developer re-titles the tests before the Reconciler runs.
+- **A case that moves to another suite gets a new ID.** That happens only in the end-of-epic pass, or in a story that moves the wiki rules the case derives from. The epic's close-out, or the story's plan, lists old → new IDs, and a developer re-titles the tests before the Reconciler runs.
 
 ## Statuses
 
 | Status | Means | Set by |
 |---|---|---|
 | `Planned` | The wiki passage it derives from is marked `**Planned:**`. It can't be built yet. | Test Planner |
-| `Open` | The rule is live. The case has no test yet, and isn't `Manual`. | Test Planner: for a new case, or from `Planned`, `Pending PO`, or a `Manual` case whose reason no longer holds. Reconciler: from `Automated`, when the test is gone. |
+| `Open` | The rule is live. The tests that carry its ID don't yet assert all of it, and it isn't `Manual`. | Test Planner: for a new case, or from `Planned`, `Pending PO`, or a `Manual` case whose reason no longer holds. Reconciler: from `Automated`, when the test is gone. |
 | `Pending PO` | Written where the wiki is silent, and waiting on the PO. | Test Planner |
-| `Automated` | At least one test carries the case's ID and asserts it. | Reconciler |
+| `Automated` | The tests that carry the case's ID assert all of it, alone or together. | Reconciler |
 | `Manual` | Checked by hand, for a present-tense reason. | Test Planner, or Reconciler once Nathan approves (see below) |
 
 - **`Planned` follows the wiki's marker, which sits on a passage, not a section.** A section can hold both `Planned` and live cases. When the PO removes a marker, that passage's cases become `Open`, and the Reconciler moves them to `Automated` once tests carry their IDs.
 - **A `Planned` case that will replace a live one** says so on its status line, as `Planned, replaces <ID>`. Both cases stay until the build lands; then the replaced case is deleted.
 - **An `Open` case is always listed in some story's Scope,** the current story's or a later one's. That's what makes it a scheduled gap rather than a lost one.
+- **Tests and cases map many-to-many.** One test can prove several cases, and one case can be proved by several tests together. When the tests carrying a case's ID assert only part of it, the case stays `Open`, with `—` on its Automation test line, and the Reconciler's report names those tests and the part they miss.
+- **Closing a partial gap is a judgment call,** made case by case. Any of these is acceptable:
+  - extend a test that already carries the ID;
+  - write a new test focused on the case;
+  - put the ID on another existing test that asserts the missing part.
+
+  A test through the surface where the rule is visible is preferred, usually a Playwright test for a behavior (`.claude/guides/testing-strategy.md`).
 
 ## Which tests count, and what's manual
 
 - **A test through a surface counts without approval:** a Playwright UI test (`tests/ui/`), a Playwright API test (`tests/api/`), or a server route test (`server/tests/routes/`). This is the layer rule in `.claude/guides/testing-strategy.md`: a rule a user or an API caller can see gets a test through that surface.
 - **A test that calls internal code directly** (a client module, or a server `lib/` function) counts only once Nathan approves it. The Reconciler proposes the mapping, and writes it after approval. A later run treats an existing internal pointer as approved.
-- **`Manual`, by the Test Planner's judgment,** when the case is written: its outcome can't be reduced to precise assertions. That covers feel ("the drag reads as one continuous motion"), and a case whose pass depends on a tunable drag threshold (`.claude/guides/testing-strategy.md`, "What stays manual"). A part of the same rule that can be pinned, such as reaching the gesture or the write it makes, is its own case.
+- **One category of internal test is approved outright: a drag clock's logic.** That covers when a clock starts, what resets it, what counts toward it, and which band fires it, tested in the pop state machine with the threshold passed as a parameter. Such a test's pass doesn't depend on the tuned value, so a case about a clock's logic is `Open`, not `Manual`.
+- **`Manual`, by the Test Planner's judgment,** when the case is written: its outcome can't be reduced to precise assertions. That covers feel ("the drag reads as one continuous motion"), and a case whose pass depends on a tunable drag threshold's value (`.claude/guides/testing-strategy.md`, "What stays manual"), such as whether the tuned values feel right. A part of the same rule that can be pinned, such as reaching the gesture, the write it makes, or a clock's logic, is its own case.
 - **`Manual`, by Nathan's approval,** for a case that could be automated but isn't worth it: too flaky, or too costly. The Reconciler proposes it, one case at a time or for a named category.
 - **A `Manual` reason is a present-tense condition.** When it stops holding, the case goes back to `Open`.
 
@@ -95,7 +103,7 @@ it('DRAG-6.6: a rejected move fails the write and resyncs the board', …)
 test.describe('DRAG-4.9, DRAG-4.10: placement between two rows', …)
 ```
 
-- **A case's `**Automation test:**` line lists repo-relative file paths,** not individual tests. For a `Manual` case, it reads `none — manual: <reason>`.
+- **A case's `**Automation test:**` line lists repo-relative file paths,** not individual tests. For a `Manual` case, it reads `none — manual: <reason>`. A case with no test yet shows `—`.
 - **The ID in the test's title is the reference that matters.** It runs from the side that changes more to the side that changes less, so moving or splitting a test file carries it along. The file path is a convenience the Reconciler keeps current.
 - **Deleting a test that carries an ID, or dropping the ID from its title,** goes in the story's living-docs handoff. The developer doesn't edit the plan.
 - **`npm run check:docs` checks the IDs themselves.** It flags a case ID, in a test title, a code comment or the test plans, that isn't a case in the catalog; a bare `TC-n` in a test title or comment; and a suite's `**Next ID:**` that isn't past every case in that suite. It can't tell whether a case still has a test; the Reconciler checks that.

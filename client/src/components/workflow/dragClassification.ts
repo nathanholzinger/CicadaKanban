@@ -1,5 +1,5 @@
 // classifyDragTargets: classifies every item on the board against the carried item,
-// once per drag start — valid / cycle-forming / depth-capped / inert.
+// once per drag start — valid / cycle-forming / depth-capped.
 
 import type { Item } from '../../types';
 import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
@@ -16,17 +16,14 @@ import { isStub } from '../../lib/isStub';
 // poppable and what a drop means; in this story it only drives the
 // `data-drop-state` attribute and the provisional overlays.
 //
-// Story 5 (2026-09-21): a Stub is classified on exactly the same terms as a
-// Card, below — the interim "everything outside its own parent's Stub list
-// is Inert" rule retires (DRAG-2.8 — the Stub-*drag* half; DRAG-2.7 is the
-// separate "Stubs as targets" rule and is unaffected). Full classification
-// is what makes the
-// zoom-in reparent (TC-4) and Board-layer detach (TC-1–3) need no
-// classification code of their own: every Card and Stub is already valid/
-// cycle-forming/depth-capped for a Stub drag exactly as it would be for a
-// Free Card's.
+// A Stub is classified on exactly the same terms as a Card, below (DRAG-2.8;
+// DRAG-2.7 is the separate "Stubs as targets" rule). Full classification is
+// what makes the zoom-in reparent (DRAG-5.4) and Board-layer detach
+// (DRAG-5.1, DRAG-5.2, DRAG-5.3) need no classification code of their own:
+// every Card and Stub is already valid/cycle-forming/depth-capped for a Stub
+// drag exactly as it would be for a Free Card's.
 
-export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped' | 'inert';
+export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped';
 
 export interface DragClassification {
   activeId: string;

@@ -36,13 +36,15 @@ function anchorFor(
 // nothing — this subsumes every prior per-case "nothing to write" (a
 // covered-set member in the middle band, TC-7.16; an empty or done region,
 // TC-7.5/7.8) into one rule. Narrowed by Option A + the lean (2026-09-24):
-// at a column/sub-row or Descendants layer, a real, non-trivial anchor is
-// never identity even in the item's own slot (the last sentence below) —
-// the release there always sends the anchor `dropAnchorFor` named, since
-// "after the card above" and "before the card below" can genuinely differ
-// once other workphases' items sit between them in the workflow-wide order
-// (item-positioning §2), so "stay" would contradict the line. Identity
-// still holds at Card layer ("set back down"), the terminal/bare-container
+// at a column/sub-row layer, a real, non-trivial anchor is never identity
+// even in the item's own slot (the last sentence below) — the release there
+// always sends the anchor `dropAnchorFor` named, since "after the card
+// above" and "before the card below" can genuinely differ once other
+// workphases' items sit between them in the workflow-wide order
+// (item-positioning §2), so "stay" would contradict the line. A Descendants
+// release in the item's own gap and depth does write nothing, but that's
+// decided before this runs (`descendantsProjection.ts::descendantsReleasePlacement`).
+// Identity still holds at Card layer ("set back down"), the terminal/bare-container
 // fallbacks, and a null placement. Compared against the session's
 // own `origin` — where the drag genuinely started — rather than the raw
 // item's `(parentId, isAttached)`/`workphaseId` fields (the old

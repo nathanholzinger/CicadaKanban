@@ -142,7 +142,11 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
 });
 
 test.describe('3: interior moves that stay in project 1a (collapse with group 2)', () => {
-  test('3.a — set C back down in its own slot, leaning up: "after A"', async ({ page, request, projectSidebar }) => {
+  test('DRAG-1.24: 3.a — set C back down in its own slot, leaning up: "after A"', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
     await setBackDownLeaning(page, article(page, 'Item C'), 'up');
 
@@ -154,7 +158,11 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2)
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('3.b — set C back down in its own slot, leaning down: "before E"', async ({ page, request, projectSidebar }) => {
+  test('DRAG-1.24: 3.b — set C back down in its own slot, leaning down: "before E"', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
     await setBackDownLeaning(page, article(page, 'Item C'), 'down');
 

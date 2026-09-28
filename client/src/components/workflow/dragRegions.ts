@@ -7,7 +7,8 @@
 // expanded column. Each is a context a drag can start in or pop into, and
 // the surface the drop bands are measured against. Unsorted, a broken
 // column, and an expanded column's outer wrapper register no region — they
-// are Inert (§4). Pure geometry over rects the board measures from the DOM.
+// are nowhere, so no drag enters them and a release there writes nothing.
+// Pure geometry over rects the board measures from the DOM.
 //
 // Story 4: a Card is also a region — `card:<id>`, reachable as a zoom-in
 // target only from the column/sub-row that contains it (`parentRegionKey`)

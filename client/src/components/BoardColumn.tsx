@@ -139,7 +139,7 @@ export default function BoardColumn({
 
       {/* Body — a merged column's card list is one drag region (wiki
           board-drag-interaction §1); an expanded column's sub-rows each
-          register their own below, and its wrapper is Inert. A broken
+          register their own below, and its wrapper none. A broken
           column registers none. The region sits *inside* the scrolling
           body (Story 3's carve-out addendum, 2026-09-16) rather than being a non-scrolling wrapper
           around it, so it's found as a real scroll ancestor the same way a

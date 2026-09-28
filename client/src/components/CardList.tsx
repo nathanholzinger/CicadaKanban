@@ -39,7 +39,7 @@ interface CardListProps {
   isOver?: boolean;
   /** Whether a card is being dragged anywhere on the board — gates the isOver highlight. */
   isCardBeingDragged?: boolean;
-  /** Registers the list (never a label above it) as a drag region via DragCarveFrame. Omit for an Inert list. */
+  /** Registers the list (never a label above it) as a drag region via DragCarveFrame. Omit for a list that is no region, such as Unsorted's. */
   region?: CardListRegionProps;
 }
 

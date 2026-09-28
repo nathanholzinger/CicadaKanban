@@ -28,8 +28,11 @@ to the wiki for the "why". What each module owns in detail is in its own header.
   a Card's Stubs happens one layer further in, at Descendants). Descendants: the gap +
   depth rule (wiki board-drag-interaction §7) — the named neighbor picks the **gap**,
   horizontal offset from a seeded depth picks the **depth** (`descendantsProjection.ts`,
-  `DragSessionContext.ts::DescendantsProjection`), and release resolves the placement
-  via `lib/hierarchyPlacement.ts::resolvePlacement`; a foreign item's _first_ entry
+  `DragSessionContext.ts::DescendantsProjection`). The seed is where the ghost already
+  was, so zooming in never moves it: a Stub's own slot, or the Card's last child for an
+  item from outside. Release resolves the placement via
+  `lib/hierarchyPlacement.ts::resolvePlacement`, and writes nothing at the Stub's own
+  gap and depth; a foreign item's _first_ entry
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
   same-section case — a Stub already home there). An over-cap tab state is reachable
   but commits nothing on release, the one exception to "a release always commits"

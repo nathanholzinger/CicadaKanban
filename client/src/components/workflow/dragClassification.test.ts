@@ -34,7 +34,7 @@ describe('isWithinDepthCap', () => {
 // The one parent-legality answer: the region gate and the Descendants
 // layer's over-cap cue both read it, off the same drag-start snapshot.
 describe('isValidParent', () => {
-  it('is true only for a Valid target — never depth-capped, cycle-forming, or unknown', () => {
+  it('DRAG-1.7, DRAG-1.8: is true only for a Valid target — never depth-capped, cycle-forming, or unknown', () => {
     // X carries a one-level subtree (X1), so a parent at depth CAP - 1 is one too deep.
     const items = [item('X'), item('X1', 'X'), ...chain('d', CAP - 1), item('T')];
     const classification = classifyDragTargets('X', items, CAP);
@@ -123,16 +123,14 @@ describe('classifyDragTargets — Card drag', () => {
   });
 });
 
-describe('classifyDragTargets — Stub drag (Story 5, full classification, DRAG-2.8)', () => {
+describe('classifyDragTargets — Stub drag (full classification, DRAG-2.8)', () => {
   it('a Stub is classified exactly like a Card would be — its own parent, its siblings, and every other Card/Stub included, no blanket exclusion', () => {
     const items = [item('P'), item('S1', 'P'), item('S2', 'P'), item('Q'), item('SQ', 'Q'), item('V')];
     const { states } = classifyDragTargets('S1', items, CAP);
     expect(states.get('S1')).toBe('cycle-forming');
-    // The interim rule ("everything outside the parent's Stub list is
-    // Inert") retires: S1's own parent P is a legal reparent-to-root-ish
-    // target (S1 is already under it, well within depth), Q and its Stub
-    // are ordinary Valid targets (the zoom-in reparent, TC-4), and a
-    // sibling is Valid exactly as before.
+    // S1's own parent P is a legal reparent-to-root-ish target (S1 is
+    // already under it, well within depth), Q and its Stub are ordinary
+    // Valid targets (the zoom-in reparent, DRAG-5.4), and a sibling is Valid.
     expect(states.get('S2')).toBe('valid');
     expect(states.get('P')).toBe('valid');
     expect(states.get('Q')).toBe('valid');

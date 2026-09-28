@@ -241,7 +241,7 @@ async function titlesIn(col: Locator): Promise<string[]> {
 }
 
 test.describe('Card → column drop bands', () => {
-  test('DRAG-3.1 / 3.2: the top band places before the first item, the bottom band after the last (DRAG-3.5: at the configured carve-outs)', async ({
+  test('DRAG-3.1, DRAG-3.2, DRAG-3.11: the top band places before the first item, the bottom band after the last', async ({
     page,
     request,
     projectSidebar,
@@ -295,7 +295,7 @@ test.describe('Card → column drop bands', () => {
   // keeps that true after any future card-chrome change — it doesn't probe
   // *why*, unit tests already do that; it just measures the real rendered
   // box before and after.
-  test('the reservation invariant: hovering a region never changes its own rendered height, for a positional, an empty, and a terminal-with-cards region alike', async ({
+  test('DRAG-3.17: the reservation invariant — hovering a region never changes its own rendered height, for a positional, an empty, and a terminal-with-cards region alike', async ({
     page,
     request,
     projectSidebar,
@@ -341,7 +341,7 @@ test.describe('Card → column drop bands', () => {
   // a genuinely empty sub-row used to shift by the padding alone (12px) the
   // moment it stopped being the live hover target. Same invariant as above,
   // read off the sub-row's own region rather than a merged column's.
-  test("the reservation invariant: an expanded column's own empty sub-row doesn't shift by its droppable padding either (audit epic-3-5-story-4 #2)", async ({
+  test("DRAG-3.17: the reservation invariant — an expanded column's own empty sub-row doesn't shift by its droppable padding either", async ({
     page,
     request,
     projectSidebar,
@@ -376,7 +376,7 @@ test.describe('Card → column drop bands', () => {
     await release(page);
   });
 
-  test('DRAG-3.3 / DRAG-1.3 (momentary): the middle band released before THRESHOLD is a workphase-only move — position kept, the hovered card ignored', async ({
+  test('DRAG-3.3, DRAG-3.11: the middle band released before THRESHOLD is a workphase-only move — position kept, the hovered card ignored', async ({
     page,
     request,
     projectSidebar,
@@ -421,7 +421,7 @@ test.describe('Card → column drop bands', () => {
     expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABXC');
   });
 
-  test('DRAG-3.4 / DRAG-1.3 (sustained) / DRAG-1.5: holding in the middle band pops out, then in; the release is then anchor + side', async ({
+  test('DRAG-3.4, DRAG-1.3, DRAG-1.5: holding in the middle band pops out, then in; the release is then anchor + side', async ({
     page,
     request,
     projectSidebar,
@@ -452,7 +452,7 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.X.id)).workphaseId).toBe(s.phase.inProgress.id);
   });
 
-  test('popping out: the cursor outside the context past THRESHOLD frees the card; it can then pop back into the column it left', async ({
+  test('DRAG-1.3, DRAG-1.12: the cursor outside the context past THRESHOLD frees the card; it can then pop back into the column it left', async ({
     page,
     request,
     projectSidebar,
@@ -489,7 +489,11 @@ test.describe('Card → column drop bands', () => {
     expect(x.workphaseId).toBe(s.phase.todo.id);
   });
 
-  test("popped out, a release in a column is still that column's band", async ({ page, request, projectSidebar }) => {
+  test("DRAG-3.2: popped out, a release in a column is still that column's band", async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, { popDelayMs: 150, popInDelayMs: 30_000 });
     await openBoard(page, projectSidebar);
@@ -508,7 +512,7 @@ test.describe('Card → column drop bands', () => {
     await expect.poll(() => columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABCX');
   });
 
-  test('a card is locked to each context it pops into in turn — In Progress, then Review', async ({
+  test('DRAG-1.5, DRAG-1.23: a card is locked to each context it pops into in turn — In Progress, then Review', async ({
     page,
     request,
     projectSidebar,
@@ -540,7 +544,7 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.X.id)).position).toBe(2.5);
   });
 
-  test('DRAG-1.3 (momentary): brushing across another column while reordering never leaves the context', async ({
+  test('DRAG-1.23: a reorder onto the first card lands in the first slot, even with the cursor passing over another column on the way', async ({
     page,
     request,
     projectSidebar,
@@ -559,7 +563,7 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.C.id)).workphaseId).toBe(s.phase.inProgress.id);
   });
 
-  test('Board layer, a release between columns or over Unsorted writes nothing and leaves the card where it was', async ({
+  test('DRAG-1.9: at Board layer, a release between columns writes nothing and leaves the card where it was', async ({
     page,
     request,
     projectSidebar,
@@ -591,7 +595,7 @@ test.describe('Card → column drop bands', () => {
     expect(x.position).toBe(2.5);
   });
 
-  test('DRAG-3.6 / 3.7: a merged column takes the entry workphase for an outsider and leaves a covered-set member alone', async ({
+  test('DRAG-3.6, DRAG-3.7: a merged column takes the entry workphase for an outsider and leaves a covered-set member alone', async ({
     page,
     request,
     projectSidebar,
@@ -631,7 +635,7 @@ test.describe('Card → column drop bands', () => {
     expect((await fetchItem(request, s.items.X.id)).workphaseId).toBe(s.phase.inProgress.id);
   });
 
-  test('DRAG-3.8 / DRAG-1.6: an expanded column resolves per sub-row — exact workphase, first/last of that sub-row', async ({
+  test('DRAG-3.8, DRAG-1.6: an expanded column resolves per sub-row — exact workphase, first/last of that sub-row', async ({
     page,
     request,
     projectSidebar,
@@ -755,7 +759,7 @@ test.describe('ordinal preview and reconciliation', () => {
     });
   }
 
-  test('DRAG-6.1 / 6.2: the drop is drawn at its slot and marked pending until the response lands, then settles unchanged', async ({
+  test('DRAG-6.1, DRAG-6.2: the drop is drawn at its slot and marked pending until the response lands, then settles unchanged', async ({
     page,
     request,
     projectSidebar,

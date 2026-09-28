@@ -60,7 +60,7 @@ describe('placementFor', () => {
   // above with no `over` at all). These are what useBoardDnd.ts's
   // handleDragEnd actually calls once a real drop has resolved.
   describe('over (release, in-context)', () => {
-    it('a specific card: the anchor + side dnd-kit resolved, under its own workphase (TC-2.11)', () => {
+    it('DRAG-1.4, TC-2.11: a specific card: the anchor + side dnd-kit resolved, under its own workphase', () => {
       expect(
         placementFor(subject(startPopSession(A.key)), regions, {
           anchorId: 'card-x',
@@ -76,7 +76,7 @@ describe('placementFor', () => {
       });
     });
 
-    it('a done region never anchors, even onto one of its own cards — same fallback as a bare container (audit epic-3-5-story-3-reconciled #4)', () => {
+    it('a done region never anchors, even onto one of its own cards — same fallback as a bare container', () => {
       const done = region('column:d', rect(0, 0, 100, 400), { isTerminal: true });
       expect(
         placementFor(subject(startPopSession(done.key)), [done], {
@@ -138,7 +138,7 @@ describe('placementFor', () => {
   // reopened done item, a first-time assignment — takes the append
   // fallback instead of the position-sort's null-coerced top slot, in
   // either of the two places band resolution lands on 'existing'.
-  it('#29: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
+  it('DRAG-6.10: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
     expect(placementFor(subject(hoverAt(bMiddle), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
       slot: 'last',
@@ -168,7 +168,7 @@ describe('placementFor', () => {
   // started in) must not recompute a fresh slot from the raw, possibly
   // stale item — that jumps the ghost. The prior placement wins whenever
   // there's no hover to say otherwise, in the list it draws the item in.
-  describe('priorPlacement (a re-dragged item)', () => {
+  describe('DRAG-6.13: priorPlacement (a re-dragged item)', () => {
     const prior: Placement = { workphaseId: activeWorkphase, slot: { anchorId: 'other-item', side: 'after' } };
 
     it('in-context, no hover: the prior placement wins over a freshly computed slot', () => {
@@ -236,7 +236,8 @@ describe('placementFor', () => {
   });
 
   // Story 5 (2026-09-21): a Stub's own origin (`{parentId, slot: 'existing'}`)
-  // through the Card and Descendants branches — TC-1/2/4/5/9/12.
+  // through the Card and Descendants branches — DRAG-5.1, DRAG-5.2, DRAG-5.4,
+  // DRAG-5.5, DRAG-5.9, DRAG-5.12.
   describe('a Stub drag (origin carries parentId)', () => {
     const P = 'card-p';
     const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
@@ -246,22 +247,22 @@ describe('placementFor', () => {
     const stub = (pop: PopSession, position: number | null) =>
       subject(pop, { workphaseId: null, position, origin, containingCardId: P });
 
-    it('TC-12: at its own containing Card, the within-action is origin itself — "set back down"', () => {
+    it('DRAG-5.12: at its own containing Card, the within-action is origin itself — "set back down"', () => {
       expect(placementFor(stub(startPopSession(cardP.key), null), [cardP])).toBe(origin);
     });
 
-    it('TC-4: at a *different* Card, the within-action is attach as its last child', () => {
+    it('DRAG-5.4: at a *different* Card, the within-action is attach as its last child', () => {
       expect(placementFor(stub(startPopSession(otherCard.key), null), [otherCard])).toEqual({
         parentId: 'card-q',
         slot: 'last',
       });
     });
 
-    it("TC-9 (sibling bullets): at its own Descendants section, mid-drag (this branch never actually sees a real `over` — release there goes through releaseDescendants instead, Story 6 Phase D) sits at origin — dnd-kit's own sortable strategy draws the reorder", () => {
+    it("DRAG-5.9: at its own Descendants section, mid-drag, it sits at origin — dnd-kit's own sortable strategy draws the reorder (this branch never sees a real `over`; a release there goes through releaseDescendants instead)", () => {
       expect(placementFor(stub(startPopSession(descendantsP.key), null), [descendantsP])).toBe(origin);
     });
 
-    it('TC-1/2/3: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot (decision 5)', () => {
+    it('DRAG-6.12: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot', () => {
       // activeItemPosition is a real number here on purpose — a Stub's own
       // attached-siblings-scope position, which must NOT be read as "a
       // position to keep" once it's previewing into a workflow-wide list.
@@ -272,7 +273,7 @@ describe('placementFor', () => {
       });
     });
 
-    it("TC-1: a real anchor at the column layer resolves exactly like any Card's anchor+side", () => {
+    it("DRAG-5.1, DRAG-6.12: a real anchor at the column layer resolves exactly like any Card's anchor+side", () => {
       expect(placementFor(stub(startPopSession(A.key), 3), regions, { anchorId: 'q', side: 'after' })).toEqual({
         parentId: null,
         workphaseId: activeWorkphase,
@@ -280,7 +281,7 @@ describe('placementFor', () => {
       });
     });
 
-    it('TC-3: Board layer (genuinely popped out) also previews Free at the append slot', () => {
+    it('DRAG-5.3, DRAG-6.12: at Board layer (genuinely popped out), it also previews Free at the append slot', () => {
       expect(placementFor(stub(hoverAt(bMiddle), 3), regions)).toEqual({
         parentId: null,
         workphaseId: B.targetWorkphaseId,
@@ -307,7 +308,7 @@ describe('placementFor', () => {
   // branch's own `attachToCardId === containingCardId` distinction one
   // layer up. This branch never actually sees a real `over` (release goes
   // through `releaseDescendants` instead, Story 6.1 Phase 0 L1-5).
-  describe('a Descendants section reached by a foreign item (Story 6 Phase D)', () => {
+  describe('a Descendants section reached by a foreign item', () => {
     const Q = 'card-q';
     const descendantsQ = descendantsRegion(Q, rect(0, 0, 100, 200));
 
