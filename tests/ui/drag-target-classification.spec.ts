@@ -44,7 +44,7 @@ test.describe('drag-target classification', () => {
     expect(typeof cap).toBe('number');
 
     // X: the carried Card, with an attached Stub S, a detached child D (its
-    // own Card) and D's own child D1 — DRAG-2.2/2.5's fixture.
+    // own Card) and D's own child D1 — DRAG-2.2's and DRAG-2.5's fixture.
     const x = await seedItem(request, { title: 'X', projectId: project.id, workphaseId: todo.id });
     const s = await seedItem(request, { title: 'S', parentId: x.id });
     const d = await seedItem(request, { title: 'D', parentId: x.id, isAttached: false, workphaseId: todo.id });
@@ -53,8 +53,8 @@ test.describe('drag-target classification', () => {
     // X's subtree is 2 levels tall (X -> D -> D1, through the detached
     // branch — ATT-4.5), so the deepest legal parent for X sits at depth
     // cap - 1 - 2. A chain of nested Stubs down to exactly that depth ends
-    // in T_ok; one more level under it is T_over — DRAG-2.3/2.7's fixture,
-    // parameterized on the cap the board reports, never a literal.
+    // in T_ok; one more level under it is T_over — DRAG-2.3's and DRAG-2.7's
+    // fixture, parameterized on the cap the board reports, never a literal.
     const xHeight = 2;
     const okDepth = cap - 1 - xHeight;
     expect(okDepth).toBeGreaterThanOrEqual(1);
@@ -79,8 +79,8 @@ test.describe('drag-target classification', () => {
 
     const expectStates = async () => {
       await expect(itemRow(page, v.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.1
-      await expect(itemRow(page, tOk.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.3, 2.7 (a Stub)
-      await expect(itemRow(page, tOver.id)).toHaveAttribute('data-drop-state', 'depth-capped'); // DRAG-2.3, 2.6
+      await expect(itemRow(page, tOk.id)).toHaveAttribute('data-drop-state', 'valid'); // DRAG-2.3, DRAG-2.7 (a Stub)
+      await expect(itemRow(page, tOver.id)).toHaveAttribute('data-drop-state', 'depth-capped'); // DRAG-2.3
       for (const id of [x.id, d.id, d1.id]) {
         await expect(itemRow(page, id).first()).toHaveAttribute('data-drop-state', 'cycle-forming'); // DRAG-2.2
       }

@@ -155,12 +155,16 @@ Not to be pre-built in Epic 3.5. The point of recording it is that Stories
 4.1's `kind` discriminant plus the audit's #7/#8 leave the facet work
 confined to these four, rather than a branch in twelve places.
 
-### 12. Revisit with the done-column rework: dragging within a done column, and done items in the reindex threshold
-Three items wait for this epic's done-column rework (Nathan: the drag questions on 2026-09-27 and 2026-09-28, TC-5.15 at A3 batch 5's Stop 1):
+### 12. Revisit with the done-column rework: dragging within a done column, and three test-plan cases
+These wait for this epic's done-column rework. Nathan routed the drag
+questions on 2026-09-27 and 2026-09-28, TC-5.15 at A3 batch 5's Stop 1,
+and TC-6.11 and 6.12 at batch 6's.
 
-- **TC-5.15: done items count toward the magnitude threshold.** Routed
-  here by ID from A3 batch 5 (A3's Open question 18); it stays `Open`
-  until this rework lands. Wiki item-positioning §5 reindexes before an
+**Three test-plan cases, routed here by ID.** Each stays `Open` until this
+rework lands.
+
+- **TC-5.15: done items count toward the magnitude threshold** (A3's Open
+  question 18). Wiki item-positioning §5 reindexes before an
   append would cross `max(1000, n + 100)`, where `n` is the number of
   items in the scope. A Free item's scope is the workflow's active items
   (§2), and done items have no position, so they shouldn't count. The
@@ -168,8 +172,20 @@ Three items wait for this epic's done-column rework (Nathan: the drag questions 
   workflow holds hundreds of done items. The Test Planner reads the page
   as clear, which puts the fix in the code, and the Reconciler puts it at
   one filter. Nathan deferred it to this rework.
+- **TC-6.11: changing a workphase's terminal flag applies the active/done
+  split to the items already in it** (wiki item-positioning §6).
+- **TC-6.12: a flag change that would leave a column spanning terminal and
+  non-terminal workphases is rejected.** The wiki says only that a range
+  "cannot span" both. The rejection is the Test Planner's reading, which
+  Nathan kept.
 
-The two drag questions:
+Nathan routed TC-6.11 and 6.12 here because the rework may retire the
+terminal flag. Their tests exist in `server/tests/routes/workphases.test.ts`
+but carry no ID: lines 102, 130 and 160 for TC-6.11, and 72 and 92 for
+TC-6.12. The flag tests compare with `toBeLessThan` rather than the case's
+values (`docs/audits/test-reconciliation-a3-close.md`, Test Quality 5).
+
+**The two drag questions:**
 
 - **A card set back down in its own done column.** Today it writes nothing
   (wiki board-drag-interaction §2, rule 6). Nathan flagged that this may

@@ -625,12 +625,28 @@ deferral and keep landing with their stories.
        4.21, 4.22, 4.32, 4.33;
      - DRAG-5.1, 5.2, 5.3, 5.9, 5.10, 5.11, 5.13, 5.14;
      - DRAG-6.2, 6.4, 6.6, 6.7, 6.8, 6.9, 6.11.
+
+     **The client-rule category reaches these cases too** (Nathan, A3
+     batch 6's Stop 1). The category approved at batch 5's Stop 1 is a
+     client ordering or request rule whose only surface is a drag, tested
+     in the client's pure modules (`docs/test-plans/README.md`). It covers
+     board-drag's client rules as well as item-positioning's. Two
+     consequences, from `docs/audits/test-reconciliation-a3-close.md`,
+     "What changed since they were routed":
+     - **DRAG-6.2 closes with a stamp.** `itemWriteReconciliation.test.ts`'s
+       TC-2.30 test asserts the half its UI test misses, so it needs no new
+       drag test.
+     - **DRAG-1.24, 3.12 and 3.24 need only their surface halves.**
+       `dragRequest.test.ts`'s "same workphase, slot existing" and "same
+       workphase, empty others" tests hold the request-level halves.
    - **item-attachment, 1 case** (A3 batch 4): ATT-4.9, the UI and the API
      agreeing on every target's legality. Its test is described in
      `docs/audits/test-reconciliation-a3-item-attachment.md`, under
      "ATT-4.9", option (a): extend the classification spec to replay each
      target it classifies against the move endpoint.
-   - **item-positioning:** added when A3's batch 5 routes its gaps.
+   - **item-positioning:** none. A3 closed every item-positioning gap it
+     didn't route elsewhere. TC-5.15, 6.11 and 6.12 are routed to Epic 4
+     (`epic-4-decisions.md` §12), and TC-2.32, 6.10, 6.13 and 7.18 to A5.
 
 2. **Deferred from the Story 4 audit, #3** (`docs/audits/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no

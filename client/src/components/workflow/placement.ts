@@ -85,7 +85,7 @@ export interface PlacementSubject {
 // unknown (mid-drag, decision 1); Board layer: the hovered band's slot;
 // Card: 'last' for an item arriving from outside (Story 4's narrowed
 // scope — no band, no anchor), or `origin` itself for the drag's own
-// containing Card — "set back down," not "attach" (Story 5, §6/§8; TC-12).
+// containing Card — "set back down," not "attach" (Story 5, §6/§8; DRAG-5.12).
 // Never previews a foreign region a mere hover hasn't actually reached
 // (rule 1): the ghost only ever shows what a drop right now would do.
 // Null when the card belongs nowhere and the cursor is over nothing: it's
@@ -125,7 +125,7 @@ export function placementFor(
   // A Card's within-action: "set back down" for the drag's own containing
   // Card (Story 5, `origin` itself — `region.attachToCardId ===
   // containingCardId`), else attach as the last child (Story 4, or Story 5
-  // TC-4's reparent into a *different* Card).
+  // DRAG-5.4's reparent into a *different* Card).
   if (region.kind === 'card') {
     if (region.attachToCardId === containingCardId) return origin;
     return { parentId: region.attachToCardId, slot: 'last' };

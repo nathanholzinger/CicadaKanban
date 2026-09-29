@@ -14,7 +14,7 @@ describe('isIdentity', () => {
   const freeOrigin: Placement = { workphaseId: 'w2', slot: 'existing' };
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
-  it('a different workphase is never identity, whatever the slot (DRAG-3.1/3.2/3.6)', () => {
+  it('a different workphase is never identity, whatever the slot (DRAG-3.1, DRAG-3.2, DRAG-3.6)', () => {
     const outsiderOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(false);
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
@@ -81,13 +81,13 @@ describe('isIdentity', () => {
   });
 });
 
-// TC-2.11, DRAG-3.1/3.2/3.6/3.7/3.9/3.10, and DRAG-5.1, DRAG-5.2, DRAG-5.4, DRAG-5.9: the
-// request a resolved placement turns into — the one adapter from the
-// ghost's own terms to the item's, replacing resolveDropTarget +
-// buildMoveInput's independent re-derivation (F3). `item` is now only
-// consulted for its own current `workphaseId` (whether the field is worth
-// sending); the identity check itself is `origin`'s job (`isIdentity`,
-// tested above).
+// TC-2.11, DRAG-3.1, DRAG-3.2, DRAG-3.6, DRAG-3.7, DRAG-3.9, DRAG-3.10, and
+// DRAG-5.1, DRAG-5.2, DRAG-5.4, DRAG-5.9: the request a resolved placement
+// turns into — the one adapter from the ghost's own terms to the item's,
+// replacing resolveDropTarget + buildMoveInput's independent re-derivation
+// (F3). `item` is now only consulted for its own current `workphaseId`
+// (whether the field is worth sending); the identity check itself is
+// `origin`'s job (`isIdentity`, tested above).
 describe('TC-2.11: toRequest', () => {
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
@@ -258,7 +258,7 @@ describe('TC-2.11: toRequest', () => {
   });
 });
 
-// TC-2.11: extracted from useBoardDnd's handleDragEnd so the "server
+// Extracted from useBoardDnd's handleDragEnd so the "server
 // resolution is authoritative over a stale client guess, resync via
 // loadBoard() on failure" contract can be unit tested directly — no
 // dnd-kit runtime or rendered component needed, per the same reasoning

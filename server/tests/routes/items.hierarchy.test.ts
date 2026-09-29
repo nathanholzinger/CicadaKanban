@@ -410,7 +410,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     ).toEqual(['Detached from "P"', 'Attached to "P"']);
   });
 
-  it('ATT-3.9, ATT-3.10: a Free item can be reparented and stay Free; without an anchor its position is untouched', async () => {
+  it('ATT-3.10: a Free item can be reparented and stay Free; without an anchor its position is untouched', async () => {
     const { project, todo } = await setupWorkflow();
     const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X', isAttached: false });

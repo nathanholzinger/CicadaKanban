@@ -75,7 +75,7 @@ describe('classifyDragTargets — Card drag', () => {
     expect(freeDescendantIds).toEqual(new Set(['D', 'D2']));
   });
 
-  it.each([4, 6, 8])('depth-caps a target one level too deep, parameterized on cap = %i (DRAG-2.3, 2.6)', cap => {
+  it.each([4, 6, 8])('depth-caps a target one level too deep, parameterized on cap = %i (DRAG-2.3)', cap => {
     // T_ok at depth cap - 1 with a leaf mover: exactly cap. T_over sits under it.
     const targets = chain('T', cap); // T1..T{cap}: T{cap-1} is T_ok, T{cap} is T_over
     const items = [...targets, item('X')];

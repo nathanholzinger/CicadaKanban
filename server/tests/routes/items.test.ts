@@ -471,7 +471,7 @@ describe('position resolution', () => {
     expect(res.body.position).toBe(1.5); // between D1 and its workflow neighbor T
   });
 
-  it('TC-2.18, TC-3.4: POST scopes a new attached child to its true siblings, not the whole workphase', async () => {
+  it('TC-2.7, TC-2.18, TC-3.4: POST scopes a new attached child to its true siblings, not the whole workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     // Unrelated top-level items sharing the workphase must not pollute the
     // new child's position (the pre-Epic-3.2 bug: nextPosition was scoped
@@ -574,7 +574,7 @@ describe('position resolution', () => {
     expect(res.body.position).toBeLessThan(b.position);
   });
 
-  describe('detached siblings sharing one workphase', () => {
+  describe('top-level items sharing one workphase', () => {
     // Fresh GET-based reads, not the move response — a genuine persisted-
     // order check on reload, same convention as
     // itemRepositioningAttachedSiblings.spec.ts's siblingOrder helper.
@@ -595,7 +595,7 @@ describe('position resolution', () => {
       return { a, b, c };
     }
 
-    it('TC-2.5: C before A — becomes the new true first sibling', async () => {
+    it('TC-2.5: C before A — becomes the new true first item', async () => {
       const { a, b, c } = await seedABC();
       const res = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'before' });
       expect(res.status).toBe(200);
@@ -616,7 +616,7 @@ describe('position resolution', () => {
       expect(await orderOf([a, b, c])).toBe('ACB');
     });
 
-    it('A after C — becomes the new true last sibling', async () => {
+    it('A after C — becomes the new true last item', async () => {
       const { a, b, c } = await seedABC();
       const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: c.id, side: 'after' });
       expect(res.status).toBe(200);
@@ -814,7 +814,7 @@ describe('position resolution', () => {
     expect(children.find(c => c.id === detachedChild.id)?.positionScope).toBe('none');
   });
 
-  it('ATT-1.1, TC-2.14: GET returns positionScope = "workflow" for a detached item in a non-terminal workphase', async () => {
+  it('ATT-1.1, TC-2.14: GET returns positionScope = "workflow" for a top-level item in a non-terminal workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });
 

@@ -4,7 +4,9 @@
 
 ## Goal
 
-During A3 Test Plan Rules and Sweep it was noticed that a project side bar test case was incorrectly mapped into a board-drag-interaction test plan. This appears to be stem from the fact that there is no appropriate home for project sidebar behavior so those rules were folded into the board-drag-interaction section. And then the test cases were written to match the wiki layout. We should address all know behavior/rule mismatches, but also do a full sweep through the wiki looking for more. Behaviors and Rules that do not belong in the current section should be moved to an appropriate home, with new sections created for rules that don't yet have a home. Ask Nathan for input when it is unclear. When Wiki rules move we should also rehome any related test cases, and also double check if the automation tests are living in appropriate files. 
+During A3 Test Plan Rules and Sweep it was noticed that a project side bar test case was incorrectly mapped into a board-drag-interaction test plan. This appears to be stem from the fact that there is no appropriate home for project sidebar behavior so those rules were folded into the board-drag-interaction section. And then the test cases were written to match the wiki layout. We should address all know behavior/rule mismatches, but also do a full sweep through the wiki looking for more. Behaviors and Rules that do not belong in the current section should be moved to an appropriate home, with new sections created for rules that don't yet have a home. Ask Nathan for input when it is unclear. When Wiki rules move we should also rehome any related test cases, and also double check if the automation tests are living in appropriate files.
+
+We'll also address nailing down some rules that were deferred out of A3
 
 ## Decisions
 
@@ -90,6 +92,11 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - The Test Planner's view: `"none"`. §7.3 nulls the item's position because it has no meaningful comparison scope, which is what `"none"` means. §2's list would gain the case, and the code follow.
 - **TC-2.32: a write that names a final position.** Item-positioning §2 says a write carries relative intent. The API also accepts a raw `position` on a move, and a reorder endpoint that sets positions outright. Scripts and test setup use both, and no client calls the reorder endpoint. Is it part of the API, or to be retired?
 - **TC-6.10: two done items with the same `completedAt`.** What orders them? The client puts the one created first ahead today.
+
+*Added by the Test Planner, from A3 batch 6's Stop 1 (2026-09-29):* one more item-positioning case, `Pending PO`, routed here by Nathan beside TC-6.10.
+- **TC-6.13: several Free items made done, or reopened, by one flag change.** Making a workphase terminal completes all its Free items in one write, so they tie on `completedAt` (TC-6.10). Clearing the flag reopens them all, and item-positioning §2 gives each a fresh position by the append fallback, but doesn't say in which order. Does the done list keep their active order, and does reopening restore their done order?
+  - The server keeps the order both ways today. `server/tests/routes/workphases.test.ts`'s two flag tests pin it: 'backfills items on a non-terminal -> terminal flip…' and 'backfills items on a terminal -> non-terminal flip…'.
+  - The flag change itself (TC-6.11 and 6.12) is routed to Epic 4's done-column rework, which may retire the flag. The answer may belong there too.
 
 Once the wiki states each answer, the Test Planner keeps, changes or deletes the case.
 

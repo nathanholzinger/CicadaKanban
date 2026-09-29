@@ -71,7 +71,7 @@ test.describe('1: extreme boundary moves within project 1a', () => {
 });
 
 test.describe('2: extreme boundary moves anchored against project 1b', () => {
-  test('2.a — move C to before B', async ({ request }) => {
+  test('TC-2.33: 2.a — move C to before B', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.B.id, side: 'before' });
 
     const updated = await getItem(request, scenario.items.C.id);
@@ -82,7 +82,7 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1b.id)).toBe('BD');
   });
 
-  test('2.b — move C to after D', async ({ request }) => {
+  test('TC-2.33: 2.b — move C to after D', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.D.id, side: 'after' });
 
     const updated = await getItem(request, scenario.items.C.id);
@@ -95,7 +95,7 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
 });
 
 test.describe('3: interior moves that stay in project 1a (collapse with group 2 under workflow-wide scope)', () => {
-  test('3.a — move C to after A', async ({ request }) => {
+  test('TC-2.33: 3.a — move C to after A', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'after' });
 
     // Same gap as 2.a (1.5) — not a no-op. A's true neighbor is B, not E,
@@ -109,7 +109,7 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2 
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1b.id)).toBe('BD');
   });
 
-  test('3.b — move C to before E', async ({ request }) => {
+  test('TC-2.33: 3.b — move C to before E', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.E.id, side: 'before' });
 
     // Same gap as 2.b (4.5).
@@ -123,7 +123,7 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2 
 });
 
 test.describe('4: reverse direction — moving a project 1b item against a project 1a anchor', () => {
-  test('4.a — move B to after E', async ({ request }) => {
+  test('TC-2.33: 4.a — move B to after E', async ({ request }) => {
     await moveItem(request, scenario.items.B.id, { anchorId: scenario.items.E.id, side: 'after' });
 
     // No true successor beyond E (global max) -> flat +1.0, same degenerate
@@ -139,7 +139,7 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1b.id)).toBe('DB');
   });
 
-  test('4.b — move D to before A', async ({ request }) => {
+  test('TC-2.33: 4.b — move D to before A', async ({ request }) => {
     await moveItem(request, scenario.items.D.id, { anchorId: scenario.items.A.id, side: 'before' });
 
     // No true predecessor before A (global min) -> floor coarsestFit(0, 1),

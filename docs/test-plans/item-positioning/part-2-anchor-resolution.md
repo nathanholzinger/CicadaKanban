@@ -1,6 +1,6 @@
 # TC-2 — Anchor and side resolution
 
-**Next ID:** TC-2.33
+**Next ID:** TC-2.34
 
 The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a locally ordered list. What the board adds is [DRAG-6](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
@@ -35,6 +35,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.30 | A pending item is never represented as `position: null` | P0 | Automated |
 | TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
 | TC-2.32 | A write that names a final position | P2 | Pending PO |
+| TC-2.33 | A Free item's true neighbor, or its anchor, can be in another project on the same workflow | P1 | Automated |
 
 ---
 
@@ -269,3 +270,11 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 *Given* Free item `X`, *when* a move sends a raw `position`, or a reorder sets positions outright, *then* — **question for the PO:** wiki item-positioning §2 says a write carries relative intent and the server resolves the number. The API also accepts a final number, both ways, and scripts and test setup rely on it. Is that part of the API, which the page would then state, or is it to be retired?
 
 **Automation test:** —
+
+## TC-2.33 — A Free item's true neighbor, or its anchor, can be in another project on the same workflow
+
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
+
+*Given* projects `P1` and `P2` on one workflow, and, in one workphase, Free items `A` (`1.0`), `D` (`3.0`) and `C` (`5.0`) in `P1` and `B` (`2.0`) in `P2`, *when* `C` is placed after `A`, as `P1`'s board asks, since it doesn't show `B`, *then* `C`'s position is `1.5`: `A`'s true neighbor is `B`, whatever its project ([TC-2.9](part-2-anchor-resolution.md)). *And when* `C` is instead placed with `{anchorId: B, side: after}`, *then* it's accepted, and `C`'s position is `2.5`, between `B` and `D`: `B` is in `C`'s scope, though not in its project.
+
+**Automation test:** `tests/api/itemRepositioningCrossProject.spec.ts`

@@ -8,7 +8,7 @@ describe('classifyPositionScope', () => {
     );
   });
 
-  it('classifies an attached child as attached-siblings even under a terminal cascade (TC-6.6)', () => {
+  it('classifies an attached child as attached-siblings even under a terminal cascade', () => {
     // The attached-siblings branch precedes the terminal check in source
     // order, so an attached child never falls into 'none' just because its
     // (cascaded) workphase turned terminal — its scope stays (parentId,
@@ -19,7 +19,7 @@ describe('classifyPositionScope', () => {
     );
   });
 
-  it('classifies a null-workphase item as none (unsorted, not currently ordered) (TC-2.16)', () => {
+  it('classifies a null-workphase item as none (unsorted, not currently ordered)', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: null }, null)).toBe('none');
   });
 
@@ -31,7 +31,7 @@ describe('classifyPositionScope', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 
-  it('classifies an attached-but-parentless item as workflow, not attached-siblings (TC-2.17)', () => {
+  it('classifies an attached-but-parentless item as workflow, not attached-siblings', () => {
     expect(classifyPositionScope({ isAttached: true, parentId: null, workphaseId: 'w1' }, false)).toBe('workflow');
   });
 });
