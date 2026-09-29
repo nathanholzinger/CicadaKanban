@@ -21,7 +21,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §4
 
-*Given* attached child `X` of `A` with sibling-scoped position `p`, *when* `X` is reparented to `B` and stays attached, with or without an anchor, *then* `X`'s position is freshly resolved in `B`'s attached-sibling scope: against the anchor and side if one is given, by the append fallback if not. No request form carries `p` across unchanged ([TC-2.21](../item-positioning/part-2-anchor-resolution.md), [TC-7.12](../item-positioning/part-7-board-placement-intents.md)).
+*Given* attached child `X` of `A` with sibling-scoped position `p`, *when* `X` is reparented to `B` and stays attached, with or without an anchor, *then* `X`'s position is freshly resolved in `B`'s attached-sibling scope: against the anchor and side if one is given, by the append fallback if not. No request form carries `p` across unchanged ([TC-2.21](../item-positioning/part-2-anchor-resolution.md)).
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
 
@@ -37,7 +37,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §5
 
-*Given* a reparent with an anchor, where the old parent's attached siblings and the new parent's have positions in ranges that don't overlap, *when* the position is resolved, *then* the scope it's resolved in is the new parent's: the resulting number lies among the new siblings, never among the old ([TC-7.12](../item-positioning/part-7-board-placement-intents.md) uses the same fixture). Resolving against the old scope would give a number that looks valid but comes from the wrong list.
+*Given* a reparent with an anchor, where the old parent's attached siblings and the new parent's have positions in ranges that don't overlap, *when* the position is resolved, *then* the scope it's resolved in is the new parent's: the resulting number lies among the new siblings, never among the old. Resolving against the old scope would give a number that looks valid but comes from the wrong list.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
 import { freeOrigin, stubOrigin } from '../../test/dragFixtures';
 import { isIdentity, toRequest, sendItemMove } from './dragRequest';
-import type { Placement } from './itemListOps';
+import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 
 // Story 4.1 Phase 3 — decision 2 (2026-09-17), replaced by Story 5
@@ -23,13 +23,13 @@ describe('isIdentity', () => {
     );
   });
 
-  it('same workphase, slot existing: always identity (middle band member, TC-7.16)', () => {
+  it('same workphase, slot existing: always identity (middle band member, DRAG-3.12)', () => {
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
     // An omitted workphaseId means "unchanged" — same rule, no literal to compare.
     expect(isIdentity(freeOrigin, { slot: 'existing' }, others)).toBe(true);
   });
 
-  it('same workphase, empty others: any slot is identity — nothing to order against (TC-7.5, TC-7.8)', () => {
+  it('same workphase, empty others: any slot is identity — nothing to order against', () => {
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
     expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
@@ -88,7 +88,7 @@ describe('isIdentity', () => {
 // consulted for its own current `workphaseId` (whether the field is worth
 // sending); the identity check itself is `origin`'s job (`isIdentity`,
 // tested above).
-describe('toRequest', () => {
+describe('TC-2.11: toRequest', () => {
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
   it('a null placement sends nothing — drawn where it already is', () => {
@@ -101,7 +101,7 @@ describe('toRequest', () => {
     ).toBeNull();
   });
 
-  it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider / TC-7.16-shaped, middle band)', () => {
+  it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider, middle band)', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'existing' }, others)).toEqual(
       {
         workphaseId: 'w2',
@@ -109,7 +109,7 @@ describe('toRequest', () => {
     );
   });
 
-  it('cross-column with a specific anchor: workphaseId + anchor + side (TC-2.11)', () => {
+  it('cross-column with a specific anchor: workphaseId + anchor + side', () => {
     expect(
       toRequest(
         { workphaseId: 'w1' },
@@ -124,7 +124,7 @@ describe('toRequest', () => {
     });
   });
 
-  it("first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, 3.2)", () => {
+  it("TC-7.1, TC-7.2, TC-7.4: first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, DRAG-3.2)", () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'A',
@@ -137,13 +137,32 @@ describe('toRequest', () => {
     });
   });
 
+  it('TC-7.3: first and last anchor on the rendered order, which breaks a position tie by creation time', () => {
+    // Each tied pair arrives newest first, so only the tie-break puts the older one ahead.
+    const rendered = getWorkphaseItemsFrom(
+      [
+        makeItem('B', { position: 1, createdAt: 200 }),
+        makeItem('A', { position: 1, createdAt: 100 }),
+        makeItem('M', { position: 3, createdAt: 50 }),
+        makeItem('E', { position: 5, createdAt: 400 }),
+        makeItem('D', { position: 5, createdAt: 300 }),
+      ],
+      'todo',
+    );
+    expect(rendered.map(i => i.id)).toEqual(['A', 'B', 'M', 'D', 'E']);
+    const place = (slot: Placement['slot']) =>
+      toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'todo', slot }, rendered);
+    expect(place('first')).toEqual({ workphaseId: 'todo', anchorId: 'A', side: 'before' });
+    expect(place('last')).toEqual({ workphaseId: 'todo', anchorId: 'E', side: 'after' });
+  });
+
   it('empty others: first/last send a bare workphase move, no anchor to resolve (DRAG-3.10)', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
       workphaseId: 'w2',
     });
   });
 
-  it('same workphase, a real anchor: no workphaseId sent, just the anchor (in-context reorder, TC-2.11)', () => {
+  it('same workphase, a real anchor: no workphaseId sent, just the anchor (in-context reorder)', () => {
     expect(
       toRequest(
         { workphaseId: 'w2' },
@@ -157,7 +176,7 @@ describe('toRequest', () => {
     });
   });
 
-  it("a done region never anchors — DRAG-3.9/TC-7.8 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
+  it("a done region never anchors — DRAG-3.9 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
     expect(
       toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'done', slot: 'existing' }, [
         { id: 'D1' },
@@ -258,7 +277,7 @@ describe('sendItemMove', () => {
     isPending: vi.fn<ItemWriteTracker['isPending']>(() => false),
   });
 
-  it('begins the write with its pending placement, completes it with the response, and never calls loadBoard', async () => {
+  it('TC-5a.1: begins the write with its pending placement, completes it with the response, and never calls loadBoard', async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();

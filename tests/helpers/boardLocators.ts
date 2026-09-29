@@ -18,6 +18,11 @@ export function column(page: Page, name: string): Locator {
   return page.getByRole('group', { name, exact: true });
 }
 
+// The titles of the Cards in `scope`, in the order they render.
+export async function titlesIn(scope: Locator): Promise<string[]> {
+  return scope.getByRole('article').evaluateAll(els => els.map(e => e.getAttribute('aria-label') ?? ''));
+}
+
 // Every Card/Stub row's own identifying attribute (`KanbanCard.tsx`,
 // `workflow/CLAUDE.md`'s documented E2E surface) — spelled independently as
 // `stubRow`/`target` in at least two specs (audit epic-3-5-story-5 #13).

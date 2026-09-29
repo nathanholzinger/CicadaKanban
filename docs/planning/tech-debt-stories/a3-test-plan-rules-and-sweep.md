@@ -96,6 +96,7 @@ This follows the layer rule in `testing-strategy.md`: a rule a user or an API ca
     - Where part of such a rule can be pinned, such as reaching the gesture or the write it makes, that part becomes its own case and can be automated.
   - **Nathan's call.** A case that could be automated but isn't worth it (too flaky, or too costly) becomes `Manual` only with Nathan's approval, one case at a time or for a named category. The Reconciler proposes it.
 - **An approved category of internal test** (Nathan, batch 3 Stop 1): a drag clock's logic, tested in the pop state machine with the threshold as a parameter. A case about a clock's logic is therefore `Open`, not `Manual`. Only whether the tuned values feel right stays `Manual`.
+- **A second approved category** (Nathan, batch 5 Stop 1): a client ordering or request rule whose only surface is a drag. It's tested in the pure modules `itemListOps.ts`, `itemWriteReconciliation.ts` and `dragRequest.ts`.
 
 ### D4. Case IDs
 
@@ -431,7 +432,7 @@ What it finds is resolved in this batch.
   - no ⏳, ✅, ❌ or ⏸ remains, and no case is `Pending PO` unless A5 names it by ID. Nathan made A5 the home for the rulings deferred at batch 4's Stop 1;
   - batch 6's run confirms that every `Automated` case has at least one test carrying its ID;
   - every `Open` case is named by ID in Story 10's roadmap entry or in another named destination;
-  - TC-4.4 is either `Automated`, with a test that asserts the snapping rule, or `Open` and routed;
+  - TC-4.4's snapping rule (wiki item-positioning §4) is `Automated`. Batch 5 found DRAG-3.6 and 3.8 assert it, and deleted TC-4.2–4.5 as restatements;
   - no `**Rule:**` field cites the old anchor of a moved rule. This is checked by review against the anchor table in the feature batches, since the checker can't see it.
 - **The tests:**
   - `check:docs --rules case-id,bare-case-id -- tests server/tests client/src` reports zero hits;
@@ -441,14 +442,17 @@ What it finds is resolved in this batch.
 ## Handoff
 
 - **To the Architect:** everything owed through batch 4 is applied (checked 2026-09-28).
-  - **Story 10's roadmap entry:** item 1 names every case A3 has routed there: 66 from board-drag-interaction and ATT-4.9. It points at both reports' Gaps and "Confirming run" sections. Items 2 and 4 use qualified IDs. Still owed: batch 5's routed item-positioning cases, before batch 5 signs off (D10).
+  - **Story 10's roadmap entry:** item 1 names every case A3 has routed there: 66 from board-drag-interaction and ATT-4.9. It points at both reports' Gaps and "Confirming run" sections. Items 2 and 4 use qualified IDs. **Still owed, from batch 5's confirming run:** item 1's item-positioning placeholder ("added when A3's batch 5 routes its gaps") becomes "**item-positioning:** none. A3 batch 5 closed every gap in A3. TC-5.15 is routed to Epic 4 (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5."
+  - **`docs/planning/epic-4-decisions.md`:** *applied 2026-09-29;* §12 names TC-5.15 by ID, beside the done-column items. The magnitude threshold's `n` counts done items today, though they're outside the scope (wiki item-positioning §5, §2). Nathan deferred the fix to Epic 4's done-column rework (A3's Open question 18). The routing counts once that doc names the case (D9).
   - **`.claude/agents/test-reconciler.md`, "How You Map":** the many-to-many bullet (Amendments, "2026-09-28, many-to-many coverage").
   - **`.claude/guides/testing-strategy.md`, "What stays manual":** the approved clock-logic category.
 - **To the PO:** the drag INDEX's flag 14 lists edits owed to the "Placement rules for a Hierarchy" design doc. It goes when the flag list is removed. The design doc is transient, and wiki §7 already carries the agreed wording. Please confirm nothing is lost.
 - **To A4 (the Coder):** test comments in the files A3 touched are still A4's, except for their case IDs. A3's Coder qualifies bare `TC-n` and re-points IDs of deleted cases in the comments of every file it touches (Nathan, batch 3 Stop 1).
+  - **Stale section references in code comments,** from batch 5's report: "the §2 addendum" near `items.ts::crossWorkflowMoveError`, in `itemHierarchy.ts::applyHierarchyRequest` and in `itemListOps.ts::workphaseOnlySlot`, and the disclosure cited as §5 rather than §5.1. A2's anchor table gives the new names.
 - **To A5:**
   - **DRAG-4.26, 4.28 and 4.31** are routed there by ID (A5's D1). All three are the project sidebar's, and move with its rules.
   - **Eight `Pending PO` item-attachment cases**, from batch 4's Stop 1 (A5's D2): ATT-1.8, 1.10, 1.13, 3.11, 4.12, 4.13, 5.7 and 5.8. When A5 lands their wiki changes, the Test Planner resolves them: each is kept, changed or deleted. A5's D2 also lists, by title, the tests to check each answer against.
+  - **Three `Pending PO` item-positioning cases**, from batch 5's Stop 1 (A5's D2): TC-2.32, 6.10 and 7.18. The Test Planner resolves them the same way.
 - **To every later story:** the flow is D9's, with one Reconciler run at close.
 
 ## Drafts for the Architect (batch 1)
@@ -784,6 +788,38 @@ Four are `Pending PO` cases, where the wiki is silent and the code has chosen:
 
 **Nathan Rulings**
 These are deferred to docs\planning\tech-debt-stories\a5-wiki-and-test-plan-heirarchy-updates.md. We are ok to move on with the wiki and code staying as is
+
+**For the PO, from batch 5's proposing Reconciler run** (`docs/audits/test-reconciliation-a3-item-positioning.md`). Not yet answered.
+
+Two are rulings, where a test fails against today's code:
+
+17. **Ruling C: TC-7.18, the `positionScope` of an item left in another workflow's workphase.**
+    - A Free item reparented across workflows keeps a workphase its new project's workflow doesn't use. Its position is nulled: that's TC-7.17, which passes.
+    - The page disagrees with itself:
+      - wiki item-positioning §7.3 says the item reads `"none"`;
+      - §2's definition of `"none"` names only a done item and an item with no workphase.
+    - The API returns `"workflow"`, following §2's list, and `items.hierarchy.test.ts` line 697 pins that.
+    - **The Test Planner's view:** §7.3's reason is that the item has no meaningful comparison scope. That's what `"none"` means, and why its position is nulled, as a done item's is. So `"none"`: §2's list gains the case, and the code follows.
+    - The alternative is that §7.3 drops its parenthetical, and the case follows the code.
+18. **Ruling D: TC-5.15, done items and the magnitude threshold.**
+    - Wiki item-positioning §5's `n` is "the number of items in the scope", and a Free item's scope is the workflow's active items (§2). Done items have no position, so they don't count.
+    - The Reconciler found that the code counts them. A test fails today, though only with hundreds of done items.
+    - **The Test Planner's view:** the page is clear, so the code looks wrong. The Reconciler puts the fix at one filter, small enough for A3's Coder, as ATT-8.3's was.
+
+Two are `Pending PO` cases, where the wiki is silent:
+
+19. **TC-2.32, a write that names a final position.**
+    - The page says a write carries relative intent, never a final number.
+    - The API accepts one anyway, in two ways:
+      - a raw `position` on a move;
+      - a reorder endpoint that sets positions outright.
+    - The route calls this an escape hatch for scripts, the MCP server and tests. No client calls the reorder endpoint.
+    - Is it part of the API, which the page would then state, or is it to be retired, perhaps in the API contract epic?
+20. **TC-6.10, two done items with the same `completedAt`.**
+    - What orders them? §6 orders a done list by `completedAt`, and §5a's tie-break is for a sort by position.
+    - The client puts the one created first ahead today.
+
+**Nathan's rulings (2026-09-29):** 17, 19 and 20 go to A5's D2, question 17 alongside the other item movement cases. On 18, Nathan agrees that done items are a different scope, so they don't count toward `n`; the fix is deferred to Epic 4.
 
 ## Amendments
 
@@ -1306,4 +1342,285 @@ Line numbers below are the report's, from before these edits.
   - **Destinations:** Story 10's item 1 names ATT-4.9, and A5's D2 names all 8 `Pending PO` cases. No mismatch either way.
   - Every Architect item in the Handoff is applied.
 - **The batch's catalog:** 56 cases, of which 47 are `Automated`, 1 `Open` (routed to Story 10) and 8 `Pending PO` (routed to A5).
+- **Ready for Stop 2.**
+
+**2026-09-28, batch 5 step 1 (Test Planner, item-positioning):**
+- **Re-derived from the swept page:** 74 cases.
+  - 46 carry the legacy ✅. Their status is left for the Reconciler, and their pointers are file-level now.
+  - 28 are `Open`.
+  - None is `Pending PO` or `Planned`. No case needed an answer the page doesn't give, and the page has no `**Planned:**` marker.
+- **Format:**
+  - D8's layout, with suites titled `TC-<suite>` and a `**Rule:**` field on every case;
+  - the INDEX lists the suites. Its counts, status block and history are gone.
+  - From the suites: every history note, "previous mapping" note and "(regression/guard)" tag.
+- **Anchors:**
+  - The scope-change table's cases cite §2.1: TC-2.19–2.21, 2.23–2.25 and 7.17.
+  - The disclosure's cite §5.1: TC-5.9–5.14 and 5a.4.
+  - "§2 addendum" appears nowhere.
+- **Deleted: 19.**
+  - **Superseded:** TC-3.3, X.3 and X.5.
+  - **Rules another catalog's cases hold:**
+    - **TC-4.2–4.5, the merged-column drop resolution.** DRAG-3.6, 3.7 and 3.8 assert it, and are `Automated`. Their Rule fields now cite wiki item-positioning §4, and so does DRAG-5.2's. This closes TP F11: TC-4.4's snapping rule is DRAG-3.6's and 3.8's.
+    - **TC-7.5 and 7.6 (an empty region), TC-7.8 (a done column) and TC-7.16 (the middle band).** The page says each takes a path §2 already has: "unchanged", "no new mechanism", "not a new rule".
+      - DRAG-3.10, 3.9 and 3.3 make the requests. Their Rule fields now cite §7.1, §7.4 and §7.5.
+      - The server's side is TC-2.24, 2.7, 6.1 and 6.3.
+    - **TC-7.7, an empty Stub list:** DRAG-4.12 makes the request, and TC-2.20 holds the result. DRAG-4.12 now cites §7.1.
+    - **TC-7.12:** ATT-3.5 asserts it with the same fixture. Item-attachment §5 holds the sequencing rule, and item-positioning §7.2 defers to it.
+    - **TC-X.2, cycles:** ATT-4.2 and 4.3 (item-attachment §7).
+  - **Within the catalog:**
+    - TC-2.26 was only a pointer to part 6.
+    - TC-2.3's example (`1.0` and `3.0` give `2`) can't tell coarsest fit from the raw midpoint. TC-2.2's `1.8` can.
+    - TC-2.22: TC-2.1 now covers a moved item as well as a created one, and both mapped to the same test.
+    - TC-7.9 is merged into TC-7.11, the same request. TC-7.11 now asserts the acceptance too, and cites §7.1.
+    - TC-5a.3, re-sorting only on an inversion, was §5a's step 4, which Nathan dropped in A2.
+- **New: 3.**
+  - **TC-2.31:** a move within the item's own workphase that names no anchor appends it. This is §2's "a same-workphase reorder/append with no specific target card".
+  - **TC-5a.6:** the board records no inversion for a write it didn't preview (§5a).
+  - **TC-7.17:** a cross-workflow reparent nulls the position of the moved Free item and of its detached descendants (§7.3, §2.1).
+    - Attached descendants keep their positions.
+    - Re-filing takes the append fallback.
+    - ATT-5's preamble points there. This is the case batch 4 left to batch 5.
+- **Revised beyond wording.** The ✅ cases among these are the Reconciler's to re-check.
+  - **Concrete values where the rule fixes one:** TC-2.1, 2.4–2.7, 2.9, 2.19–2.21, 3.4, 3.5, 5.2, 5.3, 6.9, 7.1, 7.2, 7.4, 7.11, 7.13–7.15, X.1 and X.6. For example, TC-2.4 is now `3`, not `3.4`.
+  - **Part 2:**
+    - TC-2.7 adds that an empty workphase isn't an empty scope, which was TC-7.6's rule.
+    - TC-2.8 adds an anchor that doesn't exist, and that no fallback appends instead (§7.1).
+    - TC-2.10 is now the workflow-wide scope: a neighbor in another workphase, and an attached child that isn't one. Its old example had an attached item as a Free item's neighbor, which §2 rules out.
+    - TC-2.11 is now the request: relative intent, with no `position` field. The preview's side is TC-2.27 and 2.30.
+    - TC-2.19 said "workphase-scoped". The scope is the workflow.
+  - **Parts 5 and 5a:**
+    - TC-5.6 is now the server's tie-break in a reindex. The client's is TC-5a.5.
+    - TC-5a.1 is now §5a's outcome rule: the server's order, no reload, and no correctly ordered row moving, for each kind of write.
+    - TC-5a.2 asserts that the inversion log gains no entry.
+  - **Parts 6 and 7:**
+    - TC-6.4 now has a direction: oldest completion first, the newest last. Board-drag §10 says a done list orders a missing `completedAt` last, "matching the server's stamp", so the case cites that section too.
+    - TC-7.10 adds a plain move that names an anchor from another scope.
+    - TC-7.14 follows the reworded §7.3. A cross-project attach resolves as it would within one project, and a Free item that stays Free keeps its position through a reparent with no anchor.
+  - **TC-X:** TC-X.1 is now a detached child's workflow scope, and TC-X.6 a moving item not being its own neighbor. Each has values that tell the rule from its failure.
+- **For the Reconciler:**
+  - `useItemManagement.test.ts` no longer exists.
+    - TC-4.1's pointer is `itemListOps.test.ts`, where the catalog's old note said its test moved.
+    - TC-5.6's lists only the server test.
+    - TC-6.4's is `—`.
+  - TC-2.17 is the `positionScope` side of Ruling A's parentless flag (A5), and holds under either answer.
+- **Deleted IDs in test titles and comments.** `case-id` reports 12, for the Coder in step 3. The report proposes where each goes.
+  - `dragRequest.test.ts`: TC-7.16 at lines 26 and 104, TC-7.5 and 7.8 at line 32, and TC-7.8 at line 160;
+  - `dragRequest.ts`, comments: TC-7.16 at line 37, and TC-7.5 at line 38;
+  - `items.hierarchy.test.ts`: TC-7.9 at line 199, TC-7.12 at 280, TC-7.7 at 370, and TC-7.8 at 588;
+  - `itemWriteReconciliation.ts`, a comment: TC-5a.3 at line 95.
+
+  `placement.ts`'s two bare `TC-n` are batch 6's, as already listed.
+- **Also edited:**
+  - cross-references to deleted cases, and the Rule additions above, in DRAG-3.3, 3.6–3.10, 4.12, 5.2 and 6.10, and in ATT-3.1, 3.5 and 4.2;
+  - the README's example ID, from TC-4.3 to TC-4.1.
+- **Acceptance's TC-4.4 line** now asks for the snapping rule to be `Automated` in DRAG-3.6 and 3.8.
+- **Checks:**
+  - `check:docs -- docs/test-plans` reports 0 hits. item-positioning had 72.
+  - Every status matches its suite table.
+  - Every Next ID is past its suite's last case.
+  - Every case has a Rule field.
+- **Next:** step 2, the proposing Reconciler run.
+
+**2026-09-28, batch 5 step 2 (the proposing Reconciler run, and the Test Planner's response):**
+- **The report** is `docs/audits/test-reconciliation-a3-item-positioning.md`. Of the 74 cases:
+  - 31 are `Automated` by stamps alone: 27 through surface tests, and 4 under the existing resolver and itemListOps pointers;
+  - 6 need an internal mapping approved;
+  - 24 have route, API or no-drag UI gaps that A3 can close. For 8 of them, a range only needs tightening to the case's value;
+  - 10 are client cases, split between internal tests and the drag;
+  - 3 needed a ruling.
+
+  No coverage was lost. Board-drag's 42 `Automated` cases and item-attachment's 47 are all still backed, and the cases step 1 edited keep their statuses.
+- **16 of the 46 ✅ cases don't hold as they now read:** TC-2.1, 2.6, 2.7, 2.8, 2.9, 2.10, 2.19, 3.4, 5.4, 5.6, 6.1, 6.4, 6.7, 6.9, X.1 and X.6.
+  - Most fail on the exact values and new clauses step 1 added.
+  - TC-2.10's ✅ rested on resolver tests that scope to one workphase.
+  - TC-X.1's describe holds no detached child.
+- **The Test Planner's response:**
+  - **R2, TC-2.1:** a create takes no anchor, and the page never says one does. TC-2.1 is now a move, and TC-2.11's "an inline create into a slot" is now "an inline create".
+  - **R3, TC-5.9:** its values were wiki item-positioning §5.1's illustration. A tight gap reindexes first and then inserts, so they're now `A = 1`, `C = 2` and `E = 3`, with `X` at `1.5`.
+  - **R1, TC-7.17:** its `positionScope` clause is split out as TC-7.18, `Pending PO` (Open question 17). TC-7.17 is now the nulled positions, which pass today.
+  - **TC-7.14:** `X` is now a detached child, so its Free half doesn't turn on Ruling A (ATT-3.11).
+  - **TC-7.10** gains two more rejected anchors, both outside the resulting scope (§7.1):
+    - an anchor in another workflow (candidate 2);
+    - the moving item as its own anchor (candidate 1), which follows from TC-X.6.
+  - **New cases:**
+    - TC-5.15, `Open`: done items don't count toward `n` (candidate 6, read from §5 and §2). It fails today (Open question 18).
+    - TC-2.32, `Pending PO`: a write that names a final position (candidate 3; question 19).
+    - TC-6.10, `Pending PO`: a tie in `completedAt` (candidate 5; question 20).
+  - **Not catalogued:** candidate 4, that a client applies the pairs before the written row. Against a correct server the two agree (TC-5.11), so no surface can see the order.
+  - **The overlaps the report lists stay.** Each case states its own rule, even where one test proves several.
+  - **For the confirming run:** TC-2.16's, 2.17's and 6.6's pointers name the wrong file.
+- **The catalog now:** 78 cases: 46 ✅, 29 `Open` and 3 `Pending PO`. `check:docs -- docs/test-plans` reports 0 hits.
+- **The report's addendum** maps the changed and new cases:
+  - TC-2.1 (as a move) and TC-7.17 (without its `positionScope` clause) are whole on existing tests, and pass today.
+  - TC-7.10 isn't whole yet: two of its rejections need a re-read of the row.
+  - TC-5.9 passes today once items:669 reads `reindexed`. That one assertion also closes TC-5.13's and 5.14's missing halves.
+  - TC-5.15 fails today, as expected.
+  - 15 of the 46 ✅ cases don't hold as they now read. TC-2.1 holds as a move.
+- **Expected at the confirming run:**
+  - 38 `Automated` if Stop 1 approves only the six internal mappings;
+  - 65 if A3's Coder also closes every tighten, route, API and no-drag UI gap, TC-5.15 included only if its fix lands;
+  - 75 if the client-case category is approved too.
+
+  The 3 `Pending PO` cases stay out of these counts.
+- **Next:** Stop 1.
+
+**2026-09-29, batch 5 Stop 1 (Nathan's rulings):**
+- **Internal tests:**
+  - **Approved:** TC-2.27, 5a.2, 5a.4 and 5a.6 (the report's mappings A).
+  - **TC-2.16 and 2.17** become route tests: one assertion each, on tests that already set up the item.
+  - **A new approved category:** a client ordering or request rule whose only surface is a drag, tested in the pure modules `itemListOps.ts`, `itemWriteReconciliation.ts` and `dragRequest.ts` (D3, README).
+    - It covers the report's partial mappings B.
+    - It covers four new tests: TC-2.28's client half, TC-2.29's reconciled half, TC-2.30's re-sort half, and TC-7.3.
+    - It covers TC-5a.5's `null` half.
+    - placement:63 keeps TC-2.11.
+- **Exact values:** the Coder tightens the eight tests the report lists (R4) to each case's value.
+- **Gaps:** every route, API and no-drag UI gap goes to A3's Coder. Under the category, nothing from this batch goes to Story 10.
+- **Open question 17, TC-7.18's `positionScope`:** to A5, with the other item-movement cases in its D2.
+- **Open question 18, TC-5.15:** Nathan agrees that done items are a different scope, so they don't count toward `n`. The fix is deferred to Epic 4, with the done-column rework. TC-5.15 stays `Open`, routed there.
+- **Open questions 19 and 20, TC-2.32 and TC-6.10:** to A5.
+- **The catalog:** 78 cases: 46 ✅, 29 `Open` and 3 `Pending PO`.
+  - Of the `Open` cases, TC-5.15 is routed to Epic 4, and the rest are A3's.
+  - The 3 `Pending PO` cases are routed to A5.
+- **Expected after the confirming run,** if every A3 gap closes: 74 `Automated`, TC-5.15 `Open` and routed to Epic 4, and 3 `Pending PO` routed to A5.
+
+**Batch 5, step 3: the Coder's brief.**
+The report is `docs/audits/test-reconciliation-a3-item-positioning.md`. Where its Addendum names a case, the Addendum wins. Line numbers are the report's.
+1. **Stamp titles** as the report's Proposed Stamps and the Addendum list them, including tests that assert only part of a case. That covers:
+   - the surface tests;
+   - the internal tests under existing pointers (resolver, and listOps:125 for TC-4.1);
+   - the approved internal tests:
+     - TC-2.27 (listOps:292) and 5a.2 (reconcile:130), already stamped;
+     - TC-5a.4 (reconcile:49 and :26);
+     - TC-5a.6 (reconcile:153);
+   - under the new category, the report's mappings B:
+     - TC-2.11, on dragRequest's `toRequest` describe (placement:63 keeps its TC-2.11);
+     - TC-2.29, on listOps:318;
+     - TC-2.30, on listOps:343, with the ID moved to the front;
+     - TC-5a.1, on reconcile:26, reconcile:56 and dragRequest:261;
+     - TC-5a.5, on listOps:73;
+     - TC-7.1, 7.2 and 7.4, on dragRequest:127.
+2. **Deleted and misattributed IDs**, as the report's Unknown IDs table proposes:
+   - the 12 `case-id` hits;
+   - the range tails the checker can't see: reconcile:108's "TC-5a.1–5a.3" and the "7.8" in `dragRequest.ts` line 38;
+   - TC-5.6 on items:658, :712 and :742's comment, which becomes TC-5.5;
+   - TC-X.1 comes off items:410's describe.
+3. **Titles:** strip provenance from every title in a file you touch, as the report's "For the Coder" lists. The "(wiki …)" and "(positioning §N)" pointers can go.
+   - items:258 states the rule §2 replaced. Retitle it to what it asserts, or remove it.
+   - items:338 can't tell a fresh position from a kept one. Fix its fixture, or leave it without an ID.
+4. **Tighten** the eight tests in the report's R4 to the case's value:
+   - **TC-2.9:** resolver:163 asserts `2.9`.
+   - **TC-2.19:** items:354 asserts the exact append, and `positionScope` `"workflow"`.
+   - **TC-5.6:** resolver:82's older row is inserted later.
+   - **TC-6.1:** items:328 and :577 assert that `completedAt` falls between timestamps read just before and just after the write.
+   - **TC-7.11:** hier:260 asserts `1.5`.
+   - **TC-7.13:** hier:352 asserts `10.5`.
+   - **TC-7.15:** hier:540 asserts `1.5`.
+   - **TC-X.6:** items:462 asserts `2`.
+5. **Route and API gap tests.** The report's Gaps and Addendum say what each one asserts.
+   - **Partly covered:** TC-2.5, 2.6, 2.7, 2.8, 2.10, 3.4, 5.4, 5.9, 5.12, 5.13, 5.14, 6.7, 6.9, 7.10 and 7.14.
+     - TC-5.9 closes with one assertion on items:669's `reindexed`. That assertion also closes TC-5.13's and 5.14's missing halves.
+     - TC-7.10's rejections need a re-read of the row.
+   - **No test yet:**
+     - TC-2.31 and X.1;
+     - the server halves of TC-7.1 and 7.2;
+     - TC-2.16 (one assertion on boardsRoute:133) and TC-2.17 (one on items:1244).
+6. **UI with no drag:**
+   - TC-6.4;
+   - TC-2.11's inline create: its `POST` body carries no `position`;
+   - TC-5a.1's inline create and Sheet edit: the server's order, with no reload.
+7. **New internal tests, under the category:**
+   - TC-2.28's client half: fold `X = 1.5`, and then `X = 2.5`, into `A, C, E` and sort;
+   - TC-2.29's reconciled half;
+   - TC-2.30's re-sort half;
+   - TC-7.3: a tie given newest first, then `toRequest`'s first and last;
+   - TC-5a.5's `null` half.
+8. **Don't:**
+   - write tests for the `Pending PO` cases (TC-2.32, 6.10 and 7.18);
+   - change hier:697's `positionScope` assertion (A5);
+   - fix TC-5.15's threshold count (Epic 4);
+   - edit the "§2 addendum" comments, which are A4's.
+9. **Checks:**
+   - `npm run check:docs -- --rules case-id,bare-case-id -- <the files you touched>` reports 0 hits. `placement.ts`'s two bare IDs are batch 6's unless you touch that file;
+   - `npm run check` passes;
+   - `npm run test:e2e` passes.
+
+**Step 4, the confirming run:** apply the approvals above.
+- The existing pointers count, and `itemListOps.test.ts` counts for TC-4.1.
+- Correct the pointers that name the wrong file: TC-2.16, 2.17 and 6.6.
+- A case whose tests assert only part of it stays `Open`, with `—`.
+- Story 10's item 1 then says item-positioning routed nothing, or names what's left (Handoff).
+
+**2026-09-29, batch 5 step 3 (Coder):**
+Line numbers below are the report's, from before these edits.
+- **Titles (brief items 1 and 3).** Stamped as the report's Proposed Stamps and its Addendum list them, in ten test files, with the partial stamps under mappings B.
+  - Provenance is stripped as the report's "For the Coder" lists it, both optional items included. Every "(wiki …)" and "(positioning §N)" pointer is gone from the touched titles, including the resolver's "disclosure (wiki §5)" describe, which the list doesn't name.
+  - A trailing ID is gone wherever the title or its describe now carries it at the front: the "(TC-n)" suffixes in `items.test.ts`, the API specs' "(TC-2.n-equivalent)", and two "(TC-2.11)" suffixes inside dragRequest's `toRequest` describe.
+  - **items:258 is removed.** It asserted the rule §2 replaced, and items:284 (TC-2.24) asserts the one that holds.
+  - **items:338's fixture is fixed.** The item is pinned at `5.0` before it attaches, and the test asserts `2.0` and `"attached-siblings"`. It carries TC-2.20, which the report didn't propose (Test Quality 1). TC-2.20 is whole on hier:540 and :370 either way.
+  - **Left alone:** resolver:399's "(the Date.now()-scale legacy-data self-heal)". It names the data the rule is for, not where the test came from.
+- **IDs (item 2).**
+  - The 12 `case-id` hits are resolved as the Unknown IDs table proposes. dragRequest:26 keeps DRAG-3.12 mid-title, as the table allows.
+  - The range tails: reconcile:108 now reads "TC-5a.1, TC-5a.2", and `dragRequest.ts`:37–38 name DRAG-3.12, 3.10 and 3.24.
+  - items:712's title and :742's comment carry TC-5.5 in place of TC-5.6. The describes at items:410 and :658 lose their IDs.
+- **Tightened (item 4):** all eight. TC-6.1's two tests bracket `completedAt` between timestamps read before and after the write.
+- **Route and API gap tests (item 5).**
+  - **New, in `items.test.ts`:** TC-2.5, 2.6, 2.7, 2.10, 2.31, 3.4, 6.9, 7.1, 7.2 and X.1, and one magnitude test stamped TC-5.4, 5.13 and 5.14. Its two items are created before either is pinned high, since a create after the pin would reindex the scope itself.
+  - **New, in `items.hierarchy.test.ts`:** TC-7.14's Free half. A detached child reparented across projects with no anchor keeps `5.0`.
+  - **Extended:**
+    - TC-2.8: items:487 and hier:588 re-read the row, so the refused move is shown to write nothing.
+    - TC-5.9: items:669 asserts the whole `reindexed`, which also closes TC-5.13's and 5.14's halves there.
+    - TC-5.12: hier:1055 adds a plain append with no `reindexed`.
+    - TC-6.7: columnsRoute's two rejections re-read the board's columns.
+    - TC-7.10: items:510 and :537 re-read the row.
+    - TC-2.16 and 2.17: one assertion each, on boardsRoute:133 and items:1244.
+  - One server test less than planned: items:258, above.
+- **UI with no drag (item 6):** a new `tests/ui/item-positioning.spec.ts`.
+  - **TC-6.4:** three items are completed in the order D2, D3, D1, each once the clock has passed the one before, so no two share a `completedAt` (TC-6.10's tie is `Pending PO`). The Done column reads D2, D3, D1.
+  - **TC-2.11 and 5a.1, the inline create:** the `POST` body has a `workphaseId` and no `position`.
+  - **TC-5a.1, the Sheet edit:** a detach from the item's own panel, a `PUT` whose position the server resolves.
+  - Both TC-5a.1 tests seed two items at `1100` and `1200`, so the write reindexes. Only a board that applied the pairs renders the new item last. Each test also records every `GET /api/boards/:id` after the board loads, and expects none.
+  - `titlesIn` moved from `drag-column-bands.spec.ts` to `tests/helpers/boardLocators.ts`, so both specs share it.
+- **New internal tests, under the category (item 7):**
+  - `itemWriteReconciliation.test.ts`, "the preview through its responses": TC-2.28, 2.29 and 2.30. Each asserts the rendered order at each step, and TC-2.30 that `X` keeps its position and placement while another item's response lands.
+  - `dragRequest.test.ts`: TC-7.3.
+  - `itemListOps.test.ts`: TC-5a.5's `null` half, as its own test beside the tie.
+- **Not done, as the brief says (item 8):** no tests for TC-2.32, 6.10 or 7.18; hier:697 unchanged; TC-5.15's count unchanged; the "§2 addendum" comments untouched. Also left for batch 6: hier:415's ATT-3.9 and `placement.ts`'s bare IDs.
+- **Checks:**
+  - `check:docs -- --rules case-id,bare-case-id` on the 15 touched files reports 0 hits;
+  - `npm run check` passes: server 346, client 398, scripts 75;
+  - `npm run test:e2e` passes: 145 passed, and 8 skipped, all of them known.
+- **Expected after the confirming run,** as at Stop 1: 74 `Automated`, TC-5.15 `Open` and routed to Epic 4, and 3 `Pending PO` routed to A5.
+
+**2026-09-29, batch 5 steps 4 and 5 (the confirming run, and the Test Planner's checks):**
+- **The confirming run** wrote the status and Automation test line on every case, and matched the expected figures:
+  - 74 `Automated`: 52 by surface tests alone, 14 by internal tests alone, and 8 by both. The 14 are 6 under existing pointers and 8 under Nathan's approvals;
+  - TC-5.15 `Open`, routed to Epic 4;
+  - 3 `Pending PO`, untouched and routed to A5.
+
+  The pointers that named the wrong file are corrected. The report's section is "Confirming run (2026-09-29)".
+- **The Coder left no step 3 entry,** so the run mapped from the tests as they stand.
+- **Six readings, disclosed. None changes a status.**
+  - **Made whole by rewording:**
+    - **TC-2.11** listed a request's forms as an anchor and a side, or a workphase, but an attach or detach also names a parent. The case now says the request names what the placement is relative to, and carries no `position`.
+    - **TC-7.14's** attach half runs on a top-level `X`. The detached child now applies only to its Free half, where it matters.
+  - **Stand:**
+    - **TC-2.7:** two clauses rest on the resolver's bootstrap tests, under an existing pointer. The route tests that show them carry other IDs.
+    - **TC-5.9:** its test's fixture differs from the case's, but its values are exact.
+    - **TC-5a.1:** the inline create and the Sheet edit without a reindex rest on the reducer test, under the category. The UI tests show the harder path, with a reindex.
+    - **TC-2.30:** the pending marker is asserted as the placement entry, not the board's attribute. The case asks for a separate marker, not a particular one.
+- **A5's D2:**
+  - batch 5's entry moved after batch 4's tests list, since it had split batch 4's entry;
+  - the parentless-create test that pins ATT-1.8 now carries TC-2.17 too, so it moved to the list that's re-checked once A5 answers.
+- **Batch 6's close-out** also picks up:
+  - `itemPositionScope.test.ts`'s titles, which still end in TC IDs that don't count;
+  - `items.test.ts`'s "detached siblings" describe, which holds top-level items;
+  - optionally, TC-2.7 on the route test that shows a first attached child's `1.0`.
+- **Checks:**
+  - `check:docs -- docs/test-plans` reports 0 hits, and no ✅, ⏳, ❌ or ⏸ remains anywhere in the catalog.
+  - `case-id,bare-case-id` across `tests`, `server/tests`, `client/src` and `server/src` reports only `placement.ts`'s two bare IDs, which are batch 6's.
+  - Every status matches its suite table (74, 1 and 3), and the four `—` lines are exactly the `Open` and `Pending PO` cases.
+  - Every live case names its wiki section. The `Pending PO` cases have no Rule field (D2).
+  - `npm run check` passes. So does `npm run test:e2e`: 145 passed and 8 skipped, the known skips. The Test Planner ran both, since the Coder left no results.
+  - **Destinations:** Epic 4's decisions §12 names TC-5.15, and A5's D2 names TC-2.32, 6.10 and 7.18. Nothing is routed to Story 10. Its item-positioning placeholder is the Architect's to replace (Handoff).
+- **The batch's catalog:** 78 cases. 74 are `Automated`, 1 is `Open` (routed to Epic 4), and 3 are `Pending PO` (routed to A5).
 - **Ready for Stop 2.**

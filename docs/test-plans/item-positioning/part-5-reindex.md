@@ -1,254 +1,143 @@
-# Part 5 — Reindex mechanism
+# TC-5 — Reindexing and its disclosure
 
-**Next ID:** TC-5.15
+**Next ID:** TC-5.16
 
-**Wiki:** [`../../wiki/item-positioning/#5-reindexing-precision--magnitude`](../../wiki/item-positioning/README.md#5-reindexing-precision--magnitude)
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-5.1 | Reindex preserves current relative order | P0 | ✅ automated |
-| TC-5.2 | Magnitude threshold triggers reindex before append | P0 | ✅ automated |
-| TC-5.3 | Magnitude threshold scales with scope size | P1 | ✅ automated |
-| TC-5.4 | Active items reindex as one coordinated cross-workphase scope | P0 | ✅ automated |
-| TC-5.5 | Done items are never reindexed | P1 | ✅ automated |
-| TC-5.6 | Tie-break on exact position equality | P1 | ✅ automated |
-| TC-5.7 | Attached-siblings reindex doesn't leak into workflow-wide scope | P0 (regression/guard) | ✅ automated |
-| TC-5.8 | Workflow-wide reindex doesn't leak into attached-siblings scope | P0 (regression/guard) | ✅ automated |
-| TC-5.9 | A write that triggered a reindex discloses every renumbered position | P0 | ⏳ pending triage |
-| TC-5.10 | Disclosure entries are `{id, position}` and nothing more | P1 | ⏳ pending triage |
-| TC-5.11 | The written item is included in the disclosure when it was in the reindexed scope | P0 | ⏳ pending triage |
-| TC-5.12 | No reindex → disclosure is absent or empty | P1 | ⏳ pending triage |
-| TC-5.13 | Disclosure covers the whole reindexed scope, not just the caller's view | P0 | ⏳ pending triage |
-| TC-5.14 | Every reindex-capable write path discloses | P1 | ⏳ pending triage |
-
-*(TC-5.9–5.14 added by Epic 3.5 from §5 "Reindexing must be disclosed to
-the caller." The client's side of the contract — what to do with the
-disclosure — is [Part 5a](part-5a-client-reconciliation.md).)*
+| TC-5.1 | A reindex keeps the scope's order | P0 | Automated |
+| TC-5.2 | Crossing the magnitude threshold reindexes before the append | P0 | Automated |
+| TC-5.3 | The magnitude threshold scales with the scope's size | P1 | Automated |
+| TC-5.4 | Active items reindex as one scope, across every active workphase | P0 | Automated |
+| TC-5.5 | Done items are never reindexed | P1 | Automated |
+| TC-5.6 | A reindex breaks an exact tie by creation time | P1 | Automated |
+| TC-5.7 | An attached-siblings reindex doesn't touch the workflow scope | P0 | Automated |
+| TC-5.8 | A workflow reindex doesn't touch attached siblings | P0 | Automated |
+| TC-5.9 | A write that triggered a reindex discloses every renumbered position | P0 | Automated |
+| TC-5.10 | Each disclosed entry is `{id, position}` and nothing more | P1 | Automated |
+| TC-5.11 | The written item is in the disclosure when its scope was reindexed | P0 | Automated |
+| TC-5.12 | With no reindex, the disclosure is absent or empty | P1 | Automated |
+| TC-5.13 | The disclosure covers the whole reindexed scope, not the caller's view | P0 | Automated |
+| TC-5.14 | Every item write that can reindex discloses | P1 | Automated |
+| TC-5.15 | Done items don't count toward the magnitude threshold | P2 | Open |
 
 ---
 
-## TC-5.1 — Reindex preserves current relative order
+## TC-5.1 — A reindex keeps the scope's order
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5
 
-*Given* a comparison scope with items in some order (regardless of their
-raw position values), *when* a reindex is triggered, *then* the items' new
-clean sequential positions preserve their pre-reindex relative order
-exactly.
+*Given* a comparison scope whose items are in some order, at any positions, *when* it is reindexed, *then* its items take clean sequential values, `1`, `2`, `3` and on, and their order is exactly what it was.
 
-**Automation test:** `server/tests/lib/positionResolver.test.ts` ›
-`reindexScope` › "reassigns clean sequential positions while preserving
-relative order"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-5.2 — Magnitude threshold triggers reindex before append
+## TC-5.2 — Crossing the magnitude threshold reindexes before the append
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5
 
-*Given* a scope where the next append-fallback value would cross
-`max(1000, currentScopeItemCount + 100)`, *when* an append is attempted,
-*then* the scope is reindexed first, and the append proceeds afterward
-with a small, clean value.
+*Given* a scope of `n` items whose next appended value would cross `max(1000, n + 100)`, *when* an item is appended, *then* the scope is reindexed first, and the appended item takes the value after the reindexed last item: `n + 1`.
 
-**Automation test:** `positionResolver.test.ts` › `resolveAppendPosition`
-› "reindexes before appending once the magnitude threshold is crossed"
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## TC-5.3 — Magnitude threshold scales with scope size
+## TC-5.3 — The magnitude threshold scales with the scope's size
 
-**Priority:** P1 · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5
 
-*Given* a scope that legitimately holds 1200 items with positions already
-in a comparable range, *when* an append occurs, *then* it does *not*
-trigger a reindex merely because a flat 1000 ceiling was crossed — the
-threshold accounts for item count.
+*Given* a scope of 1,200 items whose true last is at `1250`, *when* an item is appended, at `1251`, *then* no reindex happens: `1251` doesn't cross `max(1000, 1200 + 100)`, which is `1300`.
 
-**Automation test:** `positionResolver.test.ts` › `resolveAppendPosition`
-› "does not reindex when a large position is proportionate to a large item
-count"
+**Automation test:** `server/tests/lib/positionResolver.test.ts`
 
-## TC-5.4 — Active items reindex as one coordinated cross-workphase scope
+## TC-5.4 — Active items reindex as one scope, across every active workphase
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5
 
-*Given* multiple non-terminal workphases whose combined items need
-reindexing, *when* a reindex is triggered by either cause (tight-gap or
-magnitude) affecting the active scope, *then* all active items across
-every non-terminal workphase are reset together in one operation — not
-workphase-by-workphase.
+*Given* a workflow's Free items in two non-terminal workphases, `W1` and `W2`, *when* a reindex fires in `W1`, by either trigger, *then* `W2`'s items are renumbered in the same operation, in one sequence with `W1`'s and in their combined order. No workphase is reindexed on its own.
 
-**Automation test:** `items.test.ts` › "reindexes every non-terminal
-workphase in the workflow together, in one coordinated pass (TC-5.4)".
-Uses the tight-gap trigger (crossing the magnitude threshold via real
-appends would need 1000+ POSTs — `max(1000, count+100)` is never crossed
-by a plain `count+1` append). Seeds a tight gap in one workphase, an item
-in a second non-terminal workphase in the same workflow, forces the
-reindex via a real `PATCH /:id/move` anchor+side call, and confirms the
-second workphase's item was renumbered in the same pass — the
-coordination proof.
+**Automation test:** `server/tests/routes/items.test.ts`
 
 ## TC-5.5 — Done items are never reindexed
 
-**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5, wiki item-positioning §6
 
-*Given* a terminal-workphase (done) item, *when* an active-scope reindex
-occurs elsewhere, *then* the done item's data is untouched — done items
-have no stored `position` to reindex (see [Part 6](part-6-active-done-split.md)).
+*Given* a done Free item, with no position, in a workflow, *when* the workflow's active scope is reindexed, *then* the done item still has no position, and nothing else about it changes.
 
-**Automation test:** `items.test.ts` › "excludes a done item from an
-active-scope reindex (TC-5.6)". Found a real bug on first write (2026-08-18):
-`positionScopeFor`'s workflow-wide scope (`workphaseIdsInSameWorkflow`)
-includes terminal workphase ids with no `isTerminal` filter, so a done
-item (`position: null`) was a scope member by `workphaseId` alone, and
-SQLite sorts `NULL` first in `ASC` order — so `reindexScope` assigned the
-done item a real position, contradicting this very rule. **Fixed** by
-filtering `isNotNull(items.position)` directly in `reindexScope`
-(`positionResolver.ts`) rather than narrowing `positionScopeFor`: the
-append/anchor neighbor-lookup queries elsewhere in that file were already
-safe (`gt()`/`lt()` against a real value can never match a null
-position, and `ORDER BY position DESC` sorts `NULL` *last*, both
-confirmed empirically) — `reindexScope`'s blind order-and-renumber loop
-was the only exposed spot, so the fix lives there.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-5.6 — Tie-break on exact position equality
+## TC-5.6 — A reindex breaks an exact tie by creation time
 
-**Priority:** P1 · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5a, wiki item-positioning §5
 
-*Given* two items with identical `position` values in the same rendered
-list, *when* the list is sorted client-side, *then* the item with the
-earlier `createdAt` sorts first, deterministically, regardless of
-underlying DB row order.
+*Given* two items in one scope with the same `position`, *when* the scope is reindexed, *then* the one created earlier takes the lower new value, whatever order the database holds them in. How a client sorts a tie is [TC-5a.5](part-5a-client-reconciliation.md).
 
-**Automation test:** `positionResolver.test.ts` › `reindexScope` ›
-"breaks exact ties by createdAt, oldest first" (server reindex-time) and
-`useItemManagement.test.ts` › `getWorkphaseItemsFrom` › "breaks an exact
-position tie by createdAt, oldest first" (client render-time) — two
-genuinely different code paths, not redundant
+**Automation test:** `server/tests/lib/positionResolver.test.ts`
 
-## TC-5.7 — Attached-siblings reindex doesn't leak into workflow-wide scope
+## TC-5.7 — An attached-siblings reindex doesn't touch the workflow scope
 
-**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5, wiki item-positioning §2
 
-*Given* a tight-gap reindex triggered within one parent's attached-siblings
-scope (`parentId = X AND isAttached = 1`), *when* the reindex runs, *then*
-an unrelated workflow-wide item sharing the same workphase — and the
-parent itself — are completely untouched by it.
+*Given* `P`'s attached children with a gap too tight to split, and a Free item in the same workphase, *when* an insert among `P`'s children triggers a reindex, *then* the Free item and `P` itself keep their positions exactly.
 
-**Automation test:** `items.test.ts` › `describe('reindex scope isolation:
-attached-siblings vs. workflow-wide', ...)` › "an attached-siblings
-reindex does not touch an unrelated workflow-wide item". Added 2026-08-18
-after a direct question about whether `positionScopeFor`'s two branches
-(attached-siblings vs. workflow-wide — literal complements of each other
-by construction, see the describe block's own header comment) could
-cross-contaminate under a real reindex, the same class of gap TC-5.6
-turned out to hide. Verified empirically rather than trusting the
-construction argument alone. The pre-existing isolation coverage in
-`itemRepositioningAttachedSiblings.spec.ts` never actually triggers a
-reindex (its gaps are always resolvable directly), so this is genuinely
-new coverage, not a duplicate.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-5.8 — Workflow-wide reindex doesn't leak into attached-siblings scope
+## TC-5.8 — A workflow reindex doesn't touch attached siblings
 
-**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5, wiki item-positioning §2
 
-*Given* a tight-gap reindex triggered in the workflow-wide scope, *when*
-the reindex runs, *then* an unrelated parent's attached children, sharing
-the same workphase, are completely untouched by it.
+*Given* Free items with a gap too tight to split, and `Q`'s attached children in the same workphase, *when* an insert among the Free items triggers a reindex, *then* `Q`'s children keep their positions exactly.
 
-**Automation test:** `items.test.ts` › same describe block as TC-5.8 ›
-"a workflow-wide reindex does not touch an unrelated parent's attached
-children" — the reverse direction of TC-5.8, added alongside it.
-
-### Reindexing must be disclosed to the caller (Epic 3.5)
+**Automation test:** `server/tests/routes/items.test.ts`
 
 ## TC-5.9 — A write that triggered a reindex discloses every renumbered position
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-*Given* a comparison scope rendered by a caller as `A=1.0, C=1.5, E=1.75`
-(with a gap too tight to insert into between `C` and `E`, or a scope past
-the magnitude threshold), *when* the caller writes `X` with a placement
-that triggers a reindex — say the scope is renumbered to `A=1, X=2, C=3,
-E=4` — *then* the write's response carries a collection of `{id,
-position}` pairs containing `A→1`, `X→2`, `C→3`, `E→4` (every item the
-reindex renumbered), so that a caller who applies all of them renders
-`A, X, C, E`.
+*Given* a caller that renders `A` (`1.0`), `C` and `E`, with `C` and `E` so close above `A` that no value fits between `A` and `C`, *when* it places `X` after `A`, *then* the scope is reindexed first, to `A = 1`, `C = 2` and `E = 3`, and `X` is then placed at `1.5` ([TC-2.12](part-2-anchor-resolution.md)). The response's `reindexed` field holds an `{id, position}` pair for every item the reindex renumbered: `A → 1`, `C → 2` and `E → 3`. A caller that applies them all renders `A, X, C, E`. One that learned only `X = 1.5`, and kept its old values for `C` and `E`, would sort `X` last.
 
-*Negative framing the case exists for:* a caller that learned only `X=2`
-and mixed it into its old values would sort `1.0, 2, 1.5, 1.75` → `A, C,
-E, X` — consistent-looking and wrong. The disclosure is what makes that
-impossible.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-**Automation test:** —
+## TC-5.10 — Each disclosed entry is `{id, position}` and nothing more
 
-## TC-5.10 — Disclosure entries are `{id, position}` and nothing more
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+*Given* a response carrying `reindexed`, *when* an entry is read, *then* it has exactly two fields, `id` and `position`, and no other field of the item.
 
-*Given* a response carrying a reindex disclosure, *when* an entry is
-inspected, *then* it has exactly two fields — the item's `id` and its new
-`position` — and no other item fields (no title, workphase, parent, etc.).
-A reindex changes positions and never any other field; a fuller row would
-imply otherwise.
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-**Automation test:** —
+## TC-5.11 — The written item is in the disclosure when its scope was reindexed
 
-## TC-5.11 — The written item is included in the disclosure when it was in the reindexed scope
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+*Given* a write whose own scope is reindexed as part of resolving it, *when* the response is read, *then* `reindexed` holds the written item's pair, and the `position` there equals the `position` in the response body.
 
-*Given* a write whose target scope is reindexed as part of resolving it,
-*when* the response is inspected, *then* the written item's own `{id,
-position}` pair appears in the disclosure collection alongside its
-neighbors', and the value there equals the written item's `position` in the
-response body. A caller therefore has exactly one rule — apply every pair
-— and no precedence between "the item I wrote" and "the collection" to
-reason about.
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-**Automation test:** —
+## TC-5.12 — With no reindex, the disclosure is absent or empty
 
-## TC-5.12 — No reindex → disclosure is absent or empty
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+*Given* a position write that resolves without a reindex (a gap that fits, or an append under the magnitude threshold), *when* the response is read, *then* `reindexed` is absent, or an empty collection.
 
-*Given* an ordinary position write that resolves directly (a gap that fits
-at some precision; an append well under the magnitude threshold), *when*
-the response is inspected, *then* the disclosure is either absent or an
-empty collection — and a caller treats both identically as "no reindex
-occurred." This is the overwhelmingly common path and must not carry any
-per-item cost.
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-**Automation test:** —
+## TC-5.13 — The disclosure covers the whole reindexed scope, not the caller's view
 
-## TC-5.13 — Disclosure covers the whole reindexed scope, not just the caller's view
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+*Given* an active scope across non-terminal workphases `W1` and `W2`, and a caller whose view holds only `W1`'s items, *when* its write triggers a reindex of that scope, *then* `reindexed` also holds a pair for each of `W2`'s renumbered items: every item the reindex touched ([TC-5.4](part-5-reindex.md)). *And given* the reindexed scope is `P`'s attached children, *then* it holds a pair for every child of `P` that was renumbered. What a caller does with ids it doesn't hold is [TC-5a.4](part-5a-client-reconciliation.md).
 
-*Given* a workflow-wide active scope spanning two non-terminal workphases
-`W1` and `W2` (and, for the attached-siblings variant, a parent whose
-attached children are the scope), and a caller whose view only loaded the
-`W1` items, *when* the caller's write triggers a reindex of the active
-scope, *then* the disclosure includes the renumbered `W2` items as well —
-every item the coordinated reindex (TC-5.4) touched — not only the ids the
-caller could have known about.
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
-Corollary on the receiving side (Part 5a, TC-5a.4): an id the caller doesn't
-recognize means "not in this view," never "missing data to go fetch."
+## TC-5.14 — Every item write that can reindex discloses
 
-**Automation test:** —
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5.1
 
-## TC-5.14 — Every reindex-capable write path discloses
+*Given* each of `POST /items`, `PUT /items/:id` and `PATCH /items/:id/move`, *when* the write triggers a reindex, whether through a tight gap beside its anchor or through the magnitude threshold on an append (including the append a scope change takes), *then* its response carries `reindexed` as [TC-5.9](part-5-reindex.md) describes. The rule covers any write that reindexed, not only a move.
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
-*Given* each distinct write that can trigger a reindex —
+## TC-5.15 — Done items don't count toward the magnitude threshold
 
-- an anchor+side move whose gap exhausts precision (tight-gap, TC-2.12),
-- a create or anchor-free append whose value would cross the magnitude
-  threshold (TC-5.2),
-- a scope-change reassignment (attach, detach, reparent — Part 2's table)
-  whose append fallback crosses the magnitude threshold in the *new* scope,
+**Priority:** P2 · **Status:** Open · **Rule:** wiki item-positioning §5, wiki item-positioning §2
 
-*when* the reindex fires, *then* that write's response carries the
-disclosure per TC-5.9 — the rule is "a response to a write that triggered
-a reindex," not "a response to a move."
+*Given* a workflow with 950 done Free items and 5 active Free items, the last of them at `1040`, *when* a Free item is appended, *then* the scope is reindexed first, and the new item takes `6`. `n` is 5, since done items have no position and aren't in the scope, so `1041` crosses `max(1000, 5 + 100)`, which is `1000`.
 
 **Automation test:** —

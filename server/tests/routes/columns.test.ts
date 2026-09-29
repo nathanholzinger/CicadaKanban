@@ -116,7 +116,7 @@ describe('POST /api/columns', () => {
     expect(res.status).toBe(404);
   });
 
-  it('creates a column spanning a range, defaulting displayMode to merged', async () => {
+  it('TC-6.8: creates a column spanning a range, defaulting displayMode to merged', async () => {
     const { board, todo, done } = await setupCleanBoard();
     const res = await request(app).post('/api/columns').send({
       boardId: board.id,
@@ -308,7 +308,7 @@ describe('DELETE /api/columns/:id', () => {
   });
 });
 
-describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
+describe('terminal/non-terminal column ranges', () => {
   async function setupWithTerminal() {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -319,7 +319,12 @@ describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
     return { project, workflow, board, inProgress, done };
   }
 
-  it('POST rejects a range spanning a terminal and non-terminal workphase', async () => {
+  async function boardColumns(boardId: string) {
+    const res = await request(app).get(`/api/boards/${boardId}`);
+    return res.body.columns as { id: string; startWorkphaseId: string; endWorkphaseId: string }[];
+  }
+
+  it('TC-6.7: POST rejects a range spanning a terminal and non-terminal workphase', async () => {
     const { board, inProgress, done } = await setupWithTerminal();
     const res = await request(app).post('/api/columns').send({
       boardId: board.id,
@@ -328,9 +333,10 @@ describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
     });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/terminal/i);
+    expect(await boardColumns(board.id)).toEqual([]);
   });
 
-  it('POST allows a range entirely within terminal workphases', async () => {
+  it('TC-6.8: POST allows a range entirely within terminal workphases', async () => {
     const { board, done } = await setupWithTerminal();
     const res = await request(app).post('/api/columns').send({
       boardId: board.id,
@@ -340,11 +346,14 @@ describe('Epic 3.2 — terminal/non-terminal column ranges', () => {
     expect(res.status).toBe(201);
   });
 
-  it('PUT rejects extending a range to cross the terminal boundary', async () => {
+  it('TC-6.7: PUT rejects extending a range to cross the terminal boundary', async () => {
     const { board, inProgress, done } = await setupWithTerminal();
     const created = await createColumn(board.id, inProgress.id, inProgress.id);
     const res = await request(app).put(`/api/columns/${created.id}`).send({ endWorkphaseId: done.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/terminal/i);
+    expect(await boardColumns(board.id)).toEqual([
+      expect.objectContaining({ id: created.id, startWorkphaseId: inProgress.id, endWorkphaseId: inProgress.id }),
+    ]);
   });
 });

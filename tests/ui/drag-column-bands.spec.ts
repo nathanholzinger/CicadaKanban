@@ -25,7 +25,7 @@ import {
   SUSTAINED,
   type Point,
 } from '../helpers/dragGesture';
-import { article, column } from '../helpers/boardLocators';
+import { article, column, titlesIn } from '../helpers/boardLocators';
 import { columnOrder, fullOrder } from '../helpers/itemRepositioningScenario';
 import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
 import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from '../../client/src/components/workflow/dragRegions';
@@ -234,10 +234,6 @@ async function middleGapPoint(page: Page): Promise<Point> {
 
 function regionOf(col: Locator): Locator {
   return col.locator(`[${DRAG_REGION_ATTR}]`).first();
-}
-
-async function titlesIn(col: Locator): Promise<string[]> {
-  return col.getByRole('article').evaluateAll(els => els.map(e => e.getAttribute('aria-label') ?? ''));
 }
 
 test.describe('Card → column drop bands', () => {

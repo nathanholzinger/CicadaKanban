@@ -30,9 +30,9 @@
 
 ## DRAG-5.2 — Detaching in place keeps the inherited workphase, even a merged column's non-entry workphase
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8, wiki item-positioning §4
 
-*Given* a merged column covering `W2, W3`, with `W2` its entry workphase, Card `P` in `W3`, and Stub `X` attached to `P` (so `X.workphaseId` is `W3`), *when* `X` is detached by popping out to `P`'s column and releasing there ([DRAG-5.1](drag-5-detach-and-overflow.md)), *then* the request carries **no** workphase change, and `X.workphaseId` is still `W3` afterwards. `X` was already a member of the column's covered set, so this is a position-only move ([TC-4.2](../item-positioning/part-4-merged-column.md)). The entry workphase applies only to a drop into a column the item wasn't already in, and `X` must not be moved back to `W2`.
+*Given* a merged column covering `W2, W3`, with `W2` its entry workphase, Card `P` in `W3`, and Stub `X` attached to `P` (so `X.workphaseId` is `W3`), *when* `X` is detached by popping out to `P`'s column and releasing there ([DRAG-5.1](drag-5-detach-and-overflow.md)), *then* the request carries **no** workphase change, and `X.workphaseId` is still `W3` afterwards. `X` was already a member of the column's covered set, so this is a position-only move ([DRAG-3.7](drag-3-card-column-bands.md)). The entry workphase applies only to a drop into a column the item wasn't already in, and `X` must not be moved back to `W2`.
 
 **Automation test:** —
 

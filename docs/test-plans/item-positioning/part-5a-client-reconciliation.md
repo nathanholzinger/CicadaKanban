@@ -1,110 +1,55 @@
-# Part 5a — Client reconciliation order
+# TC-5a — Client reconciliation order
 
-**Next ID:** TC-5a.6
+**Next ID:** TC-5a.7
 
-**Wiki:** [`../../wiki/item-positioning/#5a-client-reconciliation-order`](../../wiki/item-positioning/README.md#5a-client-reconciliation-order)
+These hold for any client that keeps a locally ordered list. What the board adds (the pending marker, the inversion log, sequencing responses per item, resyncing on a failure) is [DRAG-6](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
-**Added by Epic 3.5.** Applies to any client holding a locally-ordered
-list. The board drag is what exercises it; the board-specific steps
-(clearing the pending marker, surfacing an inversion, sequencing per-item
-responses) are in
-[`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md),
-which cross-references these cases rather than restating them.
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-5a.1 | Reconciliation runs its four steps in the stated order | P0 | ⏳ pending triage |
-| TC-5a.2 | Applying the reindex disclosure first prevents a spurious inversion | P0 | ⏳ pending triage |
-| TC-5a.3 | Re-sort happens only when an inversion is actually found | P1 | ⏳ pending triage |
-| TC-5a.4 | Unrecognized ids in the disclosure are ignored, not fetched | P1 | ⏳ pending triage |
-| TC-5a.5 | Any client-side sort uses the tie-break verbatim | P1 | ⏳ pending triage |
+| TC-5a.1 | After a successful position write, the list shows the server's order without a reload | P0 | Automated |
+| TC-5a.2 | Applying the reindex pairs before comparing records no false inversion | P0 | Automated |
+| TC-5a.4 | Disclosed ids the client doesn't hold are ignored, not fetched | P1 | Automated |
+| TC-5a.5 | Every client sort breaks ties the same way: position, a missing one as `0`, then creation time | P1 | Automated |
+| TC-5a.6 | The board records no inversion for a write it didn't preview | P2 | Automated |
 
 ---
 
-## TC-5a.1 — Reconciliation runs its four steps in the stated order
+## TC-5a.1 — After a successful position write, the list shows the server's order without a reload
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5a
 
-*Given* a client holding a locally-ordered list and a pending position
-write for item `X`, *when* the write's response arrives, *then* the client
-performs, in this order and no other:
+*Given* a list the client renders, *when* a write that returns positions succeeds, whether it's a board move, a sibling reorder, an inline create or a Sheet edit, and whether or not it triggered a reindex, *then* the list reads in the server's saved order (by position, then the tie-break of [TC-5a.5](part-5a-client-reconciliation.md)). The list isn't reloaded, and every row other than the written item keeps its order relative to the rest. A failed write, or a stale response that carried reindex pairs, resyncs instead ([DRAG-6.6](../board-drag-interaction/drag-6-preview-reconciliation.md), [DRAG-6.7](../board-drag-interaction/drag-6-preview-reconciliation.md)).
 
-1. apply the reindex disclosure collection, if populated (every `{id,
-   position}` pair it holds an item for);
-2. assign `X`'s authoritative `position` from the response;
-3. check for inversions among items that have real positions — i.e. is
-   there any adjacent pair in the rendered order whose `position` values
-   (tie-broken per TC-5a.5) are out of order;
-4. re-sort the list only if step 3 found an inversion.
+**Automation test:** `tests/ui/item-positioning.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
-The observable contract: after a correctly-formed response, the rendered
-order equals what a fresh sort of the updated positions would produce,
-*and* (per TC-5a.3) no re-sort was performed when none was needed.
+## TC-5a.2 — Applying the reindex pairs before comparing records no false inversion
 
-**Automation test:** —
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §5a
 
-## TC-5a.2 — Applying the reindex disclosure first prevents a spurious inversion
+*Given* a board rendering `A` (`1.0`), `C` (`1.5`) and `E` (`1.75`), with `X` previewed after `A` (`A, X, C, E`), *when* the response arrives with `X = 2`, and `reindexed` holding `A → 1`, `X → 2`, `C → 3` and `E → 4`, *then* afterwards the positions read `A = 1`, `X = 2`, `C = 3`, `E = 4`, the list reads `A, X, C, E`, and the tuning panel's inversion log gains no entry. A comparison made before the pairs landed, against `A = 1.0`, `X = 2`, `C = 1.5` and `E = 1.75`, would log an inversion that never happened.
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
-*Given* rendered `A=1.0, C=1.5, E=1.75` with `X` previewed ordinally after
-`A` (`A, X, C, E`), *when* the response arrives carrying `X=2` and the
-disclosure `A→1, X→2, C→3, E→4`, *then* after reconciliation the positions
-read `A=1, X=2, C=3, E=4`, the inversion check finds nothing, no re-sort
-occurs, and the rendered order is still `A, X, C, E`.
+## TC-5a.4 — Disclosed ids the client doesn't hold are ignored, not fetched
 
-*The negative this guards:* had the client checked for inversions *before*
-applying the disclosure — seeing `A=1.0, X=2, C=1.5, E=1.75` — it would
-have detected an "inversion" on data that was never inconsistent and
-"fixed" it by reordering correct rows to `A, C, E, X`. The order of the
-steps is the rule.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5.1, wiki item-positioning §5a
 
-**Automation test:** —
+*Given* a `reindexed` collection with pairs for items the client never loaded, *when* the client applies it, *then* it applies the pairs for the items it holds and skips the rest. It sends no request for the others, and its list gains no rows.
 
-## TC-5a.3 — Re-sort happens only when an inversion is actually found
+**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+## TC-5a.5 — Every client sort breaks ties the same way: position, a missing one as `0`, then creation time
 
-*Given* a reconciled response whose positions are already consistent with
-the rendered order (the common case — see Part 2 TC-2.28 for why), *when*
-reconciliation reaches step 4, *then* no re-sort is performed and the
-rendered order is left exactly as it was — the list is not gratuitously
-rebuilt.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §5a
 
-*And given* a response whose reconciled positions genuinely invert the
-rendered order (two items with real positions now out of sequence), *when*
-step 3 detects it, *then* a re-sort is performed and the rendered order
-afterward follows the positions.
+*Given* any list the client sorts by position, including the order it reads first and last from ([TC-7.3](part-7-board-placement-intents.md)), *when* two items have the same `position`, *then* the one created earlier sorts first. *And when* one item has no `position`, *then* it sorts as though its position were `0`. A client that sorts ties any other way disagrees with the server ([TC-5.6](part-5-reindex.md)).
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`
 
-## TC-5a.4 — Unrecognized ids in the disclosure are ignored, not fetched
+## TC-5a.6 — The board records no inversion for a write it didn't preview
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §5a
 
-*Given* a disclosure collection containing pairs for items the client
-never loaded (the reindexed scope was wider than the view — Part 5
-TC-5.13), *when* the client applies it, *then* the pairs whose ids it
-holds are applied, the rest are silently skipped, no fetch or requery is
-issued for them, and the client's list gains no entries. An unrecognized
-id means "not in this view," never "missing data."
+*Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its own panel, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order.
 
-**Automation test:** —
-
-## TC-5a.5 — Any client-side sort uses the tie-break verbatim
-
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-*Given* any place the client sorts a list of items by position — including
-step 4's re-sort and the reading of "first"/"last" for Part 7's anchor
-choice — *when* two items have identical `position` values (or one is
-`null`), *then* the comparator is exactly
-`(a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt`: ties
-break by `createdAt` ascending, nulls coerce to `0`. Any divergence from
-this makes the client and server disagree on an exact tie.
-
-Cross-reference [Part 5 TC-5.6](part-5-reindex.md) (the tie-break rule
-itself); this case is that the rule is applied *everywhere* the client
-sorts, not just in one path.
-
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`

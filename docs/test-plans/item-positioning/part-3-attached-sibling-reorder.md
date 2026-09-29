@@ -1,106 +1,48 @@
-# Part 3 — Attached-child sibling reorder
+# TC-3 — Attached-sibling reorder
 
 **Next ID:** TC-3.6
 
-**Wiki:** [`../../wiki/item-positioning/#3-attached-child-sibling-reordering`](../../wiki/item-positioning/README.md#3-attached-child-sibling-reordering)
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-3.1 | Reordering an attached child persists new order | P0 | ✅ automated |
-| TC-3.2 | Reordering scoped strictly to `(parentId, isAttached)` | P0 | ✅ automated |
-| TC-3.3 | ~~Dragging a child out of its parent is still blocked~~ — superseded by Epic 3.5 | — | ⏸ superseded |
-| TC-3.4 | New attached child positioned among true siblings | P0 | ✅ automated |
-| TC-3.5 | Attached-sibling reorder reuses anchor+side resolution | P1 | ✅ automated |
+| TC-3.1 | A reorder among attached siblings persists | P0 | Automated |
+| TC-3.2 | A reorder among one parent's children touches nothing outside that scope | P0 | Automated |
+| TC-3.4 | A new attached child is placed after its own parent's last child | P0 | Automated |
+| TC-3.5 | Attached siblings resolve by the same anchor and side rules | P1 | Automated |
 
 ---
 
-## TC-3.1 — Reordering an attached child persists new order
+## TC-3.1 — A reorder among attached siblings persists
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §3
 
-*Given* a parent with 3+ attached children, *when* one child is dragged to
-a new position among its siblings, *then* the persisted order (by
-`position`) reflects the drop location on reload.
+*Given* parent `P` with attached children `A`, `B` and `C`, in that order, *when* `C` is moved before `A`, *then* reading `P`'s children back gives `C`, `A`, `B`.
 
 **Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
-— all three cases assert order via `siblingOrder`, which reads
-`GET /api/items/:parentId`'s `children` array (a different codepath than
-the move response itself) — a genuine reload/persistence check.
 
-## TC-3.2 — Reordering scoped strictly to `(parentId, isAttached)`
+## TC-3.2 — A reorder among one parent's children touches nothing outside that scope
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §3, wiki item-positioning §2
 
-*Given* a workphase containing both top-level items and two different
-parents' attached children, *when* one parent's children are reordered,
-*then* the other parent's children and the top-level items retain their
-original relative order and are not renumbered.
+*Given* a workphase holding Free items, `P`'s attached children and `Q`'s attached children, *when* `P`'s children are reordered, *then* `Q`'s children and the Free items keep their positions exactly.
 
 **Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
-— every case calls `expectIsolationUnaffected`, checking an unrelated
-second parent's attached child and an unrelated top-level item (sharing
-the same workphase) after each reorder.
 
-## TC-3.3 — ~~Dragging a child out of its parent is still blocked~~ (superseded by Epic 3.5)
+## TC-3.4 — A new attached child is placed after its own parent's last child
 
-**Priority:** — · **Automated:** ⏸ superseded
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §3
 
-*Superseded by Epic 3.5.* This case guarded the Epic 3.2 interim state in
-which the cross-boundary gesture was held closed. Epic 3.5 opens it — a
-Stub can now be dragged out of its parent Card, and Stubs are classified
-individually as targets during a Card drag instead of being blanket-
-excluded. The replacing rules and cases:
+*Given* parent `P` whose attached children's true last is at `2.0`, in a workphase that also holds Free items and `Q`'s attached children at higher positions, *when* an attached child is created under `P` with no anchor, *then* its position is `3`: after `P`'s last child, whatever is last in the workphase. *And given* `P` has no attached children, *then* it's `1.0`.
 
-- Stub → out (detach by drag):
-  [`../board-drag-interaction/drag-5-detach-and-overflow.md`](../board-drag-interaction/drag-5-detach-and-overflow.md)
-  DRAG-5.1–5.5
-- Stubs classified individually during a Card drag (replaces the blanket
-  exclusion):
-  [`../board-drag-interaction/drag-2-target-classification.md`](../board-drag-interaction/drag-2-target-classification.md)
-  DRAG-2.7
+**Automation test:** `server/tests/routes/items.test.ts`
 
-*Was:* "Given an attached child rendered in its parent's nested list, when
-a drag gesture attempts to move it out of the parent (into the board-level
-dnd context), then the drag is rejected/no-ops."
+## TC-3.5 — Attached siblings resolve by the same anchor and side rules
 
-**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
-`boardCollisionDetection` › "excludes attached-child containers from a card
-drag" and "scopes an attached-child drag to siblings under the same parent
-only" — retired as predicted: `boardCollisionDetection` is now
-`resolveBoardCollisions` in `dragCollision.test.ts`, and those two named
-cases no longer exist under any name, superseded by "scopes a Descendants
-context's collisions to every Stub row inside the section's rect, any real
-parent" — the Story 6 model this case's DRAG-2.7 supersedes.)*
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §3, wiki item-positioning §2
 
-## TC-3.4 — New attached child positioned among true siblings
+*Given* `P`'s attached children `A` (`1.0`), `B` (`2.0`) and `C` (`3.0`), each of these from that starting state:
 
-**Priority:** P0 · **Automated:** ✅ automated
-
-*Given* a parent with existing attached children in a workphase that also
-contains unrelated top-level items and another parent's attached children,
-*when* a new attached child is created under that parent with no explicit
-position, *then* its resolved position places it after that specific
-parent's true last attached child — not after whatever item happens to be
-last in the shared workphase.
-
-**Automation test:** `server/tests/routes/items.test.ts` › "POST scopes a
-new attached child to its true siblings, not the whole workphase" (exact
-scenario: 2 unrelated top-level items + parent + child, child lands at 1.0)
-
-## TC-3.5 — Attached-sibling reorder reuses anchor+side resolution
-
-**Priority:** P1 · **Automated:** ✅ automated
-
-Attached-sibling reorder uses the same anchor+side resolution as
-everything else (coarsest-fit, append fallback at scope boundaries) —
-covered by re-running [TC-2.1](part-2-anchor-resolution.md)/[TC-2.4](part-2-anchor-resolution.md)/[TC-2.5](part-2-anchor-resolution.md)
-with comparison scope = `(parentId, isAttached)` instead of workflow.
+- *when* `C` is placed before `A`, *then* its position is `0.5` ([TC-2.5](part-2-anchor-resolution.md));
+- *when* `C` is placed after `A`, *then* it's `1.5` ([TC-2.1](part-2-anchor-resolution.md));
+- *when* `A` is placed after `C`, *then* it's `4` ([TC-2.4](part-2-anchor-resolution.md)).
 
 **Automation test:** `tests/api/itemRepositioningAttachedSiblings.spec.ts`
-— "C before A" (TC-2.5-equivalent: no true predecessor, floor-anchored
-coarsest-fit), "C after A / C before B" (TC-2.1-equivalent: true-neighbor
-coarsest-fit, asserted from both anchor directions), "A after C"
-(TC-2.4-equivalent: no true successor, append fallback). Each asserts the
-exact resolved value, not just "some plausible position" — proving these
-are the specific coarsest-fit/append-fallback code paths, not just any
-change in the right direction.

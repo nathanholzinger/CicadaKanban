@@ -100,7 +100,7 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.itemDepthCap).toBe(ITEM_DEPTH_CAP);
   });
 
-  it('reports identical position for the same item across two different boards on one workflow (TC-1.1)', async () => {
+  it('TC-1.1: reports identical position for the same item across two different boards on one workflow', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const todo = await createWorkphase(workflow.id, { name: 'Todo' });
@@ -130,7 +130,7 @@ describe('GET /api/boards/:id', () => {
     expect(onBoardOne.position).toBe(onBoardTwo.position);
   });
 
-  it('surfaces items whose workphase was deleted as invalidItems (Unknown status)', async () => {
+  it('TC-2.16: surfaces items whose workphase was deleted as invalidItems (Unknown status)', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const todo = await createWorkphase(workflow.id, { name: 'Todo' });
@@ -148,6 +148,8 @@ describe('GET /api/boards/:id', () => {
     const invalidIds = res.body.unsorted.invalidItems.map((i: { id: string }) => i.id);
     expect(invalidIds).toContain(stranded.id);
     expect(res.body.unsorted.needsAttention).toBe(true);
+    // With no workphase, it's in no position order: the same scope as a done item's.
+    expect((await request(app).get(`/api/items/${stranded.id}`)).body.positionScope).toBe('none');
     void keep;
   });
 

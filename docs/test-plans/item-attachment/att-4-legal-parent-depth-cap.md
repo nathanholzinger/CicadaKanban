@@ -33,7 +33,7 @@
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §7
 
-*Given* item `A`, *when* a write sets `A.parentId = A`, *then* it is rejected, and `A` is unchanged ([TC-X.2](../item-positioning/cross-cutting-regression.md)).
+*Given* item `A`, *when* a write sets `A.parentId = A`, *then* it is rejected, and `A` is unchanged.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 

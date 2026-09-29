@@ -66,7 +66,7 @@ test.describe('1: extreme boundary moves within column 1', () => {
 });
 
 test.describe('2: extreme boundary moves into column 2', () => {
-  test('2.a — move C to before B', async ({ request }) => {
+  test('TC-7.4: 2.a — move C to before B', async ({ request }) => {
     await moveC(request, { anchorId: scenario.items.B.id, side: 'before', workphaseId: scenario.colTwoPhase.id });
 
     const updated = await getC(request);
@@ -92,7 +92,7 @@ test.describe('2: extreme boundary moves into column 2', () => {
 });
 
 test.describe('3: interior moves that stay in column 1 ("drop it back where it was")', () => {
-  test('3.a — move C to after A', async ({ request }) => {
+  test('TC-2.10, TC-2.28: 3.a — move C to after A', async ({ request }) => {
     await moveC(request, { anchorId: scenario.items.A.id, side: 'after' });
 
     const updated = await getC(request);
@@ -105,7 +105,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('3.b — move C to before E', async ({ request }) => {
+  test('TC-2.28: 3.b — move C to before E', async ({ request }) => {
     await moveC(request, { anchorId: scenario.items.E.id, side: 'before' });
 
     const updated = await getC(request);

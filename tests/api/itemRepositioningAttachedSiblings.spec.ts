@@ -57,7 +57,7 @@ async function expectIsolationUnaffected(request: APIRequestContext) {
   expect(topLevel.position).toBe(scenario.topLevel.position); // unchanged from creation
 }
 
-test('C before A — becomes the new true first sibling (TC-2.5-equivalent)', async ({ request }) => {
+test('TC-2.5, TC-3.1, TC-3.2, TC-3.5: C before A — becomes the new true first sibling', async ({ request }) => {
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'before' });
 
   const updated = await getItem(request, scenario.items.C.id);
@@ -69,7 +69,7 @@ test('C before A — becomes the new true first sibling (TC-2.5-equivalent)', as
   await expectIsolationUnaffected(request);
 });
 
-test('C after A / C before B — same true-neighbor midpoint from either anchor (TC-2.1-equivalent)', async ({
+test('TC-2.1, TC-3.2, TC-3.5: C after A / C before B — same true-neighbor midpoint from either anchor', async ({
   request,
 }) => {
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'after' });
@@ -88,7 +88,7 @@ test('C after A / C before B — same true-neighbor midpoint from either anchor 
   await expectIsolationUnaffected(request);
 });
 
-test('A after C — becomes the new true last sibling (TC-2.4-equivalent)', async ({ request }) => {
+test('TC-3.2, TC-3.5: A after C — becomes the new true last sibling', async ({ request }) => {
   await moveItem(request, scenario.items.A.id, { anchorId: scenario.items.C.id, side: 'after' });
 
   const updated = await getItem(request, scenario.items.A.id);

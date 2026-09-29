@@ -196,7 +196,7 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
     expect(res.body.error).toMatch(/isAttached must be a boolean/);
   });
 
-  it('validates the anchor against the resulting scope: a new sibling is accepted (TC-7.9)', async () => {
+  it('TC-7.11: validates the anchor against the resulting scope: a new sibling is accepted', async () => {
     const { project, todo } = await setupWorkflow();
     const { p, s1 } = await cardWithTwoStubs(project.id, todo.id);
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
@@ -221,7 +221,7 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
     expect(getRow(x1.id)).toEqual(before.x1);
   });
 
-  it('rejects the item as its own anchor with a 400, not a 500', async () => {
+  it('TC-7.10: rejects the item as its own anchor with a 400, not a 500', async () => {
     const { project, todo } = await setupWorkflow();
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     const before = getRow(x.id);
@@ -271,13 +271,12 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     expect(res.body.workphaseId).toBe(inProgress.id); // inherited
     expect(res.body.positionScope).toBe('attached-siblings');
     // Drawn from P's sibling list — not 50.0 kept, not a workflow-wide value.
-    expect(res.body.position).toBeGreaterThan(1.0);
-    expect(res.body.position).toBeLessThan(2.0);
+    expect(res.body.position).toBe(1.5);
     expect(getRow(x1.id).workphaseId).toBe(inProgress.id); // cascaded
     expect([getRow(s1.id).position, getRow(s2.id).position]).toEqual([1.0, 2.0]); // siblings untouched
   });
 
-  it("ATT-3.1, ATT-3.5, ATT-3.9, ATT-7.5, TC-7.12: reparents while attached against the NEW parent's scope, never the old", async () => {
+  it("ATT-3.1, ATT-3.5, ATT-3.9, ATT-7.5: reparents while attached against the NEW parent's scope, never the old", async () => {
     const { project, todo } = await setupWorkflow();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
     await createItem({ projectId: project.id, parentId: a.id, title: 'A1' });
@@ -349,7 +348,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     ).toEqual(['Reparented from "P" to "Q" (attached)']);
   });
 
-  it('ATT-1.2, ATT-1.7, ATT-7.1, ATT-7.2, ATT-7.3, TC-7.13: detaches with placement into the workflow scope, keeping the parent', async () => {
+  it('ATT-1.2, ATT-1.7, ATT-7.1, ATT-7.2, ATT-7.3, TC-2.14, TC-7.13: detaches with placement into the workflow scope, keeping the parent', async () => {
     const { project, todo } = await setupWorkflow();
     const { p, s2: x } = await cardWithTwoStubs(project.id, todo.id);
     const f1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'F1' });
@@ -362,12 +361,11 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     expect(res.body.isAttached).toBe(0);
     expect(res.body.parentId).toBe(p.id); // detaching is not un-parenting (§11)
     expect(res.body.positionScope).toBe('workflow');
-    expect(res.body.position).toBeGreaterThan(10.0);
-    expect(res.body.position).toBeLessThan(11.0);
+    expect(res.body.position).toBe(10.5); // against the anchor, not the sibling-scoped 2.0
     expect(res.body.workphaseId).toBe(todo.id); // keeps the inherited workphase
   });
 
-  it('TC-7.7: attaching into an empty Stub list takes the append fallback — bootstrap 1.0', async () => {
+  it('TC-2.20: attaching into an empty Stub list takes the append fallback — bootstrap 1.0', async () => {
     const { project, todo } = await setupWorkflow();
     const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
@@ -537,7 +535,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
 });
 
 describe('PATCH /items/:id/move — done parents and done columns (wiki §10; positioning §7.4)', () => {
-  it('ATT-6.1, ATT-6.2, TC-7.15: attaching to a done parent inherits the terminal workphase, no completedAt, keeps a position', async () => {
+  it('ATT-6.1, ATT-6.2, TC-2.20, TC-7.15: attaching to a done parent inherits the terminal workphase, no completedAt, keeps a position', async () => {
     const { project, todo, done } = await setupWorkflow();
     const { p, s1 } = await cardWithTwoStubs(project.id, done.id);
     expect(getRow(p.id).position).toBeNull(); // P is a done Free item
@@ -549,9 +547,7 @@ describe('PATCH /items/:id/move — done parents and done columns (wiki §10; po
 
     const res = await move(x.id, { parentId: p.id, isAttached: true, anchorId: s1.id, side: 'after' });
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ ...attachedUnderP, positionScope: 'attached-siblings' });
-    expect(res.body.position).toBeGreaterThan(1.0);
-    expect(res.body.position).toBeLessThan(2.0);
+    expect(res.body).toMatchObject({ ...attachedUnderP, positionScope: 'attached-siblings', position: 1.5 });
 
     // With no anchor, it lands last among P's Stubs.
     const y = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Y' });
@@ -585,13 +581,15 @@ describe('PATCH /items/:id/move — done parents and done columns (wiki §10; po
     expect(res.body.completedAt).not.toBeNull();
   });
 
-  it('a done Free item cannot be an anchor (TC-7.8 server half, TC-2.8)', async () => {
+  it('TC-2.8: a done Free item cannot be an anchor, and the refused move writes nothing', async () => {
     const { project, todo, done } = await setupWorkflow();
     const d = await createItem({ projectId: project.id, workphaseId: done.id, title: 'D' });
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const before = getRow(x.id);
     const res = await move(x.id, { workphaseId: done.id, anchorId: d.id, side: 'after' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/no position to anchor against/);
+    expect(getRow(x.id)).toEqual(before); // no workphase change, no position
   });
 
   it('ATT-1.12: attaching a done Free item clears its completedAt, under a live parent or a done one', async () => {
@@ -654,8 +652,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
     expect(res.body.projectId).toBe(p2.id);
     for (const id of [x1.id, x2.id, x2a.id]) expect(getRow(id).projectId).toBe(p2.id);
     // No cross-project positioning rule: same anchor + true-neighbor math.
-    expect(res.body.position).toBeGreaterThan(1.0);
-    expect(res.body.position).toBeLessThan(2.0);
+    expect(res.body.position).toBe(1.5);
     // Same workflow on both sides — nothing is foreign, nothing is nulled.
     expect(getRow(x2.id).workphaseId).toBe(todo.id);
     expect(getRow(x2.id).position).toBe(x2Position);
@@ -673,8 +670,26 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
     expect(JSON.parse(entry.metadata!)).toMatchObject({ fromProjectId: p1.id, toProjectId: p2.id, toAttached: true });
   });
 
+  it('TC-7.14: a Free item reparented across projects with no anchor keeps its position', async () => {
+    const { todo, p1, p2 } = await setupSiblingProjects();
+    const a = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'A' });
+    const b = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'B' });
+    const x = await createItem({
+      projectId: p1.id,
+      parentId: a.id,
+      title: 'X',
+      isAttached: false,
+      workphaseId: todo.id,
+    });
+    setPosition(x.id, 5.0);
+
+    const res = await move(x.id, { parentId: b.id });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ parentId: b.id, isAttached: 0, projectId: p2.id, position: 5.0 });
+  });
+
   describe('cross-workflow (API-only)', () => {
-    it('ATT-5.4: a Free reparent keeps every workphase, nulls foreign positions, and surfaces as Unknown status on the new board', async () => {
+    it('ATT-5.4, TC-7.17: a Free reparent keeps every workphase, nulls foreign positions, and surfaces as Unknown status on the new board', async () => {
       const a = await setupWorkflow('A');
       const b = await setupWorkflow('B');
       const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
@@ -706,7 +721,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
       expect(boardRes.body.unsorted.needsAttention).toBe(true);
     });
 
-    it("ATT-5.5: an attached reparent inherits the new workflow's workphase; only detached descendants are left foreign", async () => {
+    it("ATT-5.5, TC-7.17: an attached reparent inherits the new workflow's workphase; only detached descendants are left foreign", async () => {
       const a = await setupWorkflow('A');
       const b = await setupWorkflow('B');
       const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
@@ -758,7 +773,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
       expect(getRow(x2.id)).toMatchObject({ projectId: b.project.id, workphaseId: a.inProgress.id });
     });
 
-    it('re-filing a foreign-workphase item into the new workflow assigns a fresh position (positioning §7.3)', async () => {
+    it('TC-2.24, TC-7.17: re-filing a foreign-workphase item into the new workflow assigns a fresh position', async () => {
       const a = await setupWorkflow('A');
       const b = await setupWorkflow('B');
       const pb = await createItem({ projectId: b.project.id, workphaseId: b.todo.id, title: 'PB' });
@@ -998,7 +1013,7 @@ describe('hierarchy activity log (wiki §11a)', () => {
   });
 });
 
-describe('reindex disclosure (wiki item-positioning §5)', () => {
+describe('reindex disclosure', () => {
   // Two positioned items at ≥ 1000 in a scope of two trips the magnitude
   // threshold (max(1000, count + 100)) on the next append.
   async function setupNearThreshold() {
@@ -1010,7 +1025,7 @@ describe('reindex disclosure (wiki item-positioning §5)', () => {
     return { project, todo, a, b };
   }
 
-  it('move: the response carries every renumbered {id, position} pair, the moved item included', async () => {
+  it('TC-5.10, TC-5.11, TC-5.14: move: the response carries every renumbered {id, position} pair, the moved item included', async () => {
     const { project, todo, a, b } = await setupNearThreshold();
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     // X's own create already reindexed (A=1, B=2, X=3) — push A/B back up so
@@ -1029,7 +1044,7 @@ describe('reindex disclosure (wiki item-positioning §5)', () => {
     expect(res.body.position).toBe(3);
   });
 
-  it('PUT and POST disclose the same way', async () => {
+  it('TC-5.2, TC-5.10, TC-5.13, TC-5.14: PUT and POST disclose the same way', async () => {
     const { project, todo, a, b } = await setupNearThreshold();
     const created = await request(app)
       .post('/api/items')
@@ -1052,13 +1067,19 @@ describe('reindex disclosure (wiki item-positioning §5)', () => {
     ]);
   });
 
-  it('is absent when no reindex fired', async () => {
+  it('TC-5.12: is absent when no reindex fired, for a gap that fits and for an append under the threshold', async () => {
     const { project, todo } = await setupWorkflow();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     const res = await move(x.id, { anchorId: a.id, side: 'before' });
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty('reindexed');
+
+    const appended = await request(app)
+      .post('/api/items')
+      .send({ projectId: project.id, workphaseId: todo.id, title: 'Y' });
+    expect(appended.status).toBe(201);
+    expect(appended.body).not.toHaveProperty('reindexed');
   });
 });
 

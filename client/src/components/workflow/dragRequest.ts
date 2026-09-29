@@ -34,8 +34,8 @@ function anchorFor(
 // Decision 2 (2026-09-17), replaced by Story 5 (2026-09-21): a placement
 // that resolves to the list and ordinal the item already occupies writes
 // nothing — this subsumes every prior per-case "nothing to write" (a
-// covered-set member in the middle band, TC-7.16; an empty or done region,
-// TC-7.5/7.8) into one rule. Narrowed by Option A + the lean (2026-09-24):
+// covered-set member in the middle band, DRAG-3.12; an empty or done region,
+// DRAG-3.10, DRAG-3.24) into one rule. Narrowed by Option A + the lean (2026-09-24):
 // at a column/sub-row layer, a real, non-trivial anchor is never identity
 // even in the item's own slot (the last sentence below) — the release there
 // always sends the anchor `dropAnchorFor` named, since "after the card

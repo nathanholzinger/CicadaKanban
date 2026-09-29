@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
-import type { Placement } from './itemListOps';
+import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
 import {
   EMPTY_ITEM_LIST_STATE,
   applyItemWriteResponse,
@@ -23,7 +23,7 @@ describe('applyItemWriteResponse', () => {
     item('X', { position: 9 }),
   ];
 
-  it('applies every reindexed pair the list holds, then the written item (§5a order)', () => {
+  it('TC-5a.1, TC-5a.4: applies every reindexed pair the list holds, then the written item', () => {
     // The wiki's own example: a caller learning only X=2 would sort X last;
     // with the pairs applied first the rendered order is A, X, C, E.
     const response = {
@@ -46,14 +46,14 @@ describe('applyItemWriteResponse', () => {
     expect(applyItemWriteResponse(list(), response).find(i => i.id === 'X')!.position).toBe(2.5);
   });
 
-  it('ignores pairs for ids not in the list — "not in this view," never missing data', () => {
+  it('TC-5a.4: ignores pairs for ids not in the list — "not in this view," never missing data', () => {
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'unseen', position: 1 }] };
     const result = applyItemWriteResponse(list(), response);
     expect(result).toHaveLength(4);
     expect(result.some(i => i.id === 'unseen')).toBe(false);
   });
 
-  it('with no reindex, replaces the written row by reference and leaves every other row untouched', () => {
+  it('TC-5a.1: with no reindex, replaces the written row by reference and leaves every other row untouched', () => {
     const before = list();
     const written = item('X', { position: 3 });
     const result = applyItemWriteResponse(before, written);
@@ -105,7 +105,7 @@ describe('freeItemOrder / findInversion', () => {
   });
 });
 
-// TC-5a.1–5a.3: the reconciliation step, in order.
+// TC-5a.1, TC-5a.2: the reconciliation step, in order.
 describe('completeItemWrite', () => {
   // The exact object `writes.begin` would have stashed for this write — the
   // reducer only clears/tripwires when the item's current placement is
@@ -150,7 +150,7 @@ describe('completeItemWrite', () => {
     expect(next.inversions).toEqual([{ itemId: 'X', expected: ['A', 'X', 'C', 'E'], actual: ['A', 'C', 'E', 'X'] }]);
   });
 
-  it('a write the board never previewed (a Sheet edit, an inline create) is folded in with no tripwire, even when the id has an unrelated placement', () => {
+  it('TC-5a.6: a write the board never previewed (a Sheet edit, an inline create) is folded in with no tripwire, even when the id has an unrelated placement', () => {
     const next = completeItemWrite(pending(), item('X', { position: 1.9 }));
     expect(next.inversions).toEqual([]);
     expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);
@@ -176,5 +176,87 @@ describe('completeItemWrite', () => {
     expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);
     expect(next.placements.get('X')).toBe(liveGhost);
     expect(next.inversions).toEqual([]);
+  });
+});
+
+// The preview against the responses: what the list reads before a write
+// lands, and after it's folded in.
+describe('the preview through its responses', () => {
+  const todoList = (state: typeof EMPTY_ITEM_LIST_STATE) =>
+    getWorkphaseItemsFrom(state.items, 'todo', undefined, undefined, state.placements).map(i => i.id);
+
+  it("TC-2.28: under a narrow view, the server's answer sorts into the order the preview drew", () => {
+    // The client holds A, C and E. The true order also has B at 2 and D at 4, unseen here.
+    const view = () => [
+      item('A', { position: 1 }),
+      item('C', { position: 3 }),
+      item('E', { position: 5 }),
+      item('X', { position: 9 }),
+    ];
+    const cases: Array<[Placement, number]> = [
+      [{ slot: { anchorId: 'A', side: 'after' } }, 1.5], // between A and the unseen B
+      [{ slot: { anchorId: 'C', side: 'before' } }, 2.5], // between the unseen B and C
+    ];
+    for (const [placement, resolved] of cases) {
+      const state = withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: view() }, 'X', placement);
+      expect(todoList(state)).toEqual(['A', 'X', 'C', 'E']);
+      const next = completeItemWrite(state, item('X', { position: resolved }), placement);
+      expect(todoList(next)).toEqual(['A', 'X', 'C', 'E']);
+      expect(next.inversions).toEqual([]);
+    }
+  });
+
+  it('TC-2.29: an item placed after a still-pending one stays right after it once both responses land', () => {
+    const yPlacement: Placement = { slot: { anchorId: 'A', side: 'after' } };
+    const xPlacement: Placement = { slot: { anchorId: 'Y', side: 'after' } };
+    let state = withPlacement(
+      {
+        ...EMPTY_ITEM_LIST_STATE,
+        items: [
+          item('A', { position: 1 }),
+          item('C', { position: 3 }),
+          item('E', { position: 5 }),
+          item('Y', { position: 8 }),
+          item('X', { position: 9 }),
+        ],
+      },
+      'Y',
+      yPlacement,
+    );
+    state = withPlacement(state, 'X', xPlacement);
+    expect(todoList(state)).toEqual(['A', 'Y', 'X', 'C', 'E']);
+
+    // Y lands first, between A and C. X, still pending, follows it there.
+    state = completeItemWrite(state, item('Y', { position: 2 }), yPlacement);
+    expect(todoList(state)).toEqual(['A', 'Y', 'X', 'C', 'E']);
+    // X's own write resolved after Y's new position.
+    state = completeItemWrite(state, item('X', { position: 2.5 }), xPlacement);
+    expect(todoList(state)).toEqual(['A', 'Y', 'X', 'C', 'E']);
+    expect(state.inversions).toEqual([]);
+  });
+
+  it("TC-2.30: a pending item keeps its position and its place when another item's response re-sorts the list", () => {
+    // X is moving into this workphase, with its position left as it was.
+    const xPlacement: Placement = { workphaseId: 'todo', slot: 'existing' };
+    let state = withPlacement(
+      {
+        ...EMPTY_ITEM_LIST_STATE,
+        items: [
+          item('A', { position: 1 }),
+          item('C', { position: 3 }),
+          item('E', { position: 5 }),
+          item('X', { workphaseId: 'doing', position: 4 }),
+        ],
+      },
+      'X',
+      xPlacement,
+    );
+    expect(todoList(state)).toEqual(['A', 'C', 'X', 'E']);
+
+    // E's own write lands, moving it to the front. X is still pending, after C.
+    state = completeItemWrite(state, item('E', { position: 0.5 }));
+    expect(todoList(state)).toEqual(['E', 'A', 'C', 'X']);
+    expect(state.items.find(i => i.id === 'X')!.position).toBe(4);
+    expect(state.placements.get('X')).toBe(xPlacement);
   });
 });

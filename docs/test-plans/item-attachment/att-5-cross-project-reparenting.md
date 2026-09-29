@@ -2,7 +2,7 @@
 
 **Next ID:** ATT-5.9
 
-What a cross-project or cross-workflow reparent does to positions is item-positioning's ([TC-7.14](../item-positioning/part-7-board-placement-intents.md), and wiki item-positioning §7.3).
+What a cross-project or cross-workflow reparent does to positions is item-positioning's ([TC-7.14](../item-positioning/part-7-board-placement-intents.md) and [TC-7.17](../item-positioning/part-7-board-placement-intents.md), and wiki item-positioning §7.3).
 
 | ID | Case | Priority | Status |
 |---|---|---|---|

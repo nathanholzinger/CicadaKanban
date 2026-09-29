@@ -92,7 +92,7 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // inversion — the check runs on a list where the item is an ordinary
 // positioned row (TC-5a.1). Re-sorting is implicit: render order is
 // derived from `position` every render, so applying the rows *is* the
-// re-sort (TC-5a.3 — nothing is rebuilt when nothing changed). The tripwire
+// re-sort (nothing is rebuilt when nothing changed). The tripwire
 // only fires for a write the board previewed; a Sheet edit that reassigns a
 // position made no ordinal claim.
 //

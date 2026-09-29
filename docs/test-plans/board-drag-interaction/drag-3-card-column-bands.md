@@ -49,9 +49,9 @@
 
 ## DRAG-3.3 — Middle band, released without popping in → a workphase-only move that keeps the position
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.5
 
-*Given* Card `X` with position `p` at Board layer over a region `X` isn't a covered member of, *when* the cursor is between the dividers and the user releases without popping in, *then* the request is a workphase-only move, with no `anchorId` and no `side`. After the response, `X.workphaseId` is the region's workphase and `X.position` is exactly `p` ([TC-2.24](../item-positioning/part-2-anchor-resolution.md), [TC-7.16](../item-positioning/part-7-board-placement-intents.md)). An `X` with no position gets one by the append fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)), and previews last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
+*Given* Card `X` with position `p` at Board layer over a region `X` isn't a covered member of, *when* the cursor is between the dividers and the user releases without popping in, *then* the request is a workphase-only move, with no `anchorId` and no `side`. After the response, `X.workphaseId` is the region's workphase and `X.position` is exactly `p` ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)). An `X` with no position gets one by the append fallback ([TC-6.9](../item-positioning/part-6-active-done-split.md)), and previews last ([DRAG-6.10](drag-6-preview-reconciliation.md)).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
@@ -73,9 +73,9 @@
 
 ## DRAG-3.6 — A drop into a merged column from outside its covered set takes the entry workphase
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
-*Given* a merged column covering `W2, W3`, with `W2` first in its range (the column's entry workphase), and Card `X` in `W1`, *when* `X` is released in the column at Board layer, in any band, *then* the request's workphase is `W2`, combined with the band's placement ([DRAG-3.1](drag-3-card-column-bands.md), [DRAG-3.2](drag-3-card-column-bands.md), [DRAG-3.3](drag-3-card-column-bands.md)). See [TC-4.4](../item-positioning/part-4-merged-column.md).
+*Given* a merged column covering `W2, W3`, with `W2` first in its range (the column's entry workphase), and Card `X` in `W1`, *when* `X` is released in the column at Board layer, in any band, *then* the request's workphase is `W2`, combined with the band's placement ([DRAG-3.1](drag-3-card-column-bands.md), [DRAG-3.2](drag-3-card-column-bands.md), [DRAG-3.3](drag-3-card-column-bands.md)).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
@@ -83,13 +83,13 @@
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
-*Given* the same merged column, and Card `X` in `W3` (a covered member, not the entry workphase), *when* `X` is released in the column at Board layer in the top or bottom band, *then* the request carries the band's anchor and side and **no** workphase change: `X` stays in `W3`. Membership of the covered set decides it, not which workphase a neighboring card is in. See [TC-4.2](../item-positioning/part-4-merged-column.md). A covered member in the middle band is [DRAG-3.12](drag-3-card-column-bands.md).
+*Given* the same merged column, and Card `X` in `W3` (a covered member, not the entry workphase), *when* `X` is released in the column at Board layer in the top or bottom band, *then* the request carries the band's anchor and side and **no** workphase change: `X` stays in `W3`. Membership of the covered set decides it, not which workphase a neighboring card is in. A covered member in the middle band is [DRAG-3.12](drag-3-card-column-bands.md).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
 ## DRAG-3.8 — Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §4
 
 *Given* an expanded column with sub-rows `W2` (rendering `A, B`) and `W3` (rendering `C, D`), and Card `X` at Board layer, *when* `X` is released above the `W3` sub-row's top divider, *then* the request is `{anchorId: C, side: before}` with workphase `W3`: the first item of that sub-row, in exactly that workphase. *When* it is released below the `W3` sub-row's bottom divider, *then* the request is `{anchorId: D, side: after}`, workphase `W3`. Each sub-row carves its own bands from its own content.
 
@@ -97,17 +97,17 @@
 
 ## DRAG-3.9 — A done region is a single band; any release is a workphase-only move with no anchor
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.4
 
-*Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, *when* Card `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-7.8](../item-positioning/part-7-board-placement-intents.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)).
+*Given* a done column (a terminal covered set) rendering `D1, D2` by `completedAt`, *when* Card `X` at Board layer is released anywhere in its region (near the top, near the bottom, over `D1`, over `D2`), *then* every release sends the same workphase-only move with no `anchorId`. The server applies it as a workphase change with `completedAt` set and `position` dropped ([TC-6.1](../item-positioning/part-6-active-done-split.md), [TC-6.3](../item-positioning/part-6-active-done-split.md)). A done region has no top or bottom band, whatever its card count: a Free done item has no position to anchor against. Its one reserved zone is at the bottom, where the ghost previews as the newest completion ([DRAG-6.11](drag-6-preview-reconciliation.md)).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
 ## DRAG-3.10 — An empty region is a single band; any release is a workphase-only move
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5, wiki item-positioning §7.1
 
-*Given* a column region with no items, *when* Card `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server's result is [TC-7.5](../item-positioning/part-7-board-placement-intents.md) or [TC-7.6](../item-positioning/part-7-board-placement-intents.md).
+*Given* a column region with no items, *when* Card `X` at Board layer is released anywhere in it, *then* the request is a workphase-only move with no anchor. There's no first or last to carve two zones around, so the region has one zone, `h` tall. The server keeps the item's position, or gives an item with none the append fallback ([TC-2.24](../item-positioning/part-2-anchor-resolution.md)).
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 

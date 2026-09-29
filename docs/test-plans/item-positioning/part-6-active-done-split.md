@@ -1,134 +1,98 @@
-# Part 6 — Active/done split
+# TC-6 — Active/done split
 
-**Next ID:** TC-6.10
+**Next ID:** TC-6.11
 
-**Wiki:** [`../../wiki/item-positioning/#6-activedone-split`](../../wiki/item-positioning/README.md#6-activedone-split)
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-6.1 | `completedAt` set on transition to terminal | P0 | ✅ automated |
-| TC-6.2 | `completedAt` cleared on reopen | P0 | ✅ automated |
-| TC-6.3 | Done items store no position | P0 | ✅ automated |
-| TC-6.4 | Done-item ordering is purely `completedAt`-based | P0 | ✅ automated |
-| TC-6.5 | Attached children keep position under terminal cascade | P0 | ✅ automated |
-| TC-6.6 | `positionScope` stays `"attached-siblings"` under terminal cascade | P0 | ✅ automated |
-| TC-6.7 | Column range validation rejects terminal+non-terminal mix | P0 | ✅ automated |
-| TC-6.8 | Range entirely terminal or entirely non-terminal remains valid | P1 | ✅ automated |
-| TC-6.9 | Reopening a done item doesn't resurrect a stale position | P1 | ✅ automated |
+| TC-6.1 | `completedAt` is set when a Free item enters a terminal workphase | P0 | Automated |
+| TC-6.2 | `completedAt` is cleared when a done item is reopened | P0 | Automated |
+| TC-6.3 | A done Free item has no stored position | P0 | Automated |
+| TC-6.4 | Done items are ordered by completion, the newest last | P0 | Automated |
+| TC-6.5 | Attached children keep their positions under a terminal cascade | P0 | Automated |
+| TC-6.6 | `positionScope` stays `"attached-siblings"` under a terminal cascade | P0 | Automated |
+| TC-6.7 | A column range can't mix terminal and non-terminal workphases | P0 | Automated |
+| TC-6.8 | A range that's all terminal, or all non-terminal, is accepted | P1 | Automated |
+| TC-6.9 | A reopened done item takes the append fallback | P1 | Automated |
+| TC-6.10 | Two done items completed at the same moment | P2 | Pending PO |
 
 ---
 
-## TC-6.1 — `completedAt` set on transition to terminal
+## TC-6.1 — `completedAt` is set when a Free item enters a terminal workphase
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* a detached/root item currently in a non-terminal workphase with
-`completedAt = null`, *when* its effective workphase transitions to a
-terminal one, *then* `completedAt` is set to the transition time.
+*Given* a Free item, *when* it is created in a terminal workphase, or moves to one from a non-terminal workphase, *then* its `completedAt` is set to the time of that write.
 
-**Automation test:** `server/tests/routes/items.test.ts` › "POST into a
-terminal workphase gets no position, but a completedAt timestamp" and
-"moving into a terminal workphase clears position and sets completedAt"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.2 — `completedAt` cleared on reopen
+## TC-6.2 — `completedAt` is cleared when a done item is reopened
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* a done item with `completedAt` set, *when* it is moved back to a
-non-terminal workphase, *then* `completedAt` is cleared to `null`.
+*Given* a done Free item with `completedAt` set, *when* it moves to a non-terminal workphase, *then* its `completedAt` is `null`.
 
-**Automation test:** `items.test.ts` › "moving out of a terminal workphase
-clears completedAt and assigns a fresh position"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.3 — Done items store no position
+## TC-6.3 — A done Free item has no stored position
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* an item transitioning to a terminal workphase, *when* the
-transition completes, *then* its `position` is not written/updated as
-part of that transition — ordering among done items is derived from
-`completedAt`, not a stored `position` value.
+*Given* an item, *when* it becomes a Free item in a terminal workphase, whether it's created there, moved there or detached there, *then* its `position` is `null`.
 
-**Automation test:** Same tests as TC-6.1, plus `items.test.ts` ›
-"detaching into a terminal workphase clears position and sets completedAt"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.4 — Done-item ordering is purely `completedAt`-based
+## TC-6.4 — Done items are ordered by completion, the newest last
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6, wiki board-drag-interaction §10
 
-*Given* several done items with different `completedAt` timestamps,
-*when* they are listed/sorted, *then* the order follows `completedAt`
-(e.g. most recently completed first, or whatever direction is specified),
-never a `position` comparison.
+*Given* done Free items `D1`, `D2` and `D3`, created in that order but completed in the order `D2`, `D3`, `D1`, *when* their done list is sorted, *then* it reads `D2, D3, D1`: by `completedAt`, oldest first. Neither position nor creation time plays a part.
 
-**Automation test:** `client/src/components/workflow/useItemManagement.test.ts`
-› `getWorkphaseItemsFrom` › "sorts by completedAt instead of position for a
-terminal workphase (Epic 3.2 Part 6)" and `getMergedColumnItemsFrom` ›
-"sorts by completedAt instead of position when the covered set is
-terminal"
+**Automation test:** `tests/ui/item-positioning.spec.ts`
 
-## TC-6.5 — Attached children keep position under terminal cascade
+## TC-6.5 — Attached children keep their positions under a terminal cascade
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* an attached child whose parent (and thus the child's cascaded
-effective workphase) transitions to terminal, *when* the cascade applies,
-*then* the child's `position` is retained and still meaningful within
-`(parentId, isAttached)` — only detached/root items lose position on
-terminal transition.
+*Given* attached child `X` of `P` at position `p`, *when* `P` moves to a terminal workphase and the move cascades to `X`, *then* `X.position` is still `p`, and `X.completedAt` stays `null`. Only a Free item loses its position on entering a terminal workphase.
 
-**Automation test:** `items.test.ts` › "an attached child keeps its
-position (and stays out of Part 6 done-tracking) when its parent cascades
-into a terminal workphase (TC-6.5)" — confirms the parent's own
-active→done transition alongside the child's position/completedAt staying
-untouched, the inverse of the already-covered detaching-into-terminal case.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.6 — `positionScope` stays `"attached-siblings"` under terminal cascade
+## TC-6.6 — `positionScope` stays `"attached-siblings"` under a terminal cascade
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6, wiki item-positioning §2
 
-Cross-reference [TC-2.13](part-2-anchor-resolution.md). An attached child
-cascaded to terminal still reports `"attached-siblings"`, not `"none"`.
+*Given* attached child `X` of `P`, *when* `P` moves to a terminal workphase and the move cascades to `X`, *then* `X`'s `positionScope` is still `"attached-siblings"`, not `"none"`.
 
-**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
-› "classifies an attached child as attached-siblings even under a terminal
-cascade (TC-6.6)"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.7 — Column range validation rejects terminal+non-terminal mix
+## TC-6.7 — A column range can't mix terminal and non-terminal workphases
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* an attempt to create or edit a board column whose configured
-status range includes both a terminal and a non-terminal workphase,
-*when* the range is validated, *then* it is rejected with an error,
-alongside the existing overlap/direction/foreign-workphase checks.
+*Given* a board, *when* a column is created, or an existing one edited, with a range that covers both a terminal and a non-terminal workphase, *then* the request is rejected, and nothing about the columns changes.
 
-**Automation test:** `server/tests/routes/columns.test.ts` › "POST rejects
-a range spanning a terminal and non-terminal workphase" and "PUT rejects
-extending a range to cross the terminal boundary"
+**Automation test:** `server/tests/routes/columns.test.ts`
 
-## TC-6.8 — Range entirely terminal or entirely non-terminal remains valid
+## TC-6.8 — A range that's all terminal, or all non-terminal, is accepted
 
-**Priority:** P1 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
-*Given* a column range that covers only non-terminal statuses (or only
-terminal ones), *when* validated, *then* it is accepted — the new check
-only rejects a *mixed* range.
+*Given* a board, *when* a column is created with a range covering only terminal workphases, or only non-terminal ones, *then* it is accepted.
 
-**Automation test:** `columns.test.ts` › "POST allows a range entirely
-within terminal workphases" (all-terminal case explicit; all-non-terminal
-case implicit via every other pre-existing column test in the same file)
+**Automation test:** `server/tests/routes/columns.test.ts`
 
-## TC-6.9 — Reopening a done item doesn't resurrect a stale position
+## TC-6.9 — A reopened done item takes the append fallback
 
-**Priority:** P1 · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2, wiki item-positioning §6
 
-*Given* a detached/root done item with no stored position, *when* it's
-reopened (moved to non-terminal), *then* it receives a fresh position via
-the append-fallback mechanism ([Part 2](part-2-anchor-resolution.md)),
-consistent with any other scope-change reassignment.
+*Given* a done Free item with no position, in a workflow whose true last Free item is at `6.0`, *when* it moves to a non-terminal workphase with no anchor, *then* its position is `7`, by the append fallback. No earlier position comes back.
 
-**Automation test:** `items.test.ts` › "moving out of a terminal workphase
-clears completedAt and assigns a fresh position" — now asserts the fresh
-position is strictly past a true pre-existing sibling's position, proving
-append-fallback specifically rather than just non-null.
+**Automation test:** `server/tests/routes/items.test.ts`
+
+## TC-6.10 — Two done items completed at the same moment
+
+**Priority:** P2 · **Status:** Pending PO
+
+*Given* done Free items `D1` and `D2` with the same `completedAt`, `D1` created first, *when* their done list is sorted, *then* — **question for the PO:** wiki item-positioning §6 orders a done list by `completedAt`, and wiki item-positioning §5a's tie-break (`position`, then `createdAt`) is for a sort by position. What decides a tie in `completedAt`? The client puts the one created first ahead today.
+
+**Automation test:** —

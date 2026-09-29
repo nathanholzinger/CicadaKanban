@@ -89,7 +89,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
-*Given* Card `X` with `position` `null` (a reopened done item, or an item getting its first workphase), *when* it is previewed with the "keep its position" placement (a middle-band release, [DRAG-3.3](drag-3-card-column-bands.md)), *then* the ghost, and the pending marker after release, sit at the **end** of the receiving list, not the top, matching the append fallback the write resolves to ([TC-6.9](../item-positioning/part-6-active-done-split.md), [TC-7.5](../item-positioning/part-7-board-placement-intents.md)).
+*Given* Card `X` with `position` `null` (a reopened done item, or an item getting its first workphase), *when* it is previewed with the "keep its position" placement (a middle-band release, [DRAG-3.3](drag-3-card-column-bands.md)), *then* the ghost, and the pending marker after release, sit at the **end** of the receiving list, not the top, matching the append fallback the write resolves to ([TC-2.24](../item-positioning/part-2-anchor-resolution.md), [TC-6.9](../item-positioning/part-6-active-done-split.md)).
 
 **Automation test:** `client/src/components/workflow/placement.test.ts`, `client/src/components/workflow/itemListOps.test.ts`
 

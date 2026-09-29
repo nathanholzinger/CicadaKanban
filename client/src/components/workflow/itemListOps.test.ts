@@ -70,12 +70,23 @@ describe('getWorkphaseItemsFrom', () => {
     expect(result.map(i => i.id)).toEqual(['first', 'root', 'detached-child']);
   });
 
-  it('breaks an exact position tie by createdAt, oldest first', () => {
+  it('TC-5a.5: breaks an exact position tie by createdAt, oldest first', () => {
     const tied = [item('newer', { position: 1, createdAt: 200 }), item('older', { position: 1, createdAt: 100 })];
     expect(getWorkphaseItemsFrom(tied, 'todo').map(i => i.id)).toEqual(['older', 'newer']);
   });
 
-  it('sorts by completedAt instead of position for a terminal workphase (Epic 3.2 Part 6)', () => {
+  it('TC-5a.5: sorts a missing position as 0, tie-break included', () => {
+    const items = [
+      item('one', { position: 1, createdAt: 10 }),
+      item('zero-newer', { position: 0, createdAt: 300 }),
+      item('missing', { position: null, createdAt: 200 }),
+      item('zero-older', { position: 0, createdAt: 100 }),
+    ];
+    // Among the zeros by creation time, and ahead of 1: not first, not last.
+    expect(getWorkphaseItemsFrom(items, 'todo').map(i => i.id)).toEqual(['zero-older', 'missing', 'zero-newer', 'one']);
+  });
+
+  it('sorts by completedAt instead of position for a terminal workphase', () => {
     const done = [
       item('shipped-later', { position: null, completedAt: 200 }),
       item('shipped-first', { position: null, completedAt: 100 }),
@@ -122,7 +133,7 @@ describe('getMergedColumnItemsFrom', () => {
     item('other-project', { workphaseId: 'review', projectId: 'p2', position: 0.1 }),
   ];
 
-  it('union-sorts across the covered workphases, allowing genuine interleaving', () => {
+  it('TC-4.1: union-sorts across the covered workphases, allowing genuine interleaving', () => {
     // Scoped to p1 so other-project's tiny position doesn't also need
     // accounting for here — that's covered separately below.
     const result = getMergedColumnItemsFrom(items, ['todo', 'review'], 'p1');
@@ -340,7 +351,7 @@ describe('applyPlacements', () => {
 });
 
 describe('selectors with placements', () => {
-  it('a placement with a workphaseId moves the item into that list without changing the item (TC-2.30: position kept, not null)', () => {
+  it('TC-2.30: a placement with a workphaseId moves the item into that list without changing the item (position kept, not null)', () => {
     const items = [
       item('A', { position: 1 }),
       item('X', { position: 3 }),

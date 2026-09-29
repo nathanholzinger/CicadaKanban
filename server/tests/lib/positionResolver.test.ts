@@ -79,12 +79,16 @@ describe('coarsestFit', () => {
 });
 
 describe('reindexScope', () => {
-  it('breaks exact ties by createdAt, oldest first', async () => {
+  it('TC-5.6: breaks exact ties by createdAt, oldest first', async () => {
     const { phase, items: created } = await seedPhaseWithItems(4);
     setPosition(created[0].id, 5.0);
     setPosition(created[1].id, 1.0 + 1e-13);
     setPosition(created[2].id, 1.0);
     setPosition(created[3].id, 5.0);
+    // The tied pair's creation times run against the order the rows were
+    // inserted, so the row order alone would put created[0] first.
+    db.update(items).set({ createdAt: 2000 }).where(eq(items.id, created[0].id)).run();
+    db.update(items).set({ createdAt: 1000 }).where(eq(items.id, created[3].id)).run();
 
     db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[2].id),
@@ -92,15 +96,15 @@ describe('reindexScope', () => {
 
     expect(getPosition(created[2].id)).toBe(1);
     expect(getPosition(created[1].id)).toBe(2);
-    expect(getPosition(created[0].id)).toBe(3);
-    expect(getPosition(created[3].id)).toBe(4);
+    expect(getPosition(created[3].id)).toBe(3);
+    expect(getPosition(created[0].id)).toBe(4);
   });
 
   // docs/wiki/item-positioning §5 "Reindexing must be disclosed to the
   // caller" (Epic 3.5): a caller that mixes one fresh number into stale
   // ones computes an ordering that is wrong while looking consistent, so
   // the resolver must report every row it renumbered.
-  describe('disclosure (wiki §5)', () => {
+  describe('disclosure', () => {
     it('reports every renumbered row, in scope order, as bare {id, position} pairs (tight-gap trigger)', async () => {
       const { phase, items: created } = await seedPhaseWithItems(3);
       setPosition(created[0].id, 1.0);
@@ -149,7 +153,7 @@ describe('reindexScope', () => {
 });
 
 describe('resolveAnchorPosition', () => {
-  it('coarsest-fits between the anchor and its true next neighbor', async () => {
+  it('TC-2.2: coarsest-fits between the anchor and its true next neighbor', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
     setPosition(created[0].id, 1.5);
     setPosition(created[1].id, 2.0);
@@ -160,7 +164,7 @@ describe('resolveAnchorPosition', () => {
     expect(result).toBe(1.8);
   });
 
-  it('finds the true neighbor even when it is not the literal next row created', async () => {
+  it('TC-2.9: finds the true neighbor even when it is not the literal next row created', async () => {
     // Regression for the narrow-view leapfrog bug: the true bounding
     // neighbor must be found by querying real data, not assumed from
     // creation order or a caller-supplied guess.
@@ -174,11 +178,10 @@ describe('resolveAnchorPosition', () => {
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[2].id),
     );
-    expect(result).toBeGreaterThan(2.8);
-    expect(result).toBeLessThan(3.0);
+    expect(result).toBe(2.9);
   });
 
-  it('appends past the anchor when it is the true last item', async () => {
+  it('TC-2.4: appends past the anchor when it is the true last item', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, 5.3);
 
@@ -217,7 +220,7 @@ describe('resolveAnchorPosition', () => {
     expect(result).toBe(1.5);
   });
 
-  it('throws for an anchor with no position (a done item, per Part 6) (TC-2.8)', async () => {
+  it('TC-2.8: throws for an anchor with no position (a done item)', async () => {
     const { items: created } = await seedPhaseWithItems(1);
     setPosition(created[0].id, null);
 
@@ -261,7 +264,7 @@ describe('resolveAnchorPosition', () => {
 });
 
 describe('resolveAppendPosition', () => {
-  it('returns 1.0 for a genuinely empty scope', async () => {
+  it('TC-2.7: returns 1.0 for a genuinely empty scope', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
@@ -270,7 +273,7 @@ describe('resolveAppendPosition', () => {
     expect(result).toBe(1.0);
   });
 
-  it('treats a scope holding only null-positioned rows the same as a genuinely empty one (regression: getLastPositionInScope missed an isNotNull guard)', async () => {
+  it('TC-2.7: treats a scope holding only null-positioned rows the same as a genuinely empty one', async () => {
     // A scope isn't only ever empty or fully-positioned — a done item keeps
     // its row (null position, real completedAt instead, per Part 6) inside
     // the same workflow-wide scope active items compare against. If every
@@ -304,7 +307,7 @@ describe('resolveAppendPosition', () => {
     expect(result).toBeLessThan(10);
   });
 
-  it('does not reindex when a large position is proportionate to a large item count', async () => {
+  it('TC-5.3: does not reindex when a large position is proportionate to a large item count', async () => {
     const { project, phase, items: created } = await seedPhaseWithItems(3);
     setPosition(created[0].id, 1);
     setPosition(created[1].id, 2);

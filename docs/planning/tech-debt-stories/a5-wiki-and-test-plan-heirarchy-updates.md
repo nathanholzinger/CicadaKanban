@@ -56,6 +56,7 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - ATT-1.13, 5.7 and 5.8 (rulings 13, 15 and 16).
 
   Once the wiki states each answer, the Test Planner keeps, changes or deletes the case.
+
 - **Tests to check the answers against,** from A3 batch 4's confirming run. Each is named by file and title.
   - **Stamped ATT-1.8, and they invert if Ruling A is written in:** `items.hierarchy.test.ts`'s "ATT-1.8: rejects isAttached: true with no resulting parent" and "ATT-1.8: PUT rejects a parentless attach".
   - **They assert that clearing the parent clears the flag, which is ATT-1.8's question:**
@@ -66,8 +67,8 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - **They depend on a parentless create storing the flag.** Re-check them after the answer:
     - ATT-1.1's test in `items.test.ts`: its top-level item holds that flag, and still reads Free;
     - `items.hierarchy.test.ts`'s "ATT-4.7: a tree already past the cap loads…": its chain is attached only through that flag. Without the flag, its reorder is among Free items, not among attached siblings.
+    - `items.test.ts`'s "creates a parentless item with isAttached true (the default)…". It pins ATT-1.8's answer today, and since batch 5 it carries TC-2.17 too, whose `positionScope` assertion holds under either answer but needs a parentless item that holds the flag.
   - **They carry no case ID, and pin today's answer:**
-    - **ATT-1.8:** `items.test.ts`'s "creates a parentless item with isAttached true (the default)…".
     - **ATT-1.13:**
       - `items.hierarchy.test.ts`'s "rejects a workphaseId that contradicts the parent an attached item inherits from…", where the move refuses;
       - `items.test.ts`'s "an attached child inherits the parent workphase even when a different one is passed", where the create ignores it.
@@ -82,6 +83,15 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - **Misstamped:** `items.hierarchy.test.ts`'s "ATT-3.9, ATT-3.10: a Free item can be reparented…" reparents a top-level item, which is ATT-3.11's scenario.
     - A3's close-out drops ATT-3.9 from its title.
     - Whether it gains ATT-3.11 depends on the answer. Its flag is clear, so it stays Free either way.
+
+*Added by the Test Planner, from A3 batch 5's Stop 1 (2026-09-29):* three item-positioning cases, all `Pending PO`, routed here by Nathan. A3's Open questions 17, 19 and 20 hold the full questions. The batch 5 report (`test-reconciliation-a3-item-positioning.md`, in `docs/audits/` and then `docs/archive/`) lists, in its Addendum, the tests that pin today's behavior for each.
+- **TC-7.18 (Ruling C): the `positionScope` of an item left in another workflow's workphase.** It goes "alongside the other item movement cases" (Nathan).
+  - Item-positioning §7.3 says `"none"`. §2's list of `"none"` cases doesn't include it, and the API returns `"workflow"`.
+  - The Test Planner's view: `"none"`. §7.3 nulls the item's position because it has no meaningful comparison scope, which is what `"none"` means. §2's list would gain the case, and the code follow.
+- **TC-2.32: a write that names a final position.** Item-positioning §2 says a write carries relative intent. The API also accepts a raw `position` on a move, and a reorder endpoint that sets positions outright. Scripts and test setup use both, and no client calls the reorder endpoint. Is it part of the API, or to be retired?
+- **TC-6.10: two done items with the same `completedAt`.** What orders them? The client puts the one created first ahead today.
+
+Once the wiki states each answer, the Test Planner keeps, changes or deletes the case.
 
 ### D3
 

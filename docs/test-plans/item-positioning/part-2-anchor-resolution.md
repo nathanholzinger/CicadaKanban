@@ -1,543 +1,271 @@
-# Part 2 — Anchor+side position resolution
+# TC-2 — Anchor and side resolution
 
-**Next ID:** TC-2.31
+**Next ID:** TC-2.33
 
-**Wiki:** [`../../wiki/item-positioning/#2-position-resolution-anchor--side`](../../wiki/item-positioning/README.md#2-position-resolution-anchor--side)
+The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a locally ordered list. What the board adds is [DRAG-6](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-2.1 | Insert between two existing neighbors | P0 | ✅ automated |
-| TC-2.2 | Coarsest-fit rounding | P0 | ✅ automated |
-| TC-2.3 | Coarsest-fit stops at minimum needed precision | P1 | ✅ automated |
-| TC-2.4 | Append fallback, no true successor | P0 | ✅ automated |
-| TC-2.5 | Prepend fallback, no true predecessor — floor-bounded, never negative | P0 | ⏳ pending re-triage |
-| TC-2.6 | Creation with no anchor at all | P1 | ✅ automated |
-| TC-2.7 | Bootstrap: brand-new empty scope | P0 | ✅ automated |
-| TC-2.8 | Anchoring against a done item is rejected | P1 | ✅ automated |
-| TC-2.9 | Narrow view cannot leapfrog past an unseen true neighbor | P0 | ✅ automated |
-| TC-2.10 | True neighbor lookup ignores visibility, only reality | P0 | ✅ automated |
-| TC-2.11 | The client never computes a position value, not even for display | P0 | ⏳ pending triage |
-| TC-2.12 | Precision exhaustion triggers reindex-then-retry | P0 | ✅ automated |
-| TC-2.13 | `positionScope` = `"attached-siblings"` | P1 | ✅ automated |
-| TC-2.14 | `positionScope` = `"workflow"` | P1 | ✅ automated |
-| TC-2.15 | `positionScope` = `"none"` for a done item | P1 | ✅ automated |
-| TC-2.16 | `classifyPositionScope` on a null `workphaseId` → `"none"` | P1 | ✅ automated |
-| TC-2.17 | `classifyPositionScope` on an attached-but-parentless item → `"workflow"` | P1 | ✅ automated |
-| TC-2.18 | `position`'s shape is unchanged | P2 | ✅ automated |
-| TC-2.19 | Attach → detach reassigns position | P0 | ✅ automated |
-| TC-2.20 | Detach → attach reassigns position | P0 | ✅ automated |
-| TC-2.21 | Reparent while staying attached reassigns position | P0 | ✅ automated |
-| TC-2.22 | Reorder-only move does not reassign a fresh position | P0 | ✅ automated |
-| TC-2.23 | Redundant re-attach to the same parent is a no-op for position | P1 | ✅ automated |
-| TC-2.24 | Workphase-only move with no anchor keeps existing position | P0 | ✅ automated |
-| TC-2.25 | Cascade to attached descendants leaves position untouched | P0 | ✅ automated |
-| TC-2.26 | Active → done transition reassigns per Part 6 rules | P0 | ✅ automated |
-| TC-2.27 | Optimistic feedback is ordinal — an index, not a number | P0 | ⏳ pending triage |
-| TC-2.28 | Rendered projection of the server's answer matches the ordinal preview under a narrow view | P0 | ⏳ pending triage |
-| TC-2.29 | Ordinal preview holds when the anchor's own value is still in flight | P1 | ⏳ pending triage |
-| TC-2.30 | A pending item is never represented as `position: null` | P0 | ⏳ pending triage |
-
-*(TC-2.27–2.30 added by Epic 3.5 from the amended "Client-side role" of §2.
-TC-2.11 rewritten by the same amendment; TC-2.5's rule text corrected to
-match the wiki's floor-bounded prepend — see each case's note.)*
+| TC-2.1 | An item placed between two neighbors lands strictly between them | P0 | Automated |
+| TC-2.2 | Coarsest-fit rounding | P0 | Automated |
+| TC-2.4 | Append fallback: after the true last item | P0 | Automated |
+| TC-2.5 | Prepend fallback: before the true first item, floor-bounded and never negative | P0 | Automated |
+| TC-2.6 | An item created with no anchor is placed after the scope's true last item | P1 | Automated |
+| TC-2.7 | Bootstrap: an empty scope starts at `1.0`, and an empty workphase isn't an empty scope | P0 | Automated |
+| TC-2.8 | An anchor with no position, or one that doesn't exist, is rejected | P1 | Automated |
+| TC-2.9 | A narrow view can't leapfrog an unseen true neighbor | P0 | Automated |
+| TC-2.10 | A Free item's comparison scope is its whole workflow | P0 | Automated |
+| TC-2.11 | The client never computes a position: its requests carry relative intent only | P0 | Automated |
+| TC-2.12 | Precision exhaustion reindexes the scope, then retries the insert | P0 | Automated |
+| TC-2.13 | `positionScope` is `"attached-siblings"` for an attached child | P1 | Automated |
+| TC-2.14 | `positionScope` is `"workflow"` for a Free item in an active workphase | P1 | Automated |
+| TC-2.15 | `positionScope` is `"none"` for a done Free item | P1 | Automated |
+| TC-2.16 | `positionScope` is `"none"` for an item with no workphase | P1 | Automated |
+| TC-2.17 | `positionScope` is `"workflow"` for a parentless item that holds the attachment flag | P1 | Automated |
+| TC-2.18 | `position` is a number or `null` | P2 | Automated |
+| TC-2.19 | Detaching reassigns a fresh workflow-scoped position | P0 | Automated |
+| TC-2.20 | Attaching reassigns a fresh position among the new siblings | P0 | Automated |
+| TC-2.21 | Reparenting while staying attached reassigns a fresh position | P0 | Automated |
+| TC-2.23 | A redundant re-attach to the same parent leaves the position alone | P1 | Automated |
+| TC-2.24 | A workphase-only move with no anchor keeps the position | P0 | Automated |
+| TC-2.25 | A parent's workphase cascade leaves its attached children's positions alone | P0 | Automated |
+| TC-2.27 | Optimistic feedback is ordinal: an index, not a number | P0 | Automated |
+| TC-2.28 | Under a narrow view, the server's answer renders exactly as the preview did | P0 | Automated |
+| TC-2.29 | The preview holds when the anchor's own position is still in flight | P1 | Automated |
+| TC-2.30 | A pending item is never represented as `position: null` | P0 | Automated |
+| TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
+| TC-2.32 | A write that names a final position | P2 | Pending PO |
 
 ---
 
-### Core resolution algorithm
+## TC-2.1 — An item placed between two neighbors lands strictly between them
 
-## TC-2.1 — Insert between two existing neighbors
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Priority:** P0 · **Automated:** ✅ automated
+*Given* items at `1.0` and `2.0`, adjacent in a comparison scope, *when* an item is moved with the item at `1.0` as its anchor and side `after`, *then* its position is `1.5`: strictly between the two, and the coarsest value that fits ([TC-2.2](part-2-anchor-resolution.md)).
 
-*Given* items at positions 1.0 and 2.0 in a comparison scope, *when* a new
-item is inserted with anchor = the item at 1.0, side = `after`, *then* the
-resolved position is strictly between 1.0 and 2.0, and it is the coarsest
-decimal value that fits (see TC-2.2).
-
-**Automation test:** `server/tests/lib/positionResolver.test.ts` ›
-`resolveAnchorPosition` › "coarsest-fits between the anchor and its true
-next neighbor"; also duplicated at the integration layer by
-`server/tests/routes/items.test.ts` › "move resolves anchorId+side against
-the true neighbor, not a client-supplied guess"
+**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
 
 ## TC-2.2 — Coarsest-fit rounding
 
-**Priority:** P0 · **Automated:** ✅ automated
-
-*Given* two neighbors at 1.5 and 2.0, *when* resolving an insert between
-them, *then* the result is 1.8 (the coarsest 1-decimal value that fits),
-not the raw midpoint 1.75.
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Automation test:** `positionResolver.test.ts` › `coarsestFit` › "rounds
-to the coarsest precision that still fits strictly between the neighbors"
-(uses the wiki's exact 1.5/2.0 → 1.8 example)
+*Given* neighbors at `1.5` and `2.0`, *when* an item is placed between them, *then* its position is `1.8`: the first value, searching 0 decimal places, then 1, then 2 and on, that falls strictly between them. The raw midpoint, `1.75`, isn't used.
 
-## TC-2.3 — Coarsest-fit stops at minimum needed precision
+**Automation test:** `server/tests/lib/positionResolver.test.ts`
 
-**Priority:** P1 · **Automated:** ✅ automated
+## TC-2.4 — Append fallback: after the true last item
 
-*Given* neighbors at 1.0 and 2.0, *when* resolving an insert between them,
-*then* the result is at the coarsest precision level that fits, not an
-unnecessarily long decimal.
-
-**Automation test:** `positionResolver.test.ts` › `coarsestFit` › "takes
-the exact midpoint when it already fits at 0 decimals" ›
-`coarsestFit(1, 3) === 2`. Confirmed as the intended mapping, not just an
-acceptable proxy: this case's business rule is about *stopping* at the
-coarsest precision that fits rather than always searching deeper — the
-0-decimal case is the sharpest demonstration of that (TC-2.2 already
-separately covers the wiki's 1.5/2.0 → 1.8 walkthrough at 1 decimal,
-so mapping TC-2.3 to the same assertion would just duplicate TC-2.2
-rather than add distinct coverage).
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.4 — Append fallback, no true successor
+*Given* anchor `A` at `2.4`, the true last item in its comparison scope, *when* an item is placed after `A`, *then* its position is `3`: `A`'s position plus `1.0`, rounded. It isn't `3.4`.
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Automation test:** `server/tests/lib/positionResolver.test.ts`
 
-*Given* an anchor item that is the true last item in its comparison scope,
-*when* inserting with side = `after`, *then* the resolved position is
-`round(anchor + 1.0)` and is strictly greater than the anchor.
+## TC-2.5 — Prepend fallback: before the true first item, floor-bounded and never negative
 
-**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "appends past the anchor when it is the true last item"
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.5 — Prepend fallback, no true predecessor — floor-bounded, never negative
+*Given* anchor `A` at `1.0`, the true first item in its comparison scope, *when* an item is placed before `A`, *then* its position is `0.5`: the coarsest fit between a floor of `0.0` and `A`, not `A`'s position minus `1.0`. *And when* that prepend is repeated, each new item placed before the current true first item, *then* every position resolved is greater than `0.0`, however many times it repeats. A reindex may renumber the scope along the way ([TC-2.12](part-2-anchor-resolution.md)), but no position reaches `0.0` or below.
 
-**Priority:** P0 · **Automated:** ⏳ pending re-triage
+**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
 
-*Given* an anchor item that is the true first item in its scope, *when*
-inserting with side = `before`, *then* the resolved position is the
-coarsest-fit value strictly between a virtual floor of `0.0` and the
-anchor's position — **not** a symmetric `round(anchor − 1.0)`. The result
-is strictly less than the anchor and strictly greater than `0.0`.
+## TC-2.6 — An item created with no anchor is placed after the scope's true last item
 
-*And given* that prepend is repeated many times (each new item anchored
-`before` the current true first item), *then* every resolved position stays
-strictly above `0.0` — the sequence converges toward the floor rather than
-drifting negative without limit, so it can never collide with the
-`position ?? 0` sentinel used when sorting alongside unpositioned items
-(Part 5's tie-break).
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*(Rule text corrected 2026-09-10: this case previously described
-`round(anchor − 1.0)`, which the wiki's §2 "Append fallback" paragraph
-explicitly rules out. The mapped test below needs re-checking against the
-corrected rule by the Test Reconciler — TC-3.5's mapping already describes
-the attached-siblings equivalent as "floor-anchored coarsest-fit," so the
-implementation is likely already right and only this text was stale.)*
+*Given* a workflow whose true last Free item is at `4.2`, in any of its workphases, *when* a top-level item is created in the workflow with no anchor, *then* its position is `5`, as if placed after that item ([TC-2.4](part-2-anchor-resolution.md)).
 
-**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "prepends past the anchor when it is the true first item" — **verify**
-it asserts the floor-bounded coarsest-fit value, not `anchor − 1`, and that
-the repeated-prepend bound is covered somewhere.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.6 — Creation with no anchor at all
-
-**Priority:** P1 · **Automated:** ✅ automated
-
-*Given* a scope with existing items, *when* a new item is created with no
-explicit position, *then* it resolves as if anchored after the scope's
-true last item (append fallback).
-
-**Automation test:** `positionResolver.test.ts` › `resolveAppendPosition`
-› "appends past the true last item in a non-empty scope"; also duplicated
-at the integration layer by `items.test.ts` › POST /api/items › "positions
-the first item in a workphase at 1.0 and the next at max + 1.0"
-
-## TC-2.7 — Bootstrap: brand-new empty scope
-
-**Priority:** P0 · **Automated:** ✅ automated
-
-*Given* a scope (workflow-wide for a detached/root item, parent-wide for
-an attached child) with zero positioned items, *when* an item is
-created/moved into it with no anchor, *then* its position starts at
-`1.0`.
-
-**Automation test:** `positionResolver.test.ts` › `resolveAppendPosition`
-› "returns 1.0 for a genuinely empty scope"
-
-*(This case's rule text previously described a rank-aware bootstrap —
-anchoring to the nearest non-empty workphase by rank instead of a flat
-`1.0` — which was never implemented. That was resolved architecturally,
-not by writing a test: position scope moved from per-workphase to
-workflow-wide, which is what actually eliminates the two-empty-workphases
-collision this was meant to prevent — see the wiki's §2 bootstrap-fallback
-note. The flat `1.0` baseline is now correct as documented, and the
-originally-mapped test was right all along.)*
-
-## TC-2.8 — Anchoring against a done item is rejected
-
-**Priority:** P1 · **Automated:** ✅ automated
-
-*Given* a done item (terminal workphase, no stored `position` per Part 6),
-*when* it is passed as `anchorId` to a move, *then* the request is
-rejected rather than resolving against a nonexistent position — a real
-corollary of combining this section's "query the anchor's true current
-position" step with Part 6's "done items get no stored position," not a
-generic input-validation guard.
-
-**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "throws for an anchor with no position (a done item, per Part 6)
-(TC-2.8)"; also duplicated at the integration layer by `items.test.ts` ›
-"move rejects anchoring to a done item (no position to anchor against)
-(TC-2.8)"
-
-### Narrow-view correctness (the core bug this feature fixes)
-
-## TC-2.9 — Narrow view cannot leapfrog past an unseen true neighbor
-
-**Priority:** P0 · **Automated:** ✅ automated
-
-*Given* the true full order `A(1.0), B(2.8), C(3.0), D(4.0)` and a
-narrowed client view that only has `A` and `C` loaded (e.g. a subproject
-board that doesn't load the parent project's full item set), *when* the
-narrow view drags `D` to sit immediately before `C` (anchor = C, side =
-`before`), *then* the server resolves against `C`'s true neighbor `B`
-(2.8), producing a position strictly between 2.8 and 3.0 — never a value
-less than 2.8 that would silently reorder `D` ahead of `B`, an item the
-acting view never saw.
-
-**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "finds the true neighbor even when it is not the literal next row
-created" (uses the wiki's exact A(1.0)/B(2.8)/C(3.0) fixture)
-
-## TC-2.10 — True neighbor lookup ignores visibility, only reality
-
-**Priority:** P0 · **Automated:** ✅ automated
-
-*Given* a comparison scope where the true bounding neighbor beyond the
-anchor is not currently shown in the column/board the move originated
-from (e.g. a collapsed/attached item, or an item outside the current
-board's range), *when* resolving the insert, *then* that item is still
-found and used as the bound — the check is "does a true neighbor exist,"
-never "is one visible here."
+## TC-2.7 — Bootstrap: an empty scope starts at `1.0`, and an empty workphase isn't an empty scope
 
-**Automation test:** Same test as TC-2.9 — the server-side resolver has no
-concept of "visible" at all, so one test structurally covers both
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.11 — The client never computes a position value, not even for display
+*Given* a workflow with no positioned item in any workphase, *when* an item is created in it with no anchor, or moved in with no position to keep, *then* its position is `1.0`. The same holds for the first attached child of a parent that has none. *And given* a workflow whose workphase `W2` is empty while `W1` holds an item at `3.0`, *when* an item is created in `W2` with no anchor, *then* its position is `4`, not `1.0`: the scope is the whole workflow, so an empty workphase never bootstraps on its own.
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
-*Given* any client-side placement (a drop, a reorder, a create with a
-target slot), *when* the client prepares its optimistic state and its
-request, *then* no `position` number is computed client-side at any point
-— not held in local state, not rendered, and not sent. The request carries
-only relative intent (anchor + side, or a workphase-only move) and the
-written item's `position` in client state is whatever it was before the
-write until the server's value lands (see TC-2.30 for what "pending" looks
-like instead).
+## TC-2.8 — An anchor with no position, or one that doesn't exist, is rejected
 
-*(Superseded and rewritten by Epic 3.5. This case previously read: "Given a
-client computes an optimistic position locally (`positionBetween`) for
-instant visual feedback, when the server's resolution disagrees with the
-client's guess, then the server's value wins and the client re-syncs
-(`loadBoard()`)." The amended §2 "Client-side role" now explicitly rules
-out a client-computed number, even for display, so that premise no longer
-describes allowed behavior. The still-valid half — a rejected write resyncs
-from the server and never keeps the optimistic guess — now lives with the
-gesture that exercises it:
-[`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md)
-DRAG-6.6, and as the atomicity rule in
-[`../item-attachment/att-3-reparent-placement-atomicity.md`](../item-attachment/att-3-reparent-placement-atomicity.md)
-ATT-3.7.)*
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2, wiki item-positioning §7.1
 
-**Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
-`applyItemMove` › "falls back to loadBoard and never calls setItems when
-the move is rejected" / "updates items via setItems on a successful move" —
-covered the old resync premise, not this rule. `applyItemMove` is now
-`sendItemMove` in `dragRequest.test.ts` ("DRAG-6.6: a rejected move fails
-the write (the guess is dropped) and resyncs via loadBoard" / "begins the
-write with its pending placement, completes it with the response, and
-never calls loadBoard"); it should be re-pointed at DRAG-6.6 by the Test
-Reconciler.)*
+*Given* a done item `D`, in a terminal workphase with no position, *when* a move names `D` as its anchor, *then* the request is rejected with a 400, and nothing in it is written: no workphase change and no position. *And when* a move names an anchor id that no item has, *then* it's rejected the same way. No fallback ignores the anchor and appends instead.
 
-### Tight-gap → reindex
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
-## TC-2.12 — Precision exhaustion triggers reindex-then-retry
+## TC-2.9 — A narrow view can't leapfrog an unseen true neighbor
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* two neighbors so close in value that no additional decimal digit
-produces a value strictly between them within the max search depth,
-*when* an insert is attempted between them, *then* the local comparison
-scope is reindexed to clean sequential values first, and the original
-insert is retried and succeeds afterward.
+*Given* the true order `A` (`1.0`), `B` (`2.8`), `C` (`3.0`), `D` (`4.0`), and a view that shows only `A`, `C` and `D`, *when* `D` is placed before `C`, *then* its position is `2.9`: between `C` and its true predecessor `B`. It's never below `2.8`, which would put `D` ahead of `B`, an item the view never saw.
 
-**Automation test:** `positionResolver.test.ts` › `resolveAnchorPosition`
-› "reindexes the scope and retries when the gap is too tight for any
-precision"
+**Automation test:** `server/tests/lib/positionResolver.test.ts`
 
-### `positionScope` computed field
+## TC-2.10 — A Free item's comparison scope is its whole workflow
 
-## TC-2.13 — `positionScope` = `"attached-siblings"`
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Priority:** P1 · **Automated:** ✅ automated
+*Given* a workflow with workphases `W1` and `W2`, Free items `A` (`1.0`) and `C` (`3.0`) in `W1` and `B` (`2.0`) in `W2`, and an attached child of `A` at `1.2`, *when* an item is placed after `A` in `W1`, *then* its position is `1.5`: `A`'s true neighbor is `B`, in another workphase, whether the column shows `W1` alone or both. The attached child is scoped to its parent, so it's no neighbor of a Free item.
 
-*Given* an item with `isAttached = true` and a `parentId`, *when* fetched
-via the API, *then* its `positionScope` field reads `"attached-siblings"`.
+**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningCrossColumn.spec.ts`
 
-**Automation test:** `items.test.ts` › "GET returns positionScope =
-'attached-siblings' for an attached child (TC-2.13)"
+## TC-2.11 — The client never computes a position: its requests carry relative intent only
 
-*(Previously mapped only at the unit layer, and for good reason:
-`classifyPositionScope` was exported from `positionResolver.ts` but never
-called anywhere else in `server/src` — `positionScope` didn't reach any
-API response at all. Fixed 2026-08-18: wired into every item-serializing
-response in `items.ts` (`GET/POST/PUT/:id`, `PATCH /:id/move`) and into
-the board read path (`boards.ts` — the `positionScope` clients actually
-render from). Unit coverage on the pure function stays in
-`positionResolver.test.ts`; this is now backed by a real API-level
-assertion too.)*
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.14 — `positionScope` = `"workflow"`
+*Given* any client write that places an item (a board drop, a sibling reorder, or an inline create), *when* the request is sent, *then* it names what the placement is relative to (an anchor and a side, a workphase, a parent, or a combination) and carries no `position` value. What the client shows meanwhile is [TC-2.27](part-2-anchor-resolution.md)'s and [TC-2.30](part-2-anchor-resolution.md)'s: an index, with the item's `position` left as it was.
 
-**Priority:** P1 · **Automated:** ✅ automated
+**Automation test:** `tests/ui/item-positioning.spec.ts`, `client/src/components/workflow/dragRequest.test.ts`, `client/src/components/workflow/placement.test.ts`
 
-*Given* a detached item whose workphase is not terminal, *when* fetched,
-*then* `positionScope` reads `"workflow"`.
+## TC-2.12 — Precision exhaustion reindexes the scope, then retries the insert
 
-**Automation test:** `items.test.ts` › "GET returns positionScope =
-'workflow' for a detached item in a non-terminal workphase (TC-2.14)"
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2, wiki item-positioning §5
 
-*(Case name/value updated from the pre-`de80b59` `"workphase"` naming —
-see part-2's §2 comparison-scope rewrite.)*
+*Given* two adjacent items so close that no value at the search's maximum decimal depth falls strictly between them, *when* an item is placed between them, *then* the scope is first reindexed to clean sequential values in its current order ([TC-5.1](part-5-reindex.md)), and the item is then placed strictly between the same two neighbors' new values. The write succeeds.
 
-## TC-2.15 — `positionScope` = `"none"` for a done item
+**Automation test:** `server/tests/routes/items.test.ts`
 
-**Priority:** P1 · **Automated:** ✅ automated
+## TC-2.13 — `positionScope` is `"attached-siblings"` for an attached child
 
-*Given* a detached/root item whose workphase is terminal, *when* fetched,
-*then* `positionScope` reads `"none"`.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Automation test:** `items.test.ts` › "GET returns positionScope = 'none'
-for a done item (TC-2.15)"
+*Given* an item with a parent and the attachment flag set, *when* it is read through the API, *then* its `positionScope` is `"attached-siblings"`.
 
-## TC-2.16 — `classifyPositionScope` on a null `workphaseId` → `"none"`
+**Automation test:** `server/tests/routes/items.test.ts`
 
-**Priority:** P1 · **Automated:** ✅ automated
+## TC-2.14 — `positionScope` is `"workflow"` for a Free item in an active workphase
 
-*Given* an item with a null `workphaseId` (unsorted/invalid — e.g. its
-workphase was deleted, SET NULL), *when* its `positionScope` is computed,
-*then* it reads `"none"` — the same practical bucket as a done item, even
-though the reason differs (not currently ordered at all, rather than
-ordered-by-`completedAt`). A fourth `positionScope` state the wiki's §2
-description doesn't separately enumerate (only three states are named),
-though `classifyPositionScope`'s own null-`workphaseId` branch has always
-implemented it.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
-› "classifies a null-workphase item as none (unsorted, not currently
-ordered) (TC-2.16)"
+*Given* a Free item, top-level or a detached child, in a non-terminal workphase, *when* it is read through the API, *then* its `positionScope` is `"workflow"`.
 
-## TC-2.17 — `classifyPositionScope` on an attached-but-parentless item → `"workflow"`
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
-**Priority:** P1 · **Automated:** ✅ automated
+## TC-2.15 — `positionScope` is `"none"` for a done Free item
 
-*Given* an item with `isAttached = true` but no `parentId`, *when* its
-`positionScope` is computed, *then* it reads `"workflow"`, not
-`"attached-siblings"` — the wiki states the AND-condition
-(`isAttached && parentId`) for the attached-siblings state, so this
-negative case is implied, just not previously enumerated as its own case.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2, wiki item-positioning §6
 
-**Automation test:** `positionResolver.test.ts` › `classifyPositionScope`
-› "classifies an attached-but-parentless item as workflow, not
-attached-siblings (TC-2.17)"
+*Given* a Free item in a terminal workphase, *when* it is read through the API, *then* its `positionScope` is `"none"`.
 
-## TC-2.18 — `position`'s shape is unchanged
+**Automation test:** `server/tests/routes/items.test.ts`
 
-**Priority:** P2 · **Automated:** ✅ automated
+## TC-2.16 — `positionScope` is `"none"` for an item with no workphase
 
-*Given* any item, *when* fetched via the API, *then* `position` is still a
-plain `number | null` — existing consumers that only read `position` see
-no shape change.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-**Automation test:** `items.test.ts` › "POST scopes a new attached child to
-its true siblings..." (`typeof child.position === 'number'`) and "POST
-into a terminal workphase gets no position..." (`res.body.position`
-`toBeNull()`) — explicit shape assertions folded into two already-existing
-tests rather than a new test slot.
+*Given* an item whose `workphaseId` is empty, because its workphase was deleted, *when* its `positionScope` is computed, *then* it is `"none"`: the same value as a done item's, for a different reason.
 
-### Scope-change reassignment principle
+**Automation test:** `server/tests/routes/boards.test.ts`
 
-## TC-2.19 — Attach → detach reassigns position
+## TC-2.17 — `positionScope` is `"workflow"` for a parentless item that holds the attachment flag
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* an attached child with a position meaningful among its siblings,
-*when* it is detached, *then* it receives a fresh position appropriate to
-its new workphase-scoped comparison group (append fallback), not a
-leftover sibling-scoped value.
+*Given* an item in a non-terminal workphase with no `parentId`, whose attachment flag is set, *when* its `positionScope` is computed, *then* it is `"workflow"`, not `"attached-siblings"`, which needs both the flag and a parent.
 
-**Automation test:** `items.test.ts` › "detaching reassigns a fresh
-position scoped to the workphase"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.20 — Detach → attach reassigns position
+## TC-2.18 — `position` is a number or `null`
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §1, wiki item-positioning §2
 
-*Given* a detached item, *when* it is attached to a parent, *then* it
-receives a fresh position among that parent's attached children, not a
-leftover workphase-scoped value.
+*Given* any item, *when* it is read through the API, *then* its `position` is a number or `null`, and nothing else. `positionScope` sits beside it, and doesn't change its shape.
 
-**Automation test:** `items.test.ts` › "attaching to a parent reassigns a
-fresh position scoped to the new siblings"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.21 — Reparent while staying attached reassigns position
+## TC-2.19 — Detaching reassigns a fresh workflow-scoped position
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2.1
 
-*Given* an attached child of parent A, *when* it is reparented to parent B
-(same project) while remaining attached, *then* it receives a fresh
-position among parent B's children — not an old value from parent A's
-sibling scope.
+*Given* attached child `X` of `P` at sibling-scoped `1.0`, in a workflow whose true last Free item is at `7.0`, *when* `X` is detached with no anchor, *then* its position is `8`, by the append fallback in the workflow scope, and its `positionScope` is `"workflow"`. The sibling-scoped `1.0` isn't kept.
 
-**Automation test:** `items.test.ts` › "reparenting while staying attached
-reassigns a fresh position scoped to the new parent"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.22 — Reorder-only move does not reassign a fresh position
+## TC-2.20 — Attaching reassigns a fresh position among the new siblings
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2.1
 
-*Given* an item reordered among its existing siblings without changing
-parent/attach-state/workphase scope, *when* the move is applied with an
-explicit anchor, *then* it receives the anchor-resolved position (per
-TC-2.1–2.5), not an unrelated append-fallback value.
+*Given* Free item `X` at workflow position `5.0`, and `P` whose attached children's true last is at `2.0`, *when* `X` is attached to `P` with no anchor, *then* its position is `3`, by the append fallback among `P`'s attached children, and its `positionScope` is `"attached-siblings"`. *And given* `P` has no attached children, *then* it's `1.0` ([TC-2.7](part-2-anchor-resolution.md)). The workflow-scoped `5.0` isn't kept.
 
-**Automation test:** `items.test.ts` › "move resolves anchorId+side
-against the true neighbor, not a client-supplied guess" (result lands
-strictly between two true neighbors, not an append value)
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
-## TC-2.23 — Redundant re-attach to the same parent is a no-op for position
+## TC-2.21 — Reparenting while staying attached reassigns a fresh position
 
-**Priority:** P1 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2.1
 
-*Given* an already-attached child, *when* it is "re-attached" to the same
-parent it already belongs to (no actual scope change), *then* its
-`position` is left completely untouched — a corollary of the
-scope-change-reassignment principle above (no scope change → no
-reassignment) that the table doesn't name as its own scenario.
+*Given* attached child `X` of `A` at `1.0`, and `B` whose attached children's true last is at `4.0`, *when* `X` is reparented to `B` and stays attached, with no anchor, *then* its position is `5`, among `B`'s attached children. `A`'s `1.0` isn't kept.
 
-**Automation test:** `items.test.ts` › "a redundant re-attach to the same
-parent leaves position untouched (TC-2.23)"
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.24 — Workphase-only move with no anchor keeps existing position
+## TC-2.23 — A redundant re-attach to the same parent leaves the position alone
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2.1
 
-*Given* an item that already has a real `position`, *when* it moves to a
-different workphase with no anchor and no explicit `position` in the
-request, *then* its existing `position` value is left completely
-unchanged — since position is workflow-scoped, not workphase-scoped
-(`de80b59`), the existing value is already comparable against everything
-else in the (same) workflow, so no new number needs to be computed. A
-deliberate exception to the append-fallback default (steps 4/5 above),
-documented explicitly in the wiki's §2 addendum, and the shape the MCP
-`move_item` tool already sends (`{workphaseId}` alone). New as of
-`de80b59` (2026-08-17) — not in the original 55-case catalog at all.
+*Given* `X`, attached to `P` at position `p`, *when* a write attaches `X` to `P` again, *then* `X.position` is still `p`: its scope didn't change, so nothing is reassigned.
 
-**Automation test:** `items.test.ts` › "a workphaseId-only move with no
-anchor keeps the item's existing position exactly unchanged (TC-2.24)" —
-pins the item's position to a value append-fallback could never naturally
-produce (so a pass can't be coincidental), then asserts it's exactly that
-value after the move. The one pre-existing test in this area
-("a workphaseId-only move (no position given) defaults to the end of the
-target workphase") turned out to be ambiguous — its `toBeGreaterThan`
-assertion passes whether the position was kept unchanged *or* freshly
-appended, given the specific values it uses — so it doesn't actually
-discriminate between the two behaviors this case cares about.
+**Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.25 — Cascade to attached descendants leaves position untouched
+## TC-2.24 — A workphase-only move with no anchor keeps the position
 
-**Priority:** P0 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2, wiki item-positioning §2.1
 
-*Given* an attached child, *when* its parent moves to a different
-workphase and the cascade applies to the child, *then* the child's
-`position` value is unchanged (scope did not change — still
-parent-scoped).
+*Given* Free item `X` at a position the append fallback wouldn't produce, such as `2.37`, *when* `X` moves to another workphase of the same workflow with no anchor, *then* `X.position` is exactly `2.37`: its scope is the workflow either way. *And given* `X` has no position to keep, as a reopened done item has none ([TC-6.9](part-6-active-done-split.md)), *then* it takes the append fallback instead.
 
-**Automation test:** `items.test.ts` › "cascading a non-terminal-to-
-non-terminal move leaves an attached child's position untouched (TC-2.25)"
-— reads `position` explicitly before/after, unlike the pre-existing
-cascade tests which only ever checked `workphaseId` propagation.
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
-## TC-2.26 — Active → done transition reassigns per Part 6 rules
+## TC-2.25 — A parent's workphase cascade leaves its attached children's positions alone
 
-**Priority:** P0 · **Automated:** ✅ automated
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2.1
 
-Covered by [Part 6](part-6-active-done-split.md) rather than an ordinary
-scope-change append — see TC-6.1–TC-6.4.
+*Given* attached child `X` of `P` at position `p`, *when* `P` moves to another non-terminal workphase and the move cascades to `X`, *then* `X.workphaseId` follows `P`, and `X.position` is still `p`: `X` is scoped to its parent either way. The terminal case is [TC-6.5](part-6-active-done-split.md).
 
-**Automation test:** See [Part 6](part-6-active-done-split.md) — TC-6.1–TC-6.4
+**Automation test:** `server/tests/routes/items.test.ts`
 
-### Client-side role (amended by Epic 3.5)
+## TC-2.27 — Optimistic feedback is ordinal: an index, not a number
 
-These cases apply to *any* client holding a locally-ordered list. The board
-drag is what exercises them — the board-specific additions (pending marker
-cleared on response, inversion tripwire, per-item response sequencing,
-failure resync) are in
-[`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md),
-which cross-references these rather than restating them.
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.27 — Optimistic feedback is ordinal — an index, not a number
+*Given* a rendered list `A, C, E`, and item `X` placed after `A`, *when* the client shows the placement before the server responds, *then* `X` is rendered at index 1 (`A, X, C, E`), and `X.position` isn't given a value to put it there. The order comes from the placement, not from a sort by `position`.
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`
 
-*Given* a rendered list `A, C, E` and a placement of item `X` with anchor
-= `A`, side = `after`, *when* the client shows optimistic feedback before
-the server responds, *then* `X` is rendered at index 1 (`A, X, C, E`) as an
-ordinal placement — `X`'s `position` field is not assigned any client-
-invented value to achieve that ordering, and the rendered order is not the
-product of re-sorting by `position`.
+## TC-2.28 — Under a narrow view, the server's answer renders exactly as the preview did
 
-**Automation test:** —
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-## TC-2.28 — Rendered projection of the server's answer matches the ordinal preview under a narrow view
+*Given* the true order `A, B, C, D, E`, and a client that has loaded only `A, C, E`, *when* the client places `X` after `A`, *then* the server resolves `X` between `A` and `B`, and the client's list, sorted with the server's value, reads `A, X, C, E`. *When* it instead places `X` before `C`, *then* the server resolves `X` between `B` and `C`, and the list again reads `A, X, C, E`. Either way, the order after the response is the one the preview drew ([TC-2.27](part-2-anchor-resolution.md)).
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Automation test:** `tests/api/itemRepositioningCrossColumn.spec.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
-*Given* the true full order `A, B, C, D, E` and a client view that has
-loaded only `A, C, E`, *when* the client places `X` either as `after A`
-or as `before C`, *then*:
+## TC-2.29 — The preview holds when the anchor's own position is still in flight
 
-- for `after A`, the server resolves `X` strictly between `A` and `B`
-  (A's true successor) — and re-rendering the client's loaded set with the
-  server's value sorts to `A, X, C, E`;
-- for `before C`, the server resolves `X` strictly between `B` and `C`
-  (C's true predecessor) — and re-rendering sorts to the same `A, X, C, E`.
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-In both cases the picture after the server's value lands is exactly the
-one the ordinal preview (TC-2.27) already drew. Nothing occupying the gap
-between the anchor and its true neighbor can be in the requesting view, so
-`X` always lands adjacent to its anchor on the requested side *within the
-rendered set*, whatever number it receives.
+*Given* item `Y`, just placed, with its write still pending, *when* the client places `X` after `Y` at once, *then* the preview shows `X` directly after `Y`. *And when* both responses have landed and been reconciled ([TC-5a.1](part-5a-client-reconciliation.md)), *then* `X` is still directly after `Y`.
 
-**Automation test:** —
-
-## TC-2.29 — Ordinal preview holds when the anchor's own value is still in flight
-
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-*Given* item `Y` has just been placed (its write is pending, its
-authoritative `position` not yet received), *when* the client immediately
-places `X` with anchor = `Y`, side = `after`, *then* the ordinal preview
-shows `X` directly after `Y`, and once both server responses land and are
-reconciled (§5a), the rendered order still shows `X` directly after `Y` —
-the ordinal relationship never depended on either number.
-
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
 ## TC-2.30 — A pending item is never represented as `position: null`
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* an item whose position write is in flight, *when* the client marks
-it as pending, *then* its `position` field is left exactly as it was before
-the write — specifically it is **not** set to `null` — and pending is
-tracked by a separate marker. *And when* anything re-sorts the rendered
-list while the write is still pending (e.g. another item's response lands),
-*then* the pending item does not jump to the front of the list: `null`
-would coerce to `0` under the tie-break and sort ahead of every positioned
-item, and would be indistinguishable from a done item ordered by
-`completedAt`.
+*Given* an item whose position write is in flight, *when* the client marks it pending, *then* its `position` is exactly what it was before the write, not `null`, and a separate marker shows that it's pending. *And when* the list re-sorts while the write is pending, for example because another item's response lands, *then* the pending item keeps its place. It doesn't jump to the front, as a `null` counted as `0` would ([TC-5a.5](part-5a-client-reconciliation.md)).
+
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`, `client/src/components/workflow/itemWriteReconciliation.test.ts`
+
+## TC-2.31 — A move within the item's own workphase that names no anchor appends it
+
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §2
+
+*Given* Free item `X` at `1.0` in workphase `W1`, in a workflow whose true last Free item other than `X` is at `2.0`, *when* a move names `X`'s own workphase and no anchor, *then* `X.position` is `3`, by the append fallback, as for a create with no anchor. Only a move to a different workphase keeps the position ([TC-2.24](part-2-anchor-resolution.md)).
+
+**Automation test:** `server/tests/routes/items.test.ts`
+
+## TC-2.32 — A write that names a final position
+
+**Priority:** P2 · **Status:** Pending PO
+
+*Given* Free item `X`, *when* a move sends a raw `position`, or a reorder sets positions outright, *then* — **question for the PO:** wiki item-positioning §2 says a write carries relative intent and the server resolves the number. The API also accepts a final number, both ways, and scripts and test setup rely on it. Is that part of the API, which the page would then state, or is it to be retired?
 
 **Automation test:** —

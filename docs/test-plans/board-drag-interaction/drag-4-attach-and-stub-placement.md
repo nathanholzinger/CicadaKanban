@@ -119,9 +119,9 @@ A `P` with no Stubs has no Descendants layer ([DRAG-4.12](drag-4-attach-and-stub
 
 ## DRAG-4.12 — An attach into a Card with no Stubs makes the item its sole child
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6, wiki item-positioning §7.1
 
-*Given* Card `P` with no Stubs, *when* `X` zooms into `P` and is released, *then* the request attaches `X` to `P` with no anchor, and its position resolves by the append fallback in `P`'s empty Stub scope ([TC-7.7](../item-positioning/part-7-board-placement-intents.md)). `P` has no descendants section, so the Descendants layer can't be reached from it, and the auto-drop is the only outcome.
+*Given* Card `P` with no Stubs, *when* `X` zooms into `P` and is released, *then* the request attaches `X` to `P` with no anchor, and its position resolves by the append fallback in `P`'s empty Stub scope ([TC-2.20](../item-positioning/part-2-anchor-resolution.md)). `P` has no descendants section, so the Descendants layer can't be reached from it, and the auto-drop is the only outcome.
 
 **Automation test:** —
 

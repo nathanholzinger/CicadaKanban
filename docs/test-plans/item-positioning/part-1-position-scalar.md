@@ -1,26 +1,17 @@
-# Part 1 — Position remains a single item-owned scalar
+# TC-1 — Position is one value per item
 
 **Next ID:** TC-1.2
 
-**Wiki:** [`../../wiki/item-positioning/#1-position-is-a-single-item-owned-scalar`](../../wiki/item-positioning/README.md#1-position-is-a-single-item-owned-scalar)
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| TC-1.1 | Position is a single value across boards | P2 | ✅ automated |
+| TC-1.1 | Every board reads the same position for an item | P2 | Automated |
 
 ---
 
-## TC-1.1 — Position is a single value across boards
+## TC-1.1 — Every board reads the same position for an item
 
-**Priority:** P2 (regression/guard) · **Automated:** ✅ automated
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §1
 
-*Given* an item visible on two different boards (two boards whose column
-ranges both cover the item's workphase), *when* the item is queried via
-each board, *then* both report the identical `position` value — there is
-no per-board override.
+*Given* an item in a workphase that two boards of the same workflow both cover, *when* the item is read through each board, *then* both report the same `position`. No board keeps a value of its own.
 
-**Automation test:** `server/tests/routes/boards.test.ts` › "reports
-identical position for the same item across two different boards on one
-workflow (TC-1.1)" — a genuine second board (`POST /api/boards`) on the
-same workflow, not the parent/child-project-inheritance view of one board
-`tests/ui/boards.spec.ts` already covered.
+**Automation test:** `server/tests/routes/boards.test.ts`
