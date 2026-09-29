@@ -26,6 +26,65 @@ DRAG-4.28 and several references to 'project sidebar' are incorreclty mapped int
 - **Moving the cases.** When the rules move, DRAG-4.26, 4.28 and 4.31 get new IDs in the sidebar's suite, and this plan lists old → new (A3 D4).
 - **Tests to map once they move.** Client tests already pin DRAG-4.28's and 4.31's rules without carrying their IDs: hierarchyPlacement's null-root and collapsed-Top tests, and projectTreeUtils'. A3's confirming run lists them. They're internal, so each mapping needs Nathan's approval.
 
+### D2 harden item movement rules and fix mismatches
+
+Address `Pending PO` cases, where the wiki is silent and the code has chosen:
+
+13. **ATT-1.13.** A write that leaves an item attached, but names a workphase other than its parent's: is it refused, or accepted with the workphase ignored? Moving an item refuses it today, and creating one ignores it.
+14. **ATT-4.13.** Must an item's parent picker offer legal parents from other projects? §7 says the UI and the API must agree, and the API accepts them. The picker lists only the item's own project today.
+15. **ATT-5.7.** A create under a parent that names a different project: is it refused (today), or does the item take the parent's project, as a reparent's cascade does?
+16. **ATT-5.8.** May a write name a workphase from a workflow the item's project doesn't use, either without a reparent or in the same write as a cross-workflow reparent, re-filing the item in one step? The move endpoint refuses both today.
+
+**Nathan Rulings:**
+13. **ATT-1.13.** First of all, The UI should never make this request. If the UI were to do this then that is a bug. It should know that if an item is moved out from its parent and into a new workphase that means A: it is becoming detached when the new workphase is also assigned or B: it is being reparented and adopting the parent's workphase. The API itself can be relatively more permisive and allow the Request to happen. The UI should know to look at attachment status first, if it's attached then show it alongside the parent, ignoring workphase. If the item is detached then show it free in the workphase column amongst peers
+14. **ATT-4.13.** Item parent picker is on the Item Sheet and should probably live in a seperate space from where it lives in the current wiki heirarchy. I'd. Rules that describe Sheet components should fall into a bucket of work that is classified as in-progress and minimally functioning code is good enough until we get to epic 7
+15. **ATT-5.7.** Children must have the same project as their parent. A POST call probably should allow either a projectId or a parentId (requiring at least 1). If projectId only is provided then we assume the Item is root level. If parentId only is provided then the child adopts the parent's project, if both are provided and agree then that is fine. If they disagree then refuse the create and say why.
+16. **ATT-5.8.** Similar to #13, this should never happen via the UI, but we don't need to gate the API. If the data ever does find itself with a workphase that doesn't match the workflow then the unsorted column should handle it.
+
+*Added by the Test Planner, from A3 batch 4's Stop 1 (2026-09-28):*
+- **Nathan's two further rulings, for the PO to write into the wiki:**
+  - **A parentless item may hold the attachment flag.**
+    - Free is derived: an item is Free when it has no parent or its flag is clear.
+    - Tests check all four combinations of parent and flag. A Free item renders as a Card in its column, and an Attached one inside its ancestor's Card.
+    - The UI sends no flag when it creates a top-level item.
+    - This reverses item-attachment §1's stored-row invariant. It also touches §4: does a reparent that omits the flag keep a flag the item already holds? And it touches §11: does a reparent to root still clear the flag?
+  - **Tags get no tests until the fuller tags system.** Item-attachment §12's tags would be marked `**Planned:**`.
+- **Cases routed here by ID, all `Pending PO`:**
+  - ATT-1.8 and 3.11 (the flag);
+  - ATT-1.10 (tags);
+  - ATT-4.12 and 4.13 (the Sheet's parent picker; ruling 14);
+  - ATT-1.13, 5.7 and 5.8 (rulings 13, 15 and 16).
+
+  Once the wiki states each answer, the Test Planner keeps, changes or deletes the case.
+- **Tests to check the answers against,** from A3 batch 4's confirming run. Each is named by file and title.
+  - **Stamped ATT-1.8, and they invert if Ruling A is written in:** `items.hierarchy.test.ts`'s "ATT-1.8: rejects isAttached: true with no resulting parent" and "ATT-1.8: PUT rejects a parentless attach".
+  - **They assert that clearing the parent clears the flag, which is ATT-1.8's question:**
+    - `items.hierarchy.test.ts`'s "ATT-1.8, ATT-7.7: reparent to root (parentId: null) clears the flag…";
+    - `items.test.ts`'s "ATT-7.7: reparenting to null while attached clears isAttached and keeps the workphase".
+
+    ATT-7.7 no longer asserts the flag, so it stays `Automated` whatever the answer.
+  - **They depend on a parentless create storing the flag.** Re-check them after the answer:
+    - ATT-1.1's test in `items.test.ts`: its top-level item holds that flag, and still reads Free;
+    - `items.hierarchy.test.ts`'s "ATT-4.7: a tree already past the cap loads…": its chain is attached only through that flag. Without the flag, its reorder is among Free items, not among attached siblings.
+  - **They carry no case ID, and pin today's answer:**
+    - **ATT-1.8:** `items.test.ts`'s "creates a parentless item with isAttached true (the default)…".
+    - **ATT-1.13:**
+      - `items.hierarchy.test.ts`'s "rejects a workphaseId that contradicts the parent an attached item inherits from…", where the move refuses;
+      - `items.test.ts`'s "an attached child inherits the parent workphase even when a different one is passed", where the create ignores it.
+
+      Ruling 13 lets the API allow the write, so the first would invert.
+    - **ATT-3.11 and ATT-4.12:** `attached-children.spec.ts`'s "the Parent dropdown excludes descendants, and reparenting nests the item under its new parent".
+      - In it, a top-level item attaches on a reparent that omits the flag, and the picker applies no cap.
+      - `items.test.ts`'s "accepts reparenting under a parent in a different project…" makes the same reparent, but asserts nothing about the flag.
+    - **ATT-5.7:** `items.test.ts`'s "rejects creating a child whose projectId differs from its parent", which ruling 15 keeps.
+    - **ATT-5.8:** `items.hierarchy.test.ts`'s "rejects a workphaseId from a workflow the item's project does not use…" and "rejects a one-step reparent into a different-workflow project that also names a workphaseId". Both invert if the wiki drops the refusal (ruling 16).
+    - **ATT-1.10 and 4.13:** none.
+  - **Misstamped:** `items.hierarchy.test.ts`'s "ATT-3.9, ATT-3.10: a Free item can be reparented…" reparents a top-level item, which is ATT-3.11's scenario.
+    - A3's close-out drops ATT-3.9 from its title.
+    - Whether it gains ATT-3.11 depends on the answer. Its flag is clear, so it stays Free either way.
+
+### D3
+
 ## Work, in batches
 
 ## Code map

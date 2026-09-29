@@ -13,7 +13,12 @@ import {
   withPositionScope,
   workflowIdForWorkphase,
 } from '../lib/itemPositionScope.js';
-import { applyHierarchyRequest, validateHierarchyRequest, type HierarchyRequest } from '../lib/itemHierarchy.js';
+import {
+  applyHierarchyRequest,
+  logCreatedUnderParent,
+  validateHierarchyRequest,
+  type HierarchyRequest,
+} from '../lib/itemHierarchy.js';
 import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';
 
@@ -134,7 +139,12 @@ router.post('/', (req, res) => {
 
   // Resolve projectId from parent if not provided
   let resolvedProjectId = projectId;
-  const parentProjection = { projectId: items.projectId, workphaseId: items.workphaseId };
+  const parentProjection = {
+    id: items.id,
+    title: items.title,
+    projectId: items.projectId,
+    workphaseId: items.workphaseId,
+  };
   const parent = parentId ? db.select(parentProjection).from(items).where(eq(items.id, parentId)).get() : null;
   // A non-existent parentId would otherwise be stored silently, leaving an
   // attached child invisible on every board (no parent card to nest under).
@@ -242,6 +252,7 @@ router.post('/', (req, res) => {
       },
       tx,
     );
+    if (parent) logCreatedUnderParent(tx, id, parent, attached);
   });
 
   respondWithItem(res, id, reindexed, 201);

@@ -1,4 +1,4 @@
-# Epic 7+ Deferred Decisions — Sheet-Level "Move to Project"
+# Epic 7+ Deferred Decisions — Sheet-Level "Move to Project", and the Activity Log
 
 Technical decisions and open questions captured so `mvp-roadmap.md` can stay
 high-level. Recorded 2026-09-10 during Epic 3.5 test planning; nothing here
@@ -79,3 +79,33 @@ same cross-workflow remapping problem. Worth deciding whether Epic 7's
 action is "move to project" (item-level, parent optional) or "reparent
 anywhere" (parent-level, project follows) — they're the same remapping
 problem with different UI framing.
+
+---
+
+## The activity log
+
+### Q3. How does a create under a parent read, for the child and for the parent?
+
+Deferred here by Nathan on 2026-09-28, from A3's test-plan sweep. If Epic 7
+is split into several epics, this goes with whichever one takes the
+activity log.
+
+**Settled now:** creating an item with a parent records an activity entry
+on the new item, naming the parent and whether it's attached
+([`../wiki/item-attachment/`](../wiki/item-attachment/README.md) §11a).
+Nothing more is built for it before this epic.
+
+**Nathan's ideal:** one entry, which each side shows in its own words:
+
+- the child: "Created on {datetime} as a child of {parent.name}";
+- the parent: "Child {child.name} created at {datetime}".
+
+**Open:**
+
+- whether the parent's activity list shows the entry at all;
+- whether one entry read by both items needs a change to how activity
+  entries are kept, since each entry belongs to one item today;
+- the wording on each side.
+
+The wiki carries this under item-attachment's Open questions until it's
+decided.

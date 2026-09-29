@@ -30,7 +30,7 @@ async function seedCyclicPair() {
 // forever (not merely time out — a synchronous infinite loop blocks the
 // whole process) without the visited-set guard, so these are as much a
 // smoke test that the suite itself completes as they are assertions.
-describe('cycle guards (Finding #11)', () => {
+describe('cycle guards', () => {
   it('assertValidReparent (via isSelfRefDescendant) terminates against a parentId cycle', async () => {
     const { a } = await seedCyclicPair();
     const result = assertValidReparent(items, a.id, 'some-other-id', 'item');
@@ -70,9 +70,9 @@ async function seedChain(projectId: string, length: number) {
 
 // docs/wiki/item-attachment §8. Every case parameterizes on ITEM_DEPTH_CAP
 // rather than a literal so Story 7 can change the value without touching
-// these (ATT-4.8).
+// these (DRAG-2.10).
 describe('depth cap (wiki item-attachment §8)', () => {
-  it('a root item is at depth 1 and a leaf has height 0 (ATT-4.6)', async () => {
+  it('ATT-4.6: a root item is at depth 1 and a leaf has height 0', async () => {
     const project = await createProject();
     const root = await createItem({ projectId: project.id, title: 'R' });
     const leaf = await createItem({ projectId: project.id, title: 'L' });

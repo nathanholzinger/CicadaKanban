@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases } from '../helpers/seed';
+import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem } from '../helpers/seed';
 import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
@@ -9,7 +9,7 @@ test.describe('attached children on the board', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('shows attached children nested under the parent card, and the toggle collapses them', async ({
+  test('ATT-1.1, ATT-1.9: shows attached children nested under the parent card, and the toggle collapses them', async ({
     page,
     request,
     projectSidebar,
@@ -37,7 +37,11 @@ test.describe('attached children on the board', () => {
     await expect(card.getByText('Attached Kid')).not.toBeVisible();
   });
 
-  test('a detached child renders as its own top-level card, not nested', async ({ page, request, projectSidebar }) => {
+  test('ATT-1.2: a detached child renders as its own top-level card, not nested', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Detached Sibling Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (
@@ -54,6 +58,10 @@ test.describe('attached children on the board', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     await expect(page.getByRole('article', { name: 'Detached Kid' })).toBeVisible();
+    // ...and not also as a Stub inside its parent's Card.
+    const parentCard = page.getByRole('article', { name: 'Parent With Detached' });
+    await expect(parentCard).toBeVisible();
+    await expect(parentCard.getByText('Detached Kid')).toHaveCount(0);
   });
 
   test('an attached child whose workphaseId goes invalid still renders only nested, never duplicated in Unknown status', async ({
@@ -174,7 +182,7 @@ test.describe('attached children on the board', () => {
     await expect(reloaded.getByText('Hidden Kid')).toBeVisible();
   });
 
-  test('the child badge counts only attached children and nesting recurses through grandchildren', async ({
+  test('ATT-1.9: the child badge counts only attached children and nesting recurses through grandchildren', async ({
     page,
     request,
     projectSidebar,
@@ -183,7 +191,12 @@ test.describe('attached children on the board', () => {
     const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (
       await request.post(`${API}/items`, {
-        data: { title: 'Badge Parent', projectId: project.id, workphaseId: todo.id },
+        data: {
+          title: 'Badge Parent',
+          description: 'What the badge parent is for',
+          projectId: project.id,
+          workphaseId: todo.id,
+        },
       })
     ).json();
     const attachedChild = await (
@@ -201,16 +214,22 @@ test.describe('attached children on the board', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     const card = page.getByRole('article', { name: 'Badge Parent' });
+    await expect(card.getByText('Badge Parent', { exact: true })).toBeVisible();
+    await expect(card.getByText('What the badge parent is for')).toBeVisible();
     // Only the attached child is counted — the detached one is its own card.
     await expect(card.getByRole('button', { name: /^1 child/ })).toBeVisible();
     await expect(card.getByText('Attached One')).toBeVisible();
     await expect(card.getByText('Nested Grand')).toBeVisible();
 
     await expect(page.getByRole('article', { name: 'Detached One' })).toBeVisible();
-    await expect(page.getByRole('article', { name: 'Attached One' })).not.toBeVisible();
+    // Each Stub shows once on the board, inside the Card, and is never a Card itself.
+    for (const stub of ['Attached One', 'Nested Grand']) {
+      await expect(page.getByRole('article', { name: stub })).toHaveCount(0);
+      await expect(page.getByText(stub, { exact: true })).toHaveCount(1);
+    }
   });
 
-  test('dragging a parent card across columns cascades its attached child (audit test-coverage-gap #2)', async ({
+  test('dragging a parent card across columns cascades its attached child', async ({
     page,
     request,
     projectSidebar,
@@ -276,7 +295,7 @@ test.describe('reparent and attach/detach controls', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('detaching a child via the detail panel keeps it in place when the parent moves', async ({
+  test('ATT-7.3: detaching a child via the detail panel keeps it in place when the parent moves', async ({
     page,
     request,
     projectSidebar,
@@ -363,7 +382,7 @@ test.describe('reparent and attach/detach controls', () => {
     expect(updated.parentId).toBe(itemB.id);
   });
 
-  test("unchecking Attached in the item's own panel detaches it onto the board", async ({
+  test("ATT-1.7: unchecking Attached in the item's own panel detaches it onto the board", async ({
     page,
     request,
     projectSidebar,
@@ -403,5 +422,79 @@ test.describe('reparent and attach/detach controls', () => {
 
     const detached = await (await request.get(`${API}/items/${child.id}`)).json();
     expect(detached.isAttached).toBe(0);
+  });
+
+  test("ATT-1.7: checking Attached in a detached child's own panel makes it a Stub in its nearest Free ancestor's Card", async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Attach Control Project');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    // G is a Free Card and P its Stub. X, P's detached child, is a Card of its own in another column.
+    const g = await seedItem(request, { title: 'Ancestor Card', projectId: project.id, workphaseId: todo.id });
+    const p = await seedItem(request, { title: 'Stub Parent', parentId: g.id });
+    await seedItem(request, { title: 'Loose Child', parentId: p.id, isAttached: false, workphaseId: inProgress.id });
+
+    await page.goto('/');
+    await projectSidebar.select('Attach Control Project');
+    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+
+    const ancestorCard = page.getByRole('article', { name: 'Ancestor Card' });
+    const childCard = page.getByRole('article', { name: 'Loose Child' });
+    await expect(childCard).toBeVisible();
+    await expect(ancestorCard.getByText('Loose Child')).toHaveCount(0);
+
+    await childCard.click();
+    const panel = page.locator('div.fixed.top-0.right-0');
+    // Controlled checkbox — state flips after the PUT resolves; avoid check().
+    const attachedCheckbox = panel.getByLabel('Attached');
+    await attachedCheckbox.click();
+    await expect(attachedCheckbox).toBeChecked();
+
+    // The board updates live: X is a Stub in G's Card, and no Card of its own.
+    await expect(ancestorCard.getByText('Loose Child')).toBeVisible();
+    await expect(childCard).toHaveCount(0);
+  });
+
+  test('ATT-3.9: reparenting a detached child from its own panel keeps it a Card', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Free Reparent Project');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    const first = await seedItem(request, { title: 'First Parent', projectId: project.id, workphaseId: todo.id });
+    const second = await seedItem(request, { title: 'Second Parent', projectId: project.id, workphaseId: todo.id });
+    const kid = await seedItem(request, {
+      title: 'Free Kid',
+      parentId: first.id,
+      isAttached: false,
+      workphaseId: inProgress.id,
+    });
+
+    const openBoard = async () => {
+      await page.goto('/');
+      await projectSidebar.select('Free Reparent Project');
+      await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    };
+    await openBoard();
+
+    // The picker sends only the new parent, never the attachment flag.
+    await page.getByRole('article', { name: 'Free Kid' }).click();
+    await page.locator('div.fixed.top-0.right-0').getByLabel('Parent item').selectOption({ label: 'Second Parent' });
+    await expect.poll(async () => (await fetchItem(request, kid.id)).parentId).toBe(second.id);
+    expect(await fetchItem(request, kid.id)).toMatchObject({
+      isAttached: 0,
+      workphaseId: inProgress.id,
+      positionScope: 'workflow',
+    });
+
+    // Reloaded, it's still a Card in its own column, and not a Stub in its new parent's Card.
+    await openBoard();
+    await expect(
+      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Free Kid' }),
+    ).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Second Parent' }).getByText('Free Kid')).toHaveCount(0);
   });
 });

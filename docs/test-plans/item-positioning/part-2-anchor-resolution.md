@@ -239,7 +239,7 @@ gesture that exercises it:
 [`../board-drag-interaction/drag-6-preview-reconciliation.md`](../board-drag-interaction/drag-6-preview-reconciliation.md)
 DRAG-6.6, and as the atomicity rule in
 [`../item-attachment/att-3-reparent-placement-atomicity.md`](../item-attachment/att-3-reparent-placement-atomicity.md)
-ATT-3.8.)*
+ATT-3.7.)*
 
 **Automation test:** *(previous mapping — `boardDndUtils.test.ts` ›
 `applyItemMove` › "falls back to loadBoard and never calls setItems when

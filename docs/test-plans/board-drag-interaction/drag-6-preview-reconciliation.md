@@ -57,7 +57,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 **Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* a previewed drop whose write the server rejects, *when* the rejection arrives, *then* the board drops the previewed placement and resyncs its items from the server. The previewed order isn't kept, and no value from the preview survives ([ATT-3.7](../item-attachment/att-3-reparent-placement-atomicity.md), [ATT-3.8](../item-attachment/att-3-reparent-placement-atomicity.md)). A rejection should be nearly unreachable, since an invalid target is never poppable ([DRAG-1.7](drag-1-contexts-and-popping.md), [DRAG-1.8](drag-1-contexts-and-popping.md)); one arriving at all means the board's and the API's checks have drifted apart ([ATT-4.9](../item-attachment/att-4-legal-parent-depth-cap.md)).
+*Given* a previewed drop whose write the server rejects, *when* the rejection arrives, *then* the board drops the previewed placement and resyncs its items from the server. The previewed order isn't kept, and no value from the preview survives ([ATT-3.7](../item-attachment/att-3-reparent-placement-atomicity.md)). A rejection should be nearly unreachable, since an invalid target is never poppable ([DRAG-1.7](drag-1-contexts-and-popping.md), [DRAG-1.8](drag-1-contexts-and-popping.md)); one arriving at all means the board's and the API's checks have drifted apart ([ATT-4.9](../item-attachment/att-4-legal-parent-depth-cap.md)).
 
 **Automation test:** —
 

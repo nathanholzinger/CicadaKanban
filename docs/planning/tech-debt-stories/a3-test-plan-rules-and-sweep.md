@@ -428,7 +428,7 @@ What it finds is resolved in this batch.
 - **The checker:** `case-id` and `--rules` exist and are tested.
 - **The catalog:**
   - `check:docs -- docs/test-plans` reports zero hits;
-  - no ⏳, ✅, ❌ or ⏸ remains, and no case is `Pending PO`;
+  - no ⏳, ✅, ❌ or ⏸ remains, and no case is `Pending PO` unless A5 names it by ID. Nathan made A5 the home for the rulings deferred at batch 4's Stop 1;
   - batch 6's run confirms that every `Automated` case has at least one test carrying its ID;
   - every `Open` case is named by ID in Story 10's roadmap entry or in another named destination;
   - TC-4.4 is either `Automated`, with a test that asserts the snapping rule, or `Open` and routed;
@@ -440,20 +440,15 @@ What it finds is resolved in this batch.
 
 ## Handoff
 
-- **To the Architect:**
-  - **Story 10's roadmap entry:** narrow item 1 to the IDs A3 routed there, listed per batch in Amendments ("batch 3 Stop 1" names 62). Item 5 is done. Items 2 and 4 still use the old in-suite forms, such as "DRAG-4 TC-8", which become qualified IDs. Item 1's "82 active cases … all currently ⏳" goes. D10 needs this before each batch signs off.
-    - *Applied for batch 3's 62 on 2026-09-27.* Still owed, from 2026-09-28's amendment:
-      - add DRAG-1.33, 3.24 and 4.29 to item 1's board-drag list, which makes 65;
-      - drop the note that DRAG-2.8's and 3.20's tests wait on the PO. The PO has answered: 2.8 lost its Inert half and 3.20 its tint, so both can be written as they read now.
-    - *Also owed, from the confirming run:*
-      - remove DRAG-4.29, which is `Automated` now;
-      - add DRAG-4.32 and 4.33, which makes 66;
-      - point item 1 at the report's "Confirming run" section as well. It lists the 18 tests that carry an ID but assert only part of the case. For each one, Story 10 decides whether to extend that test, write a new one, or map another test (README, "Tests and cases map many-to-many").
-  - **`.claude/agents/test-reconciler.md`, "How You Map":** one bullet changes, so that tests and cases map many-to-many. The replacement text is in Amendments, "2026-09-28, many-to-many coverage".
-  - **`.claude/guides/testing-strategy.md`, "What stays manual":** add that a drag clock's logic is tested in the pop state machine, with the threshold as a parameter. That's the category Nathan approved at batch 3's Stop 1. Such a test asserts no duration, and only whether the tuned values feel right stays manual.
+- **To the Architect:** everything owed through batch 4 is applied (checked 2026-09-28).
+  - **Story 10's roadmap entry:** item 1 names every case A3 has routed there: 66 from board-drag-interaction and ATT-4.9. It points at both reports' Gaps and "Confirming run" sections. Items 2 and 4 use qualified IDs. Still owed: batch 5's routed item-positioning cases, before batch 5 signs off (D10).
+  - **`.claude/agents/test-reconciler.md`, "How You Map":** the many-to-many bullet (Amendments, "2026-09-28, many-to-many coverage").
+  - **`.claude/guides/testing-strategy.md`, "What stays manual":** the approved clock-logic category.
 - **To the PO:** the drag INDEX's flag 14 lists edits owed to the "Placement rules for a Hierarchy" design doc. It goes when the flag list is removed. The design doc is transient, and wiki §7 already carries the agreed wording. Please confirm nothing is lost.
 - **To A4 (the Coder):** test comments in the files A3 touched are still A4's, except for their case IDs. A3's Coder qualifies bare `TC-n` and re-points IDs of deleted cases in the comments of every file it touches (Nathan, batch 3 Stop 1).
-- **To A5:** DRAG-4.26, 4.28 and 4.31 are routed there by ID (A5's D1). All three are the project sidebar's, and move with its rules.
+- **To A5:**
+  - **DRAG-4.26, 4.28 and 4.31** are routed there by ID (A5's D1). All three are the project sidebar's, and move with its rules.
+  - **Eight `Pending PO` item-attachment cases**, from batch 4's Stop 1 (A5's D2): ATT-1.8, 1.10, 1.13, 3.11, 4.12, 4.13, 5.7 and 5.8. When A5 lands their wiki changes, the Test Planner resolves them: each is kept, changed or deleted. A5's D2 also lists, by title, the tests to check each answer against.
 - **To every later story:** the flow is D9's, with one Reconciler run at close.
 
 ## Drafts for the Architect (batch 1)
@@ -744,6 +739,51 @@ When batch 2 lands, "What the checker checks" gains a bullet: "test-plan case ID
    - **Nathan: the tint is out of §5's body.** The band table's rows no longer tint, and the guides paragraph says the ghost shows which band a release resolves by.
    - Whether the band under the cursor gets a highlight of its own is now part of the "look of the drag's cues" Open question.
    - DRAG-3.20 keeps the dividers and drops the tint.
+
+**For the PO, from batch 4 (item-attachment).** Nathan answered both on 2026-09-28, and gave the PO the same context. Both wiki changes are in.
+
+9. **ATT-8.3, creating an item with a parent.** §11a logs "any write that changes an item's parent or attachment flag". Does a create that gives the new item a parent count? If so, the item gets a hierarchy entry ("attached to `P`") beside its creation entry. If not, the creation entry accounts for where the item starts.
+   - **Nathan:** yes, a log entry is created.
+     - Ideally the parent reads the same entry too. The child would show "created as a child of `P`", and the parent "child `X` created".
+     - How each item reads and shows it is deferred, possibly to Epic 7, since it may need changes to the activity-log system. For now, only the entry being created matters.
+   - **To the PO:**
+     - Add to §11a that creating an item with a parent records a hierarchy entry on the new item.
+     - The deferred display belongs in the planning docs, since neither the wiki nor the case carries forward references.
+   - **Then:** ATT-8.3 → `Open`, with Rule §11a. Its *Then* asserts only that the entry exists on `X` and names `P`, not how it's shown or whether `P`'s history lists it.
+   - **Done (PO):**
+     - §11a's new paragraph, "Creating an item with a parent counts": the new item's activity records the parent it was created under, and whether it's attached to it, whichever entry point created it.
+     - "Whether it's attached" is a deduction; see Amendments.
+     - How the entry reads, and the parent's side, are under item-attachment's Open questions. They're deferred in `epic-7-decisions.md` Q3, a new section, with your ideal wording.
+10. **"Every reparent re-resolves" in item-attachment §9 and item-positioning §7.3.** This is wording only, and blocks no case. Both pages say a cross-project reparent's position "is still re-resolved, because a reparent always re-resolves". But item-attachment §4 says only an Attached item's reparent always re-resolves: a Free item's reparent with no anchor leaves its position alone. Both sentences are about the board, whose only reparent is an attach, so nothing is wrong. Read alone, though, they say a Free item's cross-project reparent re-resolves. Would "every attach re-resolves" say it?
+    - **Nathan:** §4 is the rule. An item has one position, compared either among its attached siblings or among Free items. A Free item that is reparented and stays Free keeps its position, because its context is the Free items', not its siblings'. Story 9 may change this, since it decides whether a detached item also keeps a position among its siblings.
+    - **To the PO:** reword the sentence on both pages so it doesn't read as covering a Free item's reparent. Whether Story 9's question belongs in the wiki's Open questions is the PO's call.
+    - **Then:** no case changes. ATT-3.10 already follows §4. Batch 5 checks TC-7.14 against the reworded §7.3.
+    - **Done (PO):**
+      - item-attachment §9 and item-positioning §7.3's "Consequence" now say the position re-resolves as for any reparent, never because of the project. An item Attached before or after the write gets a fresh position. A Free item that stays Free keeps its position unless the write carries an anchor. On a board every reparent is an attach, so it always re-resolves.
+      - Story 9's question goes in item-positioning's Open questions: whether a Free child also needs a position among its siblings. It challenges §1's single position, so it belongs there while it's open. Story 9 remains where it's decided.
+
+**For the PO, from batch 4's proposing Reconciler run** (`docs/audits/test-reconciliation-a3-item-attachment.md`). Not yet answered.
+
+Two are rulings, since the code does what the wiki says it mustn't. Per the README, neither side is assumed right:
+
+11. **Ruling A: a top-level item is stored with the attachment flag set.**
+    - The create stores the flag on a parentless item by default, and the flag is kept while the item has no parent. So a later write that gives the item a parent without mentioning the flag attaches it.
+    - Wiki item-attachment §1 forbids exactly this: "silently accepting it would leave a stray flag on the row that later attaches the item the instant it gains a parent". §4 says "nothing attaches by default".
+    - Two tests pin the code's side: `items.test.ts` line 1202, and the parent-picker test in `tests/ui/attached-children.spec.ts` line 328.
+    - Affected cases: ATT-1.11, and the top-level half of ATT-3.9.
+    - **The Test Planner's view:** the page states the rule and gives its reason, so the code looks wrong. Fixing it touches the create route, the hierarchy primitive, the schema default, the existing rows and those two tests. That's probably its own story, not A3.
+    - **Inside it, for Nathan:** when the parent picker in an item's panel sets a parent, should it attach the item? If so, it sends the flag.
+12. **Ruling B: a Card shows no tags.** §12 lists tags among what a Card shows, and the board renders none. Should the PO mark the tags `**Planned:**` (the tags rework), or should the Card render them? The tags now have their own case, ATT-1.10, so ATT-1.9 doesn't wait on this.
+
+Four are `Pending PO` cases, where the wiki is silent and the code has chosen:
+
+13. **ATT-1.13.** A write that leaves an item attached, but names a workphase other than its parent's: is it refused, or accepted with the workphase ignored? Moving an item refuses it today, and creating one ignores it.
+14. **ATT-4.13.** Must an item's parent picker offer legal parents from other projects? §7 says the UI and the API must agree, and the API accepts them. The picker lists only the item's own project today.
+15. **ATT-5.7.** A create under a parent that names a different project: is it refused (today), or does the item take the parent's project, as a reparent's cascade does?
+16. **ATT-5.8.** May a write name a workphase from a workflow the item's project doesn't use, either without a reparent or in the same write as a cross-workflow reparent, re-filing the item in one step? The move endpoint refuses both today.
+
+**Nathan Rulings**
+These are deferred to docs\planning\tech-debt-stories\a5-wiki-and-test-plan-heirarchy-updates.md. We are ok to move on with the wiki and code staying as is
 
 ## Amendments
 
@@ -1061,3 +1101,209 @@ The report is `docs/audits/test-reconciliation-a3-board-drag-interaction.md`. Wh
     the gap closes is a judgment call made later, not yours
     (`docs/test-plans/README.md`).
   ```
+
+**2026-09-28, batch 4 step 1 (Test Planner, item-attachment):**
+- **Re-derived from the whole swept page.** A2 changed no rules here, so most of the work was the new format, plus the rules settled after the catalog was written. The catalog has 46 cases: 44 `Open`, 1 `Pending PO` (Open question 9), and ATT-7.6's ✅, left for the confirming run. Priorities: 29 P0, 13 P1, 4 P2. No passage is marked Planned. No case is `Manual`: every rule here can be asserted precisely, and none depends on feel or a tuned value.
+- **New suite:** ATT-8, hierarchy changes are logged (§11a).
+- **New cases for the rules the INDEX listed as settled but uncatalogued:**
+  - ATT-3.9 and 3.10: a Free item's reparent at the API (§4). Omitting the flag keeps the item's state, and a Free reparent with no anchor leaves its position alone.
+  - ATT-4.10: the "every write" clause (§7). Creating, editing and moving all enforce the same rules.
+  - ATT-5.4 and 5.5: cross-workflow reparenting (§9).
+  - ATT-7.7 and 7.8: reparenting to root (§11).
+  - ATT-8.1 and 8.2: the activity log (§11a).
+  - **The sixth, item-positioning §7.3's position nulling, is item-positioning's.** Batch 5 writes it, and ATT-5.4 points there.
+- **Other new cases:**
+  - ATT-1.8: attached means has a parent, in the stored row (§1's 400 and "clearing `parentId` clears the flag"). It was split from ATT-1.1, whose note said the rule wasn't settled.
+  - ATT-1.9: what a Card and a Stub show (§12).
+  - ATT-4.11: a move that makes an over-cap tree shallower but still over the cap is rejected (§8's "the formula is the whole rule"). ATT-4.7 keeps the rule that existing data stays usable.
+- **Deleted, as restatements of rules another catalog owns:**
+  - ATT-3.2 and 3.3: the placement form and the append fallback. §4 hands these to item-positioning §7.1 (TC-7.1, 7.2, 7.7).
+  - ATT-3.8: the client's resync on a rejection (DRAG-6.6).
+  - ATT-4.8: one `CAP` for the UI and the API (DRAG-2.10).
+  - ATT-5.3: a cross-project reparent's position (item-positioning §7.3, TC-7.14).
+
+  DRAG-6.6 and item-positioning part 2 no longer cite ATT-3.8.
+- **A3's batch 4 list:**
+  - ATT-3's stale scope note is replaced by a preamble that assigns placement to item-positioning;
+  - ATT-7.6's pointer is file-level.
+- **Removed:** provenance throughout (Epic and Story numbers, dates, the PO's confirmations, the audit behind ATT-7.6), ATT-1's history preamble, ATT-5's stale cross-workflow note, the per-suite Wiki lines and the INDEX's status, not-covered and flag sections.
+- **Not catalogued:**
+  - §7's "never in the database schema": no API or UI surface can observe it.
+  - §12's Sheet, Headline and Dossier vocabulary: nothing a case could assert today.
+- **Checks:**
+  - `check:docs -- docs/test-plans/item-attachment` reports 0 hits.
+  - `case-id` across the plans reports 0.
+  - `case-id` in the tests reports 4 hits, each one pointing at a deleted case. The Coder fixes them in step 3:
+    - `dragClassification.test.ts` line 8, `itemTree.test.ts` line 73 and `boards.test.ts` line 93 cite ATT-4.8 in comments. They re-point to DRAG-2.10.
+    - `items.hierarchy.test.ts` line 254's title cites ATT-3.3. It drops it, since TC-7.7 remains.
+
+**2026-09-28, Open questions 9 and 10 (Nathan's answers, written in by the PO):**
+- **Wiki sections changed.** No section was renumbered or added.
+  - item-attachment §9: the cross-project reparent paragraph (question 10).
+  - item-attachment §11a: new paragraph, "Creating an item with a parent counts" (question 9).
+  - item-attachment Open questions: new entry, how a create under a parent reads in the activity lists.
+  - item-positioning §7.3: the "Consequence" paragraph (question 10).
+  - item-positioning Open questions: new entry, whether a Free child also needs a position among its siblings. It was "None open".
+- **The PO's deductions:**
+  - **§11a's entry names whether the new item is attached,** as well as its parent. §11a's own "the entry says what changed" applies, and a create sets both fields.
+  - **Question 10's rewording** takes its cases from item-attachment §4 and item-positioning §2.1: an attach or detach toggle and an Attached reparent get a fresh position, and a Free-stays-Free reparent without an anchor keeps its own. The rules are unchanged; only the two sentences that overstated them changed.
+- **Deferred:**
+  - the entry's reading and the parent's side, to Epic 7 (`epic-7-decisions.md` Q3, a new section, which goes with the activity log if Epic 7 splits);
+  - the second-position question, already in the Epic 3.5 roadmap's Story 9. The wiki now carries it as an Open question.
+
+**2026-09-28, batch 4 step 2 (the proposing Reconciler run, and the Test Planner's response):**
+- **The report** is `docs/audits/test-reconciliation-a3-item-attachment.md`. Of 45 mapped cases:
+  - 18 are `Automated` by stamps alone;
+  - 1 needs an internal mapping (ATT-4.6);
+  - 22 have route or API gaps A3 can close;
+  - 3 have UI gaps with no drag;
+  - ATT-4.9 needs a routing ruling.
+
+  No coverage was lost, and board-drag's 42 `Automated` cases are all still backed. The one unknown ID in a title is the known ATT-3.3.
+- **The Test Planner's changes, from its notes:**
+  - **ATT-8.3 → `Open`.** Question 9's answer is in §11a. The case asserts the entry exists on the new item, names its parent and says whether it's attached, and nothing about how it reads.
+  - **ATT-1.5 and 6.3** now allow the modification timestamp the cascade updates. What's never written is anything recording whether the child is done.
+  - **ATT-4.7** drops "shown in the sidebar". The sidebar lists projects, not items.
+  - **ATT-8.1** says "exactly one hierarchy entry", since an attach that changes the workphase also logs that change.
+  - **The tags split out of ATT-1.9** into ATT-1.10 (Ruling B), so ATT-1.9 doesn't wait on the ruling.
+- **New cases from the report's candidates:**
+  - **Where the wiki states the rule** (`Open`):
+    - ATT-1.11: a create keeps the invariant (§1). It fails today (Ruling A).
+    - ATT-1.12: attaching a done Free item clears its `completedAt` (§2).
+    - ATT-4.12: an item's parent picker never offers a parent the API would refuse (§7). Its cap half fails today, since the picker applies no cap.
+    - ATT-5.6: an item created under a parent takes the parent's project (§9).
+    - ATT-8.4: a hierarchy change that also changes the workphase logs that too (§11a).
+  - **Where it's silent** (`Pending PO`): ATT-1.13, 4.13, 5.7 and 5.8, which are Open questions 13–16.
+- **Fixed in batch 5's catalog:** `cross-cutting-regression.md`'s "ATT-5.1–5.3" range now reads "ATT-5.1 and ATT-5.2".
+- **The catalog now:** 56 cases, of which 51 are `Open`, 4 `Pending PO`, and ATT-7.6's ✅. `check:docs` on the suites reports 0 hits, and `case-id` across the plans reports 0.
+- **Next:** an addendum to the report maps the new and revised cases, then Stop 1.
+
+**2026-09-28, batch 4 Stop 1 (Nathan's rulings):**
+- **Ruling A: a parentless item may hold the attachment flag.**
+  - Free is derived: an item is Free when it has no parent or its flag is clear. Tests should check all four combinations of parent and flag: Free renders as a Card in its column, Attached as a Stub inside its Card.
+  - The UI should send no flag when it creates a top-level item.
+  - This reverses wiki item-attachment §1's stored-row invariant, and touches §4's "omitting the flag keeps the item's state" and §11's clearing of the flag. So the wiki changes first, in A5 with the other deferred rulings.
+  - **Cases:**
+    - ATT-1.8 is now the `Pending PO` question.
+    - ATT-1.11 is deleted, merged into ATT-1.8.
+    - ATT-3.9's top-level variant moved to ATT-3.11 (`Pending PO`), and ATT-3.9 keeps a detached child.
+    - ATT-7.7 now points to ATT-1.8 for the flag.
+    - No code fix story is needed.
+- **Ruling B: no tests for tags until the fuller tags system (Epic 5).** ATT-1.10 is `Pending PO`, for the PO to mark §12's tags `**Planned:**`.
+- **Approved:**
+  - ATT-4.6's internal mapping (itemTree's "a root item is at depth 1 and a leaf has height 0");
+  - dropping `dragRequest.test.ts` from ATT-7.6's pointer.
+- **Routing, as the Test Planner proposed:**
+  - **A3's Coder:**
+    - 24 route and API gaps;
+    - ATT-8.3's logging fix;
+    - 3 UI gaps with no drag (ATT-1.2, 1.7, 1.9).
+  - **Story 10:** ATT-4.9.
+  - **A5, by ID, as `Pending PO`:**
+    - ATT-1.8, 1.10 and 3.11 (Rulings A and B);
+    - ATT-4.12 (the picker is the Sheet's, and Nathan's A5 ruling 14 makes Sheet rules in-progress until Epic 7);
+    - ATT-1.13, 4.13, 5.7 and 5.8 (Open questions 13–16, which Nathan has ruled on in A5's D2).
+- **The catalog:** 56 cases, of which 47 are `Open`, 8 `Pending PO` (all routed to A5), and ATT-7.6's ✅. `check:docs -- docs/test-plans/item-attachment` reports 0 hits.
+- **Expected after the confirming run,** if every A3 gap closes: 47 `Automated`, 1 `Open` routed to Story 10, and 8 `Pending PO` routed to A5.
+
+**Batch 4, step 3: the Coder's brief.**
+The report is `docs/audits/test-reconciliation-a3-item-attachment.md`, and where its Addendum names a case, the Addendum wins.
+1. **Stamp titles** as the report's Proposed Stamps and the Addendum list them, including tests that assert only part of a case.
+   - ATT-4.6 goes on itemTree's "a root item is at depth 1 and a leaf has height 0" (approved).
+   - Don't stamp `dragRequest.test.ts` for ATT-7.6.
+   - For the cases now `Pending PO`: hier:115 and hier:668 swap their misattributed ATT-1.1 for ATT-1.8, and attachedUI:328 stays unstamped until A5 settles ATT-4.12.
+2. **Fix titles:**
+   - hier:254 drops the deleted ATT-3.3;
+   - items:354 says "workflow", not "workphase";
+   - the "Epic 3.2 —" wrapper on items:305's `describe` goes.
+   - Strip provenance from every title in a file you touch (the report lists hier:179, items:115, :509, :925, :1111 and attachedUI:213). "(wiki §N)" in a titled test can go too.
+3. **Comments in files you touch:**
+   - re-point the ATT-4.8 comments to DRAG-2.10 (`dragClassification.test.ts` line 8, `itemTree.test.ts` line 73, `boards.test.ts` line 93);
+   - qualify every bare `TC-n`, such as hier's header "(TC-7.n)".
+4. **ATT-8.3's fix.** Creating an item with a parent records, in the new item's activity, the parent it was created under and whether it's attached to it (wiki item-attachment §11a). How it reads, and whether the parent's activity shows it, aren't rules.
+5. **Write the gap tests.** The report's Gaps and Addendum say what each one asserts.
+   - **Route or API, partly covered:** ATT-1.4, 1.5, 1.6, 1.12, 3.9, 3.10, 4.10, 5.1, 5.5, 6.1, 6.2, 7.4, 7.5, 8.1, 8.2 and 8.4.
+   - **Route or API, no test yet:** ATT-2.1, 3.4, 4.5, 4.7, 4.11, 6.3, 7.8 and 8.3.
+   - **UI with no drag:** ATT-1.2, 1.7 and 1.9.
+   - **Notes:**
+     - ATT-3.9's and 3.10's Free item is a detached child, not a top-level item created the ordinary way.
+     - ATT-1.5 and 6.3 don't compare the modification timestamp.
+6. **Don't** write tests for `Pending PO` cases, or change how the attachment flag is stored or derived. That's A5's.
+7. **Checks:**
+   - `npm run check:docs -- --rules case-id,bare-case-id -- <the files you touched>` reports 0 hits;
+   - `npm run check` passes;
+   - `npm run test:e2e` passes.
+
+**Step 4, the confirming run:** apply the approvals above. ATT-7.6's pointer lists only the route test. A case whose tests assert only part of it stays `Open`, with `—`.
+
+**2026-09-28, batch 4 step 3 (Coder):**
+Line numbers below are the report's, from before these edits.
+- **Titles (brief items 1 and 2).** Stamped as the report and its Addendum list them, in five test files.
+  - hier:306 carries `ATT-1.8` beside `ATT-7.7`, as the report proposes, so three tests carry the `Pending PO` ATT-1.8: hier:115, :306 and :668.
+  - attachedUI:328 and `dragRequest.test.ts` are unstamped.
+  - "(wiki §N)" is gone from every stamped title that had one.
+  - Two titles are reworded as well as stamped, since each now covers more: hier:357 (`ATT-1.12`) and hier:569 (`ATT-8.4`).
+  - **Provenance stripped beyond the report's list:** two "(regression: …)" notes in `items.test.ts`, the "pre-feature" note on its TC-X.1 `describe`, and itemTree's "cycle guards (Finding #11)" `describe`.
+  - **Left alone, as the report recommends:** itemTree's mid-title ATT-4.5 and ATT-4.4, and dragClassification's ATT-4.5.
+- **Comments (item 3).**
+  - The three ATT-4.8 comments now point to DRAG-2.10.
+  - hier's header no longer carries "(TC-7.n)". It now says the IDs in titles name item-attachment and item-positioning cases.
+- **ATT-8.3's fix (item 4).**
+  - `POST /items` now logs a `hierarchy_change` entry on an item created under a parent. It goes through a new `itemHierarchy.ts::logCreatedUnderParent`.
+  - The entry's metadata has the shape the other hierarchy entries use, `toParentId` and `toAttached` included. It reads 'Created under "P" (attached)', and the item panel's activity list shows it. Nothing is logged on the parent.
+  - hier:264 and :277 now count only the entries the write adds, since their Stubs are created under a parent.
+- **Gap tests (item 5).** Every case the brief lists now has its tests.
+  - **New route tests:**
+    - `items.test.ts`: ATT-1.5 and 1.6;
+    - `items.hierarchy.test.ts`: ATT-2.1, 3.4, 3.9, 3.10, 4.5, 4.7, 4.10, 4.11, 5.5, 6.3, 7.4, 7.5, 7.8, 8.1, 8.2 and 8.3.
+  - **Extended:**
+    - ATT-1.4 (items:1034);
+    - ATT-1.12 (hier:357), which adds the done-parent variant;
+    - ATT-5.1 (hier:381);
+    - ATT-6.1 and 6.2 (hier:334), which add the unanchored attach;
+    - ATT-8.4 (hier:569), now at both entry points.
+  - **UI, no drag:**
+    - ATT-1.2 and 1.9 extend attachedUI:40 and :177;
+    - ATT-1.7 has a new test: checking Attached in a detached child's own panel makes it a Stub in its nearest Free ancestor's Card.
+  - **Fixtures:**
+    - Every Free item in ATT-3.9, 3.10 and 7.8 is a detached child.
+    - ATT-2.1 first sets `B.updatedAt` to 1, so any write to `B` would show.
+    - ATT-1.5 and 6.3 compare the whole row, allowing only `workphaseId` and `updatedAt` to differ.
+- **ATT-3.9, beyond the brief's route class.** Its *Then* says `X` renders as a Card, so a new UI test covers that clause. It reparents a detached child with the item panel's parent picker, which sends no flag, and checks that the child is still a Card in its own column. The route test covers the rest: both flag-omitted items, and all four combinations with the flag.
+- **Checks:**
+  - `check:docs -- --rules case-id,bare-case-id` on the eight touched files reports 0 hits;
+  - `npm run check` passes: server 335, client 393, scripts 75;
+  - `npm run test:e2e` passes: 142 passed, and 8 skipped, all of them known.
+- **Expected after the confirming run:** as at Stop 1, 47 `Automated`, ATT-4.9 `Open` and routed to Story 10, and 8 `Pending PO` routed to A5.
+
+**2026-09-28, batch 4 steps 4 and 5 (the confirming run, and the Test Planner's checks):**
+- **The confirming run** wrote the status and Automation test line on every case. That matched the expected figures:
+  - 47 `Automated`: 46 by surface tests, and ATT-4.6 by its approved internal test;
+  - ATT-4.9 `Open`, routed to Story 10;
+  - 8 `Pending PO`, untouched and routed to A5.
+
+  ATT-7.6's ✅ is gone, and its line lists only the route test. The report's section is "Confirming run (2026-09-28)".
+- **The Reconciler disclosed four readings.** None of the Test Planner's calls on them changes a status:
+  - **Made whole by rewording, as in batch 3:**
+    - ATT-2.1 said `A`'s position changes. The tests assert its scope moving, and the number can come out the same (the coincidence ATT-3.4 describes). It now says the change is written to `A`'s row, with each field set as ATT-1.7 sets it.
+    - ATT-7.3's "though `X.parentId` is still `P`", after the parent moves, is now a pointer to ATT-7.1, which asserts it.
+  - **Stands:**
+    - ATT-1.1. Its test's top-level item holds the flag a parentless create stores today, and still reads Free. Ruling A keeps that combination Free. It's re-checked after A5, since it depends on that default.
+    - ATT-4.6. The counting is what Nathan approved.
+- **Tests for A5,** now in A5's D2 by title, from the report's "`Pending PO` cases: tests for A5":
+  - the three tests stamped ATT-1.8, two of which invert if Ruling A is written in;
+  - ATT-7.7's two tests, which assert that clearing the parent clears the flag. That's ATT-1.8's question;
+  - ATT-1.1's and ATT-4.7's tests, which depend on a parentless create storing the flag;
+  - tests with no case ID that pin today's answer to ATT-1.8, 1.13, 3.11, 4.12, 5.7 and 5.8.
+- **Batch 6's close-out** also picks up one title: `items.hierarchy.test.ts`'s "ATT-3.9, ATT-3.10: a Free item can be reparented and stay Free…" drops ATT-3.9. Its item is top-level, which is ATT-3.11's scenario, and ATT-3.9 is whole without it.
+- **Checks:**
+  - `check:docs` on the suites: 0 hits.
+  - `case-id` across the plans, `tests`, `server/tests` and `client/src`: 0 hits.
+  - The files the Coder touched: `case-id,bare-case-id` reports 0 (the Coder's run).
+  - Each status matches its row in the suite table. The nine `—` lines are exactly the `Open` and `Pending PO` cases.
+  - Every live case names its wiki section. The 8 `Pending PO` cases have no Rule field (D2).
+  - `npm run check` and `npm run test:e2e` pass (the Coder's runs). Only docs changed after them.
+  - **Destinations:** Story 10's item 1 names ATT-4.9, and A5's D2 names all 8 `Pending PO` cases. No mismatch either way.
+  - Every Architect item in the Handoff is applied.
+- **The batch's catalog:** 56 cases, of which 47 are `Automated`, 1 `Open` (routed to Story 10) and 8 `Pending PO` (routed to A5).
+- **Ready for Stop 2.**

@@ -5,7 +5,7 @@ import { classifyDragTargets, isValidParent, isWithinDepthCap } from './dragClas
 
 // Cases follow docs/test-plans/board-drag-interaction/drag-2-target-
 // classification.md (DRAG-2.n). Every depth case parameterizes on `cap`
-// rather than a literal, per ATT-4.8.
+// rather than a literal, per DRAG-2.10.
 
 // Positional alias over the shared fixture — these cases only ever vary
 // parent and attachment (positionScope follows from those, per makeItem).

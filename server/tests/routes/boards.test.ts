@@ -90,7 +90,7 @@ describe('GET /api/boards/:id', () => {
   });
 
   // Epic 3.5 Story 2: the client's drag-target classification reads the cap
-  // off the board rather than hard-coding it (ATT-4.8 — one constant moves
+  // off the board rather than hard-coding it (DRAG-2.10 — one constant moves
   // both enforcement points).
   it('DRAG-2.10: carries the item depth cap the API enforces', async () => {
     const project = await createProject();

@@ -1,5 +1,6 @@
 // validateHierarchyRequest / applyHierarchyRequest — the one reparent/attach/workphase/
-// placement implementation behind POST /items, PUT /items/:id, and PATCH /items/:id/move.
+// placement implementation behind POST /items, PUT /items/:id, and PATCH /items/:id/move;
+// logCreatedUnderParent — the hierarchy entry a create under a parent logs.
 // Rules: docs/wiki/item-attachment/README.md (Epic 3.5).
 
 import { eq, inArray } from 'drizzle-orm';
@@ -359,6 +360,25 @@ export function applyHierarchyRequest(
   }
 
   return { reindexed };
+}
+
+// A create under a parent is a hierarchy change too (wiki item-attachment
+// §11a): the new item's activity records the parent it was created under and
+// whether it's attached to it, in the metadata shape applyHierarchyRequest
+// logs. POST /items calls it inside its own insert's transaction.
+export function logCreatedUnderParent(
+  tx: Tx,
+  itemId: string,
+  parent: { id: string; title: string },
+  attached: boolean,
+): void {
+  logActivity(
+    itemId,
+    'hierarchy_change',
+    `Created under "${parent.title}" (${attached ? 'attached' : 'detached'})`,
+    { fromParentId: null, toParentId: parent.id, fromAttached: false, toAttached: attached },
+    tx,
+  );
 }
 
 // Cross-workflow reparent (wiki §9; positioning §7.3): every subtree item

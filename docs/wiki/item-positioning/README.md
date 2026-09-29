@@ -432,8 +432,13 @@ between two projects already sharing the workflow — the comparison scope on
 both sides of the move is the same one.
 
 **Consequence:** cross-project placement resolution is not a special case.
-It re-resolves because §7.2 says every reparent does, not because the
-project changed. There is no cross-project positioning rule to write.
+Whether the position re-resolves is decided as for any reparent, never by
+the project change. A reparent that carries a placement always re-resolves
+(§7.2), and so does one of an item that is Attached before or after the
+write (§2.1). A Free item that stays Free, reparented with no anchor, keeps
+its position ([`../item-attachment/`](../item-attachment/) §4). On a board
+every reparent is an attach, so it always re-resolves. There is no
+cross-project positioning rule to write.
 
 **Cross-*workflow* reparenting (API-only — see
 [`../item-attachment/`](../item-attachment/) §9) is different in one
@@ -489,4 +494,12 @@ gets a fresh one via the append fallback.
 
 Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
-None open.
+- **Whether a Free child also needs a position among its siblings (§1,
+  §2.1).** An item has one position, compared in one scope: among its
+  parent's attached children, or among the workflow's Free items. So a
+  Free item reparented with no anchor keeps its position
+  ([`../item-attachment/`](../item-attachment/) §4), and a detached child
+  has no place among its parent's other children. If a surface ever shows
+  all of a parent's children together, attached or not, a Free child
+  would need a second position there. The alternative is to show attached
+  and detached children as two separate groups.

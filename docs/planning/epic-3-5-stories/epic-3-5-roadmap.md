@@ -568,6 +568,13 @@ action that makes sense. The API side is already Story 1's
 (`wiki/item-attachment/` §4: `parentId` and `isAttached` are independent, and
 omitting the flag keeps the current state).
 
+Additionally, we will decide here rules surrounding dual position values (or theoretically more than 2, even tho there are only 2 know cases now). Right now
+an detached item has one postion to relate it to fellow free items, but it
+likely should also maintain a postion relative to it's siblings if there is ever a context where all siblings are meant to be shown side-by-side regardless of
+attachment status. Alternatively we could decide that interleaved side-by-side
+is not possible and so we can only display children amongst their siblings in 
+two separate buckets
+
 Last by design: nothing left to build on the server, but it adds a third
 drop-meaning to disambiguate in the UI, and that's only judgeable once the
 other gestures exist.
@@ -605,8 +612,10 @@ deferral and keep landing with their stories.
      asserts is in the Gaps section and Addendum of
      `docs/audits/test-reconciliation-a3-board-drag-interaction.md`, which
      moves to `docs/archive/` when A3 closes. Its "Confirming run" section
-     lists the 18 tests that carry a case's ID but assert only part of it:
-     extend those tests rather than writing new ones.
+     lists the 18 tests that carry a case's ID but assert only part of it.
+     For each, Story 10 decides whether to extend that test, write a new
+     one, or put the ID on another test that asserts the missing part
+     (`docs/test-plans/README.md`).
      - DRAG-1.1, 1.2, 1.5, 1.6, 1.9, 1.12, 1.13, 1.14, 1.16, 1.17, 1.18,
        1.19, 1.20, 1.21, 1.22, 1.24, 1.26, 1.27, 1.28, 1.31, 1.33;
      - DRAG-2.4, 2.5, 2.6, 2.8, 2.9;
@@ -616,8 +625,12 @@ deferral and keep landing with their stories.
        4.21, 4.22, 4.32, 4.33;
      - DRAG-5.1, 5.2, 5.3, 5.9, 5.10, 5.11, 5.13, 5.14;
      - DRAG-6.2, 6.4, 6.6, 6.7, 6.8, 6.9, 6.11.
-   - **item-attachment and item-positioning:** added when A3's batches 4
-     and 5 route their gaps.
+   - **item-attachment, 1 case** (A3 batch 4): ATT-4.9, the UI and the API
+     agreeing on every target's legality. Its test is described in
+     `docs/audits/test-reconciliation-a3-item-attachment.md`, under
+     "ATT-4.9", option (a): extend the classification spec to replay each
+     target it classifies against the move endpoint.
+   - **item-positioning:** added when A3's batch 5 routes its gaps.
 
 2. **Deferred from the Story 4 audit, #3** (`docs/audits/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no

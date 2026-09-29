@@ -60,7 +60,7 @@ deliberately **lifted** — reparenting across projects that share a
 workflow is now allowed and cascades the new project to the moved subtree.
 The replacing cases:
 [`../item-attachment/att-5-cross-project-reparenting.md`](../item-attachment/att-5-cross-project-reparenting.md)
-ATT-5.1–5.3, and the positioning consequence
+ATT-5.1 and ATT-5.2, and the positioning consequence
 [Part 7 TC-7.14](part-7-board-placement-intents.md).
 
 The cross-*workflow* case has no rule yet and no case — see

@@ -1,139 +1,87 @@
 # ATT-3 — Reparent placement and atomic commit
 
-**Next ID:** ATT-3.9
+**Next ID:** ATT-3.12
 
-**Wiki:** [`../../wiki/item-attachment/`](../../wiki/item-attachment/README.md) §4, §5, §6
+What a placement looks like (an anchor and a side, first and last, the append fallback) and which number it resolves to are item-positioning's ([part 7](../item-positioning/part-7-board-placement-intents.md)). This suite holds the attachment side: that a reparent re-resolves, reparenting a Free item, the sequencing, and the atomic commit.
 
-§4–§5's *numeric* consequences (which number comes out, and from which
-scope) are catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md)
-TC-7.7 and TC-7.11–7.13. This suite holds the attachment-side rules: that
-a reparent always re-resolves, the sequencing, and atomicity.
-
-**Scope note (from the wiki):** §4's rule is about **Attached** items.
-Whether a Free     item can be reparented while staying Free is an open
-question; no case here covers it.
-
-| ID | Case | Priority | Automated |
+| ID | Case | Priority | Status |
 |---|---|---|---|
-| ATT-3.1 | Reparenting an Attached item always resolves a replacement position — "keep" is not an option | P0 | ⏳ pending triage |
-| ATT-3.2 | Placement is always before/after an anchor; first/last are that same form | P1 | ⏳ pending triage |
-| ATT-3.3 | An empty target has no anchor and takes the append fallback | P1 | ⏳ pending triage |
-| ATT-3.4 | A coincidentally-equal resolved position is still a real re-resolution | P2 | ⏳ pending triage |
-| ATT-3.5 | The new parent is in effect before the position is resolved | P0 | ⏳ pending triage |
-| ATT-3.6 | One gesture, one commit: every field and the cascade land together | P0 | ⏳ pending triage |
-| ATT-3.7 | On failure, nothing changed | P0 | ⏳ pending triage |
-| ATT-3.8 | A rejected change is answered by resync, never by keeping the guess | P1 | ⏳ pending triage |
+| ATT-3.1 | Reparenting an Attached item always resolves a replacement position; "keep" isn't an option | P0 | Automated |
+| ATT-3.4 | A coincidentally equal resolved position is still a real re-resolution | P2 | Automated |
+| ATT-3.5 | The new parent is in effect before the position is resolved | P0 | Automated |
+| ATT-3.6 | One write, one commit: every field and the cascade land together | P0 | Automated |
+| ATT-3.7 | On failure, nothing changed | P0 | Automated |
+| ATT-3.9 | Reparenting and attaching are separate: omitting the attachment flag keeps the item's state | P0 | Automated |
+| ATT-3.10 | A Free item's reparent leaves its position alone unless it carries an anchor | P1 | Automated |
+| ATT-3.11 | A top-level item reparented by a write that doesn't mention the attachment flag | P1 | Pending PO |
 
 ---
 
-## ATT-3.1 — Reparenting an Attached item always resolves a replacement position — "keep" is not an option
+## ATT-3.1 — Reparenting an Attached item always resolves a replacement position; "keep" isn't an option
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §4
 
-*Given* attached child `X` of `A` with sibling-scoped position `p`, *when*
-`X` is reparented to `B` (staying attached) by any entry point, with or
-without an explicit anchor, *then* `X`'s position is freshly resolved in
-`B`'s `(parentId, isAttached)` scope — anchor+side if given, append
-fallback if not — and there is no request form that carries `p` across
-unchanged. Cross-reference [TC-2.21](../item-positioning/part-2-anchor-resolution.md)
-(the no-anchor form) and [TC-7.12](../item-positioning/part-7-board-placement-intents.md)
-(the with-anchor form).
+*Given* attached child `X` of `A` with sibling-scoped position `p`, *when* `X` is reparented to `B` and stays attached, with or without an anchor, *then* `X`'s position is freshly resolved in `B`'s attached-sibling scope: against the anchor and side if one is given, by the append fallback if not. No request form carries `p` across unchanged ([TC-2.21](../item-positioning/part-2-anchor-resolution.md), [TC-7.12](../item-positioning/part-7-board-placement-intents.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
 
-## ATT-3.2 — Placement is always before/after an anchor; first/last are that same form
+## ATT-3.4 — A coincidentally equal resolved position is still a real re-resolution
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §4
 
-Cross-reference [TC-7.1](../item-positioning/part-7-board-placement-intents.md)
-/ [TC-7.2](../item-positioning/part-7-board-placement-intents.md). *Given*
-a reparent with placement, *when* the request is formed, *then* the
-placement is an `anchorId` + `side` pair; "first in list" names the first
-item the client renders in the target context with `side = before`, "last
-in list" the last with `side = after`. No other placement form exists.
+*Given* attached child `X` of `A` at position `1.0`, and parent `B` with no attached children, *when* `X` is reparented to `B` and the append fallback's first value comes out as `1.0`, equal to the old one, *then* the write isn't treated as a no-op: `X.parentId` is `B`, its scope is `B`'s attached siblings, and `1.0` is the new scope's first value, not the old number kept.
 
-**Automation test:** —
-
-## ATT-3.3 — An empty target has no anchor and takes the append fallback
-
-**Priority:** P1 · **Automated:** ⏳ pending triage
-
-Cross-reference [TC-7.7](../item-positioning/part-7-board-placement-intents.md).
-*Given* a target parent with no attached children, *when* an item is
-reparented into it, *then* the request carries no anchor and the position
-resolves via the append fallback in the new (empty) scope.
-
-**Automation test:** —
-
-## ATT-3.4 — A coincidentally-equal resolved position is still a real re-resolution
-
-**Priority:** P2 · **Automated:** ⏳ pending triage
-
-*Given* attached child `X` of `A` at position `1.0`, and parent `B` with
-no attached children, *when* `X` is reparented to `B` and the append
-fallback's bootstrap resolves to `1.0` — numerically equal to the old
-value — *then* the operation is not treated as a no-op: `X`'s `parentId`
-is `B`, its scope is `B`'s siblings, and the value `1.0` is the *new
-scope's* bootstrap, not a retained old number. Equality of the number is
-not the same thing as keeping it.
-
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
 ## ATT-3.5 — The new parent is in effect before the position is resolved
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §5
 
-Cross-reference [TC-7.12](../item-positioning/part-7-board-placement-intents.md)
-for the discriminating fixture (old and new sibling scopes in disjoint
-numeric ranges). *Given* a single reparent-with-placement operation,
-*when* the position is resolved, *then* its comparison scope is the one
-derived from the **new** parent — the resolved number lies among the new
-siblings, never among the old. Resolving against the old scope produces a
-number that looks valid and is drawn from the wrong list — silently wrong.
+*Given* a reparent with an anchor, where the old parent's attached siblings and the new parent's have positions in ranges that don't overlap, *when* the position is resolved, *then* the scope it's resolved in is the new parent's: the resulting number lies among the new siblings, never among the old ([TC-7.12](../item-positioning/part-7-board-placement-intents.md) uses the same fixture). Resolving against the old scope would give a number that looks valid but comes from the wrong list.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## ATT-3.6 — One gesture, one commit: every field and the cascade land together
+## ATT-3.6 — One write, one commit: every field and the cascade land together
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §6
 
-*Given* Free Card `X` in workphase `W1` with attached child `X1`, and
-Card `B` in workphase `W2` with attached children, *when* one gesture
-attaches `X` to `B` at an anchored slot, *then* a single read afterward
-shows all of the following, and there is no read at which only some of
-them hold: `X.parentId = B`, `X` attached, `X.workphaseId = W2`
-(inherited), `X.position` resolved in `B`'s sibling scope, and
-`X1.workphaseId = W2` (cascaded). If the two Cards are in different
-projects, `projectId` on `X` and its subtree lands in the same commit
-([ATT-5](att-5-cross-project-reparenting.md)).
+*Given* Free Card `X` in workphase `W1` with attached child `X1`, and Card `B` in workphase `W2` with attached children, *when* one write attaches `X` to `B` at an anchored slot, *then* a single read afterward shows all of these, and no read shows only some of them: `X.parentId = B`, `X` attached, `X.workphaseId = W2` (inherited), `X.position` resolved in `B`'s attached-sibling scope, and `X1.workphaseId = W2` (cascaded). If `X` and `B` are in different projects, the new `projectId` on `X` and its subtree lands in the same commit ([ATT-5.2](att-5-cross-project-reparenting.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
 ## ATT-3.7 — On failure, nothing changed
 
-**Priority:** P0 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §6
 
-*Given* the same fixture, *when* a gesture is rejected partway through its
-consequences — for example the target fails the depth cap
-([ATT-4.4](att-4-legal-parent-depth-cap.md)), or the anchor is outside
-the resulting scope ([TC-7.10](../item-positioning/part-7-board-placement-intents.md))
-— *then* `X` and every descendant are exactly as before: same `parentId`,
-attachment flag, `workphaseId`, `position`, `projectId`, `completedAt`.
-No partial state exists in which `X` was reparented but still holds a
-position from its old sibling list, or moved while `X1` stayed behind in
-`W1`.
+*Given* the fixture of [ATT-3.6](att-3-reparent-placement-atomicity.md), *when* the write is rejected, for example because `B` fails the depth cap ([ATT-4.4](att-4-legal-parent-depth-cap.md)) or the anchor is outside the resulting scope ([TC-7.10](../item-positioning/part-7-board-placement-intents.md)), *then* `X` and every descendant are exactly as before: the same `parentId`, attachment flag, `workphaseId`, `position`, `projectId` and `completedAt`. No state exists in which `X` was reparented but still holds a position from its old sibling list, or moved while `X1` stayed in `W1`. What the board does with a rejection is [DRAG-6.6](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## ATT-3.8 — A rejected change is answered by resync, never by keeping the guess
+## ATT-3.9 — Reparenting and attaching are separate: omitting the attachment flag keeps the item's state
 
-**Priority:** P1 · **Automated:** ⏳ pending triage
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §4, wiki item-attachment §2
 
-*Given* a client that optimistically previewed a reparent, *when* the
-server rejects it, *then* the client resyncs its state from the server and
-the previewed placement is discarded. There is no partial-success outcome
-to report. The board-specific behavior is
-[DRAG-6.6](../board-drag-interaction/drag-6-preview-reconciliation.md);
-this case is the gesture-agnostic rule (Sheet, badge, any client).
+*Given* Free item `X`, a detached child of `A`, Attached item `Y` under `A`, and item `B`, *when* each is reparented to `B` by a write that carries `parentId` and no attachment flag, *then*:
+
+- `X.parentId = B`, and `X` is still Free: it keeps its own workphase, stays in the workflow-wide position scope, and renders as a Card;
+- `Y.parentId = B`, and `Y` is still Attached: it inherits `B`'s workphase and is positioned among `B`'s attached siblings ([ATT-3.1](att-3-reparent-placement-atomicity.md)).
+
+Nothing attaches by default. *And when* the write carries the flag as well, *then* every combination is accepted: Free to Free, Free to Attached, Attached to Free, and Attached to Attached, each landing in the state the flag names. A top-level item is [ATT-3.11](att-3-reparent-placement-atomicity.md)'s.
+
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `tests/ui/attached-children.spec.ts`
+
+## ATT-3.10 — A Free item's reparent leaves its position alone unless it carries an anchor
+
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §4
+
+*Given* Free item `X` at workflow-scoped position `p`, *when* `X` is reparented to `B` and stays Free, with no anchor, *then* `X.position` is still `p`: its scope is workflow-wide and didn't change. *When* the same write carries an anchor and side instead, *then* `X` is repositioned against that anchor in the workflow-wide scope, as any Free item is.
+
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+
+## ATT-3.11 — A top-level item reparented by a write that doesn't mention the attachment flag
+
+**Priority:** P1 · **Status:** Pending PO
+
+*Given* top-level item `X`, which is Free, *when* a write gives `X` parent `B` and doesn't mention the attachment flag, *then* — **question for the PO:** wiki item-attachment §4 says omitting the flag keeps the item's state, so `X` stays Free under `B`. If a parentless item may hold the flag ([ATT-1.8](att-1-free-attached-state.md)), `X` may already hold it, and gaining a parent would attach it. Which does wiki item-attachment §4 say: does the write keep `X` Free, or does a flag `X` already holds decide?
 
 **Automation test:** —

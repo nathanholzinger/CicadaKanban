@@ -241,10 +241,15 @@ because it no longer compares against anything
 ([`../item-positioning/`](../item-positioning/) §7.3).
 
 A cross-project reparent does **not** on its own change the moved item's
-position comparison scope — position is workflow-wide, and the workflow is
-unchanged. The position is still re-resolved, but because §4 says a
-reparent always re-resolves, not because the project changed. *(A
-cross-workflow reparent does change it — see
+position comparison scope, which never depends on the project: a Free
+item's is the workflow, and an Attached item's is its parent's attached
+children. Whether the position re-resolves is decided as for any reparent,
+never by the project change. An item that is Attached before or after the
+write resolves a fresh position (§4;
+[`../item-positioning/`](../item-positioning/) §2.1). A Free item that
+stays Free keeps its position unless the write carries an anchor (§4). On
+a board every reparent is an attach, so it always re-resolves. *(A
+cross-workflow reparent does change the scope — see
 [`../item-positioning/`](../item-positioning/) §7.3.)*
 
 ## 10. Attaching to a done parent
@@ -299,6 +304,11 @@ from/to, made top-level — so the Sheet's activity list can account for
 why an item is where it is. A write that touches neither field logs
 nothing under this rule (a workphase move logs its own entry already).
 
+**Creating an item with a parent counts.** The new item's activity
+records the parent it was created under, and whether it's attached to it,
+whichever entry point created it. How that reads, and whether the parent's
+activity shows it too, isn't a rule yet (Open questions).
+
 ## 12. Representation follows state
 
 Naming used throughout the product and these pages (UI vocabulary only —
@@ -332,3 +342,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
 - **Beyond the cap.** Trees deep enough that per-level indentation fits
   neither the sidebar nor the expanded-hierarchy modal have no answer yet.
   A pagination or folder scheme would be needed.
+- **How a create under a parent reads in the activity lists (§11a).** One
+  idea is a single entry that the child shows as "Created on {date} as a
+  child of {parent}" and the parent shows as "Child {child} created on
+  {date}". Whether the parent's list shows it at all, and whether that
+  needs a change to how activity entries are kept, is undecided.

@@ -82,7 +82,7 @@ describe('POST /api/items', () => {
     expect(res.body.projectId).toBe(project.id);
   });
 
-  it('inherits projectId from parentId when projectId is omitted', async () => {
+  it('ATT-5.6: inherits projectId from parentId when projectId is omitted', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'Parent' });
     const res = await request(app).post('/api/items').send({ title: 'Child', parentId: parent.id });
@@ -103,7 +103,7 @@ describe('POST /api/items', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
+  it('ATT-4.10: returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
     const project = await createProject();
     const res = await request(app)
       .post('/api/items')
@@ -112,7 +112,7 @@ describe('POST /api/items', () => {
     expect(res.body.error).toMatch(/parentId/i);
   });
 
-  it('rejects creating a child whose projectId differs from its parent (finding #11)', async () => {
+  it('rejects creating a child whose projectId differs from its parent', async () => {
     const projectA = await createProject();
     const projectB = await createProject();
     const parent = await createItem({ projectId: projectA.id, title: 'Parent A' });
@@ -206,7 +206,7 @@ describe('PATCH /api/items/:id/move', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 for a non-numeric or non-finite raw position (regression: was written unvalidated)', async () => {
+  it('returns 400 for a non-numeric or non-finite raw position', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
     await request(app).patch(`/api/items/${item.id}/move`).send({ position: 5 });
@@ -302,7 +302,7 @@ describe('PATCH /api/items/:id/move', () => {
   });
 });
 
-describe('Epic 3.2 — position resolution', () => {
+describe('position resolution', () => {
   async function setupTwoPhases(doneOverrides: Record<string, unknown> = {}) {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -351,7 +351,7 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.body.position).toBe(2.0); // fresh, past the existing sibling — not its old workphase-scoped value
   });
 
-  it('detaching reassigns a fresh position scoped to the workphase', async () => {
+  it('ATT-7.2: detaching reassigns a fresh position scoped to the workflow', async () => {
     const { project, todo } = await setupTwoPhases();
     await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Existing root' }); // position 1.0
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' }); // position 2.0
@@ -362,7 +362,7 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.body.position).toBeGreaterThan(2.0); // fresh, past the workphase's existing items
   });
 
-  it('detaching into a terminal workphase clears position and sets completedAt', async () => {
+  it('ATT-7.4: detaching into a terminal workphase clears position and sets completedAt', async () => {
     const { project, done } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: done.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Done, keeps a position
@@ -373,7 +373,7 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.body.completedAt).toBeGreaterThan(0);
   });
 
-  it('reparenting while staying attached reassigns a fresh position scoped to the new parent', async () => {
+  it('ATT-3.1: reparenting while staying attached reassigns a fresh position scoped to the new parent', async () => {
     const { project, todo } = await setupTwoPhases();
     const parentA = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent A' });
     const parentB = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent B' });
@@ -407,7 +407,7 @@ describe('Epic 3.2 — position resolution', () => {
     expect(res.body.position).toBeLessThan(b.position);
   });
 
-  describe('detached siblings sharing one workphase (TC-X.1 — unaffected pre-feature reorder behavior)', () => {
+  describe('detached siblings sharing one workphase (TC-X.1)', () => {
     // Fresh GET-based reads, not the move response — a genuine persisted-
     // order check on reload, same convention as
     // itemRepositioningAttachedSiblings.spec.ts's siblingOrder helper.
@@ -506,7 +506,7 @@ describe('Epic 3.2 — position resolution', () => {
 
   // Regression coverage for audit Finding #7: the anchor's position scope
   // was never checked against the subject's resulting scope.
-  describe("move rejects an anchorId outside the subject's position scope (Finding #7)", () => {
+  describe("move rejects an anchorId outside the subject's position scope", () => {
     it("rejects anchoring a detached item against someone else's attached child", async () => {
       const { project, todo } = await setupTwoPhases();
       const detached = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Detached' });
@@ -635,7 +635,7 @@ describe('Epic 3.2 — position resolution', () => {
     expect(children.find(c => c.id === detachedChild.id)?.positionScope).toBe('none');
   });
 
-  it('GET returns positionScope = "workflow" for a detached item in a non-terminal workphase (TC-2.14)', async () => {
+  it('ATT-1.1, TC-2.14: GET returns positionScope = "workflow" for a detached item in a non-terminal workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });
 
@@ -841,7 +841,7 @@ describe('PATCH /api/items/reorder', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects a falsy invalid entry (regression: Array.find/truthiness mix-up)', async () => {
+  it('rejects a falsy invalid entry', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id });
     const res = await request(app)
@@ -922,7 +922,7 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
   });
 
-  it('deleting a parent also deletes its detached descendants (finding #27 — whole-subtree delete regardless of attach state)', async () => {
+  it('deleting a parent also deletes its detached descendants', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'Parent' });
     const detachedChild = await createItem({
@@ -1001,7 +1001,7 @@ describe('attached children', () => {
     return { project, workflow, todo, inProgress };
   }
 
-  it('moving a parent cascades through attached children and grandchildren', async () => {
+  it('ATT-1.3: moving a parent cascades through attached children and grandchildren', async () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
@@ -1031,7 +1031,7 @@ describe('attached children', () => {
     expect(updatedChild.body.position).toBe(child.position);
   });
 
-  it('an attached child keeps its position (and stays out of Part 6 done-tracking) when its parent cascades into a terminal workphase (TC-6.5)', async () => {
+  it('ATT-1.4, ATT-1.5, TC-6.5: an attached child keeps its position (and stays out of Part 6 done-tracking) when its parent cascades into a terminal workphase', async () => {
     const { project, workflow, todo } = await setupTwoPhases();
     const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
@@ -1053,9 +1053,51 @@ describe('attached children', () => {
     expect(updatedChild.body.workphaseId).toBe(done.id);
     expect(updatedChild.body.position).toBe(child.position);
     expect(updatedChild.body.completedAt).toBeNull();
+    expect(updatedChild.body.positionScope).toBe('attached-siblings');
   });
 
-  it('a detached child halts the cascade for its whole branch', async () => {
+  it('ATT-1.5: a Stub reads done under a done parent and not done once it reopens, with only its workphase written', async () => {
+    const { project, workflow, todo } = await setupTwoPhases();
+    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    const row = () => db.select().from(items).where(eq(items.id, child.id)).get()!;
+
+    // Each change writes the cascaded workphase and the modification
+    // timestamp on the child, and nothing else: no completedAt either way.
+    for (const workphaseId of [done.id, todo.id]) {
+      const before = row();
+      expect((await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId })).status).toBe(200);
+      const after = row();
+      expect(after).toEqual({ ...before, workphaseId, updatedAt: after.updatedAt });
+      expect(after.completedAt).toBeNull();
+    }
+  });
+
+  it('ATT-1.6: a detached child keeps its workphase, position and completedAt through every move of its parent', async () => {
+    const { project, workflow, todo, inProgress } = await setupTwoPhases();
+    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
+    const detachedChild = (title: string, workphaseId: string) =>
+      createItem({ projectId: project.id, parentId: parent.id, title, isAttached: false, workphaseId });
+    // One active (a position, no completedAt) and one done (completedAt, no position).
+    const active = await detachedChild('Active', inProgress.id);
+    const finished = await detachedChild('Finished', done.id);
+    expect(finished.completedAt).not.toBeNull();
+    const tracked = (id: string) => {
+      const { workphaseId, position, completedAt } = db.select().from(items).where(eq(items.id, id)).get()!;
+      return { workphaseId, position, completedAt };
+    };
+    const before = { active: tracked(active.id), finished: tracked(finished.id) };
+
+    // Between live workphases, into a terminal one, and back out of it.
+    for (const workphaseId of [inProgress.id, done.id, todo.id]) {
+      expect((await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId })).status).toBe(200);
+      expect({ active: tracked(active.id), finished: tracked(finished.id) }).toEqual(before);
+    }
+  });
+
+  it('ATT-1.3, ATT-1.6: a detached child halts the cascade for its whole branch', async () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const root = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Root' });
     const detached = await createItem({
@@ -1108,7 +1150,7 @@ describe('attached children', () => {
     expect((await request(app).get(`/api/items/${itemChild.id}`)).body.workphaseId).toBe(inProgress.id);
   });
 
-  it('a title-only PUT does not re-sync or relocate an attached child, even if its workphase diverged (finding #10)', async () => {
+  it('a title-only PUT does not re-sync or relocate an attached child, even if its workphase diverged', async () => {
     const { project, todo, inProgress } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
@@ -1124,7 +1166,7 @@ describe('attached children', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
   });
 
-  it('rejects an item becoming its own parent or reparenting to a descendant', async () => {
+  it('ATT-4.10: rejects an item becoming its own parent or reparenting to a descendant', async () => {
     const project = await createProject();
     const root = await createItem({ projectId: project.id, title: 'Root' });
     const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child' });
@@ -1139,7 +1181,7 @@ describe('attached children', () => {
     expect(cycleRes.body.error).toMatch(/descendant/i);
   });
 
-  it('rejects reparenting to a non-existent parentId', async () => {
+  it('ATT-4.10: rejects reparenting to a non-existent parentId', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id, title: 'Item' });
 
@@ -1215,7 +1257,7 @@ describe('attached children', () => {
   // parentId: null write. docs/wiki/item-attachment §1 now makes
   // "attached ⇒ has a parent" hold in the stored row — clearing the parent
   // clears the flag (§11 "reparent to root").
-  it('reparenting to null while attached clears isAttached and keeps the workphase (wiki §1, §11)', async () => {
+  it('ATT-7.7: reparenting to null while attached clears isAttached and keeps the workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
