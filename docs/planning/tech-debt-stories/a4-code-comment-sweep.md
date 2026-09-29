@@ -1,6 +1,6 @@
 # A4 — Code Comment Sweep
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Coder · **Ready for:** Nathan's review
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Coder · **Status:** in progress
 
 **Source:**
 - the round table at `docs/planning/round-tables/documentation-purposes-and-standards` (tags like "Coder F4" or "Architect F6");
@@ -52,6 +52,7 @@ The rules themselves are in `code-comments.md`; this is the method for applying 
 | A `§N` that means a section of a plan | What that section said, restated in present tense, or nothing |
 | A `§N` in a test | The qualified ID of the case the test covers, if there is one; otherwise treated like any other `§N` |
 | A qualified case ID (`DRAG-5.5`) in a test title or test comment | Unchanged. This is the one sanctioned pointer from code to a test plan. |
+| A case ID in a comment outside the tests | `wiki <page> §N` if the pointer has a guard or index job; otherwise it goes. Rule (a)'s exception covers test titles and test comments only. |
 | Prose about another file's internals | This code's own assumption, or a `file::symbol` reference |
 | A comment that fails the umbrella test | Removed |
 
@@ -79,6 +80,8 @@ Two kinds of mismatch go to the PO as possible wiki gaps:
 - a rule I find enforced in code that no section states.
 
 The PO accepted the index job on one condition: the checker only confirms that a section exists, not that it still holds the rule. So whenever A2's handoff names a rule that moved to a different section, I move the pointers to match. D10 lists the ones A2 moved.
+
+**Pointers cite the wiki as it stands** (Nathan, 2026-09-29). A5 will move the project sidebar's rules out of board-drag-interaction §7 and §7.1, but the sidebar's sites still get their pointers to today's sections. Any story that moves or renumbers a wiki rule re-points the comments that cite it, found by searching for `wiki <page> §N`. That's in the Handoff to A5.
 
 ### D5. Placing what the wiki sweep removes
 
@@ -125,17 +128,20 @@ Every site is in the board-drag files. Each ruling lands in the batch (1a, 1b or
 
 The line counts are estimates: a grep on 2026-09-26 for story, epic, phase, audit, ledger and decision IDs, dates, and `§` in comment lines. The checker's first run when A4 starts gives the real baseline. By then, A1 batch 3 will already have cleaned some module headers in `workflow/`.
 
+1a's figures are that baseline (2026-09-29): the comment lines I read, and the checker's hits. At 248 hits, 1a split into two stops (Nathan).
+
 Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory.
 
 | Batch | Files | Est. lines | Waits for |
 |---|---|---|---|
-| **1a** Board drag: the machine and regions | `popSession.ts`, `dragRegions.ts`, `dragBands.ts`, `dragTuning.ts`, `useSnapTween.ts`, `dragOverlayGeometry.ts`, `cardMetrics.ts` | ~160 | A1; A2's board-drag-interaction page |
-| **1b** Board drag: placement and requests | `placement.ts`, `dragCollision.ts`, `dragRequest.ts`, `dragClassification.ts`, `descendantsProjection.ts`, `itemListOps.ts`, `itemWriteReconciliation.ts`, `DragSessionContext.ts`, `client/src/lib/hierarchyPlacement.ts` | ~135 | 1a |
+| **1a-i** Board drag: the pop machine | `popSession.ts`, `dragTuning.ts`, `useSnapTween.ts`, `dragOverlayGeometry.ts` | ~400 read, 124 hits | A1; A2's board-drag-interaction page |
+| **1a-ii** Board drag: regions and bands | `dragRegions.ts`, `dragBands.ts`, `cardMetrics.ts` | ~410 read, 124 hits | 1a-i |
+| **1b** Board drag: placement and requests | `placement.ts`, `dragCollision.ts`, `dragRequest.ts`, `dragClassification.ts`, `descendantsProjection.ts`, `itemListOps.ts`, `itemWriteReconciliation.ts`, `DragSessionContext.ts`, `client/src/lib/hierarchyPlacement.ts` | ~135 | 1a-ii |
 | **1c** Board drag: the hook and components | `useBoardDnd.ts`, `useItemManagement.ts`, `usePendingGhostGuard.ts`, `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~140 | 1b |
 | **2** The rest of the client | everything else in `client/src` that isn't a test: the sidebar, item detail, modals, `api/`, `lib/`, `types.ts` | ~55 | A1 |
 | **3** Server | `server/src` | ~100 | A2's other three pages |
-| **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3, for the features they cover |
-| **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 |
+| **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
+| **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
 | **5** Lint | root `package.json` | — | A2, A3, and batches 1a–4b |
 
 **Why this order:**
@@ -145,7 +151,7 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 
 **Running alongside other stories (Nathan, 2026-09-26):** nothing starts until A1 is complete. After that, some stories may run in parallel, and that gets decided when the work is scheduled. For A4 this means:
 - **Batches 1–3 can overlap A3.** They touch no test file, and they depend on A2's pages, not on A3.
-- **Batches 4a and 4b wait for A3** either way.
+- **Batches 4a and 4b wait for A3** either way. A3 closed on 2026-09-29, so they no longer wait.
 
 ### D8. What each batch must pass
 
@@ -169,14 +175,14 @@ The default scope is clean once three things hold:
 
 Batch 5 then changes the root `lint` script to run `check:docs` before the client's eslint: `"lint": "npm run check:docs && npm --prefix client run lint"`. From then on, the checks every story already runs catch any new hit.
 
-If A2 or A3 hasn't finished by the time 4b does, batch 5 waits and A4 stays open until then. It's a one-line change.
+The first two hold: A2 and A3 have closed, and `check:docs -- docs/wiki docs/test-plans` reports 0 hits on 32 files (2026-09-29). If a story that edits the wiki or the test plans leaves hits there by the time 4b is done, batch 5 waits and A4 stays open until they're cleared. It's a one-line change.
 
 ### D10. Pointers to wiki sections that A2 moved
 
 A2 moved three rules into new subsections. A comment that cites the old number still passes the checker, because §2, §5 and §6 all still exist. So this list is the checklist: each site is re-pointed in the batch that owns its file, as part of its D2 rewrite. The line numbers are from 2026-09-27; if they've drifted, search for the pointer.
 
 - **board-drag-interaction §6 → §6.1**, which Card is zoomed into (the dwell, the cue, the reset rule, invalid targets):
-  - **1a:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
+  - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
   - **1b:** `dragCollision.ts` line 85's range, the same way.
   - **1c:** `dragChrome.tsx` line 126.
   - **4a:** the `popSession.test.ts` title at line 198.
@@ -198,16 +204,28 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 
 That's 20 sites to re-point, 2 header ranges and 1 to check. Batch 1c's D4 table and batch 3's use the new numbers from the start.
 
+### D11. What A3's close-out routes here
+
+A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these comments to A4. Line numbers are from 2026-09-29.
+
+- **Case IDs in comments outside the tests** (D2's row for them). The checker doesn't flag these, so this list is the checklist:
+  - **1b:** `placement.ts` lines 88 and 128 (DRAG-5.12 and DRAG-5.4, which A3 qualified); `dragRequest.ts` lines 22 ("TC-7.1/7.2"), 37–38, 133 and 135; `dragClassification.ts` lines 15, 19–22, 61, 88 and 95; `itemListOps.ts` lines 28, 119 and 155; `itemWriteReconciliation.ts` lines 77 and 93.
+  - **1c:** `useItemManagement.ts` line 18; `StubRows.tsx` line 82.
+- **Prefix-less tails in test comments,** each written out in full:
+  - **4a:** `dragBands.test.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"); `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs.
+- **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback.
+
 ## Work, in batches
 
-Each batch does five things, then stops for review and commit:
+Each batch does six things, then stops for review and commit:
 - sweeps its files per D2 and D3;
 - writes the D6 rulings whose sites are in those files;
 - places the D5 passages whose homes are in those files;
 - re-points the D10 sites in those files;
+- clears the D11 items in those files;
 - runs D8's checks.
 
-- **1a–1c, board drag.** The D7 files, plus the placements from A2's board-drag-interaction handoff, some of which land in `workflow/CLAUDE.md`. 1c ends with D4's index-pointer table for board-drag-interaction.
+- **1a-i to 1c, board drag.** The D7 files, plus the placements from A2's board-drag-interaction handoff, some of which land in `workflow/CLAUDE.md`. 1c ends with D4's index-pointer table for board-drag-interaction.
 - **2, the rest of the client.** The sweep only.
 - **3, the server.** The sweep, A2's placements for item-attachment, item-positioning and boards-columns-unsorted, and D4's index-pointer tables for those three pages.
 - **4a and 4b, the tests.** The sweep, including:
@@ -222,8 +240,8 @@ Each batch does five things, then stops for review and commit:
 
 | File or area | Batch | Change |
 |---|---|---|
-| The board-drag files in D7 | 1a–1c | comments only, plus the D6 rulings |
-| `client/src/components/workflow/CLAUDE.md` | 1a–1c | receives placed passages (D5), mental model or rules that span modules only |
+| The board-drag files in D7 | 1a-i to 1c | comments only, plus the D6 rulings |
+| `client/src/components/workflow/CLAUDE.md` | 1a-i to 1c | receives placed passages (D5), mental model or rules that span modules only |
 | The rest of `client/src` (not tests) | 2 | comments only |
 | `server/src` | 3 | comments only, plus index pointers for three wiki pages |
 | Test files in `client/src`, `server/tests`, `tests` | 4a, 4b | comments and title provenance only |
@@ -245,5 +263,47 @@ Filled in as the batches land:
 - **To the PO:** possible wiki gaps from D4, i.e. rules the code enforces that no section states, and unmarked sections that nothing enforces.
 - **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root").
 - **To Nathan, for the next story or audit:** code that looked wrong while I was reading (D3), each with its site.
-- **To A5 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
+- **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
+- **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
 - **The D5 disposition table** for A2's passages.
+
+### D5 dispositions
+
+board-drag-interaction, from A2's list. Rows are added as each passage's home batch lands.
+
+| Section | Passage | Disposition |
+|---|---|---|
+| Page header | The pop machine is `popSession.ts`, the regions `dragRegions.ts`, the placement layer `itemListOps.ts`, the thresholds and bands `dragTuning.ts` | **Covered:** `workflow/CLAUDE.md`'s "Where each concern lives" names each module. The lead was stale: the placement layer is `placement.ts`, and the bands are `dragBands.ts`. (1a-i) |
+| §2 | The carried card's clamp is `clampToCurrentContext` | **Placed:** an index pointer at `dragOverlayGeometry.ts::clampToCurrentContext`. (1a-i) |
+| §3.1 | The panel values persist in `localStorage` under `kanban_drag_tuning`, and tests seed that key | **Covered:** `dragTuning.ts`'s header and `DRAG_TUNING_STORAGE_KEY`, with an index pointer to §3.1. `workflow/CLAUDE.md`'s testing conventions name `seedDragTuning`. (1a-i) |
+| §8 | The two pops come from `popSession.ts`'s layer-generic pop-out clock, through the region's `parentRegionKey` | **Placed:** `popSession.ts`'s header, under "Pop out, from any layer". (1a-i) |
+| §10 | The no-anchor slot is `popSession.ts::noAnchorSlot` | Stale lead: it's `placement.ts::noAnchorSlot`. Goes to 1b. |
+
+### Progress toward D4 and D6
+
+**D6 rulings written** (2 of 16):
+- #30, `popInDelayFor` is a genuine per-kind table: at `popSession.ts::popInDelayFor`. The reason comes from the Story 5 audit's #23: the other kind tests are separate properties that only happen to split the kinds alike, and one table would couple them. (1a-i)
+- #30, `clampToCurrentContext`'s `!== 'column'` vs `containmentRect`'s `=== 'column'`: at both sites. The reason comes from the Story 4.1 plan's F6: one decides how far the carried copy follows, the other whether the context still holds, and a merged column answers them against different boxes (wiki board-drag-interaction §2). (1a-i)
+
+**Board-drag-interaction pointers so far.** 1c turns these into D4's table.
+- **Index:**
+  - `popSession.ts`'s header: §1.1 (rules 2 and 3), §3, §3.1 and §6.1.
+  - `popSession.ts::namedCardCandidate`: §6.1, for "the Card zoomed into is the one the side highlight names".
+  - `popSession.ts::containmentRect`: §2, for "a merged column holds against its outer body".
+  - `dragOverlayGeometry.ts::clampToCurrentContext`: §2, for the clamp.
+  - `dragTuning.ts`'s header: §3.1, for the tuning panel and its persistence.
+  - `useSnapTween.ts`'s header: §3, for the snap on a pop.
+- **Guard:**
+  - `popSession.ts::PopHover.side`: §6.1's reset rule.
+  - `popSession.ts::ParentKeyOf`: §1.1 rule 2.
+  - `namedCardCandidate`'s resolution against `regions`: §3.2.
+  - `dragTuning.ts`: §5. The reservation isn't a tuning value.
+
+## Amendments
+
+- **2026-09-29, before batch 1 (Coder, with Nathan):**
+  - 1a split into 1a-i and 1a-ii (D7), since its baseline is 248 hits.
+  - D2 gains a row for case IDs in comments outside the tests, and D11 lists what A3's close-out routes here.
+  - D4: pointers cite the wiki as it stands, with a Handoff line to A5.
+  - D7 and D9: A3 has closed, and the wiki and test plans report 0 hits.
+  - The Auditor's story is A6 now, after its file name. The Handoff says so.

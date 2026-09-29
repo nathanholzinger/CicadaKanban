@@ -1,4 +1,4 @@
-// The snap of §3 (docs/wiki/board-drag-interaction): when a pop moves the
+// The snap on a pop (wiki board-drag-interaction §3): when a pop moves the
 // carried copy's clamp target, the copy eases there over `popSnapMs` from
 // wherever it was last drawn, instead of jumping. `start` begins a tween (a
 // pop), `draw` is the clamp modifier's last step — the drawn point for a

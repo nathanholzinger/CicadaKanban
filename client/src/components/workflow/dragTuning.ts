@@ -1,62 +1,61 @@
-// Epic 3.5 Story 3 — the tunable parameters of the board drag gesture
-// (docs/wiki/board-drag-interaction §3.1, §7.1, §4). The wiki settles
-// these *as parameters* with provisional values; the correct values are
-// found by feel, so every one of them is exposed by the dev/test panel and
-// persisted in localStorage — a change takes effect on the next drag, no
-// rebuild. Tests are written against the configured value (seeded through
-// the same storage key), never the literal.
+// The tunable parameters of the board drag gesture, and where they persist
+// (wiki board-drag-interaction §3.1). The wiki settles these *as
+// parameters* with provisional values; the correct values are found by
+// feel, so every one of them is exposed by the dev/test panel and persisted
+// in localStorage — a change takes effect on the next drag, no rebuild.
+// Tests are written against the configured value (seeded through the same
+// storage key), never the literal.
 //
-// §5's reservation height (Story 4.1 Phase 1) left this file — it's a
-// fixed fact about the shortCard component (`KanbanCard.tsx`'s
-// `SHORT_CARD_HEIGHT_PX`), not a value found by feel, so there's nothing
-// left here to tune by changing a number between two attempts.
+// The band reservation's height isn't here: it's a fixed fact about the
+// shortCard component (`cardMetrics.ts::SHORT_CARD_HEIGHT_PX`), not a value
+// found by feel (wiki board-drag-interaction §5).
 
 export interface DragTuning {
   /** `THRESHOLD` — how long the cursor must stay outside the card's context before the card pops out and follows it. */
   popDelayMs: number;
   /** Optional distance term: pop out as soon as the cursor is this far outside the current context. 0 disables it. */
   popDistancePx: number;
-  /** How long a popped-out card's cursor must rest in a column's pop-eligible band before the card pops in and locks there. */
+  /**
+   * How long a popped-out card's cursor must rest in a column/sub-row before
+   * the card pops in and locks there. Time anywhere in the region counts;
+   * the pop fires only from the middle band.
+   */
   popInDelayMs: number;
   /**
-   * Story 4 (re-plan, 2026-09-16): how long the cursor must rest over one of
-   * the locked column's own Cards before the drag zooms into it — a
-   * separate, duration-only threshold from `popInDelayMs`, since this one
-   * signals a reparent (the layer-change doc's "the big distinguisher is
-   * likely to be a context switch that signals reparenting"). No distance
-   * term: zooming in is never a fast yank, only zooming out is (Q4).
+   * The zoom-in cue's length: once `cardZoomDwellMs` has passed, how much
+   * longer the named relation must hold before the drag zooms into that
+   * Card. Separate from `popInDelayMs` because this edge can mean a
+   * reparent. No distance term: zooming in is never a fast yank, only
+   * zooming out is.
    */
   cardPopInDelayMs: number;
   /**
-   * Story 6, hands-on finding 3 (2026-09-24): how long the drag must hold
-   * the *same* named relation (`dragCollision.ts::dropAnchorFor` — which
-   * neighbor of the ghost the side highlight names, and on which side)
-   * before the zoom-in cue even starts showing. A separate, earlier
-   * threshold than `cardPopInDelayMs`: that one is now the *cue's* own
-   * length (dwell, then cue, then the pop) rather than the whole hold, so
-   * an ordinary pause while repositioning — the common case — never shows
+   * How long the drag must hold the *same* named relation
+   * (`dragCollision.ts::dropAnchorFor` — which neighbor of the ghost the
+   * side highlight names, and on which side) before the zoom-in cue even
+   * starts showing. The cue then runs for `cardPopInDelayMs`, so an
+   * ordinary pause while repositioning — the common case — never shows
    * anything before it's over.
    */
   cardZoomDwellMs: number;
   /**
-   * Story 6 Phase D: how long the cursor must rest on a locked Card's own
-   * descendants section before the drag zooms into it — its own,
-   * duration-only clock (wiki §3.1's fourth clock), no dwell/cue split the
-   * way the Column → Card edge got in finding 3: the target here is
-   * always the same one section, never a choice between named neighbors,
-   * so there's nothing for a dwell to guard against. Decision 6's
-   * suggested default: the same value as `cardPopInDelayMs`.
+   * How long the cursor must rest on a locked Card's own descendants
+   * section before the drag zooms into it — its own, duration-only clock,
+   * with no dwell/cue split the way the Column → Card edge has: the target
+   * here is always the same one section, never a choice between named
+   * neighbors, so there's nothing for a dwell to guard against. Defaults to
+   * the same value as `cardPopInDelayMs`.
    */
   descendantsPopInDelayMs: number;
   /** How long the card takes to travel from its clamped position to the cursor on a pop. 0 teleports. */
   popSnapMs: number;
-  /** §4 overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
+  /** Classification overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
   overlayFreeDescendantColor: string;
   overlayDepthCappedOpacity: number;
   /**
    * An outline drawn around whichever region — column, sub-row, or Card —
-   * is the pop machine's current `contextKey` (wiki §1.1), so the locked
-   * layer is legible without reading the dev panel's text readout. Never
+   * is the pop machine's current `contextKey`, so the locked layer is
+   * legible without reading the dev panel's text readout. Never
    * drawn at Board layer: nothing is a singular "current region" while
    * genuinely popped out.
    */
