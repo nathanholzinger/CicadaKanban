@@ -278,12 +278,16 @@ board-drag-interaction, from A2's list. Rows are added as each passage's home ba
 | §3.1 | The panel values persist in `localStorage` under `kanban_drag_tuning`, and tests seed that key | **Covered:** `dragTuning.ts`'s header and `DRAG_TUNING_STORAGE_KEY`, with an index pointer to §3.1. `workflow/CLAUDE.md`'s testing conventions name `seedDragTuning`. (1a-i) |
 | §8 | The two pops come from `popSession.ts`'s layer-generic pop-out clock, through the region's `parentRegionKey` | **Placed:** `popSession.ts`'s header, under "Pop out, from any layer". (1a-i) |
 | §10 | The no-anchor slot is `popSession.ts::noAnchorSlot` | Stale lead: it's `placement.ts::noAnchorSlot`. Goes to 1b. |
+| §1 | Region lookup is simple containment, through one lookup for every layer (`childRegionAt`). A sub-row is clipped to its column's visible scroll box when regions are measured (`measureRegions`) | **Placed:** `dragRegions.ts`'s header, with an index pointer to §1. `childRegionAt` and `measureRegions` say the same at the functions. (1a-ii) |
+| §5 | `h` is `KanbanCard.tsx::SHORT_CARD_HEIGHT_PX` and `gap` is `CARD_LIST_GAP_PX`; the band math and the carve-out render read the same two numbers | **Covered:** `cardMetrics.ts::SHORT_CARD_METRICS` and `dragBands.ts::ShortCardMetrics`, and `workflow/CLAUDE.md`'s "Short-card sizing". `dragBands.ts::Reservation` names both readers of the formula. The lead was stale: both constants are in `cardMetrics.ts`, and the band math is `dragBands.ts`. (1a-ii) |
+| §7 | `childRegionAt` returns a Descendants section as a zoom-in candidate | **Placed:** `dragRegions.ts::childRegionAt`. The shared placement library half goes to 1b. (1a-ii) |
 
 ### Progress toward D4 and D6
 
-**D6 rulings written** (2 of 16):
+**D6 rulings written** (3 of 16):
 - #30, `popInDelayFor` is a genuine per-kind table: at `popSession.ts::popInDelayFor`. The reason comes from the Story 5 audit's #23: the other kind tests are separate properties that only happen to split the kinds alike, and one table would couple them. (1a-i)
 - #30, `clampToCurrentContext`'s `!== 'column'` vs `containmentRect`'s `=== 'column'`: at both sites. The reason comes from the Story 4.1 plan's F6: one decides how far the carried copy follows, the other whether the context still holds, and a merged column answers them against different boxes (wiki board-drag-interaction §2). (1a-i)
+- #30, the board's `(d+1)·12` indent vs the sidebar's `12 + d·14`: at `cardMetrics.ts::descendantsIndentPx`. The reason: there 12 is a base inset and the step is 14, here 12 is the step itself. The sidebar's half was already written, at `projectTreeUtils.ts::ROW_BASE_INSET_PX`. (1a-ii)
 
 **Board-drag-interaction pointers so far.** 1c turns these into D4's table.
 - **Index:**
@@ -293,11 +297,16 @@ board-drag-interaction, from A2's list. Rows are added as each passage's home ba
   - `dragOverlayGeometry.ts::clampToCurrentContext`: §2, for the clamp.
   - `dragTuning.ts`'s header: §3.1, for the tuning panel and its persistence.
   - `useSnapTween.ts`'s header: §3, for the snap on a pop.
+  - `dragRegions.ts`'s header: §1, for "a region is a bounded box", nowhere, and clipping to what's visible.
+  - `dragRegions.ts::cardScopedStructure`: §3.2, for "an invalid target is never enterable".
+  - `dragRegions.ts::CardListRegion.targetWorkphaseId`: §5, for "a merged column's drop takes its first workphase".
+  - `dragBands.ts`'s header: §5, for the bands and their reservation.
 - **Guard:**
   - `popSession.ts::PopHover.side`: §6.1's reset rule.
   - `popSession.ts::ParentKeyOf`: §1.1 rule 2.
   - `namedCardCandidate`'s resolution against `regions`: §3.2.
   - `dragTuning.ts`: §5. The reservation isn't a tuning value.
+  - `dragRegions.ts::childRegionAt`: §1.1 rule 2.
 
 ## Amendments
 
