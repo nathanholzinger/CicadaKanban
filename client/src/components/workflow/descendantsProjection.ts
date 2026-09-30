@@ -1,8 +1,9 @@
-// The Descendants layer's live projection (docs/wiki/board-drag-interaction
-// §7.1): the gap the ghost sits in and the depth the pointer has chosen,
-// seeded on each entry into a section and advanced every sample. Pure — the
-// hook (`useBoardDnd.ts`) keeps the state between samples and hands in the
-// pointer, the named anchor and the board's children accessor.
+// The Descendants layer's live projection
+// (wiki board-drag-interaction §7.1): the gap the ghost sits in and the
+// depth the pointer has chosen, seeded on each entry into a section and
+// advanced every sample. Pure — the hook (`useBoardDnd.ts`) keeps the state
+// between samples and hands in the pointer, the named anchor and the
+// board's children accessor.
 
 import type { Item } from '../../types';
 import {
@@ -48,22 +49,22 @@ export interface ProjectionSample {
 }
 
 // One sample. Outside a section there's no projection. On entry the seed is
-// set where the ghost already is, so zooming in never moves it (wiki
-// board-drag-interaction §7): the drag's own section seeds at the dragged
-// row's own slot and depth, so resting still resolves to where it came from;
-// any other section seeds at its last gap at depth 0, the Card's last child,
-// where the Card layer's auto-drop showed it. Never at the last row's depth:
-// when that row is nested, the ghost would become its sibling. Then the gap
-// follows the named row — the same "the gap is the ghost's slot" rule Column
-// layer uses — or, with no row named (a hover over the section between rows,
-// or before dnd-kit's first move event), stays where it was. The depth is the
-// seed's plus the pointer's travel since, in indents, clamped to the gap's
-// range.
+// set where the ghost already is, so zooming in never moves it
+// (wiki board-drag-interaction §7): the drag's own section seeds at the
+// dragged row's own slot and depth, so resting still resolves to where it
+// came from; any other section seeds at its last gap at depth 0, the Card's
+// last child, where the Card layer's auto-drop showed it. Never at the last
+// row's depth: when that row is nested, the ghost would become its sibling.
+// Then the gap follows the named row — the same "the gap is the ghost's
+// slot" rule Column layer uses — or, with no row named (a hover over the
+// section between rows, or before dnd-kit's first move event), stays where
+// it was. The depth is the seed's plus the pointer's travel since, in
+// indents, clamped to the gap's range.
 export function advanceProjection(state: ProjectionState, sample: ProjectionSample): ProjectionState {
   const cardId = descendantsCardIdOf(sample.contextKey);
   if (!cardId) return NO_PROJECTION;
   const { classification, getAttachedChildren } = sample;
-  // §7.2: the dragged item and its whole subtree are never a Top or Bottom.
+  // The dragged item and its whole subtree are never a Top or Bottom.
   const exclude = classification.subtreeIds;
   const allRows = toRows(hierarchyRows(cardId, getAttachedChildren));
   const rows = toRows(allRows, exclude);
@@ -88,14 +89,21 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
     descendantsChildrenOf(getAttachedChildren),
     exclude,
   );
-  // §7.2: the depth cap against the resolved parent — the same answer, off
-  // the same drag-start snapshot, as the gate that decides whether this
-  // section was a region at all.
+  // The depth cap, per state, against the resolved parent
+  // (wiki board-drag-interaction §7.2) — the same answer, off the same
+  // drag-start snapshot, as the gate that decides whether this section was
+  // a region at all.
   const valid = isValidParent(classification, placement.parentId ?? cardId);
   const atOwnSlot = own !== null && gap === own.gap && depth === own.depth;
   return { seed, projection: { gap, depth, valid, resolved: placement, atOwnSlot } };
 }
 
+// Deliberately separate from the sidebar's seed (its drag's own depth at
+// pickup, in `useProjectDragReorder.ts::handleDragMove`): a sidebar drag
+// always starts at its own row, but a board drag can also enter a section
+// from the Card layer, and that entry seeds where the Card layer showed the
+// ghost. The depth step itself is shared
+// (`hierarchyPlacement.ts::computeProjection`).
 function seedFor(own: { gap: number; depth: number } | null, rows: readonly Row[], pointerX: number): ProjectionSeed {
   if (own) return { gap: own.gap, depth: own.depth, pointerX };
   return { gap: rows.length, depth: 0, pointerX };
@@ -110,13 +118,19 @@ export function sameProjection(a: DescendantsProjection | null, b: DescendantsPr
 }
 
 // What a release at the section writes: the last sample's resolved parent
-// and anchor, or nothing (null) with no projection or over the cap — §7.2's
-// one exception to §3.2, a state that's reachable but commits nothing. Also
-// nothing at the dragged Stub's own gap and depth: with the whole hierarchy
-// shown, no unseen item can sit between its neighbors, so it's already there
+// and anchor, or nothing (null) with no projection or over the cap — a
+// state that's reachable but commits nothing
+// (wiki board-drag-interaction §7.2). Also nothing at the dragged Stub's own
+// gap and depth: with the whole hierarchy shown, no unseen item can sit
+// between its neighbors, so it's already there
 // (wiki board-drag-interaction §7.1). The resolved parent is never null for
 // a board section, whose root is always a real Card; `cardId` only stands in
 // to keep the type honest.
+//
+// The anchor stays an `{anchorId, side}` slot, since the item move carries
+// exactly that. Deliberately separate from
+// `projectTreeUtils.ts::siblingIdsFromAnchor`, which turns the same relation
+// into the projects API's `prevId`/`nextId`: two APIs, two shapes.
 export function descendantsReleasePlacement(
   projection: DescendantsProjection | null,
   cardId: string,

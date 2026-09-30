@@ -1,13 +1,14 @@
-// The Descendants-layer placement rule (docs/wiki/board-drag-interaction §7) —
-// shared by the board's Card sections and the project sidebar (Epic 3.5
-// Story 6, decision 8). Pure, table-generic: never imports Item or Project,
-// only `{ id, parentId, depth }` rows and a `childrenOf` callback, the same
-// posture as the server's positionResolver. Lives beside `hierarchy.ts` (the
-// one shared tree-math layer) but is its own module — `hierarchy.ts`'s
-// `getDepth`/`getDescendantIds`/`getSubtreeHeight` are what a caller's own
-// `isValid` predicate is built from, not something this file calls itself
-// (the resolved parent is a real item/project id from the caller's own
-// dataset; only the caller knows how to look its absolute depth up).
+// The Descendants-layer placement rule, gap and depth
+// (wiki board-drag-interaction §7.1) — shared by the board's Card sections
+// and the project sidebar. Pure, table-generic: never imports Item or
+// Project, only `{ id, parentId, depth }` rows and a `childrenOf` callback,
+// the same posture as the server's positionResolver. Lives beside
+// `hierarchy.ts` (the one shared tree-math layer) but is its own module —
+// `hierarchy.ts`'s `getDepth`/`getDescendantIds`/`getSubtreeHeight` are
+// what a caller's own `isValid` predicate is built from, not something this
+// file calls itself (the resolved parent is a real item/project id from the
+// caller's own dataset; only the caller knows how to look its absolute
+// depth up).
 
 // depth 0 = the root's direct children — the root itself is never a row.
 // `parentId` mirrors `rootId`'s own type: null at depth 0 when the caller's
@@ -62,11 +63,12 @@ export function flattenHierarchyOf<T extends { id: string }>(
   return nodes;
 }
 
-// Plain rows, minus `exclude` and everything beneath it — §7.2's "the
-// dragged item carries its whole subtree", so none of it is ever a Top or
-// Bottom candidate. The walk puts a parent before its children, so a row is
-// dropped exactly when it's excluded or its parent was. Whether `exclude` is
-// really the active item's own subtree is the caller's call.
+// Plain rows, minus `exclude` and everything beneath it — the dragged item
+// carries its whole subtree, so none of it is ever a Top or Bottom
+// candidate (wiki board-drag-interaction §7.2). The walk puts a parent
+// before its children, so a row is dropped exactly when it's excluded or
+// its parent was. Whether `exclude` is really the active item's own subtree
+// is the caller's call.
 export function toRows(nodes: readonly Row[], exclude: ReadonlySet<string> = new Set()): Row[] {
   const dropped = new Set<string>();
   const rows: Row[] = [];
@@ -90,7 +92,7 @@ export function flattenHierarchy(
   return toRows(nodes, exclude);
 }
 
-// Decision 2: the gap is `over` row + side (n + 1 gaps, never just "above
+// The gap is `over` row + side (n + 1 gaps, never just "above
 // `over`") — gap 0 sits above `rows[0]`, gap `rows.length` below the last
 // row. `overId` not found in `rows` (nothing recognized — dnd-kit found no
 // collision, or `over` is the active row itself) falls back to "below
@@ -102,9 +104,8 @@ export function gapIndexFor(rows: readonly Row[], overId: string, side: DropSide
 }
 
 // Where a row already sits, as a gap and a depth: what a drag of that row
-// starts from, so a release before any movement resolves to its own slot
-// (audit epic-3-5-story-6 #2: the board used to start a Stub's drag at the
-// section's last gap). `rows` is the section *with* the dragged subtree.
+// starts from, so a release before any movement resolves to its own slot.
+// `rows` is the section *with* the dragged subtree.
 // That subtree is one contiguous block starting at `id` (a DFS), so every
 // row above `id` survives the exclusion, and `id`'s index here is its gap
 // among the rows that remain. Null when `id` isn't a row.
@@ -113,12 +114,12 @@ export function ownSlotOf(rows: readonly Row[], id: string): { gap: number; dept
   return idx === -1 ? null : { gap: idx, depth: rows[idx].depth };
 }
 
-// §7.1's range = [Bottom's depth … Top's depth + 1]. Top is the row just
-// above the gap (what the item will sit directly under), Bottom the row
-// just below (what it will sit directly above) — either may be absent at
-// the hierarchy's own ends, which is exactly where the boundaries in §7.1
-// come from: no Top -> hi = 0 (the root's own depth); no Bottom -> lo = 0
-// (nothing shallower than the root either).
+// The gap's depth range = [Bottom's depth … Top's depth + 1]. Top is the
+// row just above the gap (what the item will sit directly under), Bottom
+// the row just below (what it will sit directly above) — either may be
+// absent at the hierarchy's own ends, which is exactly where the range's
+// boundaries come from: no Top -> hi = 0 (the root's own depth); no Bottom
+// -> lo = 0 (nothing shallower than the root either).
 export function depthRangeFor(rows: readonly Row[], gap: number): { lo: number; hi: number } {
   const top = rows[gap - 1];
   const bottom = rows[gap];
@@ -141,11 +142,11 @@ function ancestorAt(rows: readonly Row[], node: Row, depth: number): Row {
   return current;
 }
 
-// §7.1 verbatim. No Top -> the root's first child (the only state
-// `depthRangeFor` offers there). `depth === top.depth + 1` -> Top's first
-// child, looked up in the **full** tree via `childrenOf` (minus `exclude`),
-// not the next row in `rows`: a Top whose children aren't all in `rows` —
-// the sidebar's difference 6, a collapsed Top, found 2026-09-23 — would
+// The gap-and-depth rule, state by state. No Top -> the root's first child
+// (the only state `depthRangeFor` offers there). `depth === top.depth + 1`
+// -> Top's first child, looked up in the **full** tree via `childrenOf`
+// (minus `exclude`), not the next row in `rows`: a Top whose children
+// aren't all in `rows` — a collapsed Top in the sidebar — would
 // otherwise read as childless the moment its real first child isn't the
 // very next rendered row, sending no anchor and landing last instead of
 // first. Any shallower depth -> the ancestor `A` of Top at that depth (Top
@@ -180,14 +181,11 @@ export interface Projection {
   placement: ResolvedPlacement;
 }
 
-// §7.1's depth step, generalized (Story 6.1 Phase 2, L2-1): the sidebar's
-// own `computeProjection` and the board's inline copy in
-// `useBoardDnd.ts::updateDescendantsProjection` were the same formula
-// spelled twice, differing only in the one axis-specific number
-// (`indentPx` — the sidebar's row indent, the board's
-// `DESCENDANTS_INDENT_PX`) and the root (`null` for the sidebar's virtual
-// top, a real Card id on the board). Depth never resets between samples —
-// `seedDepth` is the drag's own seed (at pickup, or at a zoom-in
+// The depth step, one formula for both surfaces: they differ only in the
+// one axis-specific number (`indentPx` — the sidebar's row indent, the
+// board's `DESCENDANTS_INDENT_PX`) and the root (`null` for the sidebar's
+// virtual top, a real Card id on the board). Depth never resets between
+// samples — `seedDepth` is the drag's own seed (at pickup, or at a zoom-in
 // transition), `deltaX` the pointer's travel from wherever that seed was
 // taken, so a caller re-derives the same absolute depth every sample
 // regardless of how many times the gap itself has changed underneath it.

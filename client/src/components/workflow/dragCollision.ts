@@ -12,16 +12,13 @@ import type { DragClassification } from './dragClassification';
 import type { PopSession } from './popSession';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 
-// Decision 4 (2026-09-21) — every item row's dnd-kit registration, typed so
-// the invariant it introduced ("every item row registers `type: 'item'`,
-// never a type that differs between a Stub's row and a popped-out Card row
-// for the same id") holds by construction, not by convention alone: an
-// untyped literal lets `role: 'stubs'` compile without complaint (audit
-// epic-3-5-story-5 #11). `itemRowData`/`columnData` are the one write path;
-// `isItemData`/`isColumnData`/`isCardRow`/`isStubRow` the one read path
-// (both `useSortable` calls, the collision filter below, the hook's
-// handlers and the test fixtures all go through these instead of re-typing
-// the literal).
+// Every item row's dnd-kit registration, typed so its invariant — every
+// item row registers `type: 'item'`, never a type that differs between a
+// Stub's row and a popped-out Card row for the same id — holds by
+// construction, not by convention alone: an untyped literal lets
+// `role: 'stubs'` compile without complaint. `itemRowData`/`columnData` are
+// the one write path; `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`
+// the one read path, so no caller re-types the literal.
 export type ItemRowRole = 'card' | 'stub';
 export type ItemRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null };
 export type DragRowData = ItemRowData | { type: 'column' };
@@ -52,47 +49,40 @@ export function isStubRow(data: Record<string, unknown> | undefined): data is It
   return isItemData(data) && data.role === 'stub';
 }
 
-// Pure drop-resolution for the board's drag-and-drop, extracted from
-// useBoardDnd so it can be unit tested — real drag gestures are deliberately
-// not simulated in the E2E suite. Structural subset types keep the
+// Pure drop-resolution for the board's drag-and-drop, kept out of
+// useBoardDnd so it can be unit tested. Structural subset types keep the
 // functions testable without full Column/Item fixtures.
 
-// What the collision closure needs to know about the live pop session
-// (Epic 3.5 Story 3) — a read-only view the hook keeps in a ref.
+// What the collision closure needs to know about the live pop session — a
+// read-only view the hook keeps in a ref.
 export interface CollisionSession {
-  /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover — re-plan 2026-09-16, rule 1: a mere hover never drives `over`. */
+  /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover: a mere hover never drives `over`. */
   hoverContainerId: string | null;
   /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), or while genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
   /**
-   * Story 6 Phase B: locked at a Descendants context, that region's own
-   * measured rect — candidates are every Stub row (any depth) whose center
-   * falls inside it, the same rect-containment test the Card/Board-layer
-   * branch below already uses for its own in-context candidates. Replaces
-   * Story 5's interim `siblingScopeParentId` (an exact real-`parentId`
-   * match): the section now renders as one flat list (decision 1), so
-   * scoping by "is this row visually inside the section" is both simpler
-   * and matches §7.1's own "any row of the section, any depth" — the
-   * within-action itself (`placementFor`, `toRequest`) is what still keeps
-   * a release scoped to true siblings only, unchanged in this phase. Null
-   * at every other context.
+   * Locked at a Descendants context, that region's own measured rect —
+   * candidates are every Stub row (any depth) whose center falls inside it,
+   * the same rect-containment test the column branch below uses for its own
+   * in-context candidates. The section renders as one flat list, so "is this
+   * row inside the section" is the whole scope: any row of the section, at
+   * any depth, can be the ghost's neighbor. Null at every other context.
    */
   descendantsSectionRect: Rect | null;
 }
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
-// so it has to agree with the pop machine (wiki board-drag-interaction
-// §1–§3, §5–§6), which is why this is a factory over the live session
-// rather than a constant:
+// so it has to agree with the pop machine — a mere hover never drives it
+// (wiki board-drag-interaction §1.1, rule 1) — which is why this is a
+// factory over the live session rather than a constant:
 //
 //   - Card or Stub drag, locked (a column/sub-row, a Card, or a Descendants
 //     section): closestCorners over the context's container and the cards
-//     (or, at a Descendants context, the sibling rows) whose rect lies
-//     inside it — the in-context reorder, unchanged in feel from Epic 3.2.
-//     A Card context is never actually resolved this way (its within-
-//     action is a constant — popSession.ts::placementFor's Card branch
-//     never reads `over`), but restricting candidates here is still what
-//     keeps dnd-kit from shifting a sibling against a hover rule 1 ignores.
+//     (or, at a Descendants context, the section's rows) whose rect lies
+//     inside it — the in-context reorder. A Card context's within-action is
+//     the auto-drop, which reads no `over`, but restricting candidates here
+//     still keeps dnd-kit from shifting a sibling against a hover the locked
+//     layer ignores.
 //   - Card or Stub drag, Board layer (popped out), hovering a region:
 //     `over` is that region's container and never a card in it, so the
 //     target column's sortable doesn't shift against a hover the band
@@ -100,16 +90,15 @@ export interface CollisionSession {
 //   - Card or Stub drag with no context and no hover (picked up in
 //     Unsorted, nothing hovered yet): nothing.
 //
-// Decision 4 (2026-09-21): every item row registers `data: {type: 'item',
-// role: 'card' | 'stub', parentId?}`, never a type that differs between a
-// Stub's own row and a popped-out Card row for the *same* id — the one
-// hazard this collision closure exists to sidestep is `active.data.current`
-// lagging a mid-drag remount (a Stub's row unmounting from its Descendants
-// section, a Card row mounting in its place), so nothing below reads
+// Every item row registers `data: {type: 'item', role: 'card' | 'stub',
+// parentId?}`, never a type that differs between a Stub's own row and a
+// popped-out Card row for the *same* id — the one hazard this collision
+// closure exists to sidestep is `active.data.current` lagging a mid-drag
+// remount (a Stub's row unmounting from its Descendants section, a Card row
+// mounting in its place), so nothing below reads
 // `activeData.role`/`activeData.parentId` for a policy decision; every
 // "which kind of drag, which scope" question is answered from the pop
-// session's own state (`liveSession`, computed by `useBoardDnd.ts` from
-// `regionsRef`/`sessionRef`), never dnd-kit's. Only `activeData.type`
+// session's own state (`liveSession`), never dnd-kit's. Only `activeData.type`
 // (`'item'` vs `'column'`, which never changes for either row) gates
 // whether the machine applies at all. `data?.role === 'stub'` on a
 // *droppable* row is safe to read here — that row isn't the one being
@@ -127,11 +116,15 @@ export function resolveBoardCollisions(
 
   if (session?.descendantsSectionRect) {
     const sectionRect = session.descendantsSectionRect;
-    // Option A, extended to Descendants (Story 6 Phase D hands-on,
-    // 2026-09-24): the dragged Stub's own row is a candidate too, as at a
-    // column. Excluded, `over` was never its own slot, so the gap always
-    // jumped to a neighbor's even when holding still, and a tab right made
-    // the item the *next* row's child instead of the previous one's.
+    // The dragged Stub's own row is a candidate too, as at a column.
+    // Excluded, `over` would never be its own slot, so the gap would jump to
+    // a neighbor's even when holding still, and a tab right would make the
+    // item the *next* row's child instead of the previous one's.
+    //
+    // `sectionRect` is painted space (`dragRegions.ts::layoutRect`), while
+    // dnd-kit measures `droppableRects` without transforms. Mixing them is
+    // safe: the two differ only while the Card carries a sortable transform,
+    // which at the default clocks can't overlap a Descendants lock.
     const droppableContainers = args.droppableContainers.filter(container => {
       if (!isStubRow(container.data.current)) return false;
       const rect = args.droppableRects.get(container.id);
@@ -143,12 +136,11 @@ export function resolveBoardCollisions(
   const droppableContainers = args.droppableContainers.filter(container => {
     const data = container.data.current;
     if (isStubRow(data)) return false; // never a valid target for a Card-layer or Board drop
-    // Option A (2026-09-24): in a locked column/sub-row the dragged card's
-    // own row *is* a candidate, as in stock dnd-kit sortable: over its own
-    // slot, `over` is itself and nothing shuffles (the lean still names a
-    // neighbor, `dropAnchorFor`). Excluded, the ghost always jumped to a
-    // neighbor's slot, even at pickup. A column drag still never collides
-    // with itself.
+    // In a locked column/sub-row the dragged card's own row *is* a
+    // candidate, as in stock dnd-kit sortable: over its own slot, `over` is
+    // itself and nothing shuffles (the lean still names a neighbor,
+    // `dropAnchorFor`). Excluded, the ghost would jump to a neighbor's slot,
+    // even at pickup. A column drag still never collides with itself.
     if (!session) return container.id !== args.active.id; // column drag, or no machine in play
     if (!session.context) return false;
     if (container.id === session.context.containerId) return true;
@@ -198,19 +190,16 @@ export function resolveDropSide(
   return activeCenterY <= overCenterY + SIDE_TIE_EPSILON_PX ? 'before' : 'after';
 }
 
-// Option A + lean (2026-09-24), generalized to Stub rows in Story 6 Phase D:
-// the card or Stub a drop anchors to, and which side of it — the one answer
-// the live blue line (`dragChrome.tsx`), the release
-// (`useBoardDnd.ts::handleDragEnd`), and the Descendants layer's own
-// gap-tracking (`useBoardDnd.ts`'s projection) all read, so they can't
-// disagree.
+// The card or Stub a drop anchors to, and which side of it — the one answer
+// the live blue line (`dragChrome.tsx`), the release, and the Descendants
+// layer's own gap all read, through `namedAnchorFor`, so they can't
+// disagree (wiki board-drag-interaction §2 and §7.1).
 //
 // Over an item row — a Card in a column/sub-row's own list, or a Stub in a
-// Card's flat Descendants section (§7.1's "the gap is wherever the rows
-// slide aside to make room, never a which-half-of-a-row reading") —
-// dnd-kit's sortable shuffle decides the ghost's slot, stock dnd-kit
-// semantics (the drop lands where the gap is), and the dragged copy only
-// picks which neighbor names it: above the ghost's middle, "after" the row
+// Card's flat Descendants section — dnd-kit's sortable shuffle decides the
+// ghost's slot, stock dnd-kit semantics (the drop lands where the gap is),
+// and the dragged copy only picks which neighbor names it: above the
+// ghost's middle, "after" the row
 // above it; below, "before" the row below it. Both name the same slot, so
 // the ghost, the line and the save always agree; the lean only chooses the
 // neighbor. At the top or bottom of the list there's one neighbor; alone in
@@ -226,26 +215,22 @@ export function resolveDropSide(
 // slot when `over` is itself, top-aligned to `over` when it moved up,
 // bottom-aligned when it moved down. The order is read from `over`'s own
 // sortable data — the same `items` dnd-kit draws the shuffle from — never
-// the active row's (decision 4: it can lag a mid-drag remount).
+// the active row's (it can lag a mid-drag remount).
 //
 // A card/Stub row not in `over`'s own sortable list, or one with no
 // sortable data at all, is still `over` itself, on `resolveDropSide`'s
 // which-half-of-`over` side — `over` naming anything else (no row) is its
 // own case below.
 //
-// `travels` (Story 6 Phase D hands-on, 2026-09-24): rows that move with
-// the dragged item, never a neighbor to name — see `travelingRowsFor`.
-// The search steps past them to the next row that stays.
+// `travels`: rows that move with the dragged item, never a neighbor to
+// name — see `travelingRowsFor`. The search steps past them to the next
+// row that stays.
 //
 // `over` naming anything but a card/Stub row — the bare column/sub-row
-// container itself, at rest or between shuffles — is no anchor at all
-// (Story 6.1 Phase 3, L1-3): there's no row there to draw the blue line on
-// or anchor a release beside. Every caller already treats `null` this way
-// (`resolvePlacementOver`'s own `overId === list.containerId` case already
-// wins before an anchor would even be read; `useLiveDropSide`'s
-// `anchor?.anchorId === itemId` can never match a container's id against a
-// real item's). A real row with no sortable data yet is still named via
-// `resolveDropSide`'s which-half fallback, unchanged.
+// container itself, at rest or between shuffles — is no anchor at all:
+// there's no row there to draw the blue line on or anchor a release beside,
+// so a caller reads `null` as "no row named". A real row with no sortable
+// data yet is still named via `resolveDropSide`'s which-half fallback.
 export function dropAnchorFor(
   active: Pick<Active, 'id' | 'rect'>,
   over: Over,
@@ -283,13 +268,18 @@ export function dropAnchorFor(
 
 // The rows `dropAnchorFor` steps past, or none. Only at a Descendants
 // layer: a dragged Stub's own descendants stay rendered in the flat section
-// below it, but they travel with it (§7.2), so they're never Top or Bottom
-// (they're out of the projection's rows — `classification.subtreeIds`,
-// Story 6.1 Phase 2's one derivation of the dragged subtree). Named, the
-// gap jumped to the section's end. Never at a column: there a Free
-// descendant of the dragged Card is a real anchor. One predicate for the
-// blue line (`KanbanCard.tsx`) and the gap (`useBoardDnd.ts::handleDragMove`),
-// so they can't disagree.
+// below it, but they travel with it, so they're never Top or Bottom
+// (wiki board-drag-interaction §7.2) — they're out of the projection's rows
+// too (`classification.subtreeIds`). Named, the gap would jump to the
+// section's end. Never at a column: there a Free descendant of the dragged
+// Card is a real anchor. One predicate for the blue line and the gap
+// (through `namedAnchorFor`), so they can't disagree.
+//
+// Deliberately separate from `projectTreeUtils.ts::resolveGap`: the sidebar
+// draws no ghost, so it maps an `over` inside the dragged block to the gap
+// the block collapses to; the board names the ghost's neighbor in dnd-kit's
+// shuffled order, stepping past traveling rows. Same outcome — a traveling
+// row is never Top or Bottom — from different inputs.
 export function travelingRowsFor(session: AnchorSession | null): ((id: string) => boolean) | undefined {
   if (!session || !descendantsCardIdOf(session.pop.contextKey)) return undefined;
   const { subtreeIds } = session.classification;
@@ -302,10 +292,10 @@ export type AnchorSession = {
   classification: Pick<DragClassification, 'subtreeIds'>;
 };
 
-// The row a drop names right now, asked the one way every reader asks it:
+// The row a drop names right now, in the one call shape its readers share —
 // the blue line (`dragChrome.tsx`), the pop machine's zoom-in candidate and
-// the Descendants gap (`useBoardDnd.ts::handleDragMove`), and the release.
-// So all of them step past the same traveling rows. No `over`, no anchor.
+// the Descendants gap (`useBoardDnd.ts::handleDragMove`), and the release —
+// so they all step past the same traveling rows. No `over`, no anchor.
 export function namedAnchorFor(
   active: Pick<Active, 'id' | 'rect'>,
   over: Over | null,

@@ -184,7 +184,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 
 - **board-drag-interaction §6 → §6.1**, which Card is zoomed into (the dwell, the cue, the reset rule, invalid targets):
   - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
-  - **1b-ii:** `dragCollision.ts` line 85's range, the same way.
+  - **1b-ii:** `dragCollision.ts` line 85's range, the same way. Done differently: the comment guards one rule, so the range became that rule's pointer, §1.1 rule 1.
   - **1c:** `dragChrome.tsx` line 126.
   - **4a:** the `popSession.test.ts` title at line 198.
   - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it.
@@ -287,6 +287,10 @@ board-drag-interaction, from A2's list. Rows are added as each passage's home ba
 | §10 | Per-item response sequencing: `ItemWriteTracker.complete` reports `needsResync`, and `sendItemMove` reloads the board when it's set | **Placed:** `dragRequest.ts::sendItemMove`'s comment, with an index pointer to §10. The tracker's own half is 1c's. (1b-i) |
 | §10 | The preview placement's shape: `{ workphaseId?, slot }`, with the slot `first`, `last`, `existing` or `{ anchorId, side }` | **Covered:** `itemListOps.ts::Placement` and `PlacementSlot`. (1b-i) |
 | §10 | The done-list comparator is `byCompletedAtThenCreatedAt` | **Placed:** its comment, with an index pointer to §10. (1b-i) |
+| Page header | Every item drag, Card or Stub, shares one dnd-kit registration (`data: {type: 'item', role}`) | **Placed:** `dragCollision.ts`'s row-data comment, where the typed registration lives. `workflow/CLAUDE.md`'s mental model says the same. (1b-ii) |
+| §2 | One function, `dragCollision.ts::dropAnchorFor`, feeds both the side highlight and the release | **Placed:** `dropAnchorFor`'s comment, with an index pointer to §2 and §7.1. `workflow/CLAUDE.md` names it too. (1b-ii) |
+| §2 | In a Descendants section, the dragged Stub's traveling rows come from `travelingRowsFor` | **Placed:** `travelingRowsFor`'s comment, with a guard pointer to §7.2. (1b-ii) |
+| §7 | The board's Descendants section and the project sidebar share one placement library (`client/src/lib/hierarchyPlacement.ts`) | **Covered:** `hierarchyPlacement.ts`'s header, with an index pointer to §7.1, and root `CLAUDE.md`'s "One position math layer". (1b-ii) |
 
 item-positioning, from A2's list. The rows whose home is on the client land here; the server's land in batch 3.
 
@@ -298,7 +302,7 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 
 ### Progress toward D4 and D6
 
-**D6 rulings written** (7 of 16):
+**D6 rulings written** (11 of 16):
 - #30, `popInDelayFor` is a genuine per-kind table: at `popSession.ts::popInDelayFor`. The reason comes from the Story 5 audit's #23: the other kind tests are separate properties that only happen to split the kinds alike, and one table would couple them. (1a-i)
 - #30, `clampToCurrentContext`'s `!== 'column'` vs `containmentRect`'s `=== 'column'`: at both sites. The reason comes from the Story 4.1 plan's F6: one decides how far the carried copy follows, the other whether the context still holds, and a merged column answers them against different boxes (wiki board-drag-interaction §2). (1a-i)
 - #30, the board's `(d+1)·12` indent vs the sidebar's `12 + d·14`: at `cardMetrics.ts::descendantsIndentPx`. The reason: there 12 is a base inset and the step is 14, here 12 is the step itself. The sidebar's half was already written, at `projectTreeUtils.ts::ROW_BASE_INSET_PX`. (1a-ii)
@@ -306,7 +310,11 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 - #24, a bare-container release is a no-op for a Card: at `placement.ts::resolvePlacementOver`, with a guard pointer to wiki board-drag-interaction §2. dnd-kit doesn't shuffle when `over` is the container, so the ghost never left its slot. (1b-i)
 - #30, `placementFor`'s Card branch skips `priorPlacement`: at the Card branch. The reason, recovered from the code (the Story 6 plan doesn't state it): a set-down there must write nothing, `origin` is what `isIdentity` compares against, and `usePendingGhostGuard.ts::restorePriorPlacement` puts the pending marker back after a release that writes nothing. (1b-i)
 - #30, `isWithinDepthCap` vs `assertWithinDepthCap`: at `dragClassification.ts::isWithinDepthCap`. Its pointer was already in the right format; it now names `itemTree.ts::assertWithinDepthCap` as a checked reference, and says why they're separate: the same formula on each side of the process boundary. (1b-i)
-- #30, `siblingIdsFromAnchor` vs the board release's anchor → slot step: the board side is `descendantsProjection.ts`, so it lands in 1b-ii.
+- #30, `siblingIdsFromAnchor` vs the board release's anchor → slot step: at `descendantsProjection.ts::descendantsReleasePlacement`. The item move carries `{anchorId, side}`, so the board keeps the relation as a slot; the projects API takes `prevId`/`nextId`. Two APIs, two shapes. (1b-ii)
+- #24, the mixed-space comparison: at `dragCollision.ts::resolveBoardCollisions`'s Descendants branch. The section rect is painted space and dnd-kit measures droppables without transforms (its default `getTransformAgnosticClientRect`, with no override in `client/src`); they differ only while the Card carries a sortable transform, which can't overlap a Descendants lock at the default clocks. (1b-ii)
+- #30, `travelingRowsFor` vs `resolveGap`: at `travelingRowsFor`. The reason, recovered from both functions (the audit said only "semantic"): the sidebar draws no ghost, so it maps an `over` inside the dragged block to the gap the block collapses to, while the board names the ghost's neighbor in dnd-kit's shuffled order. Same outcome from different inputs. (1b-ii)
+- #30, the board's projection seed vs the sidebar's: at `descendantsProjection.ts::seedFor`. The reason comes from the Story 6 plan's decision 3, checked against today's code: a sidebar drag always starts at its own row, but a board drag can also enter a section from the Card layer, which seeds where that layer showed the ghost. The depth step itself is shared. (1b-ii)
+- **Left for 1c:** #30's blue line vs the sidebar's gap indicator (`dragChrome.tsx`), the two `SortableContext`s (`KanbanCard.tsx`), `AttachGhostRow` vs `AttachedChildRow` (`StubRows.tsx`), and `regionItems` (`useBoardDnd.ts`); #24's Descendants release with no `over` is "no comment".
 
 **Board-drag-interaction pointers so far.** 1c turns these into D4's table.
 - **Index:**
@@ -331,6 +339,11 @@ item-positioning, from A2's list. The rows whose home is on the client land here
   - `dragClassification.ts`'s header: §4.
   - `itemListOps.ts`'s header: §10, for the ordinal preview; `byCompletedAtThenCreatedAt`: §10, for "a done list orders a previewed item as the newest".
   - `itemWriteReconciliation.ts`'s header: §10, for the inversion tripwire.
+  - `dragCollision.ts::dropAnchorFor`: §2 and §7.1, for "the ghost's slot follows the shuffle, and the named neighbor saves it".
+  - `descendantsProjection.ts::advanceProjection`: §7, for "zooming in doesn't move the ghost"; and §7.2, for "the depth cap is checked per tab state".
+  - `descendantsProjection.ts::descendantsReleasePlacement`: §7.2, for "an over-cap state commits nothing"; and §7.1, for "a set-down in its own gap and depth writes nothing".
+  - `DragSessionContext.ts::useIsPending`: §10, for the pending marker.
+  - `hierarchyPlacement.ts`'s header: §7.1, the gap and depth rule; `toRows`: §7.2, for "the dragged subtree is never a candidate".
 - **Guard:**
   - `popSession.ts::PopHover.side`: §6.1's reset rule.
   - `popSession.ts::ParentKeyOf`: §1.1 rule 2.
@@ -338,6 +351,10 @@ item-positioning, from A2's list. The rows whose home is on the client land here
   - `dragTuning.ts`: §5. The reservation isn't a tuning value.
   - `dragRegions.ts::childRegionAt`: §1.1 rule 2.
   - `placement.ts::resolvePlacementOver`: §2, for "the drop lands where the ghost is".
+  - `dragCollision.ts::resolveBoardCollisions`: §1.1 rule 1.
+  - `dragCollision.ts::travelingRowsFor`: §7.2.
+  - `descendantsProjection.ts`'s header: §7.1, for the board's use of the shared rule.
+  - `DragSessionContext.ts::DescendantsProjection.atOwnSlot`: §7.1.
 
 **Pointers to the other three pages so far.** Batch 3 folds these into its D4 tables.
 - **item-positioning, index:** `dragRequest.ts::anchorFor`: §7.1. `itemListOps.ts`'s header: §2's client-side role. `itemListOps.ts::byPositionThenCreatedAt`: §5a's tie-break. `itemListOps.ts::byCompletedAtThenCreatedAt`: §6. `itemListOps.ts::getMergedColumnItemsFrom`: §4. `itemWriteReconciliation.ts`'s header: §5a.
