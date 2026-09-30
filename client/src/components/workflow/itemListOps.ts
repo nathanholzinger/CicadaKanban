@@ -1,10 +1,10 @@
 // Pure operations over the board's Item[] state — no React, so the hook only
 // closes over state and these stay unit-testable:
-//   - the *ordinal placement* layer (docs/wiki/board-drag-interaction §10,
-//     item-positioning §2 "Client-side role"): a dragged or just-dropped item
-//     is shown at a slot in a list without any position value being invented
-//     for it. `position` is never touched client-side; the number is the
-//     server's to produce;
+//   - the *ordinal placement* layer (wiki board-drag-interaction §10,
+//     wiki item-positioning §2's "Client-side role"): a dragged or
+//     just-dropped item is shown at a slot in a list without any position
+//     value being invented for it. `position` is never touched client-side;
+//     the number is the server's to produce;
 //   - the list *selectors*: which items a column, sub-row or Stub list
 //     renders, in what order;
 //   - a Card's descendants section as flat hierarchy rows (`hierarchyRows`,
@@ -25,7 +25,7 @@ export type PlacementSlot =
   | 'last'
   // Adjacent to a specific item in the rendered list — the same relation the
   // move request carries, so the picture before and after the response is
-  // the same one (item-positioning §2, TC-2.28).
+  // the same one.
   | AnchorRelation;
 
 export interface Placement {
@@ -36,12 +36,11 @@ export interface Placement {
    */
   workphaseId?: string;
   /**
-   * Story 4: previewed as a Stub of this Card, overriding the
-   * item's own attachment for rendering purposes only — exactly as
-   * `workphaseId` overrides column membership above, and never touching
-   * real data. Explicit `null` previews detaching to Free (Story 5);
-   * omitted means "no opinion, use the item's own data" (`isStub`/its real
-   * `parentId`).
+   * Previewed as a Stub of this Card, overriding the item's own attachment
+   * for rendering purposes only — exactly as `workphaseId` overrides column
+   * membership above, and never touching real data. Explicit `null`
+   * previews detaching to Free; omitted means "no opinion, use the item's
+   * own data" (`isStub`/its real `parentId`).
    */
   parentId?: string | null;
   slot: PlacementSlot;
@@ -50,9 +49,10 @@ export interface Placement {
 // Whether a workphase-only claim (no anchor — a bare "put me in this list")
 // keeps the item where the position sort already has it, or takes the
 // append fallback instead: the server does the same thing for the same
-// reason (item-positioning §2 addendum, §7.5) — a position to keep sorts as
-// 'existing'; none (a reopened done item, a first assignment) takes the
-// append slot instead of the position-sort's null-coerced top ordering.
+// reason (wiki item-positioning §2's workphase-only rule) — a position to
+// keep sorts as 'existing'; none (a reopened done item, a first assignment)
+// takes the append slot instead of the position-sort's null-coerced top
+// ordering.
 export function workphaseOnlySlot(position: number | null): 'existing' | 'last' {
   return position === null ? 'last' : 'existing';
 }
@@ -60,10 +60,8 @@ export function workphaseOnlySlot(position: number | null): 'existing' | 'last' 
 // Whether a Placement carries an opinion about parentage at all —
 // `'parentId' in placement`, not truthiness: an explicit null previews
 // detaching to Free, distinct from "no opinion, use the item's own data"
-// (the key omitted entirely). Every Story 5 origin/placement comparison
-// re-typed this same presence test independently (audit epic-3-5-story-5
-// #7) — this is the one spelling, as a type guard so a caller can go on to
-// read `.parentId` without re-testing.
+// (the key omitted entirely). The one spelling of that presence test, as a
+// type guard so a caller can go on to read `.parentId` without re-testing.
 export function hasParentOpinion(p: Placement): p is Placement & { parentId: string | null } {
   return 'parentId' in p;
 }
@@ -89,14 +87,14 @@ export function renderedWorkphaseId(item: Item, placements: Placements): string 
   return placements.get(item.id)?.workphaseId ?? item.workphaseId;
 }
 
-// The parent an item is *rendered* under (Story 4 planning) — its
-// placement's, if the placement carries an opinion, else its own. A
-// placement's `parentId` can be an explicit `null` (would become Free), so
-// this checks the key's presence rather than truthiness — the same
-// distinction `renderedWorkphaseId` doesn't need, since a workphase
-// placement is never intentionally cleared to null. Exported, with
-// `renderedIsStub` below, for a drag's own start (`useBoardDnd.ts`, audit
-// epic-3-5-story-6 #3): a drag starts from the item as it's drawn.
+// The parent an item is *rendered* under — its placement's, if the
+// placement carries an opinion, else its own. A placement's `parentId` can
+// be an explicit `null` (would become Free), so this checks the key's
+// presence rather than truthiness — the same distinction
+// `renderedWorkphaseId` doesn't need, since a workphase placement is never
+// intentionally cleared to null. Exported, with `renderedIsStub` below, for
+// a drag's own start (`useBoardDnd.ts`): a drag starts from the item as
+// it's drawn.
 export function renderedParentId(item: Item, placements: Placements): string | null {
   const placement = placements.get(item.id);
   return placement && hasParentOpinion(placement) ? (placement.parentId ?? null) : item.parentId;
@@ -105,7 +103,7 @@ export function renderedParentId(item: Item, placements: Placements): string | n
 // Whether the item renders as a Stub — nested inside a parent Card — under
 // its current placement. A placement carrying a `parentId` opinion always
 // decides this for preview purposes (a non-null value previews attaching;
-// Story 5's detach previews null, i.e. Free); with no opinion, the item's
+// a detach previews null, i.e. Free); with no opinion, the item's
 // own data does, via isStub.
 export function renderedIsStub(item: Item, placements: Placements): boolean {
   const placement = placements.get(item.id);
@@ -116,7 +114,7 @@ export function renderedIsStub(item: Item, placements: Placements): boolean {
 // Layers placements over an already-sorted list: every item with a
 // non-'existing' slot is pulled out and re-inserted at its slot, in the
 // order the placements were recorded — so an item anchored against another
-// pending item (TC-2.29) is inserted after its anchor has been. An anchor
+// pending item is inserted after its anchor has been. An anchor
 // that isn't in this list (filtered out of the view) falls back to where the
 // sort already had the item.
 export function applyPlacements(sorted: readonly Item[], placements: Placements): Item[] {
@@ -152,16 +150,16 @@ function slotIndex(list: Item[], item: Item, slot: PlacementSlot, sortedIndex: M
 // ── Selectors ──────────────────────────────────────────────────────────────
 
 // Deterministic tie-break for an exact position match — prevents order from
-// depending on unspecified DB row order (Epic 3.2 Part 5, TC-5a.5).
+// depending on unspecified DB row order (wiki item-positioning §5a).
 export function byPositionThenCreatedAt(a: Item, b: Item): number {
   return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
 }
 
-// A done list's order (Epic 3.2 Part 6). An item with no completedAt in a
-// done list is one being previewed into it — the server stamps `now` on the
-// write (itemHierarchy.ts, active/done split) — so it sorts as the newest
-// completion: the slot the response will put it in (board-drag-interaction
-// §10). Same createdAt tie-break as byPositionThenCreatedAt.
+// A done list's order (wiki item-positioning §6). An item with no
+// completedAt in a done list is one being previewed into it — the server
+// stamps `now` on the write — so it sorts as the newest completion: the
+// slot the response will put it in (wiki board-drag-interaction §10). Same
+// createdAt tie-break as byPositionThenCreatedAt.
 function byCompletedAtThenCreatedAt(a: Item, b: Item): number {
   const at = (item: Item) => item.completedAt ?? Number.MAX_SAFE_INTEGER;
   return at(a) - at(b) || a.createdAt - b.createdAt;
@@ -203,10 +201,10 @@ export function getWorkphaseItemsFrom(
   return selectBoardItems(items, id => id === workphaseId, filterProjectId, isTerminal, placements);
 }
 
-// Epic 3.2 Part 4: a merged column's item list is a union-sort across its
-// covered workphases, not a concatenation of independently-sorted
-// per-workphase lists — this is what makes genuine cross-workphase
-// interleaving possible. `isTerminal` is uniform across the covered set (a
+// A merged column's item list is a union-sort across its covered
+// workphases, not a concatenation of independently-sorted per-workphase
+// lists — this is what makes genuine cross-workphase interleaving possible
+// (wiki item-positioning §4). `isTerminal` is uniform across the covered set (a
 // column can't span both terminal and non-terminal workphases).
 export function getMergedColumnItemsFrom(
   items: readonly Item[],
@@ -219,7 +217,7 @@ export function getMergedColumnItemsFrom(
   return selectBoardItems(items, id => id !== null && coveredSet.has(id), filterProjectId, isTerminal, placements);
 }
 
-// Story 4: a Card whose own placement previews it attaching
+// A Card whose own placement previews it attaching
 // *into* this parent is pulled into the filtered set by that placement
 // (`renderedParentId`/`renderedIsStub`, the same pattern `selectBoardItems`
 // already uses for a cross-column workphase preview), then positioned by
@@ -273,9 +271,9 @@ function sectionChildrenOf(
   return parentId => (parentId === null ? [] : childrenOf(parentId));
 }
 
-// The server deletes an item's whole subtree, not just the one id (audit
-// Finding #15) — dropping only `id` from client state left its descendants
-// stale, rendering as live top-level cards until a reload.
+// The server deletes an item's whole subtree, not just the one id — so
+// client state drops the descendants too; dropping only `id` would leave
+// them stale, rendering as live top-level cards until a reload.
 export function removeItemAndDescendants(items: readonly Item[], id: string): Item[] {
   const descendants = getDescendantIds(id, items);
   return items.filter(i => i.id !== id && !descendants.has(i.id));
@@ -283,7 +281,7 @@ export function removeItemAndDescendants(items: readonly Item[], id: string): It
 
 // Counts attached children only — the ones the card's expand toggle reveals
 // nested underneath it. Detached children render as ordinary top-level
-// cards and aren't counted here. Placement-aware (Story 4 planning) so a
+// cards and aren't counted here. Placement-aware so a
 // Card previewing an attach shows a non-zero count — and expands to reveal
 // the ghost — the moment something targets it, not only once the write
 // lands.

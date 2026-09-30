@@ -1,27 +1,24 @@
 // classifyDragTargets: classifies every item on the board against the carried item,
-// once per drag start — valid / cycle-forming / depth-capped.
-
-import type { Item } from '../../types';
-import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
-import { isStub } from '../../lib/isStub';
-
-// Epic 3.5 Story 2 — what every item on the board *is* to the item being
-// carried (docs/wiki/board-drag-interaction §4). Pure, like dragCollision.ts/
+// once per drag start — valid / cycle-forming / depth-capped
+// (wiki board-drag-interaction §4). Pure, like dragCollision.ts/
 // dragRequest.ts: no dnd-kit runtime, so it's unit-testable against plain
 // Item[] fixtures.
 //
 // Computed once at drag start and never again for the gesture — the item
 // being carried doesn't change mid-drag, so neither does what any target is
-// to it (DRAG-2.4). Stories 3/4/6 consult this map to decide what's
-// poppable and what a drop means; in this story it only drives the
-// `data-drop-state` attribute and the provisional overlays.
+// to it. The region gate reads it to decide what's poppable
+// (`isValidParent`), and it drives the `data-drop-state` attribute and the
+// overlays.
 //
-// A Stub is classified on exactly the same terms as a Card, below (DRAG-2.8;
-// DRAG-2.7 is the separate "Stubs as targets" rule). Full classification is
-// what makes the zoom-in reparent (DRAG-5.4) and Board-layer detach
-// (DRAG-5.1, DRAG-5.2, DRAG-5.3) need no classification code of their own:
-// every Card and Stub is already valid/cycle-forming/depth-capped for a Stub
-// drag exactly as it would be for a Free Card's.
+// A Stub is classified on exactly the same terms as a Card, below. Full
+// classification is what makes the zoom-in reparent and the Board-layer
+// detach need no classification code of their own: every Card and Stub is
+// already valid/cycle-forming/depth-capped for a Stub drag exactly as it
+// would be for a Free Card's.
+
+import type { Item } from '../../types';
+import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
+import { isStub } from '../../lib/isStub';
 
 export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped';
 
@@ -31,34 +28,32 @@ export interface DragClassification {
   states: ReadonlyMap<string, DropTargetState>;
   /**
    * Cycle-forming descendants that render as their own Cards — "these are
-   * yours," the green relationship overlay (wiki §4). Attached descendants
+   * yours," the green relationship overlay. Attached descendants
    * are cycle-forming too but render inside the carried Card, so they need
    * no separate cue.
    */
   freeDescendantIds: ReadonlySet<string>;
   /**
-   * Story 6 Phase D, §7.2: the dragged item and its whole subtree — never
-   * a Top/Bottom candidate at any Card's Descendants layer. One
-   * derivation (Story 6.1 Phase 2, L1-7a): `useBoardDnd.ts`'s own
-   * `excludeIdsRef` and `dragCollision.ts::travelingRowsFor` used to each
-   * re-derive this same set by filtering `states` for `'cycle-forming'` —
-   * two independent spellings of "activeId ∪ its descendants," which this
-   * function already computes internally (`descendantIds`) and now
-   * exposes directly instead of discarding.
+   * The dragged item and its whole subtree — never a Top/Bottom candidate
+   * at any Card's Descendants layer. One derivation, also read by the
+   * projection's exclusion and `dragCollision.ts::travelingRowsFor`, so
+   * neither re-derives "activeId ∪ its descendants" by filtering `states`
+   * for `'cycle-forming'`.
    */
   subtreeIds: ReadonlySet<string>;
 }
 
 // The whole depth rule (wiki item-attachment §8): a target at depth D is a
 // legal parent iff D + 1 + draggedSubtreeHeight <= cap. Root items are at
-// depth 1; a leaf has height 0. Same formula as the server's
-// assertWithinDepthCap, fed by the client's own in-memory traversal.
+// depth 1; a leaf has height 0. Deliberately separate from
+// `itemTree.ts::assertWithinDepthCap`: the same formula on each side of the
+// process boundary, fed here by the client's own in-memory traversal.
 export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap: number): boolean {
   return targetDepth + 1 + subtreeHeight <= cap;
 }
 
 // Whether `id` is a legal parent for the carried item, off the drag-start
-// snapshot (DRAG-2.4) — the one answer both the region gate (does a Card, or
+// snapshot — the one answer both the region gate (does a Card, or
 // its Descendants section, resolve as a region at all) and the Descendants
 // layer's over-cap cue read, so the two can't disagree about the same
 // parent. Cycle-forming ids are never valid either, though the projection
@@ -85,15 +80,15 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
 
   for (const item of items) {
     if (item.id === activeId || descendantIds.has(item.id)) {
-      // Descent is through the hierarchy, attachment irrelevant (DRAG-2.2),
-      // and a descendant is never a "real target" for its ancestor — this
-      // wins over depth-capped.
+      // Descent is through the hierarchy, attachment irrelevant, and a
+      // descendant is never a "real target" for its ancestor — this wins
+      // over depth-capped.
       states.set(item.id, 'cycle-forming');
       if (item.id !== activeId && !isStub(item)) freeDescendantIds.add(item.id);
       continue;
     }
-    // A Stub is classified on exactly the same terms as a Card (DRAG-2.8,
-    // Story 5) — full classification, no separate "siblings only" branch.
+    // A Stub is classified on exactly the same terms as a Card — full
+    // classification, no separate "siblings only" branch.
     states.set(item.id, isWithinDepthCap(getDepth(item.id, items), height, cap) ? 'valid' : 'depth-capped');
   }
 

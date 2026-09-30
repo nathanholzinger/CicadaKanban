@@ -1,7 +1,7 @@
-// Folding an item write's response into the board's item state (docs/wiki/
-// item-positioning §5a): apply the reindexed pairs, upsert the written row,
-// clear its pending placement, and run the inversion tripwire (wiki
-// board-drag-interaction §10). Every item-write path goes through
+// Folding an item write's response into the board's item state
+// (wiki item-positioning §5a): apply the reindexed pairs, upsert the
+// written row, clear its pending placement, and run the inversion tripwire
+// (wiki board-drag-interaction §10). Every item-write path goes through
 // `completeItemWrite`. Pure; reads `itemListOps.ts`'s placements and sort,
 // never the other way round.
 
@@ -16,12 +16,18 @@ import {
   type Placements,
 } from './itemListOps';
 
-// Epic 3.5 Story 2 — fold an item-write response into the list. Order is
-// the rule: apply every `reindexed` pair the list holds first (an unknown id
-// means "not in this view," never missing data), then upsert the written
-// row — it is authoritative for itself and is also in the pairs, so applying
-// it first and a stale pair over it would be the silent-wrong order §5a
-// warns about. `reindexed` is stripped so it never lands in an Item.
+// Fold an item-write response into the list. Order is the rule: apply
+// every `reindexed` pair the list holds first (an unknown id means "not in
+// this view," never missing data), then upsert the written row — it is
+// authoritative for itself and is also in the pairs, so applying it first
+// and a stale pair over it would be the silent-wrong order. `reindexed` is
+// stripped so it never lands in an Item.
+//
+// Only the written row is upserted: the server's `workphaseId` cascade to
+// attached descendants isn't mirrored here, so their stored copies stay
+// stale until the next load. A drag never reads those copies — a Stub's
+// drag takes its containing Card's `workphaseId` at drag start
+// (`useBoardDnd.ts`).
 export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
   if (!response.reindexed) return upsertItem(items, response);
   const { reindexed, ...written } = response;
@@ -39,13 +45,13 @@ function upsertItem(items: readonly Item[], written: Item): Item[] {
 }
 
 // The board-wide rendered order of Free, positioned items — what the ordinal
-// preview makes a claim about. Positions compare workflow-wide (item-
-// positioning §2), so the claim "X sits right after A" holds across the
-// whole loaded set, not just one column. Unpositioned items (done, or no
-// workphase) make no ordering claim and are left out — and, once a Card
-// previews attaching (Story 4 planning), so does it: its position is about
-// to stop being comparable to anything, exactly like a done item's, and the
-// tripwire (findInversion) must not judge it against a scale it's leaving.
+// preview makes a claim about. Positions compare workflow-wide, so the
+// claim "X sits right after A" holds across the whole loaded set, not just
+// one column. Unpositioned items (done, or no workphase) make no ordering
+// claim and are left out — and, once a Card previews attaching, so does
+// it: its position is about to stop being comparable to anything, exactly
+// like a done item's, and the tripwire (findInversion) must not judge it
+// against a scale it's leaving.
 export function freeItemOrder(items: readonly Item[], placements: Placements): string[] {
   const sorted = items.filter(i => !renderedIsStub(i, placements) && i.position !== null).sort(byPositionThenCreatedAt);
   return applyPlacements(sorted, placements).map(i => i.id);
@@ -57,7 +63,7 @@ export interface Inversion {
   actual: string[];
 }
 
-// The §5a/§10 tripwire: after a correctly reconciled response the position
+// The inversion tripwire: after a correctly reconciled response the position
 // sort should reproduce exactly the order the preview drew. Compares the two
 // sequences over the ids they share (an item that left the positioned set —
 // moved to done — makes no claim either way).
@@ -74,7 +80,7 @@ export function findInversion(
 export interface ItemListState {
   items: Item[];
   placements: Placements;
-  /** Every inversion the tripwire has caught this session (DRAG-6.4); surfaced by the dev/test panel. */
+  /** Every inversion the tripwire has caught this session; surfaced by the dev/test panel. */
   inversions: readonly Inversion[];
 }
 
@@ -87,10 +93,10 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
   return { ...state, placements };
 }
 
-// A write's response, in §5a's order: apply the reindex collection, assign
-// the written item, clear its pending placement, then check for an
-// inversion — the check runs on a list where the item is an ordinary
-// positioned row (TC-5a.1). Re-sorting is implicit: render order is
+// A write's response, in reconciliation order: apply the reindex
+// collection, assign the written item, clear its pending placement, then
+// check for an inversion — the check runs on a list where the item is an
+// ordinary positioned row. Re-sorting is implicit: render order is
 // derived from `position` every render, so applying the rows *is* the
 // re-sort (nothing is rebuilt when nothing changed). The tripwire
 // only fires for a write the board previewed; a Sheet edit that reassigns a
@@ -105,8 +111,7 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // different write's own marker) is left untouched: this write isn't the
 // one that owns it. Without this, a response landing mid-re-drag would
 // clear the live ghost and log a false inversion, and an unrelated write
-// (a Sheet PUT) would clear a pending marker it never recorded (audit
-// epic-3-5-story-3-reconciled #1).
+// (a Sheet PUT) would clear a pending marker it never recorded.
 export function completeItemWrite(
   state: ItemListState,
   response: ItemWriteResponse,
