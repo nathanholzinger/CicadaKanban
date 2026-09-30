@@ -193,6 +193,8 @@ Batch 5 then changes the root `lint` script to run `check:docs` before the clien
 
 The first two hold: A2 and A3 have closed, and `check:docs -- docs/wiki docs/test-plans` reports 0 hits on 32 files (2026-09-29). If a story that edits the wiki or the test plans leaves hits there by the time 4b is done, batch 5 waits and A4 stays open until they're cleared. It's a one-line change.
 
+All three hold at the end of 4b-iii (2026-09-30): `npm run check:docs` over its default scope reports 0 hits on 254 files.
+
 ### D10. Pointers to wiki sections that A2 moved
 
 A2 moved three rules into new subsections. A comment that cites the old number still passes the checker, because §2, §5 and §6 all still exist. So this list is the checklist: each site is re-pointed in the batch that owns its file, as part of its D2 rewrite. The line numbers are from 2026-09-27; if they've drifted, search for the pointer.
@@ -489,3 +491,4 @@ boards-columns-unsorted has no numbered sections, so this maps each of the page'
 - **2026-09-30, batch 4a (Coder):** 4a split into 4a-i to 4a-iii (D7), at about 840 comment lines and 235 hits. D11's prefix-less tails at "`dragBands.test.ts` lines 101–102 and 360" are in the E2E spec `drag-column-bands.spec.ts`, so they move to 4b. D10's `popSession.test.ts` site was already cleared by A3.
 - **2026-09-30, end of batch 4a (Coder):** "To the Test Reconciler" joins the Handoff, for test comments whose wiki pointer became a case ID the test's title doesn't carry. Where a title named a function that no longer exists by that name (`positionResolver.test.ts`'s `reindexScope` and `resolveAnchorPosition`), the title was corrected like a false comment; D8's comparison already allows title changes.
 - **2026-09-30, batch 4b (Coder):** 4b split into 4b-i to 4b-iii (D7), at about 1,200 comment lines and 155 hits. D8's single E2E run becomes one per stop, since each stop is its own commit.
+- **2026-09-30, end of batch 4 (Coder):** the default scope reports 0 hits (D9), so batch 5 can go ahead.

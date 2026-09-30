@@ -6,7 +6,7 @@ import { article, column, titlesIn } from '../helpers/boardLocators';
 
 // The positioning rules a board shows without a drag: the order a column
 // renders in, what an inline create sends, and a write's answer folded into
-// the board rather than reloading it. Cases from docs/test-plans/item-positioning.
+// the board rather than reloading it.
 
 // Pins an item to a raw position. Seeds both items of a pair before pinning
 // either: a create after a pin this high would reindex the scope itself.

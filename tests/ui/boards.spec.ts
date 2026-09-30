@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { API } from '../helpers/api';
 
 // ─────────────────────────────────────────────────────────────────
-// Core board interaction (the original .fixme tests, now passing)
+// Core board interaction
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('board basics', () => {
@@ -391,15 +391,12 @@ test.describe('workflow creation', () => {
     await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
   });
 
-  // Reproduces a concretely-reachable gap left open by audit Finding #16
-  // (client mutation handlers with no rejection path): App.tsx's `workflows`
-  // state is fetched once at mount and never refreshed or pruned afterward,
-  // so a project deleted elsewhere in the same session is still offered as a
-  // "copy from" source here. Combined with Finding #13's sourceWorkflowId
-  // existence check, submitting it now correctly 400s server-side — but
-  // SetupWorkflowModal's submit() has no catch, so that failure is a silent
-  // unhandled rejection: no message ever tells the user the workflow wasn't
-  // created. Expected to fail until that catch (and an error message) is added.
+  // App.tsx's `workflows` state is fetched once at mount and never refreshed
+  // or pruned afterward, so a project deleted elsewhere in the same session
+  // is still offered as a "copy from" source here. The server refuses the
+  // copy with a 400, since the source workflow no longer exists, and the
+  // dialog must say so: a silent failure would leave the user believing the
+  // workflow was created.
   test('copying from a project deleted after the page loaded surfaces an error, not a silent no-op', async ({
     page,
     projectSidebar,

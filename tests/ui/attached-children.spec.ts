@@ -77,11 +77,10 @@ test.describe('attached children on the board', () => {
     // the attached grandchild — an attached+parented row with an invalid
     // workphase — must render nested inside it and nowhere else.
     //
-    // (An earlier version of this test manufactured the divergence by moving
-    // an attached child to a different workphase than its parent via PATCH
-    // /move. Epic 3.5 made that a 400 — an attached item inherits its
-    // parent's workphase — so the stale-row shape is now only reachable the
-    // way a real workphase deletion produces it.)
+    // (Moving an attached child to a different workphase than its parent
+    // via PATCH /move is a 400 — an attached item inherits its parent's
+    // workphase — so a real workphase deletion is the only way to reach
+    // this stale-row shape.)
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Invalid Workphase Child Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
     const parent = await (
@@ -115,7 +114,7 @@ test.describe('attached children on the board', () => {
     await page.locator('main').getByRole('button', { name: 'Board' }).click();
 
     // The client excludes attached+parented rows from the "Unknown status"
-    // list, so the grandchild never doubles up (audit finding #26): it shows
+    // list, so the grandchild never doubles up: it shows
     // once, nested under the Free child's Unknown-status card.
     const unsorted = page.getByRole('group', { name: 'Unsorted' });
     await expect(unsorted).toBeVisible();
@@ -247,8 +246,7 @@ test.describe('attached children on the board', () => {
       })
     ).json();
 
-    // A cross-column move is a Board-layer band resolution (docs/wiki/
-    // board-drag-interaction §1–§3, re-planned 2026-09-16): the card starts
+    // A cross-column move is a Board-layer band resolution: the card starts
     // locked to Todo, and a release still locked there commits Todo's own
     // reorder, not a foreign column's band — so this needs an actual pop
     // out first, not just a quick hover.
@@ -264,8 +262,7 @@ test.describe('attached children on the board', () => {
     // tests/helpers/dragGesture.ts.
     const targetColumn = page.getByRole('group', { name: 'In Progress' });
     // The region itself, not the group's own center — In Progress is empty,
-    // and an empty region's carve-out (Story 3's addendum, 2026-09-16) is a
-    // fixed, small band near the top of the column body, not the whole
+    // and an empty region's carve-out is a fixed, small band near the top of the column body, not the whole
     // available column height.
     const targetRegion = targetColumn.locator(`[${DRAG_REGION_ATTR}]`).first();
     await pickUp(page, card);

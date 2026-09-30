@@ -17,30 +17,28 @@ const ROOT_NAME = 'Cross Project DnD';
 // time driven through real drag gestures. Same shared scenario: a root
 // project owning one workflow/workphase, two child sub-projects (1a, 1b)
 // inheriting it, A/C/E in 1a and B/D in 1b, all rendered in ONE shared
-// column (single workphase, unlike Suite 2's two-column split — this suite
-// isolates project scoping as the only variable).
+// column (single workphase, unlike the cross-column suite's two-column
+// split — this suite isolates project scoping as the only variable).
 //
 // Because there's only one shared column, the full item list on the root's
 // (unfiltered) board is a single flat stack sorted by position: A,B,C,D,E.
-// That happens to make every WHEN gesture here achievable via the existing
-// "before"-only drag primitive without hitting Suite 2's drag-lockout bug,
-// EXCEPT 3.a (still included for parity with the API suite's group 3, and
-// still expected to fail the same way Suite 2's 3.a does):
-//   - "after E"-shaped gestures (1.b, 4.a) target genuinely empty space past
-//     the true last card in the relevant board's list, which really is E in
-//     both cases — a true append, same mechanism as Suite 2's 1.b/2.b.
+//   - "after E"-shaped gestures (1.b, 4.a) target the empty space past the
+//     true last card in the relevant board's list, which really is E in
+//     both cases — the same mechanism as the cross-column suite's 1.b.
 //   - "after D"-shaped gestures (2.b) land on the exact same gap as
 //     "before E" once D and E are immediately adjacent with nothing between
 //     them, so this suite drags directly onto E rather than attempting an
 //     unreachable "past D, but not past E" gesture.
-//   - "before A"/"before B"-shaped gestures (1.a, 2.a, 4.b) are the
-//     already-supported primitive, straightforward center-of-card drags.
+//   - "before A"/"before B"-shaped gestures (1.a, 2.a, 4.b) are
+//     straightforward center-of-card drags.
+//   - 3.a and 3.b set C back down in its own slot, leaning up or down, as
+//     in the cross-column suite.
 //
 // 1a/1b/3a/3b act on project1a's own (inherited, read-only) board — dragging
-// there IS still possible: readOnly only hides column/workphase management
-// controls (BoardView.tsx:228,265-266), it never gates DndContext/
-// useBoardDnd. 2a/2b/4a/4b act on the root's board, the only place both
-// project1a's and project1b's items are visible together to anchor against.
+// there IS still possible: readOnly only hides the column and workphase
+// management controls, never the drag. 2a/2b/4a/4b act on the root's board,
+// the only place both project1a's and project1b's items are visible
+// together to anchor against.
 
 let scenario: CrossProjectRepositioningScenario;
 
@@ -82,11 +80,10 @@ test.describe('1: extreme boundary moves within project 1a', () => {
     await expect(column.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
 
     // The API suite's identical case (1.a) passes cleanly at 0.5, confirming
-    // the position math is correct. Same drag-gesture precision limitation
-    // as Suite 2's 1.a/2.a (dragging onto the topmost card in a list) —
-    // reproducibly lands on a different anchor than intended. Not chasing
-    // this further per the same call made there; see that suite's dragTo
-    // header comment.
+    // the position math is correct. Skipped for the same drag-gesture
+    // precision limitation as the cross-column suite's 1.a/2.a (dragging
+    // onto the topmost card in a list) — it reproducibly lands on a
+    // different anchor than intended.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(0.5);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('CAE');
     expect(await fullOrder(request, scenario.workflow.id)).toBe('CABDE');
@@ -127,11 +124,9 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
     await goToBoard(page, projectSidebar, scenario.rootProject.name);
     await dragTo(page, article(page, 'Item C'), () => topQuarter(article(page, 'Item E')));
 
-    // On the root's board C travels further (past B and D too, not just one
-    // card as in Suite 3's 3.b using the same gesture from project1a's
-    // shorter filtered list) — same class of drag-gesture precision
-    // limitation, worse over a longer distance. API suite's identical case
-    // (2.b) passes at 4.5.
+    // On the root's board C travels past B and D to reach E — the same class
+    // of drag-gesture precision limitation, worse over a longer distance.
+    // API suite's identical case (2.b) passes at 4.5.
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(4.5);
     await expect
       .poll(async () => (await fetchItem(request, scenario.items.C.id)).projectId)

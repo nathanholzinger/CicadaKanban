@@ -70,9 +70,8 @@ test('deleting the selected project returns to the placeholder', async ({ page, 
 });
 
 // The sidebar's own delete affordance (SortableProjectRow, exercised above)
-// is a separate hand-rolled variant left as-is (audit Finding #26) — this
-// covers ProjectPage's own main-content self-delete trigger, which nothing
-// previously exercised end-to-end.
+// is a separate variant — this covers ProjectPage's own main-content
+// self-delete trigger.
 test('a project can be deleted from its own page', async ({ page, projectSidebar, request }) => {
   await request.post(`${API}/projects`, { data: { name: 'Self Delete Me' } });
   await page.reload();
@@ -87,13 +86,10 @@ test('a project can be deleted from its own page', async ({ page, projectSidebar
   await expect(page.getByText('Select a project to get started.')).toBeVisible();
 });
 
-// Regression coverage from extracting ConfirmDeleteInline (audit Finding
-// #26): the two hand-rolled confirm/deleting state pairs it replaced were
-// never reset on a project switch, so triggering (without confirming or
-// cancelling) the self-delete prompt on one project and then navigating to
-// another would leave the prompt showing under the new project's heading.
-// ConfirmDeleteInline is now keyed on project.id, remounting (and resetting)
-// it on every switch.
+// Triggering the self-delete prompt on one project (without confirming or
+// cancelling) and then navigating to another must not leave the prompt
+// showing under the new project's heading: a project switch remounts
+// ConfirmDeleteInline, resetting it.
 test('starting a project self-delete and navigating away does not leak the confirm prompt to a different project', async ({
   page,
   projectSidebar,
