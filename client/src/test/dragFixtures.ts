@@ -10,9 +10,9 @@ import type {
 import { cardRegionKey, descendantsRegionKey, parseRegionKey } from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
 
-// Shared geometry fixtures for the Epic 3.5 drag tests (regions, the pop
-// machine, band resolution) — one place for the rect/region shape, same
-// reasoning as itemFixture.ts.
+// Shared by the drag tests (regions, the pop machine, band resolution): one
+// place for the rect/region shape, so a new field lands in one fixture
+// rather than in every test.
 
 export function rect(left: number, top: number, width: number, height: number): Rect {
   return { left, top, width, height, right: left + width, bottom: top + height };
@@ -23,8 +23,8 @@ export function rect(left: number, top: number, width: number, height: number): 
 // to name it); the workphase facts default to one covered workphase named
 // after the key. `contentRect` defaults to the same rect (no clipping — the
 // common case a geometry-only test wants); `cardCount` defaults to 2, the
-// "normal" band shape, so a fixture that doesn't care about Story 3's
-// carve-out addendum's single-band/one-card exceptions doesn't have to spell it out;
+// "normal" band shape, so a fixture that doesn't care about the
+// single-band/one-card exceptions doesn't have to spell it out;
 // `parentRegionKey` is always null — Board is every card list's parent.
 // `cardRegion`/`descendantsRegion` below cover the other two kinds — see
 // dragRegions.test.ts's own DOM-built cases where the structural
@@ -50,10 +50,8 @@ export function region(key: string, r: Rect, overrides: Partial<CardListRegion> 
 // A Card region — `attachToCardId` defaults to `cardId` (the ordinary
 // case: the region attaches into the same Card its key names); override it
 // for a fixture that deliberately wants the two to differ. `parentRegionKey`
-// defaults to the same `region()` fixture's own key convention (a card
-// list) since that's what every existing call site passed by hand (audit
-// epic-3-5-story-5 #12 — this and `descendantsRegion` below discharge the
-// Story 10/Story 4 #3 fixture deferral early, since Story 5 needed both).
+// is the key of the card list the Card sits in, in the `region()` fixture's
+// own key convention.
 export function cardRegion(
   cardId: string,
   r: Rect,
@@ -72,7 +70,7 @@ export function cardRegion(
 }
 
 // A Card's Descendants region — `parentRegionKey` defaults to that same
-// Card's own `card:<cardId>` key (§1.1: always one layer up), overridable
+// Card's own `card:<cardId>` key (always one layer up), overridable
 // for a fixture that wants to name a differently-keyed parent directly.
 export function descendantsRegion(
   cardId: string,
@@ -90,9 +88,8 @@ export function descendantsRegion(
   };
 }
 
-// The two `origin` shapes every Story 5 fixture needs (Story 4.1 Phase 3's
-// "where the drag genuinely started"): a Free Card's own workphase, or a
-// Stub's own real parent. Both always at `slot: 'existing'` — the only slot
+// The two `origin` shapes, where the drag genuinely started: a Free Card's
+// own workphase, or a Stub's own real parent. Both always at `slot: 'existing'` — the only slot
 // an `origin` is ever built with (a placement can name any slot; an origin
 // never has to, since it's read, never assigned to render a live position).
 export function freeOrigin(workphaseId: string): Placement {
@@ -106,8 +103,7 @@ export function stubOrigin(parentId: string): Placement {
 // A merged column covering the given workphases — override any field,
 // including `subRows` (for an expanded column, or per-row facts like
 // `isTerminal`), for a differently-shaped board fixture. Used by
-// dragRegions.test.ts's own structural-resolution cases (audit
-// epic-3-5-story-3-reconciled #8).
+// dragRegions.test.ts's own structural-resolution cases.
 export function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
     id,

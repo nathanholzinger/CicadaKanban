@@ -134,6 +134,8 @@ Batch 2's baseline is 54 files, about 500 comment lines and 68 hits, far above t
 
 Batch 3's baseline is 35 files, about 805 comment lines and 111 hits, again far above the estimate for the same reason. It split in two: 3-i is the position and hierarchy layer, where most of item-attachment's and item-positioning's rules are enforced, and 3-ii is the rest. The three D4 tables come at the end of 3-ii, since some rule sites (column ranges, the terminal-flip backfill) are in its files.
 
+Batch 4a's baseline is 40 files, about 840 comment lines and 235 hits, against an estimate of ~115 lines. It split in three: 4a-i is the tests of the pop machine, regions, bands and collision, with their fixtures; 4a-ii the tests of placement, requests, lists and client `lib/`; 4a-iii the server's tests.
+
 Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory. Paths in 3-i are under `server/src/lib/` unless they name `routes/`.
 
 | Batch | Files | Est. lines | Waits for |
@@ -148,7 +150,9 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **2-ii** The rest of the client: the other components | everything else in `client/src` that isn't a test: item detail, modals, the toolbar, the board-management hooks, `App.tsx` | ~270 read, 24 hits | 2-i |
 | **3-i** Server: the position and hierarchy layer | `itemHierarchy.ts`, `itemPositionScope.ts`, `itemTree.ts`, `positionResolver.ts`, `attachedCascade.ts`, `coarsestFit.ts`, `reorder.ts`, `routes/items.ts` | ~420 read, 80 hits | A2's other three pages |
 | **3-ii** Server: the rest | the other routes, the rest of `server/src/lib/`, `db/`, `index.ts`, `mcp.ts` | ~385 read, 31 hits | 3-i |
-| **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
+| **4a-i** Unit tests: the pop machine, regions, bands and collision | the `popSession`, `dragTuning`, `dragOverlayGeometry`, `dragRegions`, `dragBands`, `dragCollision`, `descendantsProjection` and `BandGuides` tests, `test/dragFixtures.ts`, `test/popFixtures.ts` | ~255 read, 86 hits | A3 (closed) |
+| **4a-ii** Unit tests: placement, requests, lists, client `lib/` | the `placement`, `dragRequest`, `dragClassification`, `itemListOps`, `itemWriteReconciliation`, `hierarchy`, `hierarchyPlacement`, `projectTreeUtils`, `api/shared` and `pillUtils` tests, `test/itemFixture.ts`, `test-setup.ts` | ~260 read, 92 hits | 4a-i |
+| **4a-iii** Unit tests: the server | `server/tests` | ~330 read, 57 hits | 4a-ii |
 | **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
 | **5** Lint | root `package.json` | — | A2, A3, and batches 1a–4b |
 
@@ -193,7 +197,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
   - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
   - **1b-ii:** `dragCollision.ts` line 85's range, the same way. Done differently: the comment guards one rule, so the range became that rule's pointer, §1.1 rule 1.
   - **1c-ii:** `dragChrome.tsx` line 126. Done: the zoom-in cue's comment cites §6.1.
-  - **4a:** the `popSession.test.ts` title at line 198.
+  - **4a:** the `popSession.test.ts` title at line 198. Already cleared: A3's retitle to DRAG-1.4 dropped the pointer.
   - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it.
 
   §6 keeps the auto-drop and the pinned ghost, so a pointer to those stays, e.g. `placement.ts` line 88's "set back down".
@@ -221,7 +225,8 @@ A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these
   - **1c-i:** `useItemManagement.ts` line 18. Cleared in 1c-i.
   - **1c-ii:** `StubRows.tsx` line 82. Cleared in 1c-ii: DRAG-2.8 became a guard pointer to §4.
 - **Prefix-less tails in test comments,** each written out in full:
-  - **4a:** `dragBands.test.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"); `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs.
+  - **4a:** `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs.
+  - **4b:** `drag-column-bands.spec.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"). A3's report put these in `dragBands.test.ts`, but they're in this E2E spec.
 - **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback.
 
 ## Work, in batches
@@ -467,3 +472,4 @@ boards-columns-unsorted has no numbered sections, so this maps each of the page'
 - **2026-09-29, end of batch 2 (Coder):** the Architect's handoff also takes false statements in a `CLAUDE.md` file, since A4 doesn't edit those (D1).
 - **2026-09-30, batch 3 (Coder):** 3 split into 3-i (the position and hierarchy layer) and 3-ii (the rest of `server/src`), at about 805 comment lines and 111 hits (D7). D4's tables for the other three pages come at the end of 3-ii.
 - **2026-09-30, end of batch 3 (Coder):** the running pointer list became D4's tables for the other three pages. boards-columns-unsorted has no numbered sections, so its table maps rules to sites without pointers, and the Acceptance line on index pointers holds for the other three pages only until that page is numbered. Completing item-positioning §4's row took one pointer in a client file from 1b-i, `placement.ts::regionWorkphaseFor`. "To the PO" gained entries for all three pages.
+- **2026-09-30, batch 4a (Coder):** 4a split into 4a-i to 4a-iii (D7), at about 840 comment lines and 235 hits. D11's prefix-less tails at "`dragBands.test.ts` lines 101–102 and 360" are in the E2E spec `drag-column-bands.spec.ts`, so they move to 4b. D10's `popSession.test.ts` site was already cleared by A3.

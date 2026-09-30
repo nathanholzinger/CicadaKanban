@@ -35,12 +35,6 @@ const subB1 = region('subrow:b:w1', rect(120, 0, 100, 150));
 const subB2 = region('subrow:b:w2', rect(120, 180, 100, 150));
 const regions = [colA, subB1, subB2];
 
-// Story 4.1 Phase 0: `childRegionAt(regions, point, null)` is Board's own
-// lookup — every column/sub-row's `parentRegionKey` is null — replacing
-// the old, separate `nonCardRegionAt`. `cardRegionAt` (a locked
-// column/sub-row's own Cards, `parentKey` set) is the same function; see
-// the `resolveDragStructure / measureRegions` describe block below for a
-// Card-kind region.
 describe('parseRegionKey', () => {
   it.each([
     [columnRegionKey('c1'), { kind: 'column', id: 'c1' }],
@@ -62,6 +56,11 @@ describe('parseRegionKey', () => {
   });
 });
 
+// `childRegionAt(regions, point, null)` is Board's lookup, since every
+// column/sub-row's `parentRegionKey` is null. A locked column/sub-row's own
+// Cards come from the same function with `parentKey` set; the
+// `resolveDragStructure / measureRegions` block below builds a Card-kind
+// region.
 describe('childRegionAt (Board layer: parentKey null)', () => {
   it('hits the region containing the point', () => {
     expect(childRegionAt(regions, { x: 50, y: 200 }, null)).toBe(colA);
@@ -85,11 +84,6 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
   });
 });
 
-// Story 6 Phase D: a `descendants` region is now a real zoom-in candidate
-// from its own Card's context — Story 5, decision 3 had excluded it (no
-// within-action existed for it yet). The pop-out chain
-// (contextRegion.parentRegionKey, read directly by popSession.ts, never
-// through this function) is unaffected either way.
 describe("childRegionAt finds a Card's own Descendants section", () => {
   it('returns it while hovering squarely inside it', () => {
     const P = 'card-p';
@@ -108,12 +102,11 @@ describe('containsPoint', () => {
   });
 });
 
-// Story 4.1 Phase 2 split `measureDragRegions` into a structural resolve
-// (which elements exist, their kind/parent chain/scroll ancestor/column
-// facts — everything that survives a layer change) and a scoped
-// measurement (live rects and card count, for exactly the region matching
-// `scope` plus its own children). Every case below runs both steps, the
-// same way `useBoardDnd.ts` does.
+// Regions come from two steps: a structural resolve (which elements exist,
+// their kind/parent chain/scroll ancestor/column facts — everything that
+// survives a layer change) and a scoped measurement (live rects and card
+// count, for exactly the region matching `scope` plus its own children).
+// Every case below runs both steps.
 describe('resolveDragStructure / measureRegions', () => {
   function mockRect(el: HTMLElement, r: ReturnType<typeof rect>) {
     Object.defineProperty(el, 'getBoundingClientRect', { value: () => ({ ...r, x: r.left, y: r.top }) });
@@ -193,10 +186,10 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(regions.find(r => r.kind === 'card')).toBeUndefined();
   });
 
-  // The point of the split (F5): a locked column never reads another
-  // column's Cards, and Board never reads a Card at all — `measureRegions`
-  // enforces this by construction (the scope filter), not by the caller
-  // remembering to throw the rest away.
+  // A locked column never reads another column's Cards, and Board never
+  // reads a Card at all — `measureRegions` enforces this by construction
+  // (the scope filter), not by the caller remembering to throw the rest
+  // away.
   it('scopes to exactly the context region and its own children — never a sibling column, never a foreign card', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     buildCardInColumn('col-2', rect(120, 0, 100, 400), 'item-2', rect(125, 10, 90, 50));
@@ -220,9 +213,9 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
   });
 
-  // `pastColumnEnd` (tests/helpers/dragGesture.ts) aims at a column's last
-  // card-list region; a Card's Descendants section sits after the column's
-  // own element in document order.
+  // Also read by `dragGesture.ts::pastColumnEnd`, which aims at a column's
+  // last card-list region; a Card's Descendants section sits after the
+  // column's own element in document order.
   it('CARD_LIST_REGION_SELECTOR finds the column/sub-row regions, never a Card or a section nested in one', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const section = document.createElement('div');
@@ -248,11 +241,10 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(hasNewRegionElements(document, new Set(regionElements(document)))).toBe(false);
   });
 
-  // Story 4.1 Phase 4 (F6) — a merged column's `boundsRect` is its own outer
-  // body (BoardColumn.tsx's `overflow-y-auto` wrapper — the same element
-  // already resolved as the scroll ancestor for clipping), never the
-  // content-sized region `rect` stays. A short column with room below its
-  // last card is exactly the case that used to strand the exit clock.
+  // A merged column's `boundsRect` is its outer body: the same element it
+  // resolves as its scroll ancestor for clipping, never the content-sized
+  // region `rect`. A short column with room below its last card is where
+  // the two differ.
   it("DRAG-1.25: a merged column's boundsRect is its own outer body, taller than the content-sized region", () => {
     const box = document.createElement('div');
     box.style.overflowY = 'auto';
@@ -285,12 +277,9 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(region).not.toHaveProperty('element');
   });
 
-  // Story 5, decisions 2/3 — a `descendants:<cardId>` element only ever
-  // resolves for the drag's own `originCardId`; every other Card's section
-  // (even one that would otherwise be a perfectly valid element) resolves
-  // to nothing, which is what keeps it from ever becoming a zoom-in
-  // candidate this story (childRegionAt's own guard covers the case where
-  // it's the *origin's* own section, reached from the Card layer).
+  // A `descendants:<cardId>` element resolves for the drag's own
+  // `originCardId`, and for any other Card only when `isValidCard` accepts
+  // it, the same gate as a `card:` region.
   function buildCardWithDescendants(
     columnId: string,
     cardId: string,
@@ -329,9 +318,6 @@ describe('resolveDragStructure / measureRegions', () => {
     });
   });
 
-  // Story 6 Phase D: a *different* Card's own section now resolves too,
-  // gated on `isValidCard` exactly like a `card:` region already is — the
-  // Story 5 restriction (origin-only) is gone.
   it("resolves a different Card's section too, when isValidCard says yes", () => {
     buildCardWithDescendants('col-1', 'card-q', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
     const structure = resolveDragStructure(
@@ -359,9 +345,9 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(regions.find(r => r.kind === 'descendants')).toBeUndefined();
   });
 
-  // Decision 2: the origin's own `card:` element resolves regardless of
-  // `isValidCard` — a Stub must be able to pop back out to its own Card
-  // even when that Card wouldn't be offered as a *target* for it.
+  // The origin's own `card:` element resolves regardless of `isValidCard`:
+  // a Stub must be able to pop back out to its own Card even when that Card
+  // wouldn't be offered as a *target* for it.
   it("resolves the origin's own card: region even when isValidCard rejects it", () => {
     buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
     const structure = resolveDragStructure(
@@ -395,13 +381,10 @@ describe('isCardList', () => {
 // A real browser's DOMRect exposes its fields as accessor getters on
 // `DOMRect.prototype`, not as the instance's own enumerable properties
 // (unlike jsdom's, and unlike a plain-object fixture) — so `{ ...domRect }`
-// silently drops every field instead of throwing. This is what actually
-// caught it: every sub-row region resolved with `left`/`right`/`width`
-// missing, so no point could ever match it. Shared by every test below that
-// needs to prove a Rect-shaped function doesn't re-introduce the hazard
-// (audit epic-3-5-story-3-reconciled #2 — it moved from being `clipToVisible`'s
-// problem alone to being every `Rect`-touching function's, until `toRect`
-// became the one place a DOMRect is read).
+// silently drops every field instead of throwing: a sub-row region would
+// resolve with `left`/`right`/`width` missing, so no point could ever match
+// it. Shared by every test below that needs to prove a Rect-shaped function
+// doesn't reintroduce the hazard.
 function fakeDomRect(values: Rect): Rect {
   return Object.create({
     get top() {
@@ -425,8 +408,8 @@ function fakeDomRect(values: Rect): Rect {
   });
 }
 
-// Reconciliation #20/#21: a sub-row is clipped to its column's visible
-// scroll box, not just bounded by its own extent.
+// A sub-row is clipped to its column's visible scroll box, not just bounded
+// by its own extent.
 describe('DRAG-1.10: clipToVisible', () => {
   const bounds = rect(0, 100, 200, 200); // the scroll ancestor's own visible box, y 100..300
 

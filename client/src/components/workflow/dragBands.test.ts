@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { bandBoundaries, bandFor, distanceOutside } from './dragBands';
 import { rect } from '../../test/dragFixtures';
 
-// DRAG-3.5 / Story 4.1 Phase 1: the boundaries are content-anchored pixels
-// (`heightPx` in from each edge of `contentRect`, never a fraction of the
-// region's height), with two collapses to a single band and one exception
-// that halves the edge to `(heightPx + gapPx) / 2` — the Product Owner's
-// three special rules (2026-09-16), against the fixed shortCard height and
-// list gap (`KanbanCard.tsx`) rather than a tunable.
+// DRAG-3.5: the boundaries are content-anchored pixels (`heightPx` in from
+// each edge of `contentRect`, never a fraction of the region's height), with
+// two collapses to a single band and one exception that halves the edge to
+// `(heightPx + gapPx) / 2`, all measured against the fixed shortCard height
+// and list gap rather than a tunable.
 describe('bandFor', () => {
   const contentRect = rect(0, 100, 100, 200); // spans y 100..300
   const metrics = { heightPx: 40, gapPx: 8 };

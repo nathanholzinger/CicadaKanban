@@ -11,9 +11,8 @@ import { startPopSession } from './popSession';
 import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
 import { cardRegion, descendantsRegion, rect, region } from '../../test/dragFixtures';
 
-// The DragOverlay's own geometry (Story 6.1 Phase 2, C-1/L3-3). Every
-// transform here is dnd-kit's delta space (a translation from the dragged
-// node's resting position); every rect is screen space.
+// Every transform here is in dnd-kit's delta space (a translation from the
+// dragged node's resting position); every rect is in screen space.
 
 function transform(x: number, y: number): OverlayTransform {
   return { x, y, scaleX: 1, scaleY: 1 };
@@ -42,7 +41,7 @@ describe('clampAxis', () => {
     expect(clampAxis(-20, 100, 250, 100, 300)).toBe(-20);
   });
 
-  it('is a no-op on its own output, since the modifier chain runs it twice per frame (F8)', () => {
+  it('is a no-op on its own output, since the modifier chain runs it twice per frame', () => {
     const once = clampAxis(200, 100, 50, 0, 300);
     expect(clampAxis(once, 100, 50, 0, 300)).toBe(once);
   });
@@ -86,7 +85,7 @@ describe('clampToCurrentContext', () => {
     expect(clampToCurrentContext(far, null, startPopSession(context.key), [context])).toBe(far);
   });
 
-  it('is a no-op on its own output (F8)', () => {
+  it('is a no-op on its own output', () => {
     const context = region('subrow:c1:w1', bounds);
     const pop = startPopSession(context.key);
     const once = clampToCurrentContext(far, overlay, pop, [context]);
@@ -157,7 +156,7 @@ describe('reanchorOverlayTransform', () => {
     expect(flat.left + result.x + 0.5 * stubWidth).toBe(pointerNow.x);
   });
 
-  it('gives the same answer on its own output, since the modifier chain runs it twice per frame (F8)', () => {
+  it('gives the same answer on its own output, since the modifier chain runs it twice per frame', () => {
     const once = reanchorOverlayTransform(
       incoming,
       pickupRect,

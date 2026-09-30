@@ -10,8 +10,8 @@ import {
   threeColumnBoard,
 } from '../../test/popFixtures';
 
-// docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
-// every threshold parameterized on the tuning value, never 0.5 s.
+// Every threshold reads its tuning value, never a pinned number such as
+// 0.5 s, so the tests hold at any tuning.
 
 // The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin.
 const { A, B, C, regions, points } = threeColumnBoard();
@@ -95,17 +95,14 @@ describe('locked', () => {
     expect(far.contextKey).toBeNull();
   });
 
-  // Story 4.1 Phase 4 (F6, ruled by the Product Owner 2026-09-18): a merged
-  // column must never pop out while the cursor is still somewhere inside
-  // it. `M`'s own `rect` is content-sized (Phase 1's exact reservation) and
-  // stops well short of `boundsRect`, the column's outer body — the empty
-  // space between them is exactly the case that used to strand the exit
-  // clock (F6's finding: "the pointer below a short merged column's last
-  // card is nowhere"). A sub-row has no such gap (its own `rect` already is
-  // its full bound), so it keeps reading straight off `rect`, unchanged.
+  // `M`'s own `rect` is content-sized and stops well short of `boundsRect`,
+  // the column's outer body. The space between them, below the last card, is
+  // still inside the column, so it must never start the exit clock. A
+  // sub-row has no such gap (its `rect` is its full bound), so it reads
+  // `rect`.
   describe("DRAG-1.25: merged-column boundsRect — the 'still inside' test reads the outer body, not the content-sized rect", () => {
     const shortRect = rect(0, 0, 100, 120); // the column's own cards — y 0..120
-    const outerBody = rect(0, 0, 100, 400); // BoardColumn.tsx's own overflow-y-auto wrapper — y 0..400
+    const outerBody = rect(0, 0, 100, 400); // the column's outer body — y 0..400
     const M = region('column:m', shortRect, { boundsRect: outerBody });
 
     it('below the last card but still inside the outer body: still locked, nothing tracked', () => {
@@ -133,21 +130,12 @@ describe('locked', () => {
     });
   });
 
-  // Story 4.1 Phase 1: the frozen-rect/`followRegionTop` family (and the
-  // sticky-hover check it existed for) is gone — the reservation is exact
-  // now (a hovered region's own rendered size never actually changes), so
-  // `hoverFor` just reads the region's live rect and live card count on
-  // every sample. These two cases replace the old "the band is measured
-  // against the region's rect as it was on entry" test, whose own premise
-  // ("so the ghost's own insertion can't move the band") no longer holds —
-  // it now can, on purpose, because nothing needs protecting against it.
   it("DRAG-3.21: at Board layer the band reads the region's live rect on every sample, not one frozen at entry", () => {
     const entered = advancePopSession(startPopSession(null), { x: 170, y: 110 }, regions, tuning, metrics, 0);
     expect(entered.hover?.band).toBe('middle'); // 110 is within B's original 96..304 middle band
-    // B's rect has genuinely moved (a real scroll, or a sibling reflowing
-    // next to it — nothing here has to tell the two apart anymore): its
-    // top edge is 40px lower, so the same point now sits inside the *new*
-    // top band (edge at 40 + 96 = 136).
+    // B's rect has moved (a scroll, or a sibling reflowing next to it; the
+    // two are treated alike): its top edge is 40px lower, so the same point
+    // now sits inside the *new* top band (edge at 40 + 96 = 136).
     const shiftedB = region(B.key, rect(120, 40, 100, 400));
     const after = advancePopSession(entered, { x: 170, y: 110 }, [A, shiftedB, C], tuning, metrics, 10);
     expect(after.hover?.band).toBe('top');
@@ -162,11 +150,11 @@ describe('locked', () => {
   });
 });
 
-// Story 6, hands-on finding 3 (2026-09-24): a locked column/sub-row's own
-// zoom-in candidate comes from the *named relation* (`dropAnchorFor`'s own
-// answer, handed in as `namedAnchor`), not a hit test — `inA` below is
-// deliberately nowhere near either card's own rect throughout, to prove
-// the physical pointer position no longer decides which Card is targeted.
+// A locked column/sub-row's zoom-in candidate comes from the *named
+// relation* (`dragCollision.ts::dropAnchorFor`'s answer, passed as
+// `namedAnchor`), not a hit test. `inA` below is deliberately nowhere near
+// either card's rect throughout, so the pointer's position can't be what
+// picks the Card.
 describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   const P = cardRegion('p', rect(10, 10, 80, 40), A.key);
   const Q = cardRegion('q', rect(10, 60, 80, 40), A.key);
@@ -225,11 +213,10 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   });
 });
 
-// Story 6 Phase D: a locked Card's own zoom-in into its Descendants
-// section — a plain, duration-only hold (no dwell/cue split; wiki §3.1's
-// fourth clock), found by `childRegionAt` now that a Descendants region is
-// no longer excluded from it (dragRegions.ts). Uses `descendantsPopInDelayMs`,
-// not `cardPopInDelayMs`/`cardZoomDwellMs`.
+// A locked Card's zoom-in into its Descendants section (DRAG-1.21's zoom-in
+// half) is a plain, duration-only hold with no dwell/cue split, found by
+// `dragRegions.ts::childRegionAt`. It runs on `descendantsPopInDelayMs`, not
+// `cardPopInDelayMs`/`cardZoomDwellMs`.
 describe('locked Card: zoom-in into its own Descendants section', () => {
   const P = cardRegion('p', rect(10, 10, 80, 200), A.key);
   const descendantsP = descendantsRegion('p', rect(10, 60, 80, 140));
@@ -291,8 +278,8 @@ describe('locked at a Descendants section', () => {
   });
 });
 
-// Audit epic-3-5-story-6 #19 (Story 4 #14 → Story 5 #17): a pop-out is one
-// layer (§1.1 rule 2) even when the context has no region in the sample.
+// A pop-out moves one layer (DRAG-1.17) even when the context has no region
+// in the sample.
 describe('popping out of a context the sample has no region for', () => {
   const P = cardRegion('p', rect(10, 10, 80, 200), A.key);
   const descendantsP = descendantsRegion('p', rect(10, 60, 80, 140));

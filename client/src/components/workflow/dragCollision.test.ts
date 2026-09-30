@@ -53,11 +53,9 @@ describe('resolveBoardCollisions', () => {
   });
 
   it('excludes Stub rows from a Card drag (the collision-hijack bug this guards against)', () => {
-    // Regression: a card being dragged must never resolve onto its own (or
-    // any) attached child, even when that child's rect happens to be
-    // closest — this is exactly what let a nested "Cascading Kid" row
-    // hijack its parent's cross-column drop once attached children became
-    // draggable (Epic 3.2 Part 3).
+    // A card being dragged must never resolve onto its own (or any)
+    // attached child, even when that child's rect happens to be closest:
+    // the nested row would hijack its parent's cross-column drop.
     const result = resolveBoardCollisions(
       collisionArgs('card-a', itemRowData('card'), [
         { id: 'child-1', data: itemRowData('stub', 'card-a') },
@@ -69,14 +67,10 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toContain('col-1');
   });
 
-  // Story 6 Phase B: the Descendants-context scope comes from the *live
-  // session's* own measured section rect (`descendantsSectionRect`,
-  // computed by useBoardDnd.ts from the locked region) — every Stub row
-  // inside it is a candidate, any depth and any real `parentId` (replacing
-  // Story 5's interim same-real-parent-only `siblingScopeParentId`; the
-  // within-action itself still keeps a release scoped to true siblings —
-  // `useBoardDnd.ts::handleDragEnd`'s own membership check, not this one).
-  // Never from the active row's own `data`.
+  // The Descendants-context scope comes from the *live session's* own
+  // measured section rect (`descendantsSectionRect`), never from the active
+  // row's own `data`: every Stub row inside it is a candidate, at any depth
+  // and under any real `parentId`.
   it("scopes a Descendants context's collisions to every Stub row inside the section's rect, any real parent", () => {
     const sectionRect = rect(0, 0, 100, 400);
     const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
@@ -95,9 +89,8 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).not.toContain('col-1');
   });
 
-  // Option A, extended to Descendants (Story 6 Phase D hands-on, 2026-09-24):
-  // as at a column, holding still over its own slot must be `over` itself —
-  // excluded, the gap always jumped to a neighbor's, one off.
+  // As at a column, holding still over its own slot must be `over` itself:
+  // excluding the dragged row moves the gap to a neighbor's, one off.
   it("a Descendants context: the dragged Stub's own row is a candidate too", () => {
     const sectionRect = rect(0, 0, 100, 400);
     const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
@@ -111,15 +104,14 @@ describe('resolveBoardCollisions', () => {
     expect(ids).toContain('child-a');
   });
 
-  // Decision 4's own regression guard (2026-09-21): the hazard is a Stub's
-  // row unmounting from its Descendants section and remounting as a Card
-  // row for the *same* id mid-drag, so `active.data.current.role` could in
-  // principle lag one frame behind. Every policy decision here is keyed off
-  // `liveSession` (our own pure state) instead — this proves it, by feeding
-  // a deliberately *wrong* active role (`'card'`, as if the remount hadn't
-  // been picked up yet) alongside a live session that says otherwise, and
-  // asserting the outcome still matches the live session, not the stale
-  // active data.
+  // The hazard: a Stub's row unmounts from its Descendants section and
+  // remounts as a Card row for the *same* id mid-drag, so
+  // `active.data.current.role` can lag one frame behind. Every policy
+  // decision here is keyed off the live session (pure state) instead. This
+  // feeds a deliberately *wrong* active role (`'card'`, as if the remount
+  // hadn't been picked up yet) alongside a live session that says
+  // otherwise, and asserts the outcome still matches the live session, not
+  // the stale active data.
   it("never reads the active row's own role — a stale 'card' role alongside a live Descendants session still scopes correctly", () => {
     const sectionRect = rect(0, 0, 100, 400);
     const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
@@ -133,7 +125,6 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toEqual(['child-b']);
   });
 
-  // Epic 3.5 Story 3: `over` follows the pop machine (wiki §2–§3, §5).
   describe('under the pop machine', () => {
     const context = { containerId: 'col-a', rect: rect(0, 0, 100, 400) };
     const containers: Container[] = [
@@ -156,8 +147,8 @@ describe('resolveBoardCollisions', () => {
       expect(ids).not.toContain('child-1');
     });
 
-    // Option A (2026-09-24): as in stock dnd-kit sortable, the dragged card's
-    // own row is an in-context candidate, so resting over its own slot is
+    // As in stock dnd-kit sortable, the dragged card's own row is an
+    // in-context candidate, so resting over its own slot is
     // `over` itself and nothing shuffles. Only a column drag (no session)
     // never collides with itself (the first case above).
     it("in-context: the dragged card's own row is a candidate too", () => {
@@ -225,16 +216,14 @@ describe('resolveDropSide', () => {
   });
 });
 
-// Option A + lean (2026-09-24), generalized to Stub rows in Story 6 Phase D:
-// in a column or a Descendants section alike, dnd-kit's shuffle decides the
+// In a column or a Descendants section alike, dnd-kit's shuffle decides the
 // ghost's slot and the dragged copy's center, above or below the ghost's
 // middle, picks which neighbor names it. Rows 100 tall, `over` rects
-// unshifted (as dnd-kit measures them); the ghost's own height is no longer
-// a parameter — it's `SHORT_CARD_HEIGHT_PX` over a Card row,
-// `STUB_ROW_HEIGHT_PX` over a Stub row, read off `over`'s own kind, so a
-// case that depends on it computes the ghost's middle from the constant.
-// Only the dragged copy's center is compared,
-// never its height.
+// unshifted (as dnd-kit measures them). The ghost's own height is read off
+// `over`'s own kind — `SHORT_CARD_HEIGHT_PX` over a Card row,
+// `STUB_ROW_HEIGHT_PX` over a Stub row — so a case that depends on it
+// computes the ghost's middle from the constant. Only the dragged copy's
+// center is compared, never its height.
 describe('dropAnchorFor', () => {
   function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' = 'card'): Over {
     return {
@@ -309,8 +298,7 @@ describe('dropAnchorFor', () => {
     expect(dropAnchorFor(dragged('x', 50), overRow('x', 0, ['x']))).toBeNull();
   });
 
-  // Story 6.1 Phase 3 (L1-3): a bare container is never a row to anchor
-  // beside — no card/Stub data at all, the shape a locked column/sub-row's
+  // A bare container is never a row to anchor beside — no card/Stub data at all, the shape a locked column/sub-row's
   // own container droppable (or the pop machine's Board-layer hover
   // container) registers.
   it('over a bare container (no row data): nothing to anchor to', () => {
@@ -330,9 +318,8 @@ describe('dropAnchorFor', () => {
     });
   });
 
-  // Story 6 Phase D: a Descendants section's flat list is the same ghost-
-  // slot rule, now with the Stub row's own (shorter) ghost height —
-  // §7.1's "the gap is wherever the rows slide aside to make room."
+  // A Descendants section's flat list follows the same ghost-slot rule
+  // (DRAG-4.8's gap), with the Stub row's own (shorter) ghost height.
   it("over a Stub row: the same shuffle-slot rule, with a Stub row's own ghost height", () => {
     const items = ['a', 'b', 'c', 'x'];
     const ghostMiddle = 110 + STUB_ROW_HEIGHT_PX / 2; // a Stub row's ghost, top-aligned to B (top 110)
@@ -354,9 +341,9 @@ describe('dropAnchorFor', () => {
     });
   });
 
-  // Story 6 Phase D hands-on (2026-09-24): the dragged Stub's own child
-  // `xa` is still rendered right below it, but travels with it — named, the
-  // gap jumped to the section's end. The search steps past it.
+  // The dragged Stub's own child `xa` is still rendered right below it, but
+  // travels with it: naming it would put the gap at the section's end, so
+  // the search steps past it.
   it('DRAG-4.8: steps past rows that travel with the dragged item', () => {
     const items = ['s1', 'x', 'xa', 's3'];
     const travels = (id: string) => id === 'x' || id === 'xa';

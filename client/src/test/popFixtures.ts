@@ -11,9 +11,8 @@ import { rect, region } from './dragFixtures';
 // Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
 // tall; column C further right, all fixture-default 2-card regions. With
 // `POP_TEST_METRICS`, B's top band is y < 96 and its bottom band y > 304;
-// the one-card edge is the only formula `gapPx` enters into
-// (dragRegions.test.ts covers that case; nothing here uses a one-card
-// region). The points are the ones both suites aim at.
+// the one-card edge is the only formula `gapPx` enters into, and this board
+// has no one-card region. The points are the ones both suites aim at.
 export function threeColumnBoard() {
   const A = region('column:a', rect(0, 0, 100, 400));
   const B = region('column:b', rect(120, 0, 100, 400));
@@ -34,8 +33,6 @@ export function threeColumnBoard() {
   };
 }
 
-// `heightPx` (96) matches the old `ghostCardHeightPx` default, so every
-// 2+-card band boundary reads the same as it always has.
 export const POP_TEST_METRICS: ShortCardMetrics = { heightPx: 96, gapPx: 8 };
 export const POP_TEST_TUNING: DragTuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 300, popInDelayMs: 200 };
 
