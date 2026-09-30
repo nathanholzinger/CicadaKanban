@@ -10,7 +10,10 @@ This page answers "what happens as the user drags, and what does a release
 at a given place mean." The *consequences* of any resolved drop —
 attachment, reparenting, cascades, validity — live in
 [`../item-attachment/`](../item-attachment/) and hold identically for
-non-drag paths.
+non-drag paths. The page covers dragging an item, Card or Stub. Dragging
+a column reorders the board's columns
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/)), and none
+of this page's layers, pops or bands apply to it.
 
 **Resolution and feel.** These rules come in two kinds. Drop
 **resolution**: given a release at this place, what change is committed.
@@ -911,6 +914,21 @@ resyncs the board from the server. §3.2 should make this nearly
 unreachable — an invalid target shouldn't have been poppable — so a
 rejection arriving at all means the two enforcement points have drifted.
 
+**A reload that lands mid-drag stops the drag.** Either resync above,
+a failed drop's or a stale response's, can land while the user is
+dragging an item. The drag ends at once and nothing is written. The item
+is wherever the reloaded board shows it, which is where the server has
+it and may not be where the drag picked it up. A reload is the path for
+when something has gone wrong, and picking the item up again costs
+little. Why not keep the drag going on the reloaded board: the reload can
+move or remove what the drag is locked into, such as a Card the failed
+drop had put in this column, and the release would then land somewhere
+the user never saw.
+
+**Planned:** a drag the board stops shows a cue that says so, so the
+drag's end doesn't read as a slip of the user's hand. Its look isn't a
+rule yet (Open questions).
+
 **The placement a release implies is shown at the moment of release**,
 before the request is even sent, so the board never shows its pre-drop
 order while waiting for the response.
@@ -957,7 +975,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   highlight of its own), the zoom-in cue (§6.1) and the invalid tab-state cue
   (§3.2, §7.2) each have a working placeholder; their final palette,
   weight and animation are best tuned against real gestures rather than
-  guessed up front. Today's zoom-in cue is a dashed outline in the
+  guessed up front. The cue for a drag a reload stops (§10) has no
+  placeholder. Today's zoom-in cue is a dashed outline in the
   attach-preview blue — the same dashed style as the placeholder Stub a
   Card shows once you're inside it — and a thin bar along the card's
   inside bottom edge, filling left to right. The fuller transition (the

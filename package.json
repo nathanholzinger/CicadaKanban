@@ -20,7 +20,7 @@
     "lint:client": "npm --prefix client run lint",
     "lint:server": "npm --prefix server run lint",
     "lint:root": "eslint .",
-    "lint": "npm run lint:client && npm run lint:server && npm run lint:root",
+    "lint": "npm run check:docs && npm run lint:client && npm run lint:server && npm run lint:root",
     "format:check:client": "npm --prefix client run format:check",
     "format:check:server": "prettier --check \"server/**/*.{ts,js,mjs,json}\"",
     "format:check:root": "prettier --check \"tests/**/*.ts\" \"scripts/**/*.{mts,json}\" \"*.{ts,js,mjs,json}\"",

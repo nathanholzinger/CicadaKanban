@@ -559,6 +559,16 @@ Story 6's hands-on found feel problems that aren't about any one cue's look.)*
   for a Card with children. Skipping it would change wiki §1.1's layer
   stack, so it's a rule decision as well as a feel one.
 
+**Carried in from A4's PO handoff (Nathan, 2026-09-30):**
+
+- **A cue when the board stops a drag.** If an earlier drop's write fails,
+  or a stale response resyncs the board, while the user is dragging, the
+  reload cancels the drag and nothing is written (wiki
+  board-drag-interaction §10). Nathan wants a visual cue for that forced
+  stop, so the drag's end doesn't read as the user's own slip. The wiki
+  carries the cue as Planned, and its look under Open questions. This
+  story designs the look, builds it, and clears the marker.
+
 ---
 
 ### Story 9 — Free-item reparent keeping Free status (gesture only)
@@ -639,6 +649,35 @@ deferral and keep landing with their stories.
      - **DRAG-1.24, 3.12 and 3.24 need only their surface halves.**
        `dragRequest.test.ts`'s "same workphase, slot existing" and "same
        workphase, empty others" tests hold the request-level halves.
+
+     **Candidate tests from A4** (A4's Handoff, "To the Test Reconciler",
+     2026-09-30). A4 turned wiki pointers in these tests' comments into
+     the IDs of the cases they assert (A4's D2). Their titles don't carry
+     the IDs, and a comment isn't coverage, so each case is still `Open`.
+     Check them before writing new tests. The closing run judges whether
+     each asserts its case's *Then*. An internal test counts once Nathan
+     approves it, or outright when it's in an approved category.
+     - **DRAG-6.7:** `dragRequest.test.ts`'s stale-response test in
+       `sendItemMove`.
+     - **DRAG-6.11:** `itemListOps.test.ts`'s done-list test that draws an
+       item with no `completedAt` last.
+     - **DRAG-1.17:** `popSession.test.ts`'s "popping out of a context the
+       sample has no region for" block, and `drag-5-stub-detach.spec.ts`'s
+       DRAG-5.1/DRAG-5.10 test, for its two back-to-back pops. The spec
+       waits for the column after two pops' time, but never observes the
+       Card layer between them.
+     - **DRAG-1.21, the zoom-in half only:** `popSession.test.ts`'s "locked
+       Card: zoom-in into its own Descendants section" block.
+     - **DRAG-4.15 and 4.20:** `drag-card-zoom-in.spec.ts`'s header names
+       them, but both its tests are skipped, so they cover nothing yet.
+       They aren't among item 3's six skips.
+     - **Already `Automated`, so a stamp adds a test but changes no
+       status:** ATT-7.1 on the same `drag-5-stub-detach.spec.ts` test (the
+       preserved parent), and ATT-5.1 on `server/tests/routes/items.test.ts`'s
+       PUT cross-project reparent test. Both count as they are. A4 also
+       found DRAG-4.8 in `dragCollision.test.ts`'s Stub-row `dropAnchorFor`
+       test and TC-5.9 in `positionResolver.test.ts`'s `disclosure` block.
+       As internal tests they'd need approval for no gain, so they're left.
    - **item-attachment, 1 case** (A3 batch 4): ATT-4.9, the UI and the API
      agreeing on every target's legality. Its test is described in
      `docs/audits/test-reconciliation-a3-item-attachment.md`, under

@@ -629,7 +629,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // that drag's session: the pointer listener and the pop machine would
   // keep running with the button released, and the reassert effect would
   // re-add its ghost into the reloaded board. So every reload this hook asks
-  // for ends a live drag first, the way Escape would.
+  // for ends a live drag first, the way Escape would
+  // (wiki board-drag-interaction §10).
   function resyncBoard() {
     if (sessionRef.current) handleDragCancel();
     return latest.current.loadBoard();

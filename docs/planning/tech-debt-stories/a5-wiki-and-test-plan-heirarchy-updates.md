@@ -28,6 +28,17 @@ DRAG-4.28 and several references to 'project sidebar' are incorreclty mapped int
 - **Moving the cases.** When the rules move, DRAG-4.26, 4.28 and 4.31 get new IDs in the sidebar's suite, and this plan lists old → new (A3 D4).
 - **Tests to map once they move.** Client tests already pin DRAG-4.28's and 4.31's rules without carrying their IDs: hierarchyPlacement's null-root and collapsed-Top tests, and projectTreeUtils'. A3's confirming run lists them. They're internal, so each mapping needs Nathan's approval.
 
+*Added by the Auditor, from A4's handoff (2026-09-30):* one sidebar gap, routed here by Nathan rather than to A6's audit.
+- **The sidebar writes on a set-down in its own slot.** §7.1 says an item set back down in its own gap, at its own depth, writes nothing, since with full context the release can't move it. The board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't, per the Coder: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing.
+  - §7.1 says "item", but its reason holds in the sidebar, which always has full context. When the sidebar's rules move, their new home says whether a set-down in its own slot writes (a ruling for Nathan).
+  - If it writes nothing, this story carries one code fix: a check against the project's own slot before `onReorderProject`, like the board's. Its case goes in the sidebar's new suite.
+
+*Added by Nathan on behalf of The Coder (2026-09-30):*
+- **Re-point comments when a rule moves.** it matters because the checker can't catch it: §7 and §7.1 still exist after the sidebar's rules move out, so stale pointers pass. The sites are:
+  - useProjectDragReorder.ts's header;
+  - projectTreeUtils.ts::fullChildrenOf;
+  - hierarchyPlacement.ts's header and root CLAUDE.md's "One position math layer", which cite §7/§7.1 for the rule the board and sidebar share.
+
 ### D2 harden item movement rules and fix mismatches
 
 Address `Pending PO` cases, where the wiki is silent and the code has chosen:
@@ -91,6 +102,7 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - Item-positioning §7.3 says `"none"`. §2's list of `"none"` cases doesn't include it, and the API returns `"workflow"`.
   - The Test Planner's view: `"none"`. §7.3 nulls the item's position because it has no meaningful comparison scope, which is what `"none"` means. §2's list would gain the case, and the code follow.
 - **TC-2.32: a write that names a final position.** Item-positioning §2 says a write carries relative intent. The API also accepts a raw `position` on a move, and a reorder endpoint that sets positions outright. Scripts and test setup use both, and no client calls the reorder endpoint. Is it part of the API, or to be retired?
+  - *Added by the PO, from A4's sweep (2026-09-30):* no client code sends a raw `position` on a move either, per the Coder. The client's wrapper for the reorder endpoint, `api/items.ts::reorderItems`, has no caller.
 - **TC-6.10: two done items with the same `completedAt`.** What orders them? The client puts the one created first ahead today.
 
 *Added by the Test Planner, from A3 batch 6's Stop 1 (2026-09-29):* one more item-positioning case, `Pending PO`, routed here by Nathan beside TC-6.10.
@@ -98,9 +110,37 @@ Address `Pending PO` cases, where the wiki is silent and the code has chosen:
   - The server keeps the order both ways today. `server/tests/routes/workphases.test.ts`'s two flag tests pin it: 'backfills items on a non-terminal -> terminal flip…' and 'backfills items on a terminal -> non-terminal flip…'.
   - The flag change itself (TC-6.11 and 6.12) is routed to Epic 4's done-column rework, which may retire the flag. The answer may belong there too.
 
+*Added by the PO, from A4's handoff (2026-09-30):* one more item-attachment question, routed here by Nathan beside Ruling A.
+- **A create with a parent and no attachment flag: is the child Attached or Free?** The code makes it Attached, per the Coder. No section says so.
+  - §4's "Nothing attaches by default" is about reparenting, but read on its own it says Free.
+  - §11a's "whether it's attached to it" implies that a create makes a choice, but doesn't give the default.
+  - Ruling A's §4 question, whether a reparent that omits the flag keeps a flag the item already holds, is the same kind of default, seen from the reparent side.
+  - **The PO recommends Attached, unless the create clears the flag.**
+    - Under §11, an item becomes Free only by an explicit detach, so a child created Free would be detached without anyone detaching it.
+    - It also fits Ruling A, where every create sets the flag.
+    - Write it with Ruling A, since both rewrite §1 and §4. §4's sentence would narrow to "No reparent attaches by default."
+  - The Test Planner checks whether a case already covers it.
+
 Once the wiki states each answer, the Test Planner keeps, changes or deletes the case.
 
-### D3
+### D3 Write boards-columns-unsorted out in full
+
+*Added by the PO, from A4's handoff (2026-09-30):* Nathan folded this in. A2 handed it off as a follow-up story, which was never written.
+
+The page states only the core rules so far, as unnumbered bullets, and it has no test plan. This story:
+- **numbers its sections,** so code comments can cite them and the Test Planner can derive cases from them;
+- **takes the rules the code has that the page doesn't state,** each as a ruling for Nathan before it's written, as with A4's handoff items:
+  - `DELETE /boards/:id` refuses a workflow's last board with a 409;
+  - `POST` and `PUT /api/columns` return a 400 for a range whose start comes after its end, or whose workphases aren't in the board's workflow;
+  - `unsorted` also carries `needsAttention`, which the page doesn't describe;
+- **gets the page a test plan,** written by the Test Planner. The page already uses the API's field names, which the Test Planner asked for during A2;
+- **hands the Coder A4's D4 table for this page,** which maps each rule to its main enforcing site, so the new section numbers get their index pointers.
+
+The page states today's behavior. A later epic reworks how columns and workphases relate (Nathan, 2026-09-30), and when isn't known.
+
+If A5 grows too big, this decision splits out into a story of its own.
+
+### D4 Re-point comments when a rule moves
 
 ## Work, in batches
 

@@ -1,7 +1,7 @@
 # Boards, Columns & Unsorted
 
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
-(dragging on a board) · [`../item-positioning/`](../item-positioning/)
+(dragging items on a board) · [`../item-positioning/`](../item-positioning/)
 (how a column orders its items)
 
 This page answers "what is a board, what does a column cover, and where
@@ -14,6 +14,10 @@ far, not a full description of boards and columns.
   `GET /api/boards/:id`). The covered set is worked out whenever the board is
   read, from the workflow's current workphase order, so adding or
   reordering workphases never requires changing a column.
+- A board's columns are reordered by dragging a column. The order belongs
+  to that board alone. It changes nothing about the workphases a column
+  covers, which follow the workflow's order, or the items in them, which
+  never reference a column.
 - **Unsorted** is returned with every board by `GET /api/boards/:id`, as
   the board's `unsorted`; it's derived, not a column anyone creates. It
   holds any workphase not covered by any column on that board (its

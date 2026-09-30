@@ -91,8 +91,8 @@ The hooks and contexts that run it:
   plumbing.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.
-- `DragTuningContext.ts` — the live tuning values, for the components that draw
-  thresholds and bands.
+- `DragTuningContext.ts` — the live tuning values, for the components that draw a drag
+  cue from them: a Card's zoom-in cue, timed by `cardPopInDelayMs`.
 - `usePendingGhostGuard.ts` — keeps the ghost in place while an earlier write is
   still pending.
 - `useSnapTween.ts` — the eased snap when a pop moves the carried copy's clamp target.

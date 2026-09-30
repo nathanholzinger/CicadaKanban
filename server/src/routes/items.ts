@@ -391,7 +391,8 @@ router.post('/:id/comments', (req, res) => {
   res.status(201).json({ success: true });
 });
 
-// Delete an item and all its descendants. Each item's dependent rows (itemLabels,
+// Delete an item and all its descendants, detached ones included
+// (wiki item-attachment §13). Each item's dependent rows (itemLabels,
 // activityLog, notifications, attachments, chat threads/messages) are removed by
 // ON DELETE CASCADE; parentId is a soft reference with no FK, so the subtree is
 // still collected in app code and deleted in one statement.

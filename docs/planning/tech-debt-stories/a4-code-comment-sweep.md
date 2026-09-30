@@ -1,6 +1,6 @@
 # A4 — Code Comment Sweep
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Coder · **Status:** in progress
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Coder · **Status:** code complete, awaiting sign-off
 
 **Source:**
 - the round table at `docs/planning/round-tables/documentation-purposes-and-standards` (tags like "Coder F4" or "Architect F6");
@@ -195,12 +195,14 @@ The first two hold: A2 and A3 have closed, and `check:docs -- docs/wiki docs/tes
 
 All three hold at the end of 4b-iii (2026-09-30): `npm run check:docs` over its default scope reports 0 hits on 254 files.
 
+Done in batch 5. Root `lint` had since split into `lint:client`, `lint:server` and `lint:root`, so `check:docs` runs before all three: `"lint": "npm run check:docs && npm run lint:client && npm run lint:server && npm run lint:root"`.
+
 ### D10. Pointers to wiki sections that A2 moved
 
 A2 moved three rules into new subsections. A comment that cites the old number still passes the checker, because §2, §5 and §6 all still exist. So this list is the checklist: each site is re-pointed in the batch that owns its file, as part of its D2 rewrite. The line numbers are from 2026-09-27; if they've drifted, search for the pointer.
 
 - **board-drag-interaction §6 → §6.1**, which Card is zoomed into (the dwell, the cue, the reset rule, invalid targets):
-  - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
+  - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock. Done: the header's range became a list ending in §6.1, lines 118 and 329 cite §6.1, and line 344's pointer went, since its sentence now defers to `PopHover.side`, which carries it.
   - **1b-ii:** `dragCollision.ts` line 85's range, the same way. Done differently: the comment guards one rule, so the range became that rule's pointer, §1.1 rule 1.
   - **1c-ii:** `dragChrome.tsx` line 126. Done: the zoom-in cue's comment cites §6.1.
   - **4a:** the `popSession.test.ts` title at line 198. Already cleared: A3's retitle to DRAG-1.4 dropped the pointer.
@@ -209,7 +211,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
   §6 keeps the auto-drop and the pinned ghost, so a pointer to those stays, e.g. `placement.ts` line 88's "set back down".
 - **item-positioning §2 → §2.1**, the scope-change table:
   - **3:** `itemHierarchy.ts` lines 237 and 263. Done in 3-i.
-  - **4a:** `items.hierarchy.test.ts` line 11.
+  - **4a:** `items.hierarchy.test.ts` line 11. Done in 4a-iii: the header lost its pointers, since every test below it names its cases.
 
   §2 keeps anchor + side resolution, the client-side role and the workphase-only rule, so pointers to those stay.
 - **item-positioning §5 → §5.1**, reindexing must be disclosed to the caller:
@@ -283,20 +285,33 @@ Filled in as the batches land:
 - **To the PO:** possible wiki gaps from D4, i.e. rules the code enforces that no section states, and unmarked sections that nothing enforces.
   - **board-drag-interaction (1c-ii):** no unmarked section lacks enforcing code (§9 is "Not settled"). Three rules the code enforces that no section states:
     - a press becomes a drag only after 5px of pointer movement; less is a click, which opens the item (`useBoardDnd.ts`'s `PointerSensor` activation distance);
+      - **Nathan (2026-09-30): no wiki change.** What separates a click from a drag is an implementation detail. The wiki says what each gesture does, and assumes the boundary between them is self-evident. If user testing shows it isn't, the rule gets ratified then, as a shared rule for everything that has to tell a click from a drag, not on this page.
     - a board reload that lands mid-drag (from an earlier drop's failed or resyncing write) cancels the live drag the way Escape does (`useBoardDnd.ts::resyncBoard`);
+      - **Nathan (2026-09-30): the reload stops the drag, as today, and a cue says so.** Keeping the drag going on a redrawn board would need rules for a locked context that's gone.
+      - **Done (PO):** wiki board-drag-interaction §10 gains "A reload that lands mid-drag stops the drag", and a Planned cue for the forced stop. The cue's look joins the page's Open questions, and its build is in Epic 3.5 Story 8. What Escape does isn't written: it's self-evident, as in the ruling above.
+      - **For the Coder, if A4 is still open:** `useBoardDnd.ts::resyncBoard` can take §10's index pointer for the new rule. **Done (Coder, at close-out),** and D4's table has it.
     - columns reorder by dragging, and a column drag never runs the pop machine (`useBoardDnd.ts::handleDragEnd`'s column branch). This one may belong on boards-columns-unsorted.
+      - **Nathan (2026-09-30): a short line for now.** How columns and workphases relate will be reworked later, and when isn't known, so the current behavior is worth stating.
+      - **Done (PO):** boards-columns-unsorted gains a bullet: columns reorder by dragging, and the order belongs to the board and changes neither coverage nor items. board-drag-interaction's opening paragraph says the page covers item drags, and that none of its layers, pops or bands apply to a column drag. D4's boards table has a row for the new bullet.
   - **item-attachment (3-ii):** no unmarked section lacks enforcing code (§10 has none of its own, since it follows from §2). Two rules the code enforces that no section states:
     - deleting an item deletes its whole subtree, detached descendants included (`routes/items.ts`'s `DELETE /:id`, through `itemTree.ts::walkItemDescendants`);
+      - **Nathan (2026-09-30): state today's behavior.** It may change later.
+      - **Done (PO):** item-attachment gains §13, "Deleting an item deletes its subtree", and its opening paragraph names deletion. The Sheet's "are you sure" step isn't stated, since it belongs to the Sheet (A5's ruling 14). D4's item-attachment table has a row for §13, with no pointer written yet.
+      - **Done (Coder, at close-out):** `routes/items.ts`'s `DELETE /:id` takes §13's index pointer. The client keeps to the rule too: `itemListOps.ts::removeItemAndDescendants` drops the whole subtree from the board.
     - an item created under a parent is attached unless the request says otherwise (`routes/items.ts`'s POST, and `schema.ts`'s `isAttached` default). §11a's "whether it's attached to it" implies a choice but doesn't give the default. The parentless side of that default is ATT-1.8, which A5 already carries.
+      - **Nathan (2026-09-30): moved to A5's D2**, beside Ruling A, with the PO's recommendation (Attached unless the create clears the flag). Not answered yet.
   - **item-positioning (3-ii):** no unmarked section lacks enforcing code (§7.5 is §2's workphase-only rule reached through board-drag-interaction §5's middle band). One rule the code has that §2 contradicts: the API accepts a final position, as `PATCH /items/:id/move`'s raw `position` and `PATCH /items/reorder`. A5 already carries this as TC-2.32. For that ruling: no client code calls either one. `api/items.ts::reorderItems` wraps the reorder endpoint but has no caller.
   - **boards-columns-unsorted (3-ii):** the page has no numbered sections, so no comment can carry an index pointer to it; `wiki <page> §N` needs a section. D4's table for it maps each of the page's bullets to its site instead, so the follow-up story that writes the page out in full can add the pointers once it numbers them. No bullet lacks enforcing code. The rules the code enforces that the page doesn't state are already A2's input for that story (the last-board 409, the column range 400s, `needsAttention`).
+    - **Nathan (2026-09-30): the follow-up is folded into A5,** as its D3, with the inputs from A2 and this plan's D4 boards table.
 - **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root"), and anything false in a `CLAUDE.md` file, which A4 doesn't edit.
   - **`workflow/CLAUDE.md`'s module list (2-ii):** it says `DragTuningContext.ts` serves "the components that draw thresholds and bands". Its one reader is `KanbanCard.tsx`, for the zoom-in cue's timing (`cardPopInDelayMs`); the band guides don't read it. The module's own comments now say so.
   - **Root `CLAUDE.md`'s "One hierarchy-write primitive" (3-i) overstates POST.** It says every write that can give an item a parent, `POST /items` included, routes through `itemHierarchy.ts`. `PUT /items/:id` and `PATCH /items/:id/move` do, through `validateHierarchyRequest` and `applyHierarchyRequest`. `POST /items` checks its parent itself (it exists, it's in the same project, and the depth cap through `itemTree.ts::assertWithinDepthCap`), and uses `itemHierarchy.ts` only to log (`logCreatedUnderParent`). The guardrail's instruction, not to reimplement that logic at the route level, still holds. `itemHierarchy.ts`'s header made the same claim and now names its two entry points.
+  - **Done (Architect, 2026-09-30):** both corrections are in, as written above.
 - **To Nathan, for the next story or audit:** code that looked wrong while I was reading (D3), each with its site.
   - **The project sidebar writes on a set-down in its own slot (2-i).** wiki board-drag-interaction §7.1 says an item set back down in its own gap, at its own depth, writes nothing, and the board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing, since there's no projection yet. The fix is a check against the project's own slot before `onReorderProject`, like the board's.
   - **The Sheet's parent picker offers parents over the depth cap (3-i).** wiki item-attachment §7 says the UI must never present a target the API would reject. `ParentSection.tsx::buildParentOptions` (through `hierarchy.ts::buildParentOptions`) leaves out the item itself and its descendants, but not a parent at which the item's subtree would exceed `ITEM_DEPTH_CAP`. Picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap: it classifies against `itemDepthCap`.
   - **Two redundant keys in `ProjectPage.tsx` (2-ii), not wrong.** Its `ConfirmDeleteInline` and `ProjectOverviewTab` are each keyed on `project.id` to reset their state on a project switch, but `App.tsx` already keys the whole `ProjectPage` on the selected project, so a switch remounts both anyway. The comment at the first key said nothing else reset that state; it now says only what the key guarantees.
+  - **Routed (Nathan, 2026-09-30):** the sidebar's set-down write to A5's D1; the parent picker to the Work Item Detail & Chat UI epic's entry in `mvp-roadmap.md`, as ATT-4.12's fix; the redundant keys to A6's first run, as a D10 input. A6's run also takes board-drag-interaction §2's rule 6, which D4 left without a pointer.
 - **To the Test Reconciler, on its next run:** test comments where a wiki pointer became the case ID the test asserts (D2), though the test's title doesn't carry that ID. A comment ID doesn't count as coverage, so each case's status is unchanged. The route test counts without approval. The rest are internal tests: those in a pre-approved category may be mapped outright, and the others need Nathan's approval.
   - `dragRequest.test.ts`, the stale-response test in `sendItemMove`: DRAG-6.7 (Open). (4a-ii)
   - `itemListOps.test.ts`, the done-list test that draws an item with no `completedAt` last: DRAG-6.11 (Open). (4a-ii)
@@ -307,8 +322,10 @@ Filled in as the batches land:
   - `routes/items.test.ts`, the PUT cross-project reparent test: ATT-5.1 (Automated through other tests). This is the route test. (4a-iii)
   - `drag-5-stub-detach.spec.ts`, the DRAG-5.1/DRAG-5.10 test: DRAG-1.17 (Open) for its two back-to-back pops, and ATT-7.1 (Automated) for the preserved parent. A UI test, so it counts without approval; it waits for the column after two pops' time but never observes the Card layer between them. (4b-ii)
   - `drag-card-zoom-in.spec.ts`'s header: DRAG-4.15, DRAG-4.19 and DRAG-4.20. Both of its tests are skipped, so there's nothing to map until they run. (4b-ii)
+  - **Routed (Nathan, 2026-09-30):** to Epic 3.5 Story 10, as "Candidate tests from A4" in its roadmap entry, for its closing Reconciler run. DRAG-4.8 and TC-5.9 are left, since both are already `Automated` and an internal stamp would need approval for no gain. DRAG-4.19 is already `Automated` too.
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
-- **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
+  - **Not yet in A5's plan** (2026-09-30). The checker can't catch a stale pointer here, since §7 and §7.1 keep the board's rules and so still exist after the move. The sidebar-side comments that cite them are `useProjectDragReorder.ts`'s header and `projectTreeUtils.ts::fullChildrenOf`. `hierarchyPlacement.ts`'s header cites §7.1 for the gap and depth rule the board and the sidebar share, so it needs a look, as does root `CLAUDE.md`'s "One position math layer", which cites §7 for the same library.
+- **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them. None were left: each tag's reason was recovered at its site, or the tag went because its sentence already said what it stood for.
 - **The D5 disposition table** for A2's passages.
 
 ### D5 dispositions
@@ -418,7 +435,7 @@ Every passage in A2's lists now has a disposition.
 | §7.2 | `hierarchyPlacement.ts::toRows`: the dragged subtree is never a candidate. `descendantsProjection.ts::advanceProjection`: the cap is checked per tab state. `descendantsProjection.ts::descendantsReleasePlacement`: an over-cap state commits nothing. `dragChrome.tsx::INVALID_PLACEMENT_CLASS`: the invalid cue. | `dragCollision.ts::travelingRowsFor`. |
 | §8 | `dragRequest.ts::toRequest`'s detach branch: a detach writes `isAttached: false` and leaves `parentId`. The two pops are §1.1's and §3.1's clock. | — |
 | §9 | **No enforcing code:** the section is "Not settled" and defers to Open questions. | — |
-| §10 | `itemListOps.ts`'s header: the ordinal preview. `dragRequest.ts::toRequest`: the preview shows where the write lands. `DragSessionContext.ts::useIsPending`: the pending marker. `itemWriteReconciliation.ts`'s header: the response order and the tripwire. `useItemManagement.ts::ItemWriteTracker`: a stale response never lands last. `usePendingGhostGuard.ts`'s header: a re-drag's marker and ghost. `dragRequest.ts::sendItemMove`: a failed drop resyncs. `placement.ts::noAnchorSlot`: no comparable position previews last. `itemListOps.ts::byCompletedAtThenCreatedAt`: a done list shows a previewed item as the newest. | — |
+| §10 | `itemListOps.ts`'s header: the ordinal preview. `dragRequest.ts::toRequest`: the preview shows where the write lands. `DragSessionContext.ts::useIsPending`: the pending marker. `itemWriteReconciliation.ts`'s header: the response order and the tripwire. `useItemManagement.ts::ItemWriteTracker`: a stale response never lands last. `usePendingGhostGuard.ts`'s header: a re-drag's marker and ghost. `dragRequest.ts::sendItemMove`: a failed drop resyncs. `placement.ts::noAnchorSlot`: no comparable position previews last. `itemListOps.ts::byCompletedAtThenCreatedAt`: a done list shows a previewed item as the newest. Added at close-out: `useBoardDnd.ts::resyncBoard`: a reload that lands mid-drag stops the drag. | — |
 
 Each section that states a rule the code enforces has at least one index pointer. §2's rule 6 is the one rule without one (above). The sidebar doesn't keep §7.1's "a set-down in its own gap writes nothing", so that rule's pointer stays on the board side; the gap is in the Handoff to Nathan.
 
@@ -441,6 +458,7 @@ item-attachment:
 | §11 | `HierarchyRequest.parentId`: a detach keeps its parent, and `null` is reparent to root. | — |
 | §11a | `applyHierarchyRequest`'s activity log. `itemHierarchy.ts::logCreatedUnderParent`: a create under a parent counts. | — |
 | §12 | `isStub.ts::isStub`: an attached descendant renders as a Stub. | — |
+| §13 | Added by the PO after close-out. `routes/items.ts`'s `DELETE /:id`, through `itemTree.ts::walkItemDescendants`: the whole subtree, detached descendants included (the pointer was written at close-out). | — |
 
 `POST /items` doesn't refuse `isAttached: true` with no parent, which §1 and §7's "every write" say it should. That's ATT-1.8, Pending PO in A5, so it isn't raised again here.
 
@@ -468,6 +486,7 @@ boards-columns-unsorted has no numbered sections, so this maps each of the page'
 | The page's rule | Main enforcing site |
 |---|---|
 | A column covers a range from `startWorkphaseId` to `endWorkphaseId`, worked out on every read from the current workphase order | `columnRanges.ts::getCoveredWorkphases`, from `routes/boards.ts`'s `GET /:id` |
+| A board's columns reorder by dragging, changing neither coverage nor items (added by the PO, 2026-09-30) | `useBoardDnd.ts::handleDragEnd`'s column branch, per the Coder's handoff |
 | Unsorted holds the uncovered workphases and the items with a missing or dangling `workphaseId`; a new workphase lands there, never joining a column | `columnRanges.ts::computeUnsorted`. `workflowItems.ts::getBoardScopeItems` scopes the board by project, so those items are found at all. `routes/workphases.ts`'s POST appends a new workphase after every existing one (`nextPosition`), outside every column's range. |
 | A broken column is flagged on every read, never stored, keeps showing its items, and refuses drops | `columnRanges.ts::isColumnBroken`. `dragRegions.ts::cardListStructure` gives a broken column no drop region. |
 | Every workflow always has at least one board, set up 1:1, and so does an additional board | `routes/boards.ts::createDefaultBoard`, from workflow creation, `POST /boards` and the migration backfill. `DELETE /boards/:id` refuses a workflow's last board. |
@@ -492,3 +511,16 @@ boards-columns-unsorted has no numbered sections, so this maps each of the page'
 - **2026-09-30, end of batch 4a (Coder):** "To the Test Reconciler" joins the Handoff, for test comments whose wiki pointer became a case ID the test's title doesn't carry. Where a title named a function that no longer exists by that name (`positionResolver.test.ts`'s `reindexScope` and `resolveAnchorPosition`), the title was corrected like a false comment; D8's comparison already allows title changes.
 - **2026-09-30, batch 4b (Coder):** 4b split into 4b-i to 4b-iii (D7), at about 1,200 comment lines and 155 hits. D8's single E2E run becomes one per stop, since each stop is its own commit.
 - **2026-09-30, end of batch 4 (Coder):** the default scope reports 0 hits (D9), so batch 5 can go ahead.
+- **2026-09-30, batch 5 (Coder):** D9's script predates root `lint`'s split into three parts, so `check:docs` goes in front of all three rather than replacing them with the client's eslint.
+- **2026-09-30, close-out (Coder):** every Acceptance item holds. D10's two sites that were done but never marked (`popSession.ts` in 1a-i, `items.hierarchy.test.ts` in 4a-iii) are marked, and "To A6" records that none were left. The Handoff's entries for the PO, the Architect, the Test Reconciler and A5 wait on those owners.
+- **2026-09-30, the PO's handoff (Nathan's rulings, written in by the PO):**
+  - **The click/drag threshold:** no wiki change.
+  - **A reload mid-drag:** wiki board-drag-interaction §10 gains a paragraph, "A reload that lands mid-drag stops the drag", and a Planned paragraph for the cue. The page's Open questions entry on the look of the drag's cues names the new cue. No section was added or renumbered.
+  - **Column dragging:** boards-columns-unsorted gains a bullet after the first, on reordering columns. board-drag-interaction's opening paragraph and boards-columns-unsorted's Related line now say that board-drag-interaction covers item drags only. The column bullet's last clause is the PO's deduction from the page's first and last bullets: coverage follows the workflow's order, and items never reference a column.
+  - **Deleting an item:** item-attachment gains §13, "Deleting an item deletes its subtree", the next free number, and its opening paragraph names deletion. The PO's deductions: a detached descendant is deleted because detaching keeps the parent (§11), and the reason, that attachment is about following, not belonging (§2).
+  - **Deferred:**
+    - the cue's look and build, to Epic 3.5 Story 8, in the roadmap's "Carried in from A4's PO handoff";
+    - the default for a create with a parent and no flag, to A5's D2, beside Ruling A;
+    - writing boards-columns-unsorted out in full, to A5's new D3.
+  - **Already carried by A5:** TC-2.32 (final positions). The PO added the Coder's finding to its entry.
+- **2026-09-30, after the handoff (Coder):** the two rules the PO added got their index pointers, since A4 was still open: board-drag-interaction §10's reload rule at `useBoardDnd.ts::resyncBoard`, and item-attachment §13 at `routes/items.ts`'s `DELETE /:id`. Both are comment-only. D4's tables have them, and so the Acceptance line on index pointers holds again. Each Handoff entry now says where it landed. "To A5" hasn't landed: A5's plan doesn't yet say to re-point the comments that cite a rule it moves.

@@ -82,10 +82,13 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   Descendants layer and the project sidebar. Table-generic the same way (`{id,
   parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
   walk inline either.
-- **One hierarchy-write primitive.** Every write that can give an item a parent
-  (`POST /items`, `PUT /items/:id`, `PATCH /items/:id/move`) routes through
-  `server/src/lib/itemHierarchy.ts`. Don't reimplement reparent/attach/depth-cap logic
-  at the route level.
+- **One hierarchy-write primitive.** Every write that changes an existing item's parent
+  or attachment (`PUT /items/:id`, `PATCH /items/:id/move`) routes through
+  `server/src/lib/itemHierarchy.ts` (`validateHierarchyRequest`, then
+  `applyHierarchyRequest`). `POST /items` checks a new item's parent at the route
+  (it exists, it's in the same project, and the depth cap through
+  `itemTree.ts::assertWithinDepthCap`) and uses `itemHierarchy.ts` only to log. Don't
+  reimplement reparent/attach/depth-cap logic at the route level.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
   may carry `reindexed: {id, position}[]`. Every write path folds it through
   `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`.

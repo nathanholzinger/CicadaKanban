@@ -123,6 +123,10 @@ Inbox views collate work items across workflows or items not yet assigned to a c
 
 Full work item detail panel: editable title/description, assignee, agent, status, tags, parent/child relationships. Chat thread UI (schema exists: `chat_threads`, `chat_messages`). Attachment display for link-type attachments (google_doc, github_file, local_file URLs — file uploads are post-MVP). "Visit {Agent}" deep links. Activity log timeline with all event types.
 
+**Carried in from A4's handoff (Nathan, 2026-09-30):**
+
+- **The Sheet's parent picker offers parents over the depth cap.** wiki item-attachment §7 says the UI never presents a target the API would refuse. `hierarchy.ts::buildParentOptions` leaves out the item itself and its descendants, but not a parent at which the item's subtree would exceed `ITEM_DEPTH_CAP`, so picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap: it classifies against `itemDepthCap`. The case is ATT-4.12, routed to A5 as `Pending PO`. Under Nathan's ruling there, the Sheet's rules only need minimally working code until this epic, so the fix is this epic's.
+
 ---
 
 ### Epic 8 — Dashboard, Navigation & Notifications

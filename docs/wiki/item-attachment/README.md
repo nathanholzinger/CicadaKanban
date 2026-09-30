@@ -7,7 +7,8 @@ means and how it resolves) · [`../board-drag-interaction/`](../board-drag-inter
 (the gesture that drives these rules from a board)
 
 This page answers "what does it mean for one item to be attached to
-another, and what is a legal parent." It is deliberately **gesture-
+another, what is a legal parent, and what happens to an item's
+descendants when it's deleted." It is deliberately **gesture-
 agnostic** — every rule here holds identically whether the change came from
 a drag, the Sheet's checkbox, the child badge, or an MCP tool call.
 
@@ -325,6 +326,19 @@ none of it is stored):
 
 *Dossier* — a hypothetical richer-than-Sheet view — is named but
 undesigned.
+
+## 13. Deleting an item deletes its subtree
+
+**Deleting an item permanently deletes every descendant with it,
+attached or detached**, whichever entry point makes the delete. Nothing
+is left behind: no descendant becomes top-level or moves to another
+parent.
+
+A detached descendant goes too, because detaching keeps the parent
+(§11), so it's still in the subtree. Attachment is about following, not
+belonging (§2), and a delete removes what belongs to the item. On the
+board, deleting a Card also removes the Cards of its detached
+descendants, wherever they sit.
 
 ---
 
