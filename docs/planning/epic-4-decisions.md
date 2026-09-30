@@ -197,3 +197,34 @@ values (`docs/audits/test-reconciliation-a3-close.md`, Test Quality 5).
   beside it can be named. The PO's recommendation: in a done list, zoom
   into the Card under the cursor. §6.1's only reason against that is that
   Cards slide aside, and nothing in a done list does.
+
+### 13. The status model: three hard-coded statuses (proposed)
+Nathan's plan, recorded on 2026-09-30 during A5's grooming. It's a proposal:
+it gets discussed when this epic starts, before any implementation. The
+roadmap's Epic 4 entry has the outline.
+
+- **Three hard-coded statuses,** names to be decided: one before a
+  workflow (Backlog), one within it (Active), and Done after it. A kanban
+  item's workflow and workphases replace or subdivide Active.
+- **A Quick Item** has no specific workphase while Active, or ignores it.
+- **A Quick Item's status is equal to or later than its Free ancestor's.**
+  Under a Backlog ancestor it can take any status; under an Active one,
+  only Active or Done.
+- **A Free Quick Item** shows in the workflow's first workphase, whether
+  it holds a workphase or not; having none is expected. It can be dragged,
+  but only to the Done column. Its Card has a checkbox that sets it Done.
+- **A Quick Item Stub** has a checkbox too. It stays in its parent's list,
+  either open and unchecked, or done and greyed out or struck through.
+- **Done is hard-coded,** so it can carry hard-coded rules. Whether an
+  `isTerminal` flag survives is open. If it does, it's no longer a setting
+  any workphase can take. §12's terminal-flag cases wait on this answer.
+
+**Already ruled ahead of this epic** (A5a's R5, 2026-09-30): a top-level create
+may omit its workphase, even in a project with no workflow. Every item
+today is a full item, and a full item with no workphase isn't what the
+board expects, so it shows in Unsorted, whether it was created that way or
+its workphase was deleted (`ON DELETE SET NULL`).
+
+**For the discussion:** under the status model, a full item in Backlog
+may have no workphase by design. Unsorted and `needsAttention` would then
+flag only an Active full item with none.

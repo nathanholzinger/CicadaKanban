@@ -56,7 +56,7 @@ A1 D10's template gives the audit the inputs it used to improvise, such as the N
   - *Scope:* for each Planned passage the story built, confirm the code has a `wiki <page> §N` index pointer at the rule's main enforcement site (A1 D7). A missing pointer is a small required finding.
   - *Amendments:* when judging whether code is vestigial, check which rules changed while the story was open.
   - *Code map:* only for an N.1 story, to check its "Makes dead" claims.
-- **Handoffs addressed to the audit,** or to "the next story or audit" and not yet routed anywhere else. A4's are an example (D10 lists them). Each item either matches a pass's finding, or the orchestrator rules on it and the ruling gets a tier (D5).
+- **Handoffs addressed to the audit,** or to "the next story or audit" and not yet routed anywhere else. A4's are an example (D10 lists them). Each item either matches a pass's finding, or the orchestrator rules on it and the ruling gets a tier (D5). A plan can close before the audit that covers it runs. So its items are copied into the auditing plan, as D10 copies A4's, which leaves the audit no reason to read the archive.
 - **The previous audit only, from `docs/archive/`,** for recurrence. Each report restates the full chain for anything it carries ("Story 3 #16 → Story 4 #16 → Story 5 → here"), so reading one report back is enough. Nothing else in the archive gets read.
 - **The wiki passage each correctness finding touches,** for A1 D11's classification.
 
@@ -104,14 +104,14 @@ This run happens once A4 is done. It uses the instructions as batch 1 leaves the
 
 | Source | What it contains | Passes |
 |---|---|---|
-| Story 6's fix batches (`b300c1c..06bd170`) | Code: 63 files, including the `useBoardDnd` split | All four |
+| Story 6's fix batches (`4c0cb34..06bd170`) | Code: 63 files, including the `useBoardDnd` split | All four |
 | Tooling Gates | The 12 lint fixes, and the new ESLint, tsconfig and script configs | All four |
 | Tooling Gates' Prettier sweep | Formatting only, and on `.git-blame-ignore-revs` | None |
 | A1 | New code: the `check:docs` checker in `scripts/check-docs/` | All four |
 | A1, and the Architect's edits from A4's handoff | The `CLAUDE.md` files, and the module headers that received moved rationale | Drift |
 | A3 | New tests | All four |
 | A3 | The case IDs stamped into test titles | Drift |
-| A4's 16 sweep commits (`359f093..bae02c2`) | Comments, module headers, and test titles that named functions by old names. A4 D8 proves them comment-only | Drift |
+| A4's 16 sweep commits (`359f093^..bae02c2`) | Comments, module headers, and test titles that named functions by old names. A4 D8 proves them comment-only | Drift |
 | A4 batch 5 | Root `lint` runs `check:docs` | All four (one line) |
 | A5, if it lands before this run | Sorted by the same rules: code it changes goes to all four passes, comments it re-points to drift | By D3 |
 | A2, A3's test plans, A1's guides and personas | Docs outside the audit's code scope | None |
