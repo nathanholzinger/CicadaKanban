@@ -3,14 +3,10 @@
 
 export const API = '/api';
 
-// Every domain module in this directory used to hand-roll its own fetch call
-// and error handling, and that had already drifted into two inconsistent
-// levels: some call sites parsed the server's `{ error }` body for a real,
-// specific message, others discarded it for a generic string — purely by
-// which module happened to write the fetch call, not by anything about the
-// request itself (audit code-quality-audit-epic-3-2.md, Finding #8). These
-// three helpers are the one fetch/error path every module function now
-// builds on, so that choice can't happen again.
+// These three helpers are the one fetch/error path every module function
+// in this directory builds on, so whether a failure surfaces the server's
+// specific `{ error }` message or a generic string never depends on which
+// module wrote the call.
 
 export interface ApiRequestInit {
   method?: string;

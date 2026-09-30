@@ -1,8 +1,8 @@
 // The project sidebar's drag reorder — the same placement rule as a board
-// Card's Descendants layer (docs/wiki/board-drag-interaction §7,
-// `lib/hierarchyPlacement.ts`): the rows a gap is computed against, the live
-// projection, the drop line, and on release the reorder, sent as the
-// sibling to insert beside (prevId/nextId), never a computed position.
+// Card's Descendants layer (`lib/hierarchyPlacement.ts`): the rows a gap is
+// computed against, the live projection, the drop line drawn at the gap
+// (wiki board-drag-interaction §7.1), and on release the reorder, sent as
+// the sibling to insert beside (prevId/nextId), never a computed position.
 
 import { useMemo, useState } from 'react';
 import {
@@ -50,18 +50,18 @@ export function useProjectDragReorder(
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
-  // Story 6, decision 5: the dragged project's descendants stay drawn,
-  // dimmed, but the project and its whole subtree are never a Top/Bottom
-  // candidate — `rows` is what a gap is computed against.
+  // The dragged project's descendants stay drawn, dimmed, but the project
+  // and its whole subtree are never a Top/Bottom candidate — `rows` is what
+  // a gap is computed against.
   const descendantIds = useMemo(() => (activeId ? getDescendantIds(activeId, projects) : NO_IDS), [activeId, projects]);
   const exclude = useMemo(() => (activeId ? new Set([activeId, ...descendantIds]) : NO_IDS), [activeId, descendantIds]);
   const rows = eligibleRows(flatItems, exclude);
-  // Difference 6: a Top's first-child lookup must see the *real* tree, not
-  // the render list (which a collapsed project already left out).
+  // A Top's first-child lookup must see the *real* tree, not the render
+  // list (which a collapsed project already left out).
   const childrenOf = fullChildrenOf(projects);
   // Where the drop line draws: "before" the row the gap sits above, or —
-  // the gap past the last row (decision 2's n+1th gap) — "after" the last
-  // row. None only when no eligible row is left to draw it against.
+  // the gap past the last row — "after" the last row. None only when no
+  // eligible row is left to draw it against.
   const dropLine: AnchorRelation | null =
     gap === null || rows.length === 0
       ? null

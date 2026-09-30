@@ -6,7 +6,7 @@ export function fetchItem(id: string): Promise<ItemDetail> {
 }
 
 // One row a server-side reindex renumbered — `{id, position}` and nothing
-// more (docs/wiki/item-positioning §5).
+// more (wiki item-positioning §5.1).
 export interface ReindexedPosition {
   id: string;
   position: number;
@@ -41,23 +41,19 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
   return apiJson(`/items/${id}`, { method: 'PUT', body: data }, 'Failed to update item');
 }
 
-// Epic 3.2: prefers {anchorId, side} (resolved server-side against true
-// current data, never a client-computed value) over a raw `position`, which
-// stays supported only as a direct-control escape hatch — the board drag
-// path no longer sends it.
+// Prefers {anchorId, side} (resolved server-side against true current
+// data, never a client-computed value) over a raw `position`, which stays
+// supported only as a direct-control escape hatch — the board drag never
+// sends it.
 //
-// Epic 3.5: `parentId` (null = make top-level) and `isAttached` ride along
-// with any of the above and commit in the same transaction — the shape the
-// board's attach/detach gestures (Stories 4–6) send. Omitting `isAttached`
-// keeps the item's current state. `projectId` is never sent: a cross-project
-// parent derives and cascades it server-side (docs/wiki/item-attachment §9).
+// `parentId` (null = make top-level) and `isAttached` ride along with any
+// of the above and commit in the same transaction — the shape the board's
+// attach/detach gestures send. Omitting `isAttached` keeps the item's
+// current state. `projectId` is never sent: a cross-project parent derives
+// and cascades it server-side (wiki item-attachment §9).
 //
-// Story 4.1 Phase 3: `scopeWorkphaseIds` (widened the anchor/append scope to
-// a merged column's covered set for a same-visual-group reorder with no
-// anchor) is gone from this type — every positional reorder now anchors
-// (dragRequest.ts::toRequest), so nothing client-side ever needed the
-// wider scope on its own. The server keeps accepting it on the wire; no
-// migration there.
+// The server also accepts a `scopeWorkphaseIds` field, which has no effect
+// on scope; this type leaves it out.
 export interface MoveItemInput {
   workphaseId?: string;
   position?: number;

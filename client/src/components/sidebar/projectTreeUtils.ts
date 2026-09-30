@@ -1,9 +1,9 @@
-// Sidebar-only project tree helpers (flattening, drop validation) —
-// placement itself is Epic 3.5 Story 6's shared `lib/hierarchyPlacement.ts`
-// (docs/wiki/board-drag-interaction §7), the same rule as a board Card's
-// Descendants layer. This module is the adapter: turning the sidebar's own
-// `FlatItem[]` render list into the library's `Row[]`, and its resolved
-// `{ parentId, anchor }` back into `onReorderProject`'s prevId/nextId pair.
+// Sidebar-only project tree helpers (flattening, drop validation).
+// Placement itself is the shared `lib/hierarchyPlacement.ts`, the same rule
+// as a board Card's Descendants layer. This module is the adapter: turning
+// the sidebar's own `FlatItem[]` render list into the library's `Row[]`,
+// and its resolved `{ parentId, anchor }` back into `onReorderProject`'s
+// prevId/nextId pair.
 
 import type { Project } from '../../types';
 import {
@@ -38,9 +38,7 @@ export function projectRowIndentPx(depth: number): number {
 
 // parentId -> its children, sorted the way the server orders siblings
 // (position, then createdAt) — shared by `flattenTree` (the render list,
-// collapse-aware) and `fullChildrenOf` (the real tree, collapse-blind:
-// Story 6 sidebar difference 6 needs a Top's *real* first child even while
-// that child's row never made it into `flatItems`).
+// collapse-aware) and `fullChildrenOf` (the real tree, collapse-blind).
 function childrenByParent(projects: readonly Project[]): Map<string | null, Project[]> {
   const childMap = new Map<string | null, Project[]>();
   for (const p of projects) {
@@ -72,52 +70,39 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
 }
 
 // The library's `childrenOf` over the *real* tree, ignoring collapse state
-// entirely — what `resolvePlacement` needs to find a collapsed Top's real
-// first child (difference 6), since `eligibleRows`'s own map (built from
-// `flatItems`) never has it at all.
+// entirely: the sidebar places against the real tree, so a project tabbed
+// right of a collapsed Top lands ahead of Top's real first child, which
+// `flatItems` never has at all (wiki board-drag-interaction §7.1).
 export function fullChildrenOf(projects: readonly Project[]): (parentId: string | null) => readonly string[] {
   const childMap = childrenByParent(projects);
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
 }
 
 // Descendant collection is generic tree math — shared with the item
-// hierarchy via lib/hierarchy; re-exported here to keep this module the
-// sidebar's single import surface.
+// hierarchy via lib/hierarchy; re-exported here for the sidebar.
 export { getDescendantIds } from '../../lib/hierarchy';
 
 // The rows `hierarchyPlacement.ts` reasons about — every *rendered* row
-// (collapsed subtrees already left `flatItems`, same as before Story 6),
-// minus `exclude` (Story 6 decision 5: the active project and its whole
-// subtree, never a Top/Bottom candidate — fixes difference 2, "descendant-
-// blocking instead of subtree removal"). `flatItems` is already the walk's
-// own output, so this only drops the dragged subtree.
+// (collapsed subtrees already left `flatItems`), minus `exclude` (the
+// active project and its whole subtree, never a Top/Bottom candidate).
+// `flatItems` is already the walk's own output, so this only drops the
+// dragged subtree.
 export function eligibleRows(flatItems: readonly FlatItem[], exclude: ReadonlySet<string>): Row[] {
   return toRows(flatItems, exclude);
 }
 
-// Decision 2: the gap is `over` row + side (n + 1 gaps — fixes difference
-// 1, "n gaps, not n + 1": today's model can only place *before* the last
-// item at its own depth, never after it).
+// The gap is `over` row + side, one of n + 1 (`gapIndexFor`), so a project
+// can land after the last row at its own depth, not only before it.
 //
 // `overId` inside `exclude` (a descendant of the active item, still
-// rendered dimmed) is decision 5's other half: rather than nulling the
-// projection, resolve to the gap the whole dragged block collapses to. A
-// subtree is always contiguous in DFS order, so every row inside it maps to
-// exactly one gap — the one immediately after the nearest eligible row that
-// precedes the block (equivalently, immediately before whichever eligible
-// row follows it; both give the same index once the block is removed from
-// `rows`). No eligible predecessor (the block sits at the very top) falls
-// back to gap 0.
-//
-// `overId === ` the active item's own id is deliberately **not** handled
-// here — dnd-kit can report the active row itself as `over` while the
-// pointer rests on it; the caller keeps the last known projection rather
-// than resolving a fresh one for that sample. The board no longer hits this
-// case the same way (Option A, 2026-09-24): its own `dropAnchorFor` names a
-// neighbor by the lean even over the dragged row's own slot, since the
-// sidebar stays on `over` + `resolveDropSide` with no ghost shuffle by
-// design (decision 2's amendment) — ceding a fresh answer here only when
-// dnd-kit's own collision genuinely can't tell above from below.
+// rendered dimmed) resolves to the gap the whole dragged block collapses
+// to, rather than to no projection. A subtree is always contiguous in DFS
+// order, so every row inside it maps to exactly one gap — the one
+// immediately after the nearest eligible row that precedes the block
+// (equivalently, immediately before whichever eligible row follows it;
+// both give the same index once the block is removed from `rows`). No
+// eligible predecessor (the block sits at the very top) falls back to
+// gap 0.
 export function resolveGap(
   flatItems: readonly FlatItem[],
   rows: readonly Row[],
@@ -133,22 +118,9 @@ export function resolveGap(
   return 0;
 }
 
-// Decision 3, kept sidebar-identical: depth = the active item's own starting
-// depth plus horizontal delta, clamped to the gap's own range (never a
-// separate min/max computed from the immediate neighbors — `depthRangeFor`
-// is the one range now, shared with the board). `childrenOf` is
-// `fullChildrenOf(projects)`, never `eligibleRows`'s own map — difference
-// 6's collapsed-Top fix needs the real tree, not the rendered rows. The
-// depth step itself (`lib/hierarchyPlacement.ts::computeProjection`) is
-// generalized and shared with the board's own live projection (Story 6.1
-// Phase 2, L2-1) — this module supplies `INDENT_WIDTH` and the sidebar's
-// virtual `null` root, the two things that used to make this its own copy.
-
 // `onReorderProject`'s prevId/nextId pair, straight off the one relation
-// `resolvePlacement` already resolved — replaces the old `findPrevSibling`/
-// `findNextSibling` scans (each anchor was always exactly one relation, so
-// the second lookup only ever confirmed "null," never found anything a
-// depth/parentId scan wouldn't already have named directly).
+// `resolvePlacement` already resolved. One relation names the slot, so the
+// other side stays null.
 export function siblingIdsFromAnchor(anchor: AnchorRelation | null): { prevId: string | null; nextId: string | null } {
   if (!anchor) return { prevId: null, nextId: null };
   const { anchorId, side } = anchor;

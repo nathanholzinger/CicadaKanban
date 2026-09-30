@@ -1,6 +1,6 @@
-// Tree math over flat { id, parentId } collections — shared by the project
-// hierarchy (sidebar drag validation, ProjectPage reparent dropdown) and the
-// item hierarchy (detail-panel reparent dropdown).
+// Tree math over flat { id, parentId } collections — descendants,
+// ancestors, depth, subtree height and reparent dropdown options — shared
+// by the project hierarchy and the item hierarchy.
 
 export interface TreeNode {
   id: string;
@@ -30,13 +30,11 @@ function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
 
 // The one descendant walk: one generation per array, parents before
 // children. `visited` (seeded with `id`) guards against a corrupted parentId
-// cycle in the data (audit Finding #11) turning this into an infinite loop —
-// once a node has been queued, re-finding it as someone else's "child" can't
-// discover anything new, so it's skipped rather than re-queued. Level-
-// ordered so a caller that needs both the id set and the height (drag
-// classification) walks once, and so the guard lives in one loop instead of
-// two (audit epic-3-5-story-2 #3 — the same fold the server made in
-// itemTree.ts).
+// cycle in the data turning this into an infinite loop — once a node has
+// been queued, re-finding it as someone else's "child" can't discover
+// anything new, so it's skipped rather than re-queued. Level-ordered so a
+// caller that needs both the id set and the height (drag classification)
+// walks once, and so the guard lives in one loop instead of two.
 export function getDescendantLevels(id: string, nodes: readonly TreeNode[]): string[][] {
   const childrenOf = childrenByParent(nodes);
   const levels: string[][] = [];
@@ -64,10 +62,10 @@ export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<st
 
 // Walks up the parentId chain from `node`, collecting ancestors in
 // root-to-immediate-parent order (excludes `node` itself). Stops without
-// throwing if a parentId points to a node absent from `nodes`, or (audit
-// Finding #11) if a corrupted parentId cycle in the data would otherwise
-// walk the same chain forever — re-reaching an already-visited node means
-// the chain has looped, so it stops there instead.
+// throwing if a parentId points to a node absent from `nodes`, or if a
+// corrupted parentId cycle in the data would otherwise walk the same chain
+// forever — re-reaching an already-visited node means the chain has
+// looped, so it stops there instead.
 export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): T[] {
   const map = new Map(nodes.map(n => [n.id, n]));
   const ancestors: T[] = [];
@@ -85,12 +83,7 @@ export function getAncestors<T extends TreeNode>(node: T, nodes: readonly T[]): 
 
 // The nearest ancestor (nearest first — walking `getAncestors`' own
 // root-to-immediate-parent array backwards) satisfying `pred`, or null if
-// none does. The "walk backward through getAncestors" idiom itself —
-// repeated inline at `containingCardIdOf` (useBoardDnd.ts, nearest Free
-// ancestor) and `effectiveWorkflow` (App.tsx, nearest ancestor with its own
-// workflow) — audit epic-3-5-story-5 #10: one hierarchy math layer, per the
-// root CLAUDE.md's own rule, rather than the same reversed-index loop
-// duplicated per caller.
+// none does.
 export function findNearestAncestor<T extends TreeNode>(
   node: T,
   nodes: readonly T[],
@@ -103,10 +96,10 @@ export function findNearestAncestor<T extends TreeNode>(
   return null;
 }
 
-// 1-based hierarchy depth: a root is at depth 1 (docs/wiki/item-attachment
-// §8's counting convention — the server's hierarchyDepth uses the same).
-// Built on getAncestors, so a dangling parentId reads as a root and a
-// corrupted cycle terminates. An id absent from `nodes` is depth 1.
+// 1-based hierarchy depth: a root is at depth 1, as wiki item-attachment §8
+// counts, and as `itemTree.ts::hierarchyDepth` does. Built on
+// getAncestors, so a dangling parentId reads as a root and a corrupted
+// cycle terminates. An id absent from `nodes` is depth 1.
 export function getDepth(id: string, nodes: readonly TreeNode[]): number {
   const self = nodes.find(n => n.id === id);
   return self ? getAncestors(self, nodes).length + 1 : 1;
@@ -114,9 +107,9 @@ export function getDepth(id: string, nodes: readonly TreeNode[]): number {
 
 // Levels *below* `id` — a leaf is 0. Counts every descendant, attached or
 // not: for the item hierarchy a detached child still sits under its parent
-// and moves with it (wiki §8), so it counts toward the height. One level
-// per BFS generation, so the height is how many generations the walk
-// produced.
+// and moves with it (wiki item-attachment §8), so it counts toward the
+// height. One level per BFS generation, so the height is how many
+// generations the walk produced.
 export function getSubtreeHeight(id: string, nodes: readonly TreeNode[]): number {
   return getDescendantLevels(id, nodes).length;
 }

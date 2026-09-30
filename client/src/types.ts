@@ -36,13 +36,11 @@ export interface Workphase {
   createdAt: number;
 }
 
-// Epic 3.2: derived, read-only — what an item's `position` is actually
-// comparable against, computed server-side from isAttached/parentId/
-// workphaseId/workphase.isTerminal (never stored). Read by
-// useItemManagement.ts/UnsortedBucket.tsx to distinguish attached children
-// from everything else, instead of re-deriving isAttached && parentId
-// themselves. Optional because hand-built Item fixtures (tests) may omit it
-// — real API responses always include it.
+// Derived, read-only — what an item's `position` is actually comparable
+// against, computed server-side from isAttached/parentId/workphaseId/
+// workphase.isTerminal (never stored). Read through `isStub.ts::isStub`,
+// never re-derived from isAttached && parentId. Optional because hand-built
+// Item fixtures (tests) may omit it — real API responses always include it.
 export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export interface Item {
@@ -61,10 +59,11 @@ export interface Item {
   isAttached: number;
   createdAt: number;
   updatedAt: number;
-  // Epic 3.2 Part 6: set when this item's workphase became terminal (done);
-  // null otherwise. A detached/root item with completedAt set has no
-  // position — ordered by this field instead. Attached children keep their
-  // position regardless of their (cascaded) workphase's status.
+  // Set when a detached/root item's workphase became terminal (done); null
+  // otherwise, and never set on an attached child. A detached/root item
+  // with completedAt set has no position — ordered by this field instead.
+  // Attached children keep their position regardless of their (cascaded)
+  // workphase's status.
   completedAt: number | null;
 }
 
@@ -91,7 +90,7 @@ export interface ColumnSubRow {
 }
 
 // Raw DB row shape — what POST /api/columns and PUT /api/columns/:id return.
-// Mirrors ColumnRow in server/src/routes/columnRanges.ts
+// Mirrors `columnRanges.ts::ColumnRow` on the server.
 export interface ColumnRow {
   id: string;
   boardId: string;
@@ -118,9 +117,8 @@ export interface BoardWithDetails extends Board {
     invalidItems: Item[];
     needsAttention: boolean;
   };
-  // Epic 3.5: the hierarchy depth cap the API enforces on every reparent
-  // (docs/wiki/item-attachment §8). Read here for drag-target
-  // classification; never hard-coded client-side.
+  // The hierarchy depth cap the API enforces on every reparent. Read here
+  // for drag-target classification; never hard-coded client-side.
   itemDepthCap: number;
 }
 

@@ -19,7 +19,7 @@ interface RowProps {
   selectedProjectId: string | null;
   isActive: boolean;
   isDescendantOfActive: boolean;
-  /** 'before' draws the line above this row, 'after' below it (Story 6 decision 2's new "past the last item" gap), null draws nothing. */
+  /** 'before' draws the line above this row, 'after' below it (the gap past the last row), null draws nothing. */
   indicatorSide: DropSide | null;
   indicatorDepth: number;
   expandedIds: Set<string>;

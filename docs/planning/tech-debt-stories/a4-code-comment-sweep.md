@@ -130,6 +130,8 @@ The line counts are estimates: a grep on 2026-09-26 for story, epic, phase, audi
 
 1a's, 1b's and 1c's figures are that baseline (2026-09-29): the comment lines I read, and the checker's hits. At 248 hits, 1a split into two stops (Nathan). 1b split the same way at 214 hits, since it also carries most of D11 and eight D6 rulings, and 1c at 255.
 
+Batch 2's baseline is 54 files, about 500 comment lines and 68 hits, far above the estimate of ~55 lines: the grep counted only tagged lines, and every comment in a swept file is read. That's more reading than any batch-1 stop, so it split too. `test-setup.ts` has no comments and is test setup, so it's left to 4a.
+
 Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory.
 
 | Batch | Files | Est. lines | Waits for |
@@ -140,7 +142,8 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **1b-ii** Board drag: collision and projection | `dragCollision.ts`, `descendantsProjection.ts`, `DragSessionContext.ts`, `client/src/lib/hierarchyPlacement.ts` | ~375 read, 86 hits | 1b-i |
 | **1c-i** Board drag: the hooks | `useBoardDnd.ts`, `useItemManagement.ts`, `usePendingGhostGuard.ts` | ~410 read, 88 hits | 1b-ii |
 | **1c-ii** Board drag: the components | `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~455 read, 167 hits | 1c-i |
-| **2** The rest of the client | everything else in `client/src` that isn't a test: the sidebar, item detail, modals, `api/`, `lib/`, `types.ts` | ~55 | A1 |
+| **2-i** The rest of the client: the sidebar, `lib/`, `types.ts`, `api/` | `sidebar/`, `ProjectSidebar.tsx`, `client/src/lib/hierarchy.ts`, `isStub.ts`, `types.ts`, the 14 files in `api/` | ~230 read, 48 hits | A1 |
+| **2-ii** The rest of the client: the other components | everything else in `client/src` that isn't a test: item detail, modals, the toolbar, the board-management hooks, `App.tsx` | ~270 read, 20 hits | 2-i |
 | **3** Server | `server/src` | ~100 | A2's other three pages |
 | **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
 | **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
@@ -197,7 +200,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 
   §2 keeps anchor + side resolution, the client-side role and the workphase-only rule, so pointers to those stay.
 - **item-positioning §5 → §5.1**, reindexing must be disclosed to the caller:
-  - **2:** `api/items.ts` line 9.
+  - **2:** `api/items.ts` line 9. Done in 2-i.
   - **3:** `positionResolver.ts` lines 25 and 50, `itemHierarchy.ts` line 220, `routes/items.ts` line 73.
   - **4a:** `items.hierarchy.test.ts` lines 12 and 584 (a `describe` title), `positionResolver.test.ts` lines 99 and 103 (a `describe` title), `dragRequest.test.ts` line 296, `itemWriteReconciliation.test.ts` line 16.
 
@@ -229,7 +232,7 @@ Each batch does six things, then stops for review and commit:
 - runs D8's checks.
 
 - **1a-i to 1c, board drag.** The D7 files, plus the placements from A2's board-drag-interaction handoff, some of which land in `workflow/CLAUDE.md`. 1c ends with D4's index-pointer table for board-drag-interaction.
-- **2, the rest of the client.** The sweep only.
+- **2-i and 2-ii, the rest of the client.** The sweep, plus index pointers for the rules these files enforce. 2-i adds the project sidebar's to D4's board-drag-interaction table.
 - **3, the server.** The sweep, A2's placements for item-attachment, item-positioning and boards-columns-unsorted, and D4's index-pointer tables for those three pages.
 - **4a and 4b, the tests.** The sweep, including:
   - provenance left in titles;
@@ -245,7 +248,7 @@ Each batch does six things, then stops for review and commit:
 |---|---|---|
 | The board-drag files in D7 | 1a-i to 1c | comments only, plus the D6 rulings |
 | `client/src/components/workflow/CLAUDE.md` | 1a-i to 1c | receives placed passages (D5), mental model or rules that span modules only |
-| The rest of `client/src` (not tests) | 2 | comments only |
+| The rest of `client/src` (not tests) | 2-i, 2-ii | comments only |
 | `server/src` | 3 | comments only, plus index pointers for three wiki pages |
 | Test files in `client/src`, `server/tests`, `tests` | 4a, 4b | comments and title provenance only |
 | Root `package.json`, the `lint` script | 5 | runs `check:docs` |
@@ -270,6 +273,7 @@ Filled in as the batches land:
     - columns reorder by dragging, and a column drag never runs the pop machine (`useBoardDnd.ts::handleDragEnd`'s column branch). This one may belong on boards-columns-unsorted.
 - **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root").
 - **To Nathan, for the next story or audit:** code that looked wrong while I was reading (D3), each with its site.
+  - **The project sidebar writes on a set-down in its own slot (2-i).** wiki board-drag-interaction §7.1 says an item set back down in its own gap, at its own depth, writes nothing, and the board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing, since there's no projection yet. The fix is a check against the project's own slot before `onReorderProject`, like the board's.
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
 - **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
 - **The D5 disposition table** for A2's passages.
@@ -352,18 +356,19 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 | §6 | `placement.ts::placementFor`'s Card branch: the auto-drop. | — |
 | §6.1 | `popSession.ts::namedCardCandidate`: the named relation is the signal. `dragChrome.tsx::ZoomCue`'s comment: the cue. | `popSession.ts::PopHover.side`: the reset rule. |
 | §7 | `descendantsProjection.ts::advanceProjection`: zooming in doesn't move the ghost. | — |
-| §7.1 | `hierarchyPlacement.ts`'s header: gap and depth. `dragCollision.ts::dropAnchorFor`: the gap is the ghost's neighbors. `descendantsProjection.ts::descendantsReleasePlacement`: a set-down in its own gap and depth writes nothing. | `descendantsProjection.ts`'s header; `DragSessionContext.ts::DescendantsProjection.atOwnSlot`. |
+| §7.1 | `hierarchyPlacement.ts`'s header: gap and depth. `dragCollision.ts::dropAnchorFor`: the gap is the ghost's neighbors. `descendantsProjection.ts::descendantsReleasePlacement`: a set-down in its own gap and depth writes nothing. Added in 2-i: `useProjectDragReorder.ts`'s header: the sidebar's drop line is the gap. `projectTreeUtils.ts::fullChildrenOf`: the sidebar places against the real tree. | `descendantsProjection.ts`'s header; `DragSessionContext.ts::DescendantsProjection.atOwnSlot`. |
 | §7.2 | `hierarchyPlacement.ts::toRows`: the dragged subtree is never a candidate. `descendantsProjection.ts::advanceProjection`: the cap is checked per tab state. `descendantsProjection.ts::descendantsReleasePlacement`: an over-cap state commits nothing. `dragChrome.tsx::INVALID_PLACEMENT_CLASS`: the invalid cue. | `dragCollision.ts::travelingRowsFor`. |
 | §8 | `dragRequest.ts::toRequest`'s detach branch: a detach writes `isAttached: false` and leaves `parentId`. The two pops are §1.1's and §3.1's clock. | — |
 | §9 | **No enforcing code:** the section is "Not settled" and defers to Open questions. | — |
 | §10 | `itemListOps.ts`'s header: the ordinal preview. `dragRequest.ts::toRequest`: the preview shows where the write lands. `DragSessionContext.ts::useIsPending`: the pending marker. `itemWriteReconciliation.ts`'s header: the response order and the tripwire. `useItemManagement.ts::ItemWriteTracker`: a stale response never lands last. `usePendingGhostGuard.ts`'s header: a re-drag's marker and ghost. `dragRequest.ts::sendItemMove`: a failed drop resyncs. `placement.ts::noAnchorSlot`: no comparable position previews last. `itemListOps.ts::byCompletedAtThenCreatedAt`: a done list shows a previewed item as the newest. | — |
 
-Each section that states a rule the code enforces has at least one index pointer. §2's rule 6 is the one rule without one (above).
+Each section that states a rule the code enforces has at least one index pointer. §2's rule 6 is the one rule without one (above). The sidebar doesn't keep §7.1's "a set-down in its own gap writes nothing", so that rule's pointer stays on the board side; the gap is in the Handoff to Nathan.
 
 **Pointers to the other three pages so far.** Batch 3 folds these into its D4 tables.
 - **item-positioning, index:** `dragRequest.ts::anchorFor`: §7.1. `itemListOps.ts`'s header: §2's client-side role. `itemListOps.ts::byPositionThenCreatedAt`: §5a's tie-break. `itemListOps.ts::byCompletedAtThenCreatedAt`: §6. `itemListOps.ts::getMergedColumnItemsFrom`: §4. `itemWriteReconciliation.ts`'s header: §5a.
-- **item-positioning, guard:** `itemListOps.ts::workphaseOnlySlot`: §2's workphase-only rule.
-- **item-attachment, guard:** `dragClassification.ts::isWithinDepthCap`: §8. The server check carries the index pointer.
+- **item-positioning, guard:** `itemListOps.ts::workphaseOnlySlot`: §2's workphase-only rule. `api/items.ts::ReindexedPosition`: §5.1's `{id, position}` and nothing more (2-i).
+- **item-attachment, index:** `isStub.ts::isStub`: §12, an attached descendant renders as a Stub (2-i).
+- **item-attachment, guard:** `dragClassification.ts::isWithinDepthCap`: §8. The server check carries the index pointer. `hierarchy.ts::getDepth` and `getSubtreeHeight`: §8's counting (a root is depth 1, and detached descendants count toward the height) (2-i). `api/items.ts::MoveItemInput`: §9, the project is never sent (2-i).
 
 ## Amendments
 
@@ -376,3 +381,4 @@ Each section that states a rule the code enforces has at least one index pointer
 - **2026-09-29, batch 1b (Coder):** 1b split into 1b-i and 1b-ii (D7), the same way as 1a: 214 hits, plus most of D11 and eight D6 rulings.
 - **2026-09-29, batch 1c (Coder):** 1c split into 1c-i (the hooks) and 1c-ii (the components), at 255 hits. D4's board-drag table comes at the end of 1c-ii.
 - **2026-09-29, end of batch 1 (Coder):** the Handoff's running pointer list became D4's board-drag-interaction table, and "To the PO" gained three possible gaps.
+- **2026-09-29, batch 2 (Coder):** 2 split into 2-i (the sidebar, `lib/`, `types.ts`, `api/`) and 2-ii (the other components), at about 500 comment lines (D7). Batch 2 now also writes index pointers, and 2-i adds the project sidebar's two §7.1 pointers to D4's board-drag-interaction table.
