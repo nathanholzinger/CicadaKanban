@@ -15,25 +15,19 @@ type ReorderableTable = SQLiteTable & { id: SQLiteColumn; position: SQLiteColumn
 export type ReorderValidation =
   { ok: true; entries: ReorderEntry[] } | { ok: false; status: number; body: { error: string; missingIds?: string[] } };
 
-// Shared validation step for the four `PATCH /reorder` endpoints (items,
-// workphases, columns, projects' id/position pairing). Was previously two
-// different rigor levels hand-rolled per route — see Epic 3 audit finding
-// #15. Validates the array shape, each entry's id/position types, and that
-// every id exists — against plain `db`, deliberately *not* a transaction.
+// Shared validation step for the three `PATCH /reorder` endpoints (items,
+// workphases, columns). Validates the array shape, each entry's id/position
+// types, and that every id exists — against plain `db`, deliberately *not*
+// a transaction.
 //
-// Was previously folded into one `applyReorder(table, orders, tx, res, ...)`
-// that wrote `res` directly and returned a boolean the caller had to check
-// (`db.transaction((tx) => applyReorder(...)); if (!ok) return;`) — a
-// db.transaction callback in better-sqlite3 only rolls back on *throw*, so
-// returning false after a write had already run would still commit it. Safe
-// in practice only because every bail-out happened to sit before the write
-// loop; nothing enforced that (audit Finding #12). Splitting validation out
-// to run *before* the transaction opens removes the need for that
-// convention entirely: none of these four routes' reorder transactions
-// insert or delete rows, only update existing ones' `position`, so an id's
-// existence here can't change between this call and the transaction that
-// applies it (single-threaded, synchronous better-sqlite3 — nothing else
-// can interleave a write in between).
+// A db.transaction callback in better-sqlite3 only rolls back on *throw*,
+// so a bail-out after a write had already run would still commit it.
+// Validating *before* the transaction opens keeps every bail-out outside it.
+// None of these routes' reorder transactions insert or delete rows, only
+// update existing ones' `position`, so an id's existence here can't change
+// between this call and the transaction that applies it (single-threaded,
+// synchronous better-sqlite3 — nothing else can interleave a write in
+// between).
 export function validateReorder(table: ReorderableTable, orders: unknown, entityLabel: string): ReorderValidation {
   if (!Array.isArray(orders)) {
     return { ok: false, status: 400, body: { error: `${entityLabel}Orders array is required` } };

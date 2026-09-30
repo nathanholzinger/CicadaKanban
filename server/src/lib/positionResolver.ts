@@ -1,5 +1,7 @@
 // Table-generic anchor+side position resolution, coarsest-fit, lazy reindex — shared by
-// items and projects. Rules: docs/wiki/item-positioning/README.md (Epic 3.2).
+// items and projects. Resolution against a fresh query, with its append and bootstrap
+// fallbacks: wiki item-positioning §2. Both reindex triggers, and every reindex, run
+// through reindexPositionsInScope: wiki item-positioning §5.
 // Also home to nextPosition: simple append-at-end math for workphases/boards/columns
 // (non-nullable fields, no anchor/reindex needed).
 
@@ -22,7 +24,7 @@ export type PositionedTable = SQLiteTable & {
 
 // One renumbered row from a reindex — `{id, position}` and nothing more,
 // since a reindex changes positions and never any other field
-// (docs/wiki/item-positioning §5, "Reindexing must be disclosed").
+// (wiki item-positioning §5.1).
 export type ReindexedPosition = { id: string; position: number };
 
 // Used to bundle the query context so functions have fewer params to handoff
@@ -47,7 +49,7 @@ export type Side = 'before' | 'after';
  * @param tx - the transaction handler
  * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor. if anchorId is null then side functions as "before all" or "after all"
  * @param anchorId - nullable. the targetId that the new id will be placed alongside
- * @param reindexed - optional collector; if a reindex fires, every renumbered `{id, position}` is pushed here so the caller can disclose it (wiki §5)
+ * @param reindexed - optional collector; if a reindex fires, every renumbered `{id, position}` is pushed here so the caller can disclose it (wiki item-positioning §5.1)
 
  * @returns number value of the position
  */
@@ -73,10 +75,10 @@ export function resolvePositionByAnchorAndSide(
 }
 
 // Kept as its own named export rather than folded away: every call site is a
-// pure "put this at the end" append (item creation, PUT reparent, workphase
-// terminal-transition backfill) with no anchor/side to express, so spelling
-// those 8 call sites as `resolvePositionByAnchorAndSide(table, scope, tx,
-// 'after')` would read as if a side/anchor choice were actually being made.
+// pure "put this at the end" append (item and project creation, a scope
+// change with no anchor, a workphase's terminal-transition backfill) with no
+// anchor/side to express, so spelling them as `resolvePositionByAnchorAndSide(table,
+// scope, tx, 'after')` would read as if a side/anchor choice were actually being made.
 export function resolveAppendPosition(
   table: PositionedTable,
   scopeWhere: SQL,
@@ -104,9 +106,8 @@ function getTargetPosition(targetId: string, context: PositionQueryContext): num
 
 function getLastPositionInScope(context: PositionQueryContext): number | null {
   const { table, scopeWhere, tx } = context;
-  // isNotNull guard (same reasoning as reindexPositionsInScope's): a scope
-  // can legitimately contain done items with a null position (positionScopeFor
-  // doesn't filter them out), and SQLite sorts NULLs first in ASC / last in
+  // isNotNull guard: an item scope can legitimately contain done items with a
+  // null position, and SQLite sorts NULLs first in ASC / last in
   // DESC — so a real position always outranks a null one here *unless every
   // row in scope happens to be null* (e.g. reopening the only non-empty
   // workphase in a workflow), in which case an unguarded DESC query would
@@ -272,10 +273,7 @@ function exceedsMagnitudeThreshold(candidate: number, context: PositionQueryCont
 }
 
 // "Append at end" position math — max(existing positions) + 1.0, with an
-// empty-list base case of 1.0. `position` may be null (items.position is
-// nullable); a null counts as 0 for the max, matching what every call site
-// already did ad hoc. Was hand-written identically in 4 POST handlers plus
-// MCP's move_item tool (audit finding #25).
+// empty-list base case of 1.0. A null position counts as 0 for the max.
 
 export function nextPosition(rows: { position: number | null }[]): number {
   if (rows.length === 0) return 1.0;

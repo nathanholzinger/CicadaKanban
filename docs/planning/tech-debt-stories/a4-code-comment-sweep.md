@@ -73,7 +73,7 @@ A1 D7 gives wiki pointers two jobs. The index job needs exactly one pointer per 
 - **A rule only the UI enforces** (drop bands, pop timing, where the ghost lands): the client module that decides it.
 - **A rule both sides enforce:** the server site carries the index pointer. The client site may carry a guard pointer where it would otherwise look like duplication, as `dragClassification.ts::isWithinDepthCap` already does.
 
-**When each page is done:** board-drag-interaction at the end of batch 1c-ii; the other three pages at the end of batch 3. Each of those batch reports includes a table mapping every section either to its site or to "no enforcing code".
+**When each page is done:** board-drag-interaction at the end of batch 1c-ii; the other three pages at the end of batch 3-ii. Each of those batch reports includes a table mapping every section either to its site or to "no enforcing code".
 
 Two kinds of mismatch go to the PO as possible wiki gaps:
 - a section that states a rule, with no enforcing code and no `**Planned:**` marker;
@@ -132,7 +132,9 @@ The line counts are estimates: a grep on 2026-09-26 for story, epic, phase, audi
 
 Batch 2's baseline is 54 files, about 500 comment lines and 68 hits, far above the estimate of ~55 lines: the grep counted only tagged lines, and every comment in a swept file is read. That's more reading than any batch-1 stop, so it split too. `test-setup.ts` has no comments and is test setup, so it's left to 4a.
 
-Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory.
+Batch 3's baseline is 35 files, about 805 comment lines and 111 hits, again far above the estimate for the same reason. It split in two: 3-i is the position and hierarchy layer, where most of item-attachment's and item-positioning's rules are enforced, and 3-ii is the rest. The three D4 tables come at the end of 3-ii, since some rule sites (column ranges, the terminal-flip backfill) are in its files.
+
+Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory. Paths in 3-i are under `server/src/lib/` unless they name `routes/`.
 
 | Batch | Files | Est. lines | Waits for |
 |---|---|---|---|
@@ -144,7 +146,8 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **1c-ii** Board drag: the components | `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~455 read, 167 hits | 1c-i |
 | **2-i** The rest of the client: the sidebar, `lib/`, `types.ts`, `api/` | `sidebar/`, `ProjectSidebar.tsx`, `client/src/lib/hierarchy.ts`, `isStub.ts`, `types.ts`, the 14 files in `api/` | ~230 read, 48 hits | A1 |
 | **2-ii** The rest of the client: the other components | everything else in `client/src` that isn't a test: item detail, modals, the toolbar, the board-management hooks, `App.tsx` | ~270 read, 24 hits | 2-i |
-| **3** Server | `server/src` | ~100 | A2's other three pages |
+| **3-i** Server: the position and hierarchy layer | `itemHierarchy.ts`, `itemPositionScope.ts`, `itemTree.ts`, `positionResolver.ts`, `attachedCascade.ts`, `coarsestFit.ts`, `reorder.ts`, `routes/items.ts` | ~420 read, 80 hits | A2's other three pages |
+| **3-ii** Server: the rest | the other routes, the rest of `server/src/lib/`, `db/`, `index.ts`, `mcp.ts` | ~385 read, 31 hits | 3-i |
 | **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
 | **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
 | **5** Lint | root `package.json` | — | A2, A3, and batches 1a–4b |
@@ -195,17 +198,17 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 
   §6 keeps the auto-drop and the pinned ghost, so a pointer to those stays, e.g. `placement.ts` line 88's "set back down".
 - **item-positioning §2 → §2.1**, the scope-change table:
-  - **3:** `itemHierarchy.ts` lines 237 and 263.
+  - **3:** `itemHierarchy.ts` lines 237 and 263. Done in 3-i.
   - **4a:** `items.hierarchy.test.ts` line 11.
 
   §2 keeps anchor + side resolution, the client-side role and the workphase-only rule, so pointers to those stay.
 - **item-positioning §5 → §5.1**, reindexing must be disclosed to the caller:
   - **2:** `api/items.ts` line 9. Done in 2-i.
-  - **3:** `positionResolver.ts` lines 25 and 50, `itemHierarchy.ts` line 220, `routes/items.ts` line 73.
+  - **3:** `positionResolver.ts` lines 25 and 50, `itemHierarchy.ts` line 220, `routes/items.ts` line 73. Done in 3-i.
   - **4a:** `items.hierarchy.test.ts` lines 12 and 584 (a `describe` title), `positionResolver.test.ts` lines 99 and 103 (a `describe` title), `dragRequest.test.ts` line 296, `itemWriteReconciliation.test.ts` line 16.
 
   §5 keeps the reindex itself and its two triggers.
-- **"§2 addendum" → "§2's workphase-only rule"**, still §2. The word "addendum" goes when these are rewritten: `itemListOps.ts` line 53 (1b-i, done); `routes/items.ts` line 39, `itemHierarchy.ts` line 272 and `itemPositionScope.ts` line 30 (3). "Story 3's carve-out addendum" is a different thing: provenance on board-drag §5's bands, handled like any other tag.
+- **"§2 addendum" → "§2's workphase-only rule"**, still §2. The word "addendum" goes when these are rewritten: `itemListOps.ts` line 53 (1b-i, done); `routes/items.ts` line 39, `itemHierarchy.ts` line 272 and `itemPositionScope.ts` line 30 (3). Done in 3-i. `itemPositionScope.ts`'s was a tag on the workflow-wide scope, not on the workphase-only rule, so it went without a pointer: its sentence already says what it stands for, and `positionScopeFor` carries §2's pointer. "Story 3's carve-out addendum" is a different thing: provenance on board-drag §5's bands, handled like any other tag.
 
 That's 20 sites to re-point, 2 header ranges and 1 to check. Batch 1c's D4 table and batch 3's use the new numbers from the start.
 
@@ -233,7 +236,7 @@ Each batch does six things, then stops for review and commit:
 
 - **1a-i to 1c, board drag.** The D7 files, plus the placements from A2's board-drag-interaction handoff, some of which land in `workflow/CLAUDE.md`. 1c ends with D4's index-pointer table for board-drag-interaction.
 - **2-i and 2-ii, the rest of the client.** The sweep, plus index pointers for the rules these files enforce. 2-i adds the project sidebar's to D4's board-drag-interaction table.
-- **3, the server.** The sweep, A2's placements for item-attachment, item-positioning and boards-columns-unsorted, and D4's index-pointer tables for those three pages.
+- **3-i and 3-ii, the server.** The sweep, A2's placements for item-attachment, item-positioning and boards-columns-unsorted, and D4's index-pointer tables for those three pages at the end of 3-ii.
 - **4a and 4b, the tests.** The sweep, including:
   - provenance left in titles;
   - bare `TC-n` IDs in comments, qualified against A3's catalog;
@@ -249,7 +252,7 @@ Each batch does six things, then stops for review and commit:
 | The board-drag files in D7 | 1a-i to 1c | comments only, plus the D6 rulings |
 | `client/src/components/workflow/CLAUDE.md` | 1a-i to 1c | receives placed passages (D5), mental model or rules that span modules only |
 | The rest of `client/src` (not tests) | 2-i, 2-ii | comments only |
-| `server/src` | 3 | comments only, plus index pointers for three wiki pages |
+| `server/src` | 3-i, 3-ii | comments only, plus index pointers for three wiki pages |
 | Test files in `client/src`, `server/tests`, `tests` | 4a, 4b | comments and title provenance only |
 | Root `package.json`, the `lint` script | 5 | runs `check:docs` |
 
@@ -273,8 +276,10 @@ Filled in as the batches land:
     - columns reorder by dragging, and a column drag never runs the pop machine (`useBoardDnd.ts::handleDragEnd`'s column branch). This one may belong on boards-columns-unsorted.
 - **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root"), and anything false in a `CLAUDE.md` file, which A4 doesn't edit.
   - **`workflow/CLAUDE.md`'s module list (2-ii):** it says `DragTuningContext.ts` serves "the components that draw thresholds and bands". Its one reader is `KanbanCard.tsx`, for the zoom-in cue's timing (`cardPopInDelayMs`); the band guides don't read it. The module's own comments now say so.
+  - **Root `CLAUDE.md`'s "One hierarchy-write primitive" (3-i) overstates POST.** It says every write that can give an item a parent, `POST /items` included, routes through `itemHierarchy.ts`. `PUT /items/:id` and `PATCH /items/:id/move` do, through `validateHierarchyRequest` and `applyHierarchyRequest`. `POST /items` checks its parent itself (it exists, it's in the same project, and the depth cap through `itemTree.ts::assertWithinDepthCap`), and uses `itemHierarchy.ts` only to log (`logCreatedUnderParent`). The guardrail's instruction, not to reimplement that logic at the route level, still holds. `itemHierarchy.ts`'s header made the same claim and now names its two entry points.
 - **To Nathan, for the next story or audit:** code that looked wrong while I was reading (D3), each with its site.
   - **The project sidebar writes on a set-down in its own slot (2-i).** wiki board-drag-interaction §7.1 says an item set back down in its own gap, at its own depth, writes nothing, and the board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing, since there's no projection yet. The fix is a check against the project's own slot before `onReorderProject`, like the board's.
+  - **The Sheet's parent picker offers parents over the depth cap (3-i).** wiki item-attachment §7 says the UI must never present a target the API would reject. `ParentSection.tsx::buildParentOptions` (through `hierarchy.ts::buildParentOptions`) leaves out the item itself and its descendants, but not a parent at which the item's subtree would exceed `ITEM_DEPTH_CAP`. Picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap: it classifies against `itemDepthCap`.
   - **Two redundant keys in `ProjectPage.tsx` (2-ii), not wrong.** Its `ConfirmDeleteInline` and `ProjectOverviewTab` are each keyed on `project.id` to reset their state on a project switch, but `App.tsx` already keys the whole `ProjectPage` on the selected project, so a switch remounts both anyway. The comment at the first key said nothing else reset that state; it now says only what the key guarantees.
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
 - **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
@@ -314,13 +319,24 @@ board-drag-interaction, from A2's list. Rows are added as each passage's home ba
 
 Every board-drag-interaction passage in A2's list now has a disposition.
 
-item-positioning, from A2's list. The rows whose home is on the client land here; the server's land in batch 3.
+item-attachment, from A2's list.
+
+| Section | Passage | Disposition |
+|---|---|---|
+| Page header | One server primitive, `itemHierarchy.ts`, sits behind `POST /items`, `PUT /items/:id` and `PATCH /items/:id/move` | **Covered, with a correction:** `itemHierarchy.ts`'s header names its two entry points, `PUT` and `PATCH /move`, and root `CLAUDE.md`'s "One hierarchy-write primitive" names the module. The lead was partly stale: `POST /items` checks its parent itself and uses the module only to log. Root `CLAUDE.md`'s list makes the same claim, so that's in the Handoff to the Architect. (3-i) |
+| §8 | The cap is one constant, `ITEM_DEPTH_CAP`, defined server-side and shared with the UI | **Placed:** `itemTree.ts::ITEM_DEPTH_CAP`'s comment, with an index pointer to §8. It names `GET /boards/:id`'s `itemDepthCap` as the way the value reaches the board's drag classification. (3-i) |
+
+Every item-attachment passage in A2's list now has a disposition.
+
+item-positioning, from A2's list. The rows whose home is on the client landed in batch 1; the server's land in batch 3.
 
 | Section | Passage | Disposition |
 |---|---|---|
 | Page header | The client's apply order is `applyItemWriteResponse`, used on every item-write path. The inversion tripwire, the ordinal preview and the pending marker live in `itemListOps.ts` (`applyPlacements`, `completeItemWrite`) | **Covered:** `itemWriteReconciliation.ts`'s header (every item-write path goes through `completeItemWrite`, with an index pointer to §5a) and `itemListOps.ts`'s header (the ordinal preview). Root `CLAUDE.md` names `completeItemWrite`. The lead was stale: `completeItemWrite` is in `itemWriteReconciliation.ts`. (1b-i) |
 | §5a | Step 4 has no separate mechanism: render order is derived from `position` on every render, so applying the pairs is the re-sort | **Covered:** `itemWriteReconciliation.ts::completeItemWrite`, "Re-sorting is implicit". (1b-i) |
 | §5a | The tie-break is `(a.position ?? 0) - (b.position ?? 0) \|\| a.createdAt - b.createdAt` | **Covered:** `itemListOps.ts::byPositionThenCreatedAt`, with an index pointer to §5a. (1b-i) |
+| §2.1 | The no-scope-change cascade row is `cascadeWorkphaseToAttachedDescendants` | **Placed:** its comment says the cascade leaves positions untouched, with an index pointer to §2.1. (3-i) |
+| §5 | One shared server-side primitive does every reindex | **Placed:** `positionResolver.ts`'s header: both triggers, and every reindex, run through `reindexPositionsInScope`, with an index pointer to §5. (3-i) |
 
 ### D6 rulings and D4's index pointers
 
@@ -366,11 +382,36 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 
 Each section that states a rule the code enforces has at least one index pointer. §2's rule 6 is the one rule without one (above). The sidebar doesn't keep §7.1's "a set-down in its own gap writes nothing", so that rule's pointer stays on the board side; the gap is in the Handoff to Nathan.
 
-**Pointers to the other three pages so far.** Batch 3 folds these into its D4 tables.
+**Pointers to the other three pages so far.** Batch 3-ii folds these into its D4 tables.
 - **item-positioning, index:** `dragRequest.ts::anchorFor`: §7.1. `itemListOps.ts`'s header: §2's client-side role. `itemListOps.ts::byPositionThenCreatedAt`: §5a's tie-break. `itemListOps.ts::byCompletedAtThenCreatedAt`: §6. `itemListOps.ts::getMergedColumnItemsFrom`: §4. `itemWriteReconciliation.ts`'s header: §5a.
 - **item-positioning, guard:** `itemListOps.ts::workphaseOnlySlot`: §2's workphase-only rule. `api/items.ts::ReindexedPosition`: §5.1's `{id, position}` and nothing more (2-i).
 - **item-attachment, index:** `isStub.ts::isStub`: §12, an attached descendant renders as a Stub (2-i).
 - **item-attachment, guard:** `dragClassification.ts::isWithinDepthCap`: §8. The server check carries the index pointer. `hierarchy.ts::getDepth` and `getSubtreeHeight`: §8's counting (a root is depth 1, and detached descendants count toward the height) (2-i). `api/items.ts::MoveItemInput`: §9, the project is never sent (2-i).
+- **item-attachment, index, on the server (3-i):**
+  - §1: `itemHierarchy.ts::validateHierarchyRequest`'s "attached with no parent" check; `ResultingState.attachedFlag`, the invariant in the stored row.
+  - §2: `attachedCascade.ts`'s header, the cascade; `applyHierarchyRequest`'s attached branch, no `completedAt` and the position kept.
+  - §3: `itemHierarchy.ts::HierarchyRequest`, a write to the moving item.
+  - §4: `HierarchyRequest.isAttached`, omitting the flag keeps the state; `applyHierarchyRequest`'s scope-change branch, an attached reparent resolves a fresh position.
+  - §5: `itemHierarchy.ts::ResultingState`, reparent first.
+  - §6: `itemHierarchy.ts`'s banner, validate before the transaction and apply with no early returns.
+  - §7: `validateHierarchyRequest`'s parent block, the four legality rules.
+  - §8: `itemTree.ts::ITEM_DEPTH_CAP` (one cap for UI and API), `hierarchyDepth` (a root is depth 1), `subtreeHeight` (detached descendants count), `assertWithinDepthCap` (the formula), and `validateHierarchyRequest`'s cap check (the cap gates writes, not existing data).
+  - §9: `applyHierarchyRequest`'s project cascade; `nullForeignWorkphasePositions`, nothing remapped.
+  - §11: `HierarchyRequest.parentId`, a detach keeps its parent, and `null` is reparent to root.
+  - §11a: `applyHierarchyRequest`'s activity log; `logCreatedUnderParent`.
+- **item-attachment, guard, on the server (3-i):** `routes/items.ts`'s POST: §9 (a child lives in its parent's project) and §7 (the cap gates creation too). Its `PATCH /:id/move` comment: §9.
+- **item-positioning, index, on the server (3-i):**
+  - §2: `positionResolver.ts`'s header, resolution and its fallbacks; `coarsestFit.ts`'s header; `itemPositionScope.ts::withPositionScope`, the `positionScope` field; `positionScopeFor`, the workflow-wide scope; `applyHierarchyRequest`'s workphase-only branch.
+  - §2.1: `applyHierarchyRequest`'s `scopeChanged`, the table, and its scope-change branch, the principle; `attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`, the cascade row.
+  - §3: `positionScopeFor`, the attached-sibling scope.
+  - §5: `positionResolver.ts`'s header, both triggers and every reindex.
+  - §5.1: `routes/items.ts::respondWithItem`.
+  - §6: `applyHierarchyRequest`'s active/done split.
+  - §7.1: `validateHierarchyRequest`'s anchor-scope check, against the resulting state.
+  - §7.2: `itemHierarchy.ts::ResultingState`.
+  - §7.3: `itemHierarchy.ts::nullForeignWorkphasePositions`.
+  - §7.4: `validateHierarchyRequest`'s anchor-position check, a done item is never an anchor.
+- **item-positioning, guard, on the server (3-i):** `positionResolver.ts::ReindexedPosition` and `resolvePositionByAnchorAndSide`'s `reindexed` parameter, and `applyHierarchyRequest`'s return: §5.1. `routes/items.ts`'s POST position block: §6. `crossWorkflowMoveError`: §2's workphase-only rule and §7.3.
 
 ## Amendments
 
@@ -385,3 +426,4 @@ Each section that states a rule the code enforces has at least one index pointer
 - **2026-09-29, end of batch 1 (Coder):** the Handoff's running pointer list became D4's board-drag-interaction table, and "To the PO" gained three possible gaps.
 - **2026-09-29, batch 2 (Coder):** 2 split into 2-i (the sidebar, `lib/`, `types.ts`, `api/`) and 2-ii (the other components), at about 500 comment lines (D7). Batch 2 now also writes index pointers, and 2-i adds the project sidebar's two §7.1 pointers to D4's board-drag-interaction table.
 - **2026-09-29, end of batch 2 (Coder):** the Architect's handoff also takes false statements in a `CLAUDE.md` file, since A4 doesn't edit those (D1).
+- **2026-09-30, batch 3 (Coder):** 3 split into 3-i (the position and hierarchy layer) and 3-ii (the rest of `server/src`), at about 805 comment lines and 111 hits (D7). D4's tables for the other three pages come at the end of 3-ii.

@@ -1,5 +1,6 @@
 // cascadeWorkphaseToAttachedDescendants: propagates a parent's workphase change to its
-// attached children only — a detached child halts the cascade for its whole branch. (Epic 3)
+// attached children only — a detached child halts the cascade for its whole branch
+// (wiki item-attachment §2).
 
 import { db, type Tx } from '../db/index.js';
 import { items } from '../db/schema.js';
@@ -12,9 +13,11 @@ function getAttachedDescendantIds(rootId: string, tx?: Tx): string[] {
   return walkItemDescendants(rootId, { predicate: child => Boolean(child.isAttached), tx });
 }
 
-// Moves an item's attached descendants to match its current workphaseId. Pass
-// `tx` to run inside a caller's transaction (e.g. the move/PUT handlers, where
-// the parent's own workphase write and this cascade must commit together).
+// Moves an item's attached descendants to match its current workphaseId,
+// leaving their positions untouched: they stay parent-scoped whatever the
+// workphase (wiki item-positioning §2.1). Pass `tx` to run inside a caller's
+// transaction (e.g. the move/PUT handlers, where the parent's own workphase
+// write and this cascade must commit together).
 export function cascadeWorkphaseToAttachedDescendants(rootId: string, tx?: Tx): void {
   const e = tx ?? db;
   const root = e.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, rootId)).get();

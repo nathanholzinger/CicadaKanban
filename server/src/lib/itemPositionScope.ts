@@ -8,7 +8,7 @@
 // to projects or any other PositionedTable. positionScopeFor below is the
 // SQL-predicate counterpart to classifyPositionScope's label — same items-
 // only scope rule, expressed as a query instead of a string — so it lives
-// here rather than in positionResolver.ts (audit Finding #17).
+// here rather than in positionResolver.ts.
 import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
 import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';
@@ -24,15 +24,15 @@ export function classifyPositionScope(
   // Unsorted/invalid (null workphaseId) — not currently position-ordered at
   // all, same practical bucket as a done item even though the reason differs.
   if (item.workphaseId === null) return 'none';
-  // Done item (Part 6) — ordered by completedAt, not position.
+  // Done item — ordered by completedAt, not position.
   if (workphaseIsTerminal) return 'none';
   // Comparable against every other active item in the same workflow, not
-  // just the same workphase (Epic 3.2 addendum) — see positionScopeFor.
+  // just the same workphase — see positionScopeFor.
   return 'workflow';
 }
 
-// Attaches the computed, read-only `positionScope` field (Epic 3.2 §2) to an
-// item row before it goes out over the API, telling a client what the
+// Attaches the computed, read-only `positionScope` field (wiki item-positioning §2)
+// to an item row before it goes out over the API, telling a client what the
 // item's `position` is actually comparable against without it re-deriving
 // isAttached/parentId/workphaseId/workphase.isTerminal itself.
 //
@@ -41,9 +41,7 @@ export function classifyPositionScope(
 // single-item routes query one workphase directly; its GET /:id (item +
 // children) and boards.ts (a whole board's worth of items) both prebuild a
 // `Map<workphaseId, isTerminal>` first so mapping many rows through this
-// function doesn't re-query per row. Was two near-identical copies of this
-// function, differing only in that lookup strategy (items.ts's per-item
-// query was an N+1 boards.ts's map already avoided) — audit Finding #17.
+// function doesn't re-query per row.
 export function withPositionScope<
   T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null },
 >(item: T, isTerminalOf: (workphaseId: string) => boolean | null): T & { positionScope: PositionScope } {
@@ -58,9 +56,6 @@ export function withPositionScope<
 // Builds the `isTerminalOf` lookup withPositionScope above needs, from a
 // batch of already-fetched workphase rows (each caller decides which rows —
 // a whole board's worth, an item + its children, or a whole workflow's).
-// boards.ts, items.ts, and workflows.ts each built this same
-// `Map<id, isTerminal>` + `?? null` closure by hand; collapsed into one spot
-// so the pattern doesn't re-accumulate the way withPositionScope itself did.
 export function isTerminalLookup<T extends { id: string; isTerminal: number | boolean }>(
   rows: T[],
 ): (workphaseId: string) => boolean | null {
@@ -68,25 +63,15 @@ export function isTerminalLookup<T extends { id: string; isTerminal: number | bo
   return (workphaseId: string) => map.get(workphaseId) ?? null;
 }
 
-// Epic 3.2's position-comparison scope for an item: parent-scoped
-// (parentId, isAttached) for an attached child — its true siblings — or
-// workflow-scoped for everything else. Position is a single value shared
-// across a whole workflow (docs/wiki/item-positioning), not per-workphase —
-// a workphase boundary alone was never a meaningful place to stop comparing
-// positions, since two items in different workphases of the same workflow
-// still need to compare cleanly (a merged column, a reindex, or a plain
-// cross-workphase append would otherwise risk colliding/misordering
-// against a workphase that merely happened to be empty). So every
-// detached/root item's scope is every workphaseId sharing its current
-// workphase's workflowId, not just that one workphase — always excluding
-// attached children, since they render nested under their parent rather
-// than as flat list members (mirrors the client's getWorkphaseItemsFrom
-// filter). `excludeId` keeps the subject's own (possibly just-updated) row
-// out of its own scope query. Moved here from items.ts (audit Finding #17,
-// partial — the withPositionScope duplication between items.ts/boards.ts
-// and workflows.ts's missing positionScope are still open) so other route
-// modules (e.g. workphases.ts's terminal-flip backfill) can share it
-// instead of re-deriving the same scope rule inline.
+// The position-comparison scope for an item: parent-scoped
+// (parentId, isAttached) for an attached child, its true siblings
+// (wiki item-positioning §3), or workflow-scoped for everything else
+// (wiki item-positioning §2). So every detached/root item's scope is every
+// workphaseId sharing its current workphase's workflowId, not just that one
+// workphase — always excluding attached children, since they render nested
+// under their parent rather than as flat list members (the same filter as
+// the client's `itemListOps.ts::selectBoardItems`). `excludeId` keeps the
+// subject's own (possibly just-updated) row out of its own scope query.
 export function positionScopeFor(
   subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
   excludeId?: string,
@@ -132,11 +117,10 @@ function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
 
 // True if `anchor` and `subject` resolve to the *same* comparison space —
 // not just the same PositionScope label (both could independently classify
-// as "workflow" while belonging to two different workflows). Used by
-// PATCH /items/:id/move to reject an anchorId whose position isn't
-// actually comparable to where the subject's is about to be written (audit
-// Finding #7): an attached child's siblings space and a workflow-wide space
-// are deliberately isolated (positionResolver.test.ts), and two different
+// as "workflow" while belonging to two different workflows). Rejects an
+// anchorId whose position isn't actually comparable to where the subject's
+// is about to be written: an attached child's siblings space and a
+// workflow-wide space are deliberately isolated, and two different
 // workflows' "workflow-wide" spaces are two different sets of rows even
 // though positionScopeFor would expand either one on its own without
 // noticing the mismatch.

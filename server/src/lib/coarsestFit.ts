@@ -1,5 +1,5 @@
-// The coarsest-decimal-that-fits search for position values, factored out of
-// positionResolver.ts so it can be unit-tested standalone.
+// The coarsest-decimal-that-fits search for position values (wiki item-positioning §2),
+// kept apart from positionResolver.ts so it can be unit-tested standalone.
 
 const DEFAULT_MAX_COARSEST_FIT_DECIMALS = 12;
 
@@ -15,14 +15,14 @@ const DEFAULT_MAX_COARSEST_FIT_DECIMALS = 12;
  * @param maxDecimals - optionally provide a max number of decimal specifity
  *          DEFAULT_MAX_COARSEST_FIT_DECIMALS is used when no value is provided
  * @returns the coarsest number between prev and next
- *          or null if the coarsest fit is more precise than MAX_COARSEST_FIT_DECIMALS allows
+ *          or null if the coarsest fit is more precise than maxDecimals allows
  *
  * @example prev=1.5, next=2.0 (exact midpoint = 1.75)
  *  -> tries round(1.75, 0) = 2 -> not between 1.5 an 2 (exclusive) so it goes less coarse
  *  -> returns round(1.75, 1) = 1.8 -> 1.8 is inbetween so it is returned
  * @example prev=1.9, next=3.02 (exact midpoint = 2.46)
  *  -> returns round(2.46, 0) = 2
- * @example prev=101.1, next=101.2 (exact midpoint = 1.15)
+ * @example prev=101.1, next=101.2 (exact midpoint = 101.15)
  *  -> tries round(101.15, 0) = 101
  *  -> tries round(101.15, 1) = 101.2
  *  -> returns round(101.15, 2) = 101.15

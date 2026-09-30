@@ -1,7 +1,6 @@
 // validateHierarchyRequest / applyHierarchyRequest — the one reparent/attach/workphase/
-// placement implementation behind POST /items, PUT /items/:id, and PATCH /items/:id/move;
-// logCreatedUnderParent — the hierarchy entry a create under a parent logs.
-// Rules: docs/wiki/item-attachment/README.md (Epic 3.5).
+// placement implementation behind PUT /items/:id and PATCH /items/:id/move;
+// logCreatedUnderParent — the hierarchy entry a create under a parent logs (POST /items).
 
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -22,26 +21,27 @@ import { logActivity } from './activityLog.js';
 
 // ============================================================
 // The one implementation of "this item changes parent / attachment /
-// workphase / position" (Epic 3.5 Story 1). Three entry points share it —
-// PATCH /items/:id/move (the board drag), PUT /items/:id (the Sheet's
-// checkbox / parent picker / MCP update_item), and POST /items for the
-// legality guard — so a rule enforced on one write is enforced on every
-// write (docs/wiki/item-attachment §7, "on the write means every write").
+// workphase / position". Two entry points share it — PATCH /items/:id/move
+// (the board drag) and PUT /items/:id (the Sheet's checkbox / parent picker
+// / MCP update_item) — so the two writes can't enforce different rules.
 //
-// Two halves, by the audit Finding #12 convention: validate against plain
-// `db` *before* the transaction and answer 400s from the route; apply
-// inside the transaction with no early returns, so nothing partial can
-// commit (wiki §6, one gesture one commit).
+// Two halves: validate against plain `db` *before* the transaction and
+// answer 400s from the route; apply inside the transaction with no early
+// returns, since a better-sqlite3 transaction rolls back only on a throw
+// and an early return would commit whatever it had already written. So
+// nothing partial can commit (wiki item-attachment §6).
 // ============================================================
 
 export type ItemRow = typeof items.$inferSelect;
 
+// Always a write to the moving item: a request names the item's new parent,
+// never a parent's children (wiki item-attachment §3).
 export type HierarchyRequest = {
-  /** undefined = unchanged; null = reparent to root (wiki §11). */
+  /** undefined = unchanged, so a detach keeps its parent; null = reparent to root (wiki item-attachment §11). */
   parentId?: string | null;
-  /** undefined = keep the current state — nothing attaches by default (wiki §4). */
+  /** undefined = keep the current state — nothing attaches by default (wiki item-attachment §4). */
   isAttached?: boolean;
-  /** undefined = unchanged. Ignored-with-400 when the resulting state is attached and it disagrees with the parent's. */
+  /** undefined = unchanged. Rejected with a 400 when the resulting state is attached and it disagrees with the parent's. */
   workphaseId?: string | null;
   anchorId?: string;
   side?: Side;
@@ -51,11 +51,11 @@ export type HierarchyRequest = {
 
 // Where the item will be once the request is applied — every check and
 // every scope below is evaluated against this, never against the row as it
-// currently is (wiki §5: reparent first, then resolve; positioning §7.1:
-// the anchor is validated against the resulting scope).
+// currently is: reparent first, then resolve (wiki item-attachment §5,
+// wiki item-positioning §7.2).
 type ResultingState = {
   parentId: string | null;
-  /** The stored flag. Cleared whenever the parent is cleared (wiki §1's invariant). */
+  /** The stored flag. Cleared whenever the parent is cleared (wiki item-attachment §1's invariant). */
   attachedFlag: boolean;
   /** attachedFlag && parentId — the effective "is a Stub" test the rest of the code uses. */
   isAttachedWithParent: boolean;
@@ -80,7 +80,7 @@ function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: Pare
   const parentId = req.parentId !== undefined ? req.parentId : item.parentId;
   const parentCleared = req.parentId === null && item.parentId !== null;
   // A root item may carry a stale flag from POST's attached-by-default
-  // (meaningless without a parent, per the schema comment) — leave it be
+  // (the flag means nothing without a parent) — leave it be
   // unless this write is the one clearing the parent, in which case the
   // flag goes with it.
   const attachedFlag = parentCleared ? false : req.isAttached !== undefined ? req.isAttached : Boolean(item.isAttached);
@@ -94,10 +94,9 @@ function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: Pare
   return { parentId, attachedFlag, isAttachedWithParent, workphaseId, projectId };
 }
 
-// Hand-rolled request validation (no Zod until Epic 4). Returns the first
-// 400 message, or null when the request is legal. Order: shape → parent
-// legality (wiki §7–§8) → resulting-state invariants (§1, decision 4) →
-// anchor (positioning §7.1).
+// Hand-rolled request validation. Returns the first 400 message, or null
+// when the request is legal. Order: shape → parent legality → resulting-state
+// invariants → anchor.
 export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): string | null {
   if (req.parentId !== undefined && req.parentId !== null && typeof req.parentId !== 'string') {
     return 'parentId must be a string or null';
@@ -121,15 +120,16 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
 
   let parent: ParentRow | undefined;
   if (typeof req.parentId === 'string') {
-    // Exists / not self / not a descendant / within the depth cap — §7's
-    // four legality rules. No same-project check: cross-project is not a
-    // disqualifier (§9); projectId is derived from the parent below.
+    // Exists / not self / not a descendant / within the depth cap — the
+    // four legality rules (wiki item-attachment §7). No same-project check:
+    // cross-project is not a disqualifier; projectId is derived from the
+    // parent below.
     parent = getParent(req.parentId);
     if (!parent) return 'parentId does not reference an existing item';
     const reparentError = assertValidReparent(items, item.id, req.parentId, 'item');
     if (reparentError) return reparentError;
-    // The cap gates reparents, not existing data (§8): an attach toggle
-    // that names the parent the item already has isn't one.
+    // The cap gates reparents, not existing data (wiki item-attachment §8):
+    // an attach toggle that names the parent the item already has isn't one.
     if (req.parentId !== item.parentId) {
       const depthError = assertWithinDepthCap(req.parentId, item.id);
       if (depthError) return depthError;
@@ -140,13 +140,12 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
 
   const resulting = deriveResultingState(item, req, parent);
 
-  // "Attached with no parent" is rejected, not ignored (§1) — the request
-  // can only be a client bug, and accepting it would leave a stray flag.
+  // "Attached with no parent" is rejected, not ignored (wiki item-attachment §1).
   if (req.isAttached === true && resulting.parentId === null) {
     return 'isAttached requires a parentId';
   }
-  // An attached item inherits its parent's workphase; a request naming a
-  // different one is contradictory (planning decision 4).
+  // An attached item inherits its parent's workphase, so a request naming a
+  // different one is contradictory.
   if (resulting.isAttachedWithParent && req.workphaseId !== undefined && req.workphaseId !== resulting.workphaseId) {
     return "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
   }
@@ -164,13 +163,14 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     };
     const anchor = db.select(anchorProjection).from(items).where(eq(items.id, req.anchorId)).get();
     if (!anchor) return 'anchorId does not reference an existing item';
+    // A done item has no position, so it can never be an anchor (wiki item-positioning §7.4).
     if (anchor.position === null) return 'anchorId has no position to anchor against (it may be a done item)';
     // The anchor's position is only comparable if it lives in the scope
     // the subject is about to end up in — an attached child's sibling
     // space and a workflow-wide space are isolated, and two workflows each
-    // have their own (audit Finding #7). Checked against the *resulting*
-    // state: an anchor among the new parent's children is legal even
-    // though the subject isn't in that scope yet (positioning §7.1).
+    // have their own. Checked against the *resulting* state: an anchor
+    // among the new parent's children is legal even though the subject
+    // isn't in that scope yet (wiki item-positioning §7.1).
     const anchorScope = {
       isAttached: Boolean(anchor.isAttached),
       parentId: anchor.parentId,
@@ -218,7 +218,7 @@ function hierarchyChangeContent(
 }
 
 // Applies a validated request inside `tx`. Returns the reindex disclosure
-// (wiki item-positioning §5) for the caller's response — empty when no
+// (wiki item-positioning §5.1) for the caller's response — empty when no
 // reindex fired, which is the overwhelmingly common case.
 export function applyHierarchyRequest(
   tx: Tx,
@@ -235,8 +235,8 @@ export function applyHierarchyRequest(
   const parentChanged = resulting.parentId !== item.parentId;
   const projectChanged = resulting.projectId !== item.projectId;
   // The comparison scope changes on attach↔detach and on a reparent while
-  // attached (positioning §2's table); a redundant re-attach to the same
-  // parent is not a scope change and keeps its position.
+  // attached (wiki item-positioning §2.1's table); a redundant re-attach to
+  // the same parent is not a scope change and keeps its position.
   const scopeChanged =
     wasAttachedWithParent !== resulting.isAttachedWithParent || (resulting.isAttachedWithParent && parentChanged);
 
@@ -248,7 +248,7 @@ export function applyHierarchyRequest(
     projectId: resulting.projectId,
   };
 
-  // --- Position, resolved against the *resulting* scope (wiki §5) ---
+  // --- Position, resolved against the *resulting* scope ---
   const reindexed: ReindexedPosition[] = [];
   const scope = () =>
     positionScopeFor(
@@ -261,18 +261,18 @@ export function applyHierarchyRequest(
   } else if (req.position !== undefined) {
     updates.position = req.position;
   } else if (scopeChanged) {
-    // Scope changed with no anchor → append fallback (positioning §2's
-    // scope-change principle). "Reparent but keep your position" is not an
-    // operation for an attached item (wiki §4). A Free item with no
-    // workphase at all has no scope to append into (positionScope "none").
+    // Scope changed with no anchor → append fallback (wiki item-positioning §2.1).
+    // "Reparent but keep your position" is not an operation for an attached
+    // item (wiki item-attachment §4). A Free item with no workphase at all
+    // has no scope to append into (positionScope "none").
     updates.position =
       resulting.isAttachedWithParent || resulting.workphaseId
         ? resolveAppendPosition(items, scope(), tx, reindexed)
         : null;
   } else if (req.workphaseId !== undefined && resulting.workphaseId) {
-    // A workphaseId-only move keeps an existing position (positioning §2
-    // addendum — position is workflow-wide, so it's still comparable). A
-    // same-workphase "move" with no anchor is a reorder-to-end, and an item
+    // A workphaseId-only move keeps an existing position (wiki item-positioning §2's
+    // workphase-only rule — position is workflow-wide, so it's still comparable).
+    // A same-workphase "move" with no anchor is a reorder-to-end, and an item
     // with no position to keep (reopened done item, first assignment) needs
     // a fresh one — both take the append fallback.
     if (!(workphaseChanged && item.position !== null))
@@ -281,10 +281,10 @@ export function applyHierarchyRequest(
   // Otherwise (a Free reparent with no anchor, a no-op re-attach): the scope
   // didn't change and nothing asked for placement — position is left alone.
 
-  // --- Active/done split (positioning §6) — Free items only ---
+  // --- Active/done split (wiki item-positioning §6) — Free items only ---
   if (resulting.isAttachedWithParent) {
     // Attached children never carry completedAt and always keep their
-    // position, whatever workphase they inherited (wiki §2).
+    // position, whatever workphase they inherited (wiki item-attachment §2).
     if (item.completedAt !== null) updates.completedAt = null;
   } else if (isTerminal(resulting.workphaseId, tx)) {
     // A Free item in a terminal workphase has no position; it's ordered by
@@ -300,7 +300,7 @@ export function applyHierarchyRequest(
   // --- Cascades ---
   if (projectChanged && resulting.projectId) {
     // A hierarchy can't straddle two projects: every descendant follows,
-    // detached ones included (wiki §9).
+    // detached ones included (wiki item-attachment §9).
     const descendantIds = walkItemDescendants(item.id, { tx });
     if (descendantIds.length > 0) {
       tx.update(items)
@@ -312,7 +312,7 @@ export function applyHierarchyRequest(
   if (workphaseChanged) cascadeWorkphaseToAttachedDescendants(item.id, tx);
   if (projectChanged && resulting.projectId) nullForeignWorkphasePositions(tx, item.id, resulting, now);
 
-  // --- Activity log (wiki §11a, plus the pre-existing workphase entry) ---
+  // --- Activity log (wiki item-attachment §11a, plus the workphase move's own entry) ---
   const flagChanged = wasAttachedWithParent !== resulting.isAttachedWithParent;
   if (parentChanged || flagChanged) {
     const metadata = {
@@ -362,10 +362,10 @@ export function applyHierarchyRequest(
   return { reindexed };
 }
 
-// A create under a parent is a hierarchy change too (wiki item-attachment
-// §11a): the new item's activity records the parent it was created under and
-// whether it's attached to it, in the metadata shape applyHierarchyRequest
-// logs. POST /items calls it inside its own insert's transaction.
+// A create under a parent is a hierarchy change too
+// (wiki item-attachment §11a): the new item's activity records the parent it
+// was created under and whether it's attached to it, in the metadata shape
+// applyHierarchyRequest logs. Takes the create's own transaction, so the entry commits with the insert.
 export function logCreatedUnderParent(
   tx: Tx,
   itemId: string,
@@ -381,14 +381,13 @@ export function logCreatedUnderParent(
   );
 }
 
-// Cross-workflow reparent (wiki §9; positioning §7.3): every subtree item
-// that keeps its *own* workphase — the moved item if it's Free, and every
-// detached descendant — may now hold a workphase from a workflow its new
-// project doesn't use. Those items sit in "Unknown status," which isn't
-// position-ordered, so their stored position is nulled: an item with no
-// meaningful comparison scope has no position (same treatment §6 gives a
-// done item). Attached items inherit and keep their parent-scoped
-// position; nothing is remapped (that's Epic 7's UI).
+// Cross-workflow reparent: every subtree item that keeps its *own*
+// workphase — the moved item if it's Free, and every detached descendant —
+// may now hold a workphase from a workflow its new project doesn't use.
+// Those items sit in "Unknown status," which isn't position-ordered, so
+// their stored position is nulled (wiki item-positioning §7.3). Attached
+// items inherit and keep their parent-scoped position, and nothing is
+// remapped (wiki item-attachment §9).
 function nullForeignWorkphasePositions(tx: Tx, rootId: string, resulting: ResultingState, now: number): void {
   const targetWorkflowId = effectiveWorkflowIdForProject(resulting.projectId!, tx);
   const workflowOfWorkphase = new Map<string, string | null>();
