@@ -73,7 +73,7 @@ A1 D7 gives wiki pointers two jobs. The index job needs exactly one pointer per 
 - **A rule only the UI enforces** (drop bands, pop timing, where the ghost lands): the client module that decides it.
 - **A rule both sides enforce:** the server site carries the index pointer. The client site may carry a guard pointer where it would otherwise look like duplication, as `dragClassification.ts::isWithinDepthCap` already does.
 
-**When each page is done:** board-drag-interaction at the end of batch 1c; the other three pages at the end of batch 3. Each of those batch reports includes a table mapping every section either to its site or to "no enforcing code".
+**When each page is done:** board-drag-interaction at the end of batch 1c-ii; the other three pages at the end of batch 3. Each of those batch reports includes a table mapping every section either to its site or to "no enforcing code".
 
 Two kinds of mismatch go to the PO as possible wiki gaps:
 - a section that states a rule, with no enforcing code and no `**Planned:**` marker;
@@ -128,7 +128,7 @@ Every site is in the board-drag files. Each ruling lands in the batch (1a, 1b or
 
 The line counts are estimates: a grep on 2026-09-26 for story, epic, phase, audit, ledger and decision IDs, dates, and `§` in comment lines. The checker's first run when A4 starts gives the real baseline. By then, A1 batch 3 will already have cleaned some module headers in `workflow/`.
 
-1a's and 1b's figures are that baseline (2026-09-29): the comment lines I read, and the checker's hits. At 248 hits, 1a split into two stops (Nathan). 1b split the same way at 214 hits, since it also carries most of D11 and eight D6 rulings.
+1a's, 1b's and 1c's figures are that baseline (2026-09-29): the comment lines I read, and the checker's hits. At 248 hits, 1a split into two stops (Nathan). 1b split the same way at 214 hits, since it also carries most of D11 and eight D6 rulings, and 1c at 255.
 
 Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory.
 
@@ -138,7 +138,8 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **1a-ii** Board drag: regions and bands | `dragRegions.ts`, `dragBands.ts`, `cardMetrics.ts` | ~410 read, 124 hits | 1a-i |
 | **1b-i** Board drag: placement and requests | `placement.ts`, `dragRequest.ts`, `dragClassification.ts`, `itemListOps.ts`, `itemWriteReconciliation.ts` | ~450 read, 128 hits | 1a-ii |
 | **1b-ii** Board drag: collision and projection | `dragCollision.ts`, `descendantsProjection.ts`, `DragSessionContext.ts`, `client/src/lib/hierarchyPlacement.ts` | ~375 read, 86 hits | 1b-i |
-| **1c** Board drag: the hook and components | `useBoardDnd.ts`, `useItemManagement.ts`, `usePendingGhostGuard.ts`, `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~140 | 1b-ii |
+| **1c-i** Board drag: the hooks | `useBoardDnd.ts`, `useItemManagement.ts`, `usePendingGhostGuard.ts` | ~410 read, 88 hits | 1b-ii |
+| **1c-ii** Board drag: the components | `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~455 read, 167 hits | 1c-i |
 | **2** The rest of the client | everything else in `client/src` that isn't a test: the sidebar, item detail, modals, `api/`, `lib/`, `types.ts` | ~55 | A1 |
 | **3** Server | `server/src` | ~100 | A2's other three pages |
 | **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
@@ -185,7 +186,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 - **board-drag-interaction §6 → §6.1**, which Card is zoomed into (the dwell, the cue, the reset rule, invalid targets):
   - **1a-i:** `popSession.ts` lines 118, 329 and 344. The header's range "§5–§6" (line 22) becomes "§5–§6.1", since the module runs the zoom-in clock.
   - **1b-ii:** `dragCollision.ts` line 85's range, the same way. Done differently: the comment guards one rule, so the range became that rule's pointer, §1.1 rule 1.
-  - **1c:** `dragChrome.tsx` line 126.
+  - **1c-ii:** `dragChrome.tsx` line 126.
   - **4a:** the `popSession.test.ts` title at line 198.
   - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it.
 
@@ -211,7 +212,8 @@ A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these
 
 - **Case IDs in comments outside the tests** (D2's row for them). The checker doesn't flag these, so this list is the checklist:
   - **1b-i:** `placement.ts` lines 88 and 128 (DRAG-5.12 and DRAG-5.4, which A3 qualified); `dragRequest.ts` lines 22 ("TC-7.1/7.2"), 37–38, 133 and 135; `dragClassification.ts` lines 15, 19–22, 61, 88 and 95; `itemListOps.ts` lines 28, 119 and 155; `itemWriteReconciliation.ts` lines 77 and 93. All cleared in 1b-i.
-  - **1c:** `useItemManagement.ts` line 18; `StubRows.tsx` line 82.
+  - **1c-i:** `useItemManagement.ts` line 18. Cleared in 1c-i.
+  - **1c-ii:** `StubRows.tsx` line 82.
 - **Prefix-less tails in test comments,** each written out in full:
   - **4a:** `dragBands.test.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"); `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs.
 - **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback.
@@ -291,6 +293,10 @@ board-drag-interaction, from A2's list. Rows are added as each passage's home ba
 | §2 | One function, `dragCollision.ts::dropAnchorFor`, feeds both the side highlight and the release | **Placed:** `dropAnchorFor`'s comment, with an index pointer to §2 and §7.1. `workflow/CLAUDE.md` names it too. (1b-ii) |
 | §2 | In a Descendants section, the dragged Stub's traveling rows come from `travelingRowsFor` | **Placed:** `travelingRowsFor`'s comment, with a guard pointer to §7.2. (1b-ii) |
 | §7 | The board's Descendants section and the project sidebar share one placement library (`client/src/lib/hierarchyPlacement.ts`) | **Covered:** `hierarchyPlacement.ts`'s header, with an index pointer to §7.1, and root `CLAUDE.md`'s "One position math layer". (1b-ii) |
+| §8 | A Stub drag starts in its containing Card's Descendants region (`useBoardDnd.ts::handleDragStart` → `descendantsRegionKey`) | **Placed:** `useBoardDnd.ts::beginDragAt`'s comment, with an index pointer to §1, and `containingCardIdOf`'s. (1c-i) |
+| §10 | The tracker's half of per-item sequencing: `ItemWriteTracker.complete` reports `needsResync` | **Placed:** `useItemManagement.ts::ItemWriteTracker`, with an index pointer to §10. (1c-i) |
+| §10 | A re-drag stashes the pending placement at drag start and restores it on cancel | **Covered:** `useBoardDnd.ts::handleDragStart`'s `priorPlacement` comment, and `usePendingGhostGuard.ts`'s header, with an index pointer to §10. (1c-i) |
+| §10 | The ghost is cleared reactively when its placement goes missing mid-drag | **Covered:** `usePendingGhostGuard.ts`'s header. The lead reads backwards: the guard puts the ghost back the instant a response clears it. (1c-i) |
 
 item-positioning, from A2's list. The rows whose home is on the client land here; the server's land in batch 3.
 
@@ -302,7 +308,7 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 
 ### Progress toward D4 and D6
 
-**D6 rulings written** (11 of 16):
+**D6 rulings with a disposition** (13 of 16: 12 written, 1 "no comment"):
 - #30, `popInDelayFor` is a genuine per-kind table: at `popSession.ts::popInDelayFor`. The reason comes from the Story 5 audit's #23: the other kind tests are separate properties that only happen to split the kinds alike, and one table would couple them. (1a-i)
 - #30, `clampToCurrentContext`'s `!== 'column'` vs `containmentRect`'s `=== 'column'`: at both sites. The reason comes from the Story 4.1 plan's F6: one decides how far the carried copy follows, the other whether the context still holds, and a merged column answers them against different boxes (wiki board-drag-interaction §2). (1a-i)
 - #30, the board's `(d+1)·12` indent vs the sidebar's `12 + d·14`: at `cardMetrics.ts::descendantsIndentPx`. The reason: there 12 is a base inset and the step is 14, here 12 is the step itself. The sidebar's half was already written, at `projectTreeUtils.ts::ROW_BASE_INSET_PX`. (1a-ii)
@@ -314,7 +320,9 @@ item-positioning, from A2's list. The rows whose home is on the client land here
 - #24, the mixed-space comparison: at `dragCollision.ts::resolveBoardCollisions`'s Descendants branch. The section rect is painted space and dnd-kit measures droppables without transforms (its default `getTransformAgnosticClientRect`, with no override in `client/src`); they differ only while the Card carries a sortable transform, which can't overlap a Descendants lock at the default clocks. (1b-ii)
 - #30, `travelingRowsFor` vs `resolveGap`: at `travelingRowsFor`. The reason, recovered from both functions (the audit said only "semantic"): the sidebar draws no ghost, so it maps an `over` inside the dragged block to the gap the block collapses to, while the board names the ghost's neighbor in dnd-kit's shuffled order. Same outcome from different inputs. (1b-ii)
 - #30, the board's projection seed vs the sidebar's: at `descendantsProjection.ts::seedFor`. The reason comes from the Story 6 plan's decision 3, checked against today's code: a sidebar drag always starts at its own row, but a board drag can also enter a section from the Card layer, which seeds where that layer showed the ghost. The depth step itself is shared. (1b-ii)
-- **Left for 1c:** #30's blue line vs the sidebar's gap indicator (`dragChrome.tsx`), the two `SortableContext`s (`KanbanCard.tsx`), `AttachGhostRow` vs `AttachedChildRow` (`StubRows.tsx`), and `regionItems` (`useBoardDnd.ts`); #24's Descendants release with no `over` is "no comment".
+- #30, `regionItems` vs `BoardColumn.tsx`'s render lists: at `useBoardDnd.ts::regionItems`. Both read the same selectors (`getMergedColumnItems`, `getWorkphaseItems`, checked in `BoardColumn.tsx`), so the release list and the rendered list can't disagree; only the call site repeats. (1c-i)
+- #24, a Descendants release with no `over`: **no comment.** The release reads only the projection, which `handleDragEnd`'s Descendants branch already says, so nothing there looks wrong. (1c-i)
+- **Left for 1c-ii:** #30's blue line vs the sidebar's gap indicator (`dragChrome.tsx`), the two `SortableContext`s (`KanbanCard.tsx`), and `AttachGhostRow` vs `AttachedChildRow` (`StubRows.tsx`).
 
 **Board-drag-interaction pointers so far.** 1c turns these into D4's table.
 - **Index:**
@@ -344,6 +352,9 @@ item-positioning, from A2's list. The rows whose home is on the client land here
   - `descendantsProjection.ts::descendantsReleasePlacement`: §7.2, for "an over-cap state commits nothing"; and §7.1, for "a set-down in its own gap and depth writes nothing".
   - `DragSessionContext.ts::useIsPending`: §10, for the pending marker.
   - `hierarchyPlacement.ts`'s header: §7.1, the gap and depth rule; `toRows`: §7.2, for "the dragged subtree is never a candidate".
+  - `useBoardDnd.ts::beginDragAt`: §1, for where a drag starts.
+  - `useItemManagement.ts::ItemWriteTracker`: §10, for "a stale response never lands last".
+  - `usePendingGhostGuard.ts`'s header: §10, for a re-drag's pending marker and ghost.
 - **Guard:**
   - `popSession.ts::PopHover.side`: §6.1's reset rule.
   - `popSession.ts::ParentKeyOf`: §1.1 rule 2.
@@ -355,6 +366,7 @@ item-positioning, from A2's list. The rows whose home is on the client land here
   - `dragCollision.ts::travelingRowsFor`: §7.2.
   - `descendantsProjection.ts`'s header: §7.1, for the board's use of the shared rule.
   - `DragSessionContext.ts::DescendantsProjection.atOwnSlot`: §7.1.
+  - `useBoardDnd.ts::handleDragEnd`: §2 rule 5, for "the release sends the named anchor even in its own slot".
 
 **Pointers to the other three pages so far.** Batch 3 folds these into its D4 tables.
 - **item-positioning, index:** `dragRequest.ts::anchorFor`: §7.1. `itemListOps.ts`'s header: §2's client-side role. `itemListOps.ts::byPositionThenCreatedAt`: §5a's tie-break. `itemListOps.ts::byCompletedAtThenCreatedAt`: §6. `itemListOps.ts::getMergedColumnItemsFrom`: §4. `itemWriteReconciliation.ts`'s header: §5a.
@@ -370,3 +382,4 @@ item-positioning, from A2's list. The rows whose home is on the client land here
   - D7 and D9: A3 has closed, and the wiki and test plans report 0 hits.
   - The Auditor's story is A6 now, after its file name. The Handoff says so.
 - **2026-09-29, batch 1b (Coder):** 1b split into 1b-i and 1b-ii (D7), the same way as 1a: 214 hits, plus most of D11 and eight D6 rulings.
+- **2026-09-29, batch 1c (Coder):** 1c split into 1c-i (the hooks) and 1c-ii (the components), at 255 hits. D4's board-drag table comes at the end of 1c-ii.

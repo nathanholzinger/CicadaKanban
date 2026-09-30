@@ -56,10 +56,9 @@ import { usePendingGhostGuard } from './usePendingGhostGuard';
 import { useSnapTween } from './useSnapTween';
 import { SHORT_CARD_METRICS } from '../cardMetrics';
 
-// Story 5 — a Stub's drag starts at its *containing Card's* Descendants
-// layer: the nearest Free ancestor, whatever the Stub's own depth beneath
-// it (wiki §1, §1.1, decision 1). Built on `getAncestors` (root..immediate-
-// parent order, cycle-safe — audit Finding #11) rather than a bespoke
+// A Stub's drag starts at its *containing Card's* Descendants layer: the
+// nearest Free ancestor, whatever the Stub's own depth beneath it. Built on
+// `hierarchy.ts::findNearestAncestor` (cycle-safe) rather than a bespoke
 // parentId walk, so a corrupted parentId cycle in the data degrades the
 // same way it already does everywhere else in the hierarchy math. `null`
 // only if every ancestor up to a dangling/missing parentId is itself a
@@ -68,48 +67,46 @@ function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
   return findNearestAncestor(item, items, n => !isStub(n))?.id ?? null;
 }
 
-// Drag-and-drop for the board's DndContext — the gesture layer of
-// docs/wiki/board-drag-interaction. The rules live in pure modules
-// (popSession.ts, placement.ts, dragRegions.ts, dragBands.ts,
-// dragCollision.ts, dragRequest.ts, descendantsProjection.ts, itemListOps.ts,
-// lib/hierarchyPlacement.ts); this hook owns the clocks, the DOM
-// measurements, and the dnd-kit plumbing:
+// Drag-and-drop for the board's DndContext — the board drag's gesture
+// layer. The rules live in pure modules (popSession.ts, placement.ts,
+// dragRegions.ts, dragBands.ts, dragCollision.ts, dragRequest.ts,
+// descendantsProjection.ts, itemListOps.ts, lib/hierarchyPlacement.ts);
+// this hook owns the clocks, the DOM measurements, and the dnd-kit
+// plumbing:
 //
 //   - the pointer is tracked with a window listener for the life of any
-//     item drag (Card or Stub alike, Story 5), and every sample runs the
-//     pop machine against freshly measured regions (a pop that needs no
-//     movement — the cursor resting — fires from a timer);
+//     item drag (Card or Stub alike), and every sample runs the pop machine
+//     against freshly measured regions (a pop that needs no movement — the
+//     cursor resting — fires from a timer);
 //   - the machine's state is mirrored into a ref so the closures dnd-kit
 //     calls during *its* render can read it: the collision detection (which
 //     decides `over`) and the clamp modifier (which clamps the card to its
 //     context while locked — passed to both `DndContext` and `DragOverlay`,
-//     Phase 4/F8, so `over` and the live side line track the same bounded
-//     position the overlay is actually drawn at);
-//   - the ghost is an ordinal placement (§10) over the list selectors —
-//     nothing in `items` is mutated during a drag, so cancel is just
-//     clearing it;
+//     so `over` and the live side line track the same bounded position the
+//     overlay is actually drawn at);
+//   - the ghost is an ordinal placement over the list selectors — nothing
+//     in `items` is mutated during a drag, so cancel is just clearing it;
 //   - a release resolves in-context through `dropAnchorFor`'s own anchor +
-//     lean (a column/sub-row), through §7's gap + depth rule against the
+//     lean (a column/sub-row), through the gap + depth rule against the
 //     session's own live projection (a Descendants section,
-//     `releaseDescendants`), or, popped out, through that region's band
-//     (§5) — and the write goes out with its pending placement attached.
+//     `releaseDescendants`), or, popped out, through that region's band —
+//     and the write goes out with its pending placement attached.
 //
-// Position values are never computed here (item-positioning §2): the
-// request carries relative intent and the server's number lands through the
-// write tracker.
+// Position values are never computed here: the request carries relative
+// intent and the server's number lands through the write tracker.
 
 export interface BoardDndDeps {
   board: BoardWithDetails | null;
   setBoard: React.Dispatch<React.SetStateAction<BoardWithDetails | null>>;
   items: Item[];
   tuning: DragTuning;
-  /** The live ordinal placements — read at drag start to stash a re-dragged item's pending marker (reconciliation #22). */
+  /** The live ordinal placements — read at drag start to stash a re-dragged item's pending marker. */
   placements: Placements;
   previewPlacement: (itemId: string, placement: Placement | null) => void;
   writes: ItemWriteTracker;
   getWorkphaseItems: (workphaseId: string, isTerminal?: boolean) => Item[];
   getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
-  /** Story 5: a Descendants region's own "others" list — the parent's other attached children, placement-aware. */
+  /** A Descendants region's own "others" list — the parent's other attached children, placement-aware. */
   getAttachedChildren: (parentId: string) => Item[];
   handleReorderColumns: (orders: { id: string; position: number }[]) => Promise<void>;
   loadBoard: () => Promise<void>;
@@ -134,18 +131,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const sessionRef = useRef<DragSession | null>(null);
   const { setGhost, restorePriorPlacement } = usePendingGhostGuard(sessionRef, deps);
   const regionsRef = useRef<DragRegion[]>([]);
-  // Story 4.1 Phase 2: the board's structural facts (elements, kinds,
-  // parent chains, scroll ancestors, column facts) — resolved once per
-  // drag, again after each layer change, and again when a sample finds the
-  // DOM changed under it (`sampleRegions`); not on every pointer sample.
+  // The board's structural facts (elements, kinds, parent chains, scroll
+  // ancestors, column facts) — resolved once per drag, again after each
+  // layer change, and again when a sample finds the DOM changed under it
+  // (`sampleRegions`); not on every pointer sample.
   const structureRef = useRef<DragStructure>([]);
   // Every region element present at that resolve, the ones that resolved to
   // nothing included — what `sampleRegions` compares the live DOM against to
-  // notice a region that mounted since (audit epic-3-5-story-6 #1).
+  // notice a region that mounted since.
   const structureElementsRef = useRef<ReadonlySet<Element>>(new Set());
   // The Card whose section a Stub's drag started in, null for a Free Card's
   // drag: its Card and Descendants regions resolve regardless of
-  // `isValidCard` (decisions 2/3). Set by `beginDragAt`.
+  // `isValidCard`. Set by `beginDragAt`.
   const originCardIdRef = useRef<string | null>(null);
   // The carried copy's form at pickup — a Stub for a Stub's drag, the
   // shortCard for a Free Card's. `clampToContext`'s re-anchor reads it to
@@ -193,19 +190,19 @@ export function useBoardDnd(deps: BoardDndDeps) {
     updateSession(null);
   }
 
-  // `classification` decides which Cards resolve as regions at all (§3.2:
-  // an invalid target — cycle-forming, depth-capped — is never poppable,
-  // and here that's simply "never a region," so nothing downstream has to
+  // `classification` decides which Cards resolve as regions at all (an
+  // invalid target — cycle-forming, depth-capped — is never poppable, and
+  // here that's simply "never a region," so nothing downstream has to
   // re-check validity). It's a parameter rather than read off the session
   // ref because the very first resolution of a drag (`beginDragAt`) runs
   // before the session exists yet — every call site below already has its
   // own classification in scope regardless.
   //
-  // Story 4.1 Phase 2: structural (element ↔ key ↔ kind ↔ parent chain ↔
-  // scroll ancestor ↔ column facts) and re-resolved per drag, after each
-  // layer change, and whenever `sampleRegions` finds the DOM changed under
-  // it (what a layer change's render mounts lands after the layer change's
-  // own re-resolve — see `sampleRegions`).
+  // Structural (element ↔ key ↔ kind ↔ parent chain ↔ scroll ancestor ↔
+  // column facts) and re-resolved per drag, after each layer change, and
+  // whenever `sampleRegions` finds the DOM changed under it (what a layer
+  // change's render mounts lands after the layer change's own re-resolve —
+  // see `sampleRegions`).
   function resolveStructure(classification: DragClassification): DragStructure {
     const root = latest.current.rootRef.current ?? document;
     const isValidCard = (cardId: string): boolean => isValidParent(classification, cardId);
@@ -222,20 +219,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // The per-sample read: live rects and live card counts, scoped to
   // exactly what the locked layer can use — `scope` is the pop machine's
   // current `contextKey`, so this is the context region itself plus its
-  // own children (F5: Board never reads a Card region; a locked column
-  // never reads another column's).
+  // own children (Board never reads a Card region; a locked column never
+  // reads another column's).
   //
   // Re-resolves first if the DOM has changed under the structure since the
   // last resolve: a cached element gone (a remount — it would measure as an
-  // empty box, so its region silently dropped out), or a region element
+  // empty box, so its region would silently drop out), or a region element
   // that wasn't there. A layer change re-resolves synchronously, *before*
   // React renders the new layer, so whatever that render mounts or remounts
-  // lands after it. Found twice: Board layer's carve-out zones remounted a
-  // column's Cards, so no Card in a column entered through Board layer could
-  // be zoomed into (Story 6 hands-on, 2026-09-23 — the remount itself is
-  // gone since, `BandGuides.tsx`'s keyed slot); and a collapsed Card, forced
-  // open by the zoom-in into it, mounts its Descendants section only then,
-  // so that layer could never be entered (audit epic-3-5-story-6 #1). No
+  // lands after it: a column's Cards remounted by a render, or a collapsed
+  // Card, forced open by the zoom-in into it, mounting its Descendants
+  // section only then — without this, that layer could never be entered. No
   // session yet means the drag is starting and the structure was resolved a
   // moment ago.
   function sampleRegions(scope: string | null): DragRegion[] {
@@ -270,7 +264,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
   // A context's parent, off the structure rather than a measured region: a
   // context clipped out of view has no region in the sample, but its place
-  // in the stack doesn't change (audit epic-3-5-story-6 #19).
+  // in the stack doesn't change.
   const parentKeyOf: ParentKeyOf = key => structureRef.current.find(s => s.key === key)?.parentRegionKey ?? null;
 
   // One step of the pop machine against the current pointer; re-arms the
@@ -303,21 +297,19 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // stranding a timer-driven transition (no further pointermove ever
     // arrives to self-correct it) the instant it lands.
     //
-    // Audit epic-3-5-story-5 #2 (Story 4 #13, worsened by Story 5's third
-    // layer): a single re-resolve/re-sample/re-run only ever catches one
-    // hop. A yank far enough (or, with a Card layer now in the stack, a
-    // yank out of a Stub's section) to clear two thresholds in the same
-    // sample cascades `pop.contextKey` through an intermediate layer
-    // internally (`advancePopSession`'s own `transitionTo` recursion) that
-    // this `regions` sample was never scoped for — `pop.contextKey` ends up
-    // reporting the fully-cascaded layer while `regions` stays scoped to an
-    // intermediate stop `placementRegion` can't find anything in, silently
-    // dropping the ghost (and any release in that window) until the next
-    // pointer sample or timer self-corrects it. Looping the resample/rerun
-    // until the context truly stabilizes (not just once) catches every hop
-    // this same sample is due for; bounded by the layer count so a
-    // pathological oscillation can't spin forever. `startSnap` still runs
-    // once per hop, same as before.
+    // A single re-resolve/re-sample/re-run only ever catches one hop. A
+    // yank far enough (a yank out of a Stub's section, say) to clear two
+    // thresholds in the same sample cascades `pop.contextKey` through an
+    // intermediate layer internally (`advancePopSession` re-evaluates the
+    // same sample after each transition) that this `regions` sample was
+    // never scoped for — `pop.contextKey` would report the fully-cascaded
+    // layer while `regions` stays scoped to an intermediate stop
+    // `placementRegion` can't find anything in, silently dropping the ghost
+    // (and any release in that window) until the next pointer sample or
+    // timer self-corrects it. Looping the resample/rerun until the context
+    // truly stabilizes (not just once) catches every hop this same sample is
+    // due for; bounded by the layer count so a pathological oscillation
+    // can't spin forever. `startSnap` runs once per hop.
     let previousContextKey = current.pop.contextKey;
     for (let hops = 0; pop.contextKey !== previousContextKey && hops < 4; hops++) {
       startSnap();
@@ -337,8 +329,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     }
     updateDescendantsProjection(priorContextKey, pop, current.classification);
     const { projection } = projectionRef.current;
-    // Story 6 Phase D: the projection can change (a fresh gap or depth
-    // choice) on a sample where `pop` itself doesn't — a locked
+    // The projection can change (a fresh gap or depth choice) on a sample
+    // where `pop` itself doesn't — a locked
     // Descendants context has no further child region, so
     // `advancePopSession`'s own "inside" branch keeps returning the same
     // `pop` object once `hover`/`outsideSince` are already both null,
@@ -382,24 +374,22 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const regions = regionsRef.current;
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
       const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
-      // Story 6 Phase B: locked at a Descendants context, the in-context
-      // candidates are every Stub row inside the section's own rect (any
-      // depth, decision 1's flat list) — read off the region we already
-      // measured, never dnd-kit's `active.data.current`, which is exactly
-      // what decision 4 keeps from being load-bearing here.
+      // Locked at a Descendants context, the in-context candidates are every
+      // Stub row inside the section's own rect (any depth: the section is
+      // one flat list) — read off the region we already measured, never
+      // dnd-kit's `active.data.current`, which can lag a mid-drag remount.
       const descendantsSectionRect = context?.kind === 'descendants' ? context.rect : null;
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
-        // candidate) never forces `over` — rule 1: a mere hover, not yet a
-        // pop, must never drive anything a release would act on.
+        // candidate) never forces `over` — a mere hover, not yet a pop,
+        // must never drive anything a release would act on.
         hoverContainerId: hover && isCardList(hover) ? hover.containerId : null,
-        // A locked Card context has no `over` either (decision 5, Story
-        // 4.1 Phase 0): its within-action is a constant, never a preview —
-        // today the target Card would otherwise be its own only collision
-        // candidate, which could light the live side indicator on it for
-        // no reason a release would ever honor. Descendants has its own
-        // branch above instead (a card-list container concept doesn't
-        // apply to it).
+        // A locked Card context has no `over` either: its within-action is
+        // a constant, never a preview — otherwise the target Card would be
+        // its own only collision candidate, which could light the live side
+        // indicator on it for no reason a release would ever honor.
+        // Descendants has its own branch above instead (a card-list
+        // container concept doesn't apply to it).
         context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
         descendantsSectionRect,
       };
@@ -407,43 +397,42 @@ export function useBoardDnd(deps: BoardDndDeps) {
     return resolveBoardCollisions(args, live);
   }, []);
 
-  // §2 "bounded by its context": the DragOverlay can't leave the context
-  // rect — sideways for a merged column, either axis for a sub-row. A pop
-  // swaps the rect for the new context's, and since the cursor is inside it
-  // at that moment the card's target is under the cursor — the snap of §3,
-  // tweened over `popSnapMs` from where it was clamped (`useSnapTween`) —
-  // and it is bounded there from then on. No context (a drag from Unsorted
-  // that hasn't popped yet) passes the transform through.
+  // The DragOverlay can't leave the context rect
+  // (`dragOverlayGeometry.ts::clampToCurrentContext`). A pop swaps the rect
+  // for the new context's, and since the cursor is inside it at that moment
+  // the card's target is under the cursor — the snap on a pop, tweened over
+  // `popSnapMs` from where it was clamped (`useSnapTween`) — and it is
+  // bounded there from then on. No context (a drag from Unsorted that
+  // hasn't popped yet) passes the transform through.
   //
-  // Story 4.1 Phase 4 (F8) — this same modifier is now also passed to
-  // `DndContext` itself (BoardView.tsx), not only `DragOverlay`: dnd-kit
-  // feeds a `DndContext`-level modifier's output into both the collision
-  // rect (`over`) and `active.rect.current.translated` (`resolveDropSide`'s
-  // input), so without it those two tracked the *raw*, unclamped position
-  // while only the visible copy was bounded — during the exit clock,
-  // `closestCorners` could pick a card a column away from the visible copy,
-  // and the live side line could flip to it too. Calling this twice (once
-  // for each context) is idempotent for the *clamp*: `clampAxis` clamping
-  // an already-clamped value returns it unchanged. The snap tween isn't —
-  // both calls read the same tween, so for ≤`popSnapMs` after a pop the
-  // second application re-eases an already-eased point and its result is
-  // the one that sticks (audit epic-3-5-story-4 watch-list #15). Cosmetic:
-  // the window is ≤150ms by default and the collision rect only diverges
-  // from the drawn copy within it, never after.
+  // This same modifier is also passed to `DndContext` itself
+  // (BoardView.tsx), not only `DragOverlay`: dnd-kit feeds a
+  // `DndContext`-level modifier's output into both the collision rect
+  // (`over`) and `active.rect.current.translated` (`resolveDropSide`'s
+  // input), so without it those two would track the *raw*, unclamped
+  // position while only the visible copy is bounded — during the exit
+  // clock, `closestCorners` could pick a card a column away from the
+  // visible copy, and the live side line could flip to it too. Calling this
+  // twice (once for each context) is idempotent for the *clamp*:
+  // `clampAxis` clamping an already-clamped value returns it unchanged. The
+  // snap tween isn't — both calls read the same tween, so for ≤`popSnapMs`
+  // after a pop the second application re-eases an already-eased point and
+  // its result is the one that sticks. Cosmetic: the window is ≤150ms by
+  // default and the collision rect only diverges from the drawn copy within
+  // it, never after.
   //
-  // Story 6 Phase C: `reanchorOverlayTransform` runs first, before the
-  // clamp — the carried copy's own form switch (shortCard -> Stub, at the
-  // Card-layer boundary) shrinks the box out from under dnd-kit's own
-  // pointer-glued transform (dnd-kit tracks the *pickup* point, not a
-  // fraction of the box, so a box that shrinks leaves the pointer beside
-  // it, not on it). Targets the overlay shape's width and
-  // `CARRIED_STUB_HEIGHT_PX` — the same numbers the render side already uses
-  // to size the Stub — rather than dnd-kit's own `draggingNodeRect`:
-  // swapping the overlay's rendered shape leaves that measurement stuck for
-  // a stretch (its ResizeObserver is bound once, at the DragOverlay's
-  // *first* mount, to whatever the pickup form's content happened to be;
-  // verified against a live drag, not just @dnd-kit/core's source), so it
-  // can't be trusted as the target's own dimensions here. Folding the
+  // `reanchorOverlayTransform` runs first, before the clamp — the carried
+  // copy's own form switch (shortCard -> Stub, at the Card-layer boundary)
+  // shrinks the box out from under dnd-kit's own pointer-glued transform
+  // (dnd-kit tracks the *pickup* point, not a fraction of the box, so a box
+  // that shrinks leaves the pointer beside it, not on it). Targets the
+  // overlay shape's width and `CARRIED_STUB_HEIGHT_PX` — the same numbers
+  // the render side already uses to size the Stub — rather than dnd-kit's
+  // own `draggingNodeRect`: swapping the overlay's rendered shape leaves
+  // that measurement stuck for a stretch (its ResizeObserver is bound once,
+  // at the DragOverlay's *first* mount, to whatever the pickup form's
+  // content happened to be), so it can't be trusted as the target's own
+  // dimensions here. Folding the
   // re-anchor in ahead of `clampToCurrentContext` means the clamp bounds
   // where the copy will *actually* sit post-re-anchor, and the snap tween
   // (already started by the same contextKey change that changes the form)
@@ -466,13 +455,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
     },
     [drawSnapped],
   );
-  // Shared by `DndContext` and `DragOverlay` alike (F8, above) — one array
+  // Shared by `DndContext` and `DragOverlay` alike (above) — one array
   // reference so passing it to both doesn't create a new one every render.
   const dragModifiers = useMemo(() => [clampToContext], [clampToContext]);
 
-  // Card lists only (a Card region never reaches a band resolution —
-  // Story 4's within-action is a constant append, resolved without
-  // consulting the region's rendered items at all).
+  // Card lists only: a Card region's within-action, the auto-drop, never
+  // consults the region's rendered items.
+  //
+  // A call of its own, never merged with `BoardColumn.tsx`'s render lists:
+  // both already read the same selectors (`getMergedColumnItems`,
+  // `getWorkphaseItems`), so the release list and the rendered list can't
+  // disagree.
   function regionItems(region: CardListRegion): Item[] {
     const { getMergedColumnItems, getWorkphaseItems } = latest.current;
     return region.kind === 'column'
@@ -480,25 +473,23 @@ export function useBoardDnd(deps: BoardDndDeps) {
       : getWorkphaseItems(region.targetWorkphaseId, region.isTerminal);
   }
 
-  // Audit epic-3-5-story-5 #8: "which list is this release against" is one
-  // fact about the region that `handleDragEnd` used to derive twice, twenty
-  // lines apart: once for `placementOver`'s anchor/bare-container
-  // distinction, again for `others`' candidate rows. One derivation, read
-  // by both. Card-list regions only, since Story 6.1 Phase 0 (L1-5): a
-  // Descendants release resolves through `releaseDescendants` instead
-  // (Story 6 Phase D), before this is ever called; a Card region (or no
-  // region at all) has no release list either, `null` both ways.
+  // "Which list is this release against" — one derivation, read by both
+  // `placementOver`'s anchor/bare-container distinction and `others`'
+  // candidate rows. Card-list regions only: a Descendants release resolves
+  // through `releaseDescendants` instead, before this is ever called; a
+  // Card region (or no region at all) has no release list either, `null`
+  // both ways.
   function releaseListFor(region: DragRegion | undefined): { rows: Item[]; containerId: string } | null {
     if (!region) return null;
     if (isCardList(region)) return { rows: regionItems(region), containerId: region.containerId };
     return null;
   }
 
-  // Where a drag starts, and its session. A Stub's drag starts at its
-  // containing Card's Descendants layer — deterministic, not hit-tested
-  // (wiki §1, §1.1); a Free Card's in the column or sub-row under the
-  // cursor, since a Card is never a starting context (§1), or in none from
-  // Unsorted. The rest is the same for both: resolve the structure, start
+  // Where a drag starts, and its session (wiki board-drag-interaction §1). A
+  // Stub's drag starts at its containing Card's Descendants layer —
+  // deterministic, not hit-tested; a Free Card's in the column or sub-row
+  // under the cursor, since a Card is never a starting context, or in none
+  // from Unsorted. The rest is the same for both: resolve the structure, start
   // the pop machine there, seed the projection (a Stub's drag enters its own
   // section), and set the ghost from the session's own placement.
   function beginDragAt(start: Omit<DragSession, 'pop' | 'projection'>) {
@@ -532,18 +523,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // only for a re-drag of an item whose earlier write is still pending
     // (its marker is sitting right there). Read before the ghost below
     // overwrites it; restored, instead of cleared, if that write is still
-    // in flight when this drag ends without writing anything (#22).
+    // in flight when this drag ends without writing anything.
     const priorPlacement = deps.placements.get(activeId) ?? null;
 
-    // Audit epic-3-5-story-6 #3 (Story 4 #12, Story 5 #14/#15): the drag
-    // starts from the item as the board draws it, through the same
+    // The drag starts from the item as the board draws it, through the same
     // placement-aware reads the render uses, never from the stored row
     // alone. The two differ only for a re-drag of an item whose earlier
     // write is still in flight (`priorPlacement`), and there the stored row
-    // is where it *used* to be: a stale workphase made "move it back" look
-    // like no change (nothing sent, or an anchor-only request the server
-    // applied in the new workphase), and a Stub whose detach or attach
-    // hadn't landed yet started in the wrong layer.
+    // is where it *used* to be: a stale workphase would make "move it back"
+    // look like no change (nothing sent, or an anchor-only request the
+    // server applies in the new workphase), and a Stub whose detach or
+    // attach hadn't landed yet would start in the wrong layer.
     const { placements } = deps;
     const activeItem = { ...stored, workphaseId: renderedWorkphaseId(stored, placements) };
     const parentId = renderedParentId(stored, placements);
@@ -561,19 +551,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (renderedIsStub(stored, placements)) {
       const containingCardId = containingCardIdOf({ ...stored, parentId }, deps.items);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
-      // Audit epic-3-5-story-5 #1: a Stub's own stored `workphaseId` is a
-      // cache that goes stale the moment its containing Card is moved
-      // through a client-observed write this session (`completeItemWrite`
-      // upserts only the written row) — epic-4-decisions.md §9's own
-      // invariant ("an attached item's workphaseId always equals its
-      // nearest Free ancestor's") says the containing Card's *current* row
-      // is always the fresh one, since a parent move writes that row
-      // directly. Snapshotted onto `activeItem` itself, once, here — every
-      // downstream `placementFor`/`toRequest` call in this drag (mid-drag
-      // and at release alike) reads `session.activeItem.workphaseId` and
-      // gets the fresh value for free, rather than the Stub's own copy. The
-      // Card's own move can be the write still in flight, so it's read as
-      // drawn too (#3, above).
+      // A Stub's own stored `workphaseId` is a cache that goes stale the
+      // moment its containing Card is moved through a client-observed write
+      // this session (`itemWriteReconciliation.ts::applyItemWriteResponse`
+      // upserts only the written row). An attached item's `workphaseId`
+      // always equals its nearest Free ancestor's, and a parent move writes
+      // that ancestor's row directly, so the containing Card's *current* row
+      // is the fresh one. Snapshotted onto `activeItem` itself, once, here —
+      // every downstream `placementFor`/`toRequest` call in this drag
+      // (mid-drag and at release alike) reads `session.activeItem.workphaseId`
+      // and gets the fresh value for free, rather than the Stub's own copy.
+      // The Card's own move can be the write still in flight, so it's read
+      // as drawn too, as above.
       const containingCard = deps.items.find(i => i.id === containingCardId);
       beginDragAt({
         activeItem: containingCard
@@ -597,7 +586,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       priorPlacement,
       // Where the drag started: the Card's own list, at the ordinal the
       // sort already gives it. What `isIdentity` compares a release against,
-      // at every layer (decision 2).
+      // at every layer.
       origin: { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' },
       containingCardId: null,
     });
@@ -622,7 +611,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // underneath the live gesture the moment it lands. `usePendingGhostGuard`
   // corrects that reactively, the instant it's visible in
   // `deps.placements`, rather than waiting for the next pointer move or
-  // band crossing (reconciliation #22); cancelling or a no-op release
+  // band crossing; cancelling or a no-op release
   // restores the item's pre-drag pending marker the same way, via
   // `restorePriorPlacement` (also that hook's).
 
@@ -634,23 +623,22 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (current) restorePriorPlacement(current);
   }
 
-  // Audit epic-3-5-story-6 #18 (Story 3 #16 → Story 4 #16): a reload swaps
-  // the board for "Loading board…", which unmounts the `DndContext` with no
-  // `onDragCancel`. One landing during a *later* drag (a failed or
-  // needs-resync write from the previous one) orphaned that drag's session:
-  // the pointer listener and the pop machine kept running with the button
-  // released, and the reassert effect re-added its ghost into the reloaded
-  // board. Every reload this hook asks for ends a live drag first, the way
-  // Escape would.
+  // A reload swaps the board for "Loading board…", which unmounts the
+  // `DndContext` with no `onDragCancel`. One landing during a *later* drag
+  // (a failed or needs-resync write from the previous one) would orphan
+  // that drag's session: the pointer listener and the pop machine would
+  // keep running with the button released, and the reassert effect would
+  // re-add its ghost into the reloaded board. So every reload this hook asks
+  // for ends a live drag first, the way Escape would.
   function resyncBoard() {
     if (sessionRef.current) handleDragCancel();
     return latest.current.loadBoard();
   }
 
-  // A release at the Descendants layer (§7.1's gap + depth rule): the last
-  // sample's own resolved placement, not `over`'s bare anchor. Over the cap
-  // (§7.2), or at the Stub's own gap and depth, there's nothing to write, the
-  // same path as a null placement.
+  // A release at the Descendants layer (the gap + depth rule): the last
+  // sample's own resolved placement, not `over`'s bare anchor. Over the cap,
+  // or at the Stub's own gap and depth, there's nothing to write, the same
+  // path as a null placement.
   async function releaseDescendants(session: DragSession, region: DescendantsRegion) {
     const placement = descendantsReleasePlacement(session.projection, region.cardId);
     const targetRows = placement ? latest.current.getAttachedChildren(placement.parentId) : [];
@@ -661,11 +649,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // card-list and Card releases alike: `placement` against the target list's
   // other rows becomes the request (`dragRequest.ts::toRequest`, then
   // `sendItemMove`). Nothing to write — a null placement (drawn where it
-  // already is, or an over-cap state), or an identity (decision 2) — means
-  // the ghost goes and the item is where it was, or, if it had a pending
-  // marker from an earlier write still in flight, that comes back instead
-  // (#22). The restore sits here with the send so no release path can drop
-  // it.
+  // already is, or an over-cap state), or an identity — means the ghost
+  // goes and the item is where it was, or, if it had a pending marker from
+  // an earlier write still in flight, that comes back instead. The restore
+  // sits here with the send so no release path can drop it.
   async function commitRelease(session: DragSession, placement: Placement | null, targetRows: readonly Item[]) {
     const activeId = session.activeItem.id;
     const others = targetRows.filter(i => i.id !== activeId);
@@ -705,19 +692,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     if (!current) return;
 
-    // ── Item drop: the ghost's own placement is the request (decision 1) ──
+    // ── Item drop: the ghost's own placement is the request ──
     // No fresh geometry at release — `regionsRef` already holds exactly
     // what the machine's own final state needs, scoped to `current.pop`'s
-    // own contextKey/hover by the last sample (Phase 2). `over` only means
-    // anything while locked in a column/sub-row or a Descendants section
-    // (Board-band and Card are the branches `placementFor` already had,
-    // unchanged); a bare container hover or a done region's own card both
-    // fall back to the same no-anchor slot `placementFor`'s in-context
-    // branch already uses mid-drag, so `over` only ever narrows toward a
-    // specific anchor, never introduces a new kind of answer. Story 5's
-    // Stub drag ends the same way — the `attached-child` branch this used
-    // to have of its own is gone; `origin` is what tells `toRequest` apart
-    // a sibling reorder from a detach from an attach.
+    // own contextKey/hover by the last sample. `over` only means anything
+    // while locked in a column/sub-row or a Descendants section (Board-band
+    // and Card are `placementFor`'s own branches); a bare container hover or
+    // a done region's own card both fall back to the same no-anchor slot
+    // `placementFor`'s in-context branch already uses mid-drag, so `over`
+    // only ever narrows toward a specific anchor, never introduces a new
+    // kind of answer. A Stub's drag ends the same way: `origin` is what
+    // tells `toRequest` a sibling reorder from a detach from an attach.
     const regions = regionsRef.current;
     const region = placementRegion(current.pop, regions);
 
@@ -739,13 +724,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // or dnd-kit finding no collision at all, is a bare hover with nothing
     // to anchor beside.
     //
-    // Option A + lean (2026-09-24): the release sends exactly the anchor
-    // the blue line names (`namedAnchorFor`), `over` being the dragged
-    // card's own row included (`resolveBoardCollisions`: the ghost resting
-    // in its own slot). "After the card above" and "before the card below"
-    // look the same in this column but can differ in the workflow-wide
-    // order when items from other workphases sit between them
-    // (item-positioning §2), so "stay" would contradict the line. A ghost
+    // The release sends exactly the anchor the blue line names
+    // (`namedAnchorFor`), `over` being the dragged card's own row included
+    // (`resolveBoardCollisions`: the ghost resting in its own slot). "After
+    // the card above" and "before the card below" look the same in this
+    // column but can differ in the workflow-wide order when items from
+    // other workphases sit between them
+    // (wiki board-drag-interaction §2, rule 5), so "stay" would contradict
+    // the line. A ghost
     // with no neighbor at all has nothing to anchor to: the bare
     // container's slot (`resolvePlacementOver`).
     const anchor = namedAnchorFor(active, over, current);

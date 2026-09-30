@@ -15,24 +15,23 @@ import {
 import { EMPTY_ITEM_LIST_STATE, completeItemWrite, withPlacement } from './itemWriteReconciliation';
 
 // A position write in flight, tracked per item so a stale response can never
-// land last (wiki board-drag-interaction §10, DRAG-6.5): `begin` records the
+// land last (wiki board-drag-interaction §10): `begin` records the
 // pending placement and hands back a sequence number; `complete`/`fail` are
 // no-ops for any sequence that isn't the item's latest.
 export interface ItemWriteTracker {
   begin(itemId: string, pending: Placement | null): number;
   /**
-   * Folds the response in (§5a order) unless it's stale — a stale
-   * response's own row is always discarded, since the newer write
+   * Folds the response in (in reconciliation order) unless it's stale — a
+   * stale response's own row is always discarded, since the newer write
    * supersedes it. But a reindex it disclosed renumbered *other* rows too,
    * and those are real, committed changes a discarded response must not
-   * take with it (wiki–code reconciliation #15) — `needsResync` says so,
-   * for the caller to resync the whole board from rather than silently
-   * lose them.
+   * take with it — `needsResync` says so, for the caller to resync the
+   * whole board from rather than silently lose them.
    */
   complete(itemId: string, seq: number, response: ItemWriteResponse): { applied: boolean; needsResync: boolean };
   /** Clears the pending placement so nothing from the guess survives; the caller resyncs. */
   fail(itemId: string, seq: number): void;
-  /** Whether a write for this item is currently outstanding — for restoring its pending marker after a re-drag that ends up writing nothing (reconciliation #22). */
+  /** Whether a write for this item is currently outstanding — for restoring its pending marker after a re-drag that ends up writing nothing. */
   isPending(itemId: string): boolean;
 }
 
@@ -46,15 +45,15 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
   const { items, placements, inversions } = list;
   const writeSeq = useRef(new Map<string, number>());
   // Item ids with a write currently outstanding — from `begin` until the
-  // matching non-stale `complete`/`fail` — backing `isPending`
-  // (reconciliation #22). `placements` alone can't answer this: a live
-  // drag's ghost occupies the same slot and would read as "pending" too.
+  // matching non-stale `complete`/`fail` — backing `isPending`.
+  // `placements` alone can't answer this: a live drag's ghost occupies the
+  // same slot and would read as "pending" too.
   const inFlight = useRef(new Set<string>());
   // The placement each outstanding write recorded via `begin` — so
   // `complete` can tell "this write's own marker is still there" from
   // "something else (a re-drag's ghost, a different write) now owns this
-  // id's placement" and only clear/tripwire in the former case (audit
-  // epic-3-5-story-3-reconciled #1). Keyed the same as `writeSeq`.
+  // id's placement" and only clear/tripwire in the former case. Keyed the
+  // same as `writeSeq`.
   const recordedPlacement = useRef(new Map<string, Placement | null>());
 
   // A board load replaces the list wholesale and drops every placement —
@@ -64,7 +63,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
     setList(s => ({ ...s, items: next, placements: new Map() }));
   }, []);
 
-  // The live ghost during a drag (§10): where the carried item is drawn,
+  // The live ghost during a drag: where the carried item is drawn,
   // with no position invented. Null clears it.
   const previewPlacement = useCallback((itemId: string, placement: Placement | null) => {
     setList(s => withPlacement(s, itemId, placement));
@@ -88,8 +87,7 @@ export function useItemManagement(projectId: string | undefined, filterProjectId
           // reindex it disclosed renumbered *other* rows too, and those
           // are real, committed changes this response is the only carrier
           // of; losing them along with the stale row would be silently
-          // wrong, not merely stale (reconciliation #15). The caller
-          // resyncs instead.
+          // wrong, not merely stale. The caller resyncs instead.
           return { applied: false, needsResync: Boolean(response.reindexed?.length) };
         }
         const recorded = recordedPlacement.current.get(itemId) ?? null;

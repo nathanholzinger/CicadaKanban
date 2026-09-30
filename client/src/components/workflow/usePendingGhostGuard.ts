@@ -1,9 +1,9 @@
-// The active drag's ghost against pending writes (wiki–code reconciliation
-// #22): `setGhost` is the one place the ghost is set; the reassert effect
-// puts it back the instant a response landing mid-drag clears it (a re-drag
-// of an item whose earlier write is still outstanding); `restorePriorPlacement`
-// brings back the item's pre-drag pending marker on a cancel or a release
-// that writes nothing.
+// The active drag's ghost against pending writes
+// (wiki board-drag-interaction §10): `setGhost` is the one place the ghost
+// is set; the reassert effect puts it back the instant a response landing
+// mid-drag clears it (a re-drag of an item whose earlier write is still
+// outstanding); `restorePriorPlacement` brings back the item's pre-drag
+// pending marker on a cancel or a release that writes nothing.
 
 import { useEffect, useRef, type RefObject } from 'react';
 import type { Placement, Placements } from './itemListOps';
