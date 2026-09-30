@@ -1,5 +1,5 @@
 // Dev/test panel: every drag threshold/band/overlay value, live machine state,
-// inversion log. Retired once the values lock and become constants. (Epic 3.5)
+// inversion log. Retired once the values lock and become constants.
 
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
@@ -7,12 +7,12 @@ import type { DragSession } from './workflow/DragSessionContext';
 import { popState } from './workflow/popSession';
 import type { Inversion } from './workflow/itemWriteReconciliation';
 
-// Epic 3.5 Story 3 — the dev/test panel docs/wiki/board-drag-interaction
-// §3.1 names as a required deliverable: every threshold and band of the
-// drag gesture, editable live, because the right values can only be found
-// by feel and feel can only be compared by changing one number between two
+// The dev/test panel, part of the drag feature itself
+// (wiki board-drag-interaction §3.1): every tunable value of the drag
+// gesture, editable live, because the right values can only be found by
+// feel and feel can only be compared by changing one number between two
 // attempts without a rebuild. Also shows the machine's state during a drag
-// and the §10 inversion tripwire's log.
+// and the inversion tripwire's log.
 
 interface DragTuningPanelProps {
   tuning: DragTuning;
@@ -30,7 +30,7 @@ type TextKey = {
 }[keyof DragTuning];
 
 // One descriptor drives every field — numeric and text alike — so the
-// label/input row is rendered in exactly one place (audit epic-3-5-story-3 #8).
+// label/input row is rendered in exactly one place.
 type Field =
   | { kind: 'number'; key: NumericKey; label: string; step: number; min?: number; max?: number }
   | { kind: 'text'; key: TextKey; label: string };

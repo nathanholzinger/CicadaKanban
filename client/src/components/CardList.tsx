@@ -18,7 +18,7 @@ export const DROP_HIGHLIGHT_CLASS = 'bg-zinc-700/40 ring-2 ring-blue-500/30';
 export interface CardListRegionProps {
   /** `columnRegionKey` / `subrowRegionKey` from dragRegions.ts. */
   key: string;
-  /** A done region: every band collapses to one (dragRegions.ts::bandFor). */
+  /** A done region: every band collapses to one (dragBands.ts::bandFor). */
   isTerminal: boolean;
   /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
   targetLabel: string;
@@ -43,13 +43,12 @@ interface CardListProps {
   region?: CardListRegionProps;
 }
 
-// The three lists that used to each spell this wiring — BoardColumn's merged
-// list, WorkphaseCardList (sub-rows and Unsorted groups), and before that
-// UnsortedBucket's own (audit #21) — now spell it once (audit
-// epic-3-5-story-4 #7). Two invariants the reservation math (Story 4.1
-// Phase 1) leans on live here and nowhere else: every card list uses the
-// one `CARD_LIST_GAP_CLASS`, and the list element is a plain flex column
-// that DragCarveFrame's own `relative` wrap sits directly around.
+// Every card list's wiring, spelled once — BoardColumn's merged list and
+// WorkphaseCardList's (sub-rows and Unsorted groups) render through it. Two
+// invariants the reservation math leans on live here and nowhere else:
+// every card list uses the one `CARD_LIST_GAP_CLASS`, and the list element
+// is a plain flex column that DragCarveFrame's own `relative` wrap sits
+// directly around.
 export default function CardList({
   items,
   itemTypes,
@@ -72,11 +71,11 @@ export default function CardList({
   // sub-row) puts its padded/rounded surface chrome — and the droppable
   // node ref itself — on DragCarveFrame's own wrap instead of this div, so
   // the empty-zone label DragCarveFrame substitutes for `children` carries
-  // the identical padding rather than a bare, unpadded box (audit
-  // epic-3-5-story-4 #2: the two states used to differ by the padding
-  // alone — a real layout jump on an otherwise height-stable empty
-  // sub-row). A droppable list with no region (Unsorted, a broken column's
-  // sub-row) has no such substitution to matter for, so it keeps its own.
+  // the identical padding rather than a bare, unpadded box (otherwise the
+  // two states would differ by the padding alone — a real layout jump on an
+  // otherwise height-stable empty sub-row). A droppable list with no region
+  // (Unsorted, a broken column's sub-row) has no such substitution to
+  // matter for, so it keeps its own.
   const chromeOnFrame = droppable && region !== undefined;
   const containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS} ${chromeOnFrame ? '' : droppableSurfaceClass}`;
 

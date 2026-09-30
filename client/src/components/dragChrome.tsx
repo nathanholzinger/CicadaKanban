@@ -11,19 +11,23 @@ import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './wor
 import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
 import type { OverlayForm } from './workflow/placement';
 
-// The live drop-side indicator (Epic 3.2 addendum). Reads dnd-kit's live
-// active/over state directly via useDndContext — no prop drilling through
+// The live drop-side indicator. Reads dnd-kit's live active/over state
+// directly via useDndContext — no prop drilling through
 // BoardColumn/BoardView — and names the anchor the way useBoardDnd's
-// handleDragEnd does (`namedAnchorFor`), so the line shown here always matches
-// what gets sent, at every row dropAnchorFor could ever name (a Card row or
-// a Stub row, whichever the active drag happens to be — Story 6.1 Phase 3,
-// L1-13: no longer narrowed to a caller-declared subset of roles, which
-// used to hide the line whenever the active drag's own row read a role
-// outside that subset — including a Stub leaving its Card into a column,
-// exactly the case it most needed to show). In a column (Option A + lean,
-// 2026-09-24) the anchor is a neighbor of the ghost, not necessarily the
-// card dnd-kit says is `over`, so every row asks whether it's the one
+// handleDragEnd does (`namedAnchorFor`), so the line shown here always
+// matches what gets sent, at every row dropAnchorFor could ever name: a
+// Card row or a Stub row, whichever the active drag happens to be. It's
+// never narrowed to a subset of roles, which would hide the line for a
+// Stub leaving its Card into a column, exactly the case it most needs to
+// show. In a column the anchor is a neighbor of the ghost, not necessarily
+// the card dnd-kit says is `over`, so every row asks whether it's the one
 // named.
+//
+// Deliberately separate from the sidebar's indicator
+// (`useProjectDragReorder.ts::dropLine`): the sidebar draws no ghost, so it
+// draws one line at the projected gap; the board draws on whichever row
+// the ghost's named neighbor is. Only the line's look, `DROP_INDICATOR_LINE`,
+// is shared.
 function useLiveDropSide(itemId: string): DropSide | null {
   const { active, over } = useDndContext();
   const session = useDragSession();
@@ -32,19 +36,18 @@ function useLiveDropSide(itemId: string): DropSide | null {
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
-// Epic 3.5 Story 2: provisional drag-target overlays (docs/wiki/board-drag-
-// interaction §4). The *classification* is settled and exposed as
-// `data-drop-state` for tests; the look — palette, weight, animation — is
-// deliberately rough until Story 8 tunes it against real gestures. Green:
-// a Free descendant of the carried item ("these are yours"). Dimmed: a real
-// target this item can't use (depth-capped). Valid draws nothing.
-// The color and the dim level are CSS custom properties BoardView sets from
-// the dev/test panel (Story 3).
+// The drag-target overlays (wiki board-drag-interaction §4). The
+// *classification* is settled and exposed as `data-drop-state` for tests;
+// the look — palette, weight, animation — is a placeholder, not yet tuned
+// against real gestures. Green: a Free descendant of the carried item
+// ("these are yours"). Dimmed: a real target this item can't use
+// (depth-capped). Valid draws nothing. The color and the dim level are CSS
+// custom properties BoardView sets from the dev/test panel.
 const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';
 const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
-// Epic 3.5 Story 3: a write is in flight for this item — it's drawn at the
-// slot it was dropped in, and its position is the server's to confirm
-// (wiki §10). Test surface: `data-pending`.
+// A write is in flight for this item — it's drawn at the slot it was
+// dropped in, and its position is the server's to confirm. Test surface:
+// `data-pending`.
 const PENDING = 'animate-pulse';
 
 function dropTargetClass(view: DropTargetView | null): string {
@@ -60,9 +63,9 @@ export const DROP_INDICATOR_LINE = 'pointer-events-none absolute right-0 left-0 
 const DROP_INDICATOR_BEFORE = `${DROP_INDICATOR_LINE} -top-1`;
 const DROP_INDICATOR_AFTER = `${DROP_INDICATOR_LINE} -bottom-1`;
 
-// Story 6 Phase D, decision 7 — the provisional invalid-tab-state cue
-// (§7.2): a dashed red outline on the active row's own preview while its
-// current depth choice would exceed the cap. Story 8 restyles.
+// The invalid-tab-state cue (wiki board-drag-interaction §7.2): a dashed
+// red outline on the active row's own preview while its current depth
+// choice would exceed the cap. A placeholder look.
 export const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500/70';
 
 interface ItemRowOptions {
@@ -76,7 +79,7 @@ interface ItemRowOptions {
 
 // One item row's dnd-kit registration and drag chrome, for a Card row and a
 // Stub row alike: the sortable registration (`itemRowData` — every item row
-// registers `type: 'item'`, decision 4) and its transform, the drop-target
+// registers `type: 'item'`) and its transform, the drop-target
 // attributes and overlay, the pending marker, and the dimming while this row
 // is the one being dragged. The row draws `DropSideIndicator` for
 // `dropSide` itself. The one non-component export beside the components: it
@@ -105,8 +108,8 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
       // The carried copy, for the E2E helper's "drag finished" wait — it
       // outlives the drag by dnd-kit's drop animation.
       'data-drag-overlay': isOverlay ? 'true' : undefined,
-      // Story 6 Phase C, for Story 10's E2E — which form this same carried
-      // copy is drawing as right now (placement.ts::overlayFormFor).
+      // A test surface: which form this same carried copy is drawing as
+      // right now (placement.ts::overlayFormFor).
       'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
       'data-drop-state': dropTarget?.state,
       'data-pending': pending ? 'true' : undefined,
@@ -121,9 +124,9 @@ export function DropSideIndicator({ side }: { side: DropSide | null }) {
   return null;
 }
 
-// Story 6, hands-on finding 3 (2026-09-24): the zoom-in cue — shown only
-// once the dwell has elapsed (`useZoomCandidatePhase` returns `'cue'`; the
-// dwell itself shows nothing new beyond the blue line, wiki §6). Absolutely
+// The zoom-in cue (wiki board-drag-interaction §6.1) — shown only once the
+// dwell has elapsed (`useZoomCandidatePhase` returns `'cue'`; the dwell
+// itself shows nothing new beyond the blue line). Absolutely
 // positioned and `pointer-events-none`, the same way the locked-layer
 // outline and the blue line already are, so it can never feed back into
 // layout or collision. The fill bar's `animation-duration` is the cue's

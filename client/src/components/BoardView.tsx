@@ -1,5 +1,5 @@
 // Board orchestration: loads the active board, composes the workflow/ hooks,
-// renders the DnD board. See client/src/components/workflow/CLAUDE.md.
+// renders the DnD board.
 
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
@@ -43,8 +43,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [editingColumn, setEditingColumn] = useState<Column | 'new' | null>(null);
   const [showWorkphaseManager, setShowWorkphaseManager] = useState(false);
   const [workphaseNotice, setWorkphaseNotice] = useState('');
-  // Epic 3.5 Story 3: the drag gesture's tunable parameters, persisted so a
-  // change survives a reload (docs/wiki/board-drag-interaction §3.1).
+  // The drag gesture's tunable parameters, persisted so a change survives a
+  // reload.
   const [dragTuning, setDragTuningState] = useState(loadDragTuning);
   const [showDragTuning, setShowDragTuning] = useState(false);
   const boardRootRef = useRef<HTMLDivElement>(null);
@@ -215,9 +215,9 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     rootRef: boardRootRef,
   });
 
-  // §4's overlay colors (plus the active-context outline) reach KanbanCard
-  // and BandGuides as CSS custom properties, so the dev/test panel can
-  // change them without a rebuild.
+  // The classification overlays' colors (plus the active-context outline)
+  // reach KanbanCard and BandGuides as CSS custom properties, so the
+  // dev/test panel can change them without a rebuild.
   const overlayVars = {
     '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
     '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,
@@ -319,20 +319,18 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
             <DragTuningContext value={dragTuning}>
               <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
                 {/* data-drag-state / data-drag-context / data-drag-band: the pop
-                    machine's state, for tests (wiki §1–§3, §5).
-                    data-drag-zoom-candidate / data-drag-zoom-phase: Story 6,
-                    hands-on finding 3 — the card the blue line currently
-                    names as a zoom-in candidate, and which stage of the
-                    hold it's in, for Story 10's E2E. `hover.phase` is only
-                    ever set by this candidate kind (a Board-layer band
-                    hover never sets it), so gating on it also tells the two
-                    `hover` shapes apart.
-                    data-drag-projection: Story 6 Phase D, decision 7 — the
-                    Descendants layer's own live tab state
-                    ("<gap>:<depth>:<valid>"), for Story 10's E2E. Undefined
-                    whenever the drag isn't currently locked at a
-                    `descendants:` context (decision 4's "cleared on
-                    pop-out" — `session.projection` is null then too). */}
+                    machine's state, for tests.
+                    data-drag-zoom-candidate / data-drag-zoom-phase: the card
+                    the blue line currently names as a zoom-in candidate,
+                    and which stage of the hold it's in — a test surface.
+                    `hover.phase` is only ever set by this candidate kind (a
+                    Board-layer band hover never sets it), so gating on it
+                    also tells the two `hover` shapes apart.
+                    data-drag-projection: the Descendants layer's own live
+                    tab state ("<gap>:<depth>:<valid>") — a test surface.
+                    Undefined whenever the drag isn't currently locked at a
+                    `descendants:` context (`session.projection` is null
+                    then too). */}
                 <div
                   ref={boardRootRef}
                   style={overlayVars}
@@ -385,11 +383,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
         <DragOverlay modifiers={dragModifiers}>
           {session ? (
-            // Story 6 Phase C (Story 5 decision 6, reopened): `overlayForm`/
-            // `overlayWidthPx` decide the *shape this same instance* draws,
-            // not which component renders — see KanbanCard.tsx's file
-            // header for why a component-type swap here would break
-            // dnd-kit's own measurement of the overlay.
+            // `overlayForm`/`overlayWidthPx` decide the *shape this same
+            // instance* draws, not which component renders — see
+            // KanbanCard.tsx's file header for why a component-type swap
+            // here would break dnd-kit's own measurement of the overlay.
             <KanbanCard
               item={session.activeItem}
               itemTypes={itemTypes}

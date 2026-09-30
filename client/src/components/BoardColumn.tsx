@@ -56,12 +56,12 @@ export default function BoardColumn({
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
-  // A column can't span both terminal and non-terminal workphases (Epic 3.2
-  // Part 6's column-range validation) — isTerminal is uniform across the
+  // A column can't span both terminal and non-terminal workphases (the
+  // server's column-range validation) — isTerminal is uniform across the
   // whole covered set, so any sub-row's flag is representative.
   const columnIsTerminal = Boolean(column.subRows[0]?.workphase.isTerminal);
   const totalItems = column.subRows.reduce((n, r) => n + getWorkphaseItems(r.workphase.id, columnIsTerminal).length, 0);
-  // Epic 3.2 Part 4: union-sorted across the covered set, not a
+  // Union-sorted across the covered set, not a
   // concatenation of independently-sorted per-workphase lists — this is
   // what makes cross-workphase interleaving visible and draggable.
   const mergedItems = getMergedColumnItems(
@@ -137,15 +137,15 @@ export default function BoardColumn({
 
       {deleteError && <p className="mb-2 px-1 text-[11px] text-red-400">{deleteError}</p>}
 
-      {/* Body — a merged column's card list is one drag region (wiki
-          board-drag-interaction §1); an expanded column's sub-rows each
-          register their own below, and its wrapper none. A broken
+      {/* Body — a merged column's card list is one drag region
+          (wiki board-drag-interaction §1); an expanded column's sub-rows
+          each register their own below, and its wrapper none. A broken
           column registers none. The region sits *inside* the scrolling
-          body (Story 3's carve-out addendum, 2026-09-16) rather than being a non-scrolling wrapper
-          around it, so it's found as a real scroll ancestor the same way a
-          sub-row's already is, and sizes to its own content rather than
-          the column's available height — a short column no longer strands
-          its bottom band far below the last card. */}
+          body rather than being a non-scrolling wrapper around it, so it's
+          found as a real scroll ancestor the same way a sub-row's already
+          is, and sizes to its own content rather than the column's
+          available height — so a short column's bottom band never strands
+          far below its last card. */}
       <div className="relative flex min-h-[120px] flex-1 flex-col">
         <div className={`${COLUMN_BODY_BASE} ${showDropHighlight ? DROP_HIGHLIGHT_CLASS : 'bg-zinc-800/30'}`}>
           {column.displayMode === 'expanded' ? (
@@ -175,11 +175,9 @@ export default function BoardColumn({
                 onCardClick={onCardClick}
                 region={mergedRegion}
               />
-              {/* Story 3's carve-out addendum (2026-09-16) takes over this
-                  same message during a drag, with its own "Move to {name}"
-                  carve (above) — every item drag runs the pop machine now
-                  (Story 5), so this is what a Stub drag's own hold here —
-                  and no drag at all — falls back to. */}
+              {/* During a drag the carve-out's own "Move to {name}" zone
+                  (above) takes this message's place, so it shows only with
+                  no drag in progress. */}
               {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && !session && (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-xs text-zinc-600">Drop cards here</p>

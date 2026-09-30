@@ -1,5 +1,5 @@
 // The drop bands made visible while a Card is carried: dashed boundary lines per
-// region + the hovered band tinted. (Epic 3.5)
+// region + the hovered band tinted.
 
 import { Fragment, type ReactNode } from 'react';
 import { useDragSession } from './workflow/DragSessionContext';
@@ -7,21 +7,19 @@ import { DRAG_CARD_COUNT_ATTR, dragRegionProps } from './workflow/dragRegions';
 import { reservationFor, type Reservation } from './workflow/dragBands';
 import { SHORT_CARD_METRICS } from './cardMetrics';
 
-// Epic 3.5 Story 3's carve-out addendum (2026-09-16) — the column drop bands, made
-// visible (docs/wiki/board-drag-interaction §5), reworked from Story 3's
-// percentage-of-height overlay to a content-anchored, space-reserving one.
-// These are Board layer's own cues, and only Board layer's: while a Card is
-// genuinely locked into anything — a column/sub-row, or a Card — every
-// carve-out disappears, since nothing about a bare hover elsewhere changes
-// what a release commits.
+// The column drop bands, made visible (wiki board-drag-interaction §5):
+// content-anchored and space-reserving. These are Board layer's own cues,
+// and only Board layer's: while a Card is genuinely locked into anything —
+// a column/sub-row, or a Card — every carve-out disappears, since nothing
+// about a bare hover elsewhere changes what a release commits.
 //
-// Story 4.1 Phase 1: the reservation is exact now, not approximate — a
-// region's total rendered height never changes whether or not it's the
-// live hover target, because the ghost row (KanbanCard.tsx's shortCard) is
-// pinned to exactly `SHORT_CARD_HEIGHT_PX`, and every zone below is sized
-// from that same constant plus the card lists' own shared gap
-// (`CARD_LIST_GAP_PX`) rather than the height alone. Both are fixed facts
-// about the card, owned by KanbanCard.tsx — nothing here tunes them.
+// The reservation is exact — a region's total rendered height never
+// changes whether or not it's the live hover target, because the ghost row
+// (KanbanCard.tsx's shortCard) is pinned to exactly `SHORT_CARD_HEIGHT_PX`,
+// and every zone below is sized from that same constant plus the card
+// lists' own shared gap (`CARD_LIST_GAP_PX`) rather than the height alone.
+// Both are fixed facts about the card, in `cardMetrics.ts` — nothing here
+// tunes them.
 //   - not the live hover target: dead zones carved out of the region's own
 //     real content (its cards shift down to make room) — never the
 //     visible-scrolled slice, so a boundary scrolled out of view is
@@ -32,7 +30,7 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 //     The divider lines stay, at the same fixed offsets, since the ghost's
 //     own insertion is exactly what they have to stay stable against.
 // Terminal and truly-empty regions collapse to one single band spanning
-// their own height (no top/bottom to speak of — dragRegions.ts::bandFor).
+// their own height (no top/bottom to speak of — dragBands.ts::bandFor).
 //
 // The reservation math, so the height is identical hovered or not (a
 // non-hovered list has one fewer gap than the hovered one, since the ghost
@@ -41,30 +39,29 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 //   - genuinely empty: one zone of `h` alone — the hovered list holds the
 //     ghost with no sibling to gap against.
 //   - terminal with cards: one *bottom-only* zone of `h + gap` — a done
-//     region's ghost always previews last (§10's newest-completion rule),
-//     exactly where this zone is. Reserving nothing here (as built before
-//     this phase, an absolute overlay instead) let the ghost's entry grow
-//     the region; the frozen-rect family silently covered for it.
+//     region's ghost always previews last (as the newest completion),
+//     exactly where this zone is. Reserving nothing here would let the
+//     ghost's entry grow the region.
 //
-// Two special cases the Product Owner settled 2026-09-16: an empty region
-// carves the *full* card height, not two halves (nothing to shift out of
-// the way); a region with exactly one card halves both edges instead of
-// the normal full height, so the card stays a real, unlabeled middle band
-// rather than being bisected into top/bottom with nothing left between.
-// The shape/height/edge math itself lives in `dragRegions.ts::reservationFor`
-// now (audit epic-3-5-story-4 #9) — this file only turns its answer into
-// markup, so the divider drawn here is the boundary a release actually
-// resolves against (`dragRegions.ts::bandBoundaries`) by construction,
-// never by two independently-typed formulas agreeing by comment.
+// Two special cases: an empty region carves the *full* card height, not
+// two halves (nothing to shift out of the way); a region with exactly one
+// card halves both edges instead of the normal full height, so the card
+// stays a real, unlabeled middle band rather than being bisected into
+// top/bottom with nothing left between. The shape/height/edge math itself
+// lives in `dragBands.ts::reservationFor` — this file only turns its answer
+// into markup, so the divider drawn here is the boundary a release actually
+// resolves against (`dragBands.ts::bandBoundaries`) by construction, never
+// by two independently-typed formulas agreeing by comment.
 //
 // Card (KanbanCard.tsx) draws the active-context outline directly on
-// itself; this file draws it for a column/sub-row instead, plus everything
-// above — a column/sub-row and a Card are the two places a context can be.
+// itself, for its own Descendants section too; this file draws it for a
+// column/sub-row instead, plus everything above.
 
 // Whichever region — column, sub-row, or Card — is the pop machine's
-// current `contextKey` (wiki §1.1) gets this ring, so the locked layer is
-// legible without reading the dev panel. Shared with KanbanCard.tsx, which
-// applies it directly to a Card's own element rather than an overlay div.
+// current `contextKey` gets this ring, so the locked layer is legible
+// without reading the dev panel (wiki board-drag-interaction §1.1). Shared
+// with KanbanCard.tsx, which applies it directly to a Card's own element
+// rather than an overlay div.
 export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 
 const DIVIDER = 'pointer-events-none absolute right-2 left-2 border-t border-dashed border-zinc-400/35';
@@ -74,7 +71,7 @@ const SINGLE_BAND_BORDER = 'rounded-lg border border-dashed border-zinc-600/50';
 
 interface DragCarveFrameProps {
   regionKey: string;
-  /** The rows `children` actually renders — the same array, so the counts below can't drift from the list (audit epic-3-5-story-4 #7: derived here once, not by each caller). */
+  /** The rows `children` actually renders — the same array, so the counts below can't drift from the list (derived here once, not by each caller). */
   items: readonly { id: string }[];
   isTerminal: boolean;
   /** The name a single collapsed band names itself after — "Move to {targetLabel}". */
@@ -85,9 +82,9 @@ interface DragCarveFrameProps {
    * expanded column's sub-row) — its padded/rounded surface chrome, and the
    * droppable node ref itself, live on this frame's own wrap instead of on
    * `children`'s own div, applied uniformly whether this renders the
-   * empty-zone label or `children` (audit epic-3-5-story-4 #2: the two used
-   * to differ by the padding alone, a 12px jump on an otherwise-height-
-   * stable empty sub-row). Omit for a region whose droppable, if any, is an
+   * empty-zone label or `children` (otherwise the two would differ by the
+   * padding alone, a 12px jump on an otherwise height-stable empty
+   * sub-row). Omit for a region whose droppable, if any, is an
    * ancestor (a merged column) or that isn't droppable at all.
    */
   droppable?: {
@@ -97,11 +94,12 @@ interface DragCarveFrameProps {
 }
 
 // Wraps a region's own card-list content (dead-zones-and-all at Board
-// layer) — the one place §5's band geometry becomes pixels, and the
+// layer) — the one place the band geometry becomes pixels, and the
 // column/sub-row site of `dragRegionProps` (`dragRegions.ts`): this
-// component's own root is always "the region" `measureDragRegions` finds,
-// in every branch below, so a carve-out div is always a descendant of it
-// rather than a sibling a region-scoped lookup can't reach.
+// component's own root is always "the region"
+// `dragRegions.ts::resolveDragStructure` finds, in every branch below, so a
+// carve-out div is always a descendant of it rather than a sibling a
+// region-scoped lookup can't reach.
 export function DragCarveFrame({
   regionKey,
   items,
@@ -117,13 +115,12 @@ export function DragCarveFrame({
   // the live hover target right now. Either because a ghost genuinely just
   // joined (this region is the live Board-layer hover target), or because
   // it's resting unclaimed in its own, otherwise-empty origin region while
-  // the cursor is elsewhere entirely (wiki §5: with nowhere hovered, an
-  // item "is drawn where it already is"). Either way `children` already
-  // reserves exactly the space that row needs, since it's rendered at the
-  // same fixed shortCard height regardless of which of the two reasons
-  // applies — so this is what decides whether the dead-zone/label chrome
-  // collapses (Story 4.1 Phase 1): showing both at once would double the
-  // reservation.
+  // the cursor is elsewhere entirely (with nowhere hovered, an item is
+  // drawn where it already is). Either way `children` already reserves
+  // exactly the space that row needs, since it's rendered at the same fixed
+  // shortCard height regardless of which of the two reasons applies — so
+  // this is what decides whether the dead-zone/label chrome collapses:
+  // showing both at once would double the reservation.
   const hasActiveItemRow = items.some(i => i.id === session?.activeItem.id);
   // Ghost-exclusive: the count of *other* cards, excluding the active
   // item's own row whenever it's currently here.
@@ -131,7 +128,7 @@ export function DragCarveFrame({
 
   // The droppable node ref and its padded surface chrome sit on this same
   // wrap div, applied uniformly across every branch below — including the
-  // empty-zone label, which otherwise renders with none of it (#2).
+  // empty-zone label, which otherwise renders with none of it.
   const regionAttrs = { ...dragRegionProps(regionKey), [DRAG_CARD_COUNT_ATTR]: otherCardCount };
   const wrap = (content: ReactNode, extraClassName = '') => (
     <div
@@ -145,8 +142,9 @@ export function DragCarveFrame({
   // The region's own cards, in one keyed slot that every branch below
   // renders them through. Board layer puts a carve-out zone *before* them,
   // and React matches unkeyed children by index. Without the key every
-  // Card in the region would remount on the way into and out of Board layer —
-  // reseting each one's hand-set expand/collapse to the board's default
+  // Card in the region would remount on the way into and out of Board
+  // layer, resetting each one's hand-set expand/collapse to the board's
+  // default (wiki board-drag-interaction §1.1).
   const cards = <Fragment key="cards">{children}</Fragment>;
 
   if (!session) return wrap(cards);
@@ -167,9 +165,8 @@ export function DragCarveFrame({
     );
   }
 
-  // Board layer — dragRegions.ts::reservationFor is the one place §5's
-  // shape/height/edge math lives (audit epic-3-5-story-4 #9); this only
-  // turns its answer into markup.
+  // Board layer — dragBands.ts::reservationFor is the one place the
+  // shape/height/edge math lives; this only turns its answer into markup.
   const reservation = reservationFor({ isTerminal, cardCount: otherCardCount }, SHORT_CARD_METRICS);
 
   if (reservation.shape !== 'positional') {
@@ -180,9 +177,9 @@ export function DragCarveFrame({
     // it instead, same as 'terminal' below, rather than doubling up.
     if (reservation.shape !== 'terminal')
       return hasActiveItemRow ? wrap(cards) : wrap(<SingleZone reservation={reservation} targetLabel={targetLabel} />);
-    // 'terminal', with cards: a real bottom-only reservation (Phase 1),
-    // sized for the ghost that always previews last there — not an
-    // absolute overlay that let the ghost's entry grow the region.
+    // 'terminal', with cards: a real bottom-only reservation, sized for the
+    // ghost that always previews last there — not an absolute overlay, which
+    // would let the ghost's entry grow the region.
     return wrap(
       <>
         {cards}
@@ -217,7 +214,7 @@ export function DragCarveFrame({
 
 // The one collapsed-band label — 'empty'/'none' get the standalone bordered
 // box (nothing else to show), 'terminal' sits unbordered right after real
-// cards (audit epic-3-5-story-4 #9: these were two near-identical divs).
+// cards.
 function SingleZone({ reservation, targetLabel }: { reservation: Reservation; targetLabel: string }) {
   const bordered = reservation.shape !== 'terminal';
   return (
