@@ -219,9 +219,11 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
       }
 
       case 'move_item': {
-        // No position given: the move endpoint defaults to the end of the
-        // target workphase's list, so MCP no longer needs to fetch the item
-        // and its workflow just to compute an append position itself.
+        // No position given, so the move endpoint resolves it: a move to
+        // another workphase keeps the item's existing position
+        // (wiki item-positioning §2's workphase-only rule), an item with none
+        // to keep is appended, and a done workphase leaves it none. MCP never
+        // computes a position itself.
         await api(`/items/${urlPart(args!.item_id)}/move`, {
           method: 'PATCH',
           body: JSON.stringify({ workphaseId: args!.workphase_id }),

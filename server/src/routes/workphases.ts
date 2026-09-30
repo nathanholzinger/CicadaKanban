@@ -19,8 +19,7 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'workflowId and name are required' });
     return;
   }
-  // A bogus workflowId would otherwise surface as an opaque FK-violation 500
-  // (audit Finding #13).
+  // A bogus workflowId would otherwise surface as an opaque FK-violation 500.
   if (!db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, workflowId)).get()) {
     res.status(400).json({ error: 'workflowId does not reference an existing workflow' });
     return;
@@ -61,8 +60,7 @@ router.put('/:id', (req, res) => {
 
   // A flip can break the "no column spans both a terminal and a
   // non-terminal workphase" invariant validateColumnRange enforces at
-  // column create/update time (audit Finding #6) — re-check it here, before
-  // writing anything, same as columns.ts's own pre-write validation.
+  // column create/update time — re-check it here, before writing anything.
   if (isTerminalChanging) {
     const conflicts = findColumnsMixingTerminalAfterFlip(db, workphase.workflowId, req.params.id, Boolean(isTerminal));
     if (conflicts.length > 0) {
@@ -86,12 +84,11 @@ router.put('/:id', (req, res) => {
       .run();
 
     // A flip leaves items already sitting in this workphase stale — they
-    // keep whichever of position/completedAt matched the *old* status
-    // (audit Finding #6). Backfill only detached/root items (attached
-    // children never touch position/completedAt regardless of their
-    // workphase's terminal status, mirroring items.ts's isAttachedWithParent
-    // gate) so their order is preserved rather than collapsing to an
-    // arbitrary tie.
+    // keep whichever of position/completedAt matched the *old* status.
+    // Backfill only detached/root items (attached children never touch
+    // position/completedAt regardless of their workphase's terminal status,
+    // wiki item-attachment §2) so their order is preserved rather than
+    // collapsing to an arbitrary tie.
     if (isTerminalChanging) {
       backfillItemsForTerminalFlip(tx, req.params.id, Boolean(isTerminal));
     }
@@ -101,17 +98,19 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// See the PUT handler above. `newIsTerminal` is the workphase's new status,
-// already committed by the time this runs.
+// See the PUT handler above. Keeps the active/done split true when a
+// workphase's own terminal flag flips (wiki item-positioning §6).
+// `newIsTerminal` is the workphase's new status, already committed by the
+// time this runs.
 function backfillItemsForTerminalFlip(tx: Tx, workphaseId: string, newIsTerminal: boolean): void {
   const notAttachedWithParent = or(eq(items.isAttached, 0), isNull(items.parentId))!;
 
   if (newIsTerminal) {
     // Was active, now terminal: assign completedAt in the same relative
-    // order as the existing position (ascending), so getWorkphaseItemsFrom's
-    // completedAt-ascending sort doesn't collapse every item to the same
-    // "0" tie — position is cleared, matching the single-item terminal
-    // transition in items.ts's PATCH /:id/move.
+    // order as the existing position (ascending), so a done list's
+    // completedAt-ascending order doesn't collapse every item to the same
+    // "0" tie — position is cleared, as `itemHierarchy.ts::applyHierarchyRequest`
+    // does for a single item's terminal transition.
     const activeItems = tx
       .select({ id: items.id })
       .from(items)
@@ -129,8 +128,8 @@ function backfillItemsForTerminalFlip(tx: Tx, workphaseId: string, newIsTerminal
     // Was terminal, now active: give each item a fresh workflow-wide
     // position, appended one at a time in completedAt-ascending order (so
     // the item that "finished" first reopens at the front) — the same
-    // append-and-clear-completedAt rule items.ts's PATCH /:id/move applies
-    // when reopening a single done item.
+    // append-and-clear-completedAt rule `itemHierarchy.ts::applyHierarchyRequest`
+    // applies when reopening a single done item.
     const doneItems = tx
       .select({ id: items.id })
       .from(items)

@@ -1,4 +1,4 @@
-// getByIdOrNotFound: fetch-by-id-or-404 helper used across all route files.
+// getByIdOrNotFound: fetch-by-id-or-404 helper used across the route files; existsById.
 
 import type { Response } from 'express';
 import { eq } from 'drizzle-orm';
@@ -19,9 +19,7 @@ function getOrNotFound<T>(row: T | undefined, res: Response, error: string): T |
 
 type IdTable = SQLiteTable & { id: SQLiteColumn };
 
-// The "fetch a row by id, 404 if missing" idiom — was hand-copied 26 times
-// across every route file as `getOrNotFound(db.select().from(table)
-// .where(eq(table.id, id)).get(), res, message)`. Pass `tx` to run inside a
+// The "fetch a row by id, 404 if missing" idiom. Pass `tx` to run inside a
 // caller's transaction; omit it to query standalone.
 export function getByIdOrNotFound<T extends IdTable>(table: T, id: string, res: Response, error: string, tx?: Tx) {
   const e = tx ?? db;
@@ -30,9 +28,7 @@ export function getByIdOrNotFound<T extends IdTable>(table: T, id: string, res: 
 
 // The "does a row with this id exist" check — the FK-existence guard a
 // route runs before an insert/update so a bogus reference surfaces as a
-// 400 instead of an opaque FK-violation 500 (audit Finding #13's
-// convention). Selects only the id. Was `workphaseExists` copied verbatim
-// into items.ts and itemHierarchy.ts (audit epic-3-5-story-1 #3).
+// 400 instead of an opaque FK-violation 500. Selects only the id.
 export function existsById<T extends IdTable>(table: T, id: string, tx?: Tx): boolean {
   const e = tx ?? db;
   return !!e.select({ id: table.id }).from(table).where(eq(table.id, id)).get();

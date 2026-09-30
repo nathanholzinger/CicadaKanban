@@ -125,10 +125,10 @@ export const items = sqliteTable('items', {
   workphaseId: text('workphase_id').references(() => workphases.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
-  position: real('position'),
+  position: real('position'), // one scalar per item, never per board (wiki item-positioning §1)
   // Attached-by-default is the intentional system-wide default: a new child moves
-  // with its parent (nested render, follows the parent's workphase). A per-user
-  // setting to choose the default may come later. Meaningless without a parent_id.
+  // with its parent (nested render, follows the parent's workphase). Meaningless
+  // without a parent_id.
   isAttached: integer('is_attached').notNull().default(1),
   assigneeType: text('assignee_type'), // app-level: 'human' | 'agent'
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
@@ -137,7 +137,7 @@ export const items = sqliteTable('items', {
   // Set when this item's workphase becomes terminal (done); cleared if it's
   // reopened into a non-terminal workphase. Detached/root items in a
   // terminal workphase have no meaningful `position` — ordering is derived
-  // from this field instead (see docs/planning/epic-3-2-decisions.md).
+  // from this field instead (wiki item-positioning §6).
   // Attached children keep their position regardless (parent-scoped, not
   // workphase-scoped).
   completedAt: integer('completed_at'),
@@ -148,7 +148,7 @@ export const items = sqliteTable('items', {
 // ============================================================
 
 // Labels are global (not scoped to a workflow) — a single reusable set shared
-// across every project and workflow. See docs/planning/epic-5-decisions.md.
+// across every project and workflow.
 export const labels = sqliteTable('labels', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -178,8 +178,7 @@ export const chatThreads = sqliteTable('chat_threads', {
   itemId: text('item_id')
     .notNull()
     .references(() => items.id, { onDelete: 'cascade' }),
-  // Interim: nulls on agent delete so agents stay deletable. Authorship should
-  // eventually be a snapshot (see docs/planning/epic-8-decisions.md).
+  // Nulls on agent delete so agents stay deletable.
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
   label: text('label'),
   createdAt: integer('created_at').notNull(),

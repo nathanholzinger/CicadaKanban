@@ -11,9 +11,9 @@ import { resolveAppendPosition, resolvePositionByAnchorAndSide } from '../lib/po
 const router = Router();
 
 // A project's position-comparison scope: its siblings — same parentId, or
-// every root project when parentId is null. Simpler than items.ts's
-// positionScopeFor since projects have no attach/workphase dimension, just
-// one flat "children of X" bucket per parent.
+// every root project when parentId is null. Simpler than
+// `itemPositionScope.ts::positionScopeFor` since projects have no
+// attach/workphase dimension, just one flat "children of X" bucket per parent.
 function projectPositionScope(parentId: string | null, excludeId?: string): SQL {
   const base: SQL = parentId ? eq(projects.parentId, parentId) : isNull(projects.parentId);
   return excludeId ? and(base, not(eq(projects.id, excludeId)))! : base;
@@ -45,13 +45,12 @@ router.post('/', (req, res) => {
   const resolvedParentId = parentId || null;
 
   // Wrapped in a transaction: resolveAppendPosition can trigger a reindex of
-  // the whole scope (positionResolver.ts's magnitude-threshold trigger),
-  // which writes one row at a time — without an enclosing transaction each
-  // of those writes would auto-commit individually.
+  // the whole scope, which writes one row at a time — without an enclosing
+  // transaction each of those writes would auto-commit individually.
   db.transaction(tx => {
-    // Resolved via the shared positioning library (not a raw Date.now()
-    // stamp) so a brand-new sibling under an old, contaminated position
-    // group immediately triggers that group's magnitude-threshold self-heal.
+    // Resolved via the shared positioning library, so a brand-new sibling in
+    // a group whose positions have grown past the magnitude threshold
+    // triggers that group's reindex.
     const scope = projectPositionScope(parentId);
     const position = resolveAppendPosition(projects, scope, tx);
     tx.insert(projects)
@@ -122,15 +121,13 @@ function deleteProjectById(id: string, tx: Tx) {
     .map(w => w.id);
 
   // Items to remove: owned by this project ONLY — not also every item merely
-  // sitting in one of this project's workphases (audit Finding #14). A
-  // project that was reparented away, or had its own workflow assigned,
-  // after filing items into this project's workphases still points its
-  // workphaseId here; sweeping those up too meant deleting this project
-  // could silently delete another project's items. Removing the workphases
-  // below already nulls their workphaseId (ON DELETE SET NULL, the same
-  // behavior workflows.ts's own DELETE relies on) — they survive and
-  // surface as "Unknown status" on whatever board their real project now
-  // resolves to. Each deleted item's dependent rows (itemLabels,
+  // sitting in one of this project's workphases. A project that was
+  // reparented away, or had its own workflow assigned, after filing items
+  // into this project's workphases still points its workphaseId here;
+  // sweeping those up too would silently delete another project's items.
+  // Removing the workphases below already nulls their workphaseId (ON DELETE
+  // SET NULL) — they survive and surface as "Unknown status" on whatever
+  // board their real project now resolves to. Each deleted item's dependent rows (itemLabels,
   // activityLog, notifications, attachments, chat threads/messages) are
   // removed by ON DELETE CASCADE, so deleting the items is enough.
   const allItemIds = tx
@@ -166,23 +163,21 @@ function deleteProjectById(id: string, tx: Tx) {
 }
 
 // Move/reorder a project — reposition among siblings and/or reparent, in
-// one atomic step. Replaces the old batch PATCH /reorder (audit Finding #2:
-// its per-entry cycle check ran against pre-transaction DB state, so a
-// same-request A<->B parent swap could commit a cycle undetected — a single-
-// item endpoint removes that failure mode at the API-contract level, since
-// there's no second entry in the same request to collude with).
+// one atomic step. One project per request, not a batch: a batch's
+// per-entry cycle check would run against pre-transaction DB state, so a
+// same-request A<->B parent swap could commit a cycle undetected. With a
+// single-item endpoint there's no second entry in the same request to
+// collude with.
 //
 // Body: { parentId?, prevId?, nextId? }. `prevId`/`nextId` name the
 // project's resulting *predecessor*/*successor* — the project that should
 // end up immediately before/after the moved project (not "the project I go
 // before/after," which reads ambiguously either direction; prevId/nextId
-// describes a position in the sequence, matching client/src's existing
-// findPrevSibling/findNextSibling vocabulary). Both omitted/null means "no
+// describes a position in the sequence). Both omitted/null means "no
 // positioning info, append to the true end of the resulting scope," never
-// "trust me, the scope is empty" (this is what fixes the sidebar's
-// collapsed-parent guess bug by construction: even if the client guessed
-// wrong because a parent's real children were hidden, the server always
-// re-derives the true current children here). Any given prevId/nextId is
+// "trust me, the scope is empty": even if the client guessed wrong because
+// a collapsed parent's real children were hidden, the server always
+// re-derives the true current children here. Any given prevId/nextId is
 // independently verified as a real, current sibling in the resulting scope
 // before its position is trusted for the midpoint math.
 router.patch('/:id/move', (req, res) => {
@@ -225,11 +220,10 @@ router.patch('/:id/move', (req, res) => {
   // against plain `db`, before the transaction below opens: this handler's
   // only write is to the subject project itself, so nothing about a
   // sibling's existence/scope/position can change between this check and
-  // the transaction that uses it (audit Finding #12 — a db.transaction
-  // callback in better-sqlite3 only rolls back on throw, so a validation
-  // bail-out signaled by returning false from inside it — after some other
-  // write had already run — would still commit; validating first removes
-  // the need for that convention).
+  // the transaction that uses it. Validating first keeps every bail-out
+  // outside the transaction: a db.transaction callback in better-sqlite3
+  // only rolls back on throw, so a bail-out inside it, after some other
+  // write had already run, would still commit that write.
   function verifyAnchor(anchorId: string, label: 'prevId' | 'nextId'): string | null {
     const sibling = db
       .select({ parentId: projects.parentId, position: projects.position })

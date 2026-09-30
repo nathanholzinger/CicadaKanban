@@ -1,5 +1,6 @@
-// Rank map + range coverage/overlap/broken-column detection for board columns.
-// getOrderedWorkphases and shrink-on-workphase-delete also live here.
+// Range coverage/overlap/broken-column detection, range validation and the
+// Unsorted bucket for board columns. Shrink-on-workphase-delete and the
+// terminal-flip check also live here.
 
 import { db, type Tx } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
@@ -56,12 +57,12 @@ export function columnsOverlap(a: ColumnRange, b: ColumnRange, rankMap: Map<stri
 type ColumnRangeValidation =
   { ok: true } | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
 
-// The three-step range check (both endpoints belong to this workflow, start
-// doesn't come after end, doesn't overlap a sibling column) — was hand-copied
-// identically into columns.ts POST and PUT (audit finding #24). Callers pass
-// only the sibling columns the new/updated range should be checked against
-// (PUT excludes the column being updated); on failure, `status`/`body` are
-// ready to hand straight to `res`.
+// The range check for columns.ts POST and PUT: both endpoints belong to this
+// workflow, start doesn't come after end, the range doesn't overlap a sibling
+// column, and it doesn't span a terminal and a non-terminal workphase.
+// Callers pass only the sibling columns the new/updated range should be
+// checked against (PUT excludes the column being updated); on failure,
+// `status`/`body` are ready to hand straight to `res`.
 export function validateColumnRange(
   range: ColumnRange,
   rankMap: Map<string, number>,
@@ -91,11 +92,10 @@ export function validateColumnRange(
     };
   }
 
-  // Epic 3.2 Part 6: a column can't span both a terminal (done) and a
-  // non-terminal (active) workphase. Active and done items are never
-  // meant to be directly compared in one sorted list — done items have no
-  // stored position at all (ordered by completedAt instead), so a column
-  // spanning the boundary would have no coherent order to show.
+  // A column can't span both a terminal (done) and a non-terminal (active)
+  // workphase (wiki item-positioning §6): done items have no stored position
+  // at all (ordered by completedAt instead), so a column spanning the
+  // boundary would have no coherent order to show.
   const covered = getCoveredWorkphases(range, orderedWorkphases, rankMap);
   const hasTerminal = covered.some(w => w.isTerminal);
   const hasNonTerminal = covered.some(w => !w.isTerminal);
@@ -196,8 +196,7 @@ export function shrinkColumnsForDeletedWorkphase(
 // the flip against every column covering `flippedWorkphaseId` and returns
 // the ones that would end up spanning both a terminal and a non-terminal
 // workphase — the same invariant `validateColumnRange` enforces at column
-// create/update time (audit Finding #6), just checked from the workphase
-// side instead. Call with plain `db` *before* opening a transaction (nothing
+// create/update time, just checked from the workphase side instead. Call with plain `db` *before* opening a transaction (nothing
 // has been written yet, so a conflict can still just 400) — the caller only
 // commits the flip once this returns empty.
 export function findColumnsMixingTerminalAfterFlip(

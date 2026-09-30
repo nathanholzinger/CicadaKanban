@@ -197,6 +197,9 @@ function drawsInList(placement: Placement, region: CardListRegion): boolean {
   return placement.workphaseId !== undefined && region.coveredWorkphaseIds.includes(placement.workphaseId);
 }
 
+// A drop keeps the item's own workphase when the region already covers it,
+// so it's a position-only reorder; otherwise it takes the region's target
+// workphase (wiki item-positioning §4).
 export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: string | null): string {
   const member = activeWorkphaseId !== null && region.coveredWorkphaseIds.includes(activeWorkphaseId);
   return member ? activeWorkphaseId : region.targetWorkphaseId;

@@ -274,6 +274,11 @@ Filled in as the batches land:
     - a press becomes a drag only after 5px of pointer movement; less is a click, which opens the item (`useBoardDnd.ts`'s `PointerSensor` activation distance);
     - a board reload that lands mid-drag (from an earlier drop's failed or resyncing write) cancels the live drag the way Escape does (`useBoardDnd.ts::resyncBoard`);
     - columns reorder by dragging, and a column drag never runs the pop machine (`useBoardDnd.ts::handleDragEnd`'s column branch). This one may belong on boards-columns-unsorted.
+  - **item-attachment (3-ii):** no unmarked section lacks enforcing code (§10 has none of its own, since it follows from §2). Two rules the code enforces that no section states:
+    - deleting an item deletes its whole subtree, detached descendants included (`routes/items.ts`'s `DELETE /:id`, through `itemTree.ts::walkItemDescendants`);
+    - an item created under a parent is attached unless the request says otherwise (`routes/items.ts`'s POST, and `schema.ts`'s `isAttached` default). §11a's "whether it's attached to it" implies a choice but doesn't give the default. The parentless side of that default is ATT-1.8, which A5 already carries.
+  - **item-positioning (3-ii):** no unmarked section lacks enforcing code (§7.5 is §2's workphase-only rule reached through board-drag-interaction §5's middle band). One rule the code has that §2 contradicts: the API accepts a final position, as `PATCH /items/:id/move`'s raw `position` and `PATCH /items/reorder`. A5 already carries this as TC-2.32. For that ruling: no client code calls either one. `api/items.ts::reorderItems` wraps the reorder endpoint but has no caller.
+  - **boards-columns-unsorted (3-ii):** the page has no numbered sections, so no comment can carry an index pointer to it; `wiki <page> §N` needs a section. D4's table for it maps each of the page's bullets to its site instead, so the follow-up story that writes the page out in full can add the pointers once it numbers them. No bullet lacks enforcing code. The rules the code enforces that the page doesn't state are already A2's input for that story (the last-board 409, the column range 400s, `needsAttention`).
 - **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root"), and anything false in a `CLAUDE.md` file, which A4 doesn't edit.
   - **`workflow/CLAUDE.md`'s module list (2-ii):** it says `DragTuningContext.ts` serves "the components that draw thresholds and bands". Its one reader is `KanbanCard.tsx`, for the zoom-in cue's timing (`cardPopInDelayMs`); the band guides don't read it. The module's own comments now say so.
   - **Root `CLAUDE.md`'s "One hierarchy-write primitive" (3-i) overstates POST.** It says every write that can give an item a parent, `POST /items` included, routes through `itemHierarchy.ts`. `PUT /items/:id` and `PATCH /items/:id/move` do, through `validateHierarchyRequest` and `applyHierarchyRequest`. `POST /items` checks its parent itself (it exists, it's in the same project, and the depth cap through `itemTree.ts::assertWithinDepthCap`), and uses `itemHierarchy.ts` only to log (`logCreatedUnderParent`). The guardrail's instruction, not to reimplement that logic at the route level, still holds. `itemHierarchy.ts`'s header made the same claim and now names its two entry points.
@@ -337,6 +342,20 @@ item-positioning, from A2's list. The rows whose home is on the client landed in
 | §5a | The tie-break is `(a.position ?? 0) - (b.position ?? 0) \|\| a.createdAt - b.createdAt` | **Covered:** `itemListOps.ts::byPositionThenCreatedAt`, with an index pointer to §5a. (1b-i) |
 | §2.1 | The no-scope-change cascade row is `cascadeWorkphaseToAttachedDescendants` | **Placed:** its comment says the cascade leaves positions untouched, with an index pointer to §2.1. (3-i) |
 | §5 | One shared server-side primitive does every reindex | **Placed:** `positionResolver.ts`'s header: both triggers, and every reindex, run through `reindexPositionsInScope`, with an index pointer to §5. (3-i) |
+| §1 | `items.position` is a nullable `REAL` column | **Placed:** `schema.ts`'s `items.position` declares it, and now carries an index pointer to §1. (3-ii) |
+| §6 | The split reads `workphases.isTerminal`, and `items.completedAt` is the stored column | **Covered:** `schema.ts`'s `completedAt` comment, whose link to a decisions doc became a pointer to §6, and `applyHierarchyRequest`'s active/done split, whose `isTerminal` reads `workphases.isTerminal`. (3-ii) |
+
+Every item-positioning passage in A2's list now has a disposition.
+
+boards-columns-unsorted, from A2's list. None can carry a pointer, since the page has no numbered sections.
+
+| Passage | Disposition |
+|---|---|
+| The column range is stored as `start_workphase_id` / `end_workphase_id` | **Covered:** `schema.ts`'s `columns` table declares both. (3-ii) |
+| Pre-existing workflows got their first board through a backfill in `runMigrations.ts` | **Covered:** `runMigrations.ts`'s header and its "Bootstrap a default board" step, and `boards.ts::createDefaultBoard`'s comment, which names the backfill as a caller. The step's "Phase 4" label went. (3-ii) |
+| An item's workphase column is `items.workphase_id` | **Covered:** `schema.ts`'s `items.workphaseId`, with the SET NULL comment above it. (3-ii) |
+
+Every passage in A2's lists now has a disposition.
 
 ### D6 rulings and D4's index pointers
 
@@ -382,36 +401,56 @@ item-positioning, from A2's list. The rows whose home is on the client landed in
 
 Each section that states a rule the code enforces has at least one index pointer. §2's rule 6 is the one rule without one (above). The sidebar doesn't keep §7.1's "a set-down in its own gap writes nothing", so that rule's pointer stays on the board side; the gap is in the Handoff to Nathan.
 
-**Pointers to the other three pages so far.** Batch 3-ii folds these into its D4 tables.
-- **item-positioning, index:** `dragRequest.ts::anchorFor`: §7.1. `itemListOps.ts`'s header: §2's client-side role. `itemListOps.ts::byPositionThenCreatedAt`: §5a's tie-break. `itemListOps.ts::byCompletedAtThenCreatedAt`: §6. `itemListOps.ts::getMergedColumnItemsFrom`: §4. `itemWriteReconciliation.ts`'s header: §5a.
-- **item-positioning, guard:** `itemListOps.ts::workphaseOnlySlot`: §2's workphase-only rule. `api/items.ts::ReindexedPosition`: §5.1's `{id, position}` and nothing more (2-i).
-- **item-attachment, index:** `isStub.ts::isStub`: §12, an attached descendant renders as a Stub (2-i).
-- **item-attachment, guard:** `dragClassification.ts::isWithinDepthCap`: §8. The server check carries the index pointer. `hierarchy.ts::getDepth` and `getSubtreeHeight`: §8's counting (a root is depth 1, and detached descendants count toward the height) (2-i). `api/items.ts::MoveItemInput`: §9, the project is never sent (2-i).
-- **item-attachment, index, on the server (3-i):**
-  - §1: `itemHierarchy.ts::validateHierarchyRequest`'s "attached with no parent" check; `ResultingState.attachedFlag`, the invariant in the stored row.
-  - §2: `attachedCascade.ts`'s header, the cascade; `applyHierarchyRequest`'s attached branch, no `completedAt` and the position kept.
-  - §3: `itemHierarchy.ts::HierarchyRequest`, a write to the moving item.
-  - §4: `HierarchyRequest.isAttached`, omitting the flag keeps the state; `applyHierarchyRequest`'s scope-change branch, an attached reparent resolves a fresh position.
-  - §5: `itemHierarchy.ts::ResultingState`, reparent first.
-  - §6: `itemHierarchy.ts`'s banner, validate before the transaction and apply with no early returns.
-  - §7: `validateHierarchyRequest`'s parent block, the four legality rules.
-  - §8: `itemTree.ts::ITEM_DEPTH_CAP` (one cap for UI and API), `hierarchyDepth` (a root is depth 1), `subtreeHeight` (detached descendants count), `assertWithinDepthCap` (the formula), and `validateHierarchyRequest`'s cap check (the cap gates writes, not existing data).
-  - §9: `applyHierarchyRequest`'s project cascade; `nullForeignWorkphasePositions`, nothing remapped.
-  - §11: `HierarchyRequest.parentId`, a detach keeps its parent, and `null` is reparent to root.
-  - §11a: `applyHierarchyRequest`'s activity log; `logCreatedUnderParent`.
-- **item-attachment, guard, on the server (3-i):** `routes/items.ts`'s POST: §9 (a child lives in its parent's project) and §7 (the cap gates creation too). Its `PATCH /:id/move` comment: §9.
-- **item-positioning, index, on the server (3-i):**
-  - §2: `positionResolver.ts`'s header, resolution and its fallbacks; `coarsestFit.ts`'s header; `itemPositionScope.ts::withPositionScope`, the `positionScope` field; `positionScopeFor`, the workflow-wide scope; `applyHierarchyRequest`'s workphase-only branch.
-  - §2.1: `applyHierarchyRequest`'s `scopeChanged`, the table, and its scope-change branch, the principle; `attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`, the cascade row.
-  - §3: `positionScopeFor`, the attached-sibling scope.
-  - §5: `positionResolver.ts`'s header, both triggers and every reindex.
-  - §5.1: `routes/items.ts::respondWithItem`.
-  - §6: `applyHierarchyRequest`'s active/done split.
-  - §7.1: `validateHierarchyRequest`'s anchor-scope check, against the resulting state.
-  - §7.2: `itemHierarchy.ts::ResultingState`.
-  - §7.3: `itemHierarchy.ts::nullForeignWorkphasePositions`.
-  - §7.4: `validateHierarchyRequest`'s anchor-position check, a done item is never an anchor.
-- **item-positioning, guard, on the server (3-i):** `positionResolver.ts::ReindexedPosition` and `resolvePositionByAnchorAndSide`'s `reindexed` parameter, and `applyHierarchyRequest`'s return: §5.1. `routes/items.ts`'s POST position block: §6. `crossWorkflowMoveError`: §2's workphase-only rule and §7.3.
+**D4: the other three pages' index pointers** (done at the end of 3-ii). Paths under `server/src/lib/` and `client/src/components/workflow/` drop their directory. Each page's section has at least one index pointer, except where the table says why not.
+
+item-attachment:
+
+| Section | Index pointers | Guard pointers |
+|---|---|---|
+| §1 | `itemHierarchy.ts::validateHierarchyRequest`'s "attached with no parent" check. `ResultingState.attachedFlag`: clearing the parent clears the flag. | — |
+| §2 | `attachedCascade.ts`'s header: the cascade, halted by a detached child. `applyHierarchyRequest`'s attached branch: no `completedAt`, and the position kept. | `routes/workphases.ts`'s terminal-flip backfill skips attached children. |
+| §3 | `itemHierarchy.ts::HierarchyRequest`: a request names the moving item's new parent, never a parent's children. | — |
+| §4 | `HierarchyRequest.isAttached`: omitting the flag keeps the state. `applyHierarchyRequest`'s scope-change branch: an attached reparent resolves a fresh position. | — |
+| §5 | `itemHierarchy.ts::ResultingState`: reparent first, then resolve. | — |
+| §6 | `itemHierarchy.ts`'s banner: validate before the transaction, then apply inside it with no early returns. | — |
+| §7 | `validateHierarchyRequest`'s parent block: the four legality rules. | `routes/items.ts`'s POST: the cap gates creation too. |
+| §8 | `itemTree.ts::assertWithinDepthCap`: the formula. `ITEM_DEPTH_CAP`: one cap for the UI and the API. `hierarchyDepth`: a root is depth 1. `subtreeHeight`: detached descendants count. `validateHierarchyRequest`'s cap check: the cap gates writes, not existing data. | `dragClassification.ts::isWithinDepthCap`; `hierarchy.ts::getDepth` and `getSubtreeHeight`; `routes/boards.ts`'s `itemDepthCap`. |
+| §9 | `applyHierarchyRequest`'s project cascade: every descendant follows. `itemHierarchy.ts::nullForeignWorkphasePositions`: a cross-workflow reparent remaps nothing. | `routes/items.ts`'s POST (a child lives in its parent's project) and `PATCH /:id/move` (the project is never sent); `api/items.ts::MoveItemInput`. |
+| §10 | **No enforcing code of its own:** it follows from §2 with no special case, so §2's pointers cover it. | — |
+| §11 | `HierarchyRequest.parentId`: a detach keeps its parent, and `null` is reparent to root. | — |
+| §11a | `applyHierarchyRequest`'s activity log. `itemHierarchy.ts::logCreatedUnderParent`: a create under a parent counts. | — |
+| §12 | `isStub.ts::isStub`: an attached descendant renders as a Stub. | — |
+
+`POST /items` doesn't refuse `isAttached: true` with no parent, which §1 and §7's "every write" say it should. That's ATT-1.8, Pending PO in A5, so it isn't raised again here.
+
+item-positioning:
+
+| Section | Index pointers | Guard pointers |
+|---|---|---|
+| §1 | `schema.ts`'s `items.position`: one scalar per item, never per board. | — |
+| §2 | `positionResolver.ts`'s header: anchor + side against a fresh query, and the append and bootstrap fallbacks. `coarsestFit.ts`'s header: coarsest-fit rounding. `itemPositionScope.ts::positionScopeFor`: the workflow-wide scope. `withPositionScope`: the `positionScope` field. `applyHierarchyRequest`'s workphase-only branch: §2's workphase-only rule. `itemListOps.ts`'s header: the client-side role. | `itemListOps.ts::workphaseOnlySlot`, `routes/items.ts::crossWorkflowMoveError` and `mcp.ts`'s `move_item`: the workphase-only rule. |
+| §2.1 | `applyHierarchyRequest`'s `scopeChanged`: the table's rows. Its scope-change branch: the principle. `attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`: the cascade row. | — |
+| §3 | `positionScopeFor`: an attached child's scope is `(parentId, isAttached)`. | — |
+| §4 | `itemListOps.ts::getMergedColumnItemsFrom`: the union-sort. `placement.ts::regionWorkphaseFor`: the drop resolution rule, a pointer added in 3-ii. | — |
+| §5 | `positionResolver.ts`'s header: both triggers, and every reindex. | — |
+| §5.1 | `routes/items.ts::respondWithItem`. | `positionResolver.ts::ReindexedPosition`, `applyHierarchyRequest`'s return, `api/items.ts::ReindexedPosition`. |
+| §5a | `itemWriteReconciliation.ts`'s header: the order. `itemListOps.ts::byPositionThenCreatedAt`: the tie-break. | — |
+| §6 | `applyHierarchyRequest`'s active/done split. `columnRanges.ts::validateColumnRange`: a column never spans done and active. `itemListOps.ts::byCompletedAtThenCreatedAt`: a done list's order. | `schema.ts`'s `completedAt`; `routes/items.ts`'s POST position block; `routes/workphases.ts::backfillItemsForTerminalFlip`. |
+| §7.1 | `dragRequest.ts::anchorFor`: the client picks the anchor from its rendered list. `validateHierarchyRequest`'s anchor-scope check: validated against the resulting state, and refused outside it. | — |
+| §7.2 | `itemHierarchy.ts::ResultingState`. | — |
+| §7.3 | `itemHierarchy.ts::nullForeignWorkphasePositions`. | `crossWorkflowMoveError`: re-filing an item already left foreign. |
+| §7.4 | `validateHierarchyRequest`'s anchor-position check: a done item is never an anchor. | — |
+| §7.5 | **No separate rule:** it's §2's workphase-only rule reached through board-drag-interaction §5's middle band, and both have index pointers. | — |
+
+boards-columns-unsorted has no numbered sections, so this maps each of the page's bullets to its main enforcing site, for the follow-up story to point at once it numbers them:
+
+| The page's rule | Main enforcing site |
+|---|---|
+| A column covers a range from `startWorkphaseId` to `endWorkphaseId`, worked out on every read from the current workphase order | `columnRanges.ts::getCoveredWorkphases`, from `routes/boards.ts`'s `GET /:id` |
+| Unsorted holds the uncovered workphases and the items with a missing or dangling `workphaseId`; a new workphase lands there, never joining a column | `columnRanges.ts::computeUnsorted`. `workflowItems.ts::getBoardScopeItems` scopes the board by project, so those items are found at all. `routes/workphases.ts`'s POST appends a new workphase after every existing one (`nextPosition`), outside every column's range. |
+| A broken column is flagged on every read, never stored, keeps showing its items, and refuses drops | `columnRanges.ts::isColumnBroken`. `dragRegions.ts::cardListStructure` gives a broken column no drop region. |
+| Every workflow always has at least one board, set up 1:1, and so does an additional board | `routes/boards.ts::createDefaultBoard`, from workflow creation, `POST /boards` and the migration backfill. `DELETE /boards/:id` refuses a workflow's last board. |
+| Items never reference a board or column; MCP works at the workphase level | `schema.ts`: `items` has no board or column field. `mcp.ts`'s tools send a `workphaseId`. |
 
 ## Amendments
 
@@ -427,3 +466,4 @@ Each section that states a rule the code enforces has at least one index pointer
 - **2026-09-29, batch 2 (Coder):** 2 split into 2-i (the sidebar, `lib/`, `types.ts`, `api/`) and 2-ii (the other components), at about 500 comment lines (D7). Batch 2 now also writes index pointers, and 2-i adds the project sidebar's two §7.1 pointers to D4's board-drag-interaction table.
 - **2026-09-29, end of batch 2 (Coder):** the Architect's handoff also takes false statements in a `CLAUDE.md` file, since A4 doesn't edit those (D1).
 - **2026-09-30, batch 3 (Coder):** 3 split into 3-i (the position and hierarchy layer) and 3-ii (the rest of `server/src`), at about 805 comment lines and 111 hits (D7). D4's tables for the other three pages come at the end of 3-ii.
+- **2026-09-30, end of batch 3 (Coder):** the running pointer list became D4's tables for the other three pages. boards-columns-unsorted has no numbered sections, so its table maps rules to sites without pointers, and the Acceptance line on index pointers holds for the other three pages only until that page is numbered. Completing item-positioning §4's row took one pointer in a client file from 1b-i, `placement.ts::regionWorkphaseFor`. "To the PO" gained entries for all three pages.

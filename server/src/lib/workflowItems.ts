@@ -22,8 +22,8 @@ export function getWorkflowItems(workflowWorkphases: Workphase[]): ItemRow[] {
 
 // The project ids whose EFFECTIVE workflow is `workflowId`: the workflow's own
 // project plus descendant projects that inherit it (i.e. no project between them
-// and the owner has its own workflow). Mirrors the client's App.tsx inheritance
-// resolution, on the server so the board read path can scope by project.
+// and the owner has its own workflow). The same inheritance as the client's
+// `App.tsx::effectiveWorkflow`, on the server so the board read path can scope by project.
 function getProjectsUsingWorkflow(workflowId: string): Set<string> {
   const workflow = db
     .select({ projectId: workflows.projectId })
@@ -69,10 +69,10 @@ function getProjectsUsingWorkflow(workflowId: string): Set<string> {
 
 // The inverse of getProjectsUsingWorkflow, for one project: the workflow it
 // owns, or the nearest ancestor project's. Null if no project up the chain
-// owns one. Cycle-guarded like every other parentId walk (audit Finding
-// #11). Epic 3.5: lets a cross-project reparent tell whether a subtree
-// item's workphase is foreign to its new project (wiki item-positioning
-// §7.3), which is what decides whether that item's position is nulled.
+// owns one. Cycle-guarded like every other parentId walk. Lets a
+// cross-project reparent tell whether a subtree item's workphase is foreign
+// to its new project, which is what decides whether that item's position is
+// nulled.
 export function effectiveWorkflowIdForProject(projectId: string, tx?: Tx): string | null {
   const e = tx ?? db;
   const visited = new Set<string>();

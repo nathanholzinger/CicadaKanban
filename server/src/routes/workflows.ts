@@ -27,8 +27,8 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
 
   // `visiting` tracks the current recursion stack (distinct from
   // `depthCache`, which only gets a node's entry *after* its recursive call
-  // returns) — a corrupted parentId cycle in the data (audit Finding #11)
-  // would otherwise recurse into the same ids forever, since the cache
+  // returns) — a corrupted parentId cycle in the data would otherwise
+  // recurse into the same ids forever, since the cache
   // can't break a cycle it never gets to write to. Re-entering a node still
   // on the stack means a cycle exists at that point; treating it as a
   // synthetic root (depth 0) there bounds every id's depth instead of
@@ -73,9 +73,7 @@ router.get('/:id', (req, res) => {
   const workflowItems = getWorkflowItems(workflowWorkphases);
 
   // workflowWorkphases already carries isTerminal for every id an item here
-  // could reference, so no extra query is needed to attach positionScope —
-  // this was the one read path with no positionScope at all (audit Finding
-  // #17), now consistent with items.ts's GET /:id and boards.ts.
+  // could reference, so no extra query is needed to attach positionScope.
   const isTerminalOf = isTerminalLookup(workflowWorkphases);
   const scopedItems = workflowItems.map(item => withPositionScope(item, isTerminalOf));
 
@@ -94,8 +92,7 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'projectId is required' });
     return;
   }
-  // A bogus projectId would otherwise surface as an opaque FK-violation 500
-  // (audit Finding #13).
+  // A bogus projectId would otherwise surface as an opaque FK-violation 500.
   const projectExists = Boolean(db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).get());
   if (!projectExists) {
     res.status(400).json({ error: 'projectId does not reference an existing project' });
@@ -240,7 +237,7 @@ router.delete('/:id', (req, res) => {
       .map(b => b.id);
     deleteBoardsById(workflowBoardIds, tx);
 
-    // Interim until the Epic 8 events rework: notifications carry a workflowId FK.
+    // Notifications carry a workflowId FK with no cascade, so they go before the workflow.
     tx.delete(notifications).where(eq(notifications.workflowId, req.params.id)).run();
     tx.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
     tx.delete(workflows).where(eq(workflows.id, req.params.id)).run();

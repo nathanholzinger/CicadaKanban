@@ -6,8 +6,7 @@ import { activityLog } from '../db/schema.js';
 
 // One activity entry on an item. `type` is the app-level enum documented on
 // the schema column. Pass `tx` to write inside a caller's transaction.
-// Lived in routes/items.ts until Epic 3.5 moved hierarchy/workphase logging
-// into lib/itemHierarchy.ts, which routes can't import from.
+// In lib/ because itemHierarchy.ts logs too, and lib/ never imports from routes/.
 export function logActivity(
   itemId: string,
   type: string,

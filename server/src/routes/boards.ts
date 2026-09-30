@@ -147,9 +147,8 @@ router.get('/:id', (req, res) => {
       invalidItems,
       needsAttention: uncovered.length > 0 || invalidItems.length > 0,
     },
-    // Epic 3.5 Story 2: the board's drag-target classification needs the
-    // same depth cap the API enforces (docs/wiki/item-attachment §8 — one
-    // definition, two enforcement points). Carried on the board response
+    // The board's drag-target classification needs the same depth cap the
+    // API enforces (wiki item-attachment §8). Carried on the board response
     // rather than a shared client/server module, so the client never
     // hard-codes it.
     itemDepthCap: ITEM_DEPTH_CAP,

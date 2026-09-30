@@ -1,4 +1,5 @@
-// Migration runner + seed data + board backfill (1:1 board per pre-existing workflow).
+// Migration runner + seed data + board backfill (a 1:1 default board for any workflow
+// that has none).
 
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
@@ -105,13 +106,13 @@ export function runMigrations() {
 
   const now = Date.now();
 
-  // ── Phase 1: Seed workflow templates if not yet seeded ──────────────────────
+  // ── Seed workflow templates if not yet seeded ───────────────────────────────
   const existingTemplates = db.select().from(workflowTemplates).all();
   if (existingTemplates.length === 0) {
     seedWorkflowTemplates(now);
   }
 
-  // ── Phase 2: Migrate existing data (workflows without a project_id) ─────────
+  // ── Move workflows without a project_id into a default project ──────────────
   const unassignedWorkflows = db.select().from(workflows).where(isNull(workflows.projectId)).all();
   if (unassignedWorkflows.length > 0) {
     const defaultProjectId = randomUUID();
@@ -133,13 +134,13 @@ export function runMigrations() {
     console.log(`Migrated ${unassignedWorkflows.length} existing workflow(s) into "Default Project"`);
   }
 
-  // ── Phase 3: Initialize project positions from created_at for any without one ─
+  // ── Initialize project positions from created_at for any without one ────────
   const updated = sqlite.prepare(`UPDATE projects SET position = created_at WHERE position IS NULL`).run();
   if (updated.changes > 0) {
     console.log(`Initialized position for ${updated.changes} project(s)`);
   }
 
-  // ── Phase 4: Bootstrap a default board for any workflow that has none ───────
+  // ── Bootstrap a default board for any workflow that has none ────────────────
   const allWorkflows = db.select().from(workflows).all();
   let boardsCreated = 0;
   for (const workflow of allWorkflows) {
