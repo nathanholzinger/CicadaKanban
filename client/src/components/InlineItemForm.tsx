@@ -20,20 +20,15 @@ interface InlineItemFormProps {
   submitLabel?: string;
   /** Return (or resolve to) true to clear the draft and fire `onDone`; false
    *  to leave the form open with the draft intact so the user can retry
-   *  (e.g. after a failed create). BoardColumn's item creation is
-   *  fire-and-forget — its own async handling lives further up in
-   *  useItemManagement.ts — so it always returns true. */
+   *  (e.g. after a failed create). */
   onSubmit: (title: string, type: string | null) => boolean | Promise<boolean>;
   /** Called after a successful submit — typically hides the form. */
   onDone: () => void;
   onCancel: () => void;
 }
 
-// "Inline title input + type select + Add/Cancel, Escape to dismiss" was
-// implemented twice — BoardColumn's own add-item form, and
-// item-detail/ChildrenSection's add-child form — with BoardColumn's copy
-// fully inlining classes that shadowed the shared style tokens (audit
-// Finding #28). Lives outside item-detail/ since BoardColumn isn't one.
+// Lives outside item-detail/ since BoardColumn isn't an item-detail
+// section.
 export default function InlineItemForm({
   itemTypes,
   initialType = '',

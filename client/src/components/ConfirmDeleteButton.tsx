@@ -1,10 +1,9 @@
-// Shared icon-trigger confirm-delete (columns, workphases, boards, agents).
+// Shared icon-trigger confirm-delete (columns, workphases, agents).
 
 import { useState, type ReactNode } from 'react';
 import { TrashIcon } from './icons';
 
-// Shared classes for the two-step confirm-delete control (was duplicated verbatim
-// across BoardColumn, WorkphaseManagerPanel, and AgentsModal — audit finding #9).
+// Shared classes for the two-step confirm-delete control.
 const DELETE_PILL =
   'text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-500/10 disabled:opacity-50';
 const CANCEL_PILL = 'text-[10px] text-zinc-500 hover:text-zinc-300';

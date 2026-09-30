@@ -42,8 +42,8 @@ interface ItemDetailPanelProps {
 // Owns only the open/close slide transition. All per-item state (detail,
 // editing drafts, confirm-delete, ...) lives in ItemDetailPanelContent below,
 // keyed on itemId — switching to a different item remounts that subtree
-// fresh, resetting its state by construction. This replaced an effect that
-// manually reset 5 pieces of state on every itemId change (flagged by
+// fresh, resetting its state by construction, rather than through an
+// effect that resets each piece of state on every itemId change (flagged by
 // react-hooks/set-state-in-effect: calling setState directly and
 // unconditionally in an effect body forces an extra render/commit pass).
 export default function ItemDetailPanel({ itemId, onClose, ...contentProps }: ItemDetailPanelProps) {

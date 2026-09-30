@@ -18,12 +18,10 @@ interface DetailSectionProps {
   children: ReactNode;
 }
 
-// The section header row (label + conditional "+ Add" toggle) was written
-// out identically across ChildrenSection/LabelsSection/AttachmentsSection,
-// with ParentSection/AgentSection using the label-only half (audit Finding
-// #28). `children` is the section's own body — item list, empty state,
-// error message, add-form — none of which follows a common enough shape to
-// pull in here too.
+// The section header row (label + conditional "+ Add" toggle) over the
+// section's body. `children` is that body — item list, empty state, error
+// message, add-form — none of which follows a common enough shape to pull
+// in here too.
 export function DetailSection({ label, onAdd, addLabel = '+ Add', children }: DetailSectionProps) {
   return (
     <div>
@@ -47,11 +45,10 @@ interface FormActionsProps {
   disabled?: boolean;
 }
 
-// The add-form footer (BTN_PRIMARY/BTN_CANCEL pair) was duplicated
-// identically 3 times alongside DetailSection above (audit Finding #28).
-// Rendered as siblings rather than wrapped in a container of its own, since
-// a caller's footer row sometimes also holds a <select> before these two
-// buttons (ChildrenSection, AttachmentsSection) and sometimes doesn't
+// The add-form footer (BTN_PRIMARY/BTN_CANCEL pair). Rendered as siblings
+// rather than wrapped in a container of its own, since a caller's footer
+// row sometimes also holds a <select> before these two buttons
+// (InlineItemForm, AttachmentsSection) and sometimes doesn't
 // (LabelsSection) — the wrapping `<div className="flex ... gap-2">` stays
 // the caller's to write.
 export function FormActions({ submitLabel = 'Add', onCancel, disabled }: FormActionsProps) {

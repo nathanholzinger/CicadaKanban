@@ -38,9 +38,7 @@ function tabButtonClass(active: boolean): string {
 
 // Tab shell (breadcrumb, name edit/self-delete, tabs) + board-tab wiring.
 // The Overview tab's own concerns (description, parent selector,
-// subprojects list) live in ProjectOverviewTab.tsx — this file mixed all of
-// it together as the largest client file in the codebase (audit Finding
-// #31).
+// subprojects list) live in ProjectOverviewTab.tsx.
 export default function ProjectPage({
   project,
   ancestors,
@@ -185,14 +183,12 @@ export default function ProjectPage({
           className="mb-1 w-full border-b border-zinc-600 bg-transparent text-2xl font-semibold text-zinc-100 focus:border-blue-500/60 focus:outline-none"
         />
       ) : (
-        // Keyed on project.id (prefixed to stay distinct from
-        // ProjectOverviewTab's own project.id-keyed sibling below — two
-        // direct children of the same parent sharing one key value confuses
-        // React's reconciler regardless of their differing component types):
-        // without a key, this instance's internal confirming/deleting state
-        // would survive a navigation to a different project (nothing else
-        // resets it — a real, latent bug uncovered while extracting this,
-        // now fixed by construction).
+        // Keyed on project.id, so this instance's internal confirming/deleting
+        // state never carries over to a different project. Prefixed to stay
+        // distinct from ProjectOverviewTab's own project.id-keyed sibling
+        // below: two direct children of the same parent sharing one key value
+        // confuses React's reconciler regardless of their differing
+        // component types.
         <ConfirmDeleteInline
           key={`name-${project.id}`}
           trigger={confirm => (

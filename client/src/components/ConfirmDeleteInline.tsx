@@ -1,4 +1,4 @@
-// Shared inline confirm-delete for a row/heading being replaced outright (ProjectPage).
+// Shared inline confirm-delete for a row/heading being replaced outright.
 
 import { useState, type ReactNode } from 'react';
 
@@ -15,14 +15,11 @@ interface ConfirmDeleteInlineProps {
   deletingClassName: string;
 }
 
-// Row/heading-replacement confirm-delete pattern: was hand-rolled twice in
-// ProjectPage.tsx under two separate confirm/deleting state-variable pairs,
-// with byte-identical Yes/No markup in both (audit Finding #26). Distinct
-// from ConfirmDeleteButton, which augments a persistent icon rather than
+// Row/heading-replacement confirm-delete pattern. Distinct from
+// ConfirmDeleteButton, which augments a persistent icon rather than
 // replacing the whole line it sits on; SortableProjectRow's hover-revealed
-// variant is a genuine third shape, left alone per the audit's own call —
-// fold it in only if this component (or ConfirmDeleteButton) grows a
-// matching mode, don't force it now.
+// variant is a genuine third shape, deliberately kept apart — fold it in
+// only if this component (or ConfirmDeleteButton) grows a matching mode.
 export default function ConfirmDeleteInline({
   trigger,
   prompt,

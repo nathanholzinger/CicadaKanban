@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 
-// Shared badge chrome for board column headers (BoardColumn, UnsortedBucket) —
-// both independently re-implemented the same item-count pill and the same
-// amber attention-pill styling (audit finding #20). `AttentionBadge` covers
+// Shared badge chrome for board column headers (BoardColumn, UnsortedBucket):
+// the item-count pill and the amber attention pill. `AttentionBadge` covers
 // two distinct meanings (a single column's `broken` range vs. a board-wide
 // `needsAttention`) that share only their look, so it takes the label/tooltip
 // as props rather than hardcoding either one.

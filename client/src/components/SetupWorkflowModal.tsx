@@ -48,8 +48,8 @@ export default function SetupWorkflowModal({
       await onCreate({ projectId: project.id, name: project.name, ...opts });
     } catch (err) {
       // A stale option here (e.g. a template/project deleted elsewhere since
-      // this modal's props were loaded) now surfaces as a real error instead
-      // of a silent no-op — audit Finding #16 follow-up.
+      // this modal's props were loaded) surfaces as a real error, never a
+      // silent no-op.
       setError(err instanceof Error ? err.message : 'Failed to create workflow.');
     } finally {
       setSaving(false);

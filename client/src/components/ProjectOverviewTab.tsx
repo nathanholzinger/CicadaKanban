@@ -17,16 +17,11 @@ interface ProjectOverviewTabProps {
   onDeleteSubproject: (id: string) => Promise<void>;
 }
 
-// The Overview tab's own concerns, split out of ProjectPage.tsx (audit
-// Finding #31): description edit-in-place, the parent-project selector, and
-// the subprojects list with its own delete confirmation. ProjectPage.tsx
-// renders this keyed on project.id, so switching projects resets all of
-// this component's state by remounting rather than an explicit reset
-// effect — same convention as ConfirmDeleteInline (Finding #26). One
-// side effect worth noting: an in-progress, unsaved description edit no
-// longer survives switching to the Board tab and back (it previously did,
-// since ProjectPage.tsx never unmounted this content, just hid it) — a
-// minor, arguably more correct behavior change from the plain unmount.
+// The Overview tab's own concerns: description edit-in-place, the
+// parent-project selector, and the subprojects list with its own delete
+// confirmation. Expects to be keyed on project.id, so switching projects
+// resets all of this component's state by remounting rather than an
+// explicit reset effect.
 export function ProjectOverviewTab({
   project,
   allProjects,
@@ -64,8 +59,7 @@ export function ProjectOverviewTab({
   }
 
   // Escape cancels; Enter is left alone (it's a multi-line textarea — Enter
-  // inserts a newline, matching ProjectPage.tsx's own name field being the
-  // only one of the two that saves on Enter).
+  // inserts a newline).
   function handleDescriptionKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') cancelDescriptionEdit();
   }

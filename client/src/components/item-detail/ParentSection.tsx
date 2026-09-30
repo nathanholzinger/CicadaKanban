@@ -22,7 +22,7 @@ function buildParentOptions(allItems: Item[], currentId: string, projectId: stri
 
 // Editing surface for the current item's own parent link — which item is its
 // parent, and whether it's attached (moves with the parent) or detached
-// (independent position). Split out from ChildrenSection, which lists/creates
+// (independent position). Separate from ChildrenSection, which lists/creates
 // this item's children — a different concern with no shared state.
 export function ParentSection({ item, allItems, onSelfUpdated }: ParentSectionProps) {
   const [savingParent, setSavingParent] = useState(false);

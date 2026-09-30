@@ -1,6 +1,4 @@
-// Shared inline icons. Introduced for audit finding #28 (X/close and trash paths
-// were re-inlined across components). Each renders a currentColor stroke icon in a
-// 16×16 viewBox; size defaults to 12 and can be overridden per call site.
+// Shared inline icons and icon-button chrome, drawn in currentColor.
 
 interface IconProps {
   size?: number;
@@ -47,9 +45,6 @@ interface PlusIconProps {
   className?: string;
 }
 
-// Was independently re-typed identically 3 times: ProjectSidebar's "New
-// project", ProjectPage's "Add subproject", SortableProjectRow's "Add
-// subproject" (audit Finding #29).
 export function PlusIcon({ size = 11, className }: PlusIconProps) {
   return (
     <svg
@@ -79,12 +74,10 @@ interface DragHandleIconProps {
   className?: string;
 }
 
-// 6-dot drag-handle grid, was hand-typed twice at two different sizes —
-// BoardColumn's board columns (the defaults below) and
-// SortableProjectRow's sidebar rows (audit Finding #29). The two weren't a
-// clean uniform scale of each other, so every position is its own prop
-// rather than a single `size` — defaults reproduce BoardColumn's exact
-// original values; SortableProjectRow passes its own.
+// 6-dot drag-handle grid, at two different sizes — BoardColumn's board
+// columns (the defaults below) and SortableProjectRow's sidebar rows, which
+// passes its own. The two aren't a uniform scale of each other, so every
+// position is its own prop rather than a single `size`.
 export function DragHandleIcon({
   width = 10,
   height = 14,
@@ -108,7 +101,6 @@ export function DragHandleIcon({
   );
 }
 
-// Small square icon-button chrome — was identical at ProjectSidebar's "New
-// project" and ProjectPage's "Add subproject" (audit Finding #29).
+// Small square icon-button chrome.
 export const ICON_BUTTON_SM =
   'flex h-5 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-700 hover:text-zinc-200';

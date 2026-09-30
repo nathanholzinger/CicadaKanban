@@ -9,10 +9,8 @@ import { formatTime, BTN_ADD_TRIGGER } from './item-detail/pillUtils';
 const POLL_INTERVAL_MS = 15000;
 
 // Fully self-contained notifications feature — polls independently, owns its
-// own dropdown open/close state, and has no dependency on anything else
-// App.tsx tracks (project selection, workflow inheritance, etc.). Extracted
-// out of App.tsx, which previously mixed this in with the project/workflow
-// shell (audit Finding #30).
+// own dropdown open/close state, and depends on no app state (project
+// selection, workflow inheritance, etc.).
 export default function NotificationsBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);

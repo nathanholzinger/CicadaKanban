@@ -24,18 +24,16 @@ interface WorkphaseCardListProps {
   isOver?: boolean;
   /** Whether a card is being dragged anywhere on the board — gates the isOver highlight. */
   isCardBeingDragged?: boolean;
-  /** Epic 3.5: registers the card list (never the label above it) as a drag region — an expanded column's sub-row. */
+  /** Registers the card list (never the label above it) as a drag region — an expanded column's sub-row. */
   regionKey?: string;
-  /** A done sub-row: every band collapses to one (dragRegions.ts::bandFor). Ignored unless `regionKey` is set. */
+  /** A done sub-row: every band collapses to one (dragBands.ts::bandFor). Ignored unless `regionKey` is set. */
   isTerminal?: boolean;
 }
 
 // A workphase sub-header (name + count) over a CardList — the shape
 // BoardColumn's ExpandedSubRow and UnsortedBucket's workphase groups share.
-// The list itself is CardList's (audit epic-3-5-story-4 #7); this is only
-// the header and the region props' translation. Named for what the header
-// labels today; a column expanded by something other than workphase (Epic
-// 4 decisions #11) would generalize the header, not the list.
+// The list itself is CardList's; this is only the header and the region
+// props' translation.
 export default function WorkphaseCardList({
   label,
   labelClassName = DEFAULT_LABEL_CLASS,

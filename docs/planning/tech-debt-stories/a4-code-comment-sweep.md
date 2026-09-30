@@ -143,7 +143,7 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **1c-i** Board drag: the hooks | `useBoardDnd.ts`, `useItemManagement.ts`, `usePendingGhostGuard.ts` | ~410 read, 88 hits | 1b-ii |
 | **1c-ii** Board drag: the components | `KanbanCard.tsx`, `StubRows.tsx`, `dragChrome.tsx`, `BandGuides.tsx`, `BoardColumn.tsx`, `CardList.tsx`, `BoardView.tsx`, `DragTuningPanel.tsx` | ~455 read, 167 hits | 1c-i |
 | **2-i** The rest of the client: the sidebar, `lib/`, `types.ts`, `api/` | `sidebar/`, `ProjectSidebar.tsx`, `client/src/lib/hierarchy.ts`, `isStub.ts`, `types.ts`, the 14 files in `api/` | ~230 read, 48 hits | A1 |
-| **2-ii** The rest of the client: the other components | everything else in `client/src` that isn't a test: item detail, modals, the toolbar, the board-management hooks, `App.tsx` | ~270 read, 20 hits | 2-i |
+| **2-ii** The rest of the client: the other components | everything else in `client/src` that isn't a test: item detail, modals, the toolbar, the board-management hooks, `App.tsx` | ~270 read, 24 hits | 2-i |
 | **3** Server | `server/src` | ~100 | A2's other three pages |
 | **4a** Unit tests | co-located `*.test.ts(x)`, `client/src/test/`, `server/tests` | ~115 comment lines, ~34 titles | A3 (closed) |
 | **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
@@ -271,9 +271,11 @@ Filled in as the batches land:
     - a press becomes a drag only after 5px of pointer movement; less is a click, which opens the item (`useBoardDnd.ts`'s `PointerSensor` activation distance);
     - a board reload that lands mid-drag (from an earlier drop's failed or resyncing write) cancels the live drag the way Escape does (`useBoardDnd.ts::resyncBoard`);
     - columns reorder by dragging, and a column drag never runs the pop machine (`useBoardDnd.ts::handleDragEnd`'s column branch). This one may belong on boards-columns-unsorted.
-- **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root").
+- **To the Architect:** passages that belong in root `CLAUDE.md` (D5's "root"), and anything false in a `CLAUDE.md` file, which A4 doesn't edit.
+  - **`workflow/CLAUDE.md`'s module list (2-ii):** it says `DragTuningContext.ts` serves "the components that draw thresholds and bands". Its one reader is `KanbanCard.tsx`, for the zoom-in cue's timing (`cardPopInDelayMs`); the band guides don't read it. The module's own comments now say so.
 - **To Nathan, for the next story or audit:** code that looked wrong while I was reading (D3), each with its site.
   - **The project sidebar writes on a set-down in its own slot (2-i).** wiki board-drag-interaction §7.1 says an item set back down in its own gap, at its own depth, writes nothing, and the board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing, since there's no projection yet. The fix is a check against the project's own slot before `onReorderProject`, like the board's.
+  - **Two redundant keys in `ProjectPage.tsx` (2-ii), not wrong.** Its `ConfirmDeleteInline` and `ProjectOverviewTab` are each keyed on `project.id` to reset their state on a project switch, but `App.tsx` already keys the whole `ProjectPage` on the selected project, so a switch remounts both anyway. The comment at the first key said nothing else reset that state; it now says only what the key guarantees.
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
 - **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
 - **The D5 disposition table** for A2's passages.
@@ -382,3 +384,4 @@ Each section that states a rule the code enforces has at least one index pointer
 - **2026-09-29, batch 1c (Coder):** 1c split into 1c-i (the hooks) and 1c-ii (the components), at 255 hits. D4's board-drag table comes at the end of 1c-ii.
 - **2026-09-29, end of batch 1 (Coder):** the Handoff's running pointer list became D4's board-drag-interaction table, and "To the PO" gained three possible gaps.
 - **2026-09-29, batch 2 (Coder):** 2 split into 2-i (the sidebar, `lib/`, `types.ts`, `api/`) and 2-ii (the other components), at about 500 comment lines (D7). Batch 2 now also writes index pointers, and 2-i adds the project sidebar's two §7.1 pointers to D4's board-drag-interaction table.
+- **2026-09-29, end of batch 2 (Coder):** the Architect's handoff also takes false statements in a `CLAUDE.md` file, since A4 doesn't edit those (D1).
