@@ -4,23 +4,21 @@ import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchDefaultBoard } fr
 import { pickUp, hoverTo, cancel, center, seedDragTuning, NO_POP } from '../helpers/dragGesture';
 import { itemRow } from '../helpers/boardLocators';
 
-// Epic 3.5 Story 2 — docs/wiki/board-drag-interaction §4: every visible
-// target is classified against the carried item at drag start, and that
-// classification is what the board shows. Cases from
-// docs/test-plans/board-drag-interaction/drag-2-target-classification.md.
+// Every visible target is classified against the carried item at drag
+// start, and that classification is what the board shows.
 //
 // Asserts the *state* (the `data-drop-state` attribute), never the overlay's
-// look — that's Story 8's. Nothing is dropped: the drag is picked up,
+// look, which is provisional. Nothing is dropped: the drag is picked up,
 // hovered, and cancelled, so no write happens and no outcome is asserted.
 //
-// Story 4 made a Card a zoom-in target from its own containing column (wiki
-// §1.1), so a hover that lingers on a deeply-nested Stub chain's own Card
+// A Card is a zoom-in target from its own containing column, so a hover
+// that lingers on a deeply-nested Stub chain's own Card
 // (this spec's own X -> D -> D1 / T1 -> T2 -> T3 fixtures, hovered while
 // still locked to the same Todo column X started in) accumulates toward a
 // genuine pop into it — and several real pointer-move steps across several
 // hoverTo calls can accumulate enough wall-clock time to cross the default
 // `cardPopInDelayMs` (or, for a genuine cross-column hover, `popDelayMs`/
-// `popInDelayMs`). This spec was never about pop timing at all
+// `popInDelayMs`). This spec isn't about pop timing at all
 // (classification never changes mid-drag, hover or not), so it seeds
 // `NO_POP` (tests/helpers/dragGesture.ts) purely to keep an incidental pop
 // from ever firing here.
@@ -85,10 +83,10 @@ test.describe('drag-target classification', () => {
         await expect(itemRow(page, id).first()).toHaveAttribute('data-drop-state', 'cycle-forming'); // DRAG-2.2
       }
       // S is X's own attached child, so it renders only nested inside X's
-      // own card — and Story 3's carve-out addendum (2026-09-16) collapses
-      // that card's attached children while it's the one being dragged (a
-      // fixed, small ghost height for the carve-out math), so S isn't in the DOM at all right now, never
-      // mind classified. D and D1 above are unaffected: D is detached (its
+      // own card — and that card's attached children collapse while it's
+      // the one being dragged (a fixed, small ghost height for the carve-out
+      // math), so S isn't in the DOM at all right now, never mind
+      // classified. D and D1 above are unaffected: D is detached (its
       // own card, not nested under X), so neither it nor its own child D1
       // depends on X's collapse.
       await expect(itemRow(page, s.id)).toHaveCount(0);

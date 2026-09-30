@@ -23,45 +23,32 @@ import {
 import { article, column } from '../helpers/boardLocators';
 import { DRAG_REGION_ATTR, cardRegionKey, columnRegionKey } from '../../client/src/components/workflow/dragRegions';
 
-// Epic 3.5 Story 4's Column → Card zoom-in (docs/wiki/board-drag-interaction
-// §1.1, §3), reached after the drag has passed through Board layer.
+// The Column → Card zoom-in, reached after the drag has passed through
+// Board layer (DRAG-4.15 for a Card in another column).
 //
-// Regression, found in the Story 6 hands-on (2026-09-23): at Board layer
-// `DragCarveFrame` renders a column's carve-out zones and dividers around
-// its cards, which moves the cards to a different child slot, so React
-// remounts them on the way into and out of Board layer. The drag cached
-// the Card elements just before that render, so every Card in a column it
-// entered through Board layer measured as nothing and could never be
-// zoomed into. A drag that never reaches Board layer (a Stub's pops out
-// of its own Card, DRAG-5.4) doesn't remount anything and never hit it.
-// The remount itself is gone since (`DragCarveFrame` renders the cards in
-// one keyed slot, audit epic-3-5-story-6 #1); the hook still re-reads the
-// structure when a region element detaches or newly mounts.
+// A Card in a column the drag entered through Board layer must still
+// measure as a region: `DragCarveFrame` keeps a column's cards in one keyed
+// slot, so crossing Board layer doesn't remount them, and the drag re-reads
+// its structure whenever a region element detaches or newly mounts.
 //
 // `cardPopInDelayMs` is long enough that the column-layer state is still
 // there to observe (and to re-aim from) before the Card zoom-in fires. The
 // pop into a column aims at its region's center, its middle band, never
 // at a card: a column's last card can sit in its bottom band.
 //
-// Both cases below are skipped (Story 6, hands-on finding 3, 2026-09-24) —
-// a watch item, not fixed here; not Story 10's automation deferral either,
-// since the gesture itself hasn't stopped moving yet. The zoom-in candidate
-// is now the card the blue line names, held through a dwell + cue (§6
-// planned, not yet built when these were written); popping in inserts the
-// carried item's attach-preview ghost row *inside* the target Card and
-// removes its own row from the column list, which can shift the target
-// Card's rect by a full row height the instant the drag locks in. With a
-// short seeded `popDelayMs` (150ms here) and Playwright's frozen pointer
-// (never self-corrects the way a real hand's jitter would), the pop-out
-// clock this starts can undo the whole hold before the next sample
-// observes it locked in — confirmed live via a MutationObserver: the DOM
-// briefly reads `card:<id>` for ~150ms, then bounces back to the column.
-// Real usage (default `popDelayMs` 500ms) likely self-corrects long before
-// that — Story 8's own morph (roadmap: "the target card expands... the
-// carried copy shrinks into a Stub and drifts toward it") is expected to
-// settle this by not letting the target's own position move out from under
-// the cursor mid-cue. Re-enable once Story 8 lands or this is otherwise
-// confirmed fine by hand.
+// Both cases below are skipped. The zoom-in candidate is the card the blue
+// line names, held through a dwell and a cue (DRAG-4.19, DRAG-4.20);
+// popping in inserts the carried item's attach-preview ghost row *inside*
+// the target Card and removes its own row from the column list, which can
+// shift the target Card's rect by a full row height the instant the drag
+// locks in. With a short seeded `popDelayMs` (150ms here) and Playwright's
+// frozen pointer (it never self-corrects the way a real hand's jitter
+// would), the pop-out clock this starts can undo the whole hold before the
+// next sample observes it locked in: the DOM briefly reads `card:<id>` for
+// ~150ms, then bounces back to the column. Real usage (default
+// `popDelayMs` 500ms) likely self-corrects long before that. They stay
+// skipped while the target Card can move out from under the cursor
+// mid-cue, unless the gesture is confirmed fine by hand.
 
 function regionOf(group: Locator, regionKey: string): Locator {
   return group.locator(`[${DRAG_REGION_ATTR}="${regionKey}"]`);

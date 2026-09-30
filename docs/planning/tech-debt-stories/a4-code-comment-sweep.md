@@ -202,7 +202,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
   - **1b-ii:** `dragCollision.ts` line 85's range, the same way. Done differently: the comment guards one rule, so the range became that rule's pointer, §1.1 rule 1.
   - **1c-ii:** `dragChrome.tsx` line 126. Done: the zoom-in cue's comment cites §6.1.
   - **4a:** the `popSession.test.ts` title at line 198. Already cleared: A3's retitle to DRAG-1.4 dropped the pointer.
-  - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it.
+  - **4b:** `drag-card-zoom-in.spec.ts` line 49. `drag-5-stub-detach.spec.ts` line 26 also lists §6, probably for the auto-drop. Check which rule it means before changing it. Done in 4b-ii, by D2's rule for a `§N` in a test: the zoom-in spec's "§6" now cites DRAG-4.19 and DRAG-4.20, the cases for the named Card and its dwell and cue. The stub-detach header's §6 meant the auto-drop (DRAG-5.12's set-down) and the reparent into another Card (DRAG-5.4); its list of sections went, since the tests' titles already name those cases.
 
   §6 keeps the auto-drop and the pinned ghost, so a pointer to those stays, e.g. `placement.ts` line 88's "set back down".
 - **item-positioning §2 → §2.1**, the scope-change table:
@@ -230,7 +230,7 @@ A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these
   - **1c-ii:** `StubRows.tsx` line 82. Cleared in 1c-ii: DRAG-2.8 became a guard pointer to §4.
 - **Prefix-less tails in test comments,** each written out in full:
   - **4a:** `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs. Done in 4a-ii.
-  - **4b:** `drag-column-bands.spec.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"). A3's report put these in `dragBands.test.ts`, but they're in this E2E spec.
+  - **4b:** `drag-column-bands.spec.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"). A3's report put these in `dragBands.test.ts`, but they're in this E2E spec. Done in 4b-ii.
 - **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback. Done in 4b-i.
 
 ## Work, in batches
@@ -303,6 +303,8 @@ Filled in as the batches land:
   - `dragCollision.test.ts`, the Stub-row `dropAnchorFor` test: DRAG-4.8 (Automated through other tests). (4a-i)
   - `positionResolver.test.ts`, the `disclosure` block: TC-5.9 (Automated through other tests). (4a-iii)
   - `routes/items.test.ts`, the PUT cross-project reparent test: ATT-5.1 (Automated through other tests). This is the route test. (4a-iii)
+  - `drag-5-stub-detach.spec.ts`, the DRAG-5.1/DRAG-5.10 test: DRAG-1.17 (Open) for its two back-to-back pops, and ATT-7.1 (Automated) for the preserved parent. A UI test, so it counts without approval; it waits for the column after two pops' time but never observes the Card layer between them. (4b-ii)
+  - `drag-card-zoom-in.spec.ts`'s header: DRAG-4.15, DRAG-4.19 and DRAG-4.20. Both of its tests are skipped, so there's nothing to map until they run. (4b-ii)
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
 - **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
 - **The D5 disposition table** for A2's passages.

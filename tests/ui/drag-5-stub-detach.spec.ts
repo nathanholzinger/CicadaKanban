@@ -23,10 +23,7 @@ import {
 import { article, column, itemRow } from '../helpers/boardLocators';
 import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
-// Epic 3.5 Story 5 — docs/wiki/board-drag-interaction §1, §1.1, §6, §8;
-// decisions ratified 2026-09-21. Cases from
-// docs/test-plans/board-drag-interaction/drag-5-detach-and-overflow.md.
-// DRAG-5.11's own two-pop cascade timing stays manual (threshold-timed); these
+// A Stub's drag through the Descendants, Card and Column layers. The cases
 // assert reachability (`data-drag-context`) and write correctness.
 
 test.describe('Stub detach — a Stub drags through the Descendants/Card/Column layers', () => {
@@ -76,7 +73,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(updated.parentId).toBe(p.id);
     expect(updated.isAttached).toBe(1);
     // A genuine reorder committed — not the identity of "stayed exactly
-    // where it was" (decision 2).
+    // where it was".
     expect(updated.position).not.toBe(originalX.position);
 
     // Still nested — never became Free, never left the Card.
@@ -174,8 +171,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // Q sits outside P's whole card, so both pop-outs eventually fire on
-    // the shared clock, back to back, with no further pointer movement
-    // (wiki §1.1 rule 2/3) — cardPopInDelayMs is never (POP_OUT_ONLY), so
+    // the shared clock, back to back, with no further pointer movement (one
+    // layer per pop, DRAG-1.17) — cardPopInDelayMs is never (POP_OUT_ONLY), so
     // resting on Q's card at column layer goes no further.
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
@@ -191,7 +188,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     const updated = await fetchItem(request, x.id);
     expect(updated.isAttached).toBe(0); // detached
-    expect(updated.parentId).toBe(p.id); // item-attachment §11: parent preserved
+    expect(updated.parentId).toBe(p.id); // parent preserved (ATT-7.1)
     expect(updated.workphaseId).toBe(todo.id); // DRAG-5.2: already covered — no workphase change
     expect(updated.position).not.toBeNull(); // now positioned in the workflow-wide scope
 
@@ -199,15 +196,14 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(column(page, 'Todo'), 'X')).toBeVisible();
   });
 
-  // Audit epic-3-5-story-5 #2: a yank far enough to clear both the
-  // Descendants and Card layers' own pop-out distances in one pointer
-  // sample must cascade through every hop it's due for — not strand at the
-  // intermediate Card layer until a timer (disabled here — only the
-  // distance term can ever fire) self-corrects it. A release taken in that
-  // exact window is the regression's own symptom: the pre-fix code left
-  // `pop.contextKey` reporting the fully-cascaded layer while `regionsRef`
-  // stayed scoped to the intermediate one, so `placementRegion` found
-  // nothing and the release wrote nothing at all.
+  // A yank far enough to clear both the Descendants and Card layers' own
+  // pop-out distances in one pointer sample must cascade through every hop
+  // it's due for — not strand at the intermediate Card layer until a timer
+  // (disabled here — only the distance term can ever fire) self-corrects
+  // it. A release in that exact window is what shows it: with
+  // `pop.contextKey` reporting the fully-cascaded layer but the measured
+  // regions still scoped to the intermediate one, `placementRegion` would
+  // find nothing and the release would write nothing at all.
   test('DRAG-5.11, DRAG-1.14: a yank past both pop-out distances in one sample cascades Descendants -> Card -> Column, and an immediate release detaches', async ({
     page,
     request,
@@ -222,10 +218,10 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     // popDelayMs/popInDelayMs/cardPopInDelayMs are all NO_POP's "never"
     // value — nothing here can advance on a timer, or on a second
-    // pointermove (there isn't one): only the loop fix can ever move past
-    // the first hop, and only the write path's own correctness (not a
-    // `data-drag-context` read, which reported the right layer even before
-    // the fix) proves it landed with a usable region.
+    // pointermove (there isn't one): only the cascade itself can ever move
+    // past the first hop, and only the write proves it landed with a usable
+    // region — a `data-drag-context` read can report the right layer while
+    // the regions are still scoped wrong.
     await seedDragTuning(page, { ...NO_POP, popDistancePx: 10 });
     await projectSidebar.openBoard(name);
 
@@ -295,10 +291,9 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(page, 'Q').getByText('X')).toBeVisible();
   });
 
-  // Decision 4's own regression guard (2026-09-21): a Stub's row
-  // unregisters from the Descendants section and re-registers as a Card
-  // row for the same id mid-drag. If dnd-kit's own bookkeeping (or a future
-  // regression reintroducing a type/role mismatch) ever left that id
+  // A Stub's row unregisters from the Descendants section and re-registers
+  // as a Card row for the same id mid-drag. If dnd-kit's own bookkeeping
+  // (or a type/role mismatch) ever left that id
   // confused about what kind of row it now is, the *very next* drag of the
   // same item — an ordinary reorder — would be the first thing to break.
   test('immediately after a detach, the same item drags and reorders normally as a Card', async ({
@@ -335,8 +330,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // sibling list), this would either fail to move at all or collide with
     // the wrong candidates.
     // Onto P, the column's first card: dnd-kit's shuffle gives the ghost
-    // P's slot, so X lands first wherever the detach left it (Option A,
-    // 2026-09-24 — the ghost's slot decides, not a side of the card hovered).
+    // P's slot, so X lands first wherever the detach left it (the ghost's
+    // slot decides, not a side of the card hovered).
     await pickUp(page, article(page, 'X'));
     await awaitDragContext(page, columnRegionKey(todoCol.id));
     await hoverTo(page, await atFraction(article(page, 'P'), 0.5));
