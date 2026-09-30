@@ -110,8 +110,8 @@ describe('eligibleRows', () => {
     ]);
   });
 
-  // Story 6 decision 5 (fixes difference 2): dragging A excludes it and its
-  // whole subtree from candidacy, even though B/C still render (dimmed).
+  // Dragging A excludes it and its whole subtree from candidacy, even though
+  // B/C still render (dimmed).
   it('excludes the active project and its descendants', () => {
     const rows = eligibleRows(items, new Set(['A', 'B', 'C']));
     expect(rows.map(r => r.id)).toEqual(['D']);
@@ -126,9 +126,8 @@ describe('resolveGap', () => {
     expect(resolveGap(items, rows, new Set(), 'C', 'after')).toBe(3);
   });
 
-  // Story 6 decision 5: dragging A, hovering over its own dimmed descendant
-  // B resolves to the single gap the whole A/B/C block collapsed to — not a
-  // dead zone (the old "nulls the projection" behavior).
+  // Dragging A, hovering over its own dimmed descendant B resolves to the
+  // single gap the whole A/B/C block collapsed to — never a dead zone.
   it('an excluded (dimmed descendant) over id resolves to the gap the whole dragged block collapsed to', () => {
     const excludeA = new Set(['A', 'B', 'C']);
     const rowsWithoutA = eligibleRows(items, excludeA);
@@ -146,7 +145,7 @@ describe('resolveGap', () => {
   });
 });
 
-describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
+describe('fullChildrenOf — a collapsed Top', () => {
   it('returns a project’s real children regardless of collapse state', () => {
     const root = project({ id: 'root' });
     const child = project({ id: 'child', parentId: 'root' });
@@ -154,7 +153,7 @@ describe('fullChildrenOf — sidebar difference 6 (a collapsed Top)', () => {
     expect(childrenOfReal('root')).toEqual(['child']);
   });
 
-  // The bug found 2026-09-23: `root` collapsed means `child` never enters
+  // `root` collapsed means `child` never enters
   // `flatItems`/`eligibleRows`, so the gap right after `root` (Top + 1,
   // "root's first child") has no next row to read a first child off of.
   // `computeProjection` must still resolve `child` as the anchor, using

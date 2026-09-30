@@ -38,17 +38,16 @@ describe('getDescendantIds', () => {
     expect(getDescendantIds('ghost', nodes)).toEqual(new Set());
   });
 
-  // Regression coverage for audit Finding #11: a corrupted parentId cycle
-  // in the data used to make this loop forever instead of terminating.
   it('terminates instead of looping forever when the data contains a parentId cycle', () => {
     const cyclic = [node('a', 'b'), node('b', 'a')];
     expect(getDescendantIds('a', cyclic)).toEqual(new Set(['b']));
   });
 });
 
-// Epic 3.5 Story 2: the client half of docs/wiki/item-attachment §8's depth
-// math, feeding drag-target classification. Same counting convention as the
-// server's hierarchyDepth/subtreeHeight (root = 1, leaf height = 0).
+// The client half of the depth-cap math, feeding drag-target
+// classification. Same counting convention as the server's
+// `itemTree.ts::hierarchyDepth` and `subtreeHeight` (root = 1, leaf height
+// = 0).
 describe('getDepth / getSubtreeHeight', () => {
   const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
 
@@ -72,7 +71,7 @@ describe('getDepth / getSubtreeHeight', () => {
     expect(getSubtreeHeight('ghost', orphan)).toBe(0);
   });
 
-  it('both terminate against a parentId cycle (Finding #11)', () => {
+  it('both terminate against a parentId cycle', () => {
     const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
     expect(typeof getDepth('a', cyclic)).toBe('number');
     expect(getSubtreeHeight('a', cyclic)).toBe(1); // b and c are one generation; the loop back to a is skipped
@@ -103,8 +102,6 @@ describe('getAncestors', () => {
     expect(getAncestors(child, [child])).toEqual([]);
   });
 
-  // Regression coverage for audit Finding #11: a corrupted parentId cycle
-  // in the data used to make this loop forever instead of terminating.
   it('terminates instead of looping forever when the data contains a parentId cycle', () => {
     const a = node('a', 'b');
     const b = node('b', 'a');

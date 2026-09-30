@@ -97,10 +97,10 @@ describe('getWorkphaseItemsFrom', () => {
     ]);
   });
 
-  // Wiki–code reconciliation #14: a drop into a done column previews with
-  // slot 'existing', so the sort alone decides where the ghost and the
-  // pending marker draw. The server stamps completedAt on the write, so the
-  // item lands last — the preview has to say the same (drag §10).
+  // A drop into a done column previews with slot 'existing', so the sort
+  // alone decides where the ghost and the pending marker draw. The server
+  // stamps completedAt on the write, so the item lands last — the preview
+  // has to say the same (DRAG-6.11).
   it('draws an item with no completedAt at the end of a done list, where the server will stamp it', () => {
     const done = [
       item('shipped-later', { position: null, completedAt: 200 }),
@@ -177,8 +177,8 @@ describe('getAttachedChildrenFrom', () => {
     expect(getAttachedChildrenFrom(items, 'detached')).toEqual([]);
   });
 
-  // Story 5: a Stub previewing detach (`placement.parentId: null`) leaves
-  // its section immediately, the moment the drag pops out to the column —
+  // A Stub previewing detach (`placement.parentId: null`) leaves its
+  // section immediately, the moment the drag pops out to the column —
   // not only once the write lands. `renderedIsStub` reads the `parentId`
   // key's presence, not its truthiness (a `null` still means "has an
   // opinion"), which is exactly what this placement relies on.
@@ -188,8 +188,8 @@ describe('getAttachedChildrenFrom', () => {
   });
 });
 
-// Epic 3.5 Story 6 Phase B: the whole descendants section as one flat DFS
-// list, for KanbanCard.tsx's single SortableContext.
+// The whole descendants section as one flat DFS list, for KanbanCard.tsx's
+// single SortableContext.
 describe('hierarchyRows', () => {
   const items = [
     item('root'),
@@ -212,10 +212,9 @@ describe('hierarchyRows', () => {
     expect(hierarchyRows('detached-leaf', childrenOf)).toEqual([]);
   });
 
-  // KanbanCard.tsx's own attach-ghost leaf: a `childrenOf` that returns []
-  // for a specific id stops the walk there without needing a real "exclude"
-  // set — the same technique it uses to keep the active drag's own preview
-  // row non-recursive.
+  // A `childrenOf` that returns [] for a specific id stops the walk there
+  // without needing a real "exclude" set. Also relied on by KanbanCard.tsx,
+  // to keep its attach-ghost row a leaf.
   it('never recurses into an id whose childrenOf callback returns none', () => {
     const stopAtLate = (parentId: string) => (parentId === 'late' ? [] : getAttachedChildrenFrom(items, parentId));
     const rows = hierarchyRows('root', stopAtLate);
@@ -223,9 +222,9 @@ describe('hierarchyRows', () => {
   });
 });
 
-// Story 6 Phase D: the library's own `childrenOf` adapter (ids only), fed
-// straight into `flattenHierarchy`/`resolvePlacement` by `useBoardDnd.ts`'s
-// live projection — the same `getAttachedChildren`-shaped accessor
+// The placement library's own `childrenOf` adapter (ids only), fed straight
+// into the gap + depth resolution by `descendantsProjection.ts`'s live
+// projection — the same `getAttachedChildren`-shaped accessor
 // `hierarchyRows` above wraps for rendering, just without resolving back
 // to Items.
 describe('descendantsChildrenOf', () => {
@@ -247,9 +246,8 @@ describe('descendantsChildrenOf', () => {
   });
 });
 
-// Regression coverage for audit Finding #15: deleting an item previously
-// left its descendants stale in client state, rendering as live top-level
-// cards until a reload.
+// Deleting an item removes its descendants from client state too: left
+// behind, they'd render as live top-level cards until a reload.
 describe('removeItemAndDescendants', () => {
   const items = [
     item('root'),
@@ -282,7 +280,7 @@ describe('computeChildCounts', () => {
     expect(counts).toEqual({ root: 2, a: 1 });
   });
 
-  // Story 5: the count drops the moment a Stub's placement previews
+  // The count drops the moment a Stub's placement previews
   // detaching (`parentId: null`) — the same placement-aware read
   // `getAttachedChildrenFrom` uses, so the footer's "N children" and the
   // section's own rendered list can never disagree mid-drag.
@@ -293,9 +291,8 @@ describe('computeChildCounts', () => {
   });
 });
 
-// Epic 3.5 Story 3 — the ordinal placement layer (docs/wiki/item-positioning
-// §2 "Client-side role", board-drag-interaction §10). Cross-reference
-// TC-2.27–2.30, DRAG-6.1/6.2.
+// The ordinal placement layer. Cross-reference TC-2.27, TC-2.28, TC-2.29,
+// TC-2.30, DRAG-6.1, DRAG-6.2.
 describe('applyPlacements', () => {
   const sorted = () => [item('A', { position: 1 }), item('C', { position: 3 }), item('E', { position: 5 })];
   const x = () => item('X', { position: 9 });

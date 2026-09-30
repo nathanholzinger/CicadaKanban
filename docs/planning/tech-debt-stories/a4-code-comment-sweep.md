@@ -209,7 +209,7 @@ A2 moved three rules into new subsections. A comment that cites the old number s
 - **item-positioning §5 → §5.1**, reindexing must be disclosed to the caller:
   - **2:** `api/items.ts` line 9. Done in 2-i.
   - **3:** `positionResolver.ts` lines 25 and 50, `itemHierarchy.ts` line 220, `routes/items.ts` line 73. Done in 3-i.
-  - **4a:** `items.hierarchy.test.ts` lines 12 and 584 (a `describe` title), `positionResolver.test.ts` lines 99 and 103 (a `describe` title), `dragRequest.test.ts` line 296, `itemWriteReconciliation.test.ts` line 16.
+  - **4a:** `items.hierarchy.test.ts` lines 12 and 584 (a `describe` title), `positionResolver.test.ts` lines 99 and 103 (a `describe` title), `dragRequest.test.ts` line 296, `itemWriteReconciliation.test.ts` line 16. Done in 4a-ii for the two client files, both by D2's rule for a `§N` in a test: `dragRequest.test.ts`'s cites DRAG-6.7, the case its test asserts, and `itemWriteReconciliation.test.ts`'s header went, since it already names TC-5a.1 and TC-5a.2.
 
   §5 keeps the reindex itself and its two triggers.
 - **"§2 addendum" → "§2's workphase-only rule"**, still §2. The word "addendum" goes when these are rewritten: `itemListOps.ts` line 53 (1b-i, done); `routes/items.ts` line 39, `itemHierarchy.ts` line 272 and `itemPositionScope.ts` line 30 (3). Done in 3-i. `itemPositionScope.ts`'s was a tag on the workflow-wide scope, not on the workphase-only rule, so it went without a pointer: its sentence already says what it stands for, and `positionScopeFor` carries §2's pointer. "Story 3's carve-out addendum" is a different thing: provenance on board-drag §5's bands, handled like any other tag.
@@ -225,7 +225,7 @@ A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these
   - **1c-i:** `useItemManagement.ts` line 18. Cleared in 1c-i.
   - **1c-ii:** `StubRows.tsx` line 82. Cleared in 1c-ii: DRAG-2.8 became a guard pointer to §4.
 - **Prefix-less tails in test comments,** each written out in full:
-  - **4a:** `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs.
+  - **4a:** `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs. Done in 4a-ii.
   - **4b:** `drag-column-bands.spec.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"). A3's report put these in `dragBands.test.ts`, but they're in this E2E spec.
 - **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback.
 
@@ -291,6 +291,12 @@ Filled in as the batches land:
   - **The project sidebar writes on a set-down in its own slot (2-i).** wiki board-drag-interaction §7.1 says an item set back down in its own gap, at its own depth, writes nothing, and the board keeps to that (`descendantsProjection.ts::descendantsReleasePlacement`). The sidebar doesn't: once the pointer has left the project's own row and come back, `useProjectDragReorder.ts`'s `handleDragEnd` sends the move, and the server places the project between the same neighbors. Nothing visibly moves, but `position` and `updatedAt` change. A release before the pointer leaves its own row writes nothing, since there's no projection yet. The fix is a check against the project's own slot before `onReorderProject`, like the board's.
   - **The Sheet's parent picker offers parents over the depth cap (3-i).** wiki item-attachment §7 says the UI must never present a target the API would reject. `ParentSection.tsx::buildParentOptions` (through `hierarchy.ts::buildParentOptions`) leaves out the item itself and its descendants, but not a parent at which the item's subtree would exceed `ITEM_DEPTH_CAP`. Picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap: it classifies against `itemDepthCap`.
   - **Two redundant keys in `ProjectPage.tsx` (2-ii), not wrong.** Its `ConfirmDeleteInline` and `ProjectOverviewTab` are each keyed on `project.id` to reset their state on a project switch, but `App.tsx` already keys the whole `ProjectPage` on the selected project, so a switch remounts both anyway. The comment at the first key said nothing else reset that state; it now says only what the key guarantees.
+- **To the Test Reconciler, on its next run:** test comments where a wiki pointer became the case ID the test asserts (D2), though the test's title doesn't carry that ID. A comment ID doesn't count as coverage, so each case's status is unchanged. All five are internal tests; the ones in a pre-approved category may be mapped outright, and the others need Nathan's approval.
+  - `dragRequest.test.ts`, the stale-response test in `sendItemMove`: DRAG-6.7 (Open). (4a-ii)
+  - `itemListOps.test.ts`, the done-list test that draws an item with no `completedAt` last: DRAG-6.11 (Open). (4a-ii)
+  - `popSession.test.ts`, the "popping out of a context the sample has no region for" block: DRAG-1.17 (Open). (4a-i)
+  - `popSession.test.ts`, the "locked Card: zoom-in into its own Descendants section" block: DRAG-1.21's zoom-in half (Open). (4a-i)
+  - `dragCollision.test.ts`, the Stub-row `dropAnchorFor` test: DRAG-4.8 (Automated through other tests). (4a-i)
 - **To A5 (wiki and test-plan hierarchy):** every pointer A4 writes cites the wiki as it stands (D4). When A5 moves or renumbers a rule, it re-points the comments that cite it, found by searching for `wiki <page> §N`. The project sidebar's rules in board-drag-interaction §7 and §7.1 are the ones A5 already plans to move.
 - **To A6 (the Auditor):** comments whose reason I couldn't recover. The tag is gone and the site is listed here, so the dry run can look at them.
 - **The D5 disposition table** for A2's passages.

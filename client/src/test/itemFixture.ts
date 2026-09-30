@@ -2,10 +2,6 @@
 
 import type { Item } from '../types';
 
-// The one client-side Item fixture. Was three near-identical 15-field
-// literals across components/workflow/*.test.ts (audit epic-3-5-story-2
-// #5); every remaining Epic 3.5 story adds tests over Item[] fixtures.
-//
 // positionScope is server-computed in production (never hand-set by a
 // caller) — derived here from isAttached/parentId the same way the API
 // does, so fixtures stay consistent with real data instead of every test

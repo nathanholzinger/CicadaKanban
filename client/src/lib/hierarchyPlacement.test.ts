@@ -48,8 +48,8 @@ describe('flattenHierarchy', () => {
     expect(flattenHierarchy('lonely', childrenOf)).toEqual([]);
   });
 
-  // §7.2: the dragged item's whole subtree is removed from the
-  // Top/Bottom candidates before any gap is computed.
+  // The dragged item's whole subtree is removed from the Top/Bottom
+  // candidates before any gap is computed.
   it('DRAG-4.8: excludes the given ids, and never walks into their children', () => {
     const rows = flattenHierarchy('P', childrenOf, new Set(['S1']));
     expect(rows.map(r => r.id)).toEqual(['S2']);
@@ -112,8 +112,8 @@ describe('gapIndexFor', () => {
   });
 });
 
-// Audit epic-3-5-story-6 #2: a drag starts at the dragged row's own slot, so
-// a release before any movement resolves back to where it was.
+// A drag starts at the dragged row's own slot, so a release before any
+// movement resolves back to where it was.
 describe('ownSlotOf', () => {
   const all = flattenHierarchy('P', childrenOf);
 
@@ -243,11 +243,10 @@ describe('DRAG-4.11: resolvePlacement — the boundaries', () => {
   });
 });
 
-// Sidebar difference 6 (found 2026-09-23): a Top whose children are hidden
-// from `rows` (a collapsed project, or any future case where a row's real
-// children aren't all rendered) must still resolve Top + 1 to its *real*
-// first child from the full tree, never "no anchor" just because the next
-// rendered row isn't that child.
+// A Top whose children are hidden from `rows` (a collapsed project, or any
+// other case where a row's real children aren't all rendered) must still
+// resolve Top + 1 to its *real* first child from the full tree, never "no
+// anchor" just because the next rendered row isn't that child.
 describe('resolvePlacement — a Top whose children are hidden from rows (a collapsed Top)', () => {
   function fullChildrenOf(id: string | null): readonly string[] {
     if (id === null) return ['A', 'B'];
@@ -283,8 +282,7 @@ describe('resolvePlacement — a Top whose children are hidden from rows (a coll
 // enumerates a whole gap at once — the board/sidebar each resolve one depth
 // per sample — so this drives the same two production functions a caller
 // actually uses, `depthRangeFor` for the range and `resolvePlacement` per
-// depth, rather than a test-only wrapper over them (Story 6.1 Phase 0,
-// SW-3 — `tabStates`/`TabState` had no production caller and are gone).
+// depth, rather than a test-only wrapper over them.
 describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', () => {
   const rows = flattenHierarchy('P', childrenOf);
 
@@ -330,12 +328,10 @@ describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', 
   });
 });
 
-// Story 6.1 Phase 2 (L2-1): the depth step itself, generalized from the
-// sidebar's own `computeProjection` (which used to spell this same formula
-// a second time, `INDENT_WIDTH`/`null` root the only real differences) —
-// the board's `useBoardDnd.ts::updateDescendantsProjection` and the
-// sidebar's `ProjectSidebar.tsx` both call this now, supplying their own
-// `indentPx`/`rootId`.
+// The depth step itself, one formula for the board and the project sidebar,
+// each supplying its own `indentPx`/`rootId`: also read by
+// `descendantsProjection.ts::advanceProjection` and
+// `useProjectDragReorder.ts::handleDragMove`.
 describe('computeProjection', () => {
   const rows = flattenHierarchy('P', childrenOf);
   const gap = gapIndexFor(rows, 'S2', 'before'); // between S1a1 (Top, depth 2) and S2 (Bottom, depth 0) — range 0..3

@@ -13,8 +13,8 @@ import {
 const item = makeItem;
 const placements = (entries: Array<[string, Placement]>) => new Map(entries);
 
-// Epic 3.5 Story 2 — the client half of docs/wiki/item-positioning §5/§5a
-// (reindex disclosure). Cross-reference TC-5a.1 and TC-5a.2.
+// The client half of reindex disclosure. Cross-reference TC-5a.1 and
+// TC-5a.2.
 describe('applyItemWriteResponse', () => {
   const list = () => [
     item('A', { position: 1.0 }),
@@ -109,8 +109,7 @@ describe('freeItemOrder / findInversion', () => {
 describe('completeItemWrite', () => {
   // The exact object `writes.begin` would have stashed for this write — the
   // reducer only clears/tripwires when the item's current placement is
-  // still this same object, by reference (audit
-  // epic-3-5-story-3-reconciled #1).
+  // still this same object, by reference.
   const xPlacement: Placement = { slot: { anchorId: 'A', side: 'after' } };
   const pending = () =>
     withPlacement(
@@ -165,10 +164,10 @@ describe('completeItemWrite', () => {
     expect(next.placements.has('X')).toBe(false);
   });
 
-  // audit epic-3-5-story-3-reconciled #1: a response landing while the item
-  // is being re-dragged (its placement now the live ghost, not this
-  // write's marker) must not clear that ghost or log a false inversion —
-  // this write isn't the one that owns the current placement.
+  // A response landing while the item is being re-dragged (its placement
+  // now the live ghost, not this write's marker) must not clear that ghost
+  // or log a false inversion — this write isn't the one that owns the
+  // current placement.
   it("a response for a write whose placement has since been replaced (a re-drag's ghost, or a different write) applies the rows but leaves the current placement and the tripwire alone", () => {
     const liveGhost: Placement = { slot: 'first' };
     const state = withPlacement(pending(), 'X', liveGhost);

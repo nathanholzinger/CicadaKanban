@@ -3,9 +3,8 @@ import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
 import { classifyDragTargets, isValidParent, isWithinDepthCap } from './dragClassification';
 
-// Cases follow docs/test-plans/board-drag-interaction/drag-2-target-
-// classification.md (DRAG-2.n). Every depth case parameterizes on `cap`
-// rather than a literal, per DRAG-2.10.
+// Every depth case parameterizes on `cap` rather than a literal, per
+// DRAG-2.10.
 
 // Positional alias over the shared fixture — these cases only ever vary
 // parent and attachment (positionScope follows from those, per makeItem).
@@ -63,9 +62,9 @@ describe('classifyDragTargets — Card drag', () => {
     const { states, subtreeIds } = classifyDragTargets('X', items, CAP);
     for (const id of ['X', 'S', 'D', 'D1']) expect(states.get(id)).toBe('cycle-forming');
     expect(states.get('V')).toBe('valid');
-    // Story 6.1 Phase 2 (L1-7a): the one derivation of "the dragged
-    // subtree" — the same set the cycle-forming states above encode,
-    // exposed directly rather than re-derived by filtering them.
+    // The one derivation of "the dragged subtree" — the same set the
+    // cycle-forming states above encode, exposed directly rather than
+    // re-derived by filtering them.
     expect(subtreeIds).toEqual(new Set(['X', 'S', 'D', 'D1']));
   });
 

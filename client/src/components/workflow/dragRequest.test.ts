@@ -5,11 +5,8 @@ import { isIdentity, toRequest, sendItemMove } from './dragRequest';
 import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 
-// Story 4.1 Phase 3 — decision 2 (2026-09-17), replaced by Story 5
-// (2026-09-21): a placement that resolves to the item's own *origin* list
-// and ordinal writes nothing. Replaces bandDropResolution's per-case nulls
-// and resolveDropTarget's "same workphase → reorder" branch alike: both
-// were really this one rule.
+// A placement that resolves to the item's own *origin* list and ordinal
+// writes nothing.
 describe('isIdentity', () => {
   const freeOrigin: Placement = { workphaseId: 'w2', slot: 'existing' };
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
@@ -60,12 +57,10 @@ describe('isIdentity', () => {
     expect(isIdentity(freeOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
   });
 
-  // Story 5 (2026-09-21): the origin comparison retires audit
-  // epic-3-5-story-4 #1's `isAttached` guard entirely — a detached child's
-  // origin is a *workphase* placement (its own, wherever it currently sits
-  // on the board), never a `parentId` one, so it can never collide with a
-  // re-attach's `parentId` placement the way the old raw-item comparison
-  // could.
+  // A detached child's origin is a *workphase* placement (its own, wherever
+  // it currently sits on the board), never a `parentId` one, so it can never
+  // collide with a re-attach's `parentId` placement, and no `isAttached`
+  // guard is needed.
   it("a detached child re-attaching to its own former parent is not identity — its origin is a workphase placement, never that parent's", () => {
     const detachedChildOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
     expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
@@ -73,21 +68,19 @@ describe('isIdentity', () => {
   });
 
   // DRAG-5.12: a Stub released at its own containing Card's layer previews
-  // `origin` itself (popSession.ts) — proving that's recognized as identity
-  // here too, not just structurally equal by construction.
+  // `origin` itself (`placement.ts::placementFor`'s Card branch) — proving
+  // that's recognized as identity here too, not just structurally equal by
+  // construction.
   it("DRAG-5.12: a Stub's own origin, placed back at itself, is identity — the set-back-down", () => {
     const stubOrigin: Placement = { parentId: 'card-p', slot: 'existing' };
     expect(isIdentity(stubOrigin, stubOrigin, others)).toBe(true);
   });
 });
 
-// TC-2.11, DRAG-3.1, DRAG-3.2, DRAG-3.6, DRAG-3.7, DRAG-3.9, DRAG-3.10, and
-// DRAG-5.1, DRAG-5.2, DRAG-5.4, DRAG-5.9: the request a resolved placement
-// turns into — the one adapter from the ghost's own terms to the item's,
-// replacing resolveDropTarget + buildMoveInput's independent re-derivation
-// (F3). `item` is now only consulted for its own current `workphaseId`
-// (whether the field is worth sending); the identity check itself is
-// `origin`'s job (`isIdentity`, tested above).
+// The request a resolved placement turns into — the one adapter from the
+// ghost's own terms to the item's. `item` is only consulted for its own
+// current `workphaseId` (whether the field is worth sending); the identity
+// check itself is `origin`'s job (`isIdentity`, tested above).
 describe('TC-2.11: toRequest', () => {
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
@@ -194,9 +187,8 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  // Story 5 decision 1: a Descendants-layer sibling reorder — same parent
-  // as `origin`'s own, an anchor slot — sends only the anchor + side, the
-  // pre-Story-5 attached-child request shape unchanged. Nothing about the
+  // A Descendants-layer sibling reorder — same parent as `origin`'s own, an
+  // anchor slot — sends only the anchor + side. Nothing about the
   // attachment itself is in this request; only the ordinal is.
   it('DRAG-5.5: a Descendants-layer sibling reorder (parentId matching origin, an anchor slot): sends only the anchor + side', () => {
     const origin = stubOrigin('card-p');
@@ -208,9 +200,9 @@ describe('TC-2.11: toRequest', () => {
     ).toEqual({ anchorId: 'S2', side: 'after' });
   });
 
-  // DRAG-5.1, DRAG-5.2, DRAG-5.3: detaching (`parentId: null` on the placement — the render-
-  // preview signal) never sends a `parentId` field at all — item-
-  // attachment §11's "detach preserves the parent," so the real parentId
+  // DRAG-5.1, DRAG-5.2, DRAG-5.3: detaching (`parentId: null` on the
+  // placement — the render-preview signal) never sends a `parentId` field
+  // at all: a detach preserves the parent (ATT-7.1), so the real parentId
   // stays whatever it already is; only `isAttached: false` is explicit.
   it('DRAG-5.1: detach (parentId: null on the placement): isAttached false, plus the anchor/workphase resolution otherwise', () => {
     const origin = stubOrigin('card-p');
@@ -236,15 +228,11 @@ describe('TC-2.11: toRequest', () => {
     ).toEqual({ isAttached: false, anchorId: 'Q', side: 'after' });
   });
 
-  // Audit epic-3-5-story-5 #3: this branch used to key on the *slot's own
-  // shape* (`typeof slot === 'object'`), not the parent equality its own
-  // comment stated — a proxy that happened to hold because Story 5's own
-  // Descendants branch is the only producer of an anchor-shaped slot
-  // alongside a `parentId`, and it always sets `parentId: origin.parentId`.
-  // Story 6's reparent-with-placement (a different Card's Stubs) breaks
-  // that coincidence: a genuinely different parent, still an anchor slot —
-  // this must be a full reparent (parentId + isAttached + the anchor), not
-  // a bare position-only reorder that silently drops the attachment change.
+  // A genuinely different parent with an anchor slot (a reparent into
+  // another Card's Stubs) must be a full reparent (parentId + isAttached +
+  // the anchor), not a bare position-only reorder that silently drops the
+  // attachment change. The branch keys on parent equality, never on the
+  // slot's own shape.
   it('a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder', () => {
     const origin = stubOrigin('card-p');
     expect(
@@ -258,16 +246,14 @@ describe('TC-2.11: toRequest', () => {
   });
 });
 
-// Extracted from useBoardDnd's handleDragEnd so the "server
-// resolution is authoritative over a stale client guess, resync via
-// loadBoard() on failure" contract can be unit tested directly — no
-// dnd-kit runtime or rendered component needed, per the same reasoning
-// this whole module already exists for (see its header comment).
+// The "server resolution is authoritative over a stale client guess, resync
+// via loadBoard() on failure" contract, tested directly — no dnd-kit
+// runtime or rendered component needed.
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
-  // Story 4.1 Phase 3: the pending marker is just the placement that
-  // produced `input` (toRequest's own input) — no separate re-derivation
-  // (F3) — so this is pinned directly rather than built from a function.
+  // The pending marker is just the placement that produced `input`
+  // (toRequest's own input), never a separate derivation, so this is
+  // pinned directly rather than built from a function.
   const pending: Placement = { workphaseId: 'wp-2', slot: { anchorId: 'anchor-1', side: 'after' } };
   const fakeItem = (id: string) => makeItem(id, { isAttached: 0, workphaseId: 'wp-2', position: 1.5 });
   const tracker = () => ({
@@ -308,12 +294,12 @@ describe('sendItemMove', () => {
     consoleError.mockRestore();
   });
 
-  // Reconciliation #15: the row itself is rightly dropped whole when the
-  // response is stale (a newer write for the same item superseded it) —
-  // but if it also disclosed a reindex, those pairs renumbered other rows
-  // for real, and losing them silently is the exact wrong-looking-
-  // consistent failure item-positioning §5 warns about. The tracker is the
-  // one that knows staleness; this only has to act on what it reports.
+  // The row itself is rightly dropped whole when the response is stale (a
+  // newer write for the same item superseded it), but if it also disclosed
+  // a reindex, those pairs renumbered other rows for real, and losing them
+  // silently leaves a list that looks consistent and isn't (DRAG-6.7). The
+  // tracker is the one that knows staleness; this only has to act on what
+  // it reports.
   it("a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);

@@ -17,8 +17,8 @@ import {
   threeColumnBoard,
 } from '../../test/popFixtures';
 
-// docs/wiki/board-drag-interaction §1–§3, §5. Cases from DRAG-1 and DRAG-3,
-// every threshold parameterized on the tuning value, never 0.5 s.
+// Every threshold reads its tuning value, never a pinned number such as
+// 0.5 s, so the tests hold at any tuning.
 
 // The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin.
 const { A, B, regions, points } = threeColumnBoard();
@@ -29,11 +29,11 @@ const IN = tuning.popInDelayMs;
 
 describe('placementFor', () => {
   const activeWorkphase = A.coveredWorkphaseIds[0];
-  // Every pre-Story-5 case here is a Free Card drag: `origin` names its own
-  // workphase, and `containingCardId` is null throughout (a Free Card never
-  // has one) — neither ever changes the outcome of these cases (both only
-  // ever matter for the Card/Descendants branches, exercised in their own
-  // describe block below). `subject` builds that drag — a Free Card of
+  // Every case before the Stub-drag block is a Free Card drag: `origin`
+  // names its own workphase, and `containingCardId` is null throughout (a
+  // Free Card never has one) — neither ever changes the outcome of these
+  // cases (both only ever matter for the Card/Descendants branches,
+  // exercised in their own describe blocks below). `subject` builds that drag — a Free Card of
   // `activeWorkphase` at position 1, its own origin — with any field overridden.
   interface SubjectFields {
     workphaseId?: string | null;
@@ -55,10 +55,10 @@ describe('placementFor', () => {
     });
   });
 
-  // Story 4.1 Phase 3: `over` is release-only (decision 1 — mid-drag,
-  // sortable draws the slot and the ghost just sits at 'existing', tested
-  // above with no `over` at all). These are what useBoardDnd.ts's
-  // handleDragEnd actually calls once a real drop has resolved.
+  // `over` is release-only: mid-drag, sortable draws the slot and the ghost
+  // just sits at 'existing' (tested above with no `over` at all). These are
+  // the calls `useBoardDnd.ts::handleDragEnd` makes once a real drop has
+  // resolved.
   describe('over (release, in-context)', () => {
     it('DRAG-1.4, TC-2.11: a specific card: the anchor + side dnd-kit resolved, under its own workphase', () => {
       expect(
@@ -134,10 +134,10 @@ describe('placementFor', () => {
     }
   });
 
-  // Reconciliation #29, the mirror of #14: no position to keep — a
-  // reopened done item, a first-time assignment — takes the append
-  // fallback instead of the position-sort's null-coerced top slot, in
-  // either of the two places band resolution lands on 'existing'.
+  // No position to keep — a reopened done item, a first-time assignment —
+  // takes the append fallback instead of the position-sort's null-coerced
+  // top slot, in either of the two places band resolution lands on
+  // 'existing'.
   it('DRAG-6.10: Board layer — an active region with no anchor previews last, not existing, when the item has no position to keep', () => {
     expect(placementFor(subject(hoverAt(bMiddle), { position: null }), regions)).toEqual({
       workphaseId: B.targetWorkphaseId,
@@ -163,11 +163,11 @@ describe('placementFor', () => {
     expect(placementFor(subject(startPopSession(null)), regions)).toBeNull();
   });
 
-  // re-picking up an item whose
-  // earlier write is still pending (or popping back into the context it
-  // started in) must not recompute a fresh slot from the raw, possibly
-  // stale item — that jumps the ghost. The prior placement wins whenever
-  // there's no hover to say otherwise, in the list it draws the item in.
+  // Re-picking up an item whose earlier write is still pending (or popping
+  // back into the context it started in) must not recompute a fresh slot
+  // from the raw, possibly stale item — that jumps the ghost. The prior
+  // placement wins whenever there's no hover to say otherwise, in the list
+  // it draws the item in.
   describe('DRAG-6.13: priorPlacement (a re-dragged item)', () => {
     const prior: Placement = { workphaseId: activeWorkphase, slot: { anchorId: 'other-item', side: 'after' } };
 
@@ -180,9 +180,9 @@ describe('placementFor', () => {
       );
     });
 
-    // X's move to B is pending, so
-    // it's drawn in B (and its drag reads B's workphase, as drawn). Carried
-    // back and locked in A, the ghost is A's to draw, not left behind in B.
+    // X's move to B is pending, so it's drawn in B (and its drag reads B's
+    // workphase, as drawn). Carried back and locked in A, the ghost is A's
+    // to draw, not left behind in B.
     it("locked in a list the prior placement doesn't draw it in, it gives way to that list's own slot", () => {
       const inB = B.targetWorkphaseId;
       const pendingInB: Placement = { workphaseId: inB, slot: { anchorId: 'other-item', side: 'after' } };
@@ -235,9 +235,8 @@ describe('placementFor', () => {
     });
   });
 
-  // Story 5 (2026-09-21): a Stub's own origin (`{parentId, slot: 'existing'}`)
-  // through the Card and Descendants branches — DRAG-5.1, DRAG-5.2, DRAG-5.4,
-  // DRAG-5.5, DRAG-5.9, DRAG-5.12.
+  // A Stub's own origin (`{parentId, slot: 'existing'}`) through the Card and
+  // Descendants branches, and out into a card list.
   describe('a Stub drag (origin carries parentId)', () => {
     const P = 'card-p';
     const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
@@ -299,15 +298,13 @@ describe('placementFor', () => {
     });
   });
 
-  // Story 6 Phase D — a Descendants section reached by a *foreign* item
-  // (never possible before this phase, since only the origin's own section
-  // ever resolved a `descendants:` region at all): `region.cardId` differs
-  // from `containingCardId` (null for a Free Card; a different Card for a
-  // Stub detaching and reparenting), so the mid-drag ghost previews
+  // A Descendants section reached by a *foreign* item: `region.cardId`
+  // differs from `containingCardId` (null for a Free Card; a different Card
+  // for a Stub detaching and reparenting), so the mid-drag ghost previews
   // attaching as the section's own Card's last child — mirroring the Card
   // branch's own `attachToCardId === containingCardId` distinction one
-  // layer up. This branch never actually sees a real `over` (release goes
-  // through `releaseDescendants` instead, Story 6.1 Phase 0 L1-5).
+  // layer up. This branch never actually sees a real `over`: a release goes
+  // through `useBoardDnd.ts::releaseDescendants` instead.
   describe('a Descendants section reached by a foreign item', () => {
     const Q = 'card-q';
     const descendantsQ = descendantsRegion(Q, rect(0, 0, 100, 200));
@@ -353,7 +350,7 @@ describe('placementFor', () => {
   });
 });
 
-// Story 6 Phase C: which form the carried copy draws as — a pure read of
+// Which form the carried copy draws as — a pure read of
 // `placementRegion`'s own result, per layer, and across a real pop-in and
 // pop-out (not just two isolated `startPopSession` fixtures) so the
 // transition itself is covered, not only its two endpoints.
@@ -384,7 +381,7 @@ describe('overlayFormFor', () => {
 
   it('across a real pop-in (Column → Card) and pop-out (Card → Column), the form switches both ways', () => {
     const allRegions = [...regions, cardP, descendantsP];
-    const inCard = { x: 50, y: 100 }; // still inside column A throughout — irrelevant to *which* Card is targeted (finding 3)
+    const inCard = { x: 50, y: 100 }; // still inside column A throughout — irrelevant to *which* Card is targeted
     const outsideCard = { x: 500, y: 500 }; // outside every region
     const namedAtP = { anchorId: P, side: 'after' as const };
     const total = tuning.cardZoomDwellMs + tuning.cardPopInDelayMs;
@@ -392,9 +389,9 @@ describe('overlayFormFor', () => {
     let s = startPopSession(A.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
 
-    // Zoom in to the Card (Story 6, finding 3: the *named* relation
-    // dropAnchorFor answers with, held through the dwell and the cue —
-    // not a hit test on where the cursor physically rests).
+    // Zoom in to the Card: the *named* relation dropAnchorFor answers with,
+    // held through the dwell and the cue — not a hit test on where the
+    // cursor physically rests.
     s = advancePopSession(s, inCard, allRegions, tuning, metrics, 0, namedAtP);
     s = advancePopSession(s, inCard, allRegions, tuning, metrics, total, namedAtP);
     expect(s.contextKey).toBe(cardP.key);
@@ -408,9 +405,8 @@ describe('overlayFormFor', () => {
   });
 });
 
-// Story 6.1 Phase 2 (carried structural finding, Story 4 audit #18 → Story
-// 5 audit #19): the release-only anchor/bare-container distinction, beside
-// placementFor's own mid-drag half.
+// The release-only anchor/bare-container distinction, beside placementFor's
+// own mid-drag half.
 describe('resolvePlacementOver', () => {
   const list = { containerId: 'column:a' };
 
