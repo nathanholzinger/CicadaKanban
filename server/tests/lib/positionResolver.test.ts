@@ -45,9 +45,10 @@ async function seedRootProjects(count: number) {
   return created;
 }
 
-// Root-scope predicate for these tests — same shape as projects.ts's
-// projectPositionScope(null), duplicated here (not imported) since it's a
-// one-line route-owned helper, not part of the lib's public surface.
+// Root-scope predicate for these tests — same shape as
+// `routes/projects.ts::projectPositionScope` with a null parent, duplicated
+// here (not imported) since it's a one-line route-owned helper, not part of
+// the lib's public surface.
 const rootScope = isNull(projects.parentId);
 
 describe('coarsestFit', () => {
@@ -78,7 +79,7 @@ describe('coarsestFit', () => {
   });
 });
 
-describe('reindexScope', () => {
+describe('reindex', () => {
   it('TC-5.6: breaks exact ties by createdAt, oldest first', async () => {
     const { phase, items: created } = await seedPhaseWithItems(4);
     setPosition(created[0].id, 5.0);
@@ -100,10 +101,9 @@ describe('reindexScope', () => {
     expect(getPosition(created[0].id)).toBe(4);
   });
 
-  // docs/wiki/item-positioning §5 "Reindexing must be disclosed to the
-  // caller" (Epic 3.5): a caller that mixes one fresh number into stale
-  // ones computes an ordering that is wrong while looking consistent, so
-  // the resolver must report every row it renumbered.
+  // A caller that mixes one fresh number into stale ones computes an
+  // ordering that is wrong while looking consistent, so the resolver must
+  // report every row it renumbered (TC-5.9).
   describe('disclosure', () => {
     it('reports every renumbered row, in scope order, as bare {id, position} pairs (tight-gap trigger)', async () => {
       const { phase, items: created } = await seedPhaseWithItems(3);
@@ -152,7 +152,7 @@ describe('reindexScope', () => {
   });
 });
 
-describe('resolveAnchorPosition', () => {
+describe('resolvePositionByAnchorAndSide', () => {
   it('TC-2.2: coarsest-fits between the anchor and its true next neighbor', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
     setPosition(created[0].id, 1.5);
@@ -165,9 +165,9 @@ describe('resolveAnchorPosition', () => {
   });
 
   it('TC-2.9: finds the true neighbor even when it is not the literal next row created', async () => {
-    // Regression for the narrow-view leapfrog bug: the true bounding
-    // neighbor must be found by querying real data, not assumed from
-    // creation order or a caller-supplied guess.
+    // The true bounding neighbor must be found by querying real data, not
+    // assumed from creation order or a caller-supplied guess, which a
+    // narrow view would leapfrog.
     const { phase, items: created } = await seedPhaseWithItems(3);
     setPosition(created[0].id, 1.0);
     setPosition(created[1].id, 2.8);
@@ -275,7 +275,7 @@ describe('resolveAppendPosition', () => {
 
   it('TC-2.7: treats a scope holding only null-positioned rows the same as a genuinely empty one', async () => {
     // A scope isn't only ever empty or fully-positioned — a done item keeps
-    // its row (null position, real completedAt instead, per Part 6) inside
+    // its row (null position, real completedAt instead) inside
     // the same workflow-wide scope active items compare against. If every
     // row currently matching the scope happens to be one of these (e.g. the
     // whole workflow's non-attached items are done), appending must still
@@ -341,14 +341,13 @@ describe('resolveAppendPosition', () => {
   });
 });
 
-// Same resolver, a second table — proves the table-generic generalization
-// (projects unification) didn't just happen to keep items working; it
-// genuinely serves any table matching PositionedTable. Not a full re-run of
+// Same resolver, a second table — proves it genuinely serves any table
+// matching PositionedTable, not only items. Not a full re-run of
 // every items case above, just enough of each function's core contract to
 // confirm it holds for a table with a different shape (no isAttached/
 // workphaseId, root scope instead of a workphase scope).
 describe('positionResolver against the projects table', () => {
-  describe('reindexScope', () => {
+  describe('reindex', () => {
     it('reassigns clean sequential positions while preserving relative order', async () => {
       const created = await seedRootProjects(4);
       setProjectPosition(created[0].id, 5.001);
@@ -365,7 +364,7 @@ describe('positionResolver against the projects table', () => {
     });
   });
 
-  describe('resolveAnchorPosition', () => {
+  describe('resolvePositionByAnchorAndSide', () => {
     it('coarsest-fits between the anchor and its true next neighbor', async () => {
       const created = await seedRootProjects(2);
       setProjectPosition(created[0].id, 1.5);

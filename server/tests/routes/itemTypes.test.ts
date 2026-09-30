@@ -40,10 +40,8 @@ describe('PUT /api/item-types/:id', () => {
     expect(res.body.color).toBe('#0000ff');
   });
 
-  // Regression coverage for audit Finding #18: `name.trim()` was called
-  // unguarded, so a non-string/null name threw a TypeError -> 500 instead
-  // of a 400, and an empty/whitespace name was silently accepted here even
-  // though POST rejects one.
+  // PUT rejects an empty or whitespace name, as POST does, and a
+  // non-string/null name is a 400 rather than a TypeError's 500.
   it('returns 400 instead of a 500 when name is null', async () => {
     const type = await createItemType();
     const res = await request(app).put(`/api/item-types/${type.id}`).send({ name: null });

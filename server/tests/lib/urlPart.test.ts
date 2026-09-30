@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { urlPart } from '../../src/lib/urlPart.js';
 
-// Regression coverage for audit Finding #19: mcp.ts interpolated tool
-// arguments into request paths/query values unescaped, so an id containing
-// `/`, `?`, or `#` would silently retarget the request to a different
+// An id containing `/`, `?`, or `#`, interpolated unescaped into a request
+// path or query value, would silently retarget the request to a different
 // endpoint. Lives in its own test file (rather than a mcp.ts test) because
 // mcp.ts opens a stdio transport as a side effect of being imported.
 describe('urlPart', () => {

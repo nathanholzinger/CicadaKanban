@@ -32,7 +32,7 @@ describe('effectiveWorkflowIdForProject', () => {
     expect(effectiveWorkflowIdForProject(child.id)).toBeNull();
   });
 
-  it('terminates against a parentId cycle in the projects table (Finding #11)', async () => {
+  it('terminates against a parentId cycle in the projects table', async () => {
     const a = await createProject({ name: 'A' });
     const b = await createProject({ name: 'B', parentId: a.id });
     db.update(projects).set({ parentId: b.id }).where(eq(projects.id, a.id)).run();

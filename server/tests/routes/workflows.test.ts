@@ -57,10 +57,6 @@ describe('GET /api/workflows/:id', () => {
     expect(items.find(i => i.id === child.id)?.depth).toBe(1);
   });
 
-  // Regression coverage for audit Finding #11: addDepths' recursive
-  // getDepth only cached a node's result *after* its recursive call
-  // returned, so a corrupted parentId cycle in the data would recurse
-  // forever instead of returning.
   it('returns a bounded depth instead of hanging when the data contains a parentId cycle', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -77,8 +73,6 @@ describe('GET /api/workflows/:id', () => {
     expect(typeof items.find(i => i.id === b.id)?.depth).toBe('number');
   });
 
-  // Regression coverage for audit Finding #17: this was the one read path
-  // with no positionScope attached at all.
   it('attaches positionScope to every item, matching GET /api/items/:id for the same rows', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -110,9 +104,9 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(400);
   });
 
-  // Regression coverage for audit Finding #13: these previously either hit
-  // the projectId FK constraint (opaque 500) or silently created a
-  // zero-workphase workflow (templateId/sourceWorkflowId aren't FKs).
+  // Unchecked, a bad projectId hits the FK constraint (an opaque 500), and a
+  // bad templateId or sourceWorkflowId (neither is an FK) silently creates a
+  // zero-workphase workflow.
   it('returns 400 with a specific message when projectId does not reference an existing project', async () => {
     const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: 'does-not-exist' });
     expect(res.status).toBe(400);
@@ -237,7 +231,7 @@ describe('DELETE /api/workflows/:id', () => {
     expect(itemRes.body.workphaseId).toBeNull();
   });
 
-  it('does not fail on cross-project items inheriting the workflow (finding #1 regression)', async () => {
+  it('does not fail on cross-project items inheriting the workflow', async () => {
     // A child project with no workflow of its own inherits the parent's; an item
     // in the child sits in one of the (parent) workflow's workphases.
     const parent = await createProject();
@@ -246,7 +240,7 @@ describe('DELETE /api/workflows/:id', () => {
     const child = await createProject({ parentId: parent.id });
     const crossProjectItem = await createItem({ projectId: child.id, workphaseId: workphase.id });
 
-    // Previously this threw an FK-violation 500 and left the DB half-torn-down.
+    // Not an FK-violation 500 that leaves the DB half-torn-down.
     const res = await request(app).delete(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(204);
 

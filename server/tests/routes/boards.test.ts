@@ -89,9 +89,9 @@ describe('GET /api/boards/:id', () => {
     expect(res.body.unsorted.uncovered[0].items.map((i: { id: string }) => i.id)).toEqual([item2.id]);
   });
 
-  // Epic 3.5 Story 2: the client's drag-target classification reads the cap
-  // off the board rather than hard-coding it (DRAG-2.10 — one constant moves
-  // both enforcement points).
+  // The client's drag-target classification reads the cap off the board
+  // rather than hard-coding it (DRAG-2.10 — one constant moves both
+  // enforcement points).
   it('DRAG-2.10: carries the item depth cap the API enforces', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -115,7 +115,7 @@ describe('GET /api/boards/:id', () => {
     await createColumn(boardOne.id, todo.id, todo.id);
 
     // A second, wholly independent board on the same workflow — position
-    // is a single item-owned scalar (wiki §1), not a per-board value;
+    // is a single item-owned scalar, not a per-board value;
     // boards only ever read it, never own their own copy.
     const boardTwo = await createBoard(workflow.id, { name: 'Second Board' });
     await createColumn(boardTwo.id, todo.id, todo.id);

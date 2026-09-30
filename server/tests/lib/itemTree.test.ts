@@ -26,10 +26,10 @@ async function seedCyclicPair() {
   return { a, b };
 }
 
-// Regression coverage for audit Finding #11. Every case here would hang
-// forever (not merely time out — a synchronous infinite loop blocks the
-// whole process) without the visited-set guard, so these are as much a
-// smoke test that the suite itself completes as they are assertions.
+// Every case here would hang forever (not merely time out — a synchronous
+// infinite loop blocks the whole process) without the visited-set guard, so
+// these are as much a smoke test that the suite itself completes as they
+// are assertions.
 describe('cycle guards', () => {
   it('assertValidReparent (via isSelfRefDescendant) terminates against a parentId cycle', async () => {
     const { a } = await seedCyclicPair();
@@ -68,10 +68,9 @@ async function seedChain(projectId: string, length: number) {
   return chain;
 }
 
-// docs/wiki/item-attachment §8. Every case parameterizes on ITEM_DEPTH_CAP
-// rather than a literal so Story 7 can change the value without touching
-// these (DRAG-2.10).
-describe('depth cap (wiki item-attachment §8)', () => {
+// Every case parameterizes on ITEM_DEPTH_CAP rather than a literal, so the
+// value can change without touching these (DRAG-2.10).
+describe('depth cap', () => {
   it('ATT-4.6: a root item is at depth 1 and a leaf has height 0', async () => {
     const project = await createProject();
     const root = await createItem({ projectId: project.id, title: 'R' });
@@ -119,7 +118,7 @@ describe('depth cap (wiki item-attachment §8)', () => {
     expect(assertWithinDepthCap(overCap.id, null)).toMatch(/exceeds the cap/);
   });
 
-  it('an already-over-cap subtree is refused for every target, even a root (§8 strict)', async () => {
+  it('an already-over-cap subtree is refused for every target, even a root', async () => {
     const project = await createProject();
     // Subtree of height CAP (CAP + 1 items in a chain) — seeded directly,
     // since no write path could have produced it.

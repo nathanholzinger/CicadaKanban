@@ -52,9 +52,6 @@ describe('GET /api/items/:id', () => {
     expect(childRes.body.workflowId).toBeNull();
   });
 
-  // Regression coverage for audit Finding #11: computeDepth used to walk
-  // the parent chain with no cycle guard — a corrupted parentId cycle in
-  // the data would hang this request forever instead of returning.
   it('returns a bounded depth instead of hanging when the data contains a parentId cycle', async () => {
     const project = await createProject();
     const a = await createItem({ projectId: project.id, title: 'A' });
@@ -159,8 +156,7 @@ describe('PUT /api/items/:id', () => {
     expect(res.body.description).toBe('Original desc');
   });
 
-  // Regression coverage for audit Finding #18: PUT let an empty title through
-  // unvalidated even though POST rejects one.
+  // PUT rejects an empty title, as POST does.
   it('returns 400 and leaves the title unchanged when title is set to an empty string', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id, title: 'Keep Me' });
@@ -282,7 +278,7 @@ describe('PATCH /api/items/:id/move', () => {
     const res = await request(app).patch(`/api/items/${moving.id}/move`).send({ workphaseId: inProgress.id });
     expect(res.status).toBe(200);
     expect(res.body.workphaseId).toBe(inProgress.id);
-    // Position is workflow-scoped, not workphase-scoped (de80b59) — an
+    // Position is workflow-scoped, not workphase-scoped — an
     // existing value is already comparable against everything else in the
     // workflow, so a bare workphaseId change doesn't get a fresh one.
     expect(res.body.position).toBe(7.5);
@@ -474,8 +470,7 @@ describe('position resolution', () => {
   it('TC-2.7, TC-2.18, TC-3.4: POST scopes a new attached child to its true siblings, not the whole workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     // Unrelated top-level items sharing the workphase must not pollute the
-    // new child's position (the pre-Epic-3.2 bug: nextPosition was scoped
-    // only to workphaseId).
+    // new child's position, as they would if the scope were the workphase.
     await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Unrelated 1' });
     await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Unrelated 2' });
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
@@ -671,8 +666,6 @@ describe('position resolution', () => {
     expect(res.status).toBe(400);
   });
 
-  // Regression coverage for audit Finding #7: the anchor's position scope
-  // was never checked against the subject's resulting scope.
   describe("move rejects an anchorId outside the subject's position scope", () => {
     // What a refused move would have changed: none of it did.
     const unchanged = (item: { parentId: string | null; workphaseId: string | null; position: number | null }) => ({
@@ -789,10 +782,10 @@ describe('position resolution', () => {
     expect(res.body.positionScope).toBe('attached-siblings');
   });
 
-  // Regression coverage for audit Finding #17: GET /:id's children array used
-  // to compute positionScope with a query per child; exercise two distinct
-  // workphases across parent + children in one response to catch a batching
-  // regression that only shows up with more than one workphaseId involved.
+  // GET /:id computes every child's positionScope from one batched
+  // workphase lookup; two distinct workphases across parent + children in
+  // one response catch a batching mistake that only shows up with more than
+  // one workphaseId involved.
   it('GET attaches positionScope to the item and to every child in its children array', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
@@ -859,7 +852,7 @@ describe('position resolution', () => {
       const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
       expect(res.status).toBe(200);
 
-      // Precision exhausted between T1 and T2 -> reindexScope ran over the
+      // Precision exhausted between T1 and T2 -> the reindex ran over the
       // full workflow-wide scope (positionScopeFor), not just `todo` ->
       // T1/T2/P1 all land as clean sequential integers in one pass, then
       // Mover's insert retries and resolves the now-open T1/T2 gap.
@@ -876,19 +869,14 @@ describe('position resolution', () => {
       ]);
     });
 
-    // Regression guard for a real bug found 2026-08-18: positionScopeFor's
-    // workflow-wide scope includes terminal workphase ids with no
-    // isTerminal filter, so a done item (position: null) was a scope
-    // member by workphaseId alone. reindexScope ordered by
-    // asc(items.position) with no NULL filter, and SQLite sorts NULL
-    // first in ASC order — so a done item sorted first and got a real
-    // position written by reindexScope, contradicting Part 6 ("done items
-    // get no stored position"). Fixed by filtering
-    // isNotNull(items.position) directly in reindexScope (positionResolver.ts)
-    // — the one place in the resolution path not already protected by
-    // ordinary SQL null comparisons (gt()/lt() against a real value can
-    // never match a null position, so the append/anchor neighbor-lookup
-    // queries were never at risk; this blind order-and-renumber loop was).
+    // positionScopeFor's workflow-wide scope includes terminal workphase ids
+    // with no isTerminal filter, so a done item (position: null) is a scope
+    // member by workphaseId alone. SQLite sorts NULL first in ASC order, so
+    // a reindex that orders by position without its own isNotNull filter
+    // would give that done item a real position, when a done item has none.
+    // The neighbor lookups are safe on their own (gt()/lt() against a real
+    // value never match a null); the reindex's order-and-renumber pass is
+    // the one step that needs the filter.
     it('TC-5.5: excludes a done item from an active-scope reindex', async () => {
       const { project, todo, inProgress, done } = await setupThreePhases();
 
@@ -1203,9 +1191,9 @@ describe('attached children', () => {
     const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: inProgress.id });
     expect(res.status).toBe(200);
 
-    // cascadeWorkphaseToAttachedDescendants only ever sets {workphaseId,
-    // updatedAt} on a cascaded child — position is a separate, untouched
-    // axis regardless of how many times the parent's workphase changes.
+    // A cascade only ever writes {workphaseId, updatedAt} on a cascaded
+    // child — position is a separate, untouched axis regardless of how many
+    // times the parent's workphase changes.
     const updatedChild = await request(app).get(`/api/items/${child.id}`);
     expect(updatedChild.body.workphaseId).toBe(inProgress.id);
     expect(updatedChild.body.position).toBe(child.position);
@@ -1220,15 +1208,14 @@ describe('attached children', () => {
 
     const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: done.id });
     expect(res.status).toBe(200);
-    // The parent itself does go through Part 6's active->done transition...
+    // The parent itself does go through the active->done transition...
     expect(res.body.position).toBeNull();
     expect(res.body.completedAt).toBeGreaterThan(0);
 
     // ...but the attached child's own scope is (parentId, isAttached), never
-    // workphaseId — Part 6's done-tracking is explicitly detached/root-only
-    // (items.ts: "Attached items don't participate in Part 6's
-    // done-tracking"), so its position and completedAt are untouched even
-    // though its cascaded workphaseId is now terminal.
+    // workphaseId, and done-tracking is for Free items only, so its position
+    // and completedAt are untouched even though its cascaded workphaseId is
+    // now terminal.
     const updatedChild = await request(app).get(`/api/items/${child.id}`);
     expect(updatedChild.body.workphaseId).toBe(done.id);
     expect(updatedChild.body.position).toBe(child.position);
@@ -1370,11 +1357,10 @@ describe('attached children', () => {
     expect(res.body.error).toMatch(/parentId/i);
   });
 
-  // Superseded (Epic 3.5): the same-project restriction from finding #11 is
-  // lifted — a cross-project reparent is accepted and the child takes the
-  // parent's project (docs/wiki/item-attachment §9). The full cascade cases
-  // live in items.hierarchy.test.ts; this pins the PUT entry point.
-  it('accepts reparenting under a parent in a different project and adopts its projectId (wiki §9)', async () => {
+  // A cross-project reparent is accepted and the child takes the parent's
+  // project (ATT-5.1). The full cascade cases live in
+  // items.hierarchy.test.ts; this pins the PUT entry point.
+  it('accepts reparenting under a parent in a different project and adopts its projectId', async () => {
     const projectA = await createProject();
     const projectB = await createProject();
     const itemA = await createItem({ projectId: projectA.id, title: 'Item A' });
@@ -1435,10 +1421,8 @@ describe('attached children', () => {
     expect(res.body.positionScope).toBe('workflow');
   });
 
-  // Superseded (Epic 3.5): finding #27 noted the flag used to survive a
-  // parentId: null write. docs/wiki/item-attachment §1 now makes
-  // "attached ⇒ has a parent" hold in the stored row — clearing the parent
-  // clears the flag (§11 "reparent to root").
+  // "Attached ⇒ has a parent" holds in the stored row: clearing the parent
+  // clears the flag.
   it('ATT-7.7: reparenting to null while attached clears isAttached and keeps the workphase', async () => {
     const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });

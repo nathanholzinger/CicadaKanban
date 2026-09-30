@@ -200,7 +200,7 @@ describe('PATCH /api/projects/:id/move', () => {
     expect(list.body.map((p: { id: string }) => p.id)).toEqual([b.id, a.id, c.id]);
   });
 
-  it('never treats an omitted anchor as an empty scope — appends past real existing children the caller did not mention (collapsed-parent guess bug)', async () => {
+  it('never treats an omitted anchor as an empty scope — appends past real existing children the caller did not mention', async () => {
     const parent = await createProject();
     const existingChild1 = await createProject({ name: 'Existing 1', parentId: parent.id });
     const existingChild2 = await createProject({ name: 'Existing 2', parentId: parent.id });
@@ -355,7 +355,7 @@ describe('DELETE /api/projects/:id', () => {
     expect(db.select().from(columns).where(eq(columns.id, column.id)).all()).toHaveLength(0);
   });
 
-  // Regression coverage for audit Finding #14: an item merely sitting in a
+  // An item merely sitting in a
   // to-be-deleted project's workphase — because it belongs to another
   // project that was reparented away, or was given its own workflow, after
   // filing items into the old parent's workphases — must survive with its

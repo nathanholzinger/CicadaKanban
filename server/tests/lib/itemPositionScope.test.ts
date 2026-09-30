@@ -12,8 +12,7 @@ describe('classifyPositionScope', () => {
     // The attached-siblings branch precedes the terminal check in source
     // order, so an attached child never falls into 'none' just because its
     // (cascaded) workphase turned terminal — its scope stays (parentId,
-    // isAttached), per Part 6's "attached children keep their position"
-    // exception.
+    // isAttached), since an attached child keeps its position.
     expect(classifyPositionScope({ isAttached: true, parentId: 'p1', workphaseId: 'w1' }, true)).toBe(
       'attached-siblings',
     );

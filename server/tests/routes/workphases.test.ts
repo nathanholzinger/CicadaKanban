@@ -14,8 +14,6 @@ describe('POST /api/workphases', () => {
     expect(missingName.status).toBe(400);
   });
 
-  // Regression coverage for audit Finding #13: a bogus workflowId previously
-  // hit the FK constraint and surfaced as an opaque 500.
   it('returns 400 with a specific message when workflowId does not reference an existing workflow', async () => {
     const res = await request(app).post('/api/workphases').send({ workflowId: 'does-not-exist', name: 'Todo' });
     expect(res.status).toBe(400);
@@ -66,9 +64,9 @@ describe('PUT /api/workphases/:id', () => {
     expect(res.body.triggersNotification).toBe(1);
   });
 
-  // Regression coverage for audit Finding #6: flipping isTerminal used to
-  // skip both the covering-column re-validation and the item backfill.
-  describe('isTerminal flip (Finding #6)', () => {
+  // Flipping isTerminal re-validates the covering columns and backfills the
+  // items.
+  describe('isTerminal flip', () => {
     it('rejects a flip that would leave a covering column spanning both a terminal and a non-terminal workphase', async () => {
       const project = await createProject();
       const workflow = await createWorkflow(project.id);

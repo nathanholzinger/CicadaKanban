@@ -7,10 +7,9 @@ import { items, activityLog } from '../../src/db/schema.js';
 import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
 import { createProject, createWorkflow, createWorkphase, createItem, createBoard } from '../fixtures.js';
 
-// Epic 3.5 Story 1 — atomic reparent-with-placement. Rules under test:
-// docs/wiki/item-attachment §1, §4–§11a and docs/wiki/item-positioning §2
-// (scope-change table), §5 (disclosure), §7. Case IDs in test titles name
-// cases in docs/test-plans/item-attachment and docs/test-plans/item-positioning.
+// Atomic reparent-with-placement through the item routes: attach, detach and
+// reparent, the depth cap, cross-project moves, the hierarchy activity log
+// and reindex disclosure.
 
 type Row = typeof items.$inferSelect;
 
@@ -87,7 +86,7 @@ async function cardWithTwoStubs(projectId: string, workphaseId: string, title = 
   return { p, s1, s2 };
 }
 
-describe('PATCH /items/:id/move — request validation (wiki item-attachment §1, §7, §8; positioning §7.1)', () => {
+describe('PATCH /items/:id/move — request validation', () => {
   it('ATT-4.1, ATT-4.10: rejects a parentId naming no item, and stores nothing', async () => {
     const { project, todo } = await setupWorkflow();
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
@@ -227,7 +226,7 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
     const before = getRow(x.id);
 
     // The subject is excluded from its own scope, so without an explicit
-    // check this passed validation and threw inside the transaction.
+    // check this would pass validation and throw inside the transaction.
     const res = await move(x.id, { anchorId: x.id, side: 'after' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/cannot be the item itself/);
@@ -235,7 +234,7 @@ describe('PATCH /items/:id/move — request validation (wiki item-attachment §1
   });
 });
 
-describe('PATCH /items/:id/move — attach / reparent / detach with placement (wiki §4–§6; positioning §7.2)', () => {
+describe('PATCH /items/:id/move — attach / reparent / detach with placement', () => {
   it("ATT-2.1: attaching A to B writes A; B's own row is untouched, at move and at PUT", async () => {
     const { project, todo, inProgress } = await setupWorkflow();
     const b = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'B' });
@@ -359,7 +358,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
     const res = await move(x.id, { isAttached: false, anchorId: f1.id, side: 'after' });
     expect(res.status).toBe(200);
     expect(res.body.isAttached).toBe(0);
-    expect(res.body.parentId).toBe(p.id); // detaching is not un-parenting (§11)
+    expect(res.body.parentId).toBe(p.id); // detaching is not un-parenting
     expect(res.body.positionScope).toBe('workflow');
     expect(res.body.position).toBe(10.5); // against the anchor, not the sibling-scoped 2.0
     expect(res.body.workphaseId).toBe(todo.id); // keeps the inherited workphase
@@ -387,8 +386,8 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
 
   // The same request body as above, but from a *detached* child: the parent
   // is unchanged, the flag is not, and the flag is the scope. Pinned because
-  // the board client once read "same parentId" as "already here" and no-oped
-  // the gesture (audit epic-3-5-story-4 #1).
+  // a caller that reads "same parentId" as "already here" no-ops the
+  // gesture.
   it('ATT-7.6, ATT-8.1: a detached child re-attached to the parent it still names is a real attach', async () => {
     const { project, todo, inProgress } = await setupWorkflow();
     const { p, s1, s2 } = await cardWithTwoStubs(project.id, todo.id);
@@ -534,7 +533,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement (w
   });
 });
 
-describe('PATCH /items/:id/move — done parents and done columns (wiki §10; positioning §7.4)', () => {
+describe('PATCH /items/:id/move — done parents and done columns', () => {
   it('ATT-6.1, ATT-6.2, TC-2.20, TC-7.15: attaching to a done parent inherits the terminal workphase, no completedAt, keeps a position', async () => {
     const { project, todo, done } = await setupWorkflow();
     const { p, s1 } = await cardWithTwoStubs(project.id, done.id);
@@ -620,7 +619,7 @@ describe('PATCH /items/:id/move — done parents and done columns (wiki §10; po
   });
 });
 
-describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
+describe('cross-project reparenting', () => {
   // Root project R owns the workflow; P1 and P2 inherit it, so a board of
   // R's workflow shows both — the scenario a cross-project board drag
   // comes from.
@@ -789,8 +788,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
 
     // A board renders one workflow, so a workphaseId that changes the item's
     // workflow can only come from a non-board caller. /move rejects it at
-    // the route (not in the shared primitive — PUT will carry these in
-    // Epic 7); audit code-quality-audit-epic-3-5-story-1 #1.
+    // the route, not in the shared primitive, which also serves PUT.
     describe('workflow-changing workphaseId is rejected at the route', () => {
       it("rejects a workphaseId from a workflow the item's project does not use, and stores nothing", async () => {
         const a = await setupWorkflow('A');
@@ -831,7 +829,7 @@ describe('cross-project reparenting (wiki §9; positioning §7.3)', () => {
   });
 });
 
-describe('atomicity (wiki §6)', () => {
+describe('atomicity', () => {
   it('ATT-3.7, ATT-4.4: a depth-cap rejection leaves the item and its subtree byte-identical', async () => {
     const { project, todo, inProgress } = await setupWorkflow();
     const deepest = await createChain(project.id, inProgress.id, ITEM_DEPTH_CAP - 1);
@@ -847,7 +845,7 @@ describe('atomicity (wiki §6)', () => {
   });
 });
 
-describe('data already past the cap (wiki item-attachment §8)', () => {
+describe('data already past the cap', () => {
   it('ATT-4.7: a tree already past the cap loads, and takes every write that reparents nothing', async () => {
     const { project, workflow, todo, inProgress } = await setupWorkflow();
     const chain = await seedChainPastCap(project.id, todo.id, ITEM_DEPTH_CAP + 1);
@@ -892,7 +890,7 @@ describe('data already past the cap (wiki item-attachment §8)', () => {
   });
 });
 
-describe('hierarchy activity log (wiki §11a)', () => {
+describe('hierarchy activity log', () => {
   it('ATT-8.1: each parent or attachment change logs one entry on the moving item, at both entry points, and none on the parents', async () => {
     for (const [entryPoint, write] of [
       ['move', move],
@@ -988,7 +986,7 @@ describe('hierarchy activity log (wiki §11a)', () => {
       workphaseId: todo.id,
     });
 
-    // The facts, not the wording: how the entry reads isn't a rule yet.
+    // The facts, not the wording: how the entry reads isn't a rule.
     for (const [item, isAttached] of [
       [attached, true],
       [free, false],
@@ -1083,7 +1081,7 @@ describe('reindex disclosure', () => {
   });
 });
 
-describe('PUT /items/:id and POST /items share the guards (wiki §7 "every write")', () => {
+describe('PUT /items/:id and POST /items share the guards — every write', () => {
   it('ATT-4.10: PUT enforces the depth cap', async () => {
     const { project, todo } = await setupWorkflow();
     const deepest = await createChain(project.id, todo.id, ITEM_DEPTH_CAP);

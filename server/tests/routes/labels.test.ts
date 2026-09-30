@@ -18,13 +18,13 @@ describe('POST /api/labels/item/:itemId', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 404 for a non-existent item (regression: was swallowed by an empty catch)', async () => {
+  it('returns 404 for a non-existent item', async () => {
     const label = await createLabel();
     const res = await request(app).post('/api/labels/item/does-not-exist').send({ labelId: label.id });
     expect(res.status).toBe(404);
   });
 
-  it('returns 404 for a non-existent label (regression: was swallowed by an empty catch)', async () => {
+  it('returns 404 for a non-existent label', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
     const res = await request(app).post(`/api/labels/item/${item.id}`).send({ labelId: 'does-not-exist' });
