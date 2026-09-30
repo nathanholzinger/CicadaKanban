@@ -22,10 +22,8 @@ export interface RepositioningScenario {
 // Builds the shared 8-case repositioning scenario: items A-E at positions
 // 1.0-5.0, with A/C/E in "Column One"'s workphase and B/D in "Column Two"'s
 // workphase. Position values are pinned explicitly via the /move endpoint's
-// raw `position` field (the documented direct-control escape hatch, see
-// items.ts:307-311) — per-workphase append alone would land A/C/E at
-// 1.0/2.0/3.0 and B/D at 1.0/2.0 (each workphase has its own independent
-// append counter), not the interleaved 1.0-5.0 this scenario requires.
+// raw `position` field, so the interleaved 1.0-5.0 layout this scenario
+// requires never depends on creation order or the append rule.
 export async function seedRepositioningScenario(
   request: APIRequestContext,
   projectName: string,
@@ -65,14 +63,13 @@ export interface CrossProjectRepositioningScenario {
 // Builds the cross-project repositioning scenario: a root project owning
 // one workflow with one shared workphase, and two child sub-projects
 // (project1a, project1b) with no workflow of their own — they inherit the
-// root's ("workflow inheritance" rule, CLAUDE.md; see
-// client/src/App.tsx:122-132). Items A/C/E belong to project1a, B/D to
-// project1b, all five sharing the one workphase — position scope is
-// workflow-wide and provably blind to projectId (positionScopeFor,
-// items.ts:29-58), so this scenario isolates project membership as the
-// only variable, unlike seedRepositioningScenario's column/workphase split.
-// Same position-pinning approach as seedRepositioningScenario, for the same
-// reason (append alone won't reproduce the interleaved 1.0-5.0 layout).
+// root's (`App.tsx::effectiveWorkflow`). Items A/C/E belong to project1a,
+// B/D to project1b, all five sharing the one workphase — position scope is
+// workflow-wide and blind to projectId
+// (`itemPositionScope.ts::positionScopeFor`), so this scenario isolates
+// project membership as the only variable, unlike
+// seedRepositioningScenario's column/workphase split. Positions are pinned
+// the same way as seedRepositioningScenario's, for the same reason.
 export async function seedCrossProjectRepositioningScenario(
   request: APIRequestContext,
   rootName: string,
@@ -111,11 +108,10 @@ type WorkflowItemRow = {
   projectId: string | null;
 };
 
-// Sorts by position then createdAt (the same tie-break the DB's own
-// reindex/list queries use) so a real cross-workphase position collision —
-// the workphase-scoped resolver can produce one, see repositioningScenario's
-// header comment — still yields a deterministic, reproducible order rather
-// than a flaky one. Shared by both suites so they apply identical tie-break
+// Sorts by position then createdAt (the same tie-break the server's
+// reindex and the client's lists use) so a position tie still yields a
+// deterministic, reproducible order rather than a flaky one. Shared by both
+// suites so they apply identical tie-break
 // logic to the same underlying data.
 async function orderOf(
   request: APIRequestContext,
@@ -125,11 +121,10 @@ async function orderOf(
   const workflow = await (await request.get(`${API}/workflows/${workflowId}`)).json();
   const matched = (workflow.items as WorkflowItemRow[])
     .filter(predicate)
-    // `position` is null by design for a done/unsorted item (Part 6) — the
-    // `?? 0` guard (audit Finding #20, matching siblingOrder's existing
-    // convention below) keeps a future done-item scenario deterministic
-    // instead of `NaN`-comparator flake. Not reachable today (every
-    // scenario here is active-only); hardened for whenever one isn't.
+    // `position` is null by design for a done/unsorted item — the `?? 0`
+    // guard (the same as siblingOrder's below) keeps a done-item scenario
+    // deterministic instead of a `NaN`-comparator flake. Every scenario here
+    // is active-only, so the guard is for one that isn't.
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt);
   return matched.map(i => i.title.replace('Item ', '')).join('');
 }
@@ -164,11 +159,11 @@ export interface AttachedSiblingsScenario {
   topLevel: ScenarioItem;
 }
 
-// Builds the attached-sibling scenario for Part 3 (TC-3.1/TC-3.5): one
-// parent with three attached children A/B/C, created via plain POST with no
+// Builds the attached-sibling scenario for TC-3.1 and TC-3.5: one parent
+// with three attached children A/B/C, created via plain POST with no
 // explicit position — natural append gives A=1.0, B=2.0, C=3.0, scoped to
-// (parentId, isAttached) per positionScopeFor (server/src/routes/items.ts),
-// not the workphase or workflow. Unlike seedRepositioningScenario, positions
+// (parentId, isAttached) per `itemPositionScope.ts::positionScopeFor`, not
+// the workphase or workflow. Unlike seedRepositioningScenario, positions
 // here are NOT manually pinned — the whole point is exercising the resolver
 // against its natural append/anchor behavior for this scope.
 export async function seedAttachedSiblingsScenario(

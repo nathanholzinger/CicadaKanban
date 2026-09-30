@@ -9,24 +9,23 @@ import {
 } from '../helpers/itemRepositioningScenario';
 import { API as BASE } from '../helpers/api';
 
-// The same 8-case structure as tests/api/itemRepositioning.spec.ts, this
+// The same 8-case structure as itemRepositioningCrossColumn.spec.ts, this
 // time scoped by PROJECT rather than workphase: items A/C/E belong to
 // project1a, B/D to project1b, both children of a root project and sharing
 // its one inherited workflow/workphase (see
 // seedCrossProjectRepositioningScenario's header comment). Position scope
-// is workflow-wide and provably blind to projectId (positionScopeFor,
-// server/src/routes/items.ts:29-58) — no reference to items.projectId
-// anywhere in scope-building or anchor validation — so these numbers are
-// the same underlying math as the original suite's post-scope-fix values,
+// is workflow-wide and provably blind to projectId
+// (`itemPositionScope.ts::positionScopeFor`) — no reference to
+// items.projectId anywhere in scope-building or anchor validation — so
+// these numbers are the same underlying math as the cross-column suite's,
 // just relabeled onto a project axis instead of a workphase axis.
 //
 // 1.a/1.b/2.a/2.b/3.a/3.b move C, anchored against A/B/D/E as in the
-// original suite. 3.a and 3.b land on the SAME gap as 2.a/2.b respectively
-// (A's true neighbor is now B, not E, once scope is workflow-wide) — kept
-// as designed per user, since this documents a real, useful side effect of
-// the workflow-wide scope fix rather than the "put it back" no-op it used
-// to be. 4.a/4.b are redesigned from the original suite: instead of moving
-// C, they move B/D (project1b items) anchored against E/A (project1a
+// cross-column suite. 3.a and 3.b land on the SAME gap as 2.a/2.b
+// respectively (A's true neighbor is B, not E, since scope is
+// workflow-wide) — a real, useful consequence of the workflow-wide scope,
+// not a "put it back" no-op. 4.a/4.b differ from the cross-column suite:
+// instead of moving C, they move B/D (project1b items) anchored against E/A (project1a
 // items), to exercise the reverse direction — a cross-project anchor
 // correctly reordering the anchoring item's OWN sibling relative to its
 // true project-mate, visible as a real flip on project1b's own board

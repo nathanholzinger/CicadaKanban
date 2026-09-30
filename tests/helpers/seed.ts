@@ -12,11 +12,9 @@ interface SeededWorkflow {
   workphases: Array<{ id: string; name: string }>;
 }
 
-// "POST project -> GET workflow-templates -> find by name -> POST workflow"
-// was duplicated under 3 different names across tests/api and tests/ui —
-// createFlowWorkflow, setupWorkflow, and two createTemplatedWorkflow's, one
-// per template (audit Finding #27). Callers that need specific named phases
-// out of the response use pickWorkphases below.
+// A project with a workflow from a named template: "POST project -> GET
+// workflow-templates -> find by name -> POST workflow". Callers that need
+// specific named phases out of the response use pickWorkphases below.
 export async function seedTemplatedWorkflow(
   request: APIRequestContext,
   name: string,
@@ -34,7 +32,7 @@ export async function seedTemplatedWorkflow(
 }
 
 // A workflow with no phases yet — pair with addWorkphases below to build one
-// up incrementally (was createBareWorkflow in boards-layer.spec.ts).
+// up incrementally.
 export async function seedBareWorkflow(
   request: APIRequestContext,
   name: string,
@@ -65,7 +63,7 @@ export async function addWorkphases(
 // `(await request.post(…/items)).json()` shape hands the next step an
 // `{ error }` body when the create fails — a chain link silently missing
 // its parent, a fixture item that never existed — so every seeded item
-// goes through here (audit epic-3-5-story-2 #16 / story-3 #7).
+// goes through here.
 export interface SeededItem {
   id: string;
   title: string;
@@ -92,10 +90,11 @@ export interface PositionedItemPlan<K extends string> {
   title?: string;
 }
 
-// Creates items and pins each to an explicit position — the "plan → create
-// → PATCH position" loop the repositioning scenarios and the band spec each
-// wrote by hand. Append alone can't reproduce an interleaved layout (each
-// workphase has its own append counter), which is why the pin exists.
+// Creates items and pins each to an explicit position ("plan → create →
+// PATCH position"), for the repositioning scenarios and the band spec.
+// Append alone places each new item after the workflow's last, so it can't
+// reproduce a layout with fractional positions or one out of creation order,
+// which is why the pin exists.
 // Returns the created rows keyed by plan key, with `position` as pinned.
 export async function seedPositionedItems<K extends string>(
   request: APIRequestContext,
@@ -111,17 +110,13 @@ export async function seedPositionedItems<K extends string>(
   return items;
 }
 
-// GETs one item by id — spelled independently at least three times across
-// the drag/repositioning specs (`item`/`getC`/`getItem`, audit
-// epic-3-5-story-4 #6).
+// GETs one item by id.
 export async function fetchItem(request: APIRequestContext, id: string) {
   return (await request.get(`${API}/items/${id}`)).json();
 }
 
 // The minimal shape every caller of `fetchDefaultBoard` actually reads off
-// the response — untyped before (audit epic-3-5-story-5 #13), which is why
-// `drag-5-stub-detach.spec.ts` had to re-annotate its own `.find` callback's
-// param inline, three times, to get at a column's `entryWorkphaseId`.
+// the response.
 export interface SeededColumn {
   id: string;
   entryWorkphaseId: string;
@@ -142,11 +137,8 @@ export async function fetchDefaultBoard(request: APIRequestContext, workflowId: 
   return (await request.get(`${API}/boards/${boards[0].id}`)).json();
 }
 
-// The column covering a given workphase — the `board.columns.find(c =>
-// c.entryWorkphaseId === workphaseId)` lookup `drag-5-stub-detach.spec.ts`
-// (audit epic-3-5-story-5 #13) and `drag-column-bands.spec.ts`'s own
-// `columnKeyOf` each re-rolled independently, re-annotating the untyped
-// callback param every time before `fetchDefaultBoard` had a return type.
+// The column whose entry workphase is `workphaseId` — a merged column that
+// covers it further in isn't found.
 export function columnForWorkphase(board: SeededBoard, workphaseId: string): SeededColumn {
   const found = board.columns.find(c => c.entryWorkphaseId === workphaseId);
   if (!found) throw new Error(`No column covers workphase "${workphaseId}" as its entry`);
@@ -154,9 +146,7 @@ export function columnForWorkphase(board: SeededBoard, workphaseId: string): See
 }
 
 // Pulls named phases out of a workflow's `workphases` array, in the given
-// order — the "pick phases out of the response" half of what Finding #27
-// flagged as duplicated (e.g. repeated `workflow.workphases.find(p => p.name
-// === 'Todo')` per phase per call site).
+// order.
 export function pickWorkphases(workflow: SeededWorkflow, ...names: string[]): Array<{ id: string; name: string }> {
   return names.map(name => {
     const phase = workflow.workphases.find(p => p.name === name);

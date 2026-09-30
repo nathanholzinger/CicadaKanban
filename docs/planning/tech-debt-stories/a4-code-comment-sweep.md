@@ -136,6 +136,8 @@ Batch 3's baseline is 35 files, about 805 comment lines and 111 hits, again far 
 
 Batch 4a's baseline is 40 files, about 840 comment lines and 235 hits, against an estimate of ~115 lines. It split in three: 4a-i is the tests of the pop machine, regions, bands and collision, with their fixtures; 4a-ii the tests of placement, requests, lists and client `lib/`; 4a-iii the server's tests.
 
+Batch 4b's baseline is 32 files, about 1,200 comment lines and 155 hits, against an estimate of ~105 lines. It split in three: 4b-i is the helpers, the page object and the API specs; 4b-ii the four board-drag UI specs; 4b-iii the other UI specs. Each stop runs the E2E suite, since each is its own commit.
+
 Paths in 1a–1c are under `client/src/components/`, with the drag modules in its `workflow/` directory. Paths in 3-i are under `server/src/lib/` unless they name `routes/`.
 
 | Batch | Files | Est. lines | Waits for |
@@ -153,7 +155,9 @@ Paths in 1a–1c are under `client/src/components/`, with the drag modules in it
 | **4a-i** Unit tests: the pop machine, regions, bands and collision | the `popSession`, `dragTuning`, `dragOverlayGeometry`, `dragRegions`, `dragBands`, `dragCollision`, `descendantsProjection` and `BandGuides` tests, `test/dragFixtures.ts`, `test/popFixtures.ts` | ~255 read, 86 hits | A3 (closed) |
 | **4a-ii** Unit tests: placement, requests, lists, client `lib/` | the `placement`, `dragRequest`, `dragClassification`, `itemListOps`, `itemWriteReconciliation`, `hierarchy`, `hierarchyPlacement`, `projectTreeUtils`, `api/shared` and `pillUtils` tests, `test/itemFixture.ts`, `test-setup.ts` | ~260 read, 92 hits | 4a-i |
 | **4a-iii** Unit tests: the server | `server/tests` | ~330 read, 57 hits | 4a-ii |
-| **4b** E2E | `tests/`: specs and helpers | ~105 comment lines, ~5 titles | A3 (closed) |
+| **4b-i** E2E: helpers and API specs | `tests/helpers/`, `tests/pages/`, `tests/api/`, the global setup and teardown | ~360 read, 44 hits | A3 (closed) |
+| **4b-ii** E2E: the board-drag UI specs | `drag-column-bands`, `drag-5-stub-detach`, `drag-card-zoom-in`, `drag-target-classification` | ~390 read, 76 hits | 4b-i |
+| **4b-iii** E2E: the other UI specs | the rest of `tests/ui/` | ~380 read, 35 hits | 4b-ii |
 | **5** Lint | root `package.json` | — | A2, A3, and batches 1a–4b |
 
 **Why this order:**
@@ -227,7 +231,7 @@ A3's close-out report (`test-reconciliation-a3-close.md`, archived) leaves these
 - **Prefix-less tails in test comments,** each written out in full:
   - **4a:** `itemListOps.test.ts` line 298 ("TC-2.27–2.30, DRAG-6.1/6.2"), whose range also becomes four IDs. Done in 4a-ii.
   - **4b:** `drag-column-bands.spec.ts` lines 101–102 ("DRAG-3.6/3.7 and DRAG-3.8/1.6") and 360 ("DRAG-3.6/3.7"). A3's report put these in `dragBands.test.ts`, but they're in this E2E spec.
-- **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback.
+- **4b:** `itemRepositioningAttachedSiblings.spec.ts`'s header. Its "A.5", "B.6" and "B.7" are finding numbers from an old audit, and it calls TC-2.5 the append fallback, when TC-2.5 is the prepend fallback. Done in 4b-i.
 
 ## Work, in batches
 
@@ -482,3 +486,4 @@ boards-columns-unsorted has no numbered sections, so this maps each of the page'
 - **2026-09-30, end of batch 3 (Coder):** the running pointer list became D4's tables for the other three pages. boards-columns-unsorted has no numbered sections, so its table maps rules to sites without pointers, and the Acceptance line on index pointers holds for the other three pages only until that page is numbered. Completing item-positioning §4's row took one pointer in a client file from 1b-i, `placement.ts::regionWorkphaseFor`. "To the PO" gained entries for all three pages.
 - **2026-09-30, batch 4a (Coder):** 4a split into 4a-i to 4a-iii (D7), at about 840 comment lines and 235 hits. D11's prefix-less tails at "`dragBands.test.ts` lines 101–102 and 360" are in the E2E spec `drag-column-bands.spec.ts`, so they move to 4b. D10's `popSession.test.ts` site was already cleared by A3.
 - **2026-09-30, end of batch 4a (Coder):** "To the Test Reconciler" joins the Handoff, for test comments whose wiki pointer became a case ID the test's title doesn't carry. Where a title named a function that no longer exists by that name (`positionResolver.test.ts`'s `reindexScope` and `resolveAnchorPosition`), the title was corrected like a false comment; D8's comparison already allows title changes.
+- **2026-09-30, batch 4b (Coder):** 4b split into 4b-i to 4b-iii (D7), at about 1,200 comment lines and 155 hits. D8's single E2E run becomes one per stop, since each stop is its own commit.

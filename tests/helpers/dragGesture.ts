@@ -6,9 +6,7 @@ import {
   type DragTuning,
 } from '../../client/src/components/workflow/dragTuning';
 
-// The one recipe for driving this app's @dnd-kit board from Playwright
-// (extracted in Epic 3.5 Story 1 from three per-spec copies — see
-// docs/planning/epic-3-5-decisions.md Q2).
+// The one recipe for driving this app's @dnd-kit board from Playwright.
 //
 // dnd-kit's PointerSensor (activationConstraint: { distance: 5 }) needs a
 // real pointerdown, movement past that 5px threshold to activate the drag,
@@ -17,9 +15,9 @@ import {
 // simulate native HTML5 DnD instead and never trigger dnd-kit at all.
 //
 // `resolveTarget` is a callback, not a static point: hovering another
-// column draws the dragged card's ghost there (Epic 3.5 Story 3's ordinal
-// placement — at its kept position for the middle band, first/last for the
-// edge bands), shifting whichever card used to sit at that slot. A point
+// column draws the dragged card's ghost there (the ordinal preview — at
+// its kept position for the middle band, first/last for the edge bands),
+// shifting whichever card used to sit at that slot. A point
 // measured once before the drag started can go stale the moment that
 // reflow happens, so this approaches in two passes: once toward the
 // target's pre-drag position (close enough to cross into the target column
@@ -28,22 +26,21 @@ import {
 // is in layout space (`boxOf`), which is the space dnd-kit resolves
 // collisions in — see its comment for the trap that avoids.
 //
-// Under the pop machine (docs/wiki/board-drag-interaction §2–§5) a release
-// in another column resolves by *band* of that column's region unless the
-// cursor rested there past the pop threshold, so a cross-column `dragTo`
-// onto a card lands by the band the card sits in, not the card. Story 3's
-// own spec (drag-column-bands.spec.ts) seeds the threshold and drives the
-// bands directly; the older suites' cross-column cases happen to land in
-// bands whose meaning matches what they assert.
+// Under the pop machine a release in another column resolves by *band* of
+// that column's region unless the cursor rested there past the pop
+// threshold, so a cross-column `dragTo` onto a card lands by the band the
+// card sits in, not the card. drag-column-bands.spec.ts seeds the threshold
+// and drives the bands directly; the other suites' cross-column cases
+// happen to land in bands whose meaning matches what they assert.
 export type Point = { x: number; y: number };
 
 // Pointer down on `source` and past the activation distance — the drag is
 // now live (onDragStart has fired) but nothing has been dropped. Pair with
-// `release` or `cancel`. Exposed on its own (Epic 3.5 Story 2) so a spec can
-// assert what the board shows *during* a drag without committing a drop.
+// `release` or `cancel`. Exposed on its own so a spec can assert what the
+// board shows *during* a drag without committing a drop.
 //
 // Deliberately no wait after activation: the in-context sortable preview
-// starts animating the moment the drag begins, and the older suites' card
+// starts animating the moment the drag begins, and the other suites' card
 // targeting is tuned to the timing of an immediate approach. The gap that
 // matters is the one *before* pickup — see `release`.
 export async function pickUp(page: Page, source: Locator): Promise<Point> {
@@ -98,8 +95,8 @@ export async function dragTo(page: Page, source: Locator, resolveTarget: () => P
 // collision detection works in: droppable rects are measured at drag start
 // and not re-measured while the sortable preview slides neighbours around
 // with transforms, so a point aimed at a card's *visual* rect mid-drag can
-// be nearest a different card's collision rect (found the hard way in the
-// 3.a cases — "after A" resolving as "before E"). Layout shifts — the ghost
+// be nearest a different card's collision rect ("after A" resolving as
+// "before E"). Layout shifts — the ghost
 // inserted into another column's list — are real re-measures and show up
 // here as they should.
 export async function boxOf(locator: Locator) {
@@ -123,7 +120,7 @@ export async function boxOf(locator: Locator) {
 
 // A point on the element's vertical centre line, `fraction` of the way down
 // its box — the one shape every "aim at part of a card / a band of a
-// region" helper reduces to (audit epic-3-5-story-3 #7).
+// region" helper reduces to.
 export async function atFraction(locator: Locator, fraction: number): Promise<Point> {
   const box = await boxOf(locator);
   return { x: box.x + box.width / 2, y: box.y + box.height * fraction };
@@ -133,13 +130,12 @@ export async function center(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.5);
 }
 
-// The top/bottom quarter of a card or Stub row. These no longer pick a side
-// of the row hovered, anywhere (Option A + the lean, 2026-09-24; Story 6
-// Phase D generalized it from columns/sub-rows to a Descendants section
-// too): dnd-kit's shuffle decides the ghost's slot, so aim at the row whose
-// slot the ghost should take, and the drop lands there —
-// `dropAnchorFor`'s own lean, not a raw which-half read (`resolveDropSide`
-// is now only its fallback for a non-row `over`).
+// The top/bottom quarter of a card or Stub row. Neither picks a side of the
+// row hovered, in a column, a sub-row or a Descendants section alike:
+// dnd-kit's shuffle decides the ghost's slot, so aim at the row whose slot
+// the ghost should take, and the drop lands there —
+// `dragCollision.ts::dropAnchorFor`'s own lean, not a raw which-half read
+// (`resolveDropSide` is only its fallback for a non-row `over`).
 export async function topQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.15);
 }
@@ -152,13 +148,13 @@ export async function bottomQuarter(locator: Locator): Promise<Point> {
 // copy — well clear of the middle either way, well short of the next card.
 const LEAN_PX = 15;
 
-// Option A + lean (2026-09-24): pick a card up and set it back down in its
-// own slot, the dragged copy just above or below the ghost's middle. The
-// card's own row is `over` (nothing shuffles), and the lean picks which
-// neighbor the drop names: up, "after" the card above; down, "before" the
-// card below. One slot in the column, but not in the workflow-wide order
-// when items from another workphase sit between the two neighbors
-// (docs/wiki/item-positioning §2) — which is what a case using this is for.
+// Pick a card up and set it back down in its own slot, the dragged copy
+// just above or below the ghost's middle. The card's own row is `over`
+// (nothing shuffles), and the lean picks which neighbor the drop names: up,
+// "after" the card above; down, "before" the card below. One slot in the
+// column, but not in the workflow-wide order when items from another
+// workphase sit between the two neighbors — which is what a case using
+// this is for.
 export async function setBackDownLeaning(page: Page, card: Locator, lean: 'up' | 'down') {
   const home = await center(card);
   await pickUp(page, card);
@@ -193,17 +189,15 @@ export async function awaitDragContext(page: Page, regionKey: string | null, tim
 }
 
 // "Drop past the end of the column": just inside the bottom edge of its
-// drag region — its bounded box (wiki §1; a region stops at the column
-// body, not its outer group, since wiki–code reconciliation #20), not the
-// column group's footer/"+ Add item" row below that box, which is nowhere
-// to the pop machine. In another column that lands in the bottom band
-// (after the last item — Story 3). In the card's own column it's
-// in-context, where dnd-kit's closestCorners (a nearest-corner heuristic,
-// not a hit test) resolves to the column container or its last card
-// depending on the column's height — the append the older suites assert.
-// Story 4 (planning): a Card carries `[data-drag-region]` too, and (Story
-// 5/6) so does its Descendants section, so a bare `.last()` would pick one
-// of those instead of the column's own region (or, in expanded mode, its
+// drag region — its bounded box (a region stops at the column body, not
+// its outer group), not the column group's footer/"+ Add item" row below
+// that box, which is nowhere to the pop machine. In another column that
+// lands in the bottom band (after the last item). In the card's own column
+// it's in-context, where dnd-kit's closestCorners (a nearest-corner
+// heuristic, not a hit test) resolves to the column container or its last
+// card depending on the column's height — the append the other suites
+// assert. A Card carries `[data-drag-region]` too, and so does its
+// Descendants section, so a bare `.last()` would pick one of those instead of the column's own region (or, in expanded mode, its
 // last sub-row) — landing inside a card rather than genuinely past the
 // column's content. `CARD_LIST_REGION_SELECTOR` names the column/sub-row
 // kinds positively: an "anything but `card:`" exclusion would aim at the last
@@ -216,9 +210,7 @@ export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
 
 // Seeds the dev/test panel's own storage key with `override` merged over
 // the defaults, before the page loads — the one recipe for tuning a drag
-// gesture spec, previously spelled independently (down to the same
-// `addInitScript` body) in at least four specs (audit
-// epic-3-5-story-4 #6). Returns the merged tuning so a caller can still
+// gesture spec. Returns the merged tuning so a caller can still
 // compute a wait off the *configured* value, never a literal.
 export async function seedDragTuning(page: Page, override: Partial<DragTuning> = {}): Promise<DragTuning> {
   const tuning = { ...DEFAULT_DRAG_TUNING, ...override };
@@ -231,16 +223,11 @@ export async function seedDragTuning(page: Page, override: Partial<DragTuning> =
 
 // A threshold seeded far longer than any single hover in these gestures
 // could last, so an accidental pop under a slow run never fires — never a
-// value anything computes a wait *from* (audit epic-3-5-story-4 #6/#27:
-// this used to be spelled inconsistently, 30s in some presets and 60s in
-// others, with no reason for the difference).
+// value anything computes a wait *from*.
 const NEVER_MS = 60_000;
 
 // One named slack, added atop however many of the configured clocks a wait
-// has to cover — audit epic-3-5-story-5 #13: this used to be spelled
-// `* 2 + 3000`, `* 2 + 2000`, and `+ 2000` independently across specs (and
-// this file's own `awaitPoppedOut`), with three different slacks and none
-// named. Not tuned by feel like the clocks themselves — just enough margin
+// has to cover. Not tuned by feel like the clocks themselves — just enough margin
 // for the sample-driven cascade after the last clock's own due time to
 // actually land before Playwright's own wait gives up.
 const CLOCK_SLACK_MS = 2000;
@@ -265,9 +252,8 @@ export const NO_POP: Partial<DragTuning> = {
   cardPopInDelayMs: NEVER_MS,
   descendantsPopInDelayMs: NEVER_MS,
 };
-// Re-plan (2026-09-16): a band only ever means anything at Board layer —
-// locked always commits its own context, regardless of a foreign hover
-// (docs/wiki/board-drag-interaction §1–§3). So a case that wants to reach a
+// A band only ever means anything at Board layer — locked always commits
+// its own context, regardless of a foreign hover. So a case that wants to reach a
 // *band* needs to actually get to Board layer first: a short pop-out delay,
 // paired with a pop-in delay long enough that resting in the target's own
 // middle band (also its pop-eligible zone) never completes a second,
@@ -282,7 +268,7 @@ export const POP_OUT_ONLY: Partial<DragTuning> = {
 export const SUSTAINED: Partial<DragTuning> = { popDelayMs: 150, popInDelayMs: 150, cardPopInDelayMs: NEVER_MS };
 
 // Waits for a Card drag to actually reach Board layer — a band only ever
-// resolves a release from there (re-plan 2026-09-16). The cursor doesn't
+// resolves a release from there. The cursor doesn't
 // have to move again: the pop timer fires on its own once `tuning.popDelayMs`
 // has elapsed.
 export async function awaitPoppedOut(page: Page, tuning: DragTuning) {

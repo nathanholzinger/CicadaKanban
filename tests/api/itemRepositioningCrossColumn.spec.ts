@@ -11,11 +11,10 @@ import { API as BASE } from '../helpers/api';
 
 // 8 WHEN/THEN cases for item repositioning (grouped into 4 pairs), driven
 // directly through PATCH /items/:id/move — no browser involved. Shared
-// scenario (see repositioningScenario.ts): items A-E at positions 1.0-5.0,
-// A/C/E in "Column One", B/D in "Column Two".
+// scenario (see itemRepositioningScenario.ts): items A-E at positions
+// 1.0-5.0, A/C/E in "Column One", B/D in "Column Two".
 //
-// Position is workflow-wide (de80b59, docs/wiki/item-positioning), not
-// workphase-scoped — gap-finding for an anchor sees every item in the
+// Position is workflow-wide, not workphase-scoped — gap-finding for an anchor sees every item in the
 // workflow, not just its own workphase/column. So a "boundary" anchor
 // (first/last within its own column) can still have a true neighbor in a
 // DIFFERENT column, and resolves a genuine midpoint against it rather than

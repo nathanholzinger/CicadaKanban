@@ -9,23 +9,21 @@ import {
 import { API as BASE } from '../helpers/api';
 
 // 3 WHEN/THEN cases exercising anchor+side resolution against the
-// (parentId, isAttached) comparison scope (Part 3), driven directly through
-// PATCH /items/:id/move — no browser involved. Closes three findings from
-// docs/audits/test-reconciliation-report-epic-3-2.md together:
+// (parentId, isAttached) comparison scope, driven directly through
+// PATCH /items/:id/move — no browser involved:
 //
-//   - A.5 / TC-3.5: the resolver is scope-agnostic by design, but nothing
-//     previously instantiated it against an attached-sibling scope. The
-//     three moves below re-run TC-2.5 (append fallback, no true
-//     predecessor), TC-2.1 (insert between two true neighbors), and TC-2.4
-//     (append fallback, no true successor) with that scope instead of
-//     workflow-wide.
-//   - B.6 / TC-3.1: "reorder 3+ attached siblings, check persisted order on
+//   - TC-3.5: the resolver is scope-agnostic by design. The three moves
+//     below run TC-2.5 (prepend fallback, no true predecessor), TC-2.1
+//     (insert between two true neighbors), and TC-2.4 (append fallback, no
+//     true successor) against an attached-sibling scope instead of the
+//     workflow-wide one.
+//   - TC-3.1: "reorder 3+ attached siblings, check persisted order on
 //     reload" — each test re-fetches the parent's `children` via a
 //     different endpoint (siblingOrder, GET /api/items/:parentId) than the
 //     move response itself, a genuine reload check.
-//   - B.7 / TC-3.2: isolation — the scenario seeds an unrelated second
-//     parent's attached child and an unrelated top-level item sharing the
-//     same workphase; every test confirms neither one moves.
+//   - TC-3.2: isolation — the scenario seeds an unrelated second parent's
+//     attached child and an unrelated top-level item sharing the same
+//     workphase; every test confirms neither one moves.
 //
 // Scenario (see itemRepositioningScenario.ts): parent's three attached
 // children A/B/C, created via plain POST with no explicit position —
