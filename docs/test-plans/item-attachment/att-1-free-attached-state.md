@@ -1,6 +1,6 @@
 # ATT-1 — Free / Attached state model
 
-**Next ID:** ATT-1.14
+**Next ID:** ATT-1.15
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -11,11 +11,11 @@
 | ATT-1.5 | A Stub under a done parent reads as done by derivation, with nothing stored | P1 | Automated |
 | ATT-1.6 | A detached child is not affected by its parent moving | P0 | Automated |
 | ATT-1.7 | The three state consequences always move together | P0 | Automated |
-| ATT-1.8 | A parentless item and the attachment flag | P0 | Pending PO |
+| ATT-1.8 | A move or an edit that would leave the attachment flag on a parentless item is refused | P0 | Open |
 | ATT-1.9 | A Card shows its descendant Stubs; a Stub shows a title snippet and has no board position of its own | P2 | Automated |
-| ATT-1.10 | A Card shows its tags | P2 | Pending PO |
+| ATT-1.10 | A Card shows its tags | P2 | Planned |
 | ATT-1.12 | Attaching a done Free item clears its `completedAt` and gives it a sibling position | P1 | Automated |
-| ATT-1.13 | A write that leaves an item attached, naming a workphase other than its parent's | P2 | Pending PO |
+| ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Planned |
 
 ---
 
@@ -79,11 +79,11 @@ No read shows one consequence flipped and another not.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `tests/ui/attached-children.spec.ts`
 
-## ATT-1.8 — A parentless item and the attachment flag
+## ATT-1.8 — A move or an edit that would leave the attachment flag on a parentless item is refused
 
-**Priority:** P0 · **Status:** Pending PO
+**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §1
 
-*Given* top-level item `X`, *when* a write creates `X` with the attachment flag set, sets the flag on `X` later, or clears the `parentId` of an attached `X` without mentioning the flag, *then* — **question for the PO:** wiki item-attachment §1 says a write that sets the flag on a parentless item is refused with a 400, and that the stored row never holds the flag without a parent, so clearing `parentId` clears the flag too. The alternative is to let a parentless item hold the flag, since Free is already defined as having no parent or a clear flag: a top-level item is Free whatever its flag says. Which does wiki item-attachment §1 say? Either way, a case would then check all four combinations of parent and flag: Free renders as a Card in its column, and Attached as a Stub inside its nearest Free ancestor's Card.
+*Given* top-level item `X`, and item `Y` attached to `P`, *when* a move or an edit sets `X`'s attachment flag without giving it a parent, or sets `Y.parentId` to null and sets the flag, *then* each is refused with a 400, and nothing is stored: `X` and `Y` are exactly as before. *When* a write sets `Y.parentId` to null and doesn't mention the flag, *then* it's accepted, and `Y`'s flag is clear ([ATT-7.7](att-7-detach-preserves-parent.md)). A create is [ATT-1.14](att-1-free-attached-state.md)'s.
 
 **Automation test:** —
 
@@ -97,9 +97,9 @@ No read shows one consequence flipped and another not.
 
 ## ATT-1.10 — A Card shows its tags
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Planned · **Rule:** wiki item-attachment §12
 
-*Given* Free item `P` with tags, *when* the board renders, *then* — **question for the PO:** wiki item-attachment §12 lists tags among what a Card shows, but tags exist today only in a provisional form, due to be replaced. Should wiki item-attachment §12's tags be marked `**Planned:**` until the replacement lands?
+*Given* Free item `P` with tags, *when* the board renders, *then* `P`'s Card shows each of its tags.
 
 **Automation test:** —
 
@@ -111,10 +111,10 @@ No read shows one consequence flipped and another not.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## ATT-1.13 — A write that leaves an item attached, naming a workphase other than its parent's
+## ATT-1.14 — A create can't set the attachment flag without a parent, and a parentless create stores it clear
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P0 · **Status:** Planned · **Rule:** wiki item-attachment §1
 
-*Given* item `X` attached to `P`, or being attached to it, in a write that also names a workphase other than `P`'s, *when* the write is made, *then* — **question for the PO:** an attached item's workphase is always its parent's (wiki item-attachment §2), so the named workphase can't be kept. Is the write refused, or accepted with the named workphase ignored? The Reconciler found that the endpoints disagree today: moving an item refuses it, and creating one ignores it.
+*Given* project `P1`, *when* a create makes a top-level item in `P1` and sets the attachment flag, *then* it's refused with a 400, and no item is created. *When* a create makes a top-level item in `P1` and doesn't mention the flag, *then* the new item's flag is clear, as every top-level item's is.
 
 **Automation test:** —

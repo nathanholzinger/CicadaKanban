@@ -163,7 +163,7 @@ running it against a table that never exercises its reindex paths costs
 nothing extra. Maintaining two ordering systems long-term is the more
 expensive outcome.
 
-**Conflicting record found:** `docs/audits/code-quality-audit-epic-3-2.md:96-115`,
+**Conflicting record found:** `docs/archive/code-quality-audit-epic-3-2.md:96-115`,
 written when projects were unified onto `positionResolver`, states the
 opposite conclusion — that "columns/workphases are a deliberately separate,
 smaller-scope follow-up (bulk resequence stays appropriate there — see the

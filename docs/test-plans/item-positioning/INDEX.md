@@ -13,5 +13,5 @@
 | [TC-5 — Reindexing and its disclosure](part-5-reindex.md) | When a scope is reindexed, what a reindex keeps and touches, and the renumbered positions a response discloses |
 | [TC-5a — Client reconciliation order](part-5a-client-reconciliation.md) | The list after a position write, applying a response in order, and the tie-break |
 | [TC-6 — Active/done split](part-6-active-done-split.md) | `completedAt`, a done item's missing position and its order, attached children under a done parent, column ranges, and a workphase's terminal flag changing |
-| [TC-7 — Placement intents from the board gesture](part-7-board-placement-intents.md) | First and last as an anchor and side, the anchor's resulting scope, a placement with a reparent, cross-project and cross-workflow reparents, and a done Card's Stubs |
+| [TC-7 — Placement intents from the board gesture](part-7-board-placement-intents.md) | First and last as an anchor and side, the anchor's resulting scope, a placement with a reparent, cross-project and cross-workflow reparents, the items a project move leaves in another workflow, and a done Card's Stubs |
 | [TC-X — Cross-cutting guards](cross-cutting-regression.md) | A detached child's scope, and a moving item never being its own neighbor |

@@ -34,7 +34,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.29 | The preview holds when the anchor's own position is still in flight | P1 | Automated |
 | TC-2.30 | A pending item is never represented as `position: null` | P0 | Automated |
 | TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
-| TC-2.32 | A write that names a final position | P2 | Pending PO |
+| TC-2.32 | A write can't name a final position | P1 | Planned |
 | TC-2.33 | A Free item's true neighbor, or its anchor, can be in another project on the same workflow | P1 | Automated |
 
 ---
@@ -139,7 +139,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
-*Given* a Free item, top-level or a detached child, in a non-terminal workphase, *when* it is read through the API, *then* its `positionScope` is `"workflow"`.
+*Given* a Free item, top-level or a detached child, in a non-terminal workphase of its project's workflow, *when* it is read through the API, *then* its `positionScope` is `"workflow"`.
 
 **Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
@@ -263,11 +263,11 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 **Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-2.32 — A write that names a final position
+## TC-2.32 — A write can't name a final position
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P1 · **Status:** Planned · **Rule:** wiki item-positioning §2
 
-*Given* Free item `X`, *when* a move sends a raw `position`, or a reorder sets positions outright, *then* — **question for the PO:** wiki item-positioning §2 says a write carries relative intent and the server resolves the number. The API also accepts a final number, both ways, and scripts and test setup rely on it. Is that part of the API, which the page would then state, or is it to be retired?
+*Given* Free items `X` at `2.0` and `A` at `4.0` in one workflow, *when* a move names `position: 3.0` for `X`, alone or with `{anchorId: A, side: after}`, *then* it's refused with a 400 whose message says to name an anchor and side instead, and `X.position` is still `2.0`. *And when* a request asks to set several items' positions outright, *then* no endpoint takes it: it gets a 404, and no position changes.
 
 **Automation test:** —
 

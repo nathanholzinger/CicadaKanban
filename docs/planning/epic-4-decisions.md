@@ -13,7 +13,7 @@ their numbers so existing references to §9–§11 still resolve.
 
 ### 9. Open question, to re-approach in Epic 4: an attached item's workphase — stored cascade, or null and inherit-at-read?
 Not a decision. Recorded 2026-09-21 from the Story 4 code-quality audit
-discussion (`docs/audits/code-quality-audit-epic-3-5-story-4.md` #1 and the
+discussion (`docs/archive/code-quality-audit-epic-3-5-story-4.md` #1 and the
 "no cascade" assertion it prompted), parked here rather than in Epic 3.5
 because its natural neighbor is Epic 4's done-column rework, which also
 revisits what a status means for a nested item. A data-model question, not
@@ -155,13 +155,15 @@ Not to be pre-built in Epic 3.5. The point of recording it is that Stories
 4.1's `kind` discriminant plus the audit's #7/#8 leave the facet work
 confined to these four, rather than a branch in twelve places.
 
-### 12. Revisit with the done-column rework: dragging within a done column, and three test-plan cases
-These wait for this epic's done-column rework. Nathan routed the drag
-questions on 2026-09-27 and 2026-09-28, TC-5.15 at A3 batch 5's Stop 1,
-and TC-6.11 and 6.12 at batch 6's.
+### 12. Revisit with the done-column rework: dragging within a done column, and five test-plan cases
+These wait for this epic's done-column rework, or for its status model
+(§13). Nathan routed the drag questions on 2026-09-27 and 2026-09-28,
+TC-5.15 at A3 batch 5's Stop 1, TC-6.11 and 6.12 at batch 6's, and TC-6.13
+and ATT-5.11 during A5a's phase 1 (2026-09-30).
 
-**Three test-plan cases, routed here by ID.** Each stays `Open` until this
-rework lands.
+**Five test-plan cases, routed here by ID.** TC-5.15, 6.11 and 6.12 stay
+`Open` until this rework lands. TC-6.13 and ATT-5.11 stay `Pending PO`
+until this epic answers their questions.
 
 - **TC-5.15: done items count toward the magnitude threshold** (A3's Open
   question 18). Wiki item-positioning §5 reindexes before an
@@ -178,12 +180,29 @@ rework lands.
   non-terminal workphases is rejected.** The wiki says only that a range
   "cannot span" both. The rejection is the Test Planner's reading, which
   Nathan kept.
+- **TC-6.13: several Free items made done, or reopened, by one flag
+  change** (wiki item-positioning §6). Making a workphase terminal
+  completes its Free items in one write, so they tie on `completedAt`, and
+  the done list shows them in creation order (TC-6.10). Clearing the flag
+  gives each a fresh position by the append fallback, but the wiki doesn't
+  say in which order: their order before, or the done list's. The server
+  restores their order before today.
+- **ATT-5.11: a Free item reparented between a project with no workflow
+  and one with a workflow** (wiki item-attachment §2a and §9). Is that
+  reparent cross-workflow, and so refused when it leaves a Free item in
+  the moved subtree? Going in, the Free item has no workflow to leave and
+  may have no workphase. Going out, it would keep a workphase in a project
+  that uses no workflow. Nathan expects §13's status model to settle it: a
+  move that keeps the item in Backlog has no workflow to consider. It's
+  listed here so the routed cases sit together, but it belongs to §13's
+  discussion, not the done column.
 
-Nathan routed TC-6.11 and 6.12 here because the rework may retire the
-terminal flag. Their tests exist in `server/tests/routes/workphases.test.ts`
-but carry no ID: lines 102, 130 and 160 for TC-6.11, and 72 and 92 for
-TC-6.12. The flag tests compare with `toBeLessThan` rather than the case's
-values (`docs/audits/test-reconciliation-a3-close.md`, Test Quality 5).
+Nathan routed TC-6.11, 6.12 and 6.13 here because the rework may retire
+the terminal flag. TC-6.13 has no test. TC-6.11's and 6.12's exist in
+`server/tests/routes/workphases.test.ts` but carry no ID: lines 102, 130
+and 160 for TC-6.11, and 72 and 92 for TC-6.12. The flag tests compare
+with `toBeLessThan` rather than the case's values
+(`docs/archive/test-reconciliation-a3-close.md`, Test Quality 5).
 
 **The two drag questions:**
 
@@ -227,4 +246,5 @@ its workphase was deleted (`ON DELETE SET NULL`).
 
 **For the discussion:** under the status model, a full item in Backlog
 may have no workphase by design. Unsorted and `needsAttention` would then
-flag only an Active full item with none.
+flag only an Active full item with none. ATT-5.11 (§12) belongs to the same
+discussion.

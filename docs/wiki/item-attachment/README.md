@@ -7,10 +7,12 @@ means and how it resolves) · [`../board-drag-interaction/`](../board-drag-inter
 (the gesture that drives these rules from a board)
 
 This page answers "what does it mean for one item to be attached to
-another, what is a legal parent, and what happens to an item's
-descendants when it's deleted." It is deliberately **gesture-
-agnostic** — every rule here holds identically whether the change came from
-a drag, the Sheet's checkbox, the child badge, or an MCP tool call.
+another, and what is a legal parent," and what follows from those: which
+workphase a write leaves an item in, what a create names, and what
+happens to an item's descendants when it's deleted. It is deliberately
+**gesture-agnostic** — every rule here holds identically whether the
+change came from a drag, the Sheet's checkbox, the child badge, or an MCP
+tool call.
 
 ---
 
@@ -27,13 +29,17 @@ attachment flag is clear ("detached").
 - **A detached child is Free**, exactly as Free as a top-level item. There
   is no third status. "Detached child" describes where it sits in the
   hierarchy; "Free" describes how it behaves.
-- **"Attached with no parent" is rejected, not ignored.** A write that
-  sets the attachment flag on an item that has (or would have) no parent
-  is refused with a 400 and stores nothing. The request can only be a
-  client bug, and silently accepting it would leave a stray flag on the
-  row that later attaches the item the instant it gains a parent. The
-  invariant *attached ⇒ has a parent* holds in the stored row, not only in
-  the reading: a write that clears `parentId` also clears the flag.
+- **"Attached with no parent" is rejected, not ignored.** A move or an
+  edit that sets the attachment flag on an item that has (or would have)
+  no parent is refused with a 400 and stores nothing. The request can
+  only be a client bug, and silently accepting it would leave a stray
+  flag on the row that later attaches the item the instant it gains a
+  parent. A write that clears `parentId` also clears the flag.
+- **Planned:** a create is held to the same rule. A create that sets the
+  flag with no parent is refused, and a create with no parent stores the
+  flag clear. So the invariant *attached ⇒ has a parent* holds in every
+  stored row, not only in the reading: a top-level item's flag is always
+  clear.
 
 The state determines three things at once, and they always move together:
 
@@ -59,6 +65,55 @@ choice about whether this item's status tracks its parent's.
   nothing needs to be un-stored when the parent reopens.
 - A **detached** child keeps its own workphase, its own board position, and
   its own `completedAt` — it is not affected by its parent moving.
+
+## 2a. The workphase a write leaves an item in
+
+**A write that leaves an item Attached gives it its parent's
+workphase** (§2). It may name the parent's workphase, or none. A move
+that names any other is refused with a 400, and the message says to omit
+the workphase or name the parent's. "The parent" is the one after the
+write, so two writes stay legal: a detach that files the item in a
+workphase in the same write, which is what a Stub dropped on a column
+sends, and an attach that names its new parent's workphase.
+
+**Planned:** a create that makes an Attached child and names a workphase
+other than its parent's is refused the same way.
+
+**An Attached item shows with its parent, whatever its own
+`workphaseId` says.** No write makes the two disagree, but a direct
+database edit can. The board then still shows the item inside its
+ancestor's Card, and Unsorted doesn't list it.
+
+**Planned:** a write that leaves an item Free without naming a workphase
+gives it the one it was shown in, so leaving attachment never moves an
+item on the board. That's the workphase of its nearest Free ancestor:
+- not the root's, since a detached item partway up the tree is Free, and
+  its own descendants are shown in its Card;
+- not the item's own `workphaseId`, which differs only after a direct
+  database edit.
+
+It applies to three writes:
+- a detach (§11);
+- a reparent to root of an Attached item (§11);
+- a create under a parent with the flag clear (§14), which takes the
+  workphase its parent is shown in.
+
+If that ancestor has no workphase, the write is refused with a 400, and
+the message offers two ways out: name a workphase in the same write, or
+file the Free ancestor into a workphase first. A write that names
+`workphaseId: null` is accepted and leaves the item with no workphase on
+purpose; omitting it means "where it was shown". The message doesn't
+suggest `null`, since an item with no workphase shows in Unsorted.
+Replaces §11's "takes its own workphase" and "Its workphase is whatever
+it holds at that moment".
+
+**A Free item's workphase belongs to its project's workflow, or it has
+none.** A move that names a workphase its project's workflow doesn't use
+is refused with a 400, with or without a reparent in the same write.
+
+**Planned:** a create that names such a workphase is refused too, and so
+is a cross-workflow reparent that would leave a Free item in the moved
+subtree (§9).
 
 ## 3. Reparenting is one-way
 
@@ -99,12 +154,16 @@ a no-op.
 attaching are separate choices (§2), and the API supports every
 combination: a request carries `parentId` and, independently, the
 attachment flag. **Omitting the flag keeps the item's current state** —
-a Free item reparented without the flag is still Free under its new
-parent; an Attached one is still Attached. Nothing attaches by default.
-A Free reparent with no anchor leaves the position alone (its scope is
-workflow-wide and didn't change); with an anchor it repositions like any
-other Free item. Whether the *board gesture* offers this is open (Open
-questions); the API rule is settled here.
+a detached child reparented without the flag is still Free under its new
+parent; an Attached one is still Attached. A Free reparent with no
+anchor leaves the position alone (its scope is workflow-wide and didn't
+change); with an anchor it repositions like any other Free item. Whether
+the *board gesture* offers this is open (Open questions); the API rule
+is settled here.
+
+**Planned:** so is a top-level item, whose flag is always clear (§1): a
+reparent without the flag makes it a detached child. No reparent
+attaches by default.
 
 ## 5. Reparent first, then resolve the position
 
@@ -146,6 +205,10 @@ following hold:
 
 **Cross-project is *not* a disqualifier**, and neither is cross-workflow.
 See §9.
+
+**Planned:** a cross-workflow reparent is refused whenever the moved
+subtree would hold a Free item after the write (§9). Replaces "and
+neither is cross-workflow".
 
 **Where this is enforced:** at the **UI** (before the drop is offered) and
 at the **API** (on the write). Never in the database schema — the hierarchy
@@ -241,6 +304,21 @@ their own workphase — a Free moving item, and every detached descendant
 because it no longer compares against anything
 ([`../item-positioning/`](../item-positioning/) §7.3).
 
+**Planned:** a cross-workflow reparent is refused whenever the moved
+subtree would hold a Free item after the write: the moving item, if it
+ends Free, or any detached descendant. Each would keep a workphase of
+its old workflow (§2a), and a write never leaves an item where only
+Unsorted can show it. Unsorted is for what gets past, such as a direct
+database edit or a project moving under a different workflow. The
+refusal holds even when the write names a workphase of the new workflow
+for the moving item: no write re-files items across workflows (Open
+questions). A cross-workflow reparent that ends with the moving item
+Attached, with no detached descendant, is allowed: the item and its
+attached descendants take the new parent's workphase (§2), and the item
+takes a fresh position among its new siblings, as any item Attached after
+a reparent does (§4). Replaces the paragraph "Cross-*workflow*
+reparenting is also allowed at the API" and this section's closing note.
+
 A cross-project reparent does **not** on its own change the moved item's
 position comparison scope, which never depends on the project: a Free
 item's is the workflow, and an Attached item's is its parent's attached
@@ -276,6 +354,7 @@ On becoming Free, the item:
 
 - takes a board-level position, resolved in the workflow-wide scope
 - takes its own workphase and stops tracking its former parent's
+  *Replaced by §2a once built.*
 - becomes eligible for `completedAt` like any other Free item
 
 **Why keep the parent:** per §2, attachment answers "does this follow its
@@ -287,14 +366,15 @@ separate, explicit act.
 **Severing is "reparent to root."** A write that sets `parentId` to null
 makes the item top-level: it clears the parent *and* (per §1's invariant)
 the attachment flag, so it is Free with nothing above it. Its workphase is
-whatever it holds at that moment — no workphase change is implied. For an
-Attached item this is a scope change (attached-siblings → workflow) and
-resolves a fresh position like any detach — including the done-item
-consequence if that workphase is terminal, since it is now a Free item in
-a done workphase; for an already-Free child it changes nothing about its
-position scope, and its position is left alone unless the same write
-carries an anchor. It is a legal target for any entry point, including
-the move endpoint, and needs no UI gesture to exist.
+whatever it holds at that moment — no workphase change is implied.
+*Replaced by §2a once built.* For an Attached item this is a scope change
+(attached-siblings → workflow) and resolves a fresh position like any
+detach — including the done-item consequence if that workphase is
+terminal, since it is now a Free item in a done workphase; for an
+already-Free child it changes nothing about its position scope, and its
+position is left alone unless the same write carries an anchor. It is a
+legal target for any entry point, including the move endpoint, and needs
+no UI gesture to exist.
 
 ## 11a. Hierarchy changes are logged
 
@@ -318,7 +398,8 @@ none of it is stored):
 - **Stub** — an attached descendant rendered inside its ancestor's Card. A
   title snippet, enough to identify the item. No independent board position.
 - **Card** — a Free item as the board's draggable unit: title, description
-  snippet, tags, and a collapsible list of descendant Stubs.
+  snippet, and a collapsible list of descendant Stubs.
+- **Planned:** a Card also shows its item's tags.
 - **Sheet** — the full item detail view. The only place non-positional data
   is edited.
 - **Headline** — an item's line in an Inbox list view (title + priority
@@ -339,6 +420,29 @@ A detached descendant goes too, because detaching keeps the parent
 belonging (§2), and a delete removes what belongs to the item. On the
 board, deleting a Card also removes the Cards of its detached
 descendants, wherever they sit.
+
+## 14. Creating an item
+
+**A create names the item's project, its parent, or both.**
+- A project alone makes a top-level item in that project.
+- A parent alone makes a child in the parent's project.
+- Both are accepted when the parent is in that project, and refused with
+  a 400 when it isn't: a hierarchy can't straddle two projects (§9).
+- Neither is refused with a 400.
+
+**A child is created Attached unless the create clears the flag.** Under
+§11, an item becomes Free by an explicit detach, so a child created Free
+without asking would be detached with no one detaching it. A child
+created with the flag clear is a detached child, Free from the start,
+and its workphase follows §2a.
+
+**A workphase is optional.** A top-level create may omit it, even in a
+project with no workflow, and the item then has none: it shows in
+Unsorted ([`../boards-columns-unsorted/`](../boards-columns-unsorted/)).
+An Attached child created without one takes its parent's (§2a).
+
+A create is a write like any other: §1, §2a, §7 and §8 hold for it, and
+§11a logs a create under a parent.
 
 ---
 
@@ -361,3 +465,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   child of {parent}" and the parent shows as "Child {child} created on
   {date}". Whether the parent's list shows it at all, and whether that
   needs a change to how activity entries are kept, is undecided.
+- **Re-filing across workflows (§9).** A cross-workflow reparent that
+  would leave a Free item in the moved subtree is refused, even when the
+  write names a workphase of the new workflow. How a write could re-file
+  a subtree into another workflow, for example with a map from each old
+  workphase to a new one, or a single default, is undecided. So is how a
+  project moving under a different workflow re-files its items.

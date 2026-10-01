@@ -13,7 +13,7 @@
 | TC-6.7 | A column range can't mix terminal and non-terminal workphases | P0 | Automated |
 | TC-6.8 | A range that's all terminal, or all non-terminal, is accepted | P1 | Automated |
 | TC-6.9 | A reopened done item takes the append fallback | P1 | Automated |
-| TC-6.10 | Two done items completed at the same moment | P2 | Pending PO |
+| TC-6.10 | Done items completed at the same moment read in creation order | P2 | Open |
 | TC-6.11 | Changing a workphase's terminal flag applies the split to the items already in it | P1 | Open |
 | TC-6.12 | A terminal-flag change that would leave a column mixing terminal and non-terminal workphases is rejected | P1 | Open |
 | TC-6.13 | Several Free items made done, or reopened, by one flag change | P2 | Pending PO |
@@ -92,11 +92,11 @@
 
 **Automation test:** `server/tests/routes/items.test.ts`
 
-## TC-6.10 — Two done items completed at the same moment
+## TC-6.10 — Done items completed at the same moment read in creation order
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Open · **Rule:** wiki item-positioning §6
 
-*Given* done Free items `D1` and `D2` with the same `completedAt`, `D1` created first, *when* their done list is sorted, *then* — **question for the PO:** wiki item-positioning §6 orders a done list by `completedAt`, and wiki item-positioning §5a's tie-break (`position`, then `createdAt`) is for a sort by position. What decides a tie in `completedAt`? The client puts the one created first ahead today.
+*Given* done Free items `A`, completed at 10:00, and `B` and `C`, both completed at 10:05, with `B` created before `C`, *when* their done list is sorted, *then* it reads `A, B, C`. *And given* `C` was created before `B`, *then* it reads `A, C, B`. An item previewed into a done list reads last ([DRAG-6.11](../board-drag-interaction/drag-6-preview-reconciliation.md)).
 
 **Automation test:** —
 
@@ -120,6 +120,6 @@
 
 **Priority:** P2 · **Status:** Pending PO
 
-*Given* workphase `W` holding Free items `X1` (`1.0`) and `X2` (`2.0`), *when* `W` is made terminal and later non-terminal again ([TC-6.11](part-6-active-done-split.md)), *then* — **question for the PO:** wiki item-positioning §6 sets each item's `completedAt` at the time of the write, so the two tie ([TC-6.10](part-6-active-done-split.md)). On the way back, wiki item-positioning §2 gives each one a fresh position by the append fallback, but doesn't say in which order. Does the done list keep `X1` ahead of `X2`, and does reopening them restore that order? The server keeps the order both ways today.
+*Given* workphase `W` holding Free items `X1` (`1.0`) and `X2` (`2.0`), with `X2` created first, *when* `W` is made terminal and later non-terminal again ([TC-6.11](part-6-active-done-split.md)), *then* — **question for the PO:** making `W` terminal completes both in one write, so they tie on `completedAt`, and the done list reads `X2, X1`, in creation order ([TC-6.10](part-6-active-done-split.md)). Clearing the flag reopens them, and wiki item-positioning §2 gives each a fresh position by the append fallback, but doesn't say in which order. Do they come back as `X1, X2`, their order before, or as `X2, X1`, the done list's? The server restores `X1, X2` today.
 
 **Automation test:** —

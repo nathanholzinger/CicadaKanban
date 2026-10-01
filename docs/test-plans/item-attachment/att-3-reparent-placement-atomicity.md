@@ -13,7 +13,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 | ATT-3.7 | On failure, nothing changed | P0 | Automated |
 | ATT-3.9 | Reparenting and attaching are separate: omitting the attachment flag keeps the item's state | P0 | Automated |
 | ATT-3.10 | A Free item's reparent leaves its position alone unless it carries an anchor | P1 | Automated |
-| ATT-3.11 | A top-level item reparented by a write that doesn't mention the attachment flag | P1 | Pending PO |
+| ATT-3.11 | A top-level item reparented without the attachment flag becomes a detached child | P1 | Planned |
 
 ---
 
@@ -66,7 +66,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 - `X.parentId = B`, and `X` is still Free: it keeps its own workphase, stays in the workflow-wide position scope, and renders as a Card;
 - `Y.parentId = B`, and `Y` is still Attached: it inherits `B`'s workphase and is positioned among `B`'s attached siblings ([ATT-3.1](att-3-reparent-placement-atomicity.md)).
 
-Nothing attaches by default. *And when* the write carries the flag as well, *then* every combination is accepted: Free to Free, Free to Attached, Attached to Free, and Attached to Attached, each landing in the state the flag names. A top-level item is [ATT-3.11](att-3-reparent-placement-atomicity.md)'s.
+*And when* the write carries the flag as well, *then* every combination is accepted: Free to Free, Free to Attached, Attached to Free, and Attached to Attached, each landing in the state the flag names. A top-level item is [ATT-3.11](att-3-reparent-placement-atomicity.md)'s.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `tests/ui/attached-children.spec.ts`
 
@@ -78,10 +78,10 @@ Nothing attaches by default. *And when* the write carries the flag as well, *the
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## ATT-3.11 — A top-level item reparented by a write that doesn't mention the attachment flag
+## ATT-3.11 — A top-level item reparented without the attachment flag becomes a detached child
 
-**Priority:** P1 · **Status:** Pending PO
+**Priority:** P1 · **Status:** Planned · **Rule:** wiki item-attachment §4
 
-*Given* top-level item `X`, which is Free, *when* a write gives `X` parent `B` and doesn't mention the attachment flag, *then* — **question for the PO:** wiki item-attachment §4 says omitting the flag keeps the item's state, so `X` stays Free under `B`. If a parentless item may hold the flag ([ATT-1.8](att-1-free-attached-state.md)), `X` may already hold it, and gaining a parent would attach it. Which does wiki item-attachment §4 say: does the write keep `X` Free, or does a flag `X` already holds decide?
+*Given* top-level item `X` in workphase `W1` at workflow position `p`, and item `B` in workphase `W2` of the same workflow, *when* a write gives `X` parent `B` and doesn't mention the attachment flag, whether it edits `X` or moves it, *then* `X` is a detached child of `B`: its flag is clear, and it's still Free, in `W1`, at position `p`. No reparent attaches by default.
 
 **Automation test:** —

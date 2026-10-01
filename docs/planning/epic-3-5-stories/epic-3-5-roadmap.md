@@ -227,7 +227,7 @@ hierarchy (Story 6), and dragging an already-attached Stub at all
 (Story 5).
 
 **Automation deferred (recorded 2026-09-21):** the attach gesture has no
-client-side automated coverage — `docs/audits/code-quality-audit-epic-3-5-story-4.md`
+client-side automated coverage — `docs/archive/code-quality-audit-epic-3-5-story-4.md`
 #3. Deliberately deferred to **Story 10** rather than fixed here, so the
 E2E is written once against settled thresholds instead of chased through
 Stories 5–8's tuning. The write itself is covered at the API
@@ -403,7 +403,7 @@ built here as phases.
 ratified by the PO the same day: 45 findings — 32 adopted across four
 phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Built
 2026-09-24 (Phases 0–3); the joint Story 6 + 6.1 audit followed
-(`docs/audits/code-quality-audit-epic-3-5-story-6.md`).**
+(`docs/archive/code-quality-audit-epic-3-5-story-6.md`).**
 
 ---
 
@@ -620,9 +620,9 @@ deferral and keep landing with their stories.
    separate reconciliation pass.
    - **board-drag-interaction, 66 cases** (A3 batch 3). What each test
      asserts is in the Gaps section and Addendum of
-     `docs/audits/test-reconciliation-a3-board-drag-interaction.md`, which
-     moves to `docs/archive/` when A3 closes. Its "Confirming run" section
-     lists the 18 tests that carry a case's ID but assert only part of it.
+     `docs/archive/test-reconciliation-a3-board-drag-interaction.md`. Its
+     "Confirming run" section lists the 18 tests that carry a case's ID
+     but assert only part of it.
      For each, Story 10 decides whether to extend that test, write a new
      one, or put the ID on another test that asserts the missing part
      (`docs/test-plans/README.md`).
@@ -641,7 +641,7 @@ deferral and keep landing with their stories.
      client ordering or request rule whose only surface is a drag, tested
      in the client's pure modules (`docs/test-plans/README.md`). It covers
      board-drag's client rules as well as item-positioning's. Two
-     consequences, from `docs/audits/test-reconciliation-a3-close.md`,
+     consequences, from `docs/archive/test-reconciliation-a3-close.md`,
      "What changed since they were routed":
      - **DRAG-6.2 closes with a stamp.** `itemWriteReconciliation.test.ts`'s
        TC-2.30 test asserts the half its UI test misses, so it needs no new
@@ -680,14 +680,14 @@ deferral and keep landing with their stories.
        As internal tests they'd need approval for no gain, so they're left.
    - **item-attachment, 1 case** (A3 batch 4): ATT-4.9, the UI and the API
      agreeing on every target's legality. Its test is described in
-     `docs/audits/test-reconciliation-a3-item-attachment.md`, under
+     `docs/archive/test-reconciliation-a3-item-attachment.md`, under
      "ATT-4.9", option (a): extend the classification spec to replay each
      target it classifies against the move endpoint.
    - **item-positioning:** none. A3 closed every item-positioning gap it
-     didn't route elsewhere. TC-5.15, 6.11 and 6.12 are routed to Epic 4
-     (`epic-4-decisions.md` §12), and TC-2.32, 6.10, 6.13 and 7.18 to A5.
+     didn't route elsewhere. TC-5.15, 6.11, 6.12 and 6.13 are routed to
+     Epic 4 (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5a.
 
-2. **Deferred from the Story 4 audit, #3** (`docs/audits/code-quality-audit-epic-3-5-story-4.md`,
+2. **Deferred from the Story 4 audit, #3** (`docs/archive/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no
    client-side automated coverage at any level. Column → Card zoom-in,
    `popDueAt`'s card fallback, `placementFor`'s Card branch, Card → column
@@ -779,7 +779,7 @@ deferral and keep landing with their stories.
      reader at all.
 
 7. **E2E specs that bypass helpers that exist** (Story 6 + 6.1 audit #17,
-   `docs/audits/code-quality-audit-epic-3-5-story-6.md`). This story
+   `docs/archive/code-quality-audit-epic-3-5-story-6.md`). This story
    re-touches each of these specs anyway, so fold them in then:
    - `drag-column-bands.spec.ts` re-rolls what `dragGesture.ts` and
      `seed.ts` provide: `popThrough` and its hard-coded `+ 2000` margins

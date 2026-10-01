@@ -18,8 +18,34 @@ Out of scope:
 
 ## Scope
 
-- **Wiki passages** *(PO, in phase 1)*: item-attachment §1, §4, §7, §9 and §11, plus wherever the create rules land; item-positioning §2, §6 and §7.3. The PO replaces this line with the exact passages.
-- **Test-plan cases** *(Test Planner, in phase 1)*: ATT-1.8, 1.10, 1.13, 3.11, 5.7, 5.8; TC-2.32, 6.10, 7.18; and any case the phase adds. TC-6.13 goes to Epic 4 (R11). ATT-4.12 and 4.13 go to A5b.
+- **Wiki passages** *(PO, in phase 1)*. Each `**Planned:**` passage is one phase 2 or 3 builds, and the PO takes its marker off at close.
+  - **item-attachment:**
+    - the opening paragraph: names the workphase rules, creates and deletes;
+    - §1: "Attached with no parent" narrowed to a move or an edit, and a **Planned** bullet holding a create to it (R6);
+    - §2a, new, "The workphase a write leaves an item in":
+      - an Attached item takes its parent's workphase, and a move naming another is refused (R1). **Planned:** a create is refused the same way;
+      - an Attached item shows with its parent whatever its own `workphaseId` says (R1);
+      - **Planned:** an item leaving attachment takes the workphase it was shown in (R4);
+      - a Free item's workphase belongs to its project's workflow, and a move naming another is refused (R3). **Planned:** a create too, and the cross-workflow reparent (§9);
+    - §4: "Omitting the flag keeps the item's current state" narrowed to a detached child, and a **Planned** paragraph for a top-level item, ending "No reparent attaches by default" (R6);
+    - §7: a **Planned** paragraph replacing "and neither is cross-workflow" (R3);
+    - §9: a **Planned** paragraph refusing a cross-workflow reparent that would leave a Free item in the moved subtree, replacing the cross-workflow paragraph and the closing note (R3);
+    - §11: *Replaced by §2a* notes on "takes its own workphase" and "Its workphase is whatever it holds at that moment" (R4);
+    - §12: tags moved out of the Card bullet into a **Planned** bullet (R7);
+    - §14, new, "Creating an item": project, parent or both (R2); a child is created Attached unless the create clears the flag (R6); a workphase is optional (R5);
+    - Open questions: a new entry, "Re-filing across workflows".
+  - **item-positioning:**
+    - §2: a **Planned** paragraph retiring the raw position (R8), and a **Planned** paragraph adding `"none"` for an item in another workflow's workphase (R9);
+    - §2.1: a *Replaced by §7.3* note on the cross-workflow row (R3);
+    - §6: a new bullet, a done list's order and its tie-break, with an example (R10);
+    - §7.2: a *Replaced by §7.3* note on its closing sentence (R3);
+    - §7.3: a **Planned** paragraph (no item write nulls a position any more), and a paragraph on the items a project move leaves behind (R3; Open question 3);
+    - Open questions: a new entry, what a project move under a different workflow does to its items' positions.
+- **Test-plan cases** *(Test Planner, in phase 1)*:
+  - **`Open`,** live today: ATT-1.8, 5.7, 9.1, 9.3, 9.8, 10.1, 10.2, 10.3; TC-6.10, 7.20. Each needs a test that carries its ID.
+  - **`Planned`,** built in phase 2 or 3: ATT-1.14, 3.11, 5.9, 5.10, 9.2, 9.4, 9.5, 9.6, 9.7, 9.9; TC-2.32, 7.18, 7.19. Each becomes `Open` when the PO takes its passage's marker off.
+  - **Replaced once built, then deleted:** ATT-5.4 (by 5.9), ATT-5.5 (by 5.10) and ATT-7.3 (by 9.4); TC-7.17 (by 7.19).
+  - **Routed elsewhere:** ATT-1.10 is `Planned` until the Tags & Type System epic builds §12's tags (R7). ATT-4.12 and 4.13 go to A5b, and TC-6.13 (R11) and ATT-5.11 (Open question 4) to Epic 4, all four still `Pending PO`.
 
 ## Inbound deferrals
 
@@ -87,7 +113,10 @@ Each ruling says what the code does today and what changes. "Refused" means a 40
 - A reparent that omits the flag keeps the item's state. An attached item stays attached. A top-level item, whose flag is clear, becomes a detached child. Item-attachment §4 narrows to "No reparent attaches by default."
 - A reparent to root clears the flag (§11), as today.
 - A migration clears the flag on existing parentless rows.
-- **The Sheet.** Its parent picker sends only `parentId` (`ParentSection.tsx`). So under R6, reparenting a top-level item there would make it a detached child, where today it attaches. The plan has the Sheet send `isAttached: true` when the item has no parent, which keeps today's behavior (Open question 1). Board drags send the flag explicitly, so they don't change.
+- **The Sheet keeps today's behavior until the Work Item Detail & Chat UI epic** (Nathan, Open question 1).
+  - Its parent picker sends only `parentId` (`ParentSection.tsx`). Under R6, reparenting a top-level item there would make it a detached child, where today it attaches. So it sends `isAttached: true` when the item has no parent.
+  - It's an implementation detail, not a rule. The wiki doesn't state it, and no case tests it. Internal tests that already cover it stay, and none is added.
+  - Board drags send the flag explicitly, so they don't change.
 
 **R7. Tags get no tests until the Tags & Type System epic** (ATT-1.10; Nathan, A3 batch 4). Item-attachment §12's tags get `**Planned:**`.
 
@@ -124,7 +153,7 @@ Each phase ends with the gate (`npm run check`) and a stop for review and commit
 **Phase 2: the hierarchy rules** (Coder): R1, R3, R4 and R6.
 - The primitive (`itemHierarchy.ts`) and `POST`. Whether `POST` goes through `validateHierarchyRequest` or shares its checks is the Coder's call, recorded in the Code map.
 - The migration for parentless flags. Whether the column default changes is the Coder's call.
-- The Sheet's flag (R6), and the MCP tool descriptions. Every new refusal's message names the way out.
+- The Sheet's flag (R6's Sheet bullet, with no case), and the MCP tool descriptions. Every new refusal's message names the way out.
 - Tests for the phase's cases, each titled with its case ID. Tests that pin a superseded answer are updated (the list below).
 
 **Phase 3: positions** (Coder): R8 and R9.
@@ -148,7 +177,7 @@ From the Test Planner's A3 batch 4 confirming run. Each group ends with what hap
 - **ATT-1.13:**
   - `items.hierarchy.test.ts`'s "rejects a workphaseId that contradicts the parent an attached item inherits from…" *stays*;
   - `items.test.ts`'s "an attached child inherits the parent workphase even when a different one is passed" *inverts*: the create refuses.
-- **ATT-3.11 and ATT-4.12:** `attached-children.spec.ts`'s "the Parent dropdown excludes descendants, and reparenting nests the item under its new parent". *Keeps passing* if the Sheet sends the flag (R6). `items.test.ts`'s "accepts reparenting under a parent in a different project…" asserts nothing about the flag.
+- **ATT-3.11 and ATT-4.12:** `attached-children.spec.ts`'s "the Parent dropdown excludes descendants, and reparenting nests the item under its new parent". *Keeps passing,* since the Sheet sends the flag (R6's Sheet bullet). `items.test.ts`'s "accepts reparenting under a parent in a different project…" asserts nothing about the flag.
 - **ATT-5.7:** `items.test.ts`'s "rejects creating a child whose projectId differs from its parent". *Stays.*
 - **ATT-5.8:** `items.hierarchy.test.ts`'s "rejects a workphaseId from a workflow the item's project does not use…" and "rejects a one-step reparent into a different-workflow project that also names a workphaseId". *Stay:* R3 keeps both refusals. Their messages may change if `crossWorkflowMoveError` goes.
 - **Misstamped:** `items.hierarchy.test.ts`'s "ATT-3.9, ATT-3.10: a Free item can be reparented…" reparents a top-level item, which is ATT-3.11's scenario. Whether it gains ATT-3.11 is the Test Planner's call. Its flag is clear, so it stays Free under R6.
@@ -175,11 +204,83 @@ The starting list. The Coder keeps it current and records which symbol carries w
 
 ## Amendments
 
+- **2026-09-30, phase 1 (the PO): R1–R10 written into the wiki.** Scope lists the exact passages. No section was renumbered. Two sections are new: item-attachment §2a and §14.
+  - **Nathan's ruling while writing:** in R3, "a cross-workflow reparent of a Free item" means Free *after* the write. A Free item that attaches across workflows, with no detached descendant, is allowed: its whole subtree takes the new parent's workphase, which is R3's own reason for allowing an attached item. An item that ends Free is refused, even when the write names a workphase of the new workflow.
+  - **Where the rules landed (the PO's call):**
+    - R1, R3's data rule and R4 share a new item-attachment §2a, since all three say which workphase a write leaves an item in. R3's reparent refusal is in §9, beside the passage it replaces, and in §7's disqualifiers.
+    - The create rules (R2, R5, R6's default) are a new item-attachment §14. Its create-only refusals stay with the rule they belong to, in §1 and §2a, each marked Planned for the create.
+    - R1's last bullet, a drifted Attached item showing with its parent, is in §2a as today's behavior. It's also ruling 13's "if it's attached then show it alongside the parent, ignoring workphase".
+  - **Planned passages, and what they leave in force:** each partial build states the built part unmarked and marks the rest, per the wiki README.
+    - §1's "attached with no parent" rule is narrowed to a move or an edit, which refuse today. A create's refusal, and a parentless create storing the flag clear, are Planned.
+    - §4's "a Free item reparented without the flag is still Free" is narrowed to a detached child. A top-level item's case, and "No reparent attaches by default", are Planned, since a top-level item holds the flag today.
+    - §12's tags are Planned (R7).
+  - **The PO's deductions:**
+    - **R8:** a move that names a `position` is refused with a 400 whose message says to name an anchor and side instead. The plan says the route "stops accepting" it. The Goal's principle, that the API refuses what isn't allowed and says what to do instead, rules out ignoring it.
+    - **R10:** a done list reads oldest completion first. That comes from board-drag-interaction §10, where a done list shows a previewed item last, as the newest completion.
+    - **R4:**
+      - the reason, "leaving attachment never moves an item on the board", from R4's "the one it was shown in";
+      - a create under a parent with the flag clear takes the workphase its parent is shown in, which is R4's rule applied to an item not yet shown anywhere.
+    - **R3's reason in §9:** "a write never leaves an item where only Unsorted can show it", from the Goal's principle that Unsorted catches only what gets past.
+    - **§14's reason for the Attached default,** from §11: an item becomes Free by an explicit detach. It was the PO's recommendation, and R6 ruled it.
+    - **The re-filing Open question (item-attachment),** from the plan's Out of scope: how a write re-files a subtree into another workflow.
+  - **For the Test Planner:** every case under the sections above. ATT-1.8, 1.10, 1.13, 3.11, 5.7 and 5.8, and TC-2.32, 6.10 and 7.18 have their answers. New rules without a case yet include §2a's drift rule, R4's three writes and its refusal, R3's cross-workflow cases and §14's create rules.
+  - **For phase 2's pointers:** §2a and §14 are new sections with no index pointers yet. R4 replaces §11's workphase passages, so a comment citing §11 for a detach's workphase moves to §2a. The §9 and §7.3 pointers at `itemHierarchy.ts::nullForeignWorkphasePositions` go if that function does (A4's D4 tables).
+- **2026-09-30, phase 1 (the Test Planner): the cases, against the PO's text.** Scope lists every ID. The catalog is 269 cases: 164 `Automated`, 83 `Open`, 14 `Planned`, 4 `Manual` and 4 `Pending PO`.
+  - **The nine `Pending PO` cases:**
+    - ATT-1.8 keeps the move and edit refusals, and is `Open`. A create's half is ATT-1.14, `Planned`.
+    - ATT-1.10 is `Planned` (R7).
+    - ATT-1.13 moves to ATT-9.1, a move (`Open`), and ATT-9.2, a create (`Planned`).
+    - ATT-3.11 is `Planned`: the reparent makes a top-level item a detached child.
+    - ATT-5.7 is `Open`: the create is refused.
+    - ATT-5.8 moves to ATT-9.8, a move (`Open`), and ATT-9.9, a create (`Planned`). Its one-step re-file is part of ATT-5.9.
+    - TC-2.32 is `Planned` (R8), with the PO's 400.
+    - TC-6.10 is `Open` (R10), with the wiki's example.
+    - TC-7.18 is `Planned` (R9). Its fixture is a project move now, since no reparent will leave a Free item in another workflow.
+  - **Two new suites,** for the PO's two new sections: ATT-9 for §2a, and ATT-10 for §14.
+    - The test-plans README moves a case to another suite only in a story that moves its rule, as §2a now holds ATT-1.13's and ATT-5.8's. No test carries either ID, so nothing needs re-titling, and both IDs are retired.
+    - ATT-5.6 stays in ATT-5, with §14 added to its Rule. A test carries its ID, so moving it would fail `check:docs` in lint until the test was re-titled. ATT-5.7 stays beside it.
+  - **New cases for the rules with none:**
+    - §2a's drift rule (ATT-9.3);
+    - R4's three writes and its refusal (ATT-9.4 to 9.7);
+    - R3's cross-workflow reparents, refused (ATT-5.9) and accepted (ATT-5.10), and the positions the accepted one resolves (TC-7.19);
+    - §14's create rules (ATT-10.1 to 10.3);
+    - item-positioning §7.3's items that a project move leaves behind (TC-7.20).
+  - **Replaced live cases** (`Planned, replaces`): ATT-9.4 replaces ATT-7.3, ATT-5.9 replaces ATT-5.4, ATT-5.10 replaces ATT-5.5, and TC-7.19 replaces TC-7.17. The old cases stay `Automated` until the build lands, and the close pass deletes them.
+  - **Smaller edits:**
+    - ATT-3.9 drops "Nothing attaches by default", which is §4's Planned sentence now;
+    - TC-2.14's Given names a workphase of the item's own project's workflow, since R9 takes the rest;
+    - TC-6.13's question starts from R10's tie-break;
+    - ATT-5's preamble, and both INDEX pages.
+  - **Unsorted:** ATT-10.3 and TC-7.20 assert that an item shows in Unsorted, since item-attachment §14 and item-positioning §7.3 say so. The rest of Unsorted is A5c's page.
+  - **TC-7.20 stays in this Scope** (Nathan, 2026-09-30). The rule is right, and the code met it before the wiki recorded it, so it's `Open` and needs a test here.
+  - **For the Coder in phase 2, titles only.** Each test is one the plan lists under "Tests that pin today's answers". Whether each asserts all of its case is the Reconciler's call at step 5.
+    - `items.hierarchy.test.ts`'s "rejects a workphaseId that contradicts the parent an attached item inherits from…" takes ATT-9.1.
+    - `items.test.ts`'s "an attached child inherits the parent workphase even when a different one is passed", once it inverts, takes ATT-9.2.
+    - `items.test.ts`'s "rejects creating a child whose projectId differs from its parent" takes ATT-5.7.
+    - `items.hierarchy.test.ts`'s "rejects a workphaseId from a workflow the item's project does not use…" takes ATT-9.8, and "rejects a one-step reparent into a different-workflow project that also names a workphaseId" takes ATT-5.9.
+    - The test that reparents a top-level item (the list's last entry) takes ATT-3.11, which is its scenario. It doesn't need ATT-3.9, whose Given is a detached child.
+    - TC-2.17 stays. Once a create stores the flag clear, its test sets up the parentless row that holds the flag by a direct database write.
+  - **For the close pass (step 3):** once the markers come off, ATT-1.7's detach paragraph and ATT-7.7's workphase clause cite §2a, not §11. Their expected values don't change; the reason does. ATT-1.8 and 1.14 may merge.
+  - **Routing:** A5b names ATT-4.12 and 4.13. TC-6.13 and ATT-5.11 wait on the Architect's phase 1 edits: `epic-4-decisions.md` §12 names both, and Story 10's item-positioning line names TC-6.13. ATT-5.11 goes to Epic 4 by Nathan's ruling on Open question 4.
+  - **Checks:** `check:docs -- docs/test-plans` reports 0 hits, and every table, heading, status and link agrees.
+- **2026-09-30, phase 1 (the Architect): the routing for TC-6.13 and ATT-5.11.**
+  - `epic-4-decisions.md` §12 names both, with each one's question. It now lists five routed cases. TC-6.13 is there for the terminal flag, beside TC-6.11 and 6.12. ATT-5.11 is there so the routed cases sit together, and §13's "For the discussion" points to it, since the status model is what settles it.
+  - Story 10's item-positioning line in `epic-3-5-roadmap.md` routes TC-6.13 to Epic 4, and TC-2.32, 6.10 and 7.18 to A5a.
+  - `mvp-roadmap.md`'s Epic 7 entry routes ATT-4.12 to A5b, not A5.
+  - **In passing:** the planning docs' paths to the A3 reconciliation reports and three closed audit reports pointed at `docs/audits/`. They point at `docs/archive/` now, in `epic-3-5-roadmap.md`, `epic-4-decisions.md` and `epic-5-decisions.md`.
+
 ## Open questions
 
 1. **For Nathan:** under R6, should the Sheet send `isAttached: true` when reparenting a top-level item, which keeps today's behavior? Or may the item become a detached child until the Sheet epic? The plan assumes the first.
+   - **Answered (Nathan, 2026-09-30):** keep today's behavior until the Work Item Detail & Chat UI epic. It's an implementation detail: no wiki rule and no case. Internal tests that already cover it stay, and none is added. R6's Sheet bullet holds the ruling, and the Epic 7 roadmap entry carries it in.
 2. **For the Test Planner:** does a case already cover a create with a parent and no flag (R6, from A4's handoff)?
+   - **Answered (Test Planner, 2026-09-30):** no case did. ATT-10.2 does now: a create with a parent and no flag makes an Attached child.
 3. **For the PO:** how item-positioning §7.3 reads once no item write reaches it (R3).
+   - **Done (PO, 2026-09-30):**
+     - The two cross-workflow paragraphs stay as the rule until R3 is built. A **Planned** paragraph replaces them, together with §2.1's cross-workflow row and §7.2's sentence about it. The one cross-workflow reparent R3 allows leaves every moved item Attached, so no item write nulls a position.
+     - A second paragraph covers the items a project move under a different workflow leaves behind: they show in Unsorted, and what the move does to their positions isn't a rule yet. That's under item-positioning's Open questions, since re-filing is out of this story's scope. R9's `"none"` covers their `positionScope`.
+4. **For the PO:** ATT-5.11. Is a reparent between a project with no workflow and one with a workflow cross-workflow (item-attachment §9), and so refused when it leaves a Free item in the moved subtree? A Free item coming from the project with no workflow has no workphase to keep, and §2a lets a Free item have none. The other way, a Free item would keep its workphase in a project that uses no workflow.
+   - **Routed (Nathan, 2026-09-30):** to Epic 4, which he expects to settle it: a move there that keeps the item in the backlog has no workflow to consider. ATT-5.11 stays `Pending PO`, and the Architect names it in `epic-4-decisions.md` §12, beside TC-6.13.
 
 ## Living-docs handoff
 
@@ -190,5 +291,5 @@ The starting list. The Coder keeps it current and records which symbol carries w
 - **Test-plan cases affected:**
 - **Wiki sections added, changed, moved or removed** (PO, at close):
 - **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes.
-- **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`), for the Sheet's page.
+- **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`) that the Sheet's page should state. R6's flag isn't one, since it's an implementation detail.
 - **To A5c:** R5's rule for a full item with no workphase, and R3's project moves, for the page's account of Unsorted.

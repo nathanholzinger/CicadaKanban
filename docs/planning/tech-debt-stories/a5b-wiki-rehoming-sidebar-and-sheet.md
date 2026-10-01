@@ -46,7 +46,7 @@ From A5's D2 (ATT-4.13, ruling 14):
 - **The bucket is a wiki page for the Sheet,** whose header says its rules stay provisional until the Work Item Detail & Chat UI epic (Epic 7 on today's roadmap). The docs have one marker, `**Planned:**`, which means decided but not built. The Sheet is the other way round: built, with its rules not settled. Whether the page's header is enough, or the standards guide needs a marker for it, is the Architect's call when this story is planned.
 - **Its cases move there:** ATT-4.12 and 4.13, both `Pending PO`, routed here by ID from A5a. ATT-4.13's question (does the picker offer parents from other projects?) waits for the Sheet epic.
 - **The over-cap picker is covered by the ruling, not fixed.** A4's handoff to Nathan: `hierarchy.ts::buildParentOptions` offers parents at which the item's subtree would exceed the depth cap, and picking one gets the API's 400. Item-attachment §7 says the UI never offers a target the API would refuse. Under ruling 14, the Sheet's page states the gap as provisional until the Sheet epic. The roadmap's Sheet epic already notes the fix.
-- **A5a changes the Sheet** (its R6: the parent picker sends `isAttached: true` when reparenting a top-level item). A5a's handoff says what changed.
+- **A5a changes the Sheet's code, not its rules.** Under A5a's R6, the parent picker sends `isAttached: true` when reparenting a top-level item, which keeps today's behavior until the Work Item Detail & Chat UI epic. Nathan ruled it an implementation detail, so the page doesn't state it. A5a's handoff names anything else that changed.
 
 ### D3 The sweep for other misplaced rules
 
