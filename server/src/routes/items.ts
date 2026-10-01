@@ -7,20 +7,15 @@ import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertWithinDepthCap, hierarchyDepth, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
-import {
-  isTerminalLookup,
-  positionScopeFor,
-  withPositionScope,
-  workflowIdForWorkphase,
-} from '../lib/itemPositionScope.js';
+import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
 import {
   applyHierarchyRequest,
+  foreignWorkphaseError,
   logCreatedUnderParent,
   resolveCreateWorkphase,
   validateHierarchyRequest,
   type HierarchyRequest,
 } from '../lib/itemHierarchy.js';
-import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';
 
 const router = Router();
@@ -35,44 +30,6 @@ function isTerminalOf(workphaseId: string): boolean | null {
     .where(eq(workphases.id, workphaseId))
     .get();
   return workphase ? Boolean(workphase.isTerminal) : null;
-}
-
-// PATCH /:id/move is the board's endpoint, and a board renders exactly one
-// workflow — its items may span projects but never workflows — so a
-// `workphaseId` that would change the item's workflow can only come from a
-// non-board caller. Rejected here rather than mis-placed: the primitive's
-// keep-position rule assumes same-workflow (wiki item-positioning §2's
-// workphase-only rule). Deliberately a route-level guard and not part of
-// validateHierarchyRequest: it's shaped by this endpoint's caller, the
-// board, and the primitive also serves PUT. Only fires when the request
-// names a workphase explicitly; an attached child's inherited workphase is
-// its parent's concern. Skipped when a project resolves to no workflow at
-// all — nothing to compare against.
-function crossWorkflowMoveError(item: typeof items.$inferSelect, req: HierarchyRequest): string | null {
-  if (typeof req.workphaseId !== 'string') return null;
-  // The same projectId rule as `itemHierarchy.ts::deriveResultingState`: a
-  // new parent's project, else the item's own. The parent is known to
-  // exist — validation ran.
-  const parentProjectId =
-    typeof req.parentId === 'string'
-      ? db.select({ projectId: items.projectId }).from(items).where(eq(items.id, req.parentId)).get()?.projectId
-      : undefined;
-  const resultingProjectId = parentProjectId ?? item.projectId;
-  const targetWorkflowId = resultingProjectId ? effectiveWorkflowIdForProject(resultingProjectId) : null;
-  if (!targetWorkflowId) return null;
-  // A reparent into a project on a different workflow may not also name a
-  // workphase in the same step (the one-step shape that keeps an old-scope
-  // position). Compared project-to-project, not against the item's stored
-  // workphase, so re-filing an item already left foreign by an earlier
-  // reparent (wiki item-positioning §7.3) still goes through.
-  const currentWorkflowId = item.projectId ? effectiveWorkflowIdForProject(item.projectId) : null;
-  if (currentWorkflowId && currentWorkflowId !== targetWorkflowId) {
-    return 'a reparent into a project with a different workflow cannot also set workphaseId on this endpoint; reparent first, then re-file';
-  }
-  if (workflowIdForWorkphase(req.workphaseId) !== targetWorkflowId) {
-    return "workphaseId belongs to a workflow the item's project does not use; cross-workflow moves are not supported on this endpoint";
-  }
-  return null;
 }
 
 // Every item write responds with the fresh row plus, when a reindex fired,
@@ -199,6 +156,14 @@ router.post('/', (req, res) => {
   if (resolvedWorkphaseId && !existsById(workphases, resolvedWorkphaseId)) {
     res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
     return;
+  }
+  // A Free item's workphase belongs to its project's workflow (wiki item-attachment §2a).
+  if (!attached && typeof workphaseId === 'string') {
+    const foreignError = foreignWorkphaseError(resolvedProjectId, workphaseId);
+    if (foreignError) {
+      res.status(400).json({ error: foreignError });
+      return;
+    }
   }
 
   const now = Date.now();
@@ -363,7 +328,7 @@ router.patch('/:id/move', (req, res) => {
   const hierarchyReq: HierarchyRequest = { parentId, isAttached, workphaseId, anchorId, side, position };
   if (!hasIntent) hierarchyReq.workphaseId = item.workphaseId;
 
-  const error = validateHierarchyRequest(item, hierarchyReq) ?? crossWorkflowMoveError(item, hierarchyReq);
+  const error = validateHierarchyRequest(item, hierarchyReq);
   if (error) {
     res.status(400).json({ error });
     return;

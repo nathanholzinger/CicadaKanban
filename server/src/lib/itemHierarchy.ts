@@ -4,7 +4,7 @@
 // rules (POST /items); logCreatedUnderParent — the hierarchy entry a create under a parent
 // logs (POST /items).
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, notifications } from '../db/schema.js';
@@ -117,6 +117,44 @@ function noShownWorkphaseError(anchor: ShownWith): string {
 const ATTACHED_WORKPHASE_ERROR =
   "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
 
+// A Free item's workphase belongs to its project's workflow (wiki item-attachment
+// §2a). A project with no workflow has nothing to compare against, so any
+// workphase passes there.
+export function foreignWorkphaseError(projectId: string | null, workphaseId: string): string | null {
+  const workflowId = projectId ? effectiveWorkflowIdForProject(projectId) : null;
+  if (!workflowId || workflowIdForWorkphase(workphaseId) === workflowId) return null;
+  return "workphaseId belongs to a workflow this item's project does not use; name a workphase of that workflow";
+}
+
+// A reparent into a project on another workflow can't leave a Free item in the
+// moved subtree: it would keep a workphase of the workflow it left, where only
+// Unsorted could show it (wiki item-attachment §9). Only an item that ends
+// Attached, with no detached descendant, may cross: it and its attached
+// descendants take the new parent's workphase. Projects are compared, not
+// workphases, so an item already left foreign can still be re-filed.
+function crossWorkflowError(item: ItemRow, resulting: ResultingState): string | null {
+  if (!item.projectId || !resulting.projectId || resulting.projectId === item.projectId) return null;
+  const from = effectiveWorkflowIdForProject(item.projectId);
+  const to = effectiveWorkflowIdForProject(resulting.projectId);
+  if (!from || !to || from === to) return null;
+
+  if (!resulting.isAttachedWithParent) {
+    return `this reparent crosses workflows, and a Free item can't take its workphase with it: attach "${item.title}" to its new parent (isAttached: true), or reparent it within its own workflow`;
+  }
+  const descendantIds = walkItemDescendants(item.id);
+  const detached = descendantIds.length
+    ? db
+        .select({ title: items.title })
+        .from(items)
+        .where(and(inArray(items.id, descendantIds), eq(items.isAttached, 0)))
+        .get()
+    : undefined;
+  if (detached) {
+    return `this reparent crosses workflows, and "${detached.title}", a detached descendant, would keep a workphase of the workflow it left: attach it to its parent or move it out of the subtree first, or reparent "${item.title}" within its own workflow`;
+  }
+  return null;
+}
+
 function deriveResultingState(
   item: ItemRow,
   req: HierarchyRequest,
@@ -226,6 +264,15 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     const anchor = shownWith(item.id);
     if (anchor) return noShownWorkphaseError(anchor);
   }
+  // A Free item's workphase belongs to its project's workflow, with or without
+  // a reparent in the same write (wiki item-attachment §2a), and a reparent
+  // can't cross workflows with a Free item in the subtree (wiki item-attachment §9).
+  if (!resulting.isAttachedWithParent && typeof req.workphaseId === 'string') {
+    const foreignError = foreignWorkphaseError(resulting.projectId, req.workphaseId);
+    if (foreignError) return foreignError;
+  }
+  const crossError = crossWorkflowError(item, resulting);
+  if (crossError) return crossError;
 
   if (req.anchorId !== undefined) {
     // The subject is excluded from its own scope query (positionScopeFor's
@@ -387,7 +434,6 @@ export function applyHierarchyRequest(
     }
   }
   if (workphaseChanged) cascadeWorkphaseToAttachedDescendants(item.id, tx);
-  if (projectChanged && resulting.projectId) nullForeignWorkphasePositions(tx, item.id, resulting, now);
 
   // --- Activity log (wiki item-attachment §11a, plus the workphase move's own entry) ---
   const flagChanged = wasAttachedWithParent !== resulting.isAttachedWithParent;
@@ -456,41 +502,4 @@ export function logCreatedUnderParent(
     { fromParentId: null, toParentId: parent.id, fromAttached: false, toAttached: attached },
     tx,
   );
-}
-
-// Cross-workflow reparent: every subtree item that keeps its *own*
-// workphase — the moved item if it's Free, and every detached descendant —
-// may now hold a workphase from a workflow its new project doesn't use.
-// Those items sit in "Unknown status," which isn't position-ordered, so
-// their stored position is nulled (wiki item-positioning §7.3). Attached
-// items inherit and keep their parent-scoped position, and nothing is
-// remapped (wiki item-attachment §9).
-function nullForeignWorkphasePositions(tx: Tx, rootId: string, resulting: ResultingState, now: number): void {
-  const targetWorkflowId = effectiveWorkflowIdForProject(resulting.projectId!, tx);
-  const workflowOfWorkphase = new Map<string, string | null>();
-  const isForeign = (workphaseId: string | null): boolean => {
-    if (!workphaseId) return false;
-    if (!workflowOfWorkphase.has(workphaseId))
-      workflowOfWorkphase.set(workphaseId, workflowIdForWorkphase(workphaseId, tx));
-    return workflowOfWorkphase.get(workphaseId) !== targetWorkflowId;
-  };
-
-  const toNull: string[] = [];
-  if (!resulting.isAttachedWithParent && isForeign(resulting.workphaseId)) toNull.push(rootId);
-  const descendantIds = walkItemDescendants(rootId, { tx });
-  if (descendantIds.length > 0) {
-    const projection = {
-      id: items.id,
-      isAttached: items.isAttached,
-      workphaseId: items.workphaseId,
-      position: items.position,
-    };
-    const rows = tx.select(projection).from(items).where(inArray(items.id, descendantIds)).all();
-    for (const row of rows) {
-      if (!row.isAttached && row.position !== null && isForeign(row.workphaseId)) toNull.push(row.id);
-    }
-  }
-  if (toNull.length > 0) {
-    tx.update(items).set({ position: null, updatedAt: now }).where(inArray(items.id, toNull)).run();
-  }
 }

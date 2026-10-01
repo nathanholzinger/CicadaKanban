@@ -292,7 +292,7 @@ test.describe('reparent and attach/detach controls', () => {
     await request.post(`${API}/test/reset`);
   });
 
-  test('ATT-7.3: detaching a child via the detail panel keeps it in place when the parent moves', async ({
+  test('ATT-9.4: detaching a child via the detail panel keeps it in place when the parent moves', async ({
     page,
     request,
     projectSidebar,
