@@ -1,6 +1,8 @@
 // validateHierarchyRequest / applyHierarchyRequest — the one reparent/attach/workphase/
 // placement implementation behind PUT /items/:id and PATCH /items/:id/move;
-// logCreatedUnderParent — the hierarchy entry a create under a parent logs (POST /items).
+// resolveCreateWorkphase — the workphase a create leaves its item in, held to the same
+// rules (POST /items); logCreatedUnderParent — the hierarchy entry a create under a parent
+// logs (POST /items).
 
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -41,7 +43,7 @@ export type HierarchyRequest = {
   parentId?: string | null;
   /** undefined = keep the current state — nothing attaches by default (wiki item-attachment §4). */
   isAttached?: boolean;
-  /** undefined = unchanged. Rejected with a 400 when the resulting state is attached and it disagrees with the parent's. */
+  /** undefined = unchanged, except that an item leaving attachment takes the one it was shown in (wiki item-attachment §2a). Rejected with a 400 when the resulting state is attached and it disagrees with the parent's. */
   workphaseId?: string | null;
   anchorId?: string;
   side?: Side;
@@ -59,6 +61,8 @@ type ResultingState = {
   attachedFlag: boolean;
   /** attachedFlag && parentId — the effective "is a Stub" test the rest of the code uses. */
   isAttachedWithParent: boolean;
+  /** Attached before the write and Free after it. */
+  leavesAttachment: boolean;
   workphaseId: string | null;
   projectId: string | null;
 };
@@ -76,7 +80,49 @@ function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
   return (tx ?? db).select(parentProjection).from(items).where(eq(items.id, parentId)).get();
 }
 
-function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: ParentRow | undefined): ResultingState {
+// The Free item an item is shown with: itself when it's Free, else its
+// nearest Free ancestor, since an Attached item shows in that ancestor's
+// Card. That item's workphase is where the item is shown, whatever the
+// item's own `workphaseId` says (wiki item-attachment §2a). The visited set
+// ends the walk on a parentId cycle in the data.
+type ShownWith = { id: string; title: string; workphaseId: string | null };
+
+function shownWith(itemId: string, tx?: Tx): ShownWith | undefined {
+  const e = tx ?? db;
+  const projection = {
+    id: items.id,
+    title: items.title,
+    workphaseId: items.workphaseId,
+    parentId: items.parentId,
+    isAttached: items.isAttached,
+  };
+  const visited = new Set<string>();
+  let current = e.select(projection).from(items).where(eq(items.id, itemId)).get();
+  while (current?.isAttached && current.parentId && !visited.has(current.parentId)) {
+    visited.add(current.id);
+    const parent = e.select(projection).from(items).where(eq(items.id, current.parentId)).get();
+    if (!parent) break;
+    current = parent;
+  }
+  return current;
+}
+
+// The 400 for a Free item that must take its shown-with item's workphase when
+// that item has none (wiki item-attachment §2a). Doesn't offer `null`: an item
+// with no workphase shows in Unsorted.
+function noShownWorkphaseError(anchor: ShownWith): string {
+  return `"${anchor.title}", the Free ancestor this item is shown with, has no workphase for it to take. Name a workphaseId in the same write, or file "${anchor.title}" into a workphase first`;
+}
+
+const ATTACHED_WORKPHASE_ERROR =
+  "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
+
+function deriveResultingState(
+  item: ItemRow,
+  req: HierarchyRequest,
+  parent: ParentRow | undefined,
+  tx?: Tx,
+): ResultingState {
   const parentId = req.parentId !== undefined ? req.parentId : item.parentId;
   const parentCleared = req.parentId === null && item.parentId !== null;
   // A write that omits the flag keeps the item's state, so a top-level item,
@@ -84,13 +130,39 @@ function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: Pare
   // The write that clears the parent clears the flag with it.
   const attachedFlag = parentCleared ? false : req.isAttached !== undefined ? req.isAttached : Boolean(item.isAttached);
   const isAttachedWithParent = attachedFlag && parentId !== null;
+  const leavesAttachment = Boolean(item.isAttached) && Boolean(item.parentId) && !isAttachedWithParent;
+  // An item that leaves attachment without naming a workphase takes the one it
+  // was shown in, not its own stored copy (wiki item-attachment §2a).
   const workphaseId = isAttachedWithParent
     ? (parent?.workphaseId ?? null)
     : req.workphaseId !== undefined
       ? req.workphaseId
-      : item.workphaseId;
+      : leavesAttachment
+        ? (shownWith(item.id, tx)?.workphaseId ?? null)
+        : item.workphaseId;
   const projectId = typeof req.parentId === 'string' ? (parent?.projectId ?? item.projectId) : item.projectId;
-  return { parentId, attachedFlag, isAttachedWithParent, workphaseId, projectId };
+  return { parentId, attachedFlag, isAttachedWithParent, leavesAttachment, workphaseId, projectId };
+}
+
+// What a create leaves its new item's workphase as, or the 400 that refuses
+// the create (wiki item-attachment §2a, §14). `named` is the request's
+// `workphaseId`: undefined when omitted, null when it names none on purpose.
+export function resolveCreateWorkphase(
+  parent: { id: string; workphaseId: string | null } | null,
+  attached: boolean,
+  named: string | null | undefined,
+): { workphaseId: string | null } | { error: string } {
+  if (parent && attached) {
+    if (named !== undefined && named !== parent.workphaseId) return { error: ATTACHED_WORKPHASE_ERROR };
+    return { workphaseId: parent.workphaseId };
+  }
+  if (parent && named === undefined) {
+    // A detached child takes the workphase its parent is shown in.
+    const anchor = shownWith(parent.id);
+    if (anchor && anchor.workphaseId === null) return { error: noShownWorkphaseError(anchor) };
+    return { workphaseId: anchor?.workphaseId ?? null };
+  }
+  return { workphaseId: named ?? null };
 }
 
 // Hand-rolled request validation. Returns the first 400 message, or null
@@ -144,9 +216,15 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     return 'isAttached requires a parentId';
   }
   // An attached item inherits its parent's workphase, so a request naming a
-  // different one is contradictory.
+  // different one is contradictory (wiki item-attachment §2a).
   if (resulting.isAttachedWithParent && req.workphaseId !== undefined && req.workphaseId !== resulting.workphaseId) {
-    return "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
+    return ATTACHED_WORKPHASE_ERROR;
+  }
+  // An item leaving attachment takes the workphase it was shown in, so the
+  // write needs one named when that item has none (wiki item-attachment §2a).
+  if (resulting.leavesAttachment && req.workphaseId === undefined && resulting.workphaseId === null) {
+    const anchor = shownWith(item.id);
+    if (anchor) return noShownWorkphaseError(anchor);
   }
 
   if (req.anchorId !== undefined) {
@@ -227,7 +305,7 @@ export function applyHierarchyRequest(
   const now = Date.now();
   const oldParent = item.parentId ? getParent(item.parentId, tx) : undefined;
   const newParent = typeof req.parentId === 'string' ? getParent(req.parentId, tx) : oldParent;
-  const resulting = deriveResultingState(item, req, newParent);
+  const resulting = deriveResultingState(item, req, newParent, tx);
 
   const wasAttachedWithParent = Boolean(item.isAttached) && Boolean(item.parentId);
   const workphaseChanged = resulting.workphaseId !== item.workphaseId;

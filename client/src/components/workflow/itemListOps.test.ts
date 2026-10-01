@@ -388,3 +388,20 @@ describe('workphaseOnlySlot', () => {
     expect(workphaseOnlySlot(null)).toBe('last');
   });
 });
+
+// ATT-9.3's chain: D is Free in w2, A is attached to D, and X to A, with X's
+// own workphaseId drifted, to w3 or to none.
+describe('ATT-9.3: an attached item shows with its parent, whatever its own workphaseId says', () => {
+  const items = [
+    item('d', { workphaseId: 'w2', position: 1 }),
+    item('a', { parentId: 'd', workphaseId: 'w2', position: 1 }),
+    item('x-w3', { parentId: 'a', workphaseId: 'w3', position: 2 }),
+    item('x-none', { parentId: 'a', workphaseId: null, position: 3 }),
+  ];
+
+  it('is a Stub in its parent’s list and a Card in no column', () => {
+    expect(getAttachedChildrenFrom(items, 'a').map(i => i.id)).toEqual(['x-w3', 'x-none']);
+    expect(getWorkphaseItemsFrom(items, 'w3')).toEqual([]);
+    expect(getMergedColumnItemsFrom(items, ['w2', 'w3']).map(i => i.id)).toEqual(['d']);
+  });
+});

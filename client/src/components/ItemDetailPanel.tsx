@@ -28,7 +28,6 @@ const DESCRIPTION_DISPLAY_BASE =
 interface ItemDetailPanelProps {
   itemId: string | null;
   items: Item[];
-  childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
   // Receive the raw write response so a disclosed reindex reaches the board
@@ -84,7 +83,6 @@ export default function ItemDetailPanel({ itemId, onClose, ...contentProps }: It
 interface ItemDetailPanelContentProps {
   itemId: string;
   items: Item[];
-  childDefaultWorkphaseId?: string | null;
   itemTypes: ItemType[];
   onClose: () => void;
   onUpdate: (item: ItemWriteResponse) => void;
@@ -96,7 +94,6 @@ interface ItemDetailPanelContentProps {
 function ItemDetailPanelContent({
   itemId,
   items,
-  childDefaultWorkphaseId,
   itemTypes,
   onClose,
   onUpdate,
@@ -346,7 +343,6 @@ function ItemDetailPanelContent({
         <ParentSection item={detail} allItems={items} onSelfUpdated={handleItemUpdated} />
         <ChildrenSection
           item={detail}
-          childDefaultWorkphaseId={childDefaultWorkphaseId}
           itemTypes={itemTypes}
           onNavigate={onNavigate}
           onChildCreated={handleChildCreated}

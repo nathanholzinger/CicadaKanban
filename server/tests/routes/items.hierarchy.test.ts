@@ -171,7 +171,7 @@ describe('PATCH /items/:id/move — request validation', () => {
     expect(getRow(child.id).parentId).toBe(parent.id);
   });
 
-  it('rejects a workphaseId that contradicts the parent an attached item inherits from; accepts a matching one', async () => {
+  it('ATT-9.1: rejects a workphaseId that contradicts the parent an attached item inherits from; accepts a matching one', async () => {
     const { project, todo, inProgress } = await setupWorkflow();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'parent' });
     const x = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'X' });
@@ -1151,9 +1151,189 @@ describe('PUT /items/:id and POST /items share the guards — every write', () =
     const projectB = await createProject({ name: 'B' });
     const q = await createItem({ projectId: projectB.id, title: 'Q' });
     const x = await createItem({ projectId: projectA.id, title: 'X' });
-    const x2 = await createItem({ projectId: projectA.id, parentId: x.id, title: 'X2', isAttached: false });
+    const x2 = await createItem({
+      projectId: projectA.id,
+      parentId: x.id,
+      title: 'X2',
+      isAttached: false,
+      workphaseId: null,
+    });
     const res = await put(x.id, { parentId: q.id });
     expect(res.status).toBe(200);
     expect(getRow(x2.id).projectId).toBe(projectB.id);
+  });
+});
+
+// ATT-9's setup: workflow WF with non-terminal workphases W1, W2 and W3, and
+// project P1 on it. R is top-level in W1, D is a detached child of R in W2,
+// A is attached to D and X to A. So A and X are Stubs in D's Card, and D is
+// the nearest Free ancestor of each.
+async function setupShownWithChain(name = 'P1') {
+  const { project, workflow, todo: w1, inProgress: w2 } = await setupWorkflow(name);
+  const w3 = await createWorkphase(workflow.id, { name: 'Review' });
+  const r = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'R' });
+  const d = await createItem({
+    projectId: project.id,
+    parentId: r.id,
+    title: 'D',
+    isAttached: false,
+    workphaseId: w2.id,
+  });
+  const a = await createItem({ projectId: project.id, parentId: d.id, title: 'A' });
+  const x = await createItem({ projectId: project.id, parentId: a.id, title: 'X' });
+  expect([a.workphaseId, x.workphaseId]).toEqual([w2.id, w2.id]);
+  return { project, workflow, w1, w2, w3, r, d, a, x };
+}
+
+const countItems = () => db.select().from(items).all().length;
+
+describe('the workphase a write leaves an item in', () => {
+  it("ATT-9.1: a move that leaves an item Attached cannot name a workphase other than its parent's", async () => {
+    const { project, w1, w2, w3, a, x } = await setupShownWithChain();
+    const before = getRow(x.id);
+
+    for (const body of [{ workphaseId: w3.id }, { isAttached: true, workphaseId: w3.id }]) {
+      const res = await move(x.id, body);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/inherits its parent's workphase; omit workphaseId or match the parent's/);
+      expect(getRow(x.id)).toEqual(before);
+    }
+    for (const body of [{ workphaseId: w2.id }, { isAttached: true }]) {
+      const res = await move(x.id, body);
+      expect(res.status).toBe(200);
+      expect(res.body.workphaseId).toBe(w2.id);
+    }
+
+    // The parent that counts is the one after the write.
+    const f = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'F' });
+    const own = await move(f.id, { parentId: a.id, isAttached: true, workphaseId: w1.id });
+    expect(own.status).toBe(400);
+    expect(getRow(f.id).parentId).toBeNull();
+    const parents = await move(f.id, { parentId: a.id, isAttached: true, workphaseId: w2.id });
+    expect(parents.status).toBe(200);
+    expect(parents.body).toMatchObject({ parentId: a.id, isAttached: 1, workphaseId: w2.id });
+
+    const detached = await move(x.id, { isAttached: false, workphaseId: w3.id });
+    expect(detached.status).toBe(200);
+    expect(detached.body).toMatchObject({ isAttached: 0, workphaseId: w3.id });
+  });
+
+  it("ATT-9.2: a create that makes an Attached child cannot name a workphase other than its parent's", async () => {
+    const { a, w2, w3, project } = await setupShownWithChain();
+    const before = countItems();
+
+    for (const extra of [{}, { isAttached: true }]) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'Y', parentId: a.id, workphaseId: w3.id, ...extra });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/inherits its parent's workphase; omit workphaseId or match the parent's/);
+    }
+    expect(countItems()).toBe(before);
+
+    const matching = await createItem({ projectId: project.id, parentId: a.id, title: 'Y', workphaseId: w2.id });
+    expect(matching).toMatchObject({ isAttached: 1, workphaseId: w2.id });
+  });
+
+  it('ATT-9.4: a detach that names no workphase leaves the item in the one it was shown in', async () => {
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      const { w1, w2, d, a, x } = await setupShownWithChain(entryPoint);
+      const res = await write(x.id, { isAttached: false });
+      expect(res.status, entryPoint).toBe(200);
+      // D's workphase, whose Card it was shown in, not R's.
+      expect(res.body, entryPoint).toMatchObject({ isAttached: 0, workphaseId: w2.id, positionScope: 'workflow' });
+
+      // D moves; A follows it, and X, now detached, stays.
+      expect((await move(d.id, { workphaseId: w1.id })).status).toBe(200);
+      expect(getRow(a.id).workphaseId).toBe(w1.id);
+      expect(getRow(x.id).workphaseId).toBe(w2.id);
+
+      // The stored copy has drifted: the item still leaves where it was shown.
+      const drifted = await setupShownWithChain(`${entryPoint} drifted`);
+      db.update(items).set({ workphaseId: drifted.w3.id }).where(eq(items.id, drifted.x.id)).run();
+      const left = await write(drifted.x.id, { isAttached: false });
+      expect(left.status, entryPoint).toBe(200);
+      expect(left.body.workphaseId, entryPoint).toBe(drifted.w2.id);
+    }
+  });
+
+  it('ATT-9.5: a reparent to root of an Attached item that names no workphase leaves it in the one it was shown in', async () => {
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      const { w2, x } = await setupShownWithChain(entryPoint);
+      const res = await write(x.id, { parentId: null });
+      expect(res.status, entryPoint).toBe(200);
+      expect(res.body, entryPoint).toMatchObject({ parentId: null, isAttached: 0, workphaseId: w2.id });
+
+      const drifted = await setupShownWithChain(`${entryPoint} drifted`);
+      db.update(items).set({ workphaseId: drifted.w3.id }).where(eq(items.id, drifted.x.id)).run();
+      const left = await write(drifted.x.id, { parentId: null });
+      expect(left.status, entryPoint).toBe(200);
+      expect(left.body.workphaseId, entryPoint).toBe(drifted.w2.id);
+    }
+  });
+
+  it('ATT-9.6: a detached child created with no workphase takes the one its parent is shown in', async () => {
+    const { project, w2, w3, d, a } = await setupShownWithChain();
+    const create = (parentId: string) => createItem({ projectId: project.id, parentId, title: 'Y', isAttached: false });
+
+    // A is shown in D's Card, and D is in W2.
+    const underA = await create(a.id);
+    expect(underA).toMatchObject({ parentId: a.id, isAttached: 0, workphaseId: w2.id, positionScope: 'workflow' });
+
+    // A's own copy has drifted: Y is still created where A is shown.
+    db.update(items).set({ workphaseId: w3.id }).where(eq(items.id, a.id)).run();
+    expect((await create(a.id)).workphaseId).toBe(w2.id);
+
+    // Under D itself, D's own workphase.
+    expect((await create(d.id)).workphaseId).toBe(w2.id);
+  });
+
+  it('ATT-9.7: when the nearest Free ancestor has no workphase, a write that leaves an item Free must name one', async () => {
+    const { project, w1, w3, d, a } = await setupShownWithChain();
+    // D leaves every workphase, and A and X follow it.
+    expect((await move(d.id, { workphaseId: null })).status).toBe(200);
+    const stub = () => createItem({ projectId: project.id, parentId: a.id, title: 'S' });
+    expect((await stub()).workphaseId).toBeNull();
+
+    const refusals = [
+      ['detach by move', (id: string) => move(id, { isAttached: false })],
+      ['detach by PUT', (id: string) => put(id, { isAttached: false })],
+      ['reparent to root by move', (id: string) => move(id, { parentId: null })],
+      ['reparent to root by PUT', (id: string) => put(id, { parentId: null })],
+    ] as const;
+    for (const [label, write] of refusals) {
+      const s = await stub();
+      const before = getRow(s.id);
+      const res = await write(s.id);
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(/workphaseId in the same write, or file "D" into a workphase first/);
+      expect(res.body.error, label).not.toMatch(/null/);
+      expect(getRow(s.id), label).toEqual(before);
+    }
+    const count = countItems();
+    const created = await request(app).post('/api/items').send({ title: 'Y', parentId: a.id, isAttached: false });
+    expect(created.status).toBe(400);
+    expect(created.body.error).toMatch(/file "D" into a workphase first/);
+    expect(countItems()).toBe(count);
+
+    // Naming a workphase, or none on purpose, is a way out.
+    const named = await move((await stub()).id, { isAttached: false, workphaseId: w1.id });
+    expect(named.status).toBe(200);
+    expect(named.body).toMatchObject({ isAttached: 0, workphaseId: w1.id });
+    const none = await move((await stub()).id, { isAttached: false, workphaseId: null });
+    expect(none.status).toBe(200);
+    expect(none.body).toMatchObject({ isAttached: 0, workphaseId: null });
+
+    // Filing D first is the other.
+    expect((await move(d.id, { workphaseId: w3.id })).status).toBe(200);
+    const filed = await put((await stub()).id, { isAttached: false });
+    expect(filed.status).toBe(200);
+    expect(filed.body.workphaseId).toBe(w3.id);
   });
 });

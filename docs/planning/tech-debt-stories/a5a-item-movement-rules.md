@@ -188,11 +188,12 @@ The starting list. The Coder keeps it current and records which symbol carries w
 
 | File | Phase | Change |
 |---|---|---|
-| `server/src/lib/itemHierarchy.ts` | 2 | R1's check against the resulting parent, R3's subtree check, R4's nearest Free ancestor. R6 needs nothing here: `deriveResultingState` already keeps the flag when a write omits it, so a top-level item, whose flag is now clear, becomes a detached child |
-| `server/src/routes/items.ts` | 2, 3 | `POST`: R6 (2a: `attached` is false without a parent, and `isAttached: true` without one is a 400), R1, R3, R4. `crossWorkflowMoveError` removed (R3). `PATCH /move` drops `position`, and `PATCH /reorder` goes (R8) |
+| `server/src/lib/itemHierarchy.ts` | 2 | R3's subtree check (2c). R6 needs nothing here: `deriveResultingState` already keeps the flag when a write omits it, so a top-level item, whose flag is now clear, becomes a detached child. 2b: R4 is `shownWith` (the item's nearest Free ancestor) and `deriveResultingState`'s `leavesAttachment` branch, with the refusal in `validateHierarchyRequest`; R1's refusal now shares `ATTACHED_WORKPHASE_ERROR` with the create; `resolveCreateWorkphase` is what `POST` calls (R1's create refusal, R4's detached create). `POST` shares these checks rather than going through `validateHierarchyRequest`, which needs an existing item |
+| `server/src/routes/items.ts` | 2, 3 | `POST`: R6 (2a: `attached` is false without a parent, and `isAttached: true` without one is a 400), R1 and R4 (2b: `resolveCreateWorkphase`), R3 (2c). `crossWorkflowMoveError` removed (R3, 2c). `PATCH /move` drops `position`, and `PATCH /reorder` goes (R8) |
 | `server/drizzle/` | 2a | `0011_parentless_items_not_attached.sql` clears the flag on parentless rows (R6) |
 | `server/src/db/schema.ts` | 2a | The flag's column default stays set (R6). Changing it means rebuilding `items`, and the one insert, `POST`, now states the flag. Only the comment changed |
-| `server/src/mcp.ts` | 2 | The `create_item`, `update_item` and `move_item` descriptions. 2a: the flag's sentences |
+| `server/src/mcp.ts` | 2 | The `create_item`, `update_item` and `move_item` descriptions. 2a: the flag's sentences. 2b: `create_item`'s workphase and flag, `update_item`'s leaving-attachment sentence. 2c: `move_item` |
+| `client/src/components/item-detail/ChildrenSection.tsx` | 2b | The add-child create names no workphase, so it passes R1. Its `childDefaultWorkphaseId` prop goes, with its pass-through in `ItemDetailPanel.tsx` and `BoardView.tsx` |
 | `client/src/components/item-detail/ParentSection.tsx` | 2a | `handleParentChange` sends `isAttached: true` when a parentless item gets its first parent (R6) |
 | `client/src/test/itemFixture.ts` | 2a | `makeItem`'s flag defaults to set with a parent and clear without (R6) |
 | `server/src/lib/itemPositionScope.ts` | 3 | R9 |
@@ -280,6 +281,23 @@ The starting list. The Coder keeps it current and records which symbol carries w
     - **`itemHierarchy.ts` needs no change for R6.** A write that omits the flag already keeps the item's state, so the migration and `POST` are enough to make a top-level item's reparent detach it (ATT-3.11). Only `deriveResultingState`'s comment changed.
   - **Tests updated:** `itemTree.test.ts::seedChain` and `items.hierarchy.test.ts::seedChainPastCap` set the flag with `parentId`, since they build their chains by direct write and the flag no longer comes free; ATT-4.7's sibling too. TC-2.17's test writes the flagged parentless row directly. ATT-1.14's is new. The reparent-a-top-level-item test takes ATT-3.11 and runs through both `PUT` and `PATCH /move`.
   - **Checks:** `npm run check` passes: 347 server tests, 398 client, 75 scripts, 0 checker hits. `attached-children.spec.ts` and `attachedChildren.spec.ts` pass (15 E2E tests).
+- **2026-09-30, phase 2 batch 2b (the Coder): the workphase a write leaves an item in (R1's create refusal, R4).**
+  - **Built:**
+    - a write that leaves an Attached item Free (a detach, or a reparent to root) and names no workphase gives it the one it was shown in: its nearest Free ancestor's, not its own stored copy (ATT-9.4, 9.5). With no workphase there it's refused, and the message offers the two ways out without `null` (ATT-9.7);
+    - a create under a parent with the flag clear takes the workphase its parent is shown in, or is refused the same way (ATT-9.6, 9.7);
+    - a create making an Attached child and naming another workphase than its parent's is refused with the move's message (ATT-9.2);
+    - the Sheet's add-child create names no workphase; MCP's `create_item` and `update_item` descriptions state the new rules.
+  - **The Coder's calls:**
+    - **`POST` shares the checks; it doesn't go through `validateHierarchyRequest`.** That function takes an existing item (its cycle check, its current parent and flag). The shared parts are `resolveCreateWorkphase` and `ATTACHED_WORKPHASE_ERROR`. Recorded for the Architect (below).
+    - **The nearest Free ancestor is found by walking the stored parent links**, as `shownWith`: an item that's Free, or whose parent row is missing, ends the walk. A `parentId` cycle in the data ends it too.
+    - **A detach that also reparents, and names no workphase, takes the workphase the item was shown in before the write**, the old parent's chain. R4 says "the one it was shown in", and the item hasn't been shown anywhere else yet.
+  - **Found while building: the Sheet's add-child sent a workphase.** `ChildrenSection` sent the board toolbar's "New child items go to" workphase (`childDefaultWorkphaseId`, which defaults to a workphase named Backlog). The server ignored it for an attached child, which is every child the Sheet creates, so the setting never did anything. R1 would have made it a 400 in any workflow with a Backlog phase. The create now names none, and the prop is gone from `ChildrenSection`, `ItemDetailPanel` and `BoardView`'s pass-through. **The toolbar's control and `BoardView`'s state and localStorage key for it are still there and now read by nothing.** For Nathan: remove them, or give the setting a meaning in the Sheet epic. It's listed under To A5b below.
+  - **Tests:**
+    - `ATT-9.1` to `9.7` are new in `items.hierarchy.test.ts`, on ATT-9's chain, each through both entry points where it applies. The earlier test for a contradicting workphase takes ATT-9.1 too.
+    - `items.test.ts`: ATT-5.7's test now uses a sub-project on the same workflow and checks nothing was created. ATT-10.1 to 10.3 are new. The test "an attached child inherits the parent workphase even when a different one is passed" is deleted: ATT-9.2's test replaces it with the refusal.
+    - ATT-9.3 is a client test in `itemListOps.test.ts` (Stub in its parent's list, a Card in no column) and a new `UnsortedBucket.test.tsx` (Unsorted doesn't list it). The server isn't involved: the client reads `positionScope`, not the workphase.
+    - Four tests that built a detached child under a parent with no workphase now name `workphaseId: null`, since a detached create with no workphase is refused there (R4).
+  - **Checks:** `npm run check` passes: 355 server tests, 400 client, 75 scripts, 0 checker hits.
 
 ## Open questions
 
@@ -302,6 +320,6 @@ The starting list. The Coder keeps it current and records which symbol carries w
 - **Implementation passages to place:**
 - **Test-plan cases affected:**
 - **Wiki sections added, changed, moved or removed** (PO, at close):
-- **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes.
-- **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`) that the Sheet's page should state. R6's flag isn't one, since it's an implementation detail.
+- **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes. It does, from 2b: `POST /items` still checks the parent at the route (exists, same project, depth cap), but now also takes its item's workphase from `itemHierarchy.ts::resolveCreateWorkphase`, which holds the create to the same workphase rules as a move, and uses `itemHierarchy.ts` to log. It doesn't go through `validateHierarchyRequest`. Phase 2c may add to this.
+- **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`, `ChildrenSection.tsx`) that the Sheet's page should state. R6's flag isn't one, since it's an implementation detail. From 2b: the Sheet's add-child names no workphase, so a new child takes its parent's. The board toolbar's "New child items go to" control (`BoardToolbar.tsx`, `BoardView.tsx`'s `childDefaultWorkphaseId` state and `kanban_child_col_*` localStorage key) now feeds nothing, as it never did for an attached child. Nathan's call: remove it, or give it a meaning in the Work Item Detail & Chat UI epic. It's the toolbar's, not the Sheet's, so it may not belong on the Sheet's page.
 - **To A5c:** R5's rule for a full item with no workphase, and R3's project moves, for the page's account of Unsorted.

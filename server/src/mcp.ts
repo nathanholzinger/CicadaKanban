@@ -79,7 +79,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           workphase_id: {
             type: 'string',
             description:
-              "Workphase to place the item in. Optional — omit to leave the item unsorted. Ignored for an attached item with a parent (it takes the parent's current workphase).",
+              "Workphase to place the item in. Optional — omit to leave a top-level item unsorted. An attached child takes its parent's workphase, so omit this or name the parent's: any other is refused. A detached child (is_attached false) that omits it takes the workphase its parent is shown in; if that has none, the create is refused.",
           },
           type: { type: 'string', description: 'Item type name (e.g. "Epic", "Story", "Task") or UUID. Optional.' },
           description: { type: 'string', description: 'Optional item description' },
@@ -87,7 +87,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           is_attached: {
             type: 'boolean',
             description:
-              "Whether this item moves with its parent between workphases. Only a child can be attached: with parent_id it defaults to true, and without parent_id true is refused. When true and parent_id is set, the item is placed in the parent's current workphase regardless of workphase_id.",
+              "Whether this item moves with its parent between workphases. Only a child can be attached: with parent_id it defaults to true, and without parent_id true is refused. An attached child is placed in the parent's current workphase.",
           },
         },
         required: ['title'],
@@ -96,7 +96,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'update_item',
       description:
-        "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase. A reparent that omits is_attached keeps the item's state, so a top-level item becomes a detached child; pass is_attached true to attach it.",
+        "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase. A reparent that omits is_attached keeps the item's state, so a top-level item becomes a detached child; pass is_attached true to attach it. Detaching an attached item, or making it top-level, leaves it in the workphase it was shown in; if the Free ancestor it is shown with has none, file that ancestor into a workphase first (move_item).",
       inputSchema: {
         type: 'object',
         properties: {

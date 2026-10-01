@@ -7,7 +7,6 @@ import InlineItemForm from '../InlineItemForm';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
-  childDefaultWorkphaseId: string | null | undefined;
   itemTypes: ItemType[];
   onNavigate: (id: string) => void;
   onChildCreated: (child: Item) => void;
@@ -24,14 +23,7 @@ function attachToggleClass(isAttached: boolean): string {
 // each child's attach state. Editing the current item's *own* parent link
 // lives in the sibling ParentSection — a different concern with no shared
 // state.
-export function ChildrenSection({
-  item,
-  childDefaultWorkphaseId,
-  itemTypes,
-  onNavigate,
-  onChildCreated,
-  onChildUpdated,
-}: ChildrenSectionProps) {
+export function ChildrenSection({ item, itemTypes, onNavigate, onChildCreated, onChildUpdated }: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
   const [childError, setChildError] = useState('');
 
@@ -47,13 +39,9 @@ export function ChildrenSection({
 
   async function handleCreate(title: string, type: string | null): Promise<boolean> {
     try {
-      const child = await createItem({
-        type,
-        title,
-        parentId: item.id,
-        projectId: item.projectId ?? undefined,
-        workphaseId: childDefaultWorkphaseId ?? item.workphaseId ?? undefined,
-      });
+      // An attached child takes its parent's workphase, and naming another is
+      // refused (wiki item-attachment §2a), so the create names none.
+      const child = await createItem({ type, title, parentId: item.id, projectId: item.projectId ?? undefined });
       onChildCreated(child);
       return true;
     } catch (err) {

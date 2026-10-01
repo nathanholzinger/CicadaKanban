@@ -415,7 +415,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       <ItemDetailPanel
         itemId={selectedItemId}
         items={items}
-        childDefaultWorkphaseId={childDefaultWorkphaseId}
         itemTypes={itemTypes}
         onClose={() => setSelectedItemId(null)}
         onUpdate={handleItemUpdated}

@@ -16,6 +16,7 @@ import {
 import {
   applyHierarchyRequest,
   logCreatedUnderParent,
+  resolveCreateWorkphase,
   validateHierarchyRequest,
   type HierarchyRequest,
 } from '../lib/itemHierarchy.js';
@@ -184,8 +185,15 @@ router.post('/', (req, res) => {
     return;
   }
   const attached = parent ? (isAttached !== undefined ? Boolean(isAttached) : true) : false;
-  // Attached children (the default) mirror the parent's current workphase.
-  const resolvedWorkphaseId = attached && parent ? parent.workphaseId : workphaseId;
+  // The workphase follows the same rules as any write that leaves an item there:
+  // an attached child takes its parent's, and a detached one takes the one its
+  // parent is shown in unless the create names one (wiki item-attachment §2a).
+  const resolution = resolveCreateWorkphase(parent ?? null, attached, workphaseId);
+  if ('error' in resolution) {
+    res.status(400).json({ error: resolution.error });
+    return;
+  }
+  const resolvedWorkphaseId = resolution.workphaseId;
 
   // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
   if (resolvedWorkphaseId && !existsById(workphases, resolvedWorkphaseId)) {

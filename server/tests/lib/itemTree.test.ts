@@ -90,7 +90,13 @@ describe('depth cap', () => {
     const project = await createProject();
     const m = await createItem({ projectId: project.id, title: 'M' });
     await createItem({ projectId: project.id, title: 'M1', parentId: m.id, isAttached: true });
-    const m2 = await createItem({ projectId: project.id, title: 'M2', parentId: m.id, isAttached: false });
+    const m2 = await createItem({
+      projectId: project.id,
+      title: 'M2',
+      parentId: m.id,
+      isAttached: false,
+      workphaseId: null,
+    });
     await createItem({ projectId: project.id, title: 'M2a', parentId: m2.id, isAttached: true });
     expect(subtreeHeight(m.id)).toBe(2);
   });

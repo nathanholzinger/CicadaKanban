@@ -14,7 +14,7 @@ import {
   chatThreads,
   chatMessages,
 } from '../../src/db/schema.js';
-import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
+import { createProject, createWorkflow, createWorkphase, createItem, createBoard } from '../fixtures.js';
 
 describe('GET /api/items/:id', () => {
   it('returns 404 for a non-existent id', async () => {
@@ -40,12 +40,18 @@ describe('GET /api/items/:id', () => {
     expect(childRes.body.workflowId).toBe(workflow.id);
   });
 
-  it('a detached child does not inherit the parent workphase', async () => {
+  it('a detached child created with workphaseId: null has no workphase, whatever its parent holds', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);
     const root = await createItem({ projectId: project.id, workphaseId: phase.id, title: 'Root' });
-    const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child', isAttached: false });
+    const child = await createItem({
+      projectId: project.id,
+      parentId: root.id,
+      title: 'Child',
+      isAttached: false,
+      workphaseId: null,
+    });
 
     const childRes = await request(app).get(`/api/items/${child.id}`);
     expect(childRes.body.workphaseId).toBeNull();
@@ -66,6 +72,14 @@ describe('GET /api/items/:id', () => {
 });
 
 describe('POST /api/items', () => {
+  async function setupTodoAndInProgress() {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
+    return { project, workflow, todo, inProgress };
+  }
+
   it('returns 400 when title is missing', async () => {
     const project = await createProject();
     const res = await request(app).post('/api/items').send({ projectId: project.id });
@@ -109,15 +123,83 @@ describe('POST /api/items', () => {
     expect(res.body.error).toMatch(/parentId/i);
   });
 
-  it('rejects creating a child whose projectId differs from its parent', async () => {
+  it('ATT-5.7: rejects creating a child whose projectId differs from its parent, even on one workflow', async () => {
     const projectA = await createProject();
-    const projectB = await createProject();
+    await createWorkflow(projectA.id);
+    // A sub-project with no workflow of its own uses its parent's.
+    const projectB = await createProject({ name: 'B', parentId: projectA.id });
     const parent = await createItem({ projectId: projectA.id, title: 'Parent A' });
+    const before = db.select().from(items).all().length;
+
     const res = await request(app)
       .post('/api/items')
       .send({ title: 'Child', projectId: projectB.id, parentId: parent.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/different project/i);
+    expect(db.select().from(items).all().length).toBe(before);
+  });
+
+  it('ATT-10.1: a create names its project, its parent, or both, and is refused with neither', async () => {
+    const project = await createProject();
+    const parent = await createItem({ projectId: project.id, title: 'P' });
+    const before = db.select().from(items).all().length;
+
+    const alone = await request(app).post('/api/items').send({ title: 'Top', projectId: project.id });
+    expect(alone.status).toBe(201);
+    expect(alone.body).toMatchObject({ parentId: null, projectId: project.id });
+
+    const both = await request(app)
+      .post('/api/items')
+      .send({ title: 'Child', projectId: project.id, parentId: parent.id });
+    expect(both.status).toBe(201);
+    expect(both.body).toMatchObject({ parentId: parent.id, projectId: project.id });
+
+    const neither = await request(app).post('/api/items').send({ title: 'Orphan' });
+    expect(neither.status).toBe(400);
+    expect(db.select().from(items).all().length).toBe(before + 2);
+  });
+
+  it('ATT-10.2: a child is created Attached unless the create clears the flag', async () => {
+    const { project, todo, inProgress } = await setupTodoAndInProgress();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
+
+    const attached = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached' });
+    expect(attached).toMatchObject({ isAttached: 1, workphaseId: todo.id, positionScope: 'attached-siblings' });
+
+    const detached = await createItem({
+      projectId: project.id,
+      parentId: parent.id,
+      title: 'Detached',
+      isAttached: false,
+      workphaseId: inProgress.id,
+    });
+    expect(detached).toMatchObject({
+      parentId: parent.id,
+      isAttached: 0,
+      workphaseId: inProgress.id,
+      positionScope: 'workflow',
+    });
+  });
+
+  it('ATT-10.3: a create may omit the workphase', async () => {
+    const { project, workflow, todo } = await setupTodoAndInProgress();
+    const board = await createBoard(workflow.id);
+    const bare = await createProject({ name: 'No workflow' });
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
+
+    const top = await createItem({ projectId: project.id, title: 'No workphase' });
+    expect(top).toMatchObject({ workphaseId: null, positionScope: 'none' });
+    const boardRes = await request(app).get(`/api/boards/${board.id}`);
+    const unsortedIds = boardRes.body.unsorted.invalidItems.map((i: { id: string }) => i.id);
+    expect(unsortedIds).toContain(top.id);
+
+    const inBare = await createItem({ projectId: bare.id, title: 'In a project with no workflow' });
+    expect(inBare).toMatchObject({ workphaseId: null });
+
+    for (const extra of [{}, { workphaseId: todo.id }]) {
+      const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child', ...extra });
+      expect(child.workphaseId).toBe(todo.id);
+    }
   });
 
   it('TC-2.6, TC-2.7: positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
@@ -1098,6 +1180,7 @@ describe('DELETE /api/items/:id', () => {
       parentId: parent.id,
       title: 'Detached Child',
       isAttached: false,
+      workphaseId: null,
     });
     const grandchild = await createItem({ projectId: project.id, parentId: detachedChild.id, title: 'Grandchild' });
 
@@ -1370,19 +1453,6 @@ describe('attached children', () => {
     expect(res.status).toBe(200);
     expect(res.body.parentId).toBe(parentB.id);
     expect(res.body.projectId).toBe(projectB.id);
-  });
-
-  it('an attached child inherits the parent workphase even when a different one is passed', async () => {
-    const { project, todo, inProgress } = await setupTwoPhases();
-    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
-
-    const child = await createItem({
-      projectId: project.id,
-      parentId: parent.id,
-      workphaseId: inProgress.id,
-      title: 'Child',
-    });
-    expect(child.workphaseId).toBe(todo.id);
   });
 
   it('an attached child of a parent with no workphase gets a null workphase', async () => {
