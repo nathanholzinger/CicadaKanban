@@ -179,7 +179,7 @@ test.describe('items visibility with inherited workflow', () => {
 
     // Move it to In Progress via API
     await request.patch(`${API}/items/${childItem.id}/move`, {
-      data: { workphaseId: inProgressWorkphaseId, position: 1 },
+      data: { workphaseId: inProgressWorkphaseId },
     });
 
     // Verify on parent board

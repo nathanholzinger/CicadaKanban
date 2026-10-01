@@ -4,6 +4,7 @@ import { API } from '../helpers/api';
 import {
   seedTemplatedWorkflow,
   pickWorkphases,
+  pinItemPosition,
   seedPositionedItems,
   fetchDefaultBoard,
   fetchItem,
@@ -261,7 +262,8 @@ test.describe('Card → column drop bands', () => {
     expect(x.position).toBeLessThan(1);
 
     // Back to Todo, then squarely inside the bottom carve-out.
-    await request.patch(`${API}/items/${x.id}/move`, { data: { workphaseId: s.phase.todo.id, position: 2.5 } });
+    await request.patch(`${API}/items/${x.id}/move`, { data: { workphaseId: s.phase.todo.id } });
+    await pinItemPosition(request, x.id, 2.5);
     await openBoard(page, projectSidebar);
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));

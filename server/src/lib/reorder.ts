@@ -1,5 +1,5 @@
 // validateReorder/applyReorderEntries — the shared PATCH /reorder implementation for
-// items, workphases, and columns.
+// workphases and columns.
 
 import { eq, inArray } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -15,8 +15,8 @@ type ReorderableTable = SQLiteTable & { id: SQLiteColumn; position: SQLiteColumn
 export type ReorderValidation =
   { ok: true; entries: ReorderEntry[] } | { ok: false; status: number; body: { error: string; missingIds?: string[] } };
 
-// Shared validation step for the three `PATCH /reorder` endpoints (items,
-// workphases, columns). Validates the array shape, each entry's id/position
+// Shared validation step for the two `PATCH /reorder` endpoints (workphases,
+// columns). Validates the array shape, each entry's id/position
 // types, and that every id exists — against plain `db`, deliberately *not*
 // a transaction.
 //
@@ -67,18 +67,9 @@ export function validateReorder(table: ReorderableTable, orders: unknown, entity
 }
 
 // Applies already-validated entries inside the caller's transaction — call
-// only after validateReorder returns `{ ok: true }`. `extraSet` is merged
-// into every row's update (e.g. items also bumps `updatedAt`).
-export function applyReorderEntries(
-  table: ReorderableTable,
-  entries: ReorderEntry[],
-  tx: Tx,
-  extraSet: Record<string, unknown> = {},
-): void {
+// only after validateReorder returns `{ ok: true }`.
+export function applyReorderEntries(table: ReorderableTable, entries: ReorderEntry[], tx: Tx): void {
   for (const { id, position } of entries) {
-    tx.update(table)
-      .set({ position, ...extraSet })
-      .where(eq(table.id, id))
-      .run();
+    tx.update(table).set({ position }).where(eq(table.id, id)).run();
   }
 }

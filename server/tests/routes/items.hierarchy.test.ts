@@ -5,7 +5,14 @@ import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import { items, activityLog } from '../../src/db/schema.js';
 import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
-import { createProject, createWorkflow, createWorkphase, createItem, createBoard } from '../fixtures.js';
+import {
+  createProject,
+  createWorkflow,
+  createWorkphase,
+  createItem,
+  createBoard,
+  setItemPosition,
+} from '../fixtures.js';
 
 // Atomic reparent-with-placement through the item routes: attach, detach and
 // reparent, the depth cap, cross-project moves, the hierarchy activity log
@@ -15,10 +22,6 @@ type Row = typeof items.$inferSelect;
 
 function getRow(id: string): Row {
   return db.select().from(items).where(eq(items.id, id)).get()!;
-}
-
-function setPosition(id: string, position: number | null) {
-  db.update(items).set({ position }).where(eq(items.id, id)).run();
 }
 
 function hierarchyEntries(itemId: string) {
@@ -261,7 +264,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     const { p, s1, s2 } = await cardWithTwoStubs(project.id, inProgress.id);
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     const x1 = await createItem({ projectId: project.id, parentId: x.id, title: 'X1' });
-    setPosition(x.id, 50.0);
+    setItemPosition(x.id, 50.0);
 
     const res = await move(x.id, { parentId: p.id, isAttached: true, anchorId: s1.id, side: 'after' });
     expect(res.status).toBe(200);
@@ -285,8 +288,8 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' });
     const b1 = await createItem({ projectId: project.id, parentId: b.id, title: 'B1' });
     const b2 = await createItem({ projectId: project.id, parentId: b.id, title: 'B2' });
-    setPosition(b1.id, 100.0);
-    setPosition(b2.id, 200.0);
+    setItemPosition(b1.id, 100.0);
+    setItemPosition(b2.id, 200.0);
 
     const res = await move(x.id, { parentId: b.id, anchorId: b1.id, side: 'after' }); // flag omitted: stays attached
     expect(res.status).toBe(200);
@@ -352,8 +355,8 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     const { p, s2: x } = await cardWithTwoStubs(project.id, todo.id);
     const f1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'F1' });
     const f2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'F2' });
-    setPosition(f1.id, 10.0);
-    setPosition(f2.id, 11.0);
+    setItemPosition(f1.id, 10.0);
+    setItemPosition(f2.id, 11.0);
 
     const res = await move(x.id, { isAttached: false, anchorId: f1.id, side: 'after' });
     expect(res.status).toBe(200);
@@ -368,7 +371,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     const { project, todo } = await setupWorkflow();
     const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
-    setPosition(x.id, 50.0);
+    setItemPosition(x.id, 50.0);
     const res = await move(x.id, { parentId: p.id, isAttached: true });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(1.0);
@@ -418,7 +421,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
       const p = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P' });
       const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
       expect(getRow(x.id).isAttached).toBe(0);
-      setPosition(x.id, 7.5);
+      setItemPosition(x.id, 7.5);
 
       const res = await write(x.id, { parentId: p.id });
       expect(res.status, entryPoint).toBe(200);
@@ -477,9 +480,9 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
       isAttached: false,
       workphaseId: todo.id,
     });
-    setPosition(f1.id, 10.0);
-    setPosition(f2.id, 11.0);
-    setPosition(x.id, 7.5);
+    setItemPosition(f1.id, 10.0);
+    setItemPosition(f2.id, 11.0);
+    setItemPosition(x.id, 7.5);
 
     const kept = await move(x.id, { parentId: b.id });
     expect(kept.status).toBe(200);
@@ -496,7 +499,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     const { project, todo } = await setupWorkflow();
     const { s1: x } = await cardWithTwoStubs(project.id, todo.id);
     const f = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'F' });
-    setPosition(f.id, 40.0);
+    setItemPosition(f.id, 40.0);
 
     const res = await move(x.id, { parentId: null });
     expect(res.status).toBe(200);
@@ -527,9 +530,9 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
       createItem({ projectId: project.id, parentId: p.id, title, isAttached: false, workphaseId: todo.id });
     const x = await freeChild('X');
     const y = await freeChild('Y');
-    setPosition(f1.id, 10.0);
-    setPosition(f2.id, 11.0);
-    setPosition(x.id, 7.5);
+    setItemPosition(f1.id, 10.0);
+    setItemPosition(f2.id, 11.0);
+    setItemPosition(x.id, 7.5);
 
     const kept = await move(x.id, { parentId: null });
     expect(kept.status).toBe(200);
@@ -690,7 +693,7 @@ describe('cross-project reparenting', () => {
       isAttached: false,
       workphaseId: todo.id,
     });
-    setPosition(x.id, 5.0);
+    setItemPosition(x.id, 5.0);
 
     const res = await move(x.id, { parentId: b.id });
     expect(res.status).toBe(200);
@@ -791,7 +794,7 @@ describe('cross-project reparenting', () => {
       expect([b1.position, b2.position]).toEqual([1.0, 2.0]);
       const freeWithChild = async (title: string) => {
         const x = await createItem({ projectId: p1, workphaseId: w1.id, title });
-        setPosition(x.id, 5.0);
+        setItemPosition(x.id, 5.0);
         const x1 = await createItem({ projectId: p1, parentId: x.id, title: `${title}1` });
         return { x, x1 };
       };
@@ -856,7 +859,7 @@ describe('cross-project reparenting', () => {
       expect(ok.workphaseId).toBe(a.inProgress.id);
     });
 
-    it('TC-7.20: an item a project move leaves in another workflow’s workphase shows in Unsorted', async () => {
+    it('TC-7.18, TC-7.20: an item a project move leaves in another workflow’s workphase shows in Unsorted, with no position scope', async () => {
       const q1 = await setupWorkflow('Q1');
       const q2 = await setupWorkflow('Q2');
       // P1 has no workflow of its own, so it uses Q1's.
@@ -869,16 +872,20 @@ describe('cross-project reparenting', () => {
 
       const board = await createBoard(q2.workflow.id);
       const boardRes = await request(app).get(`/api/boards/${board.id}`);
-      const invalidIds = boardRes.body.unsorted.invalidItems.map((i: { id: string }) => i.id);
-      expect(invalidIds).toContain(x.id);
+      const invalid = boardRes.body.unsorted.invalidItems as { id: string; positionScope: string }[];
+      expect(invalid.map(i => i.id)).toContain(x.id);
+
+      // It still holds a workphase of WF1, so it classifies as "none", not "workflow", wherever it's read.
+      expect(invalid.find(i => i.id === x.id)?.positionScope).toBe('none');
+      expect((await request(app).get(`/api/items/${x.id}`)).body.positionScope).toBe('none');
     });
 
     it('TC-2.24: an item with no position takes the append fallback when it is assigned a workphase', async () => {
       const { project, todo, inProgress } = await setupWorkflow();
       const pb = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'PB' });
-      setPosition(pb.id, 3.0);
+      setItemPosition(pb.id, 3.0);
       const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
-      setPosition(x.id, null);
+      setItemPosition(x.id, null);
 
       const refiled = await move(x.id, { workphaseId: inProgress.id });
       expect(refiled.status).toBe(200);
@@ -1086,8 +1093,8 @@ describe('reindex disclosure', () => {
     const { project, todo } = await setupWorkflow();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
     const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' });
-    setPosition(a.id, 1100);
-    setPosition(b.id, 1200);
+    setItemPosition(a.id, 1100);
+    setItemPosition(b.id, 1200);
     return { project, todo, a, b };
   }
 
@@ -1096,9 +1103,9 @@ describe('reindex disclosure', () => {
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     // X's own create already reindexed (A=1, B=2, X=3) — push A/B back up so
     // the move is what trips it.
-    setPosition(a.id, 1100);
-    setPosition(b.id, 1200);
-    setPosition(x.id, 5);
+    setItemPosition(a.id, 1100);
+    setItemPosition(b.id, 1200);
+    setItemPosition(x.id, 5);
 
     const res = await move(x.id, { anchorId: b.id, side: 'after' });
     expect(res.status).toBe(200);
@@ -1124,7 +1131,7 @@ describe('reindex disclosure', () => {
 
     const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
     const s1 = await createItem({ projectId: project.id, parentId: p.id, title: 'S1' });
-    setPosition(s1.id, 1500);
+    setItemPosition(s1.id, 1500);
     const attached = await put(created.body.id, { parentId: p.id, isAttached: true });
     expect(attached.status).toBe(200);
     expect(attached.body.reindexed).toEqual([

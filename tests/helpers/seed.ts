@@ -90,11 +90,19 @@ export interface PositionedItemPlan<K extends string> {
   title?: string;
 }
 
-// Creates items and pins each to an explicit position ("plan → create →
-// PATCH position"), for the repositioning scenarios and the band spec.
-// Append alone places each new item after the workflow's last, so it can't
-// reproduce a layout with fractional positions or one out of creation order,
-// which is why the pin exists.
+// Pins one item to an exact position through the test-only route,
+// `PATCH /api/test/items/:id/position`: the item API takes no final position
+// (wiki item-positioning §2).
+export async function pinItemPosition(request: APIRequestContext, id: string, position: number): Promise<void> {
+  const res = await request.patch(`${API}/test/items/${id}/position`, { data: { position } });
+  expect(res.ok(), `pin ${id} at ${position} → ${res.status()}`).toBe(true);
+}
+
+// Creates items and pins each to an explicit position ("plan → create → pin"),
+// for the repositioning scenarios and the band spec. Append alone places each
+// new item after the workflow's last, so it can't reproduce a layout with
+// fractional positions or one out of creation order, which is why the pin
+// exists.
 // Returns the created rows keyed by plan key, with `position` as pinned.
 export async function seedPositionedItems<K extends string>(
   request: APIRequestContext,
@@ -103,8 +111,7 @@ export async function seedPositionedItems<K extends string>(
   const items = {} as Record<K, SeededItem & { position: number }>;
   for (const { key, projectId, workphaseId, position, title } of plan) {
     const created = await seedItem(request, { title: title ?? `Item ${key}`, projectId, workphaseId });
-    const pinned = await request.patch(`${API}/items/${created.id}/move`, { data: { position } });
-    expect(pinned.ok(), `pin ${key} at ${position} → ${pinned.status()}`).toBe(true);
+    await pinItemPosition(request, created.id, position);
     items[key] = { ...created, position };
   }
   return items;

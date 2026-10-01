@@ -18,3 +18,23 @@ body:json {
     "parentId": null
   }
 }
+
+docs {
+  # Create Item
+
+  Name the item's `projectId`, its `parentId`, or both; with neither it's a
+  400. A `parentId` alone makes a child in the parent's project, and a
+  `projectId` other than the parent's is a 400.
+
+  A top-level item's attachment flag is clear, and `isAttached: true`
+  without a `parentId` is a 400. A child is created attached unless
+  `isAttached: false`.
+
+  `workphaseId` is optional; omitted, a top-level item has none and shows in
+  Unsorted. An attached child takes its parent's workphase, and naming
+  another is a 400. A detached child that omits it takes the workphase its
+  parent is shown in (a 400 if that has none). A Free item's workphase must
+  belong to the workflow its project uses.
+
+  See `docs/wiki/item-attachment/README.md` §1, §2a, §14.
+}

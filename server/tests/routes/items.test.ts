@@ -14,7 +14,14 @@ import {
   chatThreads,
   chatMessages,
 } from '../../src/db/schema.js';
-import { createProject, createWorkflow, createWorkphase, createItem, createBoard } from '../fixtures.js';
+import {
+  createProject,
+  createWorkflow,
+  createWorkphase,
+  createItem,
+  createBoard,
+  setItemPosition,
+} from '../fixtures.js';
 
 describe('GET /api/items/:id', () => {
   it('returns 404 for a non-existent id', async () => {
@@ -266,11 +273,11 @@ describe('PUT /api/items/:id', () => {
 
 describe('PATCH /api/items/:id/move', () => {
   it('returns 404 for a non-existent id', async () => {
-    const res = await request(app).patch('/api/items/does-not-exist/move').send({ position: 1 });
+    const res = await request(app).patch('/api/items/does-not-exist/move').send({ workphaseId: 'w' });
     expect(res.status).toBe(404);
   });
 
-  it('returns 400 when neither workphaseId nor position is given', async () => {
+  it('returns 400 when no workphaseId, parentId, isAttached or anchorId is given', async () => {
     const project = await createProject();
     const item = await createItem({ projectId: project.id });
     const res = await request(app).patch(`/api/items/${item.id}/move`).send({});
@@ -284,28 +291,46 @@ describe('PATCH /api/items/:id/move', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 for a non-numeric or non-finite raw position', async () => {
+  it('TC-2.32: a move that names a final position is refused, and no endpoint sets several outright', async () => {
     const project = await createProject();
-    const item = await createItem({ projectId: project.id });
-    await request(app).patch(`/api/items/${item.id}/move`).send({ position: 5 });
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
+    setItemPosition(x.id, 2.0);
+    setItemPosition(a.id, 4.0);
+    const positionOf = async (id: string) => (await request(app).get(`/api/items/${id}`)).body.position;
 
-    const nonNumeric = await request(app).patch(`/api/items/${item.id}/move`).send({ position: 'later' });
-    expect(nonNumeric.status).toBe(400);
+    for (const body of [{ position: 3.0 }, { position: 3.0, anchorId: a.id, side: 'after' }, { position: 'later' }]) {
+      const res = await request(app).patch(`/api/items/${x.id}/move`).send(body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(res.body.error).toMatch(/name an anchorId and side/);
+    }
+    expect(await positionOf(x.id)).toBe(2.0);
 
-    const notFinite = await request(app).patch(`/api/items/${item.id}/move`).send({ position: Infinity });
-    expect(notFinite.status).toBe(400);
-
-    const unchanged = await request(app).get(`/api/items/${item.id}`);
-    expect(unchanged.body.position).toBe(5);
+    // The batch endpoint is gone, so no request sets positions outright.
+    const reorder = await request(app)
+      .patch('/api/items/reorder')
+      .send({
+        itemOrders: [
+          { id: x.id, position: 3 },
+          { id: a.id, position: 1 },
+        ],
+      });
+    expect(reorder.status).toBe(404);
+    expect([await positionOf(x.id), await positionOf(a.id)]).toEqual([2.0, 4.0]);
   });
 
-  it('a position-only move does not add a new status_change entry beyond the one logged at creation', async () => {
+  it('a same-workphase move does not add a new status_change entry beyond the one logged at creation', async () => {
     const project = await createProject();
-    const item = await createItem({ projectId: project.id });
+    const workflow = await createWorkflow(project.id);
+    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id });
     const before = await request(app).get(`/api/items/${item.id}`);
     const countBefore = before.body.activity.filter((a: { type: string }) => a.type === 'status_change').length;
 
-    await request(app).patch(`/api/items/${item.id}/move`).send({ position: 5 });
+    const res = await request(app).patch(`/api/items/${item.id}/move`).send({ workphaseId: todo.id });
+    expect(res.status).toBe(200);
 
     const after = await request(app).get(`/api/items/${item.id}`);
     const countAfter = after.body.activity.filter((a: { type: string }) => a.type === 'status_change').length;
@@ -333,19 +358,6 @@ describe('PATCH /api/items/:id/move', () => {
     expect(notifications.body.some((n: { itemId: string }) => n.itemId === item.id)).toBe(true);
   });
 
-  it('an explicit position on a move is respected as-is, not overridden by the default', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const done = await createWorkphase(workflow.id, { name: 'Done' });
-    await createItem({ projectId: project.id, workphaseId: done.id, title: 'Already done' });
-    const moving = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Moving' });
-
-    const res = await request(app).patch(`/api/items/${moving.id}/move`).send({ workphaseId: done.id, position: 0.5 });
-    expect(res.status).toBe(200);
-    expect(res.body.position).toBe(0.5);
-  });
-
   it("TC-2.24: a workphaseId-only move with no anchor keeps the item's existing position exactly unchanged", async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
@@ -355,7 +367,7 @@ describe('PATCH /api/items/:id/move', () => {
     // Pinned to a value append-fallback would never naturally produce, so a
     // pass here can't be coincidental the way `toBeGreaterThan` checks
     // elsewhere in this describe block can be.
-    await request(app).patch(`/api/items/${moving.id}/move`).send({ position: 7.5 });
+    setItemPosition(moving.id, 7.5);
 
     const res = await request(app).patch(`/api/items/${moving.id}/move`).send({ workphaseId: inProgress.id });
     expect(res.status).toBe(200);
@@ -385,10 +397,10 @@ describe('position resolution', () => {
   const move = (id: string, body: Record<string, unknown>) => request(app).patch(`/api/items/${id}/move`).send(body);
   const fetchItem = async (id: string) => (await request(app).get(`/api/items/${id}`)).body;
 
-  // An item created at the workflow's end, then pinned to `position`.
+  // An item created at the workflow's end, then pinned to `position` (written directly: no request names one).
   async function itemAt(projectId: string, workphaseId: string, position: number, title = 'Pinned') {
     const created = await createItem({ projectId, workphaseId, title });
-    expect((await move(created.id, { position })).status).toBe(200);
+    setItemPosition(created.id, position);
     return { ...created, position };
   }
 
@@ -412,7 +424,7 @@ describe('position resolution', () => {
     await itemAt(project.id, inProgress.id, 2.0, 'B');
     await itemAt(project.id, todo.id, 3.0, 'C');
     const child = await createItem({ projectId: project.id, parentId: a.id, title: 'A1' });
-    expect((await move(child.id, { position: 1.2 })).status).toBe(200);
+    setItemPosition(child.id, 1.2);
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
 
     const res = await move(x.id, { anchorId: a.id, side: 'after' });
@@ -459,7 +471,7 @@ describe('position resolution', () => {
     await createItem({ projectId: project.id, parentId: p.id, title: 'P1' }); // 1.0
     await createItem({ projectId: project.id, parentId: p.id, title: 'P2' }); // 2.0
     const q1 = await createItem({ projectId: project.id, parentId: q.id, title: 'Q1' });
-    expect((await move(q1.id, { position: 5.0 })).status).toBe(200);
+    setItemPosition(q1.id, 5.0);
     await itemAt(project.id, todo.id, 7.0, 'F');
 
     const child = await createItem({ projectId: project.id, parentId: p.id, title: 'P3' });
@@ -471,8 +483,8 @@ describe('position resolution', () => {
     // Both created before either is pinned: a create after a pin this high would reindex on its own.
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });
     const b = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'B' });
-    expect((await move(a.id, { position: 1100 })).status).toBe(200);
-    expect((await move(b.id, { position: 1200 })).status).toBe(200);
+    setItemPosition(a.id, 1100);
+    setItemPosition(b.id, 1200);
 
     // n = 2, so the next append (1201) crosses max(1000, 102).
     const res = await request(app).post('/api/items').send({ title: 'N', projectId: project.id, workphaseId: todo.id });
@@ -537,7 +549,7 @@ describe('position resolution', () => {
         isAttached: false,
         workphaseId: todo.id,
       });
-      expect((await move(created.id, { position })).status).toBe(200);
+      setItemPosition(created.id, position);
       return created;
     };
     const d1 = await detachedChild('D1', 1.0);
@@ -586,7 +598,7 @@ describe('position resolution', () => {
       isAttached: false,
     });
     // A workflow position the sibling append can't coincide with.
-    expect((await move(detached.id, { position: 5.0 })).status).toBe(200);
+    setItemPosition(detached.id, 5.0);
 
     const res = await request(app).put(`/api/items/${detached.id}`).send({ parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
@@ -711,7 +723,7 @@ describe('position resolution', () => {
     // Force x to sit numerically between a and b — if x's own (pre-move) row
     // weren't excluded from its scope query, resolving "after a" would find
     // x itself as the closest neighbor and anchor against its stale value.
-    await request(app).patch(`/api/items/${x.id}/move`).send({ position: 1.5 });
+    setItemPosition(x.id, 1.5);
 
     const res = await request(app).patch(`/api/items/${x.id}/move`).send({ anchorId: a.id, side: 'after' });
     expect(res.status).toBe(200);
@@ -920,15 +932,13 @@ describe('position resolution', () => {
       // A tight, unresolvable gap within `todo` — the trigger.
       const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
-      await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
-      await request(app)
-        .patch(`/api/items/${itemT2.id}/move`)
-        .send({ position: 1.0 + 1e-13 });
+      setItemPosition(itemT1.id, 1.0);
+      setItemPosition(itemT2.id, 1.0 + 1e-13);
 
       // A third item in a DIFFERENT non-terminal workphase, same workflow —
       // this is what proves the coordinated (not per-workphase) scope.
       const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
-      await request(app).patch(`/api/items/${itemP1.id}/move`).send({ position: 5.0 });
+      setItemPosition(itemP1.id, 5.0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
       const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
@@ -964,12 +974,10 @@ describe('position resolution', () => {
 
       const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
-      await request(app).patch(`/api/items/${itemT1.id}/move`).send({ position: 1.0 });
-      await request(app)
-        .patch(`/api/items/${itemT2.id}/move`)
-        .send({ position: 1.0 + 1e-13 });
+      setItemPosition(itemT1.id, 1.0);
+      setItemPosition(itemT2.id, 1.0 + 1e-13);
       const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
-      await request(app).patch(`/api/items/${itemP1.id}/move`).send({ position: 5.0 });
+      setItemPosition(itemP1.id, 5.0);
 
       const doneItem = await request(app)
         .post('/api/items')
@@ -1000,13 +1008,11 @@ describe('position resolution', () => {
       const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
       const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildA' });
       const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildB' });
-      await request(app).patch(`/api/items/${childA.id}/move`).send({ position: 1.0 });
-      await request(app)
-        .patch(`/api/items/${childB.id}/move`)
-        .send({ position: 1.0 + 1e-13 }); // tight gap -> reindex trigger
+      setItemPosition(childA.id, 1.0);
+      setItemPosition(childB.id, 1.0 + 1e-13); // tight gap -> reindex trigger
 
       const farAway = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'FarAway' });
-      await request(app).patch(`/api/items/${farAway.id}/move`).send({ position: 500.0 });
+      setItemPosition(farAway.id, 500.0);
 
       const newChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'NewChild' });
       const res = await request(app)
@@ -1030,15 +1036,13 @@ describe('position resolution', () => {
       const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
       const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildA' });
       const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'ChildB' });
-      await request(app).patch(`/api/items/${childA.id}/move`).send({ position: 1.0 });
-      await request(app).patch(`/api/items/${childB.id}/move`).send({ position: 2.0 }); // plenty of room, not a trigger
+      setItemPosition(childA.id, 1.0);
+      setItemPosition(childB.id, 2.0); // plenty of room, not a trigger
 
       const t1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const t2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
-      await request(app).patch(`/api/items/${t1.id}/move`).send({ position: 10.0 });
-      await request(app)
-        .patch(`/api/items/${t2.id}/move`)
-        .send({ position: 10.0 + 1e-13 }); // tight gap -> reindex trigger
+      setItemPosition(t1.id, 10.0);
+      setItemPosition(t2.id, 10.0 + 1e-13); // tight gap -> reindex trigger
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
       const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: t1.id, side: 'after' });
@@ -1056,65 +1060,6 @@ describe('position resolution', () => {
       expect((await request(app).get(`/api/items/${childA.id}`)).body.position).toBe(1.0);
       expect((await request(app).get(`/api/items/${childB.id}`)).body.position).toBe(2.0);
     });
-  });
-});
-
-describe('PATCH /api/items/reorder', () => {
-  it('returns 400 when itemOrders is not an array', async () => {
-    const res = await request(app).patch('/api/items/reorder').send({});
-    expect(res.status).toBe(400);
-  });
-
-  it('reorders multiple items', async () => {
-    const project = await createProject();
-    const a = await createItem({ projectId: project.id });
-    const b = await createItem({ projectId: project.id });
-    const res = await request(app)
-      .patch('/api/items/reorder')
-      .send({
-        itemOrders: [
-          { id: a.id, position: 5 },
-          { id: b.id, position: 1 },
-        ],
-      });
-    expect(res.status).toBe(200);
-  });
-
-  it('rejects an entry without a string id and finite numeric position', async () => {
-    const project = await createProject();
-    const a = await createItem({ projectId: project.id });
-    const res = await request(app)
-      .patch('/api/items/reorder')
-      .send({
-        itemOrders: [{ id: a.id, position: 'first' }],
-      });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects a falsy invalid entry', async () => {
-    const project = await createProject();
-    const a = await createItem({ projectId: project.id });
-    const res = await request(app)
-      .patch('/api/items/reorder')
-      .send({
-        itemOrders: [null, { id: a.id, position: 1 }],
-      });
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 404 with missingIds when any item does not exist', async () => {
-    const project = await createProject();
-    const a = await createItem({ projectId: project.id });
-    const res = await request(app)
-      .patch('/api/items/reorder')
-      .send({
-        itemOrders: [
-          { id: a.id, position: 1 },
-          { id: 'ghost', position: 2 },
-        ],
-      });
-    expect(res.status).toBe(404);
-    expect(res.body.missingIds).toEqual(['ghost']);
   });
 });
 

@@ -1,19 +1,12 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem } from '../helpers/seed';
+import { seedTemplatedWorkflow, pickWorkphases, seedItem, pinItemPosition } from '../helpers/seed';
 import { article, column, titlesIn } from '../helpers/boardLocators';
 
 // The positioning rules a board shows without a drag: the order a column
 // renders in, what an inline create sends, and a write's answer folded into
 // the board rather than reloading it.
-
-// Pins an item to a raw position. Seeds both items of a pair before pinning
-// either: a create after a pin this high would reindex the scope itself.
-async function pin(request: APIRequestContext, id: string, position: number) {
-  const res = await request.patch(`${API}/items/${id}/move`, { data: { position } });
-  expect(res.ok(), `pin at ${position} → ${res.status()}`).toBe(true);
-}
 
 // Every board load from now on: a GET of the board itself, which is what a
 // reload after a write would be.
@@ -68,9 +61,10 @@ test.describe('item positioning on the board', () => {
     const [todo] = pickWorkphases(workflow, 'Todo');
     const a = await seedItem(request, { title: 'High A', projectId: project.id, workphaseId: todo.id });
     const b = await seedItem(request, { title: 'High B', projectId: project.id, workphaseId: todo.id });
+    // Both seeded before either is pinned: a create after a pin this high would reindex the scope itself.
     // High enough that the next append reindexes the scope first.
-    await pin(request, a.id, 1100);
-    await pin(request, b.id, 1200);
+    await pinItemPosition(request, a.id, 1100);
+    await pinItemPosition(request, b.id, 1200);
 
     await page.goto('/');
     await projectSidebar.select(name);
@@ -107,8 +101,8 @@ test.describe('item positioning on the board', () => {
     const free = await seedItem(request, { title: 'Panel Free', projectId: project.id, workphaseId: todo.id });
     await seedItem(request, { title: 'Panel Stub', parentId: parent.id });
     // High enough that the detach's append reindexes the scope first.
-    await pin(request, parent.id, 1100);
-    await pin(request, free.id, 1200);
+    await pinItemPosition(request, parent.id, 1100);
+    await pinItemPosition(request, free.id, 1200);
 
     await page.goto('/');
     await projectSidebar.select(name);

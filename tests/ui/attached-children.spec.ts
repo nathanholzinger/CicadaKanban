@@ -324,7 +324,7 @@ test.describe('reparent and attach/detach controls', () => {
     expect(detached.isAttached).toBe(0);
 
     // Move the parent — the now-detached child should stay in its workphase.
-    await request.patch(`${API}/items/${parent.id}/move`, { data: { workphaseId: inProgress.id, position: 1 } });
+    await request.patch(`${API}/items/${parent.id}/move`, { data: { workphaseId: inProgress.id } });
     const afterMove = await (await request.get(`${API}/items/${child.id}`)).json();
     expect(afterMove.workphaseId).toBe(todo.id);
 

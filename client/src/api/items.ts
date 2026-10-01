@@ -41,10 +41,9 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
   return apiJson(`/items/${id}`, { method: 'PUT', body: data }, 'Failed to update item');
 }
 
-// Prefers {anchorId, side} (resolved server-side against true current
-// data, never a client-computed value) over a raw `position`, which stays
-// supported only as a direct-control escape hatch — the board drag never
-// sends it.
+// Placement is {anchorId, side}, resolved server-side against true current
+// data, never a client-computed value; no request names a final position
+// (wiki item-positioning §2).
 //
 // `parentId` (null = make top-level) and `isAttached` ride along with any
 // of the above and commit in the same transaction — the shape the board's
@@ -56,7 +55,6 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
 // on scope; this type leaves it out.
 export interface MoveItemInput {
   workphaseId?: string;
-  position?: number;
   anchorId?: string;
   side?: 'before' | 'after';
   parentId?: string | null;
@@ -65,10 +63,6 @@ export interface MoveItemInput {
 
 export function moveItem(id: string, data: MoveItemInput): Promise<ItemWriteResponse> {
   return apiJson(`/items/${id}/move`, { method: 'PATCH', body: data }, 'Failed to move item');
-}
-
-export function reorderItems(itemOrders: { id: string; position: number }[]): Promise<void> {
-  return apiVoid('/items/reorder', { method: 'PATCH', body: { itemOrders } }, 'Failed to reorder items');
 }
 
 export function deleteItem(id: string): Promise<void> {

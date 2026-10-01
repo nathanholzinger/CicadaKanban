@@ -35,7 +35,7 @@ test('attached child inherits parent workphase on create and follows on move; de
   expect(detachedChild.isAttached).toBe(0);
 
   // Move the parent — attached child follows, detached child stays put.
-  await request.patch(`${BASE}/items/${parent.id}/move`, { data: { workphaseId: inProgress.id, position: 1 } });
+  await request.patch(`${BASE}/items/${parent.id}/move`, { data: { workphaseId: inProgress.id } });
 
   const movedAttached = await (await request.get(`${BASE}/items/${attachedChild.id}`)).json();
   expect(movedAttached.workphaseId).toBe(inProgress.id);

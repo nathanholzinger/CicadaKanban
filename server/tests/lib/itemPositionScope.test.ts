@@ -22,6 +22,11 @@ describe('classifyPositionScope', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: null }, null)).toBe('none');
   });
 
+  it('TC-7.18: classifies a detached/root item in a workphase outside its workflow as none', () => {
+    // The lookup answers null for a workphase its project's workflow doesn't use.
+    expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, null)).toBe('none');
+  });
+
   it('classifies a detached/root item in a terminal workphase as none (done, ordered by completedAt)', () => {
     expect(classifyPositionScope({ isAttached: false, parentId: null, workphaseId: 'w1' }, true)).toBe('none');
   });

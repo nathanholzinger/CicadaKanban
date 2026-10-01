@@ -107,13 +107,10 @@ router.get('/:id', (req, res) => {
   // Per-project narrowing for inherited/read-only views is left to the client.
   const scopeItems = getBoardScopeItems(board.workflowId);
 
-  // Looked up once for every workphase in the DB (not just this workflow's)
-  // since an "Unknown status" item can carry a misaligned/foreign
-  // workphaseId, and its true terminal status still needs to come from a
-  // real lookup, not be assumed.
-  const isTerminalOf = isTerminalLookup(
-    db.select({ id: workphases.id, isTerminal: workphases.isTerminal }).from(workphases).all(),
-  );
+  // Built from this workflow's workphases only: an "Unknown status" item can
+  // carry a misaligned/foreign workphaseId, which the lookup doesn't know, so
+  // its position scope is "none" (wiki item-positioning §2).
+  const isTerminalOf = isTerminalLookup(workflowWorkphases);
   const scopedItems = scopeItems.map(item => withPositionScope(item, isTerminalOf));
 
   const workphaseIdSet = new Set(workflowWorkphases.map(w => w.id));

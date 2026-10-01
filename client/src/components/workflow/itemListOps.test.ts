@@ -114,12 +114,18 @@ describe('getWorkphaseItemsFrom', () => {
     ]);
   });
 
-  it('breaks an exact completedAt tie by createdAt, oldest first', () => {
-    const tied = [
-      item('newer', { position: null, completedAt: 100, createdAt: 200 }),
-      item('older', { position: null, completedAt: 100, createdAt: 100 }),
+  it('TC-6.10: breaks an exact completedAt tie by createdAt, oldest first', () => {
+    // A completed at 10:00, and B and C both at 10:05.
+    const done = (bCreatedAt: number, cCreatedAt: number) => [
+      item('c', { position: null, completedAt: 300, createdAt: cCreatedAt }),
+      item('a', { position: null, completedAt: 100, createdAt: 50 }),
+      item('b', { position: null, completedAt: 300, createdAt: bCreatedAt }),
     ];
-    expect(getWorkphaseItemsFrom(tied, 'todo', undefined, true).map(i => i.id)).toEqual(['older', 'newer']);
+    const order = (list: ReturnType<typeof done>) =>
+      getWorkphaseItemsFrom(list, 'todo', undefined, true).map(i => i.id);
+
+    expect(order(done(1, 2))).toEqual(['a', 'b', 'c']); // B created before C
+    expect(order(done(2, 1))).toEqual(['a', 'c', 'b']); // C created before B
   });
 });
 

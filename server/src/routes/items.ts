@@ -4,7 +4,6 @@ import { items, workphases, activityLog } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { assertWithinDepthCap, hierarchyDepth, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
@@ -16,20 +15,27 @@ import {
   validateHierarchyRequest,
   type HierarchyRequest,
 } from '../lib/itemHierarchy.js';
+import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';
 
 const router = Router();
 
 // The `isTerminalOf` withPositionScope needs, for the single-item routes
-// below — a plain per-call lookup, since each only ever scopes one row. GET
-// /:id looks up its own item+children batch instead (see below).
-function isTerminalOf(workphaseId: string): boolean | null {
-  const workphase = db
-    .select({ isTerminal: workphases.isTerminal })
-    .from(workphases)
-    .where(eq(workphases.id, workphaseId))
-    .get();
-  return workphase ? Boolean(workphase.isTerminal) : null;
+// below — a plain per-call lookup, since each only ever scopes one row. It
+// answers for the workphases of the workflow the item's project uses, and null
+// for any other: an item in another workflow's workphase has no position scope
+// (wiki item-positioning §2). GET /:id looks up its own item+children batch
+// instead (see below).
+function isTerminalOfProject(projectId: string | null): (workphaseId: string) => boolean | null {
+  const workflowId = projectId ? effectiveWorkflowIdForProject(projectId) : null;
+  return workphaseId => {
+    const workphase = db
+      .select({ isTerminal: workphases.isTerminal, workflowId: workphases.workflowId })
+      .from(workphases)
+      .where(eq(workphases.id, workphaseId))
+      .get();
+    return workphase && workphase.workflowId === workflowId ? Boolean(workphase.isTerminal) : null;
+  };
 }
 
 // Every item write responds with the fresh row plus, when a reindex fired,
@@ -38,7 +44,7 @@ function isTerminalOf(workphaseId: string): boolean | null {
 // appended so a caller has one rule: apply every pair.
 function respondWithItem(res: Response, id: string, reindexed: ReindexedPosition[], status = 200): void {
   const row = db.select().from(items).where(eq(items.id, id)).get()!;
-  const body: Record<string, unknown> = withPositionScope(row, isTerminalOf);
+  const body: Record<string, unknown> = withPositionScope(row, isTerminalOfProject(row.projectId));
   if (reindexed.length > 0) {
     body.reindexed = row.position === null ? reindexed : [...reindexed, { id, position: row.position }];
   }
@@ -68,7 +74,10 @@ router.get('/:id', (req, res) => {
         .where(inArray(workphases.id, workphaseIds))
         .all()
     : [];
-  const isTerminalOf = isTerminalLookup(workphaseRows);
+  // Only the workphases of the workflow the item's project uses count: a child
+  // shares its parent's project.
+  const projectWorkflowId = item.projectId ? effectiveWorkflowIdForProject(item.projectId) : null;
+  const isTerminalOf = isTerminalLookup(workphaseRows.filter(w => w.workflowId === projectWorkflowId));
 
   const children = rawChildren.map(child => ({ ...withPositionScope(child, isTerminalOf), depth: depth + 1 }));
 
@@ -300,11 +309,10 @@ router.put('/:id', (req, res) => {
 });
 
 // Move an item: workphase, parent, attachment, and placement, in any
-// combination, committed as one transaction. Placement prefers
-// `{anchorId, side}` (resolved server-side against true current data, never
-// a client-computed value — see positionResolver.ts) over a raw `position`,
-// which is kept only as a direct-control escape hatch for non-drag callers
-// (MCP, scripts, tests).
+// combination, committed as one transaction. Placement is `{anchorId, side}`,
+// resolved server-side against true current data, never a client-computed
+// value (see positionResolver.ts); no caller names a final position
+// (wiki item-positioning §2).
 // `projectId` is never sent: a cross-project reparent derives it from the
 // new parent and cascades it to the subtree (wiki item-attachment §9).
 router.patch('/:id/move', (req, res) => {
@@ -313,19 +321,25 @@ router.patch('/:id/move', (req, res) => {
 
   const { workphaseId, position, anchorId, side, scopeWorkphaseIds, parentId, isAttached } = req.body;
 
+  // Refused rather than ignored: the API says what to do instead.
+  if (position !== undefined) {
+    res.status(400).json({ error: 'position is not accepted: name an anchorId and side to place the item instead' });
+    return;
+  }
+
   // scopeWorkphaseIds is accepted so a bare same-column reorder-to-append
   // request — no anchor, no workphaseId change, just "this merged group" —
   // doesn't 400. It has no effect on scope resolution (position is
   // workflow-wide, not workphase-narrow — see positionScopeFor), and is
   // mapped below onto the equivalent same-workphase move.
   const hasScopeWorkphaseIds = Array.isArray(scopeWorkphaseIds) && scopeWorkphaseIds.length > 0;
-  const hasIntent = [workphaseId, position, anchorId, parentId, isAttached].some(v => v !== undefined);
+  const hasIntent = [workphaseId, anchorId, parentId, isAttached].some(v => v !== undefined);
   if (!hasIntent && !hasScopeWorkphaseIds) {
-    res.status(400).json({ error: 'workphaseId, parentId, isAttached, position, and/or anchorId+side required' });
+    res.status(400).json({ error: 'workphaseId, parentId, isAttached, and/or anchorId+side required' });
     return;
   }
 
-  const hierarchyReq: HierarchyRequest = { parentId, isAttached, workphaseId, anchorId, side, position };
+  const hierarchyReq: HierarchyRequest = { parentId, isAttached, workphaseId, anchorId, side };
   if (!hasIntent) hierarchyReq.workphaseId = item.workphaseId;
 
   const error = validateHierarchyRequest(item, hierarchyReq);
@@ -340,20 +354,6 @@ router.patch('/:id/move', (req, res) => {
   });
 
   respondWithItem(res, req.params.id, reindexed);
-});
-
-// Reorder items within a workphase
-router.patch('/reorder', (req, res) => {
-  const { itemOrders } = req.body;
-
-  const validation = validateReorder(items, itemOrders, 'item');
-  if (!validation.ok) {
-    res.status(validation.status).json(validation.body);
-    return;
-  }
-
-  db.transaction(tx => applyReorderEntries(items, validation.entries, tx, { updatedAt: Date.now() }));
-  res.json({ success: true });
 });
 
 // Add a comment to an item's activity log

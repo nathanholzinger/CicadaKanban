@@ -47,8 +47,6 @@ export type HierarchyRequest = {
   workphaseId?: string | null;
   anchorId?: string;
   side?: Side;
-  /** Raw escape hatch for non-drag callers (MCP, scripts) — never sent by the board. */
-  position?: number;
 };
 
 // Where the item will be once the request is applied — every check and
@@ -219,9 +217,6 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
   if (req.anchorId !== undefined && req.side !== 'before' && req.side !== 'after') {
     return "side must be 'before' or 'after' when anchorId is given";
   }
-  if (req.position !== undefined && (typeof req.position !== 'number' || !Number.isFinite(req.position))) {
-    return 'position must be a finite number';
-  }
   // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
   if (typeof req.workphaseId === 'string' && !existsById(workphases, req.workphaseId)) {
     return 'workphaseId does not reference an existing workphase';
@@ -382,8 +377,6 @@ export function applyHierarchyRequest(
     );
   if (req.anchorId !== undefined) {
     updates.position = resolvePositionByAnchorAndSide(items, scope(), tx, req.side as Side, req.anchorId, reindexed);
-  } else if (req.position !== undefined) {
-    updates.position = req.position;
   } else if (scopeChanged) {
     // Scope changed with no anchor → append fallback (wiki item-positioning §2.1).
     // "Reparent but keep your position" is not an operation for an attached

@@ -196,11 +196,14 @@ The starting list. The Coder keeps it current and records which symbol carries w
 | `client/src/components/item-detail/ChildrenSection.tsx` | 2b | The add-child create names no workphase, so it passes R1. Its `childDefaultWorkphaseId` prop goes, with its pass-through in `ItemDetailPanel.tsx` and `BoardView.tsx` |
 | `client/src/components/item-detail/ParentSection.tsx` | 2a | `handleParentChange` sends `isAttached: true` when a parentless item gets its first parent (R6) |
 | `client/src/test/itemFixture.ts` | 2a | `makeItem`'s flag defaults to set with a parent and clear without (R6) |
-| `server/src/lib/itemPositionScope.ts` | 3 | R9 |
-| `server/src/routes/testHelpers.ts` | 3 | The position-pinning test route (R8) |
+| `server/src/lib/itemPositionScope.ts` | 3 | R9: `classifyPositionScope` gives `"none"` when the lookup answers null for a non-null workphase. The lookup is the caller's `isTerminalOf`, which now answers only for the workphases of the workflow the item's project uses |
+| `server/src/routes/items.ts`, `boards.ts` | 3 | R9's lookups: `items.ts::isTerminalOfProject` (the single-item routes) and `GET /:id`'s filtered rows; `boards.ts` builds its from the board's workflow's workphases, not every workphase in the database. `workflows.ts` already did |
+| `server/src/lib/reorder.ts` | 3 | Its header and the unused `extraSet` go with the item reorder (R8) |
+| `server/src/routes/testHelpers.ts` | 3 | `PATCH /api/test/items/:id/position` (R8) |
 | `client/src/api/items.ts` | 3 | `reorderItems` and `MoveItemInput.position` go (R8) |
-| `tests/helpers/seed.ts` | 3 | `seedPositionedItems` pins through the test route (R8) |
-| `bruno/items/` | 3 | Requests and docs (R8, and the rules they describe) |
+| `tests/helpers/seed.ts` | 3 | `pinItemPosition`, and `seedPositionedItems` pins through it (R8) |
+| `server/tests/fixtures.ts` | 3 | `setItemPosition`, the one direct-write pin the server tests share (R8) |
+| `bruno/items/` | 3 | `move-item.bru`'s docs, and new docs on `create-item.bru` and `update-item.bru` (R8, and the rules they describe) |
 | Server tests and E2E specs | 2, 3 | New cases, and the tests listed above |
 
 ## Amendments
@@ -314,6 +317,23 @@ The starting list. The Coder keeps it current and records which symbol carries w
     - the tests for ATT-5.4, ATT-5.5 and TC-7.17 are deleted, replaced by ATT-5.9, 5.10 and TC-7.19;
     - the two tests that carried ATT-7.3's ID now carry ATT-9.4's, which replaces it.
   - **Checks:** `npm run check` passes: 356 server tests, 400 client, 75 scripts, 0 checker hits.
+- **2026-09-30, phase 3 (the Coder): positions (R8, R9). The code is complete.**
+  - **Built:**
+    - **R8.** `PATCH /items/:id/move` refuses a `position`, whatever its value, with a 400 that says to name an anchor and side (TC-2.32). `position` is out of `HierarchyRequest`, its shape check and its apply branch. `PATCH /items/reorder` is gone, so a request to set several positions gets a 404. `api/items.ts::reorderItems` and `MoveItemInput.position` go. `reorder.ts` serves workphases and columns only, so its `extraSet` went too.
+    - **The pin.** `PATCH /api/test/items/:id/position`, mounted with the other test routes. E2E's `seed.ts::pinItemPosition` calls it, and `seedPositionedItems` uses that. Server tests pin by writing the row, through `fixtures.ts::setItemPosition`.
+    - **R9.** `classifyPositionScope` gives `"none"` to an item whose workphase isn't one of the workflow its project uses (TC-7.18).
+    - **Bruno.** `move-item.bru`'s docs state the refusal and the new rules. `create-item.bru` and `update-item.bru` had no docs and have them now.
+  - **The Coder's calls:**
+    - **R9 needed no new parameter.** The callers already pass an `isTerminalOf` lookup. Its contract is now "the terminal flag of a workphase of the workflow the item's project uses, else null", and null on a non-null workphase is `"none"`. `boards.ts` builds it from the board's workflow's workphases, where it used every workphase in the database; `workflows.ts` already did; `items.ts` filters by the item's project's workflow (`isTerminalOfProject`, and `GET /:id`'s rows). A dangling workphase classifies as `"none"` too.
+    - **In a project with no workflow, an item with a named workphase is `"none"`,** since its project uses no workflow. That follows from 2c's decision, and it's the same question (handoff).
+    - **Three E2E specs sent `position: 1` alongside a workphase** (`attachedChildren.spec.ts`, `attached-children.spec.ts`, `boards.spec.ts`). It did nothing they asserted, so they send the workphase alone. `drag-column-bands.spec.ts` needs its 2.5, so it pins through `pinItemPosition`.
+  - **Tests:**
+    - TC-2.32's test is new, and replaces the four tests of `PATCH /items/reorder` and the two that sent a raw position (the explicit-position and non-numeric ones);
+    - TC-7.18 is carried by the project-move test (now `TC-7.18, TC-7.20`, which also checks `positionScope`) and a `classifyPositionScope` unit test;
+    - TC-6.10's test is the existing done-list tie test, extended to the case's example: both creation orders;
+    - "a position-only move logs no status change" is now a same-workphase move, since a position-only move no longer exists;
+    - every pin in `items.test.ts` and `items.hierarchy.test.ts` is `setItemPosition`, one helper in place of `items.hierarchy.test.ts`'s local one.
+  - **Checks:** `npm run check` passes: 351 server tests, 400 client, 75 scripts, 0 checker hits. The full E2E suite: 145 passed, 8 skipped. Two tests in `item-positioning.spec.ts` failed the first run, since the spec pinned positions through its own helper that sent `position` to `PATCH /move`. It uses `pinItemPosition` now, and the spec passes.
 
 ## Open questions
 
@@ -332,16 +352,25 @@ The starting list. The Coder keeps it current and records which symbol carries w
 
 - **Behavior decisions made while building, for the PO to rule on:**
   - **A project with no workflow (phase 2, 2c).** A Free item's workphase "belongs to its project's workflow" (item-attachment §2a), and a cross-workflow reparent is refused (§9). Neither says what a project with no workflow means. The code compares nothing there: a create or move may name any workphase in such a project, and a reparent into or out of one isn't cross-workflow. That's today's behavior, kept. ATT-5.11 asks the second half and is Epic 4's.
-- **Planned passages now built:** *(phase 2; phase 3 adds item-positioning §2's two)*
+  - **`positionScope` in that project (phase 3).** It follows: an item there with a named workphase is `"none"`, since its project uses no workflow and so uses none of the workphase's. item-positioning §2's new case ("a workphase its project's workflow doesn't use") doesn't say either.
+- **Planned passages now built:**
   - item-attachment §1's create bullet (a create stores the flag clear, and refuses it without a parent);
   - §2a's Planned paragraphs: a create's refusal for an Attached child (R1), the shown-in workphase (R4), a create naming a foreign workphase, and the cross-workflow reparent;
   - §4's top-level reparent paragraph;
   - §7's cross-workflow paragraph, and §9's;
-  - item-positioning §7.3's Planned paragraph.
-- **Passages superseded:**
-- **Implementation passages to place:**
-- **Test-plan cases affected:**
+  - item-positioning §7.3's Planned paragraph;
+  - item-positioning §2's two: the raw position is retired (R8), and `"none"` for an item in another workflow's workphase (R9).
+- **Passages superseded:** the ones the PO's *Replaced by* notes mark, which the code no longer follows.
+  - item-attachment §9's paragraph "Cross-*workflow* reparenting is also allowed at the API" and its closing note; §7's "and neither is cross-workflow"; §11's "takes its own workphase" and "Its workphase is whatever it holds at that moment";
+  - item-positioning §2.1's cross-workflow row, §7.2's closing sentence, and §7.3's two cross-workflow paragraphs.
+- **Implementation passages to place:** none for the wiki. The test-only pin route, `PATCH /api/test/items/:id/position`, is for the testing guide (To the Architect).
+- **Test-plan cases affected:** every case here has a test now, so none stays `Open` for want of one.
+  - **`Planned` cases built,** each `Open` once the PO takes its marker off: ATT-1.14, 3.11, 5.9, 5.10, 9.2, 9.4 to 9.7, 9.9; TC-2.32, 7.18, 7.19.
+  - **`Open` cases with a test:** ATT-1.8, 5.7, 9.1, 9.3 (client: `itemListOps.test.ts`, `UnsortedBucket.test.tsx`), 9.8, 10.1 to 10.3; TC-6.10 (client: `itemListOps.test.ts`), TC-7.20.
+  - **Replaced cases, for the close pass to delete:** ATT-5.4, 5.5 and TC-7.17 have no test left. ATT-7.3's two tests (`items.hierarchy.test.ts`, `attached-children.spec.ts`) already carry ATT-9.4.
+  - **Rewritten tests that keep their case:** TC-2.17's, which writes its flagged parentless row directly, and TC-2.24's re-file test, which writes its null position directly.
+  - **Not asserted anywhere, for the Reconciler:** ATT-9.3's server side. The server lists a drifted Stub in `unsorted.invalidItems` (To A5c), so only the client is tested.
 - **Wiki sections added, changed, moved or removed** (PO, at close):
-- **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes. It does, from 2b: `POST /items` still checks the parent at the route (exists, same project, depth cap), but now also takes its item's workphase from `itemHierarchy.ts::resolveCreateWorkphase`, which holds the create to the same workphase rules as a move, and uses `itemHierarchy.ts` to log. It doesn't go through `validateHierarchyRequest`. Phase 2c may add to this.
+- **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes. It does, from 2b: `POST /items` still checks the parent at the route (exists, same project, depth cap), but now also takes its item's workphase from `itemHierarchy.ts::resolveCreateWorkphase`, which holds the create to the same workphase rules as a move, and uses `itemHierarchy.ts` to log. It doesn't go through `validateHierarchyRequest`. 2c and phase 3 add to it: `POST` also refuses a Free item's workphase from another workflow through `itemHierarchy.ts::foreignWorkphaseError`. Root `CLAUDE.md`'s API table also lists `/api/items` as "Item CRUD + move + reorder + comments"; `PATCH /items/reorder` is gone (phase 3, R8), so "reorder" goes from that row. The workphase and column rows keep theirs, and so does the Coder persona's "Batch reorders" paragraph. `.claude/guides/testing-strategy.md` can name the test-only pin route (`PATCH /api/test/items/:id/position`, with `ENABLE_TEST_ROUTES`) as how an E2E spec gets an exact position now.
 - **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`, `ChildrenSection.tsx`) that the Sheet's page should state. R6's flag isn't one, since it's an implementation detail. From 2b: the Sheet's add-child names no workphase, so a new child takes its parent's. The board toolbar's "New child items go to" control (`BoardToolbar.tsx`, `BoardView.tsx`'s `childDefaultWorkphaseId` state and `kanban_child_col_*` localStorage key) now feeds nothing, as it never did for an attached child. Nathan's call: remove it, or give it a meaning in the Work Item Detail & Chat UI epic. It's the toolbar's, not the Sheet's, so it may not belong on the Sheet's page.
 - **To A5c:** R5's rule for a full item with no workphase, and R3's project moves, for the page's account of Unsorted. And from 2c: `GET /boards/:id`'s `unsorted.invalidItems` lists a drifted Stub (an Attached item whose own workphase is none or outside the workflow), so `needsAttention` is true. The client's bucket doesn't list it (item-attachment §2a), but still shows the badge, whose tooltip says a workphase is uncovered. Whether the server should leave Stubs out of `invalidItems` is the page's to say.

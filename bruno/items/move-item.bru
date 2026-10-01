@@ -30,9 +30,9 @@ docs {
   workflow-scoped, so changing only the workphase doesn't invalidate the
   existing value. This is also the shape the MCP `move_item` tool sends.
 
-  A raw `position` (finite number) is still accepted instead of
-  anchorId+side, but anchor+side is the documented, preferred way to
-  reposition an item — see `docs/wiki/item-positioning/README.md` §2.
+  No caller names a final position: a request with a `position` is a 400
+  that says to name an anchor and side instead — see
+  `docs/wiki/item-positioning/README.md` §2.
 
   ## Hierarchy (Epic 3.5)
 
@@ -45,8 +45,19 @@ docs {
     by default. `isAttached: true` with no resulting parent is a 400.
   - An attached item inherits its parent's workphase; sending a different
     `workphaseId` alongside is a 400.
+  - A write that leaves an attached item Free (a detach, or `parentId:
+    null`) and names no `workphaseId` leaves it in the workphase it was
+    shown in: its nearest Free ancestor's. If that ancestor has none, it's
+    a 400; name a `workphaseId` (or `null`, for none) or file the ancestor
+    first.
+  - A Free item's `workphaseId` must belong to the workflow its project
+    uses; another workflow's is a 400.
   - Cross-project parents are allowed — `projectId` is derived from the
     parent and cascades to the whole subtree. Never send `projectId`.
+  - A reparent into a project on a different workflow is a 400 when the
+    moved subtree would hold a Free item: the item ends Free, or any
+    descendant is detached. An item that ends attached, with no detached
+    descendant, may cross, and takes the new parent's workphase.
   - Rejected for a parent that doesn't exist, is the item itself or one of
     its descendants, or would put the resulting tree past the depth cap.
   - `anchorId` is validated against the scope the item will be in *after*

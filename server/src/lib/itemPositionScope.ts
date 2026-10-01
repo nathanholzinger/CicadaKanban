@@ -16,14 +16,18 @@ import { items, workphases } from '../db/schema.js';
 
 export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
+// `workphaseIsTerminal` is null when the item's workphase isn't one of the
+// workflow its project uses (wiki item-positioning §2): the item shows in
+// Unsorted, like one with no workphase.
 export function classifyPositionScope(
   item: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
   workphaseIsTerminal: boolean | null,
 ): PositionScope {
   if (item.isAttached && item.parentId) return 'attached-siblings';
-  // Unsorted/invalid (null workphaseId) — not currently position-ordered at
-  // all, same practical bucket as a done item even though the reason differs.
-  if (item.workphaseId === null) return 'none';
+  // Unsorted — no workphase, or one the item's project's workflow doesn't use:
+  // not position-ordered at all, same practical bucket as a done item even
+  // though the reason differs.
+  if (item.workphaseId === null || workphaseIsTerminal === null) return 'none';
   // Done item — ordered by completedAt, not position.
   if (workphaseIsTerminal) return 'none';
   // Comparable against every other active item in the same workflow, not
@@ -39,9 +43,12 @@ export function classifyPositionScope(
 // `isTerminalOf` is a caller-supplied lookup rather than a live query here,
 // because the right way to resolve it differs by caller: items.ts's
 // single-item routes query one workphase directly; its GET /:id (item +
-// children) and boards.ts (a whole board's worth of items) both prebuild a
-// `Map<workphaseId, isTerminal>` first so mapping many rows through this
-// function doesn't re-query per row.
+// children), boards.ts and workflows.ts (a whole workflow's worth of items)
+// all prebuild a `Map<workphaseId, isTerminal>` first so mapping many rows
+// through this function doesn't re-query per row. It answers only for the
+// workphases of the workflow the item's project uses, and null for any other:
+// an item in another workflow's workphase is "none", like one with no
+// workphase (wiki item-positioning §2).
 export function withPositionScope<
   T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null },
 >(item: T, isTerminalOf: (workphaseId: string) => boolean | null): T & { positionScope: PositionScope } {
