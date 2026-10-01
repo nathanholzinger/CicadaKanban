@@ -60,9 +60,14 @@ describe('cycle guards', () => {
 async function seedChain(projectId: string, length: number) {
   const chain: { id: string }[] = [];
   for (let i = 0; i < length; i++) {
-    const item = await createItem({ projectId, title: `L${i + 1}`, isAttached: i % 2 === 0 });
+    const item = await createItem({ projectId, title: `L${i + 1}` });
     const parentId = chain[i - 1]?.id;
-    if (parentId) db.update(items).set({ parentId }).where(eq(items.id, item.id)).run();
+    if (parentId) {
+      db.update(items)
+        .set({ parentId, isAttached: i % 2 === 0 ? 1 : 0 })
+        .where(eq(items.id, item.id))
+        .run();
+    }
     chain.push(item);
   }
   return chain;

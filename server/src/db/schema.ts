@@ -126,9 +126,9 @@ export const items = sqliteTable('items', {
   title: text('title').notNull(),
   description: text('description'),
   position: real('position'), // one scalar per item, never per board (wiki item-positioning §1)
-  // Attached-by-default is the intentional system-wide default: a new child moves
-  // with its parent (nested render, follows the parent's workphase). Meaningless
-  // without a parent_id.
+  // Set only on a child that follows its parent (nested render, parent's workphase);
+  // a top-level item's is clear (wiki item-attachment §1). The column default is
+  // set, which only a child wants, so every insert states the flag.
   isAttached: integer('is_attached').notNull().default(1),
   assigneeType: text('assignee_type'), // app-level: 'human' | 'agent'
   agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),

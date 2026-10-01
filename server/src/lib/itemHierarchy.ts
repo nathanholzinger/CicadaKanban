@@ -79,10 +79,9 @@ function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
 function deriveResultingState(item: ItemRow, req: HierarchyRequest, parent: ParentRow | undefined): ResultingState {
   const parentId = req.parentId !== undefined ? req.parentId : item.parentId;
   const parentCleared = req.parentId === null && item.parentId !== null;
-  // A root item may carry a stale flag from POST's attached-by-default
-  // (the flag means nothing without a parent) — leave it be
-  // unless this write is the one clearing the parent, in which case the
-  // flag goes with it.
+  // A write that omits the flag keeps the item's state, so a top-level item,
+  // whose flag is clear, becomes a detached child (wiki item-attachment §4).
+  // The write that clears the parent clears the flag with it.
   const attachedFlag = parentCleared ? false : req.isAttached !== undefined ? req.isAttached : Boolean(item.isAttached);
   const isAttachedWithParent = attachedFlag && parentId !== null;
   const workphaseId = isAttachedWithParent

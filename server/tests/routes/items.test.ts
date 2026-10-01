@@ -1407,16 +1407,37 @@ describe('attached children', () => {
     expect(child.isAttached).toBe(0);
   });
 
-  it('TC-2.17: creates a parentless item with isAttached true (the default) and respects its explicit workphaseId', async () => {
+  it('ATT-1.14: a create cannot set the flag without a parent, and a parentless create stores it clear', async () => {
     const { project, todo } = await setupTwoPhases();
-    const res = await request(app)
+    const countItems = () => db.select().from(items).all().length;
+
+    const before = countItems();
+    const refused = await request(app)
       .post('/api/items')
       .send({ title: 'Solo Root', projectId: project.id, workphaseId: todo.id, isAttached: true });
-    expect(res.status).toBe(201);
-    expect(res.body.parentId).toBeNull();
-    expect(res.body.isAttached).toBe(1);
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toMatch(/requires a parentId/);
+    expect(countItems()).toBe(before);
+
+    const unflagged = await request(app)
+      .post('/api/items')
+      .send({ title: 'Solo Root', projectId: project.id, workphaseId: todo.id });
+    expect(unflagged.status).toBe(201);
+    expect(unflagged.body.parentId).toBeNull();
+    expect(unflagged.body.isAttached).toBe(0);
     // No parent to override it — the given workphaseId is used as-is.
-    expect(res.body.workphaseId).toBe(todo.id);
+    expect(unflagged.body.workphaseId).toBe(todo.id);
+  });
+
+  it('TC-2.17: a parentless item that holds the attachment flag has positionScope "workflow"', async () => {
+    const { project, todo } = await setupTwoPhases();
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Solo Root' });
+    // No write sets the flag on a top-level item, so the row is written directly.
+    db.update(items).set({ isAttached: 1 }).where(eq(items.id, item.id)).run();
+
+    const res = await request(app).get(`/api/items/${item.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.isAttached).toBe(1);
     // The flag alone isn't attached-siblings: that takes a parent too.
     expect(res.body.positionScope).toBe('workflow');
   });

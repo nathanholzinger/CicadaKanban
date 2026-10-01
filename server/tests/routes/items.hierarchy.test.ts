@@ -58,7 +58,7 @@ async function seedChainPastCap(projectId: string, workphaseId: string, length: 
   for (let d = 2; d <= length; d++) {
     const link = await createItem({ projectId, workphaseId, title: `L${d}` });
     db.update(items)
-      .set({ parentId: chain[d - 2].id })
+      .set({ parentId: chain[d - 2].id, isAttached: 1 })
       .where(eq(items.id, link.id))
       .run();
     chain.push(getRow(link.id));
@@ -409,17 +409,27 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     ).toEqual(['Detached from "P"', 'Attached to "P"']);
   });
 
-  it('ATT-3.10: a Free item can be reparented and stay Free; without an anchor its position is untouched', async () => {
-    const { project, todo } = await setupWorkflow();
-    const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
-    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X', isAttached: false });
-    setPosition(x.id, 7.5);
-    const res = await move(x.id, { parentId: p.id });
-    expect(res.status).toBe(200);
-    expect(res.body.parentId).toBe(p.id);
-    expect(res.body.isAttached).toBe(0);
-    expect(res.body.position).toBe(7.5);
-    expect(res.body.workphaseId).toBe(todo.id);
+  it('ATT-3.10, ATT-3.11: a top-level item reparented without the flag becomes a detached child, and keeps its position', async () => {
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      const { project, todo, inProgress } = await setupWorkflow(entryPoint);
+      const p = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P' });
+      const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+      expect(getRow(x.id).isAttached).toBe(0);
+      setPosition(x.id, 7.5);
+
+      const res = await write(x.id, { parentId: p.id });
+      expect(res.status, entryPoint).toBe(200);
+      expect(res.body, entryPoint).toMatchObject({
+        parentId: p.id,
+        isAttached: 0,
+        workphaseId: todo.id,
+        position: 7.5,
+        positionScope: 'workflow',
+      });
+    }
   });
 
   it('ATT-3.9: a reparent that omits the flag keeps each child Free or Attached; one that names it lands in that state', async () => {
@@ -853,7 +863,7 @@ describe('data already past the cap', () => {
     // A second child beside the deepest link, so the deepest level has a sibling to reorder.
     const sibling = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'sibling' });
     db.update(items)
-      .set({ parentId: chain[chain.length - 2].id })
+      .set({ parentId: chain[chain.length - 2].id, isAttached: 1 })
       .where(eq(items.id, sibling.id))
       .run();
     const members = [...chain, getRow(sibling.id)];

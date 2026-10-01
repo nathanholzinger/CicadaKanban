@@ -176,7 +176,14 @@ router.post('/', (req, res) => {
     }
   }
 
-  const attached = isAttached !== undefined ? Boolean(isAttached) : true;
+  // The flag is a child's: a create with no parent and the flag set is refused, and
+  // one without stores it clear. A child is attached unless the create clears the
+  // flag (wiki item-attachment §1, §14).
+  if (!parent && isAttached) {
+    res.status(400).json({ error: 'isAttached requires a parentId' });
+    return;
+  }
+  const attached = parent ? (isAttached !== undefined ? Boolean(isAttached) : true) : false;
   // Attached children (the default) mirror the parent's current workphase.
   const resolvedWorkphaseId = attached && parent ? parent.workphaseId : workphaseId;
 

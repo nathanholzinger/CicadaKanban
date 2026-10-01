@@ -87,7 +87,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           is_attached: {
             type: 'boolean',
             description:
-              "Whether this item moves with its parent between workphases. Defaults to true. When true and parent_id is set, the item is placed in the parent's current workphase regardless of workphase_id.",
+              "Whether this item moves with its parent between workphases. Only a child can be attached: with parent_id it defaults to true, and without parent_id true is refused. When true and parent_id is set, the item is placed in the parent's current workphase regardless of workphase_id.",
           },
         },
         required: ['title'],
@@ -96,7 +96,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'update_item',
       description:
-        "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase.",
+        "Update an item's title, description, parent, and/or attach state. Reparenting or attaching while a parent is set moves the item (and its own attached descendants) into the parent's current workphase. A reparent that omits is_attached keeps the item's state, so a top-level item becomes a detached child; pass is_attached true to attach it.",
       inputSchema: {
         type: 'object',
         properties: {
@@ -107,7 +107,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: 'string',
             description: 'New parent item ID, or null to make it top-level. Rejected if it would create a cycle.',
           },
-          is_attached: { type: 'boolean', description: 'Whether this item moves with its parent between workphases.' },
+          is_attached: {
+            type: 'boolean',
+            description:
+              'Whether this item moves with its parent between workphases. Only a child can be attached: true on an item with no parent, and no parent_id in the same call, is refused.',
+          },
         },
         required: ['item_id'],
       },

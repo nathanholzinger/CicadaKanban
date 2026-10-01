@@ -184,17 +184,17 @@ From the Test Planner's A3 batch 4 confirming run. Each group ends with what hap
 
 ## Code map
 
-The starting list. The Coder keeps it current and records which symbol carries which ruling.
+The starting list. The Coder keeps it current and records which symbol carries which ruling. Phase 2 is three batches: 2a the flag (R6), 2b the workphase a write leaves (R1's create refusal, R4), 2c R3.
 
 | File | Phase | Change |
 |---|---|---|
-| `server/src/lib/itemHierarchy.ts` | 2 | R1's check against the resulting parent, R3's subtree check, R4's nearest Free ancestor, R6's flag |
-| `server/src/routes/items.ts` | 2, 3 | `POST`: R1, R3, R4, R6. `crossWorkflowMoveError` removed (R3). `PATCH /move` drops `position`, and `PATCH /reorder` goes (R8) |
-| `server/drizzle/` | 2 | A migration clearing the flag on parentless rows (R6) |
-| `server/src/db/schema.ts` | 2 | The flag's default, if the Coder changes it (R6) |
-| `server/src/mcp.ts` | 2 | The `create_item`, `update_item` and `move_item` descriptions |
-| `client/src/components/item-detail/ParentSection.tsx` | 2 | Sends `isAttached: true` when reparenting an item with no parent (R6) |
-| `client/src/test/itemFixture.ts` | 2 | A parentless fixture's default flag (R6) |
+| `server/src/lib/itemHierarchy.ts` | 2 | R1's check against the resulting parent, R3's subtree check, R4's nearest Free ancestor. R6 needs nothing here: `deriveResultingState` already keeps the flag when a write omits it, so a top-level item, whose flag is now clear, becomes a detached child |
+| `server/src/routes/items.ts` | 2, 3 | `POST`: R6 (2a: `attached` is false without a parent, and `isAttached: true` without one is a 400), R1, R3, R4. `crossWorkflowMoveError` removed (R3). `PATCH /move` drops `position`, and `PATCH /reorder` goes (R8) |
+| `server/drizzle/` | 2a | `0011_parentless_items_not_attached.sql` clears the flag on parentless rows (R6) |
+| `server/src/db/schema.ts` | 2a | The flag's column default stays set (R6). Changing it means rebuilding `items`, and the one insert, `POST`, now states the flag. Only the comment changed |
+| `server/src/mcp.ts` | 2 | The `create_item`, `update_item` and `move_item` descriptions. 2a: the flag's sentences |
+| `client/src/components/item-detail/ParentSection.tsx` | 2a | `handleParentChange` sends `isAttached: true` when a parentless item gets its first parent (R6) |
+| `client/src/test/itemFixture.ts` | 2a | `makeItem`'s flag defaults to set with a parent and clear without (R6) |
 | `server/src/lib/itemPositionScope.ts` | 3 | R9 |
 | `server/src/routes/testHelpers.ts` | 3 | The position-pinning test route (R8) |
 | `client/src/api/items.ts` | 3 | `reorderItems` and `MoveItemInput.position` go (R8) |
@@ -268,6 +268,18 @@ The starting list. The Coder keeps it current and records which symbol carries w
   - Story 10's item-positioning line in `epic-3-5-roadmap.md` routes TC-6.13 to Epic 4, and TC-2.32, 6.10 and 7.18 to A5a.
   - `mvp-roadmap.md`'s Epic 7 entry routes ATT-4.12 to A5b, not A5.
   - **In passing:** the planning docs' paths to the A3 reconciliation reports and three closed audit reports pointed at `docs/audits/`. They point at `docs/archive/` now, in `epic-3-5-roadmap.md`, `epic-4-decisions.md` and `epic-5-decisions.md`.
+- **2026-09-30, phase 2 batch 2a (the Coder): the attachment flag (R6).** Phase 2 is three batches, each ending with the gate and a stop: 2a the flag, 2b the workphase a write leaves (R1's create refusal, R4), 2c R3 (the foreign-workphase rule and the cross-workflow reparent), which removes `crossWorkflowMoveError` and `nullForeignWorkphasePositions`.
+  - **Built:**
+    - `POST` stores the flag clear without a parent, and refuses `isAttached: true` without one (ATT-1.14);
+    - migration `0011` clears the flag on existing parentless rows;
+    - the Sheet's parent picker sends `isAttached: true` when a parentless item gets its first parent (R6's Sheet bullet; no case, no new test, `attached-children.spec.ts`'s reparent test still passes);
+    - `makeItem` defaults the flag by parent;
+    - MCP's `create_item.is_attached`, `update_item`'s description and `update_item.is_attached` state the flag's rules.
+  - **The Coder's calls:**
+    - **The column default stays set.** SQLite can't change a default in place, so it would mean rebuilding `items`, the table every other table points at. The one insert, `POST`, states the flag, so the default is never used; the schema comment says so. A direct insert that omits the flag still gets a set flag, which is drift of the kind §2a already tolerates.
+    - **`itemHierarchy.ts` needs no change for R6.** A write that omits the flag already keeps the item's state, so the migration and `POST` are enough to make a top-level item's reparent detach it (ATT-3.11). Only `deriveResultingState`'s comment changed.
+  - **Tests updated:** `itemTree.test.ts::seedChain` and `items.hierarchy.test.ts::seedChainPastCap` set the flag with `parentId`, since they build their chains by direct write and the flag no longer comes free; ATT-4.7's sibling too. TC-2.17's test writes the flagged parentless row directly. ATT-1.14's is new. The reparent-a-top-level-item test takes ATT-3.11 and runs through both `PUT` and `PATCH /move`.
+  - **Checks:** `npm run check` passes: 347 server tests, 398 client, 75 scripts, 0 checker hits. `attached-children.spec.ts` and `attachedChildren.spec.ts` pass (15 E2E tests).
 
 ## Open questions
 

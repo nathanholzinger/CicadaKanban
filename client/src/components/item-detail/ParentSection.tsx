@@ -33,7 +33,10 @@ export function ParentSection({ item, allItems, onSelfUpdated }: ParentSectionPr
     setSavingParent(true);
     setParentError('');
     try {
-      const updated = await updateItem(item.id, { parentId });
+      // No reparent attaches by default (wiki item-attachment §4), so the
+      // picker names the flag when it gives a top-level item its first parent.
+      const attach = parentId !== null && item.parentId === null;
+      const updated = await updateItem(item.id, attach ? { parentId, isAttached: true } : { parentId });
       onSelfUpdated(updated);
     } catch (err) {
       setParentError(err instanceof Error ? err.message : 'Failed to reparent item');
