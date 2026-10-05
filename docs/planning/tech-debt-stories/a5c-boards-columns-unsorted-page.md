@@ -29,6 +29,10 @@ The page states today's behavior. A later epic reworks how columns and workphase
   - A5a's handoff to this story may add to the list.
 - **The three rules above** (the last-board 409, the column range 400s, `needsAttention`) are each still a ruling for Nathan, in the first batch.
 
+*Added by the PO, from A5b's sweep (2026-10-05):* one rule moves here (Nathan, A5b's call 7).
+- **item-positioning §6's "Column range validation"**: a column's range never spans a terminal and a non-terminal workphase, since active and done items are never compared in one sorted list. It's a column rule, so it moves to this page, beside the column-range 400s. item-positioning §6 keeps the reason, the active/done split, and points here.
+- The Test Planner moves any case that cites §6 for it, and the Coder re-points its index pointer (A4's D4 table: `columnRanges.ts::validateColumnRange`).
+
 ## Work, in batches
 
 Written when this story is planned.

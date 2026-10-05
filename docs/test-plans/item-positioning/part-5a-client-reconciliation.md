@@ -48,7 +48,7 @@ These hold for any client that keeps a locally ordered list. What the board adds
 
 ## TC-5a.6 — The board records no inversion for a write it didn't preview
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §5a
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
 *Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its own panel, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order.
 

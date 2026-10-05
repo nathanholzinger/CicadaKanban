@@ -6,7 +6,6 @@
 |---|---|---|---|
 | ATT-7.1 | Detaching clears the attachment flag and leaves `parentId` in place | P0 | Automated |
 | ATT-7.2 | On becoming Free, the item takes a workflow-scoped board position | P0 | Automated |
-| ATT-7.3 | On becoming Free, the item keeps the workphase it held and stops tracking its former parent | P0 | Automated |
 | ATT-7.4 | On becoming Free, the item is eligible for `completedAt` | P1 | Automated |
 | ATT-7.5 | A detach that lands inside a different parent's context is a reparent, not a detach | P0 | Automated |
 | ATT-7.6 | Re-attaching a detached child to the parent it still names is a real attach, not a no-op | P0 | Automated |
@@ -30,14 +29,6 @@
 *Given* `X` detached from `P`, *when* its position is read, *then* `positionScope = "workflow"`, and its `position` was freshly resolved in the workflow-wide scope, not carried over from `P`'s attached siblings: by the append fallback with no anchor, or against the anchor when one is given ([TC-2.19](../item-positioning/part-2-anchor-resolution.md), [TC-7.13](../item-positioning/part-7-board-placement-intents.md)).
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
-
-## ATT-7.3 — On becoming Free, the item keeps the workphase it held and stops tracking its former parent
-
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §11
-
-*Given* `X` attached to `P` in workphase `W1`, *when* `X` is detached in place, with no workphase in the write, *then* `X.workphaseId = W1`: the workphase it held at that moment is now its own. *And when* `P` then moves to `W2`, *then* `X.workphaseId` is still `W1`: the cascade no longer reaches it, though `X` still names `P` as its parent ([ATT-7.1](att-7-detach-preserves-parent.md)). The board's side, a detach in place that mustn't move the item to a merged column's entry workphase, is [DRAG-5.2](../board-drag-interaction/drag-5-detach-and-overflow.md)'s.
-
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `tests/ui/attached-children.spec.ts`
 
 ## ATT-7.4 — On becoming Free, the item is eligible for `completedAt`
 
@@ -65,9 +56,9 @@
 
 ## ATT-7.7 — Reparenting an Attached item to root makes it top-level and Free, with a fresh workflow position
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §11, wiki item-attachment §1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §11, wiki item-attachment §1, wiki item-attachment §2a
 
-*Given* `X` attached to `P`, in `P`'s workphase `W1`, *when* a write sets `X.parentId` to null, whether it edits `X` or moves it, *then* it is accepted, and `X` is top-level and Free: `parentId` is null, and `X.workphaseId` is still `W1`, since nothing implies a workphase change. What happens to its stored flag is [ATT-1.8](att-1-free-attached-state.md)'s. The scope changes, from `P`'s attached siblings to the workflow, so `X` gets a fresh workflow-scoped position, as any detach does ([ATT-7.2](att-7-detach-preserves-parent.md)). *And given* `W1` is terminal, *then* `X` is now a Free item in a done workphase: `completedAt` is set and `position` is null ([ATT-7.4](att-7-detach-preserves-parent.md)).
+*Given* `X` attached to `P`, in `P`'s workphase `W1`, *when* a write sets `X.parentId` to null, whether it edits `X` or moves it, *then* it is accepted, and `X` is top-level and Free: `parentId` is null, and `X.workphaseId` is still `W1`, the workphase it was shown in ([ATT-9.5](att-9-workphase-a-write-leaves.md)). Its flag is clear ([ATT-1.8](att-1-free-attached-state.md)). The scope changes, from `P`'s attached siblings to the workflow, so `X` gets a fresh workflow-scoped position, as any detach does ([ATT-7.2](att-7-detach-preserves-parent.md)). *And given* `W1` is terminal, *then* `X` is now a Free item in a done workphase: `completedAt` is set and `position` is null ([ATT-7.4](att-7-detach-preserves-parent.md)).
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
 

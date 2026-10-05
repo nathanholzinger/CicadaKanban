@@ -15,7 +15,7 @@
 | ATT-1.9 | A Card shows its descendant Stubs; a Stub shows a title snippet and has no board position of its own | P2 | Automated |
 | ATT-1.10 | A Card shows its tags | P2 | Planned |
 | ATT-1.12 | Attaching a done Free item clears its `completedAt` and gives it a sibling position | P1 | Automated |
-| ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Planned |
+| ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Open |
 
 ---
 
@@ -69,11 +69,11 @@
 
 ## ATT-1.7 — The three state consequences always move together
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §1, wiki item-attachment §2a
 
 *Given* a Free item, *when* it becomes Attached (it acquires a parent with the attachment flag set), *then* in the same change its effective workphase becomes its parent's, its `positionScope` becomes `"attached-siblings"` with a fresh sibling-scoped position ([TC-2.20](../item-positioning/part-2-anchor-resolution.md)), and it renders as a Stub inside the Card of its nearest Free ancestor, not as a Card.
 
-*And given* an Attached item, *when* it becomes Free (a detach), *then* in the same change it takes its own workphase, the one it holds at that moment ([ATT-7.3](att-7-detach-preserves-parent.md)), its `positionScope` becomes `"workflow"` with a fresh workflow-scoped position ([TC-2.19](../item-positioning/part-2-anchor-resolution.md)), and it renders as a Card.
+*And given* an Attached item, *when* it becomes Free (a detach), *then* in the same change it keeps the workphase it was shown in, now as its own ([ATT-9.4](att-9-workphase-a-write-leaves.md)), its `positionScope` becomes `"workflow"` with a fresh workflow-scoped position ([TC-2.19](../item-positioning/part-2-anchor-resolution.md)), and it renders as a Card.
 
 No read shows one consequence flipped and another not.
 
@@ -113,7 +113,7 @@ No read shows one consequence flipped and another not.
 
 ## ATT-1.14 — A create can't set the attachment flag without a parent, and a parentless create stores it clear
 
-**Priority:** P0 · **Status:** Planned · **Rule:** wiki item-attachment §1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §1
 
 *Given* project `P1`, *when* a create makes a top-level item in `P1` and sets the attachment flag, *then* it's refused with a 400, and no item is created. *When* a create makes a top-level item in `P1` and doesn't mention the flag, *then* the new item's flag is clear, as every top-level item's is.
 

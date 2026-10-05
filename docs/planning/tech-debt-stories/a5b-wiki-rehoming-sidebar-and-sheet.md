@@ -172,7 +172,7 @@ Each batch ends with a stop for Nathan's review and commit. A batch that changes
   - proposes each internal mapping for Nathan's approval at this batch's stop;
   - writes the E2E sidebar drag;
   - writes tests for the newly stated sidebar rules.
-- **Re-titles** any test that carries a moved ID. None is expected: no test carries DRAG-4.26, 4.28 or 4.31, or ATT-4.12 or 4.13, today.
+- **Re-titles** any test that carries a moved ID. No test carries DRAG-4.26, 4.28 or 4.31, or ATT-4.12 or 4.13. TC-5a.6's test does: it becomes DRAG-6.14, and the Test Planner moves the case in the same batch (Nathan, 2026-10-05).
 - **D4's pointers,** using batch 2's anchor map, and index pointers to the project tree page's sections in the modules that enforce them.
 - **D6:** removes the toolbar control.
 - **The test-file check** (D3).
@@ -182,7 +182,7 @@ Each batch ends with a stop for Nathan's review and commit. A batch that changes
 **Close.**
 - **The PO** takes the set-down's marker off and fills in the Handoff's "Wiki sections added, changed, moved or removed".
 - **The Test Planner** moves the set-down's case from `Planned` to `Open`.
-- **The Reconciler** runs over the four touched catalogs: the two new ones, board-drag-interaction and item-attachment.
+- **The Reconciler** runs over the four touched catalogs, the two new ones, board-drag-interaction and item-attachment, and over item-positioning, for A5a's cases (Nathan, 2026-10-05).
 - **The Architect** archives this plan when Nathan signs off.
 
 ## Code map
@@ -197,7 +197,8 @@ The starting list. The Coder keeps it current.
 | `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts` | 3 | The sidebar cases' IDs, as Nathan approves each mapping, and the set-down's test (D1) |
 | `tests/ui/` | 3 | A sidebar drag spec (D1) |
 | `client/src/components/BoardToolbar.tsx`, `BoardView.tsx` | 3 | The "New child items go to" control, its state and its localStorage key go (D6) |
-| Root `CLAUDE.md` | 2 | "One position math layer"'s citation, if the shared rule moves (Architect) |
+| `client/src/components/workflow/CLAUDE.md` | 3 | Its opening paragraph names the `hierarchy-placement` page beside board-drag-interaction and item-attachment. The Descendants bullet cites `wiki hierarchy-placement §1` for the gap + depth rule, as board-drag-interaction §7.1 applies it. Its §7.2 pointer for the over-cap state stays (D4) |
+| Root `CLAUDE.md` | 2 | Done: "One position math layer" cites `wiki hierarchy-placement §1`, and the repo layout lists the new pages (Architect) |
 | `docs/planning/mvp-roadmap.md` | 2 | The Work Item Detail & Chat UI epic's entry names any case routed to it (Architect) |
 
 ## Acceptance
@@ -210,17 +211,62 @@ The starting list. The Coder keeps it current.
 - The toolbar's "New child items go to" control is gone.
 - No comment cites a section for a rule that has left it (D4).
 - `npm run check` and `npm run test:e2e` pass, and the Reconciler's run reports no lost coverage.
+- A5a's cases, folded in at batch 2, are `Automated` or routed by ID, and ATT-9.10 is answered.
 
 ## Handoff
 
 - **Wiki sections added, changed, moved or removed, with old → new anchors** (PO):
+  - *Written by the PO, batch 2 (2026-10-05).* `check:docs -- docs/wiki` reports 0 hits on 8 files.
+  - **Added:**
+    - **`hierarchy-placement`**, the shared rules: §1 gap and depth (with the worked example, its entries renamed `A › A1 › A1a`, then `B`), §2 boundaries, §3 the root, §4 the dragged entry carries its whole subtree, §5 a set-down in its own gap writes nothing. No catalog of its own.
+    - **`project-tree`:** §1, dragging a project places it by gap and depth (the sidebar's rules, call 3's deduction, call 4's no cap, and the set-down as `**Planned:**`); §2, what the drag shows (calls 2a and 2b).
+    - **`item-sheet`:** an opening paragraph saying the Sheet isn't designed yet, and Open questions only (D2, call 5).
+  - **Moved, old → new:**
+
+    | Old | New |
+    |---|---|
+    | board-drag-interaction §7.1: the gap, the depth range, the tab states and the worked example | hierarchy-placement §1 |
+    | board-drag-interaction §7.1: the boundaries | hierarchy-placement §2 |
+    | board-drag-interaction §7.1: "The root, per context", its general rule | hierarchy-placement §3 |
+    | board-drag-interaction §7.1: the set-down in its own gap writes nothing, its general rule | hierarchy-placement §5 |
+    | board-drag-interaction §7.2: the dragged item carries its whole subtree, its general rule | hierarchy-placement §4 |
+    | board-drag-interaction §7.1: the indicator line, the sidebar's root, the sidebar's empty hierarchy, "The project sidebar always has full context" | project-tree §1 |
+    | board-drag-interaction §2, "Why not the half of the hovered card": its sentence on the sidebar's line | project-tree §1 |
+    | item-positioning §5a: "On the board, the inversion check runs only for a write the board previewed" | board-drag-interaction §10 |
+
+  - **Changed where they stand:**
+    - board-drag-interaction: the Related line gains hierarchy-placement. §7's "the same ruleset as the project sidebar, deliberately" now cites hierarchy-placement. §7.1 and §7.2 keep the board's own application: the gap as the ghost's neighbors, root `P`, no empty hierarchy, the set-down against a column's, the subtree travelling with the carried copy, and the depth cap per tab state, unchanged. The Open question "Whether a Card shows its whole hierarchy" cites hierarchy-placement §1 and project-tree §1.
+    - item-positioning §5a: a one-line pointer to board-drag-interaction §10 replaces the paragraph that moved.
+    - item-attachment §7: "The two enforcement points must agree" holds for the board's drag, and the Sheet's parent picker is outside it while the Sheet isn't designed (call 5). §12's Sheet bullet links item-sheet.
+    - The wiki README's "Page layout": a page of shared rules (no catalog of its own), and a page for a feature that isn't designed yet.
+  - **No section was renumbered or removed.** board-drag-interaction §7.1 and §7.2 keep their numbers and headings.
+  - **For the Test Planner:**
+    - The new pages link `test-plans/project-tree/` and `test-plans/item-sheet/`, so those are the folder names.
+    - The test-plans README mirrors the wiki README's shared-page rule.
+    - A case that cites board-drag-interaction §7.1 or §7.2 for a general rule above now cites hierarchy-placement. A case for the board's own application keeps §7.1 or §7.2.
+    - A case that cites item-positioning §5a for the board's check now cites board-drag-interaction §10.
+  - **For the Coder's D4 pointers in batch 3,** found by searching for `wiki board-drag-interaction §7`:
+    - `useProjectDragReorder.ts`'s header and `projectTreeUtils.ts::fullChildrenOf` go to project-tree §1;
+    - `hierarchyPlacement.ts`'s header goes to hierarchy-placement §1, and `hierarchyPlacement.ts::toRows` to §4;
+    - each board pointer that cites §7.1 or §7.2 for a general rule moves to the matching hierarchy-placement section. One for the board's own application stays, such as `dragCollision.ts::dropAnchorFor` for the gap as the ghost's neighbors, and `descendantsProjection.ts::advanceProjection` for the cap per tab state;
+    - the set-down is in both places: the general rule at hierarchy-placement §5, the board's application at board-drag-interaction §7.1. The index pointer goes at the site that mainly enforces it;
+    - root `CLAUDE.md`'s citation goes to hierarchy-placement (the Architect).
 - **Moved cases, old → new** (Test Planner):
+  - *Written by the Test Planner, batch 2 (2026-10-05).* No test carries an old ID, so nothing needs re-titling.
+
+    | Old | New |
+    |---|---|
+    | DRAG-4.26 | TREE-1.1 (the line) and TREE-1.2 (the depths and their placements) |
+    | DRAG-4.28 | TREE-1.3 (the top level as the floor) and TREE-1.4 (the empty hierarchy) |
+    | DRAG-4.31 | TREE-1.5 |
+    | ATT-4.12 | deleted |
+    | ATT-4.13 | deleted |
 - **To the Work Item Detail & Chat UI epic:** the Sheet's page and its Open questions, and any case routed there, named in its roadmap entry (batch 2).
 - **To A5d:** the project tree's page, which this story creates.
 
 ## Open questions
 
-For Nathan, at plan approval. All four are answered.
+For Nathan, at plan approval. All four are answered. Question 5 came later.
 1. **D5:** the project tree's other rules and its two gaps go in a follow-up story, A5d, after A5c.
    - **Answered (Nathan, 2026-10-05):** business and behavior rules go in the wiki, and API contract details go to OpenAPI. The Architect reads that as approving A5d, scoped to behavior rules, and wrote its plan.
 2. **D6:** remove the toolbar's "New child items go to" control in batch 3.
@@ -229,6 +275,7 @@ For Nathan, at plan approval. All four are answered.
    - **Answered (Nathan, 2026-10-05):** he's agnostic about a marker. What matters is that the Sheet's layout and behavior read clearly as a placeholder until the Sheet epic, with no precise rules or robust test plans. D2 is revised to match.
 4. **D1:** the sidebar's cases get their tests here, not in Story 10.
    - **Answered (Nathan, 2026-10-05):** yes.
+5. **For the PO, before close** (from A5a, folded in at batch 2): ATT-9.10. Item-attachment §2a gives an item leaving attachment the workphase it was shown in, or refuses the write when there's none, and lists three writes it applies to: a detach, a reparent to root and a create. §11 calls a detach that lands under a different parent a reparent, not a detach. Does the rule apply to a reparent that leaves an Attached item Free under a new parent? A5a's batch 2b applies it, and §2a's first sentence reads as though it does. If it does, the list names a fourth write.
 
 ## Amendments
 
@@ -237,3 +284,115 @@ For Nathan, at plan approval. All four are answered.
   - D5 is approved, as A5d, scoped to behavior rules.
   - D6 is ruled: batch 3 removes the control.
   - D1's tests land here.
+- **2026-10-05, batch 1 (the PO): the proposal.** No living doc has changed. Each numbered call is for Nathan, with the PO's recommendation first.
+  - **The D3 sweep.** The PO read all five wiki pages for rules on the wrong page. Besides the sidebar's passages (D1) and the Sheet (D2), it found:
+    - **S1. item-positioning §5a's paragraph "On the board, the inversion check runs only for a write the board previewed".** It's board behavior: the board's preview, its pending placement, and the tuning panel's inversion log. board-drag-interaction §10 already holds the rest of the inversion rule, so the rule is split across two pages. Proposed home: board-drag-interaction §10, with §5a keeping a one-line pointer (call 6).
+    - **S2. item-positioning §6's "Column range validation":** a column never spans a terminal and a non-terminal workphase. It's a column rule, and its home is boards-columns-unsorted. A5c writes that page out in full and already takes the column-range 400s, so it moves there, not here (call 7).
+    - **S3. item-attachment §12's Sheet bullet** defines the Sheet. It stays, since §12 is the wiki's list of representations, and gains a link to the Sheet's page.
+    - **Looked at and left in place:**
+      - item-positioning §4 (a merged column's union-sort, and its drop rule) says how positions order and resolve, and board-drag-interaction cites it;
+      - board-drag-interaction §4's `itemDepthCap` paragraph names an API field, which is the API contract epic's to document, not a rule on the wrong page;
+      - item-attachment §8 grounds the cap in the sidebar's width, which is a reason, not a sidebar rule.
+  - **The project tree's page.** Folder `project-tree`, titled "Project Tree". Its question: how projects nest and are ordered, and how the sidebar rearranges them. A5d adds the project API's rules.
+    - **Call 1: the shared gap-and-depth rule stays on board-drag-interaction** (§7.1, §7.2), and the project tree's page cites it, stating only what differs.
+      - Why: the wiki states a rule that holds on more than one surface once, and pages already cite each other for it. A5d's project positions will cite item-positioning the same way. It also moves the fewest anchors.
+      - The other way: a page of its own for the shared rule, cited by both. That reads more cleanly, but a new page needs its own catalog. The generic placement cases (DRAG-4.8 to 4.10 and their tests) would move and be re-titled, and more pointers would move.
+    - **Sections (written in batch 2):**
+      - **§1, "Dragging a project places it by gap and depth":**
+        - the shared rule, cited;
+        - an indicator line in place of a ghost: the line is the gap, and a release saves what the line shows (from board-drag-interaction §2's last sentence and §7.1);
+        - the root at the top of the tree (from §7.1);
+        - the empty hierarchy (from §7.1);
+        - full context under a collapsed project (from §7.1);
+        - resting on the dragged subtree (call 3);
+        - no depth cap (call 4);
+        - a set-down in its own slot writes nothing, as `**Planned:**` (ruled 2026-09-30).
+      - **§2, "What the drag shows":** dimmed descendants (call 2a), and a collapsed project opening (call 2b).
+      - A5d's rules take the next free numbers, from §3.
+    - **What stays on board-drag-interaction:**
+      - the shared rule, worded for any hierarchy, and the board's root, `P`;
+      - §7's "the same ruleset as the project sidebar, deliberately" becomes a pointer: the project tree's drag uses the same rule (project-tree §1);
+      - §7.1's empty-hierarchy boundary keeps its board sentence and points to project-tree §1 for where it arises;
+      - the Open question "Whether a Card shows its whole hierarchy" points to project-tree §1 for the sidebar.
+    - **Anchors that move:** board-drag-interaction §2's last sentence, and §7.1's indicator line, sidebar root, sidebar empty hierarchy and full context, all to project-tree §1. Under call 1 nothing else moves, so D4 re-points only `useProjectDragReorder.ts`'s header and `projectTreeUtils.ts::fullChildrenOf`.
+  - **Rulings the page newly states:**
+    - **Call 2a: the dragged project's descendants are dimmed for the whole drag,** so the branch reads as going with it, and none of it is a place to drop. On the board, a carried Card's Stubs go with it the same way (board-drag-interaction §5a). Recommended: yes. It's how the sidebar shows what isn't possible, which Nathan's ruling on A4's click-or-drag question said the wiki should describe.
+    - **Call 2b: dropping a project into a collapsed project, as its child, opens it,** so the moved project is in view. That matches the board, where a Card the item is attached into stays open (board-drag-interaction §1.1). Recommended: yes.
+    - **Call 3, a deduction to confirm: resting on a row of the dragged project's own subtree points at the gap the subtree leaves,** which is its own slot. It follows from §7.2, where the subtree is taken out before any gap is computed. The sidebar still draws those rows, dimmed, and draws no ghost, so the line goes where the subtree was.
+    - **Call 4: project depth has no cap,** so every tab state in the range is valid. §7.2's cap is the item cap (item-attachment §8), and no page caps projects. Root `CLAUDE.md` describes the project tree as unlimited depth. Recommended: yes, with A5d stating the tree's depth rule.
+  - **The Sheet's page.** Folder `item-sheet`, titled "Item Sheet". It has no numbered sections, only Open questions.
+    - **Opening paragraph (draft):** "The Sheet is an item's full detail view. It isn't designed yet. What it does today is a working placeholder, described under Open questions, so this page states no rules of its own and no test case is derived from it. A write made from the Sheet follows the same rules as any other ([item-attachment], [item-positioning])."
+    - **Open questions:**
+      - the Sheet's layout and behavior as a whole;
+      - the parent picker. It lists its own project's items, without the item and its descendants, and applies no depth cap, so it can offer a parent the API refuses, and picking one shows the API's error. Whether it offers other projects' parents is ATT-4.13's question;
+      - the Attached checkbox, shown only when the item has a parent;
+      - the children list, with each child's Attached/Detached toggle;
+      - the add-child, which creates an Attached child that takes the item's workphase.
+    - **Call 5: how item-attachment §7 meets the Sheet.** §7 says the UI never presents a target the API would reject. Recommended: §7 says that holds for the board's drag, and that the Sheet's placeholder parent picker is outside it while the Sheet isn't designed (item-sheet's Open questions). Otherwise §7 stays as is, and the picker breaks an unmarked rule.
+    - **The wiki README (the PO's call, no ruling needed).** "Page layout" gains one line: a page for a feature that isn't designed yet says so in its opening paragraph, keeps what the feature does today under Open questions, and may have no numbered sections. "Nothing marks status at page level" stays, since it's about the Planned marker.
+  - **Calls 6 and 7, from the sweep:**
+    - **Call 6:** S1 moves to board-drag-interaction §10 in batch 2. Recommended: yes. The Test Planner rehomes any case that cites §5a for it.
+    - **Call 7:** S2 goes to A5c, and A5c's plan names it. Recommended: yes.
+- **2026-10-05, Nathan's rulings at batch 1's stop.**
+  - **Agreed as recommended:** calls 2a (dimmed descendants), 2b (a collapsed project opens on a drop into it), 4 (project depth has no cap), 5 (item-attachment §7 holds for the board's drag, and the Sheet's placeholder picker is outside it), 6 (item-positioning §5a's board paragraph moves to board-drag-interaction §10) and 7 (the column range rule goes to A5c, whose plan now names it).
+  - **Call 1, ruled the other way:** shared rules get a page of their own, which each component's page points to. A component's own handling, or its exceptions, go on its own page as further bullets or sections. The test plans flatten: each component's catalog holds every case that applies to it, shared rules included. Follow-ups are under discussion.
+  - **Call 3, confirmed:** resting on a row of the dragged project's own subtree means the gap that subtree collapses to, which is the project's own gap. The depth range still applies there. It's what the board does by construction, applied to rows the sidebar still draws.
+  - **Call 1's follow-ups, ruled:**
+    - **The shared page is `hierarchy-placement`.**
+      - It takes the gap and the depth range, the worked example, the boundaries, "each surface names its root", the set-down rule, and "the dragged item carries its whole subtree".
+      - board-drag-interaction §7 keeps the ghost's neighbors from the shuffle, root `P`, "zooming in doesn't move the ghost", the depth cap per tab state and its invalid cue, and the Card's whole-hierarchy question.
+      - project-tree §1 keeps the sidebar's own rules.
+    - **A page of shared rules has no catalog.** Each component's catalog tests the shared rules as that component applies them, so DRAG-4's board cases stay, and only their Rule lines change. The wiki README says so (the PO, batch 2), and the test-plans README follows (the Test Planner, batch 2).
+    - **Positions get the same split in A5d, not here.** A5d's plan says so.
+  - **D4 grows:** `hierarchyPlacement.ts`'s header, root `CLAUDE.md`'s citation, and the board's pointers to a shared part of §7.1 or §7.2 move to `hierarchy-placement`. Batch 2's anchor map lists each one.
+- **2026-10-05, batch 2 (the Architect).**
+  - **Root `CLAUDE.md`:**
+    - "One position math layer" cites `wiki hierarchy-placement §1`, and calls the rule the one the board's Descendants layer and the project sidebar share, not the Card's own;
+    - the repo layout's wiki line names hierarchy placement and the project tree, and its test-plans line says a page of shared rules has no catalog.
+  - **`documentation-standards.md`:** "the test-plan folders mirror the page names" gains the exception for a page of shared rules, pointing to the wiki README. It's a `.claude/` guide, so Nathan approves it at this stop.
+  - **`client/src/components/workflow/CLAUDE.md` goes to the Coder in batch 3,** not here. A directory's `CLAUDE.md` belongs to whoever changes code in that directory (the standards guide's ownership table), and batch 3 re-points that directory's comments. Its two citations are in the Code map.
+  - **The Work Item Detail & Chat UI epic's roadmap entry waits for the Test Planner.** It routes ATT-4.12 "to A5b as `Pending PO`". Once the Test Planner resolves ATT-4.12 and 4.13, the Architect rewrites that line: it names any case routed there, or says the Sheet's page holds the picker under Open questions.
+    - *Done, after the Test Planner's batch 2.* The entry gains a bullet for the `item-sheet` page, which says the Sheet isn't designed yet: this epic designs it, then the PO writes its rules and the Test Planner its cases. The over-cap bullet now says item-attachment §7 leaves out the placeholder picker, and that the fix is still this epic's. It also says no case tracks it, since ATT-4.12 is deleted and ATT-4.13's question is under the Sheet page's Open questions.
+  - **Story 10's item-positioning line** in `epic-3-5-roadmap.md` routes TC-2.32, 6.10 and 7.18 to A5b, which took over A5a's close-out (the Test Planner's note).
+  - `npm run check:docs` reports 0 hits on 260 files.
+- **2026-10-05, batch 2 (the Test Planner): the catalogs follow the pages.**
+  - **The project tree's catalog** is `test-plans/project-tree/`, prefix `TREE`, with one suite per section of the page. Under call 1's flattening it tests the shared rules as the sidebar applies them, beside the sidebar's own:
+    - TREE-1.1, the line, and a release saving what it shows;
+    - TREE-1.2, a gap's depths and the placement each saves;
+    - TREE-1.3, the boundaries, and the top level as the floor;
+    - TREE-1.4, the empty hierarchy;
+    - TREE-1.5, a collapsed project;
+    - TREE-1.6, resting on the dragged subtree (call 3);
+    - TREE-1.7, no depth cap (call 4);
+    - TREE-1.8, the set-down, `Planned` until batch 3 builds it;
+    - TREE-2.1, the dimmed descendants (call 2a), and TREE-2.2, a collapsed project opening (call 2b).
+
+    All but TREE-1.8 are `Open`. They're this story's cases, and batch 3 tests them (D1).
+  - **The moved cases** are in the Handoff. DRAG-4.26 and 4.28 each split in two, since the sidebar's catalog now states the shared placements and boundaries itself.
+  - **ATT-4.12 and 4.13 are deleted.** The Sheet's page states no rules. Its parent picker, ATT-4.13's question included, is under its Open questions, which derive no case, and item-attachment §7 now leaves the picker out. No case is routed to the Work Item Detail & Chat UI epic, so its roadmap line can say the Sheet's page holds the picker (the Architect).
+  - **The Sheet's catalog,** `test-plans/item-sheet/`, holds only its INDEX.
+  - **Rule lines moved to hierarchy-placement,** where a case asserts a shared rule: DRAG-4.8, 4.9, 4.10, 4.11, 4.18 (its cycle), 4.29 and 4.33, and DRAG-5.9. Those that also assert the board's own application keep board-drag-interaction §7.1. DRAG-4.30 and 4.32 keep §7 and §7.2, since both are the board's own.
+  - **TC-5a.6 cites board-drag-interaction §10,** and stays in TC-5a for now. Its rule moved pages, so it belongs in DRAG-6, but a test carries its ID, and moving it in this batch would fail `check:docs` until the test was re-titled. It can move as DRAG-6.14 in batch 3, beside that re-title, if Nathan wants it there.
+  - **The test-plans README** says a page of shared rules has no folder, and a feature whose page says it isn't designed holds only its INDEX.
+  - **INDEX pages:** the two new ones, and DRAG-4's line in board-drag-interaction's.
+  - **For batch 3:**
+    - A3's confirming run lists the internal tests that pin DRAG-4.28's and 4.31's rules: hierarchyPlacement's null-root and collapsed-Top tests, and projectTreeUtils'. Each is proposed against TREE-1.3, 1.4 or 1.5 now.
+    - The E2E sidebar drag is TREE-1.1's, and the set-down's test carries TREE-1.8.
+  - **Checks:** `check:docs` reports 0 hits on 264 files, and every table, heading, status and link in the catalog agrees. The catalog is 275 cases: 164 `Automated`, 89 `Open`, 15 `Planned`, 4 `Manual` and 3 `Pending PO`.
+- **2026-10-05, Nathan's rulings at batch 2 (the Test Planner's recommendations), and A5a's step 3.**
+  - **A5a's leftovers fold into this story.** A5a was archived before its step 3 (the Test Planner's pass) and step 5 (the Reconciler). So:
+    - **The Test Planner applied A5a's step 3 pass** in this batch, against the wiki as A5a's step 2 left it:
+      - `Open` from `Planned`, since their markers came off: ATT-1.14, 3.11, 5.9, 5.10, 9.2, 9.4 to 9.7 and 9.9; TC-2.32, 7.18 and 7.19;
+      - deleted, since the passages they derived from are gone: ATT-5.4, 5.5 and 7.3, and TC-7.17. ATT-7.3's two tests already carry ATT-9.4, and the other three have none left;
+      - ATT-1.7's detach paragraph and ATT-7.7's workphase clause cite §2a, the workphase the item was shown in. Their expected values are unchanged;
+      - ATT-1.8 and 1.14 stay two cases, since a test carries each ID;
+      - ATT-5's preamble no longer links TC-7.17.
+    - **This story's close confirms them:** the Reconciler's run covers item-positioning too (Close).
+    - **ATT-9.10 is this story's Open question 5,** for the PO.
+  - **TC-5a.6 moves to DRAG-6.14 in batch 3,** beside its test's re-title.
+  - **The cases this story carries, by ID:**
+    - **the project tree's,** `Open`: TREE-1.1 to 1.7, TREE-2.1 and 2.2; and `Planned`: TREE-1.8;
+    - **A5a's,** `Open`: ATT-1.8, 1.14, 3.11, 5.7, 5.9, 5.10, 9.1 to 9.9, 10.1 to 10.3; TC-2.32, 6.10, 7.18, 7.19, 7.20. The Coder's A5a amendments say each has a test;
+    - **`Pending PO`:** ATT-9.10.
+  - **For the Architect:** Story 10's item-positioning line in `epic-3-5-roadmap.md` routes TC-2.32, 6.10 and 7.18 to A5a. They're this story's now.
+  - **Checks:** `check:docs` reports 0 hits on 264 files, and the catalog agrees with itself. It's 271 cases: 160 `Automated`, 102 `Open`, 2 `Planned` (ATT-1.10 and TREE-1.8), 4 `Manual` and 3 `Pending PO` (ATT-5.11 and TC-6.13 in Epic 4, and ATT-9.10 here).

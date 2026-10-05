@@ -44,7 +44,11 @@ Each page is a folder named for its feature, holding a `README.md`, in this orde
 4. **Numbered sections,** each holding one rule or a family of closely related rules.
 5. **Open questions,** last.
 
-Folder names match the test-plan folders exactly, so each page has one catalog. A folder is named for a lasting feature, never for the piece of work that introduced it.
+Folder names match the test-plan folders exactly, so each page has one catalog, except a page of shared rules (below). A folder is named for a lasting feature, never for the piece of work that introduced it.
+
+**A page of shared rules** states rules that more than one feature applies, such as a placement rule two surfaces use. Each feature's page points to it, and states only its own handling and exceptions, marking as Planned any shared rule it's still to be built to. A page of shared rules has no catalog of its own: each feature's catalog tests the shared rules as that feature applies them.
+
+**A page for a feature that isn't designed yet** says so in its opening paragraph, and keeps what the feature does today under Open questions. It has no numbered sections, since it states no rules of its own.
 
 This README isn't a page. Nothing points at it by section.
 

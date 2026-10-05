@@ -11,7 +11,7 @@ S1        (0)
 S2        (0)
 ```
 
-The consequences of an attach (inheritance, the project cascade, a done parent's legality) are [`../item-attachment/`](../item-attachment/INDEX.md)'s cases. Cases here assert which request the gesture produces.
+The consequences of an attach (inheritance, the project cascade, a done parent's legality) are [`../item-attachment/`](../item-attachment/INDEX.md)'s cases. Cases here assert which request the gesture produces. The project sidebar places by the same shared rules, and its cases are [`../project-tree/`](../project-tree/INDEX.md)'s.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -36,11 +36,8 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 | DRAG-4.23 | A ghost alone in its list names no Card, so nothing can be zoomed into | P1 | Automated |
 | DRAG-4.24 | The cue's progress says how long to keep holding, and that letting go still repositions | P2 | Manual |
 | DRAG-4.25 | Zooming in takes a deliberate hold, and once inside, the ghost reads as nesting | P1 | Manual |
-| DRAG-4.26 | The project sidebar places by the same gap and depth rule, with an indicator line instead of a ghost | P1 | Open |
-| DRAG-4.28 | In the project sidebar, no project is tabbed shallower than the top level, and an empty hierarchy offers one state | P2 | Open |
 | DRAG-4.29 | A Stub set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
 | DRAG-4.30 | Zooming into a Card's descendants section doesn't move the ghost | P1 | Automated |
-| DRAG-4.31 | The project sidebar places against the real tree under a collapsed project | P1 | Open |
 | DRAG-4.32 | An over-cap tab state shows a visible invalid cue | P1 | Open |
 | DRAG-4.33 | Below a nested last item, a sibling placement after each of its ancestors is offered | P1 | Open |
 
@@ -76,7 +73,7 @@ Placing `X` as some item's *first* child is a different gesture, the manual plac
 
 ## DRAG-4.8 — Descendants placement: vertical position picks the gap, and the depth range is `[Bottom … Top + 1]`
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §1, wiki hierarchy-placement §4, wiki board-drag-interaction §7.1
 
 *Given* `X` at `P`'s Descendants layer over the tree, *when* the ghost is in the gap between `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *then* exactly four tab states are offered, at depths **0, 1, 2 and 3**, and each commits a different placement ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). None is shallower than `S2`'s depth: that would make `X` an ancestor of `S2`, and an item chooses its parent, never its children. *When* the ghost is in the gap between `S1` and `S1a` (Bottom is Top's child), *then* exactly one state is offered: depth 1, `S1`'s first child, before `S1a`.
 
@@ -86,7 +83,7 @@ The gap is where the rows slide aside to make room, in the same list shuffle as 
 
 ## DRAG-4.9 — Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §1
 
 *Given* the tree, with the ghost in the gap between `S1a1` (Top) and `S2` (Bottom), *when* `X` is released **aligned with Top** (depth 2), *then* `X` is Top's sibling after Top's whole subtree: `X.parentId = S1a`, attached, `{anchorId: S1a1, side: after}`. *When* it is released **one tab right of Top** (depth 3), *then* `X` is Top's **first child**: `X.parentId = S1a1`, attached, and placed before any existing child of `S1a1`. To land anywhere else among a parent's children, the user anchors against one of those children.
 
@@ -96,7 +93,7 @@ The gap is where the rows slide aside to make room, in the same list shuffle as 
 
 ## DRAG-4.10 — Descendants placement: shallower levels walk Top's ancestors; the shallowest is "before Bottom"
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §1
 
 *Given* the tree, with the ghost in the gap between `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *when* `X` is released **one tab left** of Top (depth 1), *then* `X` is a sibling of Top's parent, after that parent's subtree: `X.parentId = S1`, attached, `{anchorId: S1a, side: after}`. *When* it is released **two tabs left** (depth 0), *then* `X` is a sibling of Top's grandparent: `X.parentId = P`, attached, `{anchorId: S1, side: after}`. That is the same placement as "before `S2`": the client sends one relation, and the result is identical either way. Bottom only caps how far left the walk goes. These middle levels are reachable from no other gap, so the walk is what makes "last child of `S1`" placeable at all.
 
@@ -104,7 +101,7 @@ The gap is where the rows slide aside to make room, in the same list shuffle as 
 
 ## DRAG-4.11 — Descendants placement: boundaries and clamping
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §2, wiki hierarchy-placement §3, wiki board-drag-interaction §7.1
 
 *Given* the tree:
 
@@ -167,7 +164,7 @@ A `P` with no Stubs has no Descendants layer ([DRAG-4.12](drag-4-attach-and-stub
 
 ## DRAG-4.18 — An over-cap tab state is reachable, marked, and commits nothing; a cycle is unreachable
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §3.2
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §3.2, wiki hierarchy-placement §4
 
 *Given* `X` with subtree height `H` at `P`'s Descendants layer, where `P` is at absolute depth `d` in the workflow, *when* the user tabs to a state whose resulting depth, `d` plus the state's depth below `P` plus `H`, exceeds `CAP` (typically the deepest state, a child of Top; [ATT-4.4](../item-attachment/att-4-legal-parent-depth-cap.md)), *then* the state can still be reached, the ghost shows there marked invalid, and a release in it **commits nothing**: no request is made, and `X` goes back to where it was picked up. *When* the user tabs to a shallower state in the same gap that fits, *then* that state commits normally ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). Validity is per state, not per gap, and the cap is checked against `X`'s deepest descendant, not `X` alone. The visible cue is [DRAG-4.32](drag-4-attach-and-stub-placement.md)'s.
 
@@ -243,27 +240,9 @@ After any reset, a release commits the reposition for the relation named at that
 
 **Automation test:** none — manual: judged by feel against the tuned values.
 
-## DRAG-4.26 — The project sidebar places by the same gap and depth rule, with an indicator line instead of a ghost
-
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.1, wiki board-drag-interaction §2
-
-*Given* a hierarchy in the project sidebar shaped like the tree, *when* an item is dragged there, *then* an indicator line shows the gap, with no ghost, and the same depth range as [DRAG-4.8](drag-4-attach-and-stub-placement.md) is offered by horizontal offset. A release saves exactly the gap and depth the line shows: the placements of [DRAG-4.9](drag-4-attach-and-stub-placement.md) and [DRAG-4.10](drag-4-attach-and-stub-placement.md) hold here, with the line in place of the ghost.
-
-**Automation test:** —
-
-## DRAG-4.28 — In the project sidebar, no project is tabbed shallower than the top level, and an empty hierarchy offers one state
-
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.1
-
-*Given* the project sidebar with top-level projects `A` and `B`, where `A` has a child `A1`, and project `X` is a child of `A1`, *when* `X` is dragged into the gap below `B`, the last row, and the cursor is offset as far left as it goes, *then* the shallowest state offered is the top level: `X` becomes a top-level project after `B`, and no offset goes further.
-
-*And given* a sidebar whose only top-level project is `X`, so `X`'s subtree holds every project, *when* `X` is dragged, *then* its subtree is never a candidate, so the hierarchy is empty, and exactly one state is offered: `X` at the top level.
-
-**Automation test:** —
-
 ## DRAG-4.29 — A Stub set back down in its own gap, at its own depth, writes nothing
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §5, wiki board-drag-interaction §7.1
 
 *Given* Stub `X` attached to Card `P`, whose Stubs are `S1, X, S2`, *when* `X` is picked up at `P`'s Descendants layer and released with the ghost in its own gap, between `S1` and `S2`, at its own depth, *then* no request is sent, and `X`'s parent, attachment and position are unchanged. With full context nothing between `S1` and `S2` is unseen, so the release can't move `X`. In a column the same set-down still saves its named anchor ([DRAG-1.24](drag-1-contexts-and-popping.md)).
 
@@ -282,19 +261,6 @@ From there, the cursor moves the ghost as usual ([DRAG-4.8](drag-4-attach-and-st
 
 **Automation test:** `client/src/components/workflow/descendantsProjection.test.ts`
 
-## DRAG-4.31 — The project sidebar places against the real tree under a collapsed project
-
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.1
-
-*Given* the project sidebar with top-level project `T`, collapsed, whose children are `T1, T2`, and top-level project `U` below it, *when* project `X` is dragged into the gap below `T` (Top `T`, Bottom `U`):
-
-- tabbed once right of `T`, *then* `X` becomes `T`'s first child, ahead of `T1`, though `T1` isn't shown;
-- aligned with `T`, *then* `X` becomes a top-level project after `T`'s whole subtree, `T2` included, and before `U`.
-
-A collapsed project hides its subtree from view, not from placement.
-
-**Automation test:** —
-
 ## DRAG-4.32 — An over-cap tab state shows a visible invalid cue
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.2, wiki board-drag-interaction §3.2
@@ -305,7 +271,7 @@ A collapsed project hides its subtree from view, not from placement.
 
 ## DRAG-4.33 — Below a nested last item, a sibling placement after each of its ancestors is offered
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §2
 
 *Given* Card `P` whose Stubs are `S1, S2`, where `S2` has a child `S2a`, the last row, *when* `X` at `P`'s Descendants layer is in the gap below `S2a` (Top `S2a`, no Bottom), *then* exactly three states are offered, each committing a different placement:
 

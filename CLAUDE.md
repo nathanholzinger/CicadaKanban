@@ -77,9 +77,9 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
 - **One position math layer.** Client `hierarchy.ts`, server `positionResolver.ts` /
   `itemPositionScope.ts` / `itemTree.ts` are table-generic (items + projects). Extend
   those, never duplicate inline. Client `lib/hierarchyPlacement.ts` is the sibling
-  layer one level up — a Card's descendants section's own gap + depth rule
-  (`flattenHierarchyOf`/`resolvePlacement`, wiki board-drag-interaction §7), shared by the board's
-  Descendants layer and the project sidebar. Table-generic the same way (`{id,
+  layer one level up — the gap + depth rule (`flattenHierarchyOf`/`resolvePlacement`,
+  wiki hierarchy-placement §1) that the board's Descendants layer and the project
+  sidebar share. Table-generic the same way (`{id,
   parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
   walk inline either.
 - **One hierarchy-write primitive.** Every write that changes an existing item's parent,
@@ -167,8 +167,8 @@ KanbanApp/
 │   ├── planning/        ← roadmaps, story plans, decisions docs — open work (transient)
 │   ├── audits/          ← open audit and Reconciler reports (transient)
 │   ├── archive/         ← closed plans, audits, reports and walkthroughs (frozen — skip unless asked)
-│   ├── wiki/            ← feature-organized source of truth (hardened, testable rules) — read before touching positioning, attachment, board drag, or boards/columns/Unsorted
-│   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/
+│   ├── wiki/            ← feature-organized source of truth (hardened, testable rules) — read before touching positioning, attachment, board drag, hierarchy placement, the project tree, or boards/columns/Unsorted
+│   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/ (a page of shared rules has none)
 ├── scripts/             ← repo tooling (check-docs)
 ├── server/src/          ← see module headers in lib/*.ts for what each shared module owns
 ├── client/src/          ← see module headers; the drag layer's conventions are in components/workflow/CLAUDE.md

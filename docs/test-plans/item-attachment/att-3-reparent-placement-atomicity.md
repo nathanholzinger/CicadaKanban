@@ -13,7 +13,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 | ATT-3.7 | On failure, nothing changed | P0 | Automated |
 | ATT-3.9 | Reparenting and attaching are separate: omitting the attachment flag keeps the item's state | P0 | Automated |
 | ATT-3.10 | A Free item's reparent leaves its position alone unless it carries an anchor | P1 | Automated |
-| ATT-3.11 | A top-level item reparented without the attachment flag becomes a detached child | P1 | Planned |
+| ATT-3.11 | A top-level item reparented without the attachment flag becomes a detached child | P1 | Open |
 
 ---
 
@@ -80,7 +80,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 
 ## ATT-3.11 — A top-level item reparented without the attachment flag becomes a detached child
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki item-attachment §4
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §4
 
 *Given* top-level item `X` in workphase `W1` at workflow position `p`, and item `B` in workphase `W2` of the same workflow, *when* a write gives `X` parent `B` and doesn't mention the attachment flag, whether it edits `X` or moves it, *then* `X` is a detached child of `B`: its flag is clear, and it's still Free, in `W1`, at position `p`. No reparent attaches by default.
 

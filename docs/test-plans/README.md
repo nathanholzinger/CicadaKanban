@@ -17,6 +17,8 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 ## Layout
 
 - **One folder per feature,** named exactly like the feature's wiki folder.
+- **A page of shared rules has no folder.** Each feature that applies the shared rules holds their cases in its own catalog, as that feature applies them, and each case's Rule field names the shared page's section.
+- **A feature whose page says it isn't designed yet** has a folder holding only its `INDEX.md`, since nothing on its page derives a case.
 - **An `INDEX.md` per folder** holds the wiki page's name and each suite, with one line on what it covers. It holds no counts: two roles write statuses, so a hand-kept total would drift, and the Reconciler's report prints the totals on each run.
 - **One file per suite,** a cohesive part of the feature:
 

@@ -69,7 +69,7 @@ A reference should run from the thing that changes more to the thing that change
 - **Code comments never name `.claude/` files or `CLAUDE.md` files.**
 - **Test plan ↔ test file:** `docs/test-plans/README.md` defines how a case and its tests point at each other.
 
-**Wiki page names and section numbers are a contract.** Code pointers and test plans cite them, and the test-plan folders mirror the page names.
+**Wiki page names and section numbers are a contract.** Code pointers and test plans cite them, and the test-plan folders mirror the page names, except for a page of shared rules, which has no catalog (the wiki README).
 - **Sections:** the PO never renumbers a section, and a removed section's number is never reused.
 - **A moved rule:** when a rule moves to a different section, the story's handoff says so and the pointers follow. The checker can confirm a section exists, but not that it still holds the rule.
 - **Pages:** renaming or splitting a page, or renumbering its sections, is a piece of work of its own, and its handoff carries an old → new map.

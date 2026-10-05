@@ -15,9 +15,8 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 | TC-7.13 | A detach with a placement resolves in the workflow scope, against the anchor | P0 | Automated |
 | TC-7.14 | A cross-project reparent is positioned like any other | P1 | Automated |
 | TC-7.15 | A done Card's Stubs are anchorable and place normally | P0 | Automated |
-| TC-7.17 | A cross-workflow reparent nulls the position of every moved item that keeps its own workphase | P1 | Automated |
-| TC-7.18 | An item in a workphase its project's workflow doesn't use has `positionScope` `"none"` | P1 | Planned |
-| TC-7.19 | The cross-workflow reparent that's allowed nulls no position | P1 | Planned |
+| TC-7.18 | An item in a workphase its project's workflow doesn't use has `positionScope` `"none"` | P1 | Open |
+| TC-7.19 | The cross-workflow reparent that's allowed nulls no position | P1 | Open |
 | TC-7.20 | An item a project move leaves in another workflow's workphase shows in Unsorted | P1 | Open |
 
 ---
@@ -98,17 +97,9 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
-## TC-7.17 — A cross-workflow reparent nulls the position of every moved item that keeps its own workphase
-
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.3, wiki item-positioning §2.1
-
-*Given* project `P1` on workflow `WF1` and project `P2` on workflow `WF2`; Free item `X` in `P1` at `5.0`, with attached child `X1` at sibling-scoped `1.0` and detached child `X2` at `7.0`; and item `B` in `P2`, *when* `X` is reparented to `B` through the API and stays Free, *then* `X.position` and `X2.position` are `null`: each keeps a workphase from `WF1`, which `P2` doesn't use. `X1.position` is still `1.0`, since it's scoped to `X`. What their `positionScope` reads is [TC-7.18](part-7-board-placement-intents.md)'s. *And when* `X` is then moved into a workphase of `WF2` with no anchor, *then* it takes a position by the append fallback in `WF2`'s scope, having none to keep ([TC-2.24](part-2-anchor-resolution.md)). *And given* the same tree, *when* `X` is instead attached to `B`, *then* `X`'s position is resolved among `B`'s attached children, and `X2.position` is `null`.
-
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
-
 ## TC-7.18 — An item in a workphase its project's workflow doesn't use has `positionScope` `"none"`
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki item-positioning §2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-positioning §2
 
 *Given* Free item `X`, left in workphase `w1` of `WF1` in a project now on `WF2` by [TC-7.20](part-7-board-placement-intents.md)'s project move, *when* `X` is read through the API, *then* its `positionScope` is `"none"`, not `"workflow"`. What the move does to its `position` isn't asserted.
 
@@ -116,7 +107,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 ## TC-7.19 — The cross-workflow reparent that's allowed nulls no position
 
-**Priority:** P1 · **Status:** Planned, replaces TC-7.17 · **Rule:** wiki item-positioning §7.3, wiki item-positioning §2.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-positioning §7.3, wiki item-positioning §2.1
 
 *Given* project `P1` on workflow `WF1` and project `P2` on `WF2`; Free item `X` in `P1` at `5.0`, with attached child `X1` at sibling-scoped `1.0` and no detached descendant; and Card `B` in `P2`, with attached children `B1` (`1.0`) and `B2` (`2.0`), *when* `X` is attached to `B` with `{anchorId: B1, side: after}`, *then* `X`'s position is `1.5`, among `B`'s attached children, and `X1`'s is still `1.0`, scoped to `X`. No moved item's position is `null`. *When* `X` is attached to `B` with no anchor instead, *then* its position is `3`, by the append fallback among `B`'s children. The cross-workflow reparents that are refused are [ATT-5.9](../item-attachment/att-5-cross-project-reparenting.md)'s.
 

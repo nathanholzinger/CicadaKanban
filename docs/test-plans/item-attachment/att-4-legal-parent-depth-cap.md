@@ -16,8 +16,6 @@
 | ATT-4.9 | The UI and the API agree on every target's legality | P0 | Open |
 | ATT-4.10 | Every write that can give an item a parent enforces the same rules | P0 | Automated |
 | ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Automated |
-| ATT-4.12 | An item's parent picker never offers a parent the API would refuse | P1 | Pending PO |
-| ATT-4.13 | Whether an item's parent picker offers parents from other projects | P2 | Pending PO |
 
 ---
 
@@ -106,19 +104,3 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 *Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. The formula judges only the resulting depth, not whether the move improves it, so this subtree can be moved only once it's dismantled.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
-
-## ATT-4.12 — An item's parent picker never offers a parent the API would refuse
-
-**Priority:** P1 · **Status:** Pending PO
-
-*Given* item `X` with descendants, and an item `T` deep enough that `X`'s deepest leaf would pass `CAP` under it, *when* the parent picker in `X`'s own panel is opened, *then* — **question for the PO:** wiki item-attachment §7 says the UI never offers a parent the API would refuse. The picker leaves out `X` and its descendants, but applies no depth cap, so it offers `T`. The picker belongs to the Sheet, which is still being built. Is the picker held to wiki item-attachment §7 now, or are the Sheet's rules marked `**Planned:**` until the Sheet is built out?
-
-**Automation test:** —
-
-## ATT-4.13 — Whether an item's parent picker offers parents from other projects
-
-**Priority:** P2 · **Status:** Pending PO
-
-*Given* item `X` in project `P1`, and a legal parent `B` in project `P2` on the same workflow, *when* the parent picker in `X`'s own panel is opened, *then* — **question for the PO:** the API accepts `B` (wiki item-attachment §9), and wiki item-attachment §7 says the UI and the API must agree. Does agreeing mean the picker must offer `B`, or may it be scoped to `X`'s own project? The Reconciler found it lists only `P1`'s items today.
-
-**Automation test:** —

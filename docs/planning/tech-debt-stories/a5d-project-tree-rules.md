@@ -29,6 +29,9 @@ Out of scope:
 - **Two gaps, from A5b's D5,** each a ruling:
   - **A reparent through `PUT /projects/:id` keeps the project's old position number,** which is then compared against its new siblings. `PATCH /projects/:id/move` re-resolves the position. The project page's parent dropdown uses `PUT`. Item-positioning §2.1 re-resolves an item whose scope changes, and Nathan wants project and item tree operations to match.
   - **`POST /projects` stores a `parentId` that names no project.** The project is orphaned, and the sidebar never shows it. `PUT` and `PATCH /move` check, and an item create is refused the same way (ATT-4.1).
+*Added by the PO, from A5b's batch 1 (2026-10-05):*
+- **Shared rules get a page of their own** (Nathan, A5b's call 1). Each component's page points to the shared page, and states only its own handling and exceptions. The shared page has no catalog. Each component's catalog tests the shared rules as that component applies them. A5b applies this to hierarchy placement, with a new `hierarchy-placement` page that the board and the project tree both cite.
+- **This story applies it to positions** (Nathan, 2026-10-05). Projects and items share the position system: anchor and side, coarsest-fit rounding, the append and bootstrap fallbacks, reindexing and its disclosure. This story splits item-positioning into a shared positioning page and the item-only rules (attached-sibling scope, merged columns, the active/done split, the board's placement intents). The project tree's page then points at the shared page for its positions, rather than at item-positioning. Many TC cases change their Rule lines, and the comments citing item-positioning's shared sections are re-pointed.
 - **Tests that already pin these rules without case IDs.** Once the cases exist, mapping these tests is the Test Planner's and the Coder's job:
   - `server/tests/routes/projects.test.ts`;
   - `tests/api/projects.spec.ts`;

@@ -64,7 +64,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-5.9 — A Stub drag's within-action is hierarchy placement: reorder and reparent inside the Card need no detach
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8, wiki board-drag-interaction §7.1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8, wiki hierarchy-placement §1, wiki hierarchy-placement §2
 
 *Given* Stub `X` attached to Card `P`, whose Stubs are `S1, X, S2`, where `S1` has a child `S1a`, *when* `X` is picked up and, without ever leaving `P`'s descendants section, released with the ghost:
 

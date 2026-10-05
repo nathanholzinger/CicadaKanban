@@ -123,9 +123,14 @@ Inbox views collate work items across workflows or items not yet assigned to a c
 
 Full work item detail panel: editable title/description, assignee, agent, status, tags, parent/child relationships. Chat thread UI (schema exists: `chat_threads`, `chat_messages`). Attachment display for link-type attachments (google_doc, github_file, local_file URLs — file uploads are post-MVP). "Visit {Agent}" deep links. Activity log timeline with all event types.
 
-**Carried in from A4's handoff and A5a (Nathan, 2026-09-30):**
+**Carried in from A4's handoff, A5a and A5b (Nathan, 2026-09-30 and 2026-10-05):**
 
-- **The Sheet's parent picker offers parents over the depth cap.** wiki item-attachment §7 says the UI never presents a target the API would refuse. `hierarchy.ts::buildParentOptions` leaves out the item itself and its descendants, but not a parent at which the item's subtree would exceed `ITEM_DEPTH_CAP`, so picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap: it classifies against `itemDepthCap`. The case is ATT-4.12, routed to A5b as `Pending PO`. Under Nathan's ruling there, the Sheet's rules only need minimally working code until this epic, so the fix is this epic's.
+- **The Sheet has a wiki page, `item-sheet`, that says it isn't designed yet** (A5b). Its Open questions describe what it does today: the parent picker, the Attached checkbox, the children list with its Attached/Detached toggles, and the add-child. Its test-plan folder holds only an INDEX. This epic designs the Sheet. The PO then writes its rules on that page, and the Test Planner writes its cases.
+- **The Sheet's parent picker offers parents over the depth cap.**
+  - `hierarchy.ts::buildParentOptions` leaves out the item itself and its descendants, but not a parent under which the item's subtree would exceed `ITEM_DEPTH_CAP`. Picking one gets the API's 400, which the section shows as an error. The board's drag doesn't have this gap, since it classifies against `itemDepthCap`.
+  - Wiki item-attachment §7's "the UI never presents a target the API would refuse" covers the board's drag. It leaves out the Sheet's picker while the Sheet isn't designed.
+  - When this epic designs the picker, it's held to that rule, so the fix is this epic's.
+  - No case tracks it: A5b deleted ATT-4.12, and ATT-4.13's question (does the picker offer parents from other projects?) is under the Sheet page's Open questions.
 - **The Sheet's parent picker attaches a top-level item it reparents** (A5a's R6). Under R6, a reparent that omits the attachment flag keeps the item's state, so a top-level item would become a detached child. The picker sends `isAttached: true` for an item with no parent, which keeps the behavior from before R6. It's an implementation detail with no wiki rule or test-plan case. This epic decides how the Sheet sets attachment.
 
 ---

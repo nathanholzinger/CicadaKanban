@@ -308,13 +308,9 @@ response to a position write in this order:
 values with new ones, and reports an order that was never wrong. On the
 board, that would be a false entry in the inversion log.
 
-**On the board, the inversion check runs only for a write the board
-previewed** — a Sheet edit that reassigns a position made no ordinal claim.
-The board compares the rendered order of positioned Free items with the
-pending placement to the order after the response, with the placement
-cleared; a difference is recorded in the tuning panel's inversion log, and
-nothing goes to the console
-([board-drag-interaction](../board-drag-interaction/) §10).
+**On the board,** which writes the comparison checks, and what happens
+to a difference, are
+[`../board-drag-interaction/`](../board-drag-interaction/) §10's.
 
 **Tie-break:** wherever items are sorted, the order is `position` — a
 missing one counting as 0 — then `createdAt`. It's cheap, deterministic,

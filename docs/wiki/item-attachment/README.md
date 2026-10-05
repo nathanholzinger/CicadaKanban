@@ -209,6 +209,9 @@ doesn't is not a rule.
 **The two enforcement points must agree.** The UI must never present as
 droppable a target the API would reject; a validity rule that only the
 server knows about produces a gesture that looks like it worked and didn't.
+This holds for the board's drag. The Sheet's parent picker is outside it
+while the Sheet isn't designed
+([`../item-sheet/`](../item-sheet/), Open questions).
 
 ## 8. Depth cap
 
@@ -364,7 +367,8 @@ none of it is stored):
 - **Card** — a Free item as the board's draggable unit: title, description
   snippet, and a collapsible list of descendant Stubs.
 - **Planned:** a Card also shows its item's tags.
-- **Sheet** — the full item detail view. The only place non-positional data
+- **Sheet** — the full item detail view
+  ([`../item-sheet/`](../item-sheet/)). The only place non-positional data
   is edited.
 - **Headline** — an item's line in an Inbox list view (title + priority
   tags).

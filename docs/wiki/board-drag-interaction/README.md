@@ -4,7 +4,9 @@
 
 **Related:** [`../item-attachment/`](../item-attachment/) (what the gesture
 is allowed to produce) · [`../item-positioning/`](../item-positioning/)
-(how the resulting position resolves)
+(how the resulting position resolves) ·
+[`../hierarchy-placement/`](../hierarchy-placement/) (the gap-and-depth
+rule the Descendants layer places by)
 
 This page answers "what happens as the user drags, and what does a release
 at a given place mean." The *consequences* of any resolved drop —
@@ -225,8 +227,7 @@ While the item is in-context:
   center is in can land a drop one slot away from the ghost. **The same
   rule holds in a Card's descendants section (§7.1)**, where the rows of
   a dragged Stub's own subtree travel with it and are passed over, never
-  named. The project sidebar draws an indicator line and no ghost, so
-  there the line is the only cue, and it already matches the save.
+  named.
 
 **A release always commits the in-context meaning above, no matter where
 the bare cursor is resting** (§1.1 rule 1). The card never visually leaves
@@ -687,10 +688,11 @@ The Descendants layer is one inside a Card (§1.1), and a Stub's drag
 *starts* there (§1, §8). A Free Card, or a Stub detaching from elsewhere,
 reaches it by zooming into any Valid Card and holding over that Card's
 descendants section (§3). Its within-action is precise placement in the
-parent's hierarchy — the same ruleset as the project sidebar,
-deliberately. From the Card layer down **both copies are Stub rows** — the
-in-list ghost and the carried copy under the cursor — and the Column ↔
-Card boundary converts both, both ways (§5a, §8).
+parent's hierarchy, by the gap-and-depth rule the project sidebar uses too
+([`../hierarchy-placement/`](../hierarchy-placement/)). From the Card
+layer down **both copies are Stub rows** — the in-list ghost and the
+carried copy under the cursor — and the Column ↔ Card boundary converts
+both, both ways (§5a, §8).
 
 **Zooming in doesn't move the ghost.** At the zoom into Descendants, the
 ghost starts where the Card layer showed it: in the last gap, as `P`'s
@@ -705,96 +707,34 @@ options.
 
 ### 7.1 Gap and depth
 
-With full context of the hierarchy, the ghost sits in a **gap** between
-two rendered items, chosen by vertical position: **Top**, the item it will
-sit directly under, and **Bottom**, the item it will sit directly above.
-On the board these are **the ghost's two neighbors in the same list
-shuffle as a column's** (§2) — the gap is wherever the rows slide aside to
-make room, never a which-half-of-a-row reading. The project sidebar draws an indicator line instead
-of a ghost, so there the line's position is the gap.
-**Horizontal offset** then picks a depth from a range of discrete tab
-states — depth counted the way the rest of this wiki counts it, increasing
-as you tab **right** (deeper):
+**Placement here is
+[`../hierarchy-placement/`](../hierarchy-placement/)'s gap and depth**,
+with Card `P`'s descendants section as the hierarchy. On the board:
 
-> **range = [ Bottom's depth … Top's depth + 1 ]**
-
-- **Top's depth + 1** — tabbed once right of Top: the item becomes
-  **Top's first child**. To land anywhere else among Top's children, the
-  user anchors against one of those children instead — never directly
-  under the parent.
-- **Top's depth** — aligned with Top: the item becomes Top's sibling,
-  positioned **just after Top** — which means after Top's *entire
-  subtree* in render order, since that is where the gap is.
-- **Each shallower level**, down to Bottom's depth — tabbed left of Top:
-  walk Top's ancestors. One tab left → sibling of Top's parent, just after
-  it (after *its* subtree); two tabs left → sibling of Top's grandparent;
-  and so on. The shallowest of these, at Bottom's depth, is the same
-  placement as "Bottom's sibling, just before it" — the client sends one
-  relation, and the result is identical either way.
-- **Nothing shallower than Bottom.** That would make the item Bottom's
-  ancestor. An item may choose its parent; it may never choose its
-  children.
-
-By and large the item is being placed somewhere in Top's hierarchy — as
-its child, its next sibling, or the next sibling of one of its ancestors.
-Bottom only caps how far left the walk can go.
-
-**Worked example.** With the parent's hierarchy rendered as `S1 › S1a ›
-S1a1`, then `S2` at the top level, the gap between `S1a1` (Top, depth 2)
-and `S2` (Bottom, depth 0) offers exactly four states: depth 3, child of
-`S1a1`; depth 2, after `S1a1` under `S1a`; depth 1, after `S1a` under
-`S1`; depth 0, after `S1` — a.k.a. before `S2`. The gap directly beneath
-`S1a` (Bottom `S1a1` is Top's own child) offers exactly **one** state:
-first child of `S1a`, before `S1a1`. Note that "sibling after `S1a`" is
-*not* reached from the gap under `S1a`; it is reached from the gap below
-the last item of `S1a`'s subtree, tabbed to `S1a`'s depth.
-
-**Boundaries.**
-
-- **Above the first item** (no Top): one state, at Bottom's depth — the
-  first child of the root.
-- **Below the last item** (no Bottom): every state from the shallowest
-  level, the root's own children, up to Top's depth + 1. If the last item
-  is nested, that includes a sibling placement after each of its
-  ancestors.
-- **An empty hierarchy** (no Top, no Bottom): one state — the root's sole
-  child. On the board this never arises as a Descendants layer (a
-  childless Card has none, §1.1). In the project sidebar it arises when
-  the dragged project's subtree holds every project, since that subtree
-  is never a candidate (§7.2): for example, a sidebar with one top-level
-  project.
-- **Offsets past either end clamp** to the nearest valid state. No offset
-  produces "no state."
-
-**The root, per context.** The range is floored at the hierarchy's root,
-so the shallowest level anywhere is the root's own children:
-
-- **In the project sidebar,** the root is the top of the tree, above every
-  project. Its children are the top-level projects, those with no parent,
-  so no project can be tabbed shallower than the top level.
-- **On the board,** the root is the Card `P` whose Descendants layer this
-  is, so the shallowest level is *`P`'s own children*. An item can never
-  be tabbed out of `P` — leaving `P` is a zoom-out (§8), not a tab state.
-
-**The project sidebar always has full context.** A collapsed project hides
-its subtree from view, not from placement: the sidebar places against the
-real tree. Tabbed right of a collapsed Top, a project goes ahead of Top's
-real first child; aligned with it, after Top's whole subtree, shown or
-not.
-
-**An item set back down in its own gap, at its own depth, writes
-nothing.** That gap and depth resolve to the slot it was picked up from
-(§2, rule 2). In a column the same set-down still saves its anchor,
-because items the view doesn't show can sit between the neighbors (§2,
-rule 5). With full context nothing between Top and Bottom is unseen, so
-the release can't move the item, and there is nothing to save.
+- **The gap is the ghost's two neighbors**, in the same list shuffle as a
+  column's (§2): Top is the row above the ghost, and Bottom the row below.
+  The gap is wherever the rows slide aside to make room, never a
+  which-half-of-a-row reading.
+- **The root is Card `P`**, so the shallowest level is *`P`'s own
+  children* ([`../hierarchy-placement/`](../hierarchy-placement/) §3). An
+  item can never be tabbed out of `P` — leaving `P` is a zoom-out (§8),
+  not a tab state.
+- **The hierarchy is never empty here.** A childless Card has no
+  Descendants layer (§1.1), so the empty-hierarchy boundary
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §2) doesn't arise.
+- **An item set back down in its own gap, at its own depth, writes
+  nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
+  That gap and depth resolve to the slot it was picked up from (§2, rule
+  2). A column is different: there the same set-down still saves its
+  anchor, because items the view doesn't show can sit between the
+  neighbors (§2, rule 5).
 
 ### 7.2 What travels with the item, and what's invalid
 
-**The dragged item carries its whole subtree.** The item and its
-descendants are removed from the Top/Bottom candidates before any gap is
-computed, so no tab state can make an item a child of its own descendant —
-a cycle is structurally unreachable, not merely disallowed.
+**The dragged item carries its whole subtree**
+([`../hierarchy-placement/`](../hierarchy-placement/) §4). On the board,
+a dragged Stub's subtree travels with the carried copy, and its rows are
+passed over, never named (§2).
 
 **The depth cap is checked per tab state, against the deepest descendant,
 at absolute depth.** A state's resulting depth is `P`'s absolute depth in
@@ -808,8 +748,9 @@ up. This is the one exception to §3.2's "never enterable," for the
 reason given there. Sibling states in the same gap that do fit stay
 valid; validity is per state, never per gap.
 
-Whether a Card on the board always shows its whole hierarchy, as §7.1
-needs, is open (Open questions).
+Whether a Card on the board always shows its whole hierarchy, as
+[`../hierarchy-placement/`](../hierarchy-placement/) §1 needs, is open
+(Open questions).
 
 ## 8. Stub → out: detach
 
@@ -897,6 +838,12 @@ inversions. The order matters; see
 above, a correctly reconciled response should never invert the rendered
 order. If one fires, the client and server disagreed about what the drop
 meant — worth surfacing, not silently repairing.
+
+**The check runs only for a write the board previewed.** A Sheet edit
+that reassigns a position made no ordinal claim. The board compares the
+rendered order of positioned Free items with the pending placement to
+the order after the response, with the placement cleared, and a
+difference goes in the inversion log (below).
 
 **Re-dragging an item whose write is still pending** puts two writes in
 flight against one row. Responses must be sequenced per item so a stale one
@@ -986,9 +933,11 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   instant.
 - **Where the tuning panel lives, and who sees it (§3.1).** Today it opens
   from the board toolbar ("Drag tuning").
-- **Whether a Card shows its whole hierarchy (§7, §9).** §7.1's walk
-  depends on knowing nothing is missing between Top and Bottom. The
-  project sidebar always has the whole tree (§7.1). A Card on the board
+- **Whether a Card shows its whole hierarchy (§7, §9).** Hierarchy
+  placement depends on knowing nothing is missing between Top and Bottom
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §1). The project
+  sidebar always has the whole tree
+  ([`../project-tree/`](../project-tree/) §1). A Card on the board
   may not, and the board may not know when it doesn't. A hierarchy too
   deep to show is one such case: it could get a "see X children"
   placeholder that opens a wider modal on click or on a held drag-over,
