@@ -347,10 +347,10 @@ and count grow together — never disproportionate, needs nothing).
   `(parentId, isAttached)`, not workphaseId, so position stays meaningful
   regardless of the parent's status. Only detached/root items lose
   position on terminal transition.
-- **Column range validation:** a board column's range cannot span a
-  terminal and a non-terminal workphase together — active and done items
-  must never be directly compared in one sorted list, since done's
-  ordering isn't position-based at all.
+- **A board's columns never mix done and active workphases**
+  ([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §6),
+  since active and done items must never be directly compared in one
+  sorted list: done's ordering isn't position-based at all.
 
 ## 7. Placement intents from the board gesture
 
@@ -459,9 +459,9 @@ keep theirs, none of which has anything to do with workflows (§2.1).
 
 An item can still hold a workphase its project's workflow doesn't use,
 when its project moves under a different workflow. It shows in Unsorted
-([`../boards-columns-unsorted/`](../boards-columns-unsorted/)). What the
-move does to its position, and how it's re-filed, isn't a rule yet (Open
-questions).
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §3, §10).
+What the move does to its position, and how it's re-filed, isn't a rule
+yet (Open questions).
 
 ### 7.4 Done columns accept drops, but never positioned inserts
 

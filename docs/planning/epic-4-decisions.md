@@ -98,62 +98,19 @@ should decide if start-time should be implemented now as part of this story. Or
 as a part of epic-5's tag/label work since start-time is likely to get a label
 pill and might get classified  as tag/label work.
 
+*Context, out of this epic's scope:* `epic-8-decisions.md`, "Deferred (not
+events-specific): column merging-expanding rework", records how a column may
+later expand by start date into date buckets.
+
 ### 11. Column merging-expanding rework
-Right now a column can only merge-expand on one category - workphases. When 
-start time is implemented we will also like the ability to expand by start date
-so a column can have date buckets. Column expanding eventually will have a 
-more generalized group-by-tag feature. This is probably not an effort to 
-implement for this epic, but we should figure out where the work will live.
+Moved to `epic-8-decisions.md`, "Deferred (not events-specific): column
+merging-expanding rework" (2026-10-05). It was recorded here as context, and
+was already written as work to defer past this epic.
 
-**Where the drag-side work will live** (recorded 2026-09-21, from the
-Story 4 code-quality audit discussion of #7/#8 — the `CardList`
-consolidation and the `isCardList` predicate). The framing that keeps
-those two fixes stable: a bucket is a **facet on a sub-row, not a new
-region kind**. The layer stack (Board → Column/sub-row → Card →
-Descendants) is untouched by group-by; a date bucket is still `kind:
-'subrow'`. What varies per facet is the sub-row's *within-action write*
-— workphase today, a date range or label later. So the region-kind
-predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
-`CardList` never change for this; the four places that do:
-
-1. **Region identity** — `subrowRegionKey` / `subrowContainerId`'s
-   `<columnId>:<workphaseId>` format and `parseRegionKey`'s parse of it
-   (`client/src/components/workflow/dragRegions.ts`, the format's one
-   owner). Becomes `<columnId>:<bucketKey>` with the facet resolved from the
-   column definition.
-2. **Item selection** — `useBoardDnd.ts`'s `regionItems`: today a
-   `kind === 'column' ? merged : byWorkphase` switch. A bucket sub-row is
-   "the column's items filtered by bucket," so the selector becomes a
-   fact the region carries (or a facet switch here), not a kind switch.
-   This is the one *positive* kind test the audit's #8 didn't list; it is
-   the site group-by touches.
-   *Deferred here by Epic 3.5 Story 6.1 (ledger C-6b, 2026-09-24):* the
-   same card-list facts (covered workphases, `isTerminal`) are derived in
-   three places:
-   - `BoardColumn.tsx`, for the render;
-   - `dragRegions.ts::cardListStructure`, for the region;
-   - `regionItems`, for the release's `others` list.
-
-   All three call the same two selectors, so they agree only by
-   convention. Make them read one derivation when this point reshapes
-   item selection, or when the done-column rework settles `isTerminal`,
-   whichever comes first.
-3. **List identity** — `Placement` (`itemListOps.ts`) carries
-   `workphaseId` / `parentId`, and `isIdentity`'s `sameList` reads "same
-   workphase = same list." Two date buckets in one column share a
-   workphase, so a bucket-to-bucket move would read as identity and
-   no-op. `Placement` gains the bucket; `isIdentity`, `toRequest` and
-   `placementFor`'s card-list branch compare and emit it. The ghost /
-   pending marker follows for free (§10: placement is all three), but
-   `itemListOps.ts`'s per-list selectors filter by bucket too.
-4. **Server** — the board response's `subRows[].workphase` shape becomes a
-   bucket, and `PATCH /items/:id/move` has to accept whatever a date/tag
-   bucket writes (a `startAt`? a label?) — which is also the open product
-   question: what a drop *into* a date bucket means for the item's date.
-
-Not to be pre-built in Epic 3.5. The point of recording it is that Stories
-4.1's `kind` discriminant plus the audit's #7/#8 leave the facet work
-confined to these four, rather than a branch in twelve places.
+One part still bears on this epic: Story 6.1's C-6b (card-list facts
+derived in three places) is due when this epic's done-column rework
+settles `isTerminal`, if the column rework hasn't come first. Its note is
+under that section's item 2.
 
 ### 12. Revisit with the done-column rework: dragging within a done column, and five test-plan cases
 These wait for this epic's done-column rework, or for its status model

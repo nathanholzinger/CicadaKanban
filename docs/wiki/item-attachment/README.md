@@ -76,7 +76,9 @@ on a column sends, and an attach that names its new parent's workphase.
 **An Attached item shows with its parent, whatever its own
 `workphaseId` says.** No write makes the two disagree, but a direct
 database edit can. The board then still shows the item inside its
-ancestor's Card, and Unsorted doesn't list it.
+ancestor's Card, and not in Unsorted, though the API's
+`unsorted.invalidItems` lists it
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §10).
 
 **A write that leaves an item Free without naming a workphase gives it
 the one it was shown in**, so leaving attachment never moves an item on
@@ -106,8 +108,9 @@ suggest `null`, since an item with no workphase shows in Unsorted.
 none.** A write that names a workphase its project's workflow doesn't
 use, a create or a move, is refused with a 400, with or without a
 reparent in the same write. So is a cross-workflow reparent that would
-leave a Free item in the moved subtree (§9). What a project with no
-workflow allows isn't a rule yet (Open questions).
+leave a Free item in the moved subtree (§9). What a project that uses
+no workflow, its own or an ancestor's, allows isn't a rule yet (Open
+questions).
 
 ## 3. Reparenting is one-way
 
@@ -284,9 +287,11 @@ hold a Free item after the write:** the moving item, if it ends Free, or
 any detached descendant. Each would keep a workphase of its old workflow
 (§2a), and a write never leaves an item where only Unsorted can show it.
 Unsorted is for what gets past, such as a direct database edit or a
-project moving under a different workflow. The refusal holds even when the
-write names a workphase of the new workflow for the moving item: no write
-re-files items across workflows (Open questions). A cross-workflow
+project moving under a different workflow
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §10). The
+refusal holds even when the write names a workphase of the new workflow
+for the moving item: no write re-files items across workflows (Open
+questions). A cross-workflow
 reparent that ends with the moving item Attached, with no detached
 descendant, is allowed: the item and its attached descendants take the new
 parent's workphase (§2), and the item takes a fresh position among its new
@@ -408,9 +413,14 @@ created with the flag clear is a detached child, Free from the start,
 and its workphase follows §2a.
 
 **A workphase is optional.** A top-level create may omit it, even in a
-project with no workflow, and the item then has none: it shows in
-Unsorted ([`../boards-columns-unsorted/`](../boards-columns-unsorted/)).
-An Attached child created without one takes its parent's (§2a).
+project that uses no workflow, and the item then has none. It shows in
+Unsorted on the boards of the workflow its project uses
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §3, §10). A
+project that uses no workflow, its own or an ancestor's, has no board,
+so nothing shows the item yet
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/), Open
+questions). An Attached child created without one takes its parent's
+(§2a).
 
 A create is a write like any other: §1, §2a, §7 and §8 hold for it, and
 §11a logs a create under a parent.
@@ -442,8 +452,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   a subtree into another workflow, for example with a map from each old
   workphase to a new one, or a single default, is undecided. So is how a
   project moving under a different workflow re-files its items.
-- **A project with no workflow (§2a, §9).** A Free item's workphase
-  belongs to its project's workflow, or it has none. Whether a write may
-  name a workphase for a Free item in a project with no workflow, and
+- **A project that uses no workflow (§2a, §9),** its own or an
+  ancestor's. A Free item's workphase belongs to its project's workflow,
+  or it has none. Whether a write may name a workphase for a Free item in
+  such a project, and
   whether a reparent into or out of such a project is cross-workflow, is
   undecided.

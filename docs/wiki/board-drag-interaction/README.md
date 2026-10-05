@@ -14,7 +14,7 @@ attachment, reparenting, cascades, validity — live in
 [`../item-attachment/`](../item-attachment/) and hold identically for
 non-drag paths. The page covers dragging an item, Card or Stub. Dragging
 a column reorders the board's columns
-([`../boards-columns-unsorted/`](../boards-columns-unsorted/)), and none
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §7), and none
 of this page's layers, pops or bands apply to it.
 
 **Resolution and feel.** These rules come in two kinds. Drop

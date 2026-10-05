@@ -1,4 +1,4 @@
-# Epic 8+ Deferred Decisions — Events, Alerts & Notifications
+# Epic 8+ Deferred Decisions — Events, Alerts & Notifications, and Placeholder UI
 
 Technical decisions and discussion captured so `mvp-roadmap.md` can stay
 high-level. Reference doc for when Epic 8 (Notifications / Inbox priority) is
@@ -10,6 +10,10 @@ the priority cascade, unread model). **This doc is canonical for the decisions;
 the memory is the schema sketch.** Where they overlap, this doc wins.
 
 Decisions recorded 2026-07-17 while auditing Epic 3. Nothing here is built yet.
+
+It also holds UI that does enough for now but isn't meant to be the final
+product. That UI is revisited in Epic 8, or later (Nathan, 2026-10-05). Those
+deferrals are the last sections, after the events material.
 
 ---
 
@@ -237,3 +241,87 @@ manually resetting each field) is a real behavioral change worth testing careful
 not a drive-by lint fix. This UI consistency pass is the natural point to either do
 that refactor for all three at once, or make a deliberate, documented call to
 suppress them too.
+
+---
+
+## Deferred (not events-specific): column merging-expanding rework
+
+*Moved from `epic-4-decisions.md` §11 (2026-10-05).* It was recorded there as context for that epic's decisions, and was already written as work to defer past it. "This epic" in the first paragraph meant Epic 4. Epic 4's §10, the start datetime feature, points here for the date buckets.
+
+Right now a column can only merge-expand on one category - workphases. When
+start time is implemented we will also like the ability to expand by start date
+so a column can have date buckets. Column expanding eventually will have a
+more generalized group-by-tag feature. This is probably not an effort to
+implement for this epic, but we should figure out where the work will live.
+
+**Where the drag-side work will live** (recorded 2026-09-21, from the
+Story 4 code-quality audit discussion of #7/#8 — the `CardList`
+consolidation and the `isCardList` predicate). The framing that keeps
+those two fixes stable: a bucket is a **facet on a sub-row, not a new
+region kind**. The layer stack (Board → Column/sub-row → Card →
+Descendants) is untouched by group-by; a date bucket is still `kind:
+'subrow'`. What varies per facet is the sub-row's *within-action write*
+— workphase today, a date range or label later. So the region-kind
+predicates, `placementRegion`, `DragCarveFrame` and the facet-agnostic
+`CardList` never change for this; the four places that do:
+
+1. **Region identity** — `subrowRegionKey` / `subrowContainerId`'s
+   `<columnId>:<workphaseId>` format and `parseRegionKey`'s parse of it
+   (`client/src/components/workflow/dragRegions.ts`, the format's one
+   owner). Becomes `<columnId>:<bucketKey>` with the facet resolved from the
+   column definition.
+2. **Item selection** — `useBoardDnd.ts`'s `regionItems`: today a
+   `kind === 'column' ? merged : byWorkphase` switch. A bucket sub-row is
+   "the column's items filtered by bucket," so the selector becomes a
+   fact the region carries (or a facet switch here), not a kind switch.
+   This is the one *positive* kind test the audit's #8 didn't list; it is
+   the site group-by touches.
+   *Deferred here by Epic 3.5 Story 6.1 (ledger C-6b, 2026-09-24):* the
+   same card-list facts (covered workphases, `isTerminal`) are derived in
+   three places:
+   - `BoardColumn.tsx`, for the render;
+   - `dragRegions.ts::cardListStructure`, for the region;
+   - `regionItems`, for the release's `others` list.
+
+   All three call the same two selectors, so they agree only by
+   convention. Make them read one derivation when this point reshapes
+   item selection, or when the done-column rework settles `isTerminal`,
+   whichever comes first. The done-column rework is Epic 4's, so
+   `epic-4-decisions.md` §11 keeps a pointer to this.
+3. **List identity** — `Placement` (`itemListOps.ts`) carries
+   `workphaseId` / `parentId`, and `isIdentity`'s `sameList` reads "same
+   workphase = same list." Two date buckets in one column share a
+   workphase, so a bucket-to-bucket move would read as identity and
+   no-op. `Placement` gains the bucket; `isIdentity`, `toRequest` and
+   `placementFor`'s card-list branch compare and emit it. The ghost /
+   pending marker follows for free (wiki board-drag-interaction §10:
+   placement is all three), but `itemListOps.ts`'s per-list selectors
+   filter by bucket too.
+4. **Server** — the board response's `subRows[].workphase` shape becomes a
+   bucket, and `PATCH /items/:id/move` has to accept whatever a date/tag
+   bucket writes (a `startAt`? a label?) — which is also the open product
+   question: what a drop *into* a date bucket means for the item's date.
+
+Not to be pre-built in Epic 3.5. The point of recording it is that Stories
+4.1's `kind` discriminant plus the audit's #7/#8 leave the facet work
+confined to these four, rather than a branch in twelve places.
+
+---
+
+## Deferred (not events-specific): the board's presentation, from A5c
+
+A5c writes the API's rules for boards, columns and Unsorted out in full, and treats the board's presentation as a minimum-viable placeholder (Nathan, 2026-10-05, A5c's D1). The wiki page keeps each of these under its Open questions. They're decisions for this epic or later:
+
+- **How columns merge and subdivide,** and how merged and expanded columns look. Nathan expects this reworked. The section above holds the facet idea.
+- **A board's column order.** A board orders its columns freely, so it can show workphases out of the workflow's order. Nathan expects that to change.
+- **The column editor.** It offers ranges the API refuses, one that overlaps another column or spans done and active workphases, then shows the API's 400. It does stop a range whose start comes after its end. *(A5c's G2, recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
+- **The Unsorted bucket, the "needs attention" badge and the "broken" badge:** how they look, and their tooltips.
+  - In an inherited view, the badge counts every project's drift, but the bucket lists only the project's own. So the badge can show over an empty bucket.
+  - Its tooltip mentions only uncovered workphases.
+  - *(A5c's G3(b), recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
+- **The inherited view.** A project that inherits its workflow sees its ancestor's board, filtered to its own items, with board and workphase management hidden.
+  - It shows only the project's own items, not those of its descendants that inherit the same workflow. The owner's board shows them all. *(A5c's G5, recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
+  - Boards are due to become project-owned, paired with URL routing (root `CLAUDE.md`), which would rework this view.
+- **A board's show-attached-children setting:** whether Cards open with their attached children showing.
+
+A5c's batch 1 may add to this list, and its stop confirms or changes each recommended deferral.

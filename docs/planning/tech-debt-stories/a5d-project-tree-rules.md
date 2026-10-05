@@ -25,7 +25,7 @@ Out of scope:
     - a move under the project's own descendant is refused;
   - reparenting a project from its own page;
   - deleting a project. It deletes the whole subtree: descendant projects, their workflows, boards and workphases, and the items they own. An item of another project sitting in one of the deleted workphases survives, with no workphase, and shows in Unsorted;
-  - a project with no workflow uses its nearest ancestor's (root `CLAUDE.md`, "Workflow inheritance"). No page states this either, so the PO decides whether it belongs here or on boards-columns-unsorted.
+  - a project with no workflow uses its nearest ancestor's (root `CLAUDE.md`, "Workflow inheritance"). No page states this either. *Settled by Nathan during A5c's planning (2026-10-05):* it goes on the project tree's page. Which items a board shows, including a project's inherited view of its ancestor's board, goes on boards-columns-unsorted (A5c's D4). Each page links the other.
 - **Two gaps, from A5b's D5,** each a ruling:
   - **A reparent through `PUT /projects/:id` keeps the project's old position number,** which is then compared against its new siblings. `PATCH /projects/:id/move` re-resolves the position. The project page's parent dropdown uses `PUT`. Item-positioning §2.1 re-resolves an item whose scope changes, and Nathan wants project and item tree operations to match.
   - **`POST /projects` stores a `parentId` that names no project.** The project is orphaned, and the sidebar never shows it. `PUT` and `PATCH /move` check, and an item create is refused the same way (ATT-4.1).

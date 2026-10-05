@@ -50,6 +50,8 @@ Folder names match the test-plan folders exactly, so each page has one catalog, 
 
 **A page for a feature that isn't designed yet** says so in its opening paragraph, and keeps what the feature does today under Open questions. It has no numbered sections, since it states no rules of its own.
 
+**A page whose feature is settled only in part** numbers its settled rules as usual, says in its opening paragraph which part is a placeholder, and keeps that part under Open questions.
+
 This README isn't a page. Nothing points at it by section.
 
 ## Sections, anchors and references
