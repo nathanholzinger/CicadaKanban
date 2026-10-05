@@ -39,7 +39,7 @@ describe('flattenHierarchy', () => {
     expect(byId(rows, 'S2')).toEqual({ id: 'S2', parentId: 'P', depth: 0 });
   });
 
-  it('a null root (the sidebar’s virtual top) yields depth-0 rows with parentId null', () => {
+  it('TREE-1.3: a null root (the sidebar’s virtual top) yields depth-0 rows with parentId null', () => {
     const rows = flattenHierarchy(null, id => (id === null ? ['top1'] : []));
     expect(rows).toEqual([{ id: 'top1', parentId: null, depth: 0 }]);
   });
@@ -238,7 +238,7 @@ describe('DRAG-4.11: resolvePlacement — the boundaries', () => {
     expect(resolvePlacement([], 0, 0, 'P', childrenOf)).toEqual({ parentId: 'P', anchor: null });
   });
 
-  it('an empty hierarchy under a null (sidebar virtual) root reads parentId null', () => {
+  it('TREE-1.4: an empty hierarchy under a null (sidebar virtual) root reads parentId null', () => {
     expect(resolvePlacement([], 0, 0, null, childrenOf)).toEqual({ parentId: null, anchor: null });
   });
 });
@@ -247,7 +247,7 @@ describe('DRAG-4.11: resolvePlacement — the boundaries', () => {
 // other case where a row's real children aren't all rendered) must still
 // resolve Top + 1 to its *real* first child from the full tree, never "no
 // anchor" just because the next rendered row isn't that child.
-describe('resolvePlacement — a Top whose children are hidden from rows (a collapsed Top)', () => {
+describe('TREE-1.5: resolvePlacement — a Top whose children are hidden from rows (a collapsed Top)', () => {
   function fullChildrenOf(id: string | null): readonly string[] {
     if (id === null) return ['A', 'B'];
     if (id === 'A') return ['A1', 'A2'];

@@ -1,6 +1,6 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.14
+**Next ID:** DRAG-6.15
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, the inversion tripwire, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
@@ -18,6 +18,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | Open |
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
+| DRAG-6.14 | The board records no inversion for a write it didn't preview | P2 | Open |
 
 ---
 
@@ -116,3 +117,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 *Given* `X` dropped at slot `s1` and shown pending there (write 1 in flight), while its stored `position` still places it at its old slot `s0`, *when* `X` is picked up again, *then* its ghost starts at `s1`, where the board shows it, and resting there opens no gap elsewhere ([DRAG-1.22](drag-1-contexts-and-popping.md)). At no point in the re-drag does the ghost appear at `s0`: the board never shows the pre-drop order while a write that moves `X` is outstanding.
 
 **Automation test:** `client/src/components/workflow/placement.test.ts`
+
+## DRAG-6.14 — The board records no inversion for a write it didn't preview
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its Sheet, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order. Recording an inversion for a write it did preview is [DRAG-6.4](drag-6-preview-reconciliation.md)'s.
+
+**Automation test:** —

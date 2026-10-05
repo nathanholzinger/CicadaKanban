@@ -1,9 +1,11 @@
 # Board Drag Gesture — Working Notes
 
 The rules and their reasons are in the wiki's `board-drag-interaction` page (contexts,
-popping, drop resolution) and its `item-attachment` page (what attaching and detaching
-do). This file is the map: read it before changing anything in this directory, then go
-to the wiki for the "why". What each module owns in detail is in its own header.
+popping, drop resolution), its `hierarchy-placement` page (the gap-and-depth rule the
+Descendants layer shares with the project sidebar) and its `item-attachment` page (what
+attaching and detaching do). This file is the map: read it before changing anything in
+this directory, then go to the wiki for the "why". What each module owns in detail is in
+its own header.
 
 ## The mental model
 
@@ -26,8 +28,9 @@ to the wiki for the "why". What each module owns in detail is in its own header.
   drag's own containing Card, else append as the last child (an item from outside,
   including a Stub from another Card's section — full anchor + side placement _among_
   a Card's Stubs happens one layer further in, at Descendants). Descendants: the gap +
-  depth rule (wiki board-drag-interaction §7) — the named neighbor picks the **gap**,
-  horizontal offset from a seeded depth picks the **depth** (`descendantsProjection.ts`,
+  depth rule (wiki hierarchy-placement §1, as wiki board-drag-interaction §7.1 applies it) —
+  the named neighbor picks the **gap**, horizontal offset from a seeded depth picks the
+  **depth** (`descendantsProjection.ts`,
   `DragSessionContext.ts::DescendantsProjection`). The seed is where the ghost already
   was, so zooming in never moves it: a Stub's own slot, or the Card's last child for an
   item from outside. Release resolves the placement via

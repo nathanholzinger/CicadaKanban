@@ -2,7 +2,7 @@
 // drag-tuning entry points.
 
 import { useState } from 'react';
-import type { Board, Workphase } from '../types';
+import type { Board } from '../types';
 import { BTN_PRIMARY, BTN_CANCEL, BTN_ADD_TRIGGER, INPUT_LG, SELECT_SM } from './item-detail/pillUtils';
 
 interface BoardToolbarProps {
@@ -17,15 +17,11 @@ interface BoardToolbarProps {
   onAddColumn: () => void;
   onToggleWorkphaseManager: () => void;
   onToggleDragTuning: () => void;
-  childDefaultWorkphaseId: string | null;
-  onChildWorkphaseChange: (workphaseId: string | null) => void;
-  workphases: Workphase[];
 }
 
-// Board switcher + board CRUD, column/workphase-manager entry points, and the
-// default-workphase-for-new-child-items setting. Owns its own board
-// create/rename form state — callers only need the board list and the
-// underlying API handlers.
+// Board switcher + board CRUD, and the column/workphase-manager entry points.
+// Owns its own board create/rename form state — callers only need the board
+// list and the underlying API handlers.
 export default function BoardToolbar({
   boards,
   activeBoardId,
@@ -38,9 +34,6 @@ export default function BoardToolbar({
   onAddColumn,
   onToggleWorkphaseManager,
   onToggleDragTuning,
-  childDefaultWorkphaseId,
-  onChildWorkphaseChange,
-  workphases,
 }: BoardToolbarProps) {
   const [creatingBoard, setCreatingBoard] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
@@ -164,21 +157,6 @@ export default function BoardToolbar({
         >
           Drag tuning
         </button>
-
-        <span className="ml-2 text-[11px] text-zinc-500">New child items go to:</span>
-        <select
-          value={childDefaultWorkphaseId ?? ''}
-          onChange={e => onChildWorkphaseChange(e.target.value || null)}
-          aria-label="Default workphase for new child items"
-          className={SELECT_SM}
-        >
-          <option value="">Same workphase as parent</option>
-          {workphases.map(w => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       {renamingBoard && (

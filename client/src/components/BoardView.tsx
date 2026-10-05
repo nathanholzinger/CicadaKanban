@@ -37,9 +37,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [board, setBoard] = useState<BoardWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [childDefaultWorkphaseId, setChildDefaultWorkphaseId] = useState<string | null>(
-    () => localStorage.getItem(`kanban_child_col_${workflowId}`) ?? null,
-  );
   const [editingColumn, setEditingColumn] = useState<Column | 'new' | null>(null);
   const [showWorkphaseManager, setShowWorkphaseManager] = useState(false);
   const [workphaseNotice, setWorkphaseNotice] = useState('');
@@ -127,18 +124,12 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         ...data.unsorted.invalidItems,
       ];
       replaceItems(allItems);
-
-      const stored = localStorage.getItem(`kanban_child_col_${workflowId}`);
-      if (!stored) {
-        const backlog = allWorkphases.find(w => w.name.toLowerCase() === 'backlog');
-        if (backlog) setChildDefaultWorkphaseId(backlog.id);
-      }
     } catch (err) {
       console.error('Failed to load board:', err);
     } finally {
       setLoading(false);
     }
-  }, [activeBoardId, workflowId, setWorkphases, replaceItems]);
+  }, [activeBoardId, setWorkphases, replaceItems]);
 
   useEffect(() => {
     // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
@@ -224,15 +215,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     '--active-context-outline': dragTuning.activeContextOutlineColor,
   } as CSSProperties;
 
-  function handleChildWorkphaseChange(workphaseId: string | null) {
-    setChildDefaultWorkphaseId(workphaseId);
-    if (workphaseId) {
-      localStorage.setItem(`kanban_child_col_${workflowId}`, workphaseId);
-    } else {
-      localStorage.removeItem(`kanban_child_col_${workflowId}`);
-    }
-  }
-
   async function submitColumn(data: Parameters<typeof handleCreateColumn>[0]) {
     if (editingColumn === 'new') return handleCreateColumn(data);
     if (editingColumn) return handleUpdateColumn(editingColumn.id, data);
@@ -275,9 +257,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
             setWorkphaseNotice('');
           }}
           onToggleDragTuning={() => setShowDragTuning(v => !v)}
-          childDefaultWorkphaseId={childDefaultWorkphaseId}
-          onChildWorkphaseChange={handleChildWorkphaseChange}
-          workphases={workphases}
         />
 
         {showDragTuning && (

@@ -15,7 +15,7 @@
 | ATT-9.7 | When the nearest Free ancestor has no workphase, a write that leaves an item Free must name a workphase or `null` | P1 | Open |
 | ATT-9.8 | A move can't leave a Free item in a workphase its project's workflow doesn't use | P1 | Open |
 | ATT-9.9 | A create can't name a workphase its project's workflow doesn't use | P2 | Open |
-| ATT-9.10 | A reparent that leaves an Attached item Free under a new parent, naming no workphase | P2 | Pending PO |
+| ATT-9.10 | A detach that also reparents, naming no workphase, leaves the item in the one it was shown in | P2 | Open |
 
 ---
 
@@ -98,10 +98,10 @@
 
 **Automation test:** —
 
-## ATT-9.10 — A reparent that leaves an Attached item Free under a new parent, naming no workphase
+## ATT-9.10 — A detach that also reparents, naming no workphase, leaves the item in the one it was shown in
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §2a
 
-*Given* the setup, and top-level item `B` in `W3`, *when* a write gives `X` parent `B`, clears its attachment flag and names no workphase, *then* — **question for the PO:** wiki item-attachment §2a gives an item leaving attachment the workphase it was shown in, here `W2`, `D`'s, and refuses the write when there's none. Its list of the writes that rule applies to names a detach, a reparent to root and a create, and wiki item-attachment §11 calls a detach that lands under a different parent a reparent, not a detach. Does the rule apply to this write too, so that `X` is a detached child of `B`, in `W2`? The code does that today.
+*Given* the setup, and top-level item `B` in `W3`, *when* a write gives `X` parent `B`, clears its attachment flag and names no workphase, *then* `X` is a detached child of `B`, Free, in `W2`: the workphase of `D`, whose Card it was shown in before the write. It isn't `W3`, `B`'s. *And given* `D` has no workphase, *then* the write is refused with a 400, as the writes of [ATT-9.7](att-9-workphase-a-write-leaves.md) are, and nothing is stored.
 
 **Automation test:** —

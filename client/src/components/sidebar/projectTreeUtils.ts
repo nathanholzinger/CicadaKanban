@@ -3,15 +3,18 @@
 // as a board Card's Descendants layer. This module is the adapter: turning
 // the sidebar's own `FlatItem[]` render list into the library's `Row[]`,
 // and its resolved `{ parentId, anchor }` back into `onReorderProject`'s
-// prevId/nextId pair.
+// prevId/nextId pair, or into no write at all for a set-down in the
+// project's own slot.
 
 import type { Project } from '../../types';
 import {
   flattenHierarchyOf,
   gapIndexFor,
+  ownSlotOf,
   toRows,
   type AnchorRelation,
   type DropSide,
+  type Projection,
   type Row,
 } from '../../lib/hierarchyPlacement';
 
@@ -72,7 +75,7 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
 // The library's `childrenOf` over the *real* tree, ignoring collapse state
 // entirely: the sidebar places against the real tree, so a project tabbed
 // right of a collapsed Top lands ahead of Top's real first child, which
-// `flatItems` never has at all (wiki board-drag-interaction §7.1).
+// `flatItems` never has at all (wiki project-tree §1).
 export function fullChildrenOf(projects: readonly Project[]): (parentId: string | null) => readonly string[] {
   const childMap = childrenByParent(projects);
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
@@ -94,15 +97,15 @@ export function eligibleRows(flatItems: readonly FlatItem[], exclude: ReadonlySe
 // The gap is `over` row + side, one of n + 1 (`gapIndexFor`), so a project
 // can land after the last row at its own depth, not only before it.
 //
-// `overId` inside `exclude` (a descendant of the active item, still
-// rendered dimmed) resolves to the gap the whole dragged block collapses
-// to, rather than to no projection. A subtree is always contiguous in DFS
-// order, so every row inside it maps to exactly one gap — the one
-// immediately after the nearest eligible row that precedes the block
-// (equivalently, immediately before whichever eligible row follows it;
-// both give the same index once the block is removed from `rows`). No
-// eligible predecessor (the block sits at the very top) falls back to
-// gap 0.
+// `overId` inside `exclude` (the active item's own row, or a descendant of
+// it, still rendered dimmed) resolves to the gap the whole dragged block
+// collapses to, rather than to no projection (wiki project-tree §1). A
+// subtree is always contiguous in DFS order, so every row inside it maps to
+// exactly one gap — the one immediately after the nearest eligible row that
+// precedes the block (equivalently, immediately before whichever eligible
+// row follows it; both give the same index once the block is removed from
+// `rows`). No eligible predecessor (the block sits at the very top) falls
+// back to gap 0.
 export function resolveGap(
   flatItems: readonly FlatItem[],
   rows: readonly Row[],
@@ -125,4 +128,27 @@ export function siblingIdsFromAnchor(anchor: AnchorRelation | null): { prevId: s
   if (!anchor) return { prevId: null, nextId: null };
   const { anchorId, side } = anchor;
   return side === 'after' ? { prevId: anchorId, nextId: null } : { prevId: null, nextId: anchorId };
+}
+
+export interface ProjectRelease {
+  parentId: string | null;
+  prevId: string | null;
+  nextId: string | null;
+}
+
+// What a release writes: the projection's parent and the sibling to insert
+// beside, or nothing (null) at the project's own gap and depth. The sidebar
+// has the whole tree in view, so no project can sit unseen between its
+// neighbors, and the release can't move it (wiki project-tree §1). `gap`
+// is the one the projection was computed at, among `eligibleRows`.
+export function releaseOf(
+  flatItems: readonly FlatItem[],
+  activeId: string,
+  gap: number,
+  projection: Projection,
+): ProjectRelease | null {
+  const own = ownSlotOf(flatItems, activeId);
+  if (own && gap === own.gap && projection.depth === own.depth) return null;
+  const { parentId, anchor } = projection.placement;
+  return { parentId, ...siblingIdsFromAnchor(anchor) };
 }

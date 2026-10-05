@@ -81,6 +81,36 @@ export async function seedItem(request: APIRequestContext, data: Record<string, 
   return res.json();
 }
 
+// Projects from `[name, parent name | null]` pairs, in sibling order, a parent
+// before its children, with every status asserted. Returns each project's id
+// by name.
+export async function seedProjects(
+  request: APIRequestContext,
+  tree: ReadonlyArray<readonly [name: string, parent: string | null]>,
+): Promise<Record<string, string>> {
+  const ids: Record<string, string> = {};
+  for (const [name, parent] of tree) {
+    const data = { name, parentId: parent === null ? undefined : ids[parent] };
+    const res = await request.post(`${API}/projects`, { data });
+    expect(res.ok(), `POST /projects ${JSON.stringify(data)} → ${res.status()}`).toBe(true);
+    ids[name] = (await res.json()).id;
+  }
+  return ids;
+}
+
+export interface ProjectRow {
+  id: string;
+  parentId: string | null;
+  position: number | null;
+  updatedAt: number;
+}
+
+export async function fetchProject(request: APIRequestContext, id: string): Promise<ProjectRow> {
+  const res = await request.get(`${API}/projects/${id}`);
+  expect(res.ok(), `GET /projects/${id} → ${res.status()}`).toBe(true);
+  return res.json();
+}
+
 export interface PositionedItemPlan<K extends string> {
   key: K;
   projectId: string;

@@ -29,6 +29,21 @@ export class ProjectSidebarPage {
     return this.locator.getByText(name);
   }
 
+  // The grab handle on a project's row. Resolve it before the drag starts:
+  // the carried copy repeats the project's name.
+  dragHandle(name: string) {
+    return this.row(name).getByLabel('Drag to reorder');
+  }
+
+  get dragHandles() {
+    return this.locator.getByLabel('Drag to reorder');
+  }
+
+  // The line a drag draws at its gap, on the side of one row.
+  get dropLine() {
+    return this.locator.locator('[data-drop-line]');
+  }
+
   async select(name: string) {
     await this.locator.getByText(name, { exact: true }).click();
   }

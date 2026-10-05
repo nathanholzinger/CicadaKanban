@@ -149,7 +149,7 @@ describe('completeItemWrite', () => {
     expect(next.inversions).toEqual([{ itemId: 'X', expected: ['A', 'X', 'C', 'E'], actual: ['A', 'C', 'E', 'X'] }]);
   });
 
-  it('TC-5a.6: a write the board never previewed (a Sheet edit, an inline create) is folded in with no tripwire, even when the id has an unrelated placement', () => {
+  it('DRAG-6.14: a write the board never previewed (a Sheet edit, an inline create) is folded in with no tripwire, even when the id has an unrelated placement', () => {
     const next = completeItemWrite(pending(), item('X', { position: 1.9 }));
     expect(next.inversions).toEqual([]);
     expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);

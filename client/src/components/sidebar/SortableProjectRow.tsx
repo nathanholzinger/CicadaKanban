@@ -67,6 +67,8 @@ export function SortableProjectRow({
     return 'cursor-pointer text-zinc-300 hover:text-zinc-100';
   }
 
+  // The dragged project's descendants stay drawn, dimmed, and none of them is
+  // a place to drop (wiki project-tree §2).
   function rowOpacityClass(): string {
     if (isActive) return 'opacity-40';
     if (isDescendantOfActive) return 'opacity-40 pointer-events-none';
@@ -91,9 +93,11 @@ export function SortableProjectRow({
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      {/* Drop indicator line */}
+      {/* Drop indicator line. `data-drop-line` is a test surface: the side of
+          this row the line is drawn on. */}
       {indicatorSide && (
         <div
+          data-drop-line={indicatorSide}
           className={`${DROP_INDICATOR_LINE} ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
           style={{ marginLeft: projectRowIndentPx(indicatorDepth) }}
         />
@@ -189,9 +193,14 @@ export function SortableProjectRow({
   );
 }
 
+// The carried copy. `data-drag-overlay` is the E2E helper's "drag finished"
+// wait: the copy outlives the drag by dnd-kit's drop animation.
 export function DragGhost({ name }: { name: string }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl">
+    <div
+      data-drag-overlay="true"
+      className="flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl"
+    >
       <span className="max-w-[160px] truncate text-sm text-zinc-100">{name}</span>
     </div>
   );

@@ -1,6 +1,6 @@
-// The Descendants-layer placement rule, gap and depth
-// (wiki board-drag-interaction §7.1) — shared by the board's Card sections
-// and the project sidebar. Pure, table-generic: never imports Item or
+// The placement rule, gap and depth (wiki hierarchy-placement §1) — shared
+// by the board's Card sections (the Descendants layer) and the project
+// sidebar. Pure, table-generic: never imports Item or
 // Project, only `{ id, parentId, depth }` rows and a `childrenOf` callback,
 // the same posture as the server's positionResolver. Lives beside
 // `hierarchy.ts` (the one shared tree-math layer) but is its own module —
@@ -65,7 +65,7 @@ export function flattenHierarchyOf<T extends { id: string }>(
 
 // Plain rows, minus `exclude` and everything beneath it — the dragged item
 // carries its whole subtree, so none of it is ever a Top or Bottom
-// candidate (wiki board-drag-interaction §7.2). The walk puts a parent
+// candidate (wiki hierarchy-placement §4). The walk puts a parent
 // before its children, so a row is dropped exactly when it's excluded or
 // its parent was. Whether `exclude` is really the active item's own subtree
 // is the caller's call.
@@ -104,8 +104,10 @@ export function gapIndexFor(rows: readonly Row[], overId: string, side: DropSide
 }
 
 // Where a row already sits, as a gap and a depth: what a drag of that row
-// starts from, so a release before any movement resolves to its own slot.
-// `rows` is the section *with* the dragged subtree.
+// starts from, so a release before any movement resolves to its own slot,
+// and a release at that gap and depth writes nothing
+// (wiki hierarchy-placement §5). `rows` is the section *with* the dragged
+// subtree.
 // That subtree is one contiguous block starting at `id` (a DFS), so every
 // row above `id` survives the exclusion, and `id`'s index here is its gap
 // among the rows that remain. Null when `id` isn't a row.

@@ -191,13 +191,16 @@ The starting list. The Coder keeps it current.
 
 | File | Batch | Change |
 |---|---|---|
-| `client/src/components/sidebar/useProjectDragReorder.ts` | 3 | The set-down fix (D1), and its header's pointer (D4) |
-| `client/src/components/sidebar/projectTreeUtils.ts` | 3 | `fullChildrenOf`'s pointer (D4) |
-| `client/src/lib/hierarchyPlacement.ts` | 3 | Its header's pointer, if the shared rule moves (D4) |
-| `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts` | 3 | The sidebar cases' IDs, as Nathan approves each mapping, and the set-down's test (D1) |
-| `tests/ui/` | 3 | A sidebar drag spec (D1) |
-| `client/src/components/BoardToolbar.tsx`, `BoardView.tsx` | 3 | The "New child items go to" control, its state and its localStorage key go (D6) |
-| `client/src/components/workflow/CLAUDE.md` | 3 | Its opening paragraph names the `hierarchy-placement` page beside board-drag-interaction and item-attachment. The Descendants bullet cites `wiki hierarchy-placement §1` for the gap + depth rule, as board-drag-interaction §7.1 applies it. Its §7.2 pointer for the over-cap state stays (D4) |
+| `client/src/components/sidebar/useProjectDragReorder.ts` | 3 | Done: `handleDragEnd` writes only what `projectTreeUtils.ts::releaseOf` returns, so a set-down in the project's own slot sends nothing (D1), and `handleDragMove` reads the project's own row as the gap its block collapses to (the PO's own-row ruling). Its header cites `wiki hierarchy-placement §1` and `wiki project-tree §1`, and the `expand` call `wiki project-tree §2` (D4) |
+| `client/src/components/sidebar/projectTreeUtils.ts` | 3 | Done: new `releaseOf`, the set-down, which compares the projection's gap and depth with `hierarchyPlacement.ts::ownSlotOf` over the render list. `fullChildrenOf` and `resolveGap` cite `wiki project-tree §1` (D4) |
+| `client/src/lib/hierarchyPlacement.ts` | 3 | Done: its header cites `wiki hierarchy-placement §1`, `toRows` §4 and `ownSlotOf` §5 (D4) |
+| `client/src/components/sidebar/SortableProjectRow.tsx` | 3 | Done: test surfaces `data-drop-line` (the side of its row the line is drawn on) and `data-drag-overlay` (the carried copy); `rowOpacityClass` cites `wiki project-tree §2` |
+| `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts` | 3 | Done, for Nathan's approval: the four internal tests A3's run lists carry TREE-1.3, 1.4 and 1.5 (D1) |
+| `client/src/components/sidebar/useProjectDragReorder.test.ts` | 3 | New: TREE-1.2 to 1.6, 1.8 and 1.9, through the hook, asserting the `onReorderProject` call (D1) |
+| `tests/ui/project-tree-drag.spec.ts`, `tests/pages/ProjectSidebarPage.ts`, `tests/helpers/seed.ts` | 3 | New spec: TREE-1.1, 1.7, 1.8, 1.9, 2.1 and 2.2 (D1). The page object gains the handle and line locators, and `seed.ts` gains `seedProjects` and `fetchProject` |
+| `client/src/components/workflow/itemWriteReconciliation.test.ts` | 3 | Done: TC-5a.6's test is DRAG-6.14, after the Test Planner moved the case |
+| `client/src/components/BoardToolbar.tsx`, `BoardView.tsx` | 3 | Done: the "New child items go to" control, its state, the Backlog default that seeded it and its `kanban_child_col_*` key are gone (D6) |
+| `client/src/components/workflow/CLAUDE.md` | 3 | Done: its opening paragraph names the `hierarchy-placement` page beside board-drag-interaction and item-attachment. The Descendants bullet cites `wiki hierarchy-placement §1` for the gap + depth rule, as board-drag-interaction §7.1 applies it. Its §3.2, §7.2 pointer for the over-cap state stays (D4) |
 | Root `CLAUDE.md` | 2 | Done: "One position math layer" cites `wiki hierarchy-placement §1`, and the repo layout lists the new pages (Architect) |
 | `docs/planning/mvp-roadmap.md` | 2 | The Work Item Detail & Chat UI epic's entry names any case routed to it (Architect) |
 
@@ -261,6 +264,22 @@ The starting list. The Coder keeps it current.
     | DRAG-4.31 | TREE-1.5 |
     | ATT-4.12 | deleted |
     | ATT-4.13 | deleted |
+    | TC-5a.6 | DRAG-6.14 (batch 3, beside its test's re-title) |
+- **From the Coder, batch 3 (2026-10-05):**
+  - **For the PO:**
+    - **At Close, the set-down's `**Planned:**` comes off project-tree §1.** The build is in.
+    - **Behavior decision, for a ruling: the cursor comes back to the dragged project's own row** (not a row of its subtree). The sidebar keeps the last line, where the cursor was before, and a release saves it. Before the cursor has left, there's no line, and a release writes nothing. project-tree §1 rules only on resting on the subtree's rows. On the board the ghost goes back to its own slot. If the sidebar should too, it's a small change to `useProjectDragReorder.ts::handleDragMove`, and TREE-1.8 would then hold for a return to the own row as well.
+    - **Behavior decision: with no eligible row, no line is drawn** (TREE-1.4's tree: the dragged project's subtree holds every project). There's no row to draw it against. The release writes nothing, since that one depth is the own slot. project-tree §1 says nothing of the line there.
+  - **For the Test Planner:**
+    - **TREE-1.8 to `Open` at Close,** with the PO's marker.
+    - **TC-5a.6 to DRAG-6.14.** Its test (`itemWriteReconciliation.test.ts`, "TC-5a.6: a write the board never previewed…") still carries the old ID. It becomes DRAG-6.14 in the same commit as the catalog move, since the checker rejects a title whose case isn't there. I held the re-title for that reason.
+    - **The tests that carry sidebar IDs,** for the Reconciler's Automation lines:
+      - `tests/ui/project-tree-drag.spec.ts`: TREE-1.1, 1.7, 1.8, 1.9, 2.1, 2.2;
+      - `client/src/components/sidebar/useProjectDragReorder.test.ts`: TREE-1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9;
+      - `client/src/lib/hierarchyPlacement.test.ts`: TREE-1.3, 1.4, 1.5;
+      - `client/src/components/sidebar/projectTreeUtils.test.ts`: TREE-1.5.
+  - **For the Reconciler, with Nathan's approval:** the internal mappings are the three unit-test files above, since they call a client hook and modules directly. The E2E spec needs no approval. The four existing tests, in `hierarchyPlacement.test.ts` and `projectTreeUtils.test.ts`, are A3's list. The hook's tests are new, and assert the exact `onReorderProject` call a gesture makes.
+  - **To A5d:** `App.tsx::handleReorderProject` merges only the moved project into the sidebar's state, and `positionResolver.ts` says project moves don't disclose a reindex. If a move ever triggers one, the renumbered siblings keep their old positions on the client until the next fetch. Found by reading; no test ran it. Item writes disclose and fold in (root `CLAUDE.md`'s "Reindex disclosure"), and Nathan wants project and item operations to match.
 - **To the Work Item Detail & Chat UI epic:** the Sheet's page and its Open questions, and any case routed there, named in its roadmap entry (batch 2).
 - **To A5d:** the project tree's page, which this story creates.
 
@@ -276,6 +295,7 @@ For Nathan, at plan approval. All four are answered. Question 5 came later.
 4. **D1:** the sidebar's cases get their tests here, not in Story 10.
    - **Answered (Nathan, 2026-10-05):** yes.
 5. **For the PO, before close** (from A5a, folded in at batch 2): ATT-9.10. Item-attachment §2a gives an item leaving attachment the workphase it was shown in, or refuses the write when there's none, and lists three writes it applies to: a detach, a reparent to root and a create. §11 calls a detach that lands under a different parent a reparent, not a detach. Does the rule apply to a reparent that leaves an Attached item Free under a new parent? A5a's batch 2b applies it, and §2a's first sentence reads as though it does. If it does, the list names a fourth write.
+   - **Answered (PO, 2026-10-05), a deduction:** yes. §2a's rule is "a write that leaves an item Free without naming a workphase gives it the one it was shown in", and a detach that also reparents is such a write. The list now names it as a fourth write: the item takes the workphase it was shown in before the write, under its old parent, which is what A5a's batch 2b built. ATT-9.10 can leave `Pending PO`.
 
 ## Amendments
 
@@ -396,3 +416,56 @@ For Nathan, at plan approval. All four are answered. Question 5 came later.
     - **`Pending PO`:** ATT-9.10.
   - **For the Architect:** Story 10's item-positioning line in `epic-3-5-roadmap.md` routes TC-2.32, 6.10 and 7.18 to A5a. They're this story's now.
   - **Checks:** `check:docs` reports 0 hits on 264 files, and the catalog agrees with itself. It's 271 cases: 160 `Automated`, 102 `Open`, 2 `Planned` (ATT-1.10 and TREE-1.8), 4 `Manual` and 3 `Pending PO` (ATT-5.11 and TC-6.13 in Epic 4, and ATT-9.10 here).
+- **2026-10-05, batch 3 (the Coder): the code.**
+  - **Built:**
+    - **The set-down (D1).** A project released in its own gap, at its own depth, sends no request. `projectTreeUtils.ts::releaseOf` compares the projection's gap and depth with `hierarchyPlacement.ts::ownSlotOf` over the render list, as the board does for a Stub, and `handleDragEnd` writes only what it returns. It doesn't open the parent either, since nothing moved. A release before the pointer left the project's own row already wrote nothing.
+    - **D6.** The "New child items go to" control is gone, with its state in `BoardView.tsx`, the Backlog default that seeded it and its `kanban_child_col_*` key. `BoardToolbar` loses three props. Old keys stay in a browser's localStorage, unread.
+    - **D4's pointers,** by batch 2's map:
+      - `useProjectDragReorder.ts`'s header cites hierarchy-placement §1 and project-tree §1, and `fullChildrenOf` project-tree §1;
+      - `hierarchyPlacement.ts`'s header cites hierarchy-placement §1, and `toRows` §4;
+      - `workflow/CLAUDE.md` names hierarchy-placement in its opening paragraph and cites it from the Descendants bullet.
+    - **Index pointers** at the sidebar's own enforcement sites: `releaseOf` project-tree §1, the hook's `expand` call §2, `SortableProjectRow.rowOpacityClass` §2 (the dimming), `resolveGap` §1 (resting on the subtree), and the library's `ownSlotOf` hierarchy-placement §5.
+    - **Two test surfaces,** after the board's `data-drag-overlay`: `data-drop-line` on the line, and `data-drag-overlay` on the carried copy, which makes `release()`'s "drag finished" wait real for the sidebar.
+  - **The Coder's calls:**
+    - **The board's pointers stay at board-drag-interaction §7, §7.1 and §7.2.** Each states the board's own application: the gap as the ghost's neighbors, the cap per tab state, the set-down at `descendantsReleasePlacement`. The map says the set-down's index pointer goes at the site that mainly enforces it. I read that as one pointer per surface, so the board's stays at §7.1 and the sidebar's is project-tree §1.
+    - **Five E2E tests, where the plan said one.** TREE-1.1 is the line and its save. TREE-1.7 needs the cap the API reports, which a unit test can't read. TREE-1.8 needs to see no request and an unchanged `updatedAt`. TREE-2.1 and 2.2 are what the drag shows. The placement cases, TREE-1.2 to 1.6, are unit tests through the hook. Any E2E test can drop to a unit test if Nathan prefers fewer.
+    - **TREE-1.4's tree draws no line,** since no row is left to draw it against, and its release writes nothing. **A return to the dragged project's own row keeps the last line.** Neither is in the wiki; both are in the handoff for the PO.
+  - **The test-file check (D3)** found nothing to move. The tests for each moved case sit beside their module: DRAG-4.8 to 4.11 and 4.18 in `hierarchyPlacement.test.ts`, 4.29 and 4.30 in `descendantsProjection.test.ts`, 5.9 in `drag-5-stub-detach.spec.ts` and `placement.test.ts`, and TC-5a.6's in `itemWriteReconciliation.test.ts`. No test carries DRAG-4.26, 4.28, 4.31, 4.33 or ATT-4.12, 4.13.
+  - **Tests:**
+    - **Unit, through the hook** (`useProjectDragReorder.test.ts`, 22 tests): TREE-1.2 (the depths of the A1a/B gap, each placement, the one-depth gap under A1), 1.3 (above the first row, below a nested last row, clamping, the floor), 1.4, 1.5, 1.6 (including that no depth makes the project a child of its own subtree) and 1.8 (the cursor leaving and returning, a release before leaving, a nested own gap from either neighbor, a project with children, and a write at another depth or in another gap).
+    - **E2E** (`project-tree-drag.spec.ts`, 6 tests): TREE-1.1, 1.7, 1.8, 2.1 and 2.2 (both ways).
+    - **The four internal mappings, proposed for Nathan's approval:** in `hierarchyPlacement.test.ts`, "a null root…" is TREE-1.3, "an empty hierarchy under a null root…" is TREE-1.4, and the collapsed-Top describe is TREE-1.5; in `projectTreeUtils.test.ts`, the `fullChildrenOf` describe is TREE-1.5.
+  - **Held: TC-5a.6's test to DRAG-6.14.** The catalog still has the case as TC-5a.6, and the checker rejects a title whose case isn't there. The test changes in the commit that moves the case.
+  - **Checks:** `npm run check` passes: 351 server tests, 422 client (22 new), 75 scripts, 0 checker hits on 266 files. The full E2E suite: 151 passed, 8 skipped. The new spec passed three runs in a row. To confirm the tests bite, I disabled the own-slot check and the `expand` call: TREE-1.8 and TREE-2.2 failed in the browser (the old code sent a `PATCH /projects/:id/move`), and three hook tests failed. Both lines are back.
+- **2026-10-05, Nathan's answers at batch 3's stop.**
+  - **The four internal mappings are approved:** `hierarchyPlacement.test.ts`'s null-root test (TREE-1.3), its empty-hierarchy test (TREE-1.4) and its collapsed-Top describe (TREE-1.5), and `projectTreeUtils.test.ts`'s `fullChildrenOf` describe (TREE-1.5).
+  - **The hook's tests (`useProjectDragReorder.test.ts`) weren't named in the answer,** so the Reconciler proposes them for approval.
+  - **The TC-5a.6 re-title stays held,** until the Test Planner has moved the case to DRAG-6.14.
+  - **Nathan hands the Coder's notes to the Test Planner and the PO** (the Handoff's "From the Coder, batch 3").
+- **2026-10-05, batch 3 (the Test Planner): TC-5a.6 is DRAG-6.14.**
+  - The case moved with its rule, from item-positioning §5a to board-drag-interaction §10. Its text is unchanged, except that "its own panel" is now "its Sheet", the wiki's name for it, and it points to DRAG-6.4 for the previewed write.
+  - **It's `Open` until the Reconciler's run.** A new ID's status is the Test Planner's to set, and `Automated` is the Reconciler's. Its test, `itemWriteReconciliation.test.ts`'s, was TC-5a.6's approved internal pointer, and it's a response-reconciliation rule whose only surface is a drag, which the second approved category covers.
+  - **The Coder re-titles the test in the same commit.** Until then, `check:docs` reports the test's old ID.
+  - **Still to come from the Test Planner at Close:** TREE-1.8 to `Open` with the PO's marker, and any case the PO's rulings on the Coder's two behavior decisions need.
+- **2026-10-05, at close (the PO).**
+  - **project-tree §1's set-down is unmarked:** batch 3 built it.
+  - **Open question 5 (ATT-9.10), a deduction:** item-attachment §2a's list of the writes that leave an item Free names a fourth: a detach that also reparents. It takes the workphase it was shown in before the write. The rule's own wording already covered it, and A5a's batch 2b built it.
+  - **The Coder's two behavior decisions go to Nathan:** a return to the dragged project's own row, and the line in an empty hierarchy.
+  - **Nathan's rulings on the two, as the PO recommended:**
+    - **The dragged project's own row means its own gap,** as the rows of its subtree do. Hierarchy-placement §4 takes the entry and its descendants out of the candidates, so the own row is part of the block that collapses. When the pointer comes back to the row, the line moves to the project's own gap, and a release at its own depth writes nothing, as on the board. project-tree §1 gains a **Planned** bullet for it. The Coder's fix is in `useProjectDragReorder.ts::handleDragMove`, and TREE-1.8 covers the return. At close, the PO merges the bullet into the one before it ("a row of the dragged project or its subtree").
+    - **An empty hierarchy draws no line:** the one state is where the project already is, and a release writes nothing. project-tree §1's empty-hierarchy bullet says so. It's today's behavior, so TREE-1.4 gains it as an assertion, with nothing to build.
+- **2026-10-05, at close (the Test Planner): the PO's handoff applied.**
+  - **TREE-1.8 is `Open`,** since project-tree §1's set-down is unmarked. Its *when* now says the line comes back to the project's own gap, so it doesn't overlap TREE-1.9.
+  - **The return to the project's own row is a new case, TREE-1.9, `Planned`.** The PO's note puts it in TREE-1.8, but project-tree §1 marks that bullet `**Planned:**` until the Coder's `handleDragMove` fix lands, and a case has one status (test-plans README). So TREE-1.8 is the set-down, which is built, and TREE-1.9 is the return. TREE-1.9 goes to `Open` when the PO merges the bullet, and its test carries TREE-1.9.
+  - **TREE-1.4** gains its assertion: no line is drawn, and a release sends no request. Its title says so. It's today's behavior, so it stays `Open`.
+  - **ATT-9.10 is `Open`,** from the PO's deduction: item-attachment §2a's fourth write. It's a detached child of the new parent, in the workphase it was shown in before the write. Since §2a's refusal holds for every write in the list, the case also asserts the refusal when the old Card has no workphase. A5a's batch 2b built both, and the Reconciler judges whether a test asserts all of it.
+  - **TC-5a.6 → DRAG-6.14** was moved at batch 3 (the entry above). The Coder's re-title goes with it.
+  - **The cases this story carries now:** the project tree's TREE-1.1 to 1.8, 2.1 and 2.2 `Open`, and TREE-1.9 `Planned`; A5a's, as listed at batch 2, with ATT-9.10 `Open`; and DRAG-6.14 `Open`. None is `Pending PO`.
+- **2026-10-05, at close (the Coder): the own-row fix, and TC-5a.6's re-title.**
+  - **The own row is the block's gap.** `useProjectDragReorder.ts::handleDragMove` no longer returns early when dnd-kit reports the dragged project's own row as `over`. `exclude` already holds that row, so `resolveGap` reads it as a row of the dragged block, the same as a row of its subtree, and the line moves to the project's own gap. A release there at the own depth writes nothing (`releaseOf`).
+  - **A consequence, for the PO.** The own row now projects like any other row, so a sideways offset picks a depth there. A project picked up and dragged 7px or more sideways, still over its own row, shows the line indented a level, and a release saves that (for example, X below B becomes B's first child). It's the gap's range, and the line shows it. Before the cursor leaves, a pointer that stays within about 7px sideways still resolves to the own depth.
+  - **Tests, by the Test Planner's split.** TREE-1.9 is the return to the own row; TREE-1.8 keeps the set-down and the release before leaving.
+    - Hook: TREE-1.9 has two tests (the return to either half of the row, and an offset on the own row picking that gap's depths). TREE-1.4 gains "draws no line", and its subtree loop includes the own row. The own row is also in TREE-1.6's no-child sweep.
+    - E2E: TREE-1.9 is its own test. TREE-1.8's "released before leaving" now rests the pointer back at the start, because `pickUp` drifts 10px sideways, and on the own row that picks a depth.
+  - **TC-5a.6's test is DRAG-6.14,** in `itemWriteReconciliation.test.ts`. Nothing in code, tests or comments cites TC-5a.6 any more.
+  - **Checks:** `npm run check` passes: 351 server tests, 426 client, 75 scripts, 0 checker hits on 266 files. The full E2E suite: 152 passed, 8 skipped, and the sidebar spec passed three runs in a row. An earlier full run had one failure, DRAG-3.17 in `drag-column-bands.spec.ts`, a board spec that passes alone and in the clean run. I edited a client test file while that run was going, which restarts the dev server mid-test. To confirm the own-row tests bite, I put the early return back: six hook tests and the E2E's own-row step failed (before the split into TREE-1.8 and TREE-1.9).

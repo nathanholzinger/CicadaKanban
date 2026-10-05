@@ -1,8 +1,10 @@
 // The project sidebar's drag reorder — the same placement rule as a board
-// Card's Descendants layer (`lib/hierarchyPlacement.ts`): the rows a gap is
-// computed against, the live projection, the drop line drawn at the gap
-// (wiki board-drag-interaction §7.1), and on release the reorder, sent as
-// the sibling to insert beside (prevId/nextId), never a computed position.
+// Card's Descendants layer (`lib/hierarchyPlacement.ts`,
+// wiki hierarchy-placement §1): the rows a gap is computed against, the live
+// projection, the drop line drawn at the gap (wiki project-tree §1), and on
+// release the reorder, sent as the sibling to insert beside (prevId/nextId),
+// never a computed position. A set-down in the project's own slot sends
+// nothing (`projectTreeUtils.ts::releaseOf`).
 
 import { useMemo, useState } from 'react';
 import {
@@ -20,8 +22,8 @@ import {
   eligibleRows,
   fullChildrenOf,
   getDescendantIds,
+  releaseOf,
   resolveGap,
-  siblingIdsFromAnchor,
   INDENT_WIDTH,
   type FlatItem,
 } from './projectTreeUtils';
@@ -82,22 +84,18 @@ export function useProjectDragReorder(
       return;
     }
 
-    const overId = String(over.id);
-
-    // dnd-kit can report the active row itself as `over` while the pointer
-    // rests on it — keep the last known projection rather than resolve a
-    // fresh (and meaningless) one for that sample.
-    if (overId === activeId) return;
-
+    // dnd-kit reports the active row itself as `over` while the pointer rests
+    // on it. `exclude` holds it, so `resolveGap` reads it as a row of the
+    // dragged block: the project's own gap (wiki project-tree §1).
     const side = resolveDropSide(active.rect.current.translated, over.rect);
-    const g = resolveGap(flatItems, rows, exclude, overId, side);
+    const g = resolveGap(flatItems, rows, exclude, String(over.id), side);
     const proj = computeProjection(rows, g, activeItem.depth, delta.x, INDENT_WIDTH, null, childrenOf, exclude);
     setProjected(proj);
     setGap(g);
   }
 
   function handleDragEnd({ over }: DragEndEvent) {
-    if (!over || !activeItem || !projected) {
+    if (!over || !activeItem || !projected || gap === null) {
       clearDrag();
       return;
     }
@@ -106,11 +104,12 @@ export function useProjectDragReorder(
     // computed position (server always resolves it against true current
     // data). `resolvePlacement`'s one relation maps straight to prevId/
     // nextId; the other is always null, and the server re-derives it.
-    const { prevId, nextId } = siblingIdsFromAnchor(projected.placement.anchor);
-    const parentId = projected.placement.parentId;
-    if (parentId) expand(parentId);
-
-    onReorderProject(activeItem.id, parentId, prevId, nextId);
+    const release = releaseOf(flatItems, activeItem.id, gap, projected);
+    if (release) {
+      // A project dropped into a collapsed parent opens it (wiki project-tree §2).
+      if (release.parentId) expand(release.parentId);
+      onReorderProject(activeItem.id, release.parentId, release.prevId, release.nextId);
+    }
     clearDrag();
   }
 

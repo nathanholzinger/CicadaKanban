@@ -145,7 +145,7 @@ describe('resolveGap', () => {
   });
 });
 
-describe('fullChildrenOf — a collapsed Top', () => {
+describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
   it('returns a project’s real children regardless of collapse state', () => {
     const root = project({ id: 'root' });
     const child = project({ id: 'child', parentId: 'root' });

@@ -86,8 +86,11 @@ the board. That's the workphase of its nearest Free ancestor:
 - not the item's own `workphaseId`, which differs only after a direct
   database edit.
 
-It applies to three writes:
+It applies to four writes:
 - a detach (§11);
+- a detach that also reparents, which §11 counts as a reparent: the item
+  takes the workphase it was shown in before the write, under its old
+  parent;
 - a reparent to root of an Attached item (§11);
 - a create under a parent with the flag clear (§14), which takes the
   workphase its parent is shown in.

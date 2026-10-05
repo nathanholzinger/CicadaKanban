@@ -10,7 +10,6 @@ These hold for any client that keeps a locally ordered list. What the board adds
 | TC-5a.2 | Applying the reindex pairs before comparing records no false inversion | P0 | Automated |
 | TC-5a.4 | Disclosed ids the client doesn't hold are ignored, not fetched | P1 | Automated |
 | TC-5a.5 | Every client sort breaks ties the same way: position, a missing one as `0`, then creation time | P1 | Automated |
-| TC-5a.6 | The board records no inversion for a write it didn't preview | P2 | Automated |
 
 ---
 
@@ -45,11 +44,3 @@ These hold for any client that keeps a locally ordered list. What the board adds
 *Given* any list the client sorts by position, including the order it reads first and last from ([TC-7.3](part-7-board-placement-intents.md)), *when* two items have the same `position`, *then* the one created earlier sorts first. *And when* one item has no `position`, *then* it sorts as though its position were `0`. A client that sorts ties any other way disagrees with the server ([TC-5.6](part-5-reindex.md)).
 
 **Automation test:** `client/src/components/workflow/itemListOps.test.ts`
-
-## TC-5a.6 — The board records no inversion for a write it didn't preview
-
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
-
-*Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its own panel, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order.
-
-**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`

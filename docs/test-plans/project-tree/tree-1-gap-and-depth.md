@@ -1,6 +1,6 @@
 # TREE-1 — Dragging a project places it by gap and depth
 
-**Next ID:** TREE-1.9
+**Next ID:** TREE-1.10
 
 **The tree,** for the cases that name it: top-level projects `A`, `B` and `X`, in that order, where `A` has a child `A1`, and `A1` has a child `A1a`. `X` is the project being dragged. Depths count from the top level, at 0:
 
@@ -17,11 +17,12 @@ X        (0)
 | TREE-1.1 | An indicator line shows the gap, and a release saves exactly what the line shows | P1 | Open |
 | TREE-1.2 | A gap offers the depths from Bottom's to Top's + 1, and each places the project differently | P0 | Open |
 | TREE-1.3 | The boundaries: above the first row, below a nested last row, clamping, and the top level as the floor | P1 | Open |
-| TREE-1.4 | When the dragged project's subtree holds every project, one depth is offered, the top level | P2 | Open |
+| TREE-1.4 | When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn | P2 | Open |
 | TREE-1.5 | A collapsed project hides its subtree from view, not from placement | P1 | Open |
 | TREE-1.6 | Resting on a row of the dragged project's own subtree means its own gap | P1 | Open |
 | TREE-1.7 | Every depth offered is valid: projects have no depth cap | P2 | Open |
-| TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Planned |
+| TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Open |
+| TREE-1.9 | Coming back to the dragged project's own row means its own gap | P1 | Planned |
 
 ---
 
@@ -61,11 +62,11 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 **Automation test:** —
 
-## TREE-1.4 — When the dragged project's subtree holds every project, one depth is offered, the top level
+## TREE-1.4 — When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §2
 
-*Given* a sidebar whose only top-level project is `X`, with children `X1` and `X2`, so `X`'s subtree holds every project, *when* `X` is dragged, *then* no row is ever Top or Bottom, and wherever the cursor goes, exactly one depth is offered: the top level.
+*Given* a sidebar whose only top-level project is `X`, with children `X1` and `X2`, so `X`'s subtree holds every project, *when* `X` is dragged, *then* no row is ever Top or Bottom, and wherever the cursor goes, exactly one depth is offered: the top level, where `X` already is. No line is drawn, and a release sends no request.
 
 **Automation test:** —
 
@@ -98,8 +99,16 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 ## TREE-1.8 — A project set back down in its own gap, at its own depth, writes nothing
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §1, wiki hierarchy-placement §5
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §5
 
-*Given* the tree, *when* `X` is picked up, the cursor leaves `X`'s row and comes back, and `X` is released in its own gap, below `B`, at the top level, *then* no request is sent, and `X`'s parent, position and `updatedAt` are unchanged. *When* `X` is released before the cursor has left its row, *then* the same holds.
+*Given* the tree, *when* `X` is picked up, dragged until the line shows another gap, and released with the line back in its own gap, below `B`, at the top level, *then* no request is sent, and `X`'s parent, position and `updatedAt` are unchanged. *When* `X` is released before the cursor has left its row, *then* the same holds. Coming back to `X`'s own row is [TREE-1.9](tree-1-gap-and-depth.md)'s.
+
+**Automation test:** —
+
+## TREE-1.9 — Coming back to the dragged project's own row means its own gap
+
+**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §1, wiki hierarchy-placement §4, wiki hierarchy-placement §5
+
+*Given* the tree, *when* `X` is dragged until the line shows another gap, between `A1a` and `B`, and the cursor then comes back to `X`'s own row, *then* the line moves to `X`'s own gap, below `B`. *When* `X` is released there at the top level, its own depth, *then* no request is sent, as in [TREE-1.8](tree-1-gap-and-depth.md). A row of `X`'s subtree means the same gap ([TREE-1.6](tree-1-gap-and-depth.md)).
 
 **Automation test:** —

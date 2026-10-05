@@ -38,15 +38,20 @@ against the whole project tree. What the sidebar adds:
   or Bottom ([`../hierarchy-placement/`](../hierarchy-placement/) §4), so
   the line goes where the subtree was. On the board the same space is the
   ghost's own slot, since a Stub's subtree travels with the carried copy.
+- **Planned:** the dragged project's own row means the same, when the
+  pointer comes back to it: the line moves to the project's own gap, and
+  a release at its own depth writes nothing
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §4, §5).
 - **An empty hierarchy arises when the dragged project's subtree holds
   every project**, since that subtree is never a candidate: for example, a
   sidebar with one top-level project. It offers one state, at the top
-  level ([`../hierarchy-placement/`](../hierarchy-placement/) §2).
+  level ([`../hierarchy-placement/`](../hierarchy-placement/) §2). No line
+  is drawn, since the one state is where the project already is, and a
+  release writes nothing.
 - **Every tab state in the range is valid.** Projects have no depth cap,
   unlike items ([`../item-attachment/`](../item-attachment/) §8).
-- **Planned:** a project set back down in its own gap, at its own depth,
-  writes nothing ([`../hierarchy-placement/`](../hierarchy-placement/)
-  §5).
+- **A project set back down in its own gap, at its own depth, writes
+  nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
 
 ## 2. What the drag shows
 
