@@ -163,12 +163,15 @@ describe('TREE-1.4: when the dragged project’s subtree holds every project, on
     }
   });
 
-  it('draws no line, since no row is left to draw it against', () => {
-    const drag = sidebarDrag(tree(['X', null], ['X1', 'X'], ['X2', 'X']));
-    drag.pickUp('X');
+  it('draws no line, since no row is left to draw it against, and a release sends nothing', () => {
     for (const over of ['X', 'X1', 'X2']) {
+      const drag = sidebarDrag(tree(['X', null], ['X1', 'X'], ['X2', 'X']));
+      drag.pickUp('X');
       drag.hover(over, 'after', 0);
       expect(drag.hook.dropLine).toBeNull();
+      drag.release();
+      expect(drag.onReorderProject).not.toHaveBeenCalled();
+      expect(drag.expand).not.toHaveBeenCalled();
     }
   });
 });
@@ -311,12 +314,14 @@ describe('TREE-1.9: coming back to the dragged project’s own row means its own
     },
   );
 
-  it('resting on X’s own row, an offset still picks a depth of that gap: tabbed right, X is B’s first child', () => {
+  it('TREE-1.10: resting on X’s own row, an offset still picks a depth of that gap: tabbed right, X is B’s first child', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
     drag.hover('X', 'after', 0);
     expect(drag.hook.projectedDepth).toBe(0);
     drag.hover('X', 'after', 1);
+    // Still X's own gap, below B, one level in.
+    expect(drag.hook.dropLine).toEqual({ anchorId: 'B', side: 'after' });
     expect(drag.hook.projectedDepth).toBe(1);
     drag.hover('X', 'after', 6);
     expect(drag.hook.projectedDepth).toBe(1);

@@ -34,7 +34,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.29 | The preview holds when the anchor's own position is still in flight | P1 | Automated |
 | TC-2.30 | A pending item is never represented as `position: null` | P0 | Automated |
 | TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
-| TC-2.32 | A write can't name a final position | P1 | Open |
+| TC-2.32 | A write can't name a final position | P1 | Automated |
 | TC-2.33 | A Free item's true neighbor, or its anchor, can be in another project on the same workflow | P1 | Automated |
 
 ---
@@ -265,11 +265,11 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 ## TC-2.32 — A write can't name a final position
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki item-positioning §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
 
 *Given* Free items `X` at `2.0` and `A` at `4.0` in one workflow, *when* a move names `position: 3.0` for `X`, alone or with `{anchorId: A, side: after}`, *then* it's refused with a 400 whose message says to name an anchor and side instead, and `X.position` is still `2.0`. *And when* a request asks to set several items' positions outright, *then* no endpoint takes it: it gets a 404, and no position changes.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.test.ts`
 
 ## TC-2.33 — A Free item's true neighbor, or its anchor, can be in another project on the same workflow
 

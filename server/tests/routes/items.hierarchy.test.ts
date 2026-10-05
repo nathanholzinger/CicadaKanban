@@ -159,19 +159,29 @@ describe('PATCH /items/:id/move — request validation', () => {
     expect(accepted.body.parentId).toBe(deepEnough);
   });
 
-  it('ATT-1.8: rejects isAttached: true with no resulting parent', async () => {
+  it('ATT-1.8: a move or an edit that would leave the flag on a parentless item is refused', async () => {
     const { project, todo } = await setupWorkflow();
-    const root = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'root' });
-    const res = await move(root.id, { isAttached: true });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/requires a parentId/);
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const p = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'P' });
+    const y = await createItem({ projectId: project.id, parentId: p.id, title: 'Y' });
+    const before = { x: getRow(x.id), y: getRow(y.id) };
 
-    // ...including when the same request clears the parent.
-    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'parent' });
-    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'child' });
-    const both = await move(child.id, { parentId: null, isAttached: true });
-    expect(both.status).toBe(400);
-    expect(getRow(child.id).parentId).toBe(parent.id);
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      const refusals = [
+        ['the flag set on a top-level item', x.id, { isAttached: true }],
+        ['the parent cleared and the flag set', y.id, { parentId: null, isAttached: true }],
+      ] as const;
+      for (const [label, id, body] of refusals) {
+        const res = await write(id, body);
+        expect(res.status, `${entryPoint}: ${label}`).toBe(400);
+        expect(res.body.error, `${entryPoint}: ${label}`).toMatch(/requires a parentId/);
+        // Neither row moved: not the one written, not the other.
+        expect({ x: getRow(x.id), y: getRow(y.id) }, `${entryPoint}: ${label}`).toEqual(before);
+      }
+    }
   });
 
   it('ATT-9.1: rejects a workphaseId that contradicts the parent an attached item inherits from; accepts a matching one', async () => {
@@ -1204,13 +1214,6 @@ describe('PUT /items/:id and POST /items share the guards — every write', () =
     expect((await put(x1.id, { parentId: deepest.parentId })).status).toBe(200);
   });
 
-  it('ATT-1.8: PUT rejects a parentless attach', async () => {
-    const { project, todo } = await setupWorkflow();
-    const root = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'root' });
-    const res = await put(root.id, { isAttached: true });
-    expect(res.status).toBe(400);
-  });
-
   it('ATT-5.2: PUT cascades projectId to detached descendants on a cross-project reparent', async () => {
     const projectA = await createProject({ name: 'A' });
     const projectB = await createProject({ name: 'B' });
@@ -1251,6 +1254,10 @@ async function setupShownWithChain(name = 'P1') {
 }
 
 const countItems = () => db.select().from(items).all().length;
+
+// The two ways out of the refusal when D, the Free item an item is shown with,
+// has no workphase: naming one in the same write, or filing D into one first.
+const WAYS_OUT = /workphaseId in the same write, or file "D" into a workphase first/;
 
 describe('the workphase a write leaves an item in', () => {
   it("ATT-9.1: a move that leaves an item Attached cannot name a workphase other than its parent's", async () => {
@@ -1377,14 +1384,15 @@ describe('the workphase a write leaves an item in', () => {
       const before = getRow(s.id);
       const res = await write(s.id);
       expect(res.status, label).toBe(400);
-      expect(res.body.error, label).toMatch(/workphaseId in the same write, or file "D" into a workphase first/);
+      expect(res.body.error, label).toMatch(WAYS_OUT);
       expect(res.body.error, label).not.toMatch(/null/);
       expect(getRow(s.id), label).toEqual(before);
     }
     const count = countItems();
     const created = await request(app).post('/api/items').send({ title: 'Y', parentId: a.id, isAttached: false });
     expect(created.status).toBe(400);
-    expect(created.body.error).toMatch(/file "D" into a workphase first/);
+    expect(created.body.error).toMatch(WAYS_OUT);
+    expect(created.body.error).not.toMatch(/null/);
     expect(countItems()).toBe(count);
 
     // Naming a workphase, or none on purpose, is a way out.
@@ -1400,5 +1408,59 @@ describe('the workphase a write leaves an item in', () => {
     const filed = await put((await stub()).id, { isAttached: false });
     expect(filed.status).toBe(200);
     expect(filed.body.workphaseId).toBe(w3.id);
+  });
+
+  it('ATT-9.10: a detach that also reparents, naming no workphase, leaves the item in the one it was shown in', async () => {
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      // X, shown in D's Card in W2, is given B as its parent, B being in W3.
+      const shown = await setupShownWithChain(entryPoint);
+      const b = await createItem({ projectId: shown.project.id, workphaseId: shown.w3.id, title: 'B' });
+      const res = await write(shown.x.id, { parentId: b.id, isAttached: false });
+      expect(res.status, entryPoint).toBe(200);
+      // D's workphase, whose Card it was shown in, not B's.
+      expect(res.body, entryPoint).toMatchObject({ parentId: b.id, isAttached: 0, workphaseId: shown.w2.id });
+
+      // The stored copy has drifted, to a workphase that is neither: the item
+      // still leaves where it was shown.
+      const drifted = await setupShownWithChain(`${entryPoint} drifted`);
+      db.update(items).set({ workphaseId: drifted.w1.id }).where(eq(items.id, drifted.x.id)).run();
+      const driftedB = await createItem({ projectId: drifted.project.id, workphaseId: drifted.w3.id, title: 'B' });
+      const left = await write(drifted.x.id, { parentId: driftedB.id, isAttached: false });
+      expect(left.status, entryPoint).toBe(200);
+      expect(left.body.workphaseId, entryPoint).toBe(drifted.w2.id);
+
+      // D has no workphase, so there is none to leave X in: the write is refused
+      // as ATT-9.7's are, and X is as it was.
+      const bare = await setupShownWithChain(`${entryPoint} bare`);
+      expect((await move(bare.d.id, { workphaseId: null })).status).toBe(200);
+      const bareB = await createItem({ projectId: bare.project.id, workphaseId: bare.w3.id, title: 'B' });
+      const before = getRow(bare.x.id);
+      const refused = await write(bare.x.id, { parentId: bareB.id, isAttached: false });
+      expect(refused.status, entryPoint).toBe(400);
+      expect(refused.body.error, entryPoint).toMatch(WAYS_OUT);
+      expect(getRow(bare.x.id), entryPoint).toEqual(before);
+    }
+  });
+
+  it('ATT-9.11: naming workphaseId: null leaves an item Free with no workphase, whatever it was shown in', async () => {
+    // X is shown in D's Card, and D is in W2. A move is the one edit that can
+    // name a workphase: PUT takes none.
+    const { project, x, a } = await setupShownWithChain();
+    const detached = await move(x.id, { isAttached: false, workphaseId: null });
+    expect(detached.status).toBe(200);
+    expect(detached.body).toMatchObject({ isAttached: 0, workphaseId: null });
+
+    // A create under A, which is shown in the same Card, is no different.
+    const y = await createItem({
+      projectId: project.id,
+      parentId: a.id,
+      title: 'Y',
+      isAttached: false,
+      workphaseId: null,
+    });
+    expect(y).toMatchObject({ parentId: a.id, isAttached: 0, workphaseId: null });
   });
 });

@@ -62,6 +62,48 @@ test('TREE-1.1: an indicator line shows the gap, and a release saves exactly wha
   await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(2)}px`);
 });
 
+test('TREE-1.4: when the dragged project’s subtree holds every project, no line is drawn and a release writes nothing', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const ids = await seedProjects(request, [
+    ['X', null],
+    ['X1', 'X'],
+    ['X2', 'X'],
+  ]);
+  await page.goto('/');
+  const stored = () => Promise.all([ids.X, ids.X1, ids.X2].map(id => fetchProject(request, id)));
+  const before = await stored();
+  const writes: string[] = [];
+  page.on('request', req => {
+    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
+  });
+
+  // Every project is in X's subtree, so no row is left to draw a line against,
+  // whichever of them the cursor is over and however far sideways. The cursor
+  // ends over X1, over X2 and over X's own row in turn, and each time a release
+  // sends nothing. X's row is aimed at from the pickup point: the carried copy
+  // repeats its name.
+  for (const over of ['X1', 'X2', null]) {
+    const from = await pickUp(page, projectSidebar.dragHandle('X'));
+    for (const tabs of [-3, 0, 3]) {
+      for (const side of ['before', 'after'] as const) {
+        if (over) {
+          await aim(page, from, projectSidebar.row(over), side, tabs);
+        } else {
+          await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: from.y + (side === 'before' ? -4 : 4) });
+        }
+        await expect(projectSidebar.dropLine).toHaveCount(0);
+      }
+    }
+    await release(page);
+  }
+
+  expect(writes).toEqual([]);
+  expect(await stored()).toEqual(before);
+});
+
 test('TREE-1.7: every depth offered is valid: projects have no depth cap', async ({
   page,
   request,
@@ -159,7 +201,7 @@ test('TREE-2.1: the dragged project’s descendants are dimmed for the whole dra
   request,
   projectSidebar,
 }) => {
-  await seedProjects(request, [
+  const ids = await seedProjects(request, [
     ['A', null],
     ['X', null],
     ['X1', 'X'],
@@ -178,6 +220,17 @@ test('TREE-2.1: the dragged project’s descendants are dimmed for the whole dra
   }
 
   await cancel(page);
+  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', clear);
+  await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', clear);
+
+  // A release ends the drag the same way, here by moving X ahead of A.
+  const again = await pickUp(page, projectSidebar.dragHandle('X'));
+  await aim(page, again, projectSidebar.row('A'), 'before', 0);
+  await expect(projectSidebar.row('X1')).toHaveCSS('opacity', dimmed);
+  await release(page);
+
+  const aPosition = (await fetchProject(request, ids.A)).position!;
+  await expect.poll(async () => (await fetchProject(request, ids.X)).position).toBeLessThan(aPosition);
   await expect(projectSidebar.row('X1')).toHaveCSS('opacity', clear);
   await expect(projectSidebar.row('X1a')).toHaveCSS('opacity', clear);
 });

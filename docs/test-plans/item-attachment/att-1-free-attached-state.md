@@ -11,11 +11,11 @@
 | ATT-1.5 | A Stub under a done parent reads as done by derivation, with nothing stored | P1 | Automated |
 | ATT-1.6 | A detached child is not affected by its parent moving | P0 | Automated |
 | ATT-1.7 | The three state consequences always move together | P0 | Automated |
-| ATT-1.8 | A move or an edit that would leave the attachment flag on a parentless item is refused | P0 | Open |
+| ATT-1.8 | A move or an edit that would leave the attachment flag on a parentless item is refused | P0 | Automated |
 | ATT-1.9 | A Card shows its descendant Stubs; a Stub shows a title snippet and has no board position of its own | P2 | Automated |
 | ATT-1.10 | A Card shows its tags | P2 | Planned |
 | ATT-1.12 | Attaching a done Free item clears its `completedAt` and gives it a sibling position | P1 | Automated |
-| ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Open |
+| ATT-1.14 | A create can't set the attachment flag without a parent, and a parentless create stores it clear | P0 | Automated |
 
 ---
 
@@ -81,11 +81,11 @@ No read shows one consequence flipped and another not.
 
 ## ATT-1.8 — A move or an edit that would leave the attachment flag on a parentless item is refused
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §1
 
 *Given* top-level item `X`, and item `Y` attached to `P`, *when* a move or an edit sets `X`'s attachment flag without giving it a parent, or sets `Y.parentId` to null and sets the flag, *then* each is refused with a 400, and nothing is stored: `X` and `Y` are exactly as before. *When* a write sets `Y.parentId` to null and doesn't mention the flag, *then* it's accepted, and `Y`'s flag is clear ([ATT-7.7](att-7-detach-preserves-parent.md)). A create is [ATT-1.14](att-1-free-attached-state.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
 ## ATT-1.9 — A Card shows its descendant Stubs; a Stub shows a title snippet and has no board position of its own
 
@@ -113,8 +113,8 @@ No read shows one consequence flipped and another not.
 
 ## ATT-1.14 — A create can't set the attachment flag without a parent, and a parentless create stores it clear
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §1
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §1
 
 *Given* project `P1`, *when* a create makes a top-level item in `P1` and sets the attachment flag, *then* it's refused with a 400, and no item is created. *When* a create makes a top-level item in `P1` and doesn't mention the flag, *then* the new item's flag is clear, as every top-level item's is.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.test.ts`

@@ -18,7 +18,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | Open |
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
-| DRAG-6.14 | The board records no inversion for a write it didn't preview | P2 | Open |
+| DRAG-6.14 | The board records no inversion for a write it didn't preview | P2 | Automated |
 
 ---
 
@@ -120,8 +120,8 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.14 — The board records no inversion for a write it didn't preview
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
 *Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its Sheet, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order. Recording an inversion for a write it did preview is [DRAG-6.4](drag-6-preview-reconciliation.md)'s.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`

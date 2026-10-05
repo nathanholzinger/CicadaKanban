@@ -13,7 +13,7 @@
 | TC-6.7 | A column range can't mix terminal and non-terminal workphases | P0 | Automated |
 | TC-6.8 | A range that's all terminal, or all non-terminal, is accepted | P1 | Automated |
 | TC-6.9 | A reopened done item takes the append fallback | P1 | Automated |
-| TC-6.10 | Done items completed at the same moment read in creation order | P2 | Open |
+| TC-6.10 | Done items completed at the same moment read in creation order | P2 | Automated |
 | TC-6.11 | Changing a workphase's terminal flag applies the split to the items already in it | P1 | Open |
 | TC-6.12 | A terminal-flag change that would leave a column mixing terminal and non-terminal workphases is rejected | P1 | Open |
 | TC-6.13 | Several Free items made done, or reopened, by one flag change | P2 | Pending PO |
@@ -94,11 +94,11 @@
 
 ## TC-6.10 — Done items completed at the same moment read in creation order
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-positioning §6
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-positioning §6
 
 *Given* done Free items `A`, completed at 10:00, and `B` and `C`, both completed at 10:05, with `B` created before `C`, *when* their done list is sorted, *then* it reads `A, B, C`. *And given* `C` was created before `B`, *then* it reads `A, C, B`. An item previewed into a done list reads last ([DRAG-6.11](../board-drag-interaction/drag-6-preview-reconciliation.md)).
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`
 
 ## TC-6.11 — Changing a workphase's terminal flag applies the split to the items already in it
 

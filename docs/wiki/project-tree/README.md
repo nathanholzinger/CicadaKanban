@@ -32,16 +32,13 @@ against the whole project tree. What the sidebar adds:
   real tree. Tabbed right of a collapsed Top, a project goes ahead of
   Top's real first child; aligned with it, after Top's whole subtree,
   shown or not.
-- **Resting on a row of the dragged project's own subtree means the gap
-  that subtree collapses to**, which is the project's own gap, with its
-  depth range. The subtree's rows stay drawn (§2), but they're never Top
-  or Bottom ([`../hierarchy-placement/`](../hierarchy-placement/) §4), so
-  the line goes where the subtree was. On the board the same space is the
-  ghost's own slot, since a Stub's subtree travels with the carried copy.
-- **Planned:** the dragged project's own row means the same, when the
-  pointer comes back to it: the line moves to the project's own gap, and
-  a release at its own depth writes nothing
-  ([`../hierarchy-placement/`](../hierarchy-placement/) §4, §5).
+- **Resting on the dragged project's own row, or a row of its subtree,
+  means the gap the subtree collapses to**, which is the project's own
+  gap, with its depth range. Those rows stay in place, the subtree's
+  dimmed (§2), but none of them is ever Top or Bottom
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §4), so the line
+  goes where the subtree was. On the board the same space is the ghost's
+  own slot, since a Stub's subtree travels with the carried copy.
 - **An empty hierarchy arises when the dragged project's subtree holds
   every project**, since that subtree is never a candidate: for example, a
   sidebar with one top-level project. It offers one state, at the top

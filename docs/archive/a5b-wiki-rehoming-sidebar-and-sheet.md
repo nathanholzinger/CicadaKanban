@@ -243,6 +243,10 @@ The starting list. The Coder keeps it current.
     - item-attachment §7: "The two enforcement points must agree" holds for the board's drag, and the Sheet's parent picker is outside it while the Sheet isn't designed (call 5). §12's Sheet bullet links item-sheet.
     - The wiki README's "Page layout": a page of shared rules (no catalog of its own), and a page for a feature that isn't designed yet.
   - **No section was renumbered or removed.** board-drag-interaction §7.1 and §7.2 keep their numbers and headings.
+  - *At close (PO, 2026-10-05):*
+    - **project-tree §1:** the set-down is unmarked (batch 3). The own-row bullet is unmarked and merged into the subtree's: "Resting on the dragged project's own row, or a row of its subtree, means the gap the subtree collapses to". The empty-hierarchy bullet says no line is drawn. No `**Planned:**` marker from this story is left in the wiki.
+    - **item-attachment §2a:** the list of writes that leave an item Free names a fourth, a detach that also reparents (Open question 5).
+    - No section was added, renumbered or removed at close. `check:docs -- docs/wiki` reports 0 hits.
   - **For the Test Planner:**
     - The new pages link `test-plans/project-tree/` and `test-plans/item-sheet/`, so those are the folder names.
     - The test-plans README mirrors the wiki README's shared-page rule.
@@ -282,6 +286,7 @@ The starting list. The Coder keeps it current.
   - **To A5d:** `App.tsx::handleReorderProject` merges only the moved project into the sidebar's state, and `positionResolver.ts` says project moves don't disclose a reindex. If a move ever triggers one, the renumbered siblings keep their old positions on the client until the next fetch. Found by reading; no test ran it. Item writes disclose and fold in (root `CLAUDE.md`'s "Reindex disclosure"), and Nathan wants project and item operations to match.
 - **To the Work Item Detail & Chat UI epic:** the Sheet's page and its Open questions, and any case routed there, named in its roadmap entry (batch 2).
 - **To A5d:** the project tree's page, which this story creates.
+  - *Added by the Test Planner, from the closing Reconciler run (candidate 2):* how sibling projects are ordered. `projectTreeUtils.test.ts` pins it (by position, then by creation time when position is missing), but no page states it. It's a PO gap, for A5d's rules.
 
 ## Open questions
 
@@ -469,3 +474,51 @@ For Nathan, at plan approval. All four are answered. Question 5 came later.
     - E2E: TREE-1.9 is its own test. TREE-1.8's "released before leaving" now rests the pointer back at the start, because `pickUp` drifts 10px sideways, and on the own row that picks a depth.
   - **TC-5a.6's test is DRAG-6.14,** in `itemWriteReconciliation.test.ts`. Nothing in code, tests or comments cites TC-5a.6 any more.
   - **Checks:** `npm run check` passes: 351 server tests, 426 client, 75 scripts, 0 checker hits on 266 files. The full E2E suite: 152 passed, 8 skipped, and the sidebar spec passed three runs in a row. An earlier full run had one failure, DRAG-3.17 in `drag-column-bands.spec.ts`, a board spec that passes alone and in the clean run. I edited a client test file while that run was going, which restarts the dev server mid-test. To confirm the own-row tests bite, I put the early return back: six hook tests and the E2E's own-row step failed (before the split into TREE-1.8 and TREE-1.9).
+- **2026-10-05, the PO's last close step.**
+  - **project-tree §1's own-row bullet is unmarked,** merged into the subtree's bullet, since the Coder's fix is in. TREE-1.9 can go to `Open`.
+  - **The Coder's consequence needs no wiki change.** On its own row, a sideways offset now picks a depth: 7px or more shows the line a level in, and a release saves it. That's the own gap's depth range, which project-tree §1 gives it, and the line shows it before the release. How far the pointer travels per level is a feel question. The board has it too, under Epic 3.5 Story 8's "Travel per level", and the sidebar shares that step.
+- **2026-10-05, after the closing Reconciler run (the Test Planner).** The report is `docs/audits/test-reconciliation-a5b.md`. The Reconciler wrote only statuses and Automation test lines, as checked against the diff. `check:docs` reports 0 hits, and the catalog agrees with itself.
+  - **Two new cases, from its Candidate New Cases.** Both are Test Planner gaps, since the wiki already states the rule. Both are `Open`, in this story's scope:
+    - **TREE-1.10** (candidate 1): on the dragged project's own row, the cursor picks among its own gap's depths. project-tree §1 gives the own row its gap's depth range, which TREE-1.9 doesn't assert. Its test exists as `useProjectDragReorder.test.ts`'s "resting on X's own row, an offset still picks a depth of that gap…", inside TREE-1.9's describe. It needs TREE-1.10 in its title, and M1's approval, or an E2E test.
+    - **ATT-9.11** (candidate 3): naming `workphaseId: null` leaves an item Free with no workphase, whatever it was shown in, on a detach and on a create. ATT-9.7 covers `null` only as a way out when the Card has none. `items.test.ts`'s "a detached child created with workphaseId: null has no workphase, whatever its parent holds" covers the create, and needs ATT-9.11 in its title. The detach needs a test.
+  - **TREE-1.8's release before leaving says "at its own depth".** A sideways drift on the own row now picks a depth (the Coder's close note), so the clause needed it. The meaning is unchanged, and so are its tests.
+  - **Candidate 2, sibling project order,** is a PO gap, under the Handoff's "To A5d".
+  - **What's left for this story's close:**
+    - **Nathan's approvals:** M1, the hook tests; M2, ATT-9.3's client tests; M3, TC-6.10's client test; and M4, which the Reconciler doesn't recommend.
+    - **The Coder:** the parts the report's Gaps section names, for TREE-1.4 (a release), TREE-2.1 (a release clears the dimming), ATT-1.8 (the edit's refusal, and re-reading the rows), ATT-9.7 (the create's message) and ATT-9.10 (stamp S1, and a test for the refusal); and the two stamps and the detach test above.
+    - **A confirming Reconciler run** over those cases, then the Test Planner checks scope: any case still `Open` is routed by ID before sign-off.
+  - **For Nathan, not this story's:** `POST /items` and `PUT /items/:id` ignore a `position` in the body, where `PATCH /move` refuses one (the report, under Candidate New Cases). item-positioning §2 holds either way. Whether a create or an edit should refuse it is the API contract epic's, or the PO's.
+- **2026-10-05, Nathan's rulings on the closing Reconciler run's proposals.**
+  - **M1, M2 and M3 are approved,** as the Test Planner recommended. The confirming Reconciler run writes them:
+    - **M1:** the sidebar hook's tests, `useProjectDragReorder.test.ts`. They make TREE-1.2, 1.3, 1.5 and 1.6 whole, and the four tests approved at batch 2 join TREE-1.3's and TREE-1.5's lines beside them. Nathan approved them knowing they assert the request a gesture sends, not the saved tree (the report's Test Quality 1).
+    - **M2:** ATT-9.3's two client tests, in `itemListOps.test.ts` and `UnsortedBucket.test.tsx`.
+    - **M3:** TC-6.10's test in `itemListOps.test.ts`.
+  - **M4 isn't approved.** A route test, hier:862, covers all of TC-7.18, so its unit test in the scope lib isn't mapped. Nathan's reason: a case that a surface test covers whole needs no internal test mapped beside it.
+  - **What that changes in the list above:**
+    - **TREE-1.10** needs only its ID on the hook test, since M1 counts the hook.
+    - **TREE-1.4** still needs a test that releases. With M1 approved, a hook test that does counts.
+    - Nathan passes the Coder's list on.
+  - **The position question is a tech-debt story of its own:** `positioning-on-create-and-edit.md`, in this folder. Nathan: ignoring a `position` on a create or an edit is acceptable for now.
+- **2026-10-05, after the closing Reconciler run (the Coder): the five gaps the report names.** Tests only; no source file changed. Nathan's rule for the homes: one test per case where that costs little, and a case may have several tests where the plan's and the tests' organization differ.
+  - **TREE-1.4's release:** a new E2E test, `project-tree-drag.spec.ts`'s "TREE-1.4: …". `X` is the only top-level project, with children `X1` and `X2`. The cursor goes over each of the three rows, at -3, 0 and +3 tabs and on both halves; no line is ever drawn, and the release over each sends no request and leaves the three rows as they were. The hook test "draws no line…" also releases now, once over each row, and asserts neither `onReorderProject` nor `expand` was called. The E2E closes the case on the surface. The hook pins the `releaseOf` path whatever dnd-kit reports as `over` for a row outside the sortable list.
+  - **TREE-2.1's release:** folded into the existing E2E test. After the cancel assertions, a second drag is released ahead of `A`, and once the move has saved, `X1` and `X1a` read opacity 1.
+  - **ATT-1.8's edit and the re-read rows:** folded into `items.hierarchy.test.ts`'s "ATT-1.8: a move or an edit that would leave the flag on a parentless item is refused". It runs both refused writes (the flag on top-level `X`; the parent cleared and the flag set on `Y`) through `move` and `PUT`, checks the 400 and its message, and compares the whole `X` and `Y` rows with a snapshot taken first. The PUT-only test ("ATT-1.8: PUT rejects a parentless attach") held one row of that table, so it's deleted.
+  - **ATT-9.7's create:** the refusal's message is checked in the same test as the other four, against one shared pattern (`WAYS_OUT`): it offers naming a workphase in the same write or filing `D` first, and doesn't suggest `null`.
+  - **ATT-9.10:** one new test on ATT-9's setup, "ATT-9.10: a detach that also reparents, naming no workphase, leaves the item in the one it was shown in". Through `move` and `PUT`, `X` given parent `B` (in `W3`) with the flag cleared lands Free in `W2`, `D`'s workphase, including when its own stored copy has drifted to a third; and with `D` out of every workphase the same write is refused with ATT-9.7's message and `X` is unchanged. Stamp S1 isn't applied: the ATT-3.9 test keeps its title.
+  - **Checks:** `npm run check` passes (352 server, 426 client, 75 scripts, 0 checker hits on 266 files; the 352nd is ATT-9.11's). The sidebar spec passed three runs in a row (24 of 24), and the full E2E suite wasn't rerun, since nothing outside that spec changed. Each new assertion was made to fail by breaking its rule: the set-down check in `releaseOf` (the hook's seven set-down tests and the E2E's TREE-1.4, 1.8 and 1.9 failed), `clearDrag` on a release (TREE-2.1's new assertion failed), the refusal for a Free item with nowhere to leave it (ATT-9.7 and ATT-9.10 failed), and the shown-in workphase (ATT-9.4, 9.5 and 9.10 failed). Each was put back.
+  - **For the confirming Reconciler run:** the lines for TREE-1.4 (the new E2E test, and the hook), TREE-2.1, ATT-1.8, ATT-9.7 and ATT-9.10 (`items.hierarchy.test.ts`, which already names the first three).
+  - **TREE-1.10 and ATT-9.11, from the same list.**
+    - **TREE-1.10:** the hook test "resting on X's own row, an offset still picks a depth of that gap…" carries the ID now. It also asserts the line is in `X`'s own gap, below `B` (`{anchorId: 'B', side: 'after'}`), which the case's *Then* names and the test didn't.
+    - **ATT-9.11:** one new test in `items.hierarchy.test.ts` on ATT-9's setup, covering both halves. A move that detaches `X` naming `workphaseId: null` leaves it Free with no workphase, though `D` is in `W2`; and a create under `A` naming it leaves `Y` a detached child with no workphase. `items.test.ts`'s create test keeps its title.
+    - **A move is the only edit that can name a workphase:** `PUT /items/:id` takes none, so the case has one detach route where ATT-9.4 and 9.5 have two. The item-attachment wiki doesn't say which writes can name one.
+    - **Checked** by breaking each half of the rule in `itemHierarchy.ts` (the move's `null`, then the create's `null`): ATT-9.11 failed both times. Each was put back.
+- **2026-10-05, after the confirming Reconciler run (the Test Planner).** The report is `docs/audits/test-reconciliation-a5b-close.md`. The Reconciler wrote only statuses and Automation test lines, as checked against the diff. The catalog agrees with itself, and `check:docs` reports 0 hits.
+  - **The scope check:** all 38 cases in scope are `Automated`, 13 of A5b's and 25 of A5a's, so none needs routing. The run found no lost coverage and no unknown IDs. The Acceptance bullets for the sidebar's cases and for A5a's are met.
+  - **The 70 `Open` cases outside the scope are all routed already:** ATT-4.9 and the DRAG cases to Story 10, and TC-5.15, 6.11 and 6.12 to Epic 4.
+  - **ATT-9.10 gains the drift clause** that ATT-9.4, 9.5 and 9.6 have: with `X`'s own `workphaseId` changed to `W1` by a direct database edit, it's still left in `W2`. This was the run's candidate case. The test already asserts it (the report), so the case stays `Automated`.
+  - **`PUT /items/:id` ignores a `workphaseId`,** which the run found by reading the route. So an edit that names `null` keeps the item where it was shown, though item-attachment §2a's sentence reads as if any write could name `null`. It's question 4 of `positioning-on-create-and-edit.md`, which now hands its answer to the PO for §2a too.
+  - **For Nathan:** whether the README's rule on internal tests beside a whole surface test reaches back to older lines, such as TC-2.7, 2.8 and 5a.1. The run applied it only to new mappings.
+  - **Left for sign-off:**
+    - `npm run test:e2e` in full. The Coder's last two rounds ran only the sidebar spec.
+    - Archiving the plan with both Reconciler reports.
+- **2026-10-05, Nathan's ruling on the internal-test rule's reach.** It governs new mappings only. Existing lines such as TC-2.7, 2.8 and 5a.1 stay as they are, and a later run that comes across one may propose dropping its internal test. The test-plans README says so.

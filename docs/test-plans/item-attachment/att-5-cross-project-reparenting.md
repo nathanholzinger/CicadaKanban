@@ -9,9 +9,9 @@ What a cross-project or cross-workflow reparent does to positions is item-positi
 | ATT-5.1 | Reparenting across two projects on the same workflow is accepted | P0 | Automated |
 | ATT-5.2 | The new project cascades to the entire descendant subtree, detached descendants included | P0 | Automated |
 | ATT-5.6 | An item created under a parent takes the parent's project | P1 | Automated |
-| ATT-5.7 | A create naming a project other than its parent's is refused | P2 | Open |
-| ATT-5.9 | A cross-workflow reparent that would leave a Free item in the moved subtree is refused | P1 | Open |
-| ATT-5.10 | A cross-workflow reparent that leaves every moved item Attached is accepted | P1 | Open |
+| ATT-5.7 | A create naming a project other than its parent's is refused | P2 | Automated |
+| ATT-5.9 | A cross-workflow reparent that would leave a Free item in the moved subtree is refused | P1 | Automated |
+| ATT-5.10 | A cross-workflow reparent that leaves every moved item Attached is accepted | P1 | Automated |
 | ATT-5.11 | A Free item reparented between a project with no workflow and one with a workflow | P2 | Pending PO |
 
 ---
@@ -44,15 +44,15 @@ The project cascade changes no workphase: `X1`, attached, takes `B`'s workphase 
 
 ## ATT-5.7 — A create naming a project other than its parent's is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §14, wiki item-attachment §9
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §9
 
 *Given* item `P` in project `P1`, and project `P2` on the same workflow, *when* item `X` is created under `P` by a write that names project `P2`, *then* it's refused with a 400, and no item is created. A hierarchy can't straddle two projects, even two on one workflow.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.test.ts`
 
 ## ATT-5.9 — A cross-workflow reparent that would leave a Free item in the moved subtree is refused
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §9, wiki item-attachment §7
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §9, wiki item-attachment §7
 
 *Given* project `P1` on workflow `WF1` and project `P2` on `WF2`, item `B` in `P2` at workphase `w2` of `WF2`, and, in `P1`:
 
@@ -68,15 +68,15 @@ The project cascade changes no workphase: `X1`, attached, takes `B`'s workphase 
 
 Each would leave a Free item in the moved subtree: `X` itself, `Y2` or `Z2`. Naming `w2` for `X` doesn't help, since no write re-files items across workflows. The reparent that's accepted is [ATT-5.10](att-5-cross-project-reparenting.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
 ## ATT-5.10 — A cross-workflow reparent that leaves every moved item Attached is accepted
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §9
 
 *Given* the projects and workflows of [ATT-5.9](att-5-cross-project-reparenting.md), item `B` in `P2` at `w2`, and, in `P1`, Free item `X` at `w1` with attached child `X1`, and item `Y` attached to `A`, with attached child `Y1`, neither with a detached descendant, *when* `X` is attached to `B`, or `Y` is reparented to `B` and stays attached, *then* it's accepted: the moving item is attached to `B`, and it and its attached child are in `w2` and in `P2`. Their positions are [TC-7.19](../item-positioning/part-7-board-placement-intents.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
 
 ## ATT-5.11 — A Free item reparented between a project with no workflow and one with a workflow
 

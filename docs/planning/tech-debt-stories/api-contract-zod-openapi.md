@@ -121,7 +121,7 @@ When the epic closes, the API contract is generated, complete and current, and n
    - MCP tier 1 (C5).
    - C3's test changes for those two routes.
 2. **Request schemas for every remaining route.** That's 52 endpoints in 13 route files; many GETs take only path params. Done in batches by resource:
-   - items and projects;
+   - items and projects. Whether a create or an edit takes a position, and whether a field it doesn't take is ignored or refused, is open in `positioning-on-create-and-edit.md`, in this folder. Groom that story before this batch, so the schemas encode its answer;
    - workflows, workphases, boards and columns;
    - everything else.
 3. **Response schemas and contract tests** (C8), for every route's success response and the error shape.
