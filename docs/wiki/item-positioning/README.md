@@ -24,9 +24,9 @@ server resolves the actual number against that item's **true current**
 neighbor (a fresh query, never a client-supplied value), inside the same
 transaction as the write.
 
-**Planned:** the API takes no final position from any caller. A move that
-names a `position` is refused with a 400 whose message says to name an
-anchor and side instead, and no endpoint sets positions outright.
+**The API takes no final position from any caller.** A move that names
+a `position` is refused with a 400 whose message says to name an anchor
+and side instead, and no endpoint sets positions outright.
 
 **Why:** a client's local view of neighbors can be narrower than the true
 full order (e.g. a subproject board that doesn't load a parent project's
@@ -112,20 +112,20 @@ the relevant local comparison scope first (§5), then retry the insert.
 **`positionScope` (computed, read-only API field):** alongside the
 existing `position: number | null` (unchanged shape), a derived field —
 `"attached-siblings"` (item is attached, has a `parentId`),
-`"workflow"` (detached/root, non-terminal workphase — comparable against
-the whole workflow, see above), or `"none"` (not currently ordered — either
-a detached/root item in a terminal/done workphase, see §6, or one with no
-`workphaseId` at all, e.g. its workphase was deleted out from under it and
-its `workphaseId` was cleared). Both land on the same value because neither
-has a meaningful comparison scope, even though the reason differs (ordered-
-by-`completedAt` vs. not ordered at all). Computed whenever the item is
-read, never stored. Tells a client (or a human reading the API) what an
-item's `position` is actually comparable against.
+`"workflow"` (detached/root, in a non-terminal workphase of its project's
+workflow — comparable against the whole workflow, see above), or `"none"`
+(not currently ordered). An item is `"none"` when it's detached/root and
+one of these holds:
+- its workphase is terminal (§6);
+- it has no `workphaseId` at all, e.g. its workphase was deleted out from
+  under it and its `workphaseId` was cleared;
+- its workphase isn't one of its project's workflow's, so it shows in
+  Unsorted (§7.3).
 
-**Planned:** a detached/root item whose workphase belongs to a workflow
-its project doesn't use is `"none"` as well: it shows in Unsorted, where
-its position compares against nothing (§7.3). Replaces the `"workflow"`
-case's "detached/root, non-terminal workphase" for such an item.
+All three land on the same value because none has a meaningful comparison
+scope, even though the reasons differ (ordered by `completedAt`, or not
+ordered at all). Computed whenever the item is read, never stored. Tells a client (or a human reading the API) what an
+item's `position` is actually comparable against.
 
 **Client-side role: the client never computes a position value, not even
 for display.** Optimistic feedback is **ordinal** — the item is shown at an
@@ -186,7 +186,6 @@ never when the scope is unchanged:
 | Reparent while staying attached | Yes (old parent's siblings → new parent's) | Fresh position |
 | A parent's workphase change cascading to its attached descendants | No (still parent-scoped regardless of workphaseId) | Position untouched |
 | Workphase change, no anchor | No (workflow-scoped either way) | Position kept (§2's workphase-only rule) |
-| Cross-workflow reparent, for each subtree item keeping its own workphase (§7.3) | Yes (old workflow's scope → none) | Position nulled; re-filing later assigns a fresh one via the no-position path. *Replaced by §7.3 once built.* |
 | Active → done transition | N/A — see §6 | Position dropped entirely, not reassigned |
 
 ## 3. Attached-child sibling reordering
@@ -437,8 +436,7 @@ scope being left. Rationale and the Free-item exception:
 §2.1's scope-change table has no rows of its own for the *gesture* — a
 gesture-driven attach, detach, or reparent lands on the rows already
 there. A single request can carry the scope change and the placement
-together. (The cross-workflow row comes from the API-only case, §7.3.)
-*Replaced by §7.3 once built.*
+together.
 
 ### 7.3 Cross-project reparenting doesn't change the comparison scope
 
@@ -456,36 +454,12 @@ its position ([`../item-attachment/`](../item-attachment/) §4). On a board
 every reparent is an attach, so it always re-resolves. There is no
 cross-project positioning rule to write.
 
-**Cross-*workflow* reparenting (API-only — see
-[`../item-attachment/`](../item-attachment/) §9) is different in one
-way.** An *attached* item's placement is still unremarkable — it lands in
-its new parent's sibling scope, which has nothing to do with workflows.
-But every item in the moved subtree that keeps its own `workphaseId` — the
-moved item itself if it is Free, and every detached descendant — now
-holds a workphase from a workflow its project doesn't use. Those items
-sit in "Unknown status," which is not position-ordered (`positionScope`
-is `"none"`), and a position number resolved in the old workflow's scope
-means nothing there.
-
-**So the reparent nulls their `position`.** This keeps the invariant
-that an item with no meaningful comparison scope has no stored position —
-the same treatment §6 gives a done item, for the same reason. It also
-means re-filing needs no new rule: when a user later moves the item into
-a workphase of the new workflow, it has no position to keep and takes the
-append fallback through §2's existing "no existing position" path, like a
-reopened done item or a first-time assignment. It's the cross-workflow
-row of §2.1's scope-change table.
-
-**Planned:** no reparent reaches the two paragraphs above. A
-cross-workflow reparent is refused whenever the moved subtree would hold a
-Free item after the write ([`../item-attachment/`](../item-attachment/)
-§9). The one that's allowed leaves every moved item Attached: the moving
-item lands in its new parent's sibling scope, and its attached descendants
-keep theirs, none of which has anything to do with workflows (§2.1). So no
-item write nulls a position, and §2.1 has no cross-workflow row. Replaces
-the paragraphs "Cross-*workflow* reparenting (API-only" and "So the
-reparent nulls their `position`", §2.1's cross-workflow row, and §7.2's
-closing sentence about it.
+**Cross-*workflow* reparenting leaves no position comparing against
+nothing.** It's refused whenever the moved subtree would hold a Free item
+after the write ([`../item-attachment/`](../item-attachment/) §9). The
+one that's allowed leaves every moved item Attached: the moving item
+lands in its new parent's sibling scope, and its attached descendants
+keep theirs, none of which has anything to do with workflows (§2.1).
 
 An item can still hold a workphase its project's workflow doesn't use,
 when its project moves under a different workflow. It shows in Unsorted

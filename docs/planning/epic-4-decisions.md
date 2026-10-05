@@ -197,6 +197,14 @@ until this epic answers their questions.
   listed here so the routed cases sit together, but it belongs to §13's
   discussion, not the done column.
 
+  **Its first half, routed with it** (Nathan, at A5a's close, 2026-10-04):
+  may a write name a workphase for a Free item in a project with no
+  workflow? Read literally, §2a says no, since such a project uses no
+  workphase. Today the code compares nothing there and accepts any
+  workphase. The wiki holds both halves as one Open question
+  (item-attachment, "A project with no workflow"), and no case covers the
+  first half.
+
 Nathan routed TC-6.11, 6.12 and 6.13 here because the rework may retire
 the terminal flag. TC-6.13 has no test. TC-6.11's and 6.12's exist in
 `server/tests/routes/workphases.test.ts` but carry no ID: lines 102, 130

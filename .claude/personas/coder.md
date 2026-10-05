@@ -43,8 +43,10 @@ reconciliation rules are in `client/src/components/workflow/CLAUDE.md`.
 **Route shape:** routes return the updated record on success (not just
 `{ success: true }`), except deletes (204) and batch reorders.
 
-**Batch reorders:** `PATCH /reorder` takes `[{ id, position }]`, validated server-side
-by `reorder.ts::validateReorder` and applied by `reorder.ts::applyReorderEntries`.
+**Batch reorders:** workphases' and columns' `PATCH /reorder` takes `[{ id, position }]`,
+validated server-side by `reorder.ts::validateReorder` and applied by
+`reorder.ts::applyReorderEntries`. Items and projects have none: their moves name a
+neighbor instead (root `CLAUDE.md`, "Positioning").
 
 **Fetch-by-id-or-404:** use `getOrNotFound.ts::getByIdOrNotFound` instead of
 hand-writing the `db.select().from(table).where(eq(table.id, id)).get()` + null-check

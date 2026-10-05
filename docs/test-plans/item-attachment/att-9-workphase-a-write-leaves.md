@@ -1,6 +1,6 @@
 # ATT-9 — The workphase a write leaves an item in
 
-**Next ID:** ATT-9.10
+**Next ID:** ATT-9.11
 
 **The setup,** for the cases that name it: workflow `WF`, with non-terminal workphases `W1`, `W2` and `W3`, and project `P1` on `WF`. In `P1`, `R` is a top-level item in `W1`, and `D` is a detached child of `R`, in `W2`. `A` is attached to `D`, and `X` is attached to `A`, so `A` and `X` are Stubs in `D`'s Card, and `D` is the nearest Free ancestor of each.
 
@@ -15,6 +15,7 @@
 | ATT-9.7 | When the nearest Free ancestor has no workphase, a write that leaves an item Free must name a workphase or `null` | P1 | Planned |
 | ATT-9.8 | A move can't leave a Free item in a workphase its project's workflow doesn't use | P1 | Open |
 | ATT-9.9 | A create can't name a workphase its project's workflow doesn't use | P2 | Planned |
+| ATT-9.10 | A reparent that leaves an Attached item Free under a new parent, naming no workphase | P2 | Pending PO |
 
 ---
 
@@ -94,5 +95,13 @@
 **Priority:** P2 · **Status:** Planned · **Rule:** wiki item-attachment §2a
 
 *Given* the projects and workflows of [ATT-9.8](att-9-workphase-a-write-leaves.md), *when* a create makes a top-level item in `P1`, or a detached child of `B`, and names `v`, *then* it's refused with a 400, and no item is created. Under an attached parent, naming `v` is [ATT-9.2](att-9-workphase-a-write-leaves.md)'s.
+
+**Automation test:** —
+
+## ATT-9.10 — A reparent that leaves an Attached item Free under a new parent, naming no workphase
+
+**Priority:** P2 · **Status:** Pending PO
+
+*Given* the setup, and top-level item `B` in `W3`, *when* a write gives `X` parent `B`, clears its attachment flag and names no workphase, *then* — **question for the PO:** wiki item-attachment §2a gives an item leaving attachment the workphase it was shown in, here `W2`, `D`'s, and refuses the write when there's none. Its list of the writes that rule applies to names a detach, a reparent to root and a create, and wiki item-attachment §11 calls a detach that lands under a different parent a reparent, not a detach. Does the rule apply to this write too, so that `X` is a detached child of `B`, in `W2`? The code does that today.
 
 **Automation test:** —

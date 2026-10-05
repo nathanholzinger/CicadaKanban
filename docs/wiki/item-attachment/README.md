@@ -29,17 +29,14 @@ attachment flag is clear ("detached").
 - **A detached child is Free**, exactly as Free as a top-level item. There
   is no third status. "Detached child" describes where it sits in the
   hierarchy; "Free" describes how it behaves.
-- **"Attached with no parent" is rejected, not ignored.** A move or an
-  edit that sets the attachment flag on an item that has (or would have)
-  no parent is refused with a 400 and stores nothing. The request can
-  only be a client bug, and silently accepting it would leave a stray
-  flag on the row that later attaches the item the instant it gains a
-  parent. A write that clears `parentId` also clears the flag.
-- **Planned:** a create is held to the same rule. A create that sets the
-  flag with no parent is refused, and a create with no parent stores the
-  flag clear. So the invariant *attached ⇒ has a parent* holds in every
-  stored row, not only in the reading: a top-level item's flag is always
-  clear.
+- **"Attached with no parent" is rejected, not ignored.** A write that
+  sets the attachment flag on an item that has (or would have) no parent,
+  a create included, is refused with a 400 and stores nothing. The
+  request can only be a client bug, and silently accepting it would leave
+  a stray flag on the row that later attaches the item the instant it
+  gains a parent. The invariant *attached ⇒ has a parent* holds in the
+  stored row, not only in the reading: a create with no parent stores the
+  flag clear, and a write that clears `parentId` also clears the flag.
 
 The state determines three things at once, and they always move together:
 
@@ -69,24 +66,21 @@ choice about whether this item's status tracks its parent's.
 ## 2a. The workphase a write leaves an item in
 
 **A write that leaves an item Attached gives it its parent's
-workphase** (§2). It may name the parent's workphase, or none. A move
-that names any other is refused with a 400, and the message says to omit
-the workphase or name the parent's. "The parent" is the one after the
-write, so two writes stay legal: a detach that files the item in a
-workphase in the same write, which is what a Stub dropped on a column
-sends, and an attach that names its new parent's workphase.
-
-**Planned:** a create that makes an Attached child and names a workphase
-other than its parent's is refused the same way.
+workphase** (§2). It may name the parent's workphase, or none. A write
+that names any other, a move or a create, is refused with a 400, and the
+message says to omit the workphase or name the parent's. "The parent" is
+the one after the write, so two writes stay legal: a detach that files
+the item in a workphase in the same write, which is what a Stub dropped
+on a column sends, and an attach that names its new parent's workphase.
 
 **An Attached item shows with its parent, whatever its own
 `workphaseId` says.** No write makes the two disagree, but a direct
 database edit can. The board then still shows the item inside its
 ancestor's Card, and Unsorted doesn't list it.
 
-**Planned:** a write that leaves an item Free without naming a workphase
-gives it the one it was shown in, so leaving attachment never moves an
-item on the board. That's the workphase of its nearest Free ancestor:
+**A write that leaves an item Free without naming a workphase gives it
+the one it was shown in**, so leaving attachment never moves an item on
+the board. That's the workphase of its nearest Free ancestor:
 - not the root's, since a detached item partway up the tree is Free, and
   its own descendants are shown in its Card;
 - not the item's own `workphaseId`, which differs only after a direct
@@ -104,16 +98,13 @@ file the Free ancestor into a workphase first. A write that names
 `workphaseId: null` is accepted and leaves the item with no workphase on
 purpose; omitting it means "where it was shown". The message doesn't
 suggest `null`, since an item with no workphase shows in Unsorted.
-Replaces §11's "takes its own workphase" and "Its workphase is whatever
-it holds at that moment".
 
 **A Free item's workphase belongs to its project's workflow, or it has
-none.** A move that names a workphase its project's workflow doesn't use
-is refused with a 400, with or without a reparent in the same write.
-
-**Planned:** a create that names such a workphase is refused too, and so
-is a cross-workflow reparent that would leave a Free item in the moved
-subtree (§9).
+none.** A write that names a workphase its project's workflow doesn't
+use, a create or a move, is refused with a 400, with or without a
+reparent in the same write. So is a cross-workflow reparent that would
+leave a Free item in the moved subtree (§9). What a project with no
+workflow allows isn't a rule yet (Open questions).
 
 ## 3. Reparenting is one-way
 
@@ -154,16 +145,13 @@ a no-op.
 attaching are separate choices (§2), and the API supports every
 combination: a request carries `parentId` and, independently, the
 attachment flag. **Omitting the flag keeps the item's current state** —
-a detached child reparented without the flag is still Free under its new
-parent; an Attached one is still Attached. A Free reparent with no
-anchor leaves the position alone (its scope is workflow-wide and didn't
-change); with an anchor it repositions like any other Free item. Whether
-the *board gesture* offers this is open (Open questions); the API rule
-is settled here.
-
-**Planned:** so is a top-level item, whose flag is always clear (§1): a
-reparent without the flag makes it a detached child. No reparent
-attaches by default.
+a Free item reparented without the flag is still Free under its new
+parent, so a top-level item, whose flag is always clear (§1), becomes a
+detached child; an Attached one is still Attached. No reparent attaches
+by default. A Free reparent with no anchor leaves the position alone
+(its scope is workflow-wide and didn't change); with an anchor it
+repositions like any other Free item. Whether the *board gesture* offers
+this is open (Open questions); the API rule is settled here.
 
 ## 5. Reparent first, then resolve the position
 
@@ -203,12 +191,9 @@ following hold:
    own subtree would form a cycle.
 4. **It leaves the resulting tree within the depth cap** — see §8.
 
-**Cross-project is *not* a disqualifier**, and neither is cross-workflow.
-See §9.
-
-**Planned:** a cross-workflow reparent is refused whenever the moved
-subtree would hold a Free item after the write (§9). Replaces "and
-neither is cross-workflow".
+**Cross-project is *not* a disqualifier** (§9). **Cross-workflow is,
+whenever the moved subtree would hold a Free item after the write**
+(§9).
 
 **Where this is enforced:** at the **UI** (before the drop is offered) and
 at the **API** (on the write). Never in the database schema — the hierarchy
@@ -288,36 +273,18 @@ hierarchy, and a hierarchy can't straddle two projects. This is the one
 place a detached child is affected by its parent moving; §2's "not
 affected" is about workphase, position, and `completedAt`.
 
-**Cross-*workflow* reparenting is also allowed at the API.** No board
-gesture can produce it (a board sees one workflow), but the Sheet or an
-MCP call can, and the API accepts it: the item takes the new project, and
-every `workphaseId` in the moved subtree is left exactly as it was. An
-item whose workphase isn't in its project's workflow is what a board's
-**Unsorted → "Unknown status"** bucket exists to show; it renders there
-until a user re-files it into a workphase of the new workflow. Nothing is
-nulled and nothing is remapped. The one exception is an *attached* item,
-which never keeps its own
-workphase anyway: it inherits the new parent's, and its attached
-descendants cascade with it, exactly as §2 says. Only items that keep
-their own workphase — a Free moving item, and every detached descendant
-— end up in "Unknown status," and those have their position nulled
-because it no longer compares against anything
-([`../item-positioning/`](../item-positioning/) §7.3).
-
-**Planned:** a cross-workflow reparent is refused whenever the moved
-subtree would hold a Free item after the write: the moving item, if it
-ends Free, or any detached descendant. Each would keep a workphase of
-its old workflow (§2a), and a write never leaves an item where only
-Unsorted can show it. Unsorted is for what gets past, such as a direct
-database edit or a project moving under a different workflow. The
-refusal holds even when the write names a workphase of the new workflow
-for the moving item: no write re-files items across workflows (Open
-questions). A cross-workflow reparent that ends with the moving item
-Attached, with no detached descendant, is allowed: the item and its
-attached descendants take the new parent's workphase (§2), and the item
-takes a fresh position among its new siblings, as any item Attached after
-a reparent does (§4). Replaces the paragraph "Cross-*workflow*
-reparenting is also allowed at the API" and this section's closing note.
+**A cross-workflow reparent is refused whenever the moved subtree would
+hold a Free item after the write:** the moving item, if it ends Free, or
+any detached descendant. Each would keep a workphase of its old workflow
+(§2a), and a write never leaves an item where only Unsorted can show it.
+Unsorted is for what gets past, such as a direct database edit or a
+project moving under a different workflow. The refusal holds even when the
+write names a workphase of the new workflow for the moving item: no write
+re-files items across workflows (Open questions). A cross-workflow
+reparent that ends with the moving item Attached, with no detached
+descendant, is allowed: the item and its attached descendants take the new
+parent's workphase (§2), and the item takes a fresh position among its new
+siblings, as any item Attached after a reparent does (§4).
 
 A cross-project reparent does **not** on its own change the moved item's
 position comparison scope, which never depends on the project: a Free
@@ -327,9 +294,7 @@ never by the project change. An item that is Attached before or after the
 write resolves a fresh position (§4;
 [`../item-positioning/`](../item-positioning/) §2.1). A Free item that
 stays Free keeps its position unless the write carries an anchor (§4). On
-a board every reparent is an attach, so it always re-resolves. *(A
-cross-workflow reparent does change the scope — see
-[`../item-positioning/`](../item-positioning/) §7.3.)*
+a board every reparent is an attach, so it always re-resolves.
 
 ## 10. Attaching to a done parent
 
@@ -353,8 +318,8 @@ parent's context — then it is a reparent (§3–§5), not a plain detach.
 On becoming Free, the item:
 
 - takes a board-level position, resolved in the workflow-wide scope
-- takes its own workphase and stops tracking its former parent's
-  *Replaced by §2a once built.*
+- takes the workphase it was shown in (§2a), and stops tracking its
+  former parent's
 - becomes eligible for `completedAt` like any other Free item
 
 **Why keep the parent:** per §2, attachment answers "does this follow its
@@ -366,8 +331,7 @@ separate, explicit act.
 **Severing is "reparent to root."** A write that sets `parentId` to null
 makes the item top-level: it clears the parent *and* (per §1's invariant)
 the attachment flag, so it is Free with nothing above it. Its workphase is
-whatever it holds at that moment — no workphase change is implied.
-*Replaced by §2a once built.* For an Attached item this is a scope change
+the one §2a gives it. For an Attached item this is a scope change
 (attached-siblings → workflow) and resolves a fresh position like any
 detach — including the done-item consequence if that workphase is
 terminal, since it is now a Free item in a done workphase; for an
@@ -471,3 +435,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   a subtree into another workflow, for example with a map from each old
   workphase to a new one, or a single default, is undecided. So is how a
   project moving under a different workflow re-files its items.
+- **A project with no workflow (§2a, §9).** A Free item's workphase
+  belongs to its project's workflow, or it has none. Whether a write may
+  name a workphase for a Free item in a project with no workflow, and
+  whether a reparent into or out of such a project is cross-workflow, is
+  undecided.

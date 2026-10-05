@@ -29,6 +29,14 @@ There's no CI; everything runs locally.
 - Logic whose correctness doesn't depend on the surface gets a unit test next to it.
 - A shape-only check (a required field, an enum) is cheapest as a route test.
 
+## Setting up a state the API refuses
+
+Some tests need a state no request can produce, such as an exact position or a parentless row that holds the attachment flag. The API refuses those writes on purpose, so the test writes the state itself:
+- **Server tests** write the database directly. `server/tests/fixtures.ts::setItemPosition` pins a position.
+- **E2E tests** can't reach the database, so they go through a test route under `/api/test`, which is mounted only with `ENABLE_TEST_ROUTES`. `PATCH /api/test/items/:id/position` pins a position, through `tests/helpers/seed.ts::pinItemPosition`.
+
+A new kind of setup gets its own test route. Never loosen a rule in the real API to make a test's setup possible.
+
 ## Coverage
 
 - **Server: a hard gate on chosen files, not a global bar.** `server/vitest.config.ts` lists the core files of the work in flight, each held to 80% statements, branches, functions and lines. Every other file is measured but can't fail the run. New work adds its core files to that list; nobody raises a global percentage.

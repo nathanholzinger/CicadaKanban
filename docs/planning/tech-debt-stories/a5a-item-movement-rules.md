@@ -45,6 +45,7 @@ Out of scope:
   - **`Open`,** live today: ATT-1.8, 5.7, 9.1, 9.3, 9.8, 10.1, 10.2, 10.3; TC-6.10, 7.20. Each needs a test that carries its ID.
   - **`Planned`,** built in phase 2 or 3: ATT-1.14, 3.11, 5.9, 5.10, 9.2, 9.4, 9.5, 9.6, 9.7, 9.9; TC-2.32, 7.18, 7.19. Each becomes `Open` when the PO takes its passage's marker off.
   - **Replaced once built, then deleted:** ATT-5.4 (by 5.9), ATT-5.5 (by 5.10) and ATT-7.3 (by 9.4); TC-7.17 (by 7.19).
+  - **`Pending PO`:** ATT-9.10 (Open question 5), for the PO at step 2.
   - **Routed elsewhere:** ATT-1.10 is `Planned` until the Tags & Type System epic builds §12's tags (R7). ATT-4.12 and 4.13 go to A5b, and TC-6.13 (R11) and ATT-5.11 (Open question 4) to Epic 4, all four still `Pending PO`.
 
 ## Inbound deferrals
@@ -334,6 +335,18 @@ The starting list. The Coder keeps it current and records which symbol carries w
     - "a position-only move logs no status change" is now a same-workphase move, since a position-only move no longer exists;
     - every pin in `items.test.ts` and `items.hierarchy.test.ts` is `setItemPosition`, one helper in place of `items.hierarchy.test.ts`'s local one.
   - **Checks:** `npm run check` passes: 351 server tests, 400 client, 75 scripts, 0 checker hits. The full E2E suite: 145 passed, 8 skipped. Two tests in `item-positioning.spec.ts` failed the first run, since the spec pinned positions through its own helper that sent `position` to `PATCH /move`. It uses `pinItemPosition` now, and the spec passes.
+- **2026-09-30, the Test Planner's review of the handoff, before step 2.**
+  - **The pass itself waits for the PO's step 2.** Every case change the handoff names follows a marker coming off, or a passage going: `Planned` to `Open`, the replaced cases deleted, and the citations that move from §11 to §2a. The PO's rulings on the two behavior decisions (a project with no workflow) may add cases too.
+  - **One question for step 2:** ATT-9.10, `Pending PO` (Open question 5). It's the Coder's third call in 2b, a reparent that leaves an Attached item Free, which §2a's list of writes doesn't name.
+  - **At step 3, then:**
+    - `Planned` to `Open`, for the passages whose markers came off: ATT-1.14, 3.11, 5.9, 5.10, 9.2, 9.4 to 9.7, 9.9; TC-2.32, 7.18, 7.19. ATT-1.10 stays `Planned` (R7);
+    - delete ATT-5.4, 5.5 and 7.3, and TC-7.17, and the links to them;
+    - ATT-1.7's detach paragraph and ATT-7.7's workphase clause cite §2a (the phase 1 amendment's close-pass note), and ATT-1.8 and 1.14 may merge;
+    - cases from the PO's rulings, and ATT-9.10 resolved;
+    - any new case added to Scope.
+- **2026-10-04, step 2 (the PO): the wiki follows the build.** The handoff's "Wiki sections added, changed, moved or removed" lists each passage.
+  - **Nathan's ruling on the Coder's first behavior decision:** what a project with no workflow allows goes to Epic 4, both halves, beside ATT-5.11. It's an Open question on item-attachment. The PO added the first half to `epic-4-decisions.md` §12's ATT-5.11 entry.
+  - **The PO's deduction on the second:** `positionScope` in a project with no workflow follows from R9's wording, so it needed no ruling.
 
 ## Open questions
 
@@ -347,12 +360,15 @@ The starting list. The Coder keeps it current and records which symbol carries w
      - A second paragraph covers the items a project move under a different workflow leaves behind: they show in Unsorted, and what the move does to their positions isn't a rule yet. That's under item-positioning's Open questions, since re-filing is out of this story's scope. R9's `"none"` covers their `positionScope`.
 4. **For the PO:** ATT-5.11. Is a reparent between a project with no workflow and one with a workflow cross-workflow (item-attachment §9), and so refused when it leaves a Free item in the moved subtree? A Free item coming from the project with no workflow has no workphase to keep, and §2a lets a Free item have none. The other way, a Free item would keep its workphase in a project that uses no workflow.
    - **Routed (Nathan, 2026-09-30):** to Epic 4, which he expects to settle it: a move there that keeps the item in the backlog has no workflow to consider. ATT-5.11 stays `Pending PO`, and the Architect names it in `epic-4-decisions.md` §12, beside TC-6.13.
+5. **For the PO, at step 2:** ATT-9.10. Item-attachment §2a's rule for an item leaving attachment, the workphase it was shown in or a refusal, lists three writes: a detach, a reparent to root and a create. §11 calls a detach that lands under a different parent a reparent, not a detach. Does the rule apply to a reparent that leaves an Attached item Free under a new parent? 2b's build applies it (the Coder's third call there), and §2a's first sentence reads as though it does. If it does, the list names a fourth write.
 
 ## Living-docs handoff
 
 - **Behavior decisions made while building, for the PO to rule on:**
   - **A project with no workflow (phase 2, 2c).** A Free item's workphase "belongs to its project's workflow" (item-attachment §2a), and a cross-workflow reparent is refused (§9). Neither says what a project with no workflow means. The code compares nothing there: a create or move may name any workphase in such a project, and a reparent into or out of one isn't cross-workflow. That's today's behavior, kept. ATT-5.11 asks the second half and is Epic 4's.
+    - **Ruled (Nathan, 2026-10-04): routed to Epic 4, both halves, beside ATT-5.11.** Epic 4's status model is what defines a project with no workflow. The wiki says it isn't a rule yet: §2a ends "What a project with no workflow allows isn't a rule yet (Open questions)", and item-attachment's Open questions gains "A project with no workflow". The code's leniency stays, and no case is written for it. `epic-4-decisions.md` §12's ATT-5.11 entry now names the first half too.
   - **`positionScope` in that project (phase 3).** It follows: an item there with a named workphase is `"none"`, since its project uses no workflow and so uses none of the workphase's. item-positioning §2's new case ("a workphase its project's workflow doesn't use") doesn't say either.
+    - **The PO's deduction, no ruling needed:** §2's case now reads "its workphase isn't one of its project's workflow's". A project with no workflow has none, so an item there with a named workphase is `"none"`, which is what the code does.
 - **Planned passages now built:**
   - item-attachment §1's create bullet (a create stores the flag clear, and refuses it without a parent);
   - §2a's Planned paragraphs: a create's refusal for an Attached child (R1), the shown-in workphase (R4), a create naming a foreign workphase, and the cross-workflow reparent;
@@ -371,6 +387,31 @@ The starting list. The Coder keeps it current and records which symbol carries w
   - **Rewritten tests that keep their case:** TC-2.17's, which writes its flagged parentless row directly, and TC-2.24's re-file test, which writes its null position directly.
   - **Not asserted anywhere, for the Reconciler:** ATT-9.3's server side. The server lists a drifted Stub in `unsorted.invalidItems` (To A5c), so only the client is tested.
 - **Wiki sections added, changed, moved or removed** (PO, at close):
+  - *Applied (PO, 2026-10-04):* the markers on every passage listed as built are off, and the passages they replaced are deleted. `check:docs -- docs/wiki` reports 0 hits.
+  - **item-attachment:**
+    - **added in phase 1:** §2a, "The workphase a write leaves an item in", and §14, "Creating an item";
+    - **§1:** the "attached with no parent" refusal covers a create, and a parentless create stores the flag clear;
+    - **§2a:** R1's refusal covers a create; R4 (the shown-in workphase) and R3 (a create naming a foreign workphase, and the cross-workflow reparent) are rules now. It ends with the no-workflow sentence;
+    - **§4:** omitting the flag keeps a Free item Free, so a top-level item becomes a detached child, and "No reparent attaches by default" is back unmarked;
+    - **§7:** cross-workflow is a disqualifier whenever the moved subtree would hold a Free item after the write;
+    - **§9:** the paragraph "Cross-*workflow* reparenting is also allowed at the API" and the section's closing note on scope are deleted, and the refusal paragraph stands in their place;
+    - **§11:** a newly Free item takes the workphase it was shown in (§2a), and a reparent to root's workphase is §2a's. The two passages that said it kept its own are deleted;
+    - **Open questions:** "A project with no workflow" is new. "Re-filing across workflows" (phase 1) stays;
+    - **still Planned:** §12's tags (R7), which no story here builds.
+  - **item-positioning:**
+    - **§2:** "The API takes no final position from any caller" is a rule now (R8). `positionScope`'s `"none"` is a list of three cases, the third an item whose workphase isn't one of its project's workflow's (R9);
+    - **§2.1:** the cross-workflow row is deleted;
+    - **§6:** the done list's order and tie-break (R10, phase 1);
+    - **§7.2:** the closing sentence about the cross-workflow row is deleted;
+    - **§7.3:** the two cross-workflow paragraphs are deleted, and the paragraph that replaced them now opens "Cross-*workflow* reparenting leaves no position comparing against nothing". The paragraph on items a project move leaves behind is unchanged.
+  - **Moved between sections:** an item leaving attachment's workphase, from §11 to §2a. No section was renumbered or removed.
+  - **For the Test Planner's pass:** ATT-1.7's detach paragraph and ATT-7.7's workphase clause cite §2a now, as your close note said. Every case the handoff lists as `Planned` and built has its passage unmarked. No case covers a project with no workflow, since it's an Open question.
 - **To the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive", if `POST`'s route through the primitive changes. It does, from 2b: `POST /items` still checks the parent at the route (exists, same project, depth cap), but now also takes its item's workphase from `itemHierarchy.ts::resolveCreateWorkphase`, which holds the create to the same workphase rules as a move, and uses `itemHierarchy.ts` to log. It doesn't go through `validateHierarchyRequest`. 2c and phase 3 add to it: `POST` also refuses a Free item's workphase from another workflow through `itemHierarchy.ts::foreignWorkphaseError`. Root `CLAUDE.md`'s API table also lists `/api/items` as "Item CRUD + move + reorder + comments"; `PATCH /items/reorder` is gone (phase 3, R8), so "reorder" goes from that row. The workphase and column rows keep theirs, and so does the Coder persona's "Batch reorders" paragraph. `.claude/guides/testing-strategy.md` can name the test-only pin route (`PATCH /api/test/items/:id/position`, with `ENABLE_TEST_ROUTES`) as how an E2E spec gets an exact position now.
+  - *Applied (Architect, 2026-10-04):*
+    - root `CLAUDE.md`'s primitive bullet covers workphase writes, and says `POST` takes its workphase from `resolveCreateWorkphase` and `foreignWorkphaseError`;
+    - its API table drops "reorder" from `/api/items`, and adds the pin to `/api/test`;
+    - its Positioning bullet says no item or project write takes a final number. Projects ignore one rather than refuse it, so the bullet doesn't say "refuses";
+    - the Coder persona's "Batch reorders" names workphases and columns, and says items and projects have none;
+    - `testing-strategy.md` gains "Setting up a state the API refuses": server tests write the database, E2E uses a test route, and a test never loosens a real API rule.
 - **To A5b:** anything phase 2 changes in the Sheet (`ParentSection.tsx`, `ChildrenSection.tsx`) that the Sheet's page should state. R6's flag isn't one, since it's an implementation detail. From 2b: the Sheet's add-child names no workphase, so a new child takes its parent's. The board toolbar's "New child items go to" control (`BoardToolbar.tsx`, `BoardView.tsx`'s `childDefaultWorkphaseId` state and `kanban_child_col_*` localStorage key) now feeds nothing, as it never did for an attached child. Nathan's call: remove it, or give it a meaning in the Work Item Detail & Chat UI epic. It's the toolbar's, not the Sheet's, so it may not belong on the Sheet's page.
 - **To A5c:** R5's rule for a full item with no workphase, and R3's project moves, for the page's account of Unsorted. And from 2c: `GET /boards/:id`'s `unsorted.invalidItems` lists a drifted Stub (an Attached item whose own workphase is none or outside the workflow), so `needsAttention` is true. The client's bucket doesn't list it (item-attachment §2a), but still shows the badge, whose tooltip says a workphase is uncovered. Whether the server should leave Stubs out of `invalidItems` is the page's to say.

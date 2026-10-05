@@ -59,8 +59,8 @@ projects (tree — unlimited depth via parent_id self-ref)
 - **Positioning:** `workphases.position`/`columns.position` are simple append-at-end
   math (`nextPosition` in `server/src/lib/positionResolver.ts`). `items.position`/
   `projects.position` share a table-generic, server-resolved anchor+side system in the
-  same file — the client sends relative intent (insert before/after an anchor, by id),
-  never a final number. Full rules: `docs/wiki/item-positioning/README.md`.
+  same file — a caller sends relative intent (insert before/after an anchor, by id),
+  never a final number: no item or project write takes one. Full rules: `docs/wiki/item-positioning/README.md`.
 - **Attach/detach, hierarchy limits, boards/columns/Unsorted:** see the Conventions
   section below for the one-primitive guardrails; full rules live in
   `docs/wiki/item-attachment/README.md` and `docs/wiki/boards-columns-unsorted/README.md`.
@@ -82,13 +82,15 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   Descendants layer and the project sidebar. Table-generic the same way (`{id,
   parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
   walk inline either.
-- **One hierarchy-write primitive.** Every write that changes an existing item's parent
-  or attachment (`PUT /items/:id`, `PATCH /items/:id/move`) routes through
+- **One hierarchy-write primitive.** Every write that changes an existing item's parent,
+  attachment or workphase (`PUT /items/:id`, `PATCH /items/:id/move`) routes through
   `server/src/lib/itemHierarchy.ts` (`validateHierarchyRequest`, then
-  `applyHierarchyRequest`). `POST /items` checks a new item's parent at the route
-  (it exists, it's in the same project, and the depth cap through
-  `itemTree.ts::assertWithinDepthCap`) and uses `itemHierarchy.ts` only to log. Don't
-  reimplement reparent/attach/depth-cap logic at the route level.
+  `applyHierarchyRequest`). `POST /items` has no existing item to validate, so it checks
+  a new item's parent at the route (it exists, it's in the same project, and the depth
+  cap through `itemTree.ts::assertWithinDepthCap`), but takes its workphase from the
+  primitive's own rules (`resolveCreateWorkphase`, `foreignWorkphaseError`), so a create
+  and a move can't disagree. Don't reimplement reparent/attach/workphase/depth-cap logic
+  at the route level.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write response
   may carry `reindexed: {id, position}[]`. Every write path folds it through
   `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`.
@@ -142,13 +144,13 @@ Base URL: `http://localhost:3001`
 | `/api/workphases` | Workphase CRUD + reorder |
 | `/api/boards` | Board CRUD (resolved columns + Unsorted) |
 | `/api/columns` | Column CRUD + reorder |
-| `/api/items` | Item CRUD + move + reorder + comments |
+| `/api/items` | Item CRUD + move + comments |
 | `/api/agents` | Agent CRUD |
 | `/api/notifications` | Mark read / mark all read |
 | `/api/labels` | Label CRUD (global) |
 | `/api/attachments` | Attachment CRUD |
 | `/api/item-types` | Item type CRUD |
-| `/api/test` | Reset + seed DB — only when `ENABLE_TEST_ROUTES=true` |
+| `/api/test` | Reset + seed DB, pin an item's position — only when `ENABLE_TEST_ROUTES=true` |
 
 ---
 
