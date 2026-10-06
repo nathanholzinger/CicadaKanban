@@ -80,6 +80,13 @@ action is "move to project" (item-level, parent optional) or "reparent
 anywhere" (parent-level, project follows) — they're the same remapping
 problem with different UI framing.
 
+*Added 2026-10-06 (Architect, from A5d):* a project-level change has the same
+problem. A project that comes to use a different workflow, by a move in the
+sidebar or by overriding the one it inherits (A5d's G8), keeps its items' old
+workphases, and they show in Unsorted. Nathan deferred re-filing them
+(2026-10-05). Whatever re-files an item's subtree should serve a project's
+items too.
+
 ---
 
 ## The activity log

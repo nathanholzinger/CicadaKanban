@@ -118,6 +118,8 @@ When the epic closes, the API contract is generated, complete and current, and n
    - The OD2 spike, then add `zod` and the chosen library.
    - The parse helper (C2, C9) and the registry plumbing.
    - Move `PATCH /items/:id/move` and `PATCH /projects/:id/move` onto schemas.
+     - *Added by the Architect, from A5d's D5 (2026-10-06):* the two moves name a neighbor differently. An item's move sends `anchorId` and `side`, and a project's sends `prevId` or `nextId`. The wiki states one rule for both, a neighbor and a side (wiki positioning §2), so either shape meets it. Nathan wants project and item operations symmetrical, so whether they become one shape is this story's call.
+     - A project move naming both `prevId` and `nextId` uses `prevId`, and doesn't check `nextId`. The schema decides whether that's refused.
    - MCP tier 1 (C5).
    - C3's test changes for those two routes.
 2. **Request schemas for every remaining route.** That's 52 endpoints in 13 route files; many GETs take only path params. Done in batches by resource:

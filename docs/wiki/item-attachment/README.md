@@ -2,8 +2,9 @@
 
 **Test suite:** [`../../test-plans/item-attachment/`](../../test-plans/item-attachment/)
 
-**Related:** [`../item-positioning/`](../item-positioning/) (what a position
-means and how it resolves) · [`../board-drag-interaction/`](../board-drag-interaction/)
+**Related:** [`../item-positioning/`](../item-positioning/) (what an
+item's position compares against) · [`../positioning/`](../positioning/)
+(how a position resolves) · [`../board-drag-interaction/`](../board-drag-interaction/)
 (the gesture that drives these rules from a board)
 
 This page answers "what does it mean for one item to be attached to
@@ -104,7 +105,8 @@ file the Free ancestor into a workphase first. A write that names
 purpose; omitting it means "where it was shown". The message doesn't
 suggest `null`, since an item with no workphase shows in Unsorted.
 
-**A Free item's workphase belongs to its project's workflow, or it has
+**A Free item's workphase belongs to its project's workflow, the one
+its project uses ([`../project-tree/`](../project-tree/) §10), or it has
 none.** A write that names a workphase its project's workflow doesn't
 use, a create or a move, is refused with a 400, with or without a
 reparent in the same write. So is a cross-workflow reparent that would
@@ -140,7 +142,8 @@ The placement is always **before/after a specific anchor**. "First in
 list" and "last in list" are that same form with the anchor chosen by the
 client as the first or last item it renders in the target context — see
 [`../item-positioning/`](../item-positioning/) §7.1. An empty target has no
-anchor and takes the append fallback. There is no option that means
+anchor and takes the append fallback
+([`../positioning/`](../positioning/) §3). There is no option that means
 "unchanged."
 
 A resolved position may coincidentally come out equal to the old number.
@@ -221,48 +224,26 @@ while the Sheet isn't designed
 
 ## 8. Depth cap
 
-**A target at depth `D` is a legal parent only if:**
+**An item's hierarchy is capped by
+[`../hierarchy-placement/`](../hierarchy-placement/) §6's rule,** at the
+item cap, `CAP`, with **root items at depth 1**: a target at depth `D`
+is a legal parent only if `D + 1 + H <= CAP`, `H` being the moving
+item's subtree height. What's particular to items:
 
-```
-D + 1 + H <= CAP
-```
-
-with **root items at depth 1**, and `H` the dragged item's subtree height:
-the levels *below* the dragged item (a leaf being dragged has height 0).
-
-The moving item brings its whole subtree with it, so the cap is checked
-against the deepest leaf that would result — not against the dragged item
-alone. **The subtree is the full descendant subtree, attached and
-detached alike** — a detached descendant still sits under the moving item
-in the hierarchy and still moves with it, so it counts toward the height.
-
-**The formula is the whole rule.** It evaluates the *resulting* depth
-and nothing else — not the direction of the move, not the item's current
-depth. A subtree that is already taller than the cap therefore fails the
-check for every target, including a root; it can be moved only by
-dismantling it. This is deliberate: over-cap data can only arise from a
-later change to `CAP` or from data the UI/API never produced, and a
-direction-aware exception would cost the UI and the API a second clause
-each to stay in agreement.
+**The subtree is the full descendant subtree, attached and detached
+alike.** A detached descendant still sits under the moving item in the
+hierarchy and still moves with it, so it counts toward the height.
 
 **`CAP` is provisionally 6.** Its real value is open (Open questions).
+It's set on its own, apart from any other feature's cap
+([`../hierarchy-placement/`](../hierarchy-placement/) §6).
 
-The cap is a **display** constraint, not a data constraint: it exists
-because indented hierarchy has to stay legible in the project sidebar and
-the expanded-hierarchy modal, not because deeper trees are semantically
-wrong. Grounding for the provisional 6: the sidebar is 240px wide, indents
-14px per level from a 12px base, so a depth-6 row still leaves ~158px for
-its label — roughly twenty characters. Depth 8 leaves ~130px, which is
-where it stops reading as a label and starts reading as a truncation.
-
-**The UI and the API always enforce the same `CAP`**: one value, shared by
-both, so changing it changes it everywhere at once.
-
-**The cap does not retroactively invalidate existing data.** It gates
-*writes*; a tree that is already deeper than the cap (created before the
-cap existed, or left over-cap by a lowered `CAP`) stays valid, readable,
-and operable in every way that doesn't reparent it. It is not hidden,
-not flagged, and not repaired.
+**Grounding for the provisional 6:** an indented hierarchy has to stay
+legible in the project sidebar and the expanded-hierarchy modal. The
+sidebar is 240px wide, indents 14px per level from a 12px base, so a
+depth-6 row still leaves ~158px for its label — roughly twenty
+characters. Depth 8 leaves ~130px, which is where it stops reading as a
+label and starts reading as a truncation.
 
 ## 9. Cross-project reparenting
 
@@ -285,10 +266,11 @@ affected" is about workphase, position, and `completedAt`.
 **A cross-workflow reparent is refused whenever the moved subtree would
 hold a Free item after the write:** the moving item, if it ends Free, or
 any detached descendant. Each would keep a workphase of its old workflow
-(§2a), and a write never leaves an item where only Unsorted can show it.
-Unsorted is for what gets past, such as a direct database edit or a
-project moving under a different workflow
-([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §10). The
+(§2a), and an item write never leaves an item where only Unsorted can
+show it. Unsorted is for what gets past, such as a direct database edit,
+or a project that comes to use a different workflow
+([`../project-tree/`](../project-tree/) §6, §10;
+[`../boards-columns-unsorted/`](../boards-columns-unsorted/) §10). The
 refusal holds even when the write names a workphase of the new workflow
 for the moving item: no write re-files items across workflows (Open
 questions). A cross-workflow
@@ -397,6 +379,9 @@ belonging (§2), and a delete removes what belongs to the item. On the
 board, deleting a Card also removes the Cards of its detached
 descendants, wherever they sit.
 
+**Deleting a project deletes its items, each with its subtree**
+([`../project-tree/`](../project-tree/) §9).
+
 ## 14. Creating an item
 
 **A create names the item's project, its parent, or both.**
@@ -451,7 +436,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   write names a workphase of the new workflow. How a write could re-file
   a subtree into another workflow, for example with a map from each old
   workphase to a new one, or a single default, is undecided. So is how a
-  project moving under a different workflow re-files its items.
+  project that comes to use a different workflow re-files its items
+  ([`../project-tree/`](../project-tree/) §10).
 - **A project that uses no workflow (§2a, §9),** its own or an
   ancestor's. A Free item's workphase belongs to its project's workflow,
   or it has none. Whether a write may name a workphase for a Free item in

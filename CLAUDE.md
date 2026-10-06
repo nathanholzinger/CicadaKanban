@@ -51,8 +51,10 @@ projects (tree — unlimited depth via parent_id self-ref)
 | `notifications` | Created when an item moves to a `triggers_notification` workphase, polled by frontend every 15s |
 
 ### Architecture decisions
-- **Workflow inheritance:** a project with no workflow inherits from its nearest
-  ancestor that has one (computed at runtime, `client/src/App.tsx`).
+- **Workflow inheritance:** a project with no workflow of its own inherits its nearest
+  ancestor's, and one with its own overrides it for its subtree (computed at runtime,
+  `client/src/App.tsx` and `server/src/lib/workflowItems.ts`). Full rule:
+  wiki project-tree §10.
 - **Boards belong to workflows in the code, but they're due to become project-owned,**
   paired with URL routing. Don't add new code that depends on a board's workflow
   ownership where a project would serve.
@@ -60,10 +62,13 @@ projects (tree — unlimited depth via parent_id self-ref)
   math (`nextPosition` in `server/src/lib/positionResolver.ts`). `items.position`/
   `projects.position` share a table-generic, server-resolved anchor+side system in the
   same file — a caller sends relative intent (insert before/after an anchor, by id),
-  never a final number: no item or project write takes one. Full rules: `docs/wiki/item-positioning/README.md`.
+  never a final number: no item or project write takes one. Shared rules:
+  `docs/wiki/positioning/README.md`; an item's own scopes and the board's placements:
+  `docs/wiki/item-positioning/README.md`.
 - **Attach/detach, hierarchy limits, boards/columns/Unsorted:** see the Conventions
   section below for the one-primitive guardrails; full rules live in
   `docs/wiki/item-attachment/README.md` and `docs/wiki/boards-columns-unsorted/README.md`.
+  The depth cap's formula is wiki hierarchy-placement §6.
 - **Error handling:** a global Express error middleware (registered last) is the
   backstop. Multi-step mutations run inside `db.transaction()`. Details:
   `.claude/guides/error-handling-patterns.md`.

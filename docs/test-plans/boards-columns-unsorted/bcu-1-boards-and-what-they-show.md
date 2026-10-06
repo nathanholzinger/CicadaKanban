@@ -56,7 +56,7 @@
 
 ## BCU-1.5 — A board shows the items of every project that uses its workflow, its own or inherited
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3, wiki project-tree §10
 
 *Given* these projects, each holding one item in a workphase of the workflow it uses:
 - `A`, on workflow `WF`, holding `a`;
@@ -72,7 +72,7 @@
 
 ## BCU-1.6 — A project that comes to use another workflow takes its items to that workflow's boards
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3, wiki project-tree §10
 
 *Given* project `P1`, with no workflow of its own, under project `Q1` on workflow `WF1`; Free item `X` in `P1`, at workphase `w1` of `WF1`; and project `Q2` on workflow `WF2`, *when* `P1` is moved under `Q2`, *then* a board of `WF1` no longer returns `X`, and a board of `WF2` does, with `X` still holding `w1`. That `X` is in Unsorted there is [TC-7.20](../item-positioning/part-7-board-placement-intents.md)'s and [BCU-5.2](bcu-5-unsorted.md)'s.
 

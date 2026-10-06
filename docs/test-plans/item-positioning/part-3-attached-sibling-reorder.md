@@ -37,7 +37,7 @@
 
 ## TC-3.5 — Attached siblings resolve by the same anchor and side rules
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §3, wiki item-positioning §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §3, wiki positioning §3
 
 *Given* `P`'s attached children `A` (`1.0`), `B` (`2.0`) and `C` (`3.0`), each of these from that starting state:
 

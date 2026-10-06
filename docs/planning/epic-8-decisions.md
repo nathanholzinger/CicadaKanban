@@ -335,4 +335,23 @@ A5c writes the API's rules for boards, columns and Unsorted out in full, and tre
 - **A board's show-attached-children setting:** whether Cards open with their attached children showing.
 - **A project that uses no workflow** (A5c's G4), its own or an ancestor's, has no board. An item created there with no workphase shows nowhere. `epic-4-decisions.md` §12's ATT-5.11 asks a related question about workflow-less projects, which that epic's status model may settle.
 
-**Three more may join this list.** Nathan ruled that A5c's calls 1, 3 and 5 stay on the page only if the code already does them: the last board's 409, a column that can always be deleted, and the overlap 400. A5c's batch 3 tests pin each one. Any the code doesn't do comes off the page and joins this list, as something to weigh when reworking how boards present and meet workflows.
+**A5c's calls 1, 3 and 5 stayed on the page:** the last board's 409, a column that can always be deleted, and the overlap 400. Nathan ruled each stays only if the code already does it, and A5c's batch 3 tests show it does.
+
+## Deferred (not events-specific): the project page and the sidebar, from A5d
+
+A5d writes the project tree's API rules out in full. It treats the project page, and the sidebar's controls other than the drag, as a working placeholder, the same two tiers as A5c (Nathan, 2026-10-05, A5d's D1). Each item below is under the wiki page's Open questions (project-tree). This epic reworks navigation, with its tile-based dashboard and quick-nav sidebar, so these are decisions for it or later:
+
+- **The project page:** the breadcrumb, the tabs, the Overview tab with its description, parent dropdown and subprojects list, and the banner over an inherited board.
+  - The parent dropdown offers the top level and every project outside the project's own subtree, which is what the API accepts.
+  - Whether it also leaves out a parent that would put the subtree past the project depth cap is open. A5d plans that cap, provisionally 6.
+- **The sidebar's other controls:** the create and delete buttons, how a delete asks first, the collapse chevrons, and the remembered selection. The create dialog trims a name, and refuses an empty one.
+- **How the user learns that a project write failed** (A5d's call 11). Nathan ruled that the sidebar puts the project back where it was, which it does today. He deferred telling the user more visibly.
+  - A failed create's dialog shows an error.
+  - A failed move shows nothing but the project going back. A collapsed project the drop opened stays open.
+  - A failed parent change puts the dropdown back on the stored parent, and reaches the user only as a console error.
+- **How a tab state over the project cap looks in the sidebar.** A5d plans that it's still offered, its line is marked invalid, and a release in it writes nothing.
+- **What a project that uses no workflow shows:** "Set up a Workflow", and no board. The A5c section's entry on such a project holds the rest.
+- **Overriding an inherited workflow from the project page** (A5d's G8). Nathan ruled that any project can be given a workflow of its own, and otherwise inherits one. The API accepts an override, and nothing on the page offers one yet.
+  - An override, like a move under a different workflow, leaves the subtree's items holding the old workflow's workphases, so they show in Unsorted. Re-filing them is undesigned (`epic-7-decisions.md`'s Q2, and item-attachment's Open questions).
+
+**Not on this list:** the project cap's real value, which Epic 3.5's Story 7 sets for items and projects alike.

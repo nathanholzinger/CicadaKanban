@@ -4,6 +4,8 @@
 
 **Suite IDs:** `TC-1` … `TC-7`, with `TC-5a` and `TC-X`. A case is written by its full ID, `TC-<suite>.<n>` (e.g. `TC-4.1`), in its own suite file as everywhere else.
 
+Items position by positioning's shared rules, which have no catalog of their own, so the cases here test them as items apply them, beside item-positioning's own. Projects share the same resolution, and project-tree's catalog repeats only what differs for them.
+
 | Suite | What it covers |
 |---|---|
 | [TC-1 — Position is one value per item](part-1-position-scalar.md) | One position per item, read by every board |

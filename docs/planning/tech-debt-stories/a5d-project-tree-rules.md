@@ -167,7 +167,7 @@ The PO's decision above, ruled by Nathan. It's a page split, so it follows the w
 
 ### D5 Routed elsewhere
 
-- **The move's field names, to the API contract epic's Story 2** (the items and projects schemas). A project's move names its neighbor as `prevId` or `nextId`, and an item's as `anchorId` and `side`.
+- **The move's field names, to the API contract epic's Story 1,** which puts both moves on schemas as its pilot. *(Was Story 2, corrected in batch 2.)* A project's move names its neighbor as `prevId` or `nextId`, and an item's as `anchorId` and `side`.
   - Both are the same rule in words, a neighbor and a side, so the page holds either way. Nathan wants project and item operations symmetrical, and whether the two shapes become one is a contract change.
   - A move naming both `prevId` and `nextId` uses `prevId`, and doesn't check `nextId`. That's contract too.
   - The Architect adds both to `api-contract-zod-openapi.md` in batch 2.
@@ -271,9 +271,9 @@ The starting list. The Coder keeps it current.
 | `client/src/components/sidebar/useProjectDragReorder.ts`, `SortableProjectRow.tsx` | 3 | Call 1, deduction n: a tab state over the project cap is still offered, its line is marked invalid, and a release in it writes nothing |
 | `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `tests/api/projects.spec.ts`, client tests | 3 | Re-titles, and the new tests |
 | `server/tests/routes/columns.test.ts` | 3 | TC-6.7's and TC-6.8's tests re-titled BCU-3.2 and BCU-3.3 (D6) |
-| `CLAUDE.md` | 2, close | Batch 2: "Positioning" cites the shared page, and "Workflow inheritance" project-tree §10. At close: reindex disclosure for project writes, and the project cap in the data model |
-| `docs/planning/mvp-roadmap.md` | 2 | The Projects line loses "Unlimited-depth" (call 1) |
-| `docs/planning/epic-8-decisions.md`, `tech-debt-stories/api-contract-zod-openapi.md` | 2 | The deferrals, and D5's field names |
+| `CLAUDE.md` | 2, close | Batch 2, done: "Positioning" cites the shared page, "Workflow inheritance" project-tree §10 and the server's site, and the attach bullet the cap's formula. At close: reindex disclosure for project writes, and the project cap in the data model |
+| `docs/planning/mvp-roadmap.md` | 2 | Done. The Projects and Work Items lines lose unlimited depth (call 1, and Nathan's answer in batch 2) |
+| `docs/planning/epic-8-decisions.md`, `epic-7-decisions.md`, `tech-debt-stories/api-contract-zod-openapi.md` | 2 | Done. Epic 8: the placeholder tier. Epic 7: re-filing a project's items. The API contract epic's Story 1: D5's field names |
 
 ## Acceptance
 
@@ -286,6 +286,49 @@ The starting list. The Coder keeps it current.
 - **Routing:** each deferred gap is recorded where its ruling sends it, and D5's lines are in the API contract epic's plan.
 
 ## Handoff
+
+- **Wiki sections added, changed, moved or removed** (PO, batch 2). No section was renumbered or removed.
+  - **Added:**
+    - wiki positioning, a page of shared rules, §1 to §8, with no catalog of its own;
+    - wiki hierarchy-placement §6, the depth cap;
+    - wiki project-tree §3 to §10.
+  - **Moved, item-positioning to positioning.** Each item-positioning section keeps its number and its item-only part, with a pointer:
+    - §2's relative intent, the refusal of a final position, and why: to positioning §2. The refusal's message now reads "name a neighbor and a side";
+    - §2's resolution steps, coarsest fit, the append fallback and its virtual floor, the bootstrap, and the tight-gap trigger: to positioning §3. §2 keeps which item writes take the append fallback, and the bootstrap's workflow-wide reading with why it isn't rank-aware;
+    - §2's "Client-side role", with its worked example and the flip side: to positioning §5. §2 keeps the pending marker;
+    - §2.1's principle: to positioning §4. §2.1 keeps the table;
+    - §5's account of a reindex, its two triggers and the threshold: to positioning §6. §5 keeps active items as one scope and done items left out;
+    - §5.1's rule, why silence is unsafe, and the pairs' shape: to positioning §7. §5.1 keeps the item writes that disclose, and `reindexed`;
+    - §5a's outcome, its three steps, and why the order matters: to positioning §8. §5a keeps which item writes it covers, and the board's exceptions;
+    - §5a's tie-break: to positioning §1;
+    - §7.1's refusal of an anchor that doesn't exist, has no position, or is outside the resulting scope, with no fallback: to positioning §2. §7.1 keeps the board's case, a Card dropped as a Stub, and that nothing in the request commits.
+  - **Moved, item-attachment §8 to hierarchy-placement §6:** the formula and what `H` counts; that the formula is the whole rule; that the cap gates writes and leaves existing data valid; that a feature's UI and API enforce one value; and that it's a display constraint. §8 keeps root items at depth 1, that a detached descendant counts toward `H`, the item cap's provisional 6, and its grounding.
+  - **Newly stated** (Amendments, batch 2): positioning §2's "an entry is never its own neighbor", with an example, which TC-X.6 and TC-7.10 read from §2 and §7.1; positioning §6's "a reindex renumbers the whole scope it fires in, and nothing outside it", and item-positioning §5's attached children as a scope of their own; hierarchy-placement §6's per-tab-state validity (deduction n).
+  - **Retitled, numbers kept:** item-positioning §2, "An item's comparison scope and the workphase-only move"; §2.1, "Which item writes take a new position"; §5, "Which items reindex together"; §5.1, "Which item writes disclose a reindex"; §5a, "Which item writes the client reconciles".
+  - **Changed in place:**
+    - item-positioning: a new opening paragraph, Related, the pointers in §3 and §7 to §7.1, and §7.3 with its Open question (deduction k);
+    - item-attachment: Related, §2a's link to project-tree §10, §4's link to positioning §3, §9's "an item write never leaves …" and its cause (deduction k), §13's new last paragraph on a project's delete, and the re-filing Open question;
+    - boards-columns-unsorted: Related; §3's clause on which workflow a project uses, cut to a link to project-tree §10 (A5c's handoff), and its example, which gains an override; the Open question on a project that uses no workflow;
+    - board-drag-interaction: Related; §2's rule 5 and §10's links, now to positioning §5 and §8, and to item-positioning §2 for the pending marker; §7.2's link, now to hierarchy-placement §6 as well;
+    - hierarchy-placement: the Test suite line, Related, and the opening paragraph;
+    - project-tree: the opening paragraph, Related, §1's pointer to §6 and its Planned over-cap bullet, and §2's failed-move clause (deduction o);
+    - the wiki README's example, which links positioning §2.
+- **Planned passages this story builds:**
+  - wiki project-tree §1: a tab state over the project cap (call 1);
+  - wiki project-tree §3: a create checks its parent (G2), and the project cap (call 1);
+  - wiki project-tree §4: the sidebar's sort of a missing position (G6), and reindex disclosure (G5);
+  - wiki project-tree §6: the project as its own neighbor (G3), and a named position (G4);
+  - wiki project-tree §7: an edit that changes the parent (G1);
+  - wiki project-tree §8: an edit's empty name or `null` (G9), and a name of only spaces (call 10);
+  - wiki project-tree §10: at most one workflow (G7).
+- **For the Test Planner:**
+  - **Rule lines** follow the two maps above. A case that tests a shared rule as items apply it may cite both pages: positioning's section, and item-positioning's for the item's part. ATT-4's cases that test the formula cite hierarchy-placement §6 as well as item-attachment §8.
+  - **TREE-1.7** pins §1's "Projects have no depth cap", which stays the rule until the Planned cap is built.
+  - **project-tree §8's "or an empty one"** for a create is worded from G9's description. If a test shows a create takes an empty name, it comes back to the PO.
+  - **BCU-1.5:** boards-columns-unsorted §3 now links project-tree §10 for which workflow a project uses (D7).
+  - **The placeholder tier** is under project-tree's Open questions, and gets no cases.
+- **For the Coder (batch 3):** a comment that cites item-positioning §2, §2.1, §5, §5.1, §5a or §7.1 for a rule that moved, or item-attachment §8 for the formula, is re-pointed by the maps. Index pointers go on project-tree §3 to §10's enforcing sites.
+- **For the Architect (batch 2):** project-tree's Open questions hold the placeholder tier as written, for `epic-8-decisions.md`: the project page, the sidebar's other controls, how the user learns that a write failed, how an over-cap tab state looks, the project cap's real value (Epic 3.5's Story 7), a project that uses no workflow, overriding an inherited workflow from the page, and re-filing. Root `CLAUDE.md`'s "Positioning" bullet points to wiki positioning, and "Workflow inheritance" to wiki project-tree §10.
 
 ## Open questions
 
@@ -469,3 +512,78 @@ For Nathan, at plan approval.
   - **`**Planned:**`, call 10, in project-tree §8:** a name of only spaces counts as no name, so a create and an edit both refuse it with a 400, and nothing changes. The create's rule stays unmarked for a missing name. The edit's line joins G9's (an empty name, or `null`).
   - **Placeholder, under project-tree's Open questions** (how the sidebar tells the user a write failed): the create dialog's error, the parent dropdown going back to the stored parent, a failed edit reaching the user only as a console error, and the create dialog trimming a name and refusing a blank one.
   - *Deduction o, the PO's call the Architect left:* §2's collapsed project stays open if the write fails. §2 opens it on the drop, not on the save, and Nathan's call 11 ruling puts the moved project back, not the parent's open state. §2 gains a clause saying so, pointing to §4, so the case doesn't have to ask.
+- **2026-10-05, batch 2 (the PO): the pages.** The Handoff lists every section added, changed, moved or removed. With Nathan's clearance, the PO re-pointed `positioning-on-create-and-edit.md`'s references to item-positioning §2 to wiki positioning §2, §3 and §6. Choices made while writing, beyond batch 1's entries:
+  - **Deduction n is stated once, on hierarchy-placement §6,** since it follows from that page's §1 and §2 for every surface. board-drag-interaction §7.2 keeps the board's own handling, the ghost and its exception to §3.2, and links §6.
+  - **hierarchy-placement's "entry"** widens to an item or a project, since §6 holds for every write, not only a drag.
+  - **item-positioning §5 gains attached children as a scope of their own,** from §3 and positioning §6. TC-5.7 and TC-5.8 test it today.
+  - **positioning §2 states "an entry is never its own neighbor",** with an example, which TC-X.6 and TC-7.10 read from item-positioning §2 and §7.1 (deduction a).
+  - **The move's refusal of a position** says to name "a neighbor and a side", so it reads for items and projects alike. An item's message says "an anchor and side", which is the same thing.
+  - **project-tree §8's create refuses "no name, or an empty one",** from G9's description, "A create with no name gets a 400".
+- **2026-10-06, batch 2 (the Test Planner): the cases.** `npm run check:docs` reports 0 hits on 281 files. The catalog holds 342 cases: 197 `Automated`, 122 `Open`, 17 `Planned`, 4 `Manual` and 2 `Pending PO`. No new question for the PO.
+  - **Rule lines, by the two maps.** 49 lines changed:
+    - **item-positioning:** TC-2.1 to TC-2.12, TC-2.19 to TC-2.33, TC-3.5, TC-5.1 to TC-5.15, TC-5a, TC-7.3, TC-7.10 and TC-X.6. A case that tests a shared rule cites positioning's section. Where it also tests the item's part (a scope, which writes, `reindexed`, the board's exceptions), it cites item-positioning's section as well.
+    - **ATT-4.4 to ATT-4.11** cite hierarchy-placement §6 beside item-attachment §8 or §7.
+    - **The rest stay.** They cite only an item-only part, such as `positionScope`, the workphase-only move, the pending marker, §5's active scope and done items, §5.1's routes, §7.1's board case and empty target context, and §2.1's table. Statuses are untouched. The Reconciler checks them at Close.
+  - **project-tree's new suites,** one per section: TREE-3 to TREE-10. Projects get the shared rules that differ for them: the sibling scope, naming a neighbor, no neighbor meaning the true end, an edit's fresh position, disclosure, applying it, and the tie-break. Resolution's arithmetic stays tested once, in TC-2 (D4). The project cap is written as `PCAP`, defined in TREE-3's terms.
+  - **Each fix's `Planned` cases:**
+    - G1: TREE-7.2.
+    - G2: TREE-3.4.
+    - G3: TREE-6.5.
+    - G4: TREE-6.6.
+    - G5: TREE-4.5, TREE-4.6 and TREE-4.7.
+    - G6: TREE-4.4.
+    - G7: TREE-10.4.
+    - G9: TREE-8.3.
+    - Call 10: TREE-8.4.
+    - Call 1, the project cap:
+      - TREE-3.5 to TREE-3.8 on the API;
+      - TREE-1.11 in the sidebar, `Planned, replaces TREE-1.7`. TREE-1.7 stays `Automated` until the cap is built (Handoff), and is then deleted.
+  - **Live rules newly cased (`Open`):**
+    - TREE-3.1 to TREE-3.3, a parent's legality on an edit and a move;
+    - TREE-4.1 to TREE-4.3, the sibling scope and order;
+    - TREE-4.8, the sidebar after a failed write (call 11);
+    - TREE-5.1, a create's place;
+    - TREE-6.1 to TREE-6.4, a move. TREE-6.3 includes a neighbor with no position (call 9);
+    - TREE-7.1, an edit that keeps the parent;
+    - TREE-8.1 and TREE-8.2, a name;
+    - TREE-9.1 to TREE-9.3, a delete;
+    - TREE-10.1 to TREE-10.3, an override (G8), a move, and a deleted workflow (deduction i);
+    - TREE-1.12, a release sends a move naming a neighbor, never a position (positioning §5);
+    - TREE-2.3, the collapsed parent staying open after a failed move (deduction o).
+  - **Inheritance itself (D7) stays BCU-1.5's.** Its six projects already test "its own, or its nearest ancestor's" through the boards, so it now cites project-tree §10 rather than getting a twin. TREE-10 covers the rest of §10.
+    - BCU-1.6 cites project-tree §10 too.
+    - TC-7.20 cites project-tree §6, since it asserts that a move changing the workflow is accepted.
+  - **TC-6.7 and TC-6.8 move in batch 3a, not batch 2,** to BCU-3.2 and BCU-3.3, beside the Coder's re-title. `check:docs` flags a test title carrying an ID the catalog doesn't have. Moving them now would fail batch 2's 0-hit gate until 3a, so they move as TC-5a.6 did in A5b. BCU-3.4's links follow them, and item-positioning's INDEX line for TC-6 drops column ranges. The test-plans README needs no change: its Layout already covers a page of shared rules.
+  - **For the Coder (batch 3a):**
+    - **Tests to re-title.** Many `Open` cases pin today's code: TREE-3.1 to TREE-3.3, TREE-4.1 to TREE-4.3, TREE-5.1, TREE-6.1 to TREE-6.4, TREE-7.1, TREE-8.1, TREE-8.2, TREE-9.1 to TREE-9.3, and TREE-10.1 to TREE-10.3. `projects.test.ts` and `projects.spec.ts` likely hold several. A case a test asserts only in part stays `Open`, and the Reconciler names the gap.
+    - **Setups the API can't make.** These need a direct database edit or a test route:
+      - TREE-4.2, TREE-4.4 and TREE-6.3: a project with no position;
+      - TREE-3.7 and TREE-3.8: a tree deeper than `PCAP`.
+    - **UI cases:**
+      - TREE-1.11, TREE-1.12, TREE-2.3, TREE-4.3, TREE-4.4, TREE-4.7, TREE-4.8, and TREE-3.7's sidebar part.
+      - TREE-1.12 is a request rule whose only surface is a drag, so a client test of it counts without approval (test-plans README).
+      - TREE-4.3 and TREE-4.4 show in the sidebar's render. A client test there, such as `projectTreeUtils.test.ts`, needs Nathan's approval, or a UI test.
+    - **TREE-4.5's pairs** include the moved project's own, as TC-5.11 asserts for an item, since its write's scope was reindexed.
+  - **Scope (the cases in A5d):**
+    - project-tree: TREE-1.7 and TREE-1.11 to TREE-1.12, TREE-2.3, TREE-3.1 to TREE-3.8, TREE-4.1 to TREE-4.8, TREE-5.1, TREE-6.1 to TREE-6.6, TREE-7.1 to TREE-7.2, TREE-8.1 to TREE-8.4, TREE-9.1 to TREE-9.3, and TREE-10.1 to TREE-10.4;
+    - boards-columns-unsorted: every case, for the closing Reconciler run (D6), with BCU-3.2 and BCU-3.3 once moved;
+    - item-positioning and item-attachment: the Rule lines above. The closing Reconciler run confirms none lost coverage.
+- **2026-10-06, batch 2 (the Architect).** `npm run check:docs` reports 0 hits on 281 files.
+  - **Root `CLAUDE.md`:**
+    - "Positioning" sends the shared rules to wiki positioning, and an item's own scopes and the board's placements to item-positioning;
+    - "Workflow inheritance" says a project's own workflow overrides what it would inherit, names the server's site beside `App.tsx`, and cites wiki project-tree §10;
+    - the attach bullet cites wiki hierarchy-placement §6 for the depth cap's formula.
+    - Its data model still says projects have unlimited depth, and its reindex convention still covers item writes alone. Both stay true until batch 3b builds the cap and G5, so they change at Close.
+  - **The guides need no change.** None cites a rule that moved. `code-comments.md`'s example, `wiki item-attachment §8`, still names a section that exists.
+  - **The deferrals, routed by what each is:**
+    - **`epic-8-decisions.md`** gains "the project page and the sidebar, from A5d". It lists project-tree's placeholder Open questions: the project page, the sidebar's other controls, how the user learns a write failed (call 11), how an over-cap tab state looks, what a project that uses no workflow shows, and overriding an inherited workflow from the page (G8).
+    - **The project cap's real value** isn't there, since Epic 3.5's Story 7 sets it (the PO's earlier entry).
+    - **Re-filing** isn't placeholder UI. It joins `epic-7-decisions.md`'s Q2, which already asks how an item's project change re-files its subtree. It gains that a project that comes to use a different workflow, by a move or an override, has the same problem.
+    - **D6, carried in from A5c:** the A5c section's "Three more may join this list" now says calls 1, 3 and 5 stayed on the page, since A5c's batch 3 tests show the code does all three.
+  - **`api-contract-zod-openapi.md`:** D5's two lines go under Story 1, not Story 2 as D5 said, since Story 1 puts both moves on schemas as its pilot. D5 is corrected.
+  - **The MVP roadmap's Projects line** reads "Hierarchical folders, nested up to a depth cap (provisionally 6, as for items; Epic 3.5's Story 7 sets both)".
+    - *For Nathan:* its Work Items line still says "Unlimited depth", though items have had a cap since Epic 3. The ruling covered projects only, so it's left as it is.
+  - *For Nathan, outside this story:* `epic-7-decisions.md`'s Q1 still records the 2026-09-10 decision to accept every cross-workflow reparent. A5a's R3 now refuses one that would leave a Free item in the moved subtree (item-attachment §9). Epic 7's planning should start from R3. The Architect can add a line there if Nathan wants.
+- **2026-10-06, Nathan's answers to the Architect's batch 2 notes.**
+  - **The Work Items line:** unlimited depth is the ultimate goal, but it comes out of the MVP roadmap, since the UI has no way to show very deep items yet. The line now reads "Nested up to a depth cap (provisionally 6; Epic 3.5's Story 7 sets it)".
+  - **`epic-7-decisions.md`'s Q1 stays as it is.** Epic 7's Sheet will allow movements the board doesn't, and whether that changes the current endpoints or adds new ones is decided then.

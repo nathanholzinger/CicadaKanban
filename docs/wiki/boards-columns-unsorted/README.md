@@ -5,7 +5,7 @@
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
 (dragging items on a board) · [`../item-positioning/`](../item-positioning/)
 (how a column orders its items) · [`../project-tree/`](../project-tree/)
-(the tree a project inherits its workflow through)
+(which workflow a project uses)
 
 This page answers "what is a board, which items does it show, what does a
 column cover, and where does an item go that no column covers." Its
@@ -41,14 +41,14 @@ work at the workphase level, and boards don't affect them.
 ## 3. What a board shows
 
 **`GET /api/boards/:id` returns the items of every project that uses the
-board's workflow.** A project uses its own workflow, or, when it has
-none, that of its nearest ancestor in the project tree that has one
-([`../project-tree/`](../project-tree/)). The items include those whose
-workphase is none, or isn't one of the workflow's, which is how they
-reach Unsorted (§10).
+board's workflow** ([`../project-tree/`](../project-tree/) §10). The
+items include those whose workphase is none, or isn't one of the
+workflow's, which is how they reach Unsorted (§10).
 
 **A project that comes to use a different workflow brings its items with
-it,** for example when it moves under an ancestor with another workflow.
+it,** for example when it moves under an ancestor with another workflow,
+or is given a workflow of its own
+([`../project-tree/`](../project-tree/) §10).
 The items show on the new workflow's boards, still holding workphases of
 the old one, so they're in Unsorted. The old workflow's boards no longer
 show them. What the move does to their positions isn't a rule yet
@@ -249,6 +249,7 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   ancestor's board shows them all.
 - **A board's show-attached-children setting:** whether Cards open with
   their attached children showing.
-- **A project that uses no workflow,** its own or an ancestor's, has no
-  board. An item created there with no workphase
+- **A project that uses no workflow,** its own or an ancestor's
+  ([`../project-tree/`](../project-tree/) §10), has no board. An item
+  created there with no workphase
   ([`../item-attachment/`](../item-attachment/) §14) shows nowhere.

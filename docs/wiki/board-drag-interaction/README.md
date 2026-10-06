@@ -4,7 +4,9 @@
 
 **Related:** [`../item-attachment/`](../item-attachment/) (what the gesture
 is allowed to produce) · [`../item-positioning/`](../item-positioning/)
-(how the resulting position resolves) ·
+(what an item's position compares against) ·
+[`../positioning/`](../positioning/) (how the resulting position
+resolves) ·
 [`../hierarchy-placement/`](../hierarchy-placement/) (the gap-and-depth
 rule the Descendants layer places by)
 
@@ -210,7 +212,7 @@ While the item is in-context:
      has a neighbor. On screen, "after the card above" and "before the
      card below" are the same slot; in the workflow-wide order they can
      differ, because items this view doesn't show can sit between the two
-     neighbors ([`../item-positioning/`](../item-positioning/) §2). So the
+     neighbors ([`../positioning/`](../positioning/) §5). So the
      release saves the named anchor, and the item may move relative to
      those unseen items. Only a card alone in its list, set back down, has
      nothing to name and writes nothing (§10).
@@ -739,7 +741,8 @@ passed over, never named (§2).
 **The depth cap is checked per tab state, against the deepest descendant,
 at absolute depth.** A state's resulting depth is `P`'s absolute depth in
 the workflow plus the relative depth, plus the dragged subtree's height
-([`../item-attachment/`](../item-attachment/) §8). A state that would
+([`../hierarchy-placement/`](../hierarchy-placement/) §6;
+[`../item-attachment/`](../item-attachment/) §8). A state that would
 exceed the depth cap is still reachable — the ghost snaps there with a
 visible invalid cue (its look isn't a rule yet; Open questions) — and a
 release in it **commits
@@ -819,7 +822,7 @@ sub-row the saved anchor is always one of the ghost's own neighbors (§2),
 so the preview and the write can't disagree about the slot.
 
 This is correct rather than merely close enough — see
-[`../item-positioning/`](../item-positioning/) §2, "Client-side role," for
+[`../positioning/`](../positioning/) §5 for
 why the rendered order the client draws always matches the rendered
 projection of the server's answer, and why that holds even when the anchor's
 own value is still in flight.
@@ -827,12 +830,12 @@ own value is still in flight.
 **A previewed item is marked pending; its `position` is left alone.** It is
 specifically *not* set to `null` — null already means "not ordered by
 position" (a done item), and would sort the pending item to the top of the
-list. Same reference as above.
+list ([`../item-positioning/`](../item-positioning/) §2).
 
 **On the response**, in this order: apply any reindex pairs, assign the
 authoritative position, clear the pending marker, and only then check for
 inversions. The order matters; see
-[`../item-positioning/`](../item-positioning/) §5a.
+[`../positioning/`](../positioning/) §8.
 
 **An inversion is a tripwire, not routine maintenance.** Given the property
 above, a correctly reconciled response should never invert the rendered

@@ -75,7 +75,7 @@ A page's name and its section numbers are how code, test plans and other pages p
 
 ```markdown
 Dropping on a Stub pops out first (§8).
-The item's new position resolves by anchor and side ([item-positioning](../item-positioning/) §2).
+The item's new position resolves by anchor and side ([positioning](../positioning/) §2).
 ```
 
 ## Status: the Planned marker

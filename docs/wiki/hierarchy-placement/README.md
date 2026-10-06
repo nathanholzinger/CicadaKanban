@@ -1,21 +1,26 @@
 # Hierarchy Placement — Gap and Depth
 
-**Test suite:** none of its own. Each surface that places by these rules
-tests them in its own catalog:
-[`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/)
+**Test suite:** none of its own. Each feature that places by these
+rules tests them in its own catalog:
+[`../../test-plans/board-drag-interaction/`](../../test-plans/board-drag-interaction/),
+[`../../test-plans/item-attachment/`](../../test-plans/item-attachment/)
 and [`../../test-plans/project-tree/`](../../test-plans/project-tree/).
 
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
 §7 (a Card's descendants section on the board) ·
-[`../project-tree/`](../project-tree/) §1 (the project sidebar)
+[`../project-tree/`](../project-tree/) §1, §3 (the project sidebar, and
+the project cap) · [`../item-attachment/`](../item-attachment/) §8 (the
+item cap)
 
 This page answers "given where a dragged entry is released in a
-hierarchy, where does it land." Its rules are shared: a Card's
-descendants section on the board and the project sidebar both place by
-them. An *entry* is one row of the hierarchy: a Stub in a Card's section,
-or a project in the sidebar. Each surface's own page says how it shows the
-gap, what its root is, and any rule of its own, and marks as Planned any
-rule here that it's still to be built to.
+hierarchy, where does it land, and how deep may a hierarchy go." Its
+rules are shared: a Card's descendants section on the board and the
+project sidebar both place by them, and §6's depth cap holds for every
+write that gives an item or a project a parent, whatever the surface. An
+*entry* is one row of the hierarchy: an item, shown as a Stub in a
+Card's section, or a project in the sidebar. Each feature's own page
+says how it shows the gap, what its root is, and any rule of its own,
+and marks as Planned any rule here that it's still to be built to.
 
 ---
 
@@ -94,6 +99,56 @@ unreachable, not merely disallowed.
 nothing.** That gap and depth resolve to the slot it was picked up from.
 With full context nothing between Top and Bottom is unseen, so the
 release can't move the entry, and there is nothing to save.
+
+## 6. The depth cap
+
+**Each feature caps how deep its hierarchy may go, at a value of its
+own:** items at the item cap
+([`../item-attachment/`](../item-attachment/) §8), and projects at the
+project cap ([`../project-tree/`](../project-tree/) §3). Each is set on
+its own, so changing one never changes the other. The rules below hold
+whatever the number, with `CAP` the feature's own cap.
+
+**A target at depth `D` is a legal parent only if:**
+
+```
+D + 1 + H <= CAP
+```
+
+with the hierarchy's top level at depth 1, and `H` the moving entry's
+subtree height: the levels *below* it (a leaf has height 0).
+
+**The moving entry brings its whole subtree with it,** so the cap is
+checked against the deepest descendant that would result, not against
+the moving entry alone. A write is refused when any carried descendant
+would end past the cap. Each feature's page says what its subtree holds.
+
+**The formula is the whole rule.** It evaluates the *resulting* depth
+and nothing else: not the direction of the move, not the entry's
+current depth. A subtree that's already taller than the cap therefore
+fails the check for every target, the top level included; it can be
+moved only by dismantling it. This is deliberate: over-cap data can only
+arise from a later change to `CAP`, or from data the UI and the API
+never produced, and a direction-aware exception would cost the UI and
+the API a second clause each to stay in agreement.
+
+**The cap gates writes, and never invalidates existing data.** A tree
+that's already deeper than the cap, made before the cap existed or left
+over it by a lowered `CAP`, stays valid, readable, and operable in every
+way that doesn't reparent it. It isn't hidden, flagged or repaired.
+
+**A feature's UI and its API always enforce the same `CAP`:** one value,
+so changing it changes it everywhere that feature's entries are placed.
+
+**The cap is a display constraint, not a data constraint.** It exists
+because an indented hierarchy has to stay legible, not because deeper
+trees are wrong. Each feature's page grounds its value.
+
+**In a drag, validity is per tab state, never per gap.** The range
+doesn't depend on the cap (§1, §2), so a state that would put the
+subtree past the cap is still offered. It's marked invalid, and a
+release in it writes nothing. Sibling states in the same gap that fit
+stay valid. How a surface marks the state is its own.
 
 ---
 

@@ -39,7 +39,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 ## TC-7.3 — First and last are read off the rendered order, with ties broken by creation time
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.1, wiki item-positioning §5a
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.1, wiki positioning §1
 
 *Given* a target context whose two leading items, `A` and `B`, have the same `position`, with `A` created first, *when* an item is placed first in the list, *then* the request's anchor is `A`, the item the tie-break sorts first ([TC-5a.5](part-5a-client-reconciliation.md)). *And given* its two trailing items tie, *when* an item is placed last, *then* the anchor is the one of them created later.
 
@@ -55,7 +55,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 ## TC-7.10 — An anchor outside the resulting scope is rejected, and nothing commits
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki positioning §2, wiki item-positioning §7.1
 
 *Given* Free Card `X`, Card `P` with attached children `S1` and `S2`, and Card `Q` with attached child `T1`, *when* one request attaches `X` to `P` but names `T1` as its anchor, *then* it is rejected with a 400, and `X` is unchanged: still Free, with the same parent, workphase and position ([ATT-3.7](../item-attachment/att-3-reparent-placement-atomicity.md)). Each of these is rejected the same way, and changes nothing:
 
@@ -115,7 +115,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 ## TC-7.20 — An item a project move leaves in another workflow's workphase shows in Unsorted
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.3, wiki boards-columns-unsorted §3, wiki boards-columns-unsorted §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.3, wiki project-tree §6, wiki boards-columns-unsorted §3, wiki boards-columns-unsorted §10
 
 *Given* project `P1`, which has no workflow of its own, under project `Q1` on workflow `WF1`; Free item `X` in `P1` at workphase `w1` of `WF1`; and project `Q2` on workflow `WF2`, *when* `P1` is moved under `Q2`, *then* the move is accepted, `X.workphaseId` is still `w1`, and a board of `WF2` lists `X` under Unsorted.
 

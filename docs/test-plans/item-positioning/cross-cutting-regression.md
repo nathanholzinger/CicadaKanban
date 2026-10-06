@@ -19,7 +19,7 @@
 
 ## TC-X.6 — A moving item is never its own neighbor
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §2
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki positioning §2
 
 *Given* `A` (`1.0`), `X` (`1.5`) and `B` (`3.0`) in one scope, *when* `X` is placed after `A`, *then* `X`'s position is `2`, between `A` and `B`. Counting `X`'s own current row as `A`'s neighbor would give a value below `1.5`.
 

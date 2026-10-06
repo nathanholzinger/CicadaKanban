@@ -1,6 +1,6 @@
 # TREE-1 — Dragging a project places it by gap and depth
 
-**Next ID:** TREE-1.11
+**Next ID:** TREE-1.13
 
 **The tree,** for the cases that name it: top-level projects `A`, `B` and `X`, in that order, where `A` has a child `A1`, and `A1` has a child `A1a`. `X` is the project being dragged. Depths count from the top level, at 0:
 
@@ -24,6 +24,8 @@ X        (0)
 | TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
 | TREE-1.9 | Coming back to the dragged project's own row means its own gap | P1 | Automated |
 | TREE-1.10 | On the dragged project's own row, the cursor picks among its own gap's depths | P2 | Automated |
+| TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Planned |
+| TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Open |
 
 ---
 
@@ -121,3 +123,24 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 *Given* the tree, *when* `X` is picked up and the cursor rests on `X`'s own row, tabbed one right, *then* the line shows `X`'s own gap, below `B`, one level in, and a release makes `X` `B`'s first child. *When* the cursor is tabbed further right than that, *then* the depth clamps to the same one ([TREE-1.3](tree-1-gap-and-depth.md)). At its own depth, a release there writes nothing ([TREE-1.9](tree-1-gap-and-depth.md)).
 
 **Automation test:** `client/src/components/sidebar/useProjectDragReorder.test.ts`
+
+## TREE-1.11 — A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing
+
+**Priority:** P1 · **Status:** Planned, replaces TREE-1.7 · **Rule:** wiki project-tree §1, wiki hierarchy-placement §6, wiki project-tree §3
+
+*Given* a chain of projects, each the only child of the one before, from a top-level project down to `S`, at depth `PCAP − 2`, and `S`'s only child `T`, at depth `PCAP − 1`, where `PCAP` is the project cap and the depths count top-level projects as 1 (wiki project-tree §3); and top-level project `X`, the last row, with a child `X1`, *when* `X` is dragged into the gap below `T`:
+
+- tabbed one right of `T`, which would make `X` `T`'s child and put `X1` at depth `PCAP + 1`, *then* that state is still offered, and its line is marked invalid. A release there sends no request, and `X` stays where it was;
+- aligned with `T`, which makes `X` `S`'s child and puts `X1` at depth `PCAP`, *then* the line isn't marked invalid, and a release saves `X` as `S`'s child, after `T`.
+
+How the invalid line looks isn't asserted.
+
+**Automation test:** —
+
+## TREE-1.12 — A release saves the placement as a move naming a neighbor, never a position
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §6, wiki positioning §5
+
+*Given* the tree, *when* `X` is released with the line between `A1a` and `B`, at `A1a`'s depth, *then* the request is a move naming `A1` as `X`'s parent and `A1a` as the sibling it goes after, and it carries no position. *When* `X` is instead released above the first row, *then* the request is a move naming no parent and `A` as the sibling it goes before, again with no position. `X`'s position is the one the server's response gives.
+
+**Automation test:** —

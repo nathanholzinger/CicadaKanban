@@ -10,9 +10,9 @@ This plan is based on the current design doc (https://docs.google.com/document/d
 
 Key concepts from the design doc:
 
-- **Projects** — Unlimited-depth hierarchical folders. Each project has a workflow (own or inherited from parent). Parent projects can collate descendants sharing the same workflow into a single board view.
+- **Projects** — Hierarchical folders, nested up to a depth cap (provisionally 6, as for items; Epic 3.5's Story 7 sets both). Each project has a workflow (own or inherited from parent). Parent projects can collate descendants sharing the same workflow into a single board view.
 - **Workflows** — Define statuses (columns) that work items move through. Currently implemented as `boards` in the codebase. Subprojects inherit or override.
-- **Work Items** — Unlimited depth. Non-prescriptive hierarchy. Can be **attached** (follow parent when it moves columns) or **detached** (independent status). Full metadata: assignee, agent, tags, chat, activity.
+- **Work Items** — Nested up to a depth cap (provisionally 6; Epic 3.5's Story 7 sets it). Non-prescriptive hierarchy. Can be **attached** (follow parent when it moves columns) or **detached** (independent status). Full metadata: assignee, agent, tags, chat, activity.
 - **Quick Items** — Checkbox-based (not kanban). Aggregate into buckets. Auto-complete bucket when all children checked.
 - **Boards** — A project has one workflow (flat ordered list of statuses). Teams configure multiple boards as views of that workflow. Each board column covers a contiguous range of statuses; display mode per column is merged (all statuses in one swimlane) or expanded (each status as a sub-row). Different boards expose different levels of granularity — a PM board might group Dev+Review as "In Progress" while a dev board shows them separately.
 - **Tags & Types** — Types are purely descriptive (color/name, no behavior). Tags organize into **And Buckets** (non-exclusive) and **Or Buckets** (mutually exclusive). Up to 3 priority tags shown on card header.

@@ -2,9 +2,18 @@
 
 **Test suite:** [`../../test-plans/item-positioning/`](../../test-plans/item-positioning/)
 
-**Related:** [`../item-attachment/`](../item-attachment/) (what a legal
-parent is, and what attaching means) · [`../board-drag-interaction/`](../board-drag-interaction/)
+**Related:** [`../positioning/`](../positioning/) (how a position
+resolves, is reindexed and is applied, for items and projects alike) ·
+[`../item-attachment/`](../item-attachment/) (what a legal parent is, and
+what attaching means) · [`../board-drag-interaction/`](../board-drag-interaction/)
 (the board gesture that produces these placements)
+
+This page answers "what does an item's position compare against, and
+how does a drop on the board place an item." How a position resolves,
+is reindexed and is applied by a client is
+[`../positioning/`](../positioning/)'s, since items share those rules
+with projects. This page holds an item's own scopes, merged columns, the
+active/done split, and the board's placement intents.
 
 ---
 
@@ -15,25 +24,13 @@ Boards read it; they never own their own copy. This is the same kind of
 fact as the item's `workphaseId` (its current state), just a second axis
 of it.
 
-## 2. Position resolution: anchor + side
+## 2. An item's comparison scope and the workphase-only move
 
-Writes that change position don't send a client-computed final number.
-The client sends **relative intent** — insert this item immediately
-`before`/`after` a specific other item, by id (the "anchor") — and the
-server resolves the actual number against that item's **true current**
-neighbor (a fresh query, never a client-supplied value), inside the same
-transaction as the write.
-
-**The API takes no final position from any caller.** A move that names
-a `position` is refused with a 400 whose message says to name an anchor
-and side instead, and no endpoint sets positions outright.
-
-**Why:** a client's local view of neighbors can be narrower than the true
-full order (e.g. a subproject board that doesn't load a parent project's
-full item set). Resolving locally from a narrow view can silently leapfrog
-an item past a true neighbor the acting view never saw. Resolving against
-a fresh authoritative query, always, closes this for every comparison
-scope (attached-sibling list, merged-column union) at once.
+**An item's position resolves by anchor and side, as
+[`../positioning/`](../positioning/) §2 and §3 state:** a write names an
+anchor item and a side, never a number, and the server resolves it
+against the anchor's true neighbors in a fresh query. This section holds
+what's particular to items.
 
 **Comparison scope.** A detached/root item's position is comparable against
 every other active item in its **whole workflow**, not just its own
@@ -48,66 +45,34 @@ narrower than "the whole workflow" for a detached/root item — in particular
 a merged column's covered workphaseIds is **not** a position-comparison
 boundary, just a rendering filter (§4).
 
-**Resolution steps, in order:**
+**The append fallback** ([`../positioning/`](../positioning/) §3) is
+what an item created with no anchor takes, and so is a move within its
+own workphase that names no anchor. A workphaseId-only move with no
+anchor at all (dropping an item into a different workphase, no specific
+target card) doesn't: see the workphase-only rule below.
 
-1. Query the anchor's true current position.
-2. Look for a true bounding neighbor beyond the anchor in the requested
-   direction, against the full authoritative table — never limited to
-   what the requesting view currently has loaded or displayed, and never
-   narrower than the comparison scope above. The check is always "does a
-   true neighbor exist," never "is one visible here."
-3. If a true bounding neighbor exists: **coarsest-fit insert** between the
-   anchor and that neighbor (below).
-4. If none exists (the anchor is the true last item for side `after`, or
-   true first item for side `before`): degrade to the **append fallback**
-   (below).
-5. Pure creation with no anchor resolves the same way, treating the target
-   scope's true last item as an implicit anchor — or the **bootstrap
-   fallback** if the scope is empty.
-
-**Coarsest-fit rounding** (step 3): don't take the raw arithmetic midpoint
-— search increasing decimal precision (0 places, then 1, then 2, …),
-rounding the exact midpoint at each level, and take the first result that
-falls strictly between the two neighbors. Example: between 1.5 and 2.0,
-the raw midpoint is 1.75, but 1.8 already fits (1 decimal), so use 1.8.
-
-**Append fallback** (step 4): `round(anchor.position + 1.0)` for `after`
-with no true successor. For `before` with no true predecessor, **not** a
-symmetric `round(anchor.position - 1.0)` — instead a coarsest-fit insert
-between `0.0` (a virtual floor) and the anchor's position. This keeps a
-repeatedly-prepended item's position bounded above zero instead of
-drifting negative without limit, which would otherwise collide with the
-tie-break's treatment of a missing position as 0 when sorting alongside
-unpositioned items (§5a). A workphaseId-only move with no anchor at all
-(dropping an item into a different workphase, no specific target card)
-does **not** go through this path — see the workphase-only rule below. Item creation with no explicit
-position, and a same-workphase reorder/append with no specific target card,
-both still do.
-
-**Bootstrap fallback** (step 5, scope is completely empty): start at `1.0`.
-Because scope is workflow-wide (never workphase-narrow — see above), this
-only fires when the *whole workflow* has no positioned items yet, or a
-parent has no children yet — never merely because one particular workphase
-is currently empty while others in the same workflow aren't. Why not a
+**The bootstrap fallback** ([`../positioning/`](../positioning/) §3)
+starts an empty scope at `1.0`. Because an item's scope is
+workflow-wide (never workphase-narrow — see above), it only fires when
+the *whole workflow* has no positioned items yet, or a parent has no
+children yet — never merely because one particular workphase is
+currently empty while others in the same workflow aren't. Why not a
 rank-aware bootstrap, anchoring an empty workphase to its nearest
 non-empty neighbor by rank: it would only matter if two independently
-empty *workphases* could collide at `1.0`, and with a workflow-wide scope
-they can't.
+empty *workphases* could collide at `1.0`, and with a workflow-wide
+scope they can't.
 
 **A workphaseId-only move with no anchor keeps the item's existing
-position, unchanged** — a distinct, deliberate exception to steps 4/5
-above. Since position is workflow-scoped, an item's existing value is
-already comparable against everything else in its workflow; changing its
-workphaseId alone doesn't make that value stop being meaningful, so there's
-no need to compute a new one. (This is also the shape the MCP `move_item`
-tool already sends — `{workphaseId}` alone.) The one exception: if the item
-has no existing position to keep — reopening a done item, or a first-time
-workphase assignment — it still needs a fresh one via the append fallback,
-same as creation.
-
-**Tight-gap reindex trigger:** if the coarsest-fit search exhausts a max
-decimal depth with nothing fitting, that's precision exhaustion — reindex
-the relevant local comparison scope first (§5), then retry the insert.
+position, unchanged:** it's a write that doesn't place the item
+([`../positioning/`](../positioning/) §4). Since position is
+workflow-scoped, an item's existing value is already comparable against
+everything else in its workflow; changing its workphaseId alone doesn't
+make that value stop being meaningful, so there's no need to compute a
+new one. (This is also the shape the MCP `move_item` tool already sends
+— `{workphaseId}` alone.) The one exception: if the item has no existing
+position to keep — reopening a done item, or a first-time workphase
+assignment — it still needs a fresh one via the append fallback, same as
+creation.
 
 **`positionScope` (computed, read-only API field):** alongside the
 existing `position: number | null` (unchanged shape), a derived field —
@@ -127,58 +92,27 @@ scope, even though the reasons differ (ordered by `completedAt`, or not
 ordered at all). Computed whenever the item is read, never stored. Tells a client (or a human reading the API) what an
 item's `position` is actually comparable against.
 
-**Client-side role: the client never computes a position value, not even
-for display.** Optimistic feedback is **ordinal** — the item is shown at an
-index in the rendered list — and the number arrives from the server.
-
-Why not compute a number for display only: a plausible-but-wrong number
-held in client state is a number something will eventually be tempted to
-send, and it buys nothing (see below).
-
-**Why ordinal is sufficient, and why it's correct rather than approximate:**
-the server places an item strictly between its anchor and that anchor's
-true neighbor in the requested direction. Anything occupying that gap is,
-by definition, not in the requesting view — otherwise it would have been
-the anchor's visible neighbor. So the item always lands adjacent to its
-anchor on the requested side *within the rendered set*, whatever number it
-receives and whatever unseen items sit around it. The rendered projection
-of the server's answer is exactly what the client already drew.
-
-Worked through: rendered `A, C, E`, with true order `A, B, C, D, E`.
-Requesting `after A` resolves between A and B → renders `A, X, C, E`.
-Requesting `before C` resolves between B and C → renders `A, X, C, E`. Same
-picture, and it's the one the client predicted.
-
-The flip side: the two relations are the same *rendered* slot but not the
-same *true* slot, so the choice of anchor is never cosmetic. With the same
-view, dragging `C` and setting it back down where it was saves "after A"
-(landing between A and B) if the carried card leans up, or "before E"
-(landing between D and E) if it leans down
-([`../board-drag-interaction/`](../board-drag-interaction/) §2). Both
-render `A, C, E`, but `C` has moved relative to the unseen `B` and `D` —
-which is why a set-down with a neighbor to name is a real write, not a
-no-op.
-
-This holds under stacked operations too — an item may be positioned against
-an anchor whose own value is still in flight, because the ordinal
-relationship doesn't depend on either number.
+**The client never computes an item's position, and its feedback is
+ordinal** ([`../positioning/`](../positioning/) §5).
 
 **A pending item must not be represented as `position: null`.** Null is
 already load-bearing: it means "not ordered by position" — a done item
 ordered by `completedAt` (§6), or an item with no workphase at all — and
-the tie-break (§5a) counts it as `0`, sorting nulls to the *front*. A
-pending item marked null would be indistinguishable from a done one and
-would jump to the top of the list the moment anything re-sorted. Pending
-needs its own marker; `position` stays untouched until the real value
-lands.
+the tie-break ([`../positioning/`](../positioning/) §1) counts it as `0`,
+sorting nulls to the *front*. A pending item marked null would be
+indistinguishable from a done one and would jump to the top of the list
+the moment anything re-sorted. Pending needs its own marker; `position`
+stays untouched until the real value lands.
 
-Reconciliation on the response, and what to do when a reindex fires: §5a.
+Reconciliation on the response, and what to do when a reindex fires:
+[`../positioning/`](../positioning/) §8, and §5a for items.
 
-### 2.1 Scope-change reassignment principle
+### 2.1 Which item writes take a new position
 
-Assign a fresh position via the append fallback exactly when an operation
-changes an item's *relevant comparison scope* without an explicit anchor —
-never when the scope is unchanged:
+An item takes a fresh position by the append fallback exactly when a
+write changes its comparison scope without naming an anchor, never when
+the scope is unchanged ([`../positioning/`](../positioning/) §4). For
+items:
 
 | Operation | Scope change? | Result |
 |---|---|---|
@@ -191,16 +125,16 @@ never when the scope is unchanged:
 ## 3. Attached-child sibling reordering
 
 Attached children are a **locally-sortable list** scoped to one parent's
-children — reordering siblings under the same parent, using the anchor +
-side mechanism above. On the board, that reorder and the cross-boundary
-attach and detach are the drag gesture's job
+children — reordering siblings under the same parent, by anchor and side
+([`../positioning/`](../positioning/) §2). On the board, that reorder
+and the cross-boundary attach and detach are the drag gesture's job
 ([board-drag-interaction](../board-drag-interaction/) §7 and §8).
 
 A new attached child's position is scoped to `(parentId, isAttached)` —
-not to `workphaseId` — via the same append-fallback logic as everything
-else. (Scoping it to `workphaseId` would incorrectly pull in unrelated
-top-level items and other parents' attached children sharing that
-workphase.)
+not to `workphaseId` — via the append fallback, like everything else
+([`../positioning/`](../positioning/) §3). (Scoping it to `workphaseId`
+would incorrectly pull in unrelated top-level items and other parents'
+attached children sharing that workphase.)
 
 ## 4. Merged-column interleaving
 
@@ -225,21 +159,12 @@ column body), or the precise
 hovered workphaseId (expanded mode). Expanded/single-workphase columns are
 unaffected — covered-set membership degenerates to exact equality there.
 
-## 5. Reindexing (precision + magnitude)
+## 5. Which items reindex together
 
-**A reindex resets a given set of items to clean sequential values,
-preserving their current relative order.**
-
-**Two triggers, both lazy and reactive** — never a scheduled job, never a
-whole-project sweep:
-
-1. **Tight-gap:** an insert-between search exhausts precision (§2) →
-   reindex just that local comparison scope, then retry.
-2. **Magnitude threshold:** an append's value would cross
-   `max(1000, n + 100)`, where `n` is the number of items in the scope →
-   reindex the relevant scope first, then append. The threshold scales with scope size (1000 as a
-   floor) so a scope that genuinely holds 1200+ items doesn't reindex on
-   every single append.
+**Items reindex as [`../positioning/`](../positioning/) §6 states:**
+their scope's positions reset to clean sequential values, in order, on a
+tight gap or past the magnitude threshold, over the whole scope the
+reindex fires in. What that scope holds for items:
 
 **Active items reindex as one coordinated scope** — every non-terminal
 workphase's items reset *together*, in one operation, never
@@ -248,75 +173,40 @@ scopes from drifting into overlapping ranges and colliding later.
 
 **Done items are excluded entirely** — see §6.
 
-### 5.1 Reindexing must be disclosed to the caller
+**A parent's attached children are a scope of their own** (§3), so a
+reindex of them never touches the workflow's items, and a reindex of the
+workflow's items never touches them.
 
-The disclosure is an optional `reindexed` field on the item-write
-responses (`POST /items`, `PUT /items/:id`, `PATCH /items/:id/move`).
+### 5.1 Which item writes disclose a reindex
 
-**A response to a write that triggered a reindex must carry the renumbered
-positions.** A reindex changes rows the caller never asked about, so a
-caller that only reads back the item it wrote is left holding one fresh
-value and a set of stale ones.
+**Every item write that can reindex discloses it, as
+[`../positioning/`](../positioning/) §7 states,** in an optional
+`reindexed` field on its response: `POST /items`, `PUT /items/:id` and
+`PATCH /items/:id/move`.
 
-**Why silence is unsafe rather than merely inefficient:** a reindex
-*preserves relative order* by definition, so a caller that mixes the one
-new number into its old ones can compute an ordering that is wrong while
-looking perfectly consistent. Given rendered `A=1.0, C=1.5, E=1.75` and a
-reindex to `A=1, X=2, C=3, E=4`, a caller that learns only `X=2` sees
-`1.0, 2, 1.5, 1.75` and concludes X belongs last. Nothing errors; the list
-is simply wrong from then on.
+## 5a. Which item writes the client reconciles
 
-Shape of the disclosure:
+**After a successful item write that returns positions, the list shows
+the order the server saved,** as [`../positioning/`](../positioning/) §8
+states. This holds for every such write: a board move, a sibling
+reorder, an inline create, a Sheet edit, including one that triggers a
+reindex. The exceptions are
+[board-drag-interaction](../board-drag-interaction/) §10's: a failed
+write, or a stale response that carried reindex pairs, resyncs the board
+instead.
 
-- The response carries a **collection of `{id, position}` pairs** covering
-  every item the reindex renumbered — chosen over a bare "you should
-  requery" flag, which costs a round trip and leaves a window in which the
-  caller knows its data is stale but hasn't corrected it yet. The values
-  already exist in the transaction; withholding them to be asked again is
-  work for both sides.
-- **`{id, position}` and nothing more.** A reindex changes positions and
-  never any other field, so a full row would imply otherwise.
-- **The written item is included** in the collection when it was part of the
-  reindexed scope, so a caller has exactly one rule — apply every pair —
-  rather than a merge with precedence to reason about.
-- **Absent or empty means no reindex occurred**, which is the overwhelmingly
-  common case and should cost nothing to report.
-- The collection covers the **whole reindexed scope**, which may be far
-  wider than any one caller's view. A caller **applies the pairs it holds
-  and ignores the rest**; an unrecognized id means "not in this view," never
-  "missing data to go fetch."
-
-## 5a. Client reconciliation order
-
-**After a successful write that returns positions, the list shows the order
-the server saved** — without a reload, and without moving any row that was
-already correctly ordered. This holds for every such write: a board move, a
-sibling reorder, an inline create, a Sheet edit, including one that
-triggers a reindex. The exceptions are
-[board-drag-interaction](../board-drag-interaction/) §10's: a failed write,
-or a stale response that carried reindex pairs, resyncs the board instead.
-
-**Why it holds:** a client that holds a locally ordered list takes each
-response to a position write in this order:
-
-1. **Apply every reindex pair it holds.**
-2. **Then assign the written item's authoritative position.**
-3. **Only then compare anything.** The order follows `position` and the
-   tie-break below.
-
-**The order matters.** A comparison made before the pairs land mixes old
-values with new ones, and reports an order that was never wrong. On the
-board, that would be a false entry in the inversion log.
+The client applies the pairs first, then the written item's position,
+and only then compares anything
+([`../positioning/`](../positioning/) §8). On the board, a
+comparison made before the pairs land would be a false entry in the
+inversion log.
 
 **On the board,** which writes the comparison checks, and what happens
 to a difference, are
 [`../board-drag-interaction/`](../board-drag-interaction/) §10's.
 
-**Tie-break:** wherever items are sorted, the order is `position` — a
-missing one counting as 0 — then `createdAt`. It's cheap, deterministic,
-and keeps an exact tie's order from depending on unspecified database row
-order. A client that sorts any other way will diverge from the server on
-exact ties.
+Every client sort of items breaks ties by
+[`../positioning/`](../positioning/) §1's tie-break.
 
 ## 6. Active/done split
 
@@ -354,15 +244,16 @@ and count grow together — never disproportionate, needs nothing).
 
 ## 7. Placement intents from the board gesture
 
-These extend §2's resolution model; they don't replace any part of it.
+These extend [`../positioning/`](../positioning/)'s resolution model
+(§2, §3); they don't replace any part of it.
 
 ### 7.1 First-in-list and last-in-list are anchor + side, chosen by the client
 
 The board gesture's "first in list" and "last in list" placements (drop
 bands — see [`../board-drag-interaction/`](../board-drag-interaction/) §5
-and §7.1) introduce **no new request shape**. They are ordinary §2
-anchor + side requests where **the client picks the anchor from its own
-rendered list**:
+and §7.1) introduce **no new request shape**. They are ordinary anchor +
+side requests ([`../positioning/`](../positioning/) §2) where **the
+client picks the anchor from its own rendered list**:
 
 - **First in list** → `{ anchorId: <first item in the target context>, side: 'before' }`
 - **Last in list** → `{ anchorId: <last item in the target context>, side: 'after' }`
@@ -371,12 +262,13 @@ rendered list**:
 column in merged mode, the individual sub-row in expanded mode, or a
 parent's Stub list — exactly as
 [`../board-drag-interaction/`](../board-drag-interaction/) §1 defines it.
-"First" and "last" are read off the client's rendered order, using §5a's
-tie-break, so an exact tie can't make the client and server disagree about
-which item is first.
+"First" and "last" are read off the client's rendered order, using the
+tie-break ([`../positioning/`](../positioning/) §1), so an exact tie
+can't make the client and server disagree about which item is first.
 
 **Why the client choosing the anchor is safe, when the client computing a
-number is not.** §2's narrow-view hazard is about the *number*: a midpoint
+number is not.** The narrow-view hazard
+([`../positioning/`](../positioning/) §2) is about the *number*: a midpoint
 computed from two visible neighbors can leapfrog an unseen item between
 them. Choosing an anchor has no such hazard — the server still resolves
 against that anchor's *true* neighbor, so nothing is jumped. Picking the
@@ -390,9 +282,10 @@ the visible first item A — then anchoring `before A` lands the item between
 Z and A, and the rendered result is: first in the list the user was looking
 at. That is what "first in list" meant. A server-side "true first" would
 instead place it ahead of Z, an item the user never saw and expressed no
-intent about. The same §2 "Client-side role" argument that makes the
-ordinal preview correct makes this choice correct: the rendered projection
-of the server's answer matches the slot the user picked.
+intent about. The same argument that makes the ordinal preview correct
+([`../positioning/`](../positioning/) §5) makes this choice correct: the
+rendered projection of the server's answer matches the slot the user
+picked.
 
 **Empty target context — no anchor exists.** First and last are then the
 same slot and both degrade to the existing anchor-free paths, unchanged:
@@ -407,19 +300,19 @@ same slot and both degrade to the existing anchor-free paths, unchanged:
 so cannot be anchors (§7.4). The bands do not produce an anchor request in a
 done column; the drop is workphase-only.
 
-**Scope check happens against the item's *resulting* state.** When the same
-request also reparents or attaches (a Card dropped as a Stub), the anchor is
-one of the *new* parent's children — a scope the item isn't in yet. The
-server validates the anchor's scope against where the item will be after
-the reparent, not where it is now; this is §7.2's sequencing rule seen from
-the validation side.
+**The anchor is checked against the item's *resulting* scope**
+([`../positioning/`](../positioning/) §2). When the same request also
+reparents or attaches (a Card dropped as a Stub), the anchor is one of
+the *new* parent's children — a scope the item isn't in yet. This is
+§7.2's sequencing rule seen from the validation side.
 
-**An anchor outside the resulting scope is rejected** — 400, and per
+**An anchor the request can't use is rejected** — 400, and per
 [`../item-attachment/`](../item-attachment/) §6 nothing in the request
-commits: not the reparent, not the workphase change, not the cascade. The
-same applies to an anchor that doesn't exist or has no position (§7.4).
-There is no fallback that ignores the anchor and appends instead; a
-request that names an anchor means that anchor.
+commits: not the reparent, not the workphase change, not the cascade.
+That holds for every anchor [`../positioning/`](../positioning/) §2
+refuses: one outside the resulting scope, one that doesn't exist, one
+with no position, such as a done item (§7.4), and the moving item
+itself. A request that names an anchor means that anchor.
 
 ### 7.2 Reparenting re-resolves position, and the order matters
 
@@ -458,10 +351,11 @@ lands in its new parent's sibling scope, and its attached descendants
 keep theirs, none of which has anything to do with workflows (§2.1).
 
 An item can still hold a workphase its project's workflow doesn't use,
-when its project moves under a different workflow. It shows in Unsorted
+when its project comes to use a different workflow
+([`../project-tree/`](../project-tree/) §10). It shows in Unsorted
 ([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §3, §10).
-What the move does to its position, and how it's re-filed, isn't a rule
-yet (Open questions).
+What that does to its position, and how it's re-filed, isn't a rule yet
+(Open questions).
 
 ### 7.4 Done columns accept drops, but never positioned inserts
 
@@ -506,8 +400,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   all of a parent's children together, attached or not, a Free child
   would need a second position there. The alternative is to show attached
   and detached children as two separate groups.
-- **What a project move under a different workflow does to its items'
-  positions (§7.3).** Its items can be left holding a workphase the new
-  workflow doesn't use, and so a position that compares against nothing.
-  Whether the move nulls those positions, as a done item has none (§6),
-  and how the items are later re-filed, is undecided.
+- **What a project's coming to use a different workflow does to its
+  items' positions (§7.3).** Its items can be left holding a workphase
+  the new workflow doesn't use, and so a position that compares against
+  nothing. Whether the change nulls those positions, as a done item has
+  none (§6), and how the items are later re-filed, is undecided.

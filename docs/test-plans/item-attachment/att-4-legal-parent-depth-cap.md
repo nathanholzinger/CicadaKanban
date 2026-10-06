@@ -45,7 +45,7 @@
 
 ## ATT-4.4 — Depth cap boundary: exactly `CAP` is legal, `CAP + 1` isn't
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §8
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* target `T` at depth `D` and moving item `M` with subtree height `H`, arranged so that `D + 1 + H = CAP`, *when* `M` is reparented to `T`, *then* it is accepted, and the resulting deepest leaf sits at depth `CAP`. *And given* an arrangement where `D + 1 + H = CAP + 1`, through a deeper target or one more level under `M`, *when* the same reparent is attempted, *then* it is rejected as depth-capped, and nothing changes ([ATT-3.7](att-3-reparent-placement-atomicity.md)).
 
@@ -53,7 +53,7 @@
 
 ## ATT-4.5 — Subtree height is the deepest resulting leaf, detached descendants included
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §8
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* moving item `M` with an attached child `M1` (height 1 through that branch) and a detached child `M2` that has a child `M2a` (height 2 through that branch), *when* `M` is reparented to target `T` at depth `D`, *then* the cap check uses `H = 2`, the deepest leaf that would result, through the detached branch: the move is accepted if and only if `D + 1 + 2 <= CAP`. Checking `M` alone (`H = 0`) or only its attached branch (`H = 1`) would admit a tree that ends up past the cap.
 
@@ -61,7 +61,7 @@
 
 ## ATT-4.6 — Root depth is 1 and a leaf's height is 0
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* root item `R` (no parent) and leaf item `L` (no children), *when* `L` is reparented to `R`, *then* the check evaluates `1 + 1 + 0 = 2 <= CAP` and accepts it, and `L` sits at depth 2. This pins the counting the formula depends on.
 
@@ -69,7 +69,7 @@
 
 ## ATT-4.7 — The cap gates reparents, not existing data
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* a tree already deeper than `CAP`, such as one stored before a lower `CAP`, *when* its items are read or listed on a board, *then* they load like any others: nothing hides them, flags them or repairs them. *And when* one of them is changed in a way that doesn't reparent it (its workphase moves, it's reordered among its attached siblings, or its title is edited), *then* the change is accepted. Only a reparent is checked against the cap ([ATT-4.4](att-4-legal-parent-depth-cap.md), [ATT-4.11](att-4-legal-parent-depth-cap.md)).
 
@@ -77,7 +77,7 @@
 
 ## ATT-4.9 — The UI and the API agree on every target's legality
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §7
+**Priority:** P0 · **Status:** Open · **Rule:** wiki item-attachment §7, wiki hierarchy-placement §6
 
 *Given* a fixed board and a moving item `M`, *when* the UI classifies every visible target for `M` ([DRAG-2](../board-drag-interaction/drag-2-target-classification.md)) and the API is asked to reparent `M` to each of those targets, *then* every target the UI classifies Valid is accepted by the API, and every target it classifies Cycle-forming or Depth-capped is rejected. The UI never offers a target the API would refuse, and never withholds one it would accept, across the whole board, not just a sample.
 
@@ -85,7 +85,7 @@
 
 ## ATT-4.10 — Every write that can give an item a parent enforces the same rules
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §7, wiki item-attachment §8
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki item-attachment §7, wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* each write that can give an item a parent (creating an item with a parent, editing an item's parent, and moving an item), *when* the write names:
 
@@ -99,7 +99,7 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 
 ## ATT-4.11 — A move that makes an over-cap tree shallower, but still over the cap, is rejected
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. The formula judges only the resulting depth, not whether the move improves it, so this subtree can be moved only once it's dismantled.
 
