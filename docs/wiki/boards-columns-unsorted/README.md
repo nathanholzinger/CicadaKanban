@@ -64,13 +64,15 @@ a placeholder (Open questions).
 and `PUT /api/columns` request bodies, and returned on every column by
 `GET /api/boards/:id`. What a column covers is worked out whenever the
 board is read, from the workflow's current order, so adding or reordering
-workphases never requires changing a column (§8).
+workphases never requires changing a column (§8). What a column covers
+when its start comes after its end is §9's.
 
-**A column created with no name is named for its range:** its
+**A column with no name of its own is named for what it covers:** its
 workphase's name when it covers one, or its first's and its last's
-joined by a dash. Its `displayMode` is `merged` unless the create asks
-for `expanded`. What each mode looks like is a placeholder, and so is
-whether a default name follows its workphases later (Open questions).
+joined by a dash. The name is worked out whenever the board is read, like
+what the column covers, so it follows a workphase rename or a change of
+range. Its `displayMode` is `merged` unless the create asks for
+`expanded`. What each mode looks like is a placeholder (Open questions).
 
 **A column can always be deleted,** and no item changes. The workphases
 it covered go to Unsorted's `uncovered`, unless another column on the
@@ -97,14 +99,19 @@ Two rules hold for the columns of one board:
   reorder (below), every column is either a done column, covering only
   terminal workphases, or an active one.
 
-**A write that would break either rule is refused with a 400 naming the
-column, and nothing changes:**
+**A write that would break either rule is refused with a 400, and
+nothing changes:**
 - a column create or edit whose range would cover a workphase another
-  column on the board covers, which the response names, or would cover
-  both terminal and non-terminal workphases;
+  column on the board covers. The response names that column: its
+  `conflictingColumnId` is the column's id, and its message quotes the
+  column's own name, or its id when it has none (§4);
+- a column create or edit whose range would cover both terminal and
+  non-terminal workphases;
 - a change to a workphase's terminal flag that would leave a column
-  covering both. A change on a workphase no column covers, or one a
-  column covers alone, is accepted.
+  covering both. The response names that column the same way, and names
+  one of them when the change would leave several covering both. A
+  change on a workphase no column covers, or one a column covers alone,
+  is accepted.
 
 **A workphase reorder isn't checked against columns** (§8), so it can
 leave two columns overlapping, or a column covering both. What the board
@@ -157,10 +164,16 @@ workphases (§6).
 **A column whose start comes after its end in the workflow's order is
 flagged `broken`.** Through the API, only a workphase reorder makes one
 (§8), since a column write can't (§5). The flag is worked out on every
-read of the board, never stored. A broken column keeps showing its
-covered items, but takes no drop
-([`../board-drag-interaction/`](../board-drag-interaction/) §4) until an
-edit gives it a range that passes §5.
+read of the board, never stored.
+
+**A broken column still covers the workphases between its two ends,** so
+none of them is in `uncovered` (§10). It keeps showing their items, but
+takes no drop ([`../board-drag-interaction/`](../board-drag-interaction/)
+§4) until an edit gives it a range that passes §5.
+
+Example: column `A` runs from `W1` to `W3`, and the workphases are
+reordered to `W3, W2, W1, W4`. `A` is broken, and still covers `W3`, `W2`
+and `W1`. An edit to run from `W3` to `W1` fixes it.
 
 ## 10. Unsorted
 
@@ -211,15 +224,13 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   ([`../board-drag-interaction/`](../board-drag-interaction/) §5) and a
   merged column's order
   ([`../item-positioning/`](../item-positioning/) §4) are rules today.
-- **A column's default name (§4).** Whether a column created with no name
-  keeps that name, or follows its workphases when one is renamed or its
-  range changes, is undecided.
 - **A board's column order (§7).** Whether a board may show workphases in
   an order other than its workflow's.
 - **The column editor.** It offers ranges the API refuses (§6), one that
   overlaps another column or covers both terminal and non-terminal
   workphases, and then shows the API's 400. It does stop a range whose
-  start comes after its end (§5).
+  start comes after its end (§5). The 400 names a column with no name of
+  its own by its id, which the board never shows (§4, §6).
 - **A board out of step with its workflow (§6, §8).** A workphase reorder
   can leave columns overlapping, or a column covering both terminal and
   non-terminal workphases. Only a column whose start comes after its end

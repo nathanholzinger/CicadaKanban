@@ -115,7 +115,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 ## TC-7.20 — An item a project move leaves in another workflow's workphase shows in Unsorted
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-positioning §7.3, wiki boards-columns-unsorted §3, wiki boards-columns-unsorted §10
 
 *Given* project `P1`, which has no workflow of its own, under project `Q1` on workflow `WF1`; Free item `X` in `P1` at workphase `w1` of `WF1`; and project `Q2` on workflow `WF2`, *when* `P1` is moved under `Q2`, *then* the move is accepted, `X.workphaseId` is still `w1`, and a board of `WF2` lists `X` under Unsorted.
 

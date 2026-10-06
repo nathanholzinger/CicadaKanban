@@ -64,7 +64,7 @@ test.describe('attached children on the board', () => {
     await expect(parentCard.getByText('Detached Kid')).toHaveCount(0);
   });
 
-  test('an attached child whose workphaseId goes invalid still renders only nested, never duplicated in Unknown status', async ({
+  test('BCU-5.5: an attached child whose workphaseId goes invalid still renders only nested, never duplicated in Unknown status', async ({
     page,
     request,
     projectSidebar,

@@ -36,8 +36,8 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 
 ## ATT-10.3 — A create may omit the workphase
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §2a
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki item-attachment §2a, wiki boards-columns-unsorted §10
 
-*Given* project `P1` on workflow `WF1`, project `P0` with no workflow, and item `P` in `P1` at workphase `W1`, *when* a create makes a top-level item in `P1` and names no workphase, *then* it's accepted, and the item has none: its `workphaseId` is null, its `positionScope` is `"none"` ([TC-2.16](../item-positioning/part-2-anchor-resolution.md)), and a board of `WF1` lists it under Unsorted. *When* a create makes a top-level item in `P0`, *then* it's accepted the same way, with no workphase. *When* a create makes a child attached to `P` and names no workphase, or `W1`, *then* the child is in `W1`, `P`'s.
+*Given* project `P1` on workflow `WF1`, project `P0`, which uses no workflow, its own or an ancestor's, and item `P` in `P1` at workphase `W1`, *when* a create makes a top-level item in `P1` and names no workphase, *then* it's accepted, and the item has none: its `workphaseId` is null, its `positionScope` is `"none"` ([TC-2.16](../item-positioning/part-2-anchor-resolution.md)), and a board of `WF1` lists it under Unsorted. *When* a create makes a top-level item in `P0`, *then* it's accepted the same way, with no workphase. *When* a create makes a child attached to `P` and names no workphase, or `W1`, *then* the child is in `W1`, `P`'s.
 
 **Automation test:** `server/tests/routes/items.test.ts`

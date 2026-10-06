@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedBareWorkflow, addWorkphases, seedTemplatedWorkflow } from '../helpers/seed';
+import { column, titlesIn } from '../helpers/boardLocators';
+import { atFraction, hoverTo, pickUp, release } from '../helpers/dragGesture';
+import { seedBareWorkflow, addWorkphases, seedItem, seedTemplatedWorkflow } from '../helpers/seed';
 
 // This file's templated workflows use "quick" (Todo/Done) rather than the
 // seed helper's "flow" default, so its workphases exist at workflow-creation
@@ -385,5 +387,43 @@ test.describe('board and column lifecycle', () => {
     await expect(groups).toHaveCount(2);
     await expect(groups.nth(0)).toHaveAttribute('aria-label', 'Done');
     await expect(groups.nth(1)).toHaveAttribute('aria-label', 'Todo');
+  });
+
+  test('BCU-3.6: dragging a column reorders the board’s columns', async ({ page, request, projectSidebar }) => {
+    const { project, workflow } = await seedBareWorkflow(request, 'Column Drag Project');
+    const names = ['Todo', 'Doing', 'Review'];
+    const phases = await addWorkphases(request, workflow.id, names);
+    const [board] = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
+    for (const phase of phases) {
+      const created = await request.post(`${API}/columns`, {
+        data: { boardId: board.id, startWorkphaseId: phase.id, endWorkphaseId: phase.id },
+      });
+      expect(created.ok()).toBe(true);
+      await seedItem(request, { title: `In ${phase.name}`, projectId: project.id, workphaseId: phase.id });
+    }
+
+    await projectSidebar.openBoard('Column Drag Project');
+    const groups = page.locator('main [role="group"]');
+    const columnOrder = () => groups.evaluateAll(els => els.map(e => e.getAttribute('aria-label')));
+    const cardsByColumn = async () => Promise.all(names.map(async name => titlesIn(column(page, name))));
+    await expect(groups).toHaveCount(3);
+    expect(await columnOrder()).toEqual(names);
+    const cardsBefore = await cardsByColumn();
+
+    // Review's handle is carried to the first column, and let go.
+    const handle = column(page, 'Review').getByTitle('Drag to reorder');
+    const target = await atFraction(column(page, 'Todo'), 0.1);
+    await pickUp(page, handle);
+    await hoverTo(page, target);
+    await release(page);
+
+    const reordered = ['Review', 'Todo', 'Doing'];
+    await expect.poll(columnOrder).toEqual(reordered);
+    // The order is saved: a fresh load shows it too.
+    await projectSidebar.openBoard('Column Drag Project');
+    await expect(groups).toHaveCount(3);
+    expect(await columnOrder()).toEqual(reordered);
+    // Each column shows the same items as before.
+    expect(await cardsByColumn()).toEqual(cardsBefore);
   });
 });

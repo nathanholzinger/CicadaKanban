@@ -112,15 +112,21 @@ derived in three places) is due when this epic's done-column rework
 settles `isTerminal`, if the column rework hasn't come first. Its note is
 under that section's item 2.
 
-### 12. Revisit with the done-column rework: dragging within a done column, and five test-plan cases
+### 12. Revisit with the done-column rework: dragging within a done column, and four test-plan cases
 These wait for this epic's done-column rework, or for its status model
 (§13). Nathan routed the drag questions on 2026-09-27 and 2026-09-28,
 TC-5.15 at A3 batch 5's Stop 1, TC-6.11 and 6.12 at batch 6's, and TC-6.13
 and ATT-5.11 during A5a's phase 1 (2026-09-30).
 
-**Five test-plan cases, routed here by ID.** TC-5.15, 6.11 and 6.12 stay
-`Open` until this rework lands. TC-6.13 and ATT-5.11 stay `Pending PO`
-until this epic answers their questions.
+**Four test-plan cases, routed here by ID.** TC-5.15 and 6.11 stay `Open`
+until this rework lands. TC-6.13 and ATT-5.11 stay `Pending PO` until this
+epic answers their questions.
+
+*TC-6.12 left this list on 2026-10-05.* It's BCU-3.4 now, in A5c's new
+boards-columns-unsorted catalog. The terminal-flag refusal it asserts is
+what the API does today, so Nathan had it mapped to its existing tests
+rather than wait here. This epic is expected to remove the terminal flag,
+which retires the rule and the case with it.
 
 - **TC-5.15: done items count toward the magnitude threshold** (A3's Open
   question 18). Wiki item-positioning §5 reindexes before an
@@ -133,10 +139,6 @@ until this epic answers their questions.
   one filter. Nathan deferred it to this rework.
 - **TC-6.11: changing a workphase's terminal flag applies the active/done
   split to the items already in it** (wiki item-positioning §6).
-- **TC-6.12: a flag change that would leave a column spanning terminal and
-  non-terminal workphases is rejected.** The wiki says only that a range
-  "cannot span" both. The rejection is the Test Planner's reading, which
-  Nathan kept.
 - **TC-6.13: several Free items made done, or reopened, by one flag
   change** (wiki item-positioning §6). Making a workphase terminal
   completes its Free items in one write, so they tie on `completedAt`, and
@@ -159,13 +161,13 @@ until this epic answers their questions.
   workflow? Read literally, §2a says no, since such a project uses no
   workphase. Today the code compares nothing there and accepts any
   workphase. The wiki holds both halves as one Open question
-  (item-attachment, "A project with no workflow"), and no case covers the
+  (item-attachment, "A project that uses no workflow"), and no case covers the
   first half.
 
-Nathan routed TC-6.11, 6.12 and 6.13 here because the rework may retire
-the terminal flag. TC-6.13 has no test. TC-6.11's and 6.12's exist in
-`server/tests/routes/workphases.test.ts` but carry no ID: lines 102, 130
-and 160 for TC-6.11, and 72 and 92 for TC-6.12. The flag tests compare
+Nathan routed TC-6.11 and 6.13 here because the rework may retire the
+terminal flag. TC-6.13 has no test. TC-6.11's exist in
+`server/tests/routes/workphases.test.ts` but carry no ID: the three
+backfill tests under `describe('isTerminal flip')`. The flag tests compare
 with `toBeLessThan` rather than the case's values
 (`docs/archive/test-reconciliation-a3-close.md`, Test Quality 5).
 

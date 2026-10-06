@@ -41,9 +41,9 @@
 
 ## ATT-9.3 — An Attached item shows with its parent, whatever its own `workphaseId` says
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §2a
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §2a, wiki boards-columns-unsorted §10
 
-*Given* the setup, with `X`'s own `workphaseId` changed by a direct database edit, to `W3` or to none, *when* the board renders, *then* `X` is still a Stub in `D`'s Card. No column shows `X` as a Card, and Unsorted doesn't list it.
+*Given* the setup, with `X`'s own `workphaseId` changed by a direct database edit, to `W3` or to none, *when* the board renders, *then* `X` is still a Stub in `D`'s Card. No column shows `X` as a Card, and the board doesn't show it in Unsorted. That the API's `unsorted.invalidItems` lists it is [BCU-5.4](../boards-columns-unsorted/bcu-5-unsorted.md)'s.
 
 **Automation test:** `client/src/components/workflow/itemListOps.test.ts`, `client/src/components/UnsortedBucket.test.tsx`
 

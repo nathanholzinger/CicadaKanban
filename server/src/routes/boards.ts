@@ -17,9 +17,10 @@ type ItemRow = typeof items.$inferSelect;
 type ItemRowWithScope = ItemRow & { positionScope: PositionScope };
 
 // Creates one board with 1:1 columns (one per current workphase) for a
-// workflow. Shared by POST /api/workflows (new-workflow bootstrap), POST
-// /api/boards (additional boards), and runMigrations' backfill phase — every
-// new board starts immediately usable rather than an all-Unsorted blank slate.
+// workflow (wiki boards-columns-unsorted §1). Shared by POST /api/workflows
+// (new-workflow bootstrap), POST /api/boards (additional boards), and
+// runMigrations' backfill phase — every new board starts immediately usable
+// rather than an all-Unsorted blank slate.
 // Pass `tx` to fold this into a caller's transaction (e.g. workflow creation,
 // where the workflow row + its seeded workphases + this bootstrap must commit
 // together); omit it to run standalone in its own transaction.
@@ -66,6 +67,8 @@ export function createDefaultBoard(
   return tx ? run(tx) : db.transaction(run);
 }
 
+// A column with no name of its own is named for what it covers, on every read
+// (wiki boards-columns-unsorted §4).
 function displayNameFor(name: string | null, covered: Workphase[]): string {
   if (name) return name;
   if (covered.length === 0) return '(empty range)';
@@ -193,6 +196,7 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete a board and its columns — blocked if it's the workflow's last board
+// (wiki boards-columns-unsorted §1)
 router.delete('/:id', (req, res) => {
   const board = getByIdOrNotFound(boards, req.params.id, res, 'Board not found');
   if (!board) return;

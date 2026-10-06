@@ -87,8 +87,9 @@ export function effectiveWorkflowIdForProject(projectId: string, tx?: Tx): strin
   return null;
 }
 
-// Every item belonging to the projects whose effective workflow is this one —
-// including items whose workphaseId is null or points outside the workflow.
+// Every item belonging to the projects whose effective workflow is this one
+// (wiki boards-columns-unsorted §3) — including items whose workphaseId is null
+// or points outside the workflow.
 // Those surface as "Unknown status" in the board's unsorted bucket; without this
 // project scoping they'd be silently dropped, since a SET-NULL'd item has no link
 // back to the workflow once its workphase is gone.

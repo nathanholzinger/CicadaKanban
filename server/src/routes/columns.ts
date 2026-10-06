@@ -42,6 +42,7 @@ router.post('/', (req, res) => {
       name: name || null,
       startWorkphaseId,
       endWorkphaseId,
+      // `merged` unless the create asks for `expanded` (wiki boards-columns-unsorted §4).
       displayMode: displayMode === 'expanded' ? 'expanded' : 'merged',
       position: nextPosition(siblingColumns),
       createdAt: Date.now(),
@@ -110,6 +111,7 @@ router.patch('/reorder', (req, res) => {
 });
 
 // Delete a column — always safe, items never reference columns directly
+// (wiki boards-columns-unsorted §4)
 router.delete('/:id', (req, res) => {
   const column = getByIdOrNotFound(columns, req.params.id, res, 'Column not found');
   if (!column) return;

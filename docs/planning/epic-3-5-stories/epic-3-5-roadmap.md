@@ -684,9 +684,10 @@ deferral and keep landing with their stories.
      "ATT-4.9", option (a): extend the classification spec to replay each
      target it classifies against the move endpoint.
    - **item-positioning:** none. A3 closed every item-positioning gap it
-     didn't route elsewhere. TC-5.15, 6.11, 6.12 and 6.13 are routed to
-     Epic 4 (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5b,
-     which took over A5a's close-out.
+     didn't route elsewhere. TC-5.15, 6.11 and 6.13 are routed to Epic 4
+     (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5b, which
+     took over A5a's close-out. TC-6.12 moved to A5c's boards catalog as
+     BCU-3.4.
 
 2. **Deferred from the Story 4 audit, #3** (`docs/archive/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no

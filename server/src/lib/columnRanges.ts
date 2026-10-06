@@ -19,7 +19,7 @@ type ColumnRange = { startWorkphaseId: string; endWorkphaseId: string };
 // ============================================================
 
 // [lowRank, highRank] for a range. Uses min/max so an inverted (broken) range
-// still resolves to a coverage set instead of nothing.
+// still resolves to a coverage set instead of nothing (wiki boards-columns-unsorted §9).
 export function computeColumnRange(range: ColumnRange, rankMap: Map<string, number>): [number, number] | null {
   const startRank = rankMap.get(range.startWorkphaseId);
   const endRank = rankMap.get(range.endWorkphaseId);
@@ -28,7 +28,8 @@ export function computeColumnRange(range: ColumnRange, rankMap: Map<string, numb
 }
 
 // A range is "broken" only when its start/end have crossed over (e.g. via an
-// independent workphase reorder) — never stored, always recomputed on read.
+// independent workphase reorder) — never stored, always recomputed on read
+// (wiki boards-columns-unsorted §9).
 export function isColumnBroken(range: ColumnRange, rankMap: Map<string, number>): boolean {
   const startRank = rankMap.get(range.startWorkphaseId);
   const endRank = rankMap.get(range.endWorkphaseId);
@@ -36,6 +37,8 @@ export function isColumnBroken(range: ColumnRange, rankMap: Map<string, number>)
   return startRank > endRank;
 }
 
+// What a column covers is worked out from the workflow's current order on every
+// read (wiki boards-columns-unsorted §4).
 export function getCoveredWorkphases(
   range: ColumnRange,
   orderedWorkphases: Workphase[],
@@ -58,8 +61,9 @@ type ColumnRangeValidation =
   { ok: true } | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
 
 // The range check for columns.ts POST and PUT: both endpoints belong to this
-// workflow, start doesn't come after end, the range doesn't overlap a sibling
-// column, and it doesn't span a terminal and a non-terminal workphase.
+// workflow, start doesn't come after end (wiki boards-columns-unsorted §5), the
+// range doesn't overlap a sibling column, and it doesn't span a terminal and a
+// non-terminal workphase (wiki boards-columns-unsorted §6).
 // Callers pass only the sibling columns the new/updated range should be
 // checked against (PUT excludes the column being updated); on failure,
 // `status`/`body` are ready to hand straight to `res`.
@@ -93,8 +97,8 @@ export function validateColumnRange(
   }
 
   // A column can't span both a terminal (done) and a non-terminal (active)
-  // workphase (wiki item-positioning §6): done items have no stored position
-  // at all (ordered by completedAt instead), so a column spanning the
+  // workphase (wiki boards-columns-unsorted §6): done items have no stored
+  // position at all (ordered by completedAt instead), so a column spanning the
   // boundary would have no coherent order to show.
   const covered = getCoveredWorkphases(range, orderedWorkphases, rankMap);
   const hasTerminal = covered.some(w => w.isTerminal);
@@ -110,6 +114,7 @@ export function validateColumnRange(
   return { ok: true };
 }
 
+// The board's Unsorted bucket (wiki boards-columns-unsorted §10).
 export function computeUnsorted<T extends ItemRow>(
   orderedWorkphases: Workphase[],
   boardColumns: ColumnRange[],
@@ -134,13 +139,13 @@ export function computeUnsorted<T extends ItemRow>(
 type DbClient = Tx | typeof db;
 
 // Recomputes every column's range after `deletedWorkphaseId` is removed from
-// `workflowId`. Called from workphases.ts DELETE, before the workphase row
-// itself is deleted, both wrapped in one transaction — interior deletions
-// resolve to a no-op write (the range still shrinks naturally at the next
-// read); boundary deletions repoint the FK to the next remaining covered
-// workphase; a column whose sole covered workphase is the one being deleted
-// is deleted outright (both FKs are NOT NULL — a dangling reference isn't
-// possible).
+// `workflowId` (wiki boards-columns-unsorted §8). Called from workphases.ts
+// DELETE, before the workphase row itself is deleted, both wrapped in one
+// transaction — interior deletions resolve to a no-op write (the range still
+// shrinks naturally at the next read); boundary deletions repoint the FK to
+// the next remaining covered workphase; a column whose sole covered workphase
+// is the one being deleted is deleted outright (both FKs are NOT NULL — a
+// dangling reference isn't possible).
 export function shrinkColumnsForDeletedWorkphase(
   client: DbClient,
   deletedWorkphaseId: string,
@@ -195,10 +200,11 @@ export function shrinkColumnsForDeletedWorkphase(
 // Read-only check for `PUT /workphases/:id` flipping `isTerminal`: simulates
 // the flip against every column covering `flippedWorkphaseId` and returns
 // the ones that would end up spanning both a terminal and a non-terminal
-// workphase — the same invariant `validateColumnRange` enforces at column
-// create/update time, just checked from the workphase side instead. Call with plain `db` *before* opening a transaction (nothing
-// has been written yet, so a conflict can still just 400) — the caller only
-// commits the flip once this returns empty.
+// workphase (wiki boards-columns-unsorted §6) — the same invariant
+// `validateColumnRange` enforces at column create/update time, just checked
+// from the workphase side instead. Call with plain `db` *before* opening a
+// transaction (nothing has been written yet, so a conflict can still just
+// 400) — the caller only commits the flip once this returns empty.
 export function findColumnsMixingTerminalAfterFlip(
   client: DbClient,
   workflowId: string,

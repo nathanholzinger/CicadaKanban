@@ -310,18 +310,29 @@ confined to these four, rather than a branch in twelve places.
 
 ## Deferred (not events-specific): the board's presentation, from A5c
 
-A5c writes the API's rules for boards, columns and Unsorted out in full, and treats the board's presentation as a minimum-viable placeholder (Nathan, 2026-10-05, A5c's D1). The wiki page keeps each of these under its Open questions. They're decisions for this epic or later:
+A5c writes the API's rules for boards, columns and Unsorted out in full, and treats the board's presentation as a minimum-viable placeholder (Nathan, 2026-10-05, A5c's D1). Each item below is under the wiki page's Open questions (boards-columns-unsorted). Nathan confirmed the deferrals at A5c's batch 1 stop (2026-10-05). They're decisions for this epic or later:
 
 - **How columns merge and subdivide,** and how merged and expanded columns look. Nathan expects this reworked. The section above holds the facet idea.
 - **A board's column order.** A board orders its columns freely, so it can show workphases out of the workflow's order. Nathan expects that to change.
-- **The column editor.** It offers ranges the API refuses, one that overlaps another column or spans done and active workphases, then shows the API's 400. It does stop a range whose start comes after its end. *(A5c's G2, recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
-- **The Unsorted bucket, the "needs attention" badge and the "broken" badge:** how they look, and their tooltips.
-  - In an inherited view, the badge counts every project's drift, but the bucket lists only the project's own. So the badge can show over an empty bucket.
-  - Its tooltip mentions only uncovered workphases.
-  - *(A5c's G3(b), recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
-- **The inherited view.** A project that inherits its workflow sees its ancestor's board, filtered to its own items, with board and workphase management hidden.
-  - It shows only the project's own items, not those of its descendants that inherit the same workflow. The owner's board shows them all. *(A5c's G5, recommended for deferral; Nathan rules at A5c's batch 1 stop.)*
+- **The column editor** (A5c's G2 and G6). It offers ranges the API refuses, one that overlaps another column or spans done and active workphases, then shows the API's 400. It does stop a range whose start comes after its end.
+  - **The 400 it shows names an unnamed column by its id** (G6). The messages for an overlap and for a terminal-flag change quote a column's own name, or its id when it has none. Every column a new board starts with has none, so the editor usually shows an id where the board shows the column's name.
+  - An API caller has the response's `conflictingColumnId`, so the message matters only where a person reads it, which today is the editor.
+- **A board out of step with its workflow** (A5c's G1).
+  - **Nathan's principle for the rework:** editing a workflow or its workphases shouldn't need to consider boards. A board recognizes when its configuration is out of sync with its workflow. How precisely is for the rework.
+  - **Today a workphase reorder isn't checked against columns.** It can leave two columns overlapping, and the board response then lists that workphase's items in both. It can also leave a column spanning done and active workphases. No UI or MCP tool sends a reorder, so only a direct API call does this.
+  - **`broken`** (a column whose start comes after its end) is today's one case of a board recognizing it's out of sync. A broken column keeps showing its items and takes no drop.
+  - **Two rules today make a workphase write consider boards,** and both stay on the page until the rework weighs them against the principle (A5c's deduction h):
+    - a terminal-flag change that would leave a column spanning done and active is refused. The Quick Items epic is expected to remove the terminal flag, which retires this rule;
+    - a workphase delete shrinks the columns covering it, and deletes a column it was the only workphase of.
+- **The Unsorted bucket, the "needs attention" badge and the "broken" badge:** how they look, and their tooltips (A5c's G3(b)).
+  - The badge is raised by anything in `unsorted`, so it can show over a bucket that lists nothing.
+  - **An inherited view:** the badge counts every project's drift, but the bucket lists only the project's own.
+  - **An Attached item whose own workphase is missing or foreign** (A5c's deduction i): the API lists it in `unsorted.invalidItems`, but the board shows it with its parent, never in the bucket by itself. A5c ruled that by the wiki, with no code change (its G3(a)).
+  - The tooltip mentions only uncovered workphases.
+- **The inherited view** (A5c's G5). A project that inherits its workflow sees its ancestor's board, filtered to its own items, with board and workphase management hidden.
+  - It shows only the project's own items, not those of its descendants that inherit the same workflow. The owner's board shows them all.
   - Boards are due to become project-owned, paired with URL routing (root `CLAUDE.md`), which would rework this view.
 - **A board's show-attached-children setting:** whether Cards open with their attached children showing.
+- **A project that uses no workflow** (A5c's G4), its own or an ancestor's, has no board. An item created there with no workphase shows nowhere. `epic-4-decisions.md` §12's ATT-5.11 asks a related question about workflow-less projects, which that epic's status model may settle.
 
-A5c's batch 1 may add to this list, and its stop confirms or changes each recommended deferral.
+**Three more may join this list.** Nathan ruled that A5c's calls 1, 3 and 5 stay on the page only if the code already does them: the last board's 409, a column that can always be deleted, and the overlap 400. A5c's batch 3 tests pin each one. Any the code doesn't do comes off the page and joins this list, as something to weigh when reworking how boards present and meet workflows.

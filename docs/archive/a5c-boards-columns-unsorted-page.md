@@ -1,6 +1,6 @@
 # A5c — Write boards-columns-unsorted Out in Full
 
-**Type:** tech-debt story. It may change behavior where a ruling settles a gap, and each change carries a test. If a change alters what the API accepts, the story closes by the full story-done checklist, audit included, as A5a did. · **Written:** 2026-09-30 by the PO, as A5's D3; split out the same day by the Architect; planned on 2026-10-05 by the Architect · **Status:** approved 2026-10-05, with Nathan's answers to its open questions; batch 1 (the PO) is next · **Sequenced:** after A5a and A5b (both closed), before A5d
+**Type:** tech-debt story. A ruling could have changed behavior, but none did (batch 1's stop): batch 3 is tests and code pointers, so the story closes without an audit. · **Written:** 2026-09-30 by the PO, as A5's D3; split out the same day by the Architect; planned on 2026-10-05 by the Architect · **Status:** approved 2026-10-05, with Nathan's answers to its open questions; batch 2 is written, for Nathan's review at its stop; batch 3 (the Coder) is next · **Sequenced:** after A5a and A5b (both closed), before A5d
 
 ## Goal
 
@@ -80,6 +80,8 @@ Each rule is written descriptively. Rules an API caller can see get cases. The p
 **Nathan (2026-10-05):** "if a finding is a code gap then we can decide if we want to address it now or defer it, but 'no code' should not be a strict rule."
 
 The PO's batch 1 proposes a rule for each gap. Nathan rules at batch 1's stop, choosing between fixing it in batch 3 and deferring it. A deferred gap goes under the page's Open questions, and the Architect records it in `epic-8-decisions.md` (Open question 2), unless its ruling sends it elsewhere. The Architect's recommendations:
+
+*Ruled at batch 1's stop (2026-10-05):* every gap is deferred, and G3(a) is settled by the wiki with no code change. G1's deferral comes with a principle for the rework. The Amendments have the rulings.
 
 - **G1. A workphase reorder is never checked.** `PATCH /workphases/reorder` checks only that the ids exist.
   - **What it can do:**
@@ -174,20 +176,19 @@ Each batch ends with a stop for Nathan's review and commit. A batch that changes
 - **Stop:** Nathan reviews the page and the cases.
 
 **Batch 3: the code** (Coder).
-- **Each fix ruled "fix now,"** with a test carrying its case ID. On G1 and G3(a) as recommended:
-  - **G1:** `PATCH /workphases/reorder` refuses a reorder that would make columns overlap, or a column span done and active, through one `columnRanges.ts` check shared with the terminal-flag change.
-  - **G3(a):** `computeUnsorted` leaves Attached children out of `invalidItems`.
+- **No fix:** none was ruled at batch 1's stop.
+- **Calls 1, 3 and 5's tests decide whether those rules stay** (BCU-1.2, BCU-2.4 and BCU-3.1). If a test shows the code doesn't do one, the rule comes off the page and joins `epic-8-decisions.md`'s A5c section (Nathan, batch 1's stop). The PO and the Architect make that move at close. By reading, the code does all three.
 - **Re-titles** the existing tests that assert a firm rule (D6), and the tests of the moved cases.
 - **Proposes** any client test's mapping, for Nathan's approval.
 - **Adds index pointers** (D6).
-- **The gate.** Then `npm run test:e2e` if an E2E spec changed.
+- **The gate.** Then `npm run test:e2e` if an E2E spec changed or was added. BCU-3.6 and BCU-5.5 are seen on the board.
 - **Stop:** Nathan approves the mappings, and reviews.
 
 **Close.**
-- **The PO** takes the markers off and fills in the Handoff's "Wiki sections added, changed, moved or removed".
-- **The Test Planner** moves the fixes' cases from `Planned` to `Open`.
-- **The Reconciler** runs over the new catalog, item-positioning (for the moved cases), and item-attachment (ATT-9.3's server half).
-- **If a fix changed what the API accepts** (G1 would), the full story-done checklist applies, audit included.
+- **The PO** brings the Handoff's "Wiki sections added, changed, moved or removed" up to date. The page carries no `**Planned:**` marker. A rule from calls 1, 3 or 5 that batch 3's tests disproved comes off it.
+- **The Test Planner** applies the Handoff. That includes deleting the case of any rule that comes off the page.
+- **The Reconciler** runs over the new catalog, item-positioning (for the moved cases), and item-attachment (ATT-9.3 and ATT-10.3, whose wording changed).
+- **No audit:** no fix was ruled, and nothing restructures code.
 - **The Architect** archives this plan when Nathan signs off.
 
 ## Code map
@@ -196,15 +197,19 @@ The starting list. The Coder keeps it current.
 
 | File | Batch | Change |
 |---|---|---|
-| `server/src/lib/columnRanges.ts` | 3 | G1: a check for a workphase reorder that would make columns overlap or a column span done and active, sharing `findColumnsMixingTerminalAfterFlip`'s simulation. G3(a): `computeUnsorted` leaves Attached children out of `invalidItems`. Index pointers on `getCoveredWorkphases`, `isColumnBroken`, `validateColumnRange` (re-pointed off item-positioning §6), `computeUnsorted` and `shrinkColumnsForDeletedWorkphase` |
-| `server/src/routes/workphases.ts` | 3 | G1: the reorder route calls the new check before its transaction. Pointers on the POST's append and the flag change's refusal |
-| `server/src/routes/boards.ts` | 3 | Pointers: `createDefaultBoard`, the last-board 409, and `GET /:id`'s board scope |
-| `server/src/routes/columns.ts` | 3 | Pointers, if the page states the column delete or the name default as rules |
-| `server/src/lib/workflowItems.ts` | 3 | A pointer on `getBoardScopeItems` (D4) |
-| `client/src/components/workflow/useBoardDnd.ts` | 3 | A pointer on `handleDragEnd`'s column branch (column order) |
-| `server/tests/routes/boards.test.ts`, `columns.test.ts`, `workphases.test.ts`; `tests/api/boards.spec.ts`, `columns.spec.ts` | 3 | Re-titles with the new case IDs, and new tests for unpinned rules and each fix |
-| `client/src/components/UnsortedBucket.test.tsx` | 3 | A mapping, for Nathan's approval, if a firm case needs it |
-| `docs/planning/epic-8-decisions.md`, `epic-4-decisions.md`, `epic-3-5-roadmap.md` | 2 | The Architect's routing (batch 2). Done at planning: Epic 4's §11 moved to Epic 8, with pointers left in Epic 4's §10 and §11, and Epic 8's A5c section added |
+| `server/src/lib/columnRanges.ts` | 3 | Done. Index pointers on `getCoveredWorkphases` (§4), `validateColumnRange` (§5 on the endpoint and order checks, §6 on the overlap and the terminal mix; re-pointed off item-positioning §6), `findColumnsMixingTerminalAfterFlip` (§6, the flag change), `shrinkColumnsForDeletedWorkphase` (§8), `isColumnBroken` (§9), `computeColumnRange` (§9, a broken column still covers what lies between its ends) and `computeUnsorted` (§10). No fix (batch 1's stop) |
+| `server/src/routes/workphases.ts` | 3 | Done. A pointer on the POST's append (§8). The flag change's refusal (§6) has its pointer on `findColumnsMixingTerminalAfterFlip`, its one site. The reorder stays unchecked (G1, deferred) |
+| `server/src/routes/boards.ts` | 3 | Done. Pointers on `createDefaultBoard` (§1), the last-board 409 (§1) and `displayNameFor` (§4, where an unnamed column's name is worked out, so not `routes/columns.ts`). The board scope (§3) has its pointer on `getBoardScopeItems` only |
+| `server/src/routes/columns.ts` | 3 | Done. Pointers on the POST's `displayMode` default (§4) and the DELETE (§4) |
+| `server/src/lib/workflowItems.ts` | 3 | Done. A pointer on `getBoardScopeItems` (§3) |
+| `server/src/db/schema.ts` | 3 | Done (new row). A pointer on `items`: no board or column field (§2). `mcp.ts` has none, since the schema is that rule's one site |
+| `client/src/components/workflow/useBoardDnd.ts` | 3 | Done. A pointer on `handleDragEnd`'s column branch (§7) |
+| `server/tests/routes/boards.test.ts`, `columns.test.ts`, `workphases.test.ts`, `server/tests/fixtures.ts` | 3 | Done. BCU-1.1 to 1.6, 2.1 to 2.8, 3.1, 3.4, 3.5, 4.1 to 4.7 and 5.1 to 5.4 carry their IDs: 28 tests, 17 of them new and 11 from existing tests, extended or retitled (BCU-4.6 moved from `boards.test.ts` to `workphases.test.ts`). Existing tests that a test above now covers whole are gone. `fixtures.ts` gains `readBoard`, `boardsOf`, `columnOn`, `covers` and `reorderWorkphases`, which the three files share. The Amendments have the table |
+| `tests/ui/boards-layer.spec.ts`, `tests/ui/attached-children.spec.ts` | 3 | Done. A new E2E test, BCU-3.6 (dragging a column), and BCU-5.5's ID on `attached-children.spec.ts`'s Unknown-status test |
+| `tests/api/boards.spec.ts`, `columns.spec.ts` | 3 | No change. Each rule they pin is asserted whole by a route test above, so they stay unmapped support |
+| `server/tests/routes/columns.test.ts`'s TC-6.7 and TC-6.8 tests | 3 | **Held.** Three titles move to BCU-3.2 and BCU-3.3 once the Test Planner moves the cases |
+| `client/src/components/UnsortedBucket.test.tsx` | 3 | No mapping proposed: no firm case needs a client test. Its ATT-9.3 test stays ATT-9.3's |
+| `docs/planning/epic-8-decisions.md`, `epic-4-decisions.md`, `epic-3-5-roadmap.md` | 2 | Done (Architect). At planning: Epic 4's §11 moved to Epic 8, with pointers left in Epic 4's §10 and §11, and Epic 8's A5c section added. In batch 2: the A5c section carries the ruled deferrals, and TC-6.12 is off Epic 4's §12 and Story 10's line |
 
 ## Acceptance
 
@@ -215,7 +220,7 @@ The starting list. The Coder keeps it current.
   - `check:docs` reports 0 hits.
 - **The moved rule:** no column rule is left on item-positioning §6 beyond its pointer here. TC-6.7, 6.8 and 6.12 are moved, and TC-6.12 is off Epic 4's §12.
 - **The catalog:** every case for a firm rule is `Automated`, or routed by ID.
-- **The fixes:** each fix ruled "fix now" is built, and a test carrying its case ID shows it.
+- **No fix:** none was ruled. Calls 1, 3 and 5 are on the page with passing tests, or moved to `epic-8-decisions.md`.
 - **The gate:** `npm run check` passes, as does `npm run test:e2e` if a spec changed. The Reconciler's run reports no lost coverage.
 - **Pointers:** every row of A4's D4 table for this page has its index pointer, and no comment cites item-positioning §6 for the column rule.
 - **Routing:** each deferred gap is recorded in `epic-8-decisions.md`, or wherever its ruling sends it.
@@ -258,9 +263,35 @@ The starting list. The Coder keeps it current.
     - §4: `getCoveredWorkphases`, and `routes/columns.ts`'s default name and delete; §5 and §6: `validateColumnRange`, re-pointed off item-positioning §6, and the flag change's refusal;
     - §7: `handleDragEnd`'s column branch; §8: the workphase POST's append and `shrinkColumnsForDeletedWorkphase`; §9: `isColumnBroken`; §10: `computeUnsorted`.
   - **For the Architect:** root `CLAUDE.md` needs no change. Its lines on this page name the same scope.
+  - *Changed after the Test Planner's batch 2 (PO, 2026-10-05),* answering Open questions 3 and 4. No section added, renumbered or removed:
+    - **§6:** the lead says "refused with a 400", and only an overlap and a terminal-flag change name a column, by `conflictingColumnId` and in the message. A flag change that would leave several columns mixing names one. BCU-3.2 asserts no column; BCU-3.1 and 3.4 can assert `conflictingColumnId`.
+    - **§9:** a broken column still covers the workphases between its two ends, so none is in `uncovered`, with BCU-2.8's example. BCU-2.8 can leave `Pending PO`.
+    - **§4:** a pointer to §9 for a start after the end.
+  - *Changed after Nathan's rulings on call 9 and G6 (PO, 2026-10-05).* No section added, renumbered or removed:
+    - **§4:** a column with no name of its own is named for what it covers, worked out on every read, so it follows a workphase rename or a change of range. BCU-2.2 gains a rename.
+    - **Open questions:** "A column's default name" is deleted. "The column editor" gains that its 400 names an unnamed column by an id the board never shows.
+- **Moved cases, old → new** (Test Planner):
+  - *Written by the Test Planner, batch 2 (2026-10-05).* `columns.test.ts` carries TC-6.7's and TC-6.8's IDs, so those two move in batch 3, beside the Coder's re-title. Their new IDs are reserved, so the Coder can use them.
+
+    | Old | New |
+    |---|---|
+    | TC-6.12 | BCU-3.4 (batch 2; no test carries its ID) |
+    | TC-6.7 | BCU-3.2 (batch 3, beside its tests' re-title) |
+    | TC-6.8 | BCU-3.3 (batch 3, beside its tests' re-title) |
 - **To A5d:** what a board shows is this page's, and which workflow a project uses is the project tree's (D4). A5d's Decisions say so.
   - §3 states which workflow a project uses in a clause, linked to project-tree. Once project-tree states the rule, the PO cuts the clause to the link (call 8).
   - item-attachment already says "a project that uses no workflow, its own or an ancestor's".
+- **From the Coder, batch 3 (2026-10-05).**
+  - **For the Test Planner:**
+    - **TC-6.7 and TC-6.8 are still in item-positioning, so their three tests keep the old IDs.** `columns.test.ts` has two tests titled TC-6.7 and one titled TC-6.8. Once BCU-3.2 and BCU-3.3 are in the catalog, the Coder re-titles them (BCU-3.2 takes two, BCU-3.3 one), since `check:docs` flags a test title whose ID isn't declared.
+    - **BCU-1.5's Z can't be built as written.** "Z, top-level, on WF2": a workflow has one owner project, so no project outside D's subtree can use D's. The test gives Z a workflow of its own and asserts that `z` is on neither board, and WF2's board returns `d` and `e`. Reword Z as a top-level project on a workflow of its own, or drop it.
+    - **BCU-5.5's test has a detached child with no workphase as its Free ancestor,** not a top-level item. It's the same rule, and the Reconciler can judge whether the case's wording needs the top-level form.
+  - **For the PO:** nothing comes off the page. BCU-1.2, 2.4 and 3.1 pass against the code, so calls 1, 3 and 5 stand. BCU-2.5's id that is no workphase at all gets a 400, not a 404, and BCU-3.1 and 3.4's messages name the column, as §5 and §6 say.
+  - **For the Reconciler:**
+    - **Every case in the catalog has a test carrying its ID,** except BCU-3.2 and BCU-3.3 (above). The Amendments' table gives each case's file. BCU-3.6 and BCU-5.5 are E2E tests.
+    - **TC-6.8 was on a wrong test.** `columns.test.ts`'s "TC-6.8: creates a column spanning a range, defaulting displayMode to merged" asserted BCU-2.3's rule and is BCU-2.3's now. TC-6.8's own test is the one that allows an all-terminal range.
+    - **`tests/api/boards.spec.ts` and `columns.spec.ts`, and the UI specs, carry no ID.** A route test above asserts each rule they pin whole, so they're unmapped support.
+    - **No client test is proposed for Nathan's approval.**
 
 ## Open questions
 
@@ -273,6 +304,26 @@ For Nathan, at plan approval. Both are answered.
    - **Recommended:** a "Carried in from A5c" block in that epic's entry, listing the page's Open questions as decisions for it or later. `epic-4-decisions.md` §11 gets a line saying where the column rework went.
    - **Answered (Nathan, 2026-10-05):** not the roadmap. Epic 8 is where UI that does enough for now, but isn't meant to be the final product, is revisited. Most of `epic-4-decisions.md` §11 moves to `epic-8-decisions.md`, which also takes A5c's deferrals. Epic 4's §10 gets a one-line pointer there for the start-time context.
    - *Done (Architect, 2026-10-05):* `epic-8-decisions.md` gains two sections at its end: the column merging-expanding rework, moved from Epic 4, and the board's presentation from A5c, with G2, G3(b) and G5 as recommended deferrals for batch 1's stop. Epic 4's §11 keeps a pointer and C-6b's trigger, since the done-column rework is that epic's. Its §10 gains its pointer.
+
+For the PO, from the Test Planner's batch 2. Neither blocks batch 3.
+
+3. **Which workphases a broken column covers** (BCU-2.8, `Pending PO`).
+   - §9 says a broken column "keeps showing its covered items". §4's "from its `startWorkphaseId` to its `endWorkphaseId`, in the workflow's order" doesn't say what a range covers when its start comes after its end.
+   - In BCU-2.8's example, column `A` runs from `W1` to `W3`, and the workphases are reordered to `W3, W2, W1, W4`. Does `A` still cover `W3`, `W2` and `W1`, the workphases between its two ends, or none? And are any of them in `unsorted.uncovered`?
+   - *What the code does, as context, not a ruling (Architect, batch 2):* a broken column covers the workphases between its two ends in the new order. `columnRanges.ts::computeColumnRange` takes the lower and higher of the two ends' places. In BCU-2.8's example `A` covers `W3`, `W2` and `W1`, none of them is in `uncovered`, and the board response lists their items in `A`'s sub-rows.
+   - **Answered (PO, 2026-10-05), by deduction k:** the workphases between its two ends. In BCU-2.8's example `A` covers `W3`, `W2` and `W1`, and none of them is in `uncovered`. §9 says so, with that example, and §4 points there.
+4. **Which column a 400 names when a column write's own range would cover both done and active workphases.**
+   - §6 refuses a write that would break either of its rules "with a 400 naming the column".
+   - For an overlap, the 400 names the other column (BCU-3.1). For a terminal-flag change, it names the column that would mix (BCU-3.4).
+   - A column create whose own range mixes has no column to name yet.
+   - Unless §6 says what that 400 names, BCU-3.2, TC-6.7's new ID, asserts only the 400 and that nothing changes, as TC-6.7 does today.
+   - *What the code does, as context, not a ruling (Architect, batch 2):*
+     - **A range that mixes on its own** gets a 400 that names no column: "A column cannot span both a terminal (done) and a non-terminal workphase".
+     - **An overlap and a terminal-flag change** each name the column in two ways: the response's `conflictingColumnId`, and the message, which quotes the column's name or, when it has none, its id. Every column a new board starts with has no name, so its message shows an id, not the name the board shows (§4).
+     - **A flag change that would mix several columns** names only the first.
+   - **Answered (PO, 2026-10-05):** none. §6's lead over-generalized: the rulings name a column only for an overlap (call 5) and a terminal-flag change (D5). §6 now says "refused with a 400" for all three writes, and names a column only for those two. So BCU-3.2 asserts the 400 and that nothing changes, as TC-6.7 does.
+     - **How the 400 names it,** stated in §6 so BCU-3.1 and 3.4 can assert it: `conflictingColumnId` is the column's id, and the message quotes the column's own name, or its id when it has none. A flag change that would leave several columns mixing names one of them. That's precision on what was ruled, and what the code does. The message showing an id the board never shows is call 9's question, below.
+     - That bears on BCU-3.1 and BCU-3.4 in batch 3. Whether "naming the column" in the message by id meets §6 is the PO's to read.
 
 ## Amendments
 
@@ -372,3 +423,111 @@ For Nathan, at plan approval. Both are answered.
   - Written as ruled at batch 1's stop and in Nathan's answer on deduction h. No gap is fixed now, so the page carries no `**Planned:**` marker.
   - *Deduction j,* from §5's range 400s and §9's definition: no column write makes a broken column, and an edit whose range passes fixes one. §5 and §9 say so, and through the API only a workphase reorder makes one.
   - The opening paragraph and the Open questions follow the README's new line for a page settled only in part.
+- **2026-10-05, batch 2 (the Test Planner): the catalog.** `npm run check:docs` reports 0 hits on 272 files, and the catalog agrees with itself.
+  - **The new catalog is `test-plans/boards-columns-unsorted/`, with prefix `BCU`.** It has an INDEX and five suites, one per part of the page:
+    - **BCU-1,** boards and what they show (§1 to §3);
+    - **BCU-2,** a column and its range (§4, §5, §9);
+    - **BCU-3,** a board's columns together (§6, §7);
+    - **BCU-4,** what a workphase write does to columns (§8);
+    - **BCU-5,** Unsorted (§10).
+  - **30 cases: 29 `Open` and 1 `Pending PO`.** BCU-2.8 is the `Pending PO` one, Open question 3. None is `Planned`, since no fix is ruled. The deductions the PO listed carry cases:
+    - a, in BCU-1.3;
+    - b, in BCU-1.6;
+    - c, in BCU-2.4;
+    - d, in BCU-4.3;
+    - g, in BCU-5.5;
+    - j, in BCU-2.7.
+  - **The cases in this story's scope:**
+    - BCU-1.1 to 1.6, BCU-2.1 to 2.8, BCU-3.1 and 3.4 to 3.6, BCU-4.1 to 4.7, and BCU-5.1 to 5.5;
+    - BCU-3.2 and 3.3, once they move in batch 3;
+    - from the other catalogs, ATT-9.3, whose wording changed (below).
+  - **The moved cases** are in the Handoff:
+    - **TC-6.12 is BCU-3.4 now.** It asserts what TC-6.12 did, in §6's words, and adds that the 400 names the column, as §6 says. It's `Open`, since its tests in `workphases.test.ts` don't carry an ID yet.
+    - **TC-6.7 and TC-6.8 move in batch 3,** as BCU-3.2 and 3.3. Their tests carry their IDs, and `check:docs` flags a test title whose ID isn't in the catalog.
+    - **Until batch 3:** TC-6.7 and 6.8 cite wiki boards-columns-unsorted §6, and BCU-3.4 links them.
+  - **ATT-9.3's server half: ATT-9.3 now covers only what the board shows.**
+    - That the API lists a drifted Stub in `unsorted.invalidItems` is a case of its own, BCU-5.4.
+    - ATT-9.3's *Then* said "Unsorted doesn't list it". It now says "the board doesn't show it in Unsorted", and it cites §10 too.
+    - Its tests are client tests of what the board shows (M2, A5b), so it stays `Automated`.
+  - **Rule fields only.** None of these assertions changed, so each case stays `Automated`:
+    - **ATT-10.3** cites §10. Its `P0` "uses no workflow, its own or an ancestor's", as item-attachment now says. It asserts nothing about where that project's item shows, so item-attachment §14's "nothing shows the item yet", one of this page's Open questions, needs no case.
+    - **TC-7.20** cites §3 and §10.
+  - **For the Coder, batch 3:**
+    - **Re-title the existing tests that assert a firm rule (D6) with their BCU IDs.** Each case's *Then* gives its values. A test that asserts only part of a case is extended, or joined by a new one.
+    - **TC-6.7's and TC-6.8's tests are re-titled BCU-3.2 and BCU-3.3.** The Test Planner moves the two cases in the same batch.
+    - **Where a case asserts what the page says and the code may not,** a failing test is a ruling (the test-plans README's "When a test for a case fails"):
+      - BCU-2.5: a range end that's no workphase at all gets a 400, not a 404;
+      - BCU-3.1 and BCU-3.4: the 400's message names the column;
+      - calls 1, 3 and 5, which are BCU-1.2, BCU-2.4 and BCU-3.1: under Nathan's ruling at batch 1, if their tests show the code doesn't do them, those rules come off the page and go to `epic-8-decisions.md`.
+    - **Two cases are seen on the board,** BCU-3.6 (dragging a column) and BCU-5.5 (an Attached item inside its ancestor's Card in Unsorted). A UI test counts outright. A client test needs Nathan's approval.
+  - **For the Architect:** TC-6.12 is BCU-3.4, for `epic-4-decisions.md` §12 and Epic 3.5 Story 10's item-positioning line.
+  - **For the PO:** Open questions 3 and 4.
+- **2026-10-05, batch 2 (the Architect).** `npm run check:docs` reports 0 hits.
+  - **`epic-8-decisions.md`'s A5c section** now carries the ruled deferrals:
+    - G1, with Nathan's principle, the overlap and the span a reorder can leave, `broken` as today's one case of a board recognizing it's out of sync, and deduction h's two rules (the terminal-flag refusal, which the Quick Items epic is expected to retire, and the delete that shrinks columns);
+    - G2, G3(b) with deduction i, G4 and G5, each confirmed;
+    - the page's other Open questions, including the default column name;
+    - a closing line saying calls 1, 3 and 5 join the list only if batch 3's tests disprove them.
+  - **TC-6.12 → BCU-3.4.** It's off `epic-4-decisions.md` §12's list, which is retitled for four cases, with a dated line saying where it went. §12's line on TC-6.11's tests names them by their `describe` instead of line numbers, which had drifted. Its quote of item-attachment's Open question follows the PO's rewording. Epic 3.5 Story 10's item-positioning line routes TC-5.15, 6.11 and 6.13 to Epic 4, and says TC-6.12 moved here.
+  - **Root `CLAUDE.md` and the guides need no change.** The PO checked root `CLAUDE.md`. The guides name only the shared-rules page as a kind without a catalog, and a page settled only in part has one.
+  - **Work, Close, the Code map and Acceptance follow batch 1's rulings.** There's no fix and no audit. Calls 1, 3 and 5 now depend on their tests. The Code map's pointer rows carry the PO's section numbers, and its G1 and G3(a) changes are gone.
+  - **For the PO, the code's behavior as context:**
+    - **Call 2's question:** a column created with no name stores none. `GET /api/boards/:id` works its name out from what it covers on every read, so today the name already follows its workphases when one is renamed or the range changes. The page's Open question asks whether it should.
+    - **Open questions 3 and 4:** see each question.
+    - **Calls 1, 3 and 5,** by reading: the code does all three. `routes/boards.ts`'s `DELETE` refuses the last board with a 409. `routes/columns.ts`'s `DELETE` checks nothing. `validateColumnRange` refuses an overlap. Batch 3's tests confirm it.
+- **2026-10-05, after batch 2 (the PO): Open questions 3 and 4, and two calls for Nathan.**
+  - *Deduction k,* from §9's "keeps showing its covered items" and §4's range from one end to the other: a broken column covers the workphases between its two ends. Covering none would leave it nothing to show, so that's the one reading §9 allows. The Architect reports the code does the same. §9 states it with an example.
+  - §6's naming is corrected and made precise (Open question 4's answer).
+  - **Call 9, for Nathan: a column's default name follows its workphases.** The Architect reports `GET /api/boards/:id` works an unnamed column's name out on every read, so a rename or a range change already shows. Call 2 put that under Open questions while it was unknown.
+    - **Recommended:** §4 states it as today's rule, like coverage, and the Open question goes. D1 has the page describe what the API does, and calls 1, 3 and 5 went in on the same footing. BCU-2.2 gains a rename.
+    - The other way: keep the Open question, and BCU-2.2 asserts the name at creation only.
+  - **G6, for Nathan: the 400 names an unnamed column by its id.** The overlap's and the flag change's messages quote a column's own name, or its id when it has none. Every column a new board starts with has none, so the message usually shows an id where the board shows a name (§4).
+    - **Recommended: defer, with G2.** An API caller has `conflictingColumnId`, so the message matters only where a person reads it, which today is the column editor showing the API's 400. The column editor's Open question gains it, and the Architect adds it to G2's deferral.
+    - The other way: fix now. The message quotes the default name, §6's sentence is marked `**Planned:**`, and batch 3 changes the code.
+- **2026-10-05, Nathan's rulings on call 9 and G6.** Both as recommended.
+  - **Call 9:** §4 states that an unnamed column's name follows its workphases, and its Open question is deleted.
+  - **G6, deferred with G2:** the column editor's Open question gains it. *For the Architect:* add it to G2's deferral in `epic-8-decisions.md`, and take the default column name off that section's list of the page's Open questions.
+  - *Done (Architect, 2026-10-05):* `epic-8-decisions.md`'s column editor entry names G2 and G6, and says the message matters only where a person reads it, since an API caller has `conflictingColumnId`. The default column name is off the list. `npm run check:docs` reports 0 hits.
+- **2026-10-05, after the PO's answers and Nathan's rulings (the Test Planner).** Applied from the Handoff's two "Changed after" entries.
+  - **BCU-2.8 is `Open`,** from Open question 3's answer. It's titled "A broken column still covers the workphases between its two ends", and cites §9 for its example: `A` still covers `W3`, `W2` and `W1`, still shows their items, and none of them is in `uncovered`. No case is `Pending PO` now.
+  - **BCU-2.2 follows call 9.** It's titled "A column with no name of its own is named for what it covers, and the name follows its workphases". It gains:
+    - a workphase rename, with no column written;
+    - a range change;
+    - a column that has a name of its own, which keeps it through a rename.
+  - **BCU-3.1 and BCU-3.4 assert how the 400 names the column** (§6, Open question 4's answer). `conflictingColumnId` is the column's id, and the message quotes the column's own name.
+    - BCU-3.1 also asserts that the message quotes the id when the column has no name of its own. That id showing to a person is G6, deferred.
+    - BCU-3.4 also asserts that a flag change leaving two columns mixing, on two boards, names one of them.
+  - **BCU-3.2, TC-6.7's new ID, asserts no column,** only the 400 and that nothing changes, as TC-6.7 does. It's still written in batch 3.
+  - **The case count is unchanged:** 30, all `Open`.
+  - **For the Coder, batch 3:** the watch-out on "the 400's message names the column" now has §6's exact form, for BCU-3.1 and 3.4.
+
+- **2026-10-05, batch 3 (the Coder): the tests and the index pointers.** No source behavior changed, so the story still closes without an audit.
+  - **Calls 1, 3 and 5 stand.** BCU-1.2, 2.4 and 3.1 pass against the code, so no rule comes off the page. BCU-2.5's "no workphase at all gets a 400, not a 404" and BCU-3.1's and 3.4's "the message names the column" hold too.
+  - **The cases and their tests.** Where a test already asserted part of a case, it's extended or retitled and the partial tests it replaces are deleted. A case with one whole test needs no second one, so the API specs and the UI specs stay unmapped support.
+
+    | Case | Test, in | What |
+    |---|---|---|
+    | BCU-1.1 | `boards.test.ts` | The "quick"-template test, replaced by one on the "flow" template that also reads a board made by `POST /api/boards` |
+    | BCU-1.2 | `boards.test.ts` | The 409 test, extended: the board still reads with its columns; a second board; the first deleted; the second refused |
+    | BCU-1.3 | `boards.test.ts` | The non-last delete test, extended: the board reads 404, neither column exists, and the kept board is unchanged |
+    | BCU-1.4 | `boards.test.ts` | New: the seven writes in turn, each asserted to have succeeded, and every item row compared with a snapshot after each |
+    | BCU-1.5 | `boards.test.ts` | New, with Z on a workflow of its own (the Handoff) |
+    | BCU-1.6 | `boards.test.ts` | New: a project move, read on both workflows' boards |
+    | BCU-2.1, 2.2, 2.7, 2.8 | `columns.test.ts` | New. 2.2 renames a workphase, changes a range, and checks that a named column keeps its name. 2.7 and 2.8 reorder the workphases first |
+    | BCU-2.3 | `columns.test.ts` | The test labeled TC-6.8 that asserted the `displayMode` default, retitled and given the `expanded` half |
+    | BCU-2.4 | `columns.test.ts` | The unconditional delete test, extended to what `uncovered` lists after each delete |
+    | BCU-2.5, 2.6 | `columns.test.ts` | New, replacing four partial tests (an inverted POST, a foreign-workphase POST, and the PUT test of both). 2.5 adds a start of another workflow and an id that's no workphase, and that nothing changed |
+    | BCU-3.1 | `columns.test.ts` | New, replacing the POST overlap test: `conflictingColumnId`, the message (the name, or the id when there is none), the edit, and the other board |
+    | BCU-3.4 | `workphases.test.ts` | The two flip tests, merged and extended: the column named, items unchanged, two boards, and the accepted cases |
+    | BCU-3.5 | `columns.test.ts` | The reorder test, extended to coverage, the other board's order and the workflow's order |
+    | BCU-3.6 | `boards-layer.spec.ts` | New E2E: the last column's handle dragged to the first, saved, with each column's Cards unchanged |
+    | BCU-4.1, 4.5, 4.7 | `workphases.test.ts` | New |
+    | BCU-4.2 | `workphases.test.ts` | The boundary and sole-workphase tests, merged, with the end-of-range case added |
+    | BCU-4.3 | `workphases.test.ts` | The interior-delete test, retitled |
+    | BCU-4.4 | `workphases.test.ts` | The delete-with-items test, extended to two items and `invalidItems` |
+    | BCU-4.6 | `workphases.test.ts` | Moved from `boards.test.ts` and rewritten as the case says: `A` broken, `B` not, and back |
+    | BCU-5.1 to 5.4 | `boards.test.ts` | New. 5.2 and 5.4 give an item its foreign or missing workphase by a direct database edit, since the API refuses it |
+    | BCU-5.5 | `attached-children.spec.ts` | The existing Unknown-status test, retitled |
+    | BCU-3.2, 3.3 | `columns.test.ts` | **Held.** TC-6.7's and TC-6.8's three tests keep their IDs until the cases move |
+  - **Pointers** are on the Code map's sites. Two differ from the Handoff's list. An unnamed column's name is worked out in `boards.ts::displayNameFor`, so §4's name pointer is there, not in `routes/columns.ts`. Rules with one enforcing site carry one pointer: the flag change's refusal (§6) is on `findColumnsMixingTerminalAfterFlip` only, and the board scope (§3) on `getBoardScopeItems` only. A search for `wiki item-positioning §6` finds no pointer to the column rule; the other five concern items' active/done split.
+  - **Checks:** `npm run check` passes (363 server tests, 426 client, 75 scripts, 0 checker hits on 272 files), and so does the full E2E suite (154 passed, 8 skipped). Each new server assertion was made to fail by breaking its rule in the source, 23 breaks in all, and BCU-3.6 by skipping the column branch of `handleDragEnd`. Every break was caught by the case it targets, and each file was put back.

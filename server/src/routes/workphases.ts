@@ -34,6 +34,7 @@ router.post('/', (req, res) => {
 
   const id = randomUUID();
 
+  // Appended after every other workphase, so no column covers it (wiki boards-columns-unsorted §8).
   db.insert(workphases)
     .values({
       id,

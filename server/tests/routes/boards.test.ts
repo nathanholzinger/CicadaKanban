@@ -2,10 +2,44 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
-import { columns } from '../../src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { columns, items } from '../../src/db/schema.js';
+import { eq, inArray } from 'drizzle-orm';
 import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
-import { createProject, createWorkflow, createWorkphase, createBoard, createColumn, createItem } from '../fixtures.js';
+import {
+  createProject,
+  createWorkflow,
+  createWorkphase,
+  createBoard,
+  createColumn,
+  createItem,
+  findTemplateByName,
+  readBoard,
+  boardsOf,
+  covers,
+  type BoardBody,
+} from '../fixtures.js';
+
+// Every item a board returns, wherever it sits: in a column, in an uncovered
+// workphase, or in `invalidItems`.
+function itemIdsOn(board: BoardBody): Set<string> {
+  const ids = new Set<string>();
+  for (const column of board.columns) for (const row of column.subRows) for (const i of row.items) ids.add(i.id);
+  for (const row of board.unsorted.uncovered) for (const i of row.items) ids.add(i.id);
+  for (const i of board.unsorted.invalidItems) ids.add(i.id);
+  return ids;
+}
+
+// A workflow built from the "quick" (Todo, Done) or "flow" (Todo, In Progress,
+// Review, Done) template, so its default board starts with real 1:1 columns.
+async function templatedWorkflow(template: 'quick' | 'flow', projectOverrides: Record<string, unknown> = {}) {
+  const project = await createProject(projectOverrides);
+  const { id: templateId } = await findTemplateByName(template);
+  const workflow = await createWorkflow(project.id, { templateId });
+  const workphaseIds = [...(workflow.workphases as { id: string; position: number }[])]
+    .sort((a, b) => a.position - b.position)
+    .map(w => w.id);
+  return { project, workflow, workphaseIds };
+}
 
 describe('workflow creation bootstraps a default board', () => {
   it('POST /api/workflows creates exactly one board with 1:1 columns matching its workphases', async () => {
@@ -20,17 +54,16 @@ describe('workflow creation bootstraps a default board', () => {
     expect(detail.body.columns).toEqual([]);
   });
 
-  it('bootstraps 1:1 columns when created from a template', async () => {
-    const project = await createProject();
-    const templates = await request(app).get('/api/workflow-templates');
-    const quick = templates.body.find((t: { name: string }) => t.name === 'quick');
+  it('BCU-1.1: a new board starts with one column per workphase, in the workflow’s order', async () => {
+    const { workflow, workphaseIds } = await templatedWorkflow('flow');
+    expect(workphaseIds).toHaveLength(4);
 
-    const workflow = await createWorkflow(project.id, { templateId: quick.id });
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
-
-    expect(detail.body.columns.length).toBe(2); // 'quick' template = Todo, Done
-    expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual(['Todo', 'Done']);
+    // The board made with the workflow, and one made afterwards by POST /api/boards.
+    const [first] = await boardsOf(workflow.id);
+    const second = await createBoard(workflow.id, { name: 'Second' });
+    for (const { id } of [first, second]) {
+      expect((await readBoard(id)).columns.map(covers)).toEqual(workphaseIds.map(w => [w]));
+    }
   });
 });
 
@@ -167,33 +200,6 @@ describe('GET /api/boards/:id', () => {
     const col = res.body.columns.find((c: { id: string }) => c.id === named.id);
     expect(col.displayName).toBe('Active Work');
   });
-
-  it('flags a column as broken after an out-of-band workphase reorder inverts its range', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const board = boardsRes.body[0];
-    const col = await createColumn(board.id, todo.id, inProgress.id);
-
-    // Reorder so 'In Progress' now sorts before 'Todo' — inverts col's range
-    await request(app)
-      .patch('/api/workphases/reorder')
-      .send({
-        workphaseOrders: [
-          { id: todo.id, position: 2 },
-          { id: inProgress.id, position: 1 },
-        ],
-      });
-
-    const res = await request(app).get(`/api/boards/${board.id}`);
-    const resolved = res.body.columns.find((c: { id: string }) => c.id === col.id);
-    expect(resolved.broken).toBe(true);
-    // Still shows its (now min/max-resolved) items rather than emptying into Unsorted
-    expect(resolved.subRows.length).toBe(2);
-  });
 });
 
 describe('POST /api/boards', () => {
@@ -263,29 +269,233 @@ describe('DELETE /api/boards/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 409 when deleting a workflow's last remaining board", async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
+  it('BCU-1.2: a workflow’s last board can’t be deleted', async () => {
+    const { workflow } = await templatedWorkflow('quick');
+    const [only] = await boardsOf(workflow.id);
 
-    const res = await request(app).delete(`/api/boards/${boardsRes.body[0].id}`);
-    expect(res.status).toBe(409);
+    const refused = await request(app).delete(`/api/boards/${only.id}`);
+    expect(refused.status).toBe(409);
+    const stillThere = await request(app).get(`/api/boards/${only.id}`);
+    expect(stillThere.status).toBe(200);
+    expect(stillThere.body.columns).toHaveLength(2);
+
+    // With a second board, the first can go; the second is then the last.
+    const second = await createBoard(workflow.id, { name: 'Second' });
+    expect((await request(app).delete(`/api/boards/${only.id}`)).status).toBe(204);
+    expect((await request(app).delete(`/api/boards/${second.id}`)).status).toBe(409);
   });
 
-  it('deletes a non-last board along with its columns', async () => {
+  it('BCU-1.3: deleting a board that isn’t its workflow’s last deletes its columns', async () => {
+    const { workflow } = await templatedWorkflow('quick');
+    const [kept] = await boardsOf(workflow.id);
+    const doomed = await createBoard(workflow.id, { name: 'Second' });
+    const doomedColumnIds = (await readBoard(doomed.id)).columns.map(c => c.id);
+    expect(doomedColumnIds).toHaveLength(2);
+    const keptBefore = await readBoard(kept.id);
+
+    expect((await request(app).delete(`/api/boards/${doomed.id}`)).status).toBe(204);
+
+    expect((await request(app).get(`/api/boards/${doomed.id}`)).status).toBe(404);
+    expect(db.select().from(columns).where(inArray(columns.id, doomedColumnIds)).all()).toEqual([]);
+    expect(await readBoard(kept.id)).toEqual(keptBefore);
+  });
+});
+
+describe('what a board is and shows', () => {
+  it('BCU-1.4: no board or column write changes an item', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
-    await createWorkphase(workflow.id, { name: 'Todo' });
-    // Bootstrapped with a 1:1 column for 'Todo' since it exists at creation time
-    const secondBoard = await createBoard(workflow.id, { name: 'Second' });
+    // Two boards with no columns yet; the workphases come after.
+    const [board] = await boardsOf(workflow.id);
+    const second = await createBoard(workflow.id, { name: 'Second' });
+    const phases: { id: string; name: string }[] = [];
+    for (const name of ['W1', 'W2', 'W3', 'W4']) phases.push(await createWorkphase(workflow.id, { name }));
+    const a = await createColumn(board.id, phases[0].id, phases[0].id);
+    const c = await createColumn(board.id, phases[1].id, phases[2].id);
 
-    const res = await request(app).delete(`/api/boards/${secondBoard.id}`);
-    expect(res.status).toBe(204);
+    // A Free item in each workphase, each with an Attached Stub.
+    for (const phase of phases) {
+      const free = await createItem({ projectId: project.id, workphaseId: phase.id, title: `Free in ${phase.name}` });
+      await createItem({ projectId: project.id, parentId: free.id, title: `Stub in ${phase.name}` });
+    }
+    const snapshot = () =>
+      db
+        .select()
+        .from(items)
+        .all()
+        .sort((x, y) => x.id.localeCompare(y.id));
+    const before = snapshot();
+    expect(before).toHaveLength(8);
 
-    const remaining = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    expect(remaining.body.map((b: { id: string }) => b.id)).not.toContain(secondBoard.id);
+    const writes: [string, () => Promise<{ status: number }>][] = [
+      ['a board created', () => request(app).post('/api/boards').send({ workflowId: workflow.id, name: 'Third' })],
+      ['a board renamed', () => request(app).put(`/api/boards/${board.id}`).send({ name: 'Renamed' })],
+      [
+        'a column created',
+        () =>
+          request(app)
+            .post('/api/columns')
+            .send({ boardId: board.id, startWorkphaseId: phases[3].id, endWorkphaseId: phases[3].id }),
+      ],
+      [
+        'a column’s range edited',
+        () => request(app).put(`/api/columns/${c.id}`).send({ endWorkphaseId: phases[1].id }),
+      ],
+      [
+        'the columns reordered',
+        () =>
+          request(app)
+            .patch('/api/columns/reorder')
+            .send({
+              columnOrders: [
+                { id: c.id, position: 1 },
+                { id: a.id, position: 2 },
+              ],
+            }),
+      ],
+      ['a column deleted', () => request(app).delete(`/api/columns/${a.id}`)],
+      ['the second board deleted', () => request(app).delete(`/api/boards/${second.id}`)],
+    ];
+    for (const [label, write] of writes) {
+      // A refused write would leave the items alone for the wrong reason.
+      expect((await write()).status, label).toBeLessThan(300);
+      expect(snapshot(), label).toEqual(before);
+    }
+  });
 
-    const orphanedColumns = db.select().from(columns).where(eq(columns.boardId, secondBoard.id)).all();
-    expect(orphanedColumns).toEqual([]);
+  it('BCU-1.5: a board shows the items of every project that uses its workflow, its own or inherited', async () => {
+    const withWorkflow = async (project: { id: string }) => {
+      const workflow = await createWorkflow(project.id);
+      return { board: (await boardsOf(workflow.id))[0], phase: await createWorkphase(workflow.id, { name: 'Todo' }) };
+    };
+    const a = await createProject({ name: 'A' });
+    const b = await createProject({ name: 'B', parentId: a.id });
+    const c = await createProject({ name: 'C', parentId: b.id });
+    const d = await createProject({ name: 'D', parentId: a.id });
+    const e = await createProject({ name: 'E', parentId: d.id });
+    // Z is top-level and uses a workflow of its own: a workflow has one owner,
+    // so no project outside D's subtree can use D's.
+    const z = await createProject({ name: 'Z' });
+    const wf = await withWorkflow(a);
+    const wf2 = await withWorkflow(d);
+    const wf3 = await withWorkflow(z);
+
+    const itemOf = (project: { id: string }, phase: { id: string }, title: string) =>
+      createItem({ projectId: project.id, workphaseId: phase.id, title });
+    const ia = await itemOf(a, wf.phase, 'a');
+    const ib = await itemOf(b, wf.phase, 'b');
+    const ic = await itemOf(c, wf.phase, 'c');
+    const id = await itemOf(d, wf2.phase, 'd');
+    const ie = await itemOf(e, wf2.phase, 'e');
+    await itemOf(z, wf3.phase, 'z');
+
+    // D uses its own workflow, and E uses D's, its nearest ancestor that has one.
+    expect(itemIdsOn(await readBoard(wf.board.id))).toEqual(new Set([ia.id, ib.id, ic.id]));
+    expect(itemIdsOn(await readBoard(wf2.board.id))).toEqual(new Set([id.id, ie.id]));
+
+    // An item with no workphase comes with its project.
+    const a0 = await createItem({ projectId: a.id, title: 'a0' });
+    expect(itemIdsOn(await readBoard(wf.board.id))).toEqual(new Set([ia.id, ib.id, ic.id, a0.id]));
+  });
+
+  it('BCU-1.6: a project that comes to use another workflow takes its items to that workflow’s boards', async () => {
+    const q1 = await templatedWorkflow('quick', { name: 'Q1' });
+    const q2 = await templatedWorkflow('quick', { name: 'Q2' });
+    const p1 = await createProject({ name: 'P1', parentId: q1.project.id });
+    const w1 = q1.workphaseIds[0];
+    const x = await createItem({ projectId: p1.id, workphaseId: w1, title: 'X' });
+    const [board1] = await boardsOf(q1.workflow.id);
+    const [board2] = await boardsOf(q2.workflow.id);
+    expect(itemIdsOn(await readBoard(board1.id))).toContain(x.id);
+    expect(itemIdsOn(await readBoard(board2.id))).not.toContain(x.id);
+
+    const moved = await request(app).patch(`/api/projects/${p1.id}/move`).send({ parentId: q2.project.id });
+    expect(moved.status).toBe(200);
+
+    expect(itemIdsOn(await readBoard(board1.id))).not.toContain(x.id);
+    const onNew = await readBoard(board2.id);
+    expect(itemIdsOn(onNew)).toContain(x.id);
+    // Still holding the old workflow's workphase, so it's in Unsorted there.
+    expect(onNew.unsorted.invalidItems.map(i => i.id)).toEqual([x.id]);
+    expect((await request(app).get(`/api/items/${x.id}`)).body.workphaseId).toBe(w1);
+  });
+});
+
+describe('Unsorted', () => {
+  it('BCU-5.1: uncovered lists each of the workflow’s workphases that no column on the board covers', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    const [board] = await boardsOf(workflow.id);
+    const [w1, w2, w3] = [
+      await createWorkphase(workflow.id, { name: 'W1' }),
+      await createWorkphase(workflow.id, { name: 'W2' }),
+      await createWorkphase(workflow.id, { name: 'W3' }),
+    ];
+    const column = await createColumn(board.id, w1.id, w1.id);
+    const uncovered = async () => (await readBoard(board.id)).unsorted.uncovered.map(r => r.workphase.id);
+
+    expect(await uncovered()).toEqual([w2.id, w3.id]);
+    const edit = { startWorkphaseId: w2.id, endWorkphaseId: w2.id };
+    expect((await request(app).put(`/api/columns/${column.id}`).send(edit)).status).toBe(200);
+    expect(await uncovered()).toEqual([w1.id, w3.id]);
+  });
+
+  it('BCU-5.2: invalidItems lists each item the board shows whose workphase is missing or isn’t the workflow’s', async () => {
+    const wf = await templatedWorkflow('quick', { name: 'P' });
+    const other = await templatedWorkflow('quick', { name: 'Q' });
+    const [boardOfWf] = await boardsOf(wf.workflow.id);
+
+    const itemIn = (projectId: string, workphaseId: string | undefined, title: string) =>
+      createItem({ projectId, workphaseId, title });
+    const x = await itemIn(wf.project.id, undefined, 'X');
+    const y = await itemIn(wf.project.id, wf.workphaseIds[0], 'Y');
+    const z = await itemIn(wf.project.id, wf.workphaseIds[0], 'Z');
+    const q1 = await itemIn(other.project.id, undefined, 'Q1');
+    // The API refuses a workphase of another workflow, so Y gets one by a direct edit.
+    db.update(items).set({ workphaseId: other.workphaseIds[0] }).where(eq(items.id, y.id)).run();
+
+    const board = await readBoard(boardOfWf.id);
+    expect(board.unsorted.invalidItems.map(i => i.id).sort()).toEqual([x.id, y.id].sort());
+    expect(itemIdsOn(board)).toContain(z.id);
+    // Q1 is another project's, on another workflow: not on this board at all.
+    expect(itemIdsOn(board)).not.toContain(q1.id);
+  });
+
+  it('BCU-5.3: needsAttention is true when uncovered or invalidItems holds anything', async () => {
+    const { project, workflow } = await templatedWorkflow('quick');
+    const [{ id: boardId }] = await boardsOf(workflow.id);
+    const needsAttention = async () => (await readBoard(boardId)).unsorted.needsAttention;
+    expect(await needsAttention()).toBe(false);
+
+    // A workphase no column covers.
+    const [first] = (await readBoard(boardId)).columns;
+    expect((await request(app).delete(`/api/columns/${first.id}`)).status).toBe(204);
+    expect(await needsAttention()).toBe(true);
+
+    // Covered again, an item with no workphase raises it with `uncovered` empty.
+    await createColumn(boardId, first.startWorkphaseId, first.endWorkphaseId);
+    expect(await needsAttention()).toBe(false);
+    await createItem({ projectId: project.id, title: 'No workphase' });
+    const board = await readBoard(boardId);
+    expect(board.unsorted.uncovered).toEqual([]);
+    expect(board.unsorted.needsAttention).toBe(true);
+  });
+
+  it('BCU-5.4: invalidItems lists an Attached item whose own workphase is missing or isn’t the workflow’s', async () => {
+    const { project, workflow, workphaseIds } = await templatedWorkflow('flow');
+    const [{ id: boardId }] = await boardsOf(workflow.id);
+    const foreign = await createWorkphase((await createWorkflow((await createProject()).id)).id, { name: 'V1' });
+    // D is Free in the second workphase, A is attached to D, and X to A.
+    const d = await createItem({ projectId: project.id, workphaseId: workphaseIds[1], title: 'D' });
+    const a = await createItem({ projectId: project.id, parentId: d.id, title: 'A' });
+    const x = await createItem({ projectId: project.id, parentId: a.id, title: 'X' });
+    expect((await readBoard(boardId)).unsorted.needsAttention).toBe(false);
+
+    for (const drifted of [foreign.id, null]) {
+      db.update(items).set({ workphaseId: drifted }).where(eq(items.id, x.id)).run();
+      const { unsorted } = await readBoard(boardId);
+      expect(unsorted.invalidItems.map(i => i.id)).toEqual([x.id]);
+      expect(unsorted.needsAttention).toBe(true);
+    }
   });
 });

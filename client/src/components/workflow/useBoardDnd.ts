@@ -672,7 +672,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     const activeId = String(active.id);
 
-    // ── Column reorder ──
+    // ── Column reorder (wiki boards-columns-unsorted §7) ──
     if (isColumnData(active.data.current)) {
       if (!over || activeId === String(over.id) || !board) return;
       const cols = board.columns;

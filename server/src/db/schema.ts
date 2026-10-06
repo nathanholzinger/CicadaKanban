@@ -115,6 +115,8 @@ export const columns = sqliteTable('columns', {
   createdAt: integer('created_at').notNull(),
 });
 
+// No board or column field: boards and columns are views over `workphaseId`
+// (wiki boards-columns-unsorted §2).
 export const items = sqliteTable('items', {
   id: text('id').primaryKey(),
   // An item outlives the descriptive/positional things it points at: deleting a
