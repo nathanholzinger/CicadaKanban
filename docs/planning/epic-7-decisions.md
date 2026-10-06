@@ -116,3 +116,35 @@ Nothing more is built for it before this epic.
 
 The wiki carries this under item-attachment's Open questions until it's
 decided.
+
+---
+
+## Deleting an item
+
+### Q4. What does deleting an item do to the rows that hang off it?
+
+Deferred here by Nathan on 2026-10-06, from A5d's closing Reconciler run.
+No wiki page says what happens to an item's comments and activity, label
+links, notifications, attachments and chat when the item is deleted,
+whether alone or with its project
+([`../wiki/item-attachment/`](../wiki/item-attachment/README.md) §13,
+[`../wiki/project-tree/`](../wiki/project-tree/README.md) §9).
+
+**Today:** the database deletes them with the item (`ON DELETE CASCADE`,
+migration 0009; root `CLAUDE.md`), and `projects.test.ts`'s cascade test
+pins it for a project's delete. The label itself survives, since labels
+are global. No test case states it, since no page does.
+
+**Nathan's direction:** an item should more often be closed than hard
+deleted. When one is deleted from the database, anything that would be
+left orphaned should probably go with it. Revisit when the Sheet gives
+the front end access to comments, attachments and the rest, which is when
+a user can see what a delete takes.
+
+**Open:**
+
+- whether a delete takes every dependent row, or some outlive it, such as
+  activity a user may want to keep;
+- how "closed" fits the status model the Quick Items epic proposes
+  ([`epic-4-decisions.md`](epic-4-decisions.md) §13, where Done is one of
+  three statuses), and so what a delete is still for.

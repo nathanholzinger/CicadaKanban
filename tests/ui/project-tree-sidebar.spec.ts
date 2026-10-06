@@ -3,7 +3,13 @@ import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { pickUp, release } from '../helpers/dragGesture';
 import { aim } from '../helpers/projectTreeDrag';
-import { fetchProjectDepthCap, pinProjectParent, pinProjectPosition, seedProjects } from '../helpers/seed';
+import {
+  fetchProjectDepthCap,
+  pinProjectCreatedAt,
+  pinProjectParent,
+  pinProjectPosition,
+  seedProjects,
+} from '../helpers/seed';
 import { projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
 
 test.beforeEach(async () => {
@@ -35,6 +41,16 @@ test('TREE-4.3: the sidebar shows each project’s children by position, then cr
     ['TC', 1.5],
   ] as const) {
     await pinProjectPosition(request, ids[name], position);
+  }
+  // B and TB were created first, which two creates in one millisecond wouldn't
+  // settle.
+  for (const [name, createdAt] of [
+    ['B', 1000],
+    ['A', 2000],
+    ['TB', 1000],
+    ['TA', 2000],
+  ] as const) {
+    await pinProjectCreatedAt(request, ids[name], createdAt);
   }
   await page.goto('/');
 

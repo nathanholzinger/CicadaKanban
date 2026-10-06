@@ -47,6 +47,24 @@ router.patch('/projects/:id/position', (req, res) => {
   res.json({ ok: true });
 });
 
+// The same for a project's creation time, so a test of the tie-break (the order
+// by position, then creation time) doesn't rest on two creates landing in
+// different milliseconds. Mounted with the rest of this file, only when
+// ENABLE_TEST_ROUTES=true.
+router.patch('/projects/:id/created-at', (req, res) => {
+  const { createdAt } = req.body;
+  if (typeof createdAt !== 'number' || !Number.isFinite(createdAt)) {
+    res.status(400).json({ error: 'createdAt must be a finite number' });
+    return;
+  }
+  const result = db.update(projects).set({ createdAt }).where(eq(projects.id, req.params.id)).run();
+  if (result.changes === 0) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 // The same for a project's parent, to build a tree deeper than the project cap,
 // which no project write produces. Mounted with the rest of this file, only
 // when ENABLE_TEST_ROUTES=true.

@@ -32,6 +32,10 @@ import {
 } from '../fixtures.js';
 
 type ProjectBody = { id: string; name: string; parentId: string | null; position: number | null };
+type Pair = { id: string; position: number };
+
+// Disclosed pairs come in no particular order (wiki positioning §7), so they're compared by id.
+const byId = (pairs: Pair[]) => [...pairs].sort((a, b) => a.id.localeCompare(b.id));
 
 const getProject = async (id: string) => (await request(app).get(`/api/projects/${id}`)).body as ProjectBody;
 const listProjects = async () => (await request(app).get('/api/projects')).body as ProjectBody[];
@@ -455,11 +459,13 @@ describe('PATCH /api/projects/:id/move', () => {
     const res = await moveProject(x.id, { parentId: p.id });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(3);
-    expect(res.body.reindexed).toEqual([
-      { id: a.id, position: 1 },
-      { id: b.id, position: 2 },
-      { id: x.id, position: 3 },
-    ]);
+    expect(byId(res.body.reindexed)).toEqual(
+      byId([
+        { id: a.id, position: 1 },
+        { id: b.id, position: 2 },
+        { id: x.id, position: 3 },
+      ]),
+    );
 
     // At 1.0 and 2.0 there's nothing to renumber, and nothing is disclosed.
     const calm = await createProject({ name: 'Q' });
@@ -489,20 +495,24 @@ describe('PATCH /api/projects/:id/move', () => {
     const forCreate = await tree();
     const created = await request(app).post('/api/projects').send({ name: 'New', parentId: forCreate.p.id });
     expect(created.status).toBe(201);
-    expect(created.body.reindexed).toEqual([
-      { id: forCreate.a.id, position: 1 },
-      { id: forCreate.b.id, position: 2 },
-      { id: created.body.id, position: 3 },
-    ]);
+    expect(byId(created.body.reindexed)).toEqual(
+      byId([
+        { id: forCreate.a.id, position: 1 },
+        { id: forCreate.b.id, position: 2 },
+        { id: created.body.id, position: 3 },
+      ]),
+    );
 
     const forEdit = await tree();
     const edited = await editProject(forEdit.x.id, { parentId: forEdit.p.id });
     expect(edited.status).toBe(200);
-    expect(edited.body.reindexed).toEqual([
-      { id: forEdit.a.id, position: 1 },
-      { id: forEdit.b.id, position: 2 },
-      { id: forEdit.x.id, position: 3 },
-    ]);
+    expect(byId(edited.body.reindexed)).toEqual(
+      byId([
+        { id: forEdit.a.id, position: 1 },
+        { id: forEdit.b.id, position: 2 },
+        { id: forEdit.x.id, position: 3 },
+      ]),
+    );
   });
 
   it('TREE-6.4: a moved project’s subtree goes with it, keeping its parents and positions', async () => {
@@ -596,10 +606,22 @@ describe('PATCH /api/projects/:id/move', () => {
 });
 
 describe('GET /api/projects/depth-cap', () => {
-  it('returns the project cap the API enforces', async () => {
+  it('TREE-3.9: the cap the API reports is the one it enforces', async () => {
     const res = await request(app).get('/api/projects/depth-cap');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ projectDepthCap: PROJECT_DEPTH_CAP });
+    expect(Object.keys(res.body)).toEqual(['projectDepthCap']);
+    const cap: number = res.body.projectDepthCap;
+    expect(Number.isInteger(cap) && cap > 0).toBe(true);
+
+    // A project at the reported depth is accepted, and one below it is refused:
+    // the value is read off the API, never the code's constant.
+    const chain = await chainTo(cap);
+    expect(await depthOf(chain[cap - 1].id)).toBe(cap);
+    const past = await request(app)
+      .post('/api/projects')
+      .send({ name: 'Past', parentId: chain[cap - 1].id });
+    expect(past.status).toBe(400);
+    expect(await depthOf(chain[cap - 1].id)).toBe(cap);
   });
 });
 

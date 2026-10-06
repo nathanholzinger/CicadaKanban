@@ -138,7 +138,7 @@ test('TREE-1.4: when the dragged project’s subtree holds every project, no lin
   expect(await stored()).toEqual(before);
 });
 
-test('TREE-1.11: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
+test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
   page,
   request,
   projectSidebar,

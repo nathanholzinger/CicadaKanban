@@ -6,7 +6,7 @@
 |---|---|---|---|
 | TREE-2.1 | The dragged project's descendants are dimmed for the whole drag | P2 | Automated |
 | TREE-2.2 | A collapsed project opens when a project is dropped into it as its child | P2 | Automated |
-| TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Open |
+| TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Automated |
 
 ---
 
@@ -28,8 +28,8 @@
 
 ## TREE-2.3 — A collapsed project opened by a drop stays open if the move fails
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki project-tree §4
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki project-tree §4
 
 *Given* top-level projects `T` and `X`, where `T` is collapsed and its children are `T1` and `T2`, *when* `X` is released one tab right of `T`, as its first child, and the server refuses the move, *then* `T` is expanded, showing `T1` and `T2` under it, and `X` is shown top-level again, after `T`, where it was ([TREE-4.8](tree-4-sibling-order.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-drag.spec.ts`

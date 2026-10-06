@@ -23,8 +23,8 @@ X        (0)
 | TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
 | TREE-1.9 | Coming back to the dragged project's own row means its own gap | P1 | Automated |
 | TREE-1.10 | On the dragged project's own row, the cursor picks among its own gap's depths | P2 | Automated |
-| TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Open |
-| TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Open |
+| TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Automated |
+| TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Automated |
 
 ---
 
@@ -117,7 +117,7 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 ## TREE-1.11 — A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §6, wiki project-tree §3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §6, wiki project-tree §3
 
 *Given* a chain of projects, each the only child of the one before, from a top-level project down to `S`, at depth `PCAP − 2`, and `S`'s only child `T`, at depth `PCAP − 1`, where `PCAP` is the project cap and the depths count top-level projects as 1 (wiki project-tree §3); and top-level project `X`, the last row, with a child `X1`, *when* `X` is dragged into the gap below `T`:
 
@@ -126,12 +126,12 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 How the invalid line looks isn't asserted.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-drag.spec.ts`
 
 ## TREE-1.12 — A release saves the placement as a move naming a neighbor, never a position
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §6, wiki positioning §5
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki project-tree §6, wiki positioning §5
 
 *Given* the tree, *when* `X` is released with the line between `A1a` and `B`, at `A1a`'s depth, *then* the request is a move naming `A1` as `X`'s parent and `A1a` as the sibling it goes after, and it carries no position. *When* `X` is instead released above the first row, *then* the request is a move naming no parent and `A` as the sibling it goes before, again with no position. Each release saves `X` where the line showed it: as `A1`'s child after `A1a`, and as the first top-level project, before `A`.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-tree-drag.spec.ts`

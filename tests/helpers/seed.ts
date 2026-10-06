@@ -123,6 +123,13 @@ export async function pinProjectPosition(
   expect(res.ok(), `pin project ${id} at ${position} → ${res.status()}`).toBe(true);
 }
 
+// Pins one project's creation time through the test-only route
+// `PATCH /api/test/projects/:id/created-at`, so a tie's order is certain.
+export async function pinProjectCreatedAt(request: APIRequestContext, id: string, createdAt: number): Promise<void> {
+  const res = await request.patch(`${API}/test/projects/${id}/created-at`, { data: { createdAt } });
+  expect(res.ok(), `pin project ${id} created at ${createdAt} → ${res.status()}`).toBe(true);
+}
+
 // Gives one project a parent by writing the row, through the test-only route
 // `PATCH /api/test/projects/:id/parent`: no project write builds a tree deeper
 // than the project cap.
