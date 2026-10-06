@@ -416,6 +416,13 @@ the depth the UI has room for. Undecided as of 2026-09-17; wiki §9 is a
 pointer to Open questions until this story rules, and the test plan carries
 nothing for it (DRAG-5.6–5.8 withdrawn).
 
+**The project cap too** (Nathan, 2026-10-05, ruled during A5d): projects get
+a depth cap of their own, configured apart from the item cap, though the
+two will very likely share a value. Until this story sets it, it's
+provisionally 6, like the item cap. A5d writes the cap's rules that hold
+whatever the number on the hierarchy-placement page, so this story sets
+each value without restating them.
+
 Deferred beyond this story: any solution for depth so great that indenting each
 level no longer fits the sidebar or the overflow modal either.
 
