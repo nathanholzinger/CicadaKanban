@@ -312,7 +312,7 @@ router.put('/:id', (req, res) => {
 // combination, committed as one transaction. Placement is `{anchorId, side}`,
 // resolved server-side against true current data, never a client-computed
 // value (see positionResolver.ts); no caller names a final position
-// (wiki item-positioning §2).
+// (wiki positioning §2).
 // `projectId` is never sent: a cross-project reparent derives it from the
 // new parent and cascades it to the subtree (wiki item-attachment §9).
 router.patch('/:id/move', (req, res) => {

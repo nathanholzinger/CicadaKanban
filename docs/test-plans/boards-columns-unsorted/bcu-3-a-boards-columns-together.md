@@ -7,6 +7,8 @@
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | BCU-3.1 | A column write can't make two columns on a board cover the same workphase | P1 | Open |
+| BCU-3.2 | A column write can't make a column cover both terminal and non-terminal workphases | P0 | Open |
+| BCU-3.3 | A column whose range is all terminal, or all non-terminal, is accepted | P1 | Open |
 | BCU-3.4 | A terminal-flag change that would leave a column covering both terminal and non-terminal workphases is refused | P1 | Open |
 | BCU-3.5 | A board's column order is its own, and changes no column's coverage | P1 | Open |
 | BCU-3.6 | Dragging a column reorders the board's columns | P1 | Open |
@@ -21,11 +23,27 @@
 
 **Automation test:** —
 
+## BCU-3.2 — A column write can't make a column cover both terminal and non-terminal workphases
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §6
+
+*Given* the setup, *when* a column is created on `B` from `W3` to `D1`, *then* it's refused with a 400, and `B`'s columns are unchanged. *Given* column `A` on `B` from `W2` to `W3`, *when* `A` is edited to run from `W2` to `D1`, *then* it's refused with a 400, and `A` still runs from `W2` to `W3`. A terminal-flag change that would leave a column covering both is [BCU-3.4](bcu-3-a-boards-columns-together.md)'s.
+
+**Automation test:** —
+
+## BCU-3.3 — A column whose range is all terminal, or all non-terminal, is accepted
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §6
+
+*Given* the setup, *when* a column is created on `B` from `D1` to `D2`, *then* it's accepted, and covers `D1` and `D2`. *When* a column is created on `B` from `W1` to `W3`, *then* it's accepted, and covers `W1`, `W2` and `W3`.
+
+**Automation test:** —
+
 ## BCU-3.4 — A terminal-flag change that would leave a column covering both terminal and non-terminal workphases is refused
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §6
 
-*Given* the setup, with column `A`, named `Early`, on `B` from `W1` to `W2`, and Free items in `W2`, *when* `W2` is made terminal, *then* it's refused with a 400, and nothing changes: `W2` is still non-terminal, and its items keep their positions and their `null` `completedAt`. The response's `conflictingColumnId` is `A`'s id, and its message quotes `Early`. *And given* board `B2` of `WF` also has a column, `A2`, from `W2` to `W3`, *then* the change is refused the same way, naming one of `A` and `A2`. *And given* `W2` is covered by no column, or only by a column covering `W2` alone, *when* it's made terminal, *then* the change is accepted. The same rule for a column write is [TC-6.7](../item-positioning/part-6-active-done-split.md)'s and [TC-6.8](../item-positioning/part-6-active-done-split.md)'s.
+*Given* the setup, with column `A`, named `Early`, on `B` from `W1` to `W2`, and Free items in `W2`, *when* `W2` is made terminal, *then* it's refused with a 400, and nothing changes: `W2` is still non-terminal, and its items keep their positions and their `null` `completedAt`. The response's `conflictingColumnId` is `A`'s id, and its message quotes `Early`. *And given* board `B2` of `WF` also has a column, `A2`, from `W2` to `W3`, *then* the change is refused the same way, naming one of `A` and `A2`. *And given* `W2` is covered by no column, or only by a column covering `W2` alone, *when* it's made terminal, *then* the change is accepted. The same rule for a column write is [BCU-3.2](bcu-3-a-boards-columns-together.md)'s and [BCU-3.3](bcu-3-a-boards-columns-together.md)'s.
 
 **Automation test:** —
 

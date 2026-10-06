@@ -1,7 +1,7 @@
 // Table-generic anchor+side position resolution, coarsest-fit, lazy reindex — shared by
 // items and projects. Resolution against a fresh query, with its append and bootstrap
-// fallbacks: wiki item-positioning §2. Both reindex triggers, and every reindex, run
-// through reindexPositionsInScope: wiki item-positioning §5.
+// fallbacks: wiki positioning §3. Both reindex triggers, and every reindex, run
+// through reindexPositionsInScope: wiki positioning §6.
 // Also home to nextPosition: simple append-at-end math for workphases/boards/columns
 // (non-nullable fields, no anchor/reindex needed).
 
@@ -24,7 +24,7 @@ export type PositionedTable = SQLiteTable & {
 
 // One renumbered row from a reindex — `{id, position}` and nothing more,
 // since a reindex changes positions and never any other field
-// (wiki item-positioning §5.1).
+// (wiki positioning §7).
 export type ReindexedPosition = { id: string; position: number };
 
 // Used to bundle the query context so functions have fewer params to handoff
@@ -49,7 +49,7 @@ export type Side = 'before' | 'after';
  * @param tx - the transaction handler
  * @param side - whether the new id will be placed immediately 'before' or 'after' the anchor. if anchorId is null then side functions as "before all" or "after all"
  * @param anchorId - nullable. the targetId that the new id will be placed alongside
- * @param reindexed - optional collector; if a reindex fires, every renumbered `{id, position}` is pushed here so the caller can disclose it (wiki item-positioning §5.1)
+ * @param reindexed - optional collector; if a reindex fires, every renumbered `{id, position}` is pushed here so the caller can disclose it (wiki positioning §7)
 
  * @returns number value of the position
  */

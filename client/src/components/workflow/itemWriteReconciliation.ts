@@ -1,6 +1,6 @@
 // Folding an item write's response into the board's item state
-// (wiki item-positioning §5a): apply the reindexed pairs, upsert the
-// written row, clear its pending placement, and run the inversion tripwire
+// (wiki positioning §8): apply the reindexed pairs, upsert the written row,
+// clear its pending placement, and run the inversion tripwire
 // (wiki board-drag-interaction §10). Every item-write path goes through
 // `completeItemWrite`. Pure; reads `itemListOps.ts`'s placements and sort,
 // never the other way round.

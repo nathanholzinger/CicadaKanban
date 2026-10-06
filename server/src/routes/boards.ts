@@ -148,7 +148,7 @@ router.get('/:id', (req, res) => {
       needsAttention: uncovered.length > 0 || invalidItems.length > 0,
     },
     // The board's drag-target classification needs the same depth cap the
-    // API enforces (wiki item-attachment §8). Carried on the board response
+    // API enforces (wiki hierarchy-placement §6). Carried on the board response
     // rather than a shared client/server module, so the client never
     // hard-codes it.
     itemDepthCap: ITEM_DEPTH_CAP,

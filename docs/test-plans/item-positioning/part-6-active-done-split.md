@@ -10,8 +10,6 @@
 | TC-6.4 | Done items are ordered by completion, the newest last | P0 | Automated |
 | TC-6.5 | Attached children keep their positions under a terminal cascade | P0 | Automated |
 | TC-6.6 | `positionScope` stays `"attached-siblings"` under a terminal cascade | P0 | Automated |
-| TC-6.7 | A column range can't mix terminal and non-terminal workphases | P0 | Automated |
-| TC-6.8 | A range that's all terminal, or all non-terminal, is accepted | P1 | Automated |
 | TC-6.9 | A reopened done item takes the append fallback | P1 | Automated |
 | TC-6.10 | Done items completed at the same moment read in creation order | P2 | Automated |
 | TC-6.11 | Changing a workphase's terminal flag applies the split to the items already in it | P1 | Open |
@@ -66,22 +64,6 @@
 *Given* attached child `X` of `P`, *when* `P` moves to a terminal workphase and the move cascades to `X`, *then* `X`'s `positionScope` is still `"attached-siblings"`, not `"none"`.
 
 **Automation test:** `server/tests/routes/items.test.ts`
-
-## TC-6.7 — A column range can't mix terminal and non-terminal workphases
-
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §6
-
-*Given* a board, *when* a column is created, or an existing one edited, with a range that covers both a terminal and a non-terminal workphase, *then* the request is rejected, and nothing about the columns changes.
-
-**Automation test:** `server/tests/routes/columns.test.ts`
-
-## TC-6.8 — A range that's all terminal, or all non-terminal, is accepted
-
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §6
-
-*Given* a board, *when* a column is created with a range covering only terminal workphases, or only non-terminal ones, *then* it is accepted.
-
-**Automation test:** `server/tests/routes/columns.test.ts`
 
 ## TC-6.9 — A reopened done item takes the append fallback
 

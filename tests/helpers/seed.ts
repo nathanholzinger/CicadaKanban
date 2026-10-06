@@ -111,6 +111,18 @@ export async function fetchProject(request: APIRequestContext, id: string): Prom
   return res.json();
 }
 
+// Pins one project to an exact position, or to none (`null`), through the
+// test-only route `PATCH /api/test/projects/:id/position`: no project request
+// names a final position (wiki positioning §2), and none leaves it empty.
+export async function pinProjectPosition(
+  request: APIRequestContext,
+  id: string,
+  position: number | null,
+): Promise<void> {
+  const res = await request.patch(`${API}/test/projects/${id}/position`, { data: { position } });
+  expect(res.ok(), `pin project ${id} at ${position} → ${res.status()}`).toBe(true);
+}
+
 export interface PositionedItemPlan<K extends string> {
   key: K;
   projectId: string;
@@ -122,7 +134,7 @@ export interface PositionedItemPlan<K extends string> {
 
 // Pins one item to an exact position through the test-only route,
 // `PATCH /api/test/items/:id/position`: the item API takes no final position
-// (wiki item-positioning §2).
+// (wiki positioning §2).
 export async function pinItemPosition(request: APIRequestContext, id: string, position: number): Promise<void> {
   const res = await request.patch(`${API}/test/items/${id}/position`, { data: { position } });
   expect(res.ok(), `pin ${id} at ${position} → ${res.status()}`).toBe(true);

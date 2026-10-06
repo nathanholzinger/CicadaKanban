@@ -6,7 +6,7 @@ export function fetchItem(id: string): Promise<ItemDetail> {
 }
 
 // One row a server-side reindex renumbered — `{id, position}` and nothing
-// more (wiki item-positioning §5.1).
+// more (wiki positioning §7).
 export interface ReindexedPosition {
   id: string;
   position: number;
@@ -43,7 +43,7 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
 
 // Placement is {anchorId, side}, resolved server-side against true current
 // data, never a client-computed value; no request names a final position
-// (wiki item-positioning §2).
+// (wiki positioning §2).
 //
 // `parentId` (null = make top-level) and `isAttached` ride along with any
 // of the above and commit in the same transaction — the shape the board's

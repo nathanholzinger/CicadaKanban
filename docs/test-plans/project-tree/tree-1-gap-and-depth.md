@@ -141,6 +141,6 @@ How the invalid line looks isn't asserted.
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §6, wiki positioning §5
 
-*Given* the tree, *when* `X` is released with the line between `A1a` and `B`, at `A1a`'s depth, *then* the request is a move naming `A1` as `X`'s parent and `A1a` as the sibling it goes after, and it carries no position. *When* `X` is instead released above the first row, *then* the request is a move naming no parent and `A` as the sibling it goes before, again with no position. `X`'s position is the one the server's response gives.
+*Given* the tree, *when* `X` is released with the line between `A1a` and `B`, at `A1a`'s depth, *then* the request is a move naming `A1` as `X`'s parent and `A1a` as the sibling it goes after, and it carries no position. *When* `X` is instead released above the first row, *then* the request is a move naming no parent and `A` as the sibling it goes before, again with no position. Each release saves `X` where the line showed it: as `A1`'s child after `A1a`, and as the first top-level project, before `A`.
 
 **Automation test:** —

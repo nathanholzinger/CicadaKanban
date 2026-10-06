@@ -10,6 +10,7 @@ import {
   createItem,
   readBoard,
   columnOn,
+  boardsOf,
   covers,
   reorderWorkphases,
 } from '../fixtures.js';
@@ -468,51 +469,63 @@ describe('a broken column', () => {
 });
 
 describe('terminal/non-terminal column ranges', () => {
+  // WF with non-terminal W1, W2 and W3 and terminal D1 and D2, in that order, and
+  // its default board, which starts with no column.
   async function setupWithTerminal() {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
-    const boardsBefore = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const board = boardsBefore.body[0];
-    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-    const done = await createWorkphase(workflow.id, { name: 'Done', isTerminal: true });
-    return { project, workflow, board, inProgress, done };
+    const [board] = await boardsOf(workflow.id);
+    const w: { id: string }[] = [];
+    for (const name of ['W1', 'W2', 'W3']) w.push(await createWorkphase(workflow.id, { name }));
+    const d: { id: string }[] = [];
+    for (const name of ['D1', 'D2']) d.push(await createWorkphase(workflow.id, { name, isTerminal: true }));
+    return { board, w, d };
   }
 
   async function boardColumns(boardId: string) {
-    const res = await request(app).get(`/api/boards/${boardId}`);
-    return res.body.columns as { id: string; startWorkphaseId: string; endWorkphaseId: string }[];
+    return (await readBoard(boardId)).columns.map(c => ({
+      id: c.id,
+      start: c.startWorkphaseId,
+      end: c.endWorkphaseId,
+    }));
   }
 
-  it('TC-6.7: POST rejects a range spanning a terminal and non-terminal workphase', async () => {
-    const { board, inProgress, done } = await setupWithTerminal();
-    const res = await request(app).post('/api/columns').send({
+  it('BCU-3.2: a column write can’t make a column cover both terminal and non-terminal workphases', async () => {
+    const { board, w, d } = await setupWithTerminal();
+
+    const created = await request(app).post('/api/columns').send({
       boardId: board.id,
-      startWorkphaseId: inProgress.id,
-      endWorkphaseId: done.id,
+      startWorkphaseId: w[2].id,
+      endWorkphaseId: d[0].id,
     });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/terminal/i);
+    expect(created.status).toBe(400);
+    expect(created.body.error).toMatch(/terminal/i);
     expect(await boardColumns(board.id)).toEqual([]);
+
+    const a = await createColumn(board.id, w[1].id, w[2].id);
+    const edited = await request(app).put(`/api/columns/${a.id}`).send({ endWorkphaseId: d[0].id });
+    expect(edited.status).toBe(400);
+    expect(edited.body.error).toMatch(/terminal/i);
+    expect(await boardColumns(board.id)).toEqual([{ id: a.id, start: w[1].id, end: w[2].id }]);
   });
 
-  it('TC-6.8: POST allows a range entirely within terminal workphases', async () => {
-    const { board, done } = await setupWithTerminal();
-    const res = await request(app).post('/api/columns').send({
+  it('BCU-3.3: a column whose range is all terminal, or all non-terminal, is accepted', async () => {
+    const { board, w, d } = await setupWithTerminal();
+
+    const done = await request(app).post('/api/columns').send({
       boardId: board.id,
-      startWorkphaseId: done.id,
-      endWorkphaseId: done.id,
+      startWorkphaseId: d[0].id,
+      endWorkphaseId: d[1].id,
     });
-    expect(res.status).toBe(201);
-  });
+    expect(done.status).toBe(201);
+    expect(covers(await columnOn(board.id, done.body.id))).toEqual([d[0].id, d[1].id]);
 
-  it('TC-6.7: PUT rejects extending a range to cross the terminal boundary', async () => {
-    const { board, inProgress, done } = await setupWithTerminal();
-    const created = await createColumn(board.id, inProgress.id, inProgress.id);
-    const res = await request(app).put(`/api/columns/${created.id}`).send({ endWorkphaseId: done.id });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/terminal/i);
-    expect(await boardColumns(board.id)).toEqual([
-      expect.objectContaining({ id: created.id, startWorkphaseId: inProgress.id, endWorkphaseId: inProgress.id }),
-    ]);
+    const active = await request(app).post('/api/columns').send({
+      boardId: board.id,
+      startWorkphaseId: w[0].id,
+      endWorkphaseId: w[2].id,
+    });
+    expect(active.status).toBe(201);
+    expect(covers(await columnOn(board.id, active.body.id))).toEqual([w[0].id, w[1].id, w[2].id]);
   });
 });

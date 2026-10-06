@@ -113,6 +113,8 @@ export default function App() {
       const updated = await moveProject(id, { parentId, prevId, nextId });
       setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
     } catch (err) {
+      // The list only changes on success, so the project still shows where it was;
+      // the refetch resyncs the tree (wiki project-tree §4).
       console.error('Failed to reposition project:', err);
       fetchProjects()
         .then(setProjects)
@@ -124,6 +126,8 @@ export default function App() {
   const projectSubprojects = projects.filter(p => p.parentId === selectedProjectId);
   const projectAncestors = selectedProject ? getAncestors(selectedProject, projects) : [];
 
+  // The same rule as `workflowItems.ts::effectiveWorkflowIdForProject`: the
+  // project's own workflow, else its nearest ancestor's (wiki project-tree §10).
   const effectiveWorkflow = (() => {
     if (!selectedProject) return null;
     const own = workflows.find(w => w.projectId === selectedProject.id);

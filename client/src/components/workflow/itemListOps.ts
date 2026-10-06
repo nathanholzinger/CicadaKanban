@@ -1,10 +1,10 @@
 // Pure operations over the board's Item[] state — no React, so the hook only
 // closes over state and these stay unit-testable:
 //   - the *ordinal placement* layer (wiki board-drag-interaction §10,
-//     wiki item-positioning §2's "Client-side role"): a dragged or
-//     just-dropped item is shown at a slot in a list without any position
-//     value being invented for it. `position` is never touched client-side;
-//     the number is the server's to produce;
+//     wiki positioning §5): a dragged or just-dropped item is shown at a
+//     slot in a list without any position value being invented for it.
+//     `position` is never touched client-side; the number is the server's
+//     to produce;
 //   - the list *selectors*: which items a column, sub-row or Stub list
 //     renders, in what order;
 //   - a Card's descendants section as flat hierarchy rows (`hierarchyRows`,
@@ -150,7 +150,7 @@ function slotIndex(list: Item[], item: Item, slot: PlacementSlot, sortedIndex: M
 // ── Selectors ──────────────────────────────────────────────────────────────
 
 // Deterministic tie-break for an exact position match — prevents order from
-// depending on unspecified DB row order (wiki item-positioning §5a).
+// depending on unspecified DB row order (wiki positioning §1).
 export function byPositionThenCreatedAt(a: Item, b: Item): number {
   return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
 }

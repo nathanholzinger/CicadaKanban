@@ -5,7 +5,17 @@ import { app } from '../../src/index.js';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
 import { items as itemsTable, workflows } from '../../src/db/schema.js';
-import { createProject, createWorkflow, createWorkphase, createItem, findTemplateByName } from '../fixtures.js';
+import {
+  createProject,
+  createWorkflow,
+  createWorkphase,
+  createItem,
+  findTemplateByName,
+  boardsOf,
+  readBoard,
+  itemIdsOn,
+  templatedWorkflow,
+} from '../fixtures.js';
 
 describe('GET /api/workflows', () => {
   it('returns all workflows when no projectId filter is given', async () => {
@@ -186,6 +196,38 @@ describe('POST /api/workflows', () => {
     const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
     expect(detail.body.columns).toEqual([]);
   });
+
+  it('TREE-10.1: a workflow given to a project makes it, and each descendant that used the ancestor’s through it, use the new one', async () => {
+    // P owns W1, and has a child C. C's children are D, which owns W2, and E,
+    // which has none. Each project has an item in a workphase of the workflow it
+    // uses.
+    const p = await templatedWorkflow('quick', { name: 'P' });
+    const c = await createProject({ name: 'C', parentId: p.project.id });
+    const d = await templatedWorkflow('quick', { name: 'D', parentId: c.id });
+    const e = await createProject({ name: 'E', parentId: c.id });
+    const itemIn = (projectId: string, workphaseId: string, title: string) =>
+      createItem({ projectId, workphaseId, title });
+    const ip = await itemIn(p.project.id, p.workphaseIds[0], 'p');
+    const ic = await itemIn(c.id, p.workphaseIds[0], 'c');
+    const ie = await itemIn(e.id, p.workphaseIds[0], 'e');
+    const id = await itemIn(d.project.id, d.workphaseIds[0], 'd');
+    const [board1] = await boardsOf(p.workflow.id);
+    const [board2] = await boardsOf(d.workflow.id);
+    expect(itemIdsOn(await readBoard(board1.id))).toEqual(new Set([ip.id, ic.id, ie.id]));
+
+    // C used P's workflow, and is given one of its own.
+    const res = await request(app).post('/api/workflows').send({ name: 'W3', projectId: c.id });
+    expect(res.status).toBe(201);
+    const [board3] = await boardsOf(res.body.id);
+
+    // C and E use it now, and their items, still holding W1's workphases, are in
+    // its Unsorted. D keeps W2, and P keeps W1.
+    const onNew = await readBoard(board3.id);
+    expect(itemIdsOn(onNew)).toEqual(new Set([ic.id, ie.id]));
+    expect(new Set(onNew.unsorted.invalidItems.map(i => i.id))).toEqual(new Set([ic.id, ie.id]));
+    expect(itemIdsOn(await readBoard(board1.id))).toEqual(new Set([ip.id]));
+    expect(itemIdsOn(await readBoard(board2.id))).toEqual(new Set([id.id]));
+  });
 });
 
 describe('PUT /api/workflows/:id', () => {
@@ -247,6 +289,36 @@ describe('DELETE /api/workflows/:id', () => {
     const itemRes = await request(app).get(`/api/items/${crossProjectItem.id}`);
     expect(itemRes.status).toBe(200);
     expect(itemRes.body.workphaseId).toBeNull();
+  });
+
+  it('TREE-10.3: after the workflow a project uses is deleted, it uses the nearest one left above it, or none', async () => {
+    // P owns W1, and its child C owns W2. D, C's child, has none. Each has an
+    // item in a workphase of the workflow it uses. Z is on a workflow of its own.
+    const p = await templatedWorkflow('quick', { name: 'P' });
+    const c = await templatedWorkflow('quick', { name: 'C', parentId: p.project.id });
+    const d = await createProject({ name: 'D', parentId: c.project.id });
+    const z = await templatedWorkflow('quick', { name: 'Z' });
+    const itemIn = (projectId: string, workphaseId: string, title: string) =>
+      createItem({ projectId, workphaseId, title });
+    const ip = await itemIn(p.project.id, p.workphaseIds[0], 'p');
+    const ic = await itemIn(c.project.id, c.workphaseIds[0], 'c');
+    const id = await itemIn(d.id, c.workphaseIds[0], 'd');
+    const iz = await itemIn(z.project.id, z.workphaseIds[0], 'z');
+    const [boardOfP] = await boardsOf(p.workflow.id);
+    const [boardOfZ] = await boardsOf(z.workflow.id);
+    const workphaseOf = async (itemId: string) => (await request(app).get(`/api/items/${itemId}`)).body.workphaseId;
+
+    // C and D now use W1, the nearest workflow above them. Their items lost
+    // their workphases, so they're in its Unsorted.
+    expect((await request(app).delete(`/api/workflows/${c.workflow.id}`)).status).toBe(204);
+    const afterW2 = await readBoard(boardOfP.id);
+    expect(itemIdsOn(afterW2)).toEqual(new Set([ip.id, ic.id, id.id]));
+    expect(new Set(afterW2.unsorted.invalidItems.map(i => i.id))).toEqual(new Set([ic.id, id.id]));
+    expect([await workphaseOf(ic.id), await workphaseOf(id.id)]).toEqual([null, null]);
+
+    // No workflow is left above any of them: Z's boards don't list their items.
+    expect((await request(app).delete(`/api/workflows/${p.workflow.id}`)).status).toBe(204);
+    expect(itemIdsOn(await readBoard(boardOfZ.id))).toEqual(new Set([iz.id]));
   });
 
   it("deletes a workflow with a null projectId without touching any project's items", async () => {

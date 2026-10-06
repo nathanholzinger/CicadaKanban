@@ -1,4 +1,4 @@
-// The coarsest-decimal-that-fits search for position values (wiki item-positioning §2),
+// The coarsest-decimal-that-fits search for position values (wiki positioning §3),
 // kept apart from positionResolver.ts so it can be unit-tested standalone.
 
 const DEFAULT_MAX_COARSEST_FIT_DECIMALS = 12;

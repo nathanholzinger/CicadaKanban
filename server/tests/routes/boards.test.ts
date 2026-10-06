@@ -12,34 +12,12 @@ import {
   createBoard,
   createColumn,
   createItem,
-  findTemplateByName,
   readBoard,
   boardsOf,
   covers,
-  type BoardBody,
+  itemIdsOn,
+  templatedWorkflow,
 } from '../fixtures.js';
-
-// Every item a board returns, wherever it sits: in a column, in an uncovered
-// workphase, or in `invalidItems`.
-function itemIdsOn(board: BoardBody): Set<string> {
-  const ids = new Set<string>();
-  for (const column of board.columns) for (const row of column.subRows) for (const i of row.items) ids.add(i.id);
-  for (const row of board.unsorted.uncovered) for (const i of row.items) ids.add(i.id);
-  for (const i of board.unsorted.invalidItems) ids.add(i.id);
-  return ids;
-}
-
-// A workflow built from the "quick" (Todo, Done) or "flow" (Todo, In Progress,
-// Review, Done) template, so its default board starts with real 1:1 columns.
-async function templatedWorkflow(template: 'quick' | 'flow', projectOverrides: Record<string, unknown> = {}) {
-  const project = await createProject(projectOverrides);
-  const { id: templateId } = await findTemplateByName(template);
-  const workflow = await createWorkflow(project.id, { templateId });
-  const workphaseIds = [...(workflow.workphases as { id: string; position: number }[])]
-    .sort((a, b) => a.position - b.position)
-    .map(w => w.id);
-  return { project, workflow, workphaseIds };
-}
 
 describe('workflow creation bootstraps a default board', () => {
   it('POST /api/workflows creates exactly one board with 1:1 columns matching its workphases', async () => {

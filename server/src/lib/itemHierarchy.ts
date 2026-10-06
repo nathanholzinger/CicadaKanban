@@ -232,7 +232,7 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     if (!parent) return 'parentId does not reference an existing item';
     const reparentError = assertValidReparent(items, item.id, req.parentId, 'item');
     if (reparentError) return reparentError;
-    // The cap gates reparents, not existing data (wiki item-attachment §8):
+    // The cap gates reparents, not existing data (wiki hierarchy-placement §6):
     // an attach toggle that names the parent the item already has isn't one.
     if (req.parentId !== item.parentId) {
       const depthError = assertWithinDepthCap(req.parentId, item.id);
@@ -289,7 +289,7 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     // space and a workflow-wide space are isolated, and two workflows each
     // have their own. Checked against the *resulting* state: an anchor
     // among the new parent's children is legal even though the subject
-    // isn't in that scope yet (wiki item-positioning §7.1).
+    // isn't in that scope yet (wiki positioning §2).
     const anchorScope = {
       isAttached: Boolean(anchor.isAttached),
       parentId: anchor.parentId,
@@ -337,7 +337,7 @@ function hierarchyChangeContent(
 }
 
 // Applies a validated request inside `tx`. Returns the reindex disclosure
-// (wiki item-positioning §5.1) for the caller's response — empty when no
+// (wiki positioning §7) for the caller's response — empty when no
 // reindex fired, which is the overwhelmingly common case.
 export function applyHierarchyRequest(
   tx: Tx,

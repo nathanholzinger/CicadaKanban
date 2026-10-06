@@ -43,7 +43,7 @@ export interface DragClassification {
   subtreeIds: ReadonlySet<string>;
 }
 
-// The whole depth rule (wiki item-attachment §8): a target at depth D is a
+// The whole depth rule (wiki hierarchy-placement §6): a target at depth D is a
 // legal parent iff D + 1 + draggedSubtreeHeight <= cap. Root items are at
 // depth 1; a leaf has height 0. Deliberately separate from
 // `itemTree.ts::assertWithinDepthCap`: the same formula on each side of the

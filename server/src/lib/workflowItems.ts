@@ -68,8 +68,8 @@ function getProjectsUsingWorkflow(workflowId: string): Set<string> {
 }
 
 // The inverse of getProjectsUsingWorkflow, for one project: the workflow it
-// owns, or the nearest ancestor project's. Null if no project up the chain
-// owns one. Cycle-guarded like every other parentId walk. Lets a
+// owns, or the nearest ancestor project's (wiki project-tree §10). Null if no
+// project up the chain owns one. Cycle-guarded like every other parentId walk. Lets a
 // cross-project reparent tell whether a subtree item's workphase is foreign
 // to its new project, which is what decides whether that item's position is
 // nulled.

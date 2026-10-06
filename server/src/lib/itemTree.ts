@@ -55,13 +55,13 @@ export function assertValidReparent(
 // Item hierarchy depth.
 // ============================================================
 
-// The depth cap, provisionally 6. One definition for every parent-giving
-// write, and the board's drag classification reads the same value off
-// GET /boards/:id's `itemDepthCap`, so the UI and the API always enforce
-// the same cap (wiki item-attachment §8).
+// The item depth cap, provisionally 6 (wiki item-attachment §8). One definition
+// for every parent-giving write, and the board's drag classification reads the
+// same value off GET /boards/:id's `itemDepthCap`, so the UI and the API always
+// enforce the same cap (wiki hierarchy-placement §6).
 export const ITEM_DEPTH_CAP = 6;
 
-// 1-based: a root item is at depth 1 (wiki item-attachment §8). Walks
+// 1-based: a root item is at depth 1 (wiki hierarchy-placement §6). Walks
 // parentId upward with a visited set so a corrupted cycle terminates
 // instead of looping. Not the API's `depth` field on GET /items/:id, which
 // is 0-based.
@@ -90,7 +90,7 @@ export function subtreeHeight(itemId: string, tx?: Tx): number {
 // A target at depth D is a legal parent only if D + 1 + subtreeHeight <= CAP
 // — evaluated on the *resulting* deepest leaf, with no direction-aware
 // exception: an already-over-cap subtree fails for every target, including
-// a root (wiki item-attachment §8). `movingId` null means a brand-new item
+// a root (wiki hierarchy-placement §6). `movingId` null means a brand-new item
 // (height 0) — POST's case. Returns the 400 message, or null if legal.
 export function assertWithinDepthCap(parentId: string, movingId: string | null, tx?: Tx): string | null {
   const resultingDepth = hierarchyDepth(parentId, tx) + 1 + (movingId ? subtreeHeight(movingId, tx) : 0);

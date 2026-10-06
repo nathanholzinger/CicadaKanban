@@ -96,7 +96,7 @@ export function findNearestAncestor<T extends TreeNode>(
   return null;
 }
 
-// 1-based hierarchy depth: a root is at depth 1, as wiki item-attachment §8
+// 1-based hierarchy depth: a root is at depth 1, as wiki hierarchy-placement §6
 // counts, and as `itemTree.ts::hierarchyDepth` does. Built on
 // getAncestors, so a dangling parentId reads as a root and a corrupted
 // cycle terminates. An id absent from `nodes` is depth 1.

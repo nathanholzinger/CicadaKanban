@@ -11,7 +11,7 @@ import { resolveAppendPosition, resolvePositionByAnchorAndSide } from '../lib/po
 const router = Router();
 
 // A project's position-comparison scope: its siblings — same parentId, or
-// every root project when parentId is null. Simpler than
+// every root project when parentId is null (wiki project-tree §4). Simpler than
 // `itemPositionScope.ts::positionScopeFor` since projects have no
 // attach/workphase dimension, just one flat "children of X" bucket per parent.
 function projectPositionScope(parentId: string | null, excludeId?: string): SQL {
@@ -19,7 +19,8 @@ function projectPositionScope(parentId: string | null, excludeId?: string): SQL 
   return excludeId ? and(base, not(eq(projects.id, excludeId)))! : base;
 }
 
-// List all projects ordered by position (NULLS LAST) then createdAt
+// Lists projects by position, then createdAt. SQLite sorts a missing position
+// first, the same order as counting it as 0 (wiki project-tree §4).
 router.get('/', (_req, res) => {
   const allProjects = db.select().from(projects).orderBy(asc(projects.position), asc(projects.createdAt)).all();
   res.json(allProjects);
@@ -33,9 +34,11 @@ router.get('/:id', (req, res) => {
   res.json({ ...project, workflows: projectWorkflows });
 });
 
-// Create a project
+// Create a project, top-level or under `parentId`, after its siblings' true last
+// (wiki project-tree §5).
 router.post('/', (req, res) => {
   const { name, description, parentId } = req.body;
+  // A project always has a name (wiki project-tree §8).
   if (!name) {
     res.status(400).json({ error: 'name is required' });
     return;
@@ -70,13 +73,15 @@ router.post('/', (req, res) => {
   res.status(201).json(created);
 });
 
-// Update a project
+// Update a project, its parent included (wiki project-tree §7).
 router.put('/:id', (req, res) => {
   const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
 
   const { name, description, parentId } = req.body;
 
+  // The new parent must exist, and be neither the project nor in its subtree
+  // (wiki project-tree §3).
   if (parentId !== undefined && parentId !== null) {
     const reparentError = assertValidReparent(projects, req.params.id, parentId, 'project');
     if (reparentError) {
@@ -105,7 +110,7 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Recursively deletes a project subtree. Runs inside a caller-supplied
+// Recursively deletes a project subtree (wiki project-tree §9). Runs inside a caller-supplied
 // transaction (tx) so the whole cascade — descendant projects, items, workflow
 // artifacts — commits atomically; a mid-cascade failure rolls the lot back.
 function deleteProjectById(id: string, tx: Tx) {
@@ -163,7 +168,7 @@ function deleteProjectById(id: string, tx: Tx) {
 }
 
 // Move/reorder a project — reposition among siblings and/or reparent, in
-// one atomic step. One project per request, not a batch: a batch's
+// one atomic step (wiki project-tree §6). One project per request, not a batch: a batch's
 // per-entry cycle check would run against pre-transaction DB state, so a
 // same-request A<->B parent swap could commit a cycle undetected. With a
 // single-item endpoint there's no second entry in the same request to
@@ -216,7 +221,8 @@ router.patch('/:id/move', (req, res) => {
 
   // Verifies a claimed prevId/nextId is a real, current sibling in the
   // *resulting* scope before trusting it for the midpoint math — rejects a
-  // stale/false claim rather than silently falling back. Validated here,
+  // stale/false claim rather than silently falling back (wiki positioning §2).
+  // Validated here,
   // against plain `db`, before the transaction below opens: this handler's
   // only write is to the subject project itself, so nothing about a
   // sibling's existence/scope/position can change between this check and

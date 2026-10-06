@@ -101,8 +101,8 @@ export function useProjectDragReorder(
     }
 
     // Send the sibling id the server should insert beside — never a
-    // computed position (server always resolves it against true current
-    // data). `resolvePlacement`'s one relation maps straight to prevId/
+    // computed position (wiki positioning §5; the server always resolves it
+    // against true current data). `resolvePlacement`'s one relation maps straight to prevId/
     // nextId; the other is always null, and the server re-derives it.
     const release = releaseOf(flatItems, activeItem.id, gap, projected);
     if (release) {

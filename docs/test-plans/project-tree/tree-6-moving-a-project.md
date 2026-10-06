@@ -52,7 +52,7 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 - to the top level, naming `P1`;
 - to the top level, naming `N`;
 
-*then* each is refused with a 400, and `X`'s parent and position are unchanged. No fallback places `X` at the end instead.
+*then* each is refused with a 400, whether the neighbor is named as the sibling `X` goes after or as the one it goes before, and `X`'s parent and position are unchanged. No fallback places `X` at the end instead.
 
 **Automation test:** —
 

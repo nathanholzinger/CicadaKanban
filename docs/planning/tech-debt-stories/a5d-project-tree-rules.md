@@ -258,19 +258,22 @@ The starting list. The Coder keeps it current.
 
 | File | Batch | Change |
 |---|---|---|
-| `server/src/routes/projects.ts` | 3 | G1: `PUT` that reparents shares the move's resolution. G2: the create checks the parent. G3: a move naming the project itself is refused. G4: a move naming a position is refused. G5: the create, the move and `PUT` return the renumbered pairs. G9 and call 10: the create and `PUT` refuse a name of only spaces, and `PUT` refuses an empty name or `null`. Call 1: the create, the move and `PUT` refuse a parent that would put the subtree past the project cap. Pointers on each write. The list route's "NULLS LAST" comment (G6) |
-| `server/src/routes/workflows.ts` | 3 | G7: the create refuses a project that already has a workflow |
-| `server/src/lib/workflowItems.ts` | 3 | Pointers on inheritance |
-| `server/src/lib/itemTree.ts` | 3 | Call 1: the project cap, a value of its own beside `ITEM_DEPTH_CAP`, and the depth check generalized to projects, or a project twin of `assertWithinDepthCap`. The Coder decides, by "One position math layer" |
-| `server/src/db/schema.ts` | 3 | `projects.parentId`'s foreign key (D7) |
-| `server/src/lib/positionResolver.ts`, `coarsestFit.ts` | 3 | Header pointers re-pointed to the shared page |
-| Other comments citing item-positioning §2, §5, §5.1 or §5a | 3 | Re-pointed by the anchor map |
-| `client/src/App.tsx` | 3 | G5: the create and move handlers apply the pairs. A pointer on `effectiveWorkflow` |
-| `client/src/api/projects.ts`, `client/src/types.ts` | 3 | G5: the responses' renumbered pairs |
-| `client/src/components/sidebar/projectTreeUtils.ts` | 3 | G6: a missing position counts as 0 |
-| `client/src/components/sidebar/useProjectDragReorder.ts`, `SortableProjectRow.tsx` | 3 | Call 1, deduction n: a tab state over the project cap is still offered, its line is marked invalid, and a release in it writes nothing |
-| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `tests/api/projects.spec.ts`, client tests | 3 | Re-titles, and the new tests |
-| `server/tests/routes/columns.test.ts` | 3 | TC-6.7's and TC-6.8's tests re-titled BCU-3.2 and BCU-3.3 (D6) |
+| `server/src/routes/projects.ts` | 3a done, 3b | **3a, done:** index pointers on the create (§5, §8), the edit (§7, §3), the move (§6, and positioning §2 on the neighbor check), the delete (§9) and the sibling scope and the list (§4), and the list's "NULLS LAST" comment, which was wrong, now says what SQLite does. **3b:** G1: `PUT` that reparents shares the move's resolution. G2: the create checks the parent. G3: a move naming the project itself is refused. G4: a move naming a position is refused. G5: the create, the move and `PUT` return the renumbered pairs. G9 and call 10: the create and `PUT` refuse a name of only spaces, and `PUT` refuses an empty name or `null`. Call 1: the create, the move and `PUT` refuse a parent that would put the subtree past the project cap |
+| `server/src/routes/workflows.ts` | 3b | G7: the create refuses a project that already has a workflow, with its pointer (§10) |
+| `server/src/lib/workflowItems.ts` | 3a done | The pointer on inheritance (§10), on `effectiveWorkflowIdForProject` |
+| `server/src/lib/itemTree.ts` | 3a done, 3b | **3a, done:** comments re-pointed (the formula's two sites, and the item cap's one-value rule, to hierarchy-placement §6). **3b:** call 1: the project cap, a value of its own beside `ITEM_DEPTH_CAP`, and the depth check generalized to projects, or a project twin of `assertWithinDepthCap`. The Coder decides, by "One position math layer" |
+| `server/src/db/schema.ts` | 3b | `projects.parentId`'s foreign key (D7) |
+| `server/src/lib/positionResolver.ts`, `coarsestFit.ts` | 3a done | Header and `reindexed` pointers re-pointed to the shared page (§3, §6, §7) |
+| Other comments citing item-positioning §2, §5, §5.1 or §5a, or item-attachment §8 | 3a done | Re-pointed by the anchor map: `api/items.ts`, `itemListOps.ts`, `itemWriteReconciliation.ts`, `dragClassification.ts`, `lib/hierarchy.ts`, `itemHierarchy.ts`, `routes/items.ts`, `routes/boards.ts`, `routes/testHelpers.ts`, and the two test helpers that name the refusal of a final position. The ones that cite an item-only part stay (the list is in the Amendments) |
+| `client/src/App.tsx` | 3a done, 3b | **3a, done:** a pointer on `effectiveWorkflow` (§10), and one on `handleReorderProject`'s catch (§4). **3b:** G5: the create and move handlers apply the pairs |
+| `client/src/api/projects.ts`, `client/src/types.ts` | 3b | G5: the responses' renumbered pairs |
+| `client/src/components/sidebar/projectTreeUtils.ts` | 3b | G6: a missing position counts as 0 |
+| `client/src/components/sidebar/useProjectDragReorder.ts`, `SortableProjectRow.tsx` | 3a done, 3b | **3a, done:** the release's "never a computed position" comment cites positioning §5. **3b:** call 1, deduction n: a tab state over the project cap is still offered, its line is marked invalid, and a release in it writes nothing |
+| `server/src/routes/testHelpers.ts` | 3a done | New: `PATCH /api/test/projects/:id/position`, mounted only under `ENABLE_TEST_ROUTES`, to pin a project's position or clear it. Neither is a request the API takes, and TREE-4.3 needs a tie, as TREE-4.4 (3b) needs a project with none |
+| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `server/tests/fixtures.ts` | 3a done | 19 TREE tests (the Amendments' table). `fixtures.ts` gains `setProjectPosition`, and `itemIdsOn` and `templatedWorkflow` move there from `boards.test.ts`, which both route files now read |
+| `tests/ui/project-tree-drag.spec.ts`, `project-tree-sidebar.spec.ts` (new), `tests/helpers/projectTreeDrag.ts` (new), `tests/helpers/seed.ts` | 3a done | TREE-1.12 and TREE-2.3 in the drag spec; TREE-4.3 and TREE-4.8 in the new sidebar spec. The drag spec's `aim` moves to the helper so both read it. `seed.ts` gains `pinProjectPosition` |
+| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `tests/api/projects.spec.ts`, client tests | 3b | The fixes' tests (TREE-3.4 to 3.8, 4.4 to 4.7, 6.5, 6.6, 7.2, 8.3, 8.4, 10.4, 1.11), and TREE-1.7's deletion once TREE-1.11 is built |
+| `server/tests/routes/columns.test.ts` | 3a done | D6: BCU-3.2 and BCU-3.3 written whole on the case's setup (`W1` to `W3`, `D1`, `D2`), replacing TC-6.7's two tests and TC-6.8's one, which each asserted part |
 | `CLAUDE.md` | 2, close | Batch 2, done: "Positioning" cites the shared page, "Workflow inheritance" project-tree §10 and the server's site, and the attach bullet the cap's formula. At close: reindex disclosure for project writes, and the project cap in the data model |
 | `docs/planning/mvp-roadmap.md` | 2 | Done. The Projects and Work Items lines lose unlimited depth (call 1, and Nathan's answer in batch 2) |
 | `docs/planning/epic-8-decisions.md`, `epic-7-decisions.md`, `tech-debt-stories/api-contract-zod-openapi.md` | 2 | Done. Epic 8: the placeholder tier. Epic 7: re-filing a project's items. The API contract epic's Story 1: D5's field names |
@@ -329,6 +332,16 @@ The starting list. The Coder keeps it current.
   - **The placeholder tier** is under project-tree's Open questions, and gets no cases.
 - **For the Coder (batch 3):** a comment that cites item-positioning §2, §2.1, §5, §5.1, §5a or §7.1 for a rule that moved, or item-attachment §8 for the formula, is re-pointed by the maps. Index pointers go on project-tree §3 to §10's enforcing sites.
 - **For the Architect (batch 2):** project-tree's Open questions hold the placeholder tier as written, for `epic-8-decisions.md`: the project page, the sidebar's other controls, how the user learns that a write failed, how an over-cap tab state looks, the project cap's real value (Epic 3.5's Story 7), a project that uses no workflow, overriding an inherited workflow from the page, and re-filing. Root `CLAUDE.md`'s "Positioning" bullet points to wiki positioning, and "Workflow inheritance" to wiki project-tree §10.
+- **From the Coder, batch 3a (2026-10-06).**
+  - **For the Test Planner:**
+    - **Nothing open.** The Test Planner moved TC-6.7 and TC-6.8 to BCU-3.2 and BCU-3.3, and the Coder wrote both whole (the Amendments).
+  - **For the PO:** nothing comes off the page. Every `Open` case's test passed against the code on its first run, so calls 9 and 11, §3's three messages and §8's empty-name 400 are what the code does.
+  - **For the Reconciler:**
+    - **The Amendments' table gives each case's file.** TREE-1.12, 2.3, 4.3 and 4.8 are E2E tests, and the rest of the live cases are route tests. TREE-1.7 keeps its UI test until the project cap is built.
+    - **Unmapped support:** `tests/api/projects.spec.ts` (a route test asserts each rule it pins in whole, or it pins one half of a two-write case), `project-page.spec.ts` and `project-sidebar.spec.ts` (the placeholder tier), and the cascade test in `projects.test.ts`, which pins the dependent rows a delete leaves (the items' foreign keys), a rule TREE-9 doesn't state.
+    - **TREE-1.12's saved placement** is read from the stored row: `X` is `A1`'s child after `A1a`, and then before `A`, with the sidebar showing it first.
+    - **No internal test is mapped.** TREE-4.3 and TREE-1.12 have surface tests, so `projectTreeUtils.test.ts` and `useProjectDragReorder.test.ts` get no new TREE mapping, and none is proposed for Nathan's approval.
+    - **Not built, so not mapped:** the `Planned` cases, which are 3b's.
 
 ## Open questions
 
@@ -587,3 +600,46 @@ For Nathan, at plan approval.
 - **2026-10-06, Nathan's answers to the Architect's batch 2 notes.**
   - **The Work Items line:** unlimited depth is the ultimate goal, but it comes out of the MVP roadmap, since the UI has no way to show very deep items yet. The line now reads "Nested up to a depth cap (provisionally 6; Epic 3.5's Story 7 sets it)".
   - **`epic-7-decisions.md`'s Q1 stays as it is.** Epic 7's Sheet will allow movements the board doesn't, and whether that changes the current endpoints or adds new ones is decided then.
+- **2026-10-06, batch 3a (the Coder): the tests and the pointers.** No source behavior changed, and no project rule comes off the page: every `Open` case's test passed against the code on its first run. Besides the comments, one test-only route was added (the Code map), and the "NULLS LAST" comment on the project list, wrong since the list sorts a missing position first, now says what SQLite does.
+  - **The cases and their tests.** Where a test already asserted part of a case, it's extended or replaced, and the partial tests it replaces are deleted. A case with one whole test needs no second one, so the API spec and the placeholder UI specs stay unmapped support. Positions the API can't give (a tie, a fractional position, none) are set by a direct database edit in the route tests, and by the new test route in the E2E tests.
+
+    | Case | Test, in | What |
+    |---|---|---|
+    | TREE-1.12 | `project-tree-drag.spec.ts` | New E2E: two releases, between `A1a` and `B` at `A1a`'s depth, and above the first row. Each request body is compared whole (`parentId`, `prevId`, `nextId`, no position), then the stored order |
+    | TREE-2.3 | `project-tree-drag.spec.ts` | New E2E: the move is refused by a route stub, and `T` is open with `T1` and `T2`, and `X` is back after them at the top level |
+    | TREE-3.1, 3.2, 3.3 | `projects.test.ts` | New, each making the edit and the move. They replace six tests (a parent that's no project, the project itself and a descendant, for `PUT` and for the move). 3.3 adds the message, that `A` is unchanged, and the move up the tree |
+    | TREE-4.1 | `projects.test.ts` | New: a move after `A1` lands between `A1` and `A2`, and with `A`'s children at `1500` and `1600` they're reindexed and `A` and `B` keep `1` and `2` |
+    | TREE-4.2 | `projects.test.ts` | The "ordered by position then createdAt" test, replaced by the case: a tie, a lower position, and a missing one |
+    | TREE-4.3 | `project-tree-sidebar.spec.ts` | New E2E: children and top level, read in one depth-first order |
+    | TREE-4.8 | `project-tree-sidebar.spec.ts` | New E2E: a route stub refuses every project write, and the sidebar is read after a drag, a create and a parent edit |
+    | TREE-5.1 | `projects.test.ts` | New, replacing the test that a child is created when `parentId` is given: positions `3`, `1`, `2` and `5` |
+    | TREE-6.1 | `projects.test.ts` | New, replacing the `prevId` and `nextId` tests, which asserted order only: positions `1.5`, `2.5` and `2` |
+    | TREE-6.2 | `projects.test.ts` | New, replacing three tests (no body fields, a reparent with no anchor, explicit nulls). The nulls are in the second scenario |
+    | TREE-6.3 | `projects.test.ts` | New, replacing the foreign-sibling and no-such-project tests: four refusals, each with `prevId` and with `nextId`, each leaving `X` unchanged |
+    | TREE-6.4, 7.1, 8.2, 9.3 | `projects.test.ts` | New |
+    | TREE-8.1 | `projects.test.ts` | The missing-name test, extended: an empty name too, and that the list is unchanged |
+    | TREE-9.1 | `projects.test.ts` | New. The cascade test stays: it pins the dependent rows a delete leaves, which TREE-9 doesn't state |
+    | TREE-9.2 | `projects.test.ts` | The test that another project's item survives, replaced by the case: `Q` is moved under `R` first, and the item is read in `R`'s Unsorted |
+    | TREE-10.2 | `projects.test.ts` | New. BCU-1.6 tests one project's move; this adds the subtree, a project that owns a workflow, and a moved owner |
+    | TREE-10.1, 10.3 | `workflows.test.ts` | New |
+    | TREE-1.7 | `project-tree-drag.spec.ts` | Unchanged: it keeps its ID until the project cap is built |
+    | BCU-3.2, 3.3 | `columns.test.ts` | New, on the case's setup, replacing TC-6.7's two tests and TC-6.8's one. Those asserted part of each: the all-terminal create but not the all-active one or the columns' coverage, and a different, smaller setup |
+  - **Pointers** are on the Code map's sites. Four differ from the Handoff's list:
+    - **The legality rule (§3) has one pointer,** on the edit's parent check. The move's check is the same code and carries none. If 3b folds the edit's, the move's and the create's (G2) into one helper, the pointer goes there.
+    - **The inheritance rule (§10) is pointed at `workflowItems.ts::effectiveWorkflowIdForProject`** and, as a guard where it would look like duplication, at `App.tsx::effectiveWorkflow`. `getProjectsUsingWorkflow` carries none: its comment already names the client's twin.
+    - **The neighbor refusal is pointed at `verifyAnchor`,** to positioning §2, not at project-tree §6, since §6 cites it.
+    - **The sidebar's failed write (§4) is on `App.tsx::handleReorderProject`'s catch.** The create and edit handlers carry none: they throw, and the dialog and the dropdown handle the rest.
+  - **Comments re-pointed by the maps,** each now citing the page that holds its rule: `api/items.ts` (positioning §2, §7), `itemListOps.ts` (§1, §5), `itemWriteReconciliation.ts` (§8), `positionResolver.ts` (§3, §6, §7), `coarsestFit.ts` (§3), `itemHierarchy.ts` (the cap gating reparents to hierarchy-placement §6; the anchor's resulting scope and the disclosure to positioning §2 and §7), `itemTree.ts` and `lib/hierarchy.ts` (depth counting and the formula to hierarchy-placement §6), `routes/boards.ts` (the cap the UI and API share, to hierarchy-placement §6), and `routes/items.ts`, `routes/testHelpers.ts`, `tests/helpers/seed.ts` and `server/tests/fixtures.ts` (the refusal of a final position, to positioning §2).
+  - **Citations that stay,** since they name an item-only part: `item-positioning §2` on `positionScope` and the workphase-only move, `§2.1` on the table, `§6` on the active/done split, `§7.1` on the board's first and last anchors, `routes/items.ts::respondWithItem`'s `§5.1` (which item writes disclose), and `item-attachment §8` on the item cap's value and on a detached child counting toward `H`.
+  - **Checks:** `npm run check` passes (364 server tests, 426 client, 75 scripts, 0 checker hits on 283 files), and so does the full E2E suite (158 passed, 8 skipped). Each new route assertion was made to fail by breaking its rule in the source, 24 breaks in all (three of them for BCU-3.2 and BCU-3.3), and each new E2E test by breaking the client (a position in the move's body, `prevId` and `nextId` swapped, the collapsed parent not opening, the sibling tie-break reversed, and a refused move, create and edit each left showing). Every break was caught by the case it targets, and each file was put back. The four new E2E tests passed four runs in a row. The source diff is comments, plus the test-only route.
+- **2026-10-06, after batch 3a (the Test Planner): TC-6.7 is BCU-3.2, and TC-6.8 is BCU-3.3** (D6).
+  - **The cases moved with their rule,** to boards-columns-unsorted §6, keeping their priorities, P0 and P1. Each is rewritten on BCU-3's setup with concrete ranges. BCU-3.2 asserts the 400 and that nothing changes. It names no column, since §6 names one only for an overlap and a flag change.
+  - **Both are `Open` until the Reconciler's run,** as DRAG-6.14 was in A5b: a new ID's status is the Test Planner's to set, and `Automated` is the Reconciler's.
+  - **BCU-3.4's links** now point to BCU-3.2 and BCU-3.3, and item-positioning's INDEX line for TC-6 drops column ranges.
+  - **For the Coder:** `columns.test.ts`'s two TC-6.7 tests become BCU-3.2, and its TC-6.8 test becomes BCU-3.3. Until then, `check:docs` reports exactly those three titles (3 hits).
+  - **From the Coder's notes:**
+    - **TREE-6.3** now says the neighbor is refused whether it's named as the sibling `X` goes after or as the one it goes before. The test already makes each refusal both ways.
+    - **TREE-1.12's last sentence** now reads "Each release saves `X` where the line showed it", naming both placements, which is what the test's stored-order check asserts.
+    - **TREE-4.2** is unchanged. "With `B` created first" is the setup, and how a test arranges it, here a direct edit of `createdAt`, is the test's.
+  - **The catalog:** 342 cases: 195 `Automated`, 124 `Open`, 17 `Planned`, 4 `Manual` and 2 `Pending PO`.
+  - **TC-6.7 and TC-6.8 (D6), after the Test Planner moved them to BCU-3.2 and BCU-3.3:** the three tests asserted part of each case on a smaller setup, so BCU-3.2 and BCU-3.3 are written whole, and the three tests are deleted. No test or comment cites TC-6.7 or TC-6.8 any more. TREE-1.12's test also reads the first release's saved placement now, as the reworded case says.

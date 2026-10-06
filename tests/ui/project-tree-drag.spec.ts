@@ -1,7 +1,8 @@
-import type { APIRequestContext, Locator, Page } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { bottomQuarter, cancel, hoverTo, pickUp, release, topQuarter, type Point } from '../helpers/dragGesture';
+import { cancel, hoverTo, pickUp, release } from '../helpers/dragGesture';
+import { aim } from '../helpers/projectTreeDrag';
 import { fetchDefaultBoard, fetchProject, seedBareWorkflow, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import { INDENT_WIDTH, projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
@@ -19,14 +20,6 @@ const TREE_1 = [
   ['B', null],
   ['X', null],
 ] as const;
-
-// Aims the live drag at the top or bottom of a row, `tabs` indents right of
-// where the pointer picked the project up (negative for left). The dragged
-// project is top-level in every tree here, so `tabs` is the depth aimed at.
-async function aim(page: Page, from: Point, row: Locator, side: 'before' | 'after', tabs: number) {
-  const target = side === 'before' ? await topQuarter(row) : await bottomQuarter(row);
-  await hoverTo(page, { x: from.x + tabs * INDENT_WIDTH, y: target.y });
-}
 
 test('TREE-1.1: an indicator line shows the gap, and a release saves exactly what the line shows', async ({
   page,
@@ -60,6 +53,47 @@ test('TREE-1.1: an indicator line shows the gap, and a release saves exactly wha
   expect(x.parentId).toBe(ids.A1);
   expect(x.position).toBeGreaterThan(a1a.position!);
   await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(2)}px`);
+});
+
+test('TREE-1.12: a release saves the placement as a move naming a neighbor, never a position', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const moves: unknown[] = [];
+  page.on('request', req => {
+    if (req.method() === 'PATCH' && req.url().endsWith('/move')) moves.push(req.postDataJSON());
+  });
+  const dragX = async (over: string, side: 'before' | 'after', tabs: number) => {
+    const from = await pickUp(page, projectSidebar.dragHandle('X'));
+    await aim(page, from, projectSidebar.row(over), side, tabs);
+    await release(page);
+  };
+
+  // Released between A1a and B, at A1a's depth: A1's child, after A1a.
+  const first = await seedProjects(request, TREE_1);
+  await page.goto('/');
+  await dragX('B', 'before', 2);
+  await expect.poll(() => moves.length).toBe(1);
+  expect(moves[0]).toEqual({ parentId: first.A1, prevId: first.A1a, nextId: null });
+  // Saved where the line showed it: A1's child, after A1a.
+  await expect.poll(async () => (await fetchProject(request, first.X)).parentId).toBe(first.A1);
+  const a1aPosition = (await fetchProject(request, first.A1a)).position!;
+  expect((await fetchProject(request, first.X)).position).toBeGreaterThan(a1aPosition);
+
+  // Released above the first row: top-level, before A.
+  await resetAndSeedDb();
+  const second = await seedProjects(request, TREE_1);
+  await page.goto('/');
+  await dragX('A', 'before', 0);
+  await expect.poll(() => moves.length).toBe(2);
+  expect(moves[1]).toEqual({ parentId: null, prevId: null, nextId: second.A });
+
+  // Saved where the line showed it: the stored position puts X before A, and
+  // the sidebar shows it first.
+  const aPosition = (await fetchProject(request, second.A)).position!;
+  await expect.poll(async () => (await fetchProject(request, second.X)).position).toBeLessThan(aPosition);
+  await expect(projectSidebar.locator.getByText(/^(X|A|A1|A1a|B)$/)).toHaveText(['X', 'A', 'A1', 'A1a', 'B']);
 });
 
 test('TREE-1.4: when the dragged project’s subtree holds every project, no line is drawn and a release writes nothing', async ({
@@ -271,4 +305,36 @@ test.describe('TREE-2.2: a collapsed project opens when a project is dropped int
     await expect(projectSidebar.row('T').getByTitle('Expand')).toBeVisible();
     await expect(projectSidebar.projectName('T1')).not.toBeVisible();
   });
+});
+
+test('TREE-2.3: a collapsed project opened by a drop stays open if the move fails', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  await seedProjects(request, [
+    ['T', null],
+    ['T1', 'T'],
+    ['T2', 'T'],
+    ['X', null],
+  ]);
+  await page.goto('/');
+  await projectSidebar.toggle('T');
+  await expect(projectSidebar.projectName('T1')).not.toBeVisible();
+  // The server refuses every move.
+  await page.route('**/api/projects/*/move', route =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
+  );
+
+  // X is released one tab right of T, as its first child.
+  const from = await pickUp(page, projectSidebar.dragHandle('X'));
+  await aim(page, from, projectSidebar.row('T'), 'after', 1);
+  const refused = page.waitForResponse(res => res.url().endsWith('/move'));
+  await release(page);
+  expect((await refused).status()).toBe(400);
+
+  // T is open, showing its children, and X is back after it, at the top level.
+  await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
+  await expect(projectSidebar.locator.getByText(/^(T|T1|T2|X)$/)).toHaveText(['T', 'T1', 'T2', 'X']);
+  await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(0)}px`);
 });
