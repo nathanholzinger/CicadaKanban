@@ -20,11 +20,10 @@ X        (0)
 | TREE-1.4 | When the dragged project's subtree holds every project, its own place is the only one, and no line is drawn | P2 | Automated |
 | TREE-1.5 | A collapsed project hides its subtree from view, not from placement | P1 | Automated |
 | TREE-1.6 | Resting on a row of the dragged project's own subtree means its own gap | P1 | Automated |
-| TREE-1.7 | Every depth offered is valid: projects have no depth cap | P2 | Automated |
 | TREE-1.8 | A project set back down in its own gap, at its own depth, writes nothing | P1 | Automated |
 | TREE-1.9 | Coming back to the dragged project's own row means its own gap | P1 | Automated |
 | TREE-1.10 | On the dragged project's own row, the cursor picks among its own gap's depths | P2 | Automated |
-| TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Planned |
+| TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Open |
 | TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Open |
 
 ---
@@ -92,14 +91,6 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 **Automation test:** `client/src/components/sidebar/useProjectDragReorder.test.ts`
 
-## TREE-1.7 — Every depth offered is valid: projects have no depth cap
-
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §1
-
-*Given* a chain of projects, each the only child of the one before, deeper than the item depth cap `CAP` (wiki item-attachment §8), with `D` its deepest, and top-level project `X` with a child `X1`, *when* `X` is tabbed one right of `D`, *then* that depth is offered and isn't marked invalid, and a release saves `X` as `D`'s first child, with `X1` a level deeper still. No depth in any gap is marked invalid.
-
-**Automation test:** `tests/ui/project-tree-drag.spec.ts`
-
 ## TREE-1.8 — A project set back down in its own gap, at its own depth, writes nothing
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §1, wiki hierarchy-placement §5
@@ -126,7 +117,7 @@ None is shallower than `B`'s depth, since that would make `X` an ancestor of `B`
 
 ## TREE-1.11 — A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing
 
-**Priority:** P1 · **Status:** Planned, replaces TREE-1.7 · **Rule:** wiki project-tree §1, wiki hierarchy-placement §6, wiki project-tree §3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki hierarchy-placement §6, wiki project-tree §3
 
 *Given* a chain of projects, each the only child of the one before, from a top-level project down to `S`, at depth `PCAP − 2`, and `S`'s only child `T`, at depth `PCAP − 1`, where `PCAP` is the project cap and the depths count top-level projects as 1 (wiki project-tree §3); and top-level project `X`, the last row, with a child `X1`, *when* `X` is dragged into the gap below `T`:
 

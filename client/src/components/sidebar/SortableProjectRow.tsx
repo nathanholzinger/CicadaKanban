@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
-import { DROP_INDICATOR_LINE } from '../dragChrome';
+import { DROP_INDICATOR_LINE, INVALID_DROP_INDICATOR_LINE } from '../dragChrome';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
@@ -22,6 +22,8 @@ interface RowProps {
   /** 'before' draws the line above this row, 'after' below it (the gap past the last row), null draws nothing. */
   indicatorSide: DropSide | null;
   indicatorDepth: number;
+  /** The line's tab state would put the dragged subtree past the project cap. */
+  indicatorInvalid: boolean;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;
   onSelectProject: (id: string) => void;
@@ -36,6 +38,7 @@ export function SortableProjectRow({
   isDescendantOfActive,
   indicatorSide,
   indicatorDepth,
+  indicatorInvalid,
   expandedIds,
   onToggleExpand,
   onSelectProject,
@@ -94,11 +97,13 @@ export function SortableProjectRow({
   return (
     <div ref={setNodeRef} style={style} className="relative">
       {/* Drop indicator line. `data-drop-line` is a test surface: the side of
-          this row the line is drawn on. */}
+          this row the line is drawn on, and `data-drop-invalid` that its tab state
+          is past the project cap. */}
       {indicatorSide && (
         <div
           data-drop-line={indicatorSide}
-          className={`${DROP_INDICATOR_LINE} ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
+          data-drop-invalid={indicatorInvalid ? 'true' : undefined}
+          className={`${indicatorInvalid ? INVALID_DROP_INDICATOR_LINE : DROP_INDICATOR_LINE} ${indicatorSide === 'before' ? '-top-px' : '-bottom-px'}`}
           style={{ marginLeft: projectRowIndentPx(indicatorDepth) }}
         />
       )}

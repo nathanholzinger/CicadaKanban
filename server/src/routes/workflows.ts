@@ -98,6 +98,12 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'projectId does not reference an existing project' });
     return;
   }
+  // A project has at most one workflow of its own (wiki project-tree §10).
+  const owned = db.select({ name: workflows.name }).from(workflows).where(eq(workflows.projectId, projectId)).get();
+  if (owned) {
+    res.status(409).json({ error: `Project already has a workflow: "${owned.name}"` });
+    return;
+  }
   // Neither is an FK, so a bogus id here wouldn't crash — it would just
   // silently produce a zero-workphase workflow, which is just as confusing.
   // Guarded by `templateId &&`/`sourceWorkflowId &&` before querying (not just

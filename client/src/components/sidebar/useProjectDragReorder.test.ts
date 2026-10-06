@@ -30,12 +30,12 @@ const LEAN_PX = 10;
 // hover the carried copy over the top or bottom half of a row with the pointer
 // at `depth` (the absolute depth its offset picks), and release. `collapsed`
 // names the projects whose children the sidebar doesn't draw.
-function sidebarDrag(projects: Project[], collapsed: readonly string[] = []) {
+function sidebarDrag(projects: Project[], collapsed: readonly string[] = [], depthCap: number | null = null) {
   const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
   const expand = vi.fn<(id: string) => void>();
   const expanded = new Set(projects.map(p => p.id).filter(id => !collapsed.includes(id)));
   const flatItems = flattenTree(projects, expanded);
-  const { result } = renderHook(() => useProjectDragReorder(projects, flatItems, onReorderProject, expand));
+  const { result } = renderHook(() => useProjectDragReorder(projects, flatItems, onReorderProject, expand, depthCap));
   let activeId = '';
   let overId = '';
 
@@ -327,5 +327,39 @@ describe('TREE-1.9: coming back to the dragged project’s own row means its own
     expect(drag.hook.projectedDepth).toBe(1);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'B', null, null);
+  });
+});
+
+describe('the project depth cap', () => {
+  // A chain P1 to P3, each the only child of the one before, and X, with a child X1.
+  const chain = tree(['P1', null], ['P2', 'P1'], ['P3', 'P2'], ['X', null], ['X1', 'X']);
+
+  it('marks a tab state that puts the subtree past the cap invalid, and a release in it sends nothing', () => {
+    // Cap 4: X under P3 is at depth 4, and X1 at 5.
+    const drag = sidebarDrag(chain, [], 4);
+    drag.pickUp('X');
+    drag.hover('P3', 'after', 3);
+    expect(drag.hook.projectedDepth).toBe(3);
+    expect(drag.hook.dropInvalid).toBe(true);
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+    expect(drag.expand).not.toHaveBeenCalled();
+  });
+
+  it('leaves a tab state that fits the cap valid, and a release in it writes', () => {
+    // X aligned with P3 is P2's child, at depth 3, and X1 at 4.
+    const drag = sidebarDrag(chain, [], 4);
+    drag.pickUp('X');
+    drag.hover('P3', 'after', 2);
+    expect(drag.hook.dropInvalid).toBe(false);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'P2', 'P3', null);
+  });
+
+  it('marks nothing invalid while the cap is unknown', () => {
+    const drag = sidebarDrag(chain);
+    drag.pickUp('X');
+    drag.hover('P3', 'after', 3);
+    expect(drag.hook.dropInvalid).toBe(false);
   });
 });

@@ -166,14 +166,14 @@ describe('POST /api/workflows', () => {
   });
 
   it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
-    const project = await createProject();
-    const source = await createWorkflow(project.id);
+    const source = await createWorkflow((await createProject()).id);
     await createWorkphase(source.id, { name: 'Backlog' });
     await createWorkphase(source.id, { name: 'Done' });
+    const other = await createProject();
 
     const res = await request(app).post('/api/workflows').send({
       name: 'Cloned',
-      projectId: project.id,
+      projectId: other.id,
       sourceWorkflowId: source.id,
     });
     expect(res.status).toBe(201);
@@ -195,6 +195,23 @@ describe('POST /api/workflows', () => {
     expect(boardsRes.body).toHaveLength(1);
     const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
     expect(detail.body.columns).toEqual([]);
+  });
+
+  it('TREE-10.4: a project has at most one workflow of its own', async () => {
+    const p = await createProject({ name: 'P' });
+    const c = await createProject({ name: 'C', parentId: p.id });
+    const w1 = await createWorkflow(p.id, { name: 'W1' });
+
+    const second = await request(app).post('/api/workflows').send({ name: 'W2', projectId: p.id });
+    expect(second.status).toBe(409);
+    expect(second.body.error).toContain('W1');
+    expect((await request(app).get(`/api/workflows?projectId=${p.id}`)).body.map((w: { id: string }) => w.id)).toEqual([
+      w1.id,
+    ]);
+
+    // C uses P's, and may be given one of its own.
+    const own = await request(app).post('/api/workflows').send({ name: 'W3', projectId: c.id });
+    expect(own.status).toBe(201);
   });
 
   it('TREE-10.1: a workflow given to a project makes it, and each descendant that used the ancestor’s through it, use the new one', async () => {

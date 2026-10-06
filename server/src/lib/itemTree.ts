@@ -1,10 +1,11 @@
-// isSelfRefDescendant/assertValidReparent (items + projects), walkItemDescendants,
-// hierarchyDepth/subtreeHeight/assertWithinDepthCap + ITEM_DEPTH_CAP (items). All cycle-guarded.
+// isSelfRefDescendant/assertValidReparent (items + projects), the depth cap's
+// depth/height/check for both (ITEM_DEPTH_CAP, PROJECT_DEPTH_CAP), walkItemDescendants.
+// All cycle-guarded.
 
 import { eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { db, type Tx } from '../db/index.js';
-import { items } from '../db/schema.js';
+import { items, projects } from '../db/schema.js';
 
 type SelfRefTable = SQLiteTable & { id: SQLiteColumn; parentId: SQLiteColumn };
 
@@ -52,7 +53,8 @@ export function assertValidReparent(
 }
 
 // ============================================================
-// Item hierarchy depth.
+// Hierarchy depth and the cap, for items and projects alike: one formula
+// (wiki hierarchy-placement §6), each feature's own cap.
 // ============================================================
 
 // The item depth cap, provisionally 6 (wiki item-attachment §8). One definition
@@ -61,48 +63,83 @@ export function assertValidReparent(
 // enforce the same cap (wiki hierarchy-placement §6).
 export const ITEM_DEPTH_CAP = 6;
 
-// 1-based: a root item is at depth 1 (wiki hierarchy-placement §6). Walks
+// The project depth cap, provisionally 6 (wiki project-tree §3). Set apart from
+// the item cap, though it starts at the same number: changing one never changes
+// the other. The sidebar reads it off GET /projects/depth-cap, so the UI and the
+// API enforce the same cap.
+export const PROJECT_DEPTH_CAP = 6;
+
+// 1-based: a top-level entry is at depth 1 (wiki hierarchy-placement §6). Walks
 // parentId upward with a visited set so a corrupted cycle terminates
-// instead of looping. Not the API's `depth` field on GET /items/:id, which
-// is 0-based.
-export function hierarchyDepth(itemId: string, tx?: Tx): number {
+// instead of looping.
+function selfRefDepth(table: SelfRefTable, id: string, tx?: Tx): number {
   const e = tx ?? db;
+  const parentOf = (rowId: string) =>
+    (
+      e.select({ parentId: table.parentId }).from(table).where(eq(table.id, rowId)).get() as
+        { parentId: string | null } | undefined
+    )?.parentId;
   let depth = 1;
-  const visited = new Set([itemId]);
-  let current = e.select({ parentId: items.parentId }).from(items).where(eq(items.id, itemId)).get();
-  while (current?.parentId && !visited.has(current.parentId)) {
-    visited.add(current.parentId);
+  const visited = new Set([id]);
+  let parentId = parentOf(id);
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
     depth++;
-    current = e.select({ parentId: items.parentId }).from(items).where(eq(items.id, current.parentId)).get();
+    parentId = parentOf(parentId);
   }
   return depth;
 }
 
-// Levels *below* the item — a leaf is 0. Counts the full descendant subtree,
-// detached descendants included: a detached child doesn't follow its
+// An item's depth. Not the API's `depth` field on GET /items/:id, which is 0-based.
+export function hierarchyDepth(itemId: string, tx?: Tx): number {
+  return selfRefDepth(items, itemId, tx);
+}
+
+// Levels *below* the entry — a leaf is 0. Counts the full descendant subtree
+// (for items, detached descendants included: a detached child doesn't follow its
 // parent's workphase, but it does still sit under it in the hierarchy and
-// moves with it (wiki item-attachment §8). One level per BFS generation, so
+// moves with it, wiki item-attachment §8). One level per BFS generation, so
 // the height is just how many generations the walk produced.
+function selfRefSubtreeHeight(table: SelfRefTable, id: string, tx?: Tx): number {
+  return walkSelfRefLevels(table, id, { tx }).length;
+}
+
 export function subtreeHeight(itemId: string, tx?: Tx): number {
-  return walkItemDescendantLevels(itemId, { tx }).length;
+  return selfRefSubtreeHeight(items, itemId, tx);
 }
 
 // A target at depth D is a legal parent only if D + 1 + subtreeHeight <= CAP
-// — evaluated on the *resulting* deepest leaf, with no direction-aware
-// exception: an already-over-cap subtree fails for every target, including
-// a root (wiki hierarchy-placement §6). `movingId` null means a brand-new item
-// (height 0) — POST's case. Returns the 400 message, or null if legal.
-export function assertWithinDepthCap(parentId: string, movingId: string | null, tx?: Tx): string | null {
-  const resultingDepth = hierarchyDepth(parentId, tx) + 1 + (movingId ? subtreeHeight(movingId, tx) : 0);
-  if (resultingDepth > ITEM_DEPTH_CAP) {
-    return `Resulting hierarchy depth ${resultingDepth} exceeds the cap of ${ITEM_DEPTH_CAP}`;
+// (wiki hierarchy-placement §6) — evaluated on the *resulting* deepest leaf, with
+// no direction-aware exception: an already-over-cap subtree fails for every
+// target, a top-level one included. `parentId` null is the top level, depth 0.
+// `movingId` null means a brand-new entry (height 0) — a create's case. Returns
+// the 400 message, or null if legal.
+function withinCapError(
+  table: SelfRefTable,
+  cap: number,
+  parentId: string | null,
+  movingId: string | null,
+  tx?: Tx,
+): string | null {
+  const parentDepth = parentId ? selfRefDepth(table, parentId, tx) : 0;
+  const resultingDepth = parentDepth + 1 + (movingId ? selfRefSubtreeHeight(table, movingId, tx) : 0);
+  if (resultingDepth > cap) {
+    return `Resulting hierarchy depth ${resultingDepth} exceeds the cap of ${cap}`;
   }
   return null;
 }
 
+export function assertWithinDepthCap(parentId: string, movingId: string | null, tx?: Tx): string | null {
+  return withinCapError(items, ITEM_DEPTH_CAP, parentId, movingId, tx);
+}
+
+export function assertWithinProjectDepthCap(parentId: string | null, movingId: string | null, tx?: Tx): string | null {
+  return withinCapError(projects, PROJECT_DEPTH_CAP, parentId, movingId, tx);
+}
+
 // ============================================================
-// items.parentId BFS collector. Items-specific (needs the isAttached column
-// for the predicate), so not folded into the generic self-ref helpers above.
+// The parentId BFS collector, over the self-referential tables. Items add a
+// predicate on `isAttached` (walkItemDescendants), so it takes one.
 // ============================================================
 
 type ItemChild = { id: string; isAttached: number };
@@ -117,32 +154,29 @@ interface WalkItemDescendantsOptions {
   tx?: Tx;
 }
 
-// The one items-BFS: one generation per array, parents before children,
+// The one BFS: one generation per array, parents before children,
 // only descending through (and reporting) children the predicate accepts.
 // `visited` (seeded with `rootId`) guards against a corrupted parentId cycle
 // in the data: a node is marked visited the moment it's seen, before the
 // predicate even runs, so a cycle can't re-queue the same id forever
 // regardless of what the predicate decides — backs `DELETE /items/:id`,
 // where a cycle here would otherwise mean the delete never returns.
-// Level-ordered so subtreeHeight can count generations without a second
+// Level-ordered so a subtree's height can count generations without a second
 // traversal.
-function walkItemDescendantLevels(
+function walkSelfRefLevels<Child extends { id: string }>(
+  table: SelfRefTable,
   rootId: string,
-  opts: Pick<WalkItemDescendantsOptions, 'predicate' | 'tx'> = {},
-): ItemChild[][] {
+  opts: { predicate?: (child: Child) => boolean; tx?: Tx } = {},
+): Child[][] {
   const { predicate = () => true, tx } = opts;
   const e = tx ?? db;
-  const levels: ItemChild[][] = [];
+  const levels: Child[][] = [];
   const visited = new Set([rootId]);
   let frontier = [rootId];
   while (frontier.length > 0) {
-    const next: ItemChild[] = [];
+    const next: Child[] = [];
     for (const id of frontier) {
-      const children = e
-        .select({ id: items.id, isAttached: items.isAttached })
-        .from(items)
-        .where(eq(items.parentId, id))
-        .all();
+      const children = e.select().from(table).where(eq(table.parentId, id)).all() as Child[];
       for (const child of children) {
         if (visited.has(child.id)) continue;
         visited.add(child.id);
@@ -157,9 +191,9 @@ function walkItemDescendantLevels(
 
 // Flat BFS id list over an item's descendants.
 export function walkItemDescendants(rootId: string, opts: WalkItemDescendantsOptions = {}): string[] {
-  const { includeRoot = false, ...walkOpts } = opts;
+  const { includeRoot = false, predicate, tx } = opts;
   const ids: string[] = includeRoot ? [rootId] : [];
-  for (const level of walkItemDescendantLevels(rootId, walkOpts)) {
+  for (const level of walkSelfRefLevels<ItemChild>(items, rootId, { predicate, tx })) {
     for (const child of level) ids.push(child.id);
   }
   return ids;

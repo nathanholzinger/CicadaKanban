@@ -1,8 +1,9 @@
+import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { pickUp, release } from '../helpers/dragGesture';
 import { aim } from '../helpers/projectTreeDrag';
-import { pinProjectPosition, seedProjects } from '../helpers/seed';
+import { fetchProjectDepthCap, pinProjectParent, pinProjectPosition, seedProjects } from '../helpers/seed';
 import { projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
 
 test.beforeEach(async () => {
@@ -95,4 +96,100 @@ test('TREE-4.8: after a failed write, the sidebar shows the project where it was
   await page.locator('main select').selectOption({ label: 'A' });
   expect((await edited).status()).toBe(400);
   await asBefore();
+});
+
+test('TREE-4.4: the sidebar sorts a project with no position as if its position were 0', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  // P's children A (0.5) and B (2.0), and N, created last, with no position.
+  const ids = await seedProjects(request, [
+    ['P', null],
+    ['A', 'P'],
+    ['B', 'P'],
+    ['N', 'P'],
+  ]);
+  await pinProjectPosition(request, ids.A, 0.5);
+  await pinProjectPosition(request, ids.B, 2.0);
+  await pinProjectPosition(request, ids.N, null);
+  await page.goto('/');
+
+  await expect(projectSidebar.locator.getByText(/^(P|A|B|N)$/)).toHaveText(['P', 'N', 'A', 'B']);
+});
+
+test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows the server’s order without a reload', () => {
+  // P is expanded, with children A and B at 1500 and 1600, and X is top-level.
+  // A sidebar that merged only the written project would hold 1500, 1600 and 3,
+  // and show the new one first.
+  async function seedTree(request: APIRequestContext, page: Page) {
+    const ids = await seedProjects(request, [
+      ['P', null],
+      ['A', 'P'],
+      ['B', 'P'],
+      ['X', null],
+    ]);
+    await pinProjectPosition(request, ids.A, 1500);
+    await pinProjectPosition(request, ids.B, 1600);
+    await page.goto('/');
+    return ids;
+  }
+
+  test('a drag of X under P, after B', async ({ page, request, projectSidebar }) => {
+    await seedTree(request, page);
+    const from = await pickUp(page, projectSidebar.dragHandle('X'));
+    await aim(page, from, projectSidebar.row('B'), 'after', 1);
+    await release(page);
+
+    // X is P's child once the move lands; only then is its place in the order a
+    // result, since it reads P, A, B, X before.
+    await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(1)}px`);
+    const order = projectSidebar.locator.getByText(/^(P|A|B|X)$/);
+    await expect(order).toHaveText(['P', 'A', 'B', 'X']);
+    await page.reload();
+    await expect(order).toHaveText(['P', 'A', 'B', 'X']);
+  });
+
+  test('a create under P', async ({ page, request, projectSidebar }) => {
+    await seedTree(request, page);
+    const row = projectSidebar.row('P');
+    await row.hover();
+    await row.getByTitle('Add subproject').click();
+    await page.getByPlaceholder('Subproject name').fill('New');
+    await page.getByRole('button', { name: 'Create subproject' }).click();
+
+    await expect(projectSidebar.locator.getByText(/^(P|A|B|X|New)$/)).toHaveText(['P', 'A', 'B', 'New', 'X']);
+  });
+
+  test('an edit of X’s parent to P', async ({ page, request, projectSidebar }) => {
+    await seedTree(request, page);
+    await projectSidebar.select('X');
+    await page.locator('main select').selectOption({ label: 'P' });
+
+    await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(1)}px`);
+    await expect(projectSidebar.locator.getByText(/^(P|A|B|X)$/)).toHaveText(['P', 'A', 'B', 'X']);
+  });
+});
+
+test('TREE-3.7: the sidebar shows every project of a tree past the project cap, flagging and repairing none', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const cap = await fetchProjectDepthCap(request);
+  // A chain down to the cap, and two projects below it, which no project write
+  // would place there.
+  const chain = Array.from({ length: cap }, (_, level) => `P${level + 1}`);
+  const beyond = ['Past 1', 'Past 2'];
+  const ids = await seedProjects(request, [
+    ...chain.map((name, level) => [name, level === 0 ? null : chain[level - 1]] as const),
+    ...beyond.map(name => [name, null] as const),
+  ]);
+  await pinProjectParent(request, ids[beyond[0]], ids[chain[chain.length - 1]]);
+  await pinProjectParent(request, ids[beyond[1]], ids[beyond[0]]);
+  await page.goto('/');
+
+  for (const name of [...chain, ...beyond]) await expect(projectSidebar.projectName(name)).toBeVisible();
+  await expect(projectSidebar.row('Past 2')).toHaveCSS('padding-left', `${projectRowIndentPx(cap + 1)}px`);
+  await expect(projectSidebar.dropLine).toHaveCount(0);
 });

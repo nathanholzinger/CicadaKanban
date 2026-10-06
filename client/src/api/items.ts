@@ -1,15 +1,10 @@
 import type { Item, ItemDetail } from '../types';
-import { apiJson, apiVoid } from './shared';
+import { apiJson, apiVoid, type ReindexedPosition } from './shared';
+
+export type { ReindexedPosition };
 
 export function fetchItem(id: string): Promise<ItemDetail> {
   return apiJson(`/items/${id}`, undefined, 'Failed to fetch item');
-}
-
-// One row a server-side reindex renumbered — `{id, position}` and nothing
-// more (wiki positioning §7).
-export interface ReindexedPosition {
-  id: string;
-  position: number;
 }
 
 // Every item write (POST / PUT / PATCH move) answers with the fresh row and,

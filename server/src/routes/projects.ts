@@ -5,8 +5,12 @@ import { eq, inArray, asc, isNull, and, not, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { assertValidReparent } from '../lib/itemTree.js';
-import { resolveAppendPosition, resolvePositionByAnchorAndSide } from '../lib/positionResolver.js';
+import { assertValidReparent, assertWithinProjectDepthCap, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
+import {
+  resolveAppendPosition,
+  resolvePositionByAnchorAndSide,
+  type ReindexedPosition,
+} from '../lib/positionResolver.js';
 
 const router = Router();
 
@@ -19,11 +23,71 @@ function projectPositionScope(parentId: string | null, excludeId?: string): SQL 
   return excludeId ? and(base, not(eq(projects.id, excludeId)))! : base;
 }
 
+// A project's name is a string with something in it: no name, an empty one or
+// one of only spaces is no name (wiki project-tree §8).
+function isValidName(name: unknown): name is string {
+  return typeof name === 'string' && name.trim() !== '';
+}
+
+// Why `parentId` is no legal parent for the project, or null when it is: it
+// exists, isn't the project and isn't in its subtree, and leaves the subtree
+// within the project cap (wiki project-tree §3). `movingId` null is a create,
+// which has no subtree. The cap gates a write that changes the parent, so a
+// parent the project already has passes it.
+function parentError(movingId: string | null, parentId: string | null, currentParentId?: string | null): string | null {
+  if (parentId !== null && typeof parentId !== 'string') return 'parentId must be a string or null';
+  if (parentId !== null) {
+    if (movingId) {
+      const reparentError = assertValidReparent(projects, movingId, parentId, 'project');
+      if (reparentError) return reparentError;
+    }
+    const parent = db.select({ id: projects.id }).from(projects).where(eq(projects.id, parentId)).get();
+    if (!parent) return 'parentId does not reference an existing project';
+  }
+  if (movingId === null || parentId !== (currentParentId ?? null))
+    return assertWithinProjectDepthCap(parentId, movingId);
+  return null;
+}
+
+// The position a write gives a project in the sibling group it ends with: after
+// the sibling `prevId` names, before the one `nextId` names, or, naming none,
+// after the group's true last, never trusting that the group is empty. One
+// resolution for a create, a move and an edit that changes the parent, so they
+// can't disagree (wiki project-tree §7, wiki positioning §4). Siblings a reindex
+// renumbers are pushed to `reindexed`.
+function resolveProjectPosition(
+  tx: Tx,
+  projectId: string | null,
+  parentId: string | null,
+  neighbor: { prevId?: string | null; nextId?: string | null },
+  reindexed: ReindexedPosition[],
+): number {
+  const scope = projectPositionScope(parentId, projectId ?? undefined);
+  if (neighbor.prevId) return resolvePositionByAnchorAndSide(projects, scope, tx, 'after', neighbor.prevId, reindexed);
+  if (neighbor.nextId) return resolvePositionByAnchorAndSide(projects, scope, tx, 'before', neighbor.nextId, reindexed);
+  return resolveAppendPosition(projects, scope, tx, reindexed);
+}
+
+// A write's response: the project, plus the renumbered `{id, position}` pairs
+// when a reindex fired, the written project's own included so a caller applies
+// every pair (wiki positioning §7). Absent otherwise.
+function projectResponse(id: string, reindexed: ReindexedPosition[]) {
+  const project = db.select().from(projects).where(eq(projects.id, id)).get()!;
+  if (reindexed.length === 0) return project;
+  return { ...project, reindexed: [...reindexed, { id, position: project.position! }] };
+}
+
 // Lists projects by position, then createdAt. SQLite sorts a missing position
 // first, the same order as counting it as 0 (wiki project-tree §4).
 router.get('/', (_req, res) => {
   const allProjects = db.select().from(projects).orderBy(asc(projects.position), asc(projects.createdAt)).all();
   res.json(allProjects);
+});
+
+// The depth cap the sidebar offers tab states against, so the UI and the API
+// enforce one value (wiki hierarchy-placement §6).
+router.get('/depth-cap', (_req, res) => {
+  res.json({ projectDepthCap: PROJECT_DEPTH_CAP });
 });
 
 // Get a single project with its workflows
@@ -39,23 +103,25 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const { name, description, parentId } = req.body;
   // A project always has a name (wiki project-tree §8).
-  if (!name) {
+  if (!isValidName(name)) {
     res.status(400).json({ error: 'name is required' });
+    return;
+  }
+  const resolvedParentId = parentId || null;
+  const createError = parentError(null, resolvedParentId);
+  if (createError) {
+    res.status(400).json({ error: createError });
     return;
   }
   const now = Date.now();
   const id = randomUUID();
-  const resolvedParentId = parentId || null;
+  const reindexed: ReindexedPosition[] = [];
 
-  // Wrapped in a transaction: resolveAppendPosition can trigger a reindex of
+  // Wrapped in a transaction: resolving the position can trigger a reindex of
   // the whole scope, which writes one row at a time — without an enclosing
   // transaction each of those writes would auto-commit individually.
   db.transaction(tx => {
-    // Resolved via the shared positioning library, so a brand-new sibling in
-    // a group whose positions have grown past the magnitude threshold
-    // triggers that group's reindex.
-    const scope = projectPositionScope(parentId);
-    const position = resolveAppendPosition(projects, scope, tx);
+    const position = resolveProjectPosition(tx, null, resolvedParentId, {}, reindexed);
     tx.insert(projects)
       .values({
         id,
@@ -69,45 +135,48 @@ router.post('/', (req, res) => {
       .run();
   });
 
-  const created = db.select().from(projects).where(eq(projects.id, id)).get();
-  res.status(201).json(created);
+  res.status(201).json(projectResponse(id, reindexed));
 });
 
-// Update a project, its parent included (wiki project-tree §7).
+// Update a project, its parent included (wiki project-tree §7). An edit that
+// changes the parent gives the project a position after its new siblings' true
+// last; one that keeps the parent keeps the position. A body's `position` is
+// never read.
 router.put('/:id', (req, res) => {
   const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
 
-  const { name, description, parentId } = req.body;
-
-  // The new parent must exist, and be neither the project nor in its subtree
-  // (wiki project-tree §3).
-  if (parentId !== undefined && parentId !== null) {
-    const reparentError = assertValidReparent(projects, req.params.id, parentId, 'project');
-    if (reparentError) {
-      res.status(400).json({ error: reparentError });
-      return;
-    }
-    const parent = db.select({ id: projects.id }).from(projects).where(eq(projects.id, parentId)).get();
-    if (!parent) {
-      res.status(400).json({ error: 'parentId does not reference an existing project' });
-      return;
-    }
+  const { name, description } = req.body;
+  // An edit that leaves the name out keeps it; naming one that isn't a name is
+  // refused (wiki project-tree §8).
+  if (name !== undefined && !isValidName(name)) {
+    res.status(400).json({ error: 'name cannot be empty' });
+    return;
   }
 
-  // No `position` field here — positions are only ever resolved through
-  // PATCH /:id/move (never a raw client-supplied number, see positionResolver.ts).
-  db.update(projects)
-    .set({
-      name: name ?? project.name,
-      description: description !== undefined ? description : project.description,
-      parentId: 'parentId' in req.body ? (parentId ?? null) : project.parentId,
-      updatedAt: Date.now(),
-    })
-    .where(eq(projects.id, req.params.id))
-    .run();
-  const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  res.json(updated);
+  const parentId: string | null = 'parentId' in req.body ? (req.body.parentId ?? null) : project.parentId;
+  const parentChanged = parentId !== project.parentId;
+  const editError = 'parentId' in req.body ? parentError(project.id, parentId, project.parentId) : null;
+  if (editError) {
+    res.status(400).json({ error: editError });
+    return;
+  }
+
+  const reindexed: ReindexedPosition[] = [];
+  db.transaction(tx => {
+    const position = parentChanged ? resolveProjectPosition(tx, project.id, parentId, {}, reindexed) : project.position;
+    tx.update(projects)
+      .set({
+        name: name ?? project.name,
+        description: description !== undefined ? description : project.description,
+        parentId,
+        position,
+        updatedAt: Date.now(),
+      })
+      .where(eq(projects.id, req.params.id))
+      .run();
+  });
+  res.json(projectResponse(req.params.id, reindexed));
 });
 
 // Recursively deletes a project subtree (wiki project-tree §9). Runs inside a caller-supplied
@@ -189,8 +258,13 @@ router.patch('/:id/move', (req, res) => {
   const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
 
-  const { parentId, prevId, nextId } = req.body;
+  const { parentId, prevId, nextId, position } = req.body;
 
+  // A move names a neighbor, never a number (wiki positioning §2).
+  if (position !== undefined) {
+    res.status(400).json({ error: 'position is not accepted: name a prevId or nextId to place the project instead' });
+    return;
+  }
   if (parentId !== undefined && parentId !== null && typeof parentId !== 'string') {
     res.status(400).json({ error: 'parentId must be a string or null' });
     return;
@@ -206,24 +280,16 @@ router.patch('/:id/move', (req, res) => {
 
   const targetParentId: string | null = 'parentId' in req.body ? (parentId ?? null) : project.parentId;
 
-  if (parentId !== undefined && parentId !== null) {
-    const reparentError = assertValidReparent(projects, req.params.id, parentId, 'project');
-    if (reparentError) {
-      res.status(400).json({ error: reparentError });
-      return;
-    }
-    const parent = db.select({ id: projects.id }).from(projects).where(eq(projects.id, parentId)).get();
-    if (!parent) {
-      res.status(400).json({ error: 'parentId does not reference an existing project' });
-      return;
-    }
+  const moveError = parentError(project.id, targetParentId, project.parentId);
+  if (moveError) {
+    res.status(400).json({ error: moveError });
+    return;
   }
 
   // Verifies a claimed prevId/nextId is a real, current sibling in the
   // *resulting* scope before trusting it for the midpoint math — rejects a
   // stale/false claim rather than silently falling back (wiki positioning §2).
-  // Validated here,
-  // against plain `db`, before the transaction below opens: this handler's
+  // Validated here, against plain `db`, before the transaction below opens: this handler's
   // only write is to the subject project itself, so nothing about a
   // sibling's existence/scope/position can change between this check and
   // the transaction that uses it. Validating first keeps every bail-out
@@ -231,6 +297,7 @@ router.patch('/:id/move', (req, res) => {
   // only rolls back on throw, so a bail-out inside it, after some other
   // write had already run, would still commit that write.
   function verifyAnchor(anchorId: string, label: 'prevId' | 'nextId'): string | null {
+    if (anchorId === req.params.id) return `${label} names the project itself: name a sibling to place it next to`;
     const sibling = db
       .select({ parentId: projects.parentId, position: projects.position })
       .from(projects)
@@ -256,34 +323,19 @@ router.patch('/:id/move', (req, res) => {
     }
   }
 
+  const reindexed: ReindexedPosition[] = [];
   db.transaction(tx => {
-    const scope = projectPositionScope(targetParentId, req.params.id);
-
-    let position: number;
-    if (prevId) {
-      // prevId is the project's resulting predecessor — insert immediately after it.
-      position = resolvePositionByAnchorAndSide(projects, scope, tx, 'after', prevId);
-    } else if (nextId) {
-      // nextId is the project's resulting successor — insert immediately before it.
-      position = resolvePositionByAnchorAndSide(projects, scope, tx, 'before', nextId);
-    } else {
-      // Both omitted/null — never trust "empty"; always re-derive the true
-      // append position against current children.
-      position = resolveAppendPosition(projects, scope, tx);
-    }
-
     tx.update(projects)
       .set({
         parentId: targetParentId,
-        position,
+        position: resolveProjectPosition(tx, project.id, targetParentId, { prevId, nextId }, reindexed),
         updatedAt: Date.now(),
       })
       .where(eq(projects.id, req.params.id))
       .run();
   });
 
-  const updated = db.select().from(projects).where(eq(projects.id, req.params.id)).get();
-  res.json(updated);
+  res.json(projectResponse(req.params.id, reindexed));
 });
 
 // Delete a project — recursively cascades through descendants → workflows → workphases → items

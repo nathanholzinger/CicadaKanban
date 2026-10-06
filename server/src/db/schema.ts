@@ -1,6 +1,6 @@
 // Drizzle table definitions — source of truth for the data model.
 
-import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, primaryKey, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 // ============================================================
 // Item Types (user-defined, purely descriptive)
@@ -42,7 +42,7 @@ export const workflowTemplatePhases = sqliteTable('workflow_template_phases', {
 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
-  parentId: text('parent_id'), // self-referential FK to projects.id
+  parentId: text('parent_id').references((): AnySQLiteColumn => projects.id), // self-referential: a project's parent
   name: text('name').notNull(),
   description: text('description'),
   position: real('position'),

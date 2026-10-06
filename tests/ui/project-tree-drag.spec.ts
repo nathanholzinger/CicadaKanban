@@ -3,7 +3,7 @@ import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { cancel, hoverTo, pickUp, release } from '../helpers/dragGesture';
 import { aim } from '../helpers/projectTreeDrag';
-import { fetchDefaultBoard, fetchProject, seedBareWorkflow, seedProjects } from '../helpers/seed';
+import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import { INDENT_WIDTH, projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
 
@@ -138,33 +138,52 @@ test('TREE-1.4: when the dragged project’s subtree holds every project, no lin
   expect(await stored()).toEqual(before);
 });
 
-test('TREE-1.7: every depth offered is valid: projects have no depth cap', async ({
+test('TREE-1.11: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  const { workflow } = await seedBareWorkflow(request, 'Cap probe');
-  const { itemDepthCap: cap } = await fetchDefaultBoard(request, workflow.id);
+  const cap = await fetchProjectDepthCap(request);
 
-  // A chain of projects, each the only child of the one before, one level
-  // past the item cap, with D its deepest; and X, with a child X1.
-  const chain = Array.from({ length: cap + 2 }, (_, depth) => `P${depth}`);
-  const deepest = chain[chain.length - 1];
+  // A chain of projects, each the only child of the one before, from a
+  // top-level project down to S, at depth cap − 2, and S's only child T, at
+  // depth cap − 1; and X, the last row, with a child X1.
+  const chain = Array.from({ length: cap - 1 }, (_, level) => `P${level + 1}`);
+  const [s, t] = chain.slice(-2);
   const ids = await seedProjects(request, [
-    ...chain.map((name, depth) => [name, depth === 0 ? null : chain[depth - 1]] as const),
+    ...chain.map((name, level) => [name, level === 0 ? null : chain[level - 1]] as const),
     ['X', null],
     ['X1', 'X'],
   ]);
   await page.goto('/');
+  const writes: string[] = [];
+  page.on('request', req => {
+    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
+  });
+  const before = await fetchProject(request, ids.X);
 
-  // X tabbed one right of D: the line reaches that depth, and the save holds.
-  const from = await pickUp(page, projectSidebar.dragHandle('X'));
-  await aim(page, from, projectSidebar.row(deepest), 'after', chain.length);
+  // One tab right of T: X would be T's child, and X1 at depth cap + 1. The state
+  // is still offered, and its line is marked invalid. A release writes nothing.
+  const first = await pickUp(page, projectSidebar.dragHandle('X'));
+  await aim(page, first, projectSidebar.row(t), 'after', chain.length);
+  await expect(projectSidebar.dropLine).toHaveCount(1);
   await expect(projectSidebar.dropLine).toHaveCSS('margin-left', `${projectRowIndentPx(chain.length)}px`);
+  await expect(projectSidebar.dropLine).toHaveAttribute('data-drop-invalid', 'true');
   await release(page);
+  expect(writes).toEqual([]);
+  expect(await fetchProject(request, ids.X)).toEqual(before);
 
-  expect((await fetchProject(request, ids.X)).parentId).toBe(ids[deepest]);
-  expect((await fetchProject(request, ids.X1)).parentId).toBe(ids.X);
+  // Aligned with T: X is S's child, after T, and X1 is at depth cap. The line
+  // isn't marked invalid, and the release saves it.
+  const second = await pickUp(page, projectSidebar.dragHandle('X'));
+  await aim(page, second, projectSidebar.row(t), 'after', chain.length - 1);
+  await expect(projectSidebar.dropLine).toHaveCount(1);
+  await expect(projectSidebar.dropLine).not.toHaveAttribute('data-drop-invalid', 'true');
+  await release(page);
+  await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids[s]);
+  expect((await fetchProject(request, ids.X)).position).toBeGreaterThan(
+    (await fetchProject(request, ids[t])).position!,
+  );
 });
 
 test('TREE-1.8: a project set back down in its own gap, at its own depth, writes nothing', async ({

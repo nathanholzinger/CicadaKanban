@@ -47,4 +47,21 @@ router.patch('/projects/:id/position', (req, res) => {
   res.json({ ok: true });
 });
 
+// The same for a project's parent, to build a tree deeper than the project cap,
+// which no project write produces. Mounted with the rest of this file, only
+// when ENABLE_TEST_ROUTES=true.
+router.patch('/projects/:id/parent', (req, res) => {
+  const { parentId } = req.body;
+  if (parentId !== null && typeof parentId !== 'string') {
+    res.status(400).json({ error: 'parentId must be a string or null' });
+    return;
+  }
+  const result = db.update(projects).set({ parentId }).where(eq(projects.id, req.params.id)).run();
+  if (result.changes === 0) {
+    res.status(404).json({ error: 'Project not found' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 export default router;

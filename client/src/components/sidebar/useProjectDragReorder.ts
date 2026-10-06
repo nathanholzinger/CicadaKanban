@@ -16,6 +16,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import type { Project } from '../../types';
+import { getSubtreeHeight } from '../../lib/hierarchy';
 import { computeProjection, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
 import { resolveDropSide } from '../workflow/dragCollision';
 import {
@@ -38,12 +39,16 @@ export type ReorderProject = (
 ) => Promise<void>;
 
 // `flatItems` is the rendered tree; `expand` opens a collapsed parent a
-// project was just dropped into.
+// project was just dropped into. `depthCap` is the project cap, null until it's
+// known: a tab state that would put the dragged subtree past it is still
+// offered, marked invalid, and a release in it writes nothing
+// (wiki hierarchy-placement §6).
 export function useProjectDragReorder(
   projects: Project[],
   flatItems: readonly FlatItem[],
   onReorderProject: ReorderProject,
   expand: (id: string) => void,
+  depthCap: number | null = null,
 ) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [projected, setProjected] = useState<Projection | null>(null);
@@ -71,6 +76,12 @@ export function useProjectDragReorder(
         ? { anchorId: rows[gap].id, side: 'before' }
         : { anchorId: rows[rows.length - 1].id, side: 'after' };
 
+  // The projection's depth counts the top level as 0, the cap's formula as 1.
+  const overCap =
+    depthCap !== null && projected !== null && activeId !== null
+      ? projected.depth + 1 + getSubtreeHeight(activeId, projects) > depthCap
+      : false;
+
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(String(active.id));
     setProjected(null);
@@ -95,7 +106,7 @@ export function useProjectDragReorder(
   }
 
   function handleDragEnd({ over }: DragEndEvent) {
-    if (!over || !activeItem || !projected || gap === null) {
+    if (!over || !activeItem || !projected || gap === null || overCap) {
       clearDrag();
       return;
     }
@@ -125,6 +136,8 @@ export function useProjectDragReorder(
     rowIds: rows.map(r => r.id),
     descendantIds,
     dropLine,
+    /** The drop line's tab state would put the dragged subtree past the project cap. */
+    dropInvalid: overCap,
     /** The depth the drop line indents to — the projection's while one is live. */
     projectedDepth: projected?.depth ?? null,
     handleDragStart,

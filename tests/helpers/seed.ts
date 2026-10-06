@@ -123,6 +123,22 @@ export async function pinProjectPosition(
   expect(res.ok(), `pin project ${id} at ${position} → ${res.status()}`).toBe(true);
 }
 
+// Gives one project a parent by writing the row, through the test-only route
+// `PATCH /api/test/projects/:id/parent`: no project write builds a tree deeper
+// than the project cap.
+export async function pinProjectParent(request: APIRequestContext, id: string, parentId: string | null): Promise<void> {
+  const res = await request.patch(`${API}/test/projects/${id}/parent`, { data: { parentId } });
+  expect(res.ok(), `pin project ${id} under ${parentId} → ${res.status()}`).toBe(true);
+}
+
+// The project depth cap the API enforces, which the sidebar offers tab states
+// against.
+export async function fetchProjectDepthCap(request: APIRequestContext): Promise<number> {
+  const res = await request.get(`${API}/projects/depth-cap`);
+  expect(res.ok(), `GET /projects/depth-cap → ${res.status()}`).toBe(true);
+  return (await res.json()).projectDepthCap;
+}
+
 export interface PositionedItemPlan<K extends string> {
   key: K;
   projectId: string;

@@ -7,10 +7,10 @@
 | TREE-4.1 | A project write compares and renumbers positions only among the siblings the project ends with | P0 | Open |
 | TREE-4.2 | `GET /api/projects` lists projects by position, then creation time, a missing position first | P1 | Open |
 | TREE-4.3 | The sidebar shows each project's children by position, then creation time | P1 | Open |
-| TREE-4.4 | The sidebar sorts a project with no position as if its position were 0 | P2 | Planned |
-| TREE-4.5 | A move that reindexes discloses every renumbered sibling, the moved project included | P1 | Planned |
-| TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Planned |
-| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Planned |
+| TREE-4.4 | The sidebar sorts a project with no position as if its position were 0 | P2 | Open |
+| TREE-4.5 | A move that reindexes discloses every renumbered sibling, the moved project included | P1 | Open |
+| TREE-4.6 | A create, and an edit that changes the parent, disclose a reindex too | P1 | Open |
+| TREE-4.7 | The sidebar applies the renumbered pairs, so it shows the server's order without a reload | P1 | Open |
 | TREE-4.8 | After a failed write, the sidebar shows the project where it was before the attempt | P2 | Open |
 
 ---
@@ -41,7 +41,7 @@
 
 ## TREE-4.4 — The sidebar sorts a project with no position as if its position were 0
 
-**Priority:** P2 · **Status:** Planned · **Rule:** wiki project-tree §4, wiki positioning §1
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §1
 
 *Given* parent `P`, whose children are `A` (`0.5`) and `B` (`2.0`), and `N`, with no position, made by a direct database edit, *when* the sidebar shows `P` expanded, *then* its children read `N, A, B`, the order `GET /api/projects` gives ([TREE-4.2](tree-4-sibling-order.md)).
 
@@ -49,7 +49,7 @@
 
 ## TREE-4.5 — A move that reindexes discloses every renumbered sibling, the moved project included
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §4, wiki positioning §7
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §7
 
 *Given* parent `P`, whose children are `A` (`1500`) and `B` (`1600`), and top-level project `X`, *when* `X` is moved under `P` with no neighbor named, *then* `P`'s children are reindexed ([TREE-4.1](tree-4-sibling-order.md)), and the response carries the renumbered pairs: `A → 1`, `B → 2` and `X → 3`. Each pair is `{id, position}` and nothing more, and `X`'s pair matches the `position` in the response body. *And given* `P`'s children sit at `1.0` and `2.0` instead, *when* the same move is made, *then* the response carries no pairs, or an empty collection, and `X`'s position is `3`.
 
@@ -57,7 +57,7 @@
 
 ## TREE-4.6 — A create, and an edit that changes the parent, disclose a reindex too
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §4, wiki positioning §7
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §7
 
 *Given* parent `P`, whose children are `A` (`1500`) and `B` (`1600`), and top-level project `X`, each of these from that starting state:
 
@@ -68,7 +68,7 @@
 
 ## TREE-4.7 — The sidebar applies the renumbered pairs, so it shows the server's order without a reload
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §4, wiki positioning §8
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §4, wiki positioning §8
 
 *Given* the sidebar showing parent `P` expanded, with children `A` (`1500`) and `B` (`1600`), and top-level project `X`, each of these from that starting state:
 

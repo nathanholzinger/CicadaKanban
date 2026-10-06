@@ -37,11 +37,19 @@ function flat(id: string, depth: number, parentId: string | null, overrides: Par
 }
 
 describe('flattenTree', () => {
-  it('sorts siblings by position, tie-breaking by createdAt when position is null', () => {
+  it('sorts siblings by position, then by createdAt on a tie', () => {
     const r1 = project({ id: 'r1', position: 2, createdAt: 100 });
     const r2 = project({ id: 'r2', position: 1, createdAt: 200 });
-    const result = flattenTree([r1, r2], new Set());
-    expect(result.map(i => i.id)).toEqual(['r2', 'r1']);
+    const tied = project({ id: 'tied', position: 2, createdAt: 50 });
+    const result = flattenTree([r1, r2, tied], new Set());
+    expect(result.map(i => i.id)).toEqual(['r2', 'tied', 'r1']);
+  });
+
+  it('counts a missing position as 0, ahead of a positive one whatever its createdAt', () => {
+    const a = project({ id: 'a', position: 0.5, createdAt: 1 });
+    const n = project({ id: 'n', position: null, createdAt: 999 });
+    const b = project({ id: 'b', position: 2, createdAt: 2 });
+    expect(flattenTree([a, b, n], new Set()).map(i => i.id)).toEqual(['n', 'a', 'b']);
   });
 
   it('falls back to createdAt ordering when position is null for both siblings', () => {

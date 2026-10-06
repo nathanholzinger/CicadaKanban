@@ -6,7 +6,14 @@ import type { Workflow } from './types';
 import type { Project } from './types';
 import { fetchWorkflows, createWorkflow } from './api/workflows';
 import type { CreateWorkflowInput } from './api/workflows';
-import { fetchProjects, createProject, updateProject, deleteProject, moveProject } from './api/projects';
+import {
+  fetchProjects,
+  fetchProjectDepthCap,
+  createProject,
+  updateProject,
+  deleteProject,
+  moveProject,
+} from './api/projects';
 import type { UpdateProjectInput } from './api/projects';
 import CreateProjectModal from './components/CreateProjectModal';
 import ProjectPage from './components/ProjectPage';
@@ -14,6 +21,7 @@ import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import NotificationsBell from './components/NotificationsBell';
 import { findNearestAncestor, getAncestors } from './lib/hierarchy';
+import { applyWriteResponse } from './lib/positionedWrite';
 
 export default function App() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -21,6 +29,8 @@ export default function App() {
   const [showAgentsModal, setShowAgentsModal] = useState(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  // The cap the sidebar offers tab states against; null until the server's is read.
+  const [projectDepthCap, setProjectDepthCap] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
     localStorage.getItem('activeProjectId'),
   );
@@ -28,6 +38,10 @@ export default function App() {
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    fetchProjectDepthCap()
+      .then(setProjectDepthCap)
+      .catch(err => console.error('Failed to load the project depth cap:', err));
+
     const workflowsLoad = fetchWorkflows()
       .then(setWorkflows)
       .catch(err => console.error('Failed to load workflows:', err));
@@ -56,12 +70,12 @@ export default function App() {
 
   async function handleCreateProject(name: string, description: string) {
     try {
-      const project = await createProject({
+      const created = await createProject({
         name,
         description: description || undefined,
         parentId: createProjectParentId,
       });
-      setProjects(prev => [...prev, project]);
+      setProjects(prev => applyWriteResponse(prev, created));
     } catch (err) {
       console.error('Failed to create project:', err);
       throw err;
@@ -83,7 +97,7 @@ export default function App() {
   async function handleUpdateProject(id: string, data: UpdateProjectInput) {
     try {
       const updated = await updateProject(id, data);
-      setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
+      setProjects(prev => applyWriteResponse(prev, updated));
     } catch (err) {
       console.error('Failed to update project:', err);
       throw err;
@@ -111,7 +125,7 @@ export default function App() {
   ) {
     try {
       const updated = await moveProject(id, { parentId, prevId, nextId });
-      setProjects(prev => prev.map(p => (p.id === id ? updated : p)));
+      setProjects(prev => applyWriteResponse(prev, updated));
     } catch (err) {
       // The list only changes on success, so the project still shows where it was;
       // the refetch resyncs the tree (wiki project-tree §4).
@@ -174,6 +188,7 @@ export default function App() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <ProjectSidebar
           projects={projects}
+          projectDepthCap={projectDepthCap}
           selectedProjectId={selectedProjectId}
           onSelectProject={handleSelectProject}
           onCreateProject={handleOpenCreateProject}

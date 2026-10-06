@@ -47,17 +47,17 @@ describe('workflow creation bootstraps a default board', () => {
 
 describe('GET /api/boards', () => {
   it('lists boards, optionally filtered by workflowId', async () => {
-    const project = await createProject();
-    const workflowA = await createWorkflow(project.id);
-    const workflowB = await createWorkflow(project.id);
+    const workflowA = await createWorkflow((await createProject()).id);
+    const workflowB = await createWorkflow((await createProject()).id);
 
     const filtered = await request(app).get(`/api/boards?workflowId=${workflowA.id}`);
     expect(filtered.body.length).toBe(1);
     expect(filtered.body[0].workflowId).toBe(workflowA.id);
 
     const all = await request(app).get('/api/boards');
-    expect(all.body.length).toBe(2);
-    void workflowB;
+    expect(all.body.map((b: { workflowId: string }) => b.workflowId).sort()).toEqual(
+      [workflowA.id, workflowB.id].sort(),
+    );
   });
 });
 

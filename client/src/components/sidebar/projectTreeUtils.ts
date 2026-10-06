@@ -39,8 +39,8 @@ export function projectRowIndentPx(depth: number): number {
   return ROW_BASE_INSET_PX + depth * INDENT_WIDTH;
 }
 
-// parentId -> its children, sorted the way the server orders siblings
-// (position, then createdAt) — shared by `flattenTree` (the render list,
+// parentId -> its children, sorted the way the server orders siblings: position,
+// a missing one counting as 0, then createdAt (wiki positioning §1). Shared by `flattenTree` (the render list,
 // collapse-aware) and `fullChildrenOf` (the real tree, collapse-blind).
 function childrenByParent(projects: readonly Project[]): Map<string | null, Project[]> {
   const childMap = new Map<string | null, Project[]>();
@@ -51,8 +51,8 @@ function childrenByParent(projects: readonly Project[]): Map<string | null, Proj
   }
   for (const children of childMap.values()) {
     children.sort((a, b) => {
-      const posA = a.position ?? a.createdAt;
-      const posB = b.position ?? b.createdAt;
+      const posA = a.position ?? 0;
+      const posB = b.position ?? 0;
       return posA !== posB ? posA - posB : a.createdAt - b.createdAt;
     });
   }

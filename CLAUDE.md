@@ -24,7 +24,7 @@ All tables defined in `server/src/db/schema.ts` (source of truth for columns/typ
 
 ### Core Hierarchy
 ```
-projects (tree — unlimited depth via parent_id self-ref)
+projects (tree via parent_id self-ref, depth-capped)
   └── workflows   (one per project, or inherited from parent)
         ├── workphases  (data layer: flat ordered stages — position REAL NOT NULL)
         │     └── items (also a tree via parent_id; position REAL nullable)
@@ -35,7 +35,7 @@ projects (tree — unlimited depth via parent_id self-ref)
 ### Tables
 | Table | Purpose |
 |---|---|
-| `projects` | Hierarchical folders, unlimited depth |
+| `projects` | Hierarchical folders, depth-capped for display (`PROJECT_DEPTH_CAP`, `server/src/lib/itemTree.ts`) |
 | `workflows` | Kanban stage sets, one per project or inherited from an ancestor |
 | `workflow_templates` / `workflow_template_phases` | System-seeded blueprints ("quick", "flow") — read-only in MVP |
 | `workphases` | Workflow stages (data layer) |
@@ -96,9 +96,13 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   primitive's own rules (`resolveCreateWorkphase`, `foreignWorkphaseError`), so a create
   and a move can't disagree. Don't reimplement reparent/attach/workphase/depth-cap logic
   at the route level.
-- **Reindex disclosure must be folded in, never merged alone.** Any item-write response
-  may carry `reindexed: {id, position}[]`. Every write path folds it through
-  `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`.
+- **Reindex disclosure must be folded in, never merged alone.** Any item-write or
+  project-write response may carry `reindexed: {id, position}[]` (server:
+  `routes/items.ts::respondWithItem`, `routes/projects.ts::projectResponse`). Every write
+  path folds it through `client/src/lib/positionedWrite.ts::applyWriteResponse`: the
+  board's item writes by way of
+  `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`, the
+  sidebar's project writes in `App.tsx`.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **`types.ts` is manually synced with `schema.ts`** — no codegen. Update both.
@@ -143,7 +147,7 @@ Base URL: `http://localhost:3001`
 | Prefix | Owns |
 |---|---|
 | `GET /api/health` | Health check |
-| `/api/projects` | Project CRUD + hierarchy move |
+| `/api/projects` | Project CRUD + hierarchy move + depth cap |
 | `/api/workflows` | Workflow CRUD + full detail |
 | `/api/workflow-templates` | Read-only system templates |
 | `/api/workphases` | Workphase CRUD + reorder |

@@ -56,16 +56,12 @@ move (§6). What the sidebar adds:
   level ([`../hierarchy-placement/`](../hierarchy-placement/) §2). No line
   is drawn, since the one state is where the project already is, and a
   release writes nothing.
-- **Every tab state in the range is valid.** Projects have no depth cap,
-  unlike items ([`../item-attachment/`](../item-attachment/) §8).
-  *Replaced by the next bullet and §3 once built.*
-- **Planned:** a tab state that would put the dragged project's subtree
-  past the project cap (§3) is still offered, its line is marked
-  invalid, and a release in it writes nothing
+- **A tab state that would put the dragged project's subtree past the
+  project cap (§3) is still offered, its line is marked invalid, and a
+  release in it writes nothing**
   ([`../hierarchy-placement/`](../hierarchy-placement/) §6). Every other
   tab state in the range is valid. How the invalid line looks isn't a
-  rule yet (Open questions). Replaces "Every tab state in the range is
-  valid".
+  rule yet (Open questions).
 - **A project set back down in its own gap, at its own depth, writes
   nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
 
@@ -81,31 +77,28 @@ move (§6). What the sidebar adds:
 ## 3. What makes a project a legal parent
 
 **A project with no parent is top-level. A write that gives a project a
-parent names a legal one, or none, for the top level.** A candidate
-parent is legal if:
+parent, a create, an edit or a move, names a legal one, or none, for the
+top level.** A candidate parent is legal if:
 1. **It exists.**
 2. **It isn't the project itself.**
 3. **It isn't in the project's subtree,** which would form a cycle.
+4. **It leaves the project's subtree within the project cap** (below).
 
-An edit or a move naming a parent that isn't legal is refused with a
-400 whose message says which of these it breaks, and nothing changes.
+A write naming a parent that isn't legal is refused with a 400 whose
+message says which of these it breaks, and nothing changes.
 
-**Planned:** A create naming a parent that isn't a project is refused
-the same way, with a 400 whose message says why, and nothing is stored.
-
-**Planned:** A write that would put the moving project's subtree past
-the project cap is refused with a 400, and nothing changes. A parent at
-depth `D` is legal only if `D + 1 + H` is at most the cap, with
-top-level projects at depth 1, and `H` the height of the project's
-subtree, every descendant project counting
+**The project cap.** A parent at depth `D` is legal only if `D + 1 + H`
+is at most the cap, with top-level projects at depth 1, and `H` the
+height of the project's subtree, every descendant project counting
 ([`../hierarchy-placement/`](../hierarchy-placement/) §6). A create has
 no subtree, so its `H` is 0. The project cap is set apart from the item
 cap, and is provisionally 6, the depth the sidebar can indent legibly,
 as for items ([`../item-attachment/`](../item-attachment/) §8). Its real
-value is open (Open questions). Example, with the cap at 6: a chain of
-projects runs from `P1`, at the top level, down to `P5`, at depth 5. A
-project with one child can be moved under `P4` (4 + 1 + 1 = 6), but not
-under `P5` (5 + 1 + 1 = 7). Replaces §1's "Projects have no depth cap".
+value is open (Open questions).
+
+Example, with the cap at 6: a chain of projects runs from `P1`, at the
+top level, down to `P5`, at depth 5. A project with one child can be
+moved under `P4` (4 + 1 + 1 = 6), but not under `P5` (5 + 1 + 1 = 7).
 
 ## 4. A project's position compares among its siblings
 
@@ -120,16 +113,13 @@ renumbers nothing outside them ([`../positioning/`](../positioning/)
 [`../positioning/`](../positioning/) §1's tie-break. `GET /api/projects`
 lists projects in that order, and the sidebar shows each project's
 children so. Only a direct database edit leaves a project with no
-position. The list sorts it first, which is the same order as counting
-it as 0, since no write gives a position at or below 0
+position. The list and the sidebar both sort it first, as if its
+position were 0, since no write gives a position at or below 0
 ([`../positioning/`](../positioning/) §3).
 
-**Planned:** The sidebar sorts a project with no position as if its
-position were 0, as the list does.
-
-**Planned:** A project write that reindexes discloses the renumbered
-pairs ([`../positioning/`](../positioning/) §7): a create (§5), a move
-(§6), and an edit that changes the parent (§7). The sidebar applies the
+**A project write that reindexes discloses the renumbered pairs**
+([`../positioning/`](../positioning/) §7): a create (§5), a move (§6),
+and an edit that changes the parent (§7). The sidebar applies the
 pairs, then the written project's position, before it orders anything
 ([`../positioning/`](../positioning/) §8), so it shows the order the
 server saved without a reload.
@@ -156,9 +146,12 @@ uses, until it's given one of its own (§10).
 its current one, next to a named sibling or at the end:**
 - **It names the sibling the project goes directly after, or directly
   before, never a number** ([`../positioning/`](../positioning/) §2). A
-  neighbor the move can't use is refused with a 400, and nothing
-  changes: one that doesn't exist, one with no position, or one that
-  isn't a sibling in the resulting group, the new parent's children.
+  move that names a position is refused with a 400 whose message says to
+  name a neighbor instead, and nothing changes.
+- **A neighbor the move can't use is refused with a 400, and nothing
+  changes:** one that doesn't exist, one with no position, the project
+  itself, or one that isn't a sibling in the resulting group, the new
+  parent's children ([`../positioning/`](../positioning/) §2).
 - **With no neighbor named, the project goes after its true last sibling
   in the resulting group,** even when its parent doesn't change, so a
   move always places the project ([`../positioning/`](../positioning/)
@@ -177,37 +170,29 @@ Example: siblings `A` at `1.0`, `B` at `2.0` and `C` at `3.0`. A project
 moved after `A` lands at `1.5`, and one moved with no neighbor named
 lands at `4`.
 
-**Planned:** A move naming the project itself as its neighbor is refused
-with a 400 whose message says why, and nothing changes
-([`../positioning/`](../positioning/) §2).
-
-**Planned:** A move that names a position is refused with a 400 whose
-message says to name a neighbor instead, and nothing changes
-([`../positioning/`](../positioning/) §2).
-
 ## 7. An edit can change a project's parent
 
 **`PUT /api/projects/:id` can change a project's parent,** as the
 project page's parent dropdown does (Open questions). The new parent
-must be legal (§3). An edit that leaves the parent as it is keeps the
-project's position.
+must be legal (§3).
 
-**Planned:** An edit that changes the parent places the project after
-its new siblings' true last, the position a move naming no neighbor
-gives it (§6; [`../positioning/`](../positioning/) §4). Example: a
-project at `2.0`, edited to a parent whose children sit at `1.0`, `2.0`
-and `3.0`, lands at `4`.
+**An edit that changes the parent places the project after its new
+siblings' true last,** the position a move naming no neighbor gives it
+(§6; [`../positioning/`](../positioning/) §4). An edit that leaves the
+parent as it is keeps the project's position. Example: a project at
+`2.0`, edited to a parent whose children sit at `1.0`, `2.0` and `3.0`,
+lands at `4`.
 
 ## 8. A project always has a name
 
-**A create with no name, or an empty one, is refused with a 400, and
-nothing is stored.** An edit that leaves the name out keeps it.
+**A create with no name is refused with a 400, and nothing is
+stored.** No name is one left out, `null`, an empty one, or one of only
+spaces.
 
-**Planned:** An edit allows only the names a create does. An edit naming
-an empty name, or `null`, is refused with a 400, and nothing changes.
-
-**Planned:** A name of only spaces counts as no name, so a create and an
-edit both refuse it with a 400, and nothing changes.
+**An edit allows exactly the names a create does.** An edit naming
+`null`, an empty name, or a name of only spaces is refused with a 400,
+and nothing changes. An edit that leaves the name out keeps the
+project's name.
 
 ## 9. Deleting a project deletes its subtree
 
@@ -250,6 +235,10 @@ subtree, except below a descendant that has one of its own.
 uses its own, and so does each descendant that used the ancestor's
 through it.
 
+**A project has at most one workflow of its own.** A workflow create for
+a project that already has one is refused with a 409 whose message
+names that workflow, and nothing is created.
+
 Example: `P` owns `W1`, and has a child `C`, whose child `D` owns `W2`.
 `C` uses `W1`, and `D` and its descendants use `W2`. A workflow given to
 `C` makes `C` use it, and leaves `D` as it is.
@@ -268,10 +257,6 @@ workphases, so they show in Unsorted on the new workflow's boards
 they're re-filed isn't a rule yet (Open questions). After a workflow is
 deleted, its items hold no workphase at all
 ([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §8).
-
-**Planned:** A project has at most one workflow of its own. A workflow
-create for a project that already has one is refused with a 409 whose
-message names that workflow, and nothing is created.
 
 ---
 

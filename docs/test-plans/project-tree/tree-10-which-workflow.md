@@ -9,7 +9,7 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.1 | A workflow given to a project makes it, and each descendant that used the ancestor's through it, use the new one | P1 | Open |
 | TREE-10.2 | A move changes the workflow a project with none of its own uses, and its subtree's | P1 | Open |
 | TREE-10.3 | After the workflow a project uses is deleted, it uses the nearest one left above it, or none | P2 | Open |
-| TREE-10.4 | A project has at most one workflow of its own | P1 | Planned |
+| TREE-10.4 | A project has at most one workflow of its own | P1 | Open |
 
 ---
 
@@ -39,7 +39,7 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.4 — A project has at most one workflow of its own
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §10
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §10
 
 *Given* project `P`, owning workflow `W1`, with child `C`, which has no workflow of its own, *when* another workflow is created for `P`, *then* it's refused with a 409 whose message names `W1`, and no workflow is created: `P` still owns `W1` alone. *When* a workflow is created for `C`, *then* it's accepted ([TREE-10.1](tree-10-which-workflow.md)).
 

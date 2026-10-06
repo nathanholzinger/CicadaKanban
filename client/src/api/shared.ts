@@ -3,6 +3,14 @@
 
 export const API = '/api';
 
+// One row a server-side reindex renumbered: `{id, position}` and nothing more
+// (wiki positioning §7). A position write's response carries them as `reindexed`
+// when a reindex fired.
+export interface ReindexedPosition {
+  id: string;
+  position: number;
+}
+
 // These three helpers are the one fetch/error path every module function
 // in this directory builds on, so whether a failure surfaces the server's
 // specific `{ error }` message or a generic string never depends on which

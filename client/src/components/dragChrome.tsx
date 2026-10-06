@@ -60,6 +60,10 @@ function dropTargetClass(view: DropTargetView | null): string {
 // The blue drop line, less its vertical offset — the board's rows and the
 // project sidebar's (`SortableProjectRow.tsx`) draw the same line.
 export const DROP_INDICATOR_LINE = 'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
+// The sidebar's drop line while its tab state would put the dragged project's
+// subtree past the project cap (wiki hierarchy-placement §6). A placeholder look.
+export const INVALID_DROP_INDICATOR_LINE =
+  'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-red-500/70';
 const DROP_INDICATOR_BEFORE = `${DROP_INDICATOR_LINE} -top-1`;
 const DROP_INDICATOR_AFTER = `${DROP_INDICATOR_LINE} -bottom-1`;
 

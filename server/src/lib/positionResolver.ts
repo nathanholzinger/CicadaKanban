@@ -33,8 +33,8 @@ type PositionQueryContext = {
   scopeWhere: SQL;
   tx: Tx;
   // Where a reindex reports the rows it renumbered. Optional: only callers
-  // that surface the disclosure to their response (the item writes) pass
-  // one; projects/workphases don't and the pairs are simply dropped.
+  // that surface the disclosure to their response (the item and project
+  // writes) pass one; workphases don't and the pairs are simply dropped.
   reindexed?: ReindexedPosition[];
 };
 

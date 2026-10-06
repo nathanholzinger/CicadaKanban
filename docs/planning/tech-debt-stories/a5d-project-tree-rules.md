@@ -258,25 +258,26 @@ The starting list. The Coder keeps it current.
 
 | File | Batch | Change |
 |---|---|---|
-| `server/src/routes/projects.ts` | 3a done, 3b | **3a, done:** index pointers on the create (§5, §8), the edit (§7, §3), the move (§6, and positioning §2 on the neighbor check), the delete (§9) and the sibling scope and the list (§4), and the list's "NULLS LAST" comment, which was wrong, now says what SQLite does. **3b:** G1: `PUT` that reparents shares the move's resolution. G2: the create checks the parent. G3: a move naming the project itself is refused. G4: a move naming a position is refused. G5: the create, the move and `PUT` return the renumbered pairs. G9 and call 10: the create and `PUT` refuse a name of only spaces, and `PUT` refuses an empty name or `null`. Call 1: the create, the move and `PUT` refuse a parent that would put the subtree past the project cap |
-| `server/src/routes/workflows.ts` | 3b | G7: the create refuses a project that already has a workflow, with its pointer (§10) |
+| `server/src/routes/projects.ts` | 3a, 3b done | **3a:** index pointers on the create (§5, §8), the edit (§7), the move (§6, and positioning §2 on the neighbor check), the delete (§9) and the sibling scope and the list (§4); the list's "NULLS LAST" comment, which was wrong, now says what SQLite does. **3b:** `parentError`, the legality rules (§3) and the project cap, for the create (G2), the edit and the move. `resolveProjectPosition`, one resolution for the create, the move and an edit that changes the parent (G1). `projectResponse`, the renumbered pairs on all three, the written project's own included (G5). `isValidName`, for the create and the edit (G9, call 10). The move refuses its own id as a neighbor (G3) and a position (G4). `GET /depth-cap` |
+| `server/src/routes/workflows.ts` | 3b done | G7: the create refuses a project that already has a workflow, with a 409 naming it, and its pointer (§10) |
 | `server/src/lib/workflowItems.ts` | 3a done | The pointer on inheritance (§10), on `effectiveWorkflowIdForProject` |
-| `server/src/lib/itemTree.ts` | 3a done, 3b | **3a, done:** comments re-pointed (the formula's two sites, and the item cap's one-value rule, to hierarchy-placement §6). **3b:** call 1: the project cap, a value of its own beside `ITEM_DEPTH_CAP`, and the depth check generalized to projects, or a project twin of `assertWithinDepthCap`. The Coder decides, by "One position math layer" |
-| `server/src/db/schema.ts` | 3b | `projects.parentId`'s foreign key (D7) |
-| `server/src/lib/positionResolver.ts`, `coarsestFit.ts` | 3a done | Header and `reindexed` pointers re-pointed to the shared page (§3, §6, §7) |
+| `server/src/lib/itemTree.ts` | 3a, 3b done | **3a:** comments re-pointed (the formula's two sites, and the item cap's one-value rule, to hierarchy-placement §6). **3b:** `PROJECT_DEPTH_CAP`, a value of its own beside `ITEM_DEPTH_CAP`. The depth, the subtree height and the cap check are table-generic, and one BFS (`walkSelfRefLevels`) serves items and projects, so `assertWithinProjectDepthCap` is a twin of `assertWithinDepthCap` over the same formula |
+| `server/src/db/schema.ts` | 3b done | `projects.parentId` declares its foreign key, as migration 0003 made it, with no `ON DELETE` action. No migration: the only drizzle snapshot is 0000's |
+| `server/src/lib/positionResolver.ts`, `coarsestFit.ts` | 3a, 3b done | **3a:** header and `reindexed` pointers re-pointed to the shared page (§3, §6, §7). **3b:** the collector's comment says the project writes pass one too |
 | Other comments citing item-positioning §2, §5, §5.1 or §5a, or item-attachment §8 | 3a done | Re-pointed by the anchor map: `api/items.ts`, `itemListOps.ts`, `itemWriteReconciliation.ts`, `dragClassification.ts`, `lib/hierarchy.ts`, `itemHierarchy.ts`, `routes/items.ts`, `routes/boards.ts`, `routes/testHelpers.ts`, and the two test helpers that name the refusal of a final position. The ones that cite an item-only part stay (the list is in the Amendments) |
-| `client/src/App.tsx` | 3a done, 3b | **3a, done:** a pointer on `effectiveWorkflow` (§10), and one on `handleReorderProject`'s catch (§4). **3b:** G5: the create and move handlers apply the pairs |
-| `client/src/api/projects.ts`, `client/src/types.ts` | 3b | G5: the responses' renumbered pairs |
-| `client/src/components/sidebar/projectTreeUtils.ts` | 3b | G6: a missing position counts as 0 |
-| `client/src/components/sidebar/useProjectDragReorder.ts`, `SortableProjectRow.tsx` | 3a done, 3b | **3a, done:** the release's "never a computed position" comment cites positioning §5. **3b:** call 1, deduction n: a tab state over the project cap is still offered, its line is marked invalid, and a release in it writes nothing |
-| `server/src/routes/testHelpers.ts` | 3a done | New: `PATCH /api/test/projects/:id/position`, mounted only under `ENABLE_TEST_ROUTES`, to pin a project's position or clear it. Neither is a request the API takes, and TREE-4.3 needs a tie, as TREE-4.4 (3b) needs a project with none |
-| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `server/tests/fixtures.ts` | 3a done | 19 TREE tests (the Amendments' table). `fixtures.ts` gains `setProjectPosition`, and `itemIdsOn` and `templatedWorkflow` move there from `boards.test.ts`, which both route files now read |
-| `tests/ui/project-tree-drag.spec.ts`, `project-tree-sidebar.spec.ts` (new), `tests/helpers/projectTreeDrag.ts` (new), `tests/helpers/seed.ts` | 3a done | TREE-1.12 and TREE-2.3 in the drag spec; TREE-4.3 and TREE-4.8 in the new sidebar spec. The drag spec's `aim` moves to the helper so both read it. `seed.ts` gains `pinProjectPosition` |
-| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `tests/api/projects.spec.ts`, client tests | 3b | The fixes' tests (TREE-3.4 to 3.8, 4.4 to 4.7, 6.5, 6.6, 7.2, 8.3, 8.4, 10.4, 1.11), and TREE-1.7's deletion once TREE-1.11 is built |
+| `client/src/App.tsx` | 3a, 3b done | **3a:** a pointer on `effectiveWorkflow` (§10), and one on `handleReorderProject`'s catch (§4). **3b:** reads the project cap, and the create, move and edit handlers fold their responses through `applyWriteResponse` (G5) |
+| `client/src/api/projects.ts`, `shared.ts`, `items.ts` | 3b done | `ProjectWriteResponse` and `fetchProjectDepthCap`; `ReindexedPosition` moves to `shared.ts`, which `items.ts` re-exports. `types.ts` needs no change: the pairs ride on the response type, not on `Project` |
+| `client/src/lib/positionedWrite.ts` (new) | 3b done | `applyWriteResponse`: the pairs first, then the written row, for items and projects. `itemWriteReconciliation.ts::applyItemWriteResponse` delegates to it |
+| `client/src/components/sidebar/projectTreeUtils.ts` | 3b done | G6: a missing position counts as 0, with its pointer (positioning §1) |
+| `client/src/components/sidebar/useProjectDragReorder.ts`, `SortableProjectRow.tsx`, `ProjectSidebar.tsx`, `dragChrome.tsx` | 3a, 3b done | **3a:** the release's "never a computed position" comment cites positioning §5. **3b:** call 1, deduction n: the hook takes the cap, marks a tab state past it (`dropInvalid`), and a release in it writes nothing; the row draws that line red with `data-drop-invalid` |
+| `server/src/routes/testHelpers.ts` | 3a, 3b done | `PATCH /api/test/projects/:id/position`, to pin a project's position or clear it, and `/parent`, to build a tree past the cap. Both mounted only under `ENABLE_TEST_ROUTES`. No project write gives a project a position of its choosing, or none, or a tree that deep |
+| `server/tests/routes/projects.test.ts`, `workflows.test.ts`, `server/tests/fixtures.ts` | 3a, 3b done | 19 TREE tests in 3a and 12 in 3b (the Amendments' tables), and the depth-cap route's. `fixtures.ts` gains `setProjectPosition`, and `itemIdsOn` and `templatedWorkflow` move there from `boards.test.ts`. Two older tests that made two workflows for one project (`boards.test.ts`, `workflows.test.ts`) use two projects now |
+| `tests/ui/project-tree-drag.spec.ts`, `project-tree-sidebar.spec.ts` (new), `tests/helpers/projectTreeDrag.ts` (new), `tests/helpers/seed.ts` | 3a, 3b done | **3a:** TREE-1.12 and TREE-2.3 in the drag spec, TREE-4.3 and TREE-4.8 in the sidebar spec. **3b:** TREE-1.11 in the drag spec, replacing TREE-1.7's test; TREE-3.7, 4.4 and 4.7 in the sidebar spec. `seed.ts` gains `pinProjectPosition`, `pinProjectParent` and `fetchProjectDepthCap` |
+| Client tests | 3b done | `positionedWrite.test.ts` (new), and the hook's cap tests and `projectTreeUtils.test.ts`'s two sort tests, which change for G6. None carries a case ID: surface tests cover TREE-1.11, 3.7, 4.4 and 4.7 whole, so none is proposed for approval |
 | `server/tests/routes/columns.test.ts` | 3a done | D6: BCU-3.2 and BCU-3.3 written whole on the case's setup (`W1` to `W3`, `D1`, `D2`), replacing TC-6.7's two tests and TC-6.8's one, which each asserted part |
-| `CLAUDE.md` | 2, close | Batch 2, done: "Positioning" cites the shared page, "Workflow inheritance" project-tree §10 and the server's site, and the attach bullet the cap's formula. At close: reindex disclosure for project writes, and the project cap in the data model |
+| `CLAUDE.md` | 2, close | Done. Batch 2: "Positioning" cites the shared page, "Workflow inheritance" project-tree §10 and the server's site, and the attach bullet the cap's formula. After 3b: reindex disclosure covers project writes, the data model's projects are depth-capped, and the API table lists the depth cap |
 | `docs/planning/mvp-roadmap.md` | 2 | Done. The Projects and Work Items lines lose unlimited depth (call 1, and Nathan's answer in batch 2) |
-| `docs/planning/epic-8-decisions.md`, `epic-7-decisions.md`, `tech-debt-stories/api-contract-zod-openapi.md` | 2 | Done. Epic 8: the placeholder tier. Epic 7: re-filing a project's items. The API contract epic's Story 1: D5's field names |
+| `docs/planning/epic-8-decisions.md`, `epic-7-decisions.md`, `tech-debt-stories/api-contract-zod-openapi.md` | 2, close | Done. Epic 8: the placeholder tier. Epic 7: re-filing a project's items. The API contract epic: D5's field names under Story 1, and after 3b the new depth-cap route under Story 2 |
 
 ## Acceptance
 
@@ -324,6 +325,12 @@ The starting list. The Coder keeps it current.
   - wiki project-tree §7: an edit that changes the parent (G1);
   - wiki project-tree §8: an edit's empty name or `null` (G9), and a name of only spaces (call 10);
   - wiki project-tree §10: at most one workflow (G7).
+  - **Built, and the markers are off** (PO, at Close, 2026-10-06), from the Coder's batch 3b handoff. Every passage above lost its marker, and §1's "Every tab state in the range is valid. Projects have no depth cap", which the cap replaced, is deleted with its note. No section number changed. Reworded as the markers came off, so the cases follow:
+    - **§3:** the cap is the fourth condition in the list of what makes a parent legal, and the create is named among the writes the list holds for. "The project cap" paragraph holds the formula, the value, and the example.
+    - **§4:** the sidebar and the list are said together to sort a project with no position first, as if its position were 0.
+    - **§6:** the refusal of a named position joins the first bullet, and the project itself joins the second's list of neighbors the move can't use.
+    - **§8:** a create's "no name" is spelled out as one left out, `null`, an empty one, or one of only spaces, and an edit allows exactly the names a create does.
+    - **§10:** "at most one workflow" moves up, after the paragraph on giving a project a workflow.
 - **For the Test Planner:**
   - **Rule lines** follow the two maps above. A case that tests a shared rule as items apply it may cite both pages: positioning's section, and item-positioning's for the item's part. ATT-4's cases that test the formula cite hierarchy-placement §6 as well as item-attachment §8.
   - **TREE-1.7** pins §1's "Projects have no depth cap", which stays the rule until the Planned cap is built.
@@ -342,6 +349,18 @@ The starting list. The Coder keeps it current.
     - **TREE-1.12's saved placement** is read from the stored row: `X` is `A1`'s child after `A1a`, and then before `A`, with the sidebar showing it first.
     - **No internal test is mapped.** TREE-4.3 and TREE-1.12 have surface tests, so `projectTreeUtils.test.ts` and `useProjectDragReorder.test.ts` get no new TREE mapping, and none is proposed for Nathan's approval.
     - **Not built, so not mapped:** the `Planned` cases, which are 3b's.
+- **From the Coder, batch 3b (2026-10-06).**
+  - **For the PO, at Close:**
+    - **Every `**Planned:**` marker on project-tree comes off:** §1's over-cap bullet, with the "*Replaced by …*" note on the bullet it replaces, §3's create and cap paragraphs, §4's two, §6's two, §7's, §8's two, and §10's. The code does each as the page words it.
+    - **A name that isn't a string counts as no name,** for a create and an edit. §8 says "no name, or an empty one" and "only spaces". `{"name": 5}` was stored as the text `5`, and is refused with a 400 now. It's the same check, so the page can say a name is a non-blank string, or leave it.
+    - **The cap's one value (hierarchy-placement §6)** is held by one route, `GET /api/projects/depth-cap`, which the sidebar reads, as the board reads `itemDepthCap` off its own response. The page needs no change.
+  - **For the Test Planner:** nothing open. The cases moved to `Open` and TREE-1.7 is deleted, since TREE-1.11's test replaced its test. TREE-3.7 has two tests, one through the API and one through the sidebar.
+  - **For the Reconciler:** the Amendments' second table gives each fix's test. TREE-4.7's three tests each wait for `X` to show at its new depth before reading the order, since the order they expect is also the order before the write. No test carries a client-test ID: the surface tests cover TREE-1.11, 3.7, 4.4 and 4.7 whole, and the hook's and `projectTreeUtils.test.ts`'s unit tests are unmapped support.
+  - **For the Architect, at Close:**
+    - **Root `CLAUDE.md`'s "Reindex disclosure" convention** covers project writes now. Every project write folds its response through `client/src/lib/positionedWrite.ts::applyWriteResponse`, the generalization of what `completeItemWrite` calls for items, and the server's `routes/projects.ts::projectResponse` is the twin of `routes/items.ts::respondWithItem`.
+    - **Its data model's "unlimited depth" for projects** is a cap of 6 now, `PROJECT_DEPTH_CAP` in `lib/itemTree.ts`.
+    - **`GET /api/projects/depth-cap` is new API surface.** `api-contract-zod-openapi.md`'s Story 1 lists the project routes, so it may want the line.
+    - **The story's audit** (G4, G7 and G9 change what the API accepts) is the checklist's, not the Coder's.
 
 ## Open questions
 
@@ -643,3 +662,56 @@ For Nathan, at plan approval.
     - **TREE-4.2** is unchanged. "With `B` created first" is the setup, and how a test arranges it, here a direct edit of `createdAt`, is the test's.
   - **The catalog:** 342 cases: 195 `Automated`, 124 `Open`, 17 `Planned`, 4 `Manual` and 2 `Pending PO`.
   - **TC-6.7 and TC-6.8 (D6), after the Test Planner moved them to BCU-3.2 and BCU-3.3:** the three tests asserted part of each case on a smaller setup, so BCU-3.2 and BCU-3.3 are written whole, and the three tests are deleted. No test or comment cites TC-6.7 or TC-6.8 any more. TREE-1.12's test also reads the first release's saved placement now, as the reworded case says.
+- **2026-10-06, batch 3b (the Coder): the fixes.** Every fix ruled "fix now" is built, each with a test carrying its case ID, and the code does each as the page words it, except for the three edges below.
+  - **The cases and their tests.**
+
+    | Case | Test, in | What |
+    |---|---|---|
+    | TREE-3.4 | `projects.test.ts` | New: a create naming a parent that's no project is a 400 with the message `PUT` and the move give, and the list is unchanged |
+    | TREE-3.5 | `projects.test.ts` | New: the move, the edit and the create, each from a fresh tree at the cap's boundary |
+    | TREE-3.6 | `projects.test.ts` | New: `M` with a height of 2 fits under a project at depth `PCAP − 3` and not under one at `PCAP − 2` |
+    | TREE-3.7 | `projects.test.ts`, `project-tree-sidebar.spec.ts` | New, two tests. A tree two levels past the cap is built by writing rows: the API lists every project, and a rename and a move among siblings are accepted. The sidebar shows every project, at its depth, with no line and no flag |
+    | TREE-3.8 | `projects.test.ts` | New: `M` at depth 3 with `PCAP` descendants is refused a move to the top level |
+    | TREE-1.11 | `project-tree-drag.spec.ts` | New, replacing TREE-1.7's test, which is deleted: the state one tab right of `T` is offered, its line marked invalid, and a release writes nothing; aligned with `T` it saves |
+    | TREE-4.4 | `project-tree-sidebar.spec.ts` | New: `N`, created last and given no position, reads ahead of `A` at `0.5` |
+    | TREE-4.5, 4.6 | `projects.test.ts` | New: the pairs for a move, a create and an edit, the written project's own last, and none when nothing was renumbered |
+    | TREE-4.7 | `project-tree-sidebar.spec.ts` | New, three tests (a drag, which is read again after a reload, a create, an edit) |
+    | TREE-6.5, 6.6 | `projects.test.ts` | New: the project as `prevId` and as `nextId`; a position alone, and with a neighbor |
+    | TREE-7.2 | `projects.test.ts` | New: the edit lands at `4`, then back at the top level at `2` |
+    | TREE-8.3, 8.4 | `projects.test.ts` | New: `""` and `null`; a name of only spaces for a create and an edit |
+    | TREE-10.4 | `workflows.test.ts` | New: a second workflow is a 409 naming the first, and a child that inherits may have one |
+  - **How the fixes are built.**
+    - **One legality check** (`routes/projects.ts::parentError`) serves the create, the edit and the move: the parent exists, isn't the project and isn't in its subtree, and the cap. The cap gates a write that changes the parent, including to the top level (TREE-3.8), so a rename or a move among siblings is never checked (TREE-3.7).
+    - **One position resolution** (`resolveProjectPosition`) serves the create, the move and an edit that changes the parent, so G1 can't drift from the move. An edit that keeps the parent keeps the position.
+    - **The cap is generic.** `lib/itemTree.ts` has one depth walk, one height walk and one cap check over both tables, with `ITEM_DEPTH_CAP` and `PROJECT_DEPTH_CAP` as separate values. The item BFS that walked only `items` is now the generic one, so deleting an item and the item cap run through it: `items.hierarchy.test.ts` and `items.test.ts` pass unchanged.
+    - **The client folds every project write through `applyWriteResponse`,** which the item reconciliation now delegates to, so its tests cover both.
+    - **`projects.parentId` declares its foreign key** in `schema.ts`. No migration: the database has had it since 0003, and the only drizzle snapshot is 0000's.
+  - **Three edges the page doesn't state,** each the smaller choice:
+    - **A name that isn't a string is refused** (the Handoff).
+    - **The sidebar reads the cap from a new route,** `GET /api/projects/depth-cap`. The board gets `itemDepthCap` on its own response, but no project response is a natural place for the cap. The other way is a constant on each side, which the wiki's "one value" rules out.
+    - **A move naming both `prevId` and `nextId` still uses `prevId` alone** (D5), so the self-neighbor refusal covers the one it uses.
+  - **Older tests changed** because a project can have one workflow now: `boards.test.ts`'s board-list test and `workflows.test.ts`'s clone test each made a second workflow for one project, and use a second project. A sort test pair in `projectTreeUtils.test.ts` changed for G6.
+  - **Checks:** `npm run check` passes (378 server tests, 432 client, 75 scripts, 0 checker hits on 285 files), and so does the full E2E suite (163 passed, 8 skipped). Each new route assertion was made to fail by breaking its rule in the source, 17 breaks in all (the create's parent check, the cap's height, level count, unchanged-parent and top-level cases and its boundary, the edit's position, the self-neighbor and position refusals, the pairs and the written project's own pair, the name checks and the second workflow), and each new E2E test by breaking the client in 7 ways (the pairs never applied, a missing position counted as its creation time, the cap check one level off, a release past the cap still writing, the line never marked invalid, the sidebar never given the cap, and rows past the cap hidden). Every break was caught by the case it targets, and each file was put back. One of those showed one of TREE-4.7's first-draft tests passing vacuously, since the order it expected was also the order before the write, so its tests wait for `X` to show at its new depth first. The three TREE-4.7 tests and TREE-1.11 passed three runs in a row.
+- **2026-10-06, after batch 3b (the Architect),** from the Coder's notes for the Architect. `npm run check:docs` reports 0 hits on 285 files.
+  - **Root `CLAUDE.md`:**
+    - **"Reindex disclosure"** covers project writes. It names the two server sites that attach the pairs (`respondWithItem` and `projectResponse`), and `lib/positionedWrite.ts::applyWriteResponse` as the one fold. The board's item writes reach it through `completeItemWrite`, and the sidebar's project writes from `App.tsx`;
+    - **the data model** says projects are depth-capped, naming `PROJECT_DEPTH_CAP`, where it said unlimited depth;
+    - **the API table's `/api/projects` row** lists the depth cap.
+  - **`client/src/components/workflow/CLAUDE.md` needs no change.** Its reindex line is about the board's item writes, which still fold through `completeItemWrite`. It's the Coder's file in any case.
+  - **`api-contract-zod-openapi.md`'s Story 2:** the endpoint count is 53, and the items-and-projects bullet gains `GET /api/projects/depth-cap`. It also notes that the item cap comes as `itemDepthCap` on the board's response instead, so whether both caps come the same way is that batch's call. Story 1 lists only the two move routes, so the line went in Story 2 rather than Story 1, as the Coder suggested.
+  - **Left at Close for the Architect:** archiving this plan, once the PO, the Test Planner, the Reconciler and the audit are done and Nathan signs off.
+- **2026-10-06, Close, step 2 (the PO): the Coder's batch 3b handoff applied.** The Handoff's Planned list records the markers coming off, and the rewording.
+  - **A name that isn't a string** (the Coder's behavior decision): project-tree §8 doesn't state it. *Deduction p,* from Nathan's ruling on what the page takes ("If it API contract details like - the Request needs these request params … then we'll leave documentation to openapi"): a field's type is the request's contract, so it belongs to the API contract epic's projects schema, not the page. The refusal the Coder built agrees with what that schema will do, so nothing changes back. For the Architect: Story 2's projects schema gives `name` a non-blank string, which also covers §8's rule.
+  - **`GET /api/projects/depth-cap`** needs no page change: hierarchy-placement §6 says a feature's UI and API enforce one value, and how the sidebar reads it is contract. The Coder routed the route itself to the Architect.
+- **2026-10-06, Close, step 3 (the Test Planner): the handoff applied to the test plans.** The checker reports 0 hits on 285 files. The catalog holds 341 cases: 194 `Automated`, 140 `Open`, 4 `Manual`, 2 `Pending PO` and 1 `Planned`, which is another story's.
+  - **`Planned` → `Open`,** with the markers off: TREE-1.11, TREE-3.4 to TREE-3.8, TREE-4.4 to TREE-4.7, TREE-6.5, TREE-6.6, TREE-7.2, TREE-8.3, TREE-8.4 and TREE-10.4. TREE-1.11 no longer says it replaces anything.
+  - **TREE-1.7 is deleted,** with the passage it derived from ("Every tab state in the range is valid. Projects have no depth cap"). Its ID stays retired, and it leaves the Scope.
+  - **Two cases follow the PO's rewording:**
+    - **TREE-3.5:** the cap is now §3's fourth condition, so its refusal's message says which condition it breaks, as the other three's do. The case now says the message names the project cap. The move's refusal states it, and the edit's and the create's are "refused the same way".
+    - **TREE-8.1:** §8 spells out a create's "no name" as one left out, `null`, an empty one, or one of only spaces. The case adds `null`, and its title says so. Spaces stay TREE-8.4's.
+  - **For the Coder, before the clean commit:** if a test doesn't yet assert either addition, it needs extending, or the Reconciler leaves that case `Open`:
+    - TREE-3.5's cap refusal message;
+    - TREE-8.1's `null` on a create. 3a's table extends TREE-8.1's test with an empty name only.
+  - **Nothing else changes.** The rest of the rewording moves rules within their sections, and the cases already state them as worded: §6's own-neighbor and position refusals, §4's sort of a missing position, and §10's one workflow. A name that isn't a string has no case, since deduction p sends it to the API contract epic. No new question for the PO.
+  - **Scope:** unchanged but for TREE-1.7. Every case in it is now `Open` or `Automated`, ready for the Reconciler's run on the clean commit.
+  - **Two cases the Test Planner reworded, checked before the commit:** TREE-3.5's three refusals (the move, the edit and the create) now each assert the message says the write would put the subtree past the cap, and TREE-8.1's test names `null` on a create beside the missing and empty names. Each was made to fail by breaking its rule (the message, and a create that takes `null`), and was caught.

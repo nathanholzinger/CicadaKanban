@@ -12,6 +12,8 @@ import { PlusIcon, ICON_BUTTON_SM } from './icons';
 
 interface ProjectSidebarProps {
   projects: Project[];
+  /** The project depth cap the drag offers tab states against; null until it's known. */
+  projectDepthCap: number | null;
   selectedProjectId: string | null;
   onSelectProject: (id: string) => void;
   onCreateProject: (parentId?: string) => void;
@@ -21,6 +23,7 @@ interface ProjectSidebarProps {
 
 export default function ProjectSidebar({
   projects,
+  projectDepthCap,
   selectedProjectId,
   onSelectProject,
   onCreateProject,
@@ -44,7 +47,7 @@ export default function ProjectSidebar({
     setExpandedIds(prev => (prev.has(id) ? prev : new Set(prev).add(id)));
   }
 
-  const drag = useProjectDragReorder(projects, flatItems, onReorderProject, expand);
+  const drag = useProjectDragReorder(projects, flatItems, onReorderProject, expand, projectDepthCap);
 
   return (
     <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-zinc-800">
@@ -82,6 +85,7 @@ export default function ProjectSidebar({
                   isDescendantOfActive={drag.descendantIds.has(item.id)}
                   indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
                   indicatorDepth={drag.projectedDepth ?? item.depth}
+                  indicatorInvalid={drag.dropInvalid}
                   expandedIds={expandedIds}
                   onToggleExpand={toggleExpand}
                   onSelectProject={onSelectProject}

@@ -7,6 +7,7 @@
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
+import { applyWriteResponse } from '../../lib/positionedWrite';
 import {
   NO_PLACEMENTS,
   applyPlacements,
@@ -16,12 +17,8 @@ import {
   type Placements,
 } from './itemListOps';
 
-// Fold an item-write response into the list. Order is the rule: apply
-// every `reindexed` pair the list holds first (an unknown id means "not in
-// this view," never missing data), then upsert the written row — it is
-// authoritative for itself and is also in the pairs, so applying it first
-// and a stale pair over it would be the silent-wrong order. `reindexed` is
-// stripped so it never lands in an Item.
+// Fold an item-write response into the list, pairs first, then the written row
+// (`lib/positionedWrite.ts::applyWriteResponse`).
 //
 // Only the written row is upserted: the server's `workphaseId` cascade to
 // attached descendants isn't mirrored here, so their stored copies stay
@@ -29,19 +26,7 @@ import {
 // drag takes its containing Card's `workphaseId` at drag start
 // (`useBoardDnd.ts`).
 export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
-  if (!response.reindexed) return upsertItem(items, response);
-  const { reindexed, ...written } = response;
-  const positionById = new Map(reindexed.map(r => [r.id, r.position]));
-  const renumbered = items.map(item => {
-    const position = positionById.get(item.id);
-    return position === undefined || item.position === position ? item : { ...item, position };
-  });
-  return upsertItem(renumbered, written);
-}
-
-function upsertItem(items: readonly Item[], written: Item): Item[] {
-  const exists = items.some(i => i.id === written.id);
-  return exists ? items.map(i => (i.id === written.id ? written : i)) : [...items, written];
+  return applyWriteResponse(items, response);
 }
 
 // The board-wide rendered order of Free, positioned items — what the ordinal

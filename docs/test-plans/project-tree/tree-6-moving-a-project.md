@@ -10,8 +10,8 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 | TREE-6.2 | A move naming no neighbor places the project after its true last sibling, even under the same parent | P1 | Open |
 | TREE-6.3 | A neighbor the move can't use is refused, and nothing changes | P1 | Open |
 | TREE-6.4 | A moved project's subtree goes with it, keeping its parents and positions | P1 | Open |
-| TREE-6.5 | A move naming the project itself as its neighbor is refused | P2 | Planned |
-| TREE-6.6 | A move can't name a position | P1 | Planned |
+| TREE-6.5 | A move naming the project itself as its neighbor is refused | P2 | Open |
+| TREE-6.6 | A move can't name a position | P1 | Open |
 
 ---
 
@@ -66,7 +66,7 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 
 ## TREE-6.5 — A move naming the project itself as its neighbor is refused
 
-**Priority:** P2 · **Status:** Planned · **Rule:** wiki project-tree §6, wiki positioning §2
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §6, wiki positioning §2
 
 *Given* top-level projects `A` and `X`, *when* `X` is moved naming itself as the sibling it goes after, or as the one it goes before, *then* each is refused with a 400 whose message says the neighbor is the project itself, and `X`'s parent and position are unchanged.
 
@@ -74,7 +74,7 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 
 ## TREE-6.6 — A move can't name a position
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki project-tree §6, wiki positioning §2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §6, wiki positioning §2
 
 *Given* top-level projects `X` (`2.0`) and `A` (`4.0`), *when* a move names `position: 3.0` for `X`, alone or with `A` as the sibling it goes after, *then* it's refused with a 400 whose message says to name a neighbor instead, and `X.position` is still `2.0`.
 
