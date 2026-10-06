@@ -22,7 +22,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
 - **Code map** *(whoever writes the code; usually the Coder)*.
   - Which symbols carry which decision. It's kept current while the story is open.
   - It replaces decision IDs in comments: comments state the fact, and the plan says which decision produced it.
-  - An N.1 refactor story builds its "Makes dead" list from it.
+  - A cleanup refactor's Code map also holds each phase's "Makes dead" list, which its audit checks.
 - **Amendments** *(whoever changes the plan)*.
   - Once coding starts, or a decision is approved, a change is made in the section it affects.
   - Then a dated line goes here, saying what changed and why.
@@ -64,11 +64,11 @@ Each section says who fills it in. The skeleton at the end is for copying.
 
 ## A tech-debt story
 
-For work that changes how the code or the process is organized, not what the app does.
+For work that changes how the code or the process is organized. If it also changes what the app does, it closes by the full story-done checklist, audit included, though its plan keeps this shape.
 
-- **Sections:** Goal (with what's out of scope), Decisions, Work (in batches), Code map (the files touched), Acceptance, Handoff (what later work inherits), and Amendments once anything changes after approval.
+- **Sections:** Goal (with what's out of scope), Inbound deferrals (once anything is routed to it), Decisions, Work (in batches), Code map (the files touched), Acceptance, Open questions, Handoff (what later work inherits), and Amendments once anything changes after approval. Inbound deferrals and Open questions work as in a full story.
 - **Checks:** the gate, plus the story's own acceptance checks.
-- **Audit:** only when the story restructures code.
+- **Audit:** only when the story restructures code or changes what the app does.
 
 ```markdown
 # <Title>
@@ -76,12 +76,15 @@ For work that changes how the code or the process is organized, not what the app
 **Type:** tech-debt story · **Written:** <date> by <role> · **Sequenced:** <what it follows or precedes>
 
 ## Goal
+## Inbound deferrals
 ## Decisions
 ## Work, in batches
 ## Code map
 | File | Batch | Change |
 |---|---|---|
 ## Acceptance
+## Open questions
+- **For <role>:** …
 ## Handoff
 ## Amendments
 ```

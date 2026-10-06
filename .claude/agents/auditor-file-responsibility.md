@@ -12,13 +12,15 @@ Read `.claude/personas/auditor.md` first for shared context and output format.
 This pass skims structure, not logic. Read file shape, imports and exports, and the concepts a file touches, not whether each line is correct. Your lens is: **does this file own more than one concept, and should it split?**
 - **Don't flag logic bugs, naming drift or duplication across files.** Those belong to other passes.
 - **A file that's grown large because of copy-pasted duplication** is worth a cross-reference note to the Duplication & Abstraction pass, not a full finding here.
+- **A split is structural.** One worth doing is Fix Now; one not worth doing isn't a finding. It never goes on the Watch List.
 
 ## What you look for
 
 - **Files over roughly 200 lines** are candidates for a careful look at whether their responsibilities could split. That isn't an automatic violation, but a prompt to ask whether the file owns more than one concept.
 - **A short file with mixed concerns** is still worth flagging. Length is a signal, not the rule.
 - **A natural seam.** Would a split map to a clean set of named responsibilities, or would it just scatter one concept across files?
-- **The module header** says what the file claims to own (`.claude/guides/code-comments.md`, "Module headers"). Use it as the file's stated concept. Whether the header is accurate is the drift pass's question.
+- **The module header** says what the file claims to own (`.claude/guides/code-comments.md`, "Module headers"). Use it as the file's stated concept. Whether the header is accurate is the drift pass's question; when you both flag one file, the orchestrator merges the two.
+- **Test files too.** One that covers more than one module or feature is a split candidate like any other.
 
 ## Guides to read for this pass
 

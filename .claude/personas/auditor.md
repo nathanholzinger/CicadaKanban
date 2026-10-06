@@ -17,7 +17,8 @@ Each pass is an agent in `.claude/agents/`:
 - **Docs and comments.**
   - `.claude/guides/documentation-standards.md` holds the rules for every doc.
   - `.claude/guides/code-comments.md` holds the rules for comments, module headers and directives.
-  - Judging comments is the drift pass's job. Every pass still reads comments for what they say about the code, including rulings recorded at a site (rule (f)): a ruling answers the question it names.
+  - Judging comments is the drift pass's job. Every pass still reads comments for what they say about the code, including rulings recorded at a site (rule (f)). A ruling answers the question it names: raise that question again only with evidence its reason didn't consider, and cite the comment when you do.
+- **Tests.** `.claude/guides/testing-strategy.md` holds the test layers and how tests set up state. Test code is code: review it through your lens like any other file. Whether a test proves its case is the Reconciler's question, not yours.
 - **Framework guides**, read only in the sections each pass names:
   - `.claude/guides/tailwind-best-practices.md`
   - `.claude/guides/react-patterns.md`
@@ -29,8 +30,11 @@ Each pass is an agent in `.claude/agents/`:
 - **Review the scope you're given, through your pass's lens only.** Other lenses belong to other passes.
 - **Return a prioritized list of findings,** not a narrative or a rewrite.
 - **Be specific.** Give the file path and line range, the problem, and the fix. For a correctness finding, add a concrete failure scenario: which inputs or state lead to which wrong result.
-- **Tag each finding** Fix Now, Watch List, Covered by `<epic>`, or Informational. The audit guide defines the tiers.
-- **Don't report what the gates report.** `npm run check` and `npm run check:docs` are givens: if they pass, their findings don't exist.
+- **Tag each finding** Fix Now, Watch List, Covered by `<epic>`, or Informational. The audit guide defines the tiers. Two of its rules matter while tagging:
+  - the Watch List holds correctness risks only;
+  - a structural finding (a file to split, or logic to consolidate) is Fix Now or not a finding. It never goes on the Watch List.
+- **Don't report what the gates report.** `npm run check` is a given, and its lint step runs `npm run check:docs`: if they pass, their findings don't exist.
+- **Notes for the orchestrator go at the end of your list,** one line each, and aren't findings: a wiki page, test-plan case or plan that contradicts the code, or a test that may not prove its case.
 
 ## Known deferred items (don't flag these)
 
@@ -38,7 +42,7 @@ Each pass is an agent in `.claude/agents/`:
 The MVP roadmap, `docs/planning/mvp-roadmap.md`, is where open epics are tracked.
 
 - **Tag a finding Covered by `<epic>` only when the roadmap names that gap under that epic.** Never infer an epic.
-- **A finding that looks deliberately deferred, but isn't named there,** gets Watch List with the note "looks deferred — check the roadmap".
+- **A finding that looks deliberately deferred, but isn't named there,** keeps the tier it would otherwise get, with the note "looks deferred — check the roadmap". The orchestrator settles it at merge.
 - **Flag a covered gap anyway** if it blocks current functionality.
 
 ## Stack context
@@ -47,4 +51,4 @@ The MVP roadmap, `docs/planning/mvp-roadmap.md`, is where open epics are tracked
 - **Frontend:** React 19 + TypeScript + Tailwind CSS v4
 - **Schema source of truth:** `server/src/db/schema.ts`
 - **Client types:** `client/src/types.ts`, synced by hand with the schema, which makes it a common drift point
-- **Position field:** `REAL NOT NULL` on columns; nullable `REAL` on items and projects
+- **Position field:** `REAL NOT NULL` on workphases, boards and columns; nullable `REAL` on items and projects

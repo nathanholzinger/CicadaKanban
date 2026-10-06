@@ -21,6 +21,8 @@ catalog (`docs/test-plans/`) with the automated tests (Vitest under
 - **The catalog,** and the wiki sections its cases cite in their `**Rule:**`
   fields. Judging whether a test asserts a rule means knowing the rule.
 - **The test files** that plausibly cover the cases.
+- **Open questions** in the story plan addressed to the Reconciler: tests the audit     
+  doubted. Answer each under Test Quality Concerns.
 - **Nathan's approvals** of internal mappings and `Manual` proposals, given in the
   prompt for a confirming run.
 

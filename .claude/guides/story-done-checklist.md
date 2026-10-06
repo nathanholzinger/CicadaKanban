@@ -38,7 +38,7 @@ What happens when a story's code is complete, in order, and what must hold befor
 
 ## A tech-debt story
 
-A tech-debt story closes on less:
+A tech-debt story that also changes what the app does closes by the full checklist above, audit included. One that only reorganizes the code or the process closes on less:
 - the gate passes;
 - its own acceptance checks pass;
 - its handoff is applied.

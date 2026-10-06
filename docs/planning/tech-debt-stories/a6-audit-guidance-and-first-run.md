@@ -1,6 +1,6 @@
 # A6 — Audit Guidance Revisit and First Run
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Ready for:** Nathan's review · **Starts after:** A4. Its order against A5 is Nathan's call, and D10 covers either order.
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batch 1 applied 2026-10-06, uncommitted; the Test Planner's review of D8 and Nathan's approval close it · **Sequenced:** after A4 and A5a–A5d, all closed
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, plus the other tech-debt stories in this folder. Tags like "Auditor F7" point to round-table items, and "A1 D11" points to another story's decisions. This plan is transient, so it may cite them.
 
@@ -51,13 +51,13 @@ A1 D10's template gives the audit the inputs it used to improvise, such as the N
 ### D4. What the orchestrator reads at the merge step
 
 **The passes read none of this.** It comes in only after they've reported:
-- **The open plan of the story being audited:**
+- **The open plan of the story being audited,** and the plan of every story in the range that closed without an audit of its own, from `docs/archive/`:
   - *Inbound deferrals:* confirm each one is done or deferred again with its new destination named. One that is silently missing becomes a required finding.
-  - *Scope:* for each Planned passage the story built, confirm the code has a `wiki <page> §N` index pointer at the rule's main enforcement site (A1 D7). A missing pointer is a small required finding.
+  - *Living-docs handoff, "Planned passages now built":* for each one, confirm the code has a `wiki <page> §N` index pointer at the rule's main enforcement site (A1 D7). A missing pointer is a small required finding. The handoff's list, not Scope's, because a Scope passage may have been deferred while the story was open.
   - *Amendments:* when judging whether code is vestigial, check which rules changed while the story was open.
   - *Code map:* only for an N.1 story, to check its "Makes dead" claims.
-- **Handoffs addressed to the audit,** or to "the next story or audit" and not yet routed anywhere else. A4's are an example (D10 lists them). Each item either matches a pass's finding, or the orchestrator rules on it and the ruling gets a tier (D5). A plan can close before the audit that covers it runs. So its items are copied into the auditing plan, as D10 copies A4's, which leaves the audit no reason to read the archive.
-- **The previous audit only, from `docs/archive/`,** for recurrence. Each report restates the full chain for anything it carries ("Story 3 #16 → Story 4 #16 → Story 5 → here"), so reading one report back is enough. Nothing else in the archive gets read.
+- **Handoffs addressed to the audit,** or to "the next story or audit" and not yet routed anywhere else. A4's are an example (D10 lists them). Each item either matches a pass's finding, or the orchestrator rules on it and the ruling gets a tier (D5).
+- **The previous audit only, from `docs/archive/`,** for recurrence. Each report restates the full chain for anything it carries ("Story 3 #16 → Story 4 #16 → Story 5 → here"), so reading one report back is enough. Apart from the closed plans above, nothing else in the archive gets read.
 - **The wiki passage each correctness finding touches,** for A1 D11's classification.
 
 ### D5. Tier details beyond A1 D11
@@ -98,7 +98,7 @@ At sign-off the report goes into the archive, and nobody reads it again. So a ro
 
 ### D10. The first run
 
-This run happens once A4 is done. It uses the instructions as batch 1 leaves them.
+This run happens once batch 1's drafts are applied, and uses the instructions as they leave them.
 
 **Scope:** `epic-3-5-story-6-audited` (`4c0cb34`, tagged retroactively) through HEAD. Under D3, that range sorts into these groups:
 
@@ -110,24 +110,29 @@ This run happens once A4 is done. It uses the instructions as batch 1 leaves the
 | A1 | New code: the `check:docs` checker in `scripts/check-docs/` | All four |
 | A1, and the Architect's edits from A4's handoff | The `CLAUDE.md` files, and the module headers that received moved rationale | Drift |
 | A3 | New tests | All four |
-| A3 | The case IDs stamped into test titles | Drift |
+| A3 | test titles reworded (the IDs are the Reconciler's) | Drift |
 | A4's 16 sweep commits (`359f093^..bae02c2`) | Comments, module headers, and test titles that named functions by old names. A4 D8 proves them comment-only | Drift |
 | A4 batch 5 | Root `lint` runs `check:docs` | All four (one line) |
-| A5, if it lands before this run | Sorted by the same rules: code it changes goes to all four passes, comments it re-points to drift | By D3 |
-| A2, A3's test plans, A1's guides and personas | Docs outside the audit's code scope | None |
+| A5a–A5d (`d298ff3..05e3f98`) | Code and tests, about 4,400 lines outside `docs/`: item movement rules in `itemHierarchy.ts` and the item routes, migration `0011`, the sidebar's set-down and drag, the boards, columns and workphases routes, and the project tree's fixes and depth cap | All four |
+| A5a–A5d | The `CLAUDE.md` edits | Drift |
+| A2, A3 and A5's wiki and test plans, A1's guides and personas | Docs outside the audit's code scope | None |
 
-**Size.** The drift pass's share is large: every comment A4 rewrote. It runs as one pass per A4 commit, in parallel, merging neighbors where a commit is small, so no single pass holds the whole sweep. That's the check A4's own gates can't make: whether a rewrite dropped a reason instead of restating it, or states something the code doesn't do. The code passes' share is the fix batches plus the three code-bearing tech-debt pieces.
+**A5a and A5d were full stories.** Each says it closes by the full story-done checklist, audit included, but neither has an audit report. This run is their audit (Nathan, 2026-10-06). So the merge step reads their archived plans' Scope, Inbound deferrals and handoffs to the audit (D4), as it does for the tech-debt stories in the range.
+
+**Size.** Two shares are large:
+- **The drift share:** every comment A4 rewrote. It runs as one pass per A4 commit, in parallel, merging neighbors where a commit is small, so no single pass holds the whole sweep. That's the check A4's own gates can't make: whether a rewrite dropped a reason instead of restating it, or states something the code doesn't do.
+- **The code share:** Story 6's fix batches, A5a–A5d, and the rest. Each of the four passes runs as several instances, one per group in the table, so no instance reads all of it. Batch 2 measures each group and sets the split.
 
 **Inputs at the merge step (D4).** A4's handoff "To A6" is empty: every tag's reason was recovered at its site. A4 left four items for "the next story or audit". Nathan routed two of them elsewhere, and they aren't audit concerns: the sidebar's set-down write went to A5's D1, and the Sheet parent picker's missing depth cap went to the Work Item Detail & Chat UI epic's entry in `mvp-roadmap.md`. A pass that finds either one again gets that route as its disposition, not a new finding. The run takes the other two:
 - **Two redundant keys in `ProjectPage.tsx`.** A4 found them not wrong: `App.tsx` already keys the whole page on the project. At most a small Fix Now, or rejected with a reason.
 - **wiki board-drag-interaction §2's rule 6 has no index pointer.** A4 didn't confirm how a done list stops the shuffle, so it left the rule unmarked. The run confirms it. If the code enforces the rule, the pointer is a small Fix Now; if it doesn't, it's a correctness finding.
 
 **What the run should show:**
-- **Real value.** It finds code problems no gate catches, in the fix batches, the checker and the new tests, or it shows credibly that there aren't any. That's the test Nathan named.
+- **Real value.** It finds code problems no gate catches, in the fix batches, the checker, A5's rule changes and the new tests, or it shows credibly that there aren't any. That's the test Nathan named.
 - **Doc findings are a minority, and none of them repeat what the checker reports.** The baseline is Story 6: doc drift was one finding, but it took one of the four fix batches.
 - **The rulings A4 wrote at their sites** (Story 6 #24 and #30) aren't raised again without new evidence (D5). A4 wrote 15 of the 16. The 16th, a Descendants release with no `over`, got no comment because `handleDragEnd`'s Descendants branch already says the release reads only the projection. If a pass raises it anyway, that comment isn't enough, and the fix is a comment.
 - **A4's handoff items are all resolved** (D4): each is ruled on, fixed, or routed.
-- **Every route lands in a plan** (D6). This plan's Handoff is the place for items to the PO and the Test Planner, and Story 7's roadmap entry or plan is the place for deferrals.
+- **Every route lands in a plan** (D6). This plan's Open questions is the place for items to the PO and the Test Planner, and Story 7's roadmap entry or plan is the place for deferrals.
 - **The report closes and moves to the archive untouched.** Its end commit is tagged `a6-audited`, and that tag is Story 7's audit base.
 
 ## Work, in batches
@@ -143,13 +148,13 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - the test-plans README (A3);
   - `npm run check` (Tooling Gates), which now includes `check:docs`;
   - what A1 changed at its close: the module-header rule in `code-comments.md` (D7), the rewritten `testing-strategy.md` (D8), and the checker's wider `transient-link` and `symbol-ref` rules, which take mechanical work off the drift pass.
-- Draft D1–D9 into the guide and the agents, plus any conflicts the re-read turns up.
+- Draft D1–D9 into the guide and the agents, plus any conflicts the re-read turns up. *Done 2026-10-06:* the drafts were applied and their folder deleted. What they changed is in Amendments.
 - **Reviews:** the Architect reviews D2 and D4's references to the template, the Test Planner reviews D8, and Nathan approves.
 - **Check:** `npm run check:docs -- .claude` still reports zero hits.
 
 ### Batch 2: the first run (Auditor)
 
-- Nathan tags `4c0cb34` as `epic-3-5-story-6-audited`.
+- Nathan tags `4c0cb34` as `epic-3-5-story-6-audited`. *Done:* an annotated tag on `4c0cb34`.
 - Run D10 and write `docs/audits/code-quality-audit-a6.md`, opening with its range line, with every route landed (D6).
 
 ### Batch 3: corrections
@@ -172,6 +177,8 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `.claude/agents/auditor-duplication-abstraction.md` | 1, 3 | D5: respect site rulings | Auditor drafts, Architect applies |
 | `.claude/agents/auditor-file-responsibility.md` | 1, 3 | D7: the split with the drift pass over module headers | Auditor drafts, Architect applies |
 | `.claude/agents/auditor-correctness-security.md` | 1, 3 | D5: respect site rulings | Auditor drafts, Architect applies |
+| `.claude/guides/story-plan-template.md` | 1 | The tech-debt template gains Inbound deferrals and Open questions; "N.1" becomes "a cleanup refactor"; a tech-debt story that changes what the app does closes by the full checklist | Architect |
+| `.claude/guides/story-done-checklist.md` | 1 | The same full-checklist line, in its tech-debt section | Architect |
 | `docs/audits/code-quality-audit-a6.md` | 2 | new, transient | Auditor |
 | Code named by the run's Fix Now | 3 | fixes | Coder |
 | The memory directory (outside the repo) | 4 | D1's pointers | Architect |
@@ -195,3 +202,39 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - its base is `a6-audited`;
   - it's the first audit of a story's own diff under the finished rules. Its report notes whether anything in D1–D9 still needs changing.
 - **To Epic 3.5's close:** D9's epic-wide pass.
+
+## Open questions
+
+- **For Nathan:** A5a and A5d each planned to close by the full checklist, audit included, and both signed off without an audit report. D10 assumes the first run is their audit. Is that right, or was one of them meant to have an audit of its own? And is folding a story's audit into a later run a practice you want? If it is, `story-done-checklist.md`'s "Before sign-off" should say so, since it requires the story's audit to be closed. (From the Auditor's batch 1 drafts.)
+  - **Answered 2026-10-06 (Nathan):** the first run covers everything since `epic-3-5-story-6-audited`, so it's A5a's and A5d's audit. That answers this run only. The checklist stays as it is, so a story's audit still closes before its sign-off.
+
+## Amendments
+
+- **2026-10-06, batch 1 (Auditor):**
+  - **D4:** the merge step reads the plans of stories in the range that closed without their own audit, from the archive. Before, their items were to be copied into the auditing plan. Nobody copied A5a's or A5d's, and reading is mechanical where copying depends on someone remembering.
+  - **D10:** A5 landed first, as four stories. Its code goes to all four passes. A5a and A5d called for audits that didn't run, so this run is theirs unless Nathan says otherwise. The code passes split by group, as the drift pass already did.
+  - **Batch 1's drafts** found three conflicts outside the audit files, for the Architect, and one question for Nathan. They're listed in `a6-batch-1-drafts/README.md`.
+- **2026-10-06, batch 1 (Architect's review):**
+  - **D4:** the index-pointer check reads the Living-docs handoff's "Planned passages now built", not Scope's wiki passages, since a Scope passage may be deferred while a story is open.
+  - **D10:** the first run's items for the PO and the Test Planner go in this plan's new Open questions, not its Handoff, now that the tech-debt template has Open questions.
+  - **The Architect's three conflicts** are resolved in two more drafts, `story-plan-template.md` and `story-done-checklist.md`. The changes to the Auditor's drafts are listed under "The Architect's review" in the drafts' README.
+  - **The question for Nathan** moved to Open questions.
+  - **Applying is still to do.** The session's permissions blocked the Architect from writing to `.claude/`, so Nathan copies the eight drafts over their live files, or allows the write.
+- **2026-10-06, batch 1 applied (Architect):** Nathan copied the eight drafts over their live files and deleted `a6-batch-1-drafts/`, so the README the two entries above cite is gone. What it held, for the record:
+  - **Conflicts inside the audit files, fixed by the Auditor's drafts:**
+    - the persona sent "looks deferred" findings to the Watch List, which broke both of its rules;
+    - the drift agent's "Not yours" restated the checker's rules and had fallen behind them. It now points at `code-comments.md`'s table;
+    - the guide and the persona disagreed on who may tag Covered by a story. Now a pass tags an epic, and only the orchestrator tags a story;
+    - classification predated the wiki README's page kinds (a page of shared rules, a page whose feature isn't designed yet);
+    - the persona's position line left out workphases and boards.
+  - **The Architect's three conflicts, resolved:**
+    - the tech-debt template gained Inbound deferrals and Open questions, and the guide's Close-out dropped its tech-debt exception;
+    - "N.1" left the template for "a cleanup refactor";
+    - the epic-wide audit's routes have one home, the guide, so `epic-done-checklist.md` is unchanged.
+  - **The Architect's review changes to the guide:**
+    - the pointer check reads the handoff (D4 above);
+    - an Open question in a plan the merge step read counts as already open;
+    - root `CLAUDE.md` goes to the drift pass as well as a directory's;
+    - a tech-debt story that changes what the app does gets its own audit and closes by the full checklist. The template and `story-done-checklist.md` say the same.
+  - **Check:** `npm run check:docs -- .claude` reports 0 hits on 22 files.
+- **2026-10-06, Nathan's answer (Architect):** the first run covers everything since `epic-3-5-story-6-audited`, A5a and A5d included, as D10 assumed. D10 and the Open question record it. Folding a story's audit into a later run isn't adopted as a practice, so `story-done-checklist.md` is unchanged.
