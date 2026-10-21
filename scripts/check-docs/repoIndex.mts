@@ -5,8 +5,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import { scriptKindOf } from './extract.mts';
-import { TRANSIENT_DIR, isSkippedDir, isSuiteFile, walkFiles } from './files.mts';
+import { scriptKindOf, unfencedLines } from './extract.mts';
+import { TRANSIENT_DIR, isSkippedDir, isSuiteFile, walkFiles, wikiPageOfReadme } from './files.mts';
 
 export interface RepoIndex {
   /** Undefined when no wiki page has that name. */
@@ -38,7 +38,6 @@ export interface IndexSource {
 
 const CODE_FILE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
 const SECTION_HEADING = /^#{1,6}\s+§?(\d+[a-z]?(?:\.\d+)*)\.?(?:\s|$)/;
-const WIKI_PAGE_README = /^docs\/wiki\/([^/]+)\/README\.md$/;
 
 /** After a case ID's prefix: the suite part (digits with an optional letter, or one capital), then the number. */
 const CASE_ID_TAIL = String.raw`-(?:\d+[a-z]?|[A-Z])\.\d+`;
@@ -85,7 +84,7 @@ export function loadIndex(root: string): RepoIndex {
   const all = walkFiles(root, '', isSkippedDir);
   const wikiPages = new Map<string, string>();
   for (const file of all) {
-    const page = WIKI_PAGE_README.exec(file)?.[1];
+    const page = wikiPageOfReadme(file);
     if (page) wikiPages.set(page, read(file));
   }
   return buildIndex({
@@ -101,13 +100,8 @@ export function loadIndex(root: string): RepoIndex {
 /** Section numbers from a page's headings, skipping fenced blocks. */
 export function headingSections(text: string): Set<string> {
   const found = new Set<string>();
-  let inFence = false;
-  for (const line of text.split('\n')) {
-    if (/^ {0,3}(?:`{3,}|~{3,})/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    const section = inFence ? undefined : SECTION_HEADING.exec(line)?.[1];
+  for (const { text: line } of unfencedLines(text)) {
+    const section = SECTION_HEADING.exec(line)?.[1];
     if (section) found.add(section);
   }
   return found;
@@ -115,17 +109,7 @@ export function headingSections(text: string): Set<string> {
 
 /** The case IDs a suite declares: each level-2 heading that opens with one, outside fences. */
 export function caseHeadings(text: string): string[] {
-  const found: string[] = [];
-  let inFence = false;
-  for (const line of text.split(/\r?\n/)) {
-    if (/^ {0,3}(?:`{3,}|~{3,})/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    const id = inFence ? undefined : CASE_HEADING.exec(line)?.[1];
-    if (id) found.push(id);
-  }
-  return found;
+  return unfencedLines(text).flatMap(({ text: line }) => CASE_HEADING.exec(line)?.[1] ?? []);
 }
 
 /** Every name the file declares at any depth: functions, variables, types, members. */

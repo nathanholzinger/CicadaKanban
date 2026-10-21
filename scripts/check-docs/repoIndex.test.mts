@@ -17,6 +17,19 @@ describe('headingSections', () => {
     ].join('\n');
     assert.deepEqual([...headingSections(text)], ['8', '1.1', '5a']);
   });
+
+  it('reads no section from inside a fence that shows a shorter one', () => {
+    const text = [
+      '````md',
+      '```',
+      '## 9. Shown in the example',
+      '```',
+      '## 10. Still the example',
+      '````',
+      '## 11. Real',
+    ];
+    assert.deepEqual([...headingSections(text.join('\n'))], ['11']);
+  });
 });
 
 describe('caseHeadings', () => {
@@ -34,6 +47,11 @@ describe('caseHeadings', () => {
       '## Open questions',
     ].join('\n');
     assert.deepEqual(caseHeadings(text), ['DRAG-5.1', 'TC-5a.1', 'TC-X.2']);
+  });
+
+  it('reads no case from inside a fence that shows a shorter one', () => {
+    const text = ['````md', '```', '## DRAG-5.9 — Shown in the example', '```', '````', '## DRAG-5.1 — Real'];
+    assert.deepEqual(caseHeadings(text.join('\n')), ['DRAG-5.1']);
   });
 });
 

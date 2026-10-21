@@ -1,9 +1,9 @@
-// The checker's rules, each run over one segment of checkable text. What each rule
-// enforces, and why, is in the comment guide; this file is only the matching.
+// The checker's rules: their IDs, and the matching each does over one segment of checkable
+// text, against the file's context and the repo index.
 
 import path from 'node:path';
 import type { Segment } from './extract.mts';
-import { TRANSIENT_DIR } from './files.mts';
+import { TRANSIENT_DIR, TRANSIENT_FOLDERS, resolveLink, wikiPageAt } from './files.mts';
 import type { RepoIndex } from './repoIndex.mts';
 
 export const RULE_IDS = [
@@ -139,7 +139,9 @@ const SECTION_REF = /(?:\bwiki\s+(<[^>\n]*>|[a-z0-9][a-z0-9-]*)\s+)?§\s?(\d+[a-
 const WIKI_PREFIX = /\bwiki\s+(<[^>\n]*>|[a-z0-9][a-z0-9-]*)\s*$/;
 /** What may sit between two references that share a page. */
 const JOINER = /^\s*(?:,|and|or|&|\/|–|-)\s*$/;
-const LINK_BEFORE = /\]\(([^)\s]+)\)\s*$/;
+/** A Markdown link's target, in the first group. */
+const LINK = /\]\(([^)\s]+)\)/;
+const LINK_BEFORE = new RegExp(`${LINK.source}\\s*$`);
 /** Nothing but indentation, a comment leader or a list marker. */
 const LINE_START = /^[\s/*>#-]*$/;
 const WORD_BEFORE = /(?<![\w/.-])([a-z0-9][a-z0-9-]*)\s*$/;
@@ -169,7 +171,8 @@ function sectionRefs(
     if (page === null && namedPage === null && context.inWiki) {
       const link = LINK_BEFORE.exec(lead);
       if (link) {
-        page = wikiPageOfLink(context.path, link[1]);
+        const target = resolveLink(context.path, link[1]);
+        page = target === null ? null : wikiPageAt(target);
         followsNonWikiLink = page === null;
       } else {
         page = context.wikiPage;
@@ -189,12 +192,6 @@ function sectionRefs(
     if (!sections) hit('wiki-pointer', at, `there is no wiki page "${page}"`);
     else if (!sections.has(section)) hit('wiki-pointer', at, `wiki ${page} has no §${section}`);
   }
-}
-
-function wikiPageOfLink(fromPath: string, target: string): string | null {
-  if (/^[a-z]+:/i.test(target) || target.startsWith('#')) return null;
-  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), target.split('#')[0]));
-  return /^docs\/wiki\/([^/]+)(?:\/(?:README\.md)?)?$/.exec(resolved)?.[1] ?? null;
 }
 
 // ── symbol-ref ─────────────────────────────────────────────────────────────────
@@ -235,8 +232,11 @@ function claudeRefs(text: string, hit: Hit): void {
 
 // ── transient-link ─────────────────────────────────────────────────────────────
 
-const TRANSIENT_PATH = /(?<![\w/.-])(?:[\w.-]+\/)*?docs\/(?:planning|audits|archive)\/[^\s`'"()<>[\]]*/g;
-const MARKDOWN_LINK = /\]\(([^)\s]+)\)/g;
+const TRANSIENT_PATH = new RegExp(
+  String.raw`(?<![\w/.-])(?:[\w.-]+\/)*?docs\/(?:${TRANSIENT_FOLDERS.join('|')})\/[^\s\`'"()<>[\]]*`,
+  'g',
+);
+const MARKDOWN_LINK = new RegExp(LINK.source, 'g');
 
 /** Reports each reference to a transient doc, and returns where they are. */
 function transientLinks(text: string, context: FileContext, index: RepoIndex, hit: Hit): Span[] {
@@ -253,10 +253,9 @@ function transientLinks(text: string, context: FileContext, index: RepoIndex, hi
     if (namesFile(relative, index)) report(match.index, reference.length, `"${reference}"`);
   }
   for (const match of text.matchAll(MARKDOWN_LINK)) {
-    const target = match[1];
-    if (/^[a-z]+:/i.test(target) || target.startsWith('#')) continue;
-    const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(context.path), target.split('#')[0]));
-    if (TRANSIENT_DIR.test(resolved) && namesFile(resolved, index)) report(match.index, match[0].length, `"${target}"`);
+    const resolved = resolveLink(context.path, match[1]);
+    if (resolved !== null && TRANSIENT_DIR.test(resolved) && namesFile(resolved, index))
+      report(match.index, match[0].length, `"${match[1]}"`);
   }
   if (index.transientNamePattern) {
     for (const match of text.matchAll(index.transientNamePattern))

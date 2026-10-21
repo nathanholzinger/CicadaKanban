@@ -1,8 +1,14 @@
-// Which files the checker reads: the default scope, what's never checked, and how
-// command-line paths expand. Paths are repo-relative with forward slashes throughout.
+// Which files the checker reads, and how it tells paths apart: the default scope, what's
+// never checked, how command-line paths expand, and the classifiers the other modules
+// share (code or Markdown, the transient folders, the wiki and the test plans, where a
+// relative link points), with `walkFiles`. Paths are repo-relative with forward slashes
+// throughout.
 
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
+
+export const WIKI_DIR = 'docs/wiki';
+export const TEST_PLANS_DIR = 'docs/test-plans';
 
 export const DEFAULT_SCOPE = [
   'client/src',
@@ -11,14 +17,15 @@ export const DEFAULT_SCOPE = [
   'tests',
   'scripts',
   '.claude',
-  'docs/wiki',
-  'docs/test-plans',
+  WIKI_DIR,
+  TEST_PLANS_DIR,
 ];
 
-/** Transient docs: plans, audits, and everything archived. */
-export const TRANSIENT_DIR = /^docs\/(?:planning|audits|archive)\//;
+/** The folders under `docs/` of transient docs: plans, audits, and everything archived. */
+export const TRANSIENT_FOLDERS = ['planning', 'audits', 'archive'] as const;
+export const TRANSIENT_DIR = new RegExp(`^docs/(?:${TRANSIENT_FOLDERS.join('|')})/`);
 
-const NEVER_CHECKED = ['docs/planning', 'docs/audits', 'docs/archive', 'tests/output'];
+const NEVER_CHECKED = [...TRANSIENT_FOLDERS.map(folder => `docs/${folder}`), 'tests/output'];
 const SKIPPED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage']);
 
 export function isSkippedDir(rel: string): boolean {
@@ -39,9 +46,31 @@ export function isCode(rel: string): boolean {
   return !rel.endsWith('.md');
 }
 
-/** A test-plan suite: every Markdown file under `docs/test-plans/` but the README and INDEX files. */
+export const isInWiki = (rel: string): boolean => rel.startsWith(`${WIKI_DIR}/`);
+export const isInTestPlans = (rel: string): boolean => rel.startsWith(`${TEST_PLANS_DIR}/`);
+
+/** A test-plan suite: every Markdown file under the test plans but the README and INDEX files. */
 export function isSuiteFile(rel: string): boolean {
-  return rel.startsWith('docs/test-plans/') && rel.endsWith('.md') && !/(?:^|\/)(?:README|INDEX)\.md$/.test(rel);
+  return isInTestPlans(rel) && rel.endsWith('.md') && !/(?:^|\/)(?:README|INDEX)\.md$/.test(rel);
+}
+
+const WIKI_PAGE_PATH = new RegExp(`^${WIKI_DIR}/([^/]+)(?:/(README\\.md)?)?$`);
+
+/** The page a wiki path names, a page's folder or its README; null for any other path. */
+export function wikiPageAt(rel: string): string | null {
+  return WIKI_PAGE_PATH.exec(rel)?.[1] ?? null;
+}
+
+/** The page a file is the README of; null for any other file. */
+export function wikiPageOfReadme(rel: string): string | null {
+  const match = WIKI_PAGE_PATH.exec(rel);
+  return match?.[2] ? match[1] : null;
+}
+
+/** Where a relative link in `fromPath` points, without its anchor; null for a URL or a bare anchor. */
+export function resolveLink(fromPath: string, target: string): string | null {
+  if (/^[a-z]+:/i.test(target) || target.startsWith('#')) return null;
+  return path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), target.split('#')[0]));
 }
 
 /** Every file under `startRel` (the repo root when empty), skipping directories `skip` names. */

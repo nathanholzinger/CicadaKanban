@@ -75,9 +75,18 @@ export function extractCode(fileName: string, text: string): Extracted {
   return { segments, markers };
 }
 
-export function extractMarkdown(text: string): Extracted {
-  const segments: Segment[] = [];
-  const markers: IgnoreMarker[] = [];
+export interface MarkdownLine {
+  text: string;
+  /** 1-based. */
+  line: number;
+}
+
+/**
+ * The lines of Markdown outside a fenced block. A fence closes with the same character, at
+ * least as long as the one that opened it, so a longer fence can show a shorter one inside.
+ */
+export function unfencedLines(text: string): MarkdownLine[] {
+  const found: MarkdownLine[] = [];
   let fence: string | null = null;
 
   text.split('\n').forEach((raw, i) => {
@@ -91,19 +100,29 @@ export function extractMarkdown(text: string): Extracted {
       fence = fenceMatch[1];
       return;
     }
+    found.push({ text: line, line: i + 1 });
+  });
 
+  return found;
+}
+
+export function extractMarkdown(text: string): Extracted {
+  const segments: Segment[] = [];
+  const markers: IgnoreMarker[] = [];
+
+  for (const { text: line, line: lineNumber } of unfencedLines(text)) {
     let visible = line;
     for (const comment of line.matchAll(/<!--([\s\S]*?)-->/g)) {
       const marker = parseMarker(comment[1]);
       if (!marker) continue;
-      markers.push({ line: i + 1, col: comment.index + 1, targetLine: i + 2, ...marker });
+      markers.push({ line: lineNumber, col: comment.index + 1, targetLine: lineNumber + 1, ...marker });
       visible =
         visible.slice(0, comment.index) +
         ' '.repeat(comment[0].length) +
         visible.slice(comment.index + comment[0].length);
     }
-    segments.push({ text: visible, line: i + 1, col: 1, source: 'markdown' });
-  });
+    segments.push({ text: visible, line: lineNumber, col: 1, source: 'markdown' });
+  }
 
   return { segments, markers };
 }
@@ -176,8 +195,11 @@ function testTitles(sourceFile: ts.SourceFile): Segment[] {
   return titles;
 }
 
+// Whether the callee starts from `it`, `test` or `describe`: through a member (`test.skip`),
+// and through the call or tagged template that makes the title call a second one
+// (`it.each(table)('title', fn)`, ``it.each`a | b`('title', fn)``).
 function isTestCallee(callee: ts.Expression): boolean {
-  let root = callee;
-  while (ts.isPropertyAccessExpression(root)) root = root.expression;
-  return ts.isIdentifier(root) && TEST_CALLEES.has(root.text);
+  if (ts.isPropertyAccessExpression(callee) || ts.isCallExpression(callee)) return isTestCallee(callee.expression);
+  if (ts.isTaggedTemplateExpression(callee)) return isTestCallee(callee.tag);
+  return ts.isIdentifier(callee) && TEST_CALLEES.has(callee.text);
 }

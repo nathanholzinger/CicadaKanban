@@ -206,6 +206,10 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `server/src/lib/itemHierarchy.ts`, `server/src/routes/items.ts`, `server/src/routes/projects.ts` | 3a done | #20: the item move and edit (through `validateHierarchyRequest`), `POST /items`, and the project create, edit and move ask `parentRefusal`, so #6 lands for all of them. #1: `POST /items` positions an attached child whatever its parent's workphase | Coder |
 | `server/src/lib/workflowItems.ts`, `server/src/routes/workflows.ts` | 3a done | #2: `getProjectsUsingWorkflow` is exported, and `GET /workflows/:id` answers a position scope only for items of the projects that use the workflow | Coder |
 | `server/tests/routes/items.test.ts`, `items.hierarchy.test.ts`, `workflows.test.ts` | 3a done | One test each for #1 (TC-3.4), #6 (ATT-4.11) and #2 (no ID); see Amendments | Coder |
+| `scripts/check-docs/extract.mts` | 3c done | #7: `isTestCallee` reads the title after an `.each` table or tagged template. #42: `unfencedLines`, the one reading of which lines sit inside a fence | Coder |
+| `scripts/check-docs/files.mts`, `rules.mts`, `check.mts`, `repoIndex.mts` | 3c done | #42: the transient folders (`TRANSIENT_FOLDERS`) and the docs layout (`isInWiki`, `isInTestPlans`, `wikiPageOfReadme`, `wikiPageAt`, `resolveLink`) each spelled once in `files.mts`, and the link pattern once in `rules.mts`. #18: the three headers | Coder |
+| `scripts/check-docs/extract.test.mts`, `repoIndex.test.mts`, `files.test.mts` (new) | 3c done | The tests for #7 and #42 | Coder |
+| `bruno/items/move-item.bru`, `create-item.bru`, `update-item.bru`; `eslint.config.mjs` | 3c done | #18: wiki pointers in the `wiki <page> §N` form, `move-item.bru`'s hierarchy block cut from about 30 lines of restated rules to a paragraph and a pointer, and the ESLint comment | Coder |
 | `client/src/components/KanbanCard.tsx` | 3b done | #3: the attach ghost is drawn for a Card that isn't the drag's containing Card (`containingCardId`, the test `placementFor` uses), not for one that isn't the Stub's direct parent, so a grandchild keeps its row at its Card's layer | Coder |
 | `client/src/components/workflow/dragRequest.ts` | 3b done | #5: `sendItemMove` records the placement with a `'first'`/`'last'` slot spelled as the anchor the request carries. `toRequest`'s sentence on the pending marker is scoped to a release that sends a request, which is #9's bullet for `dragRequest.ts:78–81`, done with it | Coder |
 | `client/src/components/CardList.tsx` | 3b done | #4: a done list's `SortableContext` takes a strategy with no transforms, and the line carries rule 6's index pointer | Coder |
@@ -282,6 +286,10 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **DRAG-3.24 stays `Open`, with no automated test.** The probe showed the report's trace, and #4's fix keeps the done list still. The permanent test is Story 10's.
 - **For the Test Reconciler:** the report's "`itemWriteReconciliation.test.ts` (no `'first'`/`'last'` marker case)" is answered by TC-2.28's new test. The same file's "case IDs only in comments" lines moved from `:16–17, 108` to `:18–19, 110`, two imports down.
 
+*From the Coder, batch 3c (2026-10-21).*
+
+- **For the Architect:** `bruno/` has no row in `documentation-standards.md`'s ownership table, and the checker doesn't read `.bru` files. The pointer and no-provenance rules hold in the request docs by hand: batch 3c fixed their pointers and cut `move-item.bru`'s hierarchy block, which restated about 30 lines of the wiki, and nothing keeps them that way. Whether the table names `bruno/`, and whether the checker reads a `.bru` file's `docs` block, is yours.
+
 ## Amendments
 
 - **2026-10-06, batch 1 (Auditor):**
@@ -355,3 +363,24 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **One edge the findings don't state.** The blue line in a done list is left as it was, for the PO (Open questions).
   - **Line numbers.** The report's line numbers for open findings in `KanbanCard.tsx`, `CardList.tsx`, `dragRequest.ts`, the two test files and `drag-5-stub-detach.spec.ts` (#9, #15, #17, #34, #38) moved by a few lines.
   - **Checks.** `npm run check` passes: 379 server tests, 433 client, 75 script tests, and `check:docs` at 0 hits. `npm run test:e2e` passes: 164 passed, 8 skipped.
+- **2026-10-21, batch 3c (the Coder): the checker.** #7, #42 and #18 are fixed, in `scripts/check-docs/`, `eslint.config.mjs` and the Bruno requests, as the batch's note says. The Close-out rows are filled in.
+  - **The fixes and their tests.**
+
+    | # | Fix | Test, in |
+    |---|---|---|
+    | 7 | `extract.mts::isTestCallee` steps through a call or a tagged template to the identifier, so the title after `it.each(table)` or ``it.each`…` `` is read | `extract.test.mts`: the title test gains both forms, and a `helper(it)(…)` that isn't a test |
+    | 42, fences | `extract.mts::unfencedLines`, which `extractMarkdown`, `headingSections` and `caseHeadings` all map over | `extract.test.mts` for `unfencedLines`, and one nested-fence case each for the two index functions in `repoIndex.test.mts` |
+    | 42, folders | `files.mts::TRANSIENT_FOLDERS` builds `TRANSIENT_DIR`, the never-checked set and `rules.mts`'s path matcher | `files.test.mts` (new): for each folder in the list, it's never checked, counts as transient, and a file in it named in a comment is a `transient-link` |
+    | 42, layout and links | `files.mts` holds `WIKI_DIR`, `TEST_PLANS_DIR`, `isInWiki`, `isInTestPlans`, `wikiPageOfReadme`, `wikiPageAt` and `resolveLink`. `check.mts::contextOf`, `repoIndex.mts::loadIndex` and both link readers in `rules.mts` use them, and the link pattern is spelled once | `files.test.mts`: the page a path names, the wiki against the test plans, and where a link resolves |
+    | 18 | The headers of `rules.mts`, `check.mts` and `files.mts`; the Bruno pointers and the hierarchy block; the ESLint comment | None: comments and docs |
+  - **#7 turns up nothing.** The 14 `.each` titles in `client/src` are read now, and `check:docs` reports no hit on any of them.
+  - **Shown to fail without the fix.** Each reverted in turn, with the tests that fail:
+    - `isTestCallee` back to property accesses only, and with calls but no tagged template: the title test, each time.
+    - `headingSections` and `caseHeadings` flipping on any fence line again: their nested-fence cases. `unfencedLines` closing on any fence line: its own test and both of those.
+    - The path matcher, the never-checked set and `TRANSIENT_DIR` each re-spelled without one folder: the new folder test, each time. The last also breaks the `transient-link` tests.
+    - `resolveLink` resolving from the repo root: its test, and the `transient-link` and `wiki-pointer` tests.
+  - **#18's Bruno part.** `move-item.bru`'s pointer for the rule that a request names an anchor and a side now says `wiki positioning §2`, and the others use `wiki <page> §N`. The hierarchy block no longer restates the wiki's rules. It keeps the request's shape and the response, and points at `wiki item-attachment` §2a, §4, §5, §7, §8 and §9. The checker doesn't read `.bru` files, so I ran it over a scratch Markdown copy of the three `docs` blocks: no hits, and the copy is deleted.
+  - **Two edges the findings don't state.**
+    - **A fence's closing line.** `unfencedLines` closes a fence on any line of the same character and length, as the old `extractMarkdown` did, so a line such as "```ts" inside a plain "```" fence ends it. CommonMark allows only spaces after a closing fence. No page nests fences that way, so nothing reads wrongly today.
+    - **`bruno/` in the standards.** It's in Open questions, for the Architect.
+  - **Checks.** `npm run check` passes: 379 server tests, 433 client, 83 script tests, and `check:docs` at 0 hits on 286 files. `npm run test:e2e` isn't run: nothing in this batch touches the app's behavior or the E2E code.

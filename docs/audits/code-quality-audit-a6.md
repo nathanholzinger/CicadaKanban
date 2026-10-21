@@ -497,9 +497,13 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 4 | Fixed | Batch 3b, after a probe that reproduced it |
 | 5 | Fixed | Batch 3b |
 | 6 | Fixed | Batch 3a, through #20 |
-| 7–19 | open | — |
+| 7 | Fixed | Batch 3c |
+| 8–17 | open | — |
+| 18 | Fixed | Batch 3c |
+| 19 | open | — |
 | 20 | Fixed | Batch 3a |
-| 21–42 | open | — |
+| 21–41 | open | — |
+| 42 | Fixed | Batch 3c |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |
 | 45 | Routed | `epic-4-decisions.md` §12, the same block |

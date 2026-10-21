@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { extractCode, extractMarkdown, parseMarker } from './extract.mts';
+import { extractCode, extractMarkdown, parseMarker, unfencedLines } from './extract.mts';
 
 const lines = (...parts: string[]): string => parts.join('\n');
 const commentTexts = (fileName: string, text: string): string[] =>
@@ -41,18 +41,21 @@ describe('extractCode: comments', () => {
 });
 
 describe('extractCode: test titles', () => {
-  it('reads the titles of it, test, describe and their members', () => {
+  it('reads the titles of it, test, describe and their members, and of an `.each` table', () => {
     const text = lines(
       "test.describe('outer', () => {",
       "  it('inner', () => {});",
+      "  it.each([1, 2])('table %i', () => {});",
+      "  test.each`a | b`('tagged', () => {});",
       '  test.skip(`skipped`, () => {});',
       '});',
       "helper('not a test');",
+      "helper(it)('not a test either');",
     );
     const titles = extractCode('a.test.ts', text)
       .segments.filter(segment => segment.source === 'title')
       .map(segment => segment.text);
-    assert.deepEqual(titles, ['outer', 'inner', 'skipped']);
+    assert.deepEqual(titles, ['outer', 'inner', 'table %i', 'tagged', 'skipped']);
   });
 
   it('points a title at its first character, inside the quotes', () => {
@@ -89,6 +92,25 @@ describe('parseMarker', () => {
       rules: ['transient-link'],
       reason: 'tracked there',
     });
+  });
+});
+
+describe('unfencedLines', () => {
+  it('closes a fence only with the same character, at least as long as the one that opened it', () => {
+    const text = lines('before', '````md', '```', 'inside', '```', '````', 'between', '~~~', '````', '~~~', 'after');
+    assert.deepEqual(unfencedLines(text), [
+      { text: 'before', line: 1 },
+      { text: 'between', line: 7 },
+      { text: 'after', line: 11 },
+    ]);
+  });
+
+  it('numbers lines from 1 and drops each carriage return', () => {
+    assert.deepEqual(unfencedLines('a\r\nb\r\n'), [
+      { text: 'a', line: 1 },
+      { text: 'b', line: 2 },
+      { text: '', line: 3 },
+    ]);
   });
 });
 

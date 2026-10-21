@@ -3,13 +3,14 @@
 // so exceptions stay visible and can't go stale.
 
 import { extractCode, extractMarkdown, type IgnoreMarker } from './extract.mts';
-import { isCode } from './files.mts';
+import { isCode, isInTestPlans, isInWiki, wikiPageOfReadme } from './files.mts';
 import type { RepoIndex } from './repoIndex.mts';
 import { checkSegment, isRuleId, type FileContext, type Finding } from './rules.mts';
 
 /**
- * `only` limits what's reported to the named rules. Every rule still runs, so a marker for
- * a rule that isn't reported is still judged against what it covers.
+ * `only` limits what's reported to the named rules. Every rule still runs, so a marker is
+ * judged as in a full run: one that names several rules counts as used when any of them
+ * fires, a rule that isn't reported included.
  */
 export function checkFile(
   rel: string,
@@ -28,12 +29,7 @@ export function checkFile(
 }
 
 export function contextOf(rel: string): FileContext {
-  return {
-    path: rel,
-    inWiki: rel.startsWith('docs/wiki/'),
-    wikiPage: /^docs\/wiki\/([^/]+)\/README\.md$/.exec(rel)?.[1] ?? null,
-    inTestPlans: rel.startsWith('docs/test-plans/'),
-  };
+  return { path: rel, inWiki: isInWiki(rel), wikiPage: wikiPageOfReadme(rel), inTestPlans: isInTestPlans(rel) };
 }
 
 function applyMarkers(findings: Finding[], markers: IgnoreMarker[], only: ReadonlySet<string> | null): Finding[] {

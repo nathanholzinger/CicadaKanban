@@ -31,39 +31,23 @@ docs {
   existing value. This is also the shape the MCP `move_item` tool sends.
 
   No caller names a final position: a request with a `position` is a 400
-  that says to name an anchor and side instead — see
-  `docs/wiki/item-positioning/README.md` §2.
+  that says to name an anchor and side instead (wiki positioning §2).
 
-  ## Hierarchy (Epic 3.5)
+  ## Hierarchy
 
   `parentId` (string, or `null` for "make top-level") and `isAttached`
   (boolean) can ride along with any of the above and commit in the same
   transaction — e.g. the board's "drop Card onto Card" gesture sends
-  `{ parentId, isAttached: true, anchorId, side }`. Rules:
+  `{ parentId, isAttached: true, anchorId, side }`. Omitting `isAttached`
+  keeps the item's current state; nothing attaches by default. Never send
+  `projectId`: it's derived from the parent.
 
-  - Omitting `isAttached` keeps the item's current state; nothing attaches
-    by default. `isAttached: true` with no resulting parent is a 400.
-  - An attached item inherits its parent's workphase; sending a different
-    `workphaseId` alongside is a 400.
-  - A write that leaves an attached item Free (a detach, or `parentId:
-    null`) and names no `workphaseId` leaves it in the workphase it was
-    shown in: its nearest Free ancestor's. If that ancestor has none, it's
-    a 400; name a `workphaseId` (or `null`, for none) or file the ancestor
-    first.
-  - A Free item's `workphaseId` must belong to the workflow its project
-    uses; another workflow's is a 400.
-  - Cross-project parents are allowed — `projectId` is derived from the
-    parent and cascades to the whole subtree. Never send `projectId`.
-  - A reparent into a project on a different workflow is a 400 when the
-    moved subtree would hold a Free item: the item ends Free, or any
-    descendant is detached. An item that ends attached, with no detached
-    descendant, may cross, and takes the new parent's workphase.
-  - Rejected for a parent that doesn't exist, is the item itself or one of
-    its descendants, or would put the resulting tree past the depth cap.
-  - `anchorId` is validated against the scope the item will be in *after*
-    the reparent (a new sibling under the target parent is a legal anchor).
+  A write the hierarchy rules refuse is a 400. The rules are the wiki's, in
+  wiki item-attachment §2a, §4, §5, §7, §8 and §9: the workphase a write
+  leaves the item in, the position it resolves, what makes a parent legal,
+  the depth cap, and a parent in another project.
 
   The response is the item row plus, only when a reindex fired, a
-  `reindexed: [{id, position}]` collection covering every renumbered item.
-  See `docs/wiki/item-attachment/README.md` §1, §4–§11a.
+  `reindexed: [{id, position}]` collection covering every renumbered item
+  (wiki positioning §7).
 }

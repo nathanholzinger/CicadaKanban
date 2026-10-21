@@ -11,7 +11,7 @@ export default defineConfig([
     files: ['tests/**/*.ts', 'playwright.config.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
-      // Node for the specs and helpers; browser for the bodies passed to page.evaluate.
+      // Node for the specs and helpers; browser for the bodies passed to a locator's evaluate and evaluateAll.
       globals: { ...globals.node, ...globals.browser },
     },
   },
