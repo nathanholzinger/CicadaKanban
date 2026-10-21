@@ -493,7 +493,9 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | # | Disposition | Where it landed (routes) |
 |---|---|---|
 | 1–2 | Fixed | Batch 3a |
-| 3–5 | open | — |
+| 3 | Fixed | Batch 3b |
+| 4 | Fixed | Batch 3b, after a probe that reproduced it |
+| 5 | Fixed | Batch 3b |
 | 6 | Fixed | Batch 3a, through #20 |
 | 7–19 | open | — |
 | 20 | Fixed | Batch 3a |

@@ -1,9 +1,9 @@
 // The one card list — a merged column's list, an expanded column's sub-row, an
-// Unsorted group: the flex/gap container, the SortableContext, the KanbanCard
-// wiring, the droppable-surface chrome, and the DragCarveFrame wrap when the
-// list is a drag region.
+// Unsorted group: the flex/gap container, the SortableContext (and whether its
+// rows slide, below), the KanbanCard wiring, the droppable-surface chrome, and
+// the DragCarveFrame wrap when the list is a drag region.
 
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, type SortingStrategy } from '@dnd-kit/sortable';
 import type { Item, ItemType } from '../types';
 import KanbanCard from './KanbanCard';
 import { DragCarveFrame } from './BandGuides';
@@ -42,6 +42,14 @@ interface CardListProps {
   /** Registers the list (never a label above it) as a drag region via DragCarveFrame. Omit for a list that is no region, such as Unsorted's. */
   region?: CardListRegionProps;
 }
+
+// A done list's rows never slide during a drag: its Free items carry no
+// position and are ordered by completion, so there is no slot for the drag to
+// choose and no gap for dnd-kit's shuffle to open. With no transform on any row,
+// the carried item's ghost stays where a release will land it, as the placement
+// already says (wiki board-drag-interaction §2, rule 6; `placement.ts::placementFor`
+// reads no `over` in a terminal region).
+const NO_SHUFFLE: SortingStrategy = () => null;
 
 // Every card list's wiring, spelled once — BoardColumn's merged list and
 // WorkphaseCardList's (sub-rows and Unsorted groups) render through it. Two
@@ -83,7 +91,10 @@ export default function CardList({
   // would double-register the same sortable ids.
   const list = (
     <div ref={chromeOnFrame ? undefined : droppable ? containerRef : undefined} className={containerClass}>
-      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={items.map(i => i.id)}
+        strategy={region?.isTerminal ? NO_SHUFFLE : verticalListSortingStrategy}
+      >
         {items.map(item => (
           <KanbanCard
             key={item.id}

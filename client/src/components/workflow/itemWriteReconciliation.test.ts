@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
+import { sendItemMove, toRequest } from './dragRequest';
 import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
+import type { ItemWriteTracker } from './useItemManagement';
 import {
   EMPTY_ITEM_LIST_STATE,
   applyItemWriteResponse,
@@ -202,6 +204,44 @@ describe('the preview through its responses', () => {
       const next = completeItemWrite(state, item('X', { position: resolved }), placement);
       expect(todoList(next)).toEqual(['A', 'X', 'C', 'E']);
       expect(next.inversions).toEqual([]);
+    }
+  });
+
+  it("TC-2.28: a top or bottom band drop is marked pending as the anchor it sends, so the server's answer is no inversion", async () => {
+    // Positions run across the workphases: Todo holds A and C, Doing holds B.
+    const items = () => [
+      item('A', { workphaseId: 'todo', position: 1 }),
+      item('B', { workphaseId: 'doing', position: 2 }),
+      item('C', { workphaseId: 'todo', position: 3 }),
+      item('X', { workphaseId: 'todo', position: 4 }),
+    ];
+    const origin: Placement = { workphaseId: 'todo', slot: 'existing' };
+    // X popped out of Todo and released in Doing's band, whose list holds only B.
+    const cases: Array<[string, Placement, number, string[]]> = [
+      ['top', { workphaseId: 'doing', slot: 'first' }, 1.5, ['A', 'X', 'B', 'C']], // before B
+      ['bottom', { workphaseId: 'doing', slot: 'last' }, 2.5, ['A', 'B', 'X', 'C']], // after B
+    ];
+    for (const [band, ghost, resolved, order] of cases) {
+      const response = item('X', { workphaseId: 'doing', position: resolved });
+      const request = toRequest({ workphaseId: 'todo' }, origin, ghost, [{ id: 'B' }])!;
+      // The marker the send block records for the write, as the board would hold it.
+      let marker: Placement | null = null;
+      const writes: ItemWriteTracker = {
+        begin: (_id, pending) => {
+          marker = pending;
+          return 1;
+        },
+        complete: () => ({ applied: true, needsResync: false }),
+        fail: () => {},
+        isPending: () => true,
+      };
+      const moveItem = async () => response;
+      await sendItemMove(moveItem, 'X', request, ghost, writes, () => {});
+
+      const state = withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: items() }, 'X', marker);
+      const next = completeItemWrite(state, response, marker);
+      expect(freeItemOrder(next.items, next.placements), band).toEqual(order);
+      expect(next.inversions, band).toEqual([]);
     }
   });
 

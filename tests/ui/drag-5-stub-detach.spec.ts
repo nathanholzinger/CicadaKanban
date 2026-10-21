@@ -107,6 +107,43 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(unchanged.parentId).toBe(s1.id); // a release with nothing hovered writes nothing
   });
 
+  test("DRAG-5.13: a grandchild Stub popped out to its containing Card's layer keeps its row and its own children drawn, and a release there writes nothing", async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const name = 'Grandchild Stub Set Back Down Project';
+    const { project, workflow } = await seedTemplatedWorkflow(request, name);
+    const [todo] = pickWorkphases(workflow, 'Todo');
+    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
+    const s1 = await seedItem(request, { title: 'S1', parentId: p.id });
+    const s1a = await seedItem(request, { title: 'S1a', parentId: s1.id });
+    const s1a1 = await seedItem(request, { title: 'S1a1', parentId: s1a.id });
+    const before = await fetchItem(request, s1a.id);
+
+    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await projectSidebar.openBoard(name);
+
+    await pickUp(page, itemRow(page, s1a.id).getByRole('button', { name: 'S1a', exact: true }));
+    await awaitDragContext(page, descendantsRegionKey(p.id));
+    await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
+    await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
+
+    // The Card layer's drop for P's own Stub is "set it back down", so its row
+    // stays where it is, with its children, rather than drawing as an attach
+    // ghost under S1 (which has no `data-item-id` and none of its children).
+    await expect(itemRow(page, s1a.id)).toBeVisible();
+    await expect(itemRow(page, s1a1.id)).toBeVisible();
+
+    await release(page);
+
+    const after = await fetchItem(request, s1a.id);
+    expect(after.parentId).toBe(s1.id);
+    expect(after.isAttached).toBe(1);
+    expect(after.position).toBe(before.position);
+    await expect(itemRow(page, s1a.id)).toBeVisible();
+  });
+
   test('DRAG-5.12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
     page,
     request,

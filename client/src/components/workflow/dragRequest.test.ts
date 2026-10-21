@@ -251,9 +251,10 @@ describe('TC-2.11: toRequest', () => {
 // runtime or rendered component needed.
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
-  // The pending marker is just the placement that produced `input`
-  // (toRequest's own input), never a separate derivation, so this is
-  // pinned directly rather than built from a function.
+  // The pending marker is the placement that produced `input` (toRequest's
+  // own input), with its slot already the anchor `input` carries, so the
+  // block records it as it is. Pinned directly rather than built from a
+  // function.
   const pending: Placement = { workphaseId: 'wp-2', slot: { anchorId: 'anchor-1', side: 'after' } };
   const fakeItem = (id: string) => makeItem(id, { isAttached: 0, workphaseId: 'wp-2', position: 1.5 });
   const tracker = () => ({

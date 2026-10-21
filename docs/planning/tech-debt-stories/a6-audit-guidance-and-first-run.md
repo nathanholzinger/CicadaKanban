@@ -206,7 +206,11 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `server/src/lib/itemHierarchy.ts`, `server/src/routes/items.ts`, `server/src/routes/projects.ts` | 3a done | #20: the item move and edit (through `validateHierarchyRequest`), `POST /items`, and the project create, edit and move ask `parentRefusal`, so #6 lands for all of them. #1: `POST /items` positions an attached child whatever its parent's workphase | Coder |
 | `server/src/lib/workflowItems.ts`, `server/src/routes/workflows.ts` | 3a done | #2: `getProjectsUsingWorkflow` is exported, and `GET /workflows/:id` answers a position scope only for items of the projects that use the workflow | Coder |
 | `server/tests/routes/items.test.ts`, `items.hierarchy.test.ts`, `workflows.test.ts` | 3a done | One test each for #1 (TC-3.4), #6 (ATT-4.11) and #2 (no ID); see Amendments | Coder |
-| `client/src/components/workflow/CLAUDE.md` | 3e | #11, and its file list after #36 and #37 | Coder |
+| `client/src/components/KanbanCard.tsx` | 3b done | #3: the attach ghost is drawn for a Card that isn't the drag's containing Card (`containingCardId`, the test `placementFor` uses), not for one that isn't the Stub's direct parent, so a grandchild keeps its row at its Card's layer | Coder |
+| `client/src/components/workflow/dragRequest.ts` | 3b done | #5: `sendItemMove` records the placement with a `'first'`/`'last'` slot spelled as the anchor the request carries. `toRequest`'s sentence on the pending marker is scoped to a release that sends a request, which is #9's bullet for `dragRequest.ts:78–81`, done with it | Coder |
+| `client/src/components/CardList.tsx` | 3b done | #4: a done list's `SortableContext` takes a strategy with no transforms, and the line carries rule 6's index pointer | Coder |
+| `client/src/components/workflow/itemWriteReconciliation.test.ts`, `dragRequest.test.ts`, `tests/ui/drag-5-stub-detach.spec.ts` | 3b done | One test each for #5 (TC-2.28) and #3 (DRAG-5.13). #4 has none: its permanent test is Story 10's. `dragRequest.test.ts` gains a reworded comment only | Coder |
+| `client/src/components/workflow/CLAUDE.md` | 3b, 3e | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37 | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
@@ -267,6 +271,17 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **TC-3.4's setup has a parent with a workphase.** Its ID is on the test for a parent with none (wiki item-positioning §3: the scope is the parent's children, not a workphase). If that variation wants a case of its own, the test's ID follows.
   - **ATT-4.11 names a root item as the shallower target.** wiki hierarchy-placement §6's "the top level included" isn't in its text. The test for the top level carries its ID, and runs it through both writes.
 
+*From the Coder, batch 3b (2026-10-21).*
+
+- **For the PO:**
+  - **The blue line in a done list.** With #4 the rows hold still, but the line still names a neighbor as if the ghost had slid: with `X` carried over `D1` in `D1, X, D2`, it draws at `D1`'s top, where `X` isn't. wiki board-drag-interaction §2's rule 3 says the highlight and the release name the same card, and a done list's release names none. `epic-4-decisions.md` §12's zoom-in question uses that highlight to pick the Card, and the PO's recommendation there (zoom into the Card under the cursor) would settle what the line means, so it's left for that decision.
+  - **§10's pending marker.** It says the placement is the ghost during the drag and the pending marker after release. The marker is now that placement with a `'first'` or `'last'` slot spelled as the anchor the request carries (#5). Nothing the user sees differs; add a clause if the wiki should say it.
+- **For the Test Planner:**
+  - **DRAG-5.13's test says more than its text.** The case says a release at the Card layer sets the grandchild back down. The test also asserts its row, and its own children's rows, stay drawn there (#3). If the drawing belongs in the case, the ID is already on the test.
+  - **TC-2.28 and a band drop.** The case places `X` by an anchor under a narrow view. The new test is the same promise for a release in a top or bottom band, where the ghost's slot is `'first'` or `'last'` and the request carries an anchor. DRAG-6.1 says the board shows "the relation the request carries", first and last among them; for a band drop, the marker after release is the anchor.
+  - **DRAG-3.24 stays `Open`, with no automated test.** The probe showed the report's trace, and #4's fix keeps the done list still. The permanent test is Story 10's.
+- **For the Test Reconciler:** the report's "`itemWriteReconciliation.test.ts` (no `'first'`/`'last'` marker case)" is answered by TC-2.28's new test. The same file's "case IDs only in comments" lines moved from `:16–17, 108` to `:18–19, 110`, two imports down.
+
 ## Amendments
 
 - **2026-10-06, batch 1 (Auditor):**
@@ -322,3 +337,21 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **`POST /items`' error order moves.** The shared check runs before the route resolves the project, so a create that names a parent in another project that is also at the cap gets the cap's message, not "belongs to a different project". No wiki rule or test-plan case orders them. 3d rebuilds the create's checks (#19) and settles the order it keeps.
     - **`assertWithinProjectDepthCap` is private,** since only `itemTree.ts` calls it once the project routes ask `parentRefusal`. `assertWithinDepthCap` stays exported, and takes a null parent: its lib tests, `dragClassification.ts`'s comment and root `CLAUDE.md` name it.
   - **Checks.** `npm run check` passes: 379 server tests, 432 client, 75 script tests, and `check:docs` at 0 hits. `npm run test:e2e` passes: 163 passed, 8 skipped.
+- **2026-10-21, batch 3b (the Coder): client correctness.** #3, #5 and #4 are fixed. #3 and #5 each gained the test their finding names; #4 gained none, as the batch's note says. The Close-out rows are filled in.
+  - **The fixes and their tests.**
+
+    | # | Fix | Test, in |
+    |---|---|---|
+    | 3 | `KanbanCard.tsx` draws the attach ghost when `cardDragSession.containingCardId !== item.id`, the question `placementFor` asks, in place of the Stub's direct parent | `tests/ui/drag-5-stub-detach.spec.ts`, DRAG-5.13: `S1a`, a grandchild of `P` with a child of its own, is carried out to `P`'s Card layer. Its row and its child's stay drawn, and the release writes nothing |
+    | 5 | `dragRequest.ts::sendItemMove` records the placement with an anchor's slot in place of `'first'`/`'last'`, when the request carries an anchor | `itemWriteReconciliation.test.ts`, TC-2.28: a top-band and a bottom-band release into a column whose list holds `B`, with the order the answer should leave and no inversion. It goes through `toRequest`, `sendItemMove` and `completeItemWrite`, so it fails if any link drops the anchor |
+    | 4 | `CardList.tsx`: a done list's `SortableContext` takes a strategy that returns no transform, with rule 6's pointer beside it | None. Story 10 owns DRAG-3.24's permanent test |
+  - **#4's probe.** A throwaway spec on the test stack seeded the report's `D1, X, D2` done column and, beside it, an active column for control. Carrying `X` over `D1` slid `D1` down 104px and `X`'s ghost up 82px into its slot, as in the control column, so the report's trace held. The release wrote nothing, and `X` stayed between `D1` and `D2`. After the fix every row in the done column kept `transform: none` over `D1` and `D2` alike, the control column still slid, and the release still wrote nothing. The probe is deleted.
+  - **Where #5's fix sits.** The report names `useBoardDnd.ts::commitRelease`. It's in `sendItemMove`, the one send block `commitRelease` calls, so `sendItemMove`'s own unit tests reach the call and the hook isn't left with an untested line. The helper there is private.
+  - **#9's two bullets for these files.** `dragRequest.ts:78–81` is done: #5 made its sentence false, so it was rewritten, scoped to a release that sends a request. `KanbanCard.tsx:141–148` is not: #3 changed what the comment says, but it still sits above `useDragSession()`, and 3e moves it.
+  - **Shown to fail without the fix.** Each reverted in turn:
+    - #3 back to the direct parent: DRAG-5.13's new test, on `element(s) not found` for `S1a`'s row, and no other.
+    - #5's anchor dropped in the helper, and `sendItemMove` recording the placement as drawn: TC-2.28's new test, each time.
+    - #4: nothing automated to run; the probe above is the before and after.
+  - **One edge the findings don't state.** The blue line in a done list is left as it was, for the PO (Open questions).
+  - **Line numbers.** The report's line numbers for open findings in `KanbanCard.tsx`, `CardList.tsx`, `dragRequest.ts`, the two test files and `drag-5-stub-detach.spec.ts` (#9, #15, #17, #34, #38) moved by a few lines.
+  - **Checks.** `npm run check` passes: 379 server tests, 433 client, 75 script tests, and `check:docs` at 0 hits. `npm run test:e2e` passes: 164 passed, 8 skipped.

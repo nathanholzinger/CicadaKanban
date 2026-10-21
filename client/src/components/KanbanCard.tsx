@@ -19,7 +19,7 @@ import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
-import { hierarchyRows, parentOpinionOf } from './workflow/itemListOps';
+import { hierarchyRows } from './workflow/itemListOps';
 import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
@@ -139,12 +139,15 @@ export default function KanbanCard({
   const zoomCandidatePhase = useZoomCandidatePhase(item.id);
   const dragTuning = useDragTuning();
   // The active drag's own ghost row — previewed attaching here, not a real
-  // Stub yet — iff its `origin`'s parent *wasn't* already this Card. That
-  // excludes a Stub's own home section (its origin's parent already is this
-  // Card), which would otherwise be misidentified as an attach — hiding the
-  // dragged row entirely, with no `data-item-id` to find it by. Once it
-  // *is* the ghost, it renders as a plain preview instead of a second,
-  // differently-typed sortable registration under its id.
+  // Stub yet — iff this Card *isn't* the drag's containing Card. That
+  // excludes a Stub's own home section, whatever its depth there (a
+  // grandchild's direct parent is another Stub, so its `origin`'s parent is
+  // no test of it; `placement.ts::placementFor` asks this same question),
+  // which would otherwise be misidentified as an attach — hiding the dragged
+  // row entirely, with no `data-item-id` to find it by, and the rows beneath
+  // it with it. Once it *is* the ghost, it renders as a plain preview
+  // instead of a second, differently-typed sortable registration under its
+  // id.
   const cardDragSession = useDragSession();
   // The static ghost above is Card layer's own auto-drop preview only. Once
   // the drag has zoomed *past* Card layer into this Card's own Descendants
@@ -154,9 +157,9 @@ export default function KanbanCard({
   // registered there for `dropAnchorFor` to read its slot, the same way
   // any Stub already reordering within its own section is. `pop` is never
   // optional once a session exists (`DragSessionContext.ts`), so checking
-  // `cardDragSession` itself is enough to also read `.pop`/`.origin` safely.
+  // `cardDragSession` itself is enough to also read `.pop` safely.
   const attachGhostId =
-    cardDragSession && contextLayer === 'card' && parentOpinionOf(cardDragSession.origin) !== item.id
+    cardDragSession && contextLayer === 'card' && cardDragSession.containingCardId !== item.id
       ? cardDragSession.activeItem.id
       : undefined;
   // While locked at *this* Card's own Descendants layer, the previewed

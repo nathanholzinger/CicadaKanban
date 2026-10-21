@@ -1,6 +1,7 @@
 // The request-shape half of the board drag gesture: toRequest (placement →
 // API request), isIdentity (recognizes a no-op), and sendItemMove (the one
-// "send, fold in, or resync" block). The collision/anchor-naming half is
+// "send, fold in, or resync" block, which also settles the pending marker the
+// write stays marked with). The collision/anchor-naming half is
 // dragCollision.ts.
 
 import type { Item } from '../../types';
@@ -75,9 +76,9 @@ export function isIdentity(origin: Placement, placement: Placement, others: read
 // never a second answer re-derived from dnd-kit's `over`/`side`, so the
 // preview shows where the write will land (wiki board-drag-interaction
 // §10). `null` for a `null` placement (drawn where it already is) or an
-// identity alike — the caller sends nothing either way, and the placement
-// itself (never a value re-derived from this request) is what stays on as
-// the pending marker. `item` is only consulted for its *current*
+// identity alike — the caller sends nothing either way. For a release that
+// does send one, the placement is what stays on as the pending marker
+// (`sendItemMove`). `item` is only consulted for its *current*
 // `workphaseId`, to decide whether the field is even worth sending — never
 // for the identity check itself (that's `origin`'s job).
 export function toRequest(
@@ -116,6 +117,20 @@ export function toRequest(
   return { workphaseId, ...anchorFor(placement.slot, others) };
 }
 
+// What stays on as the pending marker while the request is in flight: the
+// ghost's placement, its slot spelled as the anchor the request carries when
+// it carries one. `'first'`/`'last'` are ordinals in the *target list* (a
+// column's top or bottom band), but the inversion tripwire reads the marker
+// over the whole workflow's Free list (`itemWriteReconciliation.ts::freeItemOrder`),
+// where `'first'` is first in the workflow, not in the column. The anchor
+// draws the same picture in the target list and says the same thing in both,
+// so the tripwire judges the anchor the server got
+// (wiki board-drag-interaction §10).
+function pendingPlacementFor(placement: Placement, request: MoveItemInput): Placement {
+  if (request.anchorId === undefined || request.side === undefined) return placement;
+  return { ...placement, slot: { anchorId: request.anchorId, side: request.side } };
+}
+
 // The one "send a move, fold the response in, or resync" block
 // (wiki board-drag-interaction §10): on success the response is folded in
 // through the write tracker (in reconciliation order, stale responses
@@ -125,6 +140,7 @@ export function toRequest(
 // reindex: the row itself is rightly discarded (a newer write for the same
 // item supersedes it), but the pairs are real, committed renumbering of
 // other rows that a silently-dropped response would otherwise take with it.
+// The write stays marked pending as `pendingPlacementFor` spells the placement.
 // Every board-gesture write path — Card, Stub, and Descendants releases
 // alike — goes through `toRequest` and then here, by way of
 // `useBoardDnd.ts::commitRelease`, so the contract can't drift between
@@ -138,7 +154,7 @@ export async function sendItemMove(
   writes: ItemWriteTracker,
   loadBoard: () => void,
 ): Promise<void> {
-  const seq = writes.begin(activeId, pending);
+  const seq = writes.begin(activeId, pending && pendingPlacementFor(pending, input));
   try {
     const updated = await moveItem(activeId, input);
     const { needsResync } = writes.complete(activeId, seq, updated);

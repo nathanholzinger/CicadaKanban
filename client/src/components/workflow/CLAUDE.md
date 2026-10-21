@@ -24,7 +24,10 @@ its own header.
   it: "after" the row above, "before" the row below
   (`dragCollision.ts::dropAnchorFor`, which every reader — the blue line, the pop
   machine, the release — asks the same way, through `namedAnchorFor`; a bare, non-row
-  `over` names no anchor at all). Card: `origin` itself ("set back down") for the
+  `over` names no anchor at all). A done list is the exception: it has no slot to
+  choose, so its rows never slide (`CardList.tsx`'s no-shuffle strategy), and the
+  ghost stays where a release will land it (wiki board-drag-interaction §2, rule 6).
+  Card: `origin` itself ("set back down") for the
   drag's own containing Card, else append as the last child (an item from outside,
   including a Stub from another Card's section — full anchor + side placement _among_
   a Card's Stubs happens one layer further in, at Descendants). Descendants: the gap +
