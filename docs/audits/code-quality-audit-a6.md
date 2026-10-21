@@ -498,14 +498,17 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 5 | Fixed | Batch 3b |
 | 6 | Fixed | Batch 3a, through #20 |
 | 7 | Fixed | Batch 3c |
-| 8–17 | open | — |
+| 8 | Fixed | Batch 3d |
+| 9–17 | open | — |
 | 18 | Fixed | Batch 3c |
-| 19 | open | — |
+| 19 | Fixed | Batch 3d |
 | 20 | Fixed | Batch 3a |
-| 21–41 | open | — |
+| 21–26 | Fixed | Batch 3d |
+| 27–41 | open | — |
 | 42 | Fixed | Batch 3c |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |
 | 45 | Routed | `epic-4-decisions.md` §12, the same block |
+| 47 | Fixed | Batch 3d, with #19 |
 | 51–52 | Covered | `api-contract-zod-openapi.md`, C1 |
 | 53–54 | Covered | Story 10's items 3 and 7, `epic-3-5-roadmap.md` |

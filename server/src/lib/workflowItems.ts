@@ -4,6 +4,7 @@
 import { db, type Tx } from '../db/index.js';
 import { items, projects, workflows } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
+import { ancestorsOf } from './itemTree.js';
 
 type Workphase = { id: string };
 type ItemRow = typeof items.$inferSelect;
@@ -67,22 +68,16 @@ export function getProjectsUsingWorkflow(workflowId: string): Set<string> {
   return result;
 }
 
-// The inverse of getProjectsUsingWorkflow, for one project: the workflow it
-// owns, or the nearest ancestor project's (wiki project-tree §10). Null if no
-// project up the chain owns one. Cycle-guarded like every other parentId walk. Lets a
-// cross-project reparent tell whether a subtree item's workphase is foreign
-// to its new project, which is what decides whether that item's position is
-// nulled.
+// The workflow a project uses: the one it owns, or the nearest ancestor project's
+// (wiki project-tree §10), or null when no project up the chain owns one. The inverse of
+// getProjectsUsingWorkflow for one project. The cross-workflow and foreign-workphase checks
+// compare a workphase's workflow against it.
 export function effectiveWorkflowIdForProject(projectId: string, tx?: Tx): string | null {
   const e = tx ?? db;
-  const visited = new Set<string>();
-  let current: string | null = projectId;
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    const owned = e.select({ id: workflows.id }).from(workflows).where(eq(workflows.projectId, current)).get();
+  const lineage = [projectId, ...ancestorsOf(projects, projectId, tx).map(project => project.id)];
+  for (const id of lineage) {
+    const owned = e.select({ id: workflows.id }).from(workflows).where(eq(workflows.projectId, id)).get();
     if (owned) return owned.id;
-    const project = e.select({ parentId: projects.parentId }).from(projects).where(eq(projects.id, current)).get();
-    current = project?.parentId ?? null;
   }
   return null;
 }

@@ -1,71 +1,19 @@
 import { Router } from 'express';
-import { db, type Tx } from '../db/index.js';
+import { db } from '../db/index.js';
 import { boards, columns, workflows, workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
+import { createDefaultBoard } from '../lib/defaultBoard.js';
 import { isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { ITEM_DEPTH_CAP } from '../lib/itemTree.js';
-import { nextPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, type PositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ItemRow = typeof items.$inferSelect;
 type ItemRowWithScope = ItemRow & { positionScope: PositionScope };
-
-// Creates one board with 1:1 columns (one per current workphase) for a
-// workflow (wiki boards-columns-unsorted §1). Shared by POST /api/workflows
-// (new-workflow bootstrap), POST /api/boards (additional boards), and
-// runMigrations' backfill phase — every new board starts immediately usable
-// rather than an all-Unsorted blank slate.
-// Pass `tx` to fold this into a caller's transaction (e.g. workflow creation,
-// where the workflow row + its seeded workphases + this bootstrap must commit
-// together); omit it to run standalone in its own transaction.
-export function createDefaultBoard(
-  workflowId: string,
-  name: string,
-  workflowWorkphases: Workphase[],
-  now: number,
-  tx?: Tx,
-) {
-  const run = (e: Tx) => {
-    const existingBoards = e.select().from(boards).where(eq(boards.workflowId, workflowId)).all();
-
-    const boardId = randomUUID();
-    e.insert(boards)
-      .values({
-        id: boardId,
-        workflowId,
-        name,
-        position: nextPosition(existingBoards),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-
-    const sorted = [...workflowWorkphases].sort((a, b) => a.position - b.position);
-    sorted.forEach((phase, i) => {
-      e.insert(columns)
-        .values({
-          id: randomUUID(),
-          boardId,
-          name: null,
-          startWorkphaseId: phase.id,
-          endWorkphaseId: phase.id,
-          displayMode: 'merged',
-          position: i + 1.0,
-          createdAt: now,
-        })
-        .run();
-    });
-
-    return e.select().from(boards).where(eq(boards.id, boardId)).get()!;
-  };
-  return tx ? run(tx) : db.transaction(run);
-}
 
 // A column with no name of its own is named for what it covers, on every read
 // (wiki boards-columns-unsorted §4).

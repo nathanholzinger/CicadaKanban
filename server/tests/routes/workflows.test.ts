@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { items as itemsTable, workflows } from '../../src/db/schema.js';
+import { items as itemsTable, notifications, workflows } from '../../src/db/schema.js';
 import {
   createProject,
   createWorkflow,
@@ -305,6 +305,27 @@ describe('DELETE /api/workflows/:id', () => {
     const itemRes = await request(app).get(`/api/items/${item.id}`);
     expect(itemRes.status).toBe(200);
     expect(itemRes.body.workphaseId).toBeNull();
+  });
+
+  it("removes the workflow's own notifications, which belong to no item, with a workflow delete and with a project delete", async () => {
+    for (const via of ['workflow', 'project'] as const) {
+      const project = await createProject();
+      const workflow = await createWorkflow(project.id);
+      const notification = {
+        id: randomUUID(),
+        workflowId: workflow.id,
+        message: 'hi',
+        type: 'workflow',
+        createdAt: Date.now(),
+      };
+      db.insert(notifications).values(notification).run();
+
+      const res = await request(app).delete(
+        via === 'workflow' ? `/api/workflows/${workflow.id}` : `/api/projects/${project.id}`,
+      );
+      expect(res.status, via).toBe(204);
+      expect(db.select().from(notifications).where(eq(notifications.id, notification.id)).all(), via).toHaveLength(0);
+    }
   });
 
   it('does not fail on cross-project items inheriting the workflow', async () => {

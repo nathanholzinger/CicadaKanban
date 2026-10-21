@@ -121,6 +121,36 @@ describe('POST /api/items', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400, not an opaque FK 500, for a projectId, type or agentId that names no row', async () => {
+    const project = await createProject();
+    const type = (await request(app).post('/api/item-types').send({ name: 'Bug' })).body;
+    const agent = (
+      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
+    ).body;
+    const before = db.select().from(items).all().length;
+
+    const refusals = [
+      ['projectId', { projectId: 'no-such-project' }, /projectId does not reference an existing project/],
+      ['type', { projectId: project.id, type: 'no-such-type' }, /type does not reference an existing item type/],
+      ['agentId', { projectId: project.id, agentId: 'no-such-agent' }, /agentId does not reference an existing agent/],
+    ] as const;
+    for (const [field, body, message] of refusals) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'T', ...body });
+      expect(res.status, field).toBe(400);
+      expect(res.body.error, field).toMatch(message);
+    }
+    expect(db.select().from(items).all().length).toBe(before);
+
+    // A type and an agent that exist are stored.
+    const created = await request(app)
+      .post('/api/items')
+      .send({ title: 'T', projectId: project.id, type: type.id, agentId: agent.id });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ type: type.id, agentId: agent.id });
+  });
+
   it('ATT-4.10: returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
     const project = await createProject();
     const res = await request(app)

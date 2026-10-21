@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, not } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
 import { items, projects } from '../../src/db/schema.js';
 import {
+  anchorRefusal,
   resolvePositionByAnchorAndSide,
   resolveAppendPosition,
+  withReindexDisclosure,
   type ReindexedPosition,
 } from '../../src/lib/positionResolver.js';
 import { coarsestFit } from '../../src/lib/coarsestFit.js';
@@ -346,6 +348,67 @@ describe('resolveAppendPosition', () => {
 // every items case above, just enough of each function's core contract to
 // confirm it holds for a table with a different shape (no isAttached/
 // workphaseId, root scope instead of a workphase scope).
+describe('anchorRefusal', () => {
+  it('names why an anchor fails, and is null for one the scope holds', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(3);
+    const [subject, anchor, done] = created;
+    setPosition(done.id, null);
+    const elsewhere = (await seedPhaseWithItems(1)).items[0];
+    const scope = and(eq(items.workphaseId, phase.id), not(eq(items.id, subject.id)))!;
+
+    expect(anchorRefusal(items, scope, anchor.id, subject.id)).toBeNull();
+    expect(anchorRefusal(items, scope, subject.id, subject.id)).toBe('self');
+    expect(anchorRefusal(items, scope, 'no-such-item', subject.id)).toBe('missing');
+    expect(anchorRefusal(items, scope, elsewhere.id, subject.id)).toBe('outside-scope');
+    expect(anchorRefusal(items, scope, done.id, subject.id)).toBe('no-position');
+  });
+
+  it('asks whether the anchor is in the scope before whether it has a position', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(1);
+    const elsewhere = (await seedPhaseWithItems(1)).items[0];
+    setPosition(elsewhere.id, null);
+    const scope = eq(items.workphaseId, phase.id);
+
+    expect(anchorRefusal(items, scope, elsewhere.id, created[0].id)).toBe('outside-scope');
+  });
+
+  it('works over the projects table: only a sibling is in scope', async () => {
+    const [subject, sibling, noPosition] = await seedRootProjects(3);
+    const child = await createProject({ name: 'Child', parentId: sibling.id });
+    setProjectPosition(noPosition.id, null);
+    const scope = and(rootScope, not(eq(projects.id, subject.id)))!;
+
+    expect(anchorRefusal(projects, scope, sibling.id, subject.id)).toBeNull();
+    expect(anchorRefusal(projects, scope, subject.id, subject.id)).toBe('self');
+    expect(anchorRefusal(projects, scope, child.id, subject.id)).toBe('outside-scope');
+    expect(anchorRefusal(projects, scope, noPosition.id, subject.id)).toBe('no-position');
+  });
+});
+
+describe('withReindexDisclosure', () => {
+  const row = { id: 'x', position: 2, title: 'X' };
+
+  it('returns the row itself when no reindex fired', () => {
+    expect(withReindexDisclosure(row, [])).toBe(row);
+  });
+
+  it("appends the row's own {id, position} to the renumbered pairs", () => {
+    const body = withReindexDisclosure(row, [{ id: 'a', position: 1 }]);
+    expect(body).toEqual({
+      ...row,
+      reindexed: [
+        { id: 'a', position: 1 },
+        { id: 'x', position: 2 },
+      ],
+    });
+  });
+
+  it('leaves out the pair of a row with no position, which a reindex never numbered', () => {
+    const body = withReindexDisclosure({ ...row, position: null }, [{ id: 'a', position: 1 }]);
+    expect(body).toEqual({ ...row, position: null, reindexed: [{ id: 'a', position: 1 }] });
+  });
+});
+
 describe('positionResolver against the projects table', () => {
   describe('reindex', () => {
     it('reassigns clean sequential positions while preserving relative order', async () => {

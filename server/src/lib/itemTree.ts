@@ -1,6 +1,7 @@
-// isSelfRefDescendant/assertValidReparent (items + projects), the depth cap's
-// depth/height/check for both (ITEM_DEPTH_CAP, PROJECT_DEPTH_CAP), parentRefusal
-// (the parent-legality sequence over them), walkItemDescendants. All cycle-guarded.
+// isSelfRefDescendant/assertValidReparent (items + projects), ancestorsOf (the walk up
+// parentId), the depth cap's depth/height/check for both (ITEM_DEPTH_CAP,
+// PROJECT_DEPTH_CAP), parentRefusal (the parent-legality sequence over them),
+// walkItemDescendants. All cycle-guarded.
 
 import { eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -69,25 +70,33 @@ export const ITEM_DEPTH_CAP = 6;
 // API enforce the same cap.
 export const PROJECT_DEPTH_CAP = 6;
 
-// 1-based: a top-level entry is at depth 1 (wiki hierarchy-placement §6). Walks
-// parentId upward with a visited set so a corrupted cycle terminates
-// instead of looping.
-function selfRefDepth(table: SelfRefTable, id: string, tx?: Tx): number {
+// The rows above `id`, nearest first: its parent, that row's parent, and so on up to the
+// top. A caller keeps its own stop rule by reading only as far as it needs. The walk ends at a
+// parentId with no row, and at a revisit: a parentId cycle in the data ends it instead of
+// looping, and never puts `id` itself in the list.
+export function ancestorsOf<Row extends { id: string; parentId: string | null }>(
+  table: SelfRefTable,
+  id: string,
+  tx?: Tx,
+): Row[] {
   const e = tx ?? db;
-  const parentOf = (rowId: string) =>
-    (
-      e.select({ parentId: table.parentId }).from(table).where(eq(table.id, rowId)).get() as
-        { parentId: string | null } | undefined
-    )?.parentId;
-  let depth = 1;
+  const rowOf = (rowId: string) => e.select().from(table).where(eq(table.id, rowId)).get() as Row | undefined;
+  const ancestors: Row[] = [];
   const visited = new Set([id]);
-  let parentId = parentOf(id);
+  let parentId = rowOf(id)?.parentId;
   while (parentId && !visited.has(parentId)) {
     visited.add(parentId);
-    depth++;
-    parentId = parentOf(parentId);
+    const parent = rowOf(parentId);
+    if (!parent) break;
+    ancestors.push(parent);
+    parentId = parent.parentId;
   }
-  return depth;
+  return ancestors;
+}
+
+// 1-based: a top-level entry is at depth 1 (wiki hierarchy-placement §6).
+function selfRefDepth(table: SelfRefTable, id: string, tx?: Tx): number {
+  return 1 + ancestorsOf(table, id, tx).length;
 }
 
 // An item's depth. Not the API's `depth` field on GET /items/:id, which is 0-based.

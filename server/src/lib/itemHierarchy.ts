@@ -1,20 +1,22 @@
 // validateHierarchyRequest / applyHierarchyRequest — the one reparent/attach/workphase/
 // placement implementation behind PUT /items/:id and PATCH /items/:id/move;
-// resolveCreateWorkphase — the workphase a create leaves its item in, held to the same
-// rules (POST /items); logCreatedUnderParent — the hierarchy entry a create under a parent
-// logs (POST /items).
+// resolveCreate — a create's attachment flag and workphase, checked by the same rules in
+// the same order (POST /items), with getParent for the parent row it takes;
+// logCreatedUnderParent — the hierarchy entry a create under a parent logs (POST /items).
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, notifications } from '../db/schema.js';
 import { existsById } from './getOrNotFound.js';
-import { parentRefusal, walkItemDescendants } from './itemTree.js';
+import { ancestorsOf, parentRefusal, walkItemDescendants } from './itemTree.js';
 import { cascadeWorkphaseToAttachedDescendants } from './attachedCascade.js';
-import { positionScopeFor, sharesPositionScope, workflowIdForWorkphase } from './itemPositionScope.js';
+import { positionScopeFor, workflowIdForWorkphase } from './itemPositionScope.js';
 import {
+  anchorRefusal,
   resolveAppendPosition,
   resolvePositionByAnchorAndSide,
+  type AnchorRefusal,
   type ReindexedPosition,
   type Side,
 } from './positionResolver.js';
@@ -65,7 +67,7 @@ type ResultingState = {
   projectId: string | null;
 };
 
-type ParentRow = { id: string; title: string; projectId: string | null; workphaseId: string | null };
+export type ParentRow = { id: string; title: string; projectId: string | null; workphaseId: string | null };
 
 const parentProjection = {
   id: items.id,
@@ -74,35 +76,22 @@ const parentProjection = {
   workphaseId: items.workphaseId,
 };
 
-function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
+export function getParent(parentId: string, tx?: Tx): ParentRow | undefined {
   return (tx ?? db).select(parentProjection).from(items).where(eq(items.id, parentId)).get();
 }
 
 // The Free item an item is shown with: itself when it's Free, else its
 // nearest Free ancestor, since an Attached item shows in that ancestor's
 // Card. That item's workphase is where the item is shown, whatever the
-// item's own `workphaseId` says (wiki item-attachment §2a). The visited set
-// ends the walk on a parentId cycle in the data.
+// item's own `workphaseId` says (wiki item-attachment §2a). When the chain ends first, at a
+// parentId with no row or on a cycle in the data, it's the last item the walk reached.
 type ShownWith = { id: string; title: string; workphaseId: string | null };
 
 function shownWith(itemId: string, tx?: Tx): ShownWith | undefined {
-  const e = tx ?? db;
-  const projection = {
-    id: items.id,
-    title: items.title,
-    workphaseId: items.workphaseId,
-    parentId: items.parentId,
-    isAttached: items.isAttached,
-  };
-  const visited = new Set<string>();
-  let current = e.select(projection).from(items).where(eq(items.id, itemId)).get();
-  while (current?.isAttached && current.parentId && !visited.has(current.parentId)) {
-    visited.add(current.id);
-    const parent = e.select(projection).from(items).where(eq(items.id, current.parentId)).get();
-    if (!parent) break;
-    current = parent;
-  }
-  return current;
+  const item = (tx ?? db).select().from(items).where(eq(items.id, itemId)).get();
+  if (!item) return undefined;
+  const chain = [item, ...ancestorsOf<ItemRow>(items, itemId, tx)];
+  return chain.find(link => !link.isAttached || !link.parentId) ?? chain[chain.length - 1];
 }
 
 // The 400 for a Free item that must take its shown-with item's workphase when
@@ -114,11 +103,22 @@ function noShownWorkphaseError(anchor: ShownWith): string {
 
 const ATTACHED_WORKPHASE_ERROR =
   "an attached item inherits its parent's workphase; omit workphaseId or match the parent's";
+// A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
+const MISSING_WORKPHASE_ERROR = 'workphaseId does not reference an existing workphase';
+const PARENTLESS_ATTACH_ERROR = 'isAttached requires a parentId';
+
+// The message for each way a named anchor can fail.
+const ANCHOR_ERRORS: Record<AnchorRefusal, string> = {
+  self: 'anchorId cannot be the item itself',
+  missing: 'anchorId does not reference an existing item',
+  'no-position': 'anchorId has no position to anchor against (it may be a done item)',
+  'outside-scope': "anchorId is not in this item's resulting position scope",
+};
 
 // A Free item's workphase belongs to its project's workflow (wiki item-attachment
 // §2a). A project with no workflow has nothing to compare against, so any
 // workphase passes there.
-export function foreignWorkphaseError(projectId: string | null, workphaseId: string): string | null {
+function foreignWorkphaseError(projectId: string | null, workphaseId: string): string | null {
   const workflowId = projectId ? effectiveWorkflowIdForProject(projectId) : null;
   if (!workflowId || workflowIdForWorkphase(workphaseId) === workflowId) return null;
   return "workphaseId belongs to a workflow this item's project does not use; name a workphase of that workflow";
@@ -153,6 +153,16 @@ function crossWorkflowError(item: ItemRow, resulting: ResultingState): string | 
   return null;
 }
 
+// The scope the item's position is resolved in once the request is applied, with the item
+// itself left out: what a named anchor is checked against, and where the item is placed.
+function resultingScope(item: ItemRow, resulting: ResultingState, tx?: Tx): SQL {
+  return positionScopeFor(
+    { isAttached: resulting.isAttachedWithParent, parentId: resulting.parentId, workphaseId: resulting.workphaseId },
+    item.id,
+    tx,
+  );
+}
+
 function deriveResultingState(
   item: ItemRow,
   req: HierarchyRequest,
@@ -183,7 +193,7 @@ function deriveResultingState(
 // What a create leaves its new item's workphase as, or the 400 that refuses
 // the create (wiki item-attachment §2a, §14). `named` is the request's
 // `workphaseId`: undefined when omitted, null when it names none on purpose.
-export function resolveCreateWorkphase(
+function resolveCreateWorkphase(
   parent: { id: string; workphaseId: string | null } | null,
   attached: boolean,
   named: string | null | undefined,
@@ -199,6 +209,42 @@ export function resolveCreateWorkphase(
     return { workphaseId: anchor?.workphaseId ?? null };
   }
   return { workphaseId: named ?? null };
+}
+
+// A create, once the route has settled what only it can: the parent row (null for a
+// top-level item) and the project the item lands in, the parent's when it has one.
+export type CreateRequest = {
+  parent: ParentRow | null;
+  projectId: string;
+  /** undefined = attached when there is a parent (wiki item-attachment §14). */
+  isAttached?: boolean;
+  /** undefined = the workphase the create's rules give; null = none, on purpose (wiki item-attachment §2a). */
+  workphaseId?: string | null;
+};
+
+// What a create leaves its new item as, or the first 400 message that refuses it: the
+// flag and the workphase, under the rules a move or an edit follows and in the order
+// validateHierarchyRequest checks them, so a create and a move can't disagree
+// (wiki item-attachment §14). The parent's own legality is the route's, with the project.
+export function resolveCreate(
+  req: CreateRequest,
+): { attached: boolean; workphaseId: string | null } | { error: string } {
+  const { parent, projectId, workphaseId: named } = req;
+  if (named !== undefined && named !== null && !existsById(workphases, named)) {
+    return { error: MISSING_WORKPHASE_ERROR };
+  }
+  // The flag is a child's: a create with no parent and the flag set is refused, and one
+  // without stores it clear (wiki item-attachment §1).
+  if (!parent && req.isAttached) return { error: PARENTLESS_ATTACH_ERROR };
+  const attached = parent ? (req.isAttached !== undefined ? Boolean(req.isAttached) : true) : false;
+  const resolution = resolveCreateWorkphase(parent, attached, named);
+  if ('error' in resolution) return resolution;
+  // A Free item's workphase belongs to its project's workflow (wiki item-attachment §2a).
+  if (!attached && typeof named === 'string') {
+    const foreignError = foreignWorkphaseError(projectId, named);
+    if (foreignError) return { error: foreignError };
+  }
+  return { attached, workphaseId: resolution.workphaseId };
 }
 
 // Hand-rolled request validation. Returns the first 400 message, or null
@@ -217,9 +263,8 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
   if (req.anchorId !== undefined && req.side !== 'before' && req.side !== 'after') {
     return "side must be 'before' or 'after' when anchorId is given";
   }
-  // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
   if (typeof req.workphaseId === 'string' && !existsById(workphases, req.workphaseId)) {
-    return 'workphaseId does not reference an existing workphase';
+    return MISSING_WORKPHASE_ERROR;
   }
 
   // Exists / not self / not a descendant / within the depth cap — the four
@@ -237,7 +282,7 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
 
   // "Attached with no parent" is rejected, not ignored (wiki item-attachment §1).
   if (req.isAttached === true && resulting.parentId === null) {
-    return 'isAttached requires a parentId';
+    return PARENTLESS_ATTACH_ERROR;
   }
   // An attached item inherits its parent's workphase, so a request naming a
   // different one is contradictory (wiki item-attachment §2a).
@@ -261,39 +306,12 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
   if (crossError) return crossError;
 
   if (req.anchorId !== undefined) {
-    // The subject is excluded from its own scope query (positionScopeFor's
-    // excludeId), so a self-anchor would pass the scope check below and
-    // then throw inside the transaction as "anchor not found in scope".
-    if (req.anchorId === item.id) return 'anchorId cannot be the item itself';
-    const anchorProjection = {
-      isAttached: items.isAttached,
-      parentId: items.parentId,
-      workphaseId: items.workphaseId,
-      position: items.position,
-    };
-    const anchor = db.select(anchorProjection).from(items).where(eq(items.id, req.anchorId)).get();
-    if (!anchor) return 'anchorId does not reference an existing item';
-    // A done item has no position, so it can never be an anchor (wiki item-positioning §7.4).
-    if (anchor.position === null) return 'anchorId has no position to anchor against (it may be a done item)';
-    // The anchor's position is only comparable if it lives in the scope
-    // the subject is about to end up in — an attached child's sibling
-    // space and a workflow-wide space are isolated, and two workflows each
-    // have their own. Checked against the *resulting* state: an anchor
-    // among the new parent's children is legal even though the subject
-    // isn't in that scope yet (wiki positioning §2).
-    const anchorScope = {
-      isAttached: Boolean(anchor.isAttached),
-      parentId: anchor.parentId,
-      workphaseId: anchor.workphaseId,
-    };
-    const subjectScope = {
-      isAttached: resulting.isAttachedWithParent,
-      parentId: resulting.parentId,
-      workphaseId: resulting.workphaseId,
-    };
-    if (!sharesPositionScope(anchorScope, subjectScope)) {
-      return "anchorId is not in this item's resulting position scope";
-    }
+    // Checked against the scope the item ends up in, not its current one: an anchor among
+    // the new parent's children is legal although the item isn't one of them yet
+    // (wiki positioning §2). A done item has no position, so it can never be an anchor
+    // (wiki item-positioning §7.4).
+    const refusal = anchorRefusal(items, resultingScope(item, resulting), req.anchorId, item.id);
+    if (refusal) return ANCHOR_ERRORS[refusal];
   }
 
   return null;
@@ -360,12 +378,7 @@ export function applyHierarchyRequest(
 
   // --- Position, resolved against the *resulting* scope ---
   const reindexed: ReindexedPosition[] = [];
-  const scope = () =>
-    positionScopeFor(
-      { isAttached: resulting.isAttachedWithParent, parentId: resulting.parentId, workphaseId: resulting.workphaseId },
-      item.id,
-      tx,
-    );
+  const scope = () => resultingScope(item, resulting, tx);
   if (req.anchorId !== undefined) {
     updates.position = resolvePositionByAnchorAndSide(items, scope(), tx, req.side as Side, req.anchorId, reindexed);
   } else if (scopeChanged) {

@@ -1,5 +1,5 @@
-// Workphase rank/order helpers shared by columnRanges.ts and the boards, columns and
-// workflows routes.
+// Workphase rank/order helpers: a workflow's workphases in order, and the rank map derived
+// from that order.
 
 import { db } from '../db/index.js';
 import { workphases } from '../db/schema.js';

@@ -122,7 +122,7 @@ export const items = sqliteTable('items', {
   // An item outlives the descriptive/positional things it points at: deleting a
   // type, workphase, or assigned agent nulls the reference rather than the item.
   type: text('type').references(() => itemTypes.id, { onDelete: 'set null' }),
-  parentId: text('parent_id'), // self-referential FK to items.id
+  parentId: text('parent_id'), // soft reference to items.id: no FK, so the subtree is walked in app code
   projectId: text('project_id').references(() => projects.id),
   workphaseId: text('workphase_id').references(() => workphases.id, { onDelete: 'set null' }),
   title: text('title').notNull(),

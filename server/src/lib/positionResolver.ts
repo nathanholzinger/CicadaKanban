@@ -2,12 +2,15 @@
 // items and projects. Resolution against a fresh query, with its append and bootstrap
 // fallbacks: wiki positioning §3. Both reindex triggers, and every reindex, run
 // through reindexPositionsInScope: wiki positioning §6.
+// anchorRefusal — whether a named anchor can place a write (wiki positioning §2);
+// withReindexDisclosure — a write's response body with the reindex it triggered
+// (wiki positioning §7).
 // Also home to nextPosition: simple append-at-end math for workphases/boards/columns
 // (non-nullable fields, no anchor/reindex needed).
 
 import { eq, gt, lt, asc, desc, and, isNotNull, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
-import type { Tx } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { coarsestFit } from './coarsestFit.js';
 
 const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new position to be placed. If it doesn't then something else went wrong that retries shouldn't fix
@@ -32,9 +35,9 @@ type PositionQueryContext = {
   table: PositionedTable;
   scopeWhere: SQL;
   tx: Tx;
-  // Where a reindex reports the rows it renumbered. Optional: only callers
-  // that surface the disclosure to their response (the item and project
-  // writes) pass one; workphases don't and the pairs are simply dropped.
+  // Where a reindex reports the rows it renumbered. Optional: the item and project
+  // writes pass one, to disclose the reindex in their response; the item backfill in
+  // `PUT /workphases/:id` passes none, and the pairs are dropped.
   reindexed?: ReindexedPosition[];
 };
 
@@ -74,10 +77,9 @@ export function resolvePositionByAnchorAndSide(
   throw new Error(`positionResolver: failed to parse anchor + side`);
 }
 
-// Kept as its own named export rather than folded away: every call site is a
-// pure "put this at the end" append (item and project creation, a scope
-// change with no anchor, a workphase's terminal-transition backfill) with no
-// anchor/side to express, so spelling them as `resolvePositionByAnchorAndSide(table,
+// Kept as its own named export rather than folded away: a caller of it puts an
+// entry at the end and has no anchor/side to express (an item or project create, a
+// scope change with no anchor), so spelling it as `resolvePositionByAnchorAndSide(table,
 // scope, tx, 'after')` would read as if a side/anchor choice were actually being made.
 export function resolveAppendPosition(
   table: PositionedTable,
@@ -87,6 +89,48 @@ export function resolveAppendPosition(
 ): number {
   const context: PositionQueryContext = { table, scopeWhere, tx, reindexed };
   return resolveAppendAsLast(context);
+}
+
+// Why `anchorId` can't place `subjectId` in the scope `scopeWhere` describes, or null when it
+// can (wiki positioning §2). The checks run in this order, and `scopeWhere` is the predicate
+// the resolver itself queries, so a write is refused for exactly the anchors the resolution
+// would fail to find. Pass the scope the subject ends up in, which differs from its current one
+// when the same write changes it. The subject is no neighbor of itself: a scope that leaves it
+// out, as the resolver's does, never holds it, so 'self' is told apart before that is asked.
+export type AnchorRefusal = 'self' | 'missing' | 'outside-scope' | 'no-position';
+
+export function anchorRefusal(
+  table: PositionedTable,
+  scopeWhere: SQL,
+  anchorId: string,
+  subjectId: string,
+  tx?: Tx,
+): AnchorRefusal | null {
+  if (anchorId === subjectId) return 'self';
+  const e = tx ?? db;
+  const anchor = e.select({ position: table.position }).from(table).where(eq(table.id, anchorId)).get() as
+    { position: number | null } | undefined;
+  if (!anchor) return 'missing';
+  const inScope = e
+    .select({ id: table.id })
+    .from(table)
+    .where(and(scopeWhere, eq(table.id, anchorId)))
+    .get();
+  if (!inScope) return 'outside-scope';
+  return anchor.position === null ? 'no-position' : null;
+}
+
+// A write's response body: the written row, plus the renumbered `{id, position}` pairs when a
+// reindex fired, the row's own pair appended so a caller applies every pair (wiki positioning
+// §7). The row itself when none fired, so the common case adds nothing. A row with no position
+// has no pair of its own to add.
+export function withReindexDisclosure<T extends { id: string; position: number | null }>(
+  row: T,
+  reindexed: ReindexedPosition[],
+): T | (T & { reindexed: ReindexedPosition[] }) {
+  if (reindexed.length === 0) return row;
+  const own = row.position === null ? [] : [{ id: row.id, position: row.position }];
+  return { ...row, reindexed: [...reindexed, ...own] };
 }
 
 function getTargetPosition(targetId: string, context: PositionQueryContext): number {

@@ -16,8 +16,7 @@ function getAttachedDescendantIds(rootId: string, tx?: Tx): string[] {
 // Moves an item's attached descendants to match its current workphaseId,
 // leaving their positions untouched: they stay parent-scoped whatever the
 // workphase (wiki item-positioning §2.1). Pass `tx` to run inside a caller's
-// transaction (e.g. the move/PUT handlers, where the parent's own workphase
-// write and this cascade must commit together).
+// transaction, so the parent's own workphase write and this cascade commit together.
 export function cascadeWorkphaseToAttachedDescendants(rootId: string, tx?: Tx): void {
   const e = tx ?? db;
   const root = e.select({ workphaseId: items.workphaseId }).from(items).where(eq(items.id, rootId)).get();

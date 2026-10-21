@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { items } from '../../src/db/schema.js';
+import { items, projects } from '../../src/db/schema.js';
 import {
   ITEM_DEPTH_CAP,
+  ancestorsOf,
   assertValidReparent,
   assertWithinDepthCap,
   hierarchyDepth,
@@ -48,6 +49,41 @@ describe('cycle guards', () => {
     const { a } = await seedCyclicPair();
     expect(typeof hierarchyDepth(a.id)).toBe('number');
     expect(typeof subtreeHeight(a.id)).toBe('number');
+  });
+});
+
+describe('ancestorsOf', () => {
+  it('lists the rows above an item, nearest first, and none for a top-level one', async () => {
+    const project = await createProject();
+    const chain = await seedChain(project.id, 4);
+    expect(ancestorsOf(items, chain[3].id).map(row => row.id)).toEqual([chain[2].id, chain[1].id, chain[0].id]);
+    expect(ancestorsOf(items, chain[0].id)).toEqual([]);
+  });
+
+  it('ends at a parentId with no row, and for an id with no row', async () => {
+    const project = await createProject();
+    const orphan = await createItem({ projectId: project.id, title: 'Orphan' });
+    db.update(items).set({ parentId: 'no-such-item' }).where(eq(items.id, orphan.id)).run();
+    expect(ancestorsOf(items, orphan.id)).toEqual([]);
+    expect(ancestorsOf(items, 'no-such-item')).toEqual([]);
+  });
+
+  it('works over the projects table', async () => {
+    const root = await createProject({ name: 'root' });
+    const mid = await createProject({ name: 'mid', parentId: root.id });
+    const leaf = await createProject({ name: 'leaf', parentId: mid.id });
+    expect(ancestorsOf(projects, leaf.id).map(row => row.id)).toEqual([mid.id, root.id]);
+  });
+
+  it('ends on a parentId cycle without listing the item itself', async () => {
+    const { a, b } = await seedCyclicPair();
+    expect(ancestorsOf(items, a.id).map(row => row.id)).toEqual([b.id]);
+  });
+
+  it("is what hierarchyDepth counts: 1 plus the ancestors, whatever the attachment's state", async () => {
+    const project = await createProject();
+    const chain = await seedChain(project.id, 5);
+    expect(hierarchyDepth(chain[4].id)).toBe(1 + ancestorsOf(items, chain[4].id).length);
   });
 });
 

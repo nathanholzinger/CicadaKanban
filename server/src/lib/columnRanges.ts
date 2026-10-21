@@ -13,9 +13,8 @@ type ItemRow = { workphaseId: string | null } & Record<string, unknown>;
 type ColumnRange = { startWorkphaseId: string; endWorkphaseId: string };
 
 // ============================================================
-// Column-range domain logic — shared by boards.ts, columns.ts, and
-// workphases.ts so a board's columns can express a contiguous range of
-// workphases without those routes importing from one another.
+// Column-range domain logic, so a board's columns can express a contiguous range of
+// workphases without the routes that deal in them importing from one another.
 // ============================================================
 
 // [lowRank, highRank] for a range. Uses min/max so an inverted (broken) range
@@ -27,9 +26,9 @@ export function computeColumnRange(range: ColumnRange, rankMap: Map<string, numb
   return startRank <= endRank ? [startRank, endRank] : [endRank, startRank];
 }
 
-// A range is "broken" only when its start/end have crossed over (e.g. via an
-// independent workphase reorder) — never stored, always recomputed on read
-// (wiki boards-columns-unsorted §9).
+// A range is "broken" when its start/end have crossed over (e.g. via an independent
+// workphase reorder) or when either names a workphase the workflow doesn't have — never
+// stored, always recomputed on read (wiki boards-columns-unsorted §9).
 export function isColumnBroken(range: ColumnRange, rankMap: Map<string, number>): boolean {
   const startRank = rankMap.get(range.startWorkphaseId);
   const endRank = rankMap.get(range.endWorkphaseId);
@@ -60,13 +59,12 @@ export function columnsOverlap(a: ColumnRange, b: ColumnRange, rankMap: Map<stri
 type ColumnRangeValidation =
   { ok: true } | { ok: false; status: number; body: { error: string; conflictingColumnId?: string } };
 
-// The range check for columns.ts POST and PUT: both endpoints belong to this
+// The range check for a column being created or updated: both endpoints belong to this
 // workflow, start doesn't come after end (wiki boards-columns-unsorted §5), the
 // range doesn't overlap a sibling column, and it doesn't span a terminal and a
 // non-terminal workphase (wiki boards-columns-unsorted §6).
-// Callers pass only the sibling columns the new/updated range should be
-// checked against (PUT excludes the column being updated); on failure,
-// `status`/`body` are ready to hand straight to `res`.
+// `siblingColumns` must leave out the column being updated, which would overlap itself;
+// on failure, `status`/`body` are ready to hand straight to `res`.
 export function validateColumnRange(
   range: ColumnRange,
   rankMap: Map<string, number>,

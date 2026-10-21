@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import { db, type Tx } from '../db/index.js';
-import { projects, workflows, workphases, items, notifications, boards } from '../db/schema.js';
-import { eq, inArray, asc, isNull, and, not, type SQL } from 'drizzle-orm';
+import { projects, workflows } from '../db/schema.js';
+import { eq, asc, isNull, and, not, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { parentRefusal, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
+import { deleteProjectById } from '../lib/projectCascade.js';
 import {
+  anchorRefusal,
   resolveAppendPosition,
   resolvePositionByAnchorAndSide,
+  withReindexDisclosure,
+  type AnchorRefusal,
   type ReindexedPosition,
 } from '../lib/positionResolver.js';
 
@@ -56,14 +59,21 @@ function resolveProjectPosition(
   return resolveAppendPosition(projects, scope, tx, reindexed);
 }
 
-// A write's response: the project, plus the renumbered `{id, position}` pairs
-// when a reindex fired, the written project's own included so a caller applies
-// every pair (wiki positioning §7). Absent otherwise.
+// A write's response: the fresh project, with the reindex it triggered when one fired
+// (wiki positioning §7).
 function projectResponse(id: string, reindexed: ReindexedPosition[]) {
   const project = db.select().from(projects).where(eq(projects.id, id)).get()!;
-  if (reindexed.length === 0) return project;
-  return { ...project, reindexed: [...reindexed, { id, position: project.position! }] };
+  return withReindexDisclosure(project, reindexed);
 }
+
+// The 400's message for each way the neighbor a move names can fail, given the field that
+// carried it.
+const ANCHOR_ERRORS: Record<AnchorRefusal, (field: string) => string> = {
+  self: field => `${field} names the project itself: name a sibling to place it next to`,
+  missing: field => `${field} does not reference an existing project`,
+  'outside-scope': field => `${field} is not a sibling in the target scope`,
+  'no-position': field => `${field} has no position to anchor against`,
+};
 
 // Lists projects by position, then createdAt. SQLite sorts a missing position
 // first, the same order as counting it as 0 (wiki project-tree §4).
@@ -167,63 +177,6 @@ router.put('/:id', (req, res) => {
   res.json(projectResponse(req.params.id, reindexed));
 });
 
-// Recursively deletes a project subtree (wiki project-tree §9). Runs inside a caller-supplied
-// transaction (tx) so the whole cascade — descendant projects, items, workflow
-// artifacts — commits atomically; a mid-cascade failure rolls the lot back.
-function deleteProjectById(id: string, tx: Tx) {
-  const children = tx.select().from(projects).where(eq(projects.parentId, id)).all();
-  for (const child of children) deleteProjectById(child.id, tx);
-
-  // Gather this project's workflow ids upfront
-  const workflowIds = tx
-    .select({ id: workflows.id })
-    .from(workflows)
-    .where(eq(workflows.projectId, id))
-    .all()
-    .map(w => w.id);
-
-  // Items to remove: owned by this project ONLY — not also every item merely
-  // sitting in one of this project's workphases. A project that was
-  // reparented away, or had its own workflow assigned, after filing items
-  // into this project's workphases still points its workphaseId here;
-  // sweeping those up too would silently delete another project's items.
-  // Removing the workphases below already nulls their workphaseId (ON DELETE
-  // SET NULL) — they survive and surface as "Unknown status" on whatever
-  // board their real project now resolves to. Each deleted item's dependent rows (itemLabels,
-  // activityLog, notifications, attachments, chat threads/messages) are
-  // removed by ON DELETE CASCADE, so deleting the items is enough.
-  const allItemIds = tx
-    .select({ id: items.id })
-    .from(items)
-    .where(eq(items.projectId, id))
-    .all()
-    .map(i => i.id);
-
-  if (allItemIds.length > 0) {
-    tx.delete(items).where(inArray(items.id, allItemIds)).run();
-  }
-
-  // Workflow-level cleanup before removing workphases/workflows. Labels are
-  // global — NOT deleted with a project. Workflow-scoped notifications aren't
-  // item-anchored, so they are cleared explicitly here.
-  if (workflowIds.length > 0) {
-    tx.delete(notifications).where(inArray(notifications.workflowId, workflowIds)).run();
-
-    const workflowBoardIds = tx
-      .select({ id: boards.id })
-      .from(boards)
-      .where(inArray(boards.workflowId, workflowIds))
-      .all()
-      .map(b => b.id);
-    deleteBoardsById(workflowBoardIds, tx);
-
-    tx.delete(workphases).where(inArray(workphases.workflowId, workflowIds)).run();
-  }
-
-  tx.delete(workflows).where(eq(workflows.projectId, id)).run();
-  tx.delete(projects).where(eq(projects.id, id)).run();
-}
-
 // Move/reorder a project — reposition among siblings and/or reparent, in
 // one atomic step (wiki project-tree §6). One project per request, not a batch: a batch's
 // per-entry cycle check would run against pre-transaction DB state, so a
@@ -235,13 +188,12 @@ function deleteProjectById(id: string, tx: Tx) {
 // project's resulting *predecessor*/*successor* — the project that should
 // end up immediately before/after the moved project (not "the project I go
 // before/after," which reads ambiguously either direction; prevId/nextId
-// describes a position in the sequence). Both omitted/null means "no
-// positioning info, append to the true end of the resulting scope," never
-// "trust me, the scope is empty": even if the client guessed wrong because
-// a collapsed parent's real children were hidden, the server always
-// re-derives the true current children here. Any given prevId/nextId is
-// independently verified as a real, current sibling in the resulting scope
-// before its position is trusted for the midpoint math.
+// describes a position in the sequence). When both are named, `prevId` is
+// the neighbor: it alone is checked and used, and `nextId` is ignored. Both
+// omitted/null means "no positioning info, append to the true end of the
+// resulting scope," never "trust me, the scope is empty": the server always
+// re-derives the true current children, since a caller's view of them can be
+// stale or narrower than the real group.
 router.patch('/:id/move', (req, res) => {
   const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;
@@ -274,39 +226,19 @@ router.patch('/:id/move', (req, res) => {
     return;
   }
 
-  // Verifies a claimed prevId/nextId is a real, current sibling in the
-  // *resulting* scope before trusting it for the midpoint math — rejects a
-  // stale/false claim rather than silently falling back (wiki positioning §2).
-  // Validated here, against plain `db`, before the transaction below opens: this handler's
-  // only write is to the subject project itself, so nothing about a
-  // sibling's existence/scope/position can change between this check and
-  // the transaction that uses it. Validating first keeps every bail-out
-  // outside the transaction: a db.transaction callback in better-sqlite3
-  // only rolls back on throw, so a bail-out inside it, after some other
-  // write had already run, would still commit that write.
-  function verifyAnchor(anchorId: string, label: 'prevId' | 'nextId'): string | null {
-    if (anchorId === req.params.id) return `${label} names the project itself: name a sibling to place it next to`;
-    const sibling = db
-      .select({ parentId: projects.parentId, position: projects.position })
-      .from(projects)
-      .where(eq(projects.id, anchorId))
-      .get();
-    if (!sibling) return `${label} does not reference an existing project`;
-    if ((sibling.parentId ?? null) !== targetParentId) return `${label} is not a sibling in the target scope`;
-    if (sibling.position === null) return `${label} has no position to anchor against`;
-    return null;
-  }
-
-  if (prevId) {
-    const error = verifyAnchor(prevId, 'prevId');
-    if (error) {
-      res.status(400).json({ error });
-      return;
-    }
-  } else if (nextId) {
-    const error = verifyAnchor(nextId, 'nextId');
-    if (error) {
-      res.status(400).json({ error });
+  // Checks the neighbor the move names is a real, current sibling in the *resulting*
+  // group before its position is trusted for the midpoint math: a stale or false claim is
+  // refused rather than silently falling back (wiki positioning §2). Checked here, against
+  // plain `db`, before the transaction below opens. Nothing is written before it, so what's
+  // checked can't change between this check and the writes that use it, the move's own and
+  // a reindex's. Keeping every bail-out outside the transaction matters too: a
+  // db.transaction callback in better-sqlite3 only rolls back on throw, so a bail-out
+  // inside it, after some other write had already run, would still commit that write.
+  const neighbor = prevId ? { id: prevId, field: 'prevId' } : nextId ? { id: nextId, field: 'nextId' } : null;
+  if (neighbor) {
+    const refusal = anchorRefusal(projects, projectPositionScope(targetParentId, project.id), neighbor.id, project.id);
+    if (refusal) {
+      res.status(400).json({ error: ANCHOR_ERRORS[refusal](neighbor.field) });
       return;
     }
   }

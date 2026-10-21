@@ -1,5 +1,6 @@
-// Migration runner + seed data + board backfill (a 1:1 default board for any workflow
-// that has none).
+// Migration runner + seed data + the backfills that follow it: workflows and items with no
+// project move into a "Default Project", a project with no position takes its creation time
+// as one, and a workflow with no board gets a 1:1 default board.
 
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { db, sqlite } from './index.js';
@@ -8,7 +9,7 @@ import { isNull, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { createDefaultBoard } from '../routes/boards.js';
+import { createDefaultBoard } from '../lib/defaultBoard.js';
 
 const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../drizzle');
 
@@ -112,7 +113,7 @@ export function runMigrations() {
     seedWorkflowTemplates(now);
   }
 
-  // ── Move workflows without a project_id into a default project ──────────────
+  // ── Move workflows and items without a project_id into a default project ───
   const unassignedWorkflows = db.select().from(workflows).where(isNull(workflows.projectId)).all();
   if (unassignedWorkflows.length > 0) {
     const defaultProjectId = randomUUID();

@@ -1,17 +1,17 @@
 import { Router, type Response } from 'express';
 import { db } from '../db/index.js';
-import { items, workphases, activityLog } from '../db/schema.js';
+import { items, workphases, activityLog, projects, itemTypes, agents } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { hierarchyDepth, parentRefusal, walkItemDescendants } from '../lib/itemTree.js';
-import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
+import { resolveAppendPosition, withReindexDisclosure, type ReindexedPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
 import {
   applyHierarchyRequest,
-  foreignWorkphaseError,
+  getParent,
   logCreatedUnderParent,
-  resolveCreateWorkphase,
+  resolveCreate,
   validateHierarchyRequest,
   type HierarchyRequest,
 } from '../lib/itemHierarchy.js';
@@ -38,17 +38,11 @@ function isTerminalOfProject(projectId: string | null): (workphaseId: string) =>
   };
 }
 
-// Every item write responds with the fresh row plus, when a reindex fired,
-// the renumbered `{id, position}` pairs (wiki item-positioning §5.1) —
-// absent otherwise, so the common case costs nothing. The written item is
-// appended so a caller has one rule: apply every pair.
+// Every item write responds with the fresh row, and with the reindex it triggered when
+// one fired (wiki item-positioning §5.1).
 function respondWithItem(res: Response, id: string, reindexed: ReindexedPosition[], status = 200): void {
   const row = db.select().from(items).where(eq(items.id, id)).get()!;
-  const body: Record<string, unknown> = withPositionScope(row, isTerminalOfProject(row.projectId));
-  if (reindexed.length > 0) {
-    body.reindexed = row.position === null ? reindexed : [...reindexed, { id, position: row.position }];
-  }
-  res.status(status).json(body);
+  res.status(status).json(withReindexDisclosure(withPositionScope(row, isTerminalOfProject(row.projectId)), reindexed));
 }
 
 // Get a single item with its children and activity log
@@ -94,7 +88,9 @@ router.get('/:id', (req, res) => {
   res.json({ ...withPositionScope(item, isTerminalOf), workflowId, depth, children, activity });
 });
 
-// Create an item
+// Create an item, in the project it names or its parent's (wiki item-attachment §14). The
+// parent and the project are checked here; the flag and the workphase go through
+// `itemHierarchy.ts::resolveCreate`, so a create answers as a move does.
 router.post('/', (req, res) => {
   const { type, parentId, projectId, workphaseId, title, description, assigneeType, agentId, isAttached } = req.body;
 
@@ -112,19 +108,15 @@ router.post('/', (req, res) => {
     return;
   }
 
-  // Resolve projectId from parent if not provided
-  let resolvedProjectId = projectId;
-  const parentProjection = {
-    id: items.id,
-    title: items.title,
-    projectId: items.projectId,
-    workphaseId: items.workphaseId,
-  };
-  const parent = parentId ? db.select(parentProjection).from(items).where(eq(items.id, parentId)).get() : null;
-  if (parentId && !projectId && parent) resolvedProjectId = parent.projectId;
-
+  const parent = parentId ? (getParent(parentId) ?? null) : null;
+  const resolvedProjectId = projectId || parent?.projectId;
   if (!resolvedProjectId) {
     res.status(400).json({ error: 'projectId is required (or provide a parentId to inherit it)' });
+    return;
+  }
+  // A project that names no row would otherwise surface as an opaque FK-violation 500.
+  if (!existsById(projects, resolvedProjectId)) {
+    res.status(400).json({ error: 'projectId does not reference an existing project' });
     return;
   }
 
@@ -136,37 +128,22 @@ router.post('/', (req, res) => {
     return;
   }
 
-  // The flag is a child's: a create with no parent and the flag set is refused, and
-  // one without stores it clear. A child is attached unless the create clears the
-  // flag (wiki item-attachment §1, §14).
-  if (!parent && isAttached) {
-    res.status(400).json({ error: 'isAttached requires a parentId' });
+  // So would a type or an agent that names no row.
+  if (type !== undefined && type !== null && !existsById(itemTypes, type)) {
+    res.status(400).json({ error: 'type does not reference an existing item type' });
     return;
   }
-  const attached = parent ? (isAttached !== undefined ? Boolean(isAttached) : true) : false;
-  // The workphase follows the same rules as any write that leaves an item there:
-  // an attached child takes its parent's, and a detached one takes the one its
-  // parent is shown in unless the create names one (wiki item-attachment §2a).
-  const resolution = resolveCreateWorkphase(parent ?? null, attached, workphaseId);
+  if (agentId && !existsById(agents, agentId)) {
+    res.status(400).json({ error: 'agentId does not reference an existing agent' });
+    return;
+  }
+
+  const resolution = resolveCreate({ parent, projectId: resolvedProjectId, isAttached, workphaseId });
   if ('error' in resolution) {
     res.status(400).json({ error: resolution.error });
     return;
   }
-  const resolvedWorkphaseId = resolution.workphaseId;
-
-  // A bogus workphaseId would otherwise surface as an opaque FK-violation 500.
-  if (resolvedWorkphaseId && !existsById(workphases, resolvedWorkphaseId)) {
-    res.status(400).json({ error: 'workphaseId does not reference an existing workphase' });
-    return;
-  }
-  // A Free item's workphase belongs to its project's workflow (wiki item-attachment §2a).
-  if (!attached && typeof workphaseId === 'string') {
-    const foreignError = foreignWorkphaseError(resolvedProjectId, workphaseId);
-    if (foreignError) {
-      res.status(400).json({ error: foreignError });
-      return;
-    }
-  }
+  const { attached, workphaseId: resolvedWorkphaseId } = resolution;
 
   const now = Date.now();
   const id = randomUUID();

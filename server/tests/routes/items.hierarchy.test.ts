@@ -238,11 +238,23 @@ describe('PATCH /items/:id/move — request validation', () => {
     const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
     const before = getRow(x.id);
 
-    // The subject is excluded from its own scope, so without an explicit
-    // check this would pass validation and throw inside the transaction.
+    // The subject is left out of its own scope, so the refusal names the item itself
+    // rather than calling it a stranger to the scope.
     const res = await move(x.id, { anchorId: x.id, side: 'after' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/cannot be the item itself/);
+    expect(getRow(x.id)).toEqual(before);
+  });
+
+  it('TC-7.10: rejects an anchor for an item that ends with no workphase, which has no scope', async () => {
+    const { project, todo } = await setupWorkflow();
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' });
+    const before = getRow(x.id);
+
+    const res = await move(x.id, { workphaseId: null, anchorId: b.id, side: 'after' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/resulting position scope/);
     expect(getRow(x.id)).toEqual(before);
   });
 });
@@ -1329,6 +1341,30 @@ describe('the workphase a write leaves an item in', () => {
     expect(matching).toMatchObject({ isAttached: 1, workphaseId: w2.id });
   });
 
+  it('a create and a move refuse a workphaseId that names no workphase with one message, attached or not', async () => {
+    const { project, w1, a } = await setupShownWithChain();
+    const f = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'F' });
+    const before = countItems();
+
+    const moved = await move(f.id, { parentId: a.id, isAttached: true, workphaseId: 'no-such-workphase' });
+    expect(moved.status).toBe(400);
+    expect(moved.body.error).toMatch(/workphaseId does not reference an existing workphase/);
+
+    const creates = [
+      ['a top-level item', { projectId: project.id }],
+      ['an attached child', { parentId: a.id }],
+      ['a detached child', { parentId: a.id, isAttached: false }],
+    ] as const;
+    for (const [label, body] of creates) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'Y', workphaseId: 'no-such-workphase', ...body });
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toBe(moved.body.error);
+    }
+    expect(countItems()).toBe(before);
+  });
+
   it('ATT-9.4: a detach that names no workphase leaves the item in the one it was shown in', async () => {
     for (const [entryPoint, write] of [
       ['move', move],
@@ -1386,6 +1422,18 @@ describe('the workphase a write leaves an item in', () => {
 
     // Under D itself, D's own workphase.
     expect((await create(d.id)).workphaseId).toBe(w2.id);
+  });
+
+  it('a detached child created under a parentId cycle still resolves its workphase, instead of walking forever', async () => {
+    const { project, w2, a, x } = await setupShownWithChain();
+    // A is attached to D, so closing the loop makes A and X each other's ancestor.
+    db.update(items).set({ parentId: x.id }).where(eq(items.id, a.id)).run();
+
+    const res = await request(app)
+      .post('/api/items')
+      .send({ projectId: project.id, parentId: a.id, title: 'Y', isAttached: false });
+    expect(res.status).toBe(201);
+    expect(res.body.workphaseId).toBe(w2.id);
   });
 
   it('ATT-9.7: when the nearest Free ancestor has no workphase, a write that leaves an item Free must name one', async () => {

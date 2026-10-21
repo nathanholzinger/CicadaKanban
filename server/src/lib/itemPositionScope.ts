@@ -1,14 +1,14 @@
-// Classifies what an item's `position` is comparable against for API
-// consumers — distinct from positionResolver.ts, which computes/writes the
-// position value itself. Shared by items.ts and boards.ts so neither route
-// file imports from the other.
+// An item's position scope: classifyPositionScope and withPositionScope label what its
+// `position` is comparable against for API consumers, and positionScopeFor is the same rule
+// as a SQL predicate. Also here: isTerminalLookup, which builds the lookup withPositionScope
+// takes, and workflowIdForWorkphase. Distinct from positionResolver.ts, which computes and
+// writes the position value itself.
 //
-// Items-only vocabulary (isAttached/parentId/workphaseId/workphaseIsTerminal)
-// — not table-generic the way positionResolver.ts is, so this doesn't apply
-// to projects or any other PositionedTable. positionScopeFor below is the
-// SQL-predicate counterpart to classifyPositionScope's label — same items-
-// only scope rule, expressed as a query instead of a string — so it lives
-// here rather than in positionResolver.ts.
+// Items-only vocabulary (isAttached/parentId/workphaseId/workphaseIsTerminal) — not
+// table-generic the way positionResolver.ts is, so this doesn't apply to projects or any
+// other PositionedTable. positionScopeFor is classifyPositionScope's rule expressed as a
+// query instead of a string, so it lives here rather than in positionResolver.ts. Also used
+// by itemHierarchy.ts and the item, board, workflow and workphase routes.
 import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
 import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';
@@ -24,9 +24,8 @@ export function classifyPositionScope(
   workphaseIsTerminal: boolean | null,
 ): PositionScope {
   if (item.isAttached && item.parentId) return 'attached-siblings';
-  // Unsorted — no workphase, or one the item's project's workflow doesn't use:
-  // not position-ordered at all, same practical bucket as a done item even
-  // though the reason differs.
+  // Unsorted: not position-ordered at all, the same practical bucket as a done item
+  // even though the reason differs.
   if (item.workphaseId === null || workphaseIsTerminal === null) return 'none';
   // Done item — ordered by completedAt, not position.
   if (workphaseIsTerminal) return 'none';
@@ -40,15 +39,10 @@ export function classifyPositionScope(
 // item's `position` is actually comparable against without it re-deriving
 // isAttached/parentId/workphaseId/workphase.isTerminal itself.
 //
-// `isTerminalOf` is a caller-supplied lookup rather than a live query here,
-// because the right way to resolve it differs by caller: items.ts's
-// single-item routes query one workphase directly; its GET /:id (item +
-// children), boards.ts and workflows.ts (a whole workflow's worth of items)
-// all prebuild a `Map<workphaseId, isTerminal>` first so mapping many rows
-// through this function doesn't re-query per row. It answers only for the
-// workphases of the workflow the item's project uses, and null for any other:
-// an item in another workflow's workphase is "none", like one with no
-// workphase (wiki item-positioning §2).
+// `isTerminalOf` is a caller-supplied lookup rather than a live query here, so a caller
+// mapping many rows can build it once (isTerminalLookup below) instead of querying per row.
+// It answers null for a workphase the item's project's workflow doesn't use, which
+// classifyPositionScope's `workphaseIsTerminal` expects.
 export function withPositionScope<
   T extends { isAttached: number | boolean; parentId: string | null; workphaseId: string | null },
 >(item: T, isTerminalOf: (workphaseId: string) => boolean | null): T & { positionScope: PositionScope } {
@@ -120,29 +114,4 @@ function workphaseIdsInSameWorkflow(workphaseId: string, tx?: Tx): string[] {
     .where(eq(workphases.workflowId, workflowId))
     .all()
     .map(w => w.id);
-}
-
-// True if `anchor` and `subject` resolve to the *same* comparison space —
-// not just the same PositionScope label (both could independently classify
-// as "workflow" while belonging to two different workflows). Rejects an
-// anchorId whose position isn't actually comparable to where the subject's
-// is about to be written: an attached child's siblings space and a
-// workflow-wide space are deliberately isolated, and two different
-// workflows' "workflow-wide" spaces are two different sets of rows even
-// though positionScopeFor would expand either one on its own without
-// noticing the mismatch.
-export function sharesPositionScope(
-  anchor: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
-  subject: { isAttached: boolean; parentId: string | null; workphaseId: string | null },
-  tx?: Tx,
-): boolean {
-  const anchorIsAttachedSibling = anchor.isAttached && Boolean(anchor.parentId);
-  const subjectIsAttachedSibling = subject.isAttached && Boolean(subject.parentId);
-  if (anchorIsAttachedSibling !== subjectIsAttachedSibling) return false;
-  if (anchorIsAttachedSibling) return anchor.parentId === subject.parentId;
-
-  if (!anchor.workphaseId || !subject.workphaseId) return false;
-  const anchorWorkflowId = workflowIdForWorkphase(anchor.workphaseId, tx);
-  const subjectWorkflowId = workflowIdForWorkphase(subject.workphaseId, tx);
-  return anchorWorkflowId !== null && anchorWorkflowId === subjectWorkflowId;
 }

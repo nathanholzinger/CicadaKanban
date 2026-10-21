@@ -6,7 +6,7 @@ import type { Item } from '../types';
 // caller) — derived here from isAttached/parentId the same way the API
 // does, so fixtures stay consistent with real data instead of every test
 // separately tracking two things that always agree. The flag defaults to a
-// child's state: set with a parent, clear without (wiki item-attachment §1).
+// child's state: set with a parent, clear without (wiki item-attachment §1, §14).
 // An explicit override still wins, for tests about the field itself.
 export function makeItem(id: string, overrides: Partial<Item> = {}): Item {
   const parentId = overrides.parentId ?? null;

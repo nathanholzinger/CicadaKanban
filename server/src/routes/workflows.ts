@@ -1,21 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import {
-  workflows,
-  workphases,
-  items,
-  workflowTemplates,
-  workflowTemplatePhases,
-  projects,
-  boards,
-  notifications,
-} from '../db/schema.js';
+import { workflows, workphases, items, workflowTemplates, workflowTemplatePhases, projects } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { createDefaultBoard } from './boards.js';
+import { createDefaultBoard } from '../lib/defaultBoard.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
 import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems.js';
-import { deleteBoardsById } from '../lib/boardCascade.js';
+import { deleteWorkflowsById } from '../lib/workflowCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
 
@@ -239,22 +230,7 @@ router.delete('/:id', (req, res) => {
   const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;
 
-  db.transaction(tx => {
-    // Columns FK-reference workphases (no cascade), so boards/columns must go
-    // before the workphases.
-    const workflowBoardIds = tx
-      .select({ id: boards.id })
-      .from(boards)
-      .where(eq(boards.workflowId, req.params.id))
-      .all()
-      .map(b => b.id);
-    deleteBoardsById(workflowBoardIds, tx);
-
-    // Notifications carry a workflowId FK with no cascade, so they go before the workflow.
-    tx.delete(notifications).where(eq(notifications.workflowId, req.params.id)).run();
-    tx.delete(workphases).where(eq(workphases.workflowId, req.params.id)).run();
-    tx.delete(workflows).where(eq(workflows.id, req.params.id)).run();
-  });
+  db.transaction(tx => deleteWorkflowsById([req.params.id], tx));
 
   res.status(204).send();
 });
