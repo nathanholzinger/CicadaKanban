@@ -202,6 +202,10 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `.claude/guides/story-done-checklist.md` | 1 | The same full-checklist line, in its tech-debt section | Architect |
 | `docs/audits/code-quality-audit-a6.md` | 2 | new, transient | Auditor |
 | Code named by the report's Fix Now (#1–42) and Watch List #47 and #50 | 3a–3g | fixes | Coder |
+| `server/src/lib/itemTree.ts` | 3a done | #20, #6: `parentRefusal`, the one legality sequence for items and projects: the parent exists, isn't the row or in its subtree, and the cap holds when the parent changes, the top level included. `assertWithinDepthCap` takes a null parent; `assertWithinProjectDepthCap` is private | Coder |
+| `server/src/lib/itemHierarchy.ts`, `server/src/routes/items.ts`, `server/src/routes/projects.ts` | 3a done | #20: the item move and edit (through `validateHierarchyRequest`), `POST /items`, and the project create, edit and move ask `parentRefusal`, so #6 lands for all of them. #1: `POST /items` positions an attached child whatever its parent's workphase | Coder |
+| `server/src/lib/workflowItems.ts`, `server/src/routes/workflows.ts` | 3a done | #2: `getProjectsUsingWorkflow` is exported, and `GET /workflows/:id` answers a position scope only for items of the projects that use the workflow | Coder |
+| `server/tests/routes/items.test.ts`, `items.hierarchy.test.ts`, `workflows.test.ts` | 3a done | One test each for #1 (TC-3.4), #6 (ATT-4.11) and #2 (no ID); see Amendments | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3e | #11, and its file list after #36 and #37 | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -255,6 +259,14 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - TC-2.4's Automation line omits `tests/api/itemRepositioningAttachedSiblings.spec.ts`, whose header says it runs TC-2.4; its titles at `:58, 70, 89` omit TC-2.4 and TC-3.1.
   - Report #4's fix starts with a throwaway probe of DRAG-3.24's scenario. DRAG-3.24's permanent test stays with Story 10, where it's routed.
 
+*From the Coder, batch 3a (2026-10-21).*
+
+- **For the Architect:** root `CLAUDE.md`'s "One hierarchy-write primitive" bullet names `itemTree.ts::assertWithinDepthCap` as how `POST /items` checks the cap. The create asks `itemTree.ts::parentRefusal` now, which checks that the parent exists and the cap in one call; `assertWithinDepthCap` is the formula beneath it, and it still exists. 3d's #19 rebuilds the same checks, so the bullet can be reworded once, after it.
+- **For the Test Planner:**
+  - **wiki item-positioning §2's third `"none"` case,** an item filed in a workphase of a workflow its project doesn't use, has no case among TC-2.13 to TC-2.17. `workflows.test.ts`'s positionScope test checks it and carries no ID.
+  - **TC-3.4's setup has a parent with a workphase.** Its ID is on the test for a parent with none (wiki item-positioning §3: the scope is the parent's children, not a workphase). If that variation wants a case of its own, the test's ID follows.
+  - **ATT-4.11 names a root item as the shallower target.** wiki hierarchy-placement §6's "the top level included" isn't in its text. The test for the top level carries its ID, and runs it through both writes.
+
 ## Amendments
 
 - **2026-10-06, batch 1 (Auditor):**
@@ -289,3 +301,24 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - the passes split by area, not by commit, so a file changed by several sources has one reader per lens. A4's comment rewrites went to the drift instance for their area, listed apart, in place of one drift pass per A4 commit;
   - 23 instances ran in waves of up to five, after a first launch of 20 hit the account's usage limit with none finished. A run this size takes about three usage windows.
 - **2026-10-21, batch 3 planned (Architect):** batch 3's code is split into seven batches, 3a–3g, with correctness first and each area's structural moves before its comment fixes. Nathan added Watch List #47 and #50, which sit in code 3d and 3g rework anyway. Batch 4 gains the Reconciler run, which batch 3's test-file splits require, and the rule that every Open question is answered before sign-off. The status line had stayed at "batch 1 uncommitted": batch 1 was committed as `7443721`, with D8's review in it, before the first run began.
+- **2026-10-21, batch 3a (the Coder): server correctness.** #1, #2, #6 and #20 are fixed, each with the test its finding names. The Close-out rows are filled in.
+  - **The fixes and their tests.**
+
+    | # | Fix | Test, in |
+    |---|---|---|
+    | 1 | `POST /items` gives an attached child a position under a parent with no workphase, as a move does. No backfill: the dev database has no attached row with a null position (0 of 20, checked again today) | `items.test.ts`, TC-3.4: three children of a parent with no workphase get 1, 2 and 3 and `attached-siblings`; once the parent is filed, one is dropped before another. It replaces the test that made this state and asserted only the workphase |
+    | 2 | `GET /workflows/:id` answers a position scope only for items of a project that uses the workflow, and `"none"` for any other | `workflows.test.ts`, no ID: the positionScope test gains an inheriting project's item and a foreign one, and compares every row with `GET /items/:id`, which its title had claimed |
+    | 20 | `itemTree.ts::parentRefusal(tree, moving, parentId)`, for both trees. The item move and edit, `POST /items` and the three project writes ask it | The existing parent and cap tests, unchanged, and #6's |
+    | 6 | Through #20: a reparent to the top level takes the cap too, for items as for projects | `items.hierarchy.test.ts`, ATT-4.11: a subtree too tall for the cap is refused the top level by move and by PUT, and one that just fits goes |
+  - **Shown to fail without the fix.** Each fix reverted in turn, and the tests that fail:
+    - #1's gate back (`resolvedWorkphaseId` required): TC-3.4.
+    - #2's lookup back (every item answered for): the workflows positionScope test.
+    - The cap skipping the top level, in `parentRefusal`: ATT-4.11 and TREE-3.8.
+    - The primitive skipping `parentRefusal` for the top level: ATT-4.11.
+    - The cap checking a parent the row already has: TREE-3.7.
+    - The item create skipping the shared check: three ATT-4.10 tests.
+    - The project routes treating every write as a create: six TREE tests.
+  - **Two edges the findings don't state.**
+    - **`POST /items`' error order moves.** The shared check runs before the route resolves the project, so a create that names a parent in another project that is also at the cap gets the cap's message, not "belongs to a different project". No wiki rule or test-plan case orders them. 3d rebuilds the create's checks (#19) and settles the order it keeps.
+    - **`assertWithinProjectDepthCap` is private,** since only `itemTree.ts` calls it once the project routes ask `parentRefusal`. `assertWithinDepthCap` stays exported, and takes a null parent: its lib tests, `dragClassification.ts`'s comment and root `CLAUDE.md` name it.
+  - **Checks.** `npm run check` passes: 379 server tests, 432 client, 75 script tests, and `check:docs` at 0 hits. `npm run test:e2e` passes: 163 passed, 8 skipped.

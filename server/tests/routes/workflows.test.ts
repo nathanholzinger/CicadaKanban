@@ -94,11 +94,28 @@ describe('GET /api/workflows/:id', () => {
       parentId: root.id,
       title: 'Child',
     });
+    // A project under this one inherits the workflow, so its item is as much this
+    // workflow's as the owner's.
+    const inheritor = await createProject({ parentId: project.id });
+    const inherited = await createItem({ projectId: inheritor.id, workphaseId: workphase.id, title: 'Inherited' });
+    // A project on a workflow of its own, with an item filed into this workflow's
+    // workphase, which no write does: the item shows in Unsorted, so nothing orders it.
+    const other = await createProject();
+    await createWorkflow(other.id);
+    const foreign = await createItem({ projectId: other.id, title: 'Foreign' });
+    db.update(itemsTable).set({ workphaseId: workphase.id }).where(eq(itemsTable.id, foreign.id)).run();
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
-    const items = res.body.items as Array<{ id: string; positionScope: string }>;
+    const items = res.body.items as Array<{ id: string; title: string; positionScope: string }>;
     expect(items.find(i => i.id === root.id)?.positionScope).toBe('workflow');
     expect(items.find(i => i.id === child.id)?.positionScope).toBe('attached-siblings');
+    expect(items.find(i => i.id === inherited.id)?.positionScope).toBe('workflow');
+    expect(items.find(i => i.id === foreign.id)?.positionScope).toBe('none');
+
+    for (const item of items) {
+      const single = await request(app).get(`/api/items/${item.id}`);
+      expect(single.body.positionScope, item.title).toBe(item.positionScope);
+    }
   });
 });
 

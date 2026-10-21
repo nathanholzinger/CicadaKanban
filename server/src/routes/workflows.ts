@@ -14,7 +14,7 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from './boards.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
-import { getWorkflowItems } from '../lib/workflowItems.js';
+import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
@@ -73,9 +73,16 @@ router.get('/:id', (req, res) => {
   const workflowItems = getWorkflowItems(workflowWorkphases);
 
   // workflowWorkphases already carries isTerminal for every id an item here
-  // could reference, so no extra query is needed to attach positionScope.
+  // could reference, so no extra query is needed to attach positionScope. It
+  // answers only for the items of a project that uses this workflow: one filed
+  // into these workphases from a project on another workflow has no scope, as
+  // on every other read (wiki item-positioning §2).
   const isTerminalOf = isTerminalLookup(workflowWorkphases);
-  const scopedItems = workflowItems.map(item => withPositionScope(item, isTerminalOf));
+  const usedBy = getProjectsUsingWorkflow(workflow.id);
+  const noScope = () => null;
+  const scopedItems = workflowItems.map(item =>
+    withPositionScope(item, item.projectId && usedBy.has(item.projectId) ? isTerminalOf : noScope),
+  );
 
   res.json({ ...workflow, workphases: workflowWorkphases, items: addDepths(scopedItems) });
 });

@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, notifications } from '../db/schema.js';
 import { existsById } from './getOrNotFound.js';
-import { assertValidReparent, assertWithinDepthCap, walkItemDescendants } from './itemTree.js';
+import { parentRefusal, walkItemDescendants } from './itemTree.js';
 import { cascadeWorkphaseToAttachedDescendants } from './attachedCascade.js';
 import { positionScopeFor, sharesPositionScope, workflowIdForWorkphase } from './itemPositionScope.js';
 import {
@@ -222,25 +222,16 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     return 'workphaseId does not reference an existing workphase';
   }
 
-  let parent: ParentRow | undefined;
-  if (typeof req.parentId === 'string') {
-    // Exists / not self / not a descendant / within the depth cap — the
-    // four legality rules (wiki item-attachment §7). No same-project check:
-    // cross-project is not a disqualifier; projectId is derived from the
-    // parent below.
-    parent = getParent(req.parentId);
-    if (!parent) return 'parentId does not reference an existing item';
-    const reparentError = assertValidReparent(items, item.id, req.parentId, 'item');
-    if (reparentError) return reparentError;
-    // The cap gates reparents, not existing data (wiki hierarchy-placement §6):
-    // an attach toggle that names the parent the item already has isn't one.
-    if (req.parentId !== item.parentId) {
-      const depthError = assertWithinDepthCap(req.parentId, item.id);
-      if (depthError) return depthError;
-    }
-  } else if (item.parentId) {
-    parent = getParent(item.parentId);
+  // Exists / not self / not a descendant / within the depth cap — the four
+  // legality rules (wiki item-attachment §7), for a parent or the top level. No
+  // same-project check: cross-project is not a disqualifier; projectId is derived
+  // from the parent below.
+  if (req.parentId !== undefined) {
+    const parentError = parentRefusal('item', item, req.parentId);
+    if (parentError) return parentError;
   }
+  const parentId = req.parentId !== undefined ? req.parentId : item.parentId;
+  const parent = parentId ? getParent(parentId) : undefined;
 
   const resulting = deriveResultingState(item, req, parent);
 

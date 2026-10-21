@@ -1,6 +1,6 @@
 // isSelfRefDescendant/assertValidReparent (items + projects), the depth cap's
-// depth/height/check for both (ITEM_DEPTH_CAP, PROJECT_DEPTH_CAP), walkItemDescendants.
-// All cycle-guarded.
+// depth/height/check for both (ITEM_DEPTH_CAP, PROJECT_DEPTH_CAP), parentRefusal
+// (the parent-legality sequence over them), walkItemDescendants. All cycle-guarded.
 
 import { eq } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -129,12 +129,53 @@ function withinCapError(
   return null;
 }
 
-export function assertWithinDepthCap(parentId: string, movingId: string | null, tx?: Tx): string | null {
+export function assertWithinDepthCap(parentId: string | null, movingId: string | null, tx?: Tx): string | null {
   return withinCapError(items, ITEM_DEPTH_CAP, parentId, movingId, tx);
 }
 
-export function assertWithinProjectDepthCap(parentId: string | null, movingId: string | null, tx?: Tx): string | null {
+function assertWithinProjectDepthCap(parentId: string | null, movingId: string | null, tx?: Tx): string | null {
   return withinCapError(projects, PROJECT_DEPTH_CAP, parentId, movingId, tx);
+}
+
+// ============================================================
+// The legality of a parent, for items and projects alike: the one sequence every
+// write that gives a row a parent runs.
+// ============================================================
+
+// What differs between the two trees: the table and the cap check. A tree's key
+// is also what its messages call a row.
+const TREES: Record<
+  'item' | 'project',
+  { table: SelfRefTable; capError: (parentId: string | null, movingId: string | null, tx?: Tx) => string | null }
+> = {
+  item: { table: items, capError: assertWithinDepthCap },
+  project: { table: projects, capError: assertWithinProjectDepthCap },
+};
+
+// Why `parentId` is no legal parent for a row, or null when it is: it exists, it isn't
+// the row itself and isn't in its subtree (wiki item-attachment §7, wiki project-tree §3),
+// and the resulting subtree stays within the cap (wiki hierarchy-placement §6). `parentId`
+// null is the top level, which has no parent to check but takes the cap all the same: a
+// subtree too tall for the cap fails it for every target. `moving` is the row being given
+// the parent, or null for a create, which has no subtree. The cap gates a write that
+// changes the parent, so one that names the parent the row already has isn't checked.
+export function parentRefusal(
+  tree: 'item' | 'project',
+  moving: { id: string; parentId: string | null } | null,
+  parentId: string | null,
+  tx?: Tx,
+): string | null {
+  const { table, capError } = TREES[tree];
+  if (parentId !== null) {
+    const parent = (tx ?? db).select({ id: table.id }).from(table).where(eq(table.id, parentId)).get();
+    if (!parent) return `parentId does not reference an existing ${tree}`;
+    if (moving) {
+      const reparentError = assertValidReparent(table, moving.id, parentId, tree, tx);
+      if (reparentError) return reparentError;
+    }
+  }
+  if (moving && parentId === moving.parentId) return null;
+  return capError(parentId, moving?.id ?? null, tx);
 }
 
 // ============================================================

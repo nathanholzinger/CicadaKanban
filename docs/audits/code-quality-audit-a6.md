@@ -492,7 +492,12 @@ Filled in as the audit closes. One row per required finding (#1–54).
 
 | # | Disposition | Where it landed (routes) |
 |---|---|---|
-| 1–42 | open | — |
+| 1–2 | Fixed | Batch 3a |
+| 3–5 | open | — |
+| 6 | Fixed | Batch 3a, through #20 |
+| 7–19 | open | — |
+| 20 | Fixed | Batch 3a |
+| 21–42 | open | — |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |
 | 45 | Routed | `epic-4-decisions.md` §12, the same block |

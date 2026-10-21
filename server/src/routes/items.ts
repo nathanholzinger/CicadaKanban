@@ -4,7 +4,7 @@ import { items, workphases, activityLog } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { assertWithinDepthCap, hierarchyDepth, walkItemDescendants } from '../lib/itemTree.js';
+import { hierarchyDepth, parentRefusal, walkItemDescendants } from '../lib/itemTree.js';
 import { resolveAppendPosition, type ReindexedPosition } from '../lib/positionResolver.js';
 import { isTerminalLookup, positionScopeFor, withPositionScope } from '../lib/itemPositionScope.js';
 import {
@@ -103,6 +103,15 @@ router.post('/', (req, res) => {
     return;
   }
 
+  // The parent is a legal one for a new item, which has height 0 (wiki item-attachment §7).
+  // A non-existent parentId would otherwise be stored silently, leaving an attached
+  // child invisible on every board (no parent card to nest under).
+  const parentError = parentRefusal('item', null, parentId || null);
+  if (parentError) {
+    res.status(400).json({ error: parentError });
+    return;
+  }
+
   // Resolve projectId from parent if not provided
   let resolvedProjectId = projectId;
   const parentProjection = {
@@ -112,12 +121,6 @@ router.post('/', (req, res) => {
     workphaseId: items.workphaseId,
   };
   const parent = parentId ? db.select(parentProjection).from(items).where(eq(items.id, parentId)).get() : null;
-  // A non-existent parentId would otherwise be stored silently, leaving an
-  // attached child invisible on every board (no parent card to nest under).
-  if (parentId && !parent) {
-    res.status(400).json({ error: 'parentId does not reference an existing item' });
-    return;
-  }
   if (parentId && !projectId && parent) resolvedProjectId = parent.projectId;
 
   if (!resolvedProjectId) {
@@ -131,16 +134,6 @@ router.post('/', (req, res) => {
   if (parent && resolvedProjectId !== parent.projectId) {
     res.status(400).json({ error: 'parentId belongs to a different project' });
     return;
-  }
-
-  // The depth cap gates every parent-giving write, creation included
-  // (wiki item-attachment §7). A new item has height 0.
-  if (parentId) {
-    const depthError = assertWithinDepthCap(parentId, null);
-    if (depthError) {
-      res.status(400).json({ error: depthError });
-      return;
-    }
   }
 
   // The flag is a child's: a create with no parent and the flag set is refused, and
@@ -180,10 +173,11 @@ router.post('/', (req, res) => {
   const reindexed: ReindexedPosition[] = [];
 
   // Position/completedAt: an attached child is scoped to (parentId,
-  // isAttached) — its true siblings. A root/detached item is scoped to its
-  // workflow, unless its workphase is terminal, in which case it gets no
-  // stored position at all — ordering is derived from completedAt instead
-  // (wiki item-positioning §6).
+  // isAttached) — its true siblings, whatever its workphase, so a parent with
+  // none leaves it as positioned as any other (wiki item-positioning §3). A
+  // root/detached item is scoped to its workflow, unless its workphase is
+  // terminal, in which case it gets no stored position at all — ordering is
+  // derived from completedAt instead (wiki item-positioning §6).
   //
   // Wrapped in a transaction: resolveAppendPosition can trigger a reindex of
   // the whole scope, which writes one row at a time — without an enclosing
@@ -191,7 +185,7 @@ router.post('/', (req, res) => {
   db.transaction(tx => {
     let position: number | null = null;
     let completedAt: number | null = null;
-    if (attached && parentId && resolvedWorkphaseId) {
+    if (attached && parentId) {
       const scopeInput = { isAttached: true, parentId, workphaseId: resolvedWorkphaseId };
       position = resolveAppendPosition(items, positionScopeFor(scopeInput, undefined, tx), tx, reindexed);
     } else if (resolvedWorkphaseId) {

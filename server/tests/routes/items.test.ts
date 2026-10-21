@@ -1400,11 +1400,25 @@ describe('attached children', () => {
     expect(res.body.projectId).toBe(projectB.id);
   });
 
-  it('an attached child of a parent with no workphase gets a null workphase', async () => {
-    const project = await createProject();
+  it('TC-3.4: an attached child of a parent with no workphase has none itself, and is still placed among its siblings', async () => {
+    const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, title: 'Parent' });
-    const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
-    expect(child.workphaseId).toBeNull();
+    const a = await createItem({ projectId: project.id, parentId: parent.id, title: 'A' });
+    const b = await createItem({ projectId: project.id, parentId: parent.id, title: 'B' });
+    const c = await createItem({ projectId: project.id, parentId: parent.id, title: 'C' });
+    for (const child of [a, b, c]) {
+      expect(child).toMatchObject({ workphaseId: null, positionScope: 'attached-siblings' });
+    }
+    // Each goes after the one before it, as under a parent that has a workphase.
+    expect([a.position, b.position, c.position]).toEqual([1, 2, 3]);
+
+    // Once the parent is filed, its children come along with the positions they
+    // had, so one can be dropped before another.
+    const filed = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: todo.id });
+    expect(filed.status).toBe(200);
+    const reorder = await request(app).patch(`/api/items/${b.id}/move`).send({ anchorId: a.id, side: 'before' });
+    expect(reorder.status).toBe(200);
+    expect(reorder.body.position).toBeLessThan(a.position);
   });
 
   it('a detached child keeps its explicitly passed workphase', async () => {

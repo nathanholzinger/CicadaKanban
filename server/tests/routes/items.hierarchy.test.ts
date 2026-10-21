@@ -973,6 +973,28 @@ describe('data already past the cap', () => {
     expect(res.body.error).toMatch(/exceeds the cap/);
     expect(getRow(m.id)).toEqual(before);
   });
+
+  it('ATT-4.11: the top level is no exception: a subtree too tall for the cap is refused it by move and by PUT, and one that fits is not', async () => {
+    const { project, todo } = await setupWorkflow();
+    // The chain's second link has height CAP, so at the top level its deepest leaf
+    // would sit at CAP + 1. The third has height CAP − 1, which just fits.
+    const [, tooTall, fits] = await seedChainPastCap(project.id, todo.id, ITEM_DEPTH_CAP + 2);
+    const before = getRow(tooTall.id);
+
+    for (const [entryPoint, write] of [
+      ['move', move],
+      ['PUT', put],
+    ] as const) {
+      const res = await write(tooTall.id, { parentId: null });
+      expect(res.status, entryPoint).toBe(400);
+      expect(res.body.error, entryPoint).toMatch(/exceeds the cap/);
+      expect(getRow(tooTall.id), entryPoint).toEqual(before);
+    }
+
+    const accepted = await move(fits.id, { parentId: null });
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.parentId).toBeNull();
+  });
 });
 
 describe('hierarchy activity log', () => {

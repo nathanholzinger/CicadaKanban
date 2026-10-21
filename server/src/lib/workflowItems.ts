@@ -1,5 +1,5 @@
 // getWorkflowItems/getBoardScopeItems (items in/under a workflow's scope),
-// effectiveWorkflowIdForProject.
+// getProjectsUsingWorkflow, effectiveWorkflowIdForProject.
 
 import { db, type Tx } from '../db/index.js';
 import { items, projects, workflows } from '../db/schema.js';
@@ -24,7 +24,7 @@ export function getWorkflowItems(workflowWorkphases: Workphase[]): ItemRow[] {
 // project plus descendant projects that inherit it (i.e. no project between them
 // and the owner has its own workflow). The same inheritance as the client's
 // `App.tsx::effectiveWorkflow`, on the server so the board read path can scope by project.
-function getProjectsUsingWorkflow(workflowId: string): Set<string> {
+export function getProjectsUsingWorkflow(workflowId: string): Set<string> {
   const workflow = db
     .select({ projectId: workflows.projectId })
     .from(workflows)

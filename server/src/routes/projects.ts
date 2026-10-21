@@ -5,7 +5,7 @@ import { eq, inArray, asc, isNull, and, not, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { deleteBoardsById } from '../lib/boardCascade.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
-import { assertValidReparent, assertWithinProjectDepthCap, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
+import { parentRefusal, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
 import {
   resolveAppendPosition,
   resolvePositionByAnchorAndSide,
@@ -29,24 +29,12 @@ function isValidName(name: unknown): name is string {
   return typeof name === 'string' && name.trim() !== '';
 }
 
-// Why `parentId` is no legal parent for the project, or null when it is: it
-// exists, isn't the project and isn't in its subtree, and leaves the subtree
-// within the project cap (wiki project-tree §3). `movingId` null is a create,
-// which has no subtree. The cap gates a write that changes the parent, so a
-// parent the project already has passes it.
-function parentError(movingId: string | null, parentId: string | null, currentParentId?: string | null): string | null {
+// Why `parentId` is no legal parent for the project, or null when it is: the
+// shape, then the rules items follow too, over the project cap (wiki project-tree §3).
+// `moving` is the project being given the parent, or null for a create.
+function parentError(moving: { id: string; parentId: string | null } | null, parentId: string | null): string | null {
   if (parentId !== null && typeof parentId !== 'string') return 'parentId must be a string or null';
-  if (parentId !== null) {
-    if (movingId) {
-      const reparentError = assertValidReparent(projects, movingId, parentId, 'project');
-      if (reparentError) return reparentError;
-    }
-    const parent = db.select({ id: projects.id }).from(projects).where(eq(projects.id, parentId)).get();
-    if (!parent) return 'parentId does not reference an existing project';
-  }
-  if (movingId === null || parentId !== (currentParentId ?? null))
-    return assertWithinProjectDepthCap(parentId, movingId);
-  return null;
+  return parentRefusal('project', moving, parentId);
 }
 
 // The position a write gives a project in the sibling group it ends with: after
@@ -156,7 +144,7 @@ router.put('/:id', (req, res) => {
 
   const parentId: string | null = 'parentId' in req.body ? (req.body.parentId ?? null) : project.parentId;
   const parentChanged = parentId !== project.parentId;
-  const editError = 'parentId' in req.body ? parentError(project.id, parentId, project.parentId) : null;
+  const editError = 'parentId' in req.body ? parentError(project, parentId) : null;
   if (editError) {
     res.status(400).json({ error: editError });
     return;
@@ -280,7 +268,7 @@ router.patch('/:id/move', (req, res) => {
 
   const targetParentId: string | null = 'parentId' in req.body ? (parentId ?? null) : project.parentId;
 
-  const moveError = parentError(project.id, targetParentId, project.parentId);
+  const moveError = parentError(project, targetParentId);
   if (moveError) {
     res.status(400).json({ error: moveError });
     return;
