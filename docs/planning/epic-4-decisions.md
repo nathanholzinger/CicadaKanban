@@ -184,6 +184,25 @@ with `toBeLessThan` rather than the case's values
   into the Card under the cursor. §6.1's only reason against that is that
   Cards slide aside, and nothing in a done list does.
 
+**Carried in from the A6 first-run audit** (`docs/audits/code-quality-audit-a6.md`,
+2026-10-07; Nathan approved the routes on 2026-10-21):
+
+- **One rule written three ways** (#44): whether a workphase belongs to the
+  workflow the item's project uses, in `routes/items.ts:23–39, 64–80` and
+  `itemHierarchy.ts:118–125`. The copies disagree for a project with no
+  workflow: the create accepts any workphase and gives it a position, while
+  the read labels the item `"none"`. One shared lookup needs ATT-5.11's
+  first half answered first, and §13's status model may retire its terminal
+  half.
+- **The items' active/done split has three homes** (#45): the terminal-flag
+  backfill (`routes/workphases.ts:102–149`), `POST /items`
+  (`routes/items.ts:182–212`) and `itemHierarchy.ts:401–413`. Consolidate
+  them with the rework, which may retire the flag all three read.
+- **For the two drag questions above** (#4): today a done list's ghost
+  *does* slide with dnd-kit's shuffle, against rule 6, though the release
+  is right. It's a Fix Now in that audit, so "nothing in a done list
+  slides" holds once it lands.
+
 ### 13. The status model: three hard-coded statuses (proposed)
 Nathan's plan, recorded on 2026-09-30 during A5's grooming. It's a proposal:
 it gets discussed when this epic starts, before any implementation. The

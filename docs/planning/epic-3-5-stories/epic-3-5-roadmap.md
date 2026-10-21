@@ -804,6 +804,14 @@ deferral and keep landing with their stories.
      `itemRow(...).getByRole('button')` seven times.
    - The two skipped zoom-in cases in `drag-card-zoom-in.spec.ts` differ
      only by target column: one parameterized case.
+   - **Split `drag-column-bands.spec.ts`** (A6 first-run audit #43,
+     `docs/audits/code-quality-audit-a6.md`; routed here by Nathan,
+     2026-10-21). At 816 lines it holds three test-plan suites: the DRAG-3
+     band cases and the DRAG-1 context and popping cases, mixed in one
+     describe (`:235–732`), and the DRAG-6 preview describe (`:734–816`).
+     Move its helpers (`:46–233`) to a `tests/helpers/` module first, then
+     give each suite its own spec, each with its own `test.use` viewport.
+     It goes with the bullets above, since they rework the same helpers.
 
 8. **The flakiness call, made explicitly.** For each precise-move case
    the reconciler proposes automating, decide whether a real pointer

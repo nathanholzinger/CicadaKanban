@@ -1,6 +1,6 @@
 # A6 — Audit Guidance Revisit and First Run
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batch 1 applied 2026-10-06, uncommitted; the Test Planner's review of D8 and Nathan's approval close it · **Sequenced:** after A4 and A5a–A5d, all closed
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3's code, in seven batches, is next (Coder) · **Sequenced:** after A4 and A5a–A5d, all closed
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, plus the other tech-debt stories in this folder. Tags like "Auditor F7" point to round-table items, and "A1 D11" points to another story's decisions. This plan is transient, so it may cite them.
 
@@ -149,21 +149,42 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - `npm run check` (Tooling Gates), which now includes `check:docs`;
   - what A1 changed at its close: the module-header rule in `code-comments.md` (D7), the rewritten `testing-strategy.md` (D8), and the checker's wider `transient-link` and `symbol-ref` rules, which take mechanical work off the drift pass.
 - Draft D1–D9 into the guide and the agents, plus any conflicts the re-read turns up. *Done 2026-10-06:* the drafts were applied and their folder deleted. What they changed is in Amendments.
-- **Reviews:** the Architect reviews D2 and D4's references to the template, the Test Planner reviews D8, and Nathan approves.
+- **Reviews:** the Architect reviews D2 and D4's references to the template, the Test Planner reviews D8, and Nathan approves. *Done:* D8's review sent a pass's doubt about a test to the Reconciler, which now reads those doubts from the plan's Open questions (`audit-workflow.md`'s Test code, and `test-reconciler.md`). Nathan committed batch 1 as `7443721`.
 - **Check:** `npm run check:docs -- .claude` still reports zero hits.
 
 ### Batch 2: the first run (Auditor)
 
 - Nathan tags `4c0cb34` as `epic-3-5-story-6-audited`. *Done:* an annotated tag on `4c0cb34`.
-- Run D10 and write `docs/audits/code-quality-audit-a6.md`, opening with its range line, with every route landed (D6).
+- Run D10 and write `docs/audits/code-quality-audit-a6.md`, opening with its range line, with every route landed (D6). *Done 2026-10-07:* the range is `epic-3-5-story-6-audited..7443721`, and the routes landed in Open questions and their destinations.
 
 ### Batch 3: corrections
 
-- **Instructions:** whatever the run exposed. The Auditor drafts; the Architect applies.
-- **Code:** the run's Fix Now, in the usual batches (Coder). Each batch passes `npm run check`, plus E2E where it touches behavior.
+- **Instructions:** whatever the run exposed. The Auditor drafts; the Architect applies. Two candidates from the report's account of the run: the passes split by code area instead of by commit, and their instances launched in waves.
+- **The Architect's routes** (Open questions, "For the Architect"). The guides' fixes don't depend on the code and can land any time. Root `CLAUDE.md` and `coder.md` land after the code batches that change what they describe (3d and 3e).
+- **Code (Coder):** the report's Fix Now, #1–42, plus Watch List #47 and #50, which sit in code 3d and 3g already rework (Nathan, 2026-10-21). The numbers are the report's. Seven batches, each ending with `npm run check`, plus `npm run test:e2e` where it touches behavior or E2E code, and a stop for Nathan's review and commit. Each batch fills in its rows in the report's Close-out table.
+
+**Order.** Correctness comes first, as the audit guide says. After that the batches go area by area, and within an area the structural moves come before the comment fixes, the reverse of the guide's order. Many of the comments (#8, #10) sit in code that #19–#25 and #37 move or split, so this way each is written once, beside its final code.
+
+| Batch | Findings | Notes |
+|---|---|---|
+| 3a. Server correctness | #1, #2, #6, with #20 | #6 lands through #20's shared parent check. #1 needs no backfill: the dev database has no attached row with a null position (checked 2026-10-21), and the test database is rebuilt for each run. Each fix gains the test its finding names. |
+| 3b. Client correctness | #3, #5, #4 | #4 starts with a throwaway probe of DRAG-3.24's scenario on the test stack. If the probe fails as traced, keep a done list's rows still during a drag, and add rule 6's index pointer at the fix. If it passes, reject #4 with the reason, written at the site that enforces rule 6, beside its pointer. DRAG-3.24's permanent test stays with Story 10. |
+| 3c. The checker | #7, #42, #18 | `scripts/check-docs/`, `eslint.config.mjs` and the Bruno requests only. `npm run check:docs` reports no new hits afterwards. |
+| 3d. Server structure | #19, #21–#26, #47, then #8 | #47 rides with #19, which rebuilds `POST /items`' checks. #19 changes which error wins when an attached create also names a missing workphase; no wiki rule or test-plan case states which. |
+| 3e. Client structure | #27–#37, then #9–#14 | Likely two commits: the drag layer (#30, #32, #34–#37, #9–#12), then the sidebar, `lib/` and `api/` (#27–#29, #31, #33, #13, #14). #9's last bullet asks whether `AttachGhostRow` stays apart from `AttachedChildRow`: restate the reason, or merge them if none holds. Bring that choice to Nathan within the batch. |
+| 3f. Unit tests | #38, #39, #15, #16 | Test code only. |
+| 3g. E2E | #40, #41, #50, #17 | #50 rides with #40's rework of `seed.ts`. |
+
+**Across the batches:**
+- **A test that moves, splits or merges** (#31, #37, #39, #41) keeps its case ID at the start of its title. The test-plan Automation lines that name the old files go stale; the Reconciler run at close re-maps them.
+- **Root `CLAUDE.md` is the Architect's.** A batch that moves or renames something it names (#19, #22, #24, #27, #28) lists the change in its note for the Architect, who applies it with that batch.
+- **`client/src/components/workflow/CLAUDE.md` is the Coder's,** like any directory `CLAUDE.md`: #11 is fixed there, and its file list follows #36 and #37's moves.
+- **The other Watch List items** (#46, #48, #49) stay optional.
 
 ### Batch 4: close
 
+- **The Reconciler runs once** over the whole catalog, since batch 3 moves and splits test files (`story-done-checklist.md`'s tech-debt section). It also answers the items addressed to it under Open questions.
+- **Every Open question is answered,** or moved to the plan that will answer it. Batch 3 fixes behavior, so this story closes by the full checklist.
 - The Architect's memory pass for the three audit memories (D1).
 - The report moves to `docs/archive/`, followed by this plan once it's signed off. Nathan tags the report's end commit `a6-audited`.
 
@@ -180,7 +201,11 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `.claude/guides/story-plan-template.md` | 1 | The tech-debt template gains Inbound deferrals and Open questions; "N.1" becomes "a cleanup refactor"; a tech-debt story that changes what the app does closes by the full checklist | Architect |
 | `.claude/guides/story-done-checklist.md` | 1 | The same full-checklist line, in its tech-debt section | Architect |
 | `docs/audits/code-quality-audit-a6.md` | 2 | new, transient | Auditor |
-| Code named by the run's Fix Now | 3 | fixes | Coder |
+| Code named by the report's Fix Now (#1–42) and Watch List #47 and #50 | 3a–3g | fixes | Coder |
+| `client/src/components/workflow/CLAUDE.md` | 3e | #11, and its file list after #36 and #37 | Coder |
+| Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
+| `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
+| `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
 | The memory directory (outside the repo) | 4 | D1's pointers | Architect |
 
 ## Acceptance
@@ -207,6 +232,28 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
 - **For Nathan:** A5a and A5d each planned to close by the full checklist, audit included, and both signed off without an audit report. D10 assumes the first run is their audit. Is that right, or was one of them meant to have an audit of its own? And is folding a story's audit into a later run a practice you want? If it is, `story-done-checklist.md`'s "Before sign-off" should say so, since it requires the story's audit to be closed. (From the Auditor's batch 1 drafts.)
   - **Answered 2026-10-06 (Nathan):** the first run covers everything since `epic-3-5-story-6-audited`, so it's A5a's and A5d's audit. That answers this run only. The checklist stays as it is, so a story's audit still closes before its sign-off.
+
+*From the first run's report, `docs/audits/code-quality-audit-a6.md` (2026-10-07). Numbers are the report's.*
+
+- **For the PO:**
+  - **Does a workphase write disclose its reindex?** `PUT /workphases/:id`'s terminal-flag backfill appends items without disclosing the reindex it can trigger (`routes/workphases.ts:141`). Wiki positioning §7 and item-positioning §5.1 list only item writes.
+  - **"Or none" in item-attachment §2a.** It says an Attached write "may name the parent's workphase, or none". The code refuses an explicit `workphaseId: null` for an Attached item whose parent has a workphase. If "none" means "omitted", nothing changes.
+  - **Two behaviors the wiki doesn't state,** which the report's drift fixes describe: a project move naming both `prevId` and `nextId` uses `prevId` and ignores `nextId` (project-tree §6); a column whose start or end workphase is missing counts as broken (boards-columns-unsorted §9).
+- **For the Architect:**
+  - **Root `CLAUDE.md`:** "One position math layer" lists `itemPositionScope.ts` as table-generic, and it's items-only. The `/api/test` row omits the project pins (position, created-at, parent). The gates line says unit tests run across `client/`, `server/` and `tests/`; they run across `client/`, `server/` and `scripts/`, and lint runs `check:docs`.
+  - **`testing-strategy.md`:** "both Vitest suites" (there are three, one on `node:test`), and no row in the layers table for `scripts/**/*.test.mts`.
+  - **`prettier-preemptive-practice.md:3`:** the root config now covers `scripts/` and the root files too.
+  - **The checker's rule tables:** `code-comments.md`'s and `documentation-standards.md`'s both omit `wiki-code-name`.
+  - **`drizzle-sqlite-patterns.md`, "Self-Referential FK Caveat":** `projects.parentId` is a real FK now; only `items.parentId` is soft.
+  - **`.claude/personas/coder.md:60`** names `createDefaultBoard`'s home, which report #24 moves to `lib/`.
+- **For the Test Reconciler, on its next run:**
+  - **Tests that may not prove their case:** `server/tests/lib/positionResolver.test.ts:223–232` (TC-2.8 throws for the wrong reason) and `:167–182` (TC-2.9's positions follow creation order); `routes/items.hierarchy.test.ts:1179–1187` (asserts half its title); `routes/workflows.test.ts:86` (no foreign row); `itemWriteReconciliation.test.ts` (no `'first'`/`'last'` marker case); `dragRegions.test.ts:111–113` (no case exercises the DOMRect getter hazard); `scripts/check-docs/extract.test.mts:87–92` (its fixture has no `-->`).
+  - **Case IDs only in comments:** `dragBands.test.ts:5` (DRAG-3.5), `dragClassification.test.ts:7` (DRAG-2.10), `itemListOps.test.ts:300–301`, `itemWriteReconciliation.test.ts:16–17, 108`, `popSession.test.ts:216` (DRAG-1.21) and `:281` (DRAG-1.17), `server/tests/routes/items.test.ts:708` (probably TC-2.4).
+  - **Tests whose IDs the plan's Automation lines don't list:** the sidebar hook's TREE-1.4, 1.8, 1.9 and 1.11 tests; `hierarchyPlacement.test.ts`'s TREE-1.3/1.4 null-root tests and DRAG-4.8 exclusion test (check they prove those cases); E2E titles carrying DRAG-5.1, 5.9, 5.10, 5.11, 5.13, DRAG-1.1, 1.5, 1.9, 1.12, 1.14, 1.24, DRAG-3.17 and TREE-3.9, while the plan shows them `Open`; TC-7.18 in both a lib and a route test; ATT-4.10's cases in both `items.test.ts:1364–1402` and `items.hierarchy.test.ts`.
+  - **One function tested under two names:** `itemWriteReconciliation.test.ts:18–76` and `positionedWrite.test.ts` (report #31 merges them).
+- **For the Test Planner:**
+  - TC-2.4's Automation line omits `tests/api/itemRepositioningAttachedSiblings.spec.ts`, whose header says it runs TC-2.4; its titles at `:58, 70, 89` omit TC-2.4 and TC-3.1.
+  - Report #4's fix starts with a throwaway probe of DRAG-3.24's scenario. DRAG-3.24's permanent test stays with Story 10, where it's routed.
 
 ## Amendments
 
@@ -238,3 +285,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - a tech-debt story that changes what the app does gets its own audit and closes by the full checklist. The template and `story-done-checklist.md` say the same.
   - **Check:** `npm run check:docs -- .claude` reports 0 hits on 22 files.
 - **2026-10-06, Nathan's answer (Architect):** the first run covers everything since `epic-3-5-story-6-audited`, A5a and A5d included, as D10 assumed. D10 and the Open question record it. Folding a story's audit into a later run isn't adopted as a practice, so `story-done-checklist.md` is unchanged.
+- **2026-10-07, batch 2 (Auditor): the first run.** The report is `docs/audits/code-quality-audit-a6.md`; its scope lists are in `docs/audits/a6-scopes/`, deleted before the report is archived. Two departures from D10, both recorded in the report's opening:
+  - the passes split by area, not by commit, so a file changed by several sources has one reader per lens. A4's comment rewrites went to the drift instance for their area, listed apart, in place of one drift pass per A4 commit;
+  - 23 instances ran in waves of up to five, after a first launch of 20 hit the account's usage limit with none finished. A run this size takes about three usage windows.
+- **2026-10-21, batch 3 planned (Architect):** batch 3's code is split into seven batches, 3a–3g, with correctness first and each area's structural moves before its comment fixes. Nathan added Watch List #47 and #50, which sit in code 3d and 3g rework anyway. Batch 4 gains the Reconciler run, which batch 3's test-file splits require, and the rule that every Open question is answered before sign-off. The status line had stayed at "batch 1 uncommitted": batch 1 was committed as `7443721`, with D8's review in it, before the first run began.
