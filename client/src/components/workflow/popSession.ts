@@ -270,7 +270,7 @@ function hoverForChildRegion(
 // Resolving the name against `regions` — rather than trusting it outright
 // — is what keeps an invalid target (Cycle-forming, Depth-capped) from
 // ever becoming a candidate, with no validity check of its own: it relies on
-// `dragRegions.ts::resolveDragStructure` registering a `card:` region only
+// `dragStructure.ts::resolveDragStructure` registering a `card:` region only
 // for a Valid Card. An invalid Card can still be named for a reposition,
 // but is never a zoom-in candidate (wiki board-drag-interaction §3.2).
 //

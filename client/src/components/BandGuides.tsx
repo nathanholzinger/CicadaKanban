@@ -1,7 +1,8 @@
 // The drop bands made visible while a Card is carried: dashed boundary lines per
-// region + the hovered band tinted.
+// region, and the carve-out zones that reserve the ghost's space.
 
 import { Fragment, type ReactNode } from 'react';
+import { ACTIVE_CONTEXT_OUTLINE } from './dragChrome';
 import { useDragSession } from './workflow/DragSessionContext';
 import { DRAG_CARD_COUNT_ATTR, dragRegionProps } from './workflow/dragRegions';
 import { reservationFor, type Reservation } from './workflow/dragBands';
@@ -15,7 +16,7 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 //
 // The reservation is exact — a region's total rendered height never
 // changes whether or not it's the live hover target, because the ghost row
-// (KanbanCard.tsx's shortCard) is pinned to exactly `SHORT_CARD_HEIGHT_PX`,
+// (`KanbanCard.tsx::ShortCard`) is pinned to exactly `SHORT_CARD_HEIGHT_PX`,
 // and every zone below is sized from that same constant plus the card
 // lists' own shared gap (`CARD_LIST_GAP_PX`) rather than the height alone.
 // Both are fixed facts about the card, in `cardMetrics.ts` — nothing here
@@ -25,8 +26,8 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 //     visible-scrolled slice, so a boundary scrolled out of view is
 //     neither drawn nor reachable until it's scrolled to.
 //   - the live hover target (about to be committed on release, though not
-//     yet locked in): the dead zones collapse and a real ghost (itemListOps'
-//     ordinal placement) fills the reservation instead — same net height.
+//     yet locked in): the dead zones collapse and a real ghost (an ordinal
+//     `itemListOps.ts::Placement`) fills the reservation instead — same net height.
 //     The divider lines stay, at the same fixed offsets, since the ghost's
 //     own insertion is exactly what they have to stay stable against.
 // Terminal and truly-empty regions collapse to one single band spanning
@@ -45,9 +46,9 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 //
 // Two special cases: an empty region carves the *full* card height, not
 // two halves (nothing to shift out of the way); a region with exactly one
-// card halves both edges instead of the normal full height, so the card
-// stays a real, unlabeled middle band rather than being bisected into
-// top/bottom with nothing left between. The shape/height/edge math itself
+// card brings both edges in to `(h + gap) / 2` instead of the normal `h`, so
+// the card stays a real, unlabeled middle band rather than being bisected
+// into top/bottom with nothing left between. The shape/height/edge math itself
 // lives in `dragBands.ts::reservationFor` — this file only turns its answer
 // into markup, so the divider drawn here is the boundary a release actually
 // resolves against (`dragBands.ts::bandBoundaries`) by construction, never
@@ -56,13 +57,6 @@ import { SHORT_CARD_METRICS } from './cardMetrics';
 // Card (KanbanCard.tsx) draws the active-context outline directly on
 // itself, for its own Descendants section too; this file draws it for a
 // column/sub-row instead, plus everything above.
-
-// Whichever region — column, sub-row, or Card — is the pop machine's
-// current `contextKey` gets this ring, so the locked layer is legible
-// without reading the dev panel (wiki board-drag-interaction §1.1). Shared
-// with KanbanCard.tsx, which applies it directly to a Card's own element
-// rather than an overlay div.
-export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 
 const DIVIDER = 'pointer-events-none absolute right-2 left-2 border-t border-dashed border-zinc-400/35';
 const ZONE_LABEL =
@@ -97,7 +91,7 @@ interface DragCarveFrameProps {
 // layer) — the one place the band geometry becomes pixels, and the
 // column/sub-row site of `dragRegionProps` (`dragRegions.ts`): this
 // component's own root is always "the region"
-// `dragRegions.ts::resolveDragStructure` finds, in every branch below, so a
+// `dragStructure.ts::resolveDragStructure` finds, in every branch below, so a
 // carve-out div is always a descendant of it rather than a sibling a
 // region-scoped lookup can't reach.
 export function DragCarveFrame({

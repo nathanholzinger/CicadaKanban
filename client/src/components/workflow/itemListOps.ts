@@ -92,16 +92,16 @@ export function renderedWorkphaseId(item: Item, placements: Placements): string 
 // be an explicit `null` (would become Free), so this checks the key's
 // presence rather than truthiness — the same distinction
 // `renderedWorkphaseId` doesn't need, since a workphase placement is never
-// intentionally cleared to null. Exported, with `renderedIsStub` below, for
-// a drag's own start (`useBoardDnd.ts`): a drag starts from the item as
-// it's drawn.
+// intentionally cleared to null. Also read, with `renderedIsStub` below, by
+// `useBoardDnd.ts`'s drag start: a drag starts from the item as it's drawn.
 export function renderedParentId(item: Item, placements: Placements): string | null {
   const placement = placements.get(item.id);
   return placement && hasParentOpinion(placement) ? (placement.parentId ?? null) : item.parentId;
 }
 
 // Whether the item renders as a Stub — nested inside a parent Card — under
-// its current placement. A placement carrying a `parentId` opinion always
+// its current placement. Also read by `itemWriteReconciliation.ts::freeItemOrder`.
+// A placement carrying a `parentId` opinion always
 // decides this for preview purposes (a non-null value previews attaching;
 // a detach previews null, i.e. Free); with no opinion, the item's
 // own data does, via isStub.

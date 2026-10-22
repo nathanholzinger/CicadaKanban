@@ -2,7 +2,8 @@
 // the DragOverlay copy too) as shortCard for the drag's duration. While
 // locked at a Card or Descendants layer, the DragOverlay copy is a Stub row
 // instead (`overlayForm`/`overlayWidthPx`, from
-// `placement.ts::overlayFormFor` via `useBoardDnd.ts`) — rendered by *this
+// `placement.ts::overlayFormFor`, `dragOverlayGeometry.ts::overlayWidthFor`
+// via `useBoardDnd.ts`) — rendered by *this
 // same component instance*, not a separate one `BoardView.tsx` swaps in:
 // dnd-kit measures the DragOverlay's child once, on its own mount, and
 // never re-attaches that measurement if a *different* component type takes
@@ -20,7 +21,6 @@ import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import { hierarchyRows } from './workflow/itemListOps';
-import { ACTIVE_CONTEXT_OUTLINE } from './BandGuides';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
@@ -30,7 +30,7 @@ import {
   type DescendantsProjection,
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
+import { ACTIVE_CONTEXT_OUTLINE, DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
 import { AttachGhostRow, AttachedChildRow, StubBody } from './StubRows';
 
 const CARD_BASE =
@@ -138,6 +138,7 @@ export default function KanbanCard({
   // candidate, and which stage of the hold it's in.
   const zoomCandidatePhase = useZoomCandidatePhase(item.id);
   const dragTuning = useDragTuning();
+  const cardDragSession = useDragSession();
   // The active drag's own ghost row — previewed attaching here, not a real
   // Stub yet — iff this Card *isn't* the drag's containing Card. That
   // excludes a Stub's own home section, whatever its depth there (a
@@ -145,11 +146,10 @@ export default function KanbanCard({
   // no test of it; `placement.ts::placementFor` asks this same question),
   // which would otherwise be misidentified as an attach — hiding the dragged
   // row entirely, with no `data-item-id` to find it by, and the rows beneath
-  // it with it. Once it *is* the ghost, it renders as a plain preview
-  // instead of a second, differently-typed sortable registration under its
-  // id.
-  const cardDragSession = useDragSession();
-  // The static ghost above is Card layer's own auto-drop preview only. Once
+  // it with it. Once it *is* the ghost, it renders as an inert preview
+  // (`StubRows.tsx::AttachGhostRow`).
+  //
+  // That static ghost is Card layer's own auto-drop preview only. Once
   // the drag has zoomed *past* Card layer into this Card's own Descendants
   // section, the previewed row becomes a real sortable member of the flat
   // list instead (rendered below via the
@@ -175,7 +175,8 @@ export default function KanbanCard({
   // (BandGuides.tsx) reserves exactly, not an approximation of whatever the
   // full card's footer happens to add.
   const isGhostLike = isOverlay || isDragging;
-  // The one place `overlayForm` matters — everywhere else in this
+  // Where `overlayForm` changes what this component draws (`useItemRow` only
+  // reports it as `data-drag-overlay-form`) — everywhere else in this
   // component, `isOverlay` alone means "the shortCard drag copy."
   const overlayIsStub = isOverlay && overlayForm === 'stub';
   const overlayIndent = overlayStubIndent(overlayIsStub ? overlayProjection : null);
@@ -316,11 +317,8 @@ export default function KanbanCard({
                   const rowDepth = descendantsProjection && isActiveRow ? descendantsProjection.depth : depth;
                   const invalid = Boolean(descendantsProjection && isActiveRow && !descendantsProjection.valid);
                   // This row is the active drag's own ghost (previewed
-                  // attaching here, not a real Stub yet) — rendered as a
-                  // plain, non-sortable preview rather than a second
-                  // registration of the same id: the item's real
-                  // registration is wherever it's being dragged from
-                  // (`StubRows.tsx::AttachGhostRow`).
+                  // attaching here, not a real Stub yet) — an inert preview,
+                  // not a row (`StubRows.tsx::AttachGhostRow` says why).
                   return child.id === attachGhostId ? (
                     <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={rowDepth} />
                   ) : (

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { CARD_LIST_REGION_SELECTOR } from '../../client/src/components/workflow/dragRegions';
+import { CARD_LIST_REGION_SELECTOR, DRAG_OVERLAY_ATTR } from '../../client/src/components/workflow/dragRegions';
 import {
   DEFAULT_DRAG_TUNING,
   DRAG_TUNING_STORAGE_KEY,
@@ -62,7 +62,7 @@ export async function hoverTo(page: Page, target: Point) {
 // pointerdown that lands while its drop animation is still winding down can
 // fail to activate the next drag, and a spec that then hovers and releases
 // asserts against a gesture that never happened. The DragOverlay copy
-// carries `data-drag-overlay` for exactly this wait.
+// carries `DRAG_OVERLAY_ATTR` for exactly this wait.
 export async function release(page: Page) {
   await page.mouse.up();
   await settled(page);
@@ -77,7 +77,7 @@ export async function cancel(page: Page) {
 }
 
 async function settled(page: Page) {
-  await expect(page.locator('[data-drag-overlay]')).toHaveCount(0, { timeout: 2000 });
+  await expect(page.locator(`[${DRAG_OVERLAY_ATTR}]`)).toHaveCount(0, { timeout: 2000 });
 }
 
 export async function dragTo(page: Page, source: Locator, resolveTarget: () => Promise<Point>) {

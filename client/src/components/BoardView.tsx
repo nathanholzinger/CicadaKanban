@@ -133,13 +133,12 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   useEffect(() => {
     // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
-    // intentional and shared: it's also called imperatively (not from an
-    // effect, so unflagged) from handleCreateWorkphase/RenameWorkphase/
-    // DeleteWorkphase below, and by useColumnManagement/useBoardDnd, all of
+    // also called imperatively (not from an effect, so unflagged) from the
+    // workphase handlers below, and by useColumnManagement/useBoardDnd, all of
     // which rely on the same immediate loading flash. Deriving `loading`
     // from state instead would silently drop that flash from those other
     // call sites — a real behavior change, not a lint-only fix.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadBoard's sync loading flash is shared with its imperative callers
     loadBoard();
   }, [loadBoard]);
 
@@ -176,8 +175,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleCreateColumn,
     handleUpdateColumn,
     handleDeleteColumn,
-    handleReorderColumns,
-  } = useColumnManagement(activeBoardId, loadBoard);
+    onColumnDrop,
+  } = useColumnManagement(activeBoardId, board, setBoard, loadBoard);
 
   const {
     sensors,
@@ -192,7 +191,6 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleDragCancel,
   } = useBoardDnd({
     board,
-    setBoard,
     items,
     tuning: dragTuning,
     placements,
@@ -201,14 +199,15 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     getWorkphaseItems,
     getMergedColumnItems,
     getAttachedChildren,
-    handleReorderColumns,
+    onColumnDrop,
     loadBoard,
     rootRef: boardRootRef,
   });
 
-  // The classification overlays' colors (plus the active-context outline)
-  // reach KanbanCard and BandGuides as CSS custom properties, so the
-  // dev/test panel can change them without a rebuild.
+  // The classification overlays' colors and the active-context outline reach
+  // the drag chrome (`dragChrome.tsx`, which every Card and Stub row draws) as
+  // CSS custom properties, so the dev/test panel can change them without a
+  // rebuild.
   const overlayVars = {
     '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
     '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,

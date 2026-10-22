@@ -6,6 +6,7 @@ import { DEFAULT_DRAG_TUNING, type DragTuning } from '../components/workflow/dra
 import { advancePopSession, startPopSession, type PopSession } from '../components/workflow/popSession';
 import type { ShortCardMetrics } from '../components/workflow/dragBands';
 import type { DragRegion, Point } from '../components/workflow/dragRegions';
+import type { AnchorRelation } from '../lib/hierarchyPlacement';
 import { rect, region } from './dragFixtures';
 
 // Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
@@ -38,21 +39,30 @@ export const POP_TEST_TUNING: DragTuning = { ...DEFAULT_DRAG_TUNING, popDelayMs:
 
 const BOARD = threeColumnBoard();
 
+// One sample of the machine at `now`, against the shared board unless told otherwise,
+// under the shared tuning and metrics.
+export function step(
+  session: PopSession,
+  pointer: Point,
+  now: number,
+  regions: readonly DragRegion[] = BOARD.regions,
+  namedAnchor: AnchorRelation | null = null,
+): PopSession {
+  return advancePopSession(session, pointer, regions, POP_TEST_TUNING, POP_TEST_METRICS, now, namedAnchor);
+}
+
 // Samples the machine in order, from a drag locked in A unless told otherwise.
 export function runPop(
   steps: Array<[Point, number]>,
   start: PopSession = startPopSession(BOARD.A.key),
   regions: readonly DragRegion[] = BOARD.regions,
 ): PopSession {
-  return steps.reduce(
-    (s, [pointer, now]) => advancePopSession(s, pointer, regions, POP_TEST_TUNING, POP_TEST_METRICS, now),
-    start,
-  );
+  return steps.reduce((s, [pointer, now]) => step(s, pointer, now, regions), start);
 }
 
 // Board layer, fresh: hovering `point` from a standing start. A locked
 // drag's release never depends on a foreign region's band, so a case that
 // exercises a band has to actually be at Board layer.
 export function hoverAt(point: Point, regions: readonly DragRegion[] = BOARD.regions): PopSession {
-  return advancePopSession(startPopSession(null), point, regions, POP_TEST_TUNING, POP_TEST_METRICS, 0);
+  return step(startPopSession(null), point, 0, regions);
 }

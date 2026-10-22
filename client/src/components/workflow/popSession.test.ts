@@ -7,6 +7,7 @@ import {
   POP_TEST_METRICS as metrics,
   POP_TEST_TUNING as tuning,
   runPop,
+  step,
   threeColumnBoard,
 } from '../../test/popFixtures';
 
@@ -30,7 +31,7 @@ describe('locked', () => {
 
   it('inside the context nothing is tracked, and the same object comes back', () => {
     const s = startPopSession(A.key);
-    expect(advancePopSession(s, inA, regions, tuning, metrics, 0)).toBe(s);
+    expect(step(s, inA, 0, regions)).toBe(s);
   });
 
   it('DRAG-1.30: leaving the context starts the pop-out clock — into a gap as much as into another column, and neither is tracked beyond that', () => {
@@ -54,7 +55,7 @@ describe('locked', () => {
       [bMiddle, 100 + OUT - 1],
     ]);
     expect(almost.contextKey).toBe(A.key);
-    const out = advancePopSession(almost, bMiddle, regions, tuning, metrics, 100 + OUT);
+    const out = step(almost, bMiddle, 100 + OUT, regions);
     expect(out).toEqual({
       contextKey: null,
       outsideSince: null,
@@ -106,18 +107,18 @@ describe('locked', () => {
     const M = region('column:m', shortRect, { boundsRect: outerBody });
 
     it('below the last card but still inside the outer body: still locked, nothing tracked', () => {
-      const s = advancePopSession(startPopSession(M.key), { x: 50, y: 200 }, [M], tuning, metrics, 0);
+      const s = step(startPopSession(M.key), { x: 50, y: 200 }, 0, [M]);
       expect(s).toEqual(startPopSession(M.key));
     });
 
     it('past the outer body too: the pop-out clock starts, same as any other region', () => {
-      const s = advancePopSession(startPopSession(M.key), { x: 50, y: 450 }, [M], tuning, metrics, 0);
+      const s = step(startPopSession(M.key), { x: 50, y: 450 }, 0, [M]);
       expect(s).toEqual({ ...startPopSession(M.key), outsideSince: 0 });
     });
 
     it('a sub-row has no boundsRect to speak of — its own rect stays the containment test', () => {
       const sub = region('subrow:m:w1', shortRect);
-      const s = advancePopSession(startPopSession(sub.key), { x: 50, y: 200 }, [sub], tuning, metrics, 0);
+      const s = step(startPopSession(sub.key), { x: 50, y: 200 }, 0, [sub]);
       expect(s).toEqual({ ...startPopSession(sub.key), outsideSince: 0 });
     });
 
@@ -131,21 +132,21 @@ describe('locked', () => {
   });
 
   it("DRAG-3.21: at Board layer the band reads the region's live rect on every sample, not one frozen at entry", () => {
-    const entered = advancePopSession(startPopSession(null), { x: 170, y: 110 }, regions, tuning, metrics, 0);
+    const entered = step(startPopSession(null), { x: 170, y: 110 }, 0, regions);
     expect(entered.hover?.band).toBe('middle'); // 110 is within B's original 96..304 middle band
     // B's rect has moved (a scroll, or a sibling reflowing next to it; the
     // two are treated alike): its top edge is 40px lower, so the same point
     // now sits inside the *new* top band (edge at 40 + 96 = 136).
     const shiftedB = region(B.key, rect(120, 40, 100, 400));
-    const after = advancePopSession(entered, { x: 170, y: 110 }, [A, shiftedB, C], tuning, metrics, 10);
+    const after = step(entered, { x: 170, y: 110 }, 10, [A, shiftedB, C]);
     expect(after.hover?.band).toBe('top');
   });
 
   it("DRAG-3.15, DRAG-3.21: at Board layer the band also reads the region's live card count on every sample, so the one-card exception never goes stale while a region is the hover target", () => {
-    const entered = advancePopSession(startPopSession(null), { x: 170, y: 70 }, regions, tuning, metrics, 0);
+    const entered = step(startPopSession(null), { x: 170, y: 70 }, 0, regions);
     expect(entered.hover?.band).toBe('top'); // the 2-card edge is 96; 70 < 96
     const oneCardB = region(B.key, rect(120, 0, 100, 400), { cardCount: 1 });
-    const after = advancePopSession(entered, { x: 170, y: 70 }, [A, oneCardB, C], tuning, metrics, 10);
+    const after = step(entered, { x: 170, y: 70 }, 10, [A, oneCardB, C]);
     expect(after.hover?.band).toBe('middle'); // the one-card edge is (96 + 8) / 2 = 52; 70 >= 52
   });
 });
@@ -162,37 +163,37 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   const namedP = (side: DropSide = 'after') => ({ anchorId: 'p', side });
 
   it('DRAG-1.4: holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
-    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     expect(s.hover).toEqual({ regionKey: P.key, since: 0, poppable: true, side: 'after', phase: 'dwell' });
-    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL, namedP());
+    s = step(s, inA, DWELL, withCards, namedP());
     expect(s.hover).toEqual({ regionKey: P.key, since: 0, poppable: true, side: 'after', phase: 'cue' });
     expect(s.contextKey).toBe(A.key);
   });
 
   it('DRAG-4.19: holding it through the cue pops into the named Card, wherever the bare cursor happens to be', () => {
-    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
-    const popped = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + CUE, namedP());
+    const s = step(startPopSession(A.key), inA, 0, withCards, namedP());
+    const popped = step(s, inA, DWELL + CUE, withCards, namedP());
     expect(popped.contextKey).toBe(P.key);
   });
 
   it('DRAG-1.4: a different named card resets the hold from the dwell, even mid-cue', () => {
-    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
-    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 10, namedP());
+    let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
+    s = step(s, inA, DWELL + 10, withCards, namedP());
     expect(s.hover?.phase).toBe('cue');
-    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 20, { anchorId: 'q', side: 'after' });
+    s = step(s, inA, DWELL + 20, withCards, { anchorId: 'q', side: 'after' });
     expect(s.hover).toEqual({ regionKey: Q.key, since: DWELL + 20, poppable: true, side: 'after', phase: 'dwell' });
   });
 
   it('DRAG-1.4: the same card on its other side resets the hold too', () => {
-    let s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP('after'));
-    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 10, namedP('after'));
+    let s = step(startPopSession(A.key), inA, 0, withCards, namedP('after'));
+    s = step(s, inA, DWELL + 10, withCards, namedP('after'));
     expect(s.hover?.phase).toBe('cue');
-    s = advancePopSession(s, inA, withCards, tuning, metrics, DWELL + 20, namedP('before'));
+    s = step(s, inA, DWELL + 20, withCards, namedP('before'));
     expect(s.hover).toEqual({ regionKey: P.key, since: DWELL + 20, poppable: true, side: 'before', phase: 'dwell' });
   });
 
   it('DRAG-4.23: nothing named (alone in the list, or hovering nothing): no candidate at all', () => {
-    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, null);
+    const s = step(startPopSession(A.key), inA, 0, withCards, null);
     expect(s.hover).toBeNull();
   });
 
@@ -206,9 +207,9 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   });
 
   it('popDueAt schedules the dwell-end milestone first (so the cue can mount with the cursor perfectly still), then the final pop once the cue has started', () => {
-    const dwelling = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, namedP());
+    const dwelling = step(startPopSession(A.key), inA, 0, withCards, namedP());
     expect(popDueAt(dwelling, withCards, tuning)).toBe(DWELL);
-    const cueing = advancePopSession(dwelling, inA, withCards, tuning, metrics, DWELL, namedP());
+    const cueing = step(dwelling, inA, DWELL, withCards, namedP());
     expect(popDueAt(cueing, withCards, tuning)).toBe(DWELL + CUE);
   });
 });
@@ -225,32 +226,25 @@ describe('locked Card: zoom-in into its own Descendants section', () => {
   const DESC = tuning.descendantsPopInDelayMs;
 
   it('resting inside the section short of the threshold stays locked at Card', () => {
-    const first = advancePopSession(startPopSession(P.key), inDescendants, withDescendants, tuning, metrics, 0);
+    const first = step(startPopSession(P.key), inDescendants, 0, withDescendants);
     expect(first.hover).toEqual({ regionKey: descendantsP.key, since: 0, poppable: true });
-    const s = advancePopSession(first, inDescendants, withDescendants, tuning, metrics, DESC - 1);
+    const s = step(first, inDescendants, DESC - 1, withDescendants);
     expect(s.contextKey).toBe(P.key);
   });
 
   it('resting past the threshold zooms into the Descendants section, wherever the bare cursor happens to be', () => {
-    const first = advancePopSession(startPopSession(P.key), inDescendants, withDescendants, tuning, metrics, 0);
-    const s = advancePopSession(first, inDescendants, withDescendants, tuning, metrics, DESC);
+    const first = step(startPopSession(P.key), inDescendants, 0, withDescendants);
+    const s = step(first, inDescendants, DESC, withDescendants);
     expect(s.contextKey).toBe(descendantsP.key);
   });
 
   it('a childless Card (no Descendants region at all) never pops any further — the auto-drop is its only outcome', () => {
-    const s = advancePopSession(startPopSession(P.key), inDescendants, [A, P], tuning, metrics, DESC);
+    const s = step(startPopSession(P.key), inDescendants, DESC, [A, P]);
     expect(s.contextKey).toBe(P.key);
   });
 
   it('once locked at Descendants, there is no further child to zoom into (the layer table\'s own "(none)")', () => {
-    const s = advancePopSession(
-      startPopSession(descendantsP.key),
-      inDescendants,
-      withDescendants,
-      tuning,
-      metrics,
-      DESC,
-    );
+    const s = step(startPopSession(descendantsP.key), inDescendants, DESC, withDescendants);
     expect(s.contextKey).toBe(descendantsP.key);
     expect(s.hover).toBeNull();
   });
@@ -265,14 +259,14 @@ describe('locked at a Descendants section', () => {
 
   it('DRAG-5.5: an excursion out of the section shorter than popDelayMs pops nothing, and coming back resets the clock', () => {
     const locked = startPopSession(descendantsP.key);
-    const away = advancePopSession(locked, aboveSection, withDescendants, tuning, metrics, 0);
+    const away = step(locked, aboveSection, 0, withDescendants);
     expect(away.outsideSince).toBe(0);
-    const back = advancePopSession(away, inSection, withDescendants, tuning, metrics, OUT - 1);
+    const back = step(away, inSection, OUT - 1, withDescendants);
     expect(back).toEqual(locked);
 
     // A second excursion runs its own clock: the two together outlast popDelayMs, and still nothing pops.
-    const awayAgain = advancePopSession(back, aboveSection, withDescendants, tuning, metrics, OUT);
-    const s = advancePopSession(awayAgain, aboveSection, withDescendants, tuning, metrics, 2 * OUT - 1);
+    const awayAgain = step(back, aboveSection, OUT, withDescendants);
+    const s = step(awayAgain, aboveSection, 2 * OUT - 1, withDescendants);
     expect(s.contextKey).toBe(descendantsP.key);
     expect(s.outsideSince).toBe(OUT);
   });
@@ -328,15 +322,15 @@ describe('popped out', () => {
   ]);
 
   it('follows the cursor: over nothing there is no hover, and no pop pending', () => {
-    const s = advancePopSession(outInB, gap, regions, tuning, metrics, OUT + 1);
+    const s = step(outInB, gap, OUT + 1, regions);
     expect(s).toEqual(startPopSession(null));
     expect(popDueAt(s, regions, tuning)).toBeNull();
   });
 
   it('DRAG-1.11: resting in a middle band past the pop-in threshold locks the card into that column', () => {
-    const almost = advancePopSession(outInB, bMiddle, regions, tuning, metrics, OUT + IN - 1);
+    const almost = step(outInB, bMiddle, OUT + IN - 1, regions);
     expect(almost.contextKey).toBeNull();
-    const back = advancePopSession(almost, bMiddle, regions, tuning, metrics, OUT + IN);
+    const back = step(almost, bMiddle, OUT + IN, regions);
     expect(back).toEqual(startPopSession(B.key));
   });
 
@@ -366,7 +360,7 @@ describe('popped out', () => {
     );
     expect(top.contextKey).toBeNull();
     expect(top.hover?.band).toBe('top');
-    const moved = advancePopSession(outInB, cMiddle, regions, tuning, metrics, OUT + IN - 1);
+    const moved = step(outInB, cMiddle, OUT + IN - 1, regions);
     expect(moved.hover).toEqual({
       regionKey: C.key,
       band: 'middle',
@@ -385,7 +379,7 @@ describe('popped out', () => {
       startPopSession(null),
     );
     expect(inTop.contextKey).toBeNull();
-    expect(advancePopSession(inTop, bMiddle, regions, tuning, metrics, IN + 51)).toEqual(startPopSession(B.key));
+    expect(step(inTop, bMiddle, IN + 51, regions)).toEqual(startPopSession(B.key));
   });
 
   it('DRAG-1.11: leaving the region before the clock runs out and coming back starts it over', () => {
@@ -398,8 +392,8 @@ describe('popped out', () => {
       startPopSession(null),
     );
     // Past popInDelayMs from the first entry, but not from the return.
-    expect(advancePopSession(back, bMiddle, regions, tuning, metrics, IN).contextKey).toBeNull();
-    expect(advancePopSession(back, bMiddle, regions, tuning, metrics, IN - 5 + IN)).toEqual(startPopSession(B.key));
+    expect(step(back, bMiddle, IN, regions).contextKey).toBeNull();
+    expect(step(back, bMiddle, IN - 5 + IN, regions)).toEqual(startPopSession(B.key));
   });
 
   it('a drag from outside every region (Unsorted) starts popped out and locks in the same way', () => {
@@ -425,11 +419,7 @@ describe('popDueAt', () => {
   });
 
   it('DRAG-1.11: popped out, the pop-in clock only from a middle band', () => {
-    expect(
-      popDueAt(advancePopSession(startPopSession(null), bMiddle, regions, tuning, metrics, 100), regions, tuning),
-    ).toBe(100 + IN);
-    expect(
-      popDueAt(advancePopSession(startPopSession(null), bTop, regions, tuning, metrics, 100), regions, tuning),
-    ).toBeNull();
+    expect(popDueAt(step(startPopSession(null), bMiddle, 100, regions), regions, tuning)).toBe(100 + IN);
+    expect(popDueAt(step(startPopSession(null), bTop, 100, regions), regions, tuning)).toBeNull();
   });
 });

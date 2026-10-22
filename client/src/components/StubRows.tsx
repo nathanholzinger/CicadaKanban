@@ -25,11 +25,14 @@ export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[
 
 // A purely visual stand-in for the active drag's own item once it's
 // previewed attaching here — same slot, same small pill treatment as a real
-// AttachedChildRow, indented by `depth`, but no `useSortable`/`useDroppable`
-// registration of its own. Deliberately separate from `AttachedChildRow`,
-// sharing only the box class: dnd-kit doesn't support two simultaneous
-// sortable registrations for one id, and this item's real registration is
-// wherever it's actually being dragged from.
+// AttachedChildRow, indented by `depth`. Deliberately separate from
+// `AttachedChildRow`, with which it shares `StubBody`, the box class and the
+// indent: that row is a live participant in the drag (a sortable
+// registration, a drag handle, a click target, `data-item-id`, the drop
+// chrome, and the dimmed look a dragged item's own row gets), and this one
+// must be none of them. The dragged item's own row is unmounted while it
+// previews, and nothing at this layer sorts or takes a drop against it; the
+// preview is drawn dashed blue instead.
 export function AttachGhostRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
   return (
     <div

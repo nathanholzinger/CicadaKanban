@@ -1,78 +1,9 @@
-// The drag gesture's clocks, DOM measurement, and dnd-kit plumbing — composes
-// popSession.ts, placement.ts, dragRegions.ts, dragCollision.ts, dragRequest.ts,
-// dragOverlayGeometry.ts, dragClassification.ts, descendantsProjection.ts,
-// itemListOps.ts, and the hooks usePendingGhostGuard.ts and useSnapTween.ts.
-
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import {
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type CollisionDetection,
-  type DragMoveEvent,
-  type DragStartEvent,
-  type DragEndEvent,
-  type Modifier,
-} from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
-import type { BoardWithDetails, Item } from '../../types';
-import { moveItem } from '../../api/items';
-import { findNearestAncestor } from '../../lib/hierarchy';
-import type { AnchorRelation } from '../../lib/hierarchyPlacement';
-import { isStub } from '../../lib/isStub';
-import { isColumnData, namedAnchorFor, resolveBoardCollisions, type CollisionSession } from './dragCollision';
-import { sendItemMove, toRequest } from './dragRequest';
-import { clampToCurrentContext, overlayShapeFor, reanchorOverlayTransform } from './dragOverlayGeometry';
-import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
-import {
-  childRegionAt,
-  descendantsRegionKey,
-  hasDetachedElements,
-  hasNewRegionElements,
-  isCardList,
-  measureRegions,
-  regionElements,
-  resolveDragStructure,
-  type CardListRegion,
-  type DescendantsRegion,
-  type DragRegion,
-  type DragStructure,
-  type Point,
-} from './dragRegions';
-import type { DragTuning } from './dragTuning';
-import { advancePopSession, popDueAt, startPopSession, type ParentKeyOf, type PopSession } from './popSession';
-import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
-import { renderedIsStub, renderedParentId, renderedWorkphaseId, type Placement, type Placements } from './itemListOps';
-import type { ItemWriteTracker } from './useItemManagement';
-import type { DragSession } from './DragSessionContext';
-import {
-  NO_PROJECTION,
-  advanceProjection,
-  descendantsReleasePlacement,
-  sameProjection,
-  type ProjectionState,
-} from './descendantsProjection';
-import { usePendingGhostGuard } from './usePendingGhostGuard';
-import { useSnapTween } from './useSnapTween';
-import { SHORT_CARD_METRICS } from '../cardMetrics';
-
-// A Stub's drag starts at its *containing Card's* Descendants layer: the
-// nearest Free ancestor, whatever the Stub's own depth beneath it. Built on
-// `hierarchy.ts::findNearestAncestor` (cycle-safe) rather than a bespoke
-// parentId walk, so a corrupted parentId cycle in the data degrades the
-// same way it already does everywhere else in the hierarchy math. `null`
-// only if every ancestor up to a dangling/missing parentId is itself a
-// Stub, which the depth cap makes unreachable in practice.
-function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
-  return findNearestAncestor(item, items, n => !isStub(n))?.id ?? null;
-}
-
-// Drag-and-drop for the board's DndContext — the board drag's gesture
-// layer. The rules live in pure modules (popSession.ts, placement.ts,
-// dragRegions.ts, dragBands.ts, dragCollision.ts, dragRequest.ts,
-// descendantsProjection.ts, itemListOps.ts, lib/hierarchyPlacement.ts);
-// this hook owns the clocks, the DOM measurements, and the dnd-kit
-// plumbing:
+// The board drag's gesture layer, for the board's DndContext. The rules live in
+// pure modules (popSession.ts, placement.ts, dragStructure.ts, dragBands.ts,
+// dragCollision.ts, dragRequest.ts, dragClassification.ts, dragOverlayGeometry.ts,
+// descendantsProjection.ts, itemListOps.ts, lib/hierarchyPlacement.ts); this hook
+// owns the clocks, the DOM measurements, and the dnd-kit plumbing, with the hooks
+// usePendingGhostGuard.ts, useSnapTween.ts and useLatest.ts:
 //
 //   - the pointer is tracked with a window listener for the life of any
 //     item drag (Card or Stub alike), and every sample runs the pop machine
@@ -93,11 +24,77 @@ function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
 //     and the write goes out with its pending placement attached.
 //
 // Position values are never computed here: the request carries relative
-// intent and the server's number lands through the write tracker.
+// intent and the server's number lands through the write tracker. A column
+// dropped on another goes to `onColumnDrop`, which owns the reorder.
+
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragMoveEvent,
+  type DragStartEvent,
+  type DragEndEvent,
+  type Modifier,
+} from '@dnd-kit/core';
+import type { BoardWithDetails, Item } from '../../types';
+import { moveItem } from '../../api/items';
+import { findNearestAncestor } from '../../lib/hierarchy';
+import type { AnchorRelation } from '../../lib/hierarchyPlacement';
+import { isStub } from '../../lib/isStub';
+import { isColumnData, namedAnchorFor, resolveBoardCollisions, type CollisionSession } from './dragCollision';
+import { sendItemMove, toRequest } from './dragRequest';
+import { clampToCurrentContext, overlayShapeFor, reanchorOverlayTransform } from './dragOverlayGeometry';
+import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
+import {
+  childRegionAt,
+  descendantsRegionKey,
+  isCardList,
+  type CardListRegion,
+  type DescendantsRegion,
+  type DragRegion,
+  type Point,
+} from './dragRegions';
+import {
+  hasDetachedElements,
+  hasNewRegionElements,
+  measureRegions,
+  regionElements,
+  resolveDragStructure,
+  type DragStructure,
+} from './dragStructure';
+import type { DragTuning } from './dragTuning';
+import { advancePopSession, popDueAt, startPopSession, type ParentKeyOf, type PopSession } from './popSession';
+import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
+import { renderedIsStub, renderedParentId, renderedWorkphaseId, type Placement, type Placements } from './itemListOps';
+import type { ItemWriteTracker } from './useItemManagement';
+import type { DragSession } from './DragSessionContext';
+import {
+  NO_PROJECTION,
+  advanceProjection,
+  descendantsReleasePlacement,
+  sameProjection,
+  type ProjectionState,
+} from './descendantsProjection';
+import { useLatest } from './useLatest';
+import { usePendingGhostGuard } from './usePendingGhostGuard';
+import { useSnapTween } from './useSnapTween';
+import { SHORT_CARD_METRICS } from '../cardMetrics';
+
+// A Stub's drag starts at its *containing Card's* Descendants layer: the
+// nearest Free ancestor, whatever the Stub's own depth beneath it. Built on
+// `hierarchy.ts::findNearestAncestor` (cycle-safe) rather than a bespoke
+// parentId walk, so a corrupted parentId cycle in the data degrades the
+// same way it already does everywhere else in the hierarchy math. `null`
+// only if every ancestor up to a dangling/missing parentId is itself a
+// Stub, which the depth cap makes unreachable in practice.
+function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
+  return findNearestAncestor(item, items, n => !isStub(n))?.id ?? null;
+}
 
 export interface BoardDndDeps {
   board: BoardWithDetails | null;
-  setBoard: React.Dispatch<React.SetStateAction<BoardWithDetails | null>>;
   items: Item[];
   tuning: DragTuning;
   /** The live ordinal placements — read at drag start to stash a re-dragged item's pending marker. */
@@ -108,7 +105,8 @@ export interface BoardDndDeps {
   getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
   /** A Descendants region's own "others" list — the parent's other attached children, placement-aware. */
   getAttachedChildren: (parentId: string) => Item[];
-  handleReorderColumns: (orders: { id: string; position: number }[]) => Promise<void>;
+  /** A column dropped on another column: the reorder, optimistic and saved (`useColumnManagement.ts::onColumnDrop`). */
+  onColumnDrop: (activeId: string, overId: string) => Promise<void>;
   loadBoard: () => Promise<void>;
   /** The element the regions are measured under (the DndContext's wrapper). */
   rootRef: RefObject<HTMLElement | null>;
@@ -161,13 +159,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const pointerRef = useRef<Point | null>(null);
   const popTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The latest props, for the pointer/timer callbacks that live across renders.
-  const latest = useRef(deps);
-  useEffect(() => {
-    latest.current = deps;
-  });
-  // The pop timer calls back into the evaluation; a ref so the timeout
-  // never holds a stale closure.
-  const evaluateRef = useRef<() => void>(() => {});
+  const latest = useLatest(deps);
   const { start: startSnap, cancel: cancelSnap, draw: drawSnapped } = useSnapTween(deps.tuning.popSnapMs);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -275,18 +267,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
     if (!current || !pointer) return;
     const { tuning } = latest.current;
     const now = performance.now();
+    // One sample of the machine from `from`, against `sampled` regions: every input
+    // but those two is the same at each call below, so none can be left out of one.
+    const step = (from: PopSession, sampled: DragRegion[]) =>
+      advancePopSession(from, pointer, sampled, tuning, SHORT_CARD_METRICS, now, namedAnchorRef.current, parentKeyOf);
     const priorContextKey = current.pop.contextKey;
     let regions = sampleRegions(current.pop.contextKey);
-    let pop = advancePopSession(
-      current.pop,
-      pointer,
-      regions,
-      tuning,
-      SHORT_CARD_METRICS,
-      now,
-      namedAnchorRef.current,
-      parentKeyOf,
-    );
+    let pop = step(current.pop, regions);
     // A layer change: the sample above was scoped to the *old* layer, so a
     // hover onto something only visible from the *new* one (a sibling
     // region at Board, a Card inside the column just entered) can't have
@@ -316,16 +303,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       resolveStructure(current.classification);
       previousContextKey = pop.contextKey;
       regions = sampleRegions(pop.contextKey);
-      pop = advancePopSession(
-        pop,
-        pointer,
-        regions,
-        tuning,
-        SHORT_CARD_METRICS,
-        now,
-        namedAnchorRef.current,
-        parentKeyOf,
-      );
+      pop = step(pop, regions);
     }
     updateDescendantsProjection(priorContextKey, pop, current.classification);
     const { projection } = projectionRef.current;
@@ -344,9 +322,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const due = popDueAt(pop, regions, tuning);
     if (due !== null) popTimer.current = setTimeout(() => evaluateRef.current(), Math.max(0, due - now));
   }
-  useEffect(() => {
-    evaluateRef.current = evaluatePop;
-  });
+  // The pop timer calls back into the evaluation; a ref so the timeout
+  // never holds a stale closure.
+  const evaluateRef = useLatest(evaluatePop);
 
   // Pointer tracking for the life of an item drag — every item drag runs the
   // pop machine, so `pop` is never absent once `session` is.
@@ -363,7 +341,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       clearPopTimer(popTimer);
       cancelSnap();
     };
-  }, [machineActive, cancelSnap]);
+  }, [machineActive, cancelSnap, evaluateRef]);
 
   // dnd-kit calls this during its own render; it reads the mirrors.
   const collisionDetection = useCallback<CollisionDetection>(args => {
@@ -545,9 +523,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
 
-    // `renderedIsStub` reads the item as drawn (above) — never dnd-kit's
-    // own `data.role`, which only exists to keep the *droppable* side
-    // (KanbanCard.tsx) legible and is never load-bearing here.
+    // `renderedIsStub` reads the item as drawn (above) — never dnd-kit's own
+    // `data.role` off the active row, which can lag a mid-drag remount. The role
+    // is registered by `dragChrome.tsx::useItemRow` and read only off droppable
+    // rows, where the collision filters rely on it.
     if (renderedIsStub(stored, placements)) {
       const containingCardId = containingCardIdOf({ ...stored, parentId }, deps.items);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
@@ -604,16 +583,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
     namedAnchorRef.current = namedAnchorFor(event.active, event.over, sessionRef.current);
     evaluateRef.current();
   }
-
-  // The ghost's placement is otherwise only ever set on the machine's own
-  // state changes — a response completing an earlier, still-outstanding
-  // write for the *active* drag's item (a re-drag scenario) clears it from
-  // underneath the live gesture the moment it lands. `usePendingGhostGuard`
-  // corrects that reactively, the instant it's visible in
-  // `deps.placements`, rather than waiting for the next pointer move or
-  // band crossing; cancelling or a no-op release
-  // restores the item's pre-drag pending marker the same way, via
-  // `restorePriorPlacement` (also that hook's).
 
   // Escape / a cancelled gesture: nothing was written, so the ghost is the
   // only thing to undo.
@@ -672,22 +641,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
     const activeId = String(active.id);
 
-    // ── Column reorder (wiki boards-columns-unsorted §7) ──
     if (isColumnData(active.data.current)) {
-      if (!over || activeId === String(over.id) || !board) return;
-      const cols = board.columns;
-      const oldIndex = cols.findIndex(c => c.id === activeId);
-      const newIndex = cols.findIndex(c => c.id === String(over.id));
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const reordered = arrayMove(cols, oldIndex, newIndex);
-      deps.setBoard(prev => (prev ? { ...prev, columns: reordered } : prev));
-      try {
-        await deps.handleReorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
-      } catch (err) {
-        console.error('Failed to reorder columns:', err);
-        resyncBoard();
-      }
+      if (over && activeId !== String(over.id)) await deps.onColumnDrop(activeId, String(over.id));
       return;
     }
 

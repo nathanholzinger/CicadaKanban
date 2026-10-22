@@ -5,8 +5,9 @@
 // target — and `cancel` stops it. Each frame re-renders, since the cursor
 // may be perfectly still while a tween runs.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Point } from './dragRegions';
+import { useLatest } from './useLatest';
 
 interface SnapTween {
   from: Point;
@@ -14,10 +15,7 @@ interface SnapTween {
 }
 
 export function useSnapTween(durationMs: number) {
-  const duration = useRef(durationMs);
-  useEffect(() => {
-    duration.current = durationMs;
-  });
+  const duration = useLatest(durationMs);
   const drawnAt = useRef<Point>({ x: 0, y: 0 });
   const tween = useRef<SnapTween | null>(null);
   const frame = useRef<number | null>(null);
@@ -45,23 +43,26 @@ export function useSnapTween(durationMs: number) {
       setTick(t => t + 1);
     };
     frame.current = requestAnimationFrame(step);
-  }, [cancel]);
+  }, [cancel, duration]);
 
-  const draw = useCallback(<T extends Point>(target: T): T => {
-    const active = tween.current;
-    let drawn = target;
-    if (active) {
-      const progress = Math.min(1, (performance.now() - active.startedAt) / duration.current);
-      const eased = 1 - (1 - progress) ** 3; // ease-out cubic: fast start, settles
-      drawn = {
-        ...target,
-        x: active.from.x + (target.x - active.from.x) * eased,
-        y: active.from.y + (target.y - active.from.y) * eased,
-      };
-    }
-    drawnAt.current = { x: drawn.x, y: drawn.y };
-    return drawn;
-  }, []);
+  const draw = useCallback(
+    <T extends Point>(target: T): T => {
+      const active = tween.current;
+      let drawn = target;
+      if (active) {
+        const progress = Math.min(1, (performance.now() - active.startedAt) / duration.current);
+        const eased = 1 - (1 - progress) ** 3; // ease-out cubic: fast start, settles
+        drawn = {
+          ...target,
+          x: active.from.x + (target.x - active.from.x) * eased,
+          y: active.from.y + (target.y - active.from.y) * eased,
+        };
+      }
+      drawnAt.current = { x: drawn.x, y: drawn.y };
+      return drawn;
+    },
+    [duration],
+  );
 
   return { start, cancel, draw };
 }

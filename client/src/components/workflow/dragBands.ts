@@ -46,10 +46,10 @@ export interface Reservation {
 }
 
 // A genuinely empty region carves the full card height (`heightPx`),
-// nothing to shift out of the way; a region with exactly one card halves
-// both edges instead of the normal full height, so the card stays a real,
-// unlabeled middle band rather than being bisected into top/bottom with
-// nothing left between; a done region with cards reserves one bottom-only
+// nothing to shift out of the way; a region with exactly one card brings both
+// edges in to `(heightPx + gapPx) / 2` instead of the normal `heightPx`, so
+// the card stays a real, unlabeled middle band rather than being bisected
+// into top/bottom with nothing left between; a done region with cards reserves one bottom-only
 // zone of `heightPx + gapPx`, exactly where its ghost (which always
 // previews last there) lands.
 export function reservationFor(

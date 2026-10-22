@@ -221,7 +221,13 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `server/src/routes/testHelpers.ts` | 3d done | #26: `writeOrNotFound` | Coder |
 | `server/src/db/schema.ts`, `server/src/lib/columnRanges.ts`, `workphaseOrder.ts`, `attachedCascade.ts`, `server/src/mcp.ts`, `client/src/test/itemFixture.ts`, and the comments and headers of the files above | 3d done | #8, each written beside its final code | Coder |
 | `server/tests/routes/items.test.ts`, `items.hierarchy.test.ts`, `workflows.test.ts`, `testHelpers.test.ts` (new); `server/tests/lib/positionResolver.test.ts`, `itemTree.test.ts` | 3d done | The tests for #19, #47, #21, #22, #23, #25 and #26; see Amendments | Coder |
-| `client/src/components/workflow/CLAUDE.md` | 3b, 3e | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37 | Coder |
+| `client/src/components/workflow/dragRegions.ts`, `dragStructure.ts` (new), `dragRegions.test.ts`, `dragStructure.test.ts` (new) | 3e drag layer done | #37: the vocabulary (types, key builders, `parseRegionKey`, `dragRegionProps`, `containsPoint`, `childRegionAt`) stays; the DOM half (`resolveDragStructure`, `measureRegions`, `DropColumn`, the staleness checks, `clipToVisible`) moves, and `layoutRect` is `paintedRect`. The test file splits on the same line. #35: `DRAG_OVERLAY_ATTR` | Coder |
+| `client/src/components/workflow/useBoardDnd.ts`, `useColumnManagement.ts`, `client/src/components/BoardView.tsx` | 3e drag layer done | #36: the column-reorder drop is `useColumnManagement.ts::onColumnDrop`, which takes the board, and `BoardDndDeps` carries it in place of `setBoard` and `handleReorderColumns`. #30: a local `step` in `evaluatePop`. #32: `useLatest` | Coder |
+| `client/src/components/workflow/useLatest.ts` (new), `usePendingGhostGuard.ts`, `useSnapTween.ts` | 3e drag layer done | #32: the "latest value" ref, spelled once | Coder |
+| `client/src/test/popFixtures.ts`, `popSession.test.ts`, `placement.test.ts` | 3e drag layer done | #30: `step`, the single-sample runner `runPop` and `hoverAt` build on; 45 calls that fit it go through it | Coder |
+| `client/src/components/dragChrome.tsx`, `BandGuides.tsx`, `KanbanCard.tsx`, `sidebar/SortableProjectRow.tsx`, `cardMetrics.ts`; `tests/helpers/dragGesture.ts` | 3e drag layer done | #34: `ACTIVE_CONTEXT_OUTLINE` moves into `dragChrome.tsx`, `INVALID_DROP_INDICATOR_LINE` beside its one reader, and both lines are built from `DROP_LINE_SHAPE`. #35: the three spellings of the overlay attribute read `DRAG_OVERLAY_ATTR` | Coder |
+| Comments and headers across the drag layer; `eslint-disable` directives in `dragChrome.tsx`, `BoardView.tsx`, `useBoardManagement.ts` | 3e drag layer done | #9, #10, #12, each written beside its final code | Coder |
+| `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37 | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
@@ -312,6 +318,11 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **A create that names a row that doesn't exist** (a project, a type, an agent, a workphase) has no case in wiki item-attachment §14, though it's a 400 now. The two tests have no ID: `items.test.ts`'s for a `projectId`, `type` or `agentId`, and the existing one for a `workphaseId`.
   - **A create and a move refusing a missing workphase alike** is `items.hierarchy.test.ts`'s new test. It carries no ID, since no case states it.
   - **TC-7.10 and an item that ends with no workphase.** The new test carries the ID: an item with no workphase has no scope for a neighbor to be in. If the variation wants a case of its own, the ID follows.
+
+*From the Coder, batch 3e, the drag layer (2026-10-21).*
+
+- **For Nathan:** report #9's last bullet asks whether `AttachGhostRow` stays apart from `AttachedChildRow`. The reason the code gave doesn't hold: dnd-kit's registry keeps one entry per id, the last registered, and the dragged item's own row is unmounted while it previews attaching, so there is no second registration to conflict. I rendered the preview through `AttachedChildRow` as an experiment, and all 35 drag and attach E2E specs in the four drag suites still passed. What does hold is that the two are different things: `AttachedChildRow` is a live participant in the drag (a sortable registration, a handle, a click target, `data-item-id`, drop chrome, and the dimmed look a dragged item's own row gets), and the preview must be none of those and is drawn dashed blue. A merge would need a mode that skips the registration, which a hook can't do conditionally, so it would split into a body and a wrapper again. I restated the reason at `StubRows.tsx::AttachGhostRow` and kept the two apart. Merging is a follow-up if you'd rather.
+- **For the Test Reconciler:** #37 moved the DOM half of `dragRegions.test.ts` to `dragStructure.test.ts`, so the Automation lines naming `dragRegions.test.ts` are stale for DRAG-1.7, DRAG-1.8, DRAG-1.10 and DRAG-1.25. The cases keep their IDs at the start of their titles. #15's first bullet, `dragRegions.test.ts:59–63`, is done with the move.
 
 ## Amendments
 
@@ -438,3 +449,30 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **`PUT /items/:id` takes an `agentId` without checking it,** so a bogus one is the same opaque 500 #47 fixed for `POST` (probed). #47 names only the create, so it's left.
     - **`npm run check:docs` has one hit that isn't the Coder's to fix:** `.claude/personas/coder.md:60` names `routes/boards.ts::createDefaultBoard`. Open questions, for the Architect.
   - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 433 client, 83 script tests. `npm run check:docs` reports the one hit above and nothing else. `npm run test:e2e` passes: 164 passed, 8 skipped. A first run, on a machine that took 39 minutes for it, timed out in two tests, `item-positioning.spec.ts`'s TC-5a.1 and `item-repositioning-cross-column-dnd.spec.ts`'s DRAG-1.23; both passed alone, and the second full run was clean.
+- **2026-10-21, batch 3e, the drag layer (the Coder): client structure, first half.** #30, #32, #34, #35, #36, #37 and #9–#12 are fixed, with #9's last bullet (`AttachGhostRow`) restated rather than merged, which is Nathan's call (Open questions). The sidebar, `lib/` and `api/` half (#27–#29, #31, #33, #13, #14) is still to do. The Close-out rows are filled in.
+  - **The fixes and their tests.**
+
+    | # | Fix | Test, in |
+    |---|---|---|
+    | 37 | `dragStructure.ts` holds the DOM half of `dragRegions.ts`; `layoutRect` becomes `paintedRect`, which is what it returns | `dragStructure.test.ts` (new), the tests that were in `dragRegions.test.ts`, with their titles unchanged; the same count of tests as before |
+    | 36 | `useColumnManagement.ts::onColumnDrop(activeId, overId)`, which takes the board and `setBoard`. `BoardDndDeps` carries it in place of `setBoard` and `handleReorderColumns` | `useColumnManagement.test.ts` (new), no ID: the order is applied at once and saved from position 1, a failed save reloads, and an unknown column or no board does nothing. E2E covered it only through BCU-3.6 |
+    | 30 | `evaluatePop`'s local `step(from, sampled)`, the call's other six inputs written once. In tests, `popFixtures.ts::step`, which `runPop` and `hoverAt` build on | The suites it serves: 45 calls in `popSession.test.ts` and `placement.test.ts` go through it |
+    | 32 | `useLatest.ts::useLatest`, used by `useBoardDnd.ts` (twice), `usePendingGhostGuard.ts` and `useSnapTween.ts` | `useLatest.test.ts` (new), no ID |
+    | 34 | `ACTIVE_CONTEXT_OUTLINE` moves into `dragChrome.tsx`, so `KanbanCard.tsx` no longer imports `BandGuides.tsx`. `INVALID_DROP_INDICATOR_LINE` is private to `SortableProjectRow.tsx`. Both lines are `DROP_LINE_SHAPE` plus a color | None: class strings. The sidebar's E2E specs read the lines' `data-drop-invalid` |
+    | 35 | `DRAG_OVERLAY_ATTR`, in `dragRegions.ts` beside `DRAG_REGION_ATTR`, read by `dragChrome.tsx`, `SortableProjectRow.tsx` and `tests/helpers/dragGesture.ts` | `dragChrome.test.tsx` (new), no ID: the board's carried copy and the sidebar's ghost both carry the attribute the wait counts |
+    | 9, 10, 11, 12 | Each bullet, beside its code. #11's three statements are fixed in `workflow/CLAUDE.md`, whose file list follows #36 and #37 | None: comments and docs |
+  - **Shown to fail without the fix.** Each reverted in turn:
+    - `onColumnDrop` saving positions from 0, not reloading after a failed save, and without its unknown-column guard: one of `useColumnManagement.test.ts`'s tests each.
+    - `useLatest` never updating: its test.
+    - The board's carried copy, and the sidebar's ghost, each with another attribute name: `dragChrome.test.tsx`'s test for each.
+    - `step` dropping the named anchor: six of the pop suites' tests, the named-card zoom-in ones among them.
+  - **Two decisions in the rules.**
+    - **#10 asked `useBoardDnd.ts` to point at `workflow/CLAUDE.md`'s concern map.** A comment may not name a `CLAUDE.md` file (the comment guide's rule (g)), so the hook keeps one header that lists the modules it composes, matching its imports.
+    - **#9's `useBoardDnd.ts:95–96` fix became unnecessary.** It asked for "Item position values", because the column branch sent `position: i + 1`. #36 moved that branch out, so "Position values are never computed here" is true as it stands.
+  - **Edges the findings don't state.**
+    - **`step` took in more calls than #30 counted:** 45 in all, not the 13 it names, since the calls with a named anchor fit a five-argument `step`. The ones that stay direct pass a different tuning or a structural parent lookup.
+    - **`useLatest` has to be listed in the dependency arrays that read it.** `exhaustive-deps` can't see a custom hook's ref as stable the way it does a `useRef` result. The refs' identity never changes, so listing them changes nothing.
+    - **One change that is not a comment in #10's one-liners:** `BoardColumn.tsx`'s empty-column message drops `!(isOver && isCardBeingDragged)`, which `!session` already implies.
+    - **`DRAG_OVERLAY_ATTR` lives in `dragRegions.ts`,** not `dragChrome.tsx`: it is plain TypeScript the E2E helper already imports from, where `dragChrome.tsx` would pull React into the spec runtime.
+    - **#15's first bullet,** `dragRegions.test.ts:59–63`, is done with the split, since the sentence pointed at a block that moved.
+  - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 439 client, 83 script tests. `npm run check:docs` reports the one hit from 3d, `.claude/personas/coder.md:60`, and nothing else. `npm run test:e2e` passes: 164 passed, 8 skipped.

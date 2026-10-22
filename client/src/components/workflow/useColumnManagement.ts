@@ -1,7 +1,8 @@
-// Column CRUD + reorder state for BoardView.
+// Column CRUD, and the column-reorder drop, for BoardView.
 
-import { useState } from 'react';
-import type { ColumnDisplayMode } from '../../types';
+import { useState, type Dispatch, type SetStateAction } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
+import type { BoardWithDetails, ColumnDisplayMode } from '../../types';
 import { createColumn, updateColumn, deleteColumn, reorderColumns } from '../../api/columns';
 
 interface ColumnRangeInput {
@@ -11,7 +12,12 @@ interface ColumnRangeInput {
   name?: string | null;
 }
 
-export function useColumnManagement(boardId: string | null, reload: () => Promise<void>) {
+export function useColumnManagement(
+  boardId: string | null,
+  board: BoardWithDetails | null,
+  setBoard: Dispatch<SetStateAction<BoardWithDetails | null>>,
+  reload: () => Promise<void>,
+) {
   const [error, setError] = useState('');
 
   async function handleCreateColumn(data: ColumnRangeInput): Promise<boolean> {
@@ -44,9 +50,25 @@ export function useColumnManagement(boardId: string | null, reload: () => Promis
     await reload();
   }
 
-  async function handleReorderColumns(orders: { id: string; position: number }[]) {
-    await reorderColumns(orders);
+  // A column dropped on another takes its place (wiki boards-columns-unsorted §7): the
+  // board reorders at once, the new order is saved, and a failed save reloads the board
+  // to what the server has.
+  async function onColumnDrop(activeId: string, overId: string) {
+    const columns = board?.columns;
+    if (!columns) return;
+    const oldIndex = columns.findIndex(c => c.id === activeId);
+    const newIndex = columns.findIndex(c => c.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(columns, oldIndex, newIndex);
+    setBoard(prev => (prev ? { ...prev, columns: reordered } : prev));
+    try {
+      await reorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
+    } catch (err) {
+      console.error('Failed to reorder columns:', err);
+      await reload();
+    }
   }
 
-  return { error, setError, handleCreateColumn, handleUpdateColumn, handleDeleteColumn, handleReorderColumns };
+  return { error, setError, handleCreateColumn, handleUpdateColumn, handleDeleteColumn, onColumnDrop };
 }

@@ -1,5 +1,6 @@
-// Item state atom + per-item write tracker (sequences writes so a stale response
-// can't clobber a newer one — see itemWriteReconciliation.ts::completeItemWrite).
+// Item state atom + per-item write tracker: the tracker sequences writes so a
+// stale response can't clobber a newer one, and folds a current one in through
+// `itemWriteReconciliation.ts::completeItemWrite`.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Item } from '../../types';

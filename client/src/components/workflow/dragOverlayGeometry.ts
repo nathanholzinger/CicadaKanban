@@ -6,6 +6,7 @@
 //   | Function                  | Reads (space)                                    | Returns (space)      |
 //   |----------------------------|---------------------------------------------------|-----------------------|
 //   | overlayWidthFor            | region.rect (screen px)                          | width px, or null     |
+//   | overlayShapeFor            | pop session, region rects (screen px)            | form, width px or null |
 //   | reanchorOverlayTransform   | transform (dnd-kit delta px), pickupRect/pointerNow (screen px) | transform (delta px) |
 //   | clampToCurrentContext      | transform (delta px), rect/region rects (screen px) | transform (delta px) |
 //   | clampAxis                  | translate (delta px), origin/size/min/max (screen px) | number (delta px)  |

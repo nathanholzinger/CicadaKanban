@@ -56,9 +56,9 @@ export default function BoardColumn({
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
-  // A column can't span both terminal and non-terminal workphases (the
-  // server's column-range validation) — isTerminal is uniform across the
-  // whole covered set, so any sub-row's flag is representative.
+  // A column can't span both terminal and non-terminal workphases
+  // (wiki boards-columns-unsorted §6), so isTerminal is uniform across the
+  // whole covered set and any sub-row's flag is representative.
   const columnIsTerminal = Boolean(column.subRows[0]?.workphase.isTerminal);
   const totalItems = column.subRows.reduce((n, r) => n + getWorkphaseItems(r.workphase.id, columnIsTerminal).length, 0);
   // Union-sorted across the covered set, not a
@@ -175,10 +175,11 @@ export default function BoardColumn({
                 onCardClick={onCardClick}
                 region={mergedRegion}
               />
-              {/* During a drag the carve-out's own "Move to {name}" zone
-                  (above) takes this message's place, so it shows only with
-                  no drag in progress. */}
-              {mergedItems.length === 0 && !(isOver && isCardBeingDragged) && !session && (
+              {/* At Board layer the carve-out's own "Move to {name}" zone
+                  (above) takes this message's place, and locked there is
+                  nothing carved out to say it, so it shows only with no
+                  drag in progress. */}
+              {mergedItems.length === 0 && !session && (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-xs text-zinc-600">Drop cards here</p>
                 </div>

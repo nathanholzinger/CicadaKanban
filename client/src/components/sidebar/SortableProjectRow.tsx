@@ -6,13 +6,18 @@ import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
-import { DROP_INDICATOR_LINE, INVALID_DROP_INDICATOR_LINE } from '../dragChrome';
+import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE } from '../dragChrome';
+import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
 const ROW_ACTION_BTN =
   'w-5 h-5 rounded flex items-center justify-center text-zinc-500 hover:bg-zinc-700 transition-colors';
 const CHEVRON_BTN_BASE =
   'flex h-4 w-4 shrink-0 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-400';
+// The drop line while its tab state would put the dragged project's subtree past
+// the project cap (wiki hierarchy-placement §6): the board's line in red. A
+// placeholder look.
+const INVALID_DROP_INDICATOR_LINE = `${DROP_LINE_SHAPE} bg-red-500/70`;
 
 interface RowProps {
   item: FlatItem;
@@ -198,12 +203,12 @@ export function SortableProjectRow({
   );
 }
 
-// The carried copy. `data-drag-overlay` is the E2E helper's "drag finished"
+// The carried copy. Its `DRAG_OVERLAY_ATTR` is the E2E helper's "drag finished"
 // wait: the copy outlives the drag by dnd-kit's drop animation.
 export function DragGhost({ name }: { name: string }) {
   return (
     <div
-      data-drag-overlay="true"
+      {...{ [DRAG_OVERLAY_ATTR]: 'true' }}
       className="flex items-center gap-1 rounded-lg border border-zinc-600 bg-zinc-700 px-3 py-1.5 opacity-90 shadow-xl"
     >
       <span className="max-w-[160px] truncate text-sm text-zinc-100">{name}</span>

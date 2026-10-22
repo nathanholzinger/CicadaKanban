@@ -1,9 +1,11 @@
-// Card sizing facts — a leaf module with no imports of its own, so
-// KanbanCard.tsx and BandGuides.tsx can each depend on these facts without
-// depending on *each other* for them. KanbanCard.tsx already imports from
-// BandGuides.tsx, and an import cycle between them is a real hazard, not
-// just a lint complaint: the next symbol added to either side could break
-// module evaluation order with no type error to say so.
+// Card sizing facts: the shortCard's fixed height and the card lists' gap, the
+// Stub tier's row heights and box class, and the Descendants section's indent
+// step. A leaf module with no imports of its own, so the render components
+// (KanbanCard.tsx, BandGuides.tsx, CardList.tsx) and the drag layer's pure
+// modules can each depend on these facts without depending on *each other* for
+// them: an import cycle between two of them is a real hazard, not just a lint
+// complaint, since the next symbol added to either side could break module
+// evaluation order with no type error to say so.
 
 // shortCard's fixed height — the in-list ghost row always renders at
 // exactly this height, so the board's carve-out reservation

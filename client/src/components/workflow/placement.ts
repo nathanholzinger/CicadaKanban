@@ -1,6 +1,8 @@
 // The pop machine's placement rules — the ghost's own placement at every
-// layer (placementRegion/placementFor), and which form the carried copy
-// draws as (overlayFormFor). A release commits the locked layer's own
+// layer (placementRegion/placementFor, with regionWorkphaseFor, the workphase
+// a card-list drop takes), what a release's `over` resolves to
+// (resolvePlacementOver), and which form the carried copy draws as
+// (overlayFormFor). A release commits the locked layer's own
 // within-action, and the ghost always shows exactly that
 // (wiki board-drag-interaction §1.1, rule 1). The transition machine
 // (popSession.ts) is the other half: this reads its session, never writes it.

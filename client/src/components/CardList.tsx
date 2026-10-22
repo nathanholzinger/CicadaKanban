@@ -82,7 +82,7 @@ export default function CardList({
   // the identical padding rather than a bare, unpadded box (otherwise the
   // two states would differ by the padding alone — a real layout jump on an
   // otherwise height-stable empty sub-row). A droppable list with no region
-  // (Unsorted, a broken column's sub-row) has no such substitution to
+  // (a broken column's sub-row) has no such substitution to
   // matter for, so it keeps its own.
   const chromeOnFrame = droppable && region !== undefined;
   const containerClass = `flex flex-col ${CARD_LIST_GAP_CLASS} ${chromeOnFrame ? '' : droppableSurfaceClass}`;

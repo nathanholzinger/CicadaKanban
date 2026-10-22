@@ -1,5 +1,5 @@
-// Dev/test panel: every drag threshold/band/overlay value, live machine state,
-// inversion log. Retired once the values lock and become constants.
+// Dev/test panel: every drag threshold and overlay value, editable live, the
+// pop machine's live state, and the inversion log.
 
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
@@ -7,12 +7,9 @@ import type { DragSession } from './workflow/DragSessionContext';
 import { popState } from './workflow/popSession';
 import type { Inversion } from './workflow/itemWriteReconciliation';
 
-// The dev/test panel, part of the drag feature itself
-// (wiki board-drag-interaction §3.1): every tunable value of the drag
-// gesture, editable live, because the right values can only be found by
-// feel and feel can only be compared by changing one number between two
-// attempts without a rebuild. Also shows the machine's state during a drag
-// and the inversion tripwire's log.
+// Part of the drag feature itself (wiki board-drag-interaction §3.1): the right
+// values can only be found by feel, and feel can only be compared by changing
+// one number between two attempts without a rebuild.
 
 interface DragTuningPanelProps {
   tuning: DragTuning;

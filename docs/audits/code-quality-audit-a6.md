@@ -499,12 +499,20 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 6 | Fixed | Batch 3a, through #20 |
 | 7 | Fixed | Batch 3c |
 | 8 | Fixed | Batch 3d |
-| 9–17 | open | — |
+| 9 | Fixed | Batch 3e, the drag layer. The last bullet, `AttachGhostRow`, is restated, not merged: Nathan's call |
+| 10–12 | Fixed | Batch 3e, the drag layer |
+| 13–17 | open | — |
 | 18 | Fixed | Batch 3c |
 | 19 | Fixed | Batch 3d |
 | 20 | Fixed | Batch 3a |
 | 21–26 | Fixed | Batch 3d |
-| 27–41 | open | — |
+| 27–29 | open | — |
+| 30 | Fixed | Batch 3e, the drag layer |
+| 31 | open | — |
+| 32 | Fixed | Batch 3e, the drag layer |
+| 33 | open | — |
+| 34–37 | Fixed | Batch 3e, the drag layer |
+| 38–41 | open | — |
 | 42 | Fixed | Batch 3c |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { advancePopSession, startPopSession, type PopSession } from './popSession';
+import { startPopSession, type PopSession } from './popSession';
 import {
   overlayFormFor,
   placementFor,
@@ -9,13 +9,7 @@ import {
 } from './placement';
 import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
-import {
-  POP_TEST_METRICS as metrics,
-  POP_TEST_TUNING as tuning,
-  hoverAt,
-  runPop,
-  threeColumnBoard,
-} from '../../test/popFixtures';
+import { POP_TEST_TUNING as tuning, hoverAt, runPop, step, threeColumnBoard } from '../../test/popFixtures';
 
 // Every threshold reads its tuning value, never a pinned number such as
 // 0.5 s, so the tests hold at any tuning.
@@ -392,14 +386,14 @@ describe('overlayFormFor', () => {
     // Zoom in to the Card: the *named* relation dropAnchorFor answers with,
     // held through the dwell and the cue — not a hit test on where the
     // cursor physically rests.
-    s = advancePopSession(s, inCard, allRegions, tuning, metrics, 0, namedAtP);
-    s = advancePopSession(s, inCard, allRegions, tuning, metrics, total, namedAtP);
+    s = step(s, inCard, 0, allRegions, namedAtP);
+    s = step(s, inCard, total, allRegions, namedAtP);
     expect(s.contextKey).toBe(cardP.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('stub');
 
     // Pop back out to the column: the shortCard again, symmetrically.
-    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, total);
-    s = advancePopSession(s, outsideCard, allRegions, tuning, metrics, total + OUT);
+    s = step(s, outsideCard, total, allRegions);
+    s = step(s, outsideCard, total + OUT, allRegions);
     expect(s.contextKey).toBe(A.key);
     expect(overlayFormFor(placementRegion(s, allRegions))).toBe('short-card');
   });

@@ -1,7 +1,9 @@
 // The drag-time chrome a Card and a Stub share: an item row's registration
 // and drop-target chrome (`useItemRow`), the live side indicator, and the
-// zoom-in cue. The Card tier's own render is KanbanCard.tsx, the Stub tier's
-// StubRows.tsx.
+// zoom-in cue, with the looks they draw (the active-context outline, the
+// invalid-placement outline) and the drop line's shape, which the project
+// sidebar draws too. The Card tier's own render is KanbanCard.tsx, the Stub
+// tier's StubRows.tsx.
 
 import { useDndContext } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
@@ -10,6 +12,7 @@ import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
 import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
 import type { OverlayForm } from './workflow/placement';
+import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 
 // The live drop-side indicator. Reads dnd-kit's live active/over state
 // directly via useDndContext — no prop drilling through
@@ -26,8 +29,8 @@ import type { OverlayForm } from './workflow/placement';
 // Deliberately separate from the sidebar's indicator
 // (`useProjectDragReorder.ts::dropLine`): the sidebar draws no ghost, so it
 // draws one line at the projected gap; the board draws on whichever row
-// the ghost's named neighbor is. Only the line's look, `DROP_INDICATOR_LINE`,
-// is shared.
+// the ghost's named neighbor is. Only the line's look (`DROP_LINE_SHAPE` and
+// `DROP_INDICATOR_LINE`) is shared.
 function useLiveDropSide(itemId: string): DropSide | null {
   const { active, over } = useDndContext();
   const session = useDragSession();
@@ -57,13 +60,14 @@ function dropTargetClass(view: DropTargetView | null): string {
   return '';
 }
 
-// The blue drop line, less its vertical offset — the board's rows and the
-// project sidebar's (`SortableProjectRow.tsx`) draw the same line.
-export const DROP_INDICATOR_LINE = 'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-blue-500';
-// The sidebar's drop line while its tab state would put the dragged project's
-// subtree past the project cap (wiki hierarchy-placement §6). A placeholder look.
-export const INVALID_DROP_INDICATOR_LINE =
-  'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full bg-red-500/70';
+// The drop line, less its color and its vertical offset: the board's rows
+// draw it in blue, and the project sidebar's (`SortableProjectRow.tsx`) draw it
+// in blue and, past the project cap, in red, swapping one for the other on the
+// same element. The shape is spelled once, so a change to it moves both alike
+// and the line never jumps.
+export const DROP_LINE_SHAPE = 'pointer-events-none absolute right-0 left-0 z-10 h-0.5 rounded-full';
+// The blue drop line, less its vertical offset.
+export const DROP_INDICATOR_LINE = `${DROP_LINE_SHAPE} bg-blue-500`;
 const DROP_INDICATOR_BEFORE = `${DROP_INDICATOR_LINE} -top-1`;
 const DROP_INDICATOR_AFTER = `${DROP_INDICATOR_LINE} -bottom-1`;
 
@@ -71,6 +75,13 @@ const DROP_INDICATOR_AFTER = `${DROP_INDICATOR_LINE} -bottom-1`;
 // red outline on the active row's own preview while its current depth
 // choice would exceed the cap. A placeholder look.
 export const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500/70';
+
+// Whichever region — column, sub-row, or Card — is the pop machine's current
+// `contextKey` gets this ring, so the locked layer is legible without reading
+// the dev panel (wiki board-drag-interaction §1.1). A Card applies it to its own
+// element (`KanbanCard.tsx`); a column or sub-row draws it on an overlay div
+// (`BandGuides.tsx::DragCarveFrame`).
+export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 
 interface ItemRowOptions {
   /** A Stub row's own parent, carried on its registration. */
@@ -87,10 +98,8 @@ interface ItemRowOptions {
 // attributes and overlay, the pending marker, and the dimming while this row
 // is the one being dragged. The row draws `DropSideIndicator` for
 // `dropSide` itself. The one non-component export beside the components: it
-// belongs next to the indicator. Fast Refresh reloads this file in full
-// instead of hot-swapping it, a dev convenience only, so the rule is
-// suppressed rather than the file split.
-// eslint-disable-next-line react-refresh/only-export-components
+// belongs next to the indicator.
+// eslint-disable-next-line react-refresh/only-export-components -- Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
   const { parentId, isOverlay = false, overlayForm = 'short-card' } = options;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -111,7 +120,7 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
       'data-item-id': isOverlay ? undefined : itemId,
       // The carried copy, for the E2E helper's "drag finished" wait — it
       // outlives the drag by dnd-kit's drop animation.
-      'data-drag-overlay': isOverlay ? 'true' : undefined,
+      [DRAG_OVERLAY_ATTR]: isOverlay ? 'true' : undefined,
       // A test surface: which form this same carried copy is drawing as
       // right now (placement.ts::overlayFormFor).
       'data-drag-overlay-form': isOverlay ? overlayForm : undefined,

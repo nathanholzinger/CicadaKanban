@@ -49,16 +49,12 @@ export function isStubRow(data: Record<string, unknown> | undefined): data is It
   return isItemData(data) && data.role === 'stub';
 }
 
-// Pure drop-resolution for the board's drag-and-drop, kept out of
-// useBoardDnd so it can be unit tested. Structural subset types keep the
-// functions testable without full Column/Item fixtures.
-
 // What the collision closure needs to know about the live pop session — a
 // read-only view the hook keeps in a ref.
 export interface CollisionSession {
   /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover: a mere hover never drives `over`. */
   hoverContainerId: string | null;
-  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), or while genuinely popped out (Board layer). */
+  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), is locked at a Card, or is genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
   /**
    * Locked at a Descendants context, that region's own measured rect —
@@ -76,13 +72,13 @@ export interface CollisionSession {
 // (wiki board-drag-interaction §1.1, rule 1) — which is why this is a
 // factory over the live session rather than a constant:
 //
-//   - Card or Stub drag, locked (a column/sub-row, a Card, or a Descendants
-//     section): closestCorners over the context's container and the cards
-//     (or, at a Descendants context, the section's rows) whose rect lies
-//     inside it — the in-context reorder. A Card context's within-action is
-//     the auto-drop, which reads no `over`, but restricting candidates here
-//     still keeps dnd-kit from shifting a sibling against a hover the locked
-//     layer ignores.
+//   - Card or Stub drag, locked at a column/sub-row or a Descendants section:
+//     closestCorners over the context's container and the cards (or, at a
+//     Descendants context, the section's rows) whose rect lies inside it — the
+//     in-context reorder.
+//   - Card or Stub drag, locked at a Card: no candidates, so no `over`. Its
+//     within-action is the auto-drop, which reads none, and with no `over`
+//     dnd-kit shifts no sibling against a hover the locked layer ignores.
 //   - Card or Stub drag, Board layer (popped out), hovering a region:
 //     `over` is that region's container and never a card in it, so the
 //     target column's sortable doesn't shift against a hover the band
@@ -90,18 +86,12 @@ export interface CollisionSession {
 //   - Card or Stub drag with no context and no hover (picked up in
 //     Unsorted, nothing hovered yet): nothing.
 //
-// Every item row registers `data: {type: 'item', role: 'card' | 'stub',
-// parentId?}`, never a type that differs between a Stub's own row and a
-// popped-out Card row for the *same* id — the one hazard this collision
-// closure exists to sidestep is `active.data.current` lagging a mid-drag
-// remount (a Stub's row unmounting from its Descendants section, a Card row
-// mounting in its place), so nothing below reads
-// `activeData.role`/`activeData.parentId` for a policy decision; every
-// "which kind of drag, which scope" question is answered from the pop
-// session's own state (`liveSession`), never dnd-kit's. Only `activeData.type`
-// (`'item'` vs `'column'`, which never changes for either row) gates
-// whether the machine applies at all. `data?.role === 'stub'` on a
-// *droppable* row is safe to read here — that row isn't the one being
+// Nothing below reads `role`/`parentId` off the *active* row for a policy
+// decision (see `itemRowData`): every "which kind of drag, which scope"
+// question is answered from the pop session's own state (`liveSession`).
+// Only the active row's `type` (`'item'` vs `'column'`, which never changes
+// for either row) gates whether the machine applies at all. A *droppable*
+// row's role (`isStubRow`) is safe to read: that row isn't the one being
 // dragged, so it isn't the one at risk of a stale reference.
 export function resolveBoardCollisions(
   args: Parameters<CollisionDetection>[0],
@@ -121,7 +111,7 @@ export function resolveBoardCollisions(
     // a neighbor's even when holding still, and a tab right would make the
     // item the *next* row's child instead of the previous one's.
     //
-    // `sectionRect` is painted space (`dragRegions.ts::layoutRect`), while
+    // `sectionRect` is painted space (`dragStructure.ts::paintedRect`), while
     // dnd-kit measures `droppableRects` without transforms. Mixing them is
     // safe: the two differ only while the Card carries a sortable transform,
     // which at the default clocks can't overlap a Descendants lock.
@@ -191,9 +181,10 @@ export function resolveDropSide(
 }
 
 // The card or Stub a drop anchors to, and which side of it — the one answer
-// the live blue line (`dragChrome.tsx`), the release, and the Descendants
-// layer's own gap all read, through `namedAnchorFor`, so they can't
-// disagree (wiki board-drag-interaction §2 and §7.1).
+// the live blue line (`dragChrome.tsx::useLiveDropSide`), the release, the
+// Descendants layer's own gap and the pop machine's zoom-in candidate
+// (`popSession.ts::namedCardCandidate`) all read, through `namedAnchorFor`, so
+// they can't disagree (wiki board-drag-interaction §2 and §7.1).
 //
 // Over an item row — a Card in a column/sub-row's own list, or a Stub in a
 // Card's flat Descendants section — dnd-kit's sortable shuffle decides the

@@ -2,7 +2,9 @@
 // (wiki positioning §8): apply the reindexed pairs, upsert the written row,
 // clear its pending placement, and run the inversion tripwire
 // (wiki board-drag-interaction §10). Every item-write path goes through
-// `completeItemWrite`. Pure; reads `itemListOps.ts`'s placements and sort,
+// `completeItemWrite`. The state it folds into, `ItemListState` (items,
+// placements, inversions), is defined here too, with `EMPTY_ITEM_LIST_STATE`
+// and `withPlacement`. Pure; reads `itemListOps.ts`'s placements and sort,
 // never the other way round.
 
 import type { Item } from '../../types';

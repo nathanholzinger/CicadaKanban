@@ -1,12 +1,7 @@
 // rect/region test fixtures for drag geometry (Rect, CardListRegion, DropColumn).
 
-import type {
-  CardListRegion,
-  CardRegion,
-  DescendantsRegion,
-  DropColumn,
-  Rect,
-} from '../components/workflow/dragRegions';
+import type { CardListRegion, CardRegion, DescendantsRegion, Rect } from '../components/workflow/dragRegions';
+import type { DropColumn } from '../components/workflow/dragStructure';
 import { cardRegionKey, descendantsRegionKey, parseRegionKey } from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
 

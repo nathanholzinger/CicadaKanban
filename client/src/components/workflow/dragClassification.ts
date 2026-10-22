@@ -1,8 +1,7 @@
 // classifyDragTargets: classifies every item on the board against the carried item,
 // once per drag start — valid / cycle-forming / depth-capped
-// (wiki board-drag-interaction §4). Pure, like dragCollision.ts/
-// dragRequest.ts: no dnd-kit runtime, so it's unit-testable against plain
-// Item[] fixtures.
+// (wiki board-drag-interaction §4). Pure: no dnd-kit runtime, so it's
+// unit-testable against plain Item[] fixtures.
 //
 // Computed once at drag start and never again for the gesture — the item
 // being carried doesn't change mid-drag, so neither does what any target is
@@ -57,10 +56,10 @@ export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap
 // its Descendants section, resolve as a region at all) and the Descendants
 // layer's over-cap cue read, so the two can't disagree about the same
 // parent. Cycle-forming ids are never valid either, though the projection
-// never resolves to one: the dragged subtree is out of its rows. One
-// client/server difference: the server skips the cap when the parent
-// doesn't change (`itemHierarchy.ts`), and this doesn't, which only matters
-// for data already over the cap.
+// never resolves to one: the dragged subtree is out of its rows. For data
+// already past the cap this also refuses the parent the item already has,
+// which the API accepts since the cap gates only a write that reparents
+// (wiki hierarchy-placement §6).
 export function isValidParent(classification: Pick<DragClassification, 'states'>, id: string): boolean {
   return classification.states.get(id) === 'valid';
 }

@@ -9,6 +9,7 @@ import { useEffect, useRef, type RefObject } from 'react';
 import type { Placement, Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
+import { useLatest } from './useLatest';
 
 export interface PendingGhostDeps {
   placements: Placements;
@@ -23,10 +24,7 @@ export interface PendingGhostDeps {
 // reassert effect doesn't retrigger on every prop change.
 export function usePendingGhostGuard(sessionRef: RefObject<DragSession | null>, deps: PendingGhostDeps) {
   const wantedPlacementRef = useRef<Placement | null>(null);
-  const latest = useRef(deps);
-  useEffect(() => {
-    latest.current = deps;
-  });
+  const latest = useLatest(deps);
 
   function setGhost(itemId: string, placement: Placement | null) {
     wantedPlacementRef.current = placement;
@@ -44,10 +42,10 @@ export function usePendingGhostGuard(sessionRef: RefObject<DragSession | null>, 
     const wanted = wantedPlacementRef.current;
     if ((latest.current.placements.get(current.activeItem.id) ?? null) === wanted) return;
     latest.current.previewPlacement(current.activeItem.id, wanted);
-    // `sessionRef` is a stable ref — listing it costs nothing and satisfies
-    // exhaustive-deps, which can't trace a ref's stability across a
+    // `sessionRef` and `latest` are stable refs — listing them costs nothing and
+    // satisfies exhaustive-deps, which can't trace a ref's stability across a
     // function boundary.
-  }, [deps.placements, sessionRef]);
+  }, [deps.placements, sessionRef, latest]);
 
   return { setGhost, restorePriorPlacement };
 }

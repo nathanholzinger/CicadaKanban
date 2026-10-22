@@ -11,11 +11,12 @@ its own header.
 
 - **Board → a Column/sub-row → one of its own Cards → its own Descendants section**
   is a strict stack, never more than one layer deep from wherever the cursor is. A
-  drag starts in exactly one **context** — a Free item's pickup region for a Card, or
-  `descendantsRegionKey(containingCardId)` for a Stub, deterministically, never
-  hit-tested — and is either **locked** to it (DragOverlay clamped, cursor roaming
-  inside) or **popped out** (cursor left past a delay/distance threshold, card follows
-  the cursor at the parent layer).
+  drag starts in exactly one **context**: a Stub's is
+  `descendantsRegionKey(containingCardId)`, deterministically; a Free Card's is the
+  column or sub-row under the cursor at pickup (a hit test,
+  `useBoardDnd.ts::beginDragAt`), or none from Unsorted. It is either **locked** to it
+  (DragOverlay clamped, cursor roaming inside) or **popped out** (cursor left past a
+  delay/distance threshold, card follows the cursor at the parent layer).
 - **A release always commits the locked layer's own within-action** — never a foreign
   region's — regardless of where the bare cursor rests. Column/sub-row and Descendants
   alike: the drop lands where the ghost is — dnd-kit's sortable shuffle decides its
@@ -36,8 +37,9 @@ its own header.
   **depth** (`descendantsProjection.ts`,
   `DragSessionContext.ts::DescendantsProjection`). The seed is where the ghost already
   was, so zooming in never moves it: a Stub's own slot, or the Card's last child for an
-  item from outside. Release resolves the placement via
-  `lib/hierarchyPlacement.ts::resolvePlacement`, and writes nothing at the Stub's own
+  item from outside. Release writes the last sample's resolved placement (the
+  projection's `resolved` field; `lib/hierarchyPlacement.ts::resolvePlacement` runs per
+  sample), and nothing at the Stub's own
   gap and depth; a foreign item's _first_ entry
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
   same-section case — a Stub already home there). An over-cap tab state is reachable
@@ -75,8 +77,10 @@ The drag gesture's pure, unit-tested modules:
   clocks that move a drag between them. It holds no placement rules.
 - `placement.ts` — the ghost's placement at every layer, and which form the carried
   copy draws as.
-- `dragRegions.ts` — the regions (Board/Column/sub-row/Card/Descendants): their keys,
-  their structure (resolved once per drag), and their live rects (measured per sample).
+- `dragRegions.ts` — the regions' vocabulary (Board/Column/sub-row/Card/Descendants):
+  their kinds, keys and DOM attributes, and hit-testing by containment.
+- `dragStructure.ts` — the regions read off the live DOM: their structure (resolved once
+  per drag) and their live rects (measured per sample).
 - `dragBands.ts` — the pixel band and reservation math for a card-list region.
 - `dragCollision.ts` — row-data typing, collision detection, and naming the anchor a
   drop lands beside.
@@ -94,7 +98,7 @@ The drag gesture's pure, unit-tested modules:
 The hooks and contexts that run it:
 
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
-  plumbing.
+  plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.
 - `DragTuningContext.ts` — the live tuning values, for the components that draw a drag
@@ -102,16 +106,20 @@ The hooks and contexts that run it:
 - `usePendingGhostGuard.ts` — keeps the ghost in place while an earlier write is
   still pending.
 - `useSnapTween.ts` — the eased snap when a pop moves the carried copy's clamp target.
+- `useLatest.ts` — the latest value of a hook's input in a ref, for the callbacks that
+  outlive one render.
 
 The board's own state, outside the gesture:
 
 - `useItemManagement.ts` — the item state and the per-item write tracker.
 - `useBoardManagement.ts`, `useColumnManagement.ts`, `useWorkphaseManagement.ts` —
-  board, column and workphase CRUD for `BoardView.tsx`.
+  board, column and workphase CRUD for `BoardView.tsx`; `useColumnManagement.ts` also
+  holds the column-reorder drop.
 
 Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
 depth rule, shared with the project sidebar; `components/dragChrome.tsx` holds a row's
-drag registration and its live drop-side line.
+drag registration, its live drop-side line, and the looks the drag shares (the
+active-context outline, the drop line's shape).
 
 ## One way to do each of these
 
@@ -138,6 +146,7 @@ drag registration and its live drop-side line.
   gate and the over-cap cue both read it, so they can't disagree.
 - **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
+- **The latest value of a prop or callback in a ref:** `useLatest.ts::useLatest`.
 - **Starting and ending a drag:** `useBoardDnd.ts::beginDragAt` starts a Card's drag
   and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`
   is the one end.
@@ -159,7 +168,7 @@ drag registration and its live drop-side line.
   value it returns, never a literal; import region keys from `dragRegions.ts` rather
   than re-spelling `column:`/`subrow:`/`descendants:`. Unit tests of the pop machine
   and placement share one board and runner (`client/src/test/popFixtures.ts`:
-  `threeColumnBoard`, `POP_TEST_TUNING`/`POP_TEST_METRICS`, `runPop`, `hoverAt`).
+  `threeColumnBoard`, `POP_TEST_TUNING`/`POP_TEST_METRICS`, `step`, `runPop`, `hoverAt`).
   Use `dragGesture.ts`
   (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
   — never hand-roll a drag or read `boundingBox()` directly for a drop target.
@@ -168,4 +177,10 @@ drag registration and its live drop-side line.
   `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and
   its hold stage), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, present only
   while locked at a `descendants:` context). Cards/Stubs carry `data-item-id` and
-  `data-drop-state`, plus `data-placement-valid` on the active row while over cap.
+  `data-drop-state`, `data-pending` while their write is in flight, and
+  `data-placement-valid` on the active row while over cap. The carried copy carries
+  `data-drag-overlay` (`dragRegions.ts::DRAG_OVERLAY_ATTR`, which the E2E helper's
+  "drag finished" wait counts down) and `data-drag-overlay-form`, and a Card that is
+  the locked context `data-active-context`. A region's element carries
+  `data-drag-region` (its key), a card list's also `data-drag-card-count`, and the
+  carve-out's zones and dividers `data-carve-zone` and `data-carve-divider`.
