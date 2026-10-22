@@ -2,123 +2,36 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
 import {
-  createProject,
-  createWorkflow,
   createWorkphase,
   createBoard,
   createColumn,
   createItem,
   readBoard,
   columnOn,
-  boardsOf,
   covers,
   reorderWorkphases,
+  workflowWithPhases,
 } from '../fixtures.js';
-import {
-  computeColumnRange,
-  isColumnBroken,
-  getCoveredWorkphases,
-  columnsOverlap,
-  computeUnsorted,
-} from '../../src/lib/columnRanges.js';
-import { buildRankMap } from '../../src/lib/workphaseOrder.js';
 
-// ── Pure helpers (no DB) ─────────────────────────────────────────────────────
-
-function phase(id: string, position: number) {
-  return {
-    id,
-    position,
-    name: id,
-    workflowId: 'w',
-    agentId: null,
-    triggersNotification: 0,
-    isTerminal: 0,
-    createdAt: 0,
-  };
-}
-
-describe('pure range helpers', () => {
-  const phases = [phase('a', 1), phase('b', 2), phase('c', 3), phase('d', 4)];
-  const rankMap = buildRankMap(phases);
-
-  it('buildRankMap assigns ordinal ranks in position order', () => {
-    expect(rankMap.get('a')).toBe(0);
-    expect(rankMap.get('d')).toBe(3);
-  });
-
-  it('computeColumnRange resolves a normal (non-inverted) range', () => {
-    expect(computeColumnRange({ startWorkphaseId: 'b', endWorkphaseId: 'c' }, rankMap)).toEqual([1, 2]);
-  });
-
-  it('computeColumnRange uses min/max so an inverted range still resolves', () => {
-    expect(computeColumnRange({ startWorkphaseId: 'c', endWorkphaseId: 'b' }, rankMap)).toEqual([1, 2]);
-  });
-
-  it('isColumnBroken is false for a normal range and true for an inverted one', () => {
-    expect(isColumnBroken({ startWorkphaseId: 'b', endWorkphaseId: 'c' }, rankMap)).toBe(false);
-    expect(isColumnBroken({ startWorkphaseId: 'c', endWorkphaseId: 'b' }, rankMap)).toBe(true);
-  });
-
-  it('getCoveredWorkphases returns the inclusive slice between start and end', () => {
-    const covered = getCoveredWorkphases({ startWorkphaseId: 'b', endWorkphaseId: 'd' }, phases, rankMap);
-    expect(covered.map(w => w.id)).toEqual(['b', 'c', 'd']);
-  });
-
-  it('columnsOverlap detects overlapping and non-overlapping ranges', () => {
-    const rangeA = { startWorkphaseId: 'a', endWorkphaseId: 'b' };
-    const rangeB = { startWorkphaseId: 'b', endWorkphaseId: 'c' };
-    const rangeC = { startWorkphaseId: 'c', endWorkphaseId: 'd' };
-    expect(columnsOverlap(rangeA, rangeB, rankMap)).toBe(true);
-    expect(columnsOverlap(rangeA, rangeC, rankMap)).toBe(false);
-  });
-
-  it('treats unknown workphase ids as unresolvable: null range, broken column, no overlap', () => {
-    const withUnknown = { startWorkphaseId: 'a', endWorkphaseId: 'zz' };
-    expect(computeColumnRange(withUnknown, rankMap)).toBeNull();
-    expect(isColumnBroken(withUnknown, rankMap)).toBe(true);
-    expect(columnsOverlap(withUnknown, { startWorkphaseId: 'a', endWorkphaseId: 'b' }, rankMap)).toBe(false);
-  });
-
-  it('computeUnsorted reports uncovered workphases and invalid item references', () => {
-    const columnsForBoard = [{ startWorkphaseId: 'a', endWorkphaseId: 'b' }];
-    const workflowItems = [
-      { id: 'i1', workphaseId: 'a' },
-      { id: 'i2', workphaseId: 'z' }, // not a real workphase in this workflow
-      { id: 'i3', workphaseId: null },
-    ];
-    const { uncovered, invalidItems } = computeUnsorted(phases, columnsForBoard, rankMap, workflowItems);
-    expect(uncovered.map(w => w.id)).toEqual(['c', 'd']);
-    expect(invalidItems.map(i => i.id)).toEqual(['i2', 'i3']);
-  });
-});
-
-// ── Routes ───────────────────────────────────────────────────────────────────
-
-// The workflow's default board is auto-bootstrapped by POST /api/workflows at
-// creation time, when the workflow has zero workphases yet — so it starts
-// with zero columns, giving these tests a clean slate to build custom ranges
-// on top of (workphases added afterward land in Unsorted, not auto-added).
+// The workflow's default board, which starts with no columns, and the workphases Todo,
+// In Progress and Done, to build custom ranges on (workphases added afterward land in
+// Unsorted, not auto-added).
 async function setupCleanBoard() {
-  const project = await createProject();
-  const workflow = await createWorkflow(project.id);
-  const boardsBefore = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-  const board = boardsBefore.body[0];
-
-  const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-  const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-  const done = await createWorkphase(workflow.id, { name: 'Done' });
-
+  const {
+    project,
+    workflow,
+    board,
+    phases: [todo, inProgress, done],
+  } = await workflowWithPhases(['Todo', 'In Progress', 'Done']);
   return { project, workflow, board, todo, inProgress, done };
 }
 
-// Workflow `WF` with non-terminal workphases Todo, Doing, Review and Ship (W1 to
-// W4), in that order, and two boards, `board` and `otherBoard`, that start
+// A workflow with non-terminal workphases Todo, Doing, Review and Ship (`w[0]` to
+// `w[3]`), in that order, and two boards, `board` and `otherBoard`, that start
 // with no columns.
 async function setupFour() {
-  const project = await createProject();
-  const workflow = await createWorkflow(project.id);
-  const [board] = (await request(app).get(`/api/boards?workflowId=${workflow.id}`)).body;
+  const { project, workflow, board } = await workflowWithPhases([]);
+  // Made before the workphases, so it starts with no columns too.
   const otherBoard = await createBoard(workflow.id, { name: 'Other' });
   const w: { id: string; name: string }[] = [];
   for (const name of ['Todo', 'Doing', 'Review', 'Ship']) w.push(await createWorkphase(workflow.id, { name }));
@@ -204,7 +117,7 @@ describe('POST /api/columns', () => {
 
   it('BCU-2.5: a column’s start and end must be workphases of its board’s workflow', async () => {
     const { board, w } = await setupFour();
-    const v1 = await createWorkphase((await createWorkflow((await createProject()).id)).id, { name: 'V1' });
+    const [v1] = (await workflowWithPhases(['V1'])).phases;
 
     // Each is refused with a 400, and the board is left with no columns.
     for (const [label, start, end] of [
@@ -469,17 +382,17 @@ describe('a broken column', () => {
 });
 
 describe('terminal/non-terminal column ranges', () => {
-  // WF with non-terminal W1, W2 and W3 and terminal D1 and D2, in that order, and
-  // its default board, which starts with no column.
+  // A workflow with non-terminal W1, W2 and W3 and terminal D1 and D2, in that order,
+  // and its default board, which starts with no column.
   async function setupWithTerminal() {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const [board] = await boardsOf(workflow.id);
-    const w: { id: string }[] = [];
-    for (const name of ['W1', 'W2', 'W3']) w.push(await createWorkphase(workflow.id, { name }));
-    const d: { id: string }[] = [];
-    for (const name of ['D1', 'D2']) d.push(await createWorkphase(workflow.id, { name, isTerminal: true }));
-    return { board, w, d };
+    const { board, phases } = await workflowWithPhases([
+      'W1',
+      'W2',
+      'W3',
+      { name: 'D1', isTerminal: true },
+      { name: 'D2', isTerminal: true },
+    ]);
+    return { board, w: phases.slice(0, 3), d: phases.slice(3) };
   }
 
   async function boardColumns(boardId: string) {

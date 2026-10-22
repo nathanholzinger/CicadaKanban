@@ -1,6 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import { eq } from 'drizzle-orm';
-import { db } from '../../src/db/index.js';
 import { items, projects } from '../../src/db/schema.js';
 import {
   ITEM_DEPTH_CAP,
@@ -11,7 +9,7 @@ import {
   subtreeHeight,
   walkItemDescendants,
 } from '../../src/lib/itemTree.js';
-import { createProject, createItem } from '../fixtures.js';
+import { createProject, createItem, setItemParent } from '../fixtures.js';
 
 // Seeds a two-item mutual parentId cycle directly (A.parentId = B,
 // B.parentId = A) — bypassing assertValidReparent, which is exactly the
@@ -22,8 +20,8 @@ async function seedCyclicPair() {
   const project = await createProject();
   const a = await createItem({ projectId: project.id, title: 'A' });
   const b = await createItem({ projectId: project.id, title: 'B' });
-  db.update(items).set({ parentId: b.id }).where(eq(items.id, a.id)).run();
-  db.update(items).set({ parentId: a.id }).where(eq(items.id, b.id)).run();
+  setItemParent(a.id, b.id);
+  setItemParent(b.id, a.id);
   return { a, b };
 }
 
@@ -63,7 +61,7 @@ describe('ancestorsOf', () => {
   it('ends at a parentId with no row, and for an id with no row', async () => {
     const project = await createProject();
     const orphan = await createItem({ projectId: project.id, title: 'Orphan' });
-    db.update(items).set({ parentId: 'no-such-item' }).where(eq(items.id, orphan.id)).run();
+    setItemParent(orphan.id, 'no-such-item');
     expect(ancestorsOf(items, orphan.id)).toEqual([]);
     expect(ancestorsOf(items, 'no-such-item')).toEqual([]);
   });
@@ -99,18 +97,16 @@ async function seedChain(projectId: string, length: number) {
     const item = await createItem({ projectId, title: `L${i + 1}` });
     const parentId = chain[i - 1]?.id;
     if (parentId) {
-      db.update(items)
-        .set({ parentId, isAttached: i % 2 === 0 ? 1 : 0 })
-        .where(eq(items.id, item.id))
-        .run();
+      setItemParent(item.id, parentId, i % 2 === 0);
     }
     chain.push(item);
   }
   return chain;
 }
 
-// Every case parameterizes on ITEM_DEPTH_CAP rather than a literal, so the
-// value can change without touching these (DRAG-2.10).
+// The cases that reach the cap parameterize on ITEM_DEPTH_CAP rather than a literal, so
+// its value can change without touching them. The two that count a depth and a height
+// read no cap.
 describe('depth cap', () => {
   it('ATT-4.6: a root item is at depth 1 and a leaf has height 0', async () => {
     const project = await createProject();
@@ -122,7 +118,7 @@ describe('depth cap', () => {
     expect(assertWithinDepthCap(root.id, leaf.id)).toBeNull();
   });
 
-  it('subtree height is the deepest resulting leaf, through a detached branch (ATT-4.5)', async () => {
+  it('ATT-4.5: subtree height is the deepest resulting leaf, through a detached branch', async () => {
     const project = await createProject();
     const m = await createItem({ projectId: project.id, title: 'M' });
     await createItem({ projectId: project.id, title: 'M1', parentId: m.id, isAttached: true });
@@ -137,7 +133,7 @@ describe('depth cap', () => {
     expect(subtreeHeight(m.id)).toBe(2);
   });
 
-  it('exactly CAP is legal, CAP + 1 is not (ATT-4.4)', async () => {
+  it('ATT-4.4: exactly CAP is legal, CAP + 1 is not', async () => {
     const project = await createProject();
     // Target chain of depth D = CAP - 1, and a leaf mover (h = 0):
     // D + 1 + 0 = CAP — legal.

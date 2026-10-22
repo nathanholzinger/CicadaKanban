@@ -14,6 +14,7 @@ import {
   boardsOf,
   readBoard,
   itemIdsOn,
+  setItemParent,
   templatedWorkflow,
 } from '../fixtures.js';
 
@@ -73,8 +74,8 @@ describe('GET /api/workflows/:id', () => {
     const workphase = await createWorkphase(workflow.id);
     const a = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'A' });
     const b = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'B' });
-    db.update(itemsTable).set({ parentId: b.id }).where(eq(itemsTable.id, a.id)).run();
-    db.update(itemsTable).set({ parentId: a.id }).where(eq(itemsTable.id, b.id)).run();
+    setItemParent(a.id, b.id);
+    setItemParent(b.id, a.id);
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(200);
@@ -171,9 +172,9 @@ describe('POST /api/workflows', () => {
     expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
 
     // A default board is bootstrapped 1:1 with the just-created workphases
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
-    expect(boardsRes.body).toHaveLength(1);
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const boards = await boardsOf(res.body.id);
+    expect(boards).toHaveLength(1);
+    const detail = await request(app).get(`/api/boards/${boards[0].id}`);
     expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual([
       'Todo',
       'In Progress',
@@ -196,8 +197,8 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
 
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const [board] = await boardsOf(res.body.id);
+    const detail = await request(app).get(`/api/boards/${board.id}`);
     expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual(['Backlog', 'Done']);
   });
 
@@ -208,9 +209,9 @@ describe('POST /api/workflows', () => {
     expect(res.body.workphases).toEqual([]);
 
     // Still gets a default board (with zero columns, since there are no phases yet)
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${res.body.id}`);
-    expect(boardsRes.body).toHaveLength(1);
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const boards = await boardsOf(res.body.id);
+    expect(boards).toHaveLength(1);
+    const detail = await request(app).get(`/api/boards/${boards[0].id}`);
     expect(detail.body.columns).toEqual([]);
   });
 
@@ -291,8 +292,7 @@ describe('DELETE /api/workflows/:id', () => {
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
     const item = await createItem({ projectId: project.id, workphaseId: workphase.id });
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const boardId = boardsRes.body[0].id;
+    const [{ id: boardId }] = await boardsOf(workflow.id);
 
     const res = await request(app).delete(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(204);

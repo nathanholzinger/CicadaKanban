@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { eq } from 'drizzle-orm';
-import { db } from '../../src/db/index.js';
-import { projects } from '../../src/db/schema.js';
 import { effectiveWorkflowIdForProject } from '../../src/lib/workflowItems.js';
-import { createProject, createWorkflow } from '../fixtures.js';
+import { createProject, createWorkflow, setProjectParent } from '../fixtures.js';
 
 describe('effectiveWorkflowIdForProject', () => {
   it('returns the workflow a project owns directly', async () => {
@@ -35,7 +32,7 @@ describe('effectiveWorkflowIdForProject', () => {
   it('terminates against a parentId cycle in the projects table', async () => {
     const a = await createProject({ name: 'A' });
     const b = await createProject({ name: 'B', parentId: a.id });
-    db.update(projects).set({ parentId: b.id }).where(eq(projects.id, a.id)).run();
+    setProjectParent(a.id, b.id);
     expect(effectiveWorkflowIdForProject(a.id)).toBeNull();
   });
 });

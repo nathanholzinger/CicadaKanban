@@ -69,6 +69,26 @@ export async function templatedWorkflow(template: 'quick' | 'flow', projectOverr
   return { project, workflow, workphaseIds };
 }
 
+// A phase for `workflowWithPhases`: its name, or its name with the fields to create it with.
+type PhaseSpec = string | ({ name: string } & Record<string, unknown>);
+
+// A project, its workflow, the workflow's default board and workphases created in the
+// order given, back in the same order. The workflow starts with none, so its board
+// starts with no columns: bootstrap covers only the workphases that exist when a
+// workflow is made, and the tests that use this build their own column ranges on that
+// clean slate. This is the one place that relies on the board existing before the
+// workphases.
+export async function workflowWithPhases(phases: PhaseSpec[], projectOverrides: Record<string, unknown> = {}) {
+  const project = await createProject(projectOverrides);
+  const workflow = await createWorkflow(project.id);
+  const [board] = await boardsOf(workflow.id);
+  const created = [];
+  for (const phase of phases) {
+    created.push(await createWorkphase(workflow.id, typeof phase === 'string' ? { name: phase } : phase));
+  }
+  return { project, workflow, board, phases: created };
+}
+
 type ItemRef = { id: string };
 export type ResolvedColumn = {
   id: string;
@@ -76,10 +96,12 @@ export type ResolvedColumn = {
   broken: boolean;
   startWorkphaseId: string;
   endWorkphaseId: string;
+  entryWorkphaseId: string;
   subRows: { workphase: { id: string }; items: ItemRef[] }[];
 };
-// A board as `GET /api/boards/:id` returns it: the fields the board tests read.
+// A board as `GET /api/boards/:id` returns it, narrowed to the fields the board tests read.
 export type BoardBody = {
+  itemDepthCap: number;
   columns: ResolvedColumn[];
   unsorted: {
     uncovered: { workphase: { id: string }; items: ItemRef[] }[];
@@ -131,4 +153,19 @@ export function setItemPosition(id: string, position: number | null) {
 // choosing, or none.
 export function setProjectPosition(id: string, position: number | null) {
   db.update(projects).set({ position }).where(eq(projects.id, id)).run();
+}
+
+// Sets an item's parent by writing the row, for the tests of data no write produces: a
+// tree past the depth cap, or a parentId cycle. `isAttached`, when given, is written with it.
+export function setItemParent(id: string, parentId: string | null, isAttached?: boolean) {
+  const attachment = isAttached === undefined ? {} : { isAttached: isAttached ? 1 : 0 };
+  db.update(items)
+    .set({ parentId, ...attachment })
+    .where(eq(items.id, id))
+    .run();
+}
+
+// The same for a project.
+export function setProjectParent(id: string, parentId: string | null) {
+  db.update(projects).set({ parentId }).where(eq(projects.id, id)).run();
 }

@@ -236,6 +236,12 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `client/src/test/popFixtures.ts`, `client/src/components/workflow/popSession.test.ts`, `placement.test.ts` | 3f client tests done | #38: `threeColumnBoard` also builds column A's Cards P and Q and P's Descendants section, with the points in and above the section, so the five copies of that layer are one. #15: `POP_TEST_TUNING` pins the distance term and the three zoom delays as well as the two it pinned, and both suites say they read their waits from it | Coder |
 | `client/src/test/dragFixtures.ts`, `client/src/components/workflow/dragStructure.test.ts`, `dragRegions.test.ts`, `dragCollision.test.ts`, `dragRequest.test.ts` | 3f client tests done | #38: `regionEl` and `mockRect` in the fixtures replace the DOM-building helpers in the two region test files; `dragCollision.test.ts` builds its rects with `rect()`; `dragRequest.test.ts` calls `freeOrigin` and `stubOrigin` where it shadowed them. #15: the fixture file's header and comments | Coder |
 | `client/src/components/workflow/itemWriteReconciliation.test.ts`, `itemListOps.test.ts`, `dragClassification.test.ts`; `client/src/components/sidebar/useProjectDragReorder.test.ts`; `client/src/test/itemFixture.ts`; `client/src/components/BandGuides.test.tsx` | 3f client tests done | #38: the wiki's worked example is hoisted once in `itemWriteReconciliation.test.ts`. #15: case IDs at the start of titles, the cross-reference comments deleted, the smaller comment fixes | Coder |
+| `server/tests/fixtures.ts`, `lib/positionResolver.test.ts`, `lib/itemTree.test.ts`, `lib/workflowItems.test.ts`, `routes/projects.test.ts`, `routes/workflows.test.ts` | 3f server tests done | #39: `setItemParent` and `setProjectParent` are the direct parent writes, and `positionResolver.test.ts` imports `setItemPosition` and `setProjectPosition` instead of copying them. The hand-rolled board lookups call `boardsOf` | Coder |
+| `server/tests/fixtures.ts`; `routes/boards.test.ts`, `columns.test.ts`, `workphases.test.ts`, `items.test.ts`, `items.positioning.test.ts`, `items.attached.test.ts` | 3f server tests done | #39: `workflowWithPhases(phases, projectOverrides?)` returns the project, its workflow, the default board and the phases in order. 48 setups use it; the `setupTwoPhases` and `setupTodoAndInProgress` wrappers it makes redundant are gone | Coder |
+| `server/tests/routes/items.test.ts` (split), `items.positioning.test.ts` (new), `items.attached.test.ts` (new) | 3f server tests done | #39: item CRUD stays; position resolution and attached children move out, each with the helpers it carried | Coder |
+| `server/tests/routes/items.hierarchy.test.ts` (split), `items.crossProject.test.ts` (new), `items.workphase.test.ts` (new), `server/tests/itemHierarchyFixtures.ts` (new) | 3f server tests done | #39: the cross-project and cross-workflow block and the workphase-rule block move out. The helpers all three files use are written once, in `itemHierarchyFixtures.ts` | Coder |
+| `server/tests/lib/columnRanges.test.ts` (new), `server/tests/routes/columns.test.ts` | 3f server tests done | #39: the eight tests of `lib/columnRanges.ts` leave the routes layer | Coder |
+| Comments and titles across `server/tests/` | 3f server tests done | #16, each written beside its final code | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -349,6 +355,20 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **IDs that moved in titles.** `dragClassification.test.ts`, `dragRequest.test.ts` and `dragRegions.test.ts` now start every title that names an ID with it, and the Stub-drag describe in `dragClassification.test.ts` carries DRAG-2.8. In `useProjectDragReorder.test.ts`, TREE-1.10 moved out of TREE-1.9's describe into one of its own, and TREE-1.11, which was in no title, now heads the cap describe. It covers that describe's three cases, including "marks nothing invalid while the cap is unknown".
   - **A title lost an ID that wasn't its case.** `dragRequest.test.ts`'s "a done region never anchors" named DRAG-3.9, which `placement.test.ts` covers; it names nothing now.
 - **For the Architect:** root `CLAUDE.md` and `testing-strategy.md` say items come from `makeItem`. Projects have the same factory now, `client/src/test/projectFixture.ts::makeProject`, if you want the rule stated for both.
+
+*From the Coder, batch 3f (2 of 2), the server tests (2026-10-21).*
+
+- **For the Test Reconciler:**
+  - **Server test files moved and split,** so the Automation lines that name them are stale. No test was lost: the 399 server tests are the same 399 titles, apart from the retitles below.
+
+    | Was | Now |
+    |---|---|
+    | `routes/items.test.ts` | `routes/items.test.ts` (CRUD), `routes/items.positioning.test.ts` (position resolution), `routes/items.attached.test.ts` (attached children) |
+    | `routes/items.hierarchy.test.ts` | `routes/items.hierarchy.test.ts`, `routes/items.crossProject.test.ts` (cross-project reparenting, with its cross-workflow cases), `routes/items.workphase.test.ts` (ATT-9) |
+    | the eight "pure range helpers" tests in `routes/columns.test.ts` | `lib/columnRanges.test.ts`, under "column range helpers" (no case ID) |
+
+  - **IDs that moved to the start of a title:** ATT-4.4 and ATT-4.5 in `lib/itemTree.test.ts`, and ATT-5.1 in `items.attached.test.ts`, whose title now says it is the PUT entry point.
+- **For the Architect:** `testing-strategy.md` names `setItemPosition` as the server tests' fixture for writing the database. The direct-write fixtures are now `setItemPosition`, `setProjectPosition`, `setItemParent` and `setProjectParent`, and `workflowWithPhases` builds a project, workflow, board and phases, all in `server/tests/fixtures.ts`.
 
 ## Amendments
 
@@ -559,4 +579,34 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **`dragCollision.test.ts`'s casts.** With `rect()`, `Over` accepts the object as it is, so two of the three `as unknown as Over` casts are gone too.
     - **Same pattern as the finding, not named by it:** `dragRequest.test.ts`'s DRAG-3.10 title with its ID at the end, and its "a done region never anchors" title that named DRAG-3.9.
     - **`itemFixture.ts`'s comment** now says what the fixture does: it never returns `'none'`, which the API gives an item in a terminal workphase.
+  - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 445 client, 83 script tests. `npm run check:docs` reports the one hit from 3d, `.claude/personas/coder.md:60`, and nothing else. `npm run test:e2e` wasn't run: no production file changed.
+- **2026-10-21, batch 3f (2 of 2), the server tests (the Coder): #39 and #16.** This closes 3f, and the Close-out rows are filled in. No production file changed. The server still runs 399 tests, and their names are the same apart from the retitles in Open questions.
+  - **The fixes.**
+
+    | # | Fix | Where |
+    |---|---|---|
+    | 39 | `workflowWithPhases(phases, projectOverrides?)`, used by 48 setups; the two wrappers that held identical bodies under different names are gone | `fixtures.ts`; `boards`, `columns`, `workphases`, `items`, `items.positioning` and `items.attached` tests; `itemHierarchyFixtures.ts::setupWorkflow` |
+    | 39 | `setItemParent` and `setProjectParent` for the direct parent writes; `positionResolver.test.ts` imports the two position setters instead of copying them | `fixtures.ts`; `itemTree`, `workflowItems`, `positionResolver`, `projects`, `workflows`, `items`, `items.hierarchy` and `items.workphase` tests |
+    | 39 | The hand-rolled board lookups call `boardsOf`, or use the board `workflowWithPhases` returns | `boards`, `columns`, `projects`, `workflows`, `workphases` tests |
+    | 39 | The eight `columnRanges` tests move to `lib/` | `lib/columnRanges.test.ts` |
+    | 39 | `items.test.ts` splits into CRUD, positioning and attached children | `items.positioning.test.ts`, `items.attached.test.ts` |
+    | 39 | `items.hierarchy.test.ts` splits, with the shared helpers written once | `items.crossProject.test.ts`, `items.workphase.test.ts`, `itemHierarchyFixtures.ts` |
+    | 16 | Each bullet, beside its code | `fixtures.ts` and the test files above |
+  - **Shown to bite.** These are test-code changes, so what I checked is that the new fixtures matter and the moved tests still run. Each reverted in turn:
+    - `workflowWithPhases` creating the phases in reverse: 54 tests, across eight files.
+    - `workflowWithPhases` dropping a phase's fields beyond its name, so a terminal phase isn't terminal: 19 tests, across six files.
+    - `setItemParent` writing nothing: eight tests, in `itemTree.test.ts` and `items.hierarchy.test.ts`. `setProjectParent` writing nothing: two, in `projects.test.ts`.
+    - `getRow` in the shared module reading the wrong row: 12 tests, in the three files split from the hierarchy file.
+    - `columnRanges.ts` not resolving an inverted range by min and max: one test. Its overlap check looking at one side only: one test. Both are in the moved `lib/columnRanges.test.ts`.
+    - **Not caught:** `setItemParent` dropping the attachment flag it writes with the parent. The two sites that pass it, the seeded chains, wrote that flag before this batch too, and no server test asserts on it. I kept the parameter so the seeded data is the data it was.
+  - **Edges the findings don't state.**
+    - **Two cycle tests pass whether or not the cycle is written.** `items.test.ts` and `workflows.test.ts` each assert only a 200 and a numeric depth, so they also pass when `setItemParent` writes nothing. That was true before this batch.
+    - **A second board before the workphases is the site's own order.** `columns.test.ts::setupFour` and the isTerminal-flip case in `workphases.test.ts` each need two boards with no columns, and a board made after the phases gets one column per phase. They call `workflowWithPhases([])`, make the second board, and then make their phases.
+    - **The wrappers made two phases at every call.** Inlining them kept that: five of the calls name only `todo`, and still ask for `In Progress`, so the workflow, and a board made after it, are as they were.
+    - **13 setups are left as they were:** a project, a workflow and one phase with no name, in `positionResolver`, `items`, `workflows`, `projects` and `workphases` tests. The finding says "named workphases", and a fixture call with a name that nothing reads wouldn't be shorter by much.
+    - **`GET /api/boards?workflowId=` stays hand-rolled once,** in the test of that filter, since its body is what the test reads.
+    - **A stale pointer I made and removed.** The ATT-5.1 comment in `items.attached.test.ts` said the full cascade cases live in `items.hierarchy.test.ts`; they moved to `items.crossProject.test.ts`. The comment is gone, and the title says what the test is.
+    - **`itemTree.test.ts`'s comment cited DRAG-2.10 for the cap parameter.** DRAG-2.10 is the case about the board carrying the cap; the comment now says which cases reach the cap and which two read none.
+    - **`BoardBody` gained the two fields the board tests read,** `entryWorkphaseId` and `itemDepthCap`, so its comment is true.
+    - **`items.hierarchy.test.ts:215–216` needed no change.** The comment there is accurate; the finding's other line in the file, `:82–83`, named the test plans and is fixed.
   - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 445 client, 83 script tests. `npm run check:docs` reports the one hit from 3d, `.claude/personas/coder.md:60`, and nothing else. `npm run test:e2e` wasn't run: no production file changed.

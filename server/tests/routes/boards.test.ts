@@ -17,6 +17,7 @@ import {
   covers,
   itemIdsOn,
   templatedWorkflow,
+  workflowWithPhases,
 } from '../fixtures.js';
 
 describe('workflow creation bootstraps a default board', () => {
@@ -24,12 +25,11 @@ describe('workflow creation bootstraps a default board', () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id, { name: 'Bootstrap Test' });
 
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    expect(boardsRes.body.length).toBe(1);
+    const boards = await boardsOf(workflow.id);
+    expect(boards).toHaveLength(1);
 
     // No template/source given, so the workflow (and thus the board) starts with zero workphases/columns
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
-    expect(detail.body.columns).toEqual([]);
+    expect((await readBoard(boards[0].id)).columns).toEqual([]);
   });
 
   it('BCU-1.1: a new board starts with one column per workphase, in the workflow’s order', async () => {
@@ -68,14 +68,11 @@ describe('GET /api/boards/:id', () => {
   });
 
   it('resolves columns into displayName/broken/entryWorkphaseId/subRows and computes unsorted', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-    const done = await createWorkphase(workflow.id, { name: 'Done' });
-
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const board = boardsRes.body[0];
+    const {
+      project,
+      board,
+      phases: [todo, inProgress, done],
+    } = await workflowWithPhases(['Todo', 'In Progress', 'Done']);
 
     const merged = await createColumn(board.id, todo.id, inProgress.id, { name: null });
     const item1 = await createItem({ projectId: project.id, workphaseId: todo.id });
@@ -104,25 +101,24 @@ describe('GET /api/boards/:id', () => {
   // rather than hard-coding it (DRAG-2.10 — one constant moves both
   // enforcement points).
   it('DRAG-2.10: carries the item depth cap the API enforces', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const res = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const { board } = await workflowWithPhases([]);
+    const res = await request(app).get(`/api/boards/${board.id}`);
     expect(res.body.itemDepthCap).toBe(ITEM_DEPTH_CAP);
   });
 
   it('TC-1.1: reports identical position for the same item across two different boards on one workflow', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
+    const {
+      project,
+      workflow,
+      board: boardOne,
+      phases: [todo],
+    } = await workflowWithPhases(['Todo']);
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });
 
     // The workflow's auto-bootstrapped default board predates `todo`
     // (bootstrap only covers workphases that exist at workflow-creation
     // time), so it needs an explicit column covering it, same as a
     // genuinely independent second board would.
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const boardOne = boardsRes.body[0];
     await createColumn(boardOne.id, todo.id, todo.id);
 
     // A second, wholly independent board on the same workflow — position
@@ -142,18 +138,18 @@ describe('GET /api/boards/:id', () => {
   });
 
   it('TC-2.16: surfaces items whose workphase was deleted as invalidItems (Unknown status)', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const keep = await createWorkphase(workflow.id, { name: 'Keep' });
+    const {
+      project,
+      board,
+      phases: [todo, keep],
+    } = await workflowWithPhases(['Todo', 'Keep']);
     const stranded = await createItem({ projectId: project.id, workphaseId: todo.id });
 
     // Deleting the workphase nulls the item's workphaseId (SET NULL) rather than
     // deleting it — the board must still surface it instead of dropping it.
     await request(app).delete(`/api/workphases/${todo.id}`);
 
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const res = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const res = await request(app).get(`/api/boards/${board.id}`);
     expect(res.status).toBe(200);
 
     const invalidIds = res.body.unsorted.invalidItems.map((i: { id: string }) => i.id);
@@ -165,13 +161,10 @@ describe('GET /api/boards/:id', () => {
   });
 
   it('uses an explicit column name as the displayName override', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const board = boardsRes.body[0];
+    const {
+      board,
+      phases: [todo, inProgress],
+    } = await workflowWithPhases(['Todo', 'In Progress']);
     const named = await createColumn(board.id, todo.id, inProgress.id, { name: 'Active Work' });
 
     const res = await request(app).get(`/api/boards/${board.id}`);
@@ -192,10 +185,7 @@ describe('POST /api/boards', () => {
   });
 
   it("bootstraps a new board with 1:1 columns matching the workflow's current workphases", async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    await createWorkphase(workflow.id, { name: 'Todo' });
-    await createWorkphase(workflow.id, { name: 'Done' });
+    const { workflow } = await workflowWithPhases(['Todo', 'Done']);
 
     const res = await request(app).post('/api/boards').send({ workflowId: workflow.id, name: 'QA View' });
     expect(res.status).toBe(201);
@@ -281,10 +271,8 @@ describe('DELETE /api/boards/:id', () => {
 
 describe('what a board is and shows', () => {
   it('BCU-1.4: no board or column write changes an item', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
     // Two boards with no columns yet; the workphases come after.
-    const [board] = await boardsOf(workflow.id);
+    const { project, workflow, board } = await workflowWithPhases([]);
     const second = await createBoard(workflow.id, { name: 'Second' });
     const phases: { id: string; name: string }[] = [];
     for (const name of ['W1', 'W2', 'W3', 'W4']) phases.push(await createWorkphase(workflow.id, { name }));
@@ -401,14 +389,10 @@ describe('what a board is and shows', () => {
 
 describe('Unsorted', () => {
   it('BCU-5.1: uncovered lists each of the workflow’s workphases that no column on the board covers', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const [board] = await boardsOf(workflow.id);
-    const [w1, w2, w3] = [
-      await createWorkphase(workflow.id, { name: 'W1' }),
-      await createWorkphase(workflow.id, { name: 'W2' }),
-      await createWorkphase(workflow.id, { name: 'W3' }),
-    ];
+    const {
+      board,
+      phases: [w1, w2, w3],
+    } = await workflowWithPhases(['W1', 'W2', 'W3']);
     const column = await createColumn(board.id, w1.id, w1.id);
     const uncovered = async () => (await readBoard(board.id)).unsorted.uncovered.map(r => r.workphase.id);
 
@@ -462,7 +446,7 @@ describe('Unsorted', () => {
   it('BCU-5.4: invalidItems lists an Attached item whose own workphase is missing or isn’t the workflow’s', async () => {
     const { project, workflow, workphaseIds } = await templatedWorkflow('flow');
     const [{ id: boardId }] = await boardsOf(workflow.id);
-    const foreign = await createWorkphase((await createWorkflow((await createProject()).id)).id, { name: 'V1' });
+    const [foreign] = (await workflowWithPhases(['V1'])).phases;
     // D is Free in the second workphase, A is attached to D, and X to A.
     const d = await createItem({ projectId: project.id, workphaseId: workphaseIds[1], title: 'D' });
     const a = await createItem({ projectId: project.id, parentId: d.id, title: 'A' });

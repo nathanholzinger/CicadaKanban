@@ -9,20 +9,16 @@ import {
   createColumn,
   createBoard,
   readBoard,
-  boardsOf,
   columnOn,
   covers,
   reorderWorkphases,
+  workflowWithPhases,
 } from '../fixtures.js';
 
-// Workflow `WF` with non-terminal workphases W1 to W4, in that order, and a board
-// of WF with two columns: `a`, from W1 to W3, and `b`, covering W4 alone.
+// A workflow with non-terminal workphases W1 to W4, in that order, and a board with
+// two columns: `a`, from W1 to W3, and `b`, covering W4 alone.
 async function setupAB() {
-  const project = await createProject();
-  const workflow = await createWorkflow(project.id);
-  const [board] = await boardsOf(workflow.id);
-  const w: { id: string; name: string }[] = [];
-  for (const name of ['W1', 'W2', 'W3', 'W4']) w.push(await createWorkphase(workflow.id, { name }));
+  const { project, workflow, board, phases: w } = await workflowWithPhases(['W1', 'W2', 'W3', 'W4']);
   const a = await createColumn(board.id, w[0].id, w[2].id);
   const b = await createColumn(board.id, w[3].id, w[3].id);
   return { project, workflow, board, w, a, b };
@@ -87,9 +83,9 @@ describe('PUT /api/workphases/:id', () => {
   });
 
   it('updates name and coerces truthy/falsy flags to 1/0', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const phase = await createWorkphase(workflow.id, { name: 'Todo' });
+    const {
+      phases: [phase],
+    } = await workflowWithPhases(['Todo']);
 
     const res = await request(app).put(`/api/workphases/${phase.id}`).send({
       name: 'In Progress',
@@ -103,9 +99,9 @@ describe('PUT /api/workphases/:id', () => {
   });
 
   it('preserves existing fields when they are omitted from the body', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const phase = await createWorkphase(workflow.id, { name: 'Todo', triggersNotification: true });
+    const {
+      phases: [phase],
+    } = await workflowWithPhases([{ name: 'Todo', triggersNotification: true }]);
 
     const res = await request(app).put(`/api/workphases/${phase.id}`).send({});
     expect(res.body.name).toBe('Todo');
@@ -116,9 +112,7 @@ describe('PUT /api/workphases/:id', () => {
   // items.
   describe('isTerminal flip', () => {
     it('BCU-3.4: a terminal-flag change that would leave a column covering both terminal and non-terminal workphases is refused', async () => {
-      const project = await createProject();
-      const workflow = await createWorkflow(project.id);
-      const [board] = await boardsOf(workflow.id);
+      const { project, workflow, board } = await workflowWithPhases([]);
       // A second board with no columns, before the workphases exist.
       const otherBoard = await createBoard(workflow.id, { name: 'Other' });
       const [w1, w2, w3] = [
@@ -167,9 +161,10 @@ describe('PUT /api/workphases/:id', () => {
     });
 
     it('backfills items on a non-terminal -> terminal flip, preserving their position order as completedAt order, and clears position', async () => {
-      const project = await createProject();
-      const workflow = await createWorkflow(project.id);
-      const review = await createWorkphase(workflow.id, { name: 'Review' });
+      const {
+        project,
+        phases: [review],
+      } = await workflowWithPhases(['Review']);
       const a = await createItem({ projectId: project.id, workphaseId: review.id, title: 'A' });
       const b = await createItem({ projectId: project.id, workphaseId: review.id, title: 'B' });
       const c = await createItem({ projectId: project.id, workphaseId: review.id, title: 'C' });
@@ -195,9 +190,10 @@ describe('PUT /api/workphases/:id', () => {
     });
 
     it('backfills items on a terminal -> non-terminal flip, preserving their completedAt order as position order, and clears completedAt', async () => {
-      const project = await createProject();
-      const workflow = await createWorkflow(project.id);
-      const review = await createWorkphase(workflow.id, { name: 'Review' });
+      const {
+        project,
+        phases: [review],
+      } = await workflowWithPhases(['Review']);
       const a = await createItem({ projectId: project.id, workphaseId: review.id, title: 'A' });
       const b = await createItem({ projectId: project.id, workphaseId: review.id, title: 'B' });
       const c = await createItem({ projectId: project.id, workphaseId: review.id, title: 'C' });
@@ -225,9 +221,10 @@ describe('PUT /api/workphases/:id', () => {
     });
 
     it("does not touch an attached child's position/completedAt when its parent's workphase flips terminal", async () => {
-      const project = await createProject();
-      const workflow = await createWorkflow(project.id);
-      const review = await createWorkphase(workflow.id, { name: 'Review' });
+      const {
+        project,
+        phases: [review],
+      } = await workflowWithPhases(['Review']);
       const parent = await createItem({ projectId: project.id, workphaseId: review.id, title: 'Parent' });
       const childRes = await request(app).post('/api/items').send({
         title: 'Child',
@@ -255,10 +252,9 @@ describe('PATCH /api/workphases/reorder', () => {
   });
 
   it('reorders multiple workphases', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const a = await createWorkphase(workflow.id, { name: 'A' });
-    const b = await createWorkphase(workflow.id, { name: 'B' });
+    const {
+      phases: [a, b],
+    } = await workflowWithPhases(['A', 'B']);
 
     const res = await request(app)
       .patch('/api/workphases/reorder')
@@ -272,9 +268,9 @@ describe('PATCH /api/workphases/reorder', () => {
   });
 
   it('rejects an entry without a string id and finite numeric position', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const a = await createWorkphase(workflow.id, { name: 'A' });
+    const {
+      phases: [a],
+    } = await workflowWithPhases(['A']);
 
     const res = await request(app)
       .patch('/api/workphases/reorder')
@@ -285,9 +281,9 @@ describe('PATCH /api/workphases/reorder', () => {
   });
 
   it('returns 404 with missingIds when any workphase does not exist', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const a = await createWorkphase(workflow.id, { name: 'A' });
+    const {
+      phases: [a],
+    } = await workflowWithPhases(['A']);
 
     const res = await request(app)
       .patch('/api/workphases/reorder')
@@ -341,12 +337,9 @@ describe('PATCH /api/workphases/reorder', () => {
   });
 
   it('BCU-4.7: a workphase reorder isn’t checked against a board’s columns', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const [board] = await boardsOf(workflow.id);
-    const w: { id: string; name: string }[] = [];
-    for (const name of ['W1', 'W2', 'W3', 'W4']) w.push(await createWorkphase(workflow.id, { name }));
-    const d1 = await createWorkphase(workflow.id, { name: 'D1', isTerminal: true });
+    const { board, phases } = await workflowWithPhases(['W1', 'W2', 'W3', 'W4', { name: 'D1', isTerminal: true }]);
+    const w = phases.slice(0, 4);
+    const d1 = phases[4];
     const a = await createColumn(board.id, w[0].id, w[1].id);
     const c = await createColumn(board.id, w[2].id, w[3].id);
 
@@ -398,18 +391,16 @@ describe('DELETE /api/workphases/:id', () => {
   });
 
   it('BCU-4.3: a workphase delete that leaves every column’s ends in place changes no column', async () => {
-    const project = await createProject();
-    const workflow = await createWorkflow(project.id);
-    const todo = await createWorkphase(workflow.id, { name: 'Todo' });
-    const inProgress = await createWorkphase(workflow.id, { name: 'In Progress' });
-    const done = await createWorkphase(workflow.id, { name: 'Done' });
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const col = await createColumn(boardsRes.body[0].id, todo.id, done.id);
+    const {
+      board,
+      phases: [todo, inProgress, done],
+    } = await workflowWithPhases(['Todo', 'In Progress', 'Done']);
+    const col = await createColumn(board.id, todo.id, done.id);
 
     const res = await request(app).delete(`/api/workphases/${inProgress.id}`);
     expect(res.status).toBe(204);
 
-    const detail = await request(app).get(`/api/boards/${boardsRes.body[0].id}`);
+    const detail = await request(app).get(`/api/boards/${board.id}`);
     const resolved = detail.body.columns.find((c: { id: string }) => c.id === col.id);
     expect(resolved.startWorkphaseId).toBe(todo.id);
     expect(resolved.endWorkphaseId).toBe(done.id);

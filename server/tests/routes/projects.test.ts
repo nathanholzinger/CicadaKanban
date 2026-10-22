@@ -27,6 +27,7 @@ import {
   boardsOf,
   readBoard,
   itemIdsOn,
+  setProjectParent,
   setProjectPosition,
   templatedWorkflow,
 } from '../fixtures.js';
@@ -62,12 +63,6 @@ const depthOf = async (id: string) => {
   for (let p = await getProject(id); p.parentId; p = await getProject(p.parentId)) depth++;
   return depth;
 };
-
-// Sets a project's parent by writing the row: no project write produces a tree
-// past the cap.
-function setParent(id: string, parentId: string | null) {
-  db.update(projects).set({ parentId }).where(eq(projects.id, id)).run();
-}
 
 // A project with a workflow of its own, a board and one workphase, and an item
 // in that workphase.
@@ -629,8 +624,8 @@ describe('the project depth cap', () => {
   // A refusal says the write would put the subtree past the cap.
   const pastCap = /exceeds the cap/i;
 
-  // A chain from a top-level project down to T, at depth PCAP − 1, whose parent
-  // S is at PCAP − 2; and top-level M with one child M1, so M's height is 1.
+  // A chain from a top-level project down to T, at depth PROJECT_DEPTH_CAP − 1, whose parent
+  // S is at PROJECT_DEPTH_CAP − 2; and top-level M with one child M1, so M's height is 1.
   async function capTree() {
     resetTestDb();
     const chain = await chainTo(PROJECT_DEPTH_CAP - 1);
@@ -639,7 +634,7 @@ describe('the project depth cap', () => {
     return { s: chain[chain.length - 2], t: chain[chain.length - 1], m, m1 };
   }
 
-  it('TREE-3.5: a write that leaves the deepest descendant at PCAP is accepted, and one past it isn’t', async () => {
+  it('TREE-3.5: a write that leaves the deepest descendant at PROJECT_DEPTH_CAP is accepted, and one past it isn’t', async () => {
     const accepted = await capTree();
     expect((await moveProject(accepted.m.id, { parentId: accepted.s.id })).status).toBe(200);
     expect(await depthOf(accepted.m1.id)).toBe(PROJECT_DEPTH_CAP);
@@ -658,7 +653,7 @@ describe('the project depth cap', () => {
     expect((await getProject(edit.m.id)).parentId).toBeNull();
     expect((await editProject(edit.m.id, { parentId: edit.s.id })).status).toBe(200);
 
-    // A new project has no subtree, so it fits under T, at PCAP, and nothing fits under it.
+    // A new project has no subtree, so it fits under T, at PROJECT_DEPTH_CAP, and nothing fits under it.
     const create = await capTree();
     const fits = await request(app).post('/api/projects').send({ name: 'N', parentId: create.t.id });
     expect(fits.status).toBe(201);
@@ -682,7 +677,7 @@ describe('the project depth cap', () => {
       return { m, target: chain[chain.length - 1] };
     };
 
-    // D + 1 + 2 is at most PCAP: accepted. One level deeper, it isn't.
+    // D + 1 + 2 is at most PROJECT_DEPTH_CAP: accepted. One level deeper, it isn't.
     const fits = await underTarget(PROJECT_DEPTH_CAP - 3);
     expect((await moveProject(fits.m.id, { parentId: fits.target.id })).status).toBe(200);
     const past = await underTarget(PROJECT_DEPTH_CAP - 2);
@@ -693,10 +688,10 @@ describe('the project depth cap', () => {
     // A tree two levels deeper than the cap, made by writing rows.
     const chain = await chainTo(PROJECT_DEPTH_CAP);
     const beyond = [await createProject({ name: 'Past 1' }), await createProject({ name: 'Past 2' })];
-    setParent(beyond[0].id, chain[chain.length - 1].id);
-    setParent(beyond[1].id, beyond[0].id);
+    setProjectParent(beyond[0].id, chain[chain.length - 1].id);
+    setProjectParent(beyond[1].id, beyond[0].id);
     const sibling = await createProject({ name: 'Sibling' });
-    setParent(sibling.id, beyond[0].id);
+    setProjectParent(sibling.id, beyond[0].id);
     expect(await depthOf(beyond[1].id)).toBe(PROJECT_DEPTH_CAP + 2);
 
     // Every one of them is returned.
@@ -711,18 +706,18 @@ describe('the project depth cap', () => {
   });
 
   it('TREE-3.8: a subtree already taller than the cap allows can’t be moved, even to a shallower place', async () => {
-    // M is at depth 3, under P1 and P2, and has a chain of PCAP descendants.
+    // M is at depth 3, under P1 and P2, and has a chain of PROJECT_DEPTH_CAP descendants.
     const [, p2] = await chainTo(2);
     const m = await createProject({ name: 'M', parentId: p2.id });
     let parent = m;
     for (let level = 0; level < PROJECT_DEPTH_CAP; level++) {
       const child = await createProject({ name: `D${level}` });
-      setParent(child.id, parent.id);
+      setProjectParent(child.id, parent.id);
       parent = child;
     }
     const before = await placeOf(m.id);
 
-    // The top level would put its deepest descendant at 1 + PCAP, still past it.
+    // The top level would put its deepest descendant at 1 + PROJECT_DEPTH_CAP, still past it.
     const res = await moveProject(m.id, { parentId: null });
     expect(res.status).toBe(400);
     expect(await placeOf(m.id)).toEqual(before);
@@ -791,8 +786,7 @@ describe('DELETE /api/projects/:id', () => {
     const item = await createItem({ projectId: parent.id, workphaseId: workphase.id });
     await request(app).post(`/api/items/${item.id}/comments`).send({ content: 'a comment' });
 
-    const boardsRes = await request(app).get(`/api/boards?workflowId=${workflow.id}`);
-    const boardId = boardsRes.body[0].id;
+    const [{ id: boardId }] = await boardsOf(workflow.id);
     const column = await createColumn(boardId, workphase.id, workphase.id);
 
     // Seed directly (these tables have no POST route) to exercise the ON DELETE

@@ -10,11 +10,14 @@ import {
   type ReindexedPosition,
 } from '../../src/lib/positionResolver.js';
 import { coarsestFit } from '../../src/lib/coarsestFit.js';
-import { createProject, createWorkflow, createWorkphase, createItem } from '../fixtures.js';
-
-function setPosition(id: string, position: number | null) {
-  db.update(items).set({ position }).where(eq(items.id, id)).run();
-}
+import {
+  createProject,
+  createWorkflow,
+  createWorkphase,
+  createItem,
+  setItemPosition,
+  setProjectPosition,
+} from '../fixtures.js';
 
 function getPosition(id: string): number | null {
   return db.select({ position: items.position }).from(items).where(eq(items.id, id)).get()!.position;
@@ -29,10 +32,6 @@ async function seedPhaseWithItems(count: number) {
     created.push(await createItem({ projectId: project.id, workphaseId: phase.id, title: `Item ${i}` }));
   }
   return { project, workflow, phase, items: created };
-}
-
-function setProjectPosition(id: string, position: number | null) {
-  db.update(projects).set({ position }).where(eq(projects.id, id)).run();
 }
 
 function getProjectPosition(id: string): number | null {
@@ -84,10 +83,10 @@ describe('coarsestFit', () => {
 describe('reindex', () => {
   it('TC-5.6: breaks exact ties by createdAt, oldest first', async () => {
     const { phase, items: created } = await seedPhaseWithItems(4);
-    setPosition(created[0].id, 5.0);
-    setPosition(created[1].id, 1.0 + 1e-13);
-    setPosition(created[2].id, 1.0);
-    setPosition(created[3].id, 5.0);
+    setItemPosition(created[0].id, 5.0);
+    setItemPosition(created[1].id, 1.0 + 1e-13);
+    setItemPosition(created[2].id, 1.0);
+    setItemPosition(created[3].id, 5.0);
     // The tied pair's creation times run against the order the rows were
     // inserted, so the row order alone would put created[0] first.
     db.update(items).set({ createdAt: 2000 }).where(eq(items.id, created[0].id)).run();
@@ -109,9 +108,9 @@ describe('reindex', () => {
   describe('disclosure', () => {
     it('reports every renumbered row, in scope order, as bare {id, position} pairs (tight-gap trigger)', async () => {
       const { phase, items: created } = await seedPhaseWithItems(3);
-      setPosition(created[0].id, 1.0);
-      setPosition(created[1].id, 1.0 + 1e-13);
-      setPosition(created[2].id, 5.0);
+      setItemPosition(created[0].id, 1.0);
+      setItemPosition(created[1].id, 1.0 + 1e-13);
+      setItemPosition(created[2].id, 5.0);
 
       const reindexed: ReindexedPosition[] = [];
       db.transaction(tx =>
@@ -127,8 +126,8 @@ describe('reindex', () => {
 
     it('reports the reindex fired by the magnitude threshold on an append', async () => {
       const { phase, items: created } = await seedPhaseWithItems(2);
-      setPosition(created[0].id, 1100);
-      setPosition(created[1].id, 1200);
+      setItemPosition(created[0].id, 1100);
+      setItemPosition(created[1].id, 1200);
 
       const reindexed: ReindexedPosition[] = [];
       const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx, reindexed));
@@ -142,8 +141,8 @@ describe('reindex', () => {
 
     it('leaves the collector empty when no reindex fired', async () => {
       const { phase, items: created } = await seedPhaseWithItems(2);
-      setPosition(created[0].id, 1.5);
-      setPosition(created[1].id, 2.0);
+      setItemPosition(created[0].id, 1.5);
+      setItemPosition(created[1].id, 2.0);
 
       const reindexed: ReindexedPosition[] = [];
       db.transaction(tx =>
@@ -157,8 +156,8 @@ describe('reindex', () => {
 describe('resolvePositionByAnchorAndSide', () => {
   it('TC-2.2: coarsest-fits between the anchor and its true next neighbor', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
-    setPosition(created[0].id, 1.5);
-    setPosition(created[1].id, 2.0);
+    setItemPosition(created[0].id, 1.5);
+    setItemPosition(created[1].id, 2.0);
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
@@ -171,9 +170,9 @@ describe('resolvePositionByAnchorAndSide', () => {
     // assumed from creation order or a caller-supplied guess, which a
     // narrow view would leapfrog.
     const { phase, items: created } = await seedPhaseWithItems(3);
-    setPosition(created[0].id, 1.0);
-    setPosition(created[1].id, 2.8);
-    setPosition(created[2].id, 3.0);
+    setItemPosition(created[0].id, 1.0);
+    setItemPosition(created[1].id, 2.8);
+    setItemPosition(created[2].id, 3.0);
 
     // Anchor to item C (created[2]) with side 'before' — the true previous
     // neighbor is item B (2.8), not item A (1.0).
@@ -185,7 +184,7 @@ describe('resolvePositionByAnchorAndSide', () => {
 
   it('TC-2.4: appends past the anchor when it is the true last item', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, 5.3);
+    setItemPosition(created[0].id, 5.3);
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
@@ -193,9 +192,9 @@ describe('resolvePositionByAnchorAndSide', () => {
     expect(result).toBe(6);
   });
 
-  it('coarsest fit between the anchor and 0.0 when it is the before the first item (thus becomeing the new first item)', async () => {
+  it('coarsest fit between 0.0 and the anchor when it is placed before the first item, which makes it the new first item', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, 5.3);
+    setItemPosition(created[0].id, 5.3);
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before', created[0].id),
@@ -205,8 +204,8 @@ describe('resolvePositionByAnchorAndSide', () => {
 
   it('reindexes the scope and retries when the gap is too tight for any precision', async () => {
     const { phase, items: created } = await seedPhaseWithItems(2);
-    setPosition(created[0].id, 1.0);
-    setPosition(created[1].id, 1.0 + 1e-13); // unresolvable gap at any decimal depth
+    setItemPosition(created[0].id, 1.0);
+    setItemPosition(created[1].id, 1.0 + 1e-13); // unresolvable gap at any decimal depth
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
@@ -224,7 +223,7 @@ describe('resolvePositionByAnchorAndSide', () => {
 
   it('TC-2.8: throws for an anchor with no position (a done item)', async () => {
     const { items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, null);
+    setItemPosition(created[0].id, null);
 
     expect(() =>
       db.transaction(tx =>
@@ -235,7 +234,7 @@ describe('resolvePositionByAnchorAndSide', () => {
 
   it('appends as last when no anchorId is given, side "after"', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, 5.3);
+    setItemPosition(created[0].id, 5.3);
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after'),
@@ -245,7 +244,7 @@ describe('resolvePositionByAnchorAndSide', () => {
 
   it('prepends as first when no anchorId is given, side "before"', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, 5.3);
+    setItemPosition(created[0].id, 5.3);
 
     const result = db.transaction(tx =>
       resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'before'),
@@ -283,8 +282,8 @@ describe('resolveAppendPosition', () => {
     // whole workflow's non-attached items are done), appending must still
     // start fresh at 1.0, not trip over the null rows it finds.
     const { phase, items: created } = await seedPhaseWithItems(2);
-    setPosition(created[0].id, null);
-    setPosition(created[1].id, null);
+    setItemPosition(created[0].id, null);
+    setItemPosition(created[1].id, null);
 
     const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     expect(result).toBe(1.0);
@@ -292,7 +291,7 @@ describe('resolveAppendPosition', () => {
 
   it('appends past the true last item in a non-empty scope', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
-    setPosition(created[0].id, 7.2);
+    setItemPosition(created[0].id, 7.2);
 
     const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     expect(result).toBe(8);
@@ -301,7 +300,7 @@ describe('resolveAppendPosition', () => {
   it('reindexes before appending once the magnitude threshold is crossed', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     // Scope has 1 item, so the threshold is max(1000, 1 + 100) = 1000.
-    setPosition(created[0].id, 1200);
+    setItemPosition(created[0].id, 1200);
 
     const result = db.transaction(tx => resolveAppendPosition(items, eq(items.workphaseId, phase.id), tx));
     // After the reindex, the sole item becomes position 1, so the append
@@ -311,8 +310,8 @@ describe('resolveAppendPosition', () => {
 
   it('TC-5.3: does not reindex when a large position is proportionate to a large item count', async () => {
     const { project, phase, items: created } = await seedPhaseWithItems(3);
-    setPosition(created[0].id, 1);
-    setPosition(created[1].id, 2);
+    setItemPosition(created[0].id, 1);
+    setItemPosition(created[1].id, 2);
 
     // Bulk-insert filler items sharing the same project/workphase so the
     // scope genuinely holds ~1050 items — threshold becomes
@@ -329,7 +328,7 @@ describe('resolveAppendPosition', () => {
       updatedAt: now,
     }));
     db.insert(items).values(filler).run();
-    setPosition(created[2].id, 1100); // proportionate: 1100 < 1150
+    setItemPosition(created[2].id, 1100); // proportionate: 1100 < 1150
 
     const beforeA = getPosition(created[0].id);
     const beforeB = getPosition(created[1].id);
@@ -352,7 +351,7 @@ describe('anchorRefusal', () => {
   it('names why an anchor fails, and is null for one the scope holds', async () => {
     const { phase, items: created } = await seedPhaseWithItems(3);
     const [subject, anchor, done] = created;
-    setPosition(done.id, null);
+    setItemPosition(done.id, null);
     const elsewhere = (await seedPhaseWithItems(1)).items[0];
     const scope = and(eq(items.workphaseId, phase.id), not(eq(items.id, subject.id)))!;
 
@@ -366,7 +365,7 @@ describe('anchorRefusal', () => {
   it('asks whether the anchor is in the scope before whether it has a position', async () => {
     const { phase, items: created } = await seedPhaseWithItems(1);
     const elsewhere = (await seedPhaseWithItems(1)).items[0];
-    setPosition(elsewhere.id, null);
+    setItemPosition(elsewhere.id, null);
     const scope = eq(items.workphaseId, phase.id);
 
     expect(anchorRefusal(items, scope, elsewhere.id, created[0].id)).toBe('outside-scope');
@@ -458,16 +457,16 @@ describe('positionResolver against the projects table', () => {
       expect(result).toBe(8);
     });
 
-    it('reindexes before appending once the magnitude threshold is crossed (the Date.now()-scale legacy-data self-heal)', async () => {
+    it('reindexes before appending once the magnitude threshold is crossed, even for a position at the scale of Date.now()', async () => {
       const created = await seedRootProjects(1);
       // Scope has 1 project, so the threshold is max(1000, 1 + 100) = 1000.
-      // Simulates a pre-migration Date.now()-scale position.
+      // A position at the scale of Date.now() is far past it.
       setProjectPosition(created[0].id, 1_761_234_567_890);
 
       const result = db.transaction(tx => resolveAppendPosition(projects, rootScope, tx));
       // After the reindex, the sole project becomes position 1, so the
       // append resolves to a small number again instead of continuing from
-      // the huge legacy timestamp.
+      // the huge position.
       expect(result).toBeLessThan(10);
     });
   });
