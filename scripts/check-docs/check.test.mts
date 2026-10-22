@@ -342,3 +342,53 @@ describe('ignore markers', () => {
     assert.deepEqual(rulesIn(CODE, lines(IGNORE('transient-id'), '// Story 4', '// Story 5')), ['transient-id']);
   });
 });
+
+describe('a Bruno request', () => {
+  const BRU = 'bruno/items/move-item.bru';
+  const found = (text: string): [string, number, number][] =>
+    checkFile(BRU, text, index).map(finding => [finding.rule, finding.line, finding.col]);
+
+  it("checks the docs block by the Markdown rules, at the file's own line and column", () => {
+    const text = lines(
+      'meta {',
+      '  name: Move Item',
+      '}',
+      '',
+      'docs {',
+      '  Added 2026-09-24.',
+      '  See §8 and wiki item-attachment §8 and wiki item-attachment §99.',
+      '  Built in server/src/lib/itemTree.ts::assertWithinDepthCap.',
+      '  server/src/lib/itemTree.ts::missing',
+      '  Tracked in docs/planning/epic-4-decisions.md.',
+      '}',
+    );
+    assert.deepEqual(found(text), [
+      ['transient-id', 6, 9],
+      ['bare-section', 7, 7],
+      ['wiki-pointer', 7, 42],
+      ['symbol-ref', 9, 3],
+      ['transient-link', 10, 14],
+    ]);
+  });
+
+  it('reads nothing outside the docs block', () => {
+    const text = lines(
+      'meta {',
+      '  name: Story 4',
+      '}',
+      'patch {',
+      '  url: {{baseUrl}}/docs/planning/epic-4-decisions.md/2026-09-24',
+      '}',
+      'body:json {',
+      '  { "title": "See §8", "note": "server/src/lib/itemTree.ts::missing" }',
+      '}',
+    );
+    assert.deepEqual(found(text), []);
+  });
+
+  it('honors an ignore marker in the docs block', () => {
+    const marker = '  <!-- check-docs-ignore-next-line transient-id -- a fixture -->';
+    assert.deepEqual(found(lines('docs {', marker, '  Added 2026-09-24.', '}')), []);
+    assert.deepEqual(found(lines('docs {', marker, '  Nothing to ignore here.', '}')), [['ignore-marker', 2, 3]]);
+  });
+});

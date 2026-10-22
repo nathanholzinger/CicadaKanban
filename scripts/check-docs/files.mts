@@ -1,14 +1,15 @@
 // Which files the checker reads, and how it tells paths apart: the default scope, what's
 // never checked, how command-line paths expand, and the classifiers the other modules
-// share (code or Markdown, the transient folders, the wiki and the test plans, where a
-// relative link points), with `walkFiles`. Paths are repo-relative with forward slashes
-// throughout.
+// share (code, Markdown or a Bruno request, the transient folders, the wiki and the test
+// plans, where a relative link points), with `walkFiles`. Paths are repo-relative with
+// forward slashes throughout.
 
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export const WIKI_DIR = 'docs/wiki';
 export const TEST_PLANS_DIR = 'docs/test-plans';
+export const BRUNO_DIR = 'bruno';
 
 export const DEFAULT_SCOPE = [
   'client/src',
@@ -16,6 +17,7 @@ export const DEFAULT_SCOPE = [
   'server/tests',
   'tests',
   'scripts',
+  BRUNO_DIR,
   '.claude',
   WIKI_DIR,
   TEST_PLANS_DIR,
@@ -38,12 +40,15 @@ export function isNeverChecked(rel: string): boolean {
 
 export function isCheckable(rel: string): boolean {
   if (isNeverChecked(rel)) return false;
-  if (rel.endsWith('.md')) return true;
+  if (rel.endsWith('.md') || isBruno(rel)) return true;
   return /\.(?:tsx?|mts)$/.test(rel) && !rel.startsWith('.claude/');
 }
 
+/** A Bruno request or environment file; only a request's `docs` block is read. */
+export const isBruno = (rel: string): boolean => rel.startsWith(`${BRUNO_DIR}/`) && rel.endsWith('.bru');
+
 export function isCode(rel: string): boolean {
-  return !rel.endsWith('.md');
+  return !rel.endsWith('.md') && !isBruno(rel);
 }
 
 export const isInWiki = (rel: string): boolean => rel.startsWith(`${WIKI_DIR}/`);
@@ -126,7 +131,7 @@ export function expandArgs(root: string, cwd: string, args: string[]): Expansion
     } else if (isCheckable(rel)) {
       files.add(rel);
     } else {
-      skipped.push(`${arg}: not a Markdown or TypeScript file`);
+      skipped.push(`${arg}: not a Markdown, TypeScript or Bruno file`);
     }
   }
 

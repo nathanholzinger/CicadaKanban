@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { extractCode, extractMarkdown, parseMarker, unfencedLines } from './extract.mts';
+import { extractBruno, extractCode, extractMarkdown, parseMarker, unfencedLines } from './extract.mts';
 
 const lines = (...parts: string[]): string => parts.join('\n');
 const commentTexts = (fileName: string, text: string): string[] =>
@@ -129,5 +129,76 @@ describe('extractMarkdown', () => {
     assert.equal(segments[0].text.trim(), '');
     assert.equal(markers[0].targetLine, 2);
     assert.deepEqual(markers[0].rules, ['transient-link']);
+  });
+});
+
+describe('extractBruno', () => {
+  const request = lines(
+    'meta {',
+    '  name: Move Item',
+    '}',
+    '',
+    'patch {',
+    '  url: {{baseUrl}}/api/items/{{itemId}}/move',
+    '}',
+    '',
+    'docs {',
+    '  # Move Item',
+    '',
+    '  Named in Story 4.',
+    '}',
+    '',
+    'get {',
+    '  url: Story 5',
+    '}',
+  );
+  const read = (text: string) =>
+    extractBruno(text)
+      .segments.filter(segment => segment.text.trim() !== '')
+      .map(segment => [segment.line, segment.col, segment.text]);
+
+  it('reads only the docs block, each line where the file has it', () => {
+    assert.deepEqual(read(request), [
+      [10, 1, '  # Move Item'],
+      [12, 1, '  Named in Story 4.'],
+    ]);
+  });
+
+  it('ends the block at a lone closing brace, not at a brace inside a line of the docs', () => {
+    const text = lines('docs {', '  Send { "a": 1 } to {{baseUrl}}', '  More.', '}', 'get {', '  url: x', '}');
+    assert.deepEqual(read(text), [
+      [2, 1, '  Send { "a": 1 } to {{baseUrl}}'],
+      [3, 1, '  More.'],
+    ]);
+  });
+
+  it('reads nothing from a file with no docs block', () => {
+    assert.deepEqual(read(lines('vars {', '  baseUrl: http://localhost:3001', '}')), []);
+  });
+
+  it('skips a fenced block inside the docs, as it does in Markdown', () => {
+    const text = lines('docs {', '  Before.', '  ```json', '  { "title": "Story 4" }', '  ```', '  After.', '}');
+    assert.deepEqual(read(text), [
+      [2, 1, '  Before.'],
+      [6, 1, '  After.'],
+    ]);
+  });
+
+  it('drops each carriage return', () => {
+    assert.deepEqual(read('docs {\r\n  A.\r\n}\r\n'), [[2, 1, '  A.']]);
+  });
+
+  it('reads a marker in the docs, and numbers it by the file', () => {
+    const text = lines(
+      'meta {',
+      '}',
+      'docs {',
+      '  <!-- check-docs-ignore-next-line transient-id -- a fixture -->',
+      '  Story 4.',
+      '}',
+    );
+    const { markers } = extractBruno(text);
+    assert.equal(markers.length, 1);
+    assert.deepEqual([markers[0].line, markers[0].targetLine, markers[0].rules], [4, 5, ['transient-id']]);
   });
 });

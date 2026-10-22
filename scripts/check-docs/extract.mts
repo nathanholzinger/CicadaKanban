@@ -1,6 +1,6 @@
 // Pulls the checkable text out of a file: comments and test titles from code, and every
-// line outside a fenced block from Markdown. Ignore markers come out separately, and are
-// never checked themselves.
+// line outside a fenced block from Markdown or from a Bruno request's `docs` block. Ignore
+// markers come out separately, and are never checked themselves.
 
 import ts from 'typescript';
 
@@ -127,6 +127,29 @@ export function extractMarkdown(text: string): Extracted {
   }
 
   return { segments, markers };
+}
+
+/**
+ * A Bruno request's `docs` block, read as Markdown. Every other line is blanked rather than
+ * dropped, so a finding keeps the line and column the file has. The block starts at a line
+ * that is `docs {` and ends at the next one that is a lone `}`; a brace inside a line of
+ * the docs doesn't end it. The rest of the file (URL, body, vars) isn't prose.
+ */
+export function extractBruno(text: string): Extracted {
+  let inDocs = false;
+  const kept = text.split('\n').map(raw => {
+    const line = raw.replace(/\r$/, '');
+    if (!inDocs) {
+      inDocs = /^docs\s*\{\s*$/.test(line);
+      return '';
+    }
+    if (/^\}\s*$/.test(line)) {
+      inDocs = false;
+      return '';
+    }
+    return line;
+  });
+  return extractMarkdown(kept.join('\n'));
 }
 
 export function scriptKindOf(fileName: string): ts.ScriptKind {

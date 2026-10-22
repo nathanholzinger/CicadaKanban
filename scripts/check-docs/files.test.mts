@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { checkFile } from './check.mts';
 import {
+  DEFAULT_SCOPE,
   TRANSIENT_DIR,
   TRANSIENT_FOLDERS,
+  isBruno,
+  isCheckable,
+  isCode,
   isInTestPlans,
   isInWiki,
   isNeverChecked,
@@ -56,5 +60,19 @@ describe('the docs layout', () => {
     );
     assert.equal(resolveLink(from, 'https://example.com/a'), null);
     assert.equal(resolveLink(from, '#8'), null);
+  });
+});
+
+describe('Bruno requests', () => {
+  it('are checkable under bruno/, and in the default scope, and are neither code nor Markdown', () => {
+    assert.ok(isBruno('bruno/items/move-item.bru') && isCheckable('bruno/items/move-item.bru'));
+    assert.ok(!isCode('bruno/items/move-item.bru'));
+    assert.ok(DEFAULT_SCOPE.includes('bruno'));
+  });
+
+  it('are not read outside bruno/, and a code or Markdown file is not a request', () => {
+    assert.ok(!isBruno('docs/wiki/move-item.bru') && !isCheckable('docs/wiki/move-item.bru'));
+    assert.ok(!isBruno('client/src/a.ts') && isCode('client/src/a.ts'));
+    assert.ok(!isBruno('bruno/README.md') && !isCode('bruno/README.md'));
   });
 });

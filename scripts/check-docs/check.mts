@@ -2,8 +2,8 @@
 // ignore markers. A marker that's malformed, or that covers nothing, is itself a finding,
 // so exceptions stay visible and can't go stale.
 
-import { extractCode, extractMarkdown, type IgnoreMarker } from './extract.mts';
-import { isCode, isInTestPlans, isInWiki, wikiPageOfReadme } from './files.mts';
+import { extractBruno, extractCode, extractMarkdown, type Extracted, type IgnoreMarker } from './extract.mts';
+import { isBruno, isCode, isInTestPlans, isInWiki, wikiPageOfReadme } from './files.mts';
 import type { RepoIndex } from './repoIndex.mts';
 import { checkSegment, isRuleId, type FileContext, type Finding } from './rules.mts';
 
@@ -19,13 +19,18 @@ export function checkFile(
   only: ReadonlySet<string> | null = null,
 ): Finding[] {
   const context = contextOf(rel);
-  const { segments, markers } = isCode(rel) ? extractCode(rel, text) : extractMarkdown(text);
+  const { segments, markers } = extract(rel, text);
   const findings = segments.flatMap((segment, i) => {
     const previous = segments[i - 1];
     const continues = previous?.source === segment.source && previous.line === segment.line - 1;
     return checkSegment(segment, context, index, continues ? previous.text : null);
   });
   return applyMarkers(findings, markers, only).sort((a, b) => a.line - b.line || a.col - b.col);
+}
+
+function extract(rel: string, text: string): Extracted {
+  if (isBruno(rel)) return extractBruno(text);
+  return isCode(rel) ? extractCode(rel, text) : extractMarkdown(text);
 }
 
 export function contextOf(rel: string): FileContext {
