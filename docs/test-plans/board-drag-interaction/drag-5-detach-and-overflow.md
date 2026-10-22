@@ -105,9 +105,9 @@ A single cursor sample decides both pops, so this case holds at whatever values 
 
 ## DRAG-5.13 — A nested Stub's drag starts in its containing Card's section, and popping out lands on that Card
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1, wiki board-drag-interaction §8
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1, wiki board-drag-interaction §8, wiki board-drag-interaction §10
 
-*Given* Card `P` with Stub `S1`, which has its own child `S1a`, *when* `S1a` is picked up, *then* its drag starts in `P`'s descendants section, the same section `S1`'s drag would start in, not a list of `S1`'s children. *When* the cursor then stays outside `P`'s descendants section for `popDelayMs`, *then* `S1a` pops out to `P`'s Card layer, never to `S1`, and a release there sets it back down ([DRAG-5.12](drag-5-detach-and-overflow.md)).
+*Given* Card `P` with Stub `S1`, whose child `S1a` has a child of its own, `S1b`, *when* `S1a` is picked up, *then* its drag starts in `P`'s descendants section, the same section `S1`'s drag would start in, not a list of `S1`'s children. *When* the cursor then stays outside `P`'s descendants section for `popDelayMs`, *then* `S1a` pops out to `P`'s Card layer, never to `S1`, and a release there sets it back down ([DRAG-5.12](drag-5-detach-and-overflow.md)). While `S1a` is at `P`'s Card layer, `P`'s section still shows it in its own slot under `S1`, with `S1b` beneath it, and no attach preview: the board previews where a release leaves an item, and this release leaves `S1a` where it was.
 
 **Automation test:** —
 

@@ -80,25 +80,27 @@ projects (tree via parent_id self-ref, depth-capped)
 These are the "don't reinvent this" rules that aren't obvious from reading any one file:
 
 - **One position math layer.** Client `hierarchy.ts`, server `positionResolver.ts` /
-  `itemPositionScope.ts` / `itemTree.ts` are table-generic (items + projects). Extend
-  those, never duplicate inline. Client `lib/hierarchyPlacement.ts` is the sibling
-  layer one level up — the gap + depth rule (`flattenHierarchyOf`/`resolvePlacement`,
-  wiki hierarchy-placement §1) that the board's Descendants layer and the project
-  sidebar share. Table-generic the same way (`{id,
-  parentId, depth}` rows, a `childrenOf` callback) — extend it, never duplicate its
-  walk inline either.
+  `itemTree.ts` are table-generic (items + projects), including the legal-parent and
+  neighbor checks (`itemTree.ts::parentRefusal`, `positionResolver.ts::anchorRefusal`).
+  Extend those, never duplicate inline. `itemPositionScope.ts` is the items-only half:
+  what an item's position compares against. Client `lib/hierarchyPlacement.ts` is the
+  sibling layer one level up — the gap + depth rule (`flattenHierarchyOf`/
+  `resolvePlacement`, wiki hierarchy-placement §1) that the board's Descendants layer
+  and the project sidebar share. Table-generic the same way (`{id, parentId, depth}`
+  rows, a `childrenOf` callback) — extend it, never duplicate its walk inline either.
 - **One hierarchy-write primitive.** Every write that changes an existing item's parent,
   attachment or workphase (`PUT /items/:id`, `PATCH /items/:id/move`) routes through
   `server/src/lib/itemHierarchy.ts` (`validateHierarchyRequest`, then
   `applyHierarchyRequest`). `POST /items` has no existing item to validate, so it checks
-  a new item's parent at the route (it exists, it's in the same project, and the depth
-  cap through `itemTree.ts::assertWithinDepthCap`), but takes its workphase from the
-  primitive's own rules (`resolveCreateWorkphase`, `foreignWorkphaseError`), so a create
-  and a move can't disagree. Don't reimplement reparent/attach/workphase/depth-cap logic
-  at the route level.
+  a new item's parent at the route (`itemTree.ts::parentRefusal`: it exists and the
+  depth cap holds; the project is the parent's), but takes its attachment flag and
+  workphase from the primitive's `itemHierarchy.ts::resolveCreate`, so a create and a
+  move can't disagree. Don't reimplement reparent/attach/workphase/depth-cap logic at
+  the route level.
 - **Reindex disclosure must be folded in, never merged alone.** Any item-write or
   project-write response may carry `reindexed: {id, position}[]` (server:
-  `routes/items.ts::respondWithItem`, `routes/projects.ts::projectResponse`). Every write
+  `positionResolver.ts::withReindexDisclosure`, which `routes/items.ts::respondWithItem`
+  and `routes/projects.ts::projectResponse` call). Every write
   path folds it through `client/src/lib/positionedWrite.ts::applyWriteResponse`: the
   board's item writes by way of
   `client/src/components/workflow/itemWriteReconciliation.ts::completeItemWrite`, the
@@ -106,18 +108,25 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
 - **`types.ts` is manually synced with `schema.ts`** — no codegen. Update both.
-- **Never hand-write a 15-field Item literal in a test** — use
-  `client/src/test/itemFixture.ts::makeItem`.
+- **Never hand-write an Item or Project literal in a client test** — use
+  `client/src/test/itemFixture.ts::makeItem` or `projectFixture.ts::makeProject`.
 - **Never hand-roll a drag or read `boundingBox()` in an E2E spec** — use
   `tests/helpers/dragGesture.ts`.
+- **Never hand-roll E2E setup** — reset with `tests/helpers/db.ts::resetAndSeedDb`,
+  create, read and move with the `tests/helpers/seed.ts` helpers, and open a board with
+  `ProjectSidebarPage.ts::openBoard`. The reset and the seed helpers fail on a refused
+  request, where a hand-rolled call lets the test carry on from the wrong state.
+  `openBoard` matches the Board tab exactly, where a loose match also hits "+ New board".
 - **A test that covers a test-plan case starts its title with the case's ID**
   (`DRAG-5.5: …`) — see `docs/test-plans/README.md`.
 - **DB owns referential integrity** (CASCADE/SET NULL in `schema.ts`), **app owns
   behavior**. An item's dependent-row cleanup (labels, activity log, notifications,
   attachments, chat) is DB-owned via `ON DELETE CASCADE` (migration `0009`) — a new
   item-dependent table needs one FK, not a mirrored delete loop. The board+column cascade
-  and the workflow-delete chain are hand-rolled (`server/src/lib/boardCascade.ts`) and
-  are candidates for the same conversion. The `parent_id` subtree walk stays app-side by
+  (`server/src/lib/boardCascade.ts`), the workflow-delete chain
+  (`workflowCascade.ts::deleteWorkflowsById`) and a project's delete
+  (`projectCascade.ts::deleteProjectById`) are hand-rolled, and are candidates for the
+  same conversion. The `parent_id` subtree walk stays app-side by
   design (soft ref, "are you sure" delete).
 - **Board-scoped drag/drop conventions** (pop machine, drop bands, pure modules) live in
   `client/src/components/workflow/CLAUDE.md` — loaded automatically when working in
@@ -159,7 +168,7 @@ Base URL: `http://localhost:3001`
 | `/api/labels` | Label CRUD (global) |
 | `/api/attachments` | Attachment CRUD |
 | `/api/item-types` | Item type CRUD |
-| `/api/test` | Reset + seed DB, pin an item's position — only when `ENABLE_TEST_ROUTES=true` |
+| `/api/test` | Reset + seed DB; pin an item's position, or a project's position, created-at or parent — only when `ENABLE_TEST_ROUTES=true` |
 
 ---
 
@@ -206,8 +215,8 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:3001`
 - Drizzle Studio (DB browser): `cd server && npm run db:studio`
-- Gates: `npm run check` (from project root) — type-check, lint, format check and unit
-  tests across `client/`, `server/` and `tests/`
+- Gates: `npm run check` (from project root) — type-check, lint (which runs
+  `check:docs`), format check, and unit tests across `client/`, `server/` and `scripts/`
 - E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`.
   Playwright starts its own stack (client 5174 → server 3002 on `test.db`), apart
   from the dev database

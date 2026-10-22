@@ -184,6 +184,14 @@ with `toBeLessThan` rather than the case's values
   into the Card under the cursor. §6.1's only reason against that is that
   Cards slide aside, and nothing in a done list does.
 
+  **What the side highlight shows in a done list is decided with it**
+  (Nathan, 2026-10-22, from A6's batch 3b). A done list's release names no
+  card, so naming the Card to zoom into is the highlight's only job there.
+  Today it's drawn as if the ghost had slid: carrying `X` over `D1` in
+  `D1, X, D2` draws it at `D1`'s top, where `X` isn't. Under the PO's
+  recommendation, a done list draws no highlight, since the Card under the
+  cursor needs no naming.
+
 **Carried in from the A6 first-run audit** (`docs/audits/code-quality-audit-a6.md`,
 2026-10-07; Nathan approved the routes on 2026-10-21):
 

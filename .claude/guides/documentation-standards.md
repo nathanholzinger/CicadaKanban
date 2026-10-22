@@ -28,6 +28,7 @@ The owner edits the doc. Everyone else hands changes off (see Handoffs).
 | `docs/wiki/**` | living | PO | Hand changes off to the PO |
 | `docs/test-plans/**` | living | Test Planner | The Test Reconciler writes each case's status and Automation test line. Everyone else hands changes off to the Test Planner |
 | Code comments and module headers | living | Whoever changes the code, in the same change | — |
+| `bruno/` requests and their `docs` blocks | living | Whoever changes the endpoint a request covers, in the same change | A `docs` block follows `.claude/guides/code-comments.md`'s rules by hand: the checker doesn't read `.bru` files |
 | A directory's `CLAUDE.md` | living | Whoever changes code in that directory, in the same change | — |
 | Root `CLAUDE.md` | living | Architect | May fix a statement their own change made false, in the same change, and list it in the handoff |
 | `.claude/` guides, personas, agents | living | Architect; Nathan approves | A role drafts changes to its own persona on request |
@@ -135,9 +136,10 @@ How the marker is written on a page is the wiki README's.
 - section pointers in the wrong form, or pointing at a section that doesn't exist;
 - `<file>::<symbol>` references that don't resolve;
 - references to files in the transient folders;
-- test-plan case IDs that don't match a case in the catalog, and a suite's Next ID that would reuse one.
+- test-plan case IDs that don't match a case in the catalog, and a suite's Next ID that would reuse one;
+- code names in a wiki page: a `<file>::<symbol>`, a code file or a code path (`wiki-code-name`). The wiki describes behavior, not code.
 
-`.claude/guides/code-comments.md` lists its rules and their IDs. `--rules <id>,…` limits a run to the named rules.
+`.claude/guides/code-comments.md` lists the comment rules and their IDs. `--rules <id>,…` limits a run to the named rules.
 
 **A genuine exception carries an ignore marker** on the line above, with a reason:
 

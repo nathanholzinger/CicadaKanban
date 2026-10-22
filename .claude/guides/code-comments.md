@@ -112,6 +112,8 @@ An exported function whose contract isn't obvious from its name and types may ca
 | (e) a `<file>::<symbol>` that doesn't resolve, or names an ambiguous file | `symbol-ref` |
 | (g) naming `.claude/` or `CLAUDE.md` | `claude-ref` |
 
+The checker's one other rule, `wiki-code-name`, is the wiki's, not a comment's: a wiki page names no code (`.claude/guides/documentation-standards.md`, "What the checker checks").
+
 **Not checkable, so left to review:**
 - (a)'s phrasing ("ruled by");
 - (b) history narration;

@@ -101,6 +101,6 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
-*Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. The formula judges only the resulting depth, not whether the move improves it, so this subtree can be moved only once it's dismantled.
+*Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. *When* `M` is moved to the top level instead, by a move or by editing its parent, *then* its deepest leaf would land at depth `1 + H`. With `H` at `CAP` or more, that's still past `CAP`, and the write is rejected the same way. With `H` at `CAP − 1`, it's exactly `CAP`, and the write is accepted, though the tree `M` leaves was over the cap. The formula judges only the resulting depth, not whether the move improves it, so a subtree of height `CAP` or more can be moved only once it's dismantled.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`

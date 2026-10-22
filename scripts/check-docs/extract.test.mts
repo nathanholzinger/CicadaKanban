@@ -87,8 +87,8 @@ describe('parseMarker', () => {
     });
   });
 
-  it('strips the closing of an HTML comment', () => {
-    assert.deepEqual(parseMarker(' check-docs-ignore-next-line transient-link -- tracked there '), {
+  it('strips the closing of a block comment', () => {
+    assert.deepEqual(parseMarker('/* check-docs-ignore-next-line transient-link -- tracked there */'), {
       rules: ['transient-link'],
       reason: 'tracked there',
     });

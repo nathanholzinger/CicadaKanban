@@ -223,6 +223,9 @@ While the item is in-context:
      the item (§10): an item from another column, as the newest
      completion; a card already in the list, in its own slot. Released
      there, that card is being set back down, and nothing is written.
+     A release here names no card, so rule 3's side highlight has no
+     slot to show. Which Card it names here, and how it's drawn, isn't a
+     rule yet (Open questions).
 
   **Why not the half of the hovered card:** the gap is drawn from list
   order, so choosing the side by which half of a card the carried card's
@@ -952,7 +955,11 @@ Not settled. Don't derive test cases from anything in this section. Everything o
 - **Zooming into a Card in a done column (§2, rule 6; §6.1).** The Card
   zoomed into is the one the side highlight names, a neighbor of the
   ghost. A done list's ghost doesn't move, so only the Cards beside it
-  could be named.
+  could be named. What the highlight shows in a done list is decided
+  with this: a done list's release names no card, so naming the Card to
+  zoom into is the highlight's only job there. Today it's drawn as if
+  the ghost had slid: carrying `X` over `D1` in `D1, X, D2` draws it at
+  `D1`'s top, where `X` isn't.
 - **Free-item reparent as a board gesture.** Would add a third
   drop-meaning to disambiguate here. See
   [`../item-attachment/`](../item-attachment/) Open questions.

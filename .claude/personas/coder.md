@@ -57,7 +57,7 @@ join a caller's transaction and sometimes run standalone take an optional last
 param `tx?: Tx`. Pass `tx` to fold the call into a caller's `db.transaction()`; omit
 it to run standalone. Examples: `getOrNotFound.ts::getByIdOrNotFound`,
 `attachedCascade.ts::cascadeWorkphaseToAttachedDescendants`, `itemTree.ts`'s
-helpers, and `routes/boards.ts::createDefaultBoard`.
+helpers, and `defaultBoard.ts::createDefaultBoard`.
 
 ## Stack Context
 

@@ -391,6 +391,9 @@ descendants, wherever they sit.
   a 400 when it isn't: a hierarchy can't straddle two projects (§9).
 - Neither is refused with a 400.
 
+A create naming a project that doesn't exist is refused with a 400, and
+nothing is stored, as one naming a parent that doesn't exist is (§7).
+
 **A child is created Attached unless the create clears the flag.** Under
 §11, an item becomes Free by an explicit detach, so a child created Free
 without asking would be detached with no one detaching it. A child

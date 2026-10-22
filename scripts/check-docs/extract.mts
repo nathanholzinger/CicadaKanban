@@ -33,10 +33,12 @@ export interface Extracted {
 const MARKER = 'check-docs-ignore-next-line';
 const TEST_CALLEES = new Set(['it', 'test', 'describe']);
 
+// A block comment's body ends in `*/`. A Markdown marker arrives without its `-->`:
+// `extractMarkdown`'s pattern captures only what sits inside the comment.
 export function parseMarker(commentBody: string): { rules: string[]; reason: string } | null {
   const at = commentBody.indexOf(MARKER);
   if (at < 0) return null;
-  const rest = commentBody.slice(at + MARKER.length).replace(/(?:-->|\*\/)\s*$/, '');
+  const rest = commentBody.slice(at + MARKER.length).replace(/\*\/\s*$/, '');
   const separator = rest.indexOf(' -- ');
   const rulePart = separator < 0 ? rest : rest.slice(0, separator);
   const reason = separator < 0 ? '' : rest.slice(separator + 4).trim();

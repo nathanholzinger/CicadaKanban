@@ -1,6 +1,6 @@
 # Prettier-Preemptive Practice — Manual Line-Break Guidelines
 
-Prettier formats every package: the root `.prettierrc` covers `server/` and `tests/`, and `client/.prettierrc` adds the Tailwind plugin for the client. `npm run format:check` checks all three, and runs as part of `npm run check`. Markdown is deliberately left out.
+Prettier formats every package: the root `.prettierrc` covers `server/`, `tests/`, `scripts/` and the root's own files, and `client/.prettierrc` adds the Tailwind plugin for the client. `npm run format:check` checks all of them, and runs as part of `npm run check`. Markdown is deliberately left out.
 
 Prettier only wraps; it can't tell a line that's doing too much from one that's merely long. Before handing a file to `prettier --write`, walk its lines over 120 characters (the configured `printWidth`) and decide, line by line: does it need a **manual restructure** because it's doing too much, or is it just **long** and safe to hand straight to Prettier?
 

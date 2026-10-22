@@ -513,7 +513,7 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 27–28 | Fixed | Batch 3e, the sidebar, lib and api |
 | 29 | Fixed | Batch 3e, the sidebar, lib and api. The project page's Parent dropdown changes order, which Nathan accepted |
 | 30 | Fixed | Batch 3e, the drag layer |
-| 31 | Fixed | Batch 3e, the sidebar, lib and api. The test files' merge is the Reconciler's |
+| 31 | Fixed | Batch 3e, the sidebar, lib and api. The test files' merge landed with batch 3g |
 | 32 | Fixed | Batch 3e, the drag layer |
 | 33 | Fixed | Batch 3e, the sidebar, lib and api |
 | 34–37 | Fixed | Batch 3e, the drag layer |

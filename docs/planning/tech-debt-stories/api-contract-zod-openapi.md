@@ -123,7 +123,7 @@ When the epic closes, the API contract is generated, complete and current, and n
    - MCP tier 1 (C5).
    - C3's test changes for those two routes.
 2. **Request schemas for every remaining route.** That's 53 endpoints in 13 route files; many GETs take only path params. Done in batches by resource:
-   - items and projects. Whether a create or an edit takes a position, and whether a field it doesn't take is ignored or refused, is open in `positioning-on-create-and-edit.md`, in this folder. Groom that story before this batch, so the schemas encode its answer;
+   - items and projects. Whether a create or an edit takes a position, and whether a field it doesn't take is ignored or refused, is open in `positioning-on-create-and-edit.md`, in this folder. So is an item's second stored position (among all its siblings, beside its place among Free items), which changes the item's response shape and how a move names its neighbor. Groom that story before this batch, so the schemas encode its answer;
      - *Added by the Architect, from A5d (2026-10-06):* A5d added `GET /api/projects/depth-cap`, which returns the project depth cap. The count above includes it. The item cap comes as `itemDepthCap` on `GET /api/boards/:id` instead. Both caps are the same kind of value, so whether they come the same way is this batch's call (for the response, Story 3's).
    - workflows, workphases, boards and columns;
    - everything else.

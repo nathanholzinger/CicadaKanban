@@ -2,9 +2,54 @@ import { describe, it, expect } from 'vitest';
 import { applyWriteResponse } from './positionedWrite';
 import type { Project } from '../types';
 import type { ReindexedPosition } from '../api/shared';
+import { makeItem } from '../test/itemFixture';
 import { makeProject } from '../test/projectFixture';
+import { workedList, workedResponse } from '../test/reindexFixtures';
 
-const response = (written: Project, reindexed?: ReindexedPosition[]) => ({ ...written, reindexed });
+const projectResponse = (written: Project, reindexed?: ReindexedPosition[]) => ({ ...written, reindexed });
+
+// The client half of reindex disclosure (wiki positioning §7), over a list of items.
+describe('applyWriteResponse, over items', () => {
+  it('TC-5a.1, TC-5a.4: applies every reindexed pair the list holds, then the written item', () => {
+    const result = applyWriteResponse(workedList(), workedResponse);
+    const positionOf = (id: string) => result.find(i => i.id === id)!.position;
+    expect([positionOf('A'), positionOf('X'), positionOf('C'), positionOf('E')]).toEqual([1, 2, 3, 4]);
+    expect(result.find(i => i.id === 'X')).not.toHaveProperty('reindexed');
+  });
+
+  it('the written row wins over its own pair when they disagree — it is applied last', () => {
+    const response = { ...makeItem('X', { position: 2.5 }), reindexed: [{ id: 'X', position: 2 }] };
+    expect(applyWriteResponse(workedList(), response).find(i => i.id === 'X')!.position).toBe(2.5);
+  });
+
+  it('TC-5a.4: ignores pairs for ids not in the list — "not in this view," never missing data', () => {
+    const response = { ...makeItem('X', { position: 2 }), reindexed: [{ id: 'unseen', position: 1 }] };
+    const result = applyWriteResponse(workedList(), response);
+    expect(result).toHaveLength(4);
+    expect(result.some(i => i.id === 'unseen')).toBe(false);
+  });
+
+  it('TC-5a.1: with no reindex, replaces the written row by reference and leaves every other row untouched', () => {
+    const before = workedList();
+    const written = makeItem('X', { position: 3 });
+    const result = applyWriteResponse(before, written);
+    expect(result.find(i => i.id === 'X')).toBe(written);
+    expect(result.find(i => i.id === 'A')).toBe(before[0]);
+  });
+
+  it('appends a written item the list does not yet hold (a create)', () => {
+    const created = makeItem('N', { position: 10 });
+    const result = applyWriteResponse(workedList(), created);
+    expect(result).toHaveLength(5);
+    expect(result[4]).toBe(created);
+  });
+
+  it("keeps a row's reference when its pair matches its current position", () => {
+    const before = workedList();
+    const response = { ...makeItem('X', { position: 2 }), reindexed: [{ id: 'A', position: 1.0 }] };
+    expect(applyWriteResponse(before, response).find(i => i.id === 'A')).toBe(before[0]);
+  });
+});
 
 describe('applyWriteResponse, over projects', () => {
   it('applies every renumbered pair the list holds, then the written project, and strips the pairs', () => {
@@ -15,7 +60,7 @@ describe('applyWriteResponse, over projects', () => {
     ];
     const result = applyWriteResponse(
       list,
-      response(makeProject('X', { position: 3 }), [
+      projectResponse(makeProject('X', { position: 3 }), [
         { id: 'A', position: 1 },
         { id: 'B', position: 2 },
         { id: 'X', position: 3 },
@@ -31,7 +76,10 @@ describe('applyWriteResponse, over projects', () => {
   });
 
   it('appends a written project the list does not hold yet, a create', () => {
-    const result = applyWriteResponse([makeProject('A', { position: 1 })], response(makeProject('N', { position: 2 })));
+    const result = applyWriteResponse(
+      [makeProject('A', { position: 1 })],
+      projectResponse(makeProject('N', { position: 2 })),
+    );
     expect(result.map(p => p.id)).toEqual(['A', 'N']);
   });
 });

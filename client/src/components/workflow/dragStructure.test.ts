@@ -258,6 +258,27 @@ function fakeDomRect(values: Rect): Rect {
   });
 }
 
+// A region's rect is read from `getBoundingClientRect`, which a browser answers with a
+// DOMRect.
+describe('measureRegions over a DOMRect', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('keeps every field of the rect from an element whose getBoundingClientRect returns a DOMRect-shaped object', () => {
+    const el = regionEl(columnRegionKey('col-1'));
+    const domRect = fakeDomRect(rect(10, 50, 80, 200));
+    Object.defineProperty(el, 'getBoundingClientRect', { value: () => domRect });
+    document.body.append(el);
+    expect({ ...domRect }).toEqual({}); // confirms the shape actually exercises the hazard
+
+    const [region] = measureRegions(resolveDragStructure(document, [column('col-1', ['w1'])]), null);
+    const measured = { top: 50, bottom: 250, left: 10, right: 90, width: 80, height: 200 };
+    expect(region.rect).toEqual(measured);
+    expect(region.contentRect).toEqual(measured);
+  });
+});
+
 // A sub-row is clipped to its column's visible scroll box, not just bounded
 // by its own extent.
 describe('DRAG-1.10: clipToVisible', () => {

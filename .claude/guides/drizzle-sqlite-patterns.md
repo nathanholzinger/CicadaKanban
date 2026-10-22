@@ -41,24 +41,25 @@ better-sqlite3, `PRAGMA foreign_keys = ON`).
 
 ## Self-Referential FK Caveat
 
-Drizzle's SQLite adapter does not support declaring a `.references()` on a
-column that self-references its own table. This project has two such columns:
+Two columns reference their own table, and they behave differently:
 
 ```typescript
 // server/src/db/schema.ts
-projects.parentId  // self-referential FK to projects.id — not declared as a real FK
-items.parentId     // self-referential FK to items.id — not declared as a real FK
+projects.parentId  // a real FK to projects.id, declared through an AnySQLiteColumn callback, with no ON DELETE action
+items.parentId     // a soft reference to items.id: no FK, by design
 ```
 
-Because these aren't real FK constraints, SQLite's `PRAGMA foreign_keys = ON`
-does **not** enforce or cascade on them. Any delete or reparent operation
-touching `projects` or `items` must manually handle descendants — check that
-cascading deletes recurse through the full descendant tree (not just direct
-children) since there's no DB-level cascade to fall back on.
+- **`projects.parentId` is enforced but doesn't cascade.** With
+  `PRAGMA foreign_keys = ON`, SQLite refuses a parent that doesn't exist, and
+  refuses to delete a project that still has children. So a project's delete
+  removes its descendants first, deepest first.
+- **`items.parentId` isn't enforced at all.** SQLite neither refuses an
+  orphaning write nor cascades, so the app owns the item tree: a delete or a
+  reparent walks the descendants in app code.
 
 - [ ] Delete/cascade logic for `projects` or `items` walks all descendant
   levels, not just one level of children
-- [ ] No code assumes SQLite will reject an orphaning write on these two columns
+- [ ] No code assumes SQLite will reject an orphaning write on `items.parentId`
 
 ---
 
