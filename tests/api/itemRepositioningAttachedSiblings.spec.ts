@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
+import { fetchItem, moveItem } from '../helpers/seed';
 import {
   seedAttachedSiblingsScenario,
   siblingOrder,
   type AttachedSiblingsScenario,
 } from '../helpers/itemRepositioningScenario';
-import { API as BASE } from '../helpers/api';
 
 // 3 WHEN/THEN cases exercising anchor+side resolution against the
 // (parentId, isAttached) comparison scope, driven directly through
@@ -36,29 +36,21 @@ test.beforeEach(async ({ request }) => {
   scenario = await seedAttachedSiblingsScenario(request, 'Attached Siblings API Project');
 });
 
-function moveItem(request: APIRequestContext, itemId: string, body: Record<string, unknown>) {
-  return request.patch(`${BASE}/items/${itemId}/move`, { data: body });
-}
-
-async function getItem(request: APIRequestContext, itemId: string) {
-  return (await request.get(`${BASE}/items/${itemId}`)).json();
-}
-
 // TC-3.2: confirms the isolation control group is untouched by a reorder
 // among `parent`'s own children.
 async function expectIsolationUnaffected(request: APIRequestContext) {
-  const otherChild = await getItem(request, scenario.otherChild.id);
+  const otherChild = await fetchItem(request, scenario.otherChild.id);
   expect(otherChild.position).toBe(1.0); // unchanged — only child of its own parent
   expect(otherChild.parentId).toBe(scenario.otherParent.id);
 
-  const topLevel = await getItem(request, scenario.topLevel.id);
+  const topLevel = await fetchItem(request, scenario.topLevel.id);
   expect(topLevel.position).toBe(scenario.topLevel.position); // unchanged from creation
 }
 
 test('TC-2.5, TC-3.1, TC-3.2, TC-3.5: C before A — becomes the new true first sibling', async ({ request }) => {
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'before' });
 
-  const updated = await getItem(request, scenario.items.C.id);
+  const updated = await fetchItem(request, scenario.items.C.id);
   // No true predecessor before A -> floor-anchored coarsest-fit between 0.0
   // and A's 1.0, not a flat A.position - 1.0.
   expect(updated.position).toBe(0.5);
@@ -71,7 +63,7 @@ test('TC-2.1, TC-3.2, TC-3.5: C after A / C before B — same true-neighbor midp
   request,
 }) => {
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'after' });
-  const afterA = await getItem(request, scenario.items.C.id);
+  const afterA = await fetchItem(request, scenario.items.C.id);
   expect(afterA.position).toBe(1.5);
   expect(await siblingOrder(request, scenario.parent.id)).toBe('ACB');
 
@@ -80,7 +72,7 @@ test('TC-2.1, TC-3.2, TC-3.5: C after A / C before B — same true-neighbor midp
   // proving the true-neighbor lookup is symmetric regardless of which side
   // it's approached from.
   await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.B.id, side: 'before' });
-  const beforeB = await getItem(request, scenario.items.C.id);
+  const beforeB = await fetchItem(request, scenario.items.C.id);
   expect(beforeB.position).toBe(1.5);
   expect(await siblingOrder(request, scenario.parent.id)).toBe('ACB');
   await expectIsolationUnaffected(request);
@@ -89,7 +81,7 @@ test('TC-2.1, TC-3.2, TC-3.5: C after A / C before B — same true-neighbor midp
 test('TC-3.2, TC-3.5: A after C — becomes the new true last sibling', async ({ request }) => {
   await moveItem(request, scenario.items.A.id, { anchorId: scenario.items.C.id, side: 'after' });
 
-  const updated = await getItem(request, scenario.items.A.id);
+  const updated = await fetchItem(request, scenario.items.A.id);
   // No true successor after C -> append fallback, C.position + 1.0.
   expect(updated.position).toBe(4.0);
   expect(await siblingOrder(request, scenario.parent.id)).toBe('BCA');

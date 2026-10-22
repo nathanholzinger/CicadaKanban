@@ -1,13 +1,16 @@
 import type { APIRequestContext, Locator, Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
+import { resetAndSeedDb } from '../helpers/db';
 import {
   seedTemplatedWorkflow,
   pickWorkphases,
+  moveItem,
   pinItemPosition,
   seedPositionedItems,
   fetchDefaultBoard,
   fetchItem,
+  type SeededColumn,
 } from '../helpers/seed';
 import {
   pickUp,
@@ -65,7 +68,7 @@ interface Scenario {
   projectId: string;
   workflow: { id: string };
   boardId: string;
-  columns: Array<{ id: string; entryWorkphaseId: string; displayName: string }>;
+  columns: SeededColumn[];
   phase: Record<'todo' | 'inProgress' | 'review' | 'done', { id: string; name: string }>;
   items: Record<'X' | 'A' | 'B' | 'C', { id: string }>;
 }
@@ -75,7 +78,7 @@ interface Scenario {
 // workphase-only move of X lands it *between* B and C by its kept position,
 // which is what tells the middle band apart from either edge band.
 async function seed(request: APIRequestContext): Promise<Scenario> {
-  await request.post(`${API}/test/reset`);
+  await resetAndSeedDb();
   const { project, workflow } = await seedTemplatedWorkflow(request, PROJECT);
   const [todo, inProgress, review, done] = pickWorkphases(workflow, 'Todo', 'In Progress', 'Review', 'Done');
   const board = await fetchDefaultBoard(request, workflow.id);
@@ -216,7 +219,7 @@ async function bandDivider(region: Locator, edge: 'top' | 'bottom'): Promise<Poi
 }
 
 // A point in In Progress's own middle band — used as the *first* move from
-// a different locked origin (DRAG-3.4, "locked to each context in turn"),
+// a different locked origin (DRAG-3.4, and DRAG-1.5's "locked to each context in turn"),
 // before the drag has necessarily reached Board layer at all, so it can't
 // read the carve-out or the divider off (neither renders until then). The
 // region's own dead center is a safe stand-in instead: with this fixture's
@@ -262,7 +265,7 @@ test.describe('Card → column drop bands', () => {
     expect(x.position).toBeLessThan(1);
 
     // Back to Todo, then squarely inside the bottom carve-out.
-    await request.patch(`${API}/items/${x.id}/move`, { data: { workphaseId: s.phase.todo.id } });
+    await moveItem(request, x.id, { workphaseId: s.phase.todo.id });
     await pinItemPosition(request, x.id, 2.5);
     await openBoard(page, projectSidebar);
     await pickUp(page, article(page, 'Item X'));
@@ -290,7 +293,7 @@ test.describe('Card → column drop bands', () => {
   }) => {
     const s = await seed(request);
     // A into Done — terminal, but not empty, the third reservation shape.
-    await request.patch(`${API}/items/${s.items.A.id}/move`, { data: { workphaseId: s.phase.done.id } });
+    await moveItem(request, s.items.A.id, { workphaseId: s.phase.done.id });
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await openBoard(page, projectSidebar);
     const todo = column(page, 'Todo');
@@ -375,7 +378,7 @@ test.describe('Card → column drop bands', () => {
 
     // X starts locked to Todo — pop out to Board layer first; a bare hover
     // on In Progress never previews anything while still locked elsewhere
-    // (rule 1), only once genuinely there.
+    // (wiki board-drag-interaction §1.1, rule 1), only once genuinely there.
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await center(regionOf(inProgress)));
     await awaitPoppedOut(page, tuning);
@@ -691,7 +694,7 @@ test.describe('Card → column drop bands', () => {
   }) => {
     const s = await seed(request);
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
-    await request.patch(`${API}/items/${s.items.A.id}/move`, { data: { workphaseId: s.phase.done.id } });
+    await moveItem(request, s.items.A.id, { workphaseId: s.phase.done.id });
     await openBoard(page, projectSidebar);
     const todo = column(page, 'Todo');
     const done = column(page, 'Done');

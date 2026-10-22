@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test';
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export class ProjectSidebarPage {
   readonly locator;
   readonly newProjectButton;
@@ -17,7 +19,19 @@ export class ProjectSidebarPage {
   // column group), since that differs per scenario.
   async openBoard(name: string) {
     await this.page.goto('/');
+    await this.showBoard(name);
+  }
+
+  // The same on the page already loaded, for a spec that mustn't reload it: what
+  // the app fetched at mount is part of what it tests, or the page is mid-visit.
+  async showBoard(name: string) {
     await this.select(name);
+    await this.openBoardTab();
+  }
+
+  // `exact`, since a non-exact "Board" also matches "+ New board" and "Rename board"
+  // once the tab is showing.
+  async openBoardTab() {
     await this.page.locator('main').getByRole('button', { name: 'Board', exact: true }).click();
   }
 
@@ -27,6 +41,13 @@ export class ProjectSidebarPage {
 
   projectName(name: string) {
     return this.locator.getByText(name);
+  }
+
+  // The rows named any of `names`, in render order, for `toHaveText` to read an
+  // order against. A name listed here but left out of the expected order fails
+  // the assertion if that project is showing.
+  projectNames(...names: string[]) {
+    return this.locator.getByText(new RegExp(`^(${names.map(escapeRegExp).join('|')})$`));
   }
 
   // The grab handle on a project's row. Resolve it before the drag starts:

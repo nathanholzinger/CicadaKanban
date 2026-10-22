@@ -1,8 +1,9 @@
 import { expect, test } from '../fixtures';
 import { API } from '../helpers/api';
+import { resetAndSeedDb } from '../helpers/db';
 
 test.beforeAll(async ({ request }) => {
-  await request.post(`${API}/test/reset`);
+  await resetAndSeedDb();
 
   const parent = await (
     await request.post(`${API}/projects`, {

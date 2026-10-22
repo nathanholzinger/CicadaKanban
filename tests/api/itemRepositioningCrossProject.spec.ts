@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
-import type { APIRequestContext } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
+import { fetchItem, moveItem } from '../helpers/seed';
 import {
   seedCrossProjectRepositioningScenario,
   projectOrder,
   fullOrder,
   type CrossProjectRepositioningScenario,
 } from '../helpers/itemRepositioningScenario';
-import { API as BASE } from '../helpers/api';
 
 // The same 8-case structure as itemRepositioningCrossColumn.spec.ts, this
 // time scoped by PROJECT rather than workphase: items A/C/E belong to
@@ -37,19 +36,11 @@ test.beforeEach(async ({ request }) => {
   scenario = await seedCrossProjectRepositioningScenario(request, 'Cross Project API');
 });
 
-function moveItem(request: APIRequestContext, itemId: string, body: Record<string, unknown>) {
-  return request.patch(`${BASE}/items/${itemId}/move`, { data: body });
-}
-
-async function getItem(request: APIRequestContext, itemId: string) {
-  return (await request.get(`${BASE}/items/${itemId}`)).json();
-}
-
 test.describe('1: extreme boundary moves within project 1a', () => {
   test('1.a — move C to before A', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.A.id, side: 'before' });
 
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(0.5);
     expect(updated.projectId).toBe(scenario.project1a.id); // immutable across a move
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('CAE');
@@ -60,7 +51,7 @@ test.describe('1: extreme boundary moves within project 1a', () => {
   test('1.b — move C to after E', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.E.id, side: 'after' });
 
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(6.0);
     expect(updated.projectId).toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('AEC');
@@ -73,7 +64,7 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
   test('TC-2.33: 2.a — move C to before B', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.B.id, side: 'before' });
 
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(1.5);
     expect(updated.projectId).toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
@@ -84,7 +75,7 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
   test('TC-2.33: 2.b — move C to after D', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.D.id, side: 'after' });
 
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(4.5);
     expect(updated.projectId).toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
@@ -100,7 +91,7 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2 
     // Same gap as 2.a (1.5) — not a no-op. A's true neighbor is B, not E,
     // once scope spans the whole workflow rather than stopping at a
     // workphase/project boundary.
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(1.5);
     expect(updated.projectId).toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
@@ -112,7 +103,7 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2 
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.E.id, side: 'before' });
 
     // Same gap as 2.b (4.5).
-    const updated = await getItem(request, scenario.items.C.id);
+    const updated = await fetchItem(request, scenario.items.C.id);
     expect(updated.position).toBe(4.5);
     expect(updated.projectId).toBe(scenario.project1a.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE');
@@ -127,7 +118,7 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
 
     // No true successor beyond E (global max) -> flat +1.0, same degenerate
     // case as 1.b.
-    const updated = await getItem(request, scenario.items.B.id);
+    const updated = await fetchItem(request, scenario.items.B.id);
     expect(updated.position).toBe(6.0);
     expect(updated.projectId).toBe(scenario.project1b.id); // immutable, even landing among 1a's items
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE'); // unaffected
@@ -143,7 +134,7 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
 
     // No true predecessor before A (global min) -> floor coarsestFit(0, 1),
     // same degenerate case as 1.a.
-    const updated = await getItem(request, scenario.items.D.id);
+    const updated = await fetchItem(request, scenario.items.D.id);
     expect(updated.position).toBe(0.5);
     expect(updated.projectId).toBe(scenario.project1b.id);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('ACE'); // unaffected

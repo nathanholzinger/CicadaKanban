@@ -1,16 +1,16 @@
 import { test, expect } from '../fixtures';
 import type { Page } from '@playwright/test';
+import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import { resetAndSeedDb } from '../helpers/db';
 import { dragTo, center, topQuarter, pastColumnEnd, setBackDownLeaning } from '../helpers/dragGesture';
-import { article } from '../helpers/boardLocators';
-import { fetchItem } from '../helpers/seed';
+import { article, column } from '../helpers/boardLocators';
+import { fetchItem, seedColumn } from '../helpers/seed';
 import {
   seedCrossProjectRepositioningScenario,
   projectOrder,
   fullOrder,
   type CrossProjectRepositioningScenario,
 } from '../helpers/itemRepositioningScenario';
-import { API } from '../helpers/api';
 const ROOT_NAME = 'Cross Project DnD';
 
 // The same 8 cases as tests/api/itemRepositioningCrossProject.spec.ts, this
@@ -49,21 +49,14 @@ test.beforeEach(async ({ request, page }) => {
   // The root's auto-bootstrapped default board has zero columns (the shared
   // workphase post-dates workflow creation, same "bare workflow" pattern as
   // tests/ui/boards-layer.spec.ts) — add one column covering it explicitly.
-  const boards = await (await request.get(`${API}/boards?workflowId=${scenario.workflow.id}`)).json();
-  await request.post(`${API}/columns`, {
-    data: { boardId: boards[0].id, startWorkphaseId: scenario.sharedPhase.id, endWorkphaseId: scenario.sharedPhase.id },
-  });
+  await seedColumn(request, scenario.workflow.id, scenario.sharedPhase.id);
 
   await page.goto('/');
 });
 
-async function goToBoard(page: Page, projectSidebar: { select: (name: string) => Promise<void> }, projectName: string) {
-  await projectSidebar.select(projectName);
-  // exact: true — non-exact matching also hits "+ New board"/"Rename board"
-  // (case-insensitive substring match), which are already on screen if a
-  // prior step in this same test already switched to the Board tab.
-  await page.locator('main').getByRole('button', { name: 'Board', exact: true }).click();
-  await expect(page.getByRole('group', { name: 'Shared Phase' })).toBeVisible();
+async function goToBoard(page: Page, projectSidebar: ProjectSidebarPage, projectName: string) {
+  await projectSidebar.showBoard(projectName);
+  await expect(column(page, 'Shared Phase')).toBeVisible();
 }
 
 // Drag gesture recipe: tests/helpers/dragGesture.ts.
@@ -71,13 +64,13 @@ async function goToBoard(page: Page, projectSidebar: { select: (name: string) =>
 test.describe('1: extreme boundary moves within project 1a', () => {
   test.skip('1.a — drag C onto card A', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
-    const column = page.getByRole('group', { name: 'Shared Phase' });
+    const sharedColumn = column(page, 'Shared Phase');
     await dragTo(page, article(page, 'Item C'), () => center(article(page, 'Item A')));
 
     // Scoped to the column, not the bare page — a page-wide role query can
     // still match the DragOverlay's own copy of the card immediately after
     // drop, before it's unmounted.
-    await expect(column.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
+    await expect(sharedColumn.getByRole('article', { name: 'Item C', exact: true })).toBeVisible();
 
     // The API suite's identical case (1.a) passes cleanly at 0.5, confirming
     // the position math is correct. Skipped for the same drag-gesture
@@ -91,8 +84,8 @@ test.describe('1: extreme boundary moves within project 1a', () => {
 
   test("1.b — drag C past the end of project 1a's board", async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
-    const column = page.getByRole('group', { name: 'Shared Phase' });
-    await dragTo(page, article(page, 'Item C'), () => pastColumnEnd(column));
+    const sharedColumn = column(page, 'Shared Phase');
+    await dragTo(page, article(page, 'Item C'), () => pastColumnEnd(sharedColumn));
 
     await expect.poll(async () => (await fetchItem(request, scenario.items.C.id)).position).toBe(6.0);
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1a.id)).toBe('AEC');
@@ -171,8 +164,8 @@ test.describe('3: interior moves that stay in project 1a (collapse with group 2)
 test.describe('4: reverse direction — moving a project 1b item against a project 1a anchor', () => {
   test('4.a — from the root board, drag B past the end (after E)', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.rootProject.name);
-    const column = page.getByRole('group', { name: 'Shared Phase' });
-    await dragTo(page, article(page, 'Item B'), () => pastColumnEnd(column));
+    const sharedColumn = column(page, 'Shared Phase');
+    await dragTo(page, article(page, 'Item B'), () => pastColumnEnd(sharedColumn));
 
     await expect.poll(async () => (await fetchItem(request, scenario.items.B.id)).position).toBe(6.0);
     await expect

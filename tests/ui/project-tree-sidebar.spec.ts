@@ -55,7 +55,7 @@ test('TREE-4.3: the sidebar shows each project’s children by position, then cr
   await page.goto('/');
 
   // P, then its children, then the rest of the top level.
-  await expect(projectSidebar.locator.getByText(/^(P|A|B|C|TA|TB|TC)$/)).toHaveText([
+  await expect(projectSidebar.projectNames('P', 'A', 'B', 'C', 'TA', 'TB', 'TC')).toHaveText([
     'P',
     'C',
     'B',
@@ -84,7 +84,7 @@ test('TREE-4.8: after a failed write, the sidebar shows the project where it was
       : route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
   );
   const asBefore = async () => {
-    await expect(projectSidebar.locator.getByText(/^(A|B|X|Z)$/)).toHaveText(['A', 'B', 'X']);
+    await expect(projectSidebar.projectNames('A', 'B', 'X', 'Z')).toHaveText(['A', 'B', 'X']);
     await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(0)}px`);
   };
   const refusedWrite = (method: string) => page.waitForResponse(res => res.request().method() === method);
@@ -131,7 +131,7 @@ test('TREE-4.4: the sidebar sorts a project with no position as if its position 
   await pinProjectPosition(request, ids.N, null);
   await page.goto('/');
 
-  await expect(projectSidebar.locator.getByText(/^(P|A|B|N)$/)).toHaveText(['P', 'N', 'A', 'B']);
+  await expect(projectSidebar.projectNames('P', 'A', 'B', 'N')).toHaveText(['P', 'N', 'A', 'B']);
 });
 
 test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows the server’s order without a reload', () => {
@@ -160,7 +160,7 @@ test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows t
     // X is P's child once the move lands; only then is its place in the order a
     // result, since it reads P, A, B, X before.
     await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(1)}px`);
-    const order = projectSidebar.locator.getByText(/^(P|A|B|X)$/);
+    const order = projectSidebar.projectNames('P', 'A', 'B', 'X');
     await expect(order).toHaveText(['P', 'A', 'B', 'X']);
     await page.reload();
     await expect(order).toHaveText(['P', 'A', 'B', 'X']);
@@ -174,7 +174,7 @@ test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows t
     await page.getByPlaceholder('Subproject name').fill('New');
     await page.getByRole('button', { name: 'Create subproject' }).click();
 
-    await expect(projectSidebar.locator.getByText(/^(P|A|B|X|New)$/)).toHaveText(['P', 'A', 'B', 'New', 'X']);
+    await expect(projectSidebar.projectNames('P', 'A', 'B', 'X', 'New')).toHaveText(['P', 'A', 'B', 'New', 'X']);
   });
 
   test('an edit of X’s parent to P', async ({ page, request, projectSidebar }) => {
@@ -183,7 +183,7 @@ test.describe('TREE-4.7: the sidebar applies the renumbered pairs, so it shows t
     await page.locator('main select').selectOption({ label: 'P' });
 
     await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(1)}px`);
-    await expect(projectSidebar.locator.getByText(/^(P|A|B|X)$/)).toHaveText(['P', 'A', 'B', 'X']);
+    await expect(projectSidebar.projectNames('P', 'A', 'B', 'X')).toHaveText(['P', 'A', 'B', 'X']);
   });
 });
 

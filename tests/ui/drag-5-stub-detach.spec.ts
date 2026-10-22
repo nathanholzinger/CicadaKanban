@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
+import { resetAndSeedDb } from '../helpers/db';
 import {
   seedTemplatedWorkflow,
   pickWorkphases,
@@ -27,8 +27,8 @@ import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../clie
 // assert reachability (`data-drag-context`) and write correctness.
 
 test.describe('Stub detach — a Stub drags through the Descendants/Card/Column layers', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test("DRAG-1.1, DRAG-5.9: a Stub's drag starts at its containing Card's Descendants layer, and a same-parent reorder commits with no pop at all", async ({
@@ -294,8 +294,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     // The first two pops (out of Descendants, out of the Card) run the
     // shared clock back to back, same as DRAG-5.1's own test; landing squarely
-    // on Q the whole time lets the third clock (cardPopInDelayMs, the
-    // zoom-in into Q) start the moment the second pop lands.
+    // on Q the whole time lets the third clock (the zoom-in into Q:
+    // cardZoomDwellMs, then cardPopInDelayMs) start the moment the second pop lands.
     const tuning = await seedDragTuning(page, {
       popDelayMs: 150,
       popInDelayMs: NO_POP.popInDelayMs,
@@ -310,12 +310,12 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // The second pop (Card → column) lands the moment P's own card shrinks
     // — losing X's nested row — which shifts Q. Wait for that pop to land,
     // then re-aim at Q's *now-settled* position before waiting on the
-    // third clock (cardPopInDelayMs): the same reflow `dragTo`'s own header
+    // third clock (the dwell, then cardPopInDelayMs): the same reflow `dragTo`'s own header
     // comment documents, here caused by the drag itself rather than a
     // cross-column move.
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardPopInDelayMs));
+    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
 
     await release(page);
 

@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchDefaultBoard } from '../helpers/seed';
+import { resetAndSeedDb } from '../helpers/db';
+import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem, fetchDefaultBoard } from '../helpers/seed';
 import { pickUp, hoverTo, cancel, center, seedDragTuning, NO_POP } from '../helpers/dragGesture';
 import { itemRow } from '../helpers/boardLocators';
 
@@ -26,8 +26,8 @@ import { itemRow } from '../helpers/boardLocators';
 const PROJECT = 'Drag Classification Project';
 
 test.describe('drag-target classification', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('DRAG-2.1, DRAG-2.2, DRAG-2.3, DRAG-2.4, DRAG-2.7, DRAG-2.10: every visible target is classified at pickup, stays classified while hovering, and clears on cancel', async ({
@@ -109,7 +109,7 @@ test.describe('drag-target classification', () => {
     await expect(
       page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'X', exact: true }),
     ).toBeVisible();
-    const reloaded = await (await request.get(`${API}/items/${x.id}`)).json();
+    const reloaded = await fetchItem(request, x.id);
     expect(reloaded.workphaseId).toBe(todo.id);
     expect(reloaded.parentId).toBeNull();
   });

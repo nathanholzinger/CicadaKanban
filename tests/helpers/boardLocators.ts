@@ -1,7 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 
-// The board's own card/column locators, one spelling for every drag and
-// repositioning spec.
+// The board's own card and column locators, spelled once for the specs to share.
 
 // `scope` is a `Locator` (rather than always the whole `page`) so a caller
 // can disambiguate a Card that also matches on a floating DragOverlay copy
@@ -18,6 +17,12 @@ export function column(page: Page, name: string): Locator {
 // The titles of the Cards in `scope`, in the order they render.
 export async function titlesIn(scope: Locator): Promise<string[]> {
   return scope.getByRole('article').evaluateAll(els => els.map(e => e.getAttribute('aria-label') ?? ''));
+}
+
+// The item detail panel. It stays in the page when closed, slid out of view, so
+// a spec opens an item before it reads from this.
+export function itemPanel(page: Page): Locator {
+  return page.getByRole('complementary', { name: 'Item details', exact: true });
 }
 
 // Every Card/Stub row's own identifying attribute, set on every row but the

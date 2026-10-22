@@ -22,9 +22,8 @@ import {
   fullOrder,
   type RepositioningScenario,
 } from '../helpers/itemRepositioningScenario';
-import { fetchItem } from '../helpers/seed';
-import { API } from '../helpers/api';
-import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
+import { fetchItem, seedColumn, seedItem } from '../helpers/seed';
+import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
 
 const PROJECT_NAME = 'Repositioning DnD Project';
 
@@ -66,7 +65,7 @@ let scenario: RepositioningScenario;
 // so nothing completes a second, unwanted pop before the test releases.
 // Same-column cases (1, 3) never leave their own context at all, so none
 // of this affects them either way.
-const TUNING = { ...DEFAULT_DRAG_TUNING, ...POP_OUT_ONLY };
+let tuning: DragTuning;
 
 test.beforeEach(async ({ request, page, projectSidebar }) => {
   await resetAndSeedDb();
@@ -75,18 +74,11 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
   // Single-workphase columns for "Column One"/"Column Two" — boards/columns
   // are a pure presentation layer over workphaseId, so this setup step only
   // exists for this suite; the API suite never touches boards/columns.
-  const boards = await (await request.get(`${API}/boards?workflowId=${scenario.workflow.id}`)).json();
-  await request.post(`${API}/columns`, {
-    data: { boardId: boards[0].id, startWorkphaseId: scenario.colOnePhase.id, endWorkphaseId: scenario.colOnePhase.id },
-  });
-  await request.post(`${API}/columns`, {
-    data: { boardId: boards[0].id, startWorkphaseId: scenario.colTwoPhase.id, endWorkphaseId: scenario.colTwoPhase.id },
-  });
+  await seedColumn(request, scenario.workflow.id, scenario.colOnePhase.id);
+  await seedColumn(request, scenario.workflow.id, scenario.colTwoPhase.id);
 
-  await seedDragTuning(page, POP_OUT_ONLY);
-  await page.goto('/');
-  await projectSidebar.select(PROJECT_NAME);
-  await page.locator('main').getByRole('button', { name: 'Board' }).click();
+  tuning = await seedDragTuning(page, POP_OUT_ONLY);
+  await projectSidebar.openBoard(PROJECT_NAME);
   await expect(page.getByRole('group', { name: 'Column One' })).toBeVisible();
 });
 
@@ -95,7 +87,7 @@ test.beforeEach(async ({ request, page, projectSidebar }) => {
 // target mid-drag, and where pastColumnEnd aims.
 
 async function popOutFully(page: import('@playwright/test').Page) {
-  await awaitPoppedOut(page, TUNING);
+  await awaitPoppedOut(page, tuning);
 }
 
 async function getC(request: APIRequestContext) {
@@ -293,11 +285,8 @@ test.describe('5: an abandoned drop must not strand the cross-column preview', (
     projectSidebar,
   }) => {
     // An item with no workphase surfaces in Unsorted → Unknown status.
-    const u = await request.post(`${API}/items`, { data: { title: 'Item U', projectId: scenario.project.id } });
-    expect(u.ok()).toBe(true);
-    await page.goto('/');
-    await projectSidebar.select(PROJECT_NAME);
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await seedItem(request, { title: 'Item U', projectId: scenario.project.id });
+    await projectSidebar.openBoard(PROJECT_NAME);
     const unsorted = page.getByRole('group', { name: 'Unsorted' });
     await expect(unsorted.getByRole('article', { name: 'Item U', exact: true })).toBeVisible();
 

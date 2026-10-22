@@ -1,8 +1,8 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, pinItemPosition } from '../helpers/seed';
-import { article, column, titlesIn } from '../helpers/boardLocators';
+import { resetAndSeedDb } from '../helpers/db';
+import { seedTemplatedWorkflow, pickWorkphases, seedItem, moveItem, pinItemPosition } from '../helpers/seed';
+import { article, column, itemPanel, titlesIn } from '../helpers/boardLocators';
 
 // The positioning rules a board shows without a drag: the order a column
 // renders in, what an inline create sends, and a write's answer folded into
@@ -19,8 +19,8 @@ function watchBoardLoads(page: Page): string[] {
 }
 
 test.describe('item positioning on the board', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('TC-6.4: a done column lists its items by when they were completed, oldest first', async ({
@@ -38,14 +38,10 @@ test.describe('item positioning on the board', () => {
     let lastCompletedAt = 0;
     for (const item of [d2, d3, d1]) {
       await expect.poll(() => Date.now()).toBeGreaterThan(lastCompletedAt);
-      const res = await request.patch(`${API}/items/${item.id}/move`, { data: { workphaseId: done.id } });
-      expect(res.ok()).toBe(true);
-      lastCompletedAt = (await res.json()).completedAt;
+      lastCompletedAt = (await moveItem(request, item.id, { workphaseId: done.id })).completedAt;
     }
 
-    await page.goto('/');
-    await projectSidebar.select(name);
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard(name);
 
     // Not creation order, and done items hold no position.
     await expect.poll(() => titlesIn(column(page, 'Done'))).toEqual(['D2', 'D3', 'D1']);
@@ -66,9 +62,7 @@ test.describe('item positioning on the board', () => {
     await pinItemPosition(request, a.id, 1100);
     await pinItemPosition(request, b.id, 1200);
 
-    await page.goto('/');
-    await projectSidebar.select(name);
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard(name);
     const todoColumn = column(page, 'Todo');
     await expect.poll(() => titlesIn(todoColumn)).toEqual(['High A', 'High B']);
     const loads = watchBoardLoads(page);
@@ -104,16 +98,14 @@ test.describe('item positioning on the board', () => {
     await pinItemPosition(request, parent.id, 1100);
     await pinItemPosition(request, free.id, 1200);
 
-    await page.goto('/');
-    await projectSidebar.select(name);
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard(name);
     const todoColumn = column(page, 'Todo');
     await expect.poll(() => titlesIn(todoColumn)).toEqual(['Panel Parent', 'Panel Free']);
     const loads = watchBoardLoads(page);
 
     await article(page, 'Panel Parent').getByRole('button', { name: 'Panel Stub' }).click();
     // Controlled checkbox — state flips after the PUT resolves; avoid uncheck().
-    const attachedCheckbox = page.locator('div.fixed.top-0.right-0').getByLabel('Attached');
+    const attachedCheckbox = itemPanel(page).getByLabel('Attached');
     await attachedCheckbox.click();
     await expect(attachedCheckbox).not.toBeChecked();
 

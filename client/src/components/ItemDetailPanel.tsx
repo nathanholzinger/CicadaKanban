@@ -71,7 +71,11 @@ export default function ItemDetailPanel({ itemId, onClose, ...contentProps }: It
       />
 
       {/* Panel */}
-      <div className={`${PANEL_BASE} ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        role="complementary"
+        aria-label="Item details"
+        className={`${PANEL_BASE} ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
         {renderedItemId && (
           <ItemDetailPanelContent key={renderedItemId} itemId={renderedItemId} onClose={onClose} {...contentProps} />
         )}

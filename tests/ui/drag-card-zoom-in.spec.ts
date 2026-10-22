@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
+import { resetAndSeedDb } from '../helpers/db';
 import {
   seedTemplatedWorkflow,
   pickWorkphases,
@@ -55,8 +55,8 @@ function regionOf(group: Locator, regionKey: string): Locator {
 }
 
 test.describe('Card zoom-in after passing through Board layer', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test.skip('a Card in a different column: pop out, pop into its column, then zoom into it and attach', async ({
@@ -87,7 +87,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await awaitDragContext(page, columnRegionKey(inProgressCol.id), clocksMargin(tuning.popInDelayMs));
     // Locking in redraws the column (the zones gone): aim at Q where it now sits.
     await hoverTo(page, await center(article(inProgressGroup, 'Q')));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardPopInDelayMs));
+    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
     await release(page);
 
     const updated = await fetchItem(request, x.id);
@@ -121,7 +121,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await center(regionOf(todoGroup, columnRegionKey(todoCol.id))));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popInDelayMs));
     await hoverTo(page, await center(article(todoGroup, 'Q')));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardPopInDelayMs));
+    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
     await release(page);
 
     const updated = await fetchItem(request, x.id);

@@ -1,8 +1,9 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
+import { resetAndSeedDb } from '../helpers/db';
 import { column, titlesIn } from '../helpers/boardLocators';
 import { atFraction, hoverTo, pickUp, release } from '../helpers/dragGesture';
-import { seedBareWorkflow, addWorkphases, seedItem, seedTemplatedWorkflow } from '../helpers/seed';
+import { seedBareWorkflow, addWorkphases, seedColumn, seedItem, seedTemplatedWorkflow } from '../helpers/seed';
 
 // This file's templated workflows use "quick" (Todo/Done) rather than the
 // seed helper's "flow" default, so its workphases exist at workflow-creation
@@ -17,8 +18,8 @@ function createTemplatedWorkflow(request: import('@playwright/test').APIRequestC
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('multi-board management', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('Delete board is hidden when it is the only board on the workflow', async ({
@@ -27,9 +28,7 @@ test.describe('multi-board management', () => {
     projectSidebar,
   }) => {
     await seedBareWorkflow(request, 'Single Board Project');
-    await page.goto('/');
-    await projectSidebar.select('Single Board Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Single Board Project');
 
     await expect(page.getByRole('button', { name: '+ New board' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Delete board' })).not.toBeVisible();
@@ -42,9 +41,7 @@ test.describe('multi-board management', () => {
   }) => {
     await createTemplatedWorkflow(request, 'Multi Board Project');
 
-    await page.goto('/');
-    await projectSidebar.select('Multi Board Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Multi Board Project');
 
     await page.getByRole('button', { name: '+ New board' }).click();
     await page.getByLabel('Board name').fill('QA View');
@@ -64,10 +61,8 @@ test.describe('multi-board management', () => {
 
   test('renames the active board', async ({ page, request, projectSidebar }) => {
     await seedBareWorkflow(request, 'Toolbar Actions Project');
-    await page.goto('/');
-    await projectSidebar.select('Toolbar Actions Project');
+    await projectSidebar.openBoard('Toolbar Actions Project');
     const main = page.locator('main');
-    await main.getByRole('button', { name: 'Board' }).click();
 
     // Scoped to <main> — the sidebar's project-select button can otherwise
     // collide with "Rename board" under substring accessible-name matching.
@@ -84,8 +79,8 @@ test.describe('multi-board management', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('column range configuration', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('creates a merged column spanning two workphases, moving their items out of Unsorted', async ({
@@ -95,13 +90,9 @@ test.describe('column range configuration', () => {
   }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Merged Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Review', 'Done']);
-    await request.post(`${API}/items`, {
-      data: { title: 'Merge target item', projectId: project.id, workphaseId: todo.id },
-    });
+    await seedItem(request, { title: 'Merge target item', projectId: project.id, workphaseId: todo.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Merged Column Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Merged Column Project');
 
     // Board starts all-Unsorted since these workphases post-date board creation
     await expect(page.getByRole('group', { name: 'Unsorted' })).toBeVisible();
@@ -128,14 +119,10 @@ test.describe('column range configuration', () => {
   }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Expanded Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
-    await request.post(`${API}/items`, { data: { title: 'Todo item', projectId: project.id, workphaseId: todo.id } });
-    await request.post(`${API}/items`, {
-      data: { title: 'In Progress item', projectId: project.id, workphaseId: inProgress.id },
-    });
+    await seedItem(request, { title: 'Todo item', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'In Progress item', projectId: project.id, workphaseId: inProgress.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Expanded Column Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Expanded Column Project');
 
     await page.getByRole('button', { name: '+ Add column' }).click();
     const dialog = page.getByRole('dialog');
@@ -154,17 +141,9 @@ test.describe('column range configuration', () => {
   test('rejects an overlapping range with an inline error', async ({ page, request, projectSidebar }) => {
     const { workflow } = await seedBareWorkflow(request, 'Overlap Reject Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
-    await request.post(`${API}/columns`, {
-      data: {
-        boardId: (await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json())[0].id,
-        startWorkphaseId: todo.id,
-        endWorkphaseId: todo.id,
-      },
-    });
+    await seedColumn(request, workflow.id, todo.id);
 
-    await page.goto('/');
-    await projectSidebar.select('Overlap Reject Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Overlap Reject Project');
 
     await page.getByRole('button', { name: '+ Add column' }).click();
     const dialog = page.getByRole('dialog');
@@ -181,17 +160,14 @@ test.describe('column range configuration', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('broken column detection', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('flags a column as broken after reordering inverts its range', async ({ page, request, projectSidebar }) => {
     const { workflow } = await seedBareWorkflow(request, 'Broken Column Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: inProgress.id },
-    });
+    await seedColumn(request, workflow.id, todo.id, inProgress.id);
 
     // Invert their order — the column's start now sorts after its end
     await request.patch(`${API}/workphases/reorder`, {
@@ -203,9 +179,7 @@ test.describe('broken column detection', () => {
       },
     });
 
-    await page.goto('/');
-    await projectSidebar.select('Broken Column Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Broken Column Project');
 
     // displayName reflects current position order (post-reorder: In Progress, then Todo)
     const column = page.getByRole('group', { name: 'In Progress – Todo' });
@@ -219,21 +193,16 @@ test.describe('broken column detection', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('workphase delete notice', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('reports resized and removed columns after deleting workphases', async ({ page, request, projectSidebar }) => {
     const { workflow } = await seedBareWorkflow(request, 'Workphase Delete Project');
     const [todo, , done] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress', 'Done']);
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: done.id },
-    });
+    await seedColumn(request, workflow.id, todo.id, done.id);
 
-    await page.goto('/');
-    await projectSidebar.select('Workphase Delete Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Workphase Delete Project');
     await page.getByRole('button', { name: 'Manage workphases' }).click();
 
     // Deleting a boundary workphase (Todo) shrinks the column's range
@@ -261,18 +230,16 @@ test.describe('workphase delete notice', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('board and column lifecycle', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('deletes a board and falls back to the remaining board', async ({ page, request, projectSidebar }) => {
     const { workflow } = await createTemplatedWorkflow(request, 'Board Delete UI Project');
     await request.post(`${API}/boards`, { data: { workflowId: workflow.id, name: 'Doomed Board' } });
 
-    await page.goto('/');
-    await projectSidebar.select('Board Delete UI Project');
+    await projectSidebar.openBoard('Board Delete UI Project');
     const main = page.locator('main');
-    await main.getByRole('button', { name: 'Board' }).click();
 
     const switcher = main.locator('select[aria-label="Active board"]');
     await switcher.selectOption({ label: 'Doomed Board' });
@@ -292,17 +259,10 @@ test.describe('board and column lifecycle', () => {
   }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Column Edit Project');
     const [todo, inProgress] = await addWorkphases(request, workflow.id, ['Todo', 'In Progress']);
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
-    });
-    await request.post(`${API}/items`, {
-      data: { title: 'Edit range item', projectId: project.id, workphaseId: inProgress.id },
-    });
+    await seedColumn(request, workflow.id, todo.id);
+    await seedItem(request, { title: 'Edit range item', projectId: project.id, workphaseId: inProgress.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Column Edit Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Column Edit Project');
 
     // 'In Progress' is uncovered, so its item sits in Unsorted.
     await expect(
@@ -329,17 +289,10 @@ test.describe('board and column lifecycle', () => {
   }) => {
     const { project, workflow } = await seedBareWorkflow(request, 'Column Delete Project');
     const [todo] = await addWorkphases(request, workflow.id, ['Todo']);
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    await request.post(`${API}/columns`, {
-      data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
-    });
-    await request.post(`${API}/items`, {
-      data: { title: 'Orphaned by delete', projectId: project.id, workphaseId: todo.id },
-    });
+    await seedColumn(request, workflow.id, todo.id);
+    await seedItem(request, { title: 'Orphaned by delete', projectId: project.id, workphaseId: todo.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Column Delete Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Column Delete Project');
 
     const column = page.getByRole('group', { name: 'Todo' });
     await expect(column.getByRole('article', { name: 'Orphaned by delete' })).toBeVisible();
@@ -358,17 +311,8 @@ test.describe('board and column lifecycle', () => {
   test('a column reorder via the API is reflected in the rendered order', async ({ page, request, projectSidebar }) => {
     const { workflow } = await seedBareWorkflow(request, 'Column Reorder UI Project');
     const [todo, done] = await addWorkphases(request, workflow.id, ['Todo', 'Done']);
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    const colA = await (
-      await request.post(`${API}/columns`, {
-        data: { boardId: boards[0].id, startWorkphaseId: todo.id, endWorkphaseId: todo.id },
-      })
-    ).json();
-    const colB = await (
-      await request.post(`${API}/columns`, {
-        data: { boardId: boards[0].id, startWorkphaseId: done.id, endWorkphaseId: done.id },
-      })
-    ).json();
+    const colA = await seedColumn(request, workflow.id, todo.id);
+    const colB = await seedColumn(request, workflow.id, done.id);
 
     await request.patch(`${API}/columns/reorder`, {
       data: {
@@ -379,9 +323,7 @@ test.describe('board and column lifecycle', () => {
       },
     });
 
-    await page.goto('/');
-    await projectSidebar.select('Column Reorder UI Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Column Reorder UI Project');
 
     const groups = page.locator('main [role="group"]');
     await expect(groups).toHaveCount(2);
@@ -393,12 +335,8 @@ test.describe('board and column lifecycle', () => {
     const { project, workflow } = await seedBareWorkflow(request, 'Column Drag Project');
     const names = ['Todo', 'Doing', 'Review'];
     const phases = await addWorkphases(request, workflow.id, names);
-    const [board] = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
     for (const phase of phases) {
-      const created = await request.post(`${API}/columns`, {
-        data: { boardId: board.id, startWorkphaseId: phase.id, endWorkphaseId: phase.id },
-      });
-      expect(created.ok()).toBe(true);
+      await seedColumn(request, workflow.id, phase.id);
       await seedItem(request, { title: `In ${phase.name}`, projectId: project.id, workphaseId: phase.id });
     }
 

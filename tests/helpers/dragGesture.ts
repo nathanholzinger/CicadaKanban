@@ -6,7 +6,8 @@ import {
   type DragTuning,
 } from '../../client/src/components/workflow/dragTuning';
 
-// The one recipe for driving this app's @dnd-kit board from Playwright.
+// The one recipe for driving this app's @dnd-kit drags from Playwright: the
+// board's, and the project sidebar's.
 //
 // dnd-kit's PointerSensor (activationConstraint: { distance: 5 }) needs a
 // real pointerdown, movement past that 5px threshold to activate the drag,
@@ -29,9 +30,9 @@ import {
 // Under the pop machine a release in another column resolves by *band* of
 // that column's region unless the cursor rested there past the pop
 // threshold, so a cross-column `dragTo` onto a card lands by the band the
-// card sits in, not the card. drag-column-bands.spec.ts seeds the threshold
-// and drives the bands directly; the other suites' cross-column cases
-// happen to land in bands whose meaning matches what they assert.
+// card sits in, not the card. A spec that needs a particular band seeds the
+// pop threshold (`POP_OUT_ONLY`), waits for the pop out (`awaitPoppedOut`),
+// and aims at the band.
 export type Point = { x: number; y: number };
 
 // Pointer down on `source` and past the activation distance — the drag is
@@ -135,7 +136,8 @@ export async function center(locator: Locator): Promise<Point> {
 // dnd-kit's shuffle decides the ghost's slot, so aim at the row whose slot
 // the ghost should take, and the drop lands there —
 // `dragCollision.ts::dropAnchorFor`'s own lean, not a raw which-half read
-// (`resolveDropSide` is only its fallback for a non-row `over`).
+// (`resolveDropSide` reads one only for a row with no sortable position, and an
+// `over` that is no row names no anchor at all).
 export async function topQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.15);
 }

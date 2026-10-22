@@ -505,7 +505,7 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 14 | Fixed | Batch 3e, the sidebar, lib and api |
 | 15 | Fixed | Batch 3f (1 of 2), the client tests |
 | 16 | Fixed | Batch 3f (2 of 2), the server tests |
-| 17 | open | — |
+| 17 | Fixed | Batch 3g, the E2E specs |
 | 18 | Fixed | Batch 3c |
 | 19 | Fixed | Batch 3d |
 | 20 | Fixed | Batch 3a |
@@ -519,11 +519,12 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 34–37 | Fixed | Batch 3e, the drag layer |
 | 38 | Fixed | Batch 3f (1 of 2), the client tests |
 | 39 | Fixed | Batch 3f (2 of 2), the server tests. The Automation lines that name the split files are the Reconciler's |
-| 40–41 | open | — |
+| 40–41 | Fixed | Batch 3g, the E2E specs. The detail panel gained a role, the one production change |
 | 42 | Fixed | Batch 3c |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |
 | 45 | Routed | `epic-4-decisions.md` §12, the same block |
 | 47 | Fixed | Batch 3d, with #19 |
+| 50 | Fixed | Batch 3g, with #40 |
 | 51–52 | Covered | `api-contract-zod-openapi.md`, C1 |
 | 53–54 | Covered | Story 10's items 3 and 7, `epic-3-5-roadmap.md` |

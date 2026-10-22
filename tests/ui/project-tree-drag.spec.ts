@@ -2,7 +2,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { cancel, hoverTo, pickUp, release } from '../helpers/dragGesture';
-import { aim } from '../helpers/projectTreeDrag';
+import { aim, watchWrites } from '../helpers/projectTreeDrag';
 import { fetchProject, fetchProjectDepthCap, seedProjects } from '../helpers/seed';
 import type { ProjectSidebarPage } from '../pages/ProjectSidebarPage';
 import { INDENT_WIDTH, projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
@@ -48,9 +48,9 @@ test('TREE-1.1: an indicator line shows the gap, and a release saves exactly wha
   await release(page);
 
   // X is saved as A1's child, after A1a, where the line showed it.
+  await expect.poll(async () => (await fetchProject(request, ids.X)).parentId).toBe(ids.A1);
   const x = await fetchProject(request, ids.X);
   const a1a = await fetchProject(request, ids.A1a);
-  expect(x.parentId).toBe(ids.A1);
   expect(x.position).toBeGreaterThan(a1a.position!);
   await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(2)}px`);
 });
@@ -93,7 +93,7 @@ test('TREE-1.12: a release saves the placement as a move naming a neighbor, neve
   // the sidebar shows it first.
   const aPosition = (await fetchProject(request, second.A)).position!;
   await expect.poll(async () => (await fetchProject(request, second.X)).position).toBeLessThan(aPosition);
-  await expect(projectSidebar.locator.getByText(/^(X|A|A1|A1a|B)$/)).toHaveText(['X', 'A', 'A1', 'A1a', 'B']);
+  await expect(projectSidebar.projectNames('X', 'A', 'A1', 'A1a', 'B')).toHaveText(['X', 'A', 'A1', 'A1a', 'B']);
 });
 
 test('TREE-1.4: when the dragged project’s subtree holds every project, no line is drawn and a release writes nothing', async ({
@@ -109,10 +109,7 @@ test('TREE-1.4: when the dragged project’s subtree holds every project, no lin
   await page.goto('/');
   const stored = () => Promise.all([ids.X, ids.X1, ids.X2].map(id => fetchProject(request, id)));
   const before = await stored();
-  const writes: string[] = [];
-  page.on('request', req => {
-    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
-  });
+  const writes = watchWrites(page);
 
   // Every project is in X's subtree, so no row is left to draw a line against,
   // whichever of them the cursor is over and however far sideways. The cursor
@@ -156,10 +153,7 @@ test('TREE-1.11, TREE-3.9: a tab state that would put the dragged subtree past t
     ['X1', 'X'],
   ]);
   await page.goto('/');
-  const writes: string[] = [];
-  page.on('request', req => {
-    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
-  });
+  const writes = watchWrites(page);
   const before = await fetchProject(request, ids.X);
 
   // One tab right of T: X would be T's child, and X1 at depth cap + 1. The state
@@ -194,10 +188,7 @@ test('TREE-1.8: a project set back down in its own gap, at its own depth, writes
   const ids = await seedProjects(request, TREE_1);
   await page.goto('/');
   const before = await fetchProject(request, ids.X);
-  const writes: string[] = [];
-  page.on('request', req => {
-    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
-  });
+  const writes = watchWrites(page);
 
   // X's own gap is below B, at the top level: the line is on B's bottom.
   const handle = projectSidebar.dragHandle('X');
@@ -230,10 +221,7 @@ test('TREE-1.9: coming back to the dragged project’s own row means its own gap
   const ids = await seedProjects(request, TREE_1);
   await page.goto('/');
   const before = await fetchProject(request, ids.X);
-  const writes: string[] = [];
-  page.on('request', req => {
-    if (req.method() !== 'GET') writes.push(`${req.method()} ${req.url()}`);
-  });
+  const writes = watchWrites(page);
 
   // The line shows the gap between A1a and B, then the cursor comes back to
   // X's own row: the line moves to X's own gap, below B.
@@ -354,6 +342,6 @@ test('TREE-2.3: a collapsed project opened by a drop stays open if the move fail
 
   // T is open, showing its children, and X is back after it, at the top level.
   await expect(projectSidebar.row('T').getByTitle('Collapse')).toBeVisible();
-  await expect(projectSidebar.locator.getByText(/^(T|T1|T2|X)$/)).toHaveText(['T', 'T1', 'T2', 'X']);
+  await expect(projectSidebar.projectNames('T', 'T1', 'T2', 'X')).toHaveText(['T', 'T1', 'T2', 'X']);
   await expect(projectSidebar.row('X')).toHaveCSS('padding-left', `${projectRowIndentPx(0)}px`);
 });

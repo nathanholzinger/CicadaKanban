@@ -1,12 +1,22 @@
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem } from '../helpers/seed';
+import { resetAndSeedDb } from '../helpers/db';
+import {
+  seedTemplatedWorkflow,
+  pickWorkphases,
+  addWorkphases,
+  seedItem,
+  moveItem,
+  fetchItem,
+  fetchDefaultBoard,
+} from '../helpers/seed';
 import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
+import { itemPanel } from '../helpers/boardLocators';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 test.describe('attached children on the board', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('ATT-1.1, ATT-1.9: shows attached children nested under the parent card, and the toggle collapses them', async ({
@@ -16,16 +26,10 @@ test.describe('attached children on the board', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Nested Children Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Parent Card', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    await request.post(`${API}/items`, { data: { title: 'Attached Kid', parentId: parent.id } });
+    const parent = await seedItem(request, { title: 'Parent Card', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'Attached Kid', parentId: parent.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Nested Children Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Nested Children Project');
 
     const card = page.getByRole('article', { name: 'Parent Card' });
     await expect(card).toBeVisible();
@@ -44,18 +48,14 @@ test.describe('attached children on the board', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Detached Sibling Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Parent With Detached', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    await request.post(`${API}/items`, {
-      data: { title: 'Detached Kid', parentId: parent.id, isAttached: false, workphaseId: todo.id },
+    const parent = await seedItem(request, {
+      title: 'Parent With Detached',
+      projectId: project.id,
+      workphaseId: todo.id,
     });
+    await seedItem(request, { title: 'Detached Kid', parentId: parent.id, isAttached: false, workphaseId: todo.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Detached Sibling Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Detached Sibling Project');
 
     await expect(page.getByRole('article', { name: 'Detached Kid' })).toBeVisible();
     // ...and not also as a Stub inside its parent's Card.
@@ -83,35 +83,22 @@ test.describe('attached children on the board', () => {
     // this stale-row shape.)
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Invalid Workphase Child Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Diverged Parent', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    const temp = await (
-      await request.post(`${API}/workphases`, {
-        data: { workflowId: workflow.id, name: 'Temp' },
-      })
-    ).json();
-    const child = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Diverged Free Kid', parentId: parent.id, isAttached: false, workphaseId: temp.id },
-      })
-    ).json();
-    const grandchild = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Diverged Attached Grandkid', parentId: child.id },
-      })
-    ).json();
+    const parent = await seedItem(request, { title: 'Diverged Parent', projectId: project.id, workphaseId: todo.id });
+    const [temp] = await addWorkphases(request, workflow.id, ['Temp']);
+    const child = await seedItem(request, {
+      title: 'Diverged Free Kid',
+      parentId: parent.id,
+      isAttached: false,
+      workphaseId: temp.id,
+    });
+    const grandchild = await seedItem(request, { title: 'Diverged Attached Grandkid', parentId: child.id });
     await request.delete(`${API}/workphases/${temp.id}`);
 
-    const reloaded = await (await request.get(`${API}/items/${grandchild.id}`)).json();
+    const reloaded = await fetchItem(request, grandchild.id);
     expect(reloaded.workphaseId).toBeNull(); // confirms the invalid reference actually landed
     expect(reloaded.isAttached).toBe(1);
 
-    await page.goto('/');
-    await projectSidebar.select('Invalid Workphase Child Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Invalid Workphase Child Project');
 
     // The client excludes attached+parented rows from the "Unknown status"
     // list, so the grandchild never doubles up: it shows
@@ -139,16 +126,14 @@ test.describe('attached children on the board', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Board Toggle Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Toggle Default Parent', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    await request.post(`${API}/items`, { data: { title: 'Hidden Kid', parentId: parent.id } });
+    const parent = await seedItem(request, {
+      title: 'Toggle Default Parent',
+      projectId: project.id,
+      workphaseId: todo.id,
+    });
+    await seedItem(request, { title: 'Hidden Kid', parentId: parent.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Board Toggle Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Board Toggle Project');
 
     const card = page.getByRole('article', { name: 'Toggle Default Parent' });
     await expect(card.getByText('Hidden Kid')).toBeVisible(); // the setting defaults to on
@@ -160,18 +145,10 @@ test.describe('attached children on the board', () => {
     await expect(toggle).not.toBeChecked();
 
     // Persisted server-side...
-    const boards = await (await request.get(`${API}/boards?workflowId=${workflow.id}`)).json();
-    await expect
-      .poll(async () => {
-        const board = await (await request.get(`${API}/boards/${boards[0].id}`)).json();
-        return board.showAttachedChildren;
-      })
-      .toBe(0);
+    await expect.poll(async () => (await fetchDefaultBoard(request, workflow.id)).showAttachedChildren).toBe(0);
 
     // ...and a fresh load renders children collapsed, expandable via the badge.
-    await page.goto('/');
-    await projectSidebar.select('Board Toggle Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Board Toggle Project');
 
     const reloaded = page.getByRole('article', { name: 'Toggle Default Parent' });
     await expect(reloaded).toBeVisible();
@@ -188,29 +165,17 @@ test.describe('attached children on the board', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Badge Count Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: {
-          title: 'Badge Parent',
-          description: 'What the badge parent is for',
-          projectId: project.id,
-          workphaseId: todo.id,
-        },
-      })
-    ).json();
-    const attachedChild = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Attached One', parentId: parent.id },
-      })
-    ).json();
-    await request.post(`${API}/items`, {
-      data: { title: 'Detached One', parentId: parent.id, isAttached: false, workphaseId: todo.id },
+    const parent = await seedItem(request, {
+      title: 'Badge Parent',
+      description: 'What the badge parent is for',
+      projectId: project.id,
+      workphaseId: todo.id,
     });
-    await request.post(`${API}/items`, { data: { title: 'Nested Grand', parentId: attachedChild.id } });
+    const attachedChild = await seedItem(request, { title: 'Attached One', parentId: parent.id });
+    await seedItem(request, { title: 'Detached One', parentId: parent.id, isAttached: false, workphaseId: todo.id });
+    await seedItem(request, { title: 'Nested Grand', parentId: attachedChild.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Badge Count Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Badge Count Project');
 
     const card = page.getByRole('article', { name: 'Badge Parent' });
     await expect(card.getByText('Badge Parent', { exact: true })).toBeVisible();
@@ -235,25 +200,15 @@ test.describe('attached children on the board', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Drag Cascade Project');
     const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Draggable Parent', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    const child = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Cascading Kid', parentId: parent.id },
-      })
-    ).json();
+    const parent = await seedItem(request, { title: 'Draggable Parent', projectId: project.id, workphaseId: todo.id });
+    const child = await seedItem(request, { title: 'Cascading Kid', parentId: parent.id });
 
     // A cross-column move is a Board-layer band resolution: the card starts
     // locked to Todo, and a release still locked there commits Todo's own
     // reorder, not a foreign column's band — so this needs an actual pop
     // out first, not just a quick hover.
     const tuning = await seedDragTuning(page, { popDelayMs: 150 });
-    await page.goto('/');
-    await projectSidebar.select('Drag Cascade Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Drag Cascade Project');
 
     const card = page.getByRole('article', { name: 'Draggable Parent' });
     await expect(card).toBeVisible();
@@ -278,18 +233,13 @@ test.describe('attached children on the board', () => {
     await expect(movedCard.getByText('Cascading Kid')).toBeVisible();
 
     // Server: the cascade actually ran, not just optimistic client state.
-    await expect
-      .poll(async () => {
-        const updated = await (await request.get(`${API}/items/${child.id}`)).json();
-        return updated.workphaseId;
-      })
-      .toBe(inProgress.id);
+    await expect.poll(async () => (await fetchItem(request, child.id)).workphaseId).toBe(inProgress.id);
   });
 });
 
 test.describe('reparent and attach/detach controls', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${API}/test/reset`);
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
   });
 
   test('ATT-9.4: detaching a child via the detail panel keeps it in place when the parent moves', async ({
@@ -299,39 +249,27 @@ test.describe('reparent and attach/detach controls', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Detach Control Project');
     const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Movable Parent', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    const child = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Toggle Child', parentId: parent.id },
-      })
-    ).json();
+    const parent = await seedItem(request, { title: 'Movable Parent', projectId: project.id, workphaseId: todo.id });
+    const child = await seedItem(request, { title: 'Toggle Child', parentId: parent.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Detach Control Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Detach Control Project');
 
     await page.getByRole('article', { name: 'Movable Parent' }).click();
-    const panel = page.locator('div.fixed.top-0.right-0');
+    const panel = itemPanel(page);
     await expect(panel.getByText('Toggle Child')).toBeVisible();
     await panel.getByRole('button', { name: 'Attached' }).click();
     await expect(panel.getByRole('button', { name: 'Detached' })).toBeVisible();
 
-    const detached = await (await request.get(`${API}/items/${child.id}`)).json();
+    const detached = await fetchItem(request, child.id);
     expect(detached.isAttached).toBe(0);
 
     // Move the parent — the now-detached child should stay in its workphase.
-    await request.patch(`${API}/items/${parent.id}/move`, { data: { workphaseId: inProgress.id } });
-    const afterMove = await (await request.get(`${API}/items/${child.id}`)).json();
+    await moveItem(request, parent.id, { workphaseId: inProgress.id });
+    const afterMove = await fetchItem(request, child.id);
     expect(afterMove.workphaseId).toBe(todo.id);
 
     // And the board shows it: parent moved on, child stayed put as its own card.
-    await page.goto('/');
-    await projectSidebar.select('Detach Control Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Detach Control Project');
 
     await expect(
       page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Movable Parent' }),
@@ -348,21 +286,14 @@ test.describe('reparent and attach/detach controls', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Reparent Control Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const itemA = await (
-      await request.post(`${API}/items`, { data: { title: 'Item A', projectId: project.id, workphaseId: todo.id } })
-    ).json();
-    const itemB = await (
-      await request.post(`${API}/items`, { data: { title: 'Item B', projectId: project.id, workphaseId: todo.id } })
-    ).json();
-    await request.post(`${API}/items`, { data: { title: 'A Child', parentId: itemA.id } });
+    const itemA = await seedItem(request, { title: 'Item A', projectId: project.id, workphaseId: todo.id });
+    const itemB = await seedItem(request, { title: 'Item B', projectId: project.id, workphaseId: todo.id });
+    await seedItem(request, { title: 'A Child', parentId: itemA.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Reparent Control Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Reparent Control Project');
 
     await page.getByRole('article', { name: 'Item A' }).click();
-    const panel = page.locator('div.fixed.top-0.right-0');
-    const parentSelect = panel.getByLabel('Parent item');
+    const parentSelect = itemPanel(page).getByLabel('Parent item');
 
     // Cycle prevention in the UI: neither the item itself nor its descendant is offered.
     await expect(parentSelect.locator('option', { hasText: 'Item B' })).toHaveCount(1);
@@ -375,7 +306,7 @@ test.describe('reparent and attach/detach controls', () => {
     await expect(page.getByRole('article', { name: 'Item B' }).getByText('Item A')).toBeVisible();
     await expect(page.getByRole('article', { name: 'Item A' })).not.toBeVisible();
 
-    const updated = await (await request.get(`${API}/items/${itemA.id}`)).json();
+    const updated = await fetchItem(request, itemA.id);
     expect(updated.parentId).toBe(itemB.id);
   });
 
@@ -386,20 +317,10 @@ test.describe('reparent and attach/detach controls', () => {
   }) => {
     const { project, workflow } = await seedTemplatedWorkflow(request, 'Own Panel Project');
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const parent = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Own Panel Parent', projectId: project.id, workphaseId: todo.id },
-      })
-    ).json();
-    const child = await (
-      await request.post(`${API}/items`, {
-        data: { title: 'Own Panel Child', parentId: parent.id },
-      })
-    ).json();
+    const parent = await seedItem(request, { title: 'Own Panel Parent', projectId: project.id, workphaseId: todo.id });
+    const child = await seedItem(request, { title: 'Own Panel Child', parentId: parent.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Own Panel Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Own Panel Project');
 
     // The attached child is only a nested row — open its own panel from there.
     await expect(page.getByRole('article', { name: 'Own Panel Child' })).not.toBeVisible();
@@ -408,16 +329,15 @@ test.describe('reparent and attach/detach controls', () => {
       .getByRole('button', { name: 'Own Panel Child' })
       .click();
 
-    const panel = page.locator('div.fixed.top-0.right-0');
     // Controlled checkbox — state flips after the PUT resolves; avoid uncheck().
-    const attachedCheckbox = panel.getByLabel('Attached');
+    const attachedCheckbox = itemPanel(page).getByLabel('Attached');
     await attachedCheckbox.click();
     await expect(attachedCheckbox).not.toBeChecked();
 
     // The board updates live: the child becomes its own top-level card.
     await expect(page.getByRole('article', { name: 'Own Panel Child' })).toBeVisible();
 
-    const detached = await (await request.get(`${API}/items/${child.id}`)).json();
+    const detached = await fetchItem(request, child.id);
     expect(detached.isAttached).toBe(0);
   });
 
@@ -433,9 +353,7 @@ test.describe('reparent and attach/detach controls', () => {
     const p = await seedItem(request, { title: 'Stub Parent', parentId: g.id });
     await seedItem(request, { title: 'Loose Child', parentId: p.id, isAttached: false, workphaseId: inProgress.id });
 
-    await page.goto('/');
-    await projectSidebar.select('Attach Control Project');
-    await page.locator('main').getByRole('button', { name: 'Board' }).click();
+    await projectSidebar.openBoard('Attach Control Project');
 
     const ancestorCard = page.getByRole('article', { name: 'Ancestor Card' });
     const childCard = page.getByRole('article', { name: 'Loose Child' });
@@ -443,9 +361,8 @@ test.describe('reparent and attach/detach controls', () => {
     await expect(ancestorCard.getByText('Loose Child')).toHaveCount(0);
 
     await childCard.click();
-    const panel = page.locator('div.fixed.top-0.right-0');
     // Controlled checkbox — state flips after the PUT resolves; avoid check().
-    const attachedCheckbox = panel.getByLabel('Attached');
+    const attachedCheckbox = itemPanel(page).getByLabel('Attached');
     await attachedCheckbox.click();
     await expect(attachedCheckbox).toBeChecked();
 
@@ -470,16 +387,11 @@ test.describe('reparent and attach/detach controls', () => {
       workphaseId: inProgress.id,
     });
 
-    const openBoard = async () => {
-      await page.goto('/');
-      await projectSidebar.select('Free Reparent Project');
-      await page.locator('main').getByRole('button', { name: 'Board' }).click();
-    };
-    await openBoard();
+    await projectSidebar.openBoard('Free Reparent Project');
 
     // The picker sends only the new parent, never the attachment flag.
     await page.getByRole('article', { name: 'Free Kid' }).click();
-    await page.locator('div.fixed.top-0.right-0').getByLabel('Parent item').selectOption({ label: 'Second Parent' });
+    await itemPanel(page).getByLabel('Parent item').selectOption({ label: 'Second Parent' });
     await expect.poll(async () => (await fetchItem(request, kid.id)).parentId).toBe(second.id);
     expect(await fetchItem(request, kid.id)).toMatchObject({
       isAttached: 0,
@@ -488,7 +400,7 @@ test.describe('reparent and attach/detach controls', () => {
     });
 
     // Reloaded, it's still a Card in its own column, and not a Stub in its new parent's Card.
-    await openBoard();
+    await projectSidebar.openBoard('Free Reparent Project');
     await expect(
       page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Free Kid' }),
     ).toBeVisible();

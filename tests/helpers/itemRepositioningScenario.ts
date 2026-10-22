@@ -1,6 +1,6 @@
 import type { APIRequestContext } from '@playwright/test';
 import { API } from './api';
-import { seedPositionedItems } from './seed';
+import { addWorkphases, seedBareWorkflow, seedItem, seedPositionedItems, seedProjects, seedWorkflow } from './seed';
 
 export type ScenarioItem = {
   id: string;
@@ -21,24 +21,15 @@ export interface RepositioningScenario {
 
 // Builds the shared 8-case repositioning scenario: items A-E at positions
 // 1.0-5.0, with A/C/E in "Column One"'s workphase and B/D in "Column Two"'s
-// workphase. Position values are pinned explicitly via the /move endpoint's
-// raw `position` field, so the interleaved 1.0-5.0 layout this scenario
-// requires never depends on creation order or the append rule.
+// workphase. Position values are pinned explicitly through
+// `seed.ts::seedPositionedItems`, so the interleaved 1.0-5.0 layout this
+// scenario requires never depends on creation order or the append rule.
 export async function seedRepositioningScenario(
   request: APIRequestContext,
   projectName: string,
 ): Promise<RepositioningScenario> {
-  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
-  const workflow = await (
-    await request.post(`${API}/workflows`, { data: { name: projectName, projectId: project.id } })
-  ).json();
-
-  const colOnePhase = await (
-    await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Column One' } })
-  ).json();
-  const colTwoPhase = await (
-    await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Column Two' } })
-  ).json();
+  const { project, workflow } = await seedBareWorkflow(request, projectName);
+  const [colOnePhase, colTwoPhase] = await addWorkphases(request, workflow.id, ['Column One', 'Column Two']);
 
   const items = await seedPositionedItems(request, [
     { key: 'A', projectId: project.id, workphaseId: colOnePhase.id, position: 1.0 },
@@ -74,20 +65,18 @@ export async function seedCrossProjectRepositioningScenario(
   request: APIRequestContext,
   rootName: string,
 ): Promise<CrossProjectRepositioningScenario> {
-  const rootProject = await (await request.post(`${API}/projects`, { data: { name: rootName } })).json();
-  const project1a = await (
-    await request.post(`${API}/projects`, { data: { name: `${rootName} 1a`, parentId: rootProject.id } })
-  ).json();
-  const project1b = await (
-    await request.post(`${API}/projects`, { data: { name: `${rootName} 1b`, parentId: rootProject.id } })
-  ).json();
+  const names = { root: rootName, a: `${rootName} 1a`, b: `${rootName} 1b` };
+  const ids = await seedProjects(request, [
+    [names.root, null],
+    [names.a, names.root],
+    [names.b, names.root],
+  ]);
+  const rootProject = { id: ids[names.root], name: names.root };
+  const project1a = { id: ids[names.a], name: names.a };
+  const project1b = { id: ids[names.b], name: names.b };
 
-  const workflow = await (
-    await request.post(`${API}/workflows`, { data: { name: rootName, projectId: rootProject.id } })
-  ).json();
-  const sharedPhase = await (
-    await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Shared Phase' } })
-  ).json();
+  const workflow = await seedWorkflow(request, rootProject.id, rootName);
+  const [sharedPhase] = await addWorkphases(request, workflow.id, ['Shared Phase']);
 
   const items = await seedPositionedItems(request, [
     { key: 'A', projectId: project1a.id, workphaseId: sharedPhase.id, position: 1.0 },
@@ -102,7 +91,7 @@ export async function seedCrossProjectRepositioningScenario(
 
 type WorkflowItemRow = {
   title: string;
-  position: number;
+  position: number | null;
   createdAt: number;
   workphaseId: string | null;
   projectId: string | null;
@@ -170,40 +159,21 @@ export async function seedAttachedSiblingsScenario(
   request: APIRequestContext,
   projectName: string,
 ): Promise<AttachedSiblingsScenario> {
-  const project = await (await request.post(`${API}/projects`, { data: { name: projectName } })).json();
-  const workflow = await (
-    await request.post(`${API}/workflows`, { data: { name: projectName, projectId: project.id } })
-  ).json();
-  const phase = await (
-    await request.post(`${API}/workphases`, { data: { workflowId: workflow.id, name: 'Todo' } })
-  ).json();
+  const { project, workflow } = await seedBareWorkflow(request, projectName);
+  const [phase] = await addWorkphases(request, workflow.id, ['Todo']);
+  const freeCard = (title: string) =>
+    seedItem(request, { title, projectId: project.id, workphaseId: phase.id, isAttached: false });
 
-  const parent = await (
-    await request.post(`${API}/items`, {
-      data: { title: 'Parent', projectId: project.id, workphaseId: phase.id, isAttached: false },
-    })
-  ).json();
+  const parent = await freeCard('Parent');
 
   const items = {} as AttachedSiblingsScenario['items'];
   for (const key of ['A', 'B', 'C'] as const) {
-    items[key] = await (
-      await request.post(`${API}/items`, { data: { title: `Item ${key}`, parentId: parent.id } })
-    ).json();
+    items[key] = await seedItem(request, { title: `Item ${key}`, parentId: parent.id });
   }
 
-  const otherParent = await (
-    await request.post(`${API}/items`, {
-      data: { title: 'Other Parent', projectId: project.id, workphaseId: phase.id, isAttached: false },
-    })
-  ).json();
-  const otherChild = await (
-    await request.post(`${API}/items`, { data: { title: 'Other Child', parentId: otherParent.id } })
-  ).json();
-  const topLevel = await (
-    await request.post(`${API}/items`, {
-      data: { title: 'Top Level', projectId: project.id, workphaseId: phase.id, isAttached: false },
-    })
-  ).json();
+  const otherParent = await freeCard('Other Parent');
+  const otherChild = await seedItem(request, { title: 'Other Child', parentId: otherParent.id });
+  const topLevel = await freeCard('Top Level');
 
   return { project, workflow, phase, parent, items, otherParent, otherChild, topLevel };
 }
