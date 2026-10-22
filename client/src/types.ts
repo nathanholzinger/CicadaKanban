@@ -39,8 +39,7 @@ export interface Workphase {
 // Derived, read-only — what an item's `position` is actually comparable
 // against, computed server-side from isAttached/parentId/workphaseId/
 // workphase.isTerminal (never stored). Read through `isStub.ts::isStub`,
-// never re-derived from isAttached && parentId. Optional because hand-built
-// Item fixtures (tests) may omit it — real API responses always include it.
+// never re-derived from isAttached && parentId.
 export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
 
 export interface Item {
@@ -53,6 +52,8 @@ export interface Item {
   title: string;
   description: string | null;
   position: number | null;
+  // Optional in the type, though every API response carries it and
+  // `test/itemFixture.ts::makeItem` always sets it.
   positionScope?: PositionScope;
   assigneeType: string | null;
   agentId: string | null;

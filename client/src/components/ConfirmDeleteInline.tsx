@@ -17,9 +17,11 @@ interface ConfirmDeleteInlineProps {
 
 // Row/heading-replacement confirm-delete pattern. Distinct from
 // ConfirmDeleteButton, which augments a persistent icon rather than
-// replacing the whole line it sits on; SortableProjectRow's hover-revealed
-// variant is a genuine third shape, deliberately kept apart — fold it in
-// only if this component (or ConfirmDeleteButton) grows a matching mode.
+// replacing the whole line it sits on. SortableProjectRow's delete is a third
+// shape, kept apart: it swaps only the row's hover-revealed action cluster
+// (which also holds Add subproject) for Yes/No and leaves the handle, chevron
+// and name on screen, where this component replaces the whole line. Fold it
+// in only if this component grows a mode that replaces part of a line.
 export default function ConfirmDeleteInline({
   trigger,
   prompt,

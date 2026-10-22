@@ -1,7 +1,7 @@
 // Folding a position write's response into a list of positioned rows, for items
 // and projects alike (wiki positioning §8).
 
-import type { ReindexedPosition } from '../api/shared';
+import type { PositionedWriteResponse } from '../api/shared';
 
 // Order is the rule: apply every `reindexed` pair the list holds first (an
 // unknown id means "not in this view," never missing data), then upsert the
@@ -10,7 +10,7 @@ import type { ReindexedPosition } from '../api/shared';
 // `reindexed` is stripped so it never lands in a row.
 export function applyWriteResponse<Row extends { id: string; position: number | null }>(
   rows: readonly Row[],
-  response: Row & { reindexed?: ReindexedPosition[] },
+  response: PositionedWriteResponse<Row>,
 ): Row[] {
   if (!response.reindexed) return upsert(rows, response);
   const { reindexed, ...rest } = response;

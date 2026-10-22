@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
+import { applyWriteResponse } from '../../lib/positionedWrite';
 import { sendItemMove, toRequest } from './dragRequest';
 import { getWorkphaseItemsFrom, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import {
   EMPTY_ITEM_LIST_STATE,
-  applyItemWriteResponse,
   completeItemWrite,
   findInversion,
   freeItemOrder,
@@ -17,7 +17,7 @@ const placements = (entries: Array<[string, Placement]>) => new Map(entries);
 
 // The client half of reindex disclosure. Cross-reference TC-5a.1 and
 // TC-5a.2.
-describe('applyItemWriteResponse', () => {
+describe('applyWriteResponse, over items', () => {
   const list = () => [
     item('A', { position: 1.0 }),
     item('C', { position: 1.5 }),
@@ -37,7 +37,7 @@ describe('applyItemWriteResponse', () => {
         { id: 'E', position: 4 },
       ],
     };
-    const result = applyItemWriteResponse(list(), response);
+    const result = applyWriteResponse(list(), response);
     const positionOf = (id: string) => result.find(i => i.id === id)!.position;
     expect([positionOf('A'), positionOf('X'), positionOf('C'), positionOf('E')]).toEqual([1, 2, 3, 4]);
     expect(result.find(i => i.id === 'X')).not.toHaveProperty('reindexed');
@@ -45,12 +45,12 @@ describe('applyItemWriteResponse', () => {
 
   it('the written row wins over its own pair when they disagree — it is applied last', () => {
     const response = { ...item('X', { position: 2.5 }), reindexed: [{ id: 'X', position: 2 }] };
-    expect(applyItemWriteResponse(list(), response).find(i => i.id === 'X')!.position).toBe(2.5);
+    expect(applyWriteResponse(list(), response).find(i => i.id === 'X')!.position).toBe(2.5);
   });
 
   it('TC-5a.4: ignores pairs for ids not in the list — "not in this view," never missing data', () => {
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'unseen', position: 1 }] };
-    const result = applyItemWriteResponse(list(), response);
+    const result = applyWriteResponse(list(), response);
     expect(result).toHaveLength(4);
     expect(result.some(i => i.id === 'unseen')).toBe(false);
   });
@@ -58,14 +58,14 @@ describe('applyItemWriteResponse', () => {
   it('TC-5a.1: with no reindex, replaces the written row by reference and leaves every other row untouched', () => {
     const before = list();
     const written = item('X', { position: 3 });
-    const result = applyItemWriteResponse(before, written);
+    const result = applyWriteResponse(before, written);
     expect(result.find(i => i.id === 'X')).toBe(written);
     expect(result.find(i => i.id === 'A')).toBe(before[0]);
   });
 
   it('appends a written item the list does not yet hold (a create)', () => {
     const created = item('N', { position: 10 });
-    const result = applyItemWriteResponse(list(), created);
+    const result = applyWriteResponse(list(), created);
     expect(result).toHaveLength(5);
     expect(result[4]).toBe(created);
   });
@@ -73,7 +73,7 @@ describe('applyItemWriteResponse', () => {
   it("keeps a row's reference when its pair matches its current position", () => {
     const before = list();
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'A', position: 1.0 }] };
-    expect(applyItemWriteResponse(before, response).find(i => i.id === 'A')).toBe(before[0]);
+    expect(applyWriteResponse(before, response).find(i => i.id === 'A')).toBe(before[0]);
   });
 });
 

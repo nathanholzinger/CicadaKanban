@@ -19,9 +19,9 @@ interface ProjectOverviewTabProps {
 
 // The Overview tab's own concerns: description edit-in-place, the
 // parent-project selector, and the subprojects list with its own delete
-// confirmation. Expects to be keyed on project.id, so switching projects
-// resets all of this component's state by remounting rather than an
-// explicit reset effect.
+// confirmation. Switching projects resets all of this component's state by
+// remounting rather than an explicit reset effect: `App.tsx` keys the whole
+// `ProjectPage` on the project.
 export function ProjectOverviewTab({
   project,
   allProjects,

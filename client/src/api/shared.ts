@@ -1,20 +1,25 @@
-// apiJson/apiVoid/apiRequest — shared fetch helpers; always parse the server's real
-// { error } message with a fallback. Mirrors server/src/routes/*.ts, no barrel index.
+// What every module in this directory builds on (it mirrors server/src/routes/*.ts,
+// no barrel index): the one fetch/error path (`apiRequest`, `apiJson`, `apiVoid`),
+// so whether a failure surfaces the server's specific `{ error }` message or a
+// generic string never depends on which module wrote the call, and the envelope a
+// position write answers with (`PositionedWriteResponse`, `ReindexedPosition`).
 
 export const API = '/api';
 
 // One row a server-side reindex renumbered: `{id, position}` and nothing more
-// (wiki positioning §7). A position write's response carries them as `reindexed`
-// when a reindex fired.
+// (wiki positioning §7).
 export interface ReindexedPosition {
   id: string;
   position: number;
 }
 
-// These three helpers are the one fetch/error path every module function
-// in this directory builds on, so whether a failure surfaces the server's
-// specific `{ error }` message or a generic string never depends on which
-// module wrote the call.
+// A position write's answer: the fresh row and, only when a reindex fired, the
+// `reindexed` pairs covering every row it renumbered (the written one included).
+// Fold it in with `lib/positionedWrite.ts::applyWriteResponse`, never the row
+// alone. The field is optional, so a callback that takes a bare row still
+// type-checks and silently drops the pairs: anything that hands a write's
+// response on is typed with this.
+export type PositionedWriteResponse<Row> = Row & { reindexed?: ReindexedPosition[] };
 
 export interface ApiRequestInit {
   method?: string;

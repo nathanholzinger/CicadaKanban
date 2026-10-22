@@ -532,7 +532,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
       // A Stub's own stored `workphaseId` is a cache that goes stale the
       // moment its containing Card is moved through a client-observed write
-      // this session (`itemWriteReconciliation.ts::applyItemWriteResponse`
+      // this session (`itemWriteReconciliation.ts::completeItemWrite`
       // upserts only the written row). An attached item's `workphaseId`
       // always equals its nearest Free ancestor's, and a parent move writes
       // that ancestor's row directly, so the containing Card's *current* row

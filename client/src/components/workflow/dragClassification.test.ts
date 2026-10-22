@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
-import { classifyDragTargets, isValidParent, isWithinDepthCap } from './dragClassification';
+import { classifyDragTargets, isValidParent } from './dragClassification';
 
 // Every depth case parameterizes on `cap` rather than a literal, per
 // DRAG-2.10.
@@ -20,15 +20,6 @@ function chain(prefix: string, length: number): Item[] {
 }
 
 const CAP = 6;
-
-describe('isWithinDepthCap', () => {
-  it('is the whole rule: D + 1 + h <= cap', () => {
-    expect(isWithinDepthCap(1, 0, CAP)).toBe(true); // root target, leaf mover
-    expect(isWithinDepthCap(CAP - 1, 0, CAP)).toBe(true); // exactly cap
-    expect(isWithinDepthCap(CAP, 0, CAP)).toBe(false); // one deeper target
-    expect(isWithinDepthCap(CAP - 1, 1, CAP)).toBe(false); // one more level under the mover
-  });
-});
 
 // The one parent-legality answer: the region gate and the Descendants
 // layer's over-cap cue both read it, off the same drag-start snapshot.

@@ -215,20 +215,23 @@ function ItemDetailPanelContent({
     }
   }
 
+  // The three below take the write's whole response and hand it on as it came:
+  // its `reindexed` pairs are what the board folds in.
+
   // Called by AgentSection when the item's agent/assigneeType fields change.
-  function handleItemUpdated(updated: Item) {
+  function handleItemUpdated(updated: ItemWriteResponse) {
     setDetail(prev => (prev ? { ...prev, ...updated } : prev));
     onUpdate(updated);
   }
 
   // Called by ChildrenSection after a child is created.
-  function handleChildCreated(child: Item) {
+  function handleChildCreated(child: ItemWriteResponse) {
     setDetail(prev => (prev ? { ...prev, children: [...prev.children, child] } : prev));
     onChildCreated(child);
   }
 
   // Called by ChildrenSection when a child's attach state changes.
-  function handleChildUpdated(updated: Item) {
+  function handleChildUpdated(updated: ItemWriteResponse) {
     function replaceChild(c: Item): Item {
       if (c.id === updated.id) return { ...c, ...updated };
       return c;

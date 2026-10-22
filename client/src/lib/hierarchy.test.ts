@@ -1,19 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import {
+  byPositionThenCreatedAt,
   getAncestors,
   getDescendantIds,
   getDepth,
   getSubtreeHeight,
+  isWithinDepthCap,
   buildParentOptions,
+  type Positioned,
   type TreeNode,
 } from './hierarchy';
 
-interface NamedNode extends TreeNode {
+interface NamedNode extends TreeNode, Positioned {
   name: string;
 }
 
-function node(id: string, parentId: string | null = null): NamedNode {
-  return { id, parentId, name: `Node ${id}` };
+// Tied on position and creation unless a case says otherwise, so a case that
+// doesn't care about sibling order keeps the order it lists them in.
+function node(id: string, parentId: string | null = null, position: number | null = null, createdAt = 0): NamedNode {
+  return { id, parentId, position, createdAt, name: `Node ${id}` };
 }
 
 describe('getDescendantIds', () => {
@@ -44,8 +49,9 @@ describe('getDescendantIds', () => {
   });
 });
 
-// The client half of the depth-cap math, feeding drag-target
-// classification. Same counting convention as the server's
+// The client half of the depth-cap math: `getDepth` feeds the board's
+// drag-target classification, `getSubtreeHeight` that and the sidebar's
+// over-cap cue. Same counting convention as the server's
 // `itemTree.ts::hierarchyDepth` and `subtreeHeight` (root = 1, leaf height
 // = 0).
 describe('getDepth / getSubtreeHeight', () => {
@@ -75,6 +81,44 @@ describe('getDepth / getSubtreeHeight', () => {
     const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
     expect(typeof getDepth('a', cyclic)).toBe('number');
     expect(getSubtreeHeight('a', cyclic)).toBe(1); // b and c are one generation; the loop back to a is skipped
+  });
+});
+
+// The depth rule once, for the board's drag classification and the sidebar's
+// over-cap cue alike. Every case parameterizes on `cap` rather than a literal.
+describe('isWithinDepthCap', () => {
+  const CAP = 6;
+
+  it('is the whole rule: D + 1 + h <= cap', () => {
+    expect(isWithinDepthCap(1, 0, CAP)).toBe(true); // root target, leaf mover
+    expect(isWithinDepthCap(CAP - 1, 0, CAP)).toBe(true); // exactly cap
+    expect(isWithinDepthCap(CAP, 0, CAP)).toBe(false); // one deeper target
+    expect(isWithinDepthCap(CAP - 1, 1, CAP)).toBe(false); // one more level under the mover
+  });
+
+  it('a target depth of 0, the sidebar’s virtual top, fits a mover up to cap - 1 levels tall', () => {
+    expect(isWithinDepthCap(0, CAP - 1, CAP)).toBe(true);
+    expect(isWithinDepthCap(0, CAP, CAP)).toBe(false);
+  });
+});
+
+describe('byPositionThenCreatedAt', () => {
+  const sorted = (nodes: NamedNode[]) => [...nodes].sort(byPositionThenCreatedAt).map(n => n.id);
+
+  it('orders by position first, whatever the creation order', () => {
+    expect(sorted([node('late', null, 2, 1), node('early', null, 1, 9)])).toEqual(['early', 'late']);
+  });
+
+  it('breaks an exact position tie by creation', () => {
+    expect(sorted([node('b', null, 1, 20), node('a', null, 1, 10)])).toEqual(['a', 'b']);
+  });
+
+  it('counts a missing position as 0, ahead of a positive one whatever its creation', () => {
+    expect(sorted([node('p', null, 0.5, 1), node('none', null, null, 999)])).toEqual(['none', 'p']);
+  });
+
+  it('treats a missing position and a stored 0 as the same', () => {
+    expect(sorted([node('zero', null, 0, 2), node('none', null, null, 1)])).toEqual(['none', 'zero']);
   });
 });
 
@@ -132,8 +176,8 @@ describe('buildParentOptions', () => {
 describe('buildParentOptions with indent', () => {
   // Deliberately out of tree order, to prove grouping (not flat input order)
   // drives output — a node always lands under its parent even when the
-  // parent appears later in `nodes`. Sibling order within a group still
-  // follows input order.
+  // parent appears later in `nodes`. Siblings tied on position and creation
+  // keep their input order.
   const nodes = [node('a1', 'a'), node('sibling', 'root'), node('root'), node('a', 'root'), node('a1x', 'a1')];
 
   it('groups each node directly under its parent, depth-first', () => {
@@ -158,5 +202,20 @@ describe('buildParentOptions with indent', () => {
     const orphan = [...nodes, node('orphan', 'does-not-exist')];
     const options = buildParentOptions(orphan, 'ghost', n => n.name, '(none)', true);
     expect(options.map(o => o.value)).toEqual(['', 'root', 'sibling', 'a', 'a1', 'a1x', 'orphan']);
+  });
+
+  // The sidebar draws siblings in this order, and a reorder there changes only
+  // their positions, so the dropdown reads them, not the order it was handed.
+  it('lists siblings by position, then creation, not by the order of `nodes`', () => {
+    const reordered = [
+      node('root', null, 1),
+      node('last', 'root', 3, 1),
+      node('first', 'root', 1, 9),
+      node('tied-late', 'root', 2, 5),
+      node('tied-early', 'root', 2, 4),
+      node('first-child', 'first', 1),
+    ];
+    const options = buildParentOptions(reordered, 'ghost', n => n.name, '(none)', true);
+    expect(options.map(o => o.value)).toEqual(['', 'root', 'first', 'first-child', 'tied-early', 'tied-late', 'last']);
   });
 });

@@ -1,4 +1,5 @@
-// One row in the project tree sidebar — dnd-kit sortable.
+// One row in the project tree sidebar — dnd-kit sortable — and `DragGhost`, the
+// copy of it the drag overlay carries.
 
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';

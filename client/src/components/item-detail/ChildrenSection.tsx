@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Item, ItemDetail, ItemType } from '../../types';
-import { createItem, updateItem } from '../../api/items';
+import { createItem, updateItem, type ItemWriteResponse } from '../../api/items';
 import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, EMPTY_STATE } from './pillUtils';
 import { DetailSection } from './DetailSection';
 import InlineItemForm from '../InlineItemForm';
@@ -9,8 +9,8 @@ interface ChildrenSectionProps {
   item: ItemDetail;
   itemTypes: ItemType[];
   onNavigate: (id: string) => void;
-  onChildCreated: (child: Item) => void;
-  onChildUpdated: (updated: Item) => void;
+  onChildCreated: (child: ItemWriteResponse) => void;
+  onChildUpdated: (updated: ItemWriteResponse) => void;
 }
 
 function attachToggleClass(isAttached: boolean): string {

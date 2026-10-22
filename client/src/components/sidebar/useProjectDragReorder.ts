@@ -16,18 +16,10 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import type { Project } from '../../types';
-import { getSubtreeHeight } from '../../lib/hierarchy';
-import { computeProjection, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
+import { getDescendantLevels, isWithinDepthCap } from '../../lib/hierarchy';
+import { computeProjection, toRows, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
 import { resolveDropSide } from '../workflow/dragCollision';
-import {
-  eligibleRows,
-  fullChildrenOf,
-  getDescendantIds,
-  releaseOf,
-  resolveGap,
-  INDENT_WIDTH,
-  type FlatItem,
-} from './projectTreeUtils';
+import { fullChildrenOf, releaseOf, resolveGap, INDENT_WIDTH, type FlatItem } from './projectTreeUtils';
 
 const NO_IDS: ReadonlySet<string> = new Set();
 
@@ -57,18 +49,24 @@ export function useProjectDragReorder(
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
-  // The dragged project's descendants stay drawn, dimmed, but the project
-  // and its whole subtree are never a Top/Bottom candidate — `rows` is what
-  // a gap is computed against.
-  const descendantIds = useMemo(() => (activeId ? getDescendantIds(activeId, projects) : NO_IDS), [activeId, projects]);
+  // The dragged project's subtree, walked once: its descendants stay drawn,
+  // dimmed, and its height is what the cap reads.
+  const { descendantIds, height: subtreeHeight } = useMemo(() => {
+    if (!activeId) return { descendantIds: NO_IDS, height: 0 };
+    const levels = getDescendantLevels(activeId, projects);
+    return { descendantIds: new Set(levels.flat()), height: levels.length };
+  }, [activeId, projects]);
+  // The project and its whole subtree are never a Top/Bottom candidate:
+  // `rows`, what a gap is computed against, is every rendered row (a collapsed
+  // subtree already left `flatItems`) without them.
   const exclude = useMemo(() => (activeId ? new Set([activeId, ...descendantIds]) : NO_IDS), [activeId, descendantIds]);
-  const rows = eligibleRows(flatItems, exclude);
+  const rows = toRows(flatItems, exclude);
   // A Top's first-child lookup must see the *real* tree, not the render
   // list (which a collapsed project already left out).
   const childrenOf = fullChildrenOf(projects);
   // Where the drop line draws: "before" the row the gap sits above, or —
-  // the gap past the last row — "after" the last row. None only when no
-  // eligible row is left to draw it against.
+  // the gap past the last row — "after" the last row. None when there is no
+  // gap (nothing is `over`) or no eligible row is left to draw it against.
   const dropLine: AnchorRelation | null =
     gap === null || rows.length === 0
       ? null
@@ -76,11 +74,10 @@ export function useProjectDragReorder(
         ? { anchorId: rows[gap].id, side: 'before' }
         : { anchorId: rows[rows.length - 1].id, side: 'after' };
 
-  // The projection's depth counts the top level as 0, the cap's formula as 1.
+  // The projection's depth (the top level is 0) is the dropped project's parent's
+  // depth in the cap's count (a root is 1), so it is the cap's `targetDepth` as it stands.
   const overCap =
-    depthCap !== null && projected !== null && activeId !== null
-      ? projected.depth + 1 + getSubtreeHeight(activeId, projects) > depthCap
-      : false;
+    depthCap !== null && projected !== null && !isWithinDepthCap(projected.depth, subtreeHeight, depthCap);
 
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(String(active.id));
@@ -111,10 +108,7 @@ export function useProjectDragReorder(
       return;
     }
 
-    // Send the sibling id the server should insert beside — never a
-    // computed position (wiki positioning §5; the server always resolves it
-    // against true current data). `resolvePlacement`'s one relation maps straight to prevId/
-    // nextId; the other is always null, and the server re-derives it.
+    // prevId/nextId come off the projection's one anchor (`siblingIdsFromAnchor`, via `releaseOf`).
     const release = releaseOf(flatItems, activeItem.id, gap, projected);
     if (release) {
       // A project dropped into a collapsed parent opens it (wiki project-tree §2).

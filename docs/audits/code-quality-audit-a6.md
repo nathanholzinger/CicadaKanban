@@ -501,16 +501,19 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 8 | Fixed | Batch 3d |
 | 9 | Fixed | Batch 3e, the drag layer. The last bullet, `AttachGhostRow`, is restated, not merged: Nathan's call |
 | 10–12 | Fixed | Batch 3e, the drag layer |
-| 13–17 | open | — |
+| 13 | Fixed | Batch 3e, the sidebar, lib and api. The `types.ts` bullet fixes the comment; Nathan ruled `positionScope` stays optional |
+| 14 | Fixed | Batch 3e, the sidebar, lib and api |
+| 15–17 | open | — |
 | 18 | Fixed | Batch 3c |
 | 19 | Fixed | Batch 3d |
 | 20 | Fixed | Batch 3a |
 | 21–26 | Fixed | Batch 3d |
-| 27–29 | open | — |
+| 27–28 | Fixed | Batch 3e, the sidebar, lib and api |
+| 29 | Fixed | Batch 3e, the sidebar, lib and api. The project page's Parent dropdown changes order, which Nathan accepted |
 | 30 | Fixed | Batch 3e, the drag layer |
-| 31 | open | — |
+| 31 | Fixed | Batch 3e, the sidebar, lib and api. The test files' merge is the Reconciler's |
 | 32 | Fixed | Batch 3e, the drag layer |
-| 33 | open | — |
+| 33 | Fixed | Batch 3e, the sidebar, lib and api |
 | 34–37 | Fixed | Batch 3e, the drag layer |
 | 38–41 | open | — |
 | 42 | Fixed | Batch 3c |

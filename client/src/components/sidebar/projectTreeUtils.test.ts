@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   flattenTree,
-  getDescendantIds,
-  eligibleRows,
   fullChildrenOf,
   resolveGap,
   siblingIdsFromAnchor,
   INDENT_WIDTH,
   type FlatItem,
 } from './projectTreeUtils';
-import { computeProjection } from '../../lib/hierarchyPlacement';
+import { computeProjection, toRows } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
 
 function project(overrides: Partial<Project> & { id: string }): Project {
@@ -87,47 +85,11 @@ describe('flattenTree', () => {
   });
 });
 
-describe('getDescendantIds', () => {
-  it('returns an empty set for a leaf project', () => {
-    const leaf = project({ id: 'leaf' });
-    expect(getDescendantIds('leaf', [leaf])).toEqual(new Set());
-  });
-
-  it('returns children and grandchildren, excluding the project itself and unrelated siblings', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
-    const grandchild = project({ id: 'grandchild', parentId: 'child' });
-    const unrelated = project({ id: 'unrelated' });
-
-    const result = getDescendantIds('root', [root, child, grandchild, unrelated]);
-    expect(result).toEqual(new Set(['child', 'grandchild']));
-  });
-});
-
 // Shared fixture: A(depth0) -> [B(depth1), C(depth1)], D(depth0)
 const items = [flat('A', 0, null), flat('B', 1, 'A'), flat('C', 1, 'A'), flat('D', 0, null)];
 
-describe('eligibleRows', () => {
-  it('is the flat list minus the excluded ids, still depth/parentId-correct', () => {
-    const rows = eligibleRows(items, new Set());
-    expect(rows).toEqual([
-      { id: 'A', parentId: null, depth: 0 },
-      { id: 'B', parentId: 'A', depth: 1 },
-      { id: 'C', parentId: 'A', depth: 1 },
-      { id: 'D', parentId: null, depth: 0 },
-    ]);
-  });
-
-  // Dragging A excludes it and its whole subtree from candidacy, even though
-  // B/C still render (dimmed).
-  it('excludes the active project and its descendants', () => {
-    const rows = eligibleRows(items, new Set(['A', 'B', 'C']));
-    expect(rows.map(r => r.id)).toEqual(['D']);
-  });
-});
-
 describe('resolveGap', () => {
-  const rows = eligibleRows(items, new Set());
+  const rows = toRows(items);
 
   it('an eligible over id resolves the ordinary before/after gap', () => {
     expect(resolveGap(items, rows, new Set(), 'B', 'before')).toBe(1);
@@ -138,7 +100,7 @@ describe('resolveGap', () => {
   // single gap the whole A/B/C block collapsed to — never a dead zone.
   it('an excluded (dimmed descendant) over id resolves to the gap the whole dragged block collapsed to', () => {
     const excludeA = new Set(['A', 'B', 'C']);
-    const rowsWithoutA = eligibleRows(items, excludeA);
+    const rowsWithoutA = toRows(items, excludeA);
     expect(resolveGap(items, rowsWithoutA, excludeA, 'B', 'before')).toBe(0);
     expect(resolveGap(items, rowsWithoutA, excludeA, 'C', 'after')).toBe(0);
   });
@@ -148,7 +110,7 @@ describe('resolveGap', () => {
     // precedes it, so nothing eligible comes before the block.
     const soloItems = [flat('D', 0, null), flat('D1', 1, 'D')];
     const excludeD = new Set(['D', 'D1']);
-    const rowsWithoutD = eligibleRows(soloItems, excludeD);
+    const rowsWithoutD = toRows(soloItems, excludeD);
     expect(resolveGap(soloItems, rowsWithoutD, excludeD, 'D1', 'before')).toBe(0);
   });
 });
@@ -161,11 +123,10 @@ describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
     expect(childrenOfReal('root')).toEqual(['child']);
   });
 
-  // `root` collapsed means `child` never enters
-  // `flatItems`/`eligibleRows`, so the gap right after `root` (Top + 1,
-  // "root's first child") has no next row to read a first child off of.
-  // `computeProjection` must still resolve `child` as the anchor, using
-  // `fullChildrenOf`, not `eligibleRows`' own map.
+  // `root` collapsed means `child` never enters `flatItems`, or the rows made
+  // from it, so the gap right after `root` (Top + 1, "root's first child") has
+  // no next row to read a first child off of. `computeProjection` must still
+  // resolve `child` as the anchor, using `fullChildrenOf`, not the rows.
   it('a collapsed Top still resolves Top + 1 to its real first child', () => {
     const root = project({ id: 'root' });
     const child = project({ id: 'child', parentId: 'root' });
@@ -173,7 +134,7 @@ describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
     const flatCollapsed = flattenTree([root, child, sibling], new Set()); // root collapsed
     expect(flatCollapsed.map(i => i.id)).toEqual(['root', 'sibling']); // child never rendered
 
-    const rows = eligibleRows(flatCollapsed, new Set());
+    const rows = toRows(flatCollapsed);
     const childrenOfReal = fullChildrenOf([root, child, sibling]);
     const gap = resolveGap(flatCollapsed, rows, new Set(), 'sibling', 'before'); // between root (Top) and sibling (Bottom)
     const result = computeProjection(rows, gap, 0, 14, INDENT_WIDTH, null, childrenOfReal, new Set()); // one tab right of root

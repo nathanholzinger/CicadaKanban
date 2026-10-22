@@ -1,10 +1,27 @@
 // Tree math over flat { id, parentId } collections — descendants,
-// ancestors, depth, subtree height and reparent dropdown options — shared
-// by the project hierarchy and the item hierarchy.
+// ancestors, depth, subtree height, the depth-cap rule and reparent dropdown
+// options — and the sibling order, shared by the project hierarchy and the
+// item hierarchy.
+
+import { flattenHierarchyOf } from './hierarchyPlacement';
 
 export interface TreeNode {
   id: string;
   parentId: string | null;
+}
+
+// What the sibling order reads.
+export interface Positioned {
+  position: number | null;
+  createdAt: number;
+}
+
+// The order siblings are listed in (wiki positioning §1): `position`, a
+// missing one counting as 0, then `createdAt`. The tie-break keeps an exact
+// match from depending on unspecified DB row order. The sidebar's tree, the
+// board's lists and the project page's parent dropdown all sort with this.
+export function byPositionThenCreatedAt(a: Positioned, b: Positioned): number {
+  return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
 }
 
 // A single <select> option — the shape buildParentOptions (below) and any
@@ -114,17 +131,27 @@ export function getSubtreeHeight(id: string, nodes: readonly TreeNode[]): number
   return getDescendantLevels(id, nodes).length;
 }
 
+// The whole depth rule (wiki hierarchy-placement §6): a target at depth D is a
+// legal parent iff D + 1 + draggedSubtreeHeight <= cap. Root items are at
+// depth 1; a leaf has height 0 — the counting `getDepth` and `getSubtreeHeight`
+// above do. Deliberately separate from `itemTree.ts::assertWithinDepthCap`: the
+// same formula on each side of the process boundary, fed here by the client's
+// own in-memory traversal.
+export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap: number): boolean {
+  return targetDepth + 1 + subtreeHeight <= cap;
+}
+
 // Reparent dropdown options: every node except the current one and its
 // descendants (either would create a cycle), preceded by a "none" entry.
 //
 // Default (`indent: false`) preserves the input order of `nodes` — cheap and
 // enough for a same-parent-scoped list (e.g. an item's sibling candidates).
-// `indent: true` instead walks the tree depth-first, grouping each node
-// under its parent and prefixing deeper nodes with `·` per level — used for
-// dropdowns spanning multiple tree levels (e.g. the full project tree) where
-// flat input order wouldn't read as a hierarchy. A node whose `parentId`
-// isn't present in `nodes` is treated as a root.
-export function buildParentOptions<T extends TreeNode>(
+// `indent: true` instead walks the tree depth-first (`flattenHierarchyOf`),
+// siblings in `byPositionThenCreatedAt` order, and prefixes deeper nodes with
+// `·` per level — used for dropdowns spanning multiple tree levels (e.g. the
+// full project tree) where flat input order wouldn't read as a hierarchy. A
+// node whose `parentId` isn't present in `nodes` is treated as a root.
+export function buildParentOptions<T extends TreeNode & Positioned>(
   nodes: readonly T[],
   currentId: string,
   labelOf: (node: T) => string,
@@ -144,19 +171,18 @@ export function buildParentOptions<T extends TreeNode>(
   const ids = new Set(nodes.map(n => n.id));
   const byParent = new Map<string | null, T[]>();
   for (const n of nodes) {
+    if (excluded.has(n.id)) continue;
     const key = n.parentId !== null && ids.has(n.parentId) ? n.parentId : null;
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(n);
   }
+  for (const siblings of byParent.values()) siblings.sort(byPositionThenCreatedAt);
 
-  const options: SelectOption[] = [{ value: '', label: noneLabel }];
-  function traverse(parentId: string | null, depth: number) {
-    for (const n of byParent.get(parentId) ?? []) {
-      if (excluded.has(n.id)) continue;
-      options.push({ value: n.id, label: '·'.repeat(depth) + (depth > 0 ? ' ' : '') + labelOf(n) });
-      traverse(n.id, depth + 1);
-    }
-  }
-  traverse(null, 0);
-  return options;
+  return [
+    { value: '', label: noneLabel },
+    ...flattenHierarchyOf(null, parentId => byParent.get(parentId) ?? []).map(({ item, depth }) => ({
+      value: item.id,
+      label: '·'.repeat(depth) + (depth > 0 ? ' ' : '') + labelOf(item),
+    })),
+  ];
 }

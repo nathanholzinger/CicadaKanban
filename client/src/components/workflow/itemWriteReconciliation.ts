@@ -9,27 +9,9 @@
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';
+import { byPositionThenCreatedAt } from '../../lib/hierarchy';
 import { applyWriteResponse } from '../../lib/positionedWrite';
-import {
-  NO_PLACEMENTS,
-  applyPlacements,
-  byPositionThenCreatedAt,
-  renderedIsStub,
-  type Placement,
-  type Placements,
-} from './itemListOps';
-
-// Fold an item-write response into the list, pairs first, then the written row
-// (`lib/positionedWrite.ts::applyWriteResponse`).
-//
-// Only the written row is upserted: the server's `workphaseId` cascade to
-// attached descendants isn't mirrored here, so their stored copies stay
-// stale until the next load. A drag never reads those copies — a Stub's
-// drag takes its containing Card's `workphaseId` at drag start
-// (`useBoardDnd.ts`).
-export function applyItemWriteResponse(items: readonly Item[], response: ItemWriteResponse): Item[] {
-  return applyWriteResponse(items, response);
-}
+import { NO_PLACEMENTS, applyPlacements, renderedIsStub, type Placement, type Placements } from './itemListOps';
 
 // The board-wide rendered order of Free, positioned items — what the ordinal
 // preview makes a claim about. Positions compare workflow-wide, so the
@@ -89,6 +71,12 @@ export function withPlacement(state: ItemListState, itemId: string, placement: P
 // only fires for a write the board previewed; a Sheet edit that reassigns a
 // position made no ordinal claim.
 //
+// Only the written row is upserted (`lib/positionedWrite.ts::applyWriteResponse`):
+// the server's `workphaseId` cascade to attached descendants isn't mirrored
+// here, so their stored copies stay stale until the next load. A drag never
+// reads those copies — a Stub's drag takes its containing Card's `workphaseId`
+// at drag start (`useBoardDnd.ts`).
+//
 // `recorded` is the exact placement object `writes.begin` stashed when this
 // write started (undefined for a write that was never placement-tracked —
 // a Sheet PUT, an inline create, a child create). Clearing the placement
@@ -104,7 +92,7 @@ export function completeItemWrite(
   response: ItemWriteResponse,
   recorded?: Placement | null,
 ): ItemListState {
-  const items = applyItemWriteResponse(state.items, response);
+  const items = applyWriteResponse(state.items, response);
   if (recorded === undefined || state.placements.get(response.id) !== recorded) return { ...state, items };
 
   const before = freeItemOrder(state.items, state.placements);

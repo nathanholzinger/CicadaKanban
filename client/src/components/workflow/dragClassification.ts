@@ -16,7 +16,7 @@
 // would be for a Free Card's.
 
 import type { Item } from '../../types';
-import { getDepth, getDescendantLevels } from '../../lib/hierarchy';
+import { getDepth, getDescendantLevels, isWithinDepthCap } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';
 
 export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped';
@@ -40,15 +40,6 @@ export interface DragClassification {
    * for `'cycle-forming'`.
    */
   subtreeIds: ReadonlySet<string>;
-}
-
-// The whole depth rule (wiki hierarchy-placement §6): a target at depth D is a
-// legal parent iff D + 1 + draggedSubtreeHeight <= cap. Root items are at
-// depth 1; a leaf has height 0. Deliberately separate from
-// `itemTree.ts::assertWithinDepthCap`: the same formula on each side of the
-// process boundary, fed here by the client's own in-memory traversal.
-export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap: number): boolean {
-  return targetDepth + 1 + subtreeHeight <= cap;
 }
 
 // Whether `id` is a legal parent for the carried item, off the drag-start

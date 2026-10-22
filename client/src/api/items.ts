@@ -1,18 +1,15 @@
 import type { Item, ItemDetail } from '../types';
-import { apiJson, apiVoid, type ReindexedPosition } from './shared';
-
-export type { ReindexedPosition };
+import { apiJson, apiVoid, type PositionedWriteResponse } from './shared';
 
 export function fetchItem(id: string): Promise<ItemDetail> {
   return apiJson(`/items/${id}`, undefined, 'Failed to fetch item');
 }
 
 // Every item write (POST / PUT / PATCH move) answers with the fresh row and,
-// only when a lazy reindex renumbered other rows in the same transaction,
-// the `reindexed` collection covering every one of them (the written item
-// included). Absent means no reindex fired. Fold it in with
-// `itemWriteReconciliation.ts::completeItemWrite` — never merge the row alone.
-export type ItemWriteResponse = Item & { reindexed?: ReindexedPosition[] };
+// when a lazy reindex renumbered other rows in the same transaction, the
+// `reindexed` pairs. Fold it into the board with
+// `itemWriteReconciliation.ts::completeItemWrite`.
+export type ItemWriteResponse = PositionedWriteResponse<Item>;
 
 export function createItem(data: {
   type?: string | null;
@@ -40,11 +37,12 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
 // data, never a client-computed value; no request names a final position
 // (wiki positioning §2).
 //
-// `parentId` (null = make top-level) and `isAttached` ride along with any
-// of the above and commit in the same transaction — the shape the board's
-// attach/detach gestures send. Omitting `isAttached` keeps the item's
-// current state. `projectId` is never sent: a cross-project parent derives
-// and cascades it server-side (wiki item-attachment §9).
+// `parentId` (null = make top-level) and `isAttached` ride along with the
+// placement fields (`workphaseId`, `anchorId`, `side`) and commit in the same
+// transaction — the shape the board's attach/detach gestures send. Omitting
+// `isAttached` keeps the item's current state. `projectId` is never sent: a
+// cross-project parent derives and cascades it server-side
+// (wiki item-attachment §9).
 //
 // The server also accepts a `scopeWorkphaseIds` field, which has no effect
 // on scope; this type leaves it out.

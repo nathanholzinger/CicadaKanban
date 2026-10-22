@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Item, ItemDetail } from '../../types';
-import { updateItem } from '../../api/items';
+import { updateItem, type ItemWriteResponse } from '../../api/items';
 import { buildParentOptions as buildTreeParentOptions } from '../../lib/hierarchy';
 import type { SelectOption } from '../../lib/hierarchy';
 import { SELECT_BASE } from './pillUtils';
@@ -9,7 +9,7 @@ import { DetailSection } from './DetailSection';
 interface ParentSectionProps {
   item: ItemDetail;
   allItems: Item[];
-  onSelfUpdated: (updated: Item) => void;
+  onSelfUpdated: (updated: ItemWriteResponse) => void;
 }
 
 // Candidate reparent targets: items in the same project, excluding the item

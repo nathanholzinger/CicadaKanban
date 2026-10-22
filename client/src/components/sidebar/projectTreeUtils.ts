@@ -1,17 +1,18 @@
-// Sidebar-only project tree helpers (flattening, drop validation).
+// Sidebar-only project tree helpers: the render list (`flattenTree`) and the
+// row indent it is drawn at (`INDENT_WIDTH`, `projectRowIndentPx`).
 // Placement itself is the shared `lib/hierarchyPlacement.ts`, the same rule
-// as a board Card's Descendants layer. This module is the adapter: turning
-// the sidebar's own `FlatItem[]` render list into the library's `Row[]`,
-// and its resolved `{ parentId, anchor }` back into `onReorderProject`'s
-// prevId/nextId pair, or into no write at all for a set-down in the
-// project's own slot.
+// as a board Card's Descendants layer. This module is the adapter around it:
+// the gap a hovered row names (`resolveGap`), the real tree's `childrenOf`
+// (`fullChildrenOf`), and a resolved `{ parentId, anchor }` turned back into
+// `onReorderProject`'s prevId/nextId pair, or into no write at all for a
+// set-down in the project's own slot (`releaseOf`).
 
 import type { Project } from '../../types';
+import { byPositionThenCreatedAt } from '../../lib/hierarchy';
 import {
   flattenHierarchyOf,
   gapIndexFor,
   ownSlotOf,
-  toRows,
   type AnchorRelation,
   type DropSide,
   type Projection,
@@ -28,8 +29,9 @@ export interface FlatItem {
 }
 
 export const INDENT_WIDTH = 14;
-// A row's own left inset at depth 0. Unrelated to the board's 12px Stub
-// indent (`cardMetrics.ts`): the two are equal by coincidence (both `px-3`).
+// A row's own left inset at depth 0. Not the board's 12px
+// (`cardMetrics.ts::DESCENDANTS_INDENT_PX`): that one is the board's step per
+// level, this is a base inset, and the two are equal by coincidence.
 const ROW_BASE_INSET_PX = 12;
 
 // A row's content inset at `depth` — one spelling for the row's own padding
@@ -39,9 +41,9 @@ export function projectRowIndentPx(depth: number): number {
   return ROW_BASE_INSET_PX + depth * INDENT_WIDTH;
 }
 
-// parentId -> its children, sorted the way the server orders siblings: position,
-// a missing one counting as 0, then createdAt (wiki positioning §1). Shared by `flattenTree` (the render list,
-// collapse-aware) and `fullChildrenOf` (the real tree, collapse-blind).
+// parentId -> its children, in sibling order (`byPositionThenCreatedAt`). Shared
+// by `flattenTree` (the render list, collapse-aware) and `fullChildrenOf` (the
+// real tree, collapse-blind).
 function childrenByParent(projects: readonly Project[]): Map<string | null, Project[]> {
   const childMap = new Map<string | null, Project[]>();
   for (const p of projects) {
@@ -49,13 +51,7 @@ function childrenByParent(projects: readonly Project[]): Map<string | null, Proj
     if (!childMap.has(key)) childMap.set(key, []);
     childMap.get(key)!.push(p);
   }
-  for (const children of childMap.values()) {
-    children.sort((a, b) => {
-      const posA = a.position ?? 0;
-      const posB = b.position ?? 0;
-      return posA !== posB ? posA - posB : a.createdAt - b.createdAt;
-    });
-  }
+  for (const children of childMap.values()) children.sort(byPositionThenCreatedAt);
   return childMap;
 }
 
@@ -79,19 +75,6 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
 export function fullChildrenOf(projects: readonly Project[]): (parentId: string | null) => readonly string[] {
   const childMap = childrenByParent(projects);
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
-}
-
-// Descendant collection is generic tree math — shared with the item
-// hierarchy via lib/hierarchy; re-exported here for the sidebar.
-export { getDescendantIds } from '../../lib/hierarchy';
-
-// The rows `hierarchyPlacement.ts` reasons about — every *rendered* row
-// (collapsed subtrees already left `flatItems`), minus `exclude` (the
-// active project and its whole subtree, never a Top/Bottom candidate).
-// `flatItems` is already the walk's own output, so this only drops the
-// dragged subtree.
-export function eligibleRows(flatItems: readonly FlatItem[], exclude: ReadonlySet<string>): Row[] {
-  return toRows(flatItems, exclude);
 }
 
 // The gap is `over` row + side, one of n + 1 (`gapIndexFor`), so a project
@@ -138,9 +121,10 @@ export interface ProjectRelease {
 
 // What a release writes: the projection's parent and the sibling to insert
 // beside, or nothing (null) at the project's own gap and depth. The sidebar
-// has the whole tree in view, so no project can sit unseen between its
+// always has full context, so no project can sit unseen between its
 // neighbors, and the release can't move it (wiki project-tree §1). `gap`
-// is the one the projection was computed at, among `eligibleRows`.
+// is the one the projection was computed at, among the rows without the
+// dragged subtree.
 export function releaseOf(
   flatItems: readonly FlatItem[],
   activeId: string,

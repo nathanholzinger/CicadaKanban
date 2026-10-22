@@ -3,12 +3,11 @@
 // sidebar. Pure, table-generic: never imports Item or
 // Project, only `{ id, parentId, depth }` rows and a `childrenOf` callback,
 // the same posture as the server's positionResolver. Lives beside
-// `hierarchy.ts` (the one shared tree-math layer) but is its own module —
-// `hierarchy.ts`'s `getDepth`/`getDescendantIds`/`getSubtreeHeight` are
-// what a caller's own `isValid` predicate is built from, not something this
-// file calls itself (the resolved parent is a real item/project id from the
-// caller's own dataset; only the caller knows how to look its absolute
-// depth up).
+// `hierarchy.ts` (the one shared tree-math layer) but is its own module. It
+// resolves the parent a depth lands on and never reads a depth cap: the
+// resolved parent is a real item/project id from the caller's own dataset, so
+// only the caller can look its absolute depth up and judge it
+// (`hierarchy.ts::isWithinDepthCap`).
 
 // depth 0 = the root's direct children — the root itself is never a row.
 // `parentId` mirrors `rootId`'s own type: null at depth 0 when the caller's
@@ -103,11 +102,12 @@ export function gapIndexFor(rows: readonly Row[], overId: string, side: DropSide
   return side === 'before' ? idx : idx + 1;
 }
 
-// Where a row already sits, as a gap and a depth: what a drag of that row
-// starts from, so a release before any movement resolves to its own slot,
+// Where a row already sits, as a gap and a depth: what a board drag of that
+// row starts from, so a release before any movement resolves to its own slot,
 // and a release at that gap and depth writes nothing
-// (wiki hierarchy-placement §5). `rows` is the section *with* the dragged
-// subtree.
+// (wiki hierarchy-placement §5). The sidebar's drag has no gap until it first
+// moves, so it asks only the second question (`projectTreeUtils.ts::releaseOf`).
+// `rows` is the section *with* the dragged subtree.
 // That subtree is one contiguous block starting at `id` (a DFS), so every
 // row above `id` survives the exclusion, and `id`'s index here is its gap
 // among the rows that remain. Null when `id` isn't a row.
@@ -120,8 +120,8 @@ export function ownSlotOf(rows: readonly Row[], id: string): { gap: number; dept
 // row just above the gap (what the item will sit directly under), Bottom
 // the row just below (what it will sit directly above) — either may be
 // absent at the hierarchy's own ends, which is exactly where the range's
-// boundaries come from: no Top -> hi = 0 (the root's own depth); no Bottom
-// -> lo = 0 (nothing shallower than the root either).
+// boundaries come from: no Top -> hi = 0; no Bottom -> lo = 0. Depth 0 is the
+// root's direct children, the shallowest there is (the root itself is never a row).
 export function depthRangeFor(rows: readonly Row[], gap: number): { lo: number; hi: number } {
   const top = rows[gap - 1];
   const bottom = rows[gap];

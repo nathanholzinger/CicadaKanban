@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { Agent, Item, ItemDetail } from '../../types';
+import type { Agent, ItemDetail } from '../../types';
 import { fetchAgents } from '../../api/agents';
-import { updateItem } from '../../api/items';
+import { updateItem, type ItemWriteResponse } from '../../api/items';
 import { DetailSection } from './DetailSection';
 
 interface AgentSectionProps {
   item: ItemDetail;
-  onUpdate: (updated: Item) => void;
+  onUpdate: (updated: ItemWriteResponse) => void;
 }
 
 export function AgentSection({ item, onUpdate }: AgentSectionProps) {

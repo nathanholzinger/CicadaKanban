@@ -12,7 +12,7 @@
 // A write's response is folded into these lists by `itemWriteReconciliation.ts`.
 
 import type { Item } from '../../types';
-import { getDescendantIds } from '../../lib/hierarchy';
+import { byPositionThenCreatedAt, getDescendantIds } from '../../lib/hierarchy';
 import { flattenHierarchyOf, type AnchorRelation, type HierarchyNode } from '../../lib/hierarchyPlacement';
 import { isStub } from '../../lib/isStub';
 
@@ -149,17 +149,11 @@ function slotIndex(list: Item[], item: Item, slot: PlacementSlot, sortedIndex: M
 
 // ── Selectors ──────────────────────────────────────────────────────────────
 
-// Deterministic tie-break for an exact position match — prevents order from
-// depending on unspecified DB row order (wiki positioning §1).
-export function byPositionThenCreatedAt(a: Item, b: Item): number {
-  return (a.position ?? 0) - (b.position ?? 0) || a.createdAt - b.createdAt;
-}
-
 // A done list's order (wiki item-positioning §6). An item with no
 // completedAt in a done list is one being previewed into it — the server
 // stamps `now` on the write — so it sorts as the newest completion: the
 // slot the response will put it in (wiki board-drag-interaction §10). Same
-// createdAt tie-break as byPositionThenCreatedAt.
+// createdAt tie-break as `lib/hierarchy.ts::byPositionThenCreatedAt`.
 function byCompletedAtThenCreatedAt(a: Item, b: Item): number {
   const at = (item: Item) => item.completedAt ?? Number.MAX_SAFE_INTEGER;
   return at(a) - at(b) || a.createdAt - b.createdAt;

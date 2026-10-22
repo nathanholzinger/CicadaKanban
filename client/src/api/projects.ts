@@ -1,11 +1,9 @@
 import type { Project } from '../types';
-import { apiJson, apiVoid, type ReindexedPosition } from './shared';
+import { apiJson, apiVoid, type PositionedWriteResponse } from './shared';
 
-// A project write answers with the fresh row and, only when a lazy reindex
-// renumbered its siblings, the `reindexed` pairs covering every one of them
-// (the written project included; wiki positioning §7). Fold it in with
-// `lib/positionedWrite.ts::applyWriteResponse`, never the row alone.
-export type ProjectWriteResponse = Project & { reindexed?: ReindexedPosition[] };
+// A project write answers with the fresh row and, when a lazy reindex
+// renumbered its siblings, the `reindexed` pairs (wiki positioning §7).
+export type ProjectWriteResponse = PositionedWriteResponse<Project>;
 
 export function fetchProjectDepthCap(): Promise<number> {
   return apiJson<{ projectDepthCap: number }>(

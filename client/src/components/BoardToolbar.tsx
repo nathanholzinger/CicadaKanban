@@ -1,5 +1,8 @@
-// Board switcher + board create/rename/delete, add-column/manage-workphases/
-// drag-tuning entry points.
+// The board toolbar: the board switcher, board create/rename/delete, the
+// "show attached children by default" toggle, and the add-column,
+// manage-workphases and drag-tuning entry points. Owns its own board
+// create/rename form state — callers only need the board list and the
+// underlying API handlers.
 
 import { useState } from 'react';
 import type { Board } from '../types';
@@ -19,9 +22,6 @@ interface BoardToolbarProps {
   onToggleDragTuning: () => void;
 }
 
-// Board switcher + board CRUD, and the column/workphase-manager entry points.
-// Owns its own board create/rename form state — callers only need the board
-// list and the underlying API handlers.
 export default function BoardToolbar({
   boards,
   activeBoardId,

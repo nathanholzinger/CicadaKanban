@@ -164,7 +164,7 @@ describe('DRAG-4.8: depthRangeFor', () => {
     expect(depthRangeFor(rows, 0)).toEqual({ lo: 0, hi: 0 });
   });
 
-  it('DRAG-4.11: below the last item (no Bottom) offers the root’s depth up to Top + 1', () => {
+  it('DRAG-4.11: below the last item (no Bottom) offers depth 0, the root’s children, up to Top + 1', () => {
     expect(depthRangeFor(rows, rows.length)).toEqual({ lo: 0, hi: 1 });
   });
 
@@ -282,7 +282,7 @@ describe('TREE-1.5: resolvePlacement — a Top whose children are hidden from ro
 // enumerates a whole gap at once — the board/sidebar each resolve one depth
 // per sample — so this drives the same two production functions a caller
 // actually uses, `depthRangeFor` for the range and `resolvePlacement` per
-// depth, rather than a test-only wrapper over them.
+// depth, rather than a test-only wrapper over them).
 describe('depthRangeFor + resolvePlacement — every reachable depth in a gap', () => {
   const rows = flattenHierarchy('P', childrenOf);
 
