@@ -149,8 +149,8 @@ describe('resolveBoardCollisions', () => {
 
     // As in stock dnd-kit sortable, the dragged card's own row is an
     // in-context candidate, so resting over its own slot is
-    // `over` itself and nothing shuffles. Only a column drag (no session)
-    // never collides with itself (the first case above).
+    // `over` itself and nothing shuffles. Only a drag with no session never
+    // collides with itself (the describe's first case).
     it("in-context: the dragged card's own row is a candidate too", () => {
       const session: CollisionSession = { hoverContainerId: null, context, descendantsSectionRect: null };
       const own: Container = { id: 'card-x', data: itemRowData('card'), rect: rect(5, 70, 90, 50) };
@@ -228,15 +228,14 @@ describe('dropAnchorFor', () => {
   function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' = 'card'): Over {
     return {
       id,
-      rect: { top, height: 100, bottom: top + 100, left: 0, right: 100, width: 100 },
+      rect: rect(0, top, 100, 100),
       disabled: false,
       data: { current: { ...itemRowData(role), sortable: { containerId: 'col', index: items.indexOf(id), items } } },
-    } as unknown as Over;
+    };
   }
 
   function dragged(id: string, centerY: number) {
-    const translated = { top: centerY - 10, height: 20, bottom: centerY + 10, left: 0, right: 100, width: 100 };
-    return { id, rect: { current: { initial: null, translated } } };
+    return { id, rect: { current: { initial: null, translated: rect(0, centerY - 10, 100, 20) } } };
   }
 
   it('moving up onto B: the ghost takes B\'s slot top-aligned; up names "after A", down "before B" — one slot', () => {
@@ -302,12 +301,12 @@ describe('dropAnchorFor', () => {
   // own container droppable (or the pop machine's Board-layer hover
   // container) registers.
   it('over a bare container (no row data): nothing to anchor to', () => {
-    const bareContainer = {
+    const bareContainer: Over = {
       id: 'column-container',
-      rect: { top: 0, height: 400, bottom: 400, left: 0, right: 100, width: 100 },
+      rect: rect(0, 0, 100, 400),
       disabled: false,
       data: { current: {} },
-    } as unknown as Over;
+    };
     expect(dropAnchorFor(dragged('x', 50), bareContainer)).toBeNull();
   });
 

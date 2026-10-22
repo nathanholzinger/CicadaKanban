@@ -297,8 +297,7 @@ describe('computeChildCounts', () => {
   });
 });
 
-// The ordinal placement layer. Cross-reference TC-2.27, TC-2.28, TC-2.29,
-// TC-2.30, DRAG-6.1, DRAG-6.2.
+// The ordinal placement layer.
 describe('applyPlacements', () => {
   const sorted = () => [item('A', { position: 1 }), item('C', { position: 3 }), item('E', { position: 5 })];
   const x = () => item('X', { position: 9 });

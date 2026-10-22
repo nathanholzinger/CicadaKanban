@@ -1,5 +1,13 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { cardRegionKey, descendantsRegionKey, type CardListRegion, type Rect } from './dragRegions';
+import {
+  DRAG_REGION_ATTR,
+  cardRegionKey,
+  columnRegionKey,
+  descendantsRegionKey,
+  subrowRegionKey,
+  type CardListRegion,
+  type Rect,
+} from './dragRegions';
 import {
   clipToVisible,
   hasDetachedElements,
@@ -8,31 +16,30 @@ import {
   regionElements,
   resolveDragStructure,
 } from './dragStructure';
-import { rect, column } from '../../test/dragFixtures';
+import { column, mockRect, rect, regionEl } from '../../test/dragFixtures';
 
 // Regions come from two steps: a structural resolve (which elements exist,
 // their kind/parent chain/scroll ancestor/column facts — everything that
 // survives a layer change) and a scoped measurement (live rects and card
 // count, for exactly the region matching `scope` plus its own children).
-// Every case below runs both steps.
+// Most cases below run both steps; the two `has…` cases need only the first.
 describe('resolveDragStructure / measureRegions', () => {
-  function mockRect(el: HTMLElement, r: ReturnType<typeof rect>) {
-    Object.defineProperty(el, 'getBoundingClientRect', { value: () => ({ ...r, x: r.left, y: r.top }) });
-  }
-
-  // A sub-row's `[data-drag-region]` element sits inside its column's
-  // `overflow-y-auto` scroll box (dragStructure.ts::findVerticalScrollAncestor
-  // finds it by computed style, not by class name).
-  function buildScrolledSubrow(subrowRectValue: ReturnType<typeof rect>, boxRectValue: ReturnType<typeof rect>) {
+  // A scroll box (`overflow-y: auto`) measuring `r`, around `children`.
+  function scrollBoxEl(r: Rect, ...children: HTMLElement[]) {
     const box = document.createElement('div');
     box.style.overflowY = 'auto';
-    mockRect(box, boxRectValue);
-    const subrowEl = document.createElement('div');
-    subrowEl.setAttribute('data-drag-region', 'subrow:col-1:w1');
-    mockRect(subrowEl, subrowRectValue);
-    box.appendChild(subrowEl);
-    document.body.appendChild(box);
+    mockRect(box, r);
+    box.append(...children);
     return box;
+  }
+
+  const elementOf = (key: string) => document.querySelector(`[${DRAG_REGION_ATTR}="${key}"]`)!;
+
+  // A sub-row's region element sits inside its column's `overflow-y-auto` scroll
+  // box (dragStructure.ts::findVerticalScrollAncestor finds it by computed style,
+  // not by class name).
+  function buildScrolledSubrow(subrowRect: Rect, boxRect: Rect) {
+    document.body.append(scrollBoxEl(boxRect, regionEl(subrowRegionKey('col-1', 'w1'), subrowRect)));
   }
 
   afterEach(() => {
@@ -57,40 +64,28 @@ describe('resolveDragStructure / measureRegions', () => {
   // `measureRegions` produce the `kind: 'card'` shape end to end
   // (`dragFixtures.ts::cardRegion` builds one directly where the DOM isn't
   // the subject).
-  function buildCardInColumn(
-    columnId: string,
-    columnRectValue: ReturnType<typeof rect>,
-    cardId: string,
-    cardRectValue: ReturnType<typeof rect>,
-  ) {
-    const columnEl = document.createElement('div');
-    columnEl.setAttribute('data-drag-region', `column:${columnId}`);
-    mockRect(columnEl, columnRectValue);
-    const cardEl = document.createElement('div');
-    cardEl.setAttribute('data-drag-region', `card:${cardId}`);
-    mockRect(cardEl, cardRectValue);
-    columnEl.appendChild(cardEl);
-    document.body.appendChild(columnEl);
+  function buildCardInColumn(columnId: string, columnRect: Rect, cardId: string, cardRect: Rect) {
+    document.body.append(regionEl(columnRegionKey(columnId), columnRect, regionEl(cardRegionKey(cardId), cardRect)));
   }
 
   it("registers a valid card as its own kind:'card' region, parented to the column that contains it — reachable by scoping to that column", () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], id => id === 'item-1');
-    const regions = measureRegions(structure, 'column:col-1'); // the column itself, plus its own children
+    const regions = measureRegions(structure, columnRegionKey('col-1')); // the column itself, plus its own children
     expect(regions).toHaveLength(2);
     const card = regions.find(r => r.kind === 'card');
     expect(card).toMatchObject({
-      key: 'card:item-1',
+      key: cardRegionKey('item-1'),
       kind: 'card',
       attachToCardId: 'item-1',
-      parentRegionKey: 'column:col-1',
+      parentRegionKey: columnRegionKey('col-1'),
     });
   });
 
   it('DRAG-1.7, DRAG-1.8: an id isValidCard rejects resolves no region at all — same as an unresolvable column key', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => false);
-    const regions = measureRegions(structure, 'column:col-1');
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     expect(regions.find(r => r.kind === 'card')).toBeUndefined();
   });
 
@@ -103,11 +98,11 @@ describe('resolveDragStructure / measureRegions', () => {
     buildCardInColumn('col-2', rect(120, 0, 100, 400), 'item-2', rect(125, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1']), column('col-2', ['w2'])], () => true);
 
-    const scopedToCol1 = measureRegions(structure, 'column:col-1');
-    expect(scopedToCol1.map(r => r.key).sort()).toEqual(['card:item-1', 'column:col-1']);
+    const scopedToCol1 = measureRegions(structure, columnRegionKey('col-1'));
+    expect(scopedToCol1.map(r => r.key).sort()).toEqual([cardRegionKey('item-1'), columnRegionKey('col-1')]);
 
     const board = measureRegions(structure, null);
-    expect(board.map(r => r.key).sort()).toEqual(['column:col-1', 'column:col-2']);
+    expect(board.map(r => r.key).sort()).toEqual([columnRegionKey('col-1'), columnRegionKey('col-2')]);
   });
 
   it('hasDetachedElements: false while every cached element is in the document, true once one is replaced', () => {
@@ -115,7 +110,7 @@ describe('resolveDragStructure / measureRegions', () => {
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true);
     expect(hasDetachedElements(structure)).toBe(false);
 
-    const cardEl = document.querySelector('[data-drag-region="card:item-1"]')!;
+    const cardEl = elementOf(cardRegionKey('item-1'));
     cardEl.replaceWith(cardEl.cloneNode());
     expect(hasDetachedElements(structure)).toBe(true);
     expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
@@ -128,9 +123,7 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(structure.some(s => s.kind === 'card')).toBe(false); // an invalid Card: seen, never resolved
     expect(hasNewRegionElements(document, seen)).toBe(false);
 
-    const section = document.createElement('div');
-    section.setAttribute('data-drag-region', descendantsRegionKey('item-1'));
-    document.querySelector(`[data-drag-region="${cardRegionKey('item-1')}"]`)!.appendChild(section);
+    elementOf(cardRegionKey('item-1')).append(regionEl(descendantsRegionKey('item-1')));
     expect(hasNewRegionElements(document, seen)).toBe(true);
     expect(hasNewRegionElements(document, new Set(regionElements(document)))).toBe(false);
   });
@@ -140,14 +133,9 @@ describe('resolveDragStructure / measureRegions', () => {
   // region `rect`. A short column with room below its last card is where
   // the two differ.
   it("DRAG-1.25: a merged column's boundsRect is its own outer body, taller than the content-sized region", () => {
-    const box = document.createElement('div');
-    box.style.overflowY = 'auto';
-    mockRect(box, rect(0, 0, 300, 400)); // the outer body — y 0..400
-    const columnEl = document.createElement('div');
-    columnEl.setAttribute('data-drag-region', 'column:col-1');
-    mockRect(columnEl, rect(0, 0, 300, 120)); // the content-sized region — y 0..120
-    box.appendChild(columnEl);
-    document.body.appendChild(box);
+    const outerBody = rect(0, 0, 300, 400); // y 0..400
+    const contentSized = rect(0, 0, 300, 120); // the region itself — y 0..120
+    document.body.append(scrollBoxEl(outerBody, regionEl(columnRegionKey('col-1'), contentSized)));
 
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])]);
     const [region] = measureRegions(structure, null) as [CardListRegion];
@@ -174,24 +162,9 @@ describe('resolveDragStructure / measureRegions', () => {
   // A `descendants:<cardId>` element resolves for the drag's own
   // `originCardId`, and for any other Card only when `isValidCard` accepts
   // it, the same gate as a `card:` region.
-  function buildCardWithDescendants(
-    columnId: string,
-    cardId: string,
-    cardRectValue: ReturnType<typeof rect>,
-    descendantsRectValue: ReturnType<typeof rect>,
-  ) {
-    const columnEl = document.createElement('div');
-    columnEl.setAttribute('data-drag-region', `column:${columnId}`);
-    mockRect(columnEl, rect(0, 0, 300, 400));
-    const cardEl = document.createElement('div');
-    cardEl.setAttribute('data-drag-region', `card:${cardId}`);
-    mockRect(cardEl, cardRectValue);
-    const descendantsEl = document.createElement('div');
-    descendantsEl.setAttribute('data-drag-region', `descendants:${cardId}`);
-    mockRect(descendantsEl, descendantsRectValue);
-    cardEl.appendChild(descendantsEl);
-    columnEl.appendChild(cardEl);
-    document.body.appendChild(columnEl);
+  function buildCardWithDescendants(columnId: string, cardId: string, cardRect: Rect, descendantsRect: Rect) {
+    const card = regionEl(cardRegionKey(cardId), cardRect, regionEl(descendantsRegionKey(cardId), descendantsRect));
+    document.body.append(regionEl(columnRegionKey(columnId), rect(0, 0, 300, 400), card));
   }
 
   it("resolves the origin's own Descendants section, parented to its Card", () => {
@@ -250,7 +223,7 @@ describe('resolveDragStructure / measureRegions', () => {
       () => false, // every card is an invalid target for this drag
       'card-p',
     );
-    const regions = measureRegions(structure, 'column:col-1');
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     expect(regions.find(r => r.key === cardRegionKey('card-p'))).toBeDefined();
   });
 });

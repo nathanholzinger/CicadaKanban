@@ -3,8 +3,8 @@ import type { Item } from '../../types';
 import { makeItem } from '../../test/itemFixture';
 import { classifyDragTargets, isValidParent } from './dragClassification';
 
-// Every depth case parameterizes on `cap` rather than a literal, per
-// DRAG-2.10.
+// Every depth case parameterizes on `cap` rather than a literal, so a change to the
+// cap's value touches none of them.
 
 // Positional alias over the shared fixture — these cases only ever vary
 // parent and attachment (positionScope follows from those, per makeItem).
@@ -37,12 +37,12 @@ describe('isValidParent', () => {
 });
 
 describe('classifyDragTargets — Card drag', () => {
-  it('a legal target is Valid (DRAG-2.1)', () => {
+  it('DRAG-2.1: a legal target is Valid', () => {
     const items = [item('X'), item('T')];
     expect(classifyDragTargets('X', items, CAP).states.get('T')).toBe('valid');
   });
 
-  it('the dragged item and every descendant are Cycle-forming, regardless of attachment (DRAG-2.2)', () => {
+  it('DRAG-2.2: the dragged item and every descendant are Cycle-forming, regardless of attachment', () => {
     const items = [
       item('X'),
       item('S', 'X'), // attached Stub inside X
@@ -59,13 +59,13 @@ describe('classifyDragTargets — Card drag', () => {
     expect(subtreeIds).toEqual(new Set(['X', 'S', 'D', 'D1']));
   });
 
-  it('only the Free descendants carry the relationship marker (DRAG-2.5)', () => {
+  it('DRAG-2.5: only the Free descendants carry the relationship marker', () => {
     const items = [item('X'), item('S', 'X'), item('D', 'X', false), item('D1', 'D'), item('D2', 'D', false)];
     const { freeDescendantIds } = classifyDragTargets('X', items, CAP);
     expect(freeDescendantIds).toEqual(new Set(['D', 'D2']));
   });
 
-  it.each([4, 6, 8])('depth-caps a target one level too deep, parameterized on cap = %i (DRAG-2.3)', cap => {
+  it.each([4, 6, 8])('DRAG-2.3: depth-caps a target one level too deep, parameterized on cap = %i', cap => {
     // T_ok at depth cap - 1 with a leaf mover: exactly cap. T_over sits under it.
     const targets = chain('T', cap); // T1..T{cap}: T{cap-1} is T_ok, T{cap} is T_over
     const items = [...targets, item('X')];
@@ -74,7 +74,7 @@ describe('classifyDragTargets — Card drag', () => {
     expect(states.get(`T${cap}`)).toBe('depth-capped');
   });
 
-  it('subtree height counts detached descendants (ATT-4.5 via classification)', () => {
+  it('ATT-4.5: subtree height counts detached descendants, as classification reads it', () => {
     // X has an attached child (h=1 via that branch) and a detached child
     // with its own child (h=2). A target at depth CAP - 2 admits h = 1 but
     // not h = 2.
@@ -85,7 +85,7 @@ describe('classifyDragTargets — Card drag', () => {
     expect(classifyDragTargets('X', shallower, CAP).states.get(`T${CAP - 2}`)).toBe('valid');
   });
 
-  it('Stubs are classified individually — no blanket exclusion (DRAG-2.7)', () => {
+  it('DRAG-2.7: Stubs are classified individually — no blanket exclusion', () => {
     // P's Stub is at depth 2: legal for a leaf. Q's Stub sits at the bottom
     // of a chain and would put X past the cap.
     const q = chain('Q', CAP); // Q{cap} is a Stub at depth cap
@@ -113,14 +113,14 @@ describe('classifyDragTargets — Card drag', () => {
   });
 });
 
-describe('classifyDragTargets — Stub drag (full classification, DRAG-2.8)', () => {
+describe('DRAG-2.8: classifyDragTargets — Stub drag (full classification)', () => {
   it('a Stub is classified exactly like a Card would be — its own parent, its siblings, and every other Card/Stub included, no blanket exclusion', () => {
     const items = [item('P'), item('S1', 'P'), item('S2', 'P'), item('Q'), item('SQ', 'Q'), item('V')];
     const { states } = classifyDragTargets('S1', items, CAP);
     expect(states.get('S1')).toBe('cycle-forming');
-    // S1's own parent P is a legal reparent-to-root-ish target (S1 is
-    // already under it, well within depth), Q and its Stub are ordinary
-    // Valid targets (the zoom-in reparent, DRAG-5.4), and a sibling is Valid.
+    // S1's own parent P is a legal target (S1 is already under it, well within
+    // depth), Q and its Stub are ordinary Valid targets (the zoom-in reparent,
+    // DRAG-5.4), and a sibling is Valid.
     expect(states.get('S2')).toBe('valid');
     expect(states.get('P')).toBe('valid');
     expect(states.get('Q')).toBe('valid');

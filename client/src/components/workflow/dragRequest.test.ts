@@ -8,11 +8,11 @@ import type { ItemWriteTracker } from './useItemManagement';
 // A placement that resolves to the item's own *origin* list and ordinal
 // writes nothing.
 describe('isIdentity', () => {
-  const freeOrigin: Placement = { workphaseId: 'w2', slot: 'existing' };
+  const origin = freeOrigin('w2');
   const others = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
 
-  it('a different workphase is never identity, whatever the slot (DRAG-3.1, DRAG-3.2, DRAG-3.6)', () => {
-    const outsiderOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+  it('DRAG-3.1, DRAG-3.2, DRAG-3.6: a different workphase is never identity, whatever the slot', () => {
+    const outsiderOrigin = freeOrigin('w1');
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(false);
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(
@@ -20,41 +20,41 @@ describe('isIdentity', () => {
     );
   });
 
-  it('same workphase, slot existing: always identity (middle band member, DRAG-3.12)', () => {
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
+  it('DRAG-3.12: same workphase, slot existing: always identity (middle band member)', () => {
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
     // An omitted workphaseId means "unchanged" — same rule, no literal to compare.
-    expect(isIdentity(freeOrigin, { slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(origin, { slot: 'existing' }, others)).toBe(true);
   });
 
   it('same workphase, empty others: any slot is identity — nothing to order against', () => {
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
   });
 
   it('same workphase, empty others, but a genuine outsider: not identity — the workphase itself is still changing', () => {
-    const outsiderOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+    const outsiderOrigin = freeOrigin('w1');
     expect(isIdentity(outsiderOrigin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(false);
   });
 
-  it('same workphase, non-empty others, a real anchor found: not identity — a genuine reorder (DRAG-3.7 top/bottom)', () => {
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: 'last' }, others)).toBe(false);
+  it('DRAG-3.7: same workphase, non-empty others, a real anchor found: not identity — a genuine reorder (top/bottom)', () => {
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: { anchorId: 'A', side: 'before' } }, others)).toBe(false);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'first' }, others)).toBe(false);
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: 'last' }, others)).toBe(false);
   });
 
   it('same workphase, an anchor absent from others (hovering itself, or a stray id): identity — nothing sensible to order against', () => {
-    expect(isIdentity(freeOrigin, { workphaseId: 'w2', slot: { anchorId: 'not-there', side: 'after' } }, others)).toBe(
+    expect(isIdentity(origin, { workphaseId: 'w2', slot: { anchorId: 'not-there', side: 'after' } }, others)).toBe(
       true,
     );
   });
 
   it("a parentId placement compares against the origin's own parentId, never a workphase", () => {
-    const stubOrigin: Placement = { parentId: 'card-1', slot: 'existing' };
-    expect(isIdentity(stubOrigin, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
-    expect(isIdentity(stubOrigin, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
+    const fromCard1 = stubOrigin('card-1');
+    expect(isIdentity(fromCard1, { parentId: 'card-1', slot: 'existing' }, others)).toBe(true);
+    expect(isIdentity(fromCard1, { parentId: 'card-2', slot: 'existing' }, others)).toBe(false);
     // A Free Card's origin has no parentId key at all to match against.
-    expect(isIdentity(freeOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
+    expect(isIdentity(origin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
   });
 
   // A detached child's origin is a *workphase* placement (its own, wherever
@@ -62,7 +62,7 @@ describe('isIdentity', () => {
   // collide with a re-attach's `parentId` placement, and no `isAttached`
   // guard is needed.
   it("a detached child re-attaching to its own former parent is not identity — its origin is a workphase placement, never that parent's", () => {
-    const detachedChildOrigin: Placement = { workphaseId: 'w1', slot: 'existing' };
+    const detachedChildOrigin = freeOrigin('w1');
     expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'last' }, [])).toBe(false);
     expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
   });
@@ -72,8 +72,8 @@ describe('isIdentity', () => {
   // that's recognized as identity here too, not just structurally equal by
   // construction.
   it("DRAG-5.12: a Stub's own origin, placed back at itself, is identity — the set-back-down", () => {
-    const stubOrigin: Placement = { parentId: 'card-p', slot: 'existing' };
-    expect(isIdentity(stubOrigin, stubOrigin, others)).toBe(true);
+    const fromCardP = stubOrigin('card-p');
+    expect(isIdentity(fromCardP, fromCardP, others)).toBe(true);
   });
 });
 
@@ -94,7 +94,7 @@ describe('TC-2.11: toRequest', () => {
     ).toBeNull();
   });
 
-  it('cross-column, no anchor: workphaseId alone (DRAG-3.3 outsider, middle band)', () => {
+  it('DRAG-3.3: cross-column, no anchor: workphaseId alone (outsider, middle band)', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'existing' }, others)).toEqual(
       {
         workphaseId: 'w2',
@@ -117,7 +117,7 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  it("TC-7.1, TC-7.2, TC-7.4: first/last resolve to a concrete anchor beside others' own edge (DRAG-3.1, DRAG-3.2)", () => {
+  it("TC-7.1, TC-7.2, TC-7.4, DRAG-3.1, DRAG-3.2: first/last resolve to a concrete anchor beside others' own edge", () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, others)).toEqual({
       workphaseId: 'w2',
       anchorId: 'A',
@@ -149,7 +149,7 @@ describe('TC-2.11: toRequest', () => {
     expect(place('last')).toEqual({ workphaseId: 'todo', anchorId: 'E', side: 'after' });
   });
 
-  it('empty others: first/last send a bare workphase move, no anchor to resolve (DRAG-3.10)', () => {
+  it('DRAG-3.10: empty others: first/last send a bare workphase move, no anchor to resolve', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'w2', slot: 'first' }, [])).toEqual({
       workphaseId: 'w2',
     });
@@ -169,7 +169,7 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  it("a done region never anchors — DRAG-3.9 is placementFor's own fallback to 'existing', already exercised there; toRequest just never sees a first/last/anchor slot for one", () => {
+  it("a done region never anchors — placementFor falls back to 'existing' for one, so toRequest never sees a first/last/anchor slot for it", () => {
     expect(
       toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'done', slot: 'existing' }, [
         { id: 'D1' },

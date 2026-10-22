@@ -2,12 +2,14 @@
 
 import type { Item } from '../types';
 
-// positionScope is server-computed in production (never hand-set by a
-// caller) — derived here from isAttached/parentId the same way the API
-// does, so fixtures stay consistent with real data instead of every test
-// separately tracking two things that always agree. The flag defaults to a
-// child's state: set with a parent, clear without (wiki item-attachment §1, §14).
-// An explicit override still wins, for tests about the field itself.
+// positionScope is server-computed in production (never hand-set by a caller). The
+// fixture derives it from isAttached/parentId, so a test doesn't track two things that
+// always agree: an attached item with a parent is 'attached-siblings', any other
+// 'workflow'. It is never 'none', which the API gives an item in a terminal workphase
+// (wiki item-positioning §2), since the fixture knows no workphase's terminality.
+// isAttached defaults to a child's state: set with a parent, clear without
+// (wiki item-attachment §1, §14). An explicit override still wins, for tests about
+// the field itself.
 export function makeItem(id: string, overrides: Partial<Item> = {}): Item {
   const parentId = overrides.parentId ?? null;
   const isAttached = overrides.isAttached ?? (parentId ? 1 : 0);

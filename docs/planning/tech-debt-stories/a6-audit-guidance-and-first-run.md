@@ -232,7 +232,11 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `client/src/api/shared.ts`, `items.ts`, `projects.ts`; `client/src/lib/positionedWrite.ts`; `client/src/components/ItemDetailPanel.tsx`, `item-detail/AgentSection.tsx`, `ChildrenSection.tsx`, `ParentSection.tsx`; `ItemDetailPanel.test.tsx` (new) | 3e sidebar, lib and api done | #33: `api/shared.ts::PositionedWriteResponse<Row>`; `ItemWriteResponse` and `ProjectWriteResponse` are aliases of it, `applyWriteResponse` takes it, and the Sheet's callbacks are typed with it. #13: `api/items.ts`'s unused re-export of `ReindexedPosition` is gone | Coder |
 | `client/src/components/ProjectPage.tsx`, `ProjectOverviewTab.tsx` | 3e sidebar, lib and api done | #14: both inner keys and their six-line comment are gone. `ProjectOverviewTab`'s header says the remount on a project switch comes from `App.tsx` keying the whole page | Coder |
 | Comments and headers in the sidebar, `lib/` and `api/`; `types.ts`, `BoardToolbar.tsx`, `ConfirmDeleteInline.tsx`, `SortableProjectRow.tsx`, `hierarchyPlacement.ts`, `hierarchyPlacement.test.ts` | 3e sidebar, lib and api done | #13, each written beside its final code | Coder |
-| `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37 | Coder |
+| `client/src/test/projectFixture.ts` (new), `client/src/lib/positionedWrite.test.ts`, `client/src/components/sidebar/projectTreeUtils.test.ts`, `useProjectDragReorder.test.ts` | 3f client tests done | #38: `makeProject`, shaped like `makeItem`; the three local `Project` factories are gone | Coder |
+| `client/src/test/popFixtures.ts`, `client/src/components/workflow/popSession.test.ts`, `placement.test.ts` | 3f client tests done | #38: `threeColumnBoard` also builds column A's Cards P and Q and P's Descendants section, with the points in and above the section, so the five copies of that layer are one. #15: `POP_TEST_TUNING` pins the distance term and the three zoom delays as well as the two it pinned, and both suites say they read their waits from it | Coder |
+| `client/src/test/dragFixtures.ts`, `client/src/components/workflow/dragStructure.test.ts`, `dragRegions.test.ts`, `dragCollision.test.ts`, `dragRequest.test.ts` | 3f client tests done | #38: `regionEl` and `mockRect` in the fixtures replace the DOM-building helpers in the two region test files; `dragCollision.test.ts` builds its rects with `rect()`; `dragRequest.test.ts` calls `freeOrigin` and `stubOrigin` where it shadowed them. #15: the fixture file's header and comments | Coder |
+| `client/src/components/workflow/itemWriteReconciliation.test.ts`, `itemListOps.test.ts`, `dragClassification.test.ts`; `client/src/components/sidebar/useProjectDragReorder.test.ts`; `client/src/test/itemFixture.ts`; `client/src/components/BandGuides.test.tsx` | 3f client tests done | #38: the wiki's worked example is hoisted once in `itemWriteReconciliation.test.ts`. #15: case IDs at the start of titles, the cross-reference comments deleted, the smaller comment fixes | Coder |
+| `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
@@ -338,6 +342,13 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **Two test files test one function.** #31 deleted `applyItemWriteResponse`, so `itemWriteReconciliation.test.ts`'s describe now calls `applyWriteResponse`, as `positionedWrite.test.ts` does. I renamed the describe, kept its cases and their TC-5a.1 and TC-5a.4 IDs, and left the merge to you, as the report routes it.
   - **Tests of the deleted wrappers.** `projectTreeUtils.test.ts`'s `getDescendantIds` and `eligibleRows` describes are gone, two tests each. `hierarchy.test.ts`'s `getDescendantIds` tests and `hierarchyPlacement.test.ts`'s `toRows` tests cover the same ground, including "keeps only the row fields". `isWithinDepthCap`'s test moved from `dragClassification.test.ts` to `hierarchy.test.ts`, with no ID in its title.
   - **A title changed.** `hierarchyPlacement.test.ts`'s DRAG-4.11 case "below the last item" says "depth 0, the root's children" where it said "the root's depth", since the root is never a row (#13).
+
+*From the Coder, batch 3f (1 of 2), the client tests (2026-10-21).*
+
+- **For the Test Reconciler:**
+  - **IDs that moved in titles.** `dragClassification.test.ts`, `dragRequest.test.ts` and `dragRegions.test.ts` now start every title that names an ID with it, and the Stub-drag describe in `dragClassification.test.ts` carries DRAG-2.8. In `useProjectDragReorder.test.ts`, TREE-1.10 moved out of TREE-1.9's describe into one of its own, and TREE-1.11, which was in no title, now heads the cap describe. It covers that describe's three cases, including "marks nothing invalid while the cap is unknown".
+  - **A title lost an ID that wasn't its case.** `dragRequest.test.ts`'s "a done region never anchors" named DRAG-3.9, which `placement.test.ts` covers; it names nothing now.
+- **For the Architect:** root `CLAUDE.md` and `testing-strategy.md` say items come from `makeItem`. Projects have the same factory now, `client/src/test/projectFixture.ts::makeProject`, if you want the rule stated for both.
 
 ## Amendments
 
@@ -517,3 +528,35 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **#31's merge of the two test files is not done,** per the report's route to the Reconciler.
     - **`positionScope` stays optional,** which Nathan confirmed. Only its comment changed.
   - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 445 client, 83 script tests. `npm run check:docs` reports the one hit from 3d, `.claude/personas/coder.md:60`, and nothing else. `npm run test:e2e` passes: 164 passed, 8 skipped.
+- **2026-10-21, batch 3f (1 of 2), the client tests (the Coder): #38 and #15.** I split 3f the way 3e was split: the client tests here, the server tests (#39, #16) next. No production file changed. The client still runs 445 tests: none added, none deleted.
+  - **The fixes.**
+
+    | # | Fix | Where |
+    |---|---|---|
+    | 38 | `makeProject`; the three local factories are gone | `test/projectFixture.ts` (new) |
+    | 38 | The Card-and-section layer is built once, on `threeColumnBoard()` | `test/popFixtures.ts`; read by `popSession.test.ts` and `placement.test.ts` |
+    | 38 | `regionEl(key, rect?, ...children)` and `mockRect`, built on `dragRegionProps`; the five builders, the two verbatim copies and the hand-spelled attribute and keys go | `test/dragFixtures.ts`; `dragStructure.test.ts`, `dragRegions.test.ts` |
+    | 38 | `rect()` and `cardRegion()` where the fixtures already build the shape; `freeOrigin` and `stubOrigin` called, not shadowed | `dragCollision.test.ts`, `dragRegions.test.ts`, `dragRequest.test.ts` |
+    | 38 | The wiki's worked example is written once | `itemWriteReconciliation.test.ts` |
+    | 15 | `POP_TEST_TUNING` pins what the cases depend on, and the two suites say they read their waits from it | `test/popFixtures.ts`, `popSession.test.ts`, `placement.test.ts` |
+    | 15 | IDs at the start of titles; the cross-reference comments deleted; TREE-1.10 out from under TREE-1.9's describe; `TREE_3` renamed `BOUNDARY_TREE` |`dragClassification.test.ts`, `dragRequest.test.ts`, `dragRegions.test.ts`, `itemListOps.test.ts`, `itemWriteReconciliation.test.ts`, `useProjectDragReorder.test.ts` |
+    | 15 | The smaller comment fixes | `test/dragFixtures.ts`, `test/itemFixture.ts`, `dragStructure.test.ts`, `placement.test.ts`, `dragCollision.test.ts`, `dragClassification.test.ts`, `itemWriteReconciliation.test.ts`, `BandGuides.test.tsx` |
+  - **Shown to bite.** These are test-code changes, so what I checked is that the pins hold and the restructured tests still catch what they did.
+    - **The pins.** Before, a tuning value of the wrong kind broke the pop suites: `popDistancePx` at 50 failed 13 tests, `popInDelayMs` at 0 failed 11, `cardZoomDwellMs` or `cardPopInDelayMs` at 0 failed 4 each, and `descendantsPopInDelayMs` at 0 failed 2. After, setting the app's defaults for the distance term and the three zoom delays to 50, 0, 0 and 0 leaves both suites passing, 76 tests each time. `popInDelayMs` was pinned already.
+    - **Source mutations the restructured tests catch.** Each reverted in turn:
+      - `clipToVisible` not clipping the top edge: three tests.
+      - `measureRegions` without its scope filter: one.
+      - A Card the drag can't target still resolving: three.
+      - The Descendants zoom waiting on the Card cue's delay: one. The Card zoom waiting on the cue without the dwell: one. These two are caught because the pinned delays differ.
+      - The distance term on at 0: 14.
+      - Every Descendants section read as the dragged Stub's own: two. A Card region that always attaches, never sets back down: two.
+      - `dragRegionProps` registering another key: 12, so the tests do go through it.
+  - **Edges the findings don't state.**
+    - **The pop suites depend on four values, not the two #15 names.** The distance term must be off, and the dwell and the cue before a Card zoom, and the section's delay, must be above 0. I pinned all four, each to a value of its own, so a case that waits on the wrong clock fails.
+    - **The shared Card layer is one geometry where the copies had three.** No case reads more than containment. The shared P is 100 tall with its section in the lower 60, Q sits beneath it, and `inA` is below both. `placement.test.ts`'s foreign-section cases now use P's section, with Q as the other Card, where they used a section of Q and P as the other.
+    - **The finding's `dragRegions.test.ts` lines for the DOM cases are `dragStructure.test.ts`'s** since #37's split. The fixture comments that named `dragRegions.test.ts` no longer name a test file.
+    - **`placement.test.ts`'s `origin` comment was wrong in more than #15 says.** "Neither ever changes the outcome" is false for a Stub: its `origin` decides the card-list branch, which previews it as Free. The comment says so.
+    - **`dragCollision.test.ts`'s casts.** With `rect()`, `Over` accepts the object as it is, so two of the three `as unknown as Over` casts are gone too.
+    - **Same pattern as the finding, not named by it:** `dragRequest.test.ts`'s DRAG-3.10 title with its ID at the end, and its "a done region never anchors" title that named DRAG-3.9.
+    - **`itemFixture.ts`'s comment** now says what the fixture does: it never returns `'none'`, which the API gives an item in a terminal workphase.
+  - **Checks.** `npm run typecheck`, `lint`'s client, server and root parts, `format:check` and `test:unit` pass: 399 server tests, 445 client, 83 script tests. `npm run check:docs` reports the one hit from 3d, `.claude/personas/coder.md:60`, and nothing else. `npm run test:e2e` wasn't run: no production file changed.

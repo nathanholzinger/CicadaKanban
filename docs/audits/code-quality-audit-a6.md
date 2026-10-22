@@ -503,7 +503,8 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 10–12 | Fixed | Batch 3e, the drag layer |
 | 13 | Fixed | Batch 3e, the sidebar, lib and api. The `types.ts` bullet fixes the comment; Nathan ruled `positionScope` stays optional |
 | 14 | Fixed | Batch 3e, the sidebar, lib and api |
-| 15–17 | open | — |
+| 15 | Fixed | Batch 3f (1 of 2), the client tests |
+| 16–17 | open | — |
 | 18 | Fixed | Batch 3c |
 | 19 | Fixed | Batch 3d |
 | 20 | Fixed | Batch 3a |
@@ -515,7 +516,8 @@ Filled in as the audit closes. One row per required finding (#1–54).
 | 32 | Fixed | Batch 3e, the drag layer |
 | 33 | Fixed | Batch 3e, the sidebar, lib and api |
 | 34–37 | Fixed | Batch 3e, the drag layer |
-| 38–41 | open | — |
+| 38 | Fixed | Batch 3f (1 of 2), the client tests |
+| 39–41 | open | — |
 | 42 | Fixed | Batch 3c |
 | 43 | Routed | Story 10's item 7, `epic-3-5-roadmap.md` |
 | 44 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit" |

@@ -8,26 +8,14 @@ import {
   type FlatItem,
 } from './projectTreeUtils';
 import { computeProjection, toRows } from '../../lib/hierarchyPlacement';
-import type { Project } from '../../types';
-
-function project(overrides: Partial<Project> & { id: string }): Project {
-  return {
-    parentId: null,
-    name: overrides.id,
-    description: null,
-    position: null,
-    createdAt: 0,
-    updatedAt: 0,
-    ...overrides,
-  };
-}
+import { makeProject } from '../../test/projectFixture';
 
 function flat(id: string, depth: number, parentId: string | null, overrides: Partial<FlatItem> = {}): FlatItem {
   return {
     id,
     depth,
     parentId,
-    project: project({ id }),
+    project: makeProject(id),
     hasChildren: false,
     collapsed: false,
     ...overrides,
@@ -36,30 +24,30 @@ function flat(id: string, depth: number, parentId: string | null, overrides: Par
 
 describe('flattenTree', () => {
   it('sorts siblings by position, then by createdAt on a tie', () => {
-    const r1 = project({ id: 'r1', position: 2, createdAt: 100 });
-    const r2 = project({ id: 'r2', position: 1, createdAt: 200 });
-    const tied = project({ id: 'tied', position: 2, createdAt: 50 });
+    const r1 = makeProject('r1', { position: 2, createdAt: 100 });
+    const r2 = makeProject('r2', { position: 1, createdAt: 200 });
+    const tied = makeProject('tied', { position: 2, createdAt: 50 });
     const result = flattenTree([r1, r2, tied], new Set());
     expect(result.map(i => i.id)).toEqual(['r2', 'tied', 'r1']);
   });
 
   it('counts a missing position as 0, ahead of a positive one whatever its createdAt', () => {
-    const a = project({ id: 'a', position: 0.5, createdAt: 1 });
-    const n = project({ id: 'n', position: null, createdAt: 999 });
-    const b = project({ id: 'b', position: 2, createdAt: 2 });
+    const a = makeProject('a', { position: 0.5, createdAt: 1 });
+    const n = makeProject('n', { position: null, createdAt: 999 });
+    const b = makeProject('b', { position: 2, createdAt: 2 });
     expect(flattenTree([a, b, n], new Set()).map(i => i.id)).toEqual(['n', 'a', 'b']);
   });
 
   it('falls back to createdAt ordering when position is null for both siblings', () => {
-    const c1 = project({ id: 'c1', position: null, createdAt: 50 });
-    const c2 = project({ id: 'c2', position: null, createdAt: 10 });
+    const c1 = makeProject('c1', { position: null, createdAt: 50 });
+    const c2 = makeProject('c2', { position: null, createdAt: 10 });
     const result = flattenTree([c1, c2], new Set());
     expect(result.map(i => i.id)).toEqual(['c2', 'c1']);
   });
 
   it('nests children depth-first under their parent and sets hasChildren', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
+    const root = makeProject('root');
+    const child = makeProject('child', { parentId: 'root' });
     const result = flattenTree([root, child], new Set(['root']));
     expect(result.map(i => ({ id: i.id, depth: i.depth, parentId: i.parentId }))).toEqual([
       { id: 'root', depth: 0, parentId: null },
@@ -69,16 +57,16 @@ describe('flattenTree', () => {
   });
 
   it('collapses a project (excludes its descendants) when its id is absent from expandedIds', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
+    const root = makeProject('root');
+    const child = makeProject('child', { parentId: 'root' });
     const result = flattenTree([root, child], new Set()); // root not expanded
     expect(result.map(i => i.id)).toEqual(['root']);
     expect(result[0].collapsed).toBe(true);
   });
 
   it('expands a project (includes its descendants) when its id is present in expandedIds', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
+    const root = makeProject('root');
+    const child = makeProject('child', { parentId: 'root' });
     const result = flattenTree([root, child], new Set(['root']));
     expect(result.map(i => i.id)).toEqual(['root', 'child']);
     expect(result[0].collapsed).toBe(false);
@@ -117,8 +105,8 @@ describe('resolveGap', () => {
 
 describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
   it('returns a project’s real children regardless of collapse state', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
+    const root = makeProject('root');
+    const child = makeProject('child', { parentId: 'root' });
     const childrenOfReal = fullChildrenOf([root, child]);
     expect(childrenOfReal('root')).toEqual(['child']);
   });
@@ -128,9 +116,9 @@ describe('TREE-1.5: fullChildrenOf — a collapsed Top', () => {
   // no next row to read a first child off of. `computeProjection` must still
   // resolve `child` as the anchor, using `fullChildrenOf`, not the rows.
   it('a collapsed Top still resolves Top + 1 to its real first child', () => {
-    const root = project({ id: 'root' });
-    const child = project({ id: 'child', parentId: 'root' });
-    const sibling = project({ id: 'sibling' });
+    const root = makeProject('root');
+    const child = makeProject('child', { parentId: 'root' });
+    const sibling = makeProject('sibling');
     const flatCollapsed = flattenTree([root, child, sibling], new Set()); // root collapsed
     expect(flatCollapsed.map(i => i.id)).toEqual(['root', 'sibling']); // child never rendered
 

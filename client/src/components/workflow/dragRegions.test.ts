@@ -13,7 +13,7 @@ import {
   subrowContainerId,
   subrowRegionKey,
 } from './dragRegions';
-import { descendantsRegion, rect, region } from '../../test/dragFixtures';
+import { cardRegion, descendantsRegion, rect, region, regionEl } from '../../test/dragFixtures';
 
 describe('subrowContainerId', () => {
   it('encodes column and workphase into the droppable id', () => {
@@ -69,7 +69,7 @@ describe('childRegionAt (Board layer: parentKey null)', () => {
     expect(childRegionAt(regions, { x: 50, y: 900 }, null)).toBeNull();
   });
 
-  it('is null in the gap between two sub-rows (DRAG-1.6: sub-rows are distinct contexts, and the gap belongs to neither)', () => {
+  it('DRAG-1.6: is null in the gap between two sub-rows (sub-rows are distinct contexts, and the gap belongs to neither)', () => {
     expect(childRegionAt(regions, { x: 150, y: 160 }, null)).toBeNull();
     expect(childRegionAt(regions, { x: 150, y: 179 }, null)).toBeNull();
     expect(childRegionAt(regions, { x: 150, y: 180 }, null)).toBe(subB2);
@@ -96,18 +96,9 @@ describe('containsPoint', () => {
 
 describe('isCardList', () => {
   it('is true for a merged column and a sub-row, false for a Card', () => {
-    expect(isCardList(region('column:col-1', rect(0, 0, 100, 100)))).toBe(true);
-    expect(isCardList(region('subrow:col-1:w1', rect(0, 0, 100, 100)))).toBe(true);
-    const r = rect(0, 0, 100, 40);
-    const card = {
-      key: 'card:item-1',
-      kind: 'card',
-      rect: r,
-      contentRect: r,
-      attachToCardId: 'item-1',
-      parentRegionKey: 'column:col-1',
-    } as const;
-    expect(isCardList(card)).toBe(false);
+    expect(isCardList(region(columnRegionKey('col-1'), rect(0, 0, 100, 100)))).toBe(true);
+    expect(isCardList(region(subrowRegionKey('col-1', 'w1'), rect(0, 0, 100, 100)))).toBe(true);
+    expect(isCardList(cardRegion('item-1', rect(0, 0, 100, 40), columnRegionKey('col-1')))).toBe(false);
   });
 });
 
@@ -120,15 +111,9 @@ describe('CARD_LIST_REGION_SELECTOR', () => {
   });
 
   it('finds the column/sub-row regions, never a Card or a section nested in one', () => {
-    const regionEl = (key: string, ...children: HTMLElement[]) => {
-      const el = document.createElement('div');
-      el.setAttribute(DRAG_REGION_ATTR, key);
-      el.append(...children);
-      return el;
-    };
-    document.body.append(
-      regionEl(columnRegionKey('col-1'), regionEl(cardRegionKey('item-1'), regionEl(descendantsRegionKey('item-1')))),
-    );
+    const section = regionEl(descendantsRegionKey('item-1'));
+    const card = regionEl(cardRegionKey('item-1'), undefined, section);
+    document.body.append(regionEl(columnRegionKey('col-1'), undefined, card));
     const found = [...document.querySelectorAll(CARD_LIST_REGION_SELECTOR)].map(el =>
       el.getAttribute(DRAG_REGION_ATTR),
     );

@@ -1,13 +1,17 @@
-// rect/region test fixtures for drag geometry (Rect, CardListRegion, DropColumn).
+// Test fixtures for drag geometry, shared by the drag tests (regions, the pop machine,
+// band resolution, placement): the `Rect`, the three region kinds, the two `origin`
+// shapes, a board's columns, and the DOM elements a region is read from. One place for
+// each shape, so a new field lands in one fixture rather than in every test.
 
 import type { CardListRegion, CardRegion, DescendantsRegion, Rect } from '../components/workflow/dragRegions';
 import type { DropColumn } from '../components/workflow/dragStructure';
-import { cardRegionKey, descendantsRegionKey, parseRegionKey } from '../components/workflow/dragRegions';
+import {
+  cardRegionKey,
+  descendantsRegionKey,
+  dragRegionProps,
+  parseRegionKey,
+} from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
-
-// Shared by the drag tests (regions, the pop machine, band resolution): one
-// place for the rect/region shape, so a new field lands in one fixture
-// rather than in every test.
 
 export function rect(left: number, top: number, width: number, height: number): Rect {
   return { left, top, width, height, right: left + width, bottom: top + height };
@@ -21,9 +25,6 @@ export function rect(left: number, top: number, width: number, height: number): 
 // "normal" band shape, so a fixture that doesn't care about the
 // single-band/one-card exceptions doesn't have to spell it out;
 // `parentRegionKey` is always null — Board is every card list's parent.
-// `cardRegion`/`descendantsRegion` below cover the other two kinds — see
-// dragRegions.test.ts's own DOM-built cases where the structural
-// resolution itself (not just the region shape) is what's under test.
 export function region(key: string, r: Rect, overrides: Partial<CardListRegion> = {}): CardListRegion {
   const parsed = parseRegionKey(key);
   return {
@@ -42,11 +43,9 @@ export function region(key: string, r: Rect, overrides: Partial<CardListRegion> 
   };
 }
 
-// A Card region — `attachToCardId` defaults to `cardId` (the ordinary
-// case: the region attaches into the same Card its key names); override it
-// for a fixture that deliberately wants the two to differ. `parentRegionKey`
-// is the key of the card list the Card sits in, in the `region()` fixture's
-// own key convention.
+// A Card region: it attaches into the Card its key names, so `attachToCardId` is
+// `cardId`. `parentRegionKey` is the key of the card list the Card sits in, in the
+// `region()` fixture's own key convention.
 export function cardRegion(
   cardId: string,
   r: Rect,
@@ -64,9 +63,8 @@ export function cardRegion(
   };
 }
 
-// A Card's Descendants region — `parentRegionKey` defaults to that same
-// Card's own `card:<cardId>` key (always one layer up), overridable
-// for a fixture that wants to name a differently-keyed parent directly.
+// A Card's Descendants region; its `parentRegionKey` is that same Card's own
+// `card:<cardId>` key, always one layer up.
 export function descendantsRegion(
   cardId: string,
   r: Rect,
@@ -97,8 +95,7 @@ export function stubOrigin(parentId: string): Placement {
 
 // A merged column covering the given workphases — override any field,
 // including `subRows` (for an expanded column, or per-row facts like
-// `isTerminal`), for a differently-shaped board fixture. Used by
-// dragRegions.test.ts's own structural-resolution cases.
+// `isTerminal`), for a differently-shaped board fixture.
 export function column(id: string, workphaseIds: string[], overrides: Partial<DropColumn> = {}): DropColumn {
   return {
     id,
@@ -108,4 +105,20 @@ export function column(id: string, workphaseIds: string[], overrides: Partial<Dr
     subRows: workphaseIds.map(w => ({ workphase: { id: w } })),
     ...overrides,
   };
+}
+
+// Makes `el` report `r` as its measured rect; jsdom lays nothing out.
+export function mockRect(el: HTMLElement, r: Rect): void {
+  Object.defineProperty(el, 'getBoundingClientRect', { value: () => ({ ...r, x: r.left, y: r.top }) });
+}
+
+// A DOM element registered as a drag region the way a board registers one
+// (`dragRegionProps`), for the tests that read the live DOM. `r`, when given, is
+// the rect it measures; `children` nest inside it.
+export function regionEl(key: string, r?: Rect, ...children: HTMLElement[]): HTMLElement {
+  const el = document.createElement('div');
+  for (const [name, value] of Object.entries(dragRegionProps(key))) el.setAttribute(name, value);
+  if (r) mockRect(el, r);
+  el.append(...children);
+  return el;
 }

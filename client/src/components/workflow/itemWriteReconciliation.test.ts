@@ -15,29 +15,29 @@ import {
 const item = makeItem;
 const placements = (entries: Array<[string, Placement]>) => new Map(entries);
 
-// The client half of reindex disclosure. Cross-reference TC-5a.1 and
-// TC-5a.2.
-describe('applyWriteResponse, over items', () => {
-  const list = () => [
-    item('A', { position: 1.0 }),
-    item('C', { position: 1.5 }),
-    item('E', { position: 1.75 }),
-    item('X', { position: 9 }),
-  ];
+// The worked example of wiki positioning §7: X is written after A, and the reindex it
+// triggers renumbers A, C and E too. A caller that learned only X=2 would sort X last;
+// with the pairs applied first the rendered order is A, X, C, E.
+const workedList = () => [
+  item('A', { position: 1.0 }),
+  item('C', { position: 1.5 }),
+  item('E', { position: 1.75 }),
+  item('X', { position: 9 }),
+];
+const workedResponse = {
+  ...item('X', { position: 2 }),
+  reindexed: [
+    { id: 'A', position: 1 },
+    { id: 'X', position: 2 },
+    { id: 'C', position: 3 },
+    { id: 'E', position: 4 },
+  ],
+};
 
+// The client half of reindex disclosure (wiki positioning §7), over a list of items.
+describe('applyWriteResponse, over items', () => {
   it('TC-5a.1, TC-5a.4: applies every reindexed pair the list holds, then the written item', () => {
-    // The wiki's own example: a caller learning only X=2 would sort X last;
-    // with the pairs applied first the rendered order is A, X, C, E.
-    const response = {
-      ...item('X', { position: 2 }),
-      reindexed: [
-        { id: 'A', position: 1 },
-        { id: 'X', position: 2 },
-        { id: 'C', position: 3 },
-        { id: 'E', position: 4 },
-      ],
-    };
-    const result = applyWriteResponse(list(), response);
+    const result = applyWriteResponse(workedList(), workedResponse);
     const positionOf = (id: string) => result.find(i => i.id === id)!.position;
     expect([positionOf('A'), positionOf('X'), positionOf('C'), positionOf('E')]).toEqual([1, 2, 3, 4]);
     expect(result.find(i => i.id === 'X')).not.toHaveProperty('reindexed');
@@ -45,18 +45,18 @@ describe('applyWriteResponse, over items', () => {
 
   it('the written row wins over its own pair when they disagree — it is applied last', () => {
     const response = { ...item('X', { position: 2.5 }), reindexed: [{ id: 'X', position: 2 }] };
-    expect(applyWriteResponse(list(), response).find(i => i.id === 'X')!.position).toBe(2.5);
+    expect(applyWriteResponse(workedList(), response).find(i => i.id === 'X')!.position).toBe(2.5);
   });
 
   it('TC-5a.4: ignores pairs for ids not in the list — "not in this view," never missing data', () => {
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'unseen', position: 1 }] };
-    const result = applyWriteResponse(list(), response);
+    const result = applyWriteResponse(workedList(), response);
     expect(result).toHaveLength(4);
     expect(result.some(i => i.id === 'unseen')).toBe(false);
   });
 
   it('TC-5a.1: with no reindex, replaces the written row by reference and leaves every other row untouched', () => {
-    const before = list();
+    const before = workedList();
     const written = item('X', { position: 3 });
     const result = applyWriteResponse(before, written);
     expect(result.find(i => i.id === 'X')).toBe(written);
@@ -65,13 +65,13 @@ describe('applyWriteResponse, over items', () => {
 
   it('appends a written item the list does not yet hold (a create)', () => {
     const created = item('N', { position: 10 });
-    const result = applyWriteResponse(list(), created);
+    const result = applyWriteResponse(workedList(), created);
     expect(result).toHaveLength(5);
     expect(result[4]).toBe(created);
   });
 
   it("keeps a row's reference when its pair matches its current position", () => {
-    const before = list();
+    const before = workedList();
     const response = { ...item('X', { position: 2 }), reindexed: [{ id: 'A', position: 1.0 }] };
     expect(applyWriteResponse(before, response).find(i => i.id === 'A')).toBe(before[0]);
   });
@@ -107,38 +107,17 @@ describe('freeItemOrder / findInversion', () => {
   });
 });
 
-// TC-5a.1, TC-5a.2: the reconciliation step, in order.
+// The reconciliation step, in order: the response's rows applied, then the placement
+// cleared and the order checked.
 describe('completeItemWrite', () => {
-  // The exact object `writes.begin` would have stashed for this write — the
-  // reducer only clears/tripwires when the item's current placement is
-  // still this same object, by reference.
+  // The exact object `writes.begin` would have stashed for this write —
+  // `completeItemWrite` only clears the placement and checks the order when
+  // the item's current placement is still this same object, by reference.
   const xPlacement: Placement = { slot: { anchorId: 'A', side: 'after' } };
-  const pending = () =>
-    withPlacement(
-      {
-        ...EMPTY_ITEM_LIST_STATE,
-        items: [
-          item('A', { position: 1.0 }),
-          item('C', { position: 1.5 }),
-          item('E', { position: 1.75 }),
-          item('X', { position: 9 }),
-        ],
-      },
-      'X',
-      xPlacement,
-    );
+  const pending = () => withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: workedList() }, 'X', xPlacement);
 
   it('TC-5a.2: applies the reindex first, so a correct response is not read as an inversion; clears the placement', () => {
-    const response = {
-      ...item('X', { position: 2 }),
-      reindexed: [
-        { id: 'A', position: 1 },
-        { id: 'X', position: 2 },
-        { id: 'C', position: 3 },
-        { id: 'E', position: 4 },
-      ],
-    };
-    const next = completeItemWrite(pending(), response, xPlacement);
+    const next = completeItemWrite(pending(), workedResponse, xPlacement);
     expect(freeItemOrder(next.items, next.placements)).toEqual(['A', 'X', 'C', 'E']);
     expect(next.placements.has('X')).toBe(false);
     expect(next.inversions).toEqual([]);

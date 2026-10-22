@@ -7,15 +7,16 @@ import {
   resolvePlacementOver,
   type PlacementSubject,
 } from './placement';
-import { cardRegion, descendantsRegion, freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
+import { freeOrigin, rect, region, stubOrigin } from '../../test/dragFixtures';
 import type { Placement } from './itemListOps';
 import { POP_TEST_TUNING as tuning, hoverAt, runPop, step, threeColumnBoard } from '../../test/popFixtures';
 
-// Every threshold reads its tuning value, never a pinned number such as
-// 0.5 s, so the tests hold at any tuning.
+// Every wait reads its value from the tuning object (`POP_TEST_TUNING`), never a
+// number such as 0.5 s.
 
-// The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin.
-const { A, B, regions, points } = threeColumnBoard();
+// The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin and
+// holding the Cards P (here `cardP`, with its section) and Q (`otherCard`).
+const { A, B, P: cardP, Q: otherCard, descendantsP, regions, points } = threeColumnBoard();
 const { bTop, bMiddle, bBottom } = points;
 
 const OUT = tuning.popDelayMs;
@@ -23,12 +24,13 @@ const IN = tuning.popInDelayMs;
 
 describe('placementFor', () => {
   const activeWorkphase = A.coveredWorkphaseIds[0];
-  // Every case before the Stub-drag block is a Free Card drag: `origin`
-  // names its own workphase, and `containingCardId` is null throughout (a
-  // Free Card never has one) — neither ever changes the outcome of these
-  // cases (both only ever matter for the Card/Descendants branches,
-  // exercised in their own describe blocks below). `subject` builds that drag — a Free Card of
-  // `activeWorkphase` at position 1, its own origin — with any field overridden.
+  // Every case before the Stub-drag block is a Free Card drag: `origin` names its
+  // own workphase and carries no parent opinion, and `containingCardId` is null (a
+  // Free Card never has one), so neither changes these cases' outcome. A Stub's
+  // `origin` does: the Card and Descendants branches read both, and the card-list
+  // branch reads `origin` to preview a Stub as Free (the describe blocks below).
+  // `subject` builds that drag — a Free Card of `activeWorkphase` at position 1, its
+  // own origin — with any field overridden.
   interface SubjectFields {
     workphaseId?: string | null;
     position?: number | null;
@@ -232,10 +234,7 @@ describe('placementFor', () => {
   // A Stub's own origin (`{parentId, slot: 'existing'}`) through the Card and
   // Descendants branches, and out into a card list.
   describe('a Stub drag (origin carries parentId)', () => {
-    const P = 'card-p';
-    const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
-    const otherCard = cardRegion('card-q', rect(0, 0, 100, 200), A.key);
-    const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
+    const P = cardP.attachToCardId;
     const origin = stubOrigin(P);
     const stub = (pop: PopSession, position: number | null) =>
       subject(pop, { workphaseId: null, position, origin, containingCardId: P });
@@ -246,7 +245,7 @@ describe('placementFor', () => {
 
     it('DRAG-5.4: at a *different* Card, the within-action is attach as its last child', () => {
       expect(placementFor(stub(startPopSession(otherCard.key), null), [otherCard])).toEqual({
-        parentId: 'card-q',
+        parentId: otherCard.attachToCardId,
         slot: 'last',
       });
     });
@@ -300,44 +299,43 @@ describe('placementFor', () => {
   // layer up. This branch never actually sees a real `over`: a release goes
   // through `useBoardDnd.ts::releaseDescendants` instead.
   describe('a Descendants section reached by a foreign item', () => {
-    const Q = 'card-q';
-    const descendantsQ = descendantsRegion(Q, rect(0, 0, 100, 200));
+    const P = cardP.attachToCardId;
+    const Q = otherCard.attachToCardId;
 
     it("a Free Card, mid-drag: previews attaching as last child of the section's own Card", () => {
       expect(
         placementFor(
-          subject(startPopSession(descendantsQ.key), { workphaseId: null, position: null, origin: freeOrigin('w1') }),
-          [descendantsQ],
+          subject(startPopSession(descendantsP.key), { workphaseId: null, position: null, origin: freeOrigin('w1') }),
+          [descendantsP],
         ),
-      ).toEqual({ parentId: Q, slot: 'last' });
+      ).toEqual({ parentId: P, slot: 'last' });
     });
 
     it('a Stub detaching from a *different* Card (containingCardId !== region.cardId): the same foreign-entry rule, not parentOpinionOf(origin)', () => {
-      const P = 'card-p';
-      const origin = stubOrigin(P);
-      const fromP = subject(startPopSession(descendantsQ.key), {
+      const origin = stubOrigin(Q);
+      const fromQ = subject(startPopSession(descendantsP.key), {
         workphaseId: null,
         position: null,
         origin,
-        containingCardId: P,
+        containingCardId: Q,
       });
-      expect(placementFor(fromP, [descendantsQ])).toEqual({
-        parentId: Q,
+      expect(placementFor(fromQ, [descendantsP])).toEqual({
+        parentId: P,
         slot: 'last',
       });
     });
 
     it('the same Card as containingCardId is still the same-section rule (regression guard against always taking the foreign path)', () => {
-      const origin = stubOrigin(Q);
+      const origin = stubOrigin(P);
       expect(
         placementFor(
-          subject(startPopSession(descendantsQ.key), {
+          subject(startPopSession(descendantsP.key), {
             workphaseId: null,
             position: null,
             origin,
-            containingCardId: Q,
+            containingCardId: P,
           }),
-          [descendantsQ],
+          [descendantsP],
         ),
       ).toBe(origin);
     });
@@ -349,10 +347,6 @@ describe('placementFor', () => {
 // pop-out (not just two isolated `startPopSession` fixtures) so the
 // transition itself is covered, not only its two endpoints.
 describe('overlayFormFor', () => {
-  const P = 'card-p';
-  const cardP = cardRegion(P, rect(0, 0, 100, 200), A.key);
-  const descendantsP = descendantsRegion(P, rect(0, 0, 100, 200));
-
   it('no drag at all (undefined region): the shortCard', () => {
     expect(overlayFormFor(undefined)).toBe('short-card');
   });
@@ -377,7 +371,7 @@ describe('overlayFormFor', () => {
     const allRegions = [...regions, cardP, descendantsP];
     const inCard = { x: 50, y: 100 }; // still inside column A throughout — irrelevant to *which* Card is targeted
     const outsideCard = { x: 500, y: 500 }; // outside every region
-    const namedAtP = { anchorId: P, side: 'after' as const };
+    const namedAtP = { anchorId: cardP.attachToCardId, side: 'after' as const };
     const total = tuning.cardZoomDwellMs + tuning.cardPopInDelayMs;
 
     let s = startPopSession(A.key);

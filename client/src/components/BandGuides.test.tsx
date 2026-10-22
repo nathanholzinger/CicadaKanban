@@ -5,6 +5,7 @@ import { DragCarveFrame } from './BandGuides';
 import { DragSessionContext, type DragSession } from './workflow/DragSessionContext';
 import { classifyDragTargets } from './workflow/dragClassification';
 import { startPopSession } from './workflow/popSession';
+import { freeOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 
 // Counts its own mounts: a remount (not a re-render) is what resets a Card's
@@ -21,7 +22,7 @@ function sessionAt(contextKey: string | null): DragSession {
     classification: classifyDragTargets(activeItem.id, [activeItem], 5),
     pop: startPopSession(contextKey),
     priorPlacement: null,
-    origin: { slot: 'existing' },
+    origin: freeOrigin('todo'),
     containingCardId: null,
     projection: null,
   };

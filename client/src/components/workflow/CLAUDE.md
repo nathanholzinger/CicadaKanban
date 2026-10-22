@@ -129,7 +129,8 @@ active-context outline, the drop line's shape).
   flat list of Free items with bands and a workphase) against anything else. Never
   write `kind !== 'card'` to mean it.
 - **Registering an element as a drag region:** `dragRegions.ts::dragRegionProps`,
-  spread onto the region's own root element.
+  spread onto the region's own root element. A test builds the elements it reads with
+  `client/src/test/dragFixtures.ts::regionEl`.
 - **Reading a region key:** `dragRegions.ts::parseRegionKey`, with `descendantsCardIdOf`
   for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
   column/sub-row DOM query. Never `startsWith`, `slice` or `split` a key by hand.
@@ -168,7 +169,9 @@ active-context outline, the drop line's shape).
   value it returns, never a literal; import region keys from `dragRegions.ts` rather
   than re-spelling `column:`/`subrow:`/`descendants:`. Unit tests of the pop machine
   and placement share one board and runner (`client/src/test/popFixtures.ts`:
-  `threeColumnBoard`, `POP_TEST_TUNING`/`POP_TEST_METRICS`, `step`, `runPop`, `hoverAt`).
+  `threeColumnBoard`, which also holds column A's two Cards and one Card's section;
+  `POP_TEST_TUNING`, which pins the values the cases depend on; `POP_TEST_METRICS`;
+  `step`, `runPop`, `hoverAt`).
   Use `dragGesture.ts`
   (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
   — never hand-roll a drag or read `boundingBox()` directly for a drop target.

@@ -3,21 +3,14 @@ import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
+import { makeProject } from '../../test/projectFixture';
 import { flattenTree, INDENT_WIDTH } from './projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './useProjectDragReorder';
 
 // A tree from `[id, parentId]` pairs, in sibling order, a parent before its
 // children.
 function tree(...rows: Array<readonly [id: string, parentId: string | null]>): Project[] {
-  return rows.map(([id, parentId], i) => ({
-    id,
-    parentId,
-    name: id,
-    description: null,
-    position: i + 1,
-    createdAt: i,
-    updatedAt: 0,
-  }));
+  return rows.map(([id, parentId], i) => makeProject(id, { parentId, position: i + 1, createdAt: i }));
 }
 
 const ROW_HEIGHT = 32;
@@ -108,14 +101,14 @@ describe('TREE-1.2: a gap offers the depths from Bottom’s to Top’s + 1, and 
   });
 });
 
-// A, whose only child is the dragged X, and B, whose only child B1 is the last
-// row. X sits at depth 1.
-const TREE_3 = tree(['A', null], ['X', 'A'], ['B', null], ['B1', 'B']);
+// The boundaries' tree: A, whose only child is the dragged X, and B, whose only child
+// B1 is the last row. X sits at depth 1.
+const BOUNDARY_TREE = tree(['A', null], ['X', 'A'], ['B', null], ['B1', 'B']);
 
 describe('TREE-1.3: the boundaries', () => {
   it('above the first row, one depth is offered, the top level, and X becomes the first top-level project', () => {
     for (const depth of [-2, 1, 5]) {
-      const drag = sidebarDrag(TREE_3);
+      const drag = sidebarDrag(BOUNDARY_TREE);
       drag.pickUp('X');
       drag.hover('A', 'before', depth);
       expect(drag.hook.projectedDepth).toBe(0);
@@ -130,7 +123,7 @@ describe('TREE-1.3: the boundaries', () => {
       [1, 'B', 'B1'],
       [2, 'B1', null],
     ] as const) {
-      const drag = sidebarDrag(TREE_3);
+      const drag = sidebarDrag(BOUNDARY_TREE);
       drag.pickUp('X');
       drag.hover('B1', 'after', depth);
       expect(drag.hook.projectedDepth).toBe(depth);
@@ -140,7 +133,7 @@ describe('TREE-1.3: the boundaries', () => {
   });
 
   it('an offset past either end clamps to the nearest depth, and the top level is the floor', () => {
-    const drag = sidebarDrag(TREE_3);
+    const drag = sidebarDrag(BOUNDARY_TREE);
     drag.pickUp('X');
     drag.hover('B1', 'after', 9);
     expect(drag.hook.projectedDepth).toBe(2);
@@ -313,8 +306,10 @@ describe('TREE-1.9: coming back to the dragged project’s own row means its own
       expect(drag.onReorderProject).not.toHaveBeenCalled();
     },
   );
+});
 
-  it('TREE-1.10: resting on X’s own row, an offset still picks a depth of that gap: tabbed right, X is B’s first child', () => {
+describe('TREE-1.10: on the dragged project’s own row, the cursor picks among its own gap’s depths', () => {
+  it('resting on X’s own row, an offset still picks a depth of that gap: tabbed right, X is B’s first child', () => {
     const drag = sidebarDrag(TREE_1);
     drag.pickUp('X');
     drag.hover('X', 'after', 0);
@@ -330,7 +325,7 @@ describe('TREE-1.9: coming back to the dragged project’s own row means its own
   });
 });
 
-describe('the project depth cap', () => {
+describe('TREE-1.11: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', () => {
   // A chain P1 to P3, each the only child of the one before, and X, with a child X1.
   const chain = tree(['P1', null], ['P2', 'P1'], ['P3', 'P2'], ['X', null], ['X1', 'X']);
 
