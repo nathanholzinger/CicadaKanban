@@ -317,13 +317,16 @@ describe('PUT /api/items/:id', () => {
     const item = await createItem({ projectId: project.id, title: 'Keep Me' });
     const before = (await request(app).get(`/api/items/${item.id}`)).body;
 
-    // The other fields in the same edit are not applied either.
-    const refused = await request(app)
-      .put(`/api/items/${item.id}`)
-      .send({ title: 'Changed', assigneeType: 'agent', agentId: 'no-such-agent' });
-    expect(refused.status).toBe(400);
-    expect(refused.body.error).toMatch(/agentId does not reference an existing agent/);
-    expect((await request(app).get(`/api/items/${item.id}`)).body).toEqual(before);
+    // The other fields in the same edit are not applied either. An empty string names no agent
+    // any more than an unknown id does.
+    for (const missing of ['no-such-agent', '']) {
+      const refused = await request(app)
+        .put(`/api/items/${item.id}`)
+        .send({ title: 'Changed', assigneeType: 'agent', agentId: missing });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toMatch(/agentId does not reference an existing agent/);
+      expect((await request(app).get(`/api/items/${item.id}`)).body).toEqual(before);
+    }
 
     // An agent that exists is stored, and null still clears it.
     const assigned = await request(app).put(`/api/items/${item.id}`).send({ assigneeType: 'agent', agentId: agent.id });

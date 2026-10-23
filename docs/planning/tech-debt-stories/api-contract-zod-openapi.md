@@ -31,6 +31,16 @@ When the epic closes, the API contract is generated, complete and current, and n
 - **§3 of the old decisions (TSDoc on exported lib functions).** That's a comment convention, so it goes to A1's comment guide.
 - **§8 of the old decisions (`server/` has no ESLint).** A tooling gap unrelated to the API, now covered by `tooling-gates.md`.
 
+## Inbound deferrals
+
+- **An empty string for an optional id.** From A6's batch 4e, routed here by Nathan on 2026-10-23 (`a6-audit-guidance-and-first-run.md`, Open questions).
+  - **What happens now:**
+    - `PUT /items/:id` with `agentId: ''` answers 500. The empty string passes the route's agent check, which skips a falsy id, and then fails the foreign key.
+    - `POST /items` stores the same `''` as no agent (`agentId || null`), but refuses `type: ''` with a 400.
+    - Nothing sends it today. The item detail panel sends `null` to clear an agent, and no MCP tool sends `agentId`.
+  - **The convention it falls under** (Nathan, in A6): a write that names a row that doesn't exist is refused with a 400, whether the field is required or optional. Leaving the field out is how a write says "none", so `''` names no row.
+  - **Why here:** Story 2's request schemas decide what an empty string means for every optional id on every route at once. Each route still checks that the row exists, which is out of scope above. Settling `POST`'s `agentId` changes what it accepts, so it's a request-shape change. Story 2's items-and-projects batch picks it up.
+
 ## Decisions
 
 **C1. Zod validates every request, on every non-test route.** *(Was §1. Amended 2026-09-26.)*

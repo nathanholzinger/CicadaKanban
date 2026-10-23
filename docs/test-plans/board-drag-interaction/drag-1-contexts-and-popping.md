@@ -19,7 +19,7 @@
 | DRAG-1.11 | The Board → Column pop-in clock counts time in the region and fires only from the middle band | P1 | Automated |
 | DRAG-1.12 | A popped-out card can pop back into the column it just left | P1 | Open |
 | DRAG-1.13 | A drag picked up from Unsorted starts at Board layer, with no context | P1 | Open |
-| DRAG-1.14 | Pop-out by distance: when enabled, either the clock or the distance satisfies | P2 | Open |
+| DRAG-1.14 | Pop-out by distance: when enabled, either the clock or the distance satisfies | P2 | Automated |
 | DRAG-1.16 | Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests | P0 | Open |
 | DRAG-1.17 | Rule 2: a pop moves exactly one layer | P0 | Open |
 | DRAG-1.18 | Rule 3: distance never satisfies a zoom in | P1 | Open |
@@ -192,13 +192,13 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-1.14 — Pop-out by distance: when enabled, either the clock or the distance satisfies
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3.1
 
 *Given* `popDistancePx` set above 0, *when* the cursor moves at least that far outside the locked context's box before `popDelayMs` has elapsed, *then* the item pops out one layer at once. This holds for a column or sub-row (out to Board), a Card (out to its column) and Descendants (out to its Card) alike: one pop-out rule serves every layer. *And given* `popDistancePx` is 0, *when* the cursor moves any distance outside the context for less than `popDelayMs`, *then* no pop happens; only the clock decides.
 
 A single cursor sample decides the distance term, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `tests/ui/drag-5-stub-detach.spec.ts`
 
 ## DRAG-1.16 — Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests
 

@@ -15,7 +15,7 @@
 | ATT-4.7 | The cap gates reparents, not existing data | P1 | Automated |
 | ATT-4.9 | The UI and the API agree on every target's legality | P0 | Open |
 | ATT-4.10 | Every write that can give an item a parent enforces the same rules | P0 | Automated |
-| ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Open |
+| ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Automated |
 
 ---
 
@@ -99,8 +99,8 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 
 ## ATT-4.11 — A move that makes an over-cap tree shallower, but still over the cap, is rejected
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki item-attachment §8
 
 *Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. *When* `M` is moved to the top level instead, by a move or by editing its parent, *then* its deepest leaf would land at depth `1 + H`. With `H` at `CAP` or more, that's still past `CAP`, and the write is rejected the same way. With `H` at `CAP − 1`, it's exactly `CAP`, and the write is accepted, though the tree `M` leaves was over the cap. The formula judges only the resulting depth, not whether the move improves it, so a subtree of height `CAP` or more can be moved only once it's dismantled.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`

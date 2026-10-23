@@ -10,7 +10,7 @@
 | DRAG-3.2 | Bottom band → `{anchorId: last item in the region, side: after}` | P0 | Automated |
 | DRAG-3.3 | Middle band, released without popping in → a workphase-only move that keeps the position | P0 | Automated |
 | DRAG-3.4 | Middle band, held for `popInDelayMs` → pop in, then placement by the ghost's named neighbor | P0 | Automated |
-| DRAG-3.5 | With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned | P1 | Open |
+| DRAG-3.5 | With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned | P1 | Automated |
 | DRAG-3.6 | A drop into a merged column from outside its covered set takes the entry workphase | P0 | Automated |
 | DRAG-3.7 | A drop into a merged column by a covered-set member leaves the workphase alone | P0 | Automated |
 | DRAG-3.8 | Expanded column: a sub-row drop takes exactly that sub-row's workphase, with first and last of the sub-row | P0 | Automated |
@@ -65,11 +65,11 @@
 
 ## DRAG-3.5 — With two or more cards, the dividers sit `h` in from each edge, derived rather than tuned
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
 *Given* a region with two or more cards, not terminal and not the hover target, *when* a release happens just above the top divider (less than `h` below the content's top edge) and just below it (more than `h` below), *then* they resolve by the top band ([DRAG-3.1](drag-3-card-column-bands.md)) and the middle band ([DRAG-3.3](drag-3-card-column-bands.md)) respectively, and the same holds mirrored at the bottom divider ([DRAG-3.2](drag-3-card-column-bands.md)). Each dead zone outside the list is `(h + gap) / 2` tall. Every divider position and dead-zone height comes from `h` and `gap`; no tuning-panel value moves them. That the top divider cuts through the first card (and the bottom one through the last) is intended.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/dragBands.test.ts`
 
 ## DRAG-3.6 — A drop into a merged column from outside its covered set takes the entry workphase
 

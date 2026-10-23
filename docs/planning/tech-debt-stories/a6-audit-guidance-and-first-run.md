@@ -209,9 +209,11 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **Test-quality fixes outside the drag specs,** which change no status: BCU-1.2's "nothing changes" compared with a read taken before the delete, and BCU-2.3's test without its `position` assertion (the boards-columns-unsorted report, Test Quality Concerns 3 and 4); TREE-3.9's route test matching the refusal's reason, and TREE-9.1's "unchanged" asserted as unchanged, not as survival (the project-tree report, Concerns 4 and 5); and TC-2.4's ID on the "A after C" route test, once its anchor sits at a value that shows the rounding (the item-positioning report).
   - **A test under the wrong ID:** `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" moves out of TREE-1.11's describe, since no rule states what it asserts (Amendments, the run).
   - **The one code fix:** `PUT /items/:id` answers 400 for an `agentId` that names no agent, and changes nothing, as `POST /items` does since #47. Its route test carries no case ID, since no wiki page covers the agent field (Open questions, batch 3d's notes). It's a production change, so the step ends with `npm run check` and `npm run test:e2e`.
+  - *Done 2026-10-23,* as batches 4a–4e, with nothing moved to Story 10. *Re-checked the same day:* `docs/audits/test-reconciliation-a6-recheck.md`.
+  - **A last Coder item** (Nathan, 2026-10-23): `PUT /items/:id` handles `agentId: ''` the way the other writes handle an empty-string id; `POST /items` stores it as no agent. Its route test carries no case ID, and no re-check follows, since no case covers the agent field. It's a production change, so it ends with `npm run check` and `npm run test:e2e`.
   - **The re-check** also drops `positionResolver.test.ts` from TC-2.8's line: it throws for the wrong reason, and route tests prove the case.
 - **Every Open question is answered,** or moved to the plan that will answer it. Batch 3 fixes behavior, so this story closes by the full checklist.
-- The Architect's memory pass for the three audit memories (D1).
+- The Architect's memory pass for the three audit memories (D1). **Done 2026-10-23 (Architect):** see Amendments.
 - The report moves to `docs/archive/`, followed by this plan once it's signed off. Nathan tags the report's end commit `a6-audited`.
 
 ## Code map
@@ -289,13 +291,14 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `client/src/components/sidebar/useProjectDragReorder.test.ts` | 4c done | "marks nothing invalid while the cap is unknown" leaves TREE-1.11's describe for one of its own | Coder |
 | `tests/ui/attached-children.spec.ts`, `tests/ui/drag-column-bands.spec.ts` | 4d done | Two E2E tests: ATT-11.2 (a new describe, "deleting a Card"), the board's half of deleting an item's subtree; and DRAG-6.6, beside DRAG-6.1 and DRAG-6.5, the board's half of a refused drop | Coder |
 | `server/src/routes/items.ts`, `server/tests/routes/items.test.ts` | 4e done | `PUT /items/:id` answers 400 for an `agentId` that names no agent, before anything is written, as `POST` does. Its route test carries no case ID | Coder |
+| `server/src/routes/items.ts`, `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts` | 4f done | `PUT /items/:id` refuses `agentId: ''` with the 400 an agent that doesn't exist gets, and its route test covers both. `positionResolver.test.ts`'s no-position test throws for that reason now, where it threw on a scope miss | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
 | `scripts/check-docs/` | 3h | Reads a `.bru` file's `docs` block | Coder |
 | `.claude/guides/documentation-standards.md` | 3, after 3h, done | The `bruno/` row stops saying the checker doesn't read `.bru` files, and "What the checker checks" names Bruno's `docs` blocks among what it reads | Architect |
-| The memory directory (outside the repo) | 4 | D1's pointers | Architect |
+| The memory directory (outside the repo) | 4, done | D1's pointers | Architect |
 
 ## Acceptance
 
@@ -435,6 +438,8 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 *From the Coder, batch 3e, the drag layer (2026-10-21).*
 
 - **For Nathan:** report #9's last bullet asks whether `AttachGhostRow` stays apart from `AttachedChildRow`. The reason the code gave doesn't hold: dnd-kit's registry keeps one entry per id, the last registered, and the dragged item's own row is unmounted while it previews attaching, so there is no second registration to conflict. I rendered the preview through `AttachedChildRow` as an experiment, and all 35 drag and attach E2E specs in the four drag suites still passed. What does hold is that the two are different things: `AttachedChildRow` is a live participant in the drag (a sortable registration, a handle, a click target, `data-item-id`, drop chrome, and the dimmed look a dragged item's own row gets), and the preview must be none of those and is drawn dashed blue. A merge would need a mode that skips the registration, which a hook can't do conditionally, so it would split into a body and a wrapper again. I restated the reason at `StubRows.tsx::AttachGhostRow` and kept the two apart. Merging is a follow-up if you'd rather.
+  - **Answered 2026-10-23 (Nathan):** they stay apart, with no follow-up.
+  - **Answered 2026-10-23 (Nathan):** they stay apart, as the Coder and the Architect recommended, with no follow-up.
 - **For the Test Reconciler:** #37 moved the DOM half of `dragRegions.test.ts` to `dragStructure.test.ts`, so the Automation lines naming `dragRegions.test.ts` are stale for DRAG-1.7, DRAG-1.8, DRAG-1.10 and DRAG-1.25. The cases keep their IDs at the start of their titles. #15's first bullet, `dragRegions.test.ts:59–63`, is done with the move.
 
 *From the Coder, batch 3e, the sidebar, `lib/` and `api/` (2026-10-21).*
@@ -501,7 +506,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
 *From the Coder, batch 4b, the boards, columns and projects tests (2026-10-23).*
 
-- **For the Architect:** `testing-strategy.md`'s Server tests line lists the direct-write fixtures: `setItemPosition`, `setProjectPosition`, `setItemParent` and `setProjectParent`. `server/tests/fixtures.ts` has a fifth, `setColumnEnds`, which writes a column's start or end, including an id that names no workphase.
+- **For the Architect:** `testing-strategy.md`'s Server tests line lists the direct-write fixtures: `setItemPosition`, `setProjectPosition`, `setItemParent` and `setProjectParent`. `server/tests/fixtures.ts` has a fifth, `setColumnEnds`, which writes a column's start or end, including an id that names no workphase. **Done 2026-10-23 (Architect):** the line names all five.
 
 *From the Coder, batch 4c, the client tests (2026-10-23).*
 
@@ -519,6 +524,16 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 *From the Coder, batch 4e, the `agentId` fix (2026-10-23).*
 
 - **For Nathan:** `PUT /items/:id` with `agentId: ''` still answers 500, where `POST` stores it as none (`agentId || null`). The new check passes it, since `''` is falsy as it is in `POST`. Nothing sends it: the Sheet sends `null` to clear an agent. If you want `PUT` to agree with `POST`, it's `updates.agentId = agentId || null` and a test line. I left it, since the ruling was about an `agentId` that names no agent.
+  - **Answered 2026-10-23 (Nathan):** `PUT` handles an empty-string `agentId` the way the other writes handle an empty-string id. It's the Coder's last item (Batch 4). **Done 2026-10-23 (Coder, batch 4f):** see Amendments.
+  - **Answered 2026-10-23 (Nathan):** moved to `api-contract-zod-openapi.md`'s Inbound deferrals, as the Architect recommended.
+    - That epic's request schemas decide what an empty string means for every optional id, on every route, at once.
+    - `POST` already disagrees with itself: it stores `agentId: ''` as none and refuses `type: ''`.
+    - Under the convention, `''` names no row, so settling it changes what `POST` accepts, which is a request-shape change.
+
+*From the Coder, batch 4f, after the re-check (2026-10-23).*
+
+- **For Nathan:** the plan records your answer on `PUT`'s `agentId: ''` twice, and the two disagree. The Test Planner's entries (Batch 4's "A last Coder item", and the Amendments) make it the Coder's last item. The Architect's make it a Story 2 deferral (`api-contract-zod-openapi.md`'s Inbound deferrals). I did the first, since it's the one that reached me. A probe showed what the other writes do with an empty-string id: `PUT` and `PATCH /move` answer 400 for `parentId: ''`, `PATCH /move` for `anchorId: ''` and `workphaseId: ''`, and `POST` for `workphaseId: ''` and `type: ''`. `PUT` answers 400 for `agentId: ''` now, the same. If you meant the deferral, putting it back is the check's `agentId &&` and the test's second entry.
+- **For the Architect:** Inbound deferrals' first bullet says `PUT /items/:id` with `agentId: ''` answers 500. It answers 400 now. What stays for Story 2 is `POST`, which still stores `agentId: ''` as no agent, and `parentId: ''` as no parent (the probe's 201, which that bullet doesn't list).
 
 ## Amendments
 
@@ -910,3 +925,29 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **Shown to bite.** Four mutations, each caught: the check removed, a refused edit having already written the title, `null` refused as an agent that doesn't exist, and an agent that exists refused.
   - **Not changed.** The `''` edge above. No Bruno docs line: `create-item.bru` doesn't state its reference refusals either.
   - **Checks.** `npm run check` passes: 404 server tests, 448 client, 94 script. `check:docs` reports no hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.
+- **2026-10-23, the last open questions for Nathan and the Architect (Architect):** every Open question addressed to Nathan, the PO, the Test Planner or the Architect is answered or done.
+  - **`AttachGhostRow`:** it stays apart from `AttachedChildRow`, with no follow-up (Nathan).
+  - **`agentId: ''`:** moved to `api-contract-zod-openapi.md`'s new Inbound deferrals section, where Story 2's request schemas decide what an empty string means for every optional id (Nathan).
+  - **`setColumnEnds`:** `testing-strategy.md`'s server-test line names all five direct-write fixtures (Architect).
+  - **Still open:** the Reconciler's re-check of batch 4a–4e's tests. Its five reports already answer the earlier items addressed to it, and the plan marks them answered once the re-check is done.
+- **2026-10-23, the memory pass (Architect):** D1's three audit memories now point to `audit-workflow.md` instead of restating it. Every rule D1 lists is in the guide: cadence and cleanup refactors in §1, the range from tags in §2, cold passes in §3, structural findings off the Watch List in §6, batches and probes in §8, and the Close-out table in §9.
+  - What each memory still holds, because no guide says it:
+    - `story-audit-cadence`: that "N.1" was renamed "cleanup refactor", so the roadmap's Story 6.1 is one.
+    - `audit-scope-from-tags`: the incident behind the rule, and that this run's base was a one-off.
+    - `audit-fix-batches`: why Nathan wants batches, and that the Architect writes the batch plan into the story plan for a Coder session to work.
+  - `audit-run-sizing` was never one of D1's three. It holds the usage-limit waves, which aren't a process rule, and it's unchanged.
+  - Acceptance's "The guide holds the rules" is met.
+- **2026-10-23, the Reconciler's re-check (Test Planner):** every case the Coder's step meant to close is `Automated`: ATT-4.11, 5.12, 9.12, 10.4, 11.1 and 11.2, BCU-2.9, and DRAG-1.14, 2.9, 3.5, 4.12, 6.1, 6.2, 6.6 and 6.11. DRAG-1.24, 3.11, 3.23, 3.24, 6.7 and 6.9 stay `Open` for Story 10, each missing only its on-screen half. No case lost its test, and no test title carries an unknown ID, whatever its prefix. DRAG-6.6's line names only its E2E test, which proves the whole case. The catalog stands at 350 cases: 279 `Automated`, 64 `Open`, 4 `Manual`, 1 `Planned` and 2 `Pending PO`.
+- **2026-10-23, the last two rulings for Nathan (Test Planner):** `AttachGhostRow` and `AttachedChildRow` stay apart, with no follow-up. `PUT /items/:id` handles `agentId: ''` the way the other writes handle an empty-string id, as a last Coder item (Batch 4). Every Open question for Nathan is answered.
+- **2026-10-23, batch 4f, after the re-check: the Coder's last two items (the Coder).** One production change, one test fix.
+  - **`PUT /items/:id` and `agentId: ''`.** The edit answers 400, "agentId does not reference an existing agent", for an empty string, as it does for an agent that doesn't exist. The check is `agentId !== undefined && agentId !== null && …`, the shape `POST` uses for `type`: `null` still clears the agent, and a body with no `agentId` still leaves it alone. `POST` is untouched (Open questions).
+  - **Its test** is 4e's, now looping over `'no-such-agent'` and `''`: each gets the 400 and the item, activity included, reads as it did before. No case ID.
+  - **`positionResolver.test.ts`'s no-position test** (the re-check's concern 1) passed the scope `eq(items.workphaseId, 'anything')`, so it threw "could not find id" before it reached the no-position branch, and its bare `.toThrow()` couldn't tell. It passes the item's workphase now and matches `/does not have a position/`. The title had already lost its TC-2.8 ID in the working tree when I got to it, by another hand, and I left that.
+  - **Shown to bite.** Five mutations, each caught by the test it concerns:
+    - the old falsy check, which lets `''` through, and which 4e's committed test missed;
+    - `null` refused as an agent that doesn't exist;
+    - the check removed;
+    - an agent that exists refused;
+    - the resolver's no-position throw removed, which the old items-table test missed, since the scope miss threw anyway.
+  - **Not done, because nothing routed them to the Coder:** the re-check's concern 2 (PO:110's fixture), concern 7 (the header of `itemRepositioningAttachedSiblings.spec.ts` still claiming TC-2.4), and the two optional pointer drops from TC-2.4's and TC-2.9's lines.
+  - **Checks.** `npm run check` passes: 404 server tests, 448 client, 94 script, with no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.

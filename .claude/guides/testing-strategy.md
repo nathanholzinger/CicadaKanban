@@ -33,7 +33,7 @@ There's no CI; everything runs locally.
 ## Setting up a state the API refuses
 
 Some tests need a state no request can produce, such as an exact position or a parentless row that holds the attachment flag. The API refuses those writes on purpose, so the test writes the state itself:
-- **Server tests** write the database directly, through `server/tests/fixtures.ts`: `setItemPosition` and `setProjectPosition` pin a position, and `setItemParent` and `setProjectParent` a parent.
+- **Server tests** write the database directly, through `server/tests/fixtures.ts`: `setItemPosition` and `setProjectPosition` pin a position, `setItemParent` and `setProjectParent` a parent, and `setColumnEnds` a column's start or end, including one that names no workphase.
 - **E2E tests** can't reach the database, so they go through a test route under `/api/test`, which is mounted only with `ENABLE_TEST_ROUTES`. `tests/helpers/seed.ts` wraps each: `pinItemPosition` and `pinProjectPosition` pin a position, `pinProjectCreatedAt` a project's creation time, and `pinProjectParent` its parent.
 
 A new kind of setup gets its own test route. Never loosen a rule in the real API to make a test's setup possible.

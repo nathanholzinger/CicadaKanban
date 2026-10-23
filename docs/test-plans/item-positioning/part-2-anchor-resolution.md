@@ -61,7 +61,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* anchor `A` at `2.4`, the true last item in its comparison scope, *when* an item is placed after `A`, *then* its position is `3`: `A`'s position plus `1.0`, rounded. It isn't `3.4`.
 
-**Automation test:** `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
 ## TC-2.5 — Prepend fallback: before the true first item, floor-bounded and never negative
 
@@ -93,7 +93,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a done item `D`, in a terminal workphase with no position, *when* a move names `D` as its anchor, *then* the request is rejected with a 400, and nothing in it is written: no workphase change and no position. *And when* a move names an anchor id that no item has, *then* it's rejected the same way. No fallback ignores the anchor and appends instead.
 
-**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-2.9 — A narrow view can't leapfrog an unseen true neighbor
 
@@ -101,7 +101,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* the true order `A` (`1.0`), `B` (`2.8`), `C` (`3.0`), `D` (`4.0`), and a view that shows only `A`, `C` and `D`, *when* `D` is placed before `C`, *then* its position is `2.9`: between `C` and its true predecessor `B`. It's never below `2.8`, which would put `D` ahead of `B`, an item the view never saw.
 
-**Automation test:** `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `tests/api/itemRepositioningCrossColumn.spec.ts`, `server/tests/lib/positionResolver.test.ts`
 
 ## TC-2.10 — A Free item's comparison scope is its whole workflow
 
@@ -205,7 +205,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* `X`, attached to `P` at position `p`, *when* a write attaches `X` to `P` again, *then* `X.position` is still `p`: its scope didn't change, so nothing is reassigned.
 
-**Automation test:** `server/tests/routes/items.positioning.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-2.24 — A workphase-only move with no anchor keeps the position
 

@@ -17,7 +17,7 @@
 | ATT-9.9 | A create can't name a workphase its project's workflow doesn't use | P2 | Automated |
 | ATT-9.10 | A detach that also reparents, naming no workphase, leaves the item in the one it was shown in | P2 | Automated |
 | ATT-9.11 | Naming `workphaseId: null` leaves an item Free with no workphase, whatever it was shown in | P2 | Automated |
-| ATT-9.12 | A write that names a workphase that doesn't exist is refused | P2 | Open |
+| ATT-9.12 | A write that names a workphase that doesn't exist is refused | P2 | Automated |
 
 ---
 
@@ -118,7 +118,7 @@
 
 ## ATT-9.12 — A write that names a workphase that doesn't exist is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §2a
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §2a
 
 *Given* the setup, and an id `Q` that names no workphase, *when* each of these writes names `Q`:
 - a create of a top-level item in `P1`;
@@ -129,4 +129,4 @@
 
 *then* each is refused with a 400, no item is created, and `R` and `X` are unchanged. A workphase that doesn't exist is neither the parent's nor one `WF` uses, so it's refused whether the write leaves the item Attached ([ATT-9.1](att-9-workphase-a-write-leaves.md), [ATT-9.2](att-9-workphase-a-write-leaves.md)) or Free ([ATT-9.8](att-9-workphase-a-write-leaves.md), [ATT-9.9](att-9-workphase-a-write-leaves.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.workphase.test.ts`

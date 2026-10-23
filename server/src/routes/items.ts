@@ -247,8 +247,9 @@ router.put('/:id', (req, res) => {
     }
   }
 
-  // An agent that names no row would otherwise surface as an opaque FK-violation 500.
-  if (agentId && !existsById(agents, agentId)) {
+  // An agent that names no row would otherwise surface as an opaque FK-violation 500. An empty
+  // string names no row either, as it doesn't for a parent, an anchor or a workphase.
+  if (agentId !== undefined && agentId !== null && !existsById(agents, agentId)) {
     res.status(400).json({ error: 'agentId does not reference an existing agent' });
     return;
   }

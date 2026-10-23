@@ -14,7 +14,7 @@
 | BCU-2.6 | A column's start can't come after its end | P1 | Automated |
 | BCU-2.7 | An edit whose range passes fixes a broken column | P2 | Automated |
 | BCU-2.8 | A column whose start comes after its end still covers the workphases between its two ends | P2 | Automated |
-| BCU-2.9 | A column with an end outside the workflow is broken, and covers no workphase | P2 | Open |
+| BCU-2.9 | A column with an end outside the workflow is broken, and covers no workphase | P2 | Automated |
 
 ---
 
@@ -88,7 +88,7 @@
 
 ## BCU-2.9 — A column with an end outside the workflow is broken, and covers no workphase
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §9, wiki boards-columns-unsorted §4, wiki boards-columns-unsorted §10
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §9, wiki boards-columns-unsorted §4, wiki boards-columns-unsorted §10
 
 *Given* the setup, with column `A` on `B` from `W1` to `W3` and no name of its own, column `C` covering `W4` alone, and an item in each of `W1`, `W2` and `W3`, *when* a direct database edit makes one of these changes to `A`:
 - its end is `V1`;
@@ -97,4 +97,4 @@
 
 *then*, each time, `B`'s read flags `A` `broken`, `A` covers no workphase, shows none of the three items, and is named "(empty range)". `unsorted.uncovered` lists `W1`, `W2` and `W3`, and not `W4`. `C` isn't `broken`. *When* `A`, with its end at `V1`, is then edited to run from `W1` to `W3`, *then* it's accepted, `A` isn't `broken`, it covers `W1`, `W2` and `W3` again with their items, and `uncovered` is empty. That a broken column takes no drop is [DRAG-1.9](../board-drag-interaction/drag-1-contexts-and-popping.md)'s and [DRAG-2.8](../board-drag-interaction/drag-2-target-classification.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/columns.test.ts`

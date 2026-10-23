@@ -221,15 +221,15 @@ describe('resolvePositionByAnchorAndSide', () => {
     expect(result).toBe(1.5);
   });
 
-  it('TC-2.8: throws for an anchor with no position (a done item)', async () => {
-    const { items: created } = await seedPhaseWithItems(1);
+  it('throws for an anchor with no position (a done item)', async () => {
+    const { phase, items: created } = await seedPhaseWithItems(1);
     setItemPosition(created[0].id, null);
 
     expect(() =>
       db.transaction(tx =>
-        resolvePositionByAnchorAndSide(items, eq(items.workphaseId, 'anything'), tx, 'after', created[0].id),
+        resolvePositionByAnchorAndSide(items, eq(items.workphaseId, phase.id), tx, 'after', created[0].id),
       ),
-    ).toThrow();
+    ).toThrow(/does not have a position/);
   });
 
   it('appends as last when no anchorId is given, side "after"', async () => {

@@ -13,7 +13,7 @@ What a cross-project or cross-workflow reparent does to positions is item-positi
 | ATT-5.9 | A cross-workflow reparent that would leave a Free item in the moved subtree is refused | P1 | Automated |
 | ATT-5.10 | A cross-workflow reparent that leaves every moved item Attached is accepted | P1 | Automated |
 | ATT-5.11 | A Free item reparented between a project with no workflow and one with a workflow | P2 | Pending PO |
-| ATT-5.12 | A cross-project reparent on one workflow that leaves the item Free may name a workphase of that workflow | P2 | Open |
+| ATT-5.12 | A cross-project reparent on one workflow that leaves the item Free may name a workphase of that workflow | P2 | Automated |
 
 ---
 
@@ -89,8 +89,8 @@ Each would leave a Free item in the moved subtree: `X` itself, `Y2` or `Z2`. Nam
 
 ## ATT-5.12 — A cross-project reparent on one workflow that leaves the item Free may name a workphase of that workflow
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §9, wiki item-attachment §2a
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §9, wiki item-attachment §2a
 
 *Given* projects `P1` and `P2`, both on workflow `W` with workphases `w1` and `w2`, Free item `X` in `P1` at `w1`, and item `B` in `P2` at `w1`, *when* `X` is reparented under `B`, stays Free, and names `w2`, *then* it's accepted: `X.parentId = B`, `X` is Free in `w2`, and `X.projectId = P2`. The workflow both projects use is the one `X`'s new project uses, so `w2` is a workphase `X` may name. Attaching `X` across the two projects is [ATT-5.1](att-5-cross-project-reparenting.md)'s, and a Free item naming a workphase its project's workflow doesn't use is [ATT-9.8](att-9-workphase-a-write-leaves.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`

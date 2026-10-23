@@ -14,7 +14,7 @@ The classification states are asserted, never the overlays' colors or weights: t
 | DRAG-2.6 | Depth-capped targets are de-emphasized, not hidden | P2 | Open |
 | DRAG-2.7 | Every Stub is classified individually | P0 | Automated |
 | DRAG-2.8 | A Stub drag is classified exactly like a Card drag, and a place that's no target isn't classified | P1 | Open |
-| DRAG-2.9 | Cycle-forming wins over Depth-capped | P1 | Open |
+| DRAG-2.9 | Cycle-forming wins over Depth-capped | P1 | Automated |
 | DRAG-2.10 | The board's depth cap is the one the API enforces, carried by `GET /boards/:id` | P1 | Automated |
 
 ---
@@ -87,11 +87,11 @@ The classification states are asserted, never the overlays' colors or weights: t
 
 ## DRAG-2.9 — Cycle-forming wins over Depth-capped
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §4
 
 *Given* a drag of `X` with a descendant `D` placed deep enough that `D` would also fail the depth cap as a parent for `X`, *when* the drag begins, *then* `D` is classified **Cycle-forming**, not Depth-capped. A descendant is never a real target for its own ancestor.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/dragClassification.test.ts`
 
 ## DRAG-2.10 — The board's depth cap is the one the API enforces, carried by `GET /boards/:id`
 

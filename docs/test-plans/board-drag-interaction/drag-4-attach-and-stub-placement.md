@@ -22,7 +22,7 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 | DRAG-4.9 | Descendants placement: Top's depth → sibling after Top's subtree; Top + 1 → Top's first child | P0 | Automated |
 | DRAG-4.10 | Descendants placement: shallower levels walk Top's ancestors; the shallowest is "before Bottom" | P0 | Automated |
 | DRAG-4.11 | Descendants placement: boundaries and clamping | P1 | Automated |
-| DRAG-4.12 | An attach into a Card with no Stubs makes the item its sole child | P1 | Open |
+| DRAG-4.12 | An attach into a Card with no Stubs makes the item its sole child | P1 | Automated |
 | DRAG-4.13 | Placement among a done Card's Stubs works normally | P1 | Open |
 | DRAG-4.14 | The auto-drop doesn't depend on where inside the Card the cursor rests | P0 | Open |
 | DRAG-4.15 | An attach to a Card in another column takes three pops; the destination column's bands play no part | P0 | Open |
@@ -116,11 +116,11 @@ A `P` with no Stubs has no Descendants layer ([DRAG-4.12](drag-4-attach-and-stub
 
 ## DRAG-4.12 — An attach into a Card with no Stubs makes the item its sole child
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6, wiki item-positioning §7.1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §6, wiki item-positioning §7.1
 
 *Given* Card `P` with no Stubs, *when* `X` zooms into `P` and is released, *then* the request attaches `X` to `P` with no anchor, and its position resolves by the append fallback in `P`'s empty Stub scope ([TC-2.20](../item-positioning/part-2-anchor-resolution.md)). `P` has no descendants section, so the Descendants layer can't be reached from it, and the auto-drop is the only outcome.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`, `client/src/components/workflow/dragRequest.test.ts`, `client/src/components/workflow/popSession.test.ts`
 
 ## DRAG-4.13 — Placement among a done Card's Stubs works normally
 

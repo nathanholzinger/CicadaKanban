@@ -9,7 +9,7 @@ The rules every write is held to hold for a create too. A parentless create's at
 | ATT-10.1 | A create names its project, its parent, or both, and is refused with neither | P1 | Automated |
 | ATT-10.2 | A child is created Attached unless the create clears the flag | P1 | Automated |
 | ATT-10.3 | A create may omit the workphase | P2 | Automated |
-| ATT-10.4 | A create naming a project that doesn't exist is refused, and nothing is stored | P2 | Open |
+| ATT-10.4 | A create naming a project that doesn't exist is refused, and nothing is stored | P2 | Automated |
 
 ---
 
@@ -45,8 +45,8 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 
 ## ATT-10.4 — A create naming a project that doesn't exist is refused, and nothing is stored
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §14
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §14
 
 *Given* project `P1` holding item `P`, and an id `Z` that names no project, *when* a create names `Z` and no parent, *then* it's refused with a 400, and no item is created. *When* a create names `Z` and `P` as the parent, *then* it's refused with a 400 the same way. A parent that doesn't exist is [ATT-4.10](att-4-legal-parent-depth-cap.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.test.ts`

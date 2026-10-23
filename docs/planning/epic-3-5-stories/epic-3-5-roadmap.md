@@ -700,11 +700,11 @@ deferral and keep landing with their stories.
      mid-drag stops the drag; and TREE-1.13, the sidebar's top level for
      a subtree already taller than the project cap, beside TREE-1.11's
      test in `tests/ui/project-tree-drag.spec.ts`.
-   - **Closing in A6 instead, 7 cases** (Nathan, 2026-10-23): DRAG-1.14,
-     2.9, 3.5 and 6.6, whose internal tests he approved, and DRAG-4.12,
-     6.2 and 6.11, whose passing client tests need only their IDs. A6's
-     Coder step adds what each still needs, DRAG-6.6's E2E test among
-     them. A case whose test finds the code short stays here. A6 also
+   - **Closed in A6, 7 cases** (Nathan, 2026-10-23; `Automated` at A6's
+     re-check the same day), so they leave the list above: DRAG-1.14, 2.9,
+     3.5 and 6.6, whose internal tests he approved, and DRAG-4.12, 6.2 and
+     6.11, whose passing client tests needed only their IDs. That leaves
+     59 of the 66 board-drag-interaction cases here. A6 also
      puts IDs on the request-level tests of DRAG-1.24, 3.11, 3.23, 3.24,
      6.7 and 6.9, which stay here for their on-screen halves.
    - **Drag tests A6's run found short, left for this story** (Nathan,
