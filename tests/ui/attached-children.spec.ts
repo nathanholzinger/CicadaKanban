@@ -11,7 +11,7 @@ import {
   fetchDefaultBoard,
 } from '../helpers/seed';
 import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
-import { itemPanel } from '../helpers/boardLocators';
+import { column, itemPanel, itemRow, titlesIn } from '../helpers/boardLocators';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 test.describe('attached children on the board', () => {
@@ -405,5 +405,57 @@ test.describe('reparent and attach/detach controls', () => {
       page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Free Kid' }),
     ).toBeVisible();
     await expect(page.getByRole('article', { name: 'Second Parent' }).getByText('Free Kid')).toHaveCount(0);
+  });
+});
+
+test.describe('deleting a Card', () => {
+  test.beforeAll(async () => {
+    await resetAndSeedDb();
+  });
+
+  test("ATT-11.2: on the board, deleting a Card removes its detached descendants' Cards, wherever they sit", async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'Delete Subtree Project');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
+    // P in Todo, with an attached child as a Stub and a detached child in In Progress.
+    const parent = await seedItem(request, { title: 'Doomed Parent', projectId: project.id, workphaseId: todo.id });
+    const stub = await seedItem(request, { title: 'Doomed Stub', parentId: parent.id });
+    const detached = await seedItem(request, {
+      title: 'Doomed Detached',
+      parentId: parent.id,
+      isAttached: false,
+      workphaseId: inProgress.id,
+    });
+    await seedItem(request, { title: 'Bystander In Progress', projectId: project.id, workphaseId: inProgress.id });
+    await seedItem(request, { title: 'Bystander Todo', projectId: project.id, workphaseId: todo.id });
+
+    await projectSidebar.openBoard('Delete Subtree Project');
+    const todoColumn = column(page, 'Todo');
+    const inProgressColumn = column(page, 'In Progress');
+    await expect(todoColumn.getByRole('article', { name: 'Doomed Parent' }).getByText('Doomed Stub')).toBeVisible();
+    await expect(inProgressColumn.getByRole('article', { name: 'Doomed Detached' })).toBeVisible();
+
+    // A value on the page itself, which a reload would drop.
+    await page.evaluate(() => Object.assign(window, { notReloaded: true }));
+
+    await todoColumn.getByRole('article', { name: 'Doomed Parent' }).click();
+    const panel = itemPanel(page);
+    await panel.getByRole('button', { name: 'Delete item' }).click();
+    await panel.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    // The three are gone from the board, and the other Cards are as they were.
+    for (const gone of [parent, stub, detached]) await expect(itemRow(page, gone.id)).toHaveCount(0);
+    await expect.poll(() => titlesIn(todoColumn)).toEqual(['Bystander Todo']);
+    await expect.poll(() => titlesIn(inProgressColumn)).toEqual(['Bystander In Progress']);
+    expect(await page.evaluate(() => 'notReloaded' in window)).toBe(true);
+
+    // The server agrees: a fresh load of the board shows the same.
+    await projectSidebar.openBoard('Delete Subtree Project');
+    await expect.poll(() => titlesIn(column(page, 'Todo'))).toEqual(['Bystander Todo']);
+    await expect.poll(() => titlesIn(column(page, 'In Progress'))).toEqual(['Bystander In Progress']);
+    await expect(itemRow(page, stub.id)).toHaveCount(0);
   });
 });

@@ -816,4 +816,43 @@ test.describe('ordinal preview and reconciliation', () => {
     expect(await titlesIn(inProgress)).toEqual(['Item X', 'Item A', 'Item B', 'Item C']);
     expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('XABC');
   });
+
+  test('DRAG-6.6: a refused drop is not kept — the board reloads and shows the item where the server has it', async ({
+    page,
+    request,
+    projectSidebar,
+  }) => {
+    const s = await seed(request);
+    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await openBoard(page, projectSidebar);
+    const todo = column(page, 'Todo');
+    const inProgress = column(page, 'In Progress');
+
+    // The server has X in Review, which the open board doesn't know: it still draws X in Todo.
+    await moveItem(request, s.items.X.id, { workphaseId: s.phase.review.id });
+    await expect(article(todo, 'Item X')).toBeVisible();
+    await page.route('**/api/items/*/move', route =>
+      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
+    );
+
+    await pickUp(page, article(page, 'Item X'));
+    await hoverTo(page, await gapBetween(todo, inProgress));
+    await awaitPoppedOut(page, tuning);
+    await settleOnBottomBand(page, regionOf(inProgress));
+    const refused = page.waitForResponse(res => res.url().endsWith('/move'));
+    const reloaded = page.waitForResponse(
+      res => res.request().method() === 'GET' && res.url().endsWith(`/api/boards/${s.boardId}`),
+    );
+    await release(page);
+    expect((await refused).status()).toBe(400);
+    await reloaded;
+
+    // X is where the server has it: not where the board last drew it, and not where it was dropped.
+    const review = column(page, 'Review');
+    await expect(article(review, 'Item X')).toBeVisible();
+    await expect(article(review, 'Item X')).not.toHaveAttribute('data-pending', 'true');
+    await expect(article(todo, 'Item X')).toHaveCount(0);
+    expect(await titlesIn(inProgress)).toEqual(['Item A', 'Item B', 'Item C']);
+    expect(await columnOrder(request, s.workflow.id, s.phase.inProgress.id)).toBe('ABC');
+  });
 });

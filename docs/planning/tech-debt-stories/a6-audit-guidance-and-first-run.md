@@ -287,6 +287,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `client/src/components/workflow/itemWriteReconciliation.test.ts`, `itemListOps.test.ts`, `dragRequest.test.ts`, `popSession.test.ts` | 4c done | The IDs Nathan ruled on for tests that already passed: DRAG-6.1 (with an assertion of the list while the write is pending), DRAG-6.2, DRAG-6.9, DRAG-4.12 (two tests), DRAG-6.11 (with an assertion that the item stays last once stamped) and DRAG-3.11; and the request halves of DRAG-1.24, DRAG-3.23, DRAG-3.24 and DRAG-6.7 | Coder |
 | `client/src/components/workflow/dragClassification.test.ts`, `dragBands.test.ts`, `popSession.test.ts` | 4c done | The internal tests Nathan approved: DRAG-2.9, DRAG-3.5 (the two `bandFor` tests, and a new `reservationFor` test) and DRAG-1.14 (a new test that a distance of 0 pops nothing before the clock) | Coder |
 | `client/src/components/sidebar/useProjectDragReorder.test.ts` | 4c done | "marks nothing invalid while the cap is unknown" leaves TREE-1.11's describe for one of its own | Coder |
+| `tests/ui/attached-children.spec.ts`, `tests/ui/drag-column-bands.spec.ts` | 4d done | Two E2E tests: ATT-11.2 (a new describe, "deleting a Card"), the board's half of deleting an item's subtree; and DRAG-6.6, beside DRAG-6.1 and DRAG-6.5, the board's half of a refused drop | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -509,6 +510,10 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **`popSession.test.ts`:** DRAG-4.12 (the childless Card) and DRAG-1.14, which has a third test. **`dragBands.test.ts`:** DRAG-3.5 on two `bandFor` tests and a `reservationFor` test. **`dragClassification.test.ts`:** DRAG-2.9.
   - **`itemListOps.test.ts`:** DRAG-6.11, and TC-2.30 with DRAG-3.11.
   - **`useProjectDragReorder.test.ts`:** the cap-unknown test is no longer under TREE-1.11.
+
+*From the Coder, batch 4d, the E2E tests (2026-10-23).*
+
+- **For the Test Reconciler, on its re-check:** ATT-11.2 is `tests/ui/attached-children.spec.ts`'s "deleting a Card" describe. DRAG-6.6's board half is `tests/ui/drag-column-bands.spec.ts`'s test, beside `dragRequest.test.ts`'s, which has the request's half. Both specs are in the E2E count: 174 tests, 8 skipped as before.
 
 ## Amendments
 
@@ -882,3 +887,15 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **A test under the wrong ID.** "marks nothing invalid while the cap is unknown" is in its own describe, "before the sidebar has the project cap", and the chain it shares with TREE-1.11's describe is a constant above both. A comment says no wiki rule states what it pins; the Reconciler's report raises that as a question for the PO.
   - **Shown to bite.** Four source mutations, each caught by the test named for it: marking an item pending giving it a position (DRAG-6.1), a distance of 0 read as a 100px default (DRAG-1.14), the dead zone ignoring the gap (DRAG-3.5), and the divider of a two-card region sitting `heightPx + gapPx` in (DRAG-3.5). The HEAD versions of the DRAG-6.1 test, the two DRAG-1.14 tests and the `bandFor` tests miss the first three. The other IDs are on tests whose assertions did not change, so there is nothing to mutate.
   - **Checks.** `npm run check` passes: 403 server tests, 448 client (the two new ones), 94 script. `check:docs` reports no hits. No E2E test changed.
+- **2026-10-23, batch 4d, the Coder's step after the run: the two E2E tests (the Coder).** Test code only; no production file changed. The `agentId` fix is the last sub-batch.
+  - **ATT-11.2.** On a board with `P` in Todo, with an attached child as a Stub and a detached child in In Progress, and a bystander Card in each column, the test opens `P`'s panel and deletes it. With no reload of the page (a value set on `window` survives), the three items have no row on the board and each column lists only its bystander. A fresh load of the board then shows the same, so the server deleted what the board dropped.
+  - **DRAG-6.6.** The server has `X` in Review, which the open board doesn't know, so it still draws `X` in Todo. The move that drags `X` into In Progress's bottom band is answered with a 400. The test waits for that response and for a read of the board, and then expects `X` in Review, not pending, with Todo no longer holding it and In Progress still `A, B, C`. The item sitting somewhere the board had never drawn it is what tells a resync from a dropped guess.
+  - **Shown to bite.** Six source mutations, five caught by the test named for each:
+    - the board removing the Card and keeping its descendants;
+    - the board removing only the attached descendants;
+    - the board removing every Card;
+    - the server deleting only the attached descendants, which only the fresh load catches;
+    - a refused drop that doesn't reload the board.
+
+    The sixth, a refused drop that keeps its previewed placement, isn't caught and can't be: the reload replaces every placement, so the board ends the same either way. `dragRequest.test.ts` asserts the request half, that the write fails and the board resyncs.
+  - **Checks.** `npm run check` passes: 403 server tests, 448 client, 94 script. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there. `check:docs` reports no hits.
