@@ -280,6 +280,8 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `scripts/check-docs/extract.mts`, `extract.test.mts` | 3g done | `parseMarker` strips `*/` only, the one closing a caller can pass; its test uses a block-comment fixture | Coder |
 | `scripts/check-docs/extract.mts`, `files.mts`, `check.mts` | 3h done | `extractBruno` reads a `.bru` file's `docs` block as Markdown and blanks every other line, so a finding keeps the file's line and column. `files.mts` has `BRUNO_DIR` and `isBruno`, `bruno/` is in the default scope, and a request is checkable and not code. `checkFile` picks the reader | Coder |
 | `scripts/check-docs/extract.test.mts`, `check.test.mts`, `files.test.mts` | 3h done | Eleven tests: `extractBruno` (six), a request through `checkFile` (three), and the classifiers (two) | Coder |
+| `server/tests/routes/items.hierarchy.test.ts`, `items.workphase.test.ts`, `items.test.ts`, `items.crossProject.test.ts` | 4a done | The Coder's step after the run, item-attachment: ATT-4.11's accepted top-level write runs by PUT as well as by move; ATT-9.12 and ATT-10.4 take their IDs and the writes they lacked; ATT-5.12 and ATT-11.1 take theirs, and ATT-11.1 is the case's own tree, deleted from `P` and from `A` | Coder |
+| `server/tests/routes/items.positioning.test.ts`, `items.attached.test.ts`, `items.hierarchy.test.ts`; `tests/api/itemRepositioningCrossColumn.spec.ts` | 4a done | The item-positioning cases whose tests couldn't fail: TC-2.23 on the re-attach test in `items.hierarchy.test.ts`, with a sibling added to its own test; TC-2.25 pins the child off the values a re-placement would give; TC-5.1 and TC-5.4 create In Progress's item first and add a Todo item past it; TC-2.4 on the `A after C` test, with `C` at `3.4`; TC-2.9 on the cross-column spec's 3.b | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -480,6 +482,15 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
 - **For the Architect:** your note says you update `documentation-standards.md`'s `bruno/` row and its "What the checker checks" list once 3h lands. It has. A request's `docs` block gets the rules a Markdown file outside the wiki and the test plans gets: `transient-id` (IDs and dates), `transient-link`, `bare-section` and `wiki-pointer` (the pointer's form, and whether it resolves), and `symbol-ref`. It doesn't get `case-id`, `bare-case-id`, `claude-ref` or `wiki-code-name`. The rest of a `.bru` file is unread. A `.bru` file outside `bruno/` isn't checked. `code-comments.md`'s checker table, if it lists scope, has the same gap.
   - **Done 2026-10-22 (Architect).** `documentation-standards.md`'s "What the checker checks" names the `docs` blocks among what it reads, as Markdown, and says the rest of a `.bru` file isn't read. Its `bruno/` row says the checker reads a `docs` block, and that rule (g), naming no `.claude/` or `CLAUDE.md` file, holds there by hand. `case-id` and `bare-case-id` need no such line, since no request cites a test case. `wiki-code-name` needs none either, since it's the wiki's. `code-comments.md`'s table lists rules, not where they run, so it has no gap.
+
+*From the Coder, batch 4a, the item tests (2026-10-23).*
+
+- **For the Test Reconciler, on its re-check:** the tests that now carry these IDs, or carry them on a changed setup.
+  - **ATT-4.11:** `items.hierarchy.test.ts`, the top-level test, which now accepts by a move and by PUT.
+  - **ATT-5.12:** `items.crossProject.test.ts`. **ATT-9.12:** `items.workphase.test.ts`. **ATT-10.4:** `items.test.ts`'s missing-row create test.
+  - **ATT-11.1:** `items.test.ts`, two places: the chain test, which carries the ID and asserts part of the case, and the describe "ATT-11.1: deleting an item deletes every descendant, attached and detached, and nothing else", whose two tests are the case's tree deleted from `P` and from `A`.
+  - **TC-2.23:** `items.hierarchy.test.ts`'s re-attach test, now beside `items.positioning.test.ts`'s, which gained a sibling so it can fail. **TC-2.4:** `items.positioning.test.ts`'s `A after C` test, beside `positionResolver.test.ts`. **TC-2.9:** `tests/api/itemRepositioningCrossColumn.spec.ts`'s 3.b, beside `positionResolver.test.ts`.
+  - **TC-2.25** (`items.attached.test.ts`) and **TC-5.1** and **TC-5.4** (`items.positioning.test.ts`) keep their titles and files; their setups changed.
 
 ## Amendments
 
@@ -800,3 +811,25 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 - **2026-10-23, Nathan's rulings on the run (Test Planner):** the internal tests for DRAG-2.9, 3.5, 1.14 and 6.6 are approved. DRAG-2.9's and DRAG-6.6's reverse the declines at A3's batch 3 review, which predated the client-rule category. The Coder's step after the run is tests only, for what the code already does; a case whose test finds otherwise goes to Story 10, or to the story that owns the code. Batch 4 lists the step.
 - **2026-10-23, IDs on passing tests (Nathan):** a passing test that needs only its case's ID gets it now, and so does a client test that needs one more assertion. Tests that check a fine-tuned drag wait for Story 10. Batch 4's Coder step lists both; Story 10's entry lists what waits.
 - **2026-10-23, `PUT /items/:id`'s `agentId` (Nathan):** fixed in this story, in the Coder's step after the run, under the convention that a write naming a row that doesn't exist is refused with a 400.
+- **2026-10-23, batch 4a, the Coder's step after the run: the item tests (the Coder).** Test code only; no production file changed. This covers Batch 4's item-attachment and item-positioning items that are route tests. The server tests for boards, columns and projects, the client tests, the two E2E tests and the `agentId` fix are the next sub-batches.
+  - **ATT-4.11.** The top-level test ran its accepted write by a move only. Each entry point now seeds its own chain, since an accepted write takes its item out of it, and asserts the refusal, then the acceptance with the parent stored as null.
+  - **ATT-9.12.** The create-and-move test takes the ID. It now makes the case's two moves, `R`'s (left Free) and `X`'s (left attached to `A`), where it attached a new item `F`, and reads `R` and `X` before and after. It no longer asserts that every refusal carries the move's exact message: wiki item-attachment §2a doesn't say the writes share one, and the Test Planner left it out of the case on purpose, so each refusal matches the message instead. That reverses a pin batch 3d added.
+  - **ATT-10.4.** The missing-row create test takes the ID and a create naming the missing project with `P` as the parent, which the route answers with the same project message.
+  - **ATT-5.12.** The same-workflow reparent test takes the ID and a title that claims what it does. It said it also made a re-file, which it never did. It now asserts the parent and the Free state, which the case states.
+  - **ATT-11.1.** The two existing delete tests assert part of the case: no list read, no `Q`, no delete from the middle. The chain test takes the ID. The detached-descendants test became the case's own tree, deleted from `P` and from `A`, with `Q`, `P`, `D` and `D1` compared before and after the second. The old test's detached child had no workphase and the case's has one; the delete walks `parentId` only, so nothing depends on it.
+  - **Tests that couldn't fail.**
+    - **TC-2.23:** the ID is on `items.hierarchy.test.ts`'s re-attach test, where `S1` at `1.0` beside `S2` makes a re-append give `3`. `items.positioning.test.ts`'s own test had one child, so it gains a sibling after it.
+    - **TC-2.25:** the child is pinned at `0.37`, which neither a re-placement among its siblings (`1.0`) nor one among the workflow's items (`2`) gives.
+    - **TC-5.1, TC-5.4:** In Progress's item is created first and a Todo item sits at `6.0`, past it. Neither insertion order nor Todo-before-In-Progress gives the order by position, `T1, T2, P1, T3`, so the combined order is what the test proves.
+    - **TC-2.4:** the `A after C` test takes the ID, with `C` at `3.4`, so the append is `4`, not `4.4`.
+    - **TC-2.9:** the ID is on the cross-column API spec's 3.b, where `E`'s true predecessor `D` is unseen in the column and `C` lands at `4.5`.
+  - **Shown to bite.** Thirteen source mutations, each caught by the test named for it:
+    - PUT refusing a top-level move (ATT-4.11);
+    - the missing-workphase check skipped in a move and in a create, and a refused move still touching the row (ATT-9.12);
+    - a parent's project winning over the create's (ATT-10.4);
+    - a delete that leaves detached descendants, one that takes the whole project, and one from the middle that takes the parent's subtree (ATT-11.1);
+    - a same-workflow reparent counted as crossing (ATT-5.12);
+    - a re-attach counted as a scope change (TC-2.23), a cascade that re-places its child (TC-2.25), an unrounded append (TC-2.4), and a reindex in creation order (TC-5.1 and TC-5.4).
+
+    The HEAD version of each of the last four tests, run under the same mutation, still passes: those were the ones that couldn't fail.
+  - **Checks.** `npm run check` passes: 400 server tests (ATT-11.1's old test is two now), 446 client, 94 script. `check:docs` reports no hits. The cross-column API spec passes with its new title. `npm run test:e2e` wasn't run, since no E2E test changed but a title.

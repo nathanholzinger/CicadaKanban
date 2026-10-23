@@ -274,6 +274,8 @@ describe('position resolution', () => {
     const { project, todo } = await setupTwoPhases();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
+    // A sibling after it: a re-attach treated as a scope change would append past this one, to 3.
+    await createItem({ projectId: project.id, parentId: parent.id, title: 'Sibling' });
 
     const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
@@ -334,12 +336,13 @@ describe('position resolution', () => {
       expect(await orderOf([a, b, c])).toBe('ACB');
     });
 
-    it('A after C — becomes the new true last item', async () => {
+    it('TC-2.4: A after C — becomes the new true last item, at C plus 1.0 rounded', async () => {
       const { a, b, c } = await seedABC();
+      setItemPosition(c.id, 3.4); // so the append is 4.4 unrounded
       const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: c.id, side: 'after' });
       expect(res.status).toBe(200);
-      // No true successor after C -> append fallback, C.position + 1.0.
-      expect(res.body.position).toBe(4.0);
+      // No true successor after C -> append fallback, C.position + 1.0, rounded.
+      expect(res.body.position).toBe(4);
       expect(await orderOf([a, b, c])).toBe('BCA');
     });
   });
@@ -556,19 +559,23 @@ describe('position resolution', () => {
       return (await request(app).get(`/api/items/${id}`)).body.position;
     }
 
-    it('TC-2.12, TC-5.1, TC-5.4, TC-5.9, TC-5.13, TC-5.14: reindexes every non-terminal workphase in the workflow together, in one coordinated pass', async () => {
+    it('TC-2.12, TC-5.1, TC-5.4, TC-5.9, TC-5.13, TC-5.14: reindexes every non-terminal workphase in the workflow together, in one coordinated pass, in their combined order', async () => {
       const { project, todo, inProgress } = await setupThreePhases();
+
+      // An item in a DIFFERENT non-terminal workphase, same workflow — this is what
+      // proves the coordinated (not per-workphase) scope. It is created first, and
+      // `todo`'s last item sits past it, so neither the order the rows were inserted in
+      // nor `todo` before `inProgress` gives the order by position: T1, T2, P1, T3.
+      const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
+      setItemPosition(itemP1.id, 5.0);
 
       // A tight, unresolvable gap within `todo` — the trigger.
       const itemT1 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T1' });
       const itemT2 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T2' });
       setItemPosition(itemT1.id, 1.0);
       setItemPosition(itemT2.id, 1.0 + 1e-13);
-
-      // A third item in a DIFFERENT non-terminal workphase, same workflow —
-      // this is what proves the coordinated (not per-workphase) scope.
-      const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
-      setItemPosition(itemP1.id, 5.0);
+      const itemT3 = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'T3' });
+      setItemPosition(itemT3.id, 6.0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
       const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
@@ -581,12 +588,14 @@ describe('position resolution', () => {
       expect(await getPosition(itemT1.id)).toBe(1);
       expect(await getPosition(itemT2.id)).toBe(2);
       expect(await getPosition(itemP1.id)).toBe(3); // the coordination proof: a different workphase, reindexed together
+      expect(await getPosition(itemT3.id)).toBe(4); // and in the combined order, past P1
       expect(res.body.position).toBe(1.5);
       // Every renumbered item is disclosed, In Progress's P1 too, and then the mover's own pair.
       expect(res.body.reindexed).toEqual([
         { id: itemT1.id, position: 1 },
         { id: itemT2.id, position: 2 },
         { id: itemP1.id, position: 3 },
+        { id: itemT3.id, position: 4 },
         { id: mover.id, position: 1.5 },
       ]);
     });

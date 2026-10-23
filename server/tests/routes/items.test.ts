@@ -117,8 +117,9 @@ describe('POST /api/items', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400, not an opaque FK 500, for a projectId, type or agentId that names no row', async () => {
+  it('ATT-10.4: returns 400, not an opaque FK 500, for a projectId, type or agentId that names no row', async () => {
     const project = await createProject();
+    const parent = await createItem({ projectId: project.id, title: 'P' });
     const type = (await request(app).post('/api/item-types').send({ name: 'Bug' })).body;
     const agent = (
       await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
@@ -127,6 +128,11 @@ describe('POST /api/items', () => {
 
     const refusals = [
       ['projectId', { projectId: 'no-such-project' }, /projectId does not reference an existing project/],
+      [
+        'projectId, with a parent',
+        { projectId: 'no-such-project', parentId: parent.id },
+        /projectId does not reference an existing project/,
+      ],
       ['type', { projectId: project.id, type: 'no-such-type' }, /type does not reference an existing item type/],
       ['agentId', { projectId: project.id, agentId: 'no-such-agent' }, /agentId does not reference an existing agent/],
     ] as const;
@@ -453,7 +459,7 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${item.id}`)).status).toBe(404);
   });
 
-  it('cascades through a multi-level parent/child/grandchild chain', async () => {
+  it('ATT-11.1: cascades through a multi-level parent/child/grandchild chain', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
@@ -467,23 +473,71 @@ describe('DELETE /api/items/:id', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
   });
 
-  it('deleting a parent also deletes its detached descendants', async () => {
-    const project = await createProject();
-    const parent = await createItem({ projectId: project.id, title: 'Parent' });
-    const detachedChild = await createItem({
-      projectId: project.id,
-      parentId: parent.id,
-      title: 'Detached Child',
-      isAttached: false,
-      workphaseId: null,
+  describe('ATT-11.1: deleting an item deletes every descendant, attached and detached, and nothing else', () => {
+    // P holds an attached child A, whose detached child A1 sits in w3, and a detached child D in
+    // w2, which holds an attached child D1. Q is top-level and unrelated.
+    async function seedSubtree(name: string) {
+      const {
+        project,
+        phases: [w1, w2, w3],
+      } = await workflowWithPhases(['Todo', 'In Progress', 'Review'], { name });
+      const p = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'P' });
+      const a = await createItem({ projectId: project.id, parentId: p.id, title: 'A' });
+      const a1 = await createItem({
+        projectId: project.id,
+        parentId: a.id,
+        title: 'A1',
+        isAttached: false,
+        workphaseId: w3.id,
+      });
+      const d = await createItem({
+        projectId: project.id,
+        parentId: p.id,
+        title: 'D',
+        isAttached: false,
+        workphaseId: w2.id,
+      });
+      const d1 = await createItem({ projectId: project.id, parentId: d.id, title: 'D1' });
+      const q = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'Q' });
+      return { project, p, a, a1, d, d1, q };
+    }
+
+    const rowOf = (id: string) => db.select().from(items).where(eq(items.id, id)).get();
+    const idsIn = (projectId: string) =>
+      db
+        .select({ id: items.id })
+        .from(items)
+        .where(eq(items.projectId, projectId))
+        .all()
+        .map(row => row.id)
+        .sort();
+
+    it('deletes the whole subtree from its top', async () => {
+      const { project, p, a, a1, d, d1, q } = await seedSubtree('From P');
+      const qBefore = rowOf(q.id);
+
+      expect((await request(app).delete(`/api/items/${p.id}`)).status).toBe(204);
+
+      for (const gone of [p, a, a1, d, d1]) {
+        expect((await request(app).get(`/api/items/${gone.id}`)).status, gone.title).toBe(404);
+      }
+      expect(idsIn(project.id)).toEqual([q.id]);
+      expect(rowOf(q.id)).toEqual(qBefore);
     });
-    const grandchild = await createItem({ projectId: project.id, parentId: detachedChild.id, title: 'Grandchild' });
 
-    const res = await request(app).delete(`/api/items/${parent.id}`);
-    expect(res.status).toBe(204);
+    it('deletes only the branch below the item, from the middle of the tree', async () => {
+      const { project, p, a, a1, d, d1, q } = await seedSubtree('From A');
+      const kept = [p, d, d1, q];
+      const keptBefore = kept.map(item => rowOf(item.id));
 
-    expect((await request(app).get(`/api/items/${detachedChild.id}`)).status).toBe(404);
-    expect((await request(app).get(`/api/items/${grandchild.id}`)).status).toBe(404);
+      expect((await request(app).delete(`/api/items/${a.id}`)).status).toBe(204);
+
+      for (const gone of [a, a1]) {
+        expect((await request(app).get(`/api/items/${gone.id}`)).status, gone.title).toBe(404);
+      }
+      expect(idsIn(project.id)).toEqual(kept.map(item => item.id).sort());
+      expect(kept.map(item => rowOf(item.id))).toEqual(keptBefore);
+    });
   });
 
   it("cascades an item's dependent rows (labels, activity, notifications, attachments, chat) via ON DELETE CASCADE", async () => {

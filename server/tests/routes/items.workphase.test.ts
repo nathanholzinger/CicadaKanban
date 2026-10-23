@@ -84,28 +84,39 @@ describe('the workphase a write leaves an item in', () => {
     expect(matching).toMatchObject({ isAttached: 1, workphaseId: w2.id });
   });
 
-  it('a create and a move refuse a workphaseId that names no workphase with one message, attached or not', async () => {
-    const { project, w1, a } = await setupShownWithChain();
-    const f = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'F' });
+  it("ATT-9.12: a write that names a workphase that doesn't exist is refused, whether it leaves the item Free or Attached", async () => {
+    const { project, r, a, x } = await setupShownWithChain();
+    const rBefore = getRow(r.id);
+    const xBefore = getRow(x.id);
     const before = countItems();
-
-    const moved = await move(f.id, { parentId: a.id, isAttached: true, workphaseId: 'no-such-workphase' });
-    expect(moved.status).toBe(400);
-    expect(moved.body.error).toMatch(/workphaseId does not reference an existing workphase/);
+    const refused = /workphaseId does not reference an existing workphase/;
 
     const creates = [
-      ['a top-level item', { projectId: project.id }],
-      ['an attached child', { parentId: a.id }],
-      ['a detached child', { parentId: a.id, isAttached: false }],
+      ['a create of a top-level item', { projectId: project.id }],
+      ['a create of a child attached to A', { parentId: a.id }],
+      ['a create of a detached child of A', { parentId: a.id, isAttached: false }],
     ] as const;
     for (const [label, body] of creates) {
       const res = await request(app)
         .post('/api/items')
         .send({ title: 'Y', workphaseId: 'no-such-workphase', ...body });
       expect(res.status, label).toBe(400);
-      expect(res.body.error, label).toBe(moved.body.error);
+      expect(res.body.error, label).toMatch(refused);
     }
+
+    const moves = [
+      ['a move of R, which leaves it Free', r.id, {}],
+      ['a move that leaves X attached to A', x.id, { parentId: a.id, isAttached: true }],
+    ] as const;
+    for (const [label, id, body] of moves) {
+      const res = await move(id, { ...body, workphaseId: 'no-such-workphase' });
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(refused);
+    }
+
     expect(countItems()).toBe(before);
+    expect(getRow(r.id)).toEqual(rBefore);
+    expect(getRow(x.id)).toEqual(xBefore);
   });
 
   it('ATT-9.4: a detach that names no workphase leaves the item in the one it was shown in', async () => {

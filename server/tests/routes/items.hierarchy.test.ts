@@ -352,7 +352,7 @@ describe('PATCH /items/:id/move — attach / reparent / detach with placement', 
     expect(res.body.position).toBe(1.0);
   });
 
-  it('ATT-7.6, ATT-8.2: a redundant re-attach to the same parent is not a scope change and keeps its position', async () => {
+  it('ATT-7.6, ATT-8.2, TC-2.23: a redundant re-attach to the same parent is not a scope change and keeps its position', async () => {
     const { project, todo } = await setupWorkflow();
     const { p, s1 } = await cardWithTwoStubs(project.id, todo.id);
     const logged = hierarchyEntries(s1.id).length;
@@ -666,24 +666,27 @@ describe('data already past the cap', () => {
 
   it('ATT-4.11: the top level is no exception: a subtree too tall for the cap is refused it by move and by PUT, and one that fits is not', async () => {
     const { project, todo } = await setupWorkflow();
-    // The chain's second link has height CAP, so at the top level its deepest leaf
-    // would sit at CAP + 1. The third has height CAP − 1, which just fits.
-    const [, tooTall, fits] = await seedChainPastCap(project.id, todo.id, ITEM_DEPTH_CAP + 2);
-    const before = getRow(tooTall.id);
 
     for (const [entryPoint, write] of [
       ['move', move],
       ['PUT', put],
     ] as const) {
-      const res = await write(tooTall.id, { parentId: null });
-      expect(res.status, entryPoint).toBe(400);
-      expect(res.body.error, entryPoint).toMatch(/exceeds the cap/);
-      expect(getRow(tooTall.id), entryPoint).toEqual(before);
-    }
+      // The chain's second link has height CAP, so at the top level its deepest leaf
+      // would sit at CAP + 1. The third has height CAP − 1, which just fits. An accepted
+      // write takes its item out of the chain, so each entry point seeds its own.
+      const [, tooTall, fits] = await seedChainPastCap(project.id, todo.id, ITEM_DEPTH_CAP + 2);
+      const before = getRow(tooTall.id);
 
-    const accepted = await move(fits.id, { parentId: null });
-    expect(accepted.status).toBe(200);
-    expect(accepted.body.parentId).toBeNull();
+      const refused = await write(tooTall.id, { parentId: null });
+      expect(refused.status, entryPoint).toBe(400);
+      expect(refused.body.error, entryPoint).toMatch(/exceeds the cap/);
+      expect(getRow(tooTall.id), entryPoint).toEqual(before);
+
+      const accepted = await write(fits.id, { parentId: null });
+      expect(accepted.status, entryPoint).toBe(200);
+      expect(accepted.body.parentId, entryPoint).toBeNull();
+      expect(getRow(fits.id).parentId, entryPoint).toBeNull();
+    }
   });
 });
 

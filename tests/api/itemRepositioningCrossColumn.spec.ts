@@ -103,7 +103,7 @@ test.describe('3: interior moves that stay in column 1 ("drop it back where it w
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
-  test('TC-2.28: 3.b — move C to before E', async ({ request }) => {
+  test('TC-2.9, TC-2.28: 3.b — move C to before E', async ({ request }) => {
     await moveItem(request, scenario.items.C.id, { anchorId: scenario.items.E.id, side: 'before' });
 
     const updated = await fetchItem(request, scenario.items.C.id);

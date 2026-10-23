@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import { items } from '../../src/db/schema.js';
-import { createProject, createItem, workflowWithPhases } from '../fixtures.js';
+import { createProject, createItem, setItemPosition, workflowWithPhases } from '../fixtures.js';
 
 // Attached and detached children through the item routes: how a parent's workphase carries its
 // children, and what a reparent does to the flag.
@@ -33,7 +33,8 @@ describe('attached children', () => {
     } = await workflowWithPhases(['Todo', 'In Progress']);
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
-    expect(child.position).toBe(1.0); // first among the parent's own attached children
+    // Off the 1.0 a re-placement among its siblings would give it, and the 2 among the workflow's items.
+    setItemPosition(child.id, 0.37);
 
     const res = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: inProgress.id });
     expect(res.status).toBe(200);
@@ -43,7 +44,7 @@ describe('attached children', () => {
     // times the parent's workphase changes.
     const updatedChild = await request(app).get(`/api/items/${child.id}`);
     expect(updatedChild.body.workphaseId).toBe(inProgress.id);
-    expect(updatedChild.body.position).toBe(child.position);
+    expect(updatedChild.body.position).toBe(0.37);
   });
 
   it('ATT-1.4, ATT-1.5, TC-6.5, TC-6.6: an attached child keeps its position when its parent cascades into a terminal workphase', async () => {

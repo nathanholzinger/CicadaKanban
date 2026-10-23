@@ -275,14 +275,14 @@ describe('cross-project reparenting', () => {
       expect(refiled.body.position).toBe(4); // append past the workflow's true last item
     });
 
-    it("still allows a same-workflow reparent that names a workphaseId, and a re-file into the project's own workflow", async () => {
+    it('ATT-5.12: a Free item reparented to a sibling project on one workflow may name a workphase of that workflow', async () => {
       const { todo, inProgress, p1, p2 } = await setupSiblingProjects();
-      const q = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'Q' });
+      const b = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'B' });
       const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
       // Sibling projects share the root's workflow: not a workflow change.
-      const res = await move(x.id, { parentId: q.id, isAttached: false, workphaseId: inProgress.id });
+      const res = await move(x.id, { parentId: b.id, isAttached: false, workphaseId: inProgress.id });
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ projectId: p2.id, workphaseId: inProgress.id });
+      expect(res.body).toMatchObject({ parentId: b.id, isAttached: 0, projectId: p2.id, workphaseId: inProgress.id });
     });
   });
 });
