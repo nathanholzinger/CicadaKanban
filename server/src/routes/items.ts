@@ -247,6 +247,12 @@ router.put('/:id', (req, res) => {
     }
   }
 
+  // An agent that names no row would otherwise surface as an opaque FK-violation 500.
+  if (agentId && !existsById(agents, agentId)) {
+    res.status(400).json({ error: 'agentId does not reference an existing agent' });
+    return;
+  }
+
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;

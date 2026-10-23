@@ -308,6 +308,31 @@ describe('PUT /api/items/:id', () => {
     const afterAssign = await request(app).get(`/api/items/${item.id}`);
     expect(afterAssign.body.activity.some((a: { type: string }) => a.type === 'assignment')).toBe(true);
   });
+
+  it('returns 400, not an opaque FK 500, for an agentId that names no agent, and changes nothing', async () => {
+    const project = await createProject();
+    const agent = (
+      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
+    ).body;
+    const item = await createItem({ projectId: project.id, title: 'Keep Me' });
+    const before = (await request(app).get(`/api/items/${item.id}`)).body;
+
+    // The other fields in the same edit are not applied either.
+    const refused = await request(app)
+      .put(`/api/items/${item.id}`)
+      .send({ title: 'Changed', assigneeType: 'agent', agentId: 'no-such-agent' });
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toMatch(/agentId does not reference an existing agent/);
+    expect((await request(app).get(`/api/items/${item.id}`)).body).toEqual(before);
+
+    // An agent that exists is stored, and null still clears it.
+    const assigned = await request(app).put(`/api/items/${item.id}`).send({ assigneeType: 'agent', agentId: agent.id });
+    expect(assigned.status).toBe(200);
+    expect(assigned.body.agentId).toBe(agent.id);
+    const cleared = await request(app).put(`/api/items/${item.id}`).send({ assigneeType: null, agentId: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.agentId).toBeNull();
+  });
 });
 
 describe('PATCH /api/items/:id/move', () => {

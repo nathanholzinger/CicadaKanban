@@ -288,6 +288,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `client/src/components/workflow/dragClassification.test.ts`, `dragBands.test.ts`, `popSession.test.ts` | 4c done | The internal tests Nathan approved: DRAG-2.9, DRAG-3.5 (the two `bandFor` tests, and a new `reservationFor` test) and DRAG-1.14 (a new test that a distance of 0 pops nothing before the clock) | Coder |
 | `client/src/components/sidebar/useProjectDragReorder.test.ts` | 4c done | "marks nothing invalid while the cap is unknown" leaves TREE-1.11's describe for one of its own | Coder |
 | `tests/ui/attached-children.spec.ts`, `tests/ui/drag-column-bands.spec.ts` | 4d done | Two E2E tests: ATT-11.2 (a new describe, "deleting a Card"), the board's half of deleting an item's subtree; and DRAG-6.6, beside DRAG-6.1 and DRAG-6.5, the board's half of a refused drop | Coder |
+| `server/src/routes/items.ts`, `server/tests/routes/items.test.ts` | 4e done | `PUT /items/:id` answers 400 for an `agentId` that names no agent, before anything is written, as `POST` does. Its route test carries no case ID | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -429,7 +430,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **Done 2026-10-22 (Test Planner):** ATT-9.12, `Open`. It covers a top-level create, an attached and a detached child's create, and a move that leaves the item Free or Attached. It doesn't say the writes share one message, since §2a doesn't.
   - *Moved 2026-10-22 to `positioning-on-create-and-edit.md`'s Inbound deferrals:* TC-7.10 and an item that ends with no workphase. Under that story, a child with no workphase gains a sibling scope.
 - **For Nathan:** where the fix for `PUT /items/:id`'s unchecked `agentId` goes, the gap this batch's notes left since #47 named only the create. Under the convention above, an edit naming an agent that doesn't exist is refused with a 400, and nothing changes. Today it's a 500.
-  - **Answered 2026-10-23 (Nathan):** in A6's Coder step after the run (Batch 4).
+  - **Answered 2026-10-23 (Nathan):** in A6's Coder step after the run (Batch 4). **Done 2026-10-23 (Coder, batch 4e):** see Amendments.
 
 *From the Coder, batch 3e, the drag layer (2026-10-21).*
 
@@ -514,6 +515,10 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 *From the Coder, batch 4d, the E2E tests (2026-10-23).*
 
 - **For the Test Reconciler, on its re-check:** ATT-11.2 is `tests/ui/attached-children.spec.ts`'s "deleting a Card" describe. DRAG-6.6's board half is `tests/ui/drag-column-bands.spec.ts`'s test, beside `dragRequest.test.ts`'s, which has the request's half. Both specs are in the E2E count: 174 tests, 8 skipped as before.
+
+*From the Coder, batch 4e, the `agentId` fix (2026-10-23).*
+
+- **For Nathan:** `PUT /items/:id` with `agentId: ''` still answers 500, where `POST` stores it as none (`agentId || null`). The new check passes it, since `''` is falsy as it is in `POST`. Nothing sends it: the Sheet sends `null` to clear an agent. If you want `PUT` to agree with `POST`, it's `updates.agentId = agentId || null` and a test line. I left it, since the ruling was about an `agentId` that names no agent.
 
 ## Amendments
 
@@ -899,3 +904,9 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
     The sixth, a refused drop that keeps its previewed placement, isn't caught and can't be: the reload replaces every placement, so the board ends the same either way. `dragRequest.test.ts` asserts the request half, that the write fails and the board resyncs.
   - **Checks.** `npm run check` passes: 403 server tests, 448 client, 94 script. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there. `check:docs` reports no hits.
+- **2026-10-23, batch 4e, the Coder's step after the run: `PUT /items/:id`'s `agentId` (the Coder).** The one production change in the step, the fix Nathan placed here.
+  - **The fix.** `routes/items.ts`'s edit answers 400, "agentId does not reference an existing agent", for an `agentId` that names no agent, as `POST` does since #47. The check follows the hierarchy check and precedes every write, so nothing in the edit is applied, the title and assignment included. `null` still clears the agent.
+  - **The test.** `items.test.ts`'s "returns 400, not an opaque FK 500, for an agentId that names no agent, and changes nothing" carries no case ID, since no wiki page covers the agent field. It sends a title and an assignment with the missing agent, expects the 400 and the item, activity included, read as it was before, then assigns a real agent and clears it with `null`. Run before the fix, it failed with the 500 the audit described.
+  - **Shown to bite.** Four mutations, each caught: the check removed, a refused edit having already written the title, `null` refused as an agent that doesn't exist, and an agent that exists refused.
+  - **Not changed.** The `''` edge above. No Bruno docs line: `create-item.bru` doesn't state its reference refusals either.
+  - **Checks.** `npm run check` passes: 404 server tests, 448 client, 94 script. `check:docs` reports no hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.
