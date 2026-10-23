@@ -284,6 +284,9 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `server/tests/routes/items.positioning.test.ts`, `items.attached.test.ts`, `items.hierarchy.test.ts`; `tests/api/itemRepositioningCrossColumn.spec.ts` | 4a done | The item-positioning cases whose tests couldn't fail: TC-2.23 on the re-attach test in `items.hierarchy.test.ts`, with a sibling added to its own test; TC-2.25 pins the child off the values a re-placement would give; TC-5.1 and TC-5.4 create In Progress's item first and add a Todo item past it; TC-2.4 on the `A after C` test, with `C` at `3.4`; TC-2.9 on the cross-column spec's 3.b | Coder |
 | `server/tests/fixtures.ts`, `server/tests/routes/columns.test.ts` | 4b done | `setColumnEnds`, the direct write of a column's start or end, with foreign keys off for the write. BCU-2.9 is a describe of two route tests over it: a column with an end outside the workflow, in the three ways the case names, and the edit that fixes it. BCU-2.8's test takes the case's title. BCU-2.3's test drops its `position` assertion, which is a test of its own | Coder |
 | `server/tests/routes/boards.test.ts`, `projects.test.ts` | 4b done | BCU-1.2 compares the board with a read taken before the refused delete. TREE-3.9's refused create matches the cap's message, and `pastCap` is a module constant. TREE-9.1 compares Q's project, workflow, board and item with a read taken before the delete | Coder |
+| `client/src/components/workflow/itemWriteReconciliation.test.ts`, `itemListOps.test.ts`, `dragRequest.test.ts`, `popSession.test.ts` | 4c done | The IDs Nathan ruled on for tests that already passed: DRAG-6.1 (with an assertion of the list while the write is pending), DRAG-6.2, DRAG-6.9, DRAG-4.12 (two tests), DRAG-6.11 (with an assertion that the item stays last once stamped) and DRAG-3.11; and the request halves of DRAG-1.24, DRAG-3.23, DRAG-3.24 and DRAG-6.7 | Coder |
+| `client/src/components/workflow/dragClassification.test.ts`, `dragBands.test.ts`, `popSession.test.ts` | 4c done | The internal tests Nathan approved: DRAG-2.9, DRAG-3.5 (the two `bandFor` tests, and a new `reservationFor` test) and DRAG-1.14 (a new test that a distance of 0 pops nothing before the clock) | Coder |
+| `client/src/components/sidebar/useProjectDragReorder.test.ts` | 4c done | "marks nothing invalid while the cap is unknown" leaves TREE-1.11's describe for one of its own | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -497,6 +500,15 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 *From the Coder, batch 4b, the boards, columns and projects tests (2026-10-23).*
 
 - **For the Architect:** `testing-strategy.md`'s Server tests line lists the direct-write fixtures: `setItemPosition`, `setProjectPosition`, `setItemParent` and `setProjectParent`. `server/tests/fixtures.ts` has a fifth, `setColumnEnds`, which writes a column's start or end, including an id that names no workphase.
+
+*From the Coder, batch 4c, the client tests (2026-10-23).*
+
+- **For the Test Reconciler, on its re-check:** the client tests that now carry these IDs, by file.
+  - **`itemWriteReconciliation.test.ts`:** DRAG-6.1 and TC-2.28 on the band-drop test; TC-2.30 and DRAG-6.2; DRAG-6.9.
+  - **`dragRequest.test.ts`:** DRAG-1.24 (`isIdentity` over an empty list), DRAG-3.12 and DRAG-3.24, DRAG-3.23, DRAG-4.1, DRAG-4.12 and DRAG-5.4, and DRAG-6.7 on both stale-response tests. DRAG-6.6's test already began with its ID, and is unchanged.
+  - **`popSession.test.ts`:** DRAG-4.12 (the childless Card) and DRAG-1.14, which has a third test. **`dragBands.test.ts`:** DRAG-3.5 on two `bandFor` tests and a `reservationFor` test. **`dragClassification.test.ts`:** DRAG-2.9.
+  - **`itemListOps.test.ts`:** DRAG-6.11, and TC-2.30 with DRAG-3.11.
+  - **`useProjectDragReorder.test.ts`:** the cap-unknown test is no longer under TREE-1.11.
 
 ## Amendments
 
@@ -858,3 +870,15 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
     The HEAD versions of the tests for the last three, and BCU-2.3's, pass under the same mutation.
   - **Checks.** `npm run check` passes: 403 server tests (BCU-2.9's two and the column-position test), 446 client, 94 script. `check:docs` reports no hits. No E2E test changed.
+- **2026-10-23, batch 4c, the Coder's step after the run: the client tests (the Coder).** Test code only; no production file changed. The two E2E tests (ATT-11.2, and DRAG-6.6's board half) and the `agentId` fix are the next sub-batches.
+  - **Two tests gain an assertion, as the plan says.**
+    - **DRAG-6.1:** the band-drop test reads the list while the write is pending. `X` is drawn at the anchor the request carries (`A, X, B, C` for the top band, `A, B, X, C` for the bottom), and its position is still `4`. The title is `DRAG-6.1, TC-2.28:`, so TC-2.28 stays on it.
+    - **DRAG-6.11:** once the item's `completedAt` is stamped later than the others', it is still last. No source mutation fails only this assertion: it states the case's second half, and the first expectation already fails for any wrong sort of a missing `completedAt`.
+  - **IDs on tests that already passed.** DRAG-6.2 (`TC-2.30, DRAG-6.2:`), DRAG-6.9, DRAG-4.12 on `dragRequest.test.ts`'s attach test and `popSession.test.ts`'s childless-Card test, and DRAG-3.11 on `itemListOps.test.ts`'s TC-2.30 test. The request halves, which leave each case `Open` for Story 10, are DRAG-1.24, DRAG-3.23, DRAG-3.24 (the DRAG-3.12 test) and DRAG-6.7 (both stale-response tests). DRAG-6.6's request half needed nothing: `dragRequest.test.ts`'s test already began with its ID.
+  - **The approved internal tests.**
+    - **DRAG-2.9:** `dragClassification.test.ts`'s cycle-forming test takes the ID.
+    - **DRAG-3.5:** the first two `bandFor` tests take it, and a new `reservationFor` test covers the part nothing tested: with two or more cards the dead zone is `(heightPx + gapPx) / 2` tall and the divider `heightPx` in, from the metrics alone.
+    - **DRAG-1.14:** a new test that with `popDistancePx` at 0 a cursor far outside pops nothing until `popDelayMs`, where the two existing tests have a distance above 0.
+  - **A test under the wrong ID.** "marks nothing invalid while the cap is unknown" is in its own describe, "before the sidebar has the project cap", and the chain it shares with TREE-1.11's describe is a constant above both. A comment says no wiki rule states what it pins; the Reconciler's report raises that as a question for the PO.
+  - **Shown to bite.** Four source mutations, each caught by the test named for it: marking an item pending giving it a position (DRAG-6.1), a distance of 0 read as a 100px default (DRAG-1.14), the dead zone ignoring the gap (DRAG-3.5), and the divider of a two-card region sitting `heightPx + gapPx` in (DRAG-3.5). The HEAD versions of the DRAG-6.1 test, the two DRAG-1.14 tests and the `bandFor` tests miss the first three. The other IDs are on tests whose assertions did not change, so there is nothing to mutate.
+  - **Checks.** `npm run check` passes: 403 server tests, 448 client (the two new ones), 94 script. `check:docs` reports no hits. No E2E test changed.

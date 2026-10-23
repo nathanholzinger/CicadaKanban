@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { bandBoundaries, bandFor, distanceOutside } from './dragBands';
+import { bandBoundaries, bandFor, distanceOutside, reservationFor } from './dragBands';
 import { rect } from '../../test/dragFixtures';
 
-// DRAG-3.5: the boundaries are content-anchored pixels (`heightPx` in from
+// The boundaries are content-anchored pixels (`heightPx` in from
 // each edge of `contentRect`, never a fraction of the region's height), with
 // two collapses to a single band and one exception that halves the edge to
 // `(heightPx + gapPx) / 2`, all measured against the fixed shortCard height
@@ -12,7 +12,7 @@ describe('bandFor', () => {
   const metrics = { heightPx: 40, gapPx: 8 };
   const twoCards = { contentRect, isTerminal: false, cardCount: 2 };
 
-  it('switches exactly at the boundaries bandBoundaries reports — the guides draw from the same numbers', () => {
+  it('DRAG-3.5: switches exactly at the boundaries bandBoundaries reports — the guides draw from the same numbers', () => {
     const boundaries = bandBoundaries(twoCards, metrics);
     expect(boundaries).toEqual({ top: 140, bottom: 260 });
     expect(bandFor(139, twoCards, metrics)).toBe('top');
@@ -21,7 +21,7 @@ describe('bandFor', () => {
     expect(bandFor(261, twoCards, metrics)).toBe('bottom');
   });
 
-  it('moves with the shortCard height — the gap plays no part in the 2+-card edge', () => {
+  it('DRAG-3.5: moves with the shortCard height — the gap plays no part in the 2+-card edge', () => {
     const wide = { heightPx: 80, gapPx: 8 };
     expect(bandFor(170, twoCards, wide)).toBe('top'); // boundary now at 180
     expect(bandFor(215, twoCards, wide)).toBe('middle');
@@ -53,6 +53,23 @@ describe('bandFor', () => {
     expect(bandFor(125, oneCard, metrics)).toBe('middle');
     expect(bandFor(275, oneCard, metrics)).toBe('middle');
     expect(bandFor(277, oneCard, metrics)).toBe('bottom');
+  });
+});
+
+describe('reservationFor', () => {
+  it('DRAG-3.5: with two or more cards, each dead zone is (heightPx + gapPx) / 2 tall and each divider heightPx in — from the metrics alone', () => {
+    const cards = (cardCount: number) => ({ isTerminal: false, cardCount });
+    expect(reservationFor(cards(2), { heightPx: 40, gapPx: 8 })).toEqual({
+      shape: 'positional',
+      zoneHeight: 24,
+      edge: 40,
+    });
+    // Every number follows the metrics, and the card count past two changes none.
+    expect(reservationFor(cards(5), { heightPx: 80, gapPx: 12 })).toEqual({
+      shape: 'positional',
+      zoneHeight: 46,
+      edge: 80,
+    });
   });
 });
 

@@ -325,13 +325,13 @@ describe('TREE-1.10: on the dragged project’s own row, the cursor picks among 
   });
 });
 
-describe('TREE-1.11: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', () => {
-  // A chain P1 to P3, each the only child of the one before, and X, with a child X1.
-  const chain = tree(['P1', null], ['P2', 'P1'], ['P3', 'P2'], ['X', null], ['X1', 'X']);
+// A chain P1 to P3, each the only child of the one before, and X, with a child X1.
+const capChain = tree(['P1', null], ['P2', 'P1'], ['P3', 'P2'], ['X', null], ['X1', 'X']);
 
+describe('TREE-1.11: a tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing', () => {
   it('marks a tab state that puts the subtree past the cap invalid, and a release in it sends nothing', () => {
     // Cap 4: X under P3 is at depth 4, and X1 at 5.
-    const drag = sidebarDrag(chain, [], 4);
+    const drag = sidebarDrag(capChain, [], 4);
     drag.pickUp('X');
     drag.hover('P3', 'after', 3);
     expect(drag.hook.projectedDepth).toBe(3);
@@ -343,16 +343,20 @@ describe('TREE-1.11: a tab state that would put the dragged subtree past the pro
 
   it('leaves a tab state that fits the cap valid, and a release in it writes', () => {
     // X aligned with P3 is P2's child, at depth 3, and X1 at 4.
-    const drag = sidebarDrag(chain, [], 4);
+    const drag = sidebarDrag(capChain, [], 4);
     drag.pickUp('X');
     drag.hover('P3', 'after', 2);
     expect(drag.hook.dropInvalid).toBe(false);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'P2', 'P3', null);
   });
+});
 
+// No wiki rule states what the sidebar does before it has the project cap; this pins that it
+// marks nothing invalid.
+describe('before the sidebar has the project cap', () => {
   it('marks nothing invalid while the cap is unknown', () => {
-    const drag = sidebarDrag(chain);
+    const drag = sidebarDrag(capChain);
     drag.pickUp('X');
     drag.hover('P3', 'after', 3);
     expect(drag.hook.dropInvalid).toBe(false);

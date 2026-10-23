@@ -97,6 +97,15 @@ describe('locked', () => {
     expect(far.contextKey).toBeNull();
   });
 
+  it('DRAG-1.14: with popDistancePx at 0 the distance term is off — a cursor far outside pops nothing until the clock runs out', () => {
+    const off = { ...tuning, popDistancePx: 0 };
+    const farOut = { x: 500, y: 200 };
+    const early = advancePopSession(startPopSession(A.key), farOut, regions, off, metrics, 0);
+    expect(early.contextKey).toBe(A.key);
+    const late = advancePopSession(early, farOut, regions, off, metrics, OUT);
+    expect(late.contextKey).toBeNull();
+  });
+
   // `M`'s own `rect` is content-sized and stops well short of `boundsRect`,
   // the column's outer body. The space between them, below the last card, is
   // still inside the column, so it must never start the exit clock. A
@@ -234,7 +243,7 @@ describe('locked Card: zoom-in into its own Descendants section', () => {
     expect(s.contextKey).toBe(descendantsP.key);
   });
 
-  it('a childless Card (no Descendants region at all) never pops any further — the auto-drop is its only outcome', () => {
+  it('DRAG-4.12: a childless Card (no Descendants region at all) never pops any further — the auto-drop is its only outcome', () => {
     const s = step(startPopSession(P.key), inSection, DESC, [A, P]);
     expect(s.contextKey).toBe(P.key);
   });

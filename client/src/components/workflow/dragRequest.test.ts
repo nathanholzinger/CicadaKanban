@@ -20,13 +20,13 @@ describe('isIdentity', () => {
     );
   });
 
-  it('DRAG-3.12: same workphase, slot existing: always identity (middle band member)', () => {
+  it('DRAG-3.12, DRAG-3.24: same workphase, slot existing: always identity (middle band member)', () => {
     expect(isIdentity(origin, { workphaseId: 'w2', slot: 'existing' }, others)).toBe(true);
     // An omitted workphaseId means "unchanged" — same rule, no literal to compare.
     expect(isIdentity(origin, { slot: 'existing' }, others)).toBe(true);
   });
 
-  it('same workphase, empty others: any slot is identity — nothing to order against', () => {
+  it('DRAG-1.24: same workphase, empty others: any slot is identity — nothing to order against', () => {
     expect(isIdentity(origin, { workphaseId: 'w2', slot: 'first' }, [])).toBe(true);
     expect(isIdentity(origin, { workphaseId: 'w2', slot: 'last' }, [])).toBe(true);
     expect(isIdentity(origin, { workphaseId: 'w2', slot: { anchorId: 'ghost', side: 'before' } }, [])).toBe(true);
@@ -169,7 +169,7 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  it("a done region never anchors — placementFor falls back to 'existing' for one, so toRequest never sees a first/last/anchor slot for it", () => {
+  it("DRAG-3.23: a done region never anchors — placementFor falls back to 'existing' for one, so toRequest never sees a first/last/anchor slot for it", () => {
     expect(
       toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { workphaseId: 'done', slot: 'existing' }, [
         { id: 'D1' },
@@ -180,7 +180,7 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  it('DRAG-4.1, DRAG-5.4: attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside', () => {
+  it('DRAG-4.1, DRAG-4.12, DRAG-5.4: attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
@@ -298,10 +298,10 @@ describe('sendItemMove', () => {
   // The row itself is rightly dropped whole when the response is stale (a
   // newer write for the same item superseded it), but if it also disclosed
   // a reindex, those pairs renumbered other rows for real, and losing them
-  // silently leaves a list that looks consistent and isn't (DRAG-6.7). The
+  // silently leaves a list that looks consistent and isn't. The
   // tracker is the one that knows staleness; this only has to act on what
   // it reports.
-  it("a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
+  it("DRAG-6.7: a stale response's own row is still discarded, but resyncs instead of losing the reindex pairs it carried", async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();
@@ -315,7 +315,7 @@ describe('sendItemMove', () => {
     expect(loadBoard).toHaveBeenCalledTimes(1);
   });
 
-  it('a stale response with no reindex disclosed needs no resync', async () => {
+  it('DRAG-6.7: a stale response with no reindex disclosed needs no resync', async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();

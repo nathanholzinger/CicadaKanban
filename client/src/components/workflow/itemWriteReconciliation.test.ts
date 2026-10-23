@@ -87,7 +87,7 @@ describe('completeItemWrite', () => {
   // now the live ghost, not this write's marker) must not clear that ghost
   // or log a false inversion — this write isn't the one that owns the
   // current placement.
-  it("a response for a write whose placement has since been replaced (a re-drag's ghost, or a different write) applies the rows but leaves the current placement and the tripwire alone", () => {
+  it("DRAG-6.9: a response for a write whose placement has since been replaced (a re-drag's ghost, or a different write) applies the rows but leaves the current placement and the tripwire alone", () => {
     const liveGhost: Placement = { slot: 'first' };
     const state = withPlacement(pending(), 'X', liveGhost);
     const next = completeItemWrite(state, item('X', { position: 1.9 }), xPlacement);
@@ -124,7 +124,7 @@ describe('the preview through its responses', () => {
     }
   });
 
-  it("TC-2.28: a top or bottom band drop is marked pending as the anchor it sends, so the server's answer is no inversion", async () => {
+  it("DRAG-6.1, TC-2.28: a top or bottom band drop is marked pending as the anchor it sends, so the board draws the same order before the server's answer and after it, with no inversion", async () => {
     // Positions run across the workphases: Todo holds A and C, Doing holds B.
     const items = () => [
       item('A', { workphaseId: 'todo', position: 1 }),
@@ -156,6 +156,10 @@ describe('the preview through its responses', () => {
       await sendItemMove(moveItem, 'X', request, ghost, writes, () => {});
 
       const state = withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: items() }, 'X', marker);
+      // While the write is pending, X is drawn at the anchor the request carries, and no position
+      // is given to it to get there.
+      expect(freeItemOrder(state.items, state.placements), band).toEqual(order);
+      expect(state.items.find(i => i.id === 'X')!.position, band).toBe(4);
       const next = completeItemWrite(state, response, marker);
       expect(freeItemOrder(next.items, next.placements), band).toEqual(order);
       expect(next.inversions, band).toEqual([]);
@@ -191,7 +195,7 @@ describe('the preview through its responses', () => {
     expect(state.inversions).toEqual([]);
   });
 
-  it("TC-2.30: a pending item keeps its position and its place when another item's response re-sorts the list", () => {
+  it("TC-2.30, DRAG-6.2: a pending item keeps its position and its place when another item's response re-sorts the list", () => {
     // X is moving into this workphase, with its position left as it was.
     const xPlacement: Placement = { workphaseId: 'todo', slot: 'existing' };
     let state = withPlacement(

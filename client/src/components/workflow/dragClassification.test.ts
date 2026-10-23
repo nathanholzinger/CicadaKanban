@@ -95,7 +95,7 @@ describe('classifyDragTargets — Card drag', () => {
     expect(states.get(`Q${CAP}`)).toBe('depth-capped');
   });
 
-  it('cycle-forming wins over depth-capped for a deep descendant', () => {
+  it('DRAG-2.9: cycle-forming wins over depth-capped for a deep descendant', () => {
     const items = [item('X'), ...chain('D', CAP).map(d => (d.id === 'D1' ? { ...d, parentId: 'X' } : d))];
     expect(classifyDragTargets('X', items, CAP).states.get(`D${CAP}`)).toBe('cycle-forming');
   });

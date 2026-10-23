@@ -100,18 +100,19 @@ describe('getWorkphaseItemsFrom', () => {
   // A drop into a done column previews with slot 'existing', so the sort
   // alone decides where the ghost and the pending marker draw. The server
   // stamps completedAt on the write, so the item lands last — the preview
-  // has to say the same (DRAG-6.11).
-  it('draws an item with no completedAt at the end of a done list, where the server will stamp it', () => {
+  // has to say the same.
+  it('DRAG-6.11: draws an item with no completedAt at the end of a done list, where the server will stamp it, and keeps it there once it is stamped', () => {
     const done = [
       item('shipped-later', { position: null, completedAt: 200 }),
       item('being-dropped', { position: null, completedAt: null }),
       item('shipped-first', { position: null, completedAt: 100 }),
     ];
-    expect(getWorkphaseItemsFrom(done, 'todo', undefined, true).map(i => i.id)).toEqual([
-      'shipped-first',
-      'shipped-later',
-      'being-dropped',
-    ]);
+    const order = (list: typeof done) => getWorkphaseItemsFrom(list, 'todo', undefined, true).map(i => i.id);
+    expect(order(done)).toEqual(['shipped-first', 'shipped-later', 'being-dropped']);
+
+    // The response stamps it later than the rest: it stays where it was drawn.
+    const stamped = done.map(i => (i.id === 'being-dropped' ? { ...i, completedAt: 300 } : i));
+    expect(order(stamped)).toEqual(['shipped-first', 'shipped-later', 'being-dropped']);
   });
 
   it('TC-6.10: breaks an exact completedAt tie by createdAt, oldest first', () => {
@@ -353,7 +354,7 @@ describe('applyPlacements', () => {
 });
 
 describe('selectors with placements', () => {
-  it('TC-2.30: a placement with a workphaseId moves the item into that list without changing the item (position kept, not null)', () => {
+  it('TC-2.30, DRAG-3.11: a placement with a workphaseId moves the item into that list without changing the item (position kept, not null)', () => {
     const items = [
       item('A', { position: 1 }),
       item('X', { position: 3 }),
