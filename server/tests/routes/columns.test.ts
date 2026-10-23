@@ -10,6 +10,7 @@ import {
   columnOn,
   covers,
   reorderWorkphases,
+  setColumnEnds,
   workflowWithPhases,
 } from '../fixtures.js';
 
@@ -108,11 +109,17 @@ describe('POST /api/columns', () => {
     const merged = await postColumn(board.id, w[0].id, w[0].id);
     expect(merged.status).toBe(201);
     expect(merged.body.displayMode).toBe('merged');
-    expect(merged.body.position).toBe(1.0);
 
     const expanded = await postColumn(board.id, w[1].id, w[1].id, { displayMode: 'expanded' });
     expect(expanded.status).toBe(201);
     expect(expanded.body.displayMode).toBe('expanded');
+  });
+
+  it('appends a new column after the board’s last', async () => {
+    const { board, w } = await setupFour();
+    const first = await postColumn(board.id, w[0].id, w[0].id);
+    const second = await postColumn(board.id, w[1].id, w[1].id);
+    expect([first.body.position, second.body.position]).toEqual([1.0, 2.0]);
   });
 
   it('BCU-2.5: a column’s start and end must be workphases of its board’s workflow', async () => {
@@ -361,7 +368,7 @@ describe('a broken column', () => {
     expect((await columnOn(board.id, a.id)).broken).toBe(false);
   });
 
-  it('BCU-2.8: a broken column still covers the workphases between its two ends', async () => {
+  it('BCU-2.8: a column whose start comes after its end still covers the workphases between its two ends', async () => {
     const { project, board, w } = await setupFour();
     const a = await createColumn(board.id, w[0].id, w[2].id);
     await createColumn(board.id, w[3].id, w[3].id);
@@ -377,6 +384,62 @@ describe('a broken column', () => {
     expect(resolved.broken).toBe(true);
     expect(covers(resolved)).toEqual([w[2].id, w[1].id, w[0].id]);
     expect(resolved.subRows.map(r => r.items.map(i => i.id))).toEqual([[items[2].id], [items[1].id], [items[0].id]]);
+    expect(read.unsorted.uncovered).toEqual([]);
+  });
+});
+
+describe('BCU-2.9: a column with an end outside the workflow is broken, and covers no workphase', () => {
+  // `A` runs from W1 to W3 with no name of its own, `C` covers W4 alone, and each of W1, W2 and W3
+  // holds an item. V1 is a workphase of another workflow.
+  async function setupOutside() {
+    const setup = await setupFour();
+    const { project, board, w } = setup;
+    const a = await createColumn(board.id, w[0].id, w[2].id);
+    const c = await createColumn(board.id, w[3].id, w[3].id);
+    const items: { id: string }[] = [];
+    for (const phase of w.slice(0, 3)) {
+      items.push(await createItem({ projectId: project.id, workphaseId: phase.id, title: `In ${phase.name}` }));
+    }
+    const [v1] = (await workflowWithPhases(['V1'])).phases;
+    return { ...setup, a, c, items, v1 };
+  }
+
+  it('is flagged broken, covers and shows nothing, is named for that, and leaves its workphases in uncovered', async () => {
+    const { board, w, a, c, items, v1 } = await setupOutside();
+
+    for (const [label, edit] of [
+      ['its end is V1', { endWorkphaseId: v1.id }],
+      ['its start is V1', { startWorkphaseId: v1.id }],
+      ['its end is an id that names no workphase', { endWorkphaseId: 'no-such-workphase' }],
+    ] as const) {
+      setColumnEnds(a.id, { startWorkphaseId: w[0].id, endWorkphaseId: w[2].id, ...edit });
+
+      const read = await readBoard(board.id);
+      const outside = read.columns.find(column => column.id === a.id)!;
+      expect(outside.broken, label).toBe(true);
+      expect(outside.subRows, label).toEqual([]);
+      expect(outside.displayName, label).toBe('(empty range)');
+      const uncoveredIds = read.unsorted.uncovered.map(row => row.workphase.id);
+      const uncoveredItemIds = read.unsorted.uncovered.flatMap(row => row.items.map(i => i.id));
+      expect(uncoveredIds, label).toEqual(w.slice(0, 3).map(p => p.id));
+      expect(uncoveredItemIds, label).toEqual(items.map(i => i.id));
+      expect(read.columns.find(column => column.id === c.id)!.broken, label).toBe(false);
+    }
+  });
+
+  it('is fixed by an edit to a range inside the workflow', async () => {
+    const { board, w, a, items, v1 } = await setupOutside();
+    setColumnEnds(a.id, { endWorkphaseId: v1.id });
+    expect((await columnOn(board.id, a.id)).broken).toBe(true);
+
+    const fixed = await putColumn(a.id, { startWorkphaseId: w[0].id, endWorkphaseId: w[2].id });
+    expect(fixed.status).toBe(200);
+
+    const read = await readBoard(board.id);
+    const column = read.columns.find(c => c.id === a.id)!;
+    expect(column.broken).toBe(false);
+    expect(covers(column)).toEqual(w.slice(0, 3).map(p => p.id));
+    expect(column.subRows.map(row => row.items.map(i => i.id))).toEqual(items.map(i => [i.id]));
     expect(read.unsorted.uncovered).toEqual([]);
   });
 });

@@ -240,12 +240,11 @@ describe('DELETE /api/boards/:id', () => {
   it('BCU-1.2: a workflow’s last board can’t be deleted', async () => {
     const { workflow } = await templatedWorkflow('quick');
     const [only] = await boardsOf(workflow.id);
+    const before = await readBoard(only.id);
 
     const refused = await request(app).delete(`/api/boards/${only.id}`);
     expect(refused.status).toBe(409);
-    const stillThere = await request(app).get(`/api/boards/${only.id}`);
-    expect(stillThere.status).toBe(200);
-    expect(stillThere.body.columns).toHaveLength(2);
+    expect(await readBoard(only.id)).toEqual(before);
 
     // With a second board, the first can go; the second is then the last.
     const second = await createBoard(workflow.id, { name: 'Second' });

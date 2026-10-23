@@ -1,8 +1,8 @@
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { app } from '../src/index.js';
-import { db } from '../src/db/index.js';
-import { items, projects } from '../src/db/schema.js';
+import { db, sqlite } from '../src/db/index.js';
+import { columns, items, projects } from '../src/db/schema.js';
 
 export async function createProject(overrides: Record<string, unknown> = {}) {
   const res = await request(app)
@@ -163,6 +163,18 @@ export function setItemParent(id: string, parentId: string | null, isAttached?: 
     .set({ parentId, ...attachment })
     .where(eq(items.id, id))
     .run();
+}
+
+// Sets a column's start or end by writing the row, for the tests of data no write produces: an end
+// in another workflow, or one that names no workphase. SQLite refuses the second with foreign keys
+// on, so they are off for the write.
+export function setColumnEnds(id: string, ends: { startWorkphaseId?: string; endWorkphaseId?: string }) {
+  sqlite.pragma('foreign_keys = OFF');
+  try {
+    db.update(columns).set(ends).where(eq(columns.id, id)).run();
+  } finally {
+    sqlite.pragma('foreign_keys = ON');
+  }
 }
 
 // The same for a project.

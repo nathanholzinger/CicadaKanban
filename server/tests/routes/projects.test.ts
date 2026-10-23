@@ -48,6 +48,9 @@ const editProject = (id: string, body: Record<string, unknown>) => request(app).
 const moveProject = (id: string, body: Record<string, unknown>) =>
   request(app).patch(`/api/projects/${id}/move`).send(body);
 
+// A refusal says the write would put the subtree past the cap.
+const pastCap = /exceeds the cap/i;
+
 // A chain of projects, each the only child of the one before, from a top-level
 // project down to depth `depth` (top-level projects are at depth 1).
 async function chainTo(depth: number) {
@@ -616,14 +619,12 @@ describe('GET /api/projects/depth-cap', () => {
       .post('/api/projects')
       .send({ name: 'Past', parentId: chain[cap - 1].id });
     expect(past.status).toBe(400);
+    expect(past.body.error).toMatch(pastCap);
     expect(await depthOf(chain[cap - 1].id)).toBe(cap);
   });
 });
 
 describe('the project depth cap', () => {
-  // A refusal says the write would put the subtree past the cap.
-  const pastCap = /exceeds the cap/i;
-
   // A chain from a top-level project down to T, at depth PROJECT_DEPTH_CAP − 1, whose parent
   // S is at PROJECT_DEPTH_CAP − 2; and top-level M with one child M1, so M's height is 1.
   async function capTree() {
@@ -754,6 +755,13 @@ describe('DELETE /api/projects/:id', () => {
     // Q, outside the subtree, on a workflow of its own.
     const q = await projectWithItem('Q');
     await createColumn(q.board.id, q.workphase.id, q.workphase.id);
+    const readQ = async () => ({
+      project: await getProject(q.project.id),
+      workflow: (await request(app).get(`/api/workflows/${q.workflow.id}`)).body,
+      board: await readBoard(q.board.id),
+      item: (await request(app).get(`/api/items/${q.item.id}`)).body,
+    });
+    const qBefore = await readQ();
 
     const res = await request(app).delete(`/api/projects/${p.project.id}`);
     expect(res.status).toBe(204);
@@ -771,11 +779,8 @@ describe('DELETE /api/projects/:id', () => {
       expect((await request(app).get(`/api/items/${item.id}`)).status, item.title).toBe(404);
     }
 
-    // Q, its workflow and its items are untouched.
-    expect((await request(app).get(`/api/projects/${q.project.id}`)).status).toBe(200);
-    expect((await request(app).get(`/api/workflows/${q.workflow.id}`)).status).toBe(200);
-    expect(db.select().from(columns).where(eq(columns.boardId, q.board.id)).all()).toHaveLength(1);
-    expect((await request(app).get(`/api/items/${q.item.id}`)).status).toBe(200);
+    // Q, its workflow, its board and its item read as they did.
+    expect(await readQ()).toEqual(qBefore);
   });
 
   it('cascades through a nested project tree, workflow, workphase, items, and related records', async () => {
