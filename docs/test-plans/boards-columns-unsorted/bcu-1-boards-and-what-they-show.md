@@ -8,7 +8,7 @@
 | BCU-1.2 | A workflow's last board can't be deleted | P1 | Automated |
 | BCU-1.3 | Deleting a board that isn't its workflow's last deletes its columns | P1 | Automated |
 | BCU-1.4 | No board or column write changes an item | P0 | Automated |
-| BCU-1.5 | A board shows the items of every project that uses its workflow, its own or inherited | P1 | Open |
+| BCU-1.5 | A board shows the items of every project that uses its workflow, its own or inherited | P1 | Automated |
 | BCU-1.6 | A project that comes to use another workflow takes its items to that workflow's boards | P1 | Automated |
 
 ---
@@ -56,7 +56,7 @@
 
 ## BCU-1.5 — A board shows the items of every project that uses its workflow, its own or inherited
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §3, wiki project-tree §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §3, wiki project-tree §10
 
 *Given* these projects, each holding one item in a workphase of the workflow it uses:
 - `A`, on workflow `WF`, holding `a`;
@@ -68,7 +68,7 @@
 
 *when* a board of `WF` is read, *then* its items are `a`, `b` and `c`, and not `d`, `e` or `z`: `D` uses its own workflow, and `E` uses `D`'s, its nearest ancestor that has one. *When* a board of `WF2` is read, *then* its items are `d` and `e`, and not `z`: `Z` uses only its own. *And given* `A` also holds `a0`, with no workphase, *then* `WF`'s board returns `a0` too ([BCU-5.2](bcu-5-unsorted.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/boards.test.ts`
 
 ## BCU-1.6 — A project that comes to use another workflow takes its items to that workflow's boards
 

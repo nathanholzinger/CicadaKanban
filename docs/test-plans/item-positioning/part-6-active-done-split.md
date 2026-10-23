@@ -23,7 +23,7 @@
 
 *Given* a Free item, *when* it is created in a terminal workphase, or moves to one from a non-terminal workphase, *then* its `completedAt` is set to the time of that write.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-6.2 — `completedAt` is cleared when a done item is reopened
 
@@ -31,7 +31,7 @@
 
 *Given* a done Free item with `completedAt` set, *when* it moves to a non-terminal workphase, *then* its `completedAt` is `null`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-6.3 — A done Free item has no stored position
 
@@ -39,7 +39,7 @@
 
 *Given* an item, *when* it becomes a Free item in a terminal workphase, whether it's created there, moved there or detached there, *then* its `position` is `null`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-6.4 — Done items are ordered by completion, the newest last
 
@@ -55,7 +55,7 @@
 
 *Given* attached child `X` of `P` at position `p`, *when* `P` moves to a terminal workphase and the move cascades to `X`, *then* `X.position` is still `p`, and `X.completedAt` stays `null`. Only a Free item loses its position on entering a terminal workphase.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.attached.test.ts`
 
 ## TC-6.6 — `positionScope` stays `"attached-siblings"` under a terminal cascade
 
@@ -63,7 +63,7 @@
 
 *Given* attached child `X` of `P`, *when* `P` moves to a terminal workphase and the move cascades to `X`, *then* `X`'s `positionScope` is still `"attached-siblings"`, not `"none"`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.attached.test.ts`
 
 ## TC-6.9 — A reopened done item takes the append fallback
 
@@ -71,7 +71,7 @@
 
 *Given* a done Free item with no position, in a workflow whose true last Free item is at `6.0`, *when* it moves to a non-terminal workphase with no anchor, *then* its position is `7`, by the append fallback. No earlier position comes back.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-6.10 — Done items completed at the same moment read in creation order
 

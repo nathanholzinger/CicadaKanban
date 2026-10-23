@@ -45,7 +45,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* items at `1.0` and `2.0`, adjacent in a comparison scope, *when* an item is moved with the item at `1.0` as its anchor and side `after`, *then* its position is `1.5`: strictly between the two, and the coarsest value that fits ([TC-2.2](part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
 
 ## TC-2.2 — Coarsest-fit rounding
 
@@ -69,7 +69,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* anchor `A` at `1.0`, the true first item in its comparison scope, *when* an item is placed before `A`, *then* its position is `0.5`: the coarsest fit between a floor of `0.0` and `A`, not `A`'s position minus `1.0`. *And when* that prepend is repeated, each new item placed before the current true first item, *then* every position resolved is greater than `0.0`, however many times it repeats. A reindex may renumber the scope along the way ([TC-2.12](part-2-anchor-resolution.md)), but no position reaches `0.0` or below.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `tests/api/itemRepositioningAttachedSiblings.spec.ts`
 
 ## TC-2.6 — An item created with no anchor is placed after the scope's true last item
 
@@ -77,7 +77,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a workflow whose true last Free item is at `4.2`, in any of its workphases, *when* a top-level item is created in the workflow with no anchor, *then* its position is `5`, as if placed after that item ([TC-2.4](part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.test.ts`
 
 ## TC-2.7 — Bootstrap: an empty scope starts at `1.0`, and an empty workphase isn't an empty scope
 
@@ -85,7 +85,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a workflow with no positioned item in any workphase, *when* an item is created in it with no anchor, or moved in with no position to keep, *then* its position is `1.0`. The same holds for the first attached child of a parent that has none. *And given* a workflow whose workphase `W2` is empty while `W1` holds an item at `3.0`, *when* an item is created in `W2` with no anchor, *then* its position is `4`, not `1.0`: the scope is the whole workflow, so an empty workphase never bootstraps on its own.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
 ## TC-2.8 — An anchor with no position, or one that doesn't exist, is rejected
 
@@ -93,7 +93,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a done item `D`, in a terminal workphase with no position, *when* a move names `D` as its anchor, *then* the request is rejected with a 400, and nothing in it is written: no workphase change and no position. *And when* a move names an anchor id that no item has, *then* it's rejected the same way. No fallback ignores the anchor and appends instead.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
 ## TC-2.9 — A narrow view can't leapfrog an unseen true neighbor
 
@@ -109,7 +109,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a workflow with workphases `W1` and `W2`, Free items `A` (`1.0`) and `C` (`3.0`) in `W1` and `B` (`2.0`) in `W2`, and an attached child of `A` at `1.2`, *when* an item is placed after `A` in `W1`, *then* its position is `1.5`: `A`'s true neighbor is `B`, in another workphase, whether the column shows `W1` alone or both. The attached child is scoped to its parent, so it's no neighbor of a Free item.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `tests/api/itemRepositioningCrossColumn.spec.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `tests/api/itemRepositioningCrossColumn.spec.ts`
 
 ## TC-2.11 — The client never computes a position: its requests carry relative intent only
 
@@ -125,7 +125,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* two adjacent items so close that no value at the search's maximum decimal depth falls strictly between them, *when* an item is placed between them, *then* the scope is first reindexed to clean sequential values in its current order ([TC-5.1](part-5-reindex.md)), and the item is then placed strictly between the same two neighbors' new values. The write succeeds.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.13 — `positionScope` is `"attached-siblings"` for an attached child
 
@@ -133,7 +133,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* an item with a parent and the attachment flag set, *when* it is read through the API, *then* its `positionScope` is `"attached-siblings"`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.14 — `positionScope` is `"workflow"` for a Free item in an active workphase
 
@@ -141,7 +141,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a Free item, top-level or a detached child, in a non-terminal workphase of its project's workflow, *when* it is read through the API, *then* its `positionScope` is `"workflow"`.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-2.15 — `positionScope` is `"none"` for a done Free item
 
@@ -149,7 +149,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a Free item in a terminal workphase, *when* it is read through the API, *then* its `positionScope` is `"none"`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.16 — `positionScope` is `"none"` for an item with no workphase
 
@@ -165,7 +165,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* an item in a non-terminal workphase with no `parentId`, whose attachment flag is set, *when* its `positionScope` is computed, *then* it is `"workflow"`, not `"attached-siblings"`, which needs both the flag and a parent.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.attached.test.ts`
 
 ## TC-2.18 — `position` is a number or `null`
 
@@ -173,7 +173,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* any item, *when* it is read through the API, *then* its `position` is a number or `null`, and nothing else. `positionScope` sits beside it, and doesn't change its shape.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.19 — Detaching reassigns a fresh workflow-scoped position
 
@@ -181,7 +181,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* attached child `X` of `P` at sibling-scoped `1.0`, in a workflow whose true last Free item is at `7.0`, *when* `X` is detached with no anchor, *then* its position is `8`, by the append fallback in the workflow scope, and its `positionScope` is `"workflow"`. The sibling-scoped `1.0` isn't kept.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.20 — Attaching reassigns a fresh position among the new siblings
 
@@ -189,7 +189,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* Free item `X` at workflow position `5.0`, and `P` whose attached children's true last is at `2.0`, *when* `X` is attached to `P` with no anchor, *then* its position is `3`, by the append fallback among `P`'s attached children, and its `positionScope` is `"attached-siblings"`. *And given* `P` has no attached children, *then* it's `1.0` ([TC-2.7](part-2-anchor-resolution.md)). The workflow-scoped `5.0` isn't kept.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-2.21 — Reparenting while staying attached reassigns a fresh position
 
@@ -197,7 +197,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* attached child `X` of `A` at `1.0`, and `B` whose attached children's true last is at `4.0`, *when* `X` is reparented to `B` and stays attached, with no anchor, *then* its position is `5`, among `B`'s attached children. `A`'s `1.0` isn't kept.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.23 — A redundant re-attach to the same parent leaves the position alone
 
@@ -205,7 +205,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* `X`, attached to `P` at position `p`, *when* a write attaches `X` to `P` again, *then* `X.position` is still `p`: its scope didn't change, so nothing is reassigned.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.24 — A workphase-only move with no anchor keeps the position
 
@@ -213,7 +213,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* Free item `X` at a position the append fallback wouldn't produce, such as `2.37`, *when* `X` moves to another workphase of the same workflow with no anchor, *then* `X.position` is exactly `2.37`: its scope is the workflow either way. *And given* `X` has no position to keep, as a reopened done item has none ([TC-6.9](part-6-active-done-split.md)), *then* it takes the append fallback instead.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.crossProject.test.ts`
 
 ## TC-2.25 — A parent's workphase cascade leaves its attached children's positions alone
 
@@ -221,7 +221,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* attached child `X` of `P` at position `p`, *when* `P` moves to another non-terminal workphase and the move cascades to `X`, *then* `X.workphaseId` follows `P`, and `X.position` is still `p`: `X` is scoped to its parent either way. The terminal case is [TC-6.5](part-6-active-done-split.md).
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.attached.test.ts`
 
 ## TC-2.27 — Optimistic feedback is ordinal: an index, not a number
 
@@ -261,7 +261,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* Free item `X` at `1.0` in workphase `W1`, in a workflow whose true last Free item other than `X` is at `2.0`, *when* a move names `X`'s own workphase and no anchor, *then* `X.position` is `3`, by the append fallback, as for a create with no anchor. Only a move to a different workphase keeps the position ([TC-2.24](part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.32 — A write can't name a final position
 

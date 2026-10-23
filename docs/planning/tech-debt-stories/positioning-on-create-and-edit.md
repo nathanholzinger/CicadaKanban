@@ -47,6 +47,7 @@ Carried in from A6's plan (`a6-audit-guidance-and-first-run.md`, Open questions)
 
 *From the Coder, A6 batch 3a (2026-10-21):*
 - **For the Test Planner: wiki item-positioning §2's third `"none"` case,** an item filed in a workphase of a workflow its project doesn't use, has no case among TC-2.13 to TC-2.17. `workflows.test.ts`'s positionScope test checks it and carries no ID. *Why here:* this story redefines `positionScope`, so its cases are written once, against the new §2.
+  - **Found 2026-10-22 (A6's Reconciler run):** TC-7.18 states it, for an item left in its old workflow by a project move, and its route test is `Automated`. It's rewritten with the scope cases.
 - **For the Test Planner: TC-3.4's setup has a parent with a workphase.** Its ID is on the test for a parent with none (wiki item-positioning §3: the scope is the parent's children, not a workphase). If that variation wants a case of its own, the test's ID follows. *Why here:* the sibling scope widens to every child, so TC-3.4 is rewritten.
 
 *From the Coder, A6 batch 3d (2026-10-21):*

@@ -27,7 +27,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* a target context (a merged column, an expanded sub-row, or a parent's Stub list) rendering `A` (`2.0`), `B` (`3.0`) and `C` (`4.0`), with `A` the true first item of its scope, *when* item `X` is placed first in the list, *then* the request is `{anchorId: A, side: before}`, with nothing else to mark it as first, and `X`'s position is `1`: the floor-bounded prepend any placement before `A` gets ([TC-2.5](part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
 ## TC-7.2 — "Last in list" is an ordinary after-anchor request on the last rendered item
 
@@ -35,7 +35,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* the same target context rendering `A`, `B` and `C` (`4.0`), *when* `X` is placed last in the list, *then* the request is `{anchorId: C, side: after}`. `X`'s position is `5` if `C` is the true last item of its scope ([TC-2.4](part-2-anchor-resolution.md)), or `4.2` if an item the view doesn't show follows `C` at `4.4`.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
 ## TC-7.3 — First and last are read off the rendered order, with ties broken by creation time
 
@@ -63,7 +63,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 - a move naming an anchor in another workflow;
 - a move naming the moving item itself, which is never in its own scope ([TC-X.6](cross-cutting-regression.md)).
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-7.11 — An attach with a placement resolves among the new parent's children, after the reparent
 
@@ -87,7 +87,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* projects `P1` and `P2` on the same workflow, Free Card `X` in `P1` at `5.0`, Card `Q` in `P2` with attached children `Q1` (`1.0`) and `Q2` (`2.0`), and Free item `B` in `P2`, *when* `X` is attached to `Q` with `{anchorId: Q1, side: after}`, *then* `X`'s position is `1.5`, as for the same attach within one project ([TC-7.11](part-7-board-placement-intents.md)). *And given* `X` is a detached child of an item in `P1`, *when* it is instead reparented to `B` with no anchor and stays Free, *then* its position is still `5.0`: the project change doesn't re-resolve it ([ATT-3.10](../item-attachment/att-3-reparent-placement-atomicity.md)). The project cascade is [ATT-5](../item-attachment/att-5-cross-project-reparenting.md)'s.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`
 
 ## TC-7.15 — A done Card's Stubs are anchorable and place normally
 
@@ -103,7 +103,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* Free item `X`, left in workphase `w1` of `WF1` in a project now on `WF2` by [TC-7.20](part-7-board-placement-intents.md)'s project move, *when* `X` is read through the API, *then* its `positionScope` is `"none"`, not `"workflow"`. What the move does to its `position` isn't asserted.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`
 
 ## TC-7.19 — The cross-workflow reparent that's allowed nulls no position
 
@@ -111,7 +111,7 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* project `P1` on workflow `WF1` and project `P2` on `WF2`; Free item `X` in `P1` at `5.0`, with attached child `X1` at sibling-scoped `1.0` and no detached descendant; and Card `B` in `P2`, with attached children `B1` (`1.0`) and `B2` (`2.0`), *when* `X` is attached to `B` with `{anchorId: B1, side: after}`, *then* `X`'s position is `1.5`, among `B`'s attached children, and `X1`'s is still `1.0`, scoped to `X`. No moved item's position is `null`. *When* `X` is attached to `B` with no anchor instead, *then* its position is `3`, by the append fallback among `B`'s children. The cross-workflow reparents that are refused are [ATT-5.9](../item-attachment/att-5-cross-project-reparenting.md)'s.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`
 
 ## TC-7.20 — An item a project move leaves in another workflow's workphase shows in Unsorted
 
@@ -119,4 +119,4 @@ Which gesture or band produces which request is [`../board-drag-interaction/`](.
 
 *Given* project `P1`, which has no workflow of its own, under project `Q1` on workflow `WF1`; Free item `X` in `P1` at workphase `w1` of `WF1`; and project `Q2` on workflow `WF2`, *when* `P1` is moved under `Q2`, *then* the move is accepted, `X.workphaseId` is still `w1`, and a board of `WF2` lists `X` under Unsorted.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`

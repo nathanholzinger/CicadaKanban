@@ -23,4 +23,4 @@
 
 *Given* moving item `A`, with its subtree, depth and project, and target `B`, *when* the move's legality is decided ([ATT-4](att-4-legal-parent-depth-cap.md)), *then* every rule is evaluated against `A`'s facts: whether `B` is in `A`'s subtree, whether `A`'s subtree height plus `B`'s depth exceeds the cap, and which project will cascade (`B`'s, onto `A`'s subtree). None is evaluated as if `B` were the one moving. So `B` being a descendant of `A` makes the move illegal, while `A` being a descendant of `B` doesn't: that's an ordinary move up the tree.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.crossProject.test.ts`

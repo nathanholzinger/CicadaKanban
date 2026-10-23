@@ -33,7 +33,7 @@
 
 *Given* parent `P` whose attached children's true last is at `2.0`, in a workphase that also holds Free items and `Q`'s attached children at higher positions, *when* an attached child is created under `P` with no anchor, *then* its position is `3`: after `P`'s last child, whatever is last in the workphase. *And given* `P` has no attached children, *then* it's `1.0`.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.attached.test.ts`
 
 ## TC-3.5 — Attached siblings resolve by the same anchor and side rules
 

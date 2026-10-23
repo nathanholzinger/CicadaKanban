@@ -1,6 +1,6 @@
 # TREE-1 — Dragging a project places it by gap and depth
 
-**Next ID:** TREE-1.13
+**Next ID:** TREE-1.14
 
 **The tree,** for the cases that name it: top-level projects `A`, `B` and `X`, in that order, where `A` has a child `A1`, and `A1` has a child `A1a`. `X` is the project being dragged. Depths count from the top level, at 0:
 
@@ -25,6 +25,7 @@ X        (0)
 | TREE-1.10 | On the dragged project's own row, the cursor picks among its own gap's depths | P2 | Automated |
 | TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Automated |
 | TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Automated |
+| TREE-1.13 | A subtree already taller than the cap is marked invalid even at the top level | P2 | Open |
 
 ---
 
@@ -135,3 +136,11 @@ How the invalid line looks isn't asserted.
 *Given* the tree, *when* `X` is released with the line between `A1a` and `B`, at `A1a`'s depth, *then* the request is a move naming `A1` as `X`'s parent and `A1a` as the sibling it goes after, and it carries no position. *When* `X` is instead released above the first row, *then* the request is a move naming no parent and `A` as the sibling it goes before, again with no position. Each release saves `X` where the line showed it: as `A1`'s child after `A1a`, and as the first top-level project, before `A`.
 
 **Automation test:** `tests/ui/project-tree-drag.spec.ts`
+
+## TREE-1.13 — A subtree already taller than the cap is marked invalid even at the top level
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki hierarchy-placement §6, wiki project-tree §3
+
+*Given* a tree already deeper than the project cap `PCAP`, made outside the API's writes, since the cap gates only writes ([TREE-3.7](tree-3-legal-parent-and-cap.md)): a chain from top-level project `R` down to `M`, at depth 3, where `M`'s subtree height `H` is `PCAP` or more, and top-level project `B` after `R`, the last row, where depths count top-level projects as 1 (wiki project-tree §3), *when* `M` is dragged into the gap below `B`, aligned with `B` at the top level, which would put its deepest descendant at depth `1 + H`, still past `PCAP`, *then* that state is offered, and its line is marked invalid. A release there sends no request, and `M` stays where it was. *Given* instead `H` is `PCAP − 1`, *when* `M` is dragged to the same state, *then* its deepest descendant would land at exactly `PCAP`: the line isn't marked invalid, and a release saves `M` at the top level, after `B`. The API's side of the same move is [TREE-3.8](tree-3-legal-parent-and-cap.md)'s.
+
+**Automation test:** —

@@ -23,7 +23,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 
 *Given* attached child `X` of `A` with sibling-scoped position `p`, *when* `X` is reparented to `B` and stays attached, with or without an anchor, *then* `X`'s position is freshly resolved in `B`'s attached-sibling scope: against the anchor and side if one is given, by the append fallback if not. No request form carries `p` across unchanged ([TC-2.21](../item-positioning/part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.positioning.test.ts`
 
 ## ATT-3.4 — A coincidentally equal resolved position is still a real re-resolution
 
@@ -47,7 +47,7 @@ What a placement looks like (an anchor and a side, first and last, the append fa
 
 *Given* Free Card `X` in workphase `W1` with attached child `X1`, and Card `B` in workphase `W2` with attached children, *when* one write attaches `X` to `B` at an anchored slot, *then* a single read afterward shows all of these, and no read shows only some of them: `X.parentId = B`, `X` attached, `X.workphaseId = W2` (inherited), `X.position` resolved in `B`'s attached-sibling scope, and `X1.workphaseId = W2` (cascaded). If `X` and `B` are in different projects, the new `projectId` on `X` and its subtree lands in the same commit ([ATT-5.2](att-5-cross-project-reparenting.md)).
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.crossProject.test.ts`
 
 ## ATT-3.7 — On failure, nothing changed
 

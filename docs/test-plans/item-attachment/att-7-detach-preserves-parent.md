@@ -28,7 +28,7 @@
 
 *Given* `X` detached from `P`, *when* its position is read, *then* `positionScope = "workflow"`, and its `position` was freshly resolved in the workflow-wide scope, not carried over from `P`'s attached siblings: by the append fallback with no anchor, or against the anchor when one is given ([TC-2.19](../item-positioning/part-2-anchor-resolution.md), [TC-7.13](../item-positioning/part-7-board-placement-intents.md)).
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.positioning.test.ts`
 
 ## ATT-7.4 — On becoming Free, the item is eligible for `completedAt`
 
@@ -36,7 +36,7 @@
 
 *Given* `X` detached from `P`, with `parentId` still `P`, *when* `X` moves to a terminal workphase, *then* `X.completedAt` is set and `X.position` is dropped, as for any Free item ([TC-6.1](../item-positioning/part-6-active-done-split.md), [TC-6.3](../item-positioning/part-6-active-done-split.md)): its parent link doesn't exempt it. *And given* `P` is in a terminal workphase, so `X` holds that workphase when it's detached in place, *then* the detach itself sets `X.completedAt` and drops `X.position`, in the same change.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.positioning.test.ts`
 
 ## ATT-7.5 — A detach that lands inside a different parent's context is a reparent, not a detach
 
@@ -60,7 +60,7 @@
 
 *Given* `X` attached to `P`, in `P`'s workphase `W1`, *when* a write sets `X.parentId` to null, whether it edits `X` or moves it, *then* it is accepted, and `X` is top-level and Free: `parentId` is null, and `X.workphaseId` is still `W1`, the workphase it was shown in ([ATT-9.5](att-9-workphase-a-write-leaves.md)). Its flag is clear ([ATT-1.8](att-1-free-attached-state.md)). The scope changes, from `P`'s attached siblings to the workflow, so `X` gets a fresh workflow-scoped position, as any detach does ([ATT-7.2](att-7-detach-preserves-parent.md)). *And given* `W1` is terminal, *then* `X` is now a Free item in a done workphase: `completedAt` is set and `position` is null ([ATT-7.4](att-7-detach-preserves-parent.md)).
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.attached.test.ts`
 
 ## ATT-7.8 — Reparenting an already Free child to root leaves its position alone unless the write carries an anchor
 

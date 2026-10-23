@@ -24,7 +24,7 @@
 
 *then* each records exactly one hierarchy entry on `X`, saying what changed and naming the parents involved: attached to `P`, detached from `P`, reparented from `P` to `Q`, made top-level. Nothing is recorded on `P` or `Q` for it.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.crossProject.test.ts`
 
 ## ATT-8.2 — A write that changes neither the parent nor the attachment logs no hierarchy entry
 

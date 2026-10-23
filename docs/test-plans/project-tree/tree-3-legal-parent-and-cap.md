@@ -14,7 +14,7 @@
 | TREE-3.6 | Subtree height is the project's deepest descendant | P1 | Automated |
 | TREE-3.7 | The project cap gates writes that give a parent, not existing data | P2 | Automated |
 | TREE-3.8 | A subtree already taller than the cap allows can't be moved, even to a shallower place | P2 | Automated |
-| TREE-3.9 | The sidebar's project cap is the one the API enforces | P1 | Open |
+| TREE-3.9 | The sidebar's project cap is the one the API enforces | P1 | Automated |
 
 ---
 
@@ -89,8 +89,8 @@
 
 ## TREE-3.9 — The sidebar's project cap is the one the API enforces
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §6, wiki project-tree §1, wiki project-tree §3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki hierarchy-placement §6, wiki project-tree §1, wiki project-tree §3
 
 *Given* the project cap the API enforces, `PCAP`, where a write that puts the moving subtree's deepest project at depth `PCAP` is accepted, and one that puts it at `PCAP + 1` is refused ([TREE-3.5](tree-3-legal-parent-and-cap.md)), *when* the API is asked for the project cap, *then* it reports `PCAP`. The sidebar marks tab states against that reported value, holding none of its own ([TREE-1.11](tree-1-gap-and-depth.md)), so a state it shows as valid is never one the API refuses.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/projects.test.ts`, `tests/ui/project-tree-drag.spec.ts`

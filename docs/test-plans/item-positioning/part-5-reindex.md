@@ -28,7 +28,7 @@
 
 *Given* a comparison scope whose items are in some order, at any positions, *when* it is reindexed, *then* its items take clean sequential values, `1`, `2`, `3` and on, and their order is exactly what it was.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.2 — Crossing the magnitude threshold reindexes before the append
 
@@ -52,7 +52,7 @@
 
 *Given* a workflow's Free items in two non-terminal workphases, `W1` and `W2`, *when* a reindex fires in `W1`, by either trigger, *then* `W2`'s items are renumbered in the same operation, in one sequence with `W1`'s and in their combined order. No workphase is reindexed on its own.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.5 — Done items are never reindexed
 
@@ -60,7 +60,7 @@
 
 *Given* a done Free item, with no position, in a workflow, *when* the workflow's active scope is reindexed, *then* the done item still has no position, and nothing else about it changes.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.6 — A reindex breaks an exact tie by creation time
 
@@ -76,7 +76,7 @@
 
 *Given* `P`'s attached children with a gap too tight to split, and a Free item in the same workphase, *when* an insert among `P`'s children triggers a reindex, *then* the Free item and `P` itself keep their positions exactly.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.8 — A workflow reindex doesn't touch attached siblings
 
@@ -84,7 +84,7 @@
 
 *Given* Free items with a gap too tight to split, and `Q`'s attached children in the same workphase, *when* an insert among the Free items triggers a reindex, *then* `Q`'s children keep their positions exactly.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.9 — A write that triggered a reindex discloses every renumbered position
 
@@ -92,7 +92,7 @@
 
 *Given* a caller that renders `A` (`1.0`), `C` and `E`, with `C` and `E` so close above `A` that no value fits between `A` and `C`, *when* it places `X` after `A`, *then* the scope is reindexed first, to `A = 1`, `C = 2` and `E = 3`, and `X` is then placed at `1.5` ([TC-2.12](part-2-anchor-resolution.md)). The response's `reindexed` field holds an `{id, position}` pair for every item the reindex renumbered: `A → 1`, `C → 2` and `E → 3`. A caller that applies them all renders `A, X, C, E`. One that learned only `X = 1.5`, and kept its old values for `C` and `E`, would sort `X` last.
 
-**Automation test:** `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-5.10 — Each disclosed entry is `{id, position}` and nothing more
 
@@ -124,7 +124,7 @@
 
 *Given* an active scope across non-terminal workphases `W1` and `W2`, and a caller whose view holds only `W1`'s items, *when* its write triggers a reindex of that scope, *then* `reindexed` also holds a pair for each of `W2`'s renumbered items: every item the reindex touched ([TC-5.4](part-5-reindex.md)). *And given* the reindexed scope is `P`'s attached children, *then* it holds a pair for every child of `P` that was renumbered. What a caller does with ids it doesn't hold is [TC-5a.4](part-5a-client-reconciliation.md).
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-5.14 — Every item write that can reindex discloses
 
@@ -132,7 +132,7 @@
 
 *Given* each of `POST /items`, `PUT /items/:id` and `PATCH /items/:id/move`, *when* the write triggers a reindex, whether through a tight gap beside its anchor or through the magnitude threshold on an append (including the append a scope change takes), *then* its response carries `reindexed` as [TC-5.9](part-5-reindex.md) describes. The rule covers any write that reindexed, not only a move.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
 
 ## TC-5.15 — Done items don't count toward the magnitude threshold
 

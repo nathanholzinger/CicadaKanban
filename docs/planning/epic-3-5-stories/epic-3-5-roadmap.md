@@ -695,6 +695,30 @@ deferral and keep landing with their stories.
      (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5b, which
      took over A5a's close-out. TC-6.12 moved to A5c's boards catalog as
      BCU-3.4.
+   - **From A6's Reconciler run, 2 cases** (the Test Planner, 2026-10-22),
+     new and `Open`, with no test: DRAG-6.15, a reload that lands
+     mid-drag stops the drag; and TREE-1.13, the sidebar's top level for
+     a subtree already taller than the project cap, beside TREE-1.11's
+     test in `tests/ui/project-tree-drag.spec.ts`.
+   - **Closing in A6 instead, 7 cases** (Nathan, 2026-10-23): DRAG-1.14,
+     2.9, 3.5 and 6.6, whose internal tests he approved, and DRAG-4.12,
+     6.2 and 6.11, whose passing client tests need only their IDs. A6's
+     Coder step adds what each still needs, DRAG-6.6's E2E test among
+     them. A case whose test finds the code short stays here. A6 also
+     puts IDs on the request-level tests of DRAG-1.24, 3.11, 3.23, 3.24,
+     6.7 and 6.9, which stay here for their on-screen halves.
+   - **Drag tests A6's run found short, left for this story** (Nathan,
+     2026-10-23: a test that checks a fine-tuned drag waits for Story 10).
+     The A6 reports, archived with A6 as
+     `docs/archive/test-reconciliation-a6-board-drag-interaction.md` and
+     `docs/archive/test-reconciliation-a6-project-tree.md`, give each:
+     - DRAG-5.13's row order at the Card layer, DRAG-5.1 landing after
+       `Q`, and DRAG-3.11's ghost resting last before a bottom-band
+       release (Proposed Stamps, item 7);
+     - `watchWrites` in place of unchanged-field checks, DRAG-5.2's merged
+       column, and DRAG-1.12's missing neighbor (Other concerns, 15–17);
+     - the sidebar's TREE-1.8 and 1.9 tests pinning the line's side, not
+       its row (project-tree, Concerns, 3).
 
 2. **Deferred from the Story 4 audit, #3** (`docs/archive/code-quality-audit-epic-3-5-story-4.md`,
    recorded 2026-09-21): Story 4's card-to-card attach gesture has no

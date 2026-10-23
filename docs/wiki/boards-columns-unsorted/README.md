@@ -64,12 +64,13 @@ a placeholder (Open questions).
 and `PUT /api/columns` request bodies, and returned on every column by
 `GET /api/boards/:id`. What a column covers is worked out whenever the
 board is read, from the workflow's current order, so adding or reordering
-workphases never requires changing a column (§8). What a column covers
-when its start comes after its end is §9's.
+workphases never requires changing a column (§8). What a broken column
+covers is §9's.
 
 **A column with no name of its own is named for what it covers:** its
-workphase's name when it covers one, or its first's and its last's
-joined by a dash. The name is worked out whenever the board is read, like
+workphase's name when it covers one, its first's and its last's joined
+by a dash when it covers more, or "(empty range)" when it covers none
+(§9). The name is worked out whenever the board is read, like
 what the column covers, so it follows a workphase rename or a change of
 range. Its `displayMode` is `merged` unless the create asks for
 `expanded`. What each mode looks like is a placeholder (Open questions).
@@ -161,19 +162,36 @@ workphases (§6).
 
 ## 9. Broken columns
 
-**A column whose start comes after its end in the workflow's order is
-flagged `broken`.** Through the API, only a workphase reorder makes one
-(§8), since a column write can't (§5). The flag is worked out on every
-read of the board, never stored.
+**A column is flagged `broken` when its start comes after its end in
+the workflow's order, or when its start or its end isn't one of the
+workflow's workphases,** one that doesn't exist or one of another
+workflow's. The flag is worked out on every read of the board, never
+stored. Through the API, only a workphase reorder makes a broken column,
+and only by putting a column's start after its end (§8). A column write
+can't make either kind (§5), and a workphase delete shrinks or deletes
+the columns covering it (§8), so an end outside the workflow takes a
+direct database edit.
 
-**A broken column still covers the workphases between its two ends,** so
-none of them is in `uncovered` (§10). It keeps showing their items, but
-takes no drop ([`../board-drag-interaction/`](../board-drag-interaction/)
-§4) until an edit gives it a range that passes §5.
+**A broken column takes no drop**
+([`../board-drag-interaction/`](../board-drag-interaction/) §4) until an
+edit gives it a range that passes §5, which fixes it.
+
+**A column whose start comes after its end still covers the workphases
+between its two ends,** so none of them is in `uncovered` (§10), and it
+keeps showing their items.
 
 Example: column `A` runs from `W1` to `W3`, and the workphases are
 reordered to `W3, W2, W1, W4`. `A` is broken, and still covers `W3`, `W2`
 and `W1`. An edit to run from `W3` to `W1` fixes it.
+
+**A column with an end outside the workflow covers no workphase,** since
+there's no range to work out from the workflow's order. It shows no
+items, and a workphase no other column covers is in `uncovered` (§10).
+
+Example: column `A` runs from `W1` to `W3`, and a direct database edit
+points its end at a workphase of another workflow. `A` is broken and
+covers nothing, so `W1`, `W2` and `W3` are in `uncovered` unless another
+column covers them. An edit to run from `W1` to `W3` fixes it.
 
 ## 10. Unsorted
 
@@ -197,7 +215,8 @@ whose handling isn't designed yet.
   its project comes to use a different workflow (§3), or a direct
   database edit.
 - A workphase no column covers: a new one (§8), or one left out by a
-  column's delete or edit (§4), or by a reorder (§8).
+  column's delete or edit (§4), by a reorder (§8), or by a column with
+  an end outside the workflow (§9).
 
 **An Attached item shows with its parent, whatever its own `workphaseId`
 says** ([`../item-attachment/`](../item-attachment/) §2a), and that rule
@@ -233,9 +252,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   its own by its id, which the board never shows (§4, §6).
 - **A board out of step with its workflow (§6, §8).** A workphase reorder
   can leave columns overlapping, or a column covering both terminal and
-  non-terminal workphases. Only a column whose start comes after its end
-  is flagged (§9). How a board recognizes the rest, and what it shows
-  then, is undecided.
+  non-terminal workphases. Of what a reorder leaves, only a column whose
+  start comes after its end is flagged (§9). How a board recognizes the
+  rest, and what it shows then, is undecided.
 - **The Unsorted bucket and its badges.** How the bucket, the "needs
   attention" badge and the "broken" badge look, and their tooltips. The
   badge is raised by anything in `unsorted` (§10), so it can show over a

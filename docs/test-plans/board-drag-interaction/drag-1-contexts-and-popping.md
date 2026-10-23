@@ -117,7 +117,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 *Given* Card `X` with a detached descendant `D`, a Free Card in the same column, *when* `X` is locked into that column and the side highlight names `D` for well past the full zoom-in hold, *then* the dwell never starts: no cue appears on `D`, nothing zooms in, and a release commits the column's reposition naming `D`. `X` is never reparented, and the user never sees an item settle and bounce back. Validity is judged by the rule the API enforces ([ATT-4.2](../item-attachment/att-4-legal-parent-depth-cap.md), [ATT-4.3](../item-attachment/att-4-legal-parent-depth-cap.md)).
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragRegions.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
 
 ## DRAG-1.8 — A Depth-capped Card can be named for a reposition, but is never zoomed into
 
@@ -125,7 +125,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 *Given* Card `X` with subtree height `H`, and Card `T` at depth `D` in the same column with `D + 1 + H > CAP` ([ATT-4.4](../item-attachment/att-4-legal-parent-depth-cap.md)), *when* `X` is locked into that column and the side highlight names `T` for well past the full zoom-in hold, *then* the dwell never starts, no cue appears, nothing zooms in, and a release commits the column's reposition. `T` stays a zoom-in target for another drag whose subtree fits.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragRegions.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`, `client/src/components/workflow/dragClassification.test.ts`
 
 ## DRAG-1.9 — At Board layer, nowhere is no region, and a release there writes nothing
 
@@ -150,7 +150,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 *Given* an expanded column whose sub-rows overflow its view, with sub-row `W3` scrolled out of sight, *when* a Card at Board layer has its cursor where `W3`'s box would be, *then* the cursor is nowhere ([DRAG-1.9](drag-1-contexts-and-popping.md)): no pop-in clock starts, and a release writes nothing. *When* the column scrolls so that `W3` comes into view under the cursor, *then* `W3` is a region from that moment: the pop-in clock starts, and a release resolves by `W3`'s band. Where a divider sits inside a visible region is [DRAG-3.16](drag-3-card-column-bands.md).
 
-**Automation test:** `client/src/components/workflow/dragRegions.test.ts`
+**Automation test:** `client/src/components/workflow/dragStructure.test.ts`
 
 ## DRAG-1.11 — The Board → Column pop-in clock counts time in the region and fires only from the middle band
 
@@ -298,7 +298,7 @@ A `P` with no attached children has no descendants section, so its Descendants l
 
 *When* the cursor leaves `K`'s outer body, for example into the gap between columns, and stays for `popDelayMs`, *then* `X` pops out ([DRAG-1.3](drag-1-contexts-and-popping.md)). A sub-row's box already is its full bound, so sub-rows have no such space.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragRegions.test.ts`
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragStructure.test.ts`
 
 ## DRAG-1.26 — The locked layer always carries an outline, in `activeContextOutlineColor`
 

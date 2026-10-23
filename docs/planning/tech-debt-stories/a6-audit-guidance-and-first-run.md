@@ -1,6 +1,6 @@
 # A6 — Audit Guidance Revisit and First Run
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3g done; 3h (the checker reads Bruno) is next (Coder) · **Sequenced:** after A4 and A5a–A5d, all closed
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3h done; batch 4 (the close) is next · **Sequenced:** after A4 and A5a–A5d, all closed
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, plus the other tech-debt stories in this folder. Tags like "Auditor F7" point to round-table items, and "A1 D11" points to another story's decisions. This plan is transient, so it may cite them.
 
@@ -185,6 +185,31 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 ### Batch 4: close
 
 - **The Reconciler runs once** over the whole catalog, since batch 3 moves and splits test files (`story-done-checklist.md`'s tech-debt section). It runs after 3h is committed, on a clean commit (Nathan, 2026-10-22). It also answers the items addressed to it under Open questions.
+  - *Run 2026-10-22,* one instance per test-plan folder, at `57d3ca2` plus the uncommitted docs. The reports are `docs/audits/test-reconciliation-a6-<folder>.md`. A short re-check follows the Coder's step after the run.
+- **The Coder's step, after the run** (Nathan, 2026-10-22 and 2026-10-23): tests only, for what the code already does, apart from one code fix (the last item). A test that finds the code doesn't do what its case says isn't fixed here: its case goes to Story 10, or to the story that owns the code, and the Test Planner routes it. A test that checks a fine-tuned drag on the board or the sidebar isn't changed here either: that's Story 10's. Each test starts its title with its case's ID, and the reports give each test's file and line. The Reconciler then re-checks only these cases, and lists any test title whose ID has a prefix no test-plan folder uses, which no instance of the run looked for.
+  - **Cases A6 revised or added:**
+    - ATT-4.11: the accepted top-level edit by `PUT`, with `H` at `CAP − 1`.
+    - ATT-9.12: the ID on `items.workphase.test.ts`'s create-and-move test, which gains the two moves (`R` left Free, `X` left attached to `A`) and a check that the moved row is unchanged.
+    - ATT-10.4: the ID on `items.test.ts`'s missing-row create test, which gains a create naming the missing project with `P` as the parent.
+    - ATT-5.12 and ATT-11.1: their IDs on the route tests the item-attachment report names.
+    - ATT-11.2: an E2E test. The board's half has only a client test.
+    - BCU-2.9: a route test in `columns.test.ts`. BCU-2.8's test takes the case's new title.
+    - DRAG-6.1: the ID on batch 3b's band test, which also asserts the list while the write is pending.
+  - **Internal tests Nathan approved (2026-10-23):**
+    - DRAG-2.9: `dragClassification.test.ts`'s "cycle-forming wins over depth-capped" test.
+    - DRAG-3.5: `dragBands.test.ts`'s first two `bandFor` tests, and a new test of `dragBands.ts::reservationFor`.
+    - DRAG-1.14: `popSession.test.ts`'s two DRAG-1.14 tests, and an assertion that a distance of 0 never pops.
+    - DRAG-6.6: `dragRequest.test.ts`'s test, for the request's half. This reverses the decline at A3's batch 3 review. The board's half is an E2E test: the move is answered with a 400, the board reloads, and the item renders where the server has it.
+  - **Tests that can't fail, for cases already `Automated`:** TC-2.23 takes its ID on `items.hierarchy.test.ts`'s re-attach test; TC-2.25's and TC-5.1/5.4's setups change so a wrong order fails them. TC-2.9's ID goes on the cross-column API spec the report names. The item-positioning report has each fix.
+  - **IDs on passing client tests, from the board-drag report's Proposed Stamps (Nathan, 2026-10-23):**
+    - DRAG-6.2: `itemWriteReconciliation.test.ts`'s "TC-2.30: a pending item keeps its position…".
+    - DRAG-4.12: `dragRequest.test.ts`'s "DRAG-4.1, DRAG-5.4: attach…" and `popSession.test.ts`'s "a childless Card … never pops any further…".
+    - DRAG-6.11: `itemListOps.test.ts`'s "draws an item with no completedAt at the end of a done list…", which also asserts the item stays last once its `completedAt` is stamped.
+    - **Request halves only,** so each case stays `Open` for Story 10: DRAG-1.24 (`dragRequest.test.ts`'s "same workphase, empty others…"), DRAG-3.24 (its "DRAG-3.12: same workphase, slot existing…"), DRAG-3.23 (its "a done region never anchors…"), DRAG-6.7 (its two stale-response tests), DRAG-6.9 (`itemWriteReconciliation.test.ts`'s "a response for a write whose placement has since been replaced…"), and DRAG-3.11 (`itemListOps.test.ts`'s TC-2.30 test).
+  - **Test-quality fixes outside the drag specs,** which change no status: BCU-1.2's "nothing changes" compared with a read taken before the delete, and BCU-2.3's test without its `position` assertion (the boards-columns-unsorted report, Test Quality Concerns 3 and 4); TREE-3.9's route test matching the refusal's reason, and TREE-9.1's "unchanged" asserted as unchanged, not as survival (the project-tree report, Concerns 4 and 5); and TC-2.4's ID on the "A after C" route test, once its anchor sits at a value that shows the rounding (the item-positioning report).
+  - **A test under the wrong ID:** `useProjectDragReorder.test.ts`'s "marks nothing invalid while the cap is unknown" moves out of TREE-1.11's describe, since no rule states what it asserts (Amendments, the run).
+  - **The one code fix:** `PUT /items/:id` answers 400 for an `agentId` that names no agent, and changes nothing, as `POST /items` does since #47. Its route test carries no case ID, since no wiki page covers the agent field (Open questions, batch 3d's notes). It's a production change, so the step ends with `npm run check` and `npm run test:e2e`.
+  - **The re-check** also drops `positionResolver.test.ts` from TC-2.8's line: it throws for the wrong reason, and route tests prove the case.
 - **Every Open question is answered,** or moved to the plan that will answer it. Batch 3 fixes behavior, so this story closes by the full checklist.
 - The Architect's memory pass for the three audit memories (D1).
 - The report moves to `docs/archive/`, followed by this plan once it's signed off. Nathan tags the report's end commit `a6-audited`.
@@ -260,7 +285,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
 | `scripts/check-docs/` | 3h | Reads a `.bru` file's `docs` block | Coder |
-| `.claude/guides/documentation-standards.md` | 3, after 3h | The `bruno/` row stops saying the checker doesn't read `.bru` files, and "What the checker checks" names Bruno's `docs` blocks among what it reads | Architect |
+| `.claude/guides/documentation-standards.md` | 3, after 3h, done | The `bruno/` row stops saying the checker doesn't read `.bru` files, and "What the checker checks" names Bruno's `docs` blocks among what it reads | Architect |
 | The memory directory (outside the repo) | 4 | D1's pointers | Architect |
 
 ## Acceptance
@@ -298,8 +323,32 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
       - What does a board read say such a column covers: nothing, or the end that's left?
       - Does "missing" mean only an end that doesn't exist, or also one that belongs to another workflow?
       - Can anything besides a direct database edit make one, such as a foreign-key action when a workphase row is deleted?
+      - Does the board refuse a drop into such a column, as it does into one whose start comes after its end? Added 2026-10-22 (PO): under Nathan's answer below, deduction a's "takes no drop" holds only if the code agrees.
 
-      If the read covers something other than nothing, it goes back to Nathan: fix the code, or take what it does as the rule.
+      If the read covers something other than nothing, it goes back to Nathan: fix the code, or take what it does as the rule. **Answered 2026-10-22 (Nathan), ahead of the facts:** what the code does is the rule, whatever the read says. The Epic 8+ rework of columns (`epic-8-decisions.md`, "A board out of step with its workflow") revisits it, and the board is fine as it is until then. No code changes, so the facts decide only what the PO writes into §9.
+      - **Answered 2026-10-22 (Architect),** from the code:
+        - **A read says it covers nothing.** `columnRanges.ts::computeColumnRange` finds no range when either end is outside the workflow's order, so `getCoveredWorkphases` returns none. `GET /api/boards/:id` gives the column `broken: true` and no `subRows`, and names it "(empty range)" when it has no name of its own. `computeUnsorted` counts it as covering nothing, so its workphases are in `uncovered` unless another column covers them. That's Nathan's ruling, so nothing goes back to him.
+        - **"Missing" means both.** The order a board reads is its own workflow's workphases (`workphaseOrder.ts::getOrderedWorkphases`), so an end in another workflow is missing, just as one that doesn't exist is.
+        - **Nothing in the app makes one.**
+          - Both ends are foreign keys to `workphases` with no ON DELETE action, and foreign keys are on, so SQLite refuses to delete a workphase a column names.
+          - `DELETE /api/workphases/:id` first shrinks each column that covers the workphase, or deletes the column if it covered only that one (§8).
+          - A workflow's delete removes its boards and columns before its workphases (`workflowCascade.ts::deleteWorkflowsById`).
+          - A column write refuses an end outside the board's workflow (§5), and no write moves a workphase or a board to another workflow.
+
+          So it takes a direct database edit, and §9's "Through the API, only a workphase reorder makes one" stays true. The test reset turns foreign keys off only while it empties every table.
+        - **The board refuses a drop into it, as into any broken column.** The client reads `broken`, not why. A broken column registers no drag region (`BoardColumn.tsx`, `dragStructure.ts::cardListStructure`), so no drag enters it and a release over it writes nothing (wiki board-drag-interaction §4). Deduction a holds.
+        - **One write besides a drop, for the PO:** its "+ Add item" form still shows, as an inverted column's does. It creates in the column's `entryWorkphaseId`, which falls back to the stored start when the column covers nothing. The API accepts that when the start is the workflow's, and the new item sits in `uncovered` unless another column covers it. It refuses a start that isn't (wiki item-attachment §2a). Whether §9 says anything about the form is yours.
+    - **Written 2026-10-22 (PO),** from the Architect's facts. Wiki boards-columns-unsorted:
+      - **§9:** a column is broken when its start comes after its end, or when an end isn't one of the workflow's workphases, one that doesn't exist or one of another workflow's. Only a direct database edit makes the second kind. Every broken column takes no drop. A column whose start comes after its end covers the workphases between its ends, as before; one with an end outside the workflow covers none, shows no items, and leaves its workphases in `uncovered` unless another column covers them. Each kind has an example.
+      - **§4:** a column with no name of its own that covers none is named "(empty range)".
+      - **§10:** the list of what puts a workphase in `uncovered` gains a column with an end outside the workflow.
+      - **Open questions, "A board out of step with its workflow":** "Only a column whose start comes after its end is flagged" now reads "Of what a reorder leaves, …", since a column with an end outside the workflow is flagged too.
+      - **The "+ Add item" form:** not on the page. No page states the form for any column, and what its create does follows rules already stated: an item in a workphase no column covers is in `uncovered` (§10), and a workphase outside the workflow is refused (item-attachment §2a).
+    - **For the Test Planner:**
+      - **BCU-2.8's title,** "A broken column still covers the workphases between its two ends", now holds only for a column whose start comes after its end. Its text and test are unchanged.
+        - **Done 2026-10-22 (Test Planner):** it's "A column whose start comes after its end still covers the workphases between its two ends". Its text and status are unchanged.
+      - **§9's new rules have no cases:** a column with an end outside the workflow is broken, covers none and leaves its workphases in `uncovered`; every broken column takes no drop; and §4's "(empty range)".
+        - **Done 2026-10-22 (Test Planner):** BCU-2.9, `Open`, covers the new kind: a start or end at another workflow's workphase, or an end that names none, flags the column `broken`, it covers and shows nothing, it's named "(empty range)", its workphases are in `uncovered`, and an edit to a passing range fixes it. "Takes no drop" needs no new case: DRAG-1.9 and DRAG-2.8 already say a broken column is nowhere, whichever kind it is, and BCU-2.9 links them.
 - **For the Architect:**
   - **Root `CLAUDE.md`:** "One position math layer" lists `itemPositionScope.ts` as table-generic, and it's items-only. The `/api/test` row omits the project pins (position, created-at, parent). The gates line says unit tests run across `client/`, `server/` and `tests/`; they run across `client/`, `server/` and `scripts/`, and lint runs `check:docs`.
   - **`testing-strategy.md`:** "both Vitest suites" (there are three, one on `node:test`), and no row in the layers table for `scripts/**/*.test.mts`.
@@ -372,6 +421,7 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - **Done 2026-10-22 (Test Planner):** ATT-9.12, `Open`. It covers a top-level create, an attached and a detached child's create, and a move that leaves the item Free or Attached. It doesn't say the writes share one message, since §2a doesn't.
   - *Moved 2026-10-22 to `positioning-on-create-and-edit.md`'s Inbound deferrals:* TC-7.10 and an item that ends with no workphase. Under that story, a child with no workphase gains a sibling scope.
 - **For Nathan:** where the fix for `PUT /items/:id`'s unchecked `agentId` goes, the gap this batch's notes left since #47 named only the create. Under the convention above, an edit naming an agent that doesn't exist is refused with a 400, and nothing changes. Today it's a 500.
+  - **Answered 2026-10-23 (Nathan):** in A6's Coder step after the run (Batch 4).
 
 *From the Coder, batch 3e, the drag layer (2026-10-21).*
 
@@ -421,11 +471,15 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
 - **For the Test Reconciler:**
   - **Six cases to map in full,** since their text changed after their tests were written: ATT-4.11, DRAG-4.3, DRAG-5.13 and DRAG-6.1, revised; ATT-9.12 and ATT-10.4, new and `Open`, whose tests batch 3d's notes name and which carry no ID yet.
+  - **BCU-2.9, new and `Open`,** from the PO's §9, and **BCU-2.8,** retitled for a column whose start comes after its end. Whether a test already covers BCU-2.9 is yours to propose.
   - **TC-2.4 and `tests/api/itemRepositioningAttachedSiblings.spec.ts`,** the report's item for the Test Planner: whether the spec's titles at `:58, 70, 89` should carry TC-2.4 and TC-3.1, and the Automation line that follows.
+  - **The report's line numbers predate batch 3d's and 3f's moves and splits** (the table in batch 3f's server-test note). `items.hierarchy.test.ts:1179–1187`, which asserts half its title, has no ID or title to search for: say which test it is, if the files split from it show it, or that it can't be found.
+  - **Three of the report's items are done** (batch 3g's note, below): `extract.test.mts`'s fixture, the `toRect` case behind `dragRegions.test.ts:111–113`, and #31's merge. Confirm them rather than raise them again.
 
 *From the Coder, batch 3h, the checker reads Bruno (2026-10-22).*
 
 - **For the Architect:** your note says you update `documentation-standards.md`'s `bruno/` row and its "What the checker checks" list once 3h lands. It has. A request's `docs` block gets the rules a Markdown file outside the wiki and the test plans gets: `transient-id` (IDs and dates), `transient-link`, `bare-section` and `wiki-pointer` (the pointer's form, and whether it resolves), and `symbol-ref`. It doesn't get `case-id`, `bare-case-id`, `claude-ref` or `wiki-code-name`. The rest of a `.bru` file is unread. A `.bru` file outside `bruno/` isn't checked. `code-comments.md`'s checker table, if it lists scope, has the same gap.
+  - **Done 2026-10-22 (Architect).** `documentation-standards.md`'s "What the checker checks" names the `docs` blocks among what it reads, as Markdown, and says the rest of a `.bru` file isn't read. Its `bruno/` row says the checker reads a `docs` block, and that rule (g), naming no `.claude/` or `CLAUDE.md` file, holds there by hand. `case-id` and `bare-case-id` need no such line, since no request cites a test case. `wiki-code-name` needs none either, since it's the wiki's. `code-comments.md`'s table lists rules, not where they run, so it has no gap.
 
 ## Amendments
 
@@ -726,3 +780,23 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **Shown to bite.** Five reverts, each caught: `extractBruno` reading every line (six tests fail), ending the block at any line that ends in a brace (two), `checkFile` reading a `.bru` as plain Markdown (two), `isCheckable` leaving `.bru` out (one), and the default scope leaving `bruno/` out (one). A date planted in `move-item.bru`'s docs is reported at `move-item.bru:23:14`, the line and column it sits at; the file is restored. The brace test's first fixture ended its line with a full stop, so the revert passed it; the line ends in a brace now.
   - **Edges.** A block ends at the first line that is only `}`, at column 0. The docs in the current requests are indented, so a `}` inside one never sits there. Whether a `docs` block still describes its endpoint stays a review job, as the plan row says. `bruno/bruno.json` isn't a `.bru` file and isn't read; `environments/local.bru` has no `docs` block.
   - **Checks.** `npm run typecheck`, `npm run lint` (its `check:docs` step reports no hits, and the known `coder.md` one is gone), `format:check` and `test:unit` pass: 399 server tests, 446 client, 94 script tests. `npm run test:e2e` wasn't run: only checker code and its tests changed.
+- **2026-10-22, Nathan's answers before the Reconciler run (Test Planner):**
+  - **A column with a missing start or end:** what the code does is the rule, with no code change; the Epic 8+ rework of columns revisits it. The PO writes §9 from the Architect's facts.
+  - **Tests for the new cases, and the doubt whose line moved:** the run proposes and maps; it isn't preceded by a Coder step. Writing tests is the Coder's, and mapping them to the catalog and finding the gaps is the Reconciler's. ATT-9.12's and ATT-10.4's IDs, and any test they still lack, come after the run.
+- **2026-10-22, the column facts and 3h's follow-up (Architect):**
+  - **A column with a missing start or end:** the four facts are in Open questions, for the PO to write §9 from.
+    - A read says it covers nothing, which matches Nathan's ruling, so nothing goes back to him.
+    - "Missing" includes an end in another workflow.
+    - Only a direct database edit makes one.
+    - The board takes no drop into it, so deduction a holds.
+
+    One new fact for the PO: the column's "+ Add item" form still creates in its stored start, when that start is the workflow's.
+  - **3h's follow-up:** `documentation-standards.md`'s `bruno/` row and "What the checker checks" now say the checker reads a request's `docs` block as Markdown. Every Open question for the Architect is done again. The status line had stayed at "3h is next"; it now says batch 4 is next.
+- **2026-10-22, boards-columns-unsorted §9 written (PO):** from the Architect's facts, under Nathan's ruling that what the code does is the rule. Every fact matched Nathan's earlier ruling, so nothing went back to him. Deduction a holds, as the Architect confirmed. The Open questions list each change, and no section number changed. The "+ Add item" form stays off the page: no page states it for any column, and existing rules decide what its create does.
+- **2026-10-22, the Test Planner's pass on §9 (Test Planner):** BCU-2.8 is retitled for a column whose start comes after its end, and BCU-2.9 is new and `Open`, for a column with an end outside the workflow. The drag cases already cover "takes no drop" for any broken column. With §9 written, every folder of the catalog is ready for the Reconciler.
+- **2026-10-22, the Reconciler's run (Test Planner):** five instances, one per folder. No case lost its test to batch 3's moves, and no test title carries an unknown ID. BCU-1.5 and TREE-3.9 moved to `Automated`; ATT-4.11 and DRAG-6.1 moved to `Open`, since their revised text asks more than their tests assert. 78 Automation lines were re-pointed after the moves.
+  - **Three behaviors the runs found, which no rule states (Nathan):** the current behavior is acceptable, and none goes to the PO. The sidebar marks no tab state invalid until it has the project cap; a title-only edit leaves an attached child's drifted workphase as it is; a column edit can change its display mode and its own name.
+  - **Cases the runs found missing (Test Planner):** ATT-11.1 and ATT-11.2 (wiki item-attachment §13, deleting an item's subtree), in a new suite; ATT-5.12 (a cross-project reparent on one workflow that leaves the item Free and names a workphase); DRAG-6.15 (a reload that lands mid-drag stops the drag); TREE-1.13 (the sidebar's top level for a subtree already taller than the project cap). All are `Open`. DRAG-6.15 and TREE-1.13 have no test and are on Story 10's list. ATT-11.1 and ATT-5.12 have route tests that carry no ID, and ATT-11.2 has only a client test.
+- **2026-10-23, Nathan's rulings on the run (Test Planner):** the internal tests for DRAG-2.9, 3.5, 1.14 and 6.6 are approved. DRAG-2.9's and DRAG-6.6's reverse the declines at A3's batch 3 review, which predated the client-rule category. The Coder's step after the run is tests only, for what the code already does; a case whose test finds otherwise goes to Story 10, or to the story that owns the code. Batch 4 lists the step.
+- **2026-10-23, IDs on passing tests (Nathan):** a passing test that needs only its case's ID gets it now, and so does a client test that needs one more assertion. Tests that check a fine-tuned drag wait for Story 10. Batch 4's Coder step lists both; Story 10's entry lists what waits.
+- **2026-10-23, `PUT /items/:id`'s `agentId` (Nathan):** fixed in this story, in the Coder's step after the run, under the convention that a write naming a row that doesn't exist is refused with a 400.

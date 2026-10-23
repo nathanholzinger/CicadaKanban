@@ -2,7 +2,7 @@
 
 **Wiki page:** item-attachment
 
-**Suite IDs:** `ATT-1` … `ATT-10`. A case is written by its full ID, `<suite>.<n>` (e.g. `ATT-4.5`), in its own suite file as everywhere else.
+**Suite IDs:** `ATT-1` … `ATT-11`. A case is written by its full ID, `<suite>.<n>` (e.g. `ATT-4.5`), in its own suite file as everywhere else.
 
 The page is gesture-agnostic, so each case holds whichever write makes the change, a board gesture or a direct API call. A case names a write only where the rule does.
 
@@ -18,3 +18,4 @@ The page is gesture-agnostic, so each case holds whichever write makes the chang
 | [ATT-8 — Hierarchy changes are logged](att-8-hierarchy-changes-logged.md) | The activity entry a parent or attachment change records |
 | [ATT-9 — The workphase a write leaves an item in](att-9-workphase-a-write-leaves.md) | An Attached item's workphase, where an item leaving attachment lands, and a Free item's workphase staying in its project's workflow |
 | [ATT-10 — Creating an item](att-10-creating-an-item.md) | What a create names, the attachment default, and an optional workphase |
+| [ATT-11 — Deleting an item deletes its subtree](att-11-deleting-an-item.md) | What a delete removes, attached and detached, and what the board stops showing |

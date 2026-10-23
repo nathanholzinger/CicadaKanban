@@ -1,12 +1,12 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.15
+**Next ID:** DRAG-6.16
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, the inversion tripwire, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
-| DRAG-6.1 | The board shows the drop's placement at the moment of release, before the request is sent, with no position invented | P0 | Automated |
+| DRAG-6.1 | The board shows the drop's placement at the moment of release, before the request is sent, with no position invented | P0 | Open |
 | DRAG-6.2 | The previewed item is marked pending; its `position` is left alone, and isn't `null` | P0 | Open |
 | DRAG-6.4 | An inversion is recorded in the tuning panel's inversion log, not silently repaired | P1 | Open |
 | DRAG-6.5 | Re-dragging a pending item: responses are sequenced per item, so a stale one can't land last | P0 | Automated |
@@ -19,16 +19,17 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
 | DRAG-6.14 | The board records no inversion for a write it didn't preview | P2 | Automated |
+| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Open |
 
 ---
 
 ## DRAG-6.1 — The board shows the drop's placement at the moment of release, before the request is sent, with no position invented
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10, wiki item-positioning §7.1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki item-positioning §7.1
 
 *Given* a drop that resolves to `{anchorId: A, side: after}` in a column rendering `A, C, E`, *when* the user releases, *then*, before the request leaves the client, the dragged item `X` renders at index 1 (`A, X, C, E`), the ghost's index, and no `position` value is assigned to it to get there ([TC-2.27](../item-positioning/part-2-anchor-resolution.md)). The placement the board shows is the relation the request carries (a workphase, and first, last, where the kept position falls, or an anchor and side), so the picture before and after the response is the same. The board never shows its pre-drop order after the release. *And given* the same column, *when* the user releases in its top band, *then* the request is `before A` ([TC-7.1](../item-positioning/part-7-board-placement-intents.md)), and the placement the board shows is that same anchor and side, not a bare first slot: `X` renders first, and once the response is applied the list still reads `X, A, C, E`, with no inversion recorded ([DRAG-6.4](drag-6-preview-reconciliation.md)). A bottom-band release is the same, as `after E` ([TC-7.2](../item-positioning/part-7-board-placement-intents.md)), and the list reads `A, C, E, X`.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-6.2 — The previewed item is marked pending; its `position` is left alone, and isn't `null`
 
@@ -125,3 +126,15 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 *Given* Stub `X` attached to `P` on the board, *when* `X` is detached from its Sheet, so it appears in its column at a fresh position, *then* the tuning panel's inversion log gains no entry. The board previewed nothing, so the write made no claim about the order. Recording an inversion for a write it did preview is [DRAG-6.4](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`
+
+## DRAG-6.15 — A reload that lands mid-drag stops the drag, and nothing is written
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag, for either reason:
+- a drop of another item, released earlier, fails ([DRAG-6.6](drag-6-preview-reconciliation.md));
+- a stale response carrying reindex pairs arrives ([DRAG-6.7](drag-6-preview-reconciliation.md));
+
+*then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request.
+
+**Automation test:** —
