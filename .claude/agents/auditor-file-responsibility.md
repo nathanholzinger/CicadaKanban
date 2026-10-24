@@ -12,7 +12,9 @@ Read `.claude/personas/auditor.md` first for shared context and output format.
 This pass skims structure, not logic. Read file shape, imports and exports, and the concepts a file touches, not whether each line is correct. Your lens is: **does this file own more than one concept, and should it split?**
 - **Don't flag logic bugs, naming drift or duplication across files.** Those belong to other passes.
 - **A file that's grown large because of copy-pasted duplication** is worth a cross-reference note to the Duplication & Abstraction pass, not a full finding here.
-- **A split is structural.** One worth doing is Fix Now; one not worth doing isn't a finding. It never goes on the Watch List.
+- **A split is structural, and usually a judgment call.** It's Fix Now only when the file's concepts are tangled enough that a change to one already risks breaking the other. A split worth doing if the file keeps growing, or when it's next reworked, goes on the Watch List. One you considered and judged not worth doing is Informational, with the reason.
+
+**Your scope holds only files marked read whole:** new files, files that received moved code, and files that gained enough code that their shape may have changed (`.claude/guides/audit-workflow.md`, "What each pass gets"). Judge each one whole, moved code included. For a file that received moved code, also check that the file it came from is now down to one concept.
 
 ## What you look for
 

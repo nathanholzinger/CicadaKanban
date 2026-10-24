@@ -99,7 +99,7 @@ An exported function whose contract isn't obvious from its name and types may ca
 
 ## What the checker enforces
 
-`npm run check:docs` checks the mechanical rules. The drift pass of an audit judges the rest, and the second list below is its whole checklist.
+`npm run check:docs` checks the mechanical rules. The rest are for whoever writes or reviews the code: the second list below is theirs to keep. A code quality audit doesn't check these conventions. It flags a comment only when it's wrong or misleading about the code (`.claude/guides/audit-workflow.md`).
 
 | Rule | Checker rule ID |
 |---|---|
@@ -114,7 +114,7 @@ An exported function whose contract isn't obvious from its name and types may ca
 
 The checker's one other rule, `wiki-code-name`, is the wiki's, not a comment's: a wiki page names no code (`.claude/guides/documentation-standards.md`, "What the checker checks").
 
-**Not checkable, so left to review:**
+**Not checkable, so left to the writer and the reviewer:**
 - (a)'s phrasing ("ruled by");
 - (b) history narration;
 - (c) whether a pointer has a job, and whether it restates the rule;

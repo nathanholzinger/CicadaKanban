@@ -148,4 +148,4 @@ How the marker is written on a page is the wiki README's.
 // check-docs-ignore-next-line transient-id -- a date-parsing fixture, not provenance
 ```
 
-Everything the checker can't judge, such as history narration, restated rules and wrong claims, is the reviewer's and the audit's job.
+Everything the checker can't judge, such as history narration, restated rules and wrong claims, is the writer's and the reviewer's job. A code quality audit takes only a wrong claim, in code: a comment, module header or `CLAUDE.md` that's wrong or misleading about the code.

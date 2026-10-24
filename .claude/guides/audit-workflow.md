@@ -30,21 +30,37 @@ The range runs from that base to HEAD when the audit starts. It takes in the pre
 
 **Sort the range before spawning:**
 
-| What the commits change | Passes |
+| What changed | Passes |
 |---|---|
-| Formatting only, listed in `.git-blame-ignore-revs` | None |
+| Formatting only, in commits listed in `.git-blame-ignore-revs` | None |
 | Comments and test titles only, proven by the story's own comparison of the code with comments stripped | Drift |
+| A file's imports only, with nothing else in that file changed over the range | Drift |
 | A `CLAUDE.md` file, root or directory | Drift |
-| Code, tests or config | All four |
+| Code moved unchanged from one file to another | All four, listed apart (see What each pass gets) |
+| Any other code, tests or config | All four |
 | Docs outside the code: the wiki, test plans, plans, guides, personas and agents | None |
+
+Whether a file changed only in its imports is mechanical: its diff over the range touches nothing but import statements.
 
 Write the scope down: the range, the files each group touches (`git diff --stat`), and which passes read each group.
 
-**A share too large for one pass** runs as several instances of that pass, in parallel, each over its own part of the scope.
+**A share too large for one pass** runs as several instances of that pass, in parallel, each over its own part of the scope. Split it by code area, not by commit, so each file has one reader per lens however many commits changed it. Keep code that shares logic in one Duplication instance: a split between the two halves would hide the duplication that lens looks for.
+
+### What each pass gets
+
+**A scope file per instance.** It lists the instance's files with line numbers as they stand at HEAD, so a pass needs no git. Each file can have three lists:
+- **Changed lines:** the lines `git blame` over the range attributes to a commit in it, skipping the commits in `.git-blame-ignore-revs`.
+- **Moved lines,** listed apart with the file each came from: lines plain blame puts in the range, but `git blame -M -C -C`, bounded at the base, traces to an older line in another file. A run of fewer than four lines from one source counts as changed instead: short matches are usually braces and imports. A move doesn't change the code, so a pass checks only what a move can break, as its agent says.
+- **Removal sites:** where lines were deleted with nothing added in their place, the hunks of `git diff -U0` over the range that add nothing. Blame can't see them, so they're listed for a pass to check what's left around each one.
+
+**How far to read.** The orchestrator marks a file **read whole** when the range may have changed its shape: the file is new, it received moved code, or 10 or more of its changed lines are code: imports, comments, test titles and blank lines don't count. It marks any other file whose growth calls its shape into question too.
+- **A marked file** is read whole, and each lens asks its questions of the file as a whole: whether it still owns one concept, whether its new code repeats code elsewhere, whether its header still covers it.
+- **An unmarked file** is read at its listed lines, enough around them to understand them, and the code they call. A change of a few lines rarely changes what a file owns, and reading the whole file for it costs more than it finds.
+- **File Responsibility's scope holds only the marked files.**
 
 ## 3. The four passes
 
-Spawn the four audit agents in one message, so they run in parallel:
+Spawn the four audit agents in parallel:
 
 | Agent | Its lens |
 |---|---|
@@ -53,9 +69,10 @@ Spawn the four audit agents in one message, so they run in parallel:
 | `auditor-file-responsibility` | Does a file own more than one concept? |
 | `auditor-duplication-abstraction` | Is the same logic in more than one place, and would sharing it reduce risk? |
 
-- **The prompt carries only the scope.** Each agent's definition names the guide sections it reads.
+- **The prompt carries only the scope:** the path of the instance's scope file. The persona says how to read it, and each agent's definition names the guide sections it reads.
 - **The passes run cold.** They get no story plan, no earlier audit, no ledger and no wiki page. A pass that has read the plan audits what was intended, not what was built. What was planned or ruled is the orchestrator's input, at Reconcile.
 - **Run them in the foreground** unless the scope is large. The reconcile step needs all four results.
+- **Launch a large audit's instances a few at a time** when there are more instances than one usage window holds, so a usage limit stops some of them, not all. A stopped instance resumes where it left off.
 
 ## 4. Test code
 
@@ -78,7 +95,6 @@ The orchestrating session does this itself; it's never delegated.
   - *Amendments:* which rules changed while the story was open, when judging whether code is vestigial.
   - *Code map:* for a cleanup refactor, each item on a "Makes dead" list is gone.
   - *Handoff items addressed to the audit,* or to "the next story or audit" and not routed anywhere since. Each one matches a pass's finding, or the orchestrator rules on it and tiers the ruling.
-- **The previous audit, and only that one,** from `docs/archive/`, for recurrence. Each report restates the full chain for anything it carries, so one report back is enough.
 - **The wiki passage each correctness finding touches,** to classify it.
 
 Nothing else in the archive gets read.
@@ -101,7 +117,7 @@ The finding records its bucket and its `wiki <page> §N` pointer.
 **Check for lens bleed.** These are signs a pass left its lane:
 - Correctness & Security reporting file length or naming;
 - File Responsibility reporting logic bugs;
-- Consistency & Drift proposing new abstractions, or reporting what `npm run check` reports, the docs checker included;
+- Consistency & Drift proposing new abstractions, reporting what `npm run check` reports, the docs checker included, or reporting a comment that breaks a convention of `.claude/guides/code-comments.md` but says nothing wrong about the code;
 - Duplication & Abstraction reporting a lone logic bug with no duplication angle;
 - any pass judging whether a test proves its case.
 
@@ -119,12 +135,12 @@ Passes tag findings Fix Now, Watch List, Covered by `<epic>` or Informational. O
 **A route or a Covered-by tag counts only once its destination names it.** That's either the destination plan's Inbound deferrals, or its roadmap entry if the plan isn't written yet. Until then, the finding is still open.
 
 **Optional: these may be skipped without comment.**
-- **Watch List:** a correctness risk that isn't a defect yet. Nothing else goes here.
-- **Informational:** confirmations and context.
+- **Watch List:** a correctness risk that isn't a defect yet, or structural work that's a judgment call: a split or a consolidation worth doing if the code grows, or when it's next reworked.
+- **Informational:** confirmations and context, including structural work considered and judged not worth doing, with the reason.
 
-**A structural finding never goes on the Watch List.** A file to split, or logic to consolidate, is Fix Now (structural), ordered after any correctness fixes that touch the same code, or it's Routed to a story's plan. Carried from audit to audit on a Watch List, structural work never gets done.
+**A structural finding is Fix Now only when the code is already harder to change correctly because of it:** a shared rule written twice whose copies have started to differ, a helper copied rather than called, a file whose concepts are tangled enough that a change to one breaks the other. Otherwise a file to split, or logic to consolidate, is a judgment call, and goes on the Watch List or Informational. A structural finding that passes this test is Fix Now, ordered after any correctness fixes that touch the same code, or Routed to a story certain to rework that code.
 
-**An optional finding becomes required on its third consecutive audit.** Keeping it optional needs a reason written in the report. A recurring finding lists the earlier audits it appeared in, and under which numbers.
+**An optional finding lasts only as long as its audit.** It's there for whoever plans this audit's fix batches. Once the report is archived, no later audit or session reads it, and the next audit judges the same code afresh: a structural problem that has grown until the code is harder to change correctly is Fix Now then. Anything that should outlive the audit is routed into a plan (see Close-out).
 
 **A ruling is required until its site records it.** The orchestrator may rule on a question a pass raised: "deliberately separate", "looks wrong but isn't", "can't happen, because …". If no comment at the site records that ruling yet, the ruling is a required finding. Its fix is a one-line present-tense comment there, with the reason (`.claude/guides/code-comments.md`, rule (f)). Without it, the next cold audit works the same question out again.
 
@@ -135,8 +151,9 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 **Opening:**
 - the range, `<base>..<end>`, and the tag the base came from;
 - the groups the range sorted into, and which passes read each (see Scope);
+- what the passes got: how many lines changed and moved, how many removal sites there were, and which files were marked read whole;
 - the number of files, and a sentence on what the range contains;
-- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and which earlier audit).
+- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans).
 
 **Findings:**
 - **Numbered once across the whole report,** not per section, so a finding's number identifies it on its own.
@@ -152,7 +169,8 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
   - the problem, plus, for a correctness finding, a concrete failure scenario: which inputs or state lead to which wrong result;
   - the fix;
   - for a correctness finding, its wiki bucket and pointer;
-  - for a recurring finding, the earlier audits and numbers it appeared under.
+  - for an optional finding in a file a Fix Now finding already changes, a note naming that finding: "can ride along with #N".
+- **An optional finding keeps its own tier,** even when it sits beside a Fix Now. The ride-along note tells whoever plans the fix batches that it costs little to include; folding it into the Fix Now would make that choice for them.
 
 **Close-out:** a table at the end, filled in as the audit closes (see Close-out).
 
@@ -160,6 +178,7 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 
 Fix Now lands in batches (`.claude/guides/story-done-checklist.md`):
 - **Plan the batches up front:** correctness first, then duplication of a shared rule, then drift, then structural. Ask the decisions the findings need at the start, not mid-batch.
+- **Pull in the optional findings worth it.** One marked "can ride along with #N" changes a file that #N's batch already changes, so including it adds little to the batch or to the next audit's scope. Whether it's worth including is the planner's call.
 - **Say how large and how risky each change is,** concretely: the lines and files it touches, and what gates it (for example, "only runs when a pending placement exists").
 - **Each batch ends with `npm run check`,** plus `npm run test:e2e` where it touches behavior, **and a stop** for Nathan's review and commit.
 - **A finding that can't be reproduced by hand is settled by a probe,** not by argument: a throwaway test on the test stack, deleted afterwards. Where possible, show it failing before the fix and passing after, and say which probes weren't shown failing first.
@@ -185,6 +204,5 @@ The audit stays open while its Fix Now work lands. It closes when every required
 ## 10. The epic-wide audit
 
 - **Range:** from the previous `epic-N-complete` tag to HEAD, sorted and run cold like any other. It overlaps every story audit in the epic on purpose: its value is what no single story's range shows, such as duplication and drift between stories.
-- **Merge** reads the epic's last story audit for recurrence, one report back as above.
 - **Close-out** is the same as a story audit's. Routes land in the epic's roadmap, since no story plan is open.
 - **It should be light.** A finding the story audits missed points to a gap in some pass's lens. The report names the lens, so that agent's definition can be tightened.

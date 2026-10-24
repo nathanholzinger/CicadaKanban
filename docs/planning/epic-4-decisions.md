@@ -202,10 +202,23 @@ with `toBeLessThan` rather than the case's values
   the read labels the item `"none"`. One shared lookup needs ATT-5.11's
   first half answered first, and §13's status model may retire its terminal
   half.
+  - **A fourth copy since** (the A6 re-run's #25,
+    `docs/audits/code-quality-audit-a6-rerun.md`; Nathan, 2026-10-23):
+    `routes/workflows.ts:71–76`, added by that audit's fix for `GET
+    /workflows/:id`. The other copies are now at `routes/items.ts:29–39,
+    64–74` and `routes/boards.ts:64–65`, through `getBoardScopeItems`. One
+    `withPositionScopes(rows, workphaseRows)` in `itemPositionScope.ts` is
+    the shape the four would share.
 - **The items' active/done split has three homes** (#45): the terminal-flag
   backfill (`routes/workphases.ts:102–149`), `POST /items`
   (`routes/items.ts:182–212`) and `itemHierarchy.ts:401–413`. Consolidate
   them with the rework, which may retire the flag all three read.
+  - **The copies already differ** (the A6 re-run's #24, Nathan,
+    2026-10-23). They're now at `routes/items.ts:152–183` and
+    `itemHierarchy.ts:379–417`. The move appends before its terminal check,
+    then drops the position, so a move into a done column that names no
+    anchor can fire a reindex whose position it discards. The reindex is
+    real and disclosed, just wasted. A create checks the terminal flag first.
 - **For the two drag questions above** (#4): today a done list's ghost
   *does* slide with dnd-kit's shuffle, against rule 6, though the release
   is right. It's a Fix Now in that audit, so "nothing in a done list

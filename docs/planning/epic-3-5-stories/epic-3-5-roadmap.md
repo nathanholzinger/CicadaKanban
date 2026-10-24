@@ -836,6 +836,15 @@ deferral and keep landing with their stories.
      Move its helpers (`:46–233`) to a `tests/helpers/` module first, then
      give each suite its own spec, each with its own `test.use` viewport.
      It goes with the bullets above, since they rework the same helpers.
+     - **Since then** (the A6 re-run's #26,
+       `docs/audits/code-quality-audit-a6-rerun.md`; Nathan, 2026-10-23):
+       DRAG-6.6's test (`:820–857`) made it 858 lines. The DRAG-6 describe
+       (`:737–857`) uses only ten of the shared helpers, so it comes out
+       cleanly with its `delayMoveResponses`. DRAG-1 and DRAG-3 share tests
+       (`:414, 628`), so the split may stop at DRAG-6. The spec also looks
+       up a column by its entry workphase by hand five times (`:109, 110,
+       129, 343, 344`), beside `seed.ts::columnForWorkphase`, whose failure
+       names the workphase.
 
 8. **The flakiness call, made explicitly.** For each precise-move case
    the reconciler proposes automating, decide whether a real pointer

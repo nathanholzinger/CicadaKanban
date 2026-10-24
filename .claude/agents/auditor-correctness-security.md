@@ -30,6 +30,10 @@ This pass traces logic line by line. Your lens is: **does this code do what it c
 - **Each mutation and branch has an answer to "what happens if this fails":** a missing record, invalid input, a constraint violation. This isn't full TDD. The question is whether the failure path was considered, or just falls through to a framework default.
 - **Out of scope:** which status code is "more correct", such as 400 versus 422.
 
+**Moved code and removal sites** (your scope file's second and third lists):
+- **Moved lines:** the move didn't change their logic, so don't review it. Check only that the move broke nothing: an import, a constant, a setup hook (`beforeEach`, a describe-level fixture) or other state the code relied on in its old file, which the new one lacks or sets differently.
+- **Removal sites:** a guard, check or cleanup step that depended on the removed lines.
+
 **Comments that record a ruling.** A comment that says code is deliberately separate, or looks wrong but isn't, answers the question it names (`.claude/guides/code-comments.md`, rule (f)). Raise that question again only with evidence its reason didn't consider, and cite the comment when you do.
 
 ## Guides to read for this pass

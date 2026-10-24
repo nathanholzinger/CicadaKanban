@@ -1,6 +1,6 @@
 # A6 — Audit Guidance Revisit and First Run
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3h done; batch 4 (the close) is next · **Sequenced:** after A4 and A5a–A5d, all closed
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3h done; batch 4 done apart from the archive, which moved to batch 6; batch 5 (the re-run) done; batch 6's instructions applied, and its code planned as 6a–6f (Coder), which is next · **Sequenced:** after A4 and A5a–A5d, all closed
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, plus the other tech-debt stories in this folder. Tags like "Auditor F7" point to round-table items, and "A1 D11" points to another story's decisions. This plan is transient, so it may cite them.
 
@@ -214,18 +214,99 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
   - **The re-check** also drops `positionResolver.test.ts` from TC-2.8's line: it throws for the wrong reason, and route tests prove the case.
 - **Every Open question is answered,** or moved to the plan that will answer it. Batch 3 fixes behavior, so this story closes by the full checklist.
 - The Architect's memory pass for the three audit memories (D1). **Done 2026-10-23 (Architect):** see Amendments.
-- The report moves to `docs/archive/`, followed by this plan once it's signed off. Nathan tags the report's end commit `a6-audited`.
+- The archive moved to batch 6, after the re-run (Nathan, 2026-10-23). `a6-audited` is tagged on `f3fc213`, the commit that added the first report. That commit holds only docs, so it ends the same code range `7443721` would.
+
+### Batch 5: the re-run (Auditor)
+
+Batches 3 and 4 touched about 150 code files, so the audit runs again straight away, over them (Nathan, 2026-10-23). What they introduced is fixed in this story, not carried into Story 7's audit.
+
+- **Range:** `a6-audited..b315a29`, 18 commits: batches 3a–3h, the Reconciler's two commits, and 4a–4f. Nathan tags the end commit `a6-rerun-audited`, and Story 7's audit starts from it.
+- **Report:** `docs/audits/code-quality-audit-a6-rerun.md`. Its scope lists are in `docs/audits/a6-rerun-scopes/`, deleted before the report is archived.
+- **Run as D10's first run was,** in the same seven groups, as 19 instances in waves of up to five. The scope lists add two things the first run's lacked: code that only moved between files, listed apart with the file it came from, and the places where lines were removed with nothing added, which blame can't see.
+- **The previous audit is the first run.** The merge checks each finding its Close-out marks fixed against the code, and one that comes back is a recurrence under its first-run number. The re-run counts as an audit for the third-consecutive rule (`audit-workflow.md`'s Tiers).
+- **No code changes while the passes run,** since they read the working tree, not a commit.
+- *Done 2026-10-23:* 23 Fix Now as first written. re-tiered the same day under Nathan's rules (Amendments): 16 Fix Now (#1–#2, #4–#11, #13–#16, #20–#21), 4 routed (#12, #24–#26), 6 on the Watch List (#3, #17–#19, #27, #37) and 2 Covered by (#28, #29). Its routes are in Open questions. Code may change again.
+
+### Batch 6: the re-run's corrections, and the close
+
+- **Instructions (Auditor drafts, Architect applies):** what the re-run's cost showed. Reading depth follows how much a file changed; a file whose only change is its imports goes to the drift pass alone; moved code and removal sites are listed apart, as the re-run's prompts did. Nathan approved the direction on 2026-10-23. A second round the same day: comment conventions leave the audit, which flags only a wrong or misleading comment; a structural finding that's a judgment call goes on the Watch List or is Informational; and an optional finding in a file a Fix Now changes keeps its tier, with a note that it can ride along. The drafts are in `a6-batch-6-drafts/`, whose README lists each change and four judgment calls. Nathan applied them on 2026-10-23.
+  - **A third round, from the Architect's review** (Nathan, 2026-10-23), applied by the Architect:
+    - no audit reads an earlier one: the merge step's read of the previous report, the third-consecutive-audit rule and the recurring-finding line are gone. An optional finding lasts only as long as its audit, and anything that should outlive it is routed into a plan;
+    - the persona limits what a pass reads, not what it reports: a defect found in old code is reported;
+    - §6's structural sentence says plainly that a structural Fix Now is fixed, or Routed to a story certain to rework the code.
+  - **Moved, unchanged code leaves the audit** (Nathan, 2026-10-23). It was audited when it was written, and the gates and tests prove a move safe; the Reconciler re-checks the cases whose tests move. No pass reads it, and it doesn't count toward a file's read-whole mark. Two guards stay:
+    - **a copy isn't a move.** Lines whose source still holds them in the range count as changed, since a copy is what the duplication pass looks for;
+    - **a move's source side stays a removal site,** so a comment left describing the code that moved away is still caught.
+- **The scope script (Coder)** (Nathan, 2026-10-23): a repo script under `scripts/` that builds an audit's scope files, so every audit builds them the same way and the orchestrator stops building them by hand. Story 7's audit is the first to use it.
+  - **It ports the Auditor's two scripts** from the re-run (`a6-batch-6-drafts/scope-scripts/`) to `.mts`, as the Auditor recommends (2026-10-23). The rest of the repo's tooling runs on node and is tested with `node --test`, so the port runs in `npm run check`, and the repo has no Python.
+    - **The scripts' README** lists what they don't do yet, and the git details a port keeps:
+      - bound the blame at the base;
+      - blame each file twice;
+      - leave a renamed file's old path out of "another file";
+      - ignore whitespace and `.git-blame-ignore-revs`;
+      - take removal sites from the diff;
+      - read git's output as UTF-8.
+    - **A check for the port:** over the re-run's range, `a6-audited..b315a29`, its changed-line and removal-site lists match `docs/audits/a6-rerun-scopes/`, which the Python reproduces byte for byte. The rest of its output differs on purpose, by the rules below. That folder stays until A6's close, after 6f.
+  - **It takes** the base, by default the newest `*-audited` tag, and the end, by default HEAD.
+  - **For each file in the range, it writes:**
+    - its group from `audit-workflow.md` §2's sort table, judged per file over the whole range. A comments-and-test-titles-only change is proven by the script itself, comparing the file with comments stripped through `extract.mts::extractCode`, so a story no longer supplies that comparison;
+    - its changed lines: `git blame -w -M -C -C` over the range, skipping `.git-blame-ignore-revs`;
+    - its moved lines. A line counts as moved only when `git blame -M -C -C` traces it to a line from before the base. One traced to a commit inside the range is new code that moved after it was written, so it counts as changed, and so does a line whose source still holds it (a copy). Moved lines are left out of the scope, by the ruling above; the script still finds them, to tell them from changed lines;
+    - its removal sites: the hunks of `git diff -U0` that add nothing;
+    - its read-whole mark: a new file, or 10 or more changed lines of code, not counting imports, comments, test titles or blank lines. Sorting a line into those reuses the checker's TypeScript parse: `extract.mts::extractCode` finds the comment and test-title lines, and the same parse gives the import declarations, multi-line ones included. A regex can't tell these apart.
+
+    It also writes the deleted and renamed paths, under their old names, so the drift pass can search for what still names them.
+  - **Then the scope files,** one per pass instance, as §2 gives them out:
+    - an imports-only or comments-only file goes to the drift pass alone;
+    - File Responsibility gets only the files marked read whole;
+    - moved lines are left out;
+    - the drift pass also gets the deleted and renamed paths.
+  - **The split is an input.** §2 leaves to the orchestrator which area groups a run uses, how many instances each pass gets, and any extra file marked read whole. So the script reads them from a small per-run config, with the seven area groups both A6 runs used as its default, instead of hard-coding paths and instances as the Python does.
+  - **Tests** go beside it on `node:test`, as `scripts/check-docs/`'s do, and run in the gate.
+  - **Then (Architect):** the guide's §2, the persona and the agents keep the policy: which group goes to which passes, what each list means to a pass, and the orchestrator's judgment. For how the lists are built, they point to the script.
+- **Code (Coder):** the re-run's Fix Now, in the six batches below (planned 2026-10-23). Each batch ends with `npm run check`, plus `npm run test:e2e` where it touches behavior or E2E code, and a stop for Nathan's review and commit, and fills in its rows in the re-run's Close-out table.
+  - **One item outside the report** (Nathan, 2026-10-23): `POST /items` refuses `agentId: ''` and `parentId: ''` with the 400 every other write gives an empty-string id, where today it stores each as none. No client path sends either: the detail panel sends `null`. An MCP agent sending `parent_id: ''` to `create_item` would get the 400. It's a production change to a request's shape, approved here, and its route test carries no case ID unless the PO's answer (Open questions, batch 4f's notes) brings one.
+
+**Order.** As in batch 3, the batches go area by area. Each area's correctness fixes come first, then its structural moves, then its comment fixes, so each comment is written once, beside its final code. The areas go in order of risk:
+- the regression, #1, goes first;
+- the checker's #2 goes last, with the scope script, since nothing in the repo triggers it.
+
+**Keep a comment-only file comment-only.** Under batch 6's rules, Story 7's audit gives a file whose only change is to its comments to the drift pass alone. The scope script judges that per file, over the whole range, so the commit a comment fix lands in doesn't matter. What matters is that the file gets no code change too. That's why #3 and #27 aren't pulled in: each would turn a comment-only file from #6 or #8 into a code change.
+
+| Batch | Findings | Notes |
+|---|---|---|
+| 6a. Client correctness | #1, #5 | **#1:** `onColumnDrop` takes a resync callback, and `useBoardDnd`'s `handleDragEnd` passes `resyncBoard`, as the column drop did at the base. The report's other option, ending a live session on every board reload, would also cover the column and workphase CRUD reloads. But none of those can land mid-drag by hand, and `useColumnManagement` is built before `useBoardDnd`, so the two hooks would each need the other. #1 gains the hook-level test its finding names: a failed reorder that lands during an item drag ends the drag. **#5** is in the same test file. |
+| 6b. Server source | `POST /items`' empty-string ids (above), #15, then #6 with #38 and #39 | **The `POST` fix** is the batch's one behavior change, and #38's comment sits beside its check. Its finding, #29, closes as fixed here rather than Covered by. **#6's `runMigrations.ts` bullet** narrows the comment; #3, which would move the `UPDATE`, stays on the Watch List. |
+| 6c. Server tests | #4, then #16 with #17 and part of #37, then #10 with #41 and #42 | Test code only, likely in two commits, as 3f was.<br>**#4's second half:** `fixtures.ts`'s `create*` helpers assert their status.<br>**#16** moves `itemHierarchyFixtures.ts`'s helpers into `fixtures.ts`. **#17** moves the tests that sit in files whose headers say otherwise, since #16 changes the same files; each keeps its case ID.<br>**From #37:** `setItemWorkphase`, `createAgent` and `createItemType`, whose sites are all in files this batch changes. #37's extra-boards option on `workflowWithPhases` stays on the Watch List, since it would add `columns.test.ts`, which nothing else here touches. |
+| 6d. Client structure | #13, #14, #20, then #7, #8, #9 | **#13 and #14** add `getSubtree` and `sortedChildrenByParent` to `lib/hierarchy.ts`, and point both callers of each at them. **#9:** its `hierarchy.test.ts` bullet is written beside #13's rewrite, and its `popSession.test.ts` titles beside #20. **#7 and #8** are comments only; keep their files that way. `workflow/CLAUDE.md` is the Coder's (#7). Runs `npm run test:e2e`, since #13 and #14 change code the board's drag and the sidebar share. |
+| 6e. E2E | #21, then #11 | **#21's seed-helper rework** includes the test that can pass without its subject (`workflow-inheritance.spec.ts:221–226`). **#11's two files** are comments only. |
+| 6f. Scripts | #2 with #23, then the scope script | **#2 and #23** are in `scripts/check-docs/`. **The scope script** is new (above), and reuses `extract.mts::extractCode`. `npm run check:docs` reports no new hits afterwards. |
+
+**Across the batches:**
+- **A test that moves keeps its case ID** at the start of its title.
+- **The Reconciler re-checks** the cases whose tests 6c, 6d or 6e move, split or retitle, once 6e is done.
+- **The Architect's follow-ups:**
+  - after 6c, `testing-strategy.md` for #16's fixtures (Open questions, the re-run's "For the Architect");
+  - after 6f, `audit-workflow.md`'s §2, the persona and the four agents point at the script, and moved code leaves them;
+  - a batch that changes something root `CLAUDE.md` names lists it for the Architect.
+- **The optional findings left out:**
+  - on the Watch List: #3, #18, #19, #27, and #37's extra-boards option;
+  - every Informational finding except #23, #38, #39, #41 and #42.
+- **Every route lands** in its destination before sign-off (D6).
+- **Close:** `a6-scopes/`, `a6-rerun-scopes/` and `a6-batch-6-drafts/` are deleted (the drafts' `scope-scripts/` is needed until 6f lands), both reports move to `docs/archive/`, and this plan follows once it's signed off.
 
 ## Code map
 
 | File | Batch | Change | Who |
 |---|---|---|---|
-| `.claude/guides/audit-workflow.md` | 1, 3 | D1–D9 | Auditor drafts, Architect applies |
-| `.claude/personas/auditor.md` | 1, 3 | D1, D5 | Auditor drafts, Architect applies |
-| `.claude/agents/auditor-consistency-drift.md` | 1, 3 | D5, D7 | Auditor drafts, Architect applies |
-| `.claude/agents/auditor-duplication-abstraction.md` | 1, 3 | D5: respect site rulings | Auditor drafts, Architect applies |
-| `.claude/agents/auditor-file-responsibility.md` | 1, 3 | D7: the split with the drift pass over module headers | Auditor drafts, Architect applies |
-| `.claude/agents/auditor-correctness-security.md` | 1, 3 | D5: respect site rulings | Auditor drafts, Architect applies |
+| `.claude/guides/audit-workflow.md` | 1, 3, 6 | D1–D9; batch 6: the scope file and reading depth | Auditor drafts, Architect applies |
+| `.claude/personas/auditor.md` | 1, 3, 6 | D1, D5; batch 6: how a pass reads its scope file | Auditor drafts, Architect applies |
+| `.claude/agents/auditor-consistency-drift.md` | 1, 3, 6 | D5, D7; batch 6: imports-only files, moved code, removal sites | Auditor drafts, Architect applies |
+| `.claude/agents/auditor-duplication-abstraction.md` | 1, 3, 6 | D5: respect site rulings; batch 6: how far to look | Auditor drafts, Architect applies |
+| `.claude/agents/auditor-file-responsibility.md` | 1, 3, 6 | D7: the split with the drift pass over module headers; batch 6: only files read whole | Auditor drafts, Architect applies |
+| `.claude/agents/auditor-correctness-security.md` | 1, 3, 6 | D5: respect site rulings; batch 6: moved code and removal sites | Auditor drafts, Architect applies |
+| `.claude/guides/code-comments.md` | 6 | The conventions are the writer's and the reviewer's; an audit takes only a wrong claim | Auditor drafts, Architect applies |
+| `.claude/guides/documentation-standards.md` | 6 | The same, in "What the checker checks" | Auditor drafts, Architect applies |
 | `.claude/guides/story-plan-template.md` | 1 | The tech-debt template gains Inbound deferrals and Open questions; "N.1" becomes "a cleanup refactor"; a tech-debt story that changes what the app does closes by the full checklist | Architect |
 | `.claude/guides/story-done-checklist.md` | 1 | The same full-checklist line, in its tech-debt section | Architect |
 | `docs/audits/code-quality-audit-a6.md` | 2 | new, transient | Auditor |
@@ -297,6 +378,8 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
 | `scripts/check-docs/` | 3h | Reads a `.bru` file's `docs` block | Coder |
+| `scripts/` (the scope script, new) | 6 | Builds an audit's scope files (Batch 6) | Coder |
+| `.claude/guides/audit-workflow.md`, `.claude/personas/auditor.md`, the four `.claude/agents/auditor-*.md` | 6, after the script | §2's build rules give way to a pointer to the script; moved, unchanged code leaves the audit | Architect |
 | `.claude/guides/documentation-standards.md` | 3, after 3h, done | The `bruno/` row stops saying the checker doesn't read `.bru` files, and "What the checker checks" names Bruno's `docs` blocks among what it reads | Architect |
 | The memory directory (outside the repo) | 4, done | D1's pointers | Architect |
 
@@ -305,12 +388,12 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 - **The guide holds the rules.** Every rule in D1 is in `audit-workflow.md`, and the three audit memories point to it rather than restating it.
 - **Instructions use the template.** The audit files name story-plan sections (D2, D4), and none of them describes a ledger of its own.
 - **Clean check.** `npm run check:docs -- .claude` reports zero hits.
-- **The first run:**
-  - its report opens with its range line;
+- **The first run and the re-run:**
+  - each report opens with its range line;
   - every required finding has a disposition;
   - every route is recorded as landed in a named plan section;
-  - the report is in `docs/archive/` and hasn't been edited since.
-- **Tags.** `epic-3-5-story-6-audited` and `a6-audited` both exist, so Story 7's base is mechanical.
+  - both reports are in `docs/archive/` and haven't been edited since.
+- **Tags.** `epic-3-5-story-6-audited`, `a6-audited` and `a6-rerun-audited` all exist, so Story 7's base is mechanical.
 
 ## Handoff
 
@@ -525,15 +608,37 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
 
 - **For Nathan:** `PUT /items/:id` with `agentId: ''` still answers 500, where `POST` stores it as none (`agentId || null`). The new check passes it, since `''` is falsy as it is in `POST`. Nothing sends it: the Sheet sends `null` to clear an agent. If you want `PUT` to agree with `POST`, it's `updates.agentId = agentId || null` and a test line. I left it, since the ruling was about an `agentId` that names no agent.
   - **Answered 2026-10-23 (Nathan):** `PUT` handles an empty-string `agentId` the way the other writes handle an empty-string id. It's the Coder's last item (Batch 4). **Done 2026-10-23 (Coder, batch 4f):** see Amendments.
-  - **Answered 2026-10-23 (Nathan):** moved to `api-contract-zod-openapi.md`'s Inbound deferrals, as the Architect recommended.
-    - That epic's request schemas decide what an empty string means for every optional id, on every route, at once.
-    - `POST` already disagrees with itself: it stores `agentId: ''` as none and refuses `type: ''`.
-    - Under the convention, `''` names no row, so settling it changes what `POST` accepts, which is a request-shape change.
+  - *Superseded the same day, by the answer below:* ~~moved to `api-contract-zod-openapi.md`'s Inbound deferrals, as the Architect recommended.~~
+  - **Answered again 2026-10-23 (Nathan), settling the two:** whichever makes the code consistent; the Work Item Detail & Chat UI epic will revisit the item's fields anyway. Batch 4f's probe shows every other write refusing an empty-string id with a 400, so 4f stands. `POST /items`'s two exceptions, `agentId: ''` and `parentId: ''`, which it stores as none, are refused the same way in batch 6's code. The deferral to the API contract epic is withdrawn.
 
 *From the Coder, batch 4f, after the re-check (2026-10-23).*
 
 - **For Nathan:** the plan records your answer on `PUT`'s `agentId: ''` twice, and the two disagree. The Test Planner's entries (Batch 4's "A last Coder item", and the Amendments) make it the Coder's last item. The Architect's make it a Story 2 deferral (`api-contract-zod-openapi.md`'s Inbound deferrals). I did the first, since it's the one that reached me. A probe showed what the other writes do with an empty-string id: `PUT` and `PATCH /move` answer 400 for `parentId: ''`, `PATCH /move` for `anchorId: ''` and `workphaseId: ''`, and `POST` for `workphaseId: ''` and `type: ''`. `PUT` answers 400 for `agentId: ''` now, the same. If you meant the deferral, putting it back is the check's `agentId &&` and the test's second entry.
+  - **Answered 2026-10-23 (Nathan):** 4f stands, and `POST`'s two exceptions follow it in batch 6 (the 4e question's last answer).
 - **For the Architect:** Inbound deferrals' first bullet says `PUT /items/:id` with `agentId: ''` answers 500. It answers 400 now. What stays for Story 2 is `POST`, which still stores `agentId: ''` as no agent, and `parentId: ''` as no parent (the probe's 201, which that bullet doesn't list).
+  - **Done 2026-10-23 (Architect):** nothing stays for Story 2, since batch 6 fixes `POST`'s two exceptions. The deferral is gone from `api-contract-zod-openapi.md`, which has no Inbound deferrals now.
+- **For the PO:** the convention says a write naming a row that doesn't exist is refused, and leaving a field out says "none" (wiki item-attachment §14, positioning §2). Nathan's answer above adds that an empty-string id names no row, so every write refuses one with a 400, `POST /items` included once batch 6 lands, and `null` stays the way to clear a field. He wants the rule defined now, for the Test Planner's cases. Whether a page states it, and where, is yours.
+
+*From the Auditor, the re-run (2026-10-23).* The report is `docs/audits/code-quality-audit-a6-rerun.md`; the numbers below are its own.
+
+- **For Nathan:**
+  - **#12, `Item.positionScope`:** you ruled on 2026-10-21 that it stays optional. The only hold-back recorded was that not every server route returning an item had been traced. The re-run's drift pass traced them, and each attaches the field. Make it required, so the compiler guards `isStub`, or keep it optional as it is?
+    - **Answered 2026-10-23 (Nathan):** deferred to `positioning-on-create-and-edit.md`, whose Decision 8 redefines `positionScope`. It's in that plan's Inbound deferrals.
+  - **Three route additions to approve:** #24 and #25 add a fourth site and new evidence to `epic-4-decisions.md` §12's "Carried in from the A6 first-run audit" block (the first run's #44 and #45). #26 adds the DRAG-6.6 growth and the five hand-rolled column lookups to Story 10's item 7 bullet for the first run's #43. May I write them in?
+    - **Answered 2026-10-23 (Nathan):** yes. Done: two sub-bullets in `epic-4-decisions.md` §12's block, and one under Story 10's item 7.
+- **For the PO:**
+  - Board-drag-interaction §10's "A reload that lands mid-drag stops the drag" names a failed drop's and a stale response's resyncs. Report #1 sends a failed column reorder down the same path. Should the rule name every reload?
+  - Positioning §7 says the written entry is among the disclosed pairs "when it was part of the reindexed scope". `positionResolver.ts::withReindexDisclosure` adds it whenever any reindex fired and the row has a position. The client applies every pair, so nothing breaks; the wording and the code differ.
+- **For the Architect:** `testing-strategy.md` names `server/tests/fixtures.ts` as the server's setup source, and doesn't mention `itemHierarchyFixtures.ts` or `setItemParent`'s attachment argument. Report #16 moves the item helpers into `fixtures.ts`, so the guide may only need the argument.
+- **For the Test Reconciler:**
+  - Tests that may not prove their case: `server/tests/routes/items.attached.test.ts:137` and `items.positioning.test.ts:628` (TC-5.5) don't assert their move's status, so a refused move passes; `client/src/lib/hierarchy.test.ts:57–85` tests `getSubtreeHeight`, which neither cap check calls (moot once report #13 lands); `client/src/components/workflow/itemWriteReconciliation.test.ts:127–167` (DRAG-6.1, TC-2.28) rebuilds the board's write tracker by hand; `dragRegions.test.ts:72` (DRAG-1.6) checks only the gap between sub-rows; `client/src/lib/positionedWrite.test.ts:13` is titled TC-5a.4, which its third test exercises; `tests/ui/workflow-inheritance.spec.ts:221–226` passes if its setup is refused, until report #21 lands.
+  - Case IDs on more than one test: ATT-9.1 (`items.hierarchy.test.ts:140`, `items.workphase.test.ts:40`); TC-2.24 (`items.test.ts:430`, `items.crossProject.test.ts:266`, with different claims); TC-2.6 and TC-2.7 (`items.test.ts:251`, `items.positioning.test.ts:36, 43`); ATT-4.10 in four files.
+  - Report #17, #18 and #19 move tests between files if they're done (they're on the Watch List since the re-tier); their Automation lines need re-pointing after.
+- **For the Test Planner:**
+  - TC-5a.5's Automation line lists only `itemListOps.test.ts`; `client/src/lib/hierarchy.test.ts:105–123` tests the same tie-break, with no ID.
+  - TREE-1.13 is `Open`; `hierarchy.test.ts:99–102` asserts its library half, with no ID.
+  - `client/src/components/ItemDetailPanel.test.tsx` carries no case ID, and TC-5a.1's line doesn't list it.
+  - `tests/ui/workflow-inheritance.spec.ts`'s header cites wiki project-tree §10, and no project-tree case covers inherited or own workflows, or copying one. Neither it nor `workflow-creation.spec.ts` carries an ID.
 
 ## Amendments
 
@@ -951,3 +1056,35 @@ Each batch ends with its checks and a stop for Nathan's review and commit.
     - the resolver's no-position throw removed, which the old items-table test missed, since the scope miss threw anyway.
   - **Not done, because nothing routed them to the Coder:** the re-check's concern 2 (PO:110's fixture), concern 7 (the header of `itemRepositioningAttachedSiblings.spec.ts` still claiming TC-2.4), and the two optional pointer drops from TC-2.4's and TC-2.9's lines.
   - **Checks.** `npm run check` passes: 404 server tests, 448 client, 94 script, with no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.
+- **2026-10-23, batches 5 and 6 added (Auditor, at Nathan's direction):** the audit runs again over batches 3 and 4 before this story closes (Batch 5), and its fixes land here (Batch 6). The archive moved from batch 4 to batch 6. The Coder landed 4f first, so the re-run's range takes it in.
+- **2026-10-23, batch 5 (Auditor): the re-run.** The report is `docs/audits/code-quality-audit-a6-rerun.md`, over `a6-audited..b315a29`; its scope lists are in `docs/audits/a6-rerun-scopes/`, deleted before the report is archived. The 19 instances ran five at a time, across two usage limits. Every finding the first run's Close-out marks fixed is fixed in the code. What the fixes left is most of the report: one regression (#1, from the first run's #36), five fixes that stopped one site short (#13, #14, #20, #21, and #17's misplaced tests), and the comments the moves made stale. The first run's #43–#45 recur with new evidence, and their routes hold; adding the evidence to their destinations waits for Nathan (Open questions).
+- **2026-10-23, batch 6's instructions drafted (Auditor, at Nathan's direction):** Nathan asked whether the audit's cost was worth it after the re-run, and approved three changes: a file whose only change is its imports goes to the drift pass alone; moved code and removal sites go into the scope lists, as the re-run's prompts had them; and a file is read whole only when it changed enough for its shape to matter, since that's what whole-file reading is for (Nathan: more likely in a story than in a fix of a few lines). The drafts are in `a6-batch-6-drafts/`, with batch 3's two open instruction candidates folded in.
+- **2026-10-23, batch 6's instructions, a second round (Auditor, at Nathan's direction):** Nathan rated the re-run's Fix Now findings by whether they'd be agreed improvements, and decided three things. Comment conventions aren't an audit concern: they're for whoever writes the code, and an audit flags a comment only when it's wrong or misleading. A structural finding is usually a judgment call, so it may go on the Watch List or be Informational; the rule that it be Fix Now or nothing came from one carried split (`useBoardDnd`), and the third-consecutive-audit rule already covers that. And an optional finding beside a Fix Now keeps its tier with a ride-along note, for the batch planner to pull in. The drafts now include `code-comments.md` and `documentation-standards.md`.
+- **2026-10-23, the re-run's report re-tiered (Auditor, at Nathan's direction):** under the second round's three rules, ahead of batch 6. Fix Now went from 23 to 17. #3 (the backfill, which no current data can trigger) and #17–#19 (test placement and two large test files) moved to the Watch List; #22 and #23 to Informational; #15's and #16's judgment-call parts became #44 and #37. 16 convention-only items left the drift findings, and six wording items became Informational (#38–#43). Optional findings in files a Fix Now changes carry a "can ride along" note. Numbers were kept, so the references above hold.
+- **2026-10-23, the re-run's routes landed (Auditor, at Nathan's direction):** #12 (`Item.positionScope`) is deferred to `positioning-on-create-and-edit.md`'s Inbound deferrals, since its Decision 8 redefines the field. #24 and #25 are sub-bullets under the first run's #45 and #44 in `epic-4-decisions.md` §12, and #26 is one under Story 10's item 7. The report's Close-out records each; Fix Now is 16.
+- **2026-10-23, empty-string ids (Architect, on Nathan's answer):** the plan held two answers on `agentId: ''`, batch 4f's fix and the Architect's deferral to the API contract epic. Nathan settled them: whichever makes the code consistent.
+  - **4f stands**, since every other write refuses an empty-string id with a 400.
+  - **`POST /items`'s two exceptions** follow it in batch 6's code, as one item outside the report: `agentId: ''` and `parentId: ''`.
+  - **The deferral is withdrawn.** `api-contract-zod-openapi.md`'s Inbound deferrals section is gone, since it held only this item.
+  - **For the PO, in Open questions:** whether a page states that an empty-string id names no row, for the Test Planner's cases.
+- **2026-10-23, batch 6's instructions, a third round (Architect, on Nathan's answers):** Nathan applied the Auditor's drafts. The Architect's review raised six points, and Nathan took five of them.
+  - **Applied to `audit-workflow.md` and `auditor.md`:** no audit reads an earlier one; a pass's limits are on reading, not reporting; §6's structural sentence is reworded.
+  - **For the scope script,** a new Coder item in batch 6: a moved line traces to before the base, and deleted and renamed paths are listed.
+  - **Still open:** whether moved, unchanged code is an audit concern at all.
+  - **The README's four judgment calls stand as drafted:** the threshold of 10 lines, the waves sentence, imports-only files going to the drift pass, and where "wrong or misleading" stops.
+- **2026-10-23, moved code, and batch 6's code planned (Architect, on Nathan's answers):**
+  - **Moved, unchanged code leaves the audit.** It was audited when it was written, and tests prove the move. A copy still counts as changed, and a move's source side stays a removal site. The scope script's spec says so, and the `.claude/` changes follow once the script lands.
+  - **Batch 6's code is six batches, 6a–6f:**
+    - client correctness;
+    - server source;
+    - server tests;
+    - client structure;
+    - E2E;
+    - scripts, with the scope script.
+  - **Picked from the ride-along notes:** #17, three of #37's fixtures, #23, #38, #39, #41 and #42, each in a file its batch already changes.
+  - **Left out:** #3 and #27, since each would turn a comment-only file into a code change.
+  - **#29** closes as fixed in 6b, not Covered by, now that its deferral is withdrawn.
+- **2026-10-23, the scope script's starting point (Architect, from the Auditor):** the Auditor saved the re-run's two Python scripts to `a6-batch-6-drafts/scope-scripts/`, with a README of their gaps and the git details they learned. It recommends a port to `.mts` under `scripts/`.
+  - **6f's spec now says:** port rather than adopt; check the port's changed-line and removal-site lists against `a6-rerun-scopes/`; sort lines with the checker's TypeScript parse; take the area groups and instances as a per-run config; write the scope files the way §2 gives them out.
+  - **The scripts already apply the boundary rule** the Architect's review raised: a line is moved only when its traced blame lands on the base. The ambiguity was in the guide's wording, not the implementation.
+  - **Close** deletes `a6-batch-6-drafts/` too. Its `scope-scripts/` stays until 6f lands.

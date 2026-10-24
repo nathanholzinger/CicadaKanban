@@ -55,6 +55,9 @@ Carried in from A6's plan (`a6-audit-guidance-and-first-run.md`, Open questions)
 - **For the PO: an anchor with two faults.** wiki positioning §2 lists four ways a neighbor fails and orders none. A neighbor outside the scope that also has no position is now refused as outside the scope, for items as for projects; for items it was refused for having no position. *Why here:* with two scopes, "outside the scope" depends on which order the anchor names.
 - **For the Test Planner: TC-7.10 and an item that ends with no workphase.** The new test carries the ID: an item with no workphase has no scope for a neighbor to be in. If the variation wants a case of its own, the ID follows. *Why here:* a child with no workphase gains a sibling scope under this story, so the premise changes.
 
+*From the A6 re-run's report (`docs/audits/code-quality-audit-a6-rerun.md`, #12), routed here by Nathan on 2026-10-23:*
+- **For Nathan: whether `Item.positionScope` becomes required** (`client/src/types.ts:55–57`). Nathan ruled on 2026-10-21 that it stays optional, as the code had it; the Coder had held back from making it required because not every route returning an item had been traced. The re-run traced them: `routes/items.ts::respondWithItem`, `GET /items/:id` and its children, the board and the workflow detail all attach it, and the client typechecks with it required. Required would let the compiler guard `isStub`, which reads a missing field as a Free item. *Why here:* Decision 8 redefines or replaces `positionScope`, so the type is settled once, with it.
+
 ## Decisions
 
 None yet. To groom:
