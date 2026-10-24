@@ -72,7 +72,7 @@ Spawn the four audit agents in parallel:
 - **The prompt carries only the scope:** the path of the instance's scope file. The persona says how to read it, and each agent's definition names the guide sections it reads.
 - **The passes run cold.** They get no story plan, no earlier audit, no ledger and no wiki page. A pass that has read the plan audits what was intended, not what was built. What was planned or ruled is the orchestrator's input, at Reconcile.
 - **Run them in the foreground** unless the scope is large. The reconcile step needs all four results.
-- **Launch a large audit's instances a few at a time** when there are more instances than one usage window holds, so a usage limit stops some of them, not all. A stopped instance resumes where it left off.
+- **Launch a large audit's instances a few at a time** when there are more than one usage window holds, so a usage limit stops some of them, not all. A stopped instance resumes where it left off.
 
 ## 4. Test code
 
@@ -95,6 +95,7 @@ The orchestrating session does this itself; it's never delegated.
   - *Amendments:* which rules changed while the story was open, when judging whether code is vestigial.
   - *Code map:* for a cleanup refactor, each item on a "Makes dead" list is gone.
   - *Handoff items addressed to the audit,* or to "the next story or audit" and not routed anywhere since. Each one matches a pass's finding, or the orchestrator rules on it and tiers the ruling.
+- **The previous audit, and only that one,** from `docs/archive/`, for recurrence. Each report restates the full chain for anything it carries, so one report back is enough.
 - **The wiki passage each correctness finding touches,** to classify it.
 
 Nothing else in the archive gets read.
@@ -138,9 +139,9 @@ Passes tag findings Fix Now, Watch List, Covered by `<epic>` or Informational. O
 - **Watch List:** a correctness risk that isn't a defect yet, or structural work that's a judgment call: a split or a consolidation worth doing if the code grows, or when it's next reworked.
 - **Informational:** confirmations and context, including structural work considered and judged not worth doing, with the reason.
 
-**A structural finding is Fix Now only when the code is already harder to change correctly because of it:** a shared rule written twice whose copies have started to differ, a helper copied rather than called, a file whose concepts are tangled enough that a change to one breaks the other. Otherwise a file to split, or logic to consolidate, is a judgment call, and goes on the Watch List or Informational. A structural finding that passes this test is Fix Now, ordered after any correctness fixes that touch the same code, or Routed to a story certain to rework that code.
+**A structural finding is Fix Now only when the code is already harder to change correctly because of it:** a shared rule written twice whose copies have started to differ, a helper copied rather than called, a file whose concepts are tangled enough that a change to one breaks the other. Otherwise a file to split, or logic to consolidate, is a judgment call, and goes on the Watch List or Informational. Fix Now structural work is ordered after any correctness fixes that touch the same code, or it's Routed to a story's plan. A structural item carried on the Watch List isn't forgotten: the rule below makes it required on its third consecutive audit, or the report says why it stays optional.
 
-**An optional finding lasts only as long as its audit.** It's there for whoever plans this audit's fix batches. Once the report is archived, no later audit or session reads it, and the next audit judges the same code afresh: a structural problem that has grown until the code is harder to change correctly is Fix Now then. Anything that should outlive the audit is routed into a plan (see Close-out).
+**An optional finding becomes required on its third consecutive audit.** Keeping it optional needs a reason written in the report. A recurring finding lists the earlier audits it appeared in, and under which numbers.
 
 **A ruling is required until its site records it.** The orchestrator may rule on a question a pass raised: "deliberately separate", "looks wrong but isn't", "can't happen, because …". If no comment at the site records that ruling yet, the ruling is a required finding. Its fix is a one-line present-tense comment there, with the reason (`.claude/guides/code-comments.md`, rule (f)). Without it, the next cold audit works the same question out again.
 
@@ -153,7 +154,7 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 - the groups the range sorted into, and which passes read each (see Scope);
 - what the passes got: how many lines changed and moved, how many removal sites there were, and which files were marked read whole;
 - the number of files, and a sentence on what the range contains;
-- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans).
+- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and which earlier audit).
 
 **Findings:**
 - **Numbered once across the whole report,** not per section, so a finding's number identifies it on its own.
@@ -169,6 +170,7 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
   - the problem, plus, for a correctness finding, a concrete failure scenario: which inputs or state lead to which wrong result;
   - the fix;
   - for a correctness finding, its wiki bucket and pointer;
+  - for a recurring finding, the earlier audits and numbers it appeared under;
   - for an optional finding in a file a Fix Now finding already changes, a note naming that finding: "can ride along with #N".
 - **An optional finding keeps its own tier,** even when it sits beside a Fix Now. The ride-along note tells whoever plans the fix batches that it costs little to include; folding it into the Fix Now would make that choice for them.
 
@@ -204,5 +206,6 @@ The audit stays open while its Fix Now work lands. It closes when every required
 ## 10. The epic-wide audit
 
 - **Range:** from the previous `epic-N-complete` tag to HEAD, sorted and run cold like any other. It overlaps every story audit in the epic on purpose: its value is what no single story's range shows, such as duplication and drift between stories.
+- **Merge** reads the epic's last story audit for recurrence, one report back as above.
 - **Close-out** is the same as a story audit's. Routes land in the epic's roadmap, since no story plan is open.
 - **It should be light.** A finding the story audits missed points to a gap in some pass's lens. The report names the lens, so that agent's definition can be tightened.

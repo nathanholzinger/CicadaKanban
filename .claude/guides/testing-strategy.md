@@ -20,7 +20,7 @@ There's no CI; everything runs locally.
 |---|---|---|
 | Playwright UI | `tests/ui/` | User-facing flows through the browser. Drags go through `tests/helpers/dragGesture.ts`, and setup through the `tests/helpers/seed.ts` helpers, never by hand. |
 | Playwright API | `tests/api/` | The REST API, through the running server. |
-| Server routes | `server/tests/routes/` | Vitest and supertest against the exported app, with a real database. Runs one file at a time, since every file shares one SQLite database. Setup comes from `server/tests/fixtures.ts`, such as `workflowWithPhases` for a project, its workflow, board and workphases. |
+| Server routes | `server/tests/routes/` | Vitest and supertest against the exported app, with a real database. Runs one file at a time, since every file shares one SQLite database. Setup comes from `server/tests/fixtures.ts`, such as `workflowWithPhases` for a project, its workflow, board and workphases, and `move`, `put` and `getRow` for an item's writes and its stored row. Its `create*` helpers assert their status, so a refused setup step fails at its own line; a test of a refusal sends the request itself. `server/tests/itemHierarchyFixtures.ts` adds what only the hierarchy tests share. |
 | Server lib | `server/tests/lib/` | Shared domain logic in `server/src/lib/`. |
 | Client units | Next to the code, as `*.test.ts(x)` | Pure modules and hooks, in jsdom with Testing Library. Items come from `itemFixture.ts::makeItem` and projects from `projectFixture.ts::makeProject`, never a hand-written literal. |
 | Scripts | Next to the code in `scripts/`, as `*.test.mts` | Repo tooling, such as the docs checker, on `node:test`. |
@@ -33,7 +33,7 @@ There's no CI; everything runs locally.
 ## Setting up a state the API refuses
 
 Some tests need a state no request can produce, such as an exact position or a parentless row that holds the attachment flag. The API refuses those writes on purpose, so the test writes the state itself:
-- **Server tests** write the database directly, through `server/tests/fixtures.ts`: `setItemPosition` and `setProjectPosition` pin a position, `setItemParent` and `setProjectParent` a parent, and `setColumnEnds` a column's start or end, including one that names no workphase.
+- **Server tests** write the database directly, through `server/tests/fixtures.ts`: `setItemPosition` and `setProjectPosition` pin a position; `setItemParent` and `setProjectParent` a parent, with the item's attachment flag when one is given; `setItemWorkphase` an item's workphase, including one in another workflow, or none; and `setColumnEnds` a column's start or end, including one that names no workphase.
 - **E2E tests** can't reach the database, so they go through a test route under `/api/test`, which is mounted only with `ENABLE_TEST_ROUTES`. `tests/helpers/seed.ts` wraps each: `pinItemPosition` and `pinProjectPosition` pin a position, `pinProjectCreatedAt` a project's creation time, and `pinProjectParent` its parent.
 
 A new kind of setup gets its own test route. Never loosen a rule in the real API to make a test's setup possible.

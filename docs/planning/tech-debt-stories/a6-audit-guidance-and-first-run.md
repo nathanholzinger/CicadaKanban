@@ -1,6 +1,6 @@
 # A6 — Audit Guidance Revisit and First Run
 
-**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3h done; batch 4 done apart from the archive, which moved to batch 6; batch 5 (the re-run) done; batch 6's instructions applied, and its code planned as 6a–6f (Coder), which is next · **Sequenced:** after A4 and A5a–A5d, all closed
+**Type:** tech-debt story · **Written:** 2026-09-26 by the Auditor · **Revised:** 2026-09-26 (D3's tag adopted; the replay dropped); 2026-09-30 (renumbered A6; A4's handoff folded in) · **Status:** batches 1 and 2 done (batch 1 committed as `7443721`; the first run's report written 2026-10-07); batch 3a–3h done; batch 4 done apart from the archive, which moved to batch 6; batch 5 (the re-run) done; batch 6's instructions applied; its code is planned as 6a–6f (Coder), of which 6a–6c are done, with 6c's `testing-strategy.md` follow-up; 6d is next · **Sequenced:** after A4 and A5a–A5d, all closed
 
 **Source:** the round table at `docs/planning/round-tables/documentation-purposes-and-standards`, plus the other tech-debt stories in this folder. Tags like "Auditor F7" point to round-table items, and "A1 D11" points to another story's decisions. This plan is transient, so it may cite them.
 
@@ -286,7 +286,7 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 - **A test that moves keeps its case ID** at the start of its title.
 - **The Reconciler re-checks** the cases whose tests 6c, 6d or 6e move, split or retitle, once 6e is done.
 - **The Architect's follow-ups:**
-  - after 6c, `testing-strategy.md` for #16's fixtures (Open questions, the re-run's "For the Architect");
+  - after 6c, `testing-strategy.md` for #16's fixtures (Open questions, the re-run's "For the Architect"), done;
   - after 6f, `audit-workflow.md`'s §2, the persona and the four agents point at the script, and moved code leaves them;
   - a batch that changes something root `CLAUDE.md` names lists it for the Architect.
 - **The optional findings left out:**
@@ -384,6 +384,7 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done, 6a done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold. 6a: the column drop is handed `resyncBoard`, and the conventions name `useBoardDnd.test.ts` | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
+| `.claude/guides/testing-strategy.md` | 6, after 6c, done | The Server routes row names the item-route helpers, the `create*` helpers' status check and `itemHierarchyFixtures.ts`; the direct-write line adds `setItemWorkphase` and `setItemParent`'s attachment flag | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
 | `scripts/check-docs/` | 3h | Reads a `.bru` file's `docs` block | Coder |
 | `scripts/` (the scope script, new) | 6 | Builds an audit's scope files (Batch 6) | Coder |
@@ -637,7 +638,7 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 - **For the PO:**
   - Board-drag-interaction §10's "A reload that lands mid-drag stops the drag" names a failed drop's and a stale response's resyncs. Report #1 sends a failed column reorder down the same path. Should the rule name every reload?
   - Positioning §7 says the written entry is among the disclosed pairs "when it was part of the reindexed scope". `positionResolver.ts::withReindexDisclosure` adds it whenever any reindex fired and the row has a position. The client applies every pair, so nothing breaks; the wording and the code differ.
-- **For the Architect:** `testing-strategy.md` names `server/tests/fixtures.ts` as the server's setup source, and doesn't mention `itemHierarchyFixtures.ts` or `setItemParent`'s attachment argument. Report #16 moves the item helpers into `fixtures.ts`, so the guide may only need the argument.
+- **For the Architect:** `testing-strategy.md` names `server/tests/fixtures.ts` as the server's setup source, and doesn't mention `itemHierarchyFixtures.ts` or `setItemParent`'s attachment argument. Report #16 moves the item helpers into `fixtures.ts`, so the guide may only need the argument. **Done 2026-10-23 (Architect),** with 6c's note below.
 - **For the Test Reconciler:**
   - Tests that may not prove their case: `server/tests/routes/items.attached.test.ts:137` and `items.positioning.test.ts:628` (TC-5.5) don't assert their move's status, so a refused move passes; `client/src/lib/hierarchy.test.ts:57–85` tests `getSubtreeHeight`, which neither cap check calls (moot once report #13 lands); `client/src/components/workflow/itemWriteReconciliation.test.ts:127–167` (DRAG-6.1, TC-2.28) rebuilds the board's write tracker by hand; `dragRegions.test.ts:72` (DRAG-1.6) checks only the gap between sub-rows; `client/src/lib/positionedWrite.test.ts:13` is titled TC-5a.4, which its third test exercises; `tests/ui/workflow-inheritance.spec.ts:221–226` passes if its setup is refused, until report #21 lands.
   - Case IDs on more than one test: ATT-9.1 (`items.hierarchy.test.ts:140`, `items.workphase.test.ts:40`); TC-2.24 (`items.test.ts:430`, `items.crossProject.test.ts:266`, with different claims); TC-2.6 and TC-2.7 (`items.test.ts:251`, `items.positioning.test.ts:36, 43`); ATT-4.10 in four files.
@@ -662,6 +663,7 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
   - `server/tests/fixtures.ts` holds the item-route helpers every item route test shares: `move`, `put`, `getRow`, `countItems` and `setupWorkflow`, with `createAgent`, `createItemType` and the direct-write `setItemWorkphase`. `setItemParent` takes an attachment argument.
   - Its `create*` helpers assert their status, so a refused setup step fails at its own line. A test of a refusal sends the request itself.
   - `itemHierarchyFixtures.ts` is left with `hierarchyEntries` and `cardWithTwoStubs`, which only hierarchy tests use.
+  - **Done 2026-10-23 (Architect).** The Server routes row names `move`, `put` and `getRow`, says the `create*` helpers assert their status and that a test of a refusal sends its own request, and names `itemHierarchyFixtures.ts` for what only the hierarchy tests share. The direct-write line adds `setItemWorkphase`, and `setItemParent`'s attachment flag. `countItems`, `setupWorkflow`, `createAgent` and `createItemType` aren't named: the guide names a few examples, and the file's own comments say what each helper does.
 
 *From the Coder, batch 6c (2 of 2), the item tests' files (2026-10-23).*
 
@@ -1185,3 +1187,4 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
   - **Shown to keep its bite.** The committed server tests and the current ones were run against seventeen production mutations, and failed the same tests every time: the ten from 6c (1 of 2), and seven for the moved tests: a workphase of another workflow accepted; a flag on a parentless item reading as attached-siblings; a parent that names no item accepted; a cross-project reparent leaving the subtree in its old project; an attached child under a parent with no workphase getting no position; an attached item allowed to name a workphase other than its parent's; and a reparent within one workflow treated as crossing workflows. The 406 titles are the same set, apart from the one retitle.
     - Five of the seventeen first showed large, unrelated differences between the trees, and agreed on a rerun. Another session was probably using the shared test database; the extra failures (182 against 1, for one) were not the mutation's.
   - **Checks.** `npm run check` passes: 406 server tests, 450 client, 94 script, with no `check:docs` hits. `npm run test:e2e` wasn't run: no production file changed.
+- **2026-10-23, 6c's follow-up (Architect):** `testing-strategy.md`'s server-test lines, for #16 and #37's fixtures (Open questions, 6c's note). Guide only. The status line had stayed at "6a–6f is next"; it now says 6d is next.

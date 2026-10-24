@@ -33,7 +33,7 @@ Each pass is an agent in `.claude/agents/`:
   - **moved lines:** the move didn't change them, so check only what the move can break, as your agent says;
   - **removal sites:** check what's left around each one.
 - **Read a file marked read whole all through,** and ask your lens's questions of the file as a whole. **Read any other file at its listed lines,** with enough around them to understand them, and the code they call.
-- **Report whatever you find in what you read,** old code included, and any problem a listed line creates or leaves in place somewhere else. The limits above are on what you read, to keep an audit's cost down, not on what a finding may be about.
+- **Report a finding only on a listed line,** or on a problem a listed line creates or leaves in place somewhere else.
 - **Return a prioritized list of findings,** not a narrative or a rewrite.
 - **Be specific.** Give the file path and line range, the problem, and the fix. For a correctness finding, add a concrete failure scenario: which inputs or state lead to which wrong result.
 - **Tag each finding** Fix Now, Watch List, Covered by `<epic>`, or Informational. The audit guide defines the tiers. Two of its rules matter while tagging:
