@@ -1,7 +1,7 @@
-// Tree math over flat { id, parentId } collections — descendants,
-// ancestors, depth, subtree height, the depth-cap rule and reparent dropdown
-// options — and the sibling order, shared by the project hierarchy and the
-// item hierarchy.
+// Tree math over flat { id, parentId } collections — a subtree and its height,
+// ancestors, depth, the depth-cap rule, the sorted children index and reparent
+// dropdown options — and the sibling order, shared by the project hierarchy and
+// the item hierarchy.
 
 import { flattenHierarchyOf } from './hierarchyPlacement';
 
@@ -31,9 +31,10 @@ export interface SelectOption {
   label: string;
 }
 
-// parentId -> child ids, one pass over `nodes`. Roots (null parentId) are
-// skipped; a dangling parentId is indexed under its missing parent, which
-// no walk below ever reaches — harmless.
+// parentId -> child ids, one pass over `nodes`, for the walk below. Roots (null
+// parentId) are skipped; a dangling parentId is indexed under its missing
+// parent, which no walk ever reaches — harmless. Unsorted: a caller that needs
+// sibling order wants `sortedChildrenByParent`.
 function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
   const childrenOf = new Map<string, string[]>();
   for (const n of nodes) {
@@ -45,36 +46,68 @@ function childrenByParent(nodes: readonly TreeNode[]): Map<string, string[]> {
   return childrenOf;
 }
 
-// The one descendant walk: one generation per array, parents before
-// children. `visited` (seeded with `id`) guards against a corrupted parentId
-// cycle in the data turning this into an infinite loop — once a node has
-// been queued, re-finding it as someone else's "child" can't discover
-// anything new, so it's skipped rather than re-queued. Level-ordered so a
-// caller that needs both the id set and the height (drag classification)
-// walks once, and so the guard lives in one loop instead of two.
-export function getDescendantLevels(id: string, nodes: readonly TreeNode[]): string[][] {
+// parentId -> its children in sibling order (`byPositionThenCreatedAt`), the
+// roots under `null`. A node whose `parentId` no node in `nodes` has is a root
+// too, so the sidebar's tree and the project page's parent dropdown, which both
+// walk this, agree on data with a dangling parent.
+export function sortedChildrenByParent<T extends TreeNode & Positioned>(nodes: readonly T[]): Map<string | null, T[]> {
+  const ids = new Set(nodes.map(n => n.id));
+  const childrenOf = new Map<string | null, T[]>();
+  for (const n of nodes) {
+    const key = n.parentId !== null && ids.has(n.parentId) ? n.parentId : null;
+    const list = childrenOf.get(key) ?? [];
+    list.push(n);
+    childrenOf.set(key, list);
+  }
+  for (const list of childrenOf.values()) list.sort(byPositionThenCreatedAt);
+  return childrenOf;
+}
+
+export interface Subtree {
+  /** Every node below `id`, not `id` itself. */
+  descendantIds: ReadonlySet<string>;
+  /** `id` and `descendantIds`. */
+  subtreeIds: ReadonlySet<string>;
+  /** The levels below `id`; a leaf is 0. */
+  height: number;
+}
+
+// The subtree under `id`, from one walk, so a caller that needs the ids and
+// the height (drag classification, the sidebar's drag) walks once and the
+// corrupted-cycle guard lives in one loop.
+//
+// Every descendant counts, attached or not: for the item hierarchy a detached
+// child still sits under its parent and moves with it (wiki item-attachment
+// §8), so it counts toward the height. One level per BFS generation, parents
+// before children. `subtreeIds` (seeded with `id`) guards against a corrupted
+// parentId cycle in the data turning this into an infinite loop — once a node
+// has been queued, re-finding it as someone else's "child" can't discover
+// anything new, so it's skipped rather than re-queued.
+export function getSubtree(id: string, nodes: readonly TreeNode[]): Subtree {
   const childrenOf = childrenByParent(nodes);
-  const levels: string[][] = [];
-  const visited = new Set([id]);
+  const descendantIds = new Set<string>();
+  const subtreeIds = new Set([id]);
+  let height = 0;
   let frontier = [id];
   while (frontier.length > 0) {
     const next: string[] = [];
     for (const current of frontier) {
       for (const childId of childrenOf.get(current) ?? []) {
-        if (visited.has(childId)) continue;
-        visited.add(childId);
+        if (subtreeIds.has(childId)) continue;
+        subtreeIds.add(childId);
+        descendantIds.add(childId);
         next.push(childId);
       }
     }
-    if (next.length > 0) levels.push(next);
+    if (next.length > 0) height++;
     frontier = next;
   }
-  return levels;
+  return { descendantIds, subtreeIds, height };
 }
 
 // Every descendant of `id`, as a set.
-export function getDescendantIds(id: string, nodes: readonly TreeNode[]): Set<string> {
-  return new Set(getDescendantLevels(id, nodes).flat());
+export function getDescendantIds(id: string, nodes: readonly TreeNode[]): ReadonlySet<string> {
+  return getSubtree(id, nodes).descendantIds;
 }
 
 // Walks up the parentId chain from `node`, collecting ancestors in
@@ -122,21 +155,12 @@ export function getDepth(id: string, nodes: readonly TreeNode[]): number {
   return self ? getAncestors(self, nodes).length + 1 : 1;
 }
 
-// Levels *below* `id` — a leaf is 0. Counts every descendant, attached or
-// not: for the item hierarchy a detached child still sits under its parent
-// and moves with it (wiki item-attachment §8), so it counts toward the
-// height. One level per BFS generation, so the height is how many
-// generations the walk produced.
-export function getSubtreeHeight(id: string, nodes: readonly TreeNode[]): number {
-  return getDescendantLevels(id, nodes).length;
-}
-
 // The whole depth rule (wiki hierarchy-placement §6): a target at depth D is a
 // legal parent iff D + 1 + draggedSubtreeHeight <= cap. Root items are at
-// depth 1; a leaf has height 0 — the counting `getDepth` and `getSubtreeHeight`
-// above do. Deliberately separate from `itemTree.ts::assertWithinDepthCap`: the
-// same formula on each side of the process boundary, fed here by the client's
-// own in-memory traversal.
+// depth 1; a leaf has height 0 — the counting `getDepth` and `getSubtree`'s
+// `height` do. Deliberately separate from `itemTree.ts::assertWithinDepthCap`:
+// the same formula on each side of the process boundary, fed here by the
+// client's own in-memory traversal.
 export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap: number): boolean {
   return targetDepth + 1 + subtreeHeight <= cap;
 }
@@ -158,25 +182,14 @@ export function buildParentOptions<T extends TreeNode & Positioned>(
   noneLabel: string,
   indent = false,
 ): SelectOption[] {
-  const excluded = getDescendantIds(currentId, nodes);
-  excluded.add(currentId);
+  const { subtreeIds: excluded } = getSubtree(currentId, nodes);
+  const candidates = nodes.filter(n => !excluded.has(n.id));
 
   if (!indent) {
-    return [
-      { value: '', label: noneLabel },
-      ...nodes.filter(n => !excluded.has(n.id)).map(n => ({ value: n.id, label: labelOf(n) })),
-    ];
+    return [{ value: '', label: noneLabel }, ...candidates.map(n => ({ value: n.id, label: labelOf(n) }))];
   }
 
-  const ids = new Set(nodes.map(n => n.id));
-  const byParent = new Map<string | null, T[]>();
-  for (const n of nodes) {
-    if (excluded.has(n.id)) continue;
-    const key = n.parentId !== null && ids.has(n.parentId) ? n.parentId : null;
-    if (!byParent.has(key)) byParent.set(key, []);
-    byParent.get(key)!.push(n);
-  }
-  for (const siblings of byParent.values()) siblings.sort(byPositionThenCreatedAt);
+  const byParent = sortedChildrenByParent(candidates);
 
   return [
     { value: '', label: noneLabel },

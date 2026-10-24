@@ -5,8 +5,9 @@ import type { Item } from '../types';
 // positionScope is server-computed in production (never hand-set by a caller). The
 // fixture derives it from isAttached/parentId, so a test doesn't track two things that
 // always agree: an attached item with a parent is 'attached-siblings', any other
-// 'workflow'. It is never 'none', which the API gives an item in a terminal workphase
-// (wiki item-positioning §2), since the fixture knows no workphase's terminality.
+// 'workflow'. It is never 'none', which the API gives an item in a terminal workphase, one
+// with no workphase and one in a workphase its project's workflow doesn't use
+// (`itemPositionScope.ts::classifyPositionScope`), since the fixture knows none of those.
 // isAttached defaults to a child's state: set with a parent, clear without
 // (wiki item-attachment §1, §14). An explicit override still wins, for tests about
 // the field itself.

@@ -4,8 +4,8 @@
 // (wiki board-drag-interaction §10). Every item-write path goes through
 // `completeItemWrite`. The state it folds into, `ItemListState` (items,
 // placements, inversions), is defined here too, with `EMPTY_ITEM_LIST_STATE`
-// and `withPlacement`. Pure; reads `itemListOps.ts`'s placements and sort,
-// never the other way round.
+// and `withPlacement`. Pure; reads `itemListOps.ts`'s placements and
+// `lib/hierarchy.ts::byPositionThenCreatedAt`, and `itemListOps.ts` never reads it.
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse } from '../../api/items';

@@ -4,9 +4,10 @@ import {
   getAncestors,
   getDescendantIds,
   getDepth,
-  getSubtreeHeight,
+  getSubtree,
   isWithinDepthCap,
   buildParentOptions,
+  sortedChildrenByParent,
   type Positioned,
   type TreeNode,
 } from './hierarchy';
@@ -49,12 +50,12 @@ describe('getDescendantIds', () => {
   });
 });
 
-// The client half of the depth-cap math: `getDepth` feeds the board's
-// drag-target classification, `getSubtreeHeight` that and the sidebar's
-// over-cap cue. Same counting convention as the server's
-// `itemTree.ts::hierarchyDepth` and `subtreeHeight` (root = 1, leaf height
-// = 0).
-describe('getDepth / getSubtreeHeight', () => {
+// The client half of the depth-cap math: `getDepth` and a `getSubtree`'s
+// height are what the board's drag-target classification and the sidebar's
+// over-cap cue pass to `isWithinDepthCap`. Same counting convention as the
+// server's `itemTree.ts::hierarchyDepth` and `subtreeHeight` (root = 1, leaf
+// height = 0).
+describe('getDepth', () => {
   const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
 
   it('a root is at depth 1; depth counts the ancestor chain', () => {
@@ -63,24 +64,78 @@ describe('getDepth / getSubtreeHeight', () => {
     expect(getDepth('a1x', nodes)).toBe(4);
   });
 
-  it('a leaf has height 0; height is the deepest generation below', () => {
-    expect(getSubtreeHeight('a1x', nodes)).toBe(0);
-    expect(getSubtreeHeight('a', nodes)).toBe(2);
-    expect(getSubtreeHeight('root', nodes)).toBe(3); // via a -> a1 -> a1x, not the shorter b branch
-  });
-
-  it('a dangling parentId reads as a root; an unknown id is depth 1 / height 0', () => {
+  it('a dangling parentId reads as a root; an unknown id is depth 1', () => {
     const orphan = [node('x', 'missing'), node('y', 'x')];
     expect(getDepth('x', orphan)).toBe(1);
     expect(getDepth('y', orphan)).toBe(2);
     expect(getDepth('ghost', orphan)).toBe(1);
-    expect(getSubtreeHeight('ghost', orphan)).toBe(0);
   });
 
-  it('both terminate against a parentId cycle', () => {
+  it('terminates against a parentId cycle', () => {
     const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
     expect(typeof getDepth('a', cyclic)).toBe('number');
-    expect(getSubtreeHeight('a', cyclic)).toBe(1); // b and c are one generation; the loop back to a is skipped
+  });
+});
+
+describe('getSubtree', () => {
+  const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
+
+  it('names the descendants, and the subtree is the node and them', () => {
+    const { descendantIds, subtreeIds } = getSubtree('a', nodes);
+    expect(descendantIds).toEqual(new Set(['a1', 'a1x']));
+    expect(subtreeIds).toEqual(new Set(['a', 'a1', 'a1x']));
+  });
+
+  it('a leaf has height 0; height is the deepest generation below', () => {
+    expect(getSubtree('a1x', nodes).height).toBe(0);
+    expect(getSubtree('a', nodes).height).toBe(2);
+    expect(getSubtree('root', nodes).height).toBe(3); // via a -> a1 -> a1x, not the shorter b branch
+  });
+
+  it('a leaf, and an unknown id, are a subtree of themselves with height 0', () => {
+    const leaf = getSubtree('a1x', nodes);
+    expect(leaf.descendantIds).toEqual(new Set());
+    expect(leaf.subtreeIds).toEqual(new Set(['a1x']));
+    expect(getSubtree('ghost', nodes)).toEqual({ descendantIds: new Set(), subtreeIds: new Set(['ghost']), height: 0 });
+  });
+
+  it('terminates against a parentId cycle, the loop back to the node skipped', () => {
+    const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
+    const { descendantIds, subtreeIds, height } = getSubtree('a', cyclic);
+    expect(descendantIds).toEqual(new Set(['b', 'c']));
+    expect(subtreeIds).toEqual(new Set(['a', 'b', 'c']));
+    expect(height).toBe(1); // b and c are one generation
+  });
+});
+
+describe('sortedChildrenByParent', () => {
+  const idsOf = (list: NamedNode[] | undefined) => list?.map(n => n.id);
+
+  it('groups each node under its parent, roots under null, siblings by position then creation', () => {
+    const byParent = sortedChildrenByParent([
+      node('r2', null, 2),
+      node('r1', null, 1),
+      node('late', 'r1', 3, 1),
+      node('early', 'r1', 1, 9),
+      node('tied-b', 'r1', 2, 5),
+      node('tied-a', 'r1', 2, 4),
+    ]);
+    expect(idsOf(byParent.get(null))).toEqual(['r1', 'r2']);
+    expect(idsOf(byParent.get('r1'))).toEqual(['early', 'tied-a', 'tied-b', 'late']);
+    expect(byParent.get('r2')).toBeUndefined();
+  });
+
+  it('keys a node whose parent is not in the list as a root, its own children still under it', () => {
+    const byParent = sortedChildrenByParent([node('x', 'missing', 2), node('y', null, 1), node('x1', 'x')]);
+    expect(idsOf(byParent.get(null))).toEqual(['y', 'x']);
+    expect(idsOf(byParent.get('x'))).toEqual(['x1']);
+    expect(byParent.has('missing')).toBe(false);
+  });
+
+  it('does not reorder the list it is given', () => {
+    const given = [node('b', null, 2), node('a', null, 1)];
+    sortedChildrenByParent(given);
+    expect(given.map(n => n.id)).toEqual(['b', 'a']);
   });
 });
 

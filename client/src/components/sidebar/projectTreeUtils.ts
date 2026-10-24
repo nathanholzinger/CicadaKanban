@@ -8,7 +8,7 @@
 // set-down in the project's own slot (`releaseOf`).
 
 import type { Project } from '../../types';
-import { byPositionThenCreatedAt } from '../../lib/hierarchy';
+import { sortedChildrenByParent } from '../../lib/hierarchy';
 import {
   flattenHierarchyOf,
   gapIndexFor,
@@ -41,24 +41,10 @@ export function projectRowIndentPx(depth: number): number {
   return ROW_BASE_INSET_PX + depth * INDENT_WIDTH;
 }
 
-// parentId -> its children, in sibling order (`byPositionThenCreatedAt`). Shared
-// by `flattenTree` (the render list, collapse-aware) and `fullChildrenOf` (the
-// real tree, collapse-blind).
-function childrenByParent(projects: readonly Project[]): Map<string | null, Project[]> {
-  const childMap = new Map<string | null, Project[]>();
-  for (const p of projects) {
-    const key = p.parentId ?? null;
-    if (!childMap.has(key)) childMap.set(key, []);
-    childMap.get(key)!.push(p);
-  }
-  for (const children of childMap.values()) children.sort(byPositionThenCreatedAt);
-  return childMap;
-}
-
 // The render list: the shared walk, with a collapsed project's children left
 // out of it. A collapsed project still reports that it has some.
 export function flattenTree(projects: Project[], expandedIds: Set<string>): FlatItem[] {
-  const childMap = childrenByParent(projects);
+  const childMap = sortedChildrenByParent(projects);
   const childrenOf = (parentId: string | null) => childMap.get(parentId) ?? [];
   const shownChildrenOf = (parentId: string | null) =>
     parentId === null || expandedIds.has(parentId) ? childrenOf(parentId) : [];
@@ -73,7 +59,7 @@ export function flattenTree(projects: Project[], expandedIds: Set<string>): Flat
 // right of a collapsed Top lands ahead of Top's real first child, which
 // `flatItems` never has at all (wiki project-tree §1).
 export function fullChildrenOf(projects: readonly Project[]): (parentId: string | null) => readonly string[] {
-  const childMap = childrenByParent(projects);
+  const childMap = sortedChildrenByParent(projects);
   return parentId => (childMap.get(parentId) ?? []).map(p => p.id);
 }
 

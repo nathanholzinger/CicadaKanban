@@ -178,7 +178,7 @@ export default function BoardColumn({
               {/* At Board layer the carve-out's own "Move to {name}" zone
                   (above) takes this message's place, and locked there is
                   nothing carved out to say it, so it shows only with no
-                  drag in progress. */}
+                  item drag in progress. */}
               {mergedItems.length === 0 && !session && (
                 <div className="flex flex-1 items-center justify-center">
                   <p className="text-xs text-zinc-600">Drop cards here</p>

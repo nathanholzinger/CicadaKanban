@@ -97,8 +97,8 @@ interface ItemRowOptions {
 // registers `type: 'item'`) and its transform, the drop-target
 // attributes and overlay, the pending marker, and the dimming while this row
 // is the one being dragged. The row draws `DropSideIndicator` for
-// `dropSide` itself. The one non-component export beside the components: it
-// belongs next to the indicator.
+// `dropSide` itself. The one export that is neither a component nor a
+// constant: it belongs next to the indicator.
 // eslint-disable-next-line react-refresh/only-export-components -- Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
   const { parentId, isOverlay = false, overlayForm = 'short-card' } = options;

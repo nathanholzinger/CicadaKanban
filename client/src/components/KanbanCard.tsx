@@ -155,9 +155,7 @@ export default function KanbanCard({
   // list instead (rendered below via the
   // ordinary `AttachedChildRow` branch) — dnd-kit's own shuffle needs it
   // registered there for `dropAnchorFor` to read its slot, the same way
-  // any Stub already reordering within its own section is. `pop` is never
-  // optional once a session exists (`DragSessionContext.ts`), so checking
-  // `cardDragSession` itself is enough to also read `.pop` safely.
+  // any Stub already reordering within its own section is.
   const attachGhostId =
     cardDragSession && contextLayer === 'card' && cardDragSession.containingCardId !== item.id
       ? cardDragSession.activeItem.id

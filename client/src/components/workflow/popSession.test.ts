@@ -40,7 +40,7 @@ describe('locked', () => {
     expect(runPop([[bTop, 100]])).toEqual({ ...startPopSession(A.key), outsideSince: 100 });
   });
 
-  it('DRAG-1.30: coming back inside before THRESHOLD resets the clock', () => {
+  it('DRAG-1.30: coming back inside before popDelayMs resets the clock', () => {
     const s = runPop([
       [bMiddle, 100],
       [inA, 200],
@@ -50,7 +50,7 @@ describe('locked', () => {
     expect(s.outsideSince).toBe(250 + OUT);
   });
 
-  it('DRAG-1.3, DRAG-1.30: outside for >= THRESHOLD pops out — the card belongs to nothing and the pop-in clock starts now', () => {
+  it('DRAG-1.3, DRAG-1.30: outside for >= popDelayMs pops out — the card belongs to nothing and the pop-in clock starts now', () => {
     const almost = runPop([
       [bMiddle, 100],
       [bMiddle, 100 + OUT - 1],
@@ -206,10 +206,7 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   });
 
   it('DRAG-1.7, DRAG-1.8: a card with no registered region — an invalid target, cycle-forming or depth-capped, that resolveDragStructure never resolves a region for — is never a candidate even though it can still be named for a reorder', () => {
-    const s = advancePopSession(startPopSession(A.key), inA, withCards, tuning, metrics, 0, {
-      anchorId: 'invalid',
-      side: 'after',
-    });
+    const s = step(startPopSession(A.key), inA, 0, withCards, { anchorId: 'invalid', side: 'after' });
     expect(s.hover).toBeNull();
     expect(s.contextKey).toBe(A.key);
   });

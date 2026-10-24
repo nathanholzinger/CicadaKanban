@@ -16,12 +16,13 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import type { Project } from '../../types';
-import { getDescendantLevels, isWithinDepthCap } from '../../lib/hierarchy';
+import { getSubtree, isWithinDepthCap, type Subtree } from '../../lib/hierarchy';
 import { computeProjection, toRows, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
 import { resolveDropSide } from '../workflow/dragCollision';
 import { fullChildrenOf, releaseOf, resolveGap, INDENT_WIDTH, type FlatItem } from './projectTreeUtils';
 
 const NO_IDS: ReadonlySet<string> = new Set();
+const NO_SUBTREE: Subtree = { descendantIds: NO_IDS, subtreeIds: NO_IDS, height: 0 };
 
 export type ReorderProject = (
   id: string,
@@ -51,15 +52,14 @@ export function useProjectDragReorder(
   const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
   // The dragged project's subtree, walked once: its descendants stay drawn,
   // dimmed, and its height is what the cap reads.
-  const { descendantIds, height: subtreeHeight } = useMemo(() => {
-    if (!activeId) return { descendantIds: NO_IDS, height: 0 };
-    const levels = getDescendantLevels(activeId, projects);
-    return { descendantIds: new Set(levels.flat()), height: levels.length };
-  }, [activeId, projects]);
+  const {
+    descendantIds,
+    subtreeIds: exclude,
+    height: subtreeHeight,
+  } = useMemo(() => (activeId ? getSubtree(activeId, projects) : NO_SUBTREE), [activeId, projects]);
   // The project and its whole subtree are never a Top/Bottom candidate:
   // `rows`, what a gap is computed against, is every rendered row (a collapsed
   // subtree already left `flatItems`) without them.
-  const exclude = useMemo(() => (activeId ? new Set([activeId, ...descendantIds]) : NO_IDS), [activeId, descendantIds]);
   const rows = toRows(flatItems, exclude);
   // A Top's first-child lookup must see the *real* tree, not the render
   // list (which a collapsed project already left out).

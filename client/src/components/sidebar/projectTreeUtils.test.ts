@@ -94,8 +94,8 @@ describe('resolveGap', () => {
   });
 
   it('falls back to gap 0 when the dragged block has no eligible predecessor', () => {
-    // Drag D itself (imagine D were first and had descendants) — no row
-    // precedes it, so nothing eligible comes before the block.
+    // Drag D, which is first and has a descendant — no row precedes it, so
+    // nothing eligible comes before the block.
     const soloItems = [flat('D', 0, null), flat('D1', 1, 'D')];
     const excludeD = new Set(['D', 'D1']);
     const rowsWithoutD = toRows(soloItems, excludeD);

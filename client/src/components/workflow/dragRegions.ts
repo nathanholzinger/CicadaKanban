@@ -38,8 +38,8 @@ interface RegionCommon {
   key: string;
   rect: Rect;
   /**
-   * The region element's own bounds, before `clipToVisible` clips them to a
-   * scrolling ancestor's visible box. `rect` (above) stays the clipped one,
+   * The region element's own bounds, before `dragStructure.ts::clipToVisible`
+   * clips them to a scrolling ancestor's visible box. `rect` (above) stays the clipped one,
    * for hit-testing: a band scrolled fully out of view must be neither
    * drawn nor reachable. `contentRect` is what band boundaries are measured
    * against instead, so a band's position is a fact about the region's real
@@ -195,9 +195,9 @@ export function parseRegionKey(key: string): ParsedRegionKey | null {
 }
 
 // The Card whose Descendants section `key` names, or null for any other key
-// (or none): the "is this context a section, and whose" question the gesture
-// hook and the collision code both ask. Also read by
-// `descendantsProjection.ts`.
+// (or none): the "is this context a section, and whose" question that
+// `dragCollision.ts::travelingRowsFor` and
+// `descendantsProjection.ts::advanceProjection` both ask.
 export function descendantsCardIdOf(key: string | null): string | null {
   const parsed = key === null ? null : parseRegionKey(key);
   return parsed?.kind === 'descendants' ? parsed.id : null;

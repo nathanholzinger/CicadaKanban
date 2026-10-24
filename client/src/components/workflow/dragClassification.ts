@@ -16,7 +16,7 @@
 // would be for a Free Card's.
 
 import type { Item } from '../../types';
-import { getDepth, getDescendantLevels, isWithinDepthCap } from '../../lib/hierarchy';
+import { getDepth, getSubtree, isWithinDepthCap } from '../../lib/hierarchy';
 import { isStub } from '../../lib/isStub';
 
 export type DropTargetState = 'valid' | 'cycle-forming' | 'depth-capped';
@@ -63,10 +63,7 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
 
   // Computed once per drag, not per target — one walk yields both the
   // subtree (for cycle-forming) and its height (for the depth rule).
-  const levels = getDescendantLevels(activeId, items);
-  const descendantIds = new Set(levels.flat());
-  const height = levels.length;
-  const subtreeIds = new Set([activeId, ...descendantIds]);
+  const { descendantIds, subtreeIds, height } = getSubtree(activeId, items);
 
   for (const item of items) {
     if (item.id === activeId || descendantIds.has(item.id)) {

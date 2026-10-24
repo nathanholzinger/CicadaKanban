@@ -222,7 +222,8 @@ function ItemDetailPanelContent({
   // The three below take the write's whole response and hand it on as it came:
   // its `reindexed` pairs are what the board folds in.
 
-  // Called by AgentSection when the item's agent/assigneeType fields change.
+  // Called by AgentSection when the item's agent/assigneeType fields change, and by
+  // ParentSection when its parent or attach state does.
   function handleItemUpdated(updated: ItemWriteResponse) {
     setDetail(prev => (prev ? { ...prev, ...updated } : prev));
     onUpdate(updated);

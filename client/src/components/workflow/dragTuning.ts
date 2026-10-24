@@ -11,7 +11,7 @@
 // found by feel (wiki board-drag-interaction §5).
 
 export interface DragTuning {
-  /** `THRESHOLD` — how long the cursor must stay outside the card's context before the card pops out and follows it. */
+  /** How long the cursor must stay outside the card's context before the card pops out and follows it. */
   popDelayMs: number;
   /** Optional distance term: pop out as soon as the cursor is this far outside the current context. 0 disables it. */
   popDistancePx: number;

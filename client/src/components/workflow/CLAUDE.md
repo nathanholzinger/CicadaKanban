@@ -79,8 +79,9 @@ The drag gesture's pure, unit-tested modules:
   copy draws as.
 - `dragRegions.ts` — the regions' vocabulary (Board/Column/sub-row/Card/Descendants):
   their kinds, keys and DOM attributes, and hit-testing by containment.
-- `dragStructure.ts` — the regions read off the live DOM: their structure (resolved once
-  per drag) and their live rects (measured per sample).
+- `dragStructure.ts` — the regions read off the live DOM: their structure (resolved at
+  pickup, and again after a layer change or when a remount outdates it) and their live
+  rects (measured per sample).
 - `dragBands.ts` — the pixel band and reservation math for a card-list region.
 - `dragCollision.ts` — row-data typing, collision detection, and naming the anchor a
   drop lands beside.
