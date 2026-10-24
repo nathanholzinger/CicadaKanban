@@ -1,16 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
-import { createProject, createItem, createBoard, setItemPosition } from '../fixtures.js';
 import {
+  createProject,
+  createItem,
+  createBoard,
+  setItemPosition,
+  readBoard,
   getRow,
-  hierarchyEntries,
   move,
   put,
   countItems,
   setupWorkflow,
-  cardWithTwoStubs,
-} from '../itemHierarchyFixtures.js';
+} from '../fixtures.js';
+import { hierarchyEntries, cardWithTwoStubs } from '../itemHierarchyFixtures.js';
 
 // Reparenting across projects through the item routes: what the move carries to the new
 // project, and what it refuses when the two projects use different workflows.
@@ -254,8 +257,7 @@ describe('cross-project reparenting', () => {
       expect(getRow(x.id).workphaseId).toBe(q1.todo.id);
 
       const board = await createBoard(q2.workflow.id);
-      const boardRes = await request(app).get(`/api/boards/${board.id}`);
-      const invalid = boardRes.body.unsorted.invalidItems as { id: string; positionScope: string }[];
+      const invalid = (await readBoard(board.id)).unsorted.invalidItems;
       expect(invalid.map(i => i.id)).toContain(x.id);
 
       // It still holds a workphase of Q1's workflow, so it classifies as "none", not "workflow", wherever it's read.

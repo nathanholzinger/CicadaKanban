@@ -1,19 +1,11 @@
-// Shared by the item route tests that change an item's parent, attachment or workphase
-// (items.hierarchy, items.crossProject and items.workphase).
+// What the hierarchy tests of more than one file share, and no other item route test needs: an
+// item's hierarchy log entries, and a Card with Stubs (items.hierarchy and items.crossProject).
 
 import { expect } from 'vitest';
-import request from 'supertest';
 import { eq } from 'drizzle-orm';
-import { app } from '../src/index.js';
 import { db } from '../src/db/index.js';
-import { items, activityLog } from '../src/db/schema.js';
-import { createItem, workflowWithPhases } from './fixtures.js';
-
-type Row = typeof items.$inferSelect;
-
-export function getRow(id: string): Row {
-  return db.select().from(items).where(eq(items.id, id)).get()!;
-}
+import { activityLog } from '../src/db/schema.js';
+import { createItem } from './fixtures.js';
 
 export function hierarchyEntries(itemId: string) {
   return db
@@ -22,22 +14,6 @@ export function hierarchyEntries(itemId: string) {
     .where(eq(activityLog.itemId, itemId))
     .all()
     .filter(e => e.type === 'hierarchy_change');
-}
-
-export const move = (id: string, body: Record<string, unknown>) =>
-  request(app).patch(`/api/items/${id}/move`).send(body);
-export const put = (id: string, body: Record<string, unknown>) => request(app).put(`/api/items/${id}`).send(body);
-
-export const countItems = () => db.select().from(items).all().length;
-
-// One project owning a three-phase workflow (Todo, In Progress, Done*).
-export async function setupWorkflow(name = 'P') {
-  const {
-    project,
-    workflow,
-    phases: [todo, inProgress, done],
-  } = await workflowWithPhases(['Todo', 'In Progress', { name: 'Done', isTerminal: true }], { name });
-  return { project, workflow, todo, inProgress, done };
 }
 
 // Card P with attached Stubs S1 = 1.0 and S2 = 2.0: a target parent with siblings.

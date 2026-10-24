@@ -1,10 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
-import { db } from '../../src/db/index.js';
-import { items } from '../../src/db/schema.js';
-import { createProject, createItem, setItemPosition, workflowWithPhases } from '../fixtures.js';
+import {
+  createProject,
+  createItem,
+  setItemPosition,
+  setItemParent,
+  setItemWorkphase,
+  workflowWithPhases,
+  setupWorkflow,
+  getRow,
+  countItems,
+} from '../fixtures.js';
 
 // Attached and detached children through the item routes: how a parent's workphase carries its
 // children, and what a reparent does to the flag.
@@ -48,10 +55,7 @@ describe('attached children', () => {
   });
 
   it('ATT-1.4, ATT-1.5, TC-6.5, TC-6.6: an attached child keeps its position when its parent cascades into a terminal workphase', async () => {
-    const {
-      project,
-      phases: [todo, , done],
-    } = await workflowWithPhases(['Todo', 'In Progress', { name: 'Done', isTerminal: true }]);
+    const { project, todo, done } = await setupWorkflow();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
     expect(child.position).toBe(1.0);
@@ -74,13 +78,10 @@ describe('attached children', () => {
   });
 
   it('ATT-1.5: a Stub reads done under a done parent and not done once it reopens, with only its workphase written', async () => {
-    const {
-      project,
-      phases: [todo, , done],
-    } = await workflowWithPhases(['Todo', 'In Progress', { name: 'Done', isTerminal: true }]);
+    const { project, todo, done } = await setupWorkflow();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' });
-    const row = () => db.select().from(items).where(eq(items.id, child.id)).get()!;
+    const row = () => getRow(child.id);
 
     // Each change writes the cascaded workphase and the modification
     // timestamp on the child, and nothing else: no completedAt either way.
@@ -94,10 +95,7 @@ describe('attached children', () => {
   });
 
   it('ATT-1.6: a detached child keeps its workphase, position and completedAt through every move of its parent', async () => {
-    const {
-      project,
-      phases: [todo, inProgress, done],
-    } = await workflowWithPhases(['Todo', 'In Progress', { name: 'Done', isTerminal: true }]);
+    const { project, todo, inProgress, done } = await setupWorkflow();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
     const detachedChild = (title: string, workphaseId: string) =>
       createItem({ projectId: project.id, parentId: parent.id, title, isAttached: false, workphaseId });
@@ -106,7 +104,7 @@ describe('attached children', () => {
     const finished = await detachedChild('Finished', done.id);
     expect(finished.completedAt).not.toBeNull();
     const tracked = (id: string) => {
-      const { workphaseId, position, completedAt } = db.select().from(items).where(eq(items.id, id)).get()!;
+      const { workphaseId, position, completedAt } = getRow(id);
       return { workphaseId, position, completedAt };
     };
     const before = { active: tracked(active.id), finished: tracked(finished.id) };
@@ -189,8 +187,8 @@ describe('attached children', () => {
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Todo
     const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
     // Force divergence: the attached child sits in a different workphase than its parent.
-    db.update(items).set({ workphaseId: inProgress.id }).where(eq(items.id, child.id)).run();
-    db.update(items).set({ workphaseId: inProgress.id }).where(eq(items.id, grandchild.id)).run();
+    setItemWorkphase(child.id, inProgress.id);
+    setItemWorkphase(grandchild.id, inProgress.id);
 
     // A title-only edit must leave workphaseId untouched (no snap back to the parent's Todo).
     const res = await request(app).put(`/api/items/${child.id}`).send({ title: 'Renamed' });
@@ -282,8 +280,6 @@ describe('attached children', () => {
       project,
       phases: [todo],
     } = await workflowWithPhases(['Todo', 'In Progress']);
-    const countItems = () => db.select().from(items).all().length;
-
     const before = countItems();
     const refused = await request(app)
       .post('/api/items')
@@ -309,7 +305,7 @@ describe('attached children', () => {
     } = await workflowWithPhases(['Todo', 'In Progress']);
     const item = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Solo Root' });
     // No write sets the flag on a top-level item, so the row is written directly.
-    db.update(items).set({ isAttached: 1 }).where(eq(items.id, item.id)).run();
+    setItemParent(item.id, null, true);
 
     const res = await request(app).get(`/api/items/${item.id}`);
     expect(res.status).toBe(200);

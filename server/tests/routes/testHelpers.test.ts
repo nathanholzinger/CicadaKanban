@@ -3,9 +3,9 @@ import express from 'express';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { items, projects } from '../../src/db/schema.js';
+import { projects } from '../../src/db/schema.js';
 import testHelpers from '../../src/routes/testHelpers.js';
-import { createProject, createItem } from '../fixtures.js';
+import { createProject, createItem, getRow } from '../fixtures.js';
 
 // The setup routes are mounted only when ENABLE_TEST_ROUTES is set, which Playwright's
 // server sets and this suite doesn't, so they get an app of their own here.
@@ -31,7 +31,7 @@ describe('the test routes that write one column', () => {
       expect(res.body).toEqual({ ok: true });
     }
 
-    expect(db.select().from(items).where(eq(items.id, item.id)).get()!.position).toBe(7.5);
+    expect(getRow(item.id).position).toBe(7.5);
     expect(projectRow(project.id)).toMatchObject({ position: 3, createdAt: 1234, parentId: parent.id });
   });
 
@@ -71,6 +71,6 @@ describe('the test routes that write one column', () => {
     ];
     for (const res of results) expect(res.status).toBe(400);
     expect(projectRow(project.id)).toEqual(before);
-    expect(db.select().from(items).where(eq(items.id, item.id)).get()!.position).toBe(item.position);
+    expect(getRow(item.id).position).toBe(item.position);
   });
 });

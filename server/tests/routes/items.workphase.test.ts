@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import { eq } from 'drizzle-orm';
 import { app } from '../../src/index.js';
-import { db } from '../../src/db/index.js';
-import { items } from '../../src/db/schema.js';
-import { createWorkphase, createItem, setItemParent } from '../fixtures.js';
-import { getRow, move, put, countItems, setupWorkflow } from '../itemHierarchyFixtures.js';
+import {
+  createWorkphase,
+  createItem,
+  setItemParent,
+  setItemWorkphase,
+  getRow,
+  move,
+  put,
+  countItems,
+  setupWorkflow,
+} from '../fixtures.js';
 
 // The workphase a write leaves an item in (ATT-9): an Attached child takes its parent's, a
 // detach leaves the item in the one it was shown in, and a write with none to leave it in
@@ -137,7 +143,7 @@ describe('the workphase a write leaves an item in', () => {
 
       // The stored copy has drifted: the item still leaves where it was shown.
       const drifted = await setupShownWithChain(`${entryPoint} drifted`);
-      db.update(items).set({ workphaseId: drifted.w3.id }).where(eq(items.id, drifted.x.id)).run();
+      setItemWorkphase(drifted.x.id, drifted.w3.id);
       const left = await write(drifted.x.id, { isAttached: false });
       expect(left.status, entryPoint).toBe(200);
       expect(left.body.workphaseId, entryPoint).toBe(drifted.w2.id);
@@ -155,7 +161,7 @@ describe('the workphase a write leaves an item in', () => {
       expect(res.body, entryPoint).toMatchObject({ parentId: null, isAttached: 0, workphaseId: w2.id });
 
       const drifted = await setupShownWithChain(`${entryPoint} drifted`);
-      db.update(items).set({ workphaseId: drifted.w3.id }).where(eq(items.id, drifted.x.id)).run();
+      setItemWorkphase(drifted.x.id, drifted.w3.id);
       const left = await write(drifted.x.id, { parentId: null });
       expect(left.status, entryPoint).toBe(200);
       expect(left.body.workphaseId, entryPoint).toBe(drifted.w2.id);
@@ -171,7 +177,7 @@ describe('the workphase a write leaves an item in', () => {
     expect(underA).toMatchObject({ parentId: a.id, isAttached: 0, workphaseId: w2.id, positionScope: 'workflow' });
 
     // A's own copy has drifted: Y is still created where A is shown.
-    db.update(items).set({ workphaseId: w3.id }).where(eq(items.id, a.id)).run();
+    setItemWorkphase(a.id, w3.id);
     expect((await create(a.id)).workphaseId).toBe(w2.id);
 
     // Under D itself, D's own workphase.
@@ -250,7 +256,7 @@ describe('the workphase a write leaves an item in', () => {
       // The stored copy has drifted, to a workphase that is neither: the item
       // still leaves where it was shown.
       const drifted = await setupShownWithChain(`${entryPoint} drifted`);
-      db.update(items).set({ workphaseId: drifted.w1.id }).where(eq(items.id, drifted.x.id)).run();
+      setItemWorkphase(drifted.x.id, drifted.w1.id);
       const driftedB = await createItem({ projectId: drifted.project.id, workphaseId: drifted.w3.id, title: 'B' });
       const left = await write(drifted.x.id, { parentId: driftedB.id, isAttached: false });
       expect(left.status, entryPoint).toBe(200);

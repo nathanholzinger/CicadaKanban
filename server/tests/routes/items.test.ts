@@ -23,6 +23,10 @@ import {
   setItemPosition,
   workflowWithPhases,
   setItemParent,
+  createAgent,
+  createItemType,
+  getRow,
+  countItems,
 } from '../fixtures.js';
 
 // Item CRUD through the item routes: read, create, update, move, comments and delete.
@@ -120,11 +124,9 @@ describe('POST /api/items', () => {
   it('ATT-10.4: returns 400, not an opaque FK 500, for a projectId, type or agentId that names no row', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'P' });
-    const type = (await request(app).post('/api/item-types').send({ name: 'Bug' })).body;
-    const agent = (
-      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
-    ).body;
-    const before = db.select().from(items).all().length;
+    const type = await createItemType();
+    const agent = await createAgent();
+    const before = countItems();
 
     const refusals = [
       ['projectId', { projectId: 'no-such-project' }, /projectId does not reference an existing project/],
@@ -143,7 +145,7 @@ describe('POST /api/items', () => {
       expect(res.status, field).toBe(400);
       expect(res.body.error, field).toMatch(message);
     }
-    expect(db.select().from(items).all().length).toBe(before);
+    expect(countItems()).toBe(before);
 
     // A type and an agent that exist are stored.
     const created = await request(app)
@@ -155,7 +157,7 @@ describe('POST /api/items', () => {
 
   it('returns 400 for an empty-string parentId or agentId, which names no row, and creates nothing', async () => {
     const project = await createProject();
-    const before = db.select().from(items).all().length;
+    const before = countItems();
 
     const refusals = [
       ['parentId', { projectId: project.id, parentId: '' }, /parentId does not reference an existing item/],
@@ -169,7 +171,7 @@ describe('POST /api/items', () => {
       expect(res.status, field).toBe(400);
       expect(res.body.error, field).toMatch(message);
     }
-    expect(db.select().from(items).all().length).toBe(before);
+    expect(countItems()).toBe(before);
 
     // null is how a create says "none".
     const created = await request(app)
@@ -194,20 +196,20 @@ describe('POST /api/items', () => {
     // A sub-project with no workflow of its own uses its parent's.
     const projectB = await createProject({ name: 'B', parentId: projectA.id });
     const parent = await createItem({ projectId: projectA.id, title: 'Parent A' });
-    const before = db.select().from(items).all().length;
+    const before = countItems();
 
     const res = await request(app)
       .post('/api/items')
       .send({ title: 'Child', projectId: projectB.id, parentId: parent.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/different project/i);
-    expect(db.select().from(items).all().length).toBe(before);
+    expect(countItems()).toBe(before);
   });
 
   it('ATT-10.1: a create names its project, its parent, or both, and is refused with neither', async () => {
     const project = await createProject();
     const parent = await createItem({ projectId: project.id, title: 'P' });
-    const before = db.select().from(items).all().length;
+    const before = countItems();
 
     const alone = await request(app).post('/api/items').send({ title: 'Top', projectId: project.id });
     expect(alone.status).toBe(201);
@@ -221,7 +223,7 @@ describe('POST /api/items', () => {
 
     const neither = await request(app).post('/api/items').send({ title: 'Orphan' });
     expect(neither.status).toBe(400);
-    expect(db.select().from(items).all().length).toBe(before + 2);
+    expect(countItems()).toBe(before + 2);
   });
 
   it('ATT-10.2: a child is created Attached unless the create clears the flag', async () => {
@@ -337,9 +339,7 @@ describe('PUT /api/items/:id', () => {
 
   it('returns 400, not an opaque FK 500, for an agentId that names no agent, and changes nothing', async () => {
     const project = await createProject();
-    const agent = (
-      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
-    ).body;
+    const agent = await createAgent();
     const item = await createItem({ projectId: project.id, title: 'Keep Me' });
     const before = (await request(app).get(`/api/items/${item.id}`)).body;
 
@@ -556,7 +556,6 @@ describe('DELETE /api/items/:id', () => {
       return { project, p, a, a1, d, d1, q };
     }
 
-    const rowOf = (id: string) => db.select().from(items).where(eq(items.id, id)).get();
     const idsIn = (projectId: string) =>
       db
         .select({ id: items.id })
@@ -568,7 +567,7 @@ describe('DELETE /api/items/:id', () => {
 
     it('deletes the whole subtree from its top', async () => {
       const { project, p, a, a1, d, d1, q } = await seedSubtree('From P');
-      const qBefore = rowOf(q.id);
+      const qBefore = getRow(q.id);
 
       expect((await request(app).delete(`/api/items/${p.id}`)).status).toBe(204);
 
@@ -576,13 +575,13 @@ describe('DELETE /api/items/:id', () => {
         expect((await request(app).get(`/api/items/${gone.id}`)).status, gone.title).toBe(404);
       }
       expect(idsIn(project.id)).toEqual([q.id]);
-      expect(rowOf(q.id)).toEqual(qBefore);
+      expect(getRow(q.id)).toEqual(qBefore);
     });
 
     it('deletes only the branch below the item, from the middle of the tree', async () => {
       const { project, p, a, a1, d, d1, q } = await seedSubtree('From A');
       const kept = [p, d, d1, q];
-      const keptBefore = kept.map(item => rowOf(item.id));
+      const keptBefore = kept.map(item => getRow(item.id));
 
       expect((await request(app).delete(`/api/items/${a.id}`)).status).toBe(204);
 
@@ -590,7 +589,7 @@ describe('DELETE /api/items/:id', () => {
         expect((await request(app).get(`/api/items/${gone.id}`)).status, gone.title).toBe(404);
       }
       expect(idsIn(project.id)).toEqual(kept.map(item => item.id).sort());
-      expect(kept.map(item => rowOf(item.id))).toEqual(keptBefore);
+      expect(kept.map(item => getRow(item.id))).toEqual(keptBefore);
     });
   });
 
@@ -649,7 +648,7 @@ describe('DELETE /api/items/:id', () => {
 describe('deleting a referenced entity nulls the item FK (SET NULL, not blocked)', () => {
   it('deleting an item type leaves referencing items typeless', async () => {
     const project = await createProject();
-    const type = (await request(app).post('/api/item-types').send({ name: 'Bug' })).body;
+    const type = await createItemType();
     const item = await createItem({ projectId: project.id, type: type.id });
 
     const del = await request(app).delete(`/api/item-types/${type.id}`);
@@ -662,9 +661,7 @@ describe('deleting a referenced entity nulls the item FK (SET NULL, not blocked)
 
   it('deleting an agent unassigns referencing items', async () => {
     const project = await createProject();
-    const agent = (
-      await request(app).post('/api/agents').send({ name: 'Claude', claudeProjectId: 'p1', surface: 'code' })
-    ).body;
+    const agent = await createAgent();
     const item = await createItem({ projectId: project.id, assigneeType: 'agent', agentId: agent.id });
 
     const del = await request(app).delete(`/api/agents/${agent.id}`);

@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { items as itemsTable, notifications, workflows } from '../../src/db/schema.js';
+import { notifications, workflows } from '../../src/db/schema.js';
 import {
   createProject,
   createWorkflow,
@@ -15,6 +15,7 @@ import {
   readBoard,
   itemIdsOn,
   setItemParent,
+  setItemWorkphase,
   templatedWorkflow,
 } from '../fixtures.js';
 
@@ -104,7 +105,7 @@ describe('GET /api/workflows/:id', () => {
     const other = await createProject();
     await createWorkflow(other.id);
     const foreign = await createItem({ projectId: other.id, title: 'Foreign' });
-    db.update(itemsTable).set({ workphaseId: workphase.id }).where(eq(itemsTable.id, foreign.id)).run();
+    setItemWorkphase(foreign.id, workphase.id);
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     const items = res.body.items as Array<{ id: string; title: string; positionScope: string }>;
@@ -174,13 +175,8 @@ describe('POST /api/workflows', () => {
     // A default board is bootstrapped 1:1 with the just-created workphases
     const boards = await boardsOf(res.body.id);
     expect(boards).toHaveLength(1);
-    const detail = await request(app).get(`/api/boards/${boards[0].id}`);
-    expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual([
-      'Todo',
-      'In Progress',
-      'Review',
-      'Done',
-    ]);
+    const detail = await readBoard(boards[0].id);
+    expect(detail.columns.map(c => c.displayName)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
   });
 
   it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
@@ -198,8 +194,8 @@ describe('POST /api/workflows', () => {
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
 
     const [board] = await boardsOf(res.body.id);
-    const detail = await request(app).get(`/api/boards/${board.id}`);
-    expect(detail.body.columns.map((c: { displayName: string }) => c.displayName)).toEqual(['Backlog', 'Done']);
+    const detail = await readBoard(board.id);
+    expect(detail.columns.map(c => c.displayName)).toEqual(['Backlog', 'Done']);
   });
 
   it('creates a bare workflow with no phases when neither templateId nor sourceWorkflowId is given', async () => {
@@ -211,8 +207,7 @@ describe('POST /api/workflows', () => {
     // Still gets a default board (with zero columns, since there are no phases yet)
     const boards = await boardsOf(res.body.id);
     expect(boards).toHaveLength(1);
-    const detail = await request(app).get(`/api/boards/${boards[0].id}`);
-    expect(detail.body.columns).toEqual([]);
+    expect((await readBoard(boards[0].id)).columns).toEqual([]);
   });
 
   it('TREE-10.4: a project has at most one workflow of its own', async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
-import { createWorkphase, createItem, setItemPosition, workflowWithPhases } from '../fixtures.js';
+import { createWorkphase, createItem, setItemPosition, workflowWithPhases, move, put } from '../fixtures.js';
 
 // Where an item's position comes from through the item routes: the create and move rules, which
 // items count as neighbors, a move into or out of a terminal workphase, `positionScope` on a
@@ -23,7 +23,6 @@ describe('position resolution', () => {
     return { project, workflow, todo, inProgress, done };
   }
 
-  const move = (id: string, body: Record<string, unknown>) => request(app).patch(`/api/items/${id}/move`).send(body);
   const fetchItem = async (id: string) => (await request(app).get(`/api/items/${id}`)).body;
 
   // An item created at the workflow's end, then pinned to `position` (written directly: no request names one).
@@ -229,7 +228,7 @@ describe('position resolution', () => {
     // A workflow position the sibling append can't coincide with.
     setItemPosition(detached.id, 5.0);
 
-    const res = await request(app).put(`/api/items/${detached.id}`).send({ parentId: parent.id, isAttached: true });
+    const res = await put(detached.id, { parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(2.0); // fresh, past the existing sibling — not its old workflow-scoped value
     expect(res.body.positionScope).toBe('attached-siblings');
@@ -241,7 +240,7 @@ describe('position resolution', () => {
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' }); // position 2.0
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, position 1.0 among siblings
 
-    const res = await request(app).put(`/api/items/${child.id}`).send({ isAttached: false });
+    const res = await put(child.id, { isAttached: false });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(3); // appended past the workflow's last Free item, not 1.0 kept
     expect(res.body.positionScope).toBe('workflow');
@@ -252,7 +251,7 @@ describe('position resolution', () => {
     const parent = await createItem({ projectId: project.id, workphaseId: done.id, title: 'Parent' });
     const child = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child' }); // attached, inherits Done, keeps a position
 
-    const res = await request(app).put(`/api/items/${child.id}`).send({ isAttached: false });
+    const res = await put(child.id, { isAttached: false });
     expect(res.status).toBe(200);
     expect(res.body.position).toBeNull();
     expect(res.body.completedAt).toBeGreaterThan(0);
@@ -265,7 +264,7 @@ describe('position resolution', () => {
     await createItem({ projectId: project.id, parentId: parentB.id, title: 'Existing under B' }); // position 1.0
     const child = await createItem({ projectId: project.id, parentId: parentA.id, title: 'Child' });
 
-    const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: parentB.id });
+    const res = await put(child.id, { parentId: parentB.id });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(2.0);
   });
@@ -277,7 +276,7 @@ describe('position resolution', () => {
     // A sibling after it: a re-attach treated as a scope change would append past this one, to 3.
     await createItem({ projectId: project.id, parentId: parent.id, title: 'Sibling' });
 
-    const res = await request(app).put(`/api/items/${child.id}`).send({ parentId: parent.id, isAttached: true });
+    const res = await put(child.id, { parentId: parent.id, isAttached: true });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(child.position);
   });
@@ -288,7 +287,7 @@ describe('position resolution', () => {
     const b = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'B' }); // 2.0
     const c = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'C' }); // 3.0
 
-    const res = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'after' });
+    const res = await move(c.id, { anchorId: a.id, side: 'after' });
     expect(res.status).toBe(200);
     expect(res.body.position).toBeGreaterThan(a.position);
     expect(res.body.position).toBeLessThan(b.position);
@@ -317,7 +316,7 @@ describe('position resolution', () => {
 
     it('TC-2.5: C before A — becomes the new true first item', async () => {
       const { a, b, c } = await seedABC();
-      const res = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'before' });
+      const res = await move(c.id, { anchorId: a.id, side: 'before' });
       expect(res.status).toBe(200);
       // No true predecessor before A -> floor-anchored coarsest-fit between
       // 0.0 and A's 1.0, not a flat A.position - 1.0.
@@ -327,11 +326,11 @@ describe('position resolution', () => {
 
     it('TC-2.1: C after A / C before B — same true-neighbor midpoint from either anchor', async () => {
       const { a, b, c } = await seedABC();
-      const afterA = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: a.id, side: 'after' });
+      const afterA = await move(c.id, { anchorId: a.id, side: 'after' });
       expect(afterA.body.position).toBe(1.5);
       expect(await orderOf([a, b, c])).toBe('ACB');
 
-      const beforeB = await request(app).patch(`/api/items/${c.id}/move`).send({ anchorId: b.id, side: 'before' });
+      const beforeB = await move(c.id, { anchorId: b.id, side: 'before' });
       expect(beforeB.body.position).toBe(1.5);
       expect(await orderOf([a, b, c])).toBe('ACB');
     });
@@ -339,7 +338,7 @@ describe('position resolution', () => {
     it('TC-2.4: A after C — becomes the new true last item, at C plus 1.0 rounded', async () => {
       const { a, b, c } = await seedABC();
       setItemPosition(c.id, 3.4); // so the append is 4.4 unrounded
-      const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: c.id, side: 'after' });
+      const res = await move(a.id, { anchorId: c.id, side: 'after' });
       expect(res.status).toBe(200);
       // No true successor after C -> append fallback, C.position + 1.0, rounded.
       expect(res.body.position).toBe(4);
@@ -357,7 +356,7 @@ describe('position resolution', () => {
     // x itself as the closest neighbor and anchor against its stale value.
     setItemPosition(x.id, 1.5);
 
-    const res = await request(app).patch(`/api/items/${x.id}/move`).send({ anchorId: a.id, side: 'after' });
+    const res = await move(x.id, { anchorId: a.id, side: 'after' });
     expect(res.status).toBe(200);
     // Correctly resolves against the true next neighbor (b, at 3.0),
     // skipping x's own stale 1.5 — a buggy resolution would land below 1.5.
@@ -367,7 +366,7 @@ describe('position resolution', () => {
   it('move rejects an invalid side when anchorId is given', async () => {
     const { project, todo } = await setupTwoPhases();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id });
-    const res = await request(app).patch(`/api/items/${a.id}/move`).send({ anchorId: a.id, side: 'sideways' });
+    const res = await move(a.id, { anchorId: a.id, side: 'sideways' });
     expect(res.status).toBe(400);
   });
 
@@ -386,9 +385,7 @@ describe('position resolution', () => {
       .post('/api/items')
       .send({ title: 'Done item', projectId: project.id, workphaseId: done.id });
 
-    const res = await request(app)
-      .patch(`/api/items/${active.id}/move`)
-      .send({ anchorId: doneItem.body.id, side: 'after' });
+    const res = await move(active.id, { anchorId: doneItem.body.id, side: 'after' });
     expect(res.status).toBe(400);
   });
 
@@ -406,9 +403,7 @@ describe('position resolution', () => {
       const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Parent' });
       const attachedChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'Attached Child' });
 
-      const res = await request(app)
-        .patch(`/api/items/${detached.id}/move`)
-        .send({ anchorId: attachedChild.id, side: 'after' });
+      const res = await move(detached.id, { anchorId: attachedChild.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
       expect(await fetchItem(detached.id)).toMatchObject(unchanged(detached));
@@ -421,9 +416,7 @@ describe('position resolution', () => {
       const childOfA = await createItem({ projectId: project.id, parentId: parentA.id, title: 'Child of A' });
       const childOfB = await createItem({ projectId: project.id, parentId: parentB.id, title: 'Child of B' });
 
-      const res = await request(app)
-        .patch(`/api/items/${childOfA.id}/move`)
-        .send({ anchorId: childOfB.id, side: 'after' });
+      const res = await move(childOfA.id, { anchorId: childOfB.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
     });
@@ -442,9 +435,7 @@ describe('position resolution', () => {
         title: 'Foreign Anchor',
       });
 
-      const res = await request(app)
-        .patch(`/api/items/${subject.id}/move`)
-        .send({ anchorId: foreignAnchor.id, side: 'after' });
+      const res = await move(subject.id, { anchorId: foreignAnchor.id, side: 'after' });
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/position scope/);
       expect(await fetchItem(subject.id)).toMatchObject(unchanged(subject));
@@ -455,7 +446,7 @@ describe('position resolution', () => {
       const a = await createItem({ projectId: project.id, workphaseId: todo.id });
       const b = await createItem({ projectId: project.id, workphaseId: todo.id });
 
-      const res = await request(app).patch(`/api/items/${b.id}/move`).send({ anchorId: a.id, side: 'after' });
+      const res = await move(b.id, { anchorId: a.id, side: 'after' });
       expect(res.status).toBe(200);
     });
 
@@ -465,7 +456,7 @@ describe('position resolution', () => {
       const childA = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child A' });
       const childB = await createItem({ projectId: project.id, parentId: parent.id, title: 'Child B' });
 
-      const res = await request(app).patch(`/api/items/${childB.id}/move`).send({ anchorId: childA.id, side: 'after' });
+      const res = await move(childB.id, { anchorId: childA.id, side: 'after' });
       expect(res.status).toBe(200);
     });
   });
@@ -475,7 +466,7 @@ describe('position resolution', () => {
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });
 
     const before = Date.now();
-    const res = await request(app).patch(`/api/items/${item.id}/move`).send({ workphaseId: done.id });
+    const res = await move(item.id, { workphaseId: done.id });
     const after = Date.now();
     expect(res.status).toBe(200);
     expect(res.body.position).toBeNull();
@@ -491,7 +482,7 @@ describe('position resolution', () => {
       .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
     expect(item.body.completedAt).toBeGreaterThan(0);
 
-    const res = await request(app).patch(`/api/items/${item.body.id}/move`).send({ workphaseId: todo.id });
+    const res = await move(item.body.id, { workphaseId: todo.id });
     expect(res.status).toBe(200);
     expect(res.body.completedAt).toBeNull();
     // TC-6.9: proves the fresh position specifically follows append-fallback
@@ -578,7 +569,7 @@ describe('position resolution', () => {
       setItemPosition(itemT3.id, 6.0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
-      const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
+      const res = await move(mover.id, { anchorId: itemT1.id, side: 'after' });
       expect(res.status).toBe(200);
 
       // Precision exhausted between T1 and T2 -> the reindex ran over the
@@ -625,7 +616,7 @@ describe('position resolution', () => {
       expect(doneItem.body.completedAt).toBeGreaterThan(0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
-      await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: itemT1.id, side: 'after' });
+      await move(mover.id, { anchorId: itemT1.id, side: 'after' });
 
       const reread = await request(app).get(`/api/items/${doneItem.body.id}`);
       expect(reread.body.position).toBeNull();
@@ -654,9 +645,7 @@ describe('position resolution', () => {
       setItemPosition(farAway.id, 500.0);
 
       const newChild = await createItem({ projectId: project.id, parentId: parent.id, title: 'NewChild' });
-      const res = await request(app)
-        .patch(`/api/items/${newChild.id}/move`)
-        .send({ anchorId: childA.id, side: 'after' });
+      const res = await move(newChild.id, { anchorId: childA.id, side: 'after' });
 
       // The attached-siblings reindex itself worked (childA/childB got
       // clean sequential positions, newChild resolved into the gap)...
@@ -684,7 +673,7 @@ describe('position resolution', () => {
       setItemPosition(t2.id, 10.0 + 1e-13); // tight gap -> reindex trigger
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
-      const res = await request(app).patch(`/api/items/${mover.id}/move`).send({ anchorId: t1.id, side: 'after' });
+      const res = await move(mover.id, { anchorId: t1.id, side: 'after' });
 
       // The workflow-wide reindex itself worked — `parent` is itself a
       // plain top-level (non-attached) item, so it's a workflow-wide scope

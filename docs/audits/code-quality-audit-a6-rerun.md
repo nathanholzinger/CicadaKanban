@@ -317,10 +317,12 @@ Filled in as the audit closes. One row per required finding (#1–2, #4–16, #2
 | # | Disposition | Where it landed (routes) |
 |---|---|---|
 | 1 | Fixed | Batch 6a, `onColumnDrop` takes the drag layer's resync |
+| 4 | Fixed | Batch 6c (1 of 2) |
 | 5 | Fixed | Batch 6a |
-| 2, 4, 7–11, 13–14, 16, 20–21 | open | — |
+| 2, 7–11, 13–14, 20–21 | open | — |
 | 6 | Fixed | Batch 6b, with #38 and #39 |
 | 15 | Fixed | Batch 6b |
+| 16 | Fixed | Batch 6c (1 of 2) |
 | 12 | Routed | `positioning-on-create-and-edit.md`, Inbound deferrals |
 | 24 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit", the #45 bullet |
 | 25 | Routed | `epic-4-decisions.md` §12, the same block, the #44 bullet |

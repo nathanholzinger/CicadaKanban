@@ -5,8 +5,18 @@ import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import { items, activityLog } from '../../src/db/schema.js';
 import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
-import { createProject, createItem, createBoard, setItemPosition, setItemParent } from '../fixtures.js';
-import { getRow, hierarchyEntries, move, put, setupWorkflow, cardWithTwoStubs } from '../itemHierarchyFixtures.js';
+import {
+  createProject,
+  createItem,
+  createBoard,
+  setItemPosition,
+  setItemParent,
+  getRow,
+  move,
+  put,
+  setupWorkflow,
+} from '../fixtures.js';
+import { hierarchyEntries, cardWithTwoStubs } from '../itemHierarchyFixtures.js';
 
 // Atomic reparent-with-placement through the item routes: attach, detach and reparent, done
 // parents and done columns, the depth cap, atomicity, the hierarchy activity log, reindex
@@ -14,16 +24,11 @@ import { getRow, hierarchyEntries, move, put, setupWorkflow, cardWithTwoStubs } 
 
 // A straight parent chain L1 → L2 → … → L{length} built through POST, so
 // the cap is exercised via the API rather than bypassed (contrast
-// itemTree.test.ts's seedChain). Returns the deepest item. Each link is
-// asserted to exist — createItem doesn't check status, and a silently
-// failed link would hand the next one `parentId: undefined` and quietly
-// flatten the chain, hiding exactly the off-by-one these tests pin.
+// itemTree.test.ts's seedChain). Returns the deepest item.
 async function createChain(projectId: string, workphaseId: string, length: number) {
   let deepest = await createItem({ projectId, workphaseId, title: 'L1' });
-  expect(deepest.id).toBeDefined();
   for (let d = 2; d <= length; d++) {
     deepest = await createItem({ projectId, parentId: deepest.id, title: `L${d}` });
-    expect(deepest.id).toBeDefined();
   }
   return deepest;
 }

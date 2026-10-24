@@ -3,7 +3,7 @@ import request from 'supertest';
 import { app } from '../../src/index.js';
 import { db } from '../../src/db/index.js';
 import { columns, items } from '../../src/db/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { ITEM_DEPTH_CAP } from '../../src/lib/itemTree.js';
 import {
   createProject,
@@ -16,6 +16,7 @@ import {
   boardsOf,
   covers,
   itemIdsOn,
+  setItemWorkphase,
   templatedWorkflow,
   workflowWithPhases,
 } from '../fixtures.js';
@@ -115,17 +116,15 @@ describe('GET /api/boards/:id', () => {
     } = await workflowWithPhases(['Todo']);
     const item = await createItem({ projectId: project.id, workphaseId: todo.id });
 
-    // The workflow's auto-bootstrapped default board predates `todo`
-    // (bootstrap only covers workphases that exist at workflow-creation
-    // time), so it needs an explicit column covering it, same as a
-    // genuinely independent second board would.
+    // The workflow's default board predates `todo` (bootstrap covers only the workphases that
+    // exist when the workflow is made), so it needs a column covering it.
     await createColumn(boardOne.id, todo.id, todo.id);
 
     // A second, wholly independent board on the same workflow — position
     // is a single item-owned scalar, not a per-board value;
-    // boards only ever read it, never own their own copy.
+    // boards only ever read it, never own their own copy. This one is made after `todo`, so
+    // it is bootstrapped with a column covering it.
     const boardTwo = await createBoard(workflow.id, { name: 'Second Board' });
-    await createColumn(boardTwo.id, todo.id, todo.id);
 
     const detailOne = await request(app).get(`/api/boards/${boardOne.id}`);
     const detailTwo = await request(app).get(`/api/boards/${boardTwo.id}`);
@@ -413,7 +412,7 @@ describe('Unsorted', () => {
     const z = await itemIn(wf.project.id, wf.workphaseIds[0], 'Z');
     const q1 = await itemIn(other.project.id, undefined, 'Q1');
     // The API refuses a workphase of another workflow, so Y gets one by a direct edit.
-    db.update(items).set({ workphaseId: other.workphaseIds[0] }).where(eq(items.id, y.id)).run();
+    setItemWorkphase(y.id, other.workphaseIds[0]);
 
     const board = await readBoard(boardOfWf.id);
     expect(board.unsorted.invalidItems.map(i => i.id).sort()).toEqual([x.id, y.id].sort());
@@ -453,7 +452,7 @@ describe('Unsorted', () => {
     expect((await readBoard(boardId)).unsorted.needsAttention).toBe(false);
 
     for (const drifted of [foreign.id, null]) {
-      db.update(items).set({ workphaseId: drifted }).where(eq(items.id, x.id)).run();
+      setItemWorkphase(x.id, drifted);
       const { unsorted } = await readBoard(boardId);
       expect(unsorted.invalidItems.map(i => i.id)).toEqual([x.id]);
       expect(unsorted.needsAttention).toBe(true);

@@ -400,11 +400,10 @@ describe('DELETE /api/workphases/:id', () => {
     const res = await request(app).delete(`/api/workphases/${inProgress.id}`);
     expect(res.status).toBe(204);
 
-    const detail = await request(app).get(`/api/boards/${board.id}`);
-    const resolved = detail.body.columns.find((c: { id: string }) => c.id === col.id);
+    const resolved = await columnOn(board.id, col.id);
     expect(resolved.startWorkphaseId).toBe(todo.id);
     expect(resolved.endWorkphaseId).toBe(done.id);
-    expect(resolved.subRows.map((r: { workphase: { id: string } }) => r.workphase.id)).toEqual([todo.id, done.id]);
+    expect(covers(resolved)).toEqual([todo.id, done.id]);
   });
 
   it('BCU-4.2: a workphase delete shrinks each column covering it, and deletes a column it was the only workphase of', async () => {
