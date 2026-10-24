@@ -64,10 +64,10 @@ router.get('/:id', (req, res) => {
   const workflowItems = getWorkflowItems(workflowWorkphases);
 
   // workflowWorkphases already carries isTerminal for every id an item here
-  // could reference, so no extra query is needed to attach positionScope. It
-  // answers only for the items of a project that uses this workflow: one filed
-  // into these workphases from a project on another workflow has no scope, as
-  // on every other read (wiki item-positioning §2).
+  // could reference, so no extra query is needed to attach positionScope. Only the
+  // items of a project that uses this workflow get one: an item filed into these
+  // workphases from a project on another workflow has no scope, as on every other
+  // read (wiki item-positioning §2).
   const isTerminalOf = isTerminalLookup(workflowWorkphases);
   const usedBy = getProjectsUsingWorkflow(workflow.id);
   const noScope = () => null;
@@ -221,11 +221,7 @@ router.put('/:id', (req, res) => {
   res.json(updated);
 });
 
-// Delete a workflow. Its boards/columns and workphases are removed in one
-// transaction; items are NOT deleted — removing the workphases nulls their
-// workphaseId (ON DELETE SET NULL), so items survive (across every project that
-// inherited this workflow) and surface as "Unknown status" on whatever board
-// their project now resolves to.
+// Delete a workflow and what hangs off it: `workflowCascade.ts::deleteWorkflowsById`.
 router.delete('/:id', (req, res) => {
   const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;

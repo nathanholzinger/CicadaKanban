@@ -374,6 +374,9 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 | `server/src/routes/items.ts`, `server/tests/routes/items.test.ts` | 4e done | `PUT /items/:id` answers 400 for an `agentId` that names no agent, before anything is written, as `POST` does. Its route test carries no case ID | Coder |
 | `server/src/routes/items.ts`, `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts` | 4f done | `PUT /items/:id` refuses `agentId: ''` with the 400 an agent that doesn't exist gets, and its route test covers both. `positionResolver.test.ts`'s no-position test throws for that reason now, where it threw on a scope miss | Coder |
 | `client/src/components/workflow/useBoardDnd.ts`, `useColumnManagement.ts`, `useColumnManagement.test.ts`, `useBoardDnd.test.ts` (new) | 6a done | #1: `onColumnDrop` takes a `resync` callback and calls it when the save fails, and `handleDragEnd` passes `resyncBoard`, so a failed reorder landing mid-drag ends that drag before the reload. #5: the test restores its `console.error` spy. `useBoardDnd.test.ts` is the hook's first test file | Coder |
+| `server/src/routes/items.ts`, `server/tests/routes/items.test.ts`, `bruno/items/create-item.bru`, `bruno/items/update-item.bru` | 6b done | `POST /items` refuses `parentId: ''` and `agentId: ''` with the 400 a missing row gets, where it stored each as none (#29). #38: the comment on the type and agent checks. The two Bruno `docs` blocks state the rule | Coder |
+| `server/src/routes/projects.ts`, `server/tests/routes/projects.test.ts` | 6b done | #15: the move's own `parentId` type check is gone, and a test pins the one `parentError` makes. #6: the DELETE comment | Coder |
+| `server/src/routes/workflows.ts`, `server/src/lib/workflowItems.ts`, `server/src/lib/positionResolver.ts`, `server/src/db/runMigrations.ts` | 6b done | Comments only. #6: `effectiveWorkflowIdForProject`'s callers, the workflow DELETE comment, `anchorRefusal`'s contract moved from its type to the function, and the backfill's header and section comment. #39: which items get a `positionScope` | Coder |
 | `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done, 6a done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold. 6a: the column drop is handed `resyncBoard`, and the conventions name `useBoardDnd.test.ts` | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
@@ -644,6 +647,10 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 *From the Coder, batch 6a, client correctness (2026-10-23).*
 
 - **For the Test Reconciler:** the 6a tests carry no case ID. They cover a failed column reorder landing during an item drag, which is a third reason beside the two DRAG-6.15's *Given* names (a failed item drop, a stale response). Whether the rule names every reload is the PO's question in the re-run's Routes. DRAG-6.15 is `Open`. If the PO extends it, `useBoardDnd.test.ts`'s first test is the one that would carry the ID.
+
+*From the Coder, batch 6b, server source (2026-10-23).*
+
+- **For the Test Reconciler:** the empty-string `POST /items` test in `items.test.ts` and the non-string project parent test in `projects.test.ts` carry no case ID. Whether the empty-string rule gets a page, and so cases, is the PO's question in the 4f notes above.
 
 ## Amendments
 
@@ -1109,3 +1116,24 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
     - `onColumnDrop` reloading by itself, the regression as it was, which the committed `useColumnManagement` test passed;
     - `onColumnDrop` swallowing the failure.
   - **Checks.** `npm run check` passes: 404 server tests, 450 client, 94 script, with no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.
+- **2026-10-23, batch 6b, server source (the Coder): the `POST /items` item outside the report, #15, #6, #38 and #39.** One behavior change, one deleted check, and comments. The Close-out rows for #6, #15 and #29 are filled in.
+  - **`POST /items` and empty-string ids.** `parentId: ''` and `agentId: ''` answer 400 ("parentId does not reference an existing item", "agentId does not reference an existing agent") and create nothing, where each was stored as none. `parentRefusal` takes `parentId ?? null`, the agent check is `agentId !== undefined && agentId !== null && …` as `PUT`'s is, and the insert writes `parentId ?? null` and `agentId ?? null`. `null` still says none.
+    - A create with `parentId: ''` and no `projectId` answers with the parent's refusal now, where it answered "projectId is required".
+    - Nothing in the client, the E2E helpers or the Bruno requests sends either. An MCP `create_item` with `parent_id: ''` gets the 400.
+    - #29 closes as fixed, as Batch 6's table says.
+  - **Its test** in `items.test.ts` refuses `parentId: ''` with a `projectId`, the same without one, and `agentId: ''`, each with its message and no row created, then creates with both `null`. No case ID (Open questions).
+  - **The Bruno `docs` blocks** for Create Item and Update Item each gain one sentence: an id or `null` for none, and an empty string is a 400. The ownership table gives a request's docs to whoever changes its endpoint.
+  - **#15.** `PATCH /projects/:id/move` drops its own `parentId` type check. `parentError` makes the same check, with the same message, for the create, the edit and the move. No test covered it, so `projects.test.ts` gains one for the edit and the move; it would have passed with both checks gone before.
+  - **#6.**
+    - `workflowItems.ts`: `effectiveWorkflowIdForProject`'s comment says the foreign-workphase check compares a workphase's workflow against it, and the cross-workflow check one project's against another's.
+    - `projects.ts` and `workflows.ts`: each DELETE comment is one line naming its `lib/` cascade.
+    - `positionResolver.ts`: `anchorRefusal`'s contract moves from `AnchorRefusal` to the function, with "this order" now naming the type's members.
+    - `runMigrations.ts`: the header and the section comment say the items move only when some workflow had no project. #3, which would move the `UPDATE`, stays on the Watch List.
+  - **#38 and #39,** which sat beside #6's files: `items.ts`'s comment on the type and agent checks, and `workflows.ts`'s on which items get a `positionScope`.
+  - **Shown to bite.** Five mutations, each caught by a new test and passed by the committed ones:
+    - `POST` reading an empty `parentId` as none;
+    - `POST` letting an empty `agentId` through;
+    - `POST` refusing a `null` agent;
+    - `POST` refusing a `null` parent;
+    - the project routes' `parentId` type check removed, which no committed test noticed.
+  - **Checks.** `npm run check` passes: 406 server tests, 450 client, 94 script, with no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.

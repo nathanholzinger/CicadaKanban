@@ -101,8 +101,9 @@ router.post('/', (req, res) => {
 
   // The parent is a legal one for a new item, which has height 0 (wiki item-attachment §7).
   // A non-existent parentId would otherwise be stored silently, leaving an attached
-  // child invisible on every board (no parent card to nest under).
-  const parentError = parentRefusal('item', null, parentId || null);
+  // child invisible on every board (no parent card to nest under). An empty string names
+  // no row either, so it's refused rather than read as none; null is how a create says so.
+  const parentError = parentRefusal('item', null, parentId ?? null);
   if (parentError) {
     res.status(400).json({ error: parentError });
     return;
@@ -128,12 +129,13 @@ router.post('/', (req, res) => {
     return;
   }
 
-  // So would a type or an agent that names no row.
+  // A type or an agent that names no row is the same opaque FK-violation 500, and an empty
+  // string names no row either.
   if (type !== undefined && type !== null && !existsById(itemTypes, type)) {
     res.status(400).json({ error: 'type does not reference an existing item type' });
     return;
   }
-  if (agentId && !existsById(agents, agentId)) {
+  if (agentId !== undefined && agentId !== null && !existsById(agents, agentId)) {
     res.status(400).json({ error: 'agentId does not reference an existing agent' });
     return;
   }
@@ -186,7 +188,7 @@ router.post('/', (req, res) => {
       .values({
         id,
         type: type ?? null,
-        parentId: parentId || null,
+        parentId: parentId ?? null,
         projectId: resolvedProjectId,
         workphaseId: resolvedWorkphaseId,
         title,
@@ -194,7 +196,7 @@ router.post('/', (req, res) => {
         position,
         completedAt,
         assigneeType: assigneeType || null,
-        agentId: agentId || null,
+        agentId: agentId ?? null,
         isAttached: attached ? 1 : 0,
         createdAt: now,
         updatedAt: now,

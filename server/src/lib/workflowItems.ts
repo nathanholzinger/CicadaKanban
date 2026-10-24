@@ -70,8 +70,8 @@ export function getProjectsUsingWorkflow(workflowId: string): Set<string> {
 
 // The workflow a project uses: the one it owns, or the nearest ancestor project's
 // (wiki project-tree §10), or null when no project up the chain owns one. The inverse of
-// getProjectsUsingWorkflow for one project. The cross-workflow and foreign-workphase checks
-// compare a workphase's workflow against it.
+// getProjectsUsingWorkflow for one project. The foreign-workphase check compares a workphase's
+// workflow against it, and the cross-workflow check compares one project's against another's.
 export function effectiveWorkflowIdForProject(projectId: string, tx?: Tx): string | null {
   const e = tx ?? db;
   const lineage = [projectId, ...ancestorsOf(projects, projectId, tx).map(project => project.id)];

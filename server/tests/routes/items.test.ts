@@ -153,6 +153,32 @@ describe('POST /api/items', () => {
     expect(created.body).toMatchObject({ type: type.id, agentId: agent.id });
   });
 
+  it('returns 400 for an empty-string parentId or agentId, which names no row, and creates nothing', async () => {
+    const project = await createProject();
+    const before = db.select().from(items).all().length;
+
+    const refusals = [
+      ['parentId', { projectId: project.id, parentId: '' }, /parentId does not reference an existing item/],
+      ['parentId, with no projectId', { parentId: '' }, /parentId does not reference an existing item/],
+      ['agentId', { projectId: project.id, agentId: '' }, /agentId does not reference an existing agent/],
+    ] as const;
+    for (const [field, body, message] of refusals) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'T', ...body });
+      expect(res.status, field).toBe(400);
+      expect(res.body.error, field).toMatch(message);
+    }
+    expect(db.select().from(items).all().length).toBe(before);
+
+    // null is how a create says "none".
+    const created = await request(app)
+      .post('/api/items')
+      .send({ title: 'T', projectId: project.id, parentId: null, agentId: null });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ parentId: null, agentId: null });
+  });
+
   it('ATT-4.10: returns 400 for a non-existent parentId instead of storing an invisible orphan', async () => {
     const project = await createProject();
     const res = await request(app)

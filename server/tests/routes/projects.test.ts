@@ -301,6 +301,18 @@ describe('a project’s parent, on an edit and on a move', () => {
     expect(await placeOf(x.id)).toEqual(before);
   });
 
+  it('a parent that is neither a string nor null is refused, and nothing changes', async () => {
+    const x = await createProject({ name: 'X' });
+    const before = await placeOf(x.id);
+
+    for (const write of [editProject, moveProject]) {
+      const res = await write(x.id, { parentId: 5 });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/string or null/i);
+    }
+    expect(await placeOf(x.id)).toEqual(before);
+  });
+
   it('TREE-3.2: a project can’t be its own parent', async () => {
     const x = await createProject({ name: 'X' });
     const before = await placeOf(x.id);

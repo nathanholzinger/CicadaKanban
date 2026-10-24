@@ -205,10 +205,6 @@ router.patch('/:id/move', (req, res) => {
     res.status(400).json({ error: 'position is not accepted: name a prevId or nextId to place the project instead' });
     return;
   }
-  if (parentId !== undefined && parentId !== null && typeof parentId !== 'string') {
-    res.status(400).json({ error: 'parentId must be a string or null' });
-    return;
-  }
   if (prevId !== undefined && prevId !== null && typeof prevId !== 'string') {
     res.status(400).json({ error: 'prevId must be a string or null' });
     return;
@@ -258,7 +254,7 @@ router.patch('/:id/move', (req, res) => {
   res.json(projectResponse(req.params.id, reindexed));
 });
 
-// Delete a project — recursively cascades through descendants → workflows → workphases → items
+// Delete a project and its subtree: `projectCascade.ts::deleteProjectById`.
 router.delete('/:id', (req, res) => {
   const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
   if (!project) return;

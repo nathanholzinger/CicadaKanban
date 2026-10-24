@@ -91,14 +91,15 @@ export function resolveAppendPosition(
   return resolveAppendAsLast(context);
 }
 
-// Why `anchorId` can't place `subjectId` in the scope `scopeWhere` describes, or null when it
-// can (wiki positioning §2). The checks run in this order, and `scopeWhere` is the predicate
-// the resolver itself queries, so a write is refused for exactly the anchors the resolution
-// would fail to find. Pass the scope the subject ends up in, which differs from its current one
-// when the same write changes it. The subject is no neighbor of itself: a scope that leaves it
-// out, as the resolver's does, never holds it, so 'self' is told apart before that is asked.
 export type AnchorRefusal = 'self' | 'missing' | 'outside-scope' | 'no-position';
 
+// Why `anchorId` can't place `subjectId` in the scope `scopeWhere` describes, or null when it
+// can (wiki positioning §2). The checks run in the order of `AnchorRefusal`'s members, and
+// `scopeWhere` is the predicate the resolver itself queries, so a write is refused for exactly
+// the anchors the resolution would fail to find. Pass the scope the subject ends up in, which
+// differs from its current one when the same write changes it. The subject is no neighbor of
+// itself: a scope that leaves it out, as the resolver's does, never holds it, so 'self' is told
+// apart before that is asked.
 export function anchorRefusal(
   table: PositionedTable,
   scopeWhere: SQL,

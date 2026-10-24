@@ -23,7 +23,9 @@ docs {
 
   Title, description and assignment, plus `parentId` and `isAttached`, which
   run the same hierarchy rules as `PATCH /api/items/{id}/move` (see Move
-  Item). `workphaseId` and placement aren't accepted here.
+  Item). `workphaseId` and placement aren't accepted here. `parentId` and
+  `agentId` take an id, or `null` for none: an empty string names no row, and
+  is a 400.
 
   A write that omits `isAttached` keeps the item's state, so reparenting a
   top-level item makes it a detached child: send `isAttached: true` to
