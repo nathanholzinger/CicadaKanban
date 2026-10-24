@@ -22,7 +22,7 @@ import {
 } from '../fixtures.js';
 
 describe('workflow creation bootstraps a default board', () => {
-  it('POST /api/workflows creates exactly one board with 1:1 columns matching its workphases', async () => {
+  it('POST /api/workflows creates exactly one board, with no columns while the workflow has no workphases', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id, { name: 'Bootstrap Test' });
 

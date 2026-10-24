@@ -98,9 +98,7 @@ type PhaseSpec = string | ({ name: string } & Record<string, unknown>);
 // A project, its workflow, the workflow's default board and workphases created in the
 // order given, back in the same order. The workflow starts with none, so its board
 // starts with no columns: bootstrap covers only the workphases that exist when a
-// workflow is made, and the tests that use this build their own column ranges on that
-// clean slate. This is the one place that relies on the board existing before the
-// workphases.
+// workflow is made, and a test that wants a column over them adds one.
 export async function workflowWithPhases(phases: PhaseSpec[], projectOverrides: Record<string, unknown> = {}) {
   const project = await createProject(projectOverrides);
   const workflow = await createWorkflow(project.id);
@@ -129,12 +127,10 @@ export type ResolvedColumn = {
   broken: boolean;
   startWorkphaseId: string;
   endWorkphaseId: string;
-  entryWorkphaseId: string;
   subRows: { workphase: { id: string }; items: ItemRef[] }[];
 };
 // A board as `GET /api/boards/:id` returns it, narrowed to the fields the board tests read.
 export type BoardBody = {
-  itemDepthCap: number;
   columns: ResolvedColumn[];
   unsorted: {
     uncovered: { workphase: { id: string }; items: ItemRef[] }[];
@@ -231,7 +227,7 @@ export function setColumnEnds(id: string, ends: { startWorkphaseId?: string; end
   }
 }
 
-// The same for a project.
+// Sets a project's parent by writing the row, as `setItemParent` does for an item.
 export function setProjectParent(id: string, parentId: string | null) {
   db.update(projects).set({ parentId }).where(eq(projects.id, id)).run();
 }

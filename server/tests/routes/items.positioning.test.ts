@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
-import { createWorkphase, createItem, setItemPosition, workflowWithPhases, move, put } from '../fixtures.js';
+import {
+  createWorkphase,
+  createItem,
+  setItemPosition,
+  setItemParent,
+  workflowWithPhases,
+  setupWorkflow,
+  move,
+  put,
+} from '../fixtures.js';
 
 // Where an item's position comes from through the item routes: the create and move rules, which
 // items count as neighbors, a move into or out of a terminal workphase, `positionScope` on a
@@ -69,6 +78,18 @@ describe('position resolution', () => {
     const res = await move(x.id, { workphaseId: todo.id });
     expect(res.status).toBe(200);
     expect(res.body.position).toBe(3);
+  });
+
+  it('TC-2.24: an item with no position takes the append fallback when it is assigned a workphase', async () => {
+    const { project, todo, inProgress } = await setupWorkflow();
+    const pb = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'PB' });
+    setItemPosition(pb.id, 3.0);
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    setItemPosition(x.id, null);
+
+    const refiled = await move(x.id, { workphaseId: inProgress.id });
+    expect(refiled.status).toBe(200);
+    expect(refiled.body.position).toBe(4); // append past the workflow's true last item
   });
 
   it('TC-2.5: every prepend before the true first item stays above 0.0, through the reindex that repeating it forces', async () => {
@@ -281,6 +302,46 @@ describe('position resolution', () => {
     expect(res.body.position).toBe(child.position);
   });
 
+  it('TC-3.4: an attached child of a parent with no workphase has none itself, and is still placed among its siblings', async () => {
+    const {
+      project,
+      phases: [todo],
+    } = await workflowWithPhases(['Todo', 'In Progress']);
+    const parent = await createItem({ projectId: project.id, title: 'Parent' });
+    const a = await createItem({ projectId: project.id, parentId: parent.id, title: 'A' });
+    const b = await createItem({ projectId: project.id, parentId: parent.id, title: 'B' });
+    const c = await createItem({ projectId: project.id, parentId: parent.id, title: 'C' });
+    for (const child of [a, b, c]) {
+      expect(child).toMatchObject({ workphaseId: null, positionScope: 'attached-siblings' });
+    }
+    // Each goes after the one before it, as under a parent that has a workphase.
+    expect([a.position, b.position, c.position]).toEqual([1, 2, 3]);
+
+    // Once the parent is filed, its children come along with the positions they
+    // had, so one can be dropped before another.
+    const filed = await move(parent.id, { workphaseId: todo.id });
+    expect(filed.status).toBe(200);
+    const reorder = await move(b.id, { anchorId: a.id, side: 'before' });
+    expect(reorder.status).toBe(200);
+    expect(reorder.body.position).toBeLessThan(a.position);
+  });
+
+  it('TC-2.17: a parentless item that holds the attachment flag has positionScope "workflow"', async () => {
+    const {
+      project,
+      phases: [todo],
+    } = await workflowWithPhases(['Todo', 'In Progress']);
+    const item = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Solo Root' });
+    // No write sets the flag on a top-level item, so the row is written directly.
+    setItemParent(item.id, null, true);
+
+    const res = await request(app).get(`/api/items/${item.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.isAttached).toBe(1);
+    // The flag alone isn't attached-siblings: that takes a parent too.
+    expect(res.body.positionScope).toBe('workflow');
+  });
+
   it('move resolves anchorId+side against the true neighbor, not a client-supplied guess', async () => {
     const { project, todo } = await setupTwoPhases();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' }); // 1.0
@@ -296,7 +357,7 @@ describe('position resolution', () => {
   describe('top-level items sharing one workphase', () => {
     // Fresh GET-based reads, not the move response — a genuine persisted-
     // order check on reload, same convention as
-    // itemRepositioningAttachedSiblings.spec.ts's siblingOrder helper.
+    // tests/helpers/itemRepositioningScenario.ts::siblingOrder.
     async function orderOf(items: { id: string; title: string }[]): Promise<string> {
       const fetched = await Promise.all(items.map(i => request(app).get(`/api/items/${i.id}`)));
       return fetched
@@ -574,7 +635,7 @@ describe('position resolution', () => {
 
       // Precision exhausted between T1 and T2 -> the reindex ran over the
       // full workflow-wide scope (positionScopeFor), not just `todo` ->
-      // T1/T2/P1 all land as clean sequential integers in one pass, then
+      // T1/T2/P1/T3 all land as clean sequential integers in one pass, then
       // Mover's insert retries and resolves the now-open T1/T2 gap.
       expect(await getPosition(itemT1.id)).toBe(1);
       expect(await getPosition(itemT2.id)).toBe(2);

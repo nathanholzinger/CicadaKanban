@@ -13,9 +13,9 @@ import {
   setupWorkflow,
 } from '../fixtures.js';
 
-// The workphase a write leaves an item in (ATT-9): an Attached child takes its parent's, a
-// detach leaves the item in the one it was shown in, and a write with none to leave it in
-// must name one.
+// The workphase a write gives an item (ATT-9): an Attached child takes its parent's, a detach
+// leaves the item in the one it was shown in, a write with none to leave it in must name one,
+// and a Free item can only be given a workphase its project's workflow uses.
 
 // P1's workflow has workphases w1 (Todo), w2 (In Progress) and w3 (Review), and a
 // terminal Done. `r` is top-level in w1, `d` is a detached child of `r` in w2, `a` is
@@ -42,7 +42,7 @@ async function setupShownWithChain(name = 'P1') {
 // has no workphase: naming one in the same write, or filing D into one first.
 const WAYS_OUT = /workphaseId in the same write, or file "D" into a workphase first/;
 
-describe('the workphase a write leaves an item in', () => {
+describe('the workphase a write gives an item', () => {
   it("ATT-9.1: a move that leaves an item Attached cannot name a workphase other than its parent's", async () => {
     const { project, w1, w2, w3, a, x } = await setupShownWithChain();
     const before = getRow(x.id);
@@ -71,6 +71,21 @@ describe('the workphase a write leaves an item in', () => {
     const detached = await move(x.id, { isAttached: false, workphaseId: w3.id });
     expect(detached.status).toBe(200);
     expect(detached.body).toMatchObject({ isAttached: 0, workphaseId: w3.id });
+  });
+
+  it('ATT-9.1: rejects a workphaseId that contradicts the parent an attached item inherits from; accepts a matching one', async () => {
+    const { project, todo, inProgress } = await setupWorkflow();
+    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'parent' });
+    const x = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'X' });
+
+    const contradicting = await move(x.id, { parentId: parent.id, isAttached: true, workphaseId: inProgress.id });
+    expect(contradicting.status).toBe(400);
+    expect(contradicting.body.error).toMatch(/inherits its parent's workphase/);
+    expect(getRow(x.id).workphaseId).toBe(inProgress.id);
+
+    const matching = await move(x.id, { parentId: parent.id, isAttached: true, workphaseId: todo.id });
+    expect(matching.status).toBe(200);
+    expect(matching.body.workphaseId).toBe(todo.id);
   });
 
   it("ATT-9.2: a create that makes an Attached child cannot name a workphase other than its parent's", async () => {
@@ -292,5 +307,49 @@ describe('the workphase a write leaves an item in', () => {
       workphaseId: null,
     });
     expect(y).toMatchObject({ parentId: a.id, isAttached: 0, workphaseId: null });
+  });
+
+  it("ATT-9.8: a move can't leave a Free item in a workphase its project's workflow doesn't use", async () => {
+    const a = await setupWorkflow('P1');
+    const other = await setupWorkflow('Other');
+    const f = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'F' });
+    const b = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'B' });
+    const before = getRow(f.id);
+
+    // v belongs to a workflow P1 doesn't use.
+    const v = other.inProgress.id;
+    for (const [label, body] of [
+      ['no reparent', { workphaseId: v }],
+      ['reparented under B, left Free', { parentId: b.id, isAttached: false, workphaseId: v }],
+    ] as const) {
+      const res = await move(f.id, body);
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(/workflow this item's project does not use; name a workphase of that/);
+      expect(getRow(f.id), label).toEqual(before);
+    }
+  });
+
+  it("ATT-9.9: a create can't name a workphase its project's workflow doesn't use", async () => {
+    const a = await setupWorkflow('P1');
+    const other = await setupWorkflow('Other');
+    const b = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'B' });
+    const v = other.inProgress.id;
+    const before = countItems();
+
+    for (const [label, body] of [
+      ['top-level', { title: 'T', projectId: a.project.id }],
+      ['detached child of B', { title: 'C', parentId: b.id, isAttached: false }],
+    ] as const) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ ...body, workphaseId: v });
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(/workflow this item's project does not use/);
+    }
+    expect(countItems()).toBe(before);
+
+    // A workphase of its own project's workflow is fine.
+    const ok = await createItem({ projectId: a.project.id, title: 'T', workphaseId: a.inProgress.id });
+    expect(ok.workphaseId).toBe(a.inProgress.id);
   });
 });

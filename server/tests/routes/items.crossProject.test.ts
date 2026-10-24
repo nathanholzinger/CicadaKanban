@@ -10,13 +10,12 @@ import {
   getRow,
   move,
   put,
-  countItems,
   setupWorkflow,
 } from '../fixtures.js';
 import { hierarchyEntries, cardWithTwoStubs } from '../itemHierarchyFixtures.js';
 
-// Reparenting across projects through the item routes: what the move carries to the new
-// project, and what it refuses when the two projects use different workflows.
+// Reparenting across projects through the item routes: what a move or an edit carries to the
+// new project, and what it refuses when the two projects use different workflows.
 
 describe('cross-project reparenting', () => {
   // Root project R owns the workflow; P1 and P2 inherit it, so a board of
@@ -84,6 +83,45 @@ describe('cross-project reparenting', () => {
     const res = await move(x.id, { parentId: b.id });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ parentId: b.id, isAttached: 0, projectId: p2.id, position: 5.0 });
+  });
+
+  it('ATT-5.1: PUT accepts reparenting under a parent in a different project and adopts its projectId', async () => {
+    const projectA = await createProject();
+    const projectB = await createProject();
+    const itemA = await createItem({ projectId: projectA.id, title: 'Item A' });
+    const parentB = await createItem({ projectId: projectB.id, title: 'Parent B' });
+
+    const res = await put(itemA.id, { parentId: parentB.id });
+    expect(res.status).toBe(200);
+    expect(res.body.parentId).toBe(parentB.id);
+    expect(res.body.projectId).toBe(projectB.id);
+  });
+
+  it('ATT-5.2: PUT cascades projectId to detached descendants on a cross-project reparent', async () => {
+    const projectA = await createProject({ name: 'A' });
+    const projectB = await createProject({ name: 'B' });
+    const q = await createItem({ projectId: projectB.id, title: 'Q' });
+    const x = await createItem({ projectId: projectA.id, title: 'X' });
+    const x2 = await createItem({
+      projectId: projectA.id,
+      parentId: x.id,
+      title: 'X2',
+      isAttached: false,
+      workphaseId: null,
+    });
+    const res = await put(x.id, { parentId: q.id });
+    expect(res.status).toBe(200);
+    expect(getRow(x2.id).projectId).toBe(projectB.id);
+  });
+
+  it('ATT-5.12: a Free item reparented to a sibling project on one workflow may name a workphase of that workflow', async () => {
+    const { todo, inProgress, p1, p2 } = await setupSiblingProjects();
+    const b = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'B' });
+    const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
+    // Sibling projects share the root's workflow: not a workflow change.
+    const res = await move(x.id, { parentId: b.id, isAttached: false, workphaseId: inProgress.id });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ parentId: b.id, isAttached: 0, projectId: p2.id, workphaseId: inProgress.id });
   });
 
   describe('across workflows', () => {
@@ -201,50 +239,6 @@ describe('cross-project reparenting', () => {
       }
     });
 
-    it("ATT-9.8: a move can't leave a Free item in a workphase its project's workflow doesn't use", async () => {
-      const a = await setupWorkflow('P1');
-      const other = await setupWorkflow('Other');
-      const f = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'F' });
-      const b = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'B' });
-      const before = getRow(f.id);
-
-      // v belongs to a workflow P1 doesn't use.
-      const v = other.inProgress.id;
-      for (const [label, body] of [
-        ['no reparent', { workphaseId: v }],
-        ['reparented under B, left Free', { parentId: b.id, isAttached: false, workphaseId: v }],
-      ] as const) {
-        const res = await move(f.id, body);
-        expect(res.status, label).toBe(400);
-        expect(res.body.error, label).toMatch(/workflow this item's project does not use; name a workphase of that/);
-        expect(getRow(f.id), label).toEqual(before);
-      }
-    });
-
-    it("ATT-9.9: a create can't name a workphase its project's workflow doesn't use", async () => {
-      const a = await setupWorkflow('P1');
-      const other = await setupWorkflow('Other');
-      const b = await createItem({ projectId: a.project.id, workphaseId: a.todo.id, title: 'B' });
-      const v = other.inProgress.id;
-      const before = countItems();
-
-      for (const [label, body] of [
-        ['top-level', { title: 'T', projectId: a.project.id }],
-        ['detached child of B', { title: 'C', parentId: b.id, isAttached: false }],
-      ] as const) {
-        const res = await request(app)
-          .post('/api/items')
-          .send({ ...body, workphaseId: v });
-        expect(res.status, label).toBe(400);
-        expect(res.body.error, label).toMatch(/workflow this item's project does not use/);
-      }
-      expect(countItems()).toBe(before);
-
-      // A workphase of its own project's workflow is fine.
-      const ok = await createItem({ projectId: a.project.id, title: 'T', workphaseId: a.inProgress.id });
-      expect(ok.workphaseId).toBe(a.inProgress.id);
-    });
-
     it('TC-7.18, TC-7.20: an item a project move leaves in another workflow’s workphase shows in Unsorted, with no position scope', async () => {
       const q1 = await setupWorkflow('Q1');
       const q2 = await setupWorkflow('Q2');
@@ -263,28 +257,6 @@ describe('cross-project reparenting', () => {
       // It still holds a workphase of Q1's workflow, so it classifies as "none", not "workflow", wherever it's read.
       expect(invalid.find(i => i.id === x.id)?.positionScope).toBe('none');
       expect((await request(app).get(`/api/items/${x.id}`)).body.positionScope).toBe('none');
-    });
-
-    it('TC-2.24: an item with no position takes the append fallback when it is assigned a workphase', async () => {
-      const { project, todo, inProgress } = await setupWorkflow();
-      const pb = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'PB' });
-      setItemPosition(pb.id, 3.0);
-      const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
-      setItemPosition(x.id, null);
-
-      const refiled = await move(x.id, { workphaseId: inProgress.id });
-      expect(refiled.status).toBe(200);
-      expect(refiled.body.position).toBe(4); // append past the workflow's true last item
-    });
-
-    it('ATT-5.12: a Free item reparented to a sibling project on one workflow may name a workphase of that workflow', async () => {
-      const { todo, inProgress, p1, p2 } = await setupSiblingProjects();
-      const b = await createItem({ projectId: p2.id, workphaseId: todo.id, title: 'B' });
-      const x = await createItem({ projectId: p1.id, workphaseId: todo.id, title: 'X' });
-      // Sibling projects share the root's workflow: not a workflow change.
-      const res = await move(x.id, { parentId: b.id, isAttached: false, workphaseId: inProgress.id });
-      expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ parentId: b.id, isAttached: 0, projectId: p2.id, workphaseId: inProgress.id });
     });
   });
 });

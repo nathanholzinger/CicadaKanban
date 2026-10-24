@@ -106,7 +106,7 @@ async function seedChain(projectId: string, length: number) {
 
 // The cases that reach the cap parameterize on ITEM_DEPTH_CAP rather than a literal, so
 // its value can change without touching them. The two that count a depth and a height
-// read no cap.
+// don't reach it, except that ATT-4.6's last line needs a cap of at least 2.
 describe('depth cap', () => {
   it('ATT-4.6: a root item is at depth 1 and a leaf has height 0', async () => {
     const project = await createProject();

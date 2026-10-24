@@ -142,21 +142,6 @@ describe('PATCH /items/:id/move — request validation', () => {
     }
   });
 
-  it('ATT-9.1: rejects a workphaseId that contradicts the parent an attached item inherits from; accepts a matching one', async () => {
-    const { project, todo, inProgress } = await setupWorkflow();
-    const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'parent' });
-    const x = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'X' });
-
-    const contradicting = await move(x.id, { parentId: parent.id, isAttached: true, workphaseId: inProgress.id });
-    expect(contradicting.status).toBe(400);
-    expect(contradicting.body.error).toMatch(/inherits its parent's workphase/);
-    expect(getRow(x.id).workphaseId).toBe(inProgress.id);
-
-    const matching = await move(x.id, { parentId: parent.id, isAttached: true, workphaseId: todo.id });
-    expect(matching.status).toBe(200);
-    expect(matching.body.workphaseId).toBe(todo.id);
-  });
-
   it('rejects a non-boolean isAttached', async () => {
     const { project, todo } = await setupWorkflow();
     const parent = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'parent' });
@@ -934,20 +919,27 @@ describe('PUT /items/:id and POST /items share the guards — every write', () =
     expect((await put(x1.id, { parentId: deepest.parentId })).status).toBe(200);
   });
 
-  it('ATT-5.2: PUT cascades projectId to detached descendants on a cross-project reparent', async () => {
-    const projectA = await createProject({ name: 'A' });
-    const projectB = await createProject({ name: 'B' });
-    const q = await createItem({ projectId: projectB.id, title: 'Q' });
-    const x = await createItem({ projectId: projectA.id, title: 'X' });
-    const x2 = await createItem({
-      projectId: projectA.id,
-      parentId: x.id,
-      title: 'X2',
-      isAttached: false,
-      workphaseId: null,
-    });
-    const res = await put(x.id, { parentId: q.id });
-    expect(res.status).toBe(200);
-    expect(getRow(x2.id).projectId).toBe(projectB.id);
+  it('ATT-4.10: rejects an item becoming its own parent or reparenting to a descendant', async () => {
+    const project = await createProject();
+    const root = await createItem({ projectId: project.id, title: 'Root' });
+    const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child' });
+    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
+
+    const selfRes = await put(root.id, { parentId: root.id });
+    expect(selfRes.status).toBe(400);
+    expect(selfRes.body.error).toMatch(/own parent/i);
+
+    const cycleRes = await put(root.id, { parentId: grandchild.id });
+    expect(cycleRes.status).toBe(400);
+    expect(cycleRes.body.error).toMatch(/descendant/i);
+  });
+
+  it('ATT-4.10: rejects reparenting to a non-existent parentId', async () => {
+    const project = await createProject();
+    const item = await createItem({ projectId: project.id, title: 'Item' });
+
+    const res = await put(item.id, { parentId: 'no-such-parent' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/parentId/i);
   });
 });

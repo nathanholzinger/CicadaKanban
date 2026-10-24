@@ -342,11 +342,6 @@ describe('resolveAppendPosition', () => {
   });
 });
 
-// Same resolver, a second table — proves it genuinely serves any table
-// matching PositionedTable, not only items. Not a full re-run of
-// every items case above, just enough of each function's core contract to
-// confirm it holds for a table with a different shape (no isAttached/
-// workphaseId, root scope instead of a workphase scope).
 describe('anchorRefusal', () => {
   it('names why an anchor fails, and is null for one the scope holds', async () => {
     const { phase, items: created } = await seedPhaseWithItems(3);
@@ -408,6 +403,11 @@ describe('withReindexDisclosure', () => {
   });
 });
 
+// Same resolver, a second table — proves it genuinely serves any table
+// matching PositionedTable, not only items. Not a full re-run of
+// every items case above, just enough of each function's core contract to
+// confirm it holds for a table with a different shape (no isAttached/
+// workphaseId, root scope instead of a workphase scope).
 describe('positionResolver against the projects table', () => {
   describe('reindex', () => {
     it('reassigns clean sequential positions while preserving relative order', async () => {

@@ -2,10 +2,8 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../src/index.js';
 import {
-  createProject,
   createItem,
   setItemPosition,
-  setItemParent,
   setItemWorkphase,
   workflowWithPhases,
   setupWorkflow,
@@ -14,7 +12,7 @@ import {
 } from '../fixtures.js';
 
 // Attached and detached children through the item routes: how a parent's workphase carries its
-// children, and what a reparent does to the flag.
+// children, and what a create, an edit and a reparent do to the flag.
 
 describe('attached children', () => {
   it('ATT-1.3: moving a parent cascades through attached children and grandchildren', async () => {
@@ -197,66 +195,6 @@ describe('attached children', () => {
     expect((await request(app).get(`/api/items/${grandchild.id}`)).body.workphaseId).toBe(inProgress.id);
   });
 
-  it('ATT-4.10: rejects an item becoming its own parent or reparenting to a descendant', async () => {
-    const project = await createProject();
-    const root = await createItem({ projectId: project.id, title: 'Root' });
-    const child = await createItem({ projectId: project.id, parentId: root.id, title: 'Child' });
-    const grandchild = await createItem({ projectId: project.id, parentId: child.id, title: 'Grandchild' });
-
-    const selfRes = await request(app).put(`/api/items/${root.id}`).send({ parentId: root.id });
-    expect(selfRes.status).toBe(400);
-    expect(selfRes.body.error).toMatch(/own parent/i);
-
-    const cycleRes = await request(app).put(`/api/items/${root.id}`).send({ parentId: grandchild.id });
-    expect(cycleRes.status).toBe(400);
-    expect(cycleRes.body.error).toMatch(/descendant/i);
-  });
-
-  it('ATT-4.10: rejects reparenting to a non-existent parentId', async () => {
-    const project = await createProject();
-    const item = await createItem({ projectId: project.id, title: 'Item' });
-
-    const res = await request(app).put(`/api/items/${item.id}`).send({ parentId: 'no-such-parent' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/parentId/i);
-  });
-
-  it('ATT-5.1: PUT accepts reparenting under a parent in a different project and adopts its projectId', async () => {
-    const projectA = await createProject();
-    const projectB = await createProject();
-    const itemA = await createItem({ projectId: projectA.id, title: 'Item A' });
-    const parentB = await createItem({ projectId: projectB.id, title: 'Parent B' });
-
-    const res = await request(app).put(`/api/items/${itemA.id}`).send({ parentId: parentB.id });
-    expect(res.status).toBe(200);
-    expect(res.body.parentId).toBe(parentB.id);
-    expect(res.body.projectId).toBe(projectB.id);
-  });
-
-  it('TC-3.4: an attached child of a parent with no workphase has none itself, and is still placed among its siblings', async () => {
-    const {
-      project,
-      phases: [todo],
-    } = await workflowWithPhases(['Todo', 'In Progress']);
-    const parent = await createItem({ projectId: project.id, title: 'Parent' });
-    const a = await createItem({ projectId: project.id, parentId: parent.id, title: 'A' });
-    const b = await createItem({ projectId: project.id, parentId: parent.id, title: 'B' });
-    const c = await createItem({ projectId: project.id, parentId: parent.id, title: 'C' });
-    for (const child of [a, b, c]) {
-      expect(child).toMatchObject({ workphaseId: null, positionScope: 'attached-siblings' });
-    }
-    // Each goes after the one before it, as under a parent that has a workphase.
-    expect([a.position, b.position, c.position]).toEqual([1, 2, 3]);
-
-    // Once the parent is filed, its children come along with the positions they
-    // had, so one can be dropped before another.
-    const filed = await request(app).patch(`/api/items/${parent.id}/move`).send({ workphaseId: todo.id });
-    expect(filed.status).toBe(200);
-    const reorder = await request(app).patch(`/api/items/${b.id}/move`).send({ anchorId: a.id, side: 'before' });
-    expect(reorder.status).toBe(200);
-    expect(reorder.body.position).toBeLessThan(a.position);
-  });
-
   it('a detached child keeps its explicitly passed workphase', async () => {
     const {
       project,
@@ -296,22 +234,6 @@ describe('attached children', () => {
     expect(unflagged.body.isAttached).toBe(0);
     // No parent to override it — the given workphaseId is used as-is.
     expect(unflagged.body.workphaseId).toBe(todo.id);
-  });
-
-  it('TC-2.17: a parentless item that holds the attachment flag has positionScope "workflow"', async () => {
-    const {
-      project,
-      phases: [todo],
-    } = await workflowWithPhases(['Todo', 'In Progress']);
-    const item = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Solo Root' });
-    // No write sets the flag on a top-level item, so the row is written directly.
-    setItemParent(item.id, null, true);
-
-    const res = await request(app).get(`/api/items/${item.id}`);
-    expect(res.status).toBe(200);
-    expect(res.body.isAttached).toBe(1);
-    // The flag alone isn't attached-siblings: that takes a parent too.
-    expect(res.body.positionScope).toBe('workflow');
   });
 
   // "Attached ⇒ has a parent" holds in the stored row: clearing the parent
