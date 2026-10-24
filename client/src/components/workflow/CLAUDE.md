@@ -98,7 +98,9 @@ The drag gesture's pure, unit-tested modules:
 The hooks and contexts that run it:
 
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
-  plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`.
+  plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`,
+  which is handed `resyncBoard` to call if the save fails, so that a live item drag ends
+  before the reload.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.
 - `DragTuningContext.ts` — the live tuning values, for the components that draw a drag
@@ -175,6 +177,10 @@ active-context outline, the drop line's shape).
   Use `dragGesture.ts`
   (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
   — never hand-roll a drag or read `boundingBox()` directly for a drop target.
+- What needs `useBoardDnd`'s live session, such as a reload landing mid-drag, is tested by
+  rendering the hook: `useBoardDnd.test.ts` starts a drag on a board with no columns,
+  which begins in no context, and calls the hook's handlers with the events they read.
+  The gesture itself is tested through the pure modules and the E2E specs.
 - The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
   `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
   `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and

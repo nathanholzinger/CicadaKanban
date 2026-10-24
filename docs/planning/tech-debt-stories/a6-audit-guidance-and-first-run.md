@@ -373,7 +373,8 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
 | `tests/ui/attached-children.spec.ts`, `tests/ui/drag-column-bands.spec.ts` | 4d done | Two E2E tests: ATT-11.2 (a new describe, "deleting a Card"), the board's half of deleting an item's subtree; and DRAG-6.6, beside DRAG-6.1 and DRAG-6.5, the board's half of a refused drop | Coder |
 | `server/src/routes/items.ts`, `server/tests/routes/items.test.ts` | 4e done | `PUT /items/:id` answers 400 for an `agentId` that names no agent, before anything is written, as `POST` does. Its route test carries no case ID | Coder |
 | `server/src/routes/items.ts`, `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts` | 4f done | `PUT /items/:id` refuses `agentId: ''` with the 400 an agent that doesn't exist gets, and its route test covers both. `positionResolver.test.ts`'s no-position test throws for that reason now, where it threw on a scope miss | Coder |
-| `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold | Coder |
+| `client/src/components/workflow/useBoardDnd.ts`, `useColumnManagement.ts`, `useColumnManagement.test.ts`, `useBoardDnd.test.ts` (new) | 6a done | #1: `onColumnDrop` takes a `resync` callback and calls it when the save fails, and `handleDragEnd` passes `resyncBoard`, so a failed reorder landing mid-drag ends that drag before the reload. #5: the test restores its `console.error` spy. `useBoardDnd.test.ts` is the hook's first test file | Coder |
+| `client/src/components/workflow/CLAUDE.md` | 3b done, 3e drag layer done, 3f client tests done, 6a done | 3b: the done list is the exception to the shuffle it describes. 3e: #11, and its file list after #36 and #37. 3f: the testing conventions name `regionEl` and what the shared pop board and tuning hold. 6a: the column drop is handed `resyncBoard`, and the conventions name `useBoardDnd.test.ts` | Coder |
 | Root `CLAUDE.md` | 3, after 3d and 3e | The report's route to the Architect, and the names 3d and 3e move | Architect |
 | `.claude/guides/testing-strategy.md`, `prettier-preemptive-practice.md`, `code-comments.md`, `documentation-standards.md`, `drizzle-sqlite-patterns.md` | 3 | The report's routes to the Architect | Architect |
 | `.claude/personas/coder.md` | 3, after 3d | `createDefaultBoard`'s new home (#24) | Architect |
@@ -639,6 +640,10 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
   - TREE-1.13 is `Open`; `hierarchy.test.ts:99–102` asserts its library half, with no ID.
   - `client/src/components/ItemDetailPanel.test.tsx` carries no case ID, and TC-5a.1's line doesn't list it.
   - `tests/ui/workflow-inheritance.spec.ts`'s header cites wiki project-tree §10, and no project-tree case covers inherited or own workflows, or copying one. Neither it nor `workflow-creation.spec.ts` carries an ID.
+
+*From the Coder, batch 6a, client correctness (2026-10-23).*
+
+- **For the Test Reconciler:** the 6a tests carry no case ID. They cover a failed column reorder landing during an item drag, which is a third reason beside the two DRAG-6.15's *Given* names (a failed item drop, a stale response). Whether the rule names every reload is the PO's question in the re-run's Routes. DRAG-6.15 is `Open`. If the PO extends it, `useBoardDnd.test.ts`'s first test is the one that would carry the ID.
 
 ## Amendments
 
@@ -1088,3 +1093,19 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
   - **6f's spec now says:** port rather than adopt; check the port's changed-line and removal-site lists against `a6-rerun-scopes/`; sort lines with the checker's TypeScript parse; take the area groups and instances as a per-run config; write the scope files the way §2 gives them out.
   - **The scripts already apply the boundary rule** the Architect's review raised: a line is moved only when its traced blame lands on the base. The ambiguity was in the guide's wording, not the implementation.
   - **Close** deletes `a6-batch-6-drafts/` too. Its `scope-scripts/` stays until 6f lands.
+- **2026-10-23, batch 6a, client correctness (the Coder): #1 and #5.** One production change, two test files. The Close-out rows for #1 and #5 are filled in.
+  - **#1.** `useColumnManagement.ts::onColumnDrop` takes a third argument, `resync`, and calls it where it called `reload` when the save fails. `useBoardDnd.ts`'s `handleDragEnd` passes `resyncBoard`, as the column drop did at `a6-audited`, and `BoardDndDeps.onColumnDrop` carries the signature. A failed column reorder that lands during an item drag now ends that drag before the reload. The report's other option, ending a live session on every board reload, isn't taken, for the reason in Batch 6's table. `resyncBoard`'s comment names the column reorder among the reloads that can land mid-drag.
+  - **Its tests.** `useBoardDnd.test.ts` is new, the hook's first test file. It renders the hook on a board with no columns, which starts a drag in no context.
+    - One test holds a column drop's save in flight, picks up an item, then fails the save. It expects the session gone, the ghost cleared, one reload, and a release afterwards that sends no move.
+    - The other drops with no drag live and expects the reload.
+    - `useColumnManagement.test.ts`'s failure test expects the `resync` it is given to be called once and its own `reload` not at all.
+  - **#5.** That test restores its `console.error` spy, as `dragRequest.test.ts` does.
+  - **No case ID** on the new tests (Open questions, for the Reconciler).
+  - **`workflow/CLAUDE.md`** says the column drop is handed `resyncBoard`, and its testing conventions name the new test file.
+  - **Shown to bite.** Five mutations, each caught by a new test:
+    - `handleDragEnd` handing the column drop a bare reload;
+    - `resyncBoard` not ending a live drag;
+    - `resyncBoard` ending it without reloading;
+    - `onColumnDrop` reloading by itself, the regression as it was, which the committed `useColumnManagement` test passed;
+    - `onColumnDrop` swallowing the failure.
+  - **Checks.** `npm run check` passes: 404 server tests, 450 client, 94 script, with no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped, the 8 that were there.

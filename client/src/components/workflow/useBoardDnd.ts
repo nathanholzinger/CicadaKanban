@@ -105,8 +105,11 @@ export interface BoardDndDeps {
   getMergedColumnItems: (coveredWorkphaseIds: readonly string[], isTerminal?: boolean) => Item[];
   /** A Descendants region's own "others" list — the parent's other attached children, placement-aware. */
   getAttachedChildren: (parentId: string) => Item[];
-  /** A column dropped on another column: the reorder, optimistic and saved (`useColumnManagement.ts::onColumnDrop`). */
-  onColumnDrop: (activeId: string, overId: string) => Promise<void>;
+  /**
+   * A column dropped on another column: the reorder, optimistic and saved
+   * (`useColumnManagement.ts::onColumnDrop`), which calls `resync` if the save fails.
+   */
+  onColumnDrop: (activeId: string, overId: string, resync: () => Promise<void>) => Promise<void>;
   loadBoard: () => Promise<void>;
   /** The element the regions are measured under (the DndContext's wrapper). */
   rootRef: RefObject<HTMLElement | null>;
@@ -594,7 +597,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
 
   // A reload swaps the board for "Loading board…", which unmounts the
   // `DndContext` with no `onDragCancel`. One landing during a *later* drag
-  // (a failed or needs-resync write from the previous one) would orphan
+  // (a failed or needs-resync write, or a failed column reorder, from the previous one) would orphan
   // that drag's session: the pointer listener and the pop machine would
   // keep running with the button released, and the reassert effect would
   // re-add its ghost into the reloaded board. So every reload this hook asks
@@ -642,7 +645,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activeId = String(active.id);
 
     if (isColumnData(active.data.current)) {
-      if (over && activeId !== String(over.id)) await deps.onColumnDrop(activeId, String(over.id));
+      if (over && activeId !== String(over.id)) await deps.onColumnDrop(activeId, String(over.id), resyncBoard);
       return;
     }
 

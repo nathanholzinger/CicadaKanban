@@ -51,9 +51,11 @@ export function useColumnManagement(
   }
 
   // A column dropped on another takes its place (wiki boards-columns-unsorted §7): the
-  // board reorders at once, the new order is saved, and a failed save reloads the board
-  // to what the server has.
-  async function onColumnDrop(activeId: string, overId: string) {
+  // board reorders at once, the new order is saved, and a failed save resyncs the board
+  // to what the server has. `resync` is the drag layer's (`useBoardDnd.ts::resyncBoard`),
+  // not a bare `reload`: the failure can land during the next drag, and a reload then
+  // unmounts the drag's `DndContext` and orphans its session.
+  async function onColumnDrop(activeId: string, overId: string, resync: () => Promise<void>) {
     const columns = board?.columns;
     if (!columns) return;
     const oldIndex = columns.findIndex(c => c.id === activeId);
@@ -66,7 +68,7 @@ export function useColumnManagement(
       await reorderColumns(reordered.map((c, i) => ({ id: c.id, position: i + 1 })));
     } catch (err) {
       console.error('Failed to reorder columns:', err);
-      await reload();
+      await resync();
     }
   }
 

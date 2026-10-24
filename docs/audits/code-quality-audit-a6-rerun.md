@@ -316,7 +316,9 @@ Filled in as the audit closes. One row per required finding (#1–2, #4–16, #2
 
 | # | Disposition | Where it landed (routes) |
 |---|---|---|
-| 1–2, 4–11, 13–16, 20–21 | open | — |
+| 1 | Fixed | Batch 6a, `onColumnDrop` takes the drag layer's resync |
+| 5 | Fixed | Batch 6a |
+| 2, 4, 6–11, 13–16, 20–21 | open | — |
 | 12 | Routed | `positioning-on-create-and-edit.md`, Inbound deferrals |
 | 24 | Routed | `epic-4-decisions.md` §12, "Carried in from the A6 first-run audit", the #45 bullet |
 | 25 | Routed | `epic-4-decisions.md` §12, the same block, the #44 bullet |
