@@ -319,7 +319,7 @@ Filled in as the audit closes. One row per required finding (#1–2, #4–16, #2
 | 1 | Fixed | Batch 6a, `onColumnDrop` takes the drag layer's resync |
 | 4 | Fixed | Batch 6c (1 of 2) |
 | 5 | Fixed | Batch 6a |
-| 2, 11, 21 | open | — |
+| 2 | open | — |
 | 6 | Fixed | Batch 6b, with #38 and #39 |
 | 10 | Fixed | Batch 6c (2 of 2), with #41 and #42 |
 | 7 | Fixed | Batch 6d |
@@ -328,6 +328,8 @@ Filled in as the audit closes. One row per required finding (#1–2, #4–16, #2
 | 13 | Fixed | Batch 6d, `getSubtree` |
 | 14 | Fixed | Batch 6d, `sortedChildrenByParent` |
 | 20 | Fixed | Batch 6d |
+| 11 | Fixed | Batch 6e |
+| 21 | Fixed | Batch 6e, with the one test that could pass without its subject |
 | 15 | Fixed | Batch 6b |
 | 16 | Fixed | Batch 6c (1 of 2) |
 | 12 | Routed | `positioning-on-create-and-edit.md`, Inbound deferrals |

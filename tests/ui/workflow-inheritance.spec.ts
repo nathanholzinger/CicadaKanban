@@ -1,8 +1,8 @@
 import { test, expect } from '../fixtures';
 import type { Page } from '@playwright/test';
 import { resetAndSeedDb } from '../helpers/db';
-import { API } from '../helpers/api';
-import { moveItem } from '../helpers/seed';
+import { moveItem, pickWorkphases, seedItem, seedProjects, seedWorkflow } from '../helpers/seed';
+import { article, column } from '../helpers/boardLocators';
 
 // How a project's board relates to its workflow: a project with none of its own
 // inherits its nearest ancestor's, read-only, and one with its own keeps its
@@ -13,102 +13,65 @@ import { moveItem } from '../helpers/seed';
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('items visibility with inherited workflow', () => {
-  let parentId: string;
-  let todoWorkphaseId: string;
+  let childItemId: string;
   let inProgressWorkphaseId: string;
 
   test.beforeAll(async ({ request }) => {
     await resetAndSeedDb();
 
-    const parent = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Parent Project' },
-      })
-    ).json();
-    parentId = parent.id;
-
-    const child = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Child Project', parentId: parent.id },
-      })
-    ).json();
-
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-
-    const workflow = await (
-      await request.post(`${API}/workflows`, {
-        data: { name: 'Parent Project', projectId: parent.id, templateId: flow.id },
-      })
-    ).json();
-
-    const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
-    const inProgress = workflow.workphases.find((p: { name: string }) => p.name === 'In Progress');
-    todoWorkphaseId = todo.id;
+    const ids = await seedProjects(request, [
+      ['Parent Project', null],
+      ['Child Project', 'Parent Project'],
+    ]);
+    const workflow = await seedWorkflow(request, ids['Parent Project'], 'Parent Project', 'flow');
+    const [todo, inProgress] = pickWorkphases(workflow, 'Todo', 'In Progress');
     inProgressWorkphaseId = inProgress.id;
 
     // Seed a parent-owned item and a child-owned item into the parent's workflow
-    await request.post(`${API}/items`, {
-      data: { title: 'Parent-owned item', projectId: parent.id, workphaseId: todoWorkphaseId },
+    await seedItem(request, { title: 'Parent-owned item', projectId: ids['Parent Project'], workphaseId: todo.id });
+    const childItem = await seedItem(request, {
+      title: 'Child-owned item',
+      projectId: ids['Child Project'],
+      workphaseId: todo.id,
     });
-    await request.post(`${API}/items`, {
-      data: { title: 'Child-owned item', projectId: child.id, workphaseId: todoWorkphaseId },
-    });
+    childItemId = childItem.id;
   });
 
   test('item created in parent project appears on the parent board', async ({ page, projectSidebar }) => {
     await projectSidebar.openBoard('Parent Project');
 
-    await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' }),
-    ).toBeVisible();
+    await expect(article(column(page, 'Todo'), 'Parent-owned item')).toBeVisible();
   });
 
   test('item created in parent project is NOT shown on the child inherited board', async ({ page, projectSidebar }) => {
     await projectSidebar.openBoard('Child Project');
 
-    await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Parent-owned item' }),
-    ).not.toBeVisible();
+    await expect(article(column(page, 'Todo'), 'Parent-owned item')).not.toBeVisible();
   });
 
   test('item created in child project appears on the child inherited board', async ({ page, projectSidebar }) => {
     await projectSidebar.openBoard('Child Project');
 
-    await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' }),
-    ).toBeVisible();
+    await expect(article(column(page, 'Todo'), 'Child-owned item')).toBeVisible();
   });
 
   test('item created in child project also appears on the parent board', async ({ page, projectSidebar }) => {
     await projectSidebar.openBoard('Parent Project');
 
-    await expect(
-      page.getByRole('group', { name: 'Todo' }).getByRole('article', { name: 'Child-owned item' }),
-    ).toBeVisible();
+    await expect(article(column(page, 'Todo'), 'Child-owned item')).toBeVisible();
   });
 
   test('moving an item via API is reflected on both boards', async ({ page, request, projectSidebar }) => {
-    // Find the child-owned item
-    const workflowRes = await request.get(`${API}/workflows?projectId=${parentId}`);
-    const workflows = await workflowRes.json();
-    const workflowDetail = await (await request.get(`${API}/workflows/${workflows[0].id}`)).json();
-    const childItem = workflowDetail.items.find((i: { title: string }) => i.title === 'Child-owned item');
-
     // Move it to In Progress via API
-    await moveItem(request, childItem.id, { workphaseId: inProgressWorkphaseId });
+    await moveItem(request, childItemId, { workphaseId: inProgressWorkphaseId });
 
     // Verify on parent board
     await projectSidebar.openBoard('Parent Project');
-    await expect(
-      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' }),
-    ).toBeVisible();
+    await expect(article(column(page, 'In Progress'), 'Child-owned item')).toBeVisible();
 
     // Verify on child board
     await projectSidebar.showBoard('Child Project');
-    await expect(
-      page.getByRole('group', { name: 'In Progress' }).getByRole('article', { name: 'Child-owned item' }),
-    ).toBeVisible();
+    await expect(article(column(page, 'In Progress'), 'Child-owned item')).toBeVisible();
   });
 });
 
@@ -120,22 +83,11 @@ test.describe('inherited workflow is read-only', () => {
   test.beforeAll(async ({ request }) => {
     await resetAndSeedDb();
 
-    const parent = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Owning Project' },
-      })
-    ).json();
-
-    await request.post(`${API}/projects`, {
-      data: { name: 'Inheriting Project', parentId: parent.id },
-    });
-
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-
-    await request.post(`${API}/workflows`, {
-      data: { name: 'Owning Project', projectId: parent.id, templateId: flow.id },
-    });
+    const ids = await seedProjects(request, [
+      ['Owning Project', null],
+      ['Inheriting Project', 'Owning Project'],
+    ]);
+    await seedWorkflow(request, ids['Owning Project'], 'Owning Project', 'flow');
   });
 
   test.beforeEach(async ({ projectSidebar }) => {
@@ -154,7 +106,7 @@ test.describe('inherited workflow is read-only', () => {
   });
 
   test('board and workphase management controls are hidden in the inherited (read-only) view', async ({ page }) => {
-    const todoColumn = page.getByRole('group', { name: 'Todo' });
+    const todoColumn = column(page, 'Todo');
     await expect(todoColumn).toBeVisible();
     // Column edit/delete, board create/rename/delete, and workphase management
     // are all gated behind `readOnly` — none should be reachable here.
@@ -178,50 +130,37 @@ test.describe('inherited workflow is read-only', () => {
 // ─────────────────────────────────────────────────────────────────
 
 test.describe('child project with own workflow', () => {
-  let childTodoWorkphaseId: string;
-
   test.beforeAll(async ({ request }) => {
     await resetAndSeedDb();
 
-    const parent = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Parent With Workflow' },
-      })
-    ).json();
-
-    const child = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Child With Own Workflow', parentId: parent.id },
-      })
-    ).json();
-
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const quick = templates.find((t: { name: string }) => t.name === 'quick');
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-
-    await request.post(`${API}/workflows`, {
-      data: { name: 'Parent With Workflow', projectId: parent.id, templateId: flow.id },
-    });
-
-    const childWorkflow = await (
-      await request.post(`${API}/workflows`, {
-        data: { name: 'Child With Own Workflow', projectId: child.id, templateId: quick.id },
-      })
-    ).json();
-
-    const childTodo = childWorkflow.workphases.find((p: { name: string }) => p.name === 'Todo');
-    childTodoWorkphaseId = childTodo.id;
+    const ids = await seedProjects(request, [
+      ['Parent With Workflow', null],
+      ['Child With Own Workflow', 'Parent With Workflow'],
+    ]);
+    await seedWorkflow(request, ids['Parent With Workflow'], 'Parent With Workflow', 'flow');
+    const childWorkflow = await seedWorkflow(
+      request,
+      ids['Child With Own Workflow'],
+      'Child With Own Workflow',
+      'quick',
+    );
+    const [childTodo] = pickWorkphases(childWorkflow, 'Todo');
 
     // Create an item in the child's own workflow
-    await request.post(`${API}/items`, {
-      data: { title: 'Child-only item', projectId: child.id, workphaseId: childTodoWorkphaseId },
+    await seedItem(request, {
+      title: 'Child-only item',
+      projectId: ids['Child With Own Workflow'],
+      workphaseId: childTodo.id,
     });
   });
 
   test('item in child own workflow is not visible on parent board', async ({ page, projectSidebar }) => {
-    await projectSidebar.openBoard('Parent With Workflow');
+    // On its own board first, so its absence from the parent's is not an item that never rendered.
+    await projectSidebar.openBoard('Child With Own Workflow');
+    await expect(article(column(page, 'Todo'), 'Child-only item')).toBeVisible();
 
-    await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
-    await expect(page.getByRole('article', { name: 'Child-only item' })).not.toBeVisible();
+    await projectSidebar.openBoard('Parent With Workflow');
+    await expect(column(page, 'Todo')).toBeVisible();
+    await expect(article(page, 'Child-only item')).not.toBeVisible();
   });
 });

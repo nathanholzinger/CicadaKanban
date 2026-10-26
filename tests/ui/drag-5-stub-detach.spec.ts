@@ -60,11 +60,11 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     // Toward the front of the list — dnd-kit's own sortable strategy
-    // shifts S1/S2 live as X's ghost approaches, same reflow `dragTo`'s own
-    // header comment documents for a cross-column drop; re-aiming after
-    // the first pass settles targets the real, current layout (which of
-    // S1/S2 ends up the resolved anchor is the sortable strategy's own
-    // call, not this test's concern — a real anchor+side commit is).
+    // shifts S1/S2 live as X's ghost approaches, so the first pass is aimed
+    // at rows that then move; re-aiming after it settles targets the real,
+    // current layout (which of S1/S2 ends up the resolved anchor is the
+    // sortable strategy's own call, not this test's concern — a real
+    // anchor+side commit is).
     await hoverTo(page, await topQuarter(itemRow(page, s1.id)));
     await hoverTo(page, await topQuarter(itemRow(page, s1.id)));
     await release(page);
@@ -310,9 +310,9 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // The second pop (Card → column) lands the moment P's own card shrinks
     // — losing X's nested row — which shifts Q. Wait for that pop to land,
     // then re-aim at Q's *now-settled* position before waiting on the
-    // third clock (the dwell, then cardPopInDelayMs): the same reflow `dragTo`'s own header
-    // comment documents, here caused by the drag itself rather than a
-    // cross-column move.
+    // third clock (the dwell, then cardPopInDelayMs): an aim taken before the
+    // layout shifted points at where Q was, and here the drag itself caused
+    // the shift.
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
     await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));

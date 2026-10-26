@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { API } from '../helpers/api';
+import { seedProject, seedTemplatedWorkflow } from '../helpers/seed';
+import { column } from '../helpers/boardLocators';
 
 // Setting up a workflow for a project that has none: from scratch, from a
 // template, or by copying another project's.
@@ -14,22 +16,11 @@ test.describe('workflow creation', () => {
     await resetAndSeedDb();
 
     // Source project whose workflow can be copied
-    const source = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'Source Project' },
-      })
-    ).json();
-
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-
-    await request.post(`${API}/workflows`, {
-      data: { name: 'Source Project', projectId: source.id, templateId: flow.id },
-    });
+    await seedTemplatedWorkflow(request, 'Source Project');
   });
 
   test('creates a workflow from scratch (custom)', async ({ page, projectSidebar, request }) => {
-    await request.post(`${API}/projects`, { data: { name: 'Scratch Project' } });
+    await seedProject(request, { name: 'Scratch Project' });
 
     await projectSidebar.openBoard('Scratch Project');
 
@@ -38,11 +29,11 @@ test.describe('workflow creation', () => {
 
     // Empty workflow — no workphases yet, board is editable but has no columns
     await expect(page.getByRole('button', { name: 'Manage workphases' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Todo' })).not.toBeVisible();
+    await expect(column(page, 'Todo')).not.toBeVisible();
   });
 
   test('creates a workflow from a template', async ({ page, projectSidebar, request }) => {
-    await request.post(`${API}/projects`, { data: { name: 'Template Project' } });
+    await seedProject(request, { name: 'Template Project' });
 
     await projectSidebar.openBoard('Template Project');
 
@@ -50,14 +41,14 @@ test.describe('workflow creation', () => {
     // /^flow/i anchors to the start of the accessible name, avoiding the "Set up a Workflow" button
     await page.getByRole('button', { name: /^flow/i }).click();
 
-    await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'In Progress' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Review' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
+    await expect(column(page, 'Todo')).toBeVisible();
+    await expect(column(page, 'In Progress')).toBeVisible();
+    await expect(column(page, 'Review')).toBeVisible();
+    await expect(column(page, 'Done')).toBeVisible();
   });
 
   test('creates a workflow by copying from another project', async ({ page, projectSidebar, request }) => {
-    await request.post(`${API}/projects`, { data: { name: 'Copy Project' } });
+    await seedProject(request, { name: 'Copy Project' });
 
     await projectSidebar.openBoard('Copy Project');
 
@@ -69,8 +60,8 @@ test.describe('workflow creation', () => {
       .click();
 
     // Should get the same workphases as Source Project's flow workflow
-    await expect(page.getByRole('group', { name: 'Todo' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Done' })).toBeVisible();
+    await expect(column(page, 'Todo')).toBeVisible();
+    await expect(column(page, 'Done')).toBeVisible();
   });
 
   // App.tsx loads `workflows` and `projects` once, at mount, and learns of a
@@ -84,13 +75,8 @@ test.describe('workflow creation', () => {
     projectSidebar,
     request,
   }) => {
-    const source = await (await request.post(`${API}/projects`, { data: { name: 'Stale Copy Source' } })).json();
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-    await request.post(`${API}/workflows`, {
-      data: { name: 'Stale Copy Source', projectId: source.id, templateId: flow.id },
-    });
-    await request.post(`${API}/projects`, { data: { name: 'Stale Copy Target' } });
+    const { project: source } = await seedTemplatedWorkflow(request, 'Stale Copy Source');
+    await seedProject(request, { name: 'Stale Copy Target' });
 
     // Mount the app while "Stale Copy Source" and its workflow still exist —
     // App.tsx fetches `workflows` and `projects` here, and nothing fetches them
@@ -122,6 +108,6 @@ test.describe('workflow creation', () => {
     await expect(page.getByRole('dialog').getByText(/failed|does not reference/i)).toBeVisible();
 
     // And no workflow should have actually been created for the target project.
-    await expect(page.getByRole('group', { name: 'Todo' })).not.toBeVisible();
+    await expect(column(page, 'Todo')).not.toBeVisible();
   });
 });

@@ -1,25 +1,13 @@
 import { expect, test } from '../fixtures';
-import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
+import { seedProject } from '../helpers/seed';
 
 test.beforeAll(async ({ request }) => {
   await resetAndSeedDb();
 
-  const parent = await (
-    await request.post(`${API}/projects`, {
-      data: { name: 'Parent Project', description: 'A top-level project' },
-    })
-  ).json();
-
-  const child = await (
-    await request.post(`${API}/projects`, {
-      data: { name: 'Child Project', parentId: parent.id },
-    })
-  ).json();
-
-  await request.post(`${API}/projects`, {
-    data: { name: 'Grandchild Project', parentId: child.id },
-  });
+  const parent = await seedProject(request, { name: 'Parent Project', description: 'A top-level project' });
+  const child = await seedProject(request, { name: 'Child Project', parentId: parent.id });
+  await seedProject(request, { name: 'Grandchild Project', parentId: child.id });
 });
 
 test.beforeEach(async ({ page }) => {
@@ -56,7 +44,7 @@ test('selected project persists after page refresh', async ({ page, projectSideb
 });
 
 test('deleting the selected project returns to the placeholder', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Doomed Project' } });
+  await seedProject(request, { name: 'Doomed Project' });
   await page.reload();
   await projectSidebar.select('Doomed Project');
   await expect(page.getByRole('heading', { level: 1, name: 'Doomed Project' })).toBeVisible();
@@ -74,7 +62,7 @@ test('deleting the selected project returns to the placeholder', async ({ page, 
 // is a separate variant — this covers ProjectPage's own main-content
 // self-delete trigger.
 test('a project can be deleted from its own page', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Self Delete Me' } });
+  await seedProject(request, { name: 'Self Delete Me' });
   await page.reload();
   await projectSidebar.select('Self Delete Me');
   await expect(page.getByRole('heading', { level: 1, name: 'Self Delete Me' })).toBeVisible();
@@ -96,8 +84,8 @@ test('starting a project self-delete and navigating away does not leak the confi
   projectSidebar,
   request,
 }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Leak Source' } });
-  await request.post(`${API}/projects`, { data: { name: 'Leak Target' } });
+  await seedProject(request, { name: 'Leak Source' });
+  await seedProject(request, { name: 'Leak Target' });
   await page.reload();
 
   await projectSidebar.select('Leak Source');
@@ -112,7 +100,7 @@ test('starting a project self-delete and navigating away does not leak the confi
 });
 
 test('project name can be edited inline', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Rename Me' } });
+  await seedProject(request, { name: 'Rename Me' });
   await page.reload();
   await projectSidebar.select('Rename Me');
 
@@ -125,7 +113,7 @@ test('project name can be edited inline', async ({ page, projectSidebar, request
 });
 
 test('project name cannot be saved as empty', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Keep My Name' } });
+  await seedProject(request, { name: 'Keep My Name' });
   await page.reload();
   await projectSidebar.select('Keep My Name');
 
@@ -137,7 +125,7 @@ test('project name cannot be saved as empty', async ({ page, projectSidebar, req
 });
 
 test('description can be added when previously empty', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'No Description Yet' } });
+  await seedProject(request, { name: 'No Description Yet' });
   await page.reload();
   await projectSidebar.select('No Description Yet');
 
@@ -149,9 +137,7 @@ test('description can be added when previously empty', async ({ page, projectSid
 });
 
 test('description can be updated', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, {
-    data: { name: 'Update Description', description: 'Original description' },
-  });
+  await seedProject(request, { name: 'Update Description', description: 'Original description' });
   await page.reload();
   await projectSidebar.select('Update Description');
 
@@ -164,9 +150,7 @@ test('description can be updated', async ({ page, projectSidebar, request }) => 
 });
 
 test('description can be cleared', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, {
-    data: { name: 'Clear Description', description: 'Remove me' },
-  });
+  await seedProject(request, { name: 'Clear Description', description: 'Remove me' });
   await page.reload();
   await projectSidebar.select('Clear Description');
 
@@ -191,9 +175,8 @@ test('a subproject can be added from the details page', async ({ page, projectSi
 });
 
 test('a subproject can be deleted from the details page', async ({ page, projectSidebar, request }) => {
-  const parentRes = await request.post(`${API}/projects`, { data: { name: 'Delete Test Parent' } });
-  const { id: parentId } = await parentRes.json();
-  await request.post(`${API}/projects`, { data: { name: 'Delete Test Child', parentId } });
+  const { id: parentId } = await seedProject(request, { name: 'Delete Test Parent' });
+  await seedProject(request, { name: 'Delete Test Child', parentId });
   await page.reload();
   await projectSidebar.select('Delete Test Parent');
 
@@ -208,8 +191,8 @@ test('a subproject can be deleted from the details page', async ({ page, project
 // ── Reparenting ────────────────────────────────────────────────────────────────
 
 test('parent dropdown shows Root, excludes self and all descendants', async ({ page, projectSidebar, request }) => {
-  const p = await (await request.post(`${API}/projects`, { data: { name: 'Picker Parent' } })).json();
-  await request.post(`${API}/projects`, { data: { name: 'Picker Child', parentId: p.id } });
+  const p = await seedProject(request, { name: 'Picker Parent' });
+  await seedProject(request, { name: 'Picker Child', parentId: p.id });
   await page.reload();
   await projectSidebar.select('Picker Parent');
 
@@ -221,8 +204,8 @@ test('parent dropdown shows Root, excludes self and all descendants', async ({ p
 });
 
 test('a subproject can be reparented to root via the parent dropdown', async ({ page, projectSidebar, request }) => {
-  const parent = await (await request.post(`${API}/projects`, { data: { name: 'Repa Parent' } })).json();
-  await request.post(`${API}/projects`, { data: { name: 'Repa Child', parentId: parent.id } });
+  const parent = await seedProject(request, { name: 'Repa Parent' });
+  await seedProject(request, { name: 'Repa Child', parentId: parent.id });
   await page.reload();
   await projectSidebar.select('Repa Child');
 
@@ -235,8 +218,8 @@ test('a subproject can be reparented to root via the parent dropdown', async ({ 
 });
 
 test('a root project can be reparented to become a subproject', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'Adopt Me' } });
-  await request.post(`${API}/projects`, { data: { name: 'Adopt Parent' } });
+  await seedProject(request, { name: 'Adopt Me' });
+  await seedProject(request, { name: 'Adopt Parent' });
   await page.reload();
   await projectSidebar.select('Adopt Me');
 

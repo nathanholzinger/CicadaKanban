@@ -11,7 +11,7 @@ import {
   fetchDefaultBoard,
 } from '../helpers/seed';
 import { center, pickUp, hoverTo, release, seedDragTuning, awaitPoppedOut } from '../helpers/dragGesture';
-import { column, itemPanel, itemRow, titlesIn } from '../helpers/boardLocators';
+import { article, column, itemPanel, itemRow, titlesIn } from '../helpers/boardLocators';
 import { DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 test.describe('attached children on the board', () => {
@@ -435,13 +435,13 @@ test.describe('deleting a Card', () => {
     await projectSidebar.openBoard('Delete Subtree Project');
     const todoColumn = column(page, 'Todo');
     const inProgressColumn = column(page, 'In Progress');
-    await expect(todoColumn.getByRole('article', { name: 'Doomed Parent' }).getByText('Doomed Stub')).toBeVisible();
-    await expect(inProgressColumn.getByRole('article', { name: 'Doomed Detached' })).toBeVisible();
+    await expect(article(todoColumn, 'Doomed Parent').getByText('Doomed Stub')).toBeVisible();
+    await expect(article(inProgressColumn, 'Doomed Detached')).toBeVisible();
 
     // A value on the page itself, which a reload would drop.
     await page.evaluate(() => Object.assign(window, { notReloaded: true }));
 
-    await todoColumn.getByRole('article', { name: 'Doomed Parent' }).click();
+    await article(todoColumn, 'Doomed Parent').click();
     const panel = itemPanel(page);
     await panel.getByRole('button', { name: 'Delete item' }).click();
     await panel.getByRole('button', { name: 'Delete', exact: true }).click();

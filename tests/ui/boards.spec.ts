@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { API } from '../helpers/api';
+import { pickWorkphases, seedItem, seedProject, seedWorkflow } from '../helpers/seed';
 
 // ─────────────────────────────────────────────────────────────────
 // Core board interaction
@@ -13,23 +13,11 @@ test.describe('board basics', () => {
   test.beforeAll(async ({ request }) => {
     await resetAndSeedDb();
 
-    const project = await (
-      await request.post(`${API}/projects`, {
-        data: { name: 'My First Project', description: 'Board test project' },
-      })
-    ).json();
+    const project = await seedProject(request, { name: 'My First Project', description: 'Board test project' });
     projectId = project.id;
 
-    const templates = await (await request.get(`${API}/workflow-templates`)).json();
-    const flow = templates.find((t: { name: string }) => t.name === 'flow');
-
-    const workflow = await (
-      await request.post(`${API}/workflows`, {
-        data: { name: 'My First Project', projectId: project.id, templateId: flow.id },
-      })
-    ).json();
-
-    const todo = workflow.workphases.find((p: { name: string }) => p.name === 'Todo');
+    const workflow = await seedWorkflow(request, project.id, 'My First Project', 'flow');
+    const [todo] = pickWorkphases(workflow, 'Todo');
     todoWorkphaseId = todo.id;
   });
 
@@ -58,9 +46,7 @@ test.describe('board basics', () => {
   });
 
   test('typeless item created via API renders in the Todo workphase', async ({ page, request, projectSidebar }) => {
-    await request.post(`${API}/items`, {
-      data: { title: 'Typeless API item', projectId, workphaseId: todoWorkphaseId },
-    });
+    await seedItem(request, { title: 'Typeless API item', projectId, workphaseId: todoWorkphaseId });
 
     await projectSidebar.openBoard('My First Project');
 

@@ -135,9 +135,8 @@ export async function center(locator: Locator): Promise<Point> {
 // row hovered, in a column, a sub-row or a Descendants section alike:
 // dnd-kit's shuffle decides the ghost's slot, so aim at the row whose slot
 // the ghost should take, and the drop lands there —
-// `dragCollision.ts::dropAnchorFor`'s own lean, not a raw which-half read
-// (`resolveDropSide` reads one only for a row with no sortable position, and an
-// `over` that is no row names no anchor at all).
+// `dragCollision.ts::dropAnchorFor`'s own lean, not a raw which-half read, so
+// long as the dragged item is in the hovered row's list.
 export async function topQuarter(locator: Locator): Promise<Point> {
   return atFraction(locator, 0.15);
 }

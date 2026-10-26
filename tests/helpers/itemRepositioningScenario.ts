@@ -1,6 +1,14 @@
 import type { APIRequestContext } from '@playwright/test';
 import { API } from './api';
-import { addWorkphases, seedBareWorkflow, seedItem, seedPositionedItems, seedProjects, seedWorkflow } from './seed';
+import {
+  addWorkphases,
+  fetchItem,
+  seedBareWorkflow,
+  seedItem,
+  seedPositionedItems,
+  seedProjects,
+  seedWorkflow,
+} from './seed';
 
 export type ScenarioItem = {
   id: string;
@@ -184,7 +192,7 @@ export async function seedAttachedSiblingsScenario(
 // just trusting what PATCH .../move echoed back. Same position+createdAt
 // tie-break convention as orderOf.
 export async function siblingOrder(request: APIRequestContext, parentId: string): Promise<string> {
-  const parentDetail = await (await request.get(`${API}/items/${parentId}`)).json();
+  const parentDetail = await fetchItem(request, parentId);
   const children = parentDetail.children as Array<{ title: string; position: number | null; createdAt: number }>;
   return children
     .slice()

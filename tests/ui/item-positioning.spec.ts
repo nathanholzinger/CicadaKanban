@@ -1,7 +1,14 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { seedTemplatedWorkflow, pickWorkphases, seedItem, moveItem, pinItemPosition } from '../helpers/seed';
+import {
+  seedTemplatedWorkflow,
+  pickWorkphases,
+  seedItem,
+  seedPositionedItems,
+  moveItem,
+  pinItemPosition,
+} from '../helpers/seed';
 import { article, column, itemPanel, titlesIn } from '../helpers/boardLocators';
 
 // The positioning rules a board shows without a drag: the order a column
@@ -55,12 +62,11 @@ test.describe('item positioning on the board', () => {
     const name = 'Inline Create Project';
     const { project, workflow } = await seedTemplatedWorkflow(request, name);
     const [todo] = pickWorkphases(workflow, 'Todo');
-    const a = await seedItem(request, { title: 'High A', projectId: project.id, workphaseId: todo.id });
-    const b = await seedItem(request, { title: 'High B', projectId: project.id, workphaseId: todo.id });
-    // Both seeded before either is pinned: a create after a pin this high would reindex the scope itself.
     // High enough that the next append reindexes the scope first.
-    await pinItemPosition(request, a.id, 1100);
-    await pinItemPosition(request, b.id, 1200);
+    await seedPositionedItems(request, [
+      { key: 'a', projectId: project.id, workphaseId: todo.id, position: 1100, title: 'High A' },
+      { key: 'b', projectId: project.id, workphaseId: todo.id, position: 1200, title: 'High B' },
+    ]);
 
     await projectSidebar.openBoard(name);
     const todoColumn = column(page, 'Todo');
