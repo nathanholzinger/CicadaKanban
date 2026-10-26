@@ -21,6 +21,7 @@ import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
 import { hierarchyRows, sectionEntries } from './workflow/itemListOps';
+import { useHierarchyModal } from './workflow/HierarchyModalContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
@@ -31,7 +32,7 @@ import {
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
 import { ACTIVE_CONTEXT_OUTLINE, DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
-import { AttachGhostRow, AttachedChildRow, OverflowRow, StubBody } from './StubRows';
+import { SectionRows, StubBody } from './StubRows';
 
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
@@ -139,6 +140,10 @@ export default function KanbanCard({
   const zoomCandidatePhase = useZoomCandidatePhase(item.id);
   const dragTuning = useDragTuning();
   const cardDragSession = useDragSession();
+  // While the hierarchy modal holds this Card's rows, the section only shows them: it draws
+  // static and is no region, so the modal's list is the one element for the section's key.
+  const hierarchyModal = useHierarchyModal();
+  const modalOpen = hierarchyModal.openCardId === item.id;
   // The active drag's own ghost row — previewed attaching here, not a real
   // Stub yet — iff this Card *isn't* the drag's containing Card. That
   // excludes a Stub's own home section, whatever its depth there (a
@@ -310,34 +315,24 @@ export default function KanbanCard({
           {rows.length > 0 && getAttachedChildren && (
             <div
               className="mt-2 space-y-1"
-              {...(sectionIsRegion ? dragRegionProps(descendantsRegionKey(item.id)) : {})}
+              {...(sectionIsRegion && !modalOpen ? dragRegionProps(descendantsRegionKey(item.id)) : {})}
             >
-              <SortableContext items={entries.map(e => e.row.id)} strategy={verticalListSortingStrategy}>
-                {entries.map(entry => {
-                  if (entry.kind === 'overflow') return <OverflowRow key={entry.row.id} row={entry.row} />;
-                  const { item: child, depth } = entry.row;
-                  const isActiveRow = child.id === cardDragSession?.activeItem.id;
-                  // The active drag's own row previews the projected depth,
-                  // not its stored one.
-                  const rowDepth = descendantsProjection && isActiveRow ? descendantsProjection.depth : depth;
-                  const invalid = Boolean(descendantsProjection && isActiveRow && !descendantsProjection.valid);
-                  // This row is the active drag's own ghost (previewed
-                  // attaching here, not a real Stub yet) — an inert preview,
-                  // not a row (`StubRows.tsx::AttachGhostRow` says why).
-                  return child.id === attachGhostId ? (
-                    <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={rowDepth} />
-                  ) : (
-                    <AttachedChildRow
-                      key={child.id}
-                      item={child}
-                      itemTypes={itemTypes}
-                      depth={rowDepth}
-                      onCardClick={onCardClick}
-                      invalid={invalid}
-                    />
-                  );
-                })}
-              </SortableContext>
+              {modalOpen ? (
+                <SectionRows isStatic entries={entries} cardId={item.id} itemTypes={itemTypes} projection={null} />
+              ) : (
+                <SortableContext items={entries.map(e => e.row.id)} strategy={verticalListSortingStrategy}>
+                  <SectionRows
+                    entries={entries}
+                    cardId={item.id}
+                    itemTypes={itemTypes}
+                    attachGhostId={attachGhostId}
+                    projection={descendantsProjection}
+                    activeId={cardDragSession?.activeItem.id}
+                    onCardClick={onCardClick}
+                    onOpenOverflow={() => hierarchyModal.open(item.id)}
+                  />
+                </SortableContext>
+              )}
             </div>
           )}
         </>

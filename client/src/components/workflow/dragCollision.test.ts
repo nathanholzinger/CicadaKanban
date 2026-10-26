@@ -76,12 +76,17 @@ describe('resolveBoardCollisions', () => {
   // and under any real `parentId`.
   it("scopes a Descendants context's collisions to every Stub row inside the section's rect, any real parent", () => {
     const sectionRect = rect(0, 0, 100, 400);
-    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const session: CollisionSession = {
+      hoverContainerId: null,
+      context: null,
+      descendantsSectionRect: sectionRect,
+      descendantsCardId: 'card-p',
+    };
     const result = resolveBoardCollisions(
-      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
-        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) }, // inside, true sibling
-        { id: 'grandchild-c', data: itemRowData('stub', 'parent-2'), rect: rect(5, 40, 90, 20) }, // inside, different real parent — still a candidate
-        { id: 'other-section-d', data: itemRowData('stub', 'parent-3'), rect: rect(500, 0, 90, 20) }, // outside the rect — a different card's section
+      collisionArgs('child-a', itemRowData('stub', 'parent-1', 'card-p'), [
+        { id: 'child-b', data: itemRowData('stub', 'parent-1', 'card-p'), rect: rect(5, 10, 90, 20) }, // inside, true sibling
+        { id: 'grandchild-c', data: itemRowData('stub', 'parent-2', 'card-p'), rect: rect(5, 40, 90, 20) }, // inside, different real parent — still a candidate
+        { id: 'other-section-d', data: itemRowData('stub', 'parent-3', 'card-p'), rect: rect(500, 0, 90, 20) }, // outside the rect — a different card's section
         { id: 'col-1', data: columnData(), rect: rect(0, 0, 100, 400) }, // never a valid target for a Descendants-context drag
       ]),
       session,
@@ -92,15 +97,45 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).not.toContain('col-1');
   });
 
+  // The hierarchy modal is drawn over the board, so another Card's rows can lie inside its rect:
+  // only the context Card's own rows are candidates.
+  it("a Descendants context: a row of another Card's section inside the rect is no candidate", () => {
+    const session: CollisionSession = {
+      hoverContainerId: null,
+      context: null,
+      descendantsSectionRect: rect(0, 0, 100, 400),
+      descendantsCardId: 'card-p',
+    };
+    const ids = resolveBoardCollisions(
+      collisionArgs('child-a', itemRowData('stub', 'parent-1', 'card-p'), [
+        { id: 'mine', data: itemRowData('stub', 'parent-1', 'card-p'), rect: rect(5, 10, 90, 20) },
+        { id: 'theirs', data: itemRowData('stub', 'other-parent', 'card-q'), rect: rect(5, 40, 90, 20) },
+        { id: 'theirs-overflow', data: itemRowData('overflow', 'x', 'card-q'), rect: rect(5, 70, 90, 20) },
+        { id: 'unowned', data: itemRowData('stub', 'parent-1'), rect: rect(5, 100, 90, 20) },
+      ]),
+      session,
+    ).map(c => c.id);
+    expect(ids).toEqual(['mine']);
+  });
+
   // An overflow row slides with the Stubs, so it's a candidate beside them; it is no target
   // for a drop at the Card layer or the Board.
   it('a Descendants context: an overflow row inside the section is a candidate', () => {
     const sectionRect = rect(0, 0, 100, 400);
-    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const session: CollisionSession = {
+      hoverContainerId: null,
+      context: null,
+      descendantsSectionRect: sectionRect,
+      descendantsCardId: 'card-p',
+    };
     const ids = resolveBoardCollisions(
-      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
-        { id: overflowRowId('child-b'), data: itemRowData('overflow', 'child-b'), rect: rect(5, 40, 90, 20) },
-        { id: overflowRowId('elsewhere'), data: itemRowData('overflow', 'elsewhere'), rect: rect(500, 0, 90, 20) },
+      collisionArgs('child-a', itemRowData('stub', 'parent-1', 'card-p'), [
+        { id: overflowRowId('child-b'), data: itemRowData('overflow', 'child-b', 'card-p'), rect: rect(5, 40, 90, 20) },
+        {
+          id: overflowRowId('elsewhere'),
+          data: itemRowData('overflow', 'elsewhere', 'card-p'),
+          rect: rect(500, 0, 90, 20),
+        },
       ]),
       session,
     ).map(c => c.id);
@@ -122,11 +157,16 @@ describe('resolveBoardCollisions', () => {
   // excluding the dragged row moves the gap to a neighbor's, one off.
   it("a Descendants context: the dragged Stub's own row is a candidate too", () => {
     const sectionRect = rect(0, 0, 100, 400);
-    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const session: CollisionSession = {
+      hoverContainerId: null,
+      context: null,
+      descendantsSectionRect: sectionRect,
+      descendantsCardId: 'card-p',
+    };
     const ids = resolveBoardCollisions(
-      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
-        { id: 'child-a', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) },
-        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 40, 90, 20) },
+      collisionArgs('child-a', itemRowData('stub', 'parent-1', 'card-p'), [
+        { id: 'child-a', data: itemRowData('stub', 'parent-1', 'card-p'), rect: rect(5, 10, 90, 20) },
+        { id: 'child-b', data: itemRowData('stub', 'parent-1', 'card-p'), rect: rect(5, 40, 90, 20) },
       ]),
       session,
     ).map(c => c.id);
@@ -143,10 +183,15 @@ describe('resolveBoardCollisions', () => {
   // the stale active data.
   it("never reads the active row's own role — a stale 'card' role alongside a live Descendants session still scopes correctly", () => {
     const sectionRect = rect(0, 0, 100, 400);
-    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const session: CollisionSession = {
+      hoverContainerId: null,
+      context: null,
+      descendantsSectionRect: sectionRect,
+      descendantsCardId: 'card-p',
+    };
     const result = resolveBoardCollisions(
       collisionArgs('child-a', itemRowData('card'), [
-        { id: 'child-b', data: itemRowData('stub', 'parent-1'), rect: rect(5, 10, 90, 20) },
+        { id: 'child-b', data: itemRowData('stub', 'parent-1', 'card-p'), rect: rect(5, 10, 90, 20) },
         { id: 'card-c', data: itemRowData('card'), rect: rect(5, 40, 90, 20) }, // never a candidate — a Card row, not a Stub
       ]),
       session,
@@ -165,7 +210,12 @@ describe('resolveBoardCollisions', () => {
     ];
 
     it('in-context: only the context container and the cards inside it are candidates', () => {
-      const session: CollisionSession = { hoverContainerId: null, context, descendantsSectionRect: null };
+      const session: CollisionSession = {
+        hoverContainerId: null,
+        context,
+        descendantsSectionRect: null,
+        descendantsCardId: null,
+      };
       const ids = resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(
         c => c.id,
       );
@@ -181,7 +231,12 @@ describe('resolveBoardCollisions', () => {
     // `over` itself and nothing shuffles. Only a drag with no session never
     // collides with itself (the describe's first case).
     it("in-context: the dragged card's own row is a candidate too", () => {
-      const session: CollisionSession = { hoverContainerId: null, context, descendantsSectionRect: null };
+      const session: CollisionSession = {
+        hoverContainerId: null,
+        context,
+        descendantsSectionRect: null,
+        descendantsCardId: null,
+      };
       const own: Container = { id: 'card-x', data: itemRowData('card'), rect: rect(5, 70, 90, 50) };
       const ids = resolveBoardCollisions(
         collisionArgs('card-x', itemRowData('card'), [...containers, own]),
@@ -191,14 +246,24 @@ describe('resolveBoardCollisions', () => {
     });
 
     it("hovering another region: `over` is exactly that region's container, never a card in it", () => {
-      const session: CollisionSession = { hoverContainerId: 'col-b', context, descendantsSectionRect: null };
+      const session: CollisionSession = {
+        hoverContainerId: 'col-b',
+        context,
+        descendantsSectionRect: null,
+        descendantsCardId: null,
+      };
       expect(
         resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session).map(c => c.id),
       ).toEqual(['col-b']);
     });
 
     it('no context (picked up in Unsorted) and no hover: nothing to collide with', () => {
-      const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: null };
+      const session: CollisionSession = {
+        hoverContainerId: null,
+        context: null,
+        descendantsSectionRect: null,
+        descendantsCardId: null,
+      };
       expect(resolveBoardCollisions(collisionArgs('card-x', itemRowData('card'), containers), session)).toHaveLength(0);
     });
   });

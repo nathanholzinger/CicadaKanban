@@ -254,6 +254,14 @@ describe('placementFor', () => {
       expect(placementFor(stub(startPopSession(descendantsP.key), null), [descendantsP])).toBe(origin);
     });
 
+    // A Stub of this Card whose own slot the section doesn't draw has no row to hold a ghost.
+    it('DRAG-7.6: at its own Descendants section with its own slot hidden, it previews as the last child', () => {
+      const hidden = { ...stub(startPopSession(descendantsP.key), null), projection: { slotHidden: true } };
+      expect(placementFor(hidden, [descendantsP])).toEqual({ parentId: cardP.attachToCardId, slot: 'last' });
+      const drawn = { ...stub(startPopSession(descendantsP.key), null), projection: { slotHidden: false } };
+      expect(placementFor(drawn, [descendantsP])).toBe(origin);
+    });
+
     it('DRAG-6.12: reaching a card-list region previews Free (parentId: null) and rests at "last", never the position-sort\'s stale slot', () => {
       // activeItemPosition is a real number here on purpose — a Stub's own
       // attached-siblings-scope position, which must NOT be read as "a

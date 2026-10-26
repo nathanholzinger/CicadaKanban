@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
   CARD_LIST_REGION_SELECTOR,
+  DRAG_PARENT_REGION_ATTR,
   DRAG_REGION_ATTR,
   cardRegionKey,
   childRegionAt,
@@ -8,12 +9,23 @@ import {
   containsPoint,
   descendantsCardIdOf,
   descendantsRegionKey,
+  dragRegionProps,
   isCardList,
   parseRegionKey,
   subrowContainerId,
   subrowRegionKey,
 } from './dragRegions';
 import { cardRegion, descendantsRegion, rect, region, regionEl } from '../../test/dragFixtures';
+
+describe('dragRegionProps', () => {
+  it('registers an element under its key, and names a parent only when it is given one', () => {
+    expect(dragRegionProps('card:p')).toEqual({ [DRAG_REGION_ATTR]: 'card:p' });
+    expect(dragRegionProps('descendants:p', 'card:p')).toEqual({
+      [DRAG_REGION_ATTR]: 'descendants:p',
+      [DRAG_PARENT_REGION_ATTR]: 'card:p',
+    });
+  });
+});
 
 describe('subrowContainerId', () => {
   it('encodes column and workphase into the droppable id', () => {

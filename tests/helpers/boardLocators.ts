@@ -31,6 +31,11 @@ export function itemRow(page: Page, id: string): Locator {
   return page.locator(`[data-item-id="${id}"]`);
 }
 
+// The hierarchy modal of the Card titled `cardTitle` (`HierarchyModal.tsx`).
+export function hierarchyModal(page: Page, cardTitle: string): Locator {
+  return page.getByRole('dialog', { name: `Hierarchy of ${cardTitle}`, exact: true });
+}
+
 // The overflow row standing in for the hidden children of the row `ownerId`
 // (`StubRows.tsx::OverflowRow`). It is no item, so it has no `data-item-id`.
 export function overflowRow(page: Page, ownerId: string): Locator {

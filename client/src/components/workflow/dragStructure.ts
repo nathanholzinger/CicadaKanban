@@ -12,6 +12,7 @@
 
 import {
   DRAG_CARD_COUNT_ATTR,
+  DRAG_PARENT_REGION_ATTR,
   DRAG_REGION_ATTR,
   isCardList,
   parseRegionKey,
@@ -242,7 +243,9 @@ function cardCountOf(el: HTMLElement): number {
 
 // The region that contains this element — for a Card, its column/sub-row;
 // for a Descendants section, its Card — walking up the DOM to the nearest
-// ancestor that also carries `[data-drag-region]`. Safe as a simple walk
+// ancestor that also carries `[data-drag-region]`. An element that names its
+// parent (`DRAG_PARENT_REGION_ATTR`: the hierarchy modal, drawn apart from its
+// Card) is not walked for. Safe as a simple walk
 // (never has to consider a *second* card in between): only a top-level,
 // still-Free Card registers a region at all (an already-attached Stub's row
 // carries no `[data-drag-region]`), so nothing nests a card region inside
@@ -250,6 +253,8 @@ function cardCountOf(el: HTMLElement): number {
 // region, which shouldn't happen) means no region at all — same as an id
 // `isValidCard` rejects.
 function findParentRegionKey(el: HTMLElement, root: ParentNode): string | null {
+  const named = el.getAttribute(DRAG_PARENT_REGION_ATTR);
+  if (named) return named;
   for (let node = el.parentElement; node && node !== root; node = node.parentElement) {
     const key = node.getAttribute(DRAG_REGION_ATTR);
     if (key) return key;

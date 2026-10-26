@@ -23,11 +23,13 @@ import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels, typ
 import type { DescendantsProjection } from './DragSessionContext';
 
 // What the depth is measured from: the gap and depth the section was
-// entered at, and where the pointer was then.
+// entered at, and where the pointer was then. `slotHidden`: the dragged Stub's
+// own slot is one the section doesn't draw, so it entered as an item from outside.
 interface ProjectionSeed {
   gap: number;
   depth: number;
   pointerX: number;
+  slotHidden: boolean;
 }
 
 export interface ProjectionState {
@@ -57,7 +59,9 @@ export interface ProjectionSample {
 // (wiki board-drag-interaction §7): the drag's own section seeds at the
 // dragged row's own slot and depth, so resting still resolves to where it
 // came from; any other section seeds at its last gap at depth 0, the Card's
-// last child, where the Card layer's auto-drop showed it. Never at the last
+// last child, where the Card layer's auto-drop showed it. So does the drag's
+// own section when its slot is at a level the section doesn't draw: that
+// slot has no row to hold a ghost. Never at the last
 // row's depth: when that row is nested, the ghost would become its sibling.
 // Then the gap follows the named row — the same "the gap is the ghost's
 // slot" rule Column layer uses — or, with no row named (a hover over the
@@ -75,10 +79,11 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   const allRows = toRows(hierarchyRows(cardId, getAttachedChildren));
   const rows = toRows(allRows, exclude);
 
-  const own = cardId === sample.originCardId ? ownSlotOf(allRows, classification.activeId) : null;
+  const ownRow = cardId === sample.originCardId ? ownSlotOf(allRows, classification.activeId) : null;
+  const own = ownRow && ownRow.depth < shownLevels(sample.sectionLevels) ? ownRow : null;
   const seed =
     !state.seed || sample.contextKey !== sample.previousContextKey
-      ? seedFor(own, rows, sample.pointerX ?? 0)
+      ? seedFor(own, ownRow !== null && own === null, rows, sample.pointerX ?? 0)
       : state.seed;
   const previousGap = seed === state.seed ? (state.projection?.gap ?? null) : null;
 
@@ -101,8 +106,8 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   // drag-start snapshot, as the gate that decides whether this section was
   // a region at all.
   const valid = isValidParent(classification, placement.parentId ?? cardId);
-  const atOwnSlot = own !== null && gap === own.gap && depth === own.depth;
-  return { seed, projection: { gap, depth, valid, resolved: placement, atOwnSlot } };
+  const atOwnSlot = !seed.slotHidden && own !== null && gap === own.gap && depth === own.depth;
+  return { seed, projection: { gap, depth, valid, resolved: placement, atOwnSlot, slotHidden: seed.slotHidden } };
 }
 
 // The gap a named neighbor puts the ghost in, among all the section's rows. An item's row
@@ -127,9 +132,14 @@ function gapForAnchor(rows: readonly Row[], anchor: AnchorRelation): number {
 // from the Card layer, and that entry seeds where the Card layer showed the
 // ghost. The depth step itself is shared
 // (`hierarchyPlacement.ts::computeProjection`).
-function seedFor(own: { gap: number; depth: number } | null, rows: readonly Row[], pointerX: number): ProjectionSeed {
-  if (own) return { gap: own.gap, depth: own.depth, pointerX };
-  return { gap: rows.length, depth: 0, pointerX };
+function seedFor(
+  own: { gap: number; depth: number } | null,
+  slotHidden: boolean,
+  rows: readonly Row[],
+  pointerX: number,
+): ProjectionSeed {
+  if (own) return { gap: own.gap, depth: own.depth, pointerX, slotHidden };
+  return { gap: rows.length, depth: 0, pointerX, slotHidden };
 }
 
 // Whether two projections draw the same thing: `resolved` follows from the

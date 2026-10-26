@@ -37,6 +37,12 @@ export interface DescendantsProjection {
    * (wiki board-drag-interaction §7.1).
    */
   atOwnSlot: boolean;
+  /**
+   * The dragged Stub's own slot is one this section doesn't draw (a level past the last shown
+   * one), so it came in as an item from outside does: at the Card's last gap, as its last
+   * child, and `atOwnSlot` never holds. Read by `placement.ts::placementFor`.
+   */
+  slotHidden: boolean;
 }
 
 // Everything about the drag in progress, in one value: the carried item,

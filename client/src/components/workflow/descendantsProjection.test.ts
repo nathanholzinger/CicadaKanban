@@ -58,6 +58,7 @@ describe('advanceProjection', () => {
       valid: true,
       resolved: { parentId: P, anchor: { anchorId: 'S1', side: 'after' } },
       atOwnSlot: true,
+      slotHidden: false,
     });
   });
 
@@ -76,6 +77,7 @@ describe('advanceProjection', () => {
       valid: true,
       resolved: { parentId: P, anchor: { anchorId: 'S3', side: 'after' } },
       atOwnSlot: false,
+      slotHidden: false,
     });
     // A release right away commits the Card layer's own attach: last among P's children.
     expect(descendantsReleasePlacement(projection, P)).toEqual({
@@ -235,6 +237,53 @@ describe('advanceProjection under a cut-off section', () => {
 
   it('reads an owner that is no row as no row named: below everything', () => {
     expect(hover({ anchorId: overflowRowId('gone'), side: 'before' })).toMatchObject({ gap: 8, depth: 0 });
+  });
+
+  // A Stub picked up in the hierarchy modal and pulled back into the section: its own slot may be
+  // behind an overflow row, where the section can't draw a ghost.
+  describe('a Stub whose own slot the section does not draw', () => {
+    const own = (id: string, fields: Partial<ProjectionSample> = {}): ProjectionSample => ({
+      ...deepSample({ classification: classifyDragTargets(id, deep, 20), originCardId: P }),
+      ...fields,
+    });
+
+    it('DRAG-7.6: comes in as an item from outside does: the last gap, as the Card’s last child', () => {
+      const { projection } = advanceProjection(NO_PROJECTION, own('R1'));
+      expect(projection).toEqual({
+        gap: 6,
+        depth: 0,
+        valid: true,
+        resolved: { parentId: P, anchor: { anchorId: 'B', side: 'after' } },
+        atOwnSlot: false,
+        slotHidden: true,
+      });
+      // A release right away moves it there.
+      expect(descendantsReleasePlacement(projection, P)).toEqual({
+        parentId: P,
+        slot: { anchorId: 'B', side: 'after' },
+      });
+    });
+
+    it('DRAG-7.6: stays one when the ghost previews at the Card’s last child, so a release there still writes', () => {
+      // After the first sample its ghost is previewed as P's last child, drawn at depth 0.
+      const previewed = new Map([['R1', { parentId: P, slot: 'last' as const }]]);
+      const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(deep, parentId, previewed);
+      const entered = advanceProjection(NO_PROJECTION, own('R1'));
+      const held = advanceProjection(entered, own('R1', { previousContextKey: section, getAttachedChildren }));
+      expect(held.projection).toMatchObject({ gap: 6, depth: 0, atOwnSlot: false, slotHidden: true });
+      expect(descendantsReleasePlacement(held.projection, P)).not.toBeNull();
+    });
+
+    it('DRAG-7.6: a Stub whose slot the section draws starts in its own slot, as before', () => {
+      // R is at the last shown level, so its own slot is drawn.
+      const { projection } = advanceProjection(NO_PROJECTION, own('R'));
+      expect(projection).toMatchObject({ gap: 2, depth: 2, atOwnSlot: true, slotHidden: false });
+    });
+
+    it('in the hierarchy modal, which draws every level, its own slot is its own', () => {
+      const { projection } = advanceProjection(NO_PROJECTION, own('R1', { sectionLevels: Infinity }));
+      expect(projection).toMatchObject({ gap: 3, depth: 3, atOwnSlot: true, slotHidden: false });
+    });
   });
 
   it('shows no overflow row, and clamps nothing, once the levels it holds are all shown', () => {

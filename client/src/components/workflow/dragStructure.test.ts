@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
+  DRAG_PARENT_REGION_ATTR,
   DRAG_REGION_ATTR,
   cardRegionKey,
   columnRegionKey,
@@ -210,6 +211,31 @@ describe('resolveDragStructure / measureRegions', () => {
     );
     const regions = measureRegions(structure, cardRegionKey('card-q'));
     expect(regions.find(r => r.kind === 'descendants')).toBeUndefined();
+  });
+
+  // The hierarchy modal is drawn apart from its Card, so no walk up the DOM from its list
+  // reaches the Card: the element names it.
+  it('a section element outside its Card in the DOM resolves under the parent it names', () => {
+    const card = regionEl(cardRegionKey('card-p'), rect(0, 0, 100, 200));
+    document.body.append(regionEl(columnRegionKey('col-1'), rect(0, 0, 300, 400), card));
+    const apart = regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300));
+    apart.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));
+    document.body.append(apart);
+
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
+    const regions = measureRegions(structure, cardRegionKey('card-p'));
+    expect(regions.find(r => r.kind === 'descendants')).toMatchObject({
+      key: descendantsRegionKey('card-p'),
+      cardId: 'card-p',
+      parentRegionKey: cardRegionKey('card-p'),
+      rect: rect(500, 0, 200, 300),
+    });
+  });
+
+  it('a section element outside any region that names no parent resolves to nothing', () => {
+    document.body.append(regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300)));
+    const structure = resolveDragStructure(document, [], () => true, 'card-p');
+    expect(structure).toEqual([]);
   });
 
   // The origin's own `card:` element resolves regardless of `isValidCard`:

@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem } from '../helpers/seed';
@@ -14,7 +14,8 @@ import {
   type Point,
 } from '../helpers/dragGesture';
 import { article, itemRow, overflowRow } from '../helpers/boardLocators';
-import { DRAG_REGION_ATTR, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { sectionRows, seedOverflowTree } from '../helpers/overflowTree';
+import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
@@ -30,40 +31,6 @@ test.beforeEach(async () => {
 });
 
 const L = DEFAULT_DRAG_TUNING.sectionLevels;
-
-// The tree, with `L` at its default of 3. Card `P` in Todo holds A, then B, then X. A holds Q,
-// which holds R and T; R holds R1 (which holds R1a) and R2, and has a Free child F; T has only
-// a Free child G. So the section's rows are A, Q, R, R's overflow row, T, B and X.
-async function seedTree(request: APIRequestContext, name: string) {
-  const { project, workflow } = await seedTemplatedWorkflow(request, name);
-  const [todo] = pickWorkphases(workflow, 'Todo');
-  const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-  const child = (title: string, parent: { id: string }) => seedItem(request, { title, parentId: parent.id });
-  const free = (title: string, parent: { id: string }) =>
-    seedItem(request, { title, parentId: parent.id, isAttached: false, workphaseId: todo.id });
-  const a = await child('A', p);
-  const q = await child('Q', a);
-  const r = await child('R', q);
-  const t = await child('T', q);
-  const r1 = await child('R1', r);
-  const r2 = await child('R2', r);
-  const r1a = await child('R1a', r1);
-  const f = await free('F', r);
-  const g = await free('G', t);
-  const b = await child('B', p);
-  const x = await child('X', p);
-  return { project, p, a, q, r, t, r1, r2, r1a, f, g, b, x };
-}
-
-// The ids of what P's section draws, in order: an item's id, or `overflow:<owner id>`.
-async function sectionRows(page: Page, cardId: string): Promise<string[]> {
-  const section = page.locator(`[${DRAG_REGION_ATTR}="${descendantsRegionKey(cardId)}"]`);
-  return section
-    .locator('[data-item-id], [data-overflow-row]')
-    .evaluateAll(els =>
-      els.map(el => el.getAttribute('data-item-id') ?? `overflow:${el.getAttribute('data-overflow-row')}`),
-    );
-}
 
 // Picks X up in its own section and aims the carried copy at the top of `target`, `depth` levels
 // in from where X's own row starts: its own depth, 0, is where the seed puts it.
@@ -86,7 +53,7 @@ test('DRAG-7.1, DRAG-7.2: a section shows L levels below its Card, and an overfl
   projectSidebar,
 }) => {
   const name = 'Overflow Row Render Project';
-  const { p, a, q, r, t, r1, r2, r1a, f, g, b, x } = await seedTree(request, name);
+  const { p, a, q, r, t, r1, r2, r1a, f, g, b, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
 
@@ -139,7 +106,7 @@ test('DRAG-7.1, DRAG-1.34: the level count is a tuning-panel value, taken at onc
   projectSidebar,
 }) => {
   const name = 'Overflow Row Tuning Project';
-  const { p, a, q, r, t, r1, r2, r1a, b, x } = await seedTree(request, name);
+  const { p, a, q, r, t, r1, r2, r1a, b, x } = await seedOverflowTree(request, name);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await expect(overflowRow(page, r.id)).toHaveText('2 children');
@@ -176,7 +143,7 @@ test('DRAG-7.3, DRAG-7.2: between a row and its overflow row, the one state is t
   projectSidebar,
 }) => {
   const name = 'Overflow Row First Child Project';
-  const { p, r, r1, x } = await seedTree(request, name);
+  const { p, r, r1, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
 
@@ -206,7 +173,7 @@ test('DRAG-7.4, DRAG-7.2: below an overflow row, the item is the row’s last ch
   projectSidebar,
 }) => {
   const name = 'Overflow Row Last Child Project';
-  const { p, r, r2, t, x } = await seedTree(request, name);
+  const { p, r, r2, t, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
 
@@ -239,7 +206,7 @@ test('DRAG-7.4: tabbed left of the overflow row, the item is R’s next sibling,
   projectSidebar,
 }) => {
   const name = 'Overflow Row Next Sibling Project';
-  const { p, q, r, t, x } = await seedTree(request, name);
+  const { p, q, r, t, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
 
@@ -263,7 +230,7 @@ test('DRAG-7.5: below a last-level row with no attached children, one tab right 
   projectSidebar,
 }) => {
   const name = 'Overflow Row Only Child Project';
-  const { p, t, g, b, x } = await seedTree(request, name);
+  const { p, t, g, b, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
 
@@ -290,7 +257,7 @@ test('DRAG-7.1, DRAG-1.34: the drop math takes the level count the section is dr
   projectSidebar,
 }) => {
   const name = 'Overflow Row Level Count Drop Project';
-  const { p, r1, r2, t, x } = await seedTree(request, name);
+  const { p, r1, r2, t, x } = await seedOverflowTree(request, name);
   await seedDragTuning(page, { ...NO_POP, sectionLevels: L + 1 });
   await projectSidebar.openBoard(name);
 

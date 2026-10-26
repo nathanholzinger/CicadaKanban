@@ -23,11 +23,24 @@ import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 // overflow row is a section row that is no item: it slides with the Stubs and
 // can be named as a neighbor, and nothing about it is a drag source.
 export type ItemRowRole = 'card' | 'stub' | 'overflow';
-export type ItemRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null };
+// A section row also names the Card whose section it is a row of (`sectionCardId`): the
+// hierarchy modal is drawn over the board, so a row's place on screen no longer says whose
+// section it belongs to.
+export type ItemRowData = {
+  type: 'item';
+  role: ItemRowRole;
+  parentId?: string | null;
+  sectionCardId?: string;
+};
 export type DragRowData = ItemRowData | { type: 'column' };
 
-export function itemRowData(role: ItemRowRole, parentId?: string | null): DragRowData {
-  return parentId !== undefined ? { type: 'item', role, parentId } : { type: 'item', role };
+export function itemRowData(role: ItemRowRole, parentId?: string | null, sectionCardId?: string): DragRowData {
+  return {
+    type: 'item',
+    role,
+    ...(parentId !== undefined ? { parentId } : {}),
+    ...(sectionCardId !== undefined ? { sectionCardId } : {}),
+  };
 }
 
 export function columnData(): DragRowData {
@@ -70,13 +83,20 @@ export interface CollisionSession {
   context: { containerId: string; rect: Rect } | null;
   /**
    * Locked at a Descendants context, that region's own measured rect —
-   * candidates are every section row (a Stub at any depth, or an overflow row) whose center falls inside it,
+   * candidates are every section row (a Stub at any depth, or an overflow row) of the
+   * context's own Card (`descendantsCardId`) whose center falls inside it,
    * the same rect-containment test the column branch below uses for its own
    * in-context candidates. The section renders as one flat list, so "is this
    * row inside the section" is the whole scope: any row of the section, at
    * any depth, can be the ghost's neighbor. Null at every other context.
    */
   descendantsSectionRect: Rect | null;
+  /**
+   * The Card whose section `descendantsSectionRect` bounds, null at every other context. A row
+   * must belong to it: the hierarchy modal is drawn over the board, so rows of other Cards'
+   * sections can lie inside its rect.
+   */
+  descendantsCardId: string | null;
 }
 
 // `over` is what drives dnd-kit's sortable shifting and the side indicator,
@@ -128,7 +148,8 @@ export function resolveBoardCollisions(
     // safe: the two differ only while the Card carries a sortable transform,
     // which at the default clocks can't overlap a Descendants lock.
     const droppableContainers = args.droppableContainers.filter(container => {
-      if (!isSectionRow(container.data.current)) return false;
+      const data = container.data.current;
+      if (!isSectionRow(data) || data?.sectionCardId !== session.descendantsCardId) return false;
       const rect = args.droppableRects.get(container.id);
       return rect !== undefined && rectCenterInside(rect, sectionRect);
     });

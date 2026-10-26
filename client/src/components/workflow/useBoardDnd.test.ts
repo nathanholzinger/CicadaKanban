@@ -46,6 +46,8 @@ function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
     onColumnDrop,
     loadBoard: vi.fn().mockResolvedValue(undefined),
     rootRef: { current: null },
+    hierarchyModalCardId: null,
+    closeHierarchyModal: vi.fn(),
   };
 }
 

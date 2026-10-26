@@ -195,14 +195,16 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 | `client/src/components/ProjectSidebar.tsx`, `sidebar/useSidebarResize.ts`, `sidebar/sidebarWidth.ts` | D2: the aside takes the width; its list scrolls in a box inside it, so the handle on the aside's right edge stays put. The hook is the handle's pointer handlers, and the module holds the default, the limits and the storage |
 | `client/src/components/workflow/dragTuning.ts::DragTuning`, `client/src/components/DragTuningPanel.tsx` | D3's section depth, as `sectionLevels` (default 3), with its panel field; E3's hold comes with Phase 4 |
 | `client/src/components/workflow/itemListOps.ts::sectionEntries`, with `shownLevels`, `overflowRowId` and `overflowOwnerOf`, beside `hierarchyRows` | D3–D5, E1: the rows the section draws, an overflow row under each last-level row that has attached children. The render and the drop math both read the level count through `shownLevels` |
-| `client/src/components/StubRows.tsx::OverflowRow` | D4: the overflow row. It is no drag source, carries `data-overflow-row` and no `data-item-id`, and does nothing on a click until Phase 3 |
-| `client/src/components/KanbanCard.tsx` | D3, D4: the section's render, through `sectionEntries`; E2: no registration while the modal is open (Phase 3) |
-| `client/src/components/workflow/dragCollision.ts` (row data) | E1: the row role `'overflow'`, with `isOverflowRow` and `isSectionRow` (a collision candidate in a section, no Card-layer target, a Stub row's ghost height), and `travelingRowsFor` stepping past the overflow row of a traveling row |
+| `client/src/components/StubRows.tsx::OverflowRow`, `SectionRows` | D4: the overflow row, a button that opens the modal, with no drag source (a press on it goes no further than the row), `data-overflow-row` and no `data-item-id`. `SectionRows` is the one list of rows that a section and the modal both draw, with a static drawing for the section while the modal is open |
+| `client/src/components/KanbanCard.tsx` | D3, D4: the section's render, through `sectionEntries` and `SectionRows`; E2: while the modal is open the section draws static and is no region |
+| `client/src/components/workflow/dragCollision.ts` (row data) | E1: the row role `'overflow'`, and a section row's `sectionCardId`, which the section collision filter matches against the context's Card (the modal sits over other Cards' rows), with `isOverflowRow` and `isSectionRow` (a collision candidate in a section, no Card-layer target, a Stub row's ghost height), and `travelingRowsFor` stepping past the overflow row of a traveling row |
 | `client/src/components/workflow/descendantsProjection.ts` | D5, D6, E1: `gapForAnchor`, which turns an overflow-row neighbor into the gap among all the rows, and the depth clamp, handed to the shared library as a number; E3: what the hold keys on; E5: the modal's depth reading |
 | `client/src/lib/hierarchyPlacement.ts::computeProjection` | E1's clamp as an optional `maxDepth`, the deepest state a surface offers when it draws fewer levels than its rows hold. The sidebar passes none, and the library never sees an overflow row |
-| `client/src/components/workflow/popSession.ts` | E3: the hold that opens the modal |
-| `client/src/components/workflow/dragStructure.ts` | E2, E3: the modal as the Descendants region |
-| the modal component, and `client/src/components/ModalShell.tsx` if it's shared | D7, D9–D11: its rows, its placement under the cursor, its centered form |
+| `client/src/components/workflow/popSession.ts` | E3: the hold that opens the modal (Phase 4) |
+| `client/src/components/workflow/dragRegions.ts::dragRegionProps`, `dragStructure.ts::findParentRegionKey` | E2: a region element that isn't inside its parent's names it (`data-drag-parent-region`), which the modal's list does for its Card |
+| `client/src/components/HierarchyModal.tsx`, on `ModalShell.tsx` | D7, D9, D11: the modal, centered, with its list as the Card's Descendants region; Escape, the X and a click outside close it only with no drag running. Its placement under the cursor is Phase 4's |
+| `client/src/components/workflow/HierarchyModalContext.ts`, `client/src/components/BoardView.tsx`, `workflow/useBoardDnd.ts` | D9: which Card's modal is open (`BoardView.tsx` owns it, and renders the modal inside the board root); `useBoardDnd.ts` draws every level there (`levelsDrawnAt`) and closes it when the drag's context leaves the Card's Descendants layer |
+| `client/src/components/workflow/descendantsProjection.ts`, `placement.ts`, `DragSessionContext.ts::DescendantsProjection` | D9: `slotHidden`, a Stub whose own slot the section doesn't draw comes back into the section as an item from outside does: the last gap, previewed as the Card's last child |
 | `server/src/db/deepSeed.ts`, `deepDbPath.ts` and `seedDeep.ts`; `server/.env.deep`, `client/.env.deep`; the `seed:deep` and `dev:deep` scripts of `server/` and `client/` | D13: the seed, and the stack it runs on (Amendments, Phase 2) |
 
 ## Amendments
@@ -228,10 +230,23 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - **The stack:** `npm run dev:deep` in `server/` serves it on port 3003, and the same in `client/` serves the UI on 5175. The two ports are apart from the E2E stack's 3002 and 5174, which a Playwright run could otherwise reuse, and that stack's test routes would reset the data. The two `.env.deep` files carry the ports and the path. Cap trials: change the two constants and restart the server; the client reads both caps from it.
   - **The cut-off:**
     - **The level count** is the tuning value `sectionLevels`, 3 by default, in the panel under "Section". It is read as a whole number of at least 1, since the panel takes any number.
-    - **The overflow row** sits one level under each last-level row with attached children, reads "1 child" or "N children", and slides with the rows. It is no drag source and does nothing on a click until Phase 3.
+    - **The overflow row** sits one level under each last-level row with attached children, reads "1 child" or "N children", and slides with the rows. It is no drag source, and a click on it opens the modal (Phase 3).
     - **Where the drop math differs from the plan's wording:** E1 puts the clamp in the projection. It lives there, as the number `computeProjection` takes (`maxDepth`), so the shared library still never sees an overflow row.
   - **The dragged child left out of N** is built and unit-tested, and no spec reaches it until Phase 3, since a hidden row can't be picked up from the section.
   - **Checks:** `npm run check` passes (420 server tests, 504 client, 185 script), and `npm run test:e2e` passes with 179 and 8 skipped.
+- **2026-10-26, Phase 3 built (Coder).** The modal opened by a click, a drag in it, and the hidden-slot start.
+  - **What it does:** a click on an overflow row opens it, centered. Its list holds every attached descendant at its level and is the Card's Descendants region: a drag started on a row starts at that layer, places by gap and depth with every level offered, and an over-cap state is reachable and writes nothing. The Card's own section draws static under the backdrop and is no region. Leaving the list's box for the pop-out threshold closes it, and the drag is at the Card layer, so detaching still takes two pops. A drag that ends in it by a release or a cancel leaves it open. Escape, the X and a click outside close it only with no drag running.
+  - **A Stub with a hidden slot:** one picked up in the modal and pulled back out, whose own slot the section doesn't draw, comes back into the section in the last gap, as the Card's last child (D9). The projection seeds it so (`slotHidden`), and `placementFor` previews it there, so the overflow row leaves it out of its count meanwhile.
+  - **Phase 2's note on the overflow row was wrong, and is fixed.** It said a drag started from the row picks up nothing. A press on it reached the Card's own drag listeners, so it picked up the Card. A press on it now goes no further.
+  - **Where the build differs from the plan's wording:**
+    - **E4, a portal:** the modal is a child of the board root, not portaled. Its backdrop is `fixed`, so it takes no part in the board's layout, and being inside the root keeps one DOM element tree for the drag's regions and the overlay's color variables, with the React context unchanged. The carried copy draws above it.
+    - **E5, the depth read against the modal's own indents:** not built. For a drag that starts in a click-opened modal the seeded reading reads the cursor's own depth, since nothing moves under the cursor. The reading against the indents is needed once the modal opens under the cursor, and is built with that, in Phase 4.
+    - **The region is the modal's list,** its scroll box, not the dialog with its header. A row scrolled out of view lies outside the region's rect, so it isn't a collision candidate, as for a section clipped by its column. The header, with the X, is outside the layer's box.
+    - **A section row's registration carries its Card** (`sectionCardId`), and the collision filter matches it: the modal sits over the board, so rows of other Cards' sections lie inside its box.
+  - **Built beyond the plan:** the modal closes when its Card is gone or has no attached descendants left, DRAG-7.23's lean, which is still `Pending PO`.
+  - **Not wired:** a click on a row in the modal opens nothing. The Sheet would open behind the modal's backdrop.
+  - **The guard on Escape can't be told from its absence by a spec:** with it removed, a keypress during a drag still doesn't reach the modal's handler, so the modal stays open either way. The guard states the plan's rule and stays.
+  - **Checks:** `npm run check` passes (420 server tests, 513 client, 185 script), and `npm run test:e2e` passes with 193 and 8 skipped.
 
 ## Open questions
 
@@ -265,12 +280,21 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 
 - **Behavior decisions made while building, for the PO to rule on:**
   - **Phase 2, the overflow row:**
-    - It is no drag source, so a drag started on it picks up nothing (DRAG-7.22's lean). It does nothing on a click until Phase 3 builds the modal.
+    - It is no drag source, so a drag started on it picks up nothing (DRAG-7.22's lean, which Phase 3 made true), and a click on it opens the modal.
     - A dragged Stub at the last shown level takes its overflow row with it: the row stays drawn under it and is never named as a neighbor, as the Stub's other descendants aren't.
     - The live drop line can be drawn on an overflow row, when the row is the named neighbor.
     - The level count the panel takes is read as a whole number of at least 1.
     - The overflow row's look is a muted count in a Stub-sized row, a placeholder look.
+  - **Phase 3, the hierarchy modal:**
+    - The modal's header, with its title and X, is outside the layer's box, so a cursor over it counts as outside the modal for the pop-out clock. The layer's box is the modal's list.
+    - A click on a row in the modal opens nothing. Opening the Sheet from it needs the modal to give way to the panel, or the panel to draw above it.
+    - The modal closes when its Card is gone or has no attached descendants left (DRAG-7.23's lean).
+    - The overflow row's press is the Card's no more: a press on it neither starts the Card's drag nor opens the Sheet (DRAG-7.22's lean).
 - **Planned passages now built:**
+  - **Phase 3:**
+    - board-drag-interaction §7's hidden slot, and §7.3 but its hold: the modal's bounds, its rows' classification, a release placing by gap and depth, leaving it as the pop out of Descendants, and staying open after a drag ends in it;
+    - §9's click on an overflow row opening the modal, centered, and its closing by the X, a click outside it or Escape (Escape cancelling the drag instead during one), and the modal showing a Card's whole hierarchy;
+    - item-attachment §12's modal half.
   - **Phase 2:**
     - board-drag-interaction §3.1's level count (the hold's dwell and cue are still Planned);
     - §7.1's overflow row gaps, all but "anywhere else among `R`'s children is the hierarchy modal's";
@@ -288,6 +312,11 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - no keyboard control and no reset gesture.
   - **The section's cut-off and the overflow row (Phase 2),** placed in the module headers of `descendantsProjection.ts`, `itemListOps.ts` and `StubRows.tsx`, in the site comments of `dragCollision.ts` and `KanbanCard.tsx`, and in the drag layer's `CLAUDE.md` (the mental model, the concerns, "one way to do each of these", and the test surfaces).
 - **Test-plan cases affected:**
+  - **Phase 3:**
+    - DRAG-7.6 to DRAG-7.12 and DRAG-7.19 have E2E specs in `tests/ui/drag-7-hierarchy-modal.spec.ts`, which carry their IDs. DRAG-7.7 is the click, and its two clauses on `P`'s size and look are open and not asserted. DRAG-7.9's over-cap state is built from the cap the board reports. DRAG-7.12 is asserted on the modal's rows under a drag of an item with a child. DRAG-7.10's two pops are timing-driven, as the section's are.
+    - DRAG-7.2's dragged-child clause is asserted by DRAG-7.6's spec: the overflow row reads "1 child" meanwhile.
+    - A press and drag from an overflow row picks nothing up (`DRAG-7.22`'s lean): its spec carries no ID, as the case is `Pending PO`.
+    - Not yet reachable: DRAG-7.13 to DRAG-7.18 and DRAG-7.20 (the hold), and DRAG-7.21 and DRAG-7.23 (`Pending PO`).
   - **Phase 2:**
     - DRAG-7.1 to DRAG-7.5 have E2E specs in `tests/ui/drag-7-overflow-row.spec.ts`, which carry their IDs. They drive `X` as a Stub of `P` picked up in its own section, which starts at the Descendants layer with no pop, where the cases name a Free Card zoomed in. Placement there is the same for any item at the layer. DRAG-7.2's dragged-child clause waits for Phase 3.
     - DRAG-1.34's panel half, the level count, is asserted through the panel and a reload, and its hold values are Phase 4's.

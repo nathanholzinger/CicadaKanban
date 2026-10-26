@@ -86,6 +86,8 @@ export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 interface ItemRowOptions {
   /** A Stub row's own parent, carried on its registration. */
   parentId?: string | null;
+  /** A section row's Card, carried on its registration (`dragCollision.ts::ItemRowData`). */
+  sectionCardId?: string;
   /** The DragOverlay copy: the carried item itself — never a target, never pending — so it gets none of the chrome. */
   isOverlay?: boolean;
   /** isOverlay only — which form the carried copy draws as. */
@@ -101,10 +103,10 @@ interface ItemRowOptions {
 // constant: it belongs next to the indicator.
 // eslint-disable-next-line react-refresh/only-export-components -- Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
-  const { parentId, isOverlay = false, overlayForm = 'short-card' } = options;
+  const { parentId, sectionCardId, isOverlay = false, overlayForm = 'short-card' } = options;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: itemId,
-    data: itemRowData(role, parentId),
+    data: itemRowData(role, parentId, sectionCardId),
   });
   const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);

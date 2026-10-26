@@ -1,7 +1,7 @@
 // Board orchestration: loads the active board, composes the workflow/ hooks,
 // renders the DnD board.
 
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { BoardWithDetails, ItemType, Column } from '../types';
@@ -11,6 +11,7 @@ import BoardColumn from './BoardColumn';
 import UnsortedBucket from './UnsortedBucket';
 import ColumnEditorModal from './ColumnEditorModal';
 import KanbanCard from './KanbanCard';
+import HierarchyModal from './HierarchyModal';
 import ItemDetailPanel from './ItemDetailPanel';
 import BoardToolbar from './BoardToolbar';
 import WorkphaseManagerPanel from './WorkphaseManagerPanel';
@@ -22,6 +23,7 @@ import { useBoardDnd } from './workflow/useBoardDnd';
 import { DragSessionContext, PlacementsContext } from './workflow/DragSessionContext';
 import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
 import { DragTuningContext } from './workflow/DragTuningContext';
+import { HierarchyModalContext } from './workflow/HierarchyModalContext';
 import { popState } from './workflow/popSession';
 import DragTuningPanel from './DragTuningPanel';
 
@@ -44,6 +46,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // reload.
   const [dragTuning, setDragTuningState] = useState(loadDragTuning);
   const [showDragTuning, setShowDragTuning] = useState(false);
+  // The Card whose whole hierarchy the modal shows, when it's open.
+  const [hierarchyModalCardId, setHierarchyModalCardId] = useState<string | null>(null);
   const boardRootRef = useRef<HTMLDivElement>(null);
 
   function setDragTuning(next: DragTuning) {
@@ -97,6 +101,22 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       .then(setItemTypes)
       .catch(err => console.error('Failed to load item types:', err));
   }, []);
+
+  const closeHierarchyModal = useCallback(() => setHierarchyModalCardId(null), []);
+  const hierarchyModal = useMemo(
+    () => ({ openCardId: hierarchyModalCardId, open: setHierarchyModalCardId, close: closeHierarchyModal }),
+    [hierarchyModalCardId, closeHierarchyModal],
+  );
+  // The modal shows a Card that has attached descendants. A Card that is gone, or has none left,
+  // has nothing to show, so it closes.
+  const hierarchyModalCard = items.find(i => i.id === hierarchyModalCardId);
+  const hierarchyModalHasRows = hierarchyModalCardId !== null && getAttachedChildren(hierarchyModalCardId).length > 0;
+  useEffect(() => {
+    if (hierarchyModalCardId !== null && !(hierarchyModalCard && hierarchyModalHasRows)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- a reaction to the items, which this component doesn't own
+      setHierarchyModalCardId(null);
+    }
+  }, [hierarchyModalCardId, hierarchyModalCard, hierarchyModalHasRows]);
 
   const loadBoard = useCallback(async () => {
     if (!activeBoardId) {
@@ -202,6 +222,8 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     onColumnDrop,
     loadBoard,
     rootRef: boardRootRef,
+    hierarchyModalCardId,
+    closeHierarchyModal,
   });
 
   // The classification overlays' colors and the active-context outline reach
@@ -295,8 +317,9 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         <DragSessionContext value={session}>
           <PlacementsContext value={placements}>
             <DragTuningContext value={dragTuning}>
-              <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                {/* data-drag-state / data-drag-context / data-drag-band: the pop
+              <HierarchyModalContext value={hierarchyModal}>
+                <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+                  {/* data-drag-state / data-drag-context / data-drag-band: the pop
                     machine's state, for tests.
                     data-drag-zoom-candidate / data-drag-zoom-phase: the card
                     the blue line currently names as a zoom-in candidate,
@@ -309,52 +332,65 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     Undefined whenever the drag isn't currently locked at a
                     `descendants:` context (`session.projection` is null
                     then too). */}
-                <div
-                  ref={boardRootRef}
-                  style={overlayVars}
-                  data-drag-state={session ? popState(session.pop) : undefined}
-                  data-drag-context={session?.pop.contextKey ?? undefined}
-                  data-drag-band={session?.pop.hover?.band ?? undefined}
-                  data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
-                  data-drag-zoom-phase={session?.pop.hover?.phase}
-                  data-drag-projection={
-                    session?.projection
-                      ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
-                      : undefined
-                  }
-                  className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
-                >
-                  {board.columns.map(column => (
-                    <BoardColumn
-                      key={column.id}
-                      column={column}
+                  <div
+                    ref={boardRootRef}
+                    style={overlayVars}
+                    data-drag-state={session ? popState(session.pop) : undefined}
+                    data-drag-context={session?.pop.contextKey ?? undefined}
+                    data-drag-band={session?.pop.hover?.band ?? undefined}
+                    data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
+                    data-drag-zoom-phase={session?.pop.hover?.phase}
+                    data-drag-projection={
+                      session?.projection
+                        ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
+                        : undefined
+                    }
+                    className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
+                  >
+                    {board.columns.map(column => (
+                      <BoardColumn
+                        key={column.id}
+                        column={column}
+                        getWorkphaseItems={getWorkphaseItems}
+                        getMergedColumnItems={getMergedColumnItems}
+                        childCounts={childCounts}
+                        getAttachedChildren={getAttachedChildren}
+                        defaultExpanded={showAttachedChildrenDefault}
+                        itemTypes={itemTypes}
+                        onCreateItem={handleCreateItem}
+                        onCardClick={setSelectedItemId}
+                        onEdit={readOnly ? undefined : setEditingColumn}
+                        onDelete={readOnly ? undefined : handleDeleteColumn}
+                      />
+                    ))}
+
+                    <UnsortedBucket
+                      uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
+                      invalidItems={board.unsorted.invalidItems}
                       getWorkphaseItems={getWorkphaseItems}
-                      getMergedColumnItems={getMergedColumnItems}
+                      needsAttention={board.unsorted.needsAttention}
+                      itemTypes={itemTypes}
                       childCounts={childCounts}
                       getAttachedChildren={getAttachedChildren}
-                      defaultExpanded={showAttachedChildrenDefault}
-                      itemTypes={itemTypes}
-                      onCreateItem={handleCreateItem}
+                      defaultExpanded={Boolean(board.showAttachedChildren)}
+                      filterProjectId={filterProjectId}
                       onCardClick={setSelectedItemId}
-                      onEdit={readOnly ? undefined : setEditingColumn}
-                      onDelete={readOnly ? undefined : handleDeleteColumn}
                     />
-                  ))}
 
-                  <UnsortedBucket
-                    uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-                    invalidItems={board.unsorted.invalidItems}
-                    getWorkphaseItems={getWorkphaseItems}
-                    needsAttention={board.unsorted.needsAttention}
-                    itemTypes={itemTypes}
-                    childCounts={childCounts}
-                    getAttachedChildren={getAttachedChildren}
-                    defaultExpanded={Boolean(board.showAttachedChildren)}
-                    filterProjectId={filterProjectId}
-                    onCardClick={setSelectedItemId}
-                  />
-                </div>
-              </SortableContext>
+                    {/* Inside the board root, so the drag's regions are read under one element and
+                      the overlay colors reach its rows. Its backdrop is `fixed`, so it takes no
+                      part in the board's own layout. */}
+                    {hierarchyModalCard && hierarchyModalHasRows && (
+                      <HierarchyModal
+                        card={hierarchyModalCard}
+                        itemTypes={itemTypes}
+                        getAttachedChildren={getAttachedChildren}
+                        onClose={closeHierarchyModal}
+                      />
+                    )}
+                  </div>
+                </SortableContext>
+              </HierarchyModalContext>
             </DragTuningContext>
           </PlacementsContext>
         </DragSessionContext>

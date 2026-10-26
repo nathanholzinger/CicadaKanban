@@ -52,7 +52,20 @@ its own header.
   section's shuffle, so it can be the named neighbor, and the projection turns that
   into a gap among *all* the rows (`descendantsProjection.ts::gapForAnchor`) and
   offers no depth past the overflow row's level. Nothing past the projection sees its
-  id. An overflow row is not an item: nothing drags from it. The carried Stub shows the projected depth by indenting an inner box
+  id. An overflow row is not an item: nothing drags from it, and a press on it goes no
+  further than the row, so it doesn't pick up the Card either.
+  **The hierarchy modal is that same layer, drawn whole.** While it's open (`BoardView.tsx`
+  holds which Card's, `HierarchyModalContext.ts`), its list carries the Card's Descendants
+  region key and names the Card as its parent region, since it isn't inside the Card's
+  element; the Card's own section draws static and is no region, so one element carries the
+  key and each item registers one row. The drop math draws every level there
+  (`useBoardDnd.ts::levelsDrawnAt`). Its own `descendantsSectionRect` and Card id bound the
+  collision candidates: the modal sits over the board, so another Card's rows can lie inside
+  its box. Leaving its box is the usual pop out of Descendants and closes it; a drag that ends
+  in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
+  draw (picked up in the modal and pulled back out) comes back into the section as an item
+  from outside does: the projection's seed is the last gap, `projection.slotHidden`, and
+  `placement.ts::placementFor` previews it as the Card's last child. The carried Stub shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
@@ -113,6 +126,8 @@ The hooks and contexts that run it:
   props.
 - `DragTuningContext.ts` — the live tuning values, for the components that draw a drag
   cue from them: a Card's zoom-in cue, timed by `cardPopInDelayMs`.
+- `HierarchyModalContext.ts` — which Card's hierarchy modal is open, and how to open and
+  close it. `BoardView.tsx` owns the state, which `useBoardDnd.ts` also reads and closes.
 - `usePendingGhostGuard.ts` — keeps the ghost in place while an earlier write is
   still pending.
 - `useSnapTween.ts` — the eased snap when a pop moves the carried copy's clamp target.
@@ -139,15 +154,16 @@ active-context outline, the drop line's shape).
   flat list of Free items with bands and a workphase) against anything else. Never
   write `kind !== 'card'` to mean it.
 - **Registering an element as a drag region:** `dragRegions.ts::dragRegionProps`,
-  spread onto the region's own root element. A test builds the elements it reads with
+  spread onto the region's own root element. An element that isn't inside its parent
+  region's (the hierarchy modal's list) passes the parent's key as `parentKey`. A test builds the elements it reads with
   `client/src/test/dragFixtures.ts::regionEl`.
 - **Reading a region key:** `dragRegions.ts::parseRegionKey`, with `descendantsCardIdOf`
   for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
   column/sub-row DOM query. Never `startsWith`, `slice` or `split` a key by hand.
 - **Row data:** written only by `dragCollision.ts::itemRowData`/`columnData`, read
   only through `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`/`isOverflowRow`.
-  A section's row is a Stub or an overflow row (`isSectionRow`). Never read
-  `data.type` by hand.
+  A section's row is a Stub or an overflow row (`isSectionRow`), and carries the Card whose
+  section it is a row of (`sectionCardId`). Never read `data.type` by hand.
 - **The anchor a drop names:** `dragCollision.ts::namedAnchorFor`, the one call shape
   the blue line, the pop machine and the release all use.
 - **The rows that travel with the dragged item:** `dragClassification.ts`'s
@@ -202,7 +218,9 @@ active-context outline, the drop line's shape).
   context). Cards/Stubs carry `data-item-id` and
   `data-drop-state`, `data-pending` while their write is in flight, and
   `data-placement-valid` on the active row while over cap. An overflow row carries
-  `data-overflow-row` (its owner's id) and no `data-item-id`. The carried copy carries
+  `data-overflow-row` (its owner's id) and no `data-item-id`. The hierarchy modal is a
+  `role=dialog` named `Hierarchy of <title>`, whose rows carry `data-item-id` (the section's
+  rows under it draw with none). The carried copy carries
   `data-drag-overlay` (`dragRegions.ts::DRAG_OVERLAY_ATTR`, which the E2E helper's
   "drag finished" wait counts down) and `data-drag-overlay-form`, and a Card that is
   the locked context `data-active-context`. A region's element carries

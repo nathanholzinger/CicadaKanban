@@ -49,6 +49,7 @@ import { clampToCurrentContext, overlayShapeFor, reanchorOverlayTransform } from
 import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
+  descendantsCardIdOf,
   descendantsRegionKey,
   isCardList,
   type CardListRegion,
@@ -113,6 +114,9 @@ export interface BoardDndDeps {
   loadBoard: () => Promise<void>;
   /** The element the regions are measured under (the DndContext's wrapper). */
   rootRef: RefObject<HTMLElement | null>;
+  /** The Card whose hierarchy modal is open, if any: it is that Card's Descendants layer, drawn whole. */
+  hierarchyModalCardId: string | null;
+  closeHierarchyModal: () => void;
 }
 
 // The pop timer's teardown, at module scope taking its ref so the
@@ -254,8 +258,16 @@ export function useBoardDnd(deps: BoardDndDeps) {
       namedAnchor: namedAnchorRef.current,
       pointerX: pointerRef.current?.x ?? null,
       getAttachedChildren: latest.current.getAttachedChildren,
-      sectionLevels: latest.current.tuning.sectionLevels,
+      sectionLevels: levelsDrawnAt(pop.contextKey),
     });
+  }
+
+  // How many levels the section at `contextKey` draws: every one while it is the hierarchy
+  // modal's, the tuning value otherwise.
+  function levelsDrawnAt(contextKey: string | null): number {
+    const { hierarchyModalCardId, tuning } = latest.current;
+    const cardId = descendantsCardIdOf(contextKey);
+    return cardId !== null && cardId === hierarchyModalCardId ? Infinity : tuning.sectionLevels;
   }
 
   // A context's parent, off the structure rather than a measured region: a
@@ -321,6 +333,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const next = { ...current, pop, projection };
       updateSession(next);
       setGhost(current.activeItem.id, placementFor(next, regions));
+      // Leaving the modal's layer closes it: the drag is at the Card layer, and the section
+      // under the backdrop is the layer's again.
+      const modalCardId = latest.current.hierarchyModalCardId;
+      if (modalCardId !== null && pop.contextKey !== descendantsRegionKey(modalCardId)) {
+        latest.current.closeHierarchyModal();
+      }
     }
     clearPopTimer(popTimer);
     const due = popDueAt(pop, regions, tuning);
@@ -361,6 +379,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // one flat list) — read off the region we already measured, never
       // dnd-kit's `active.data.current`, which can lag a mid-drag remount.
       const descendantsSectionRect = context?.kind === 'descendants' ? context.rect : null;
+      const descendantsCardId = context?.kind === 'descendants' ? context.cardId : null;
       live = {
         // A Card hover (locked column/sub-row, tracking a zoom-in
         // candidate) never forces `over` — a mere hover, not yet a pop,
@@ -374,6 +393,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
         // container concept doesn't apply to it).
         context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
         descendantsSectionRect,
+        descendantsCardId,
       };
     }
     return resolveBoardCollisions(args, live);

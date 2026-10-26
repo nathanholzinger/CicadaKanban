@@ -152,11 +152,20 @@ export const DRAG_CARD_COUNT_ATTR = 'data-drag-card-count';
 // rename on one surface can't leave the wait passing at once.
 export const DRAG_OVERLAY_ATTR = 'data-drag-overlay';
 
+// Set beside DRAG_REGION_ATTR on a region element that isn't nested in its
+// parent region's element: the parent's key. A Descendants section sits inside
+// its Card, so the walk up the DOM finds the parent, and the hierarchy modal
+// is drawn apart from its Card, so it names it.
+export const DRAG_PARENT_REGION_ATTR = 'data-drag-parent-region';
+
 // The one spelling of "register this element as a drag region." It leaves
 // out DRAG_CARD_COUNT_ATTR, which only a card list's element carries, set
-// alongside this.
-export function dragRegionProps(key: string): Record<string, string> {
-  return { [DRAG_REGION_ATTR]: key };
+// alongside this. `parentKey` only for an element outside its parent
+// region's own (`DRAG_PARENT_REGION_ATTR`).
+export function dragRegionProps(key: string, parentKey?: string): Record<string, string> {
+  return parentKey === undefined
+    ? { [DRAG_REGION_ATTR]: key }
+    : { [DRAG_REGION_ATTR]: key, [DRAG_PARENT_REGION_ATTR]: parentKey };
 }
 
 export function columnRegionKey(columnId: string): string {

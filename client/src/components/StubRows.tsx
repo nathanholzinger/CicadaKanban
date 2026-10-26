@@ -1,6 +1,8 @@
 // The Stub tier's own rows — StubBody (the shared type-pill + title), AttachGhostRow
 // (a preview of an item about to attach), AttachedChildRow (a real, draggable Stub),
-// OverflowRow (the count standing in for a row's hidden children).
+// OverflowRow (the count standing in for a row's hidden children, which opens the
+// hierarchy modal), their static drawings, and SectionRows, the one list of them that
+// a Card's section and the hierarchy modal both draw.
 // The Card tier's own render is KanbanCard.tsx; this is everything a
 // Descendants-section row renders as.
 
@@ -8,7 +10,8 @@ import type { Item, ItemType } from '../types';
 import TypePill from './item-detail/TypePill';
 import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useItemRow } from './dragChrome';
-import type { OverflowRowData } from './workflow/itemListOps';
+import type { DescendantsProjection } from './workflow/DragSessionContext';
+import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
 // shares — AttachGhostRow and AttachedChildRow below, and KanbanCard's own
@@ -50,6 +53,8 @@ interface AttachedChildRowProps {
   item: Item;
   itemTypes: ItemType[];
   depth: number;
+  /** The Card whose section this row is in. */
+  cardId: string;
   onCardClick?: (id: string) => void;
   /**
    * True only for the active drag's own row, and only while its current
@@ -63,7 +68,14 @@ interface AttachedChildRowProps {
 // One row in the flat section, indented by `depth` — not recursive: the
 // Card's single flat list carries every shown depth (`KanbanCard.tsx`'s own
 // `entries` cut the subtree's walk at the last shown level).
-export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid = false }: AttachedChildRowProps) {
+export function AttachedChildRow({
+  item,
+  itemTypes,
+  depth,
+  cardId,
+  onCardClick,
+  invalid = false,
+}: AttachedChildRowProps) {
   // Draggable within the section's one shared `SortableContext`, through
   // the same pop machine as a Card, not a separate board-level path. `type`
   // stays `'item'`, the same as a Card row, so this id's registration
@@ -80,7 +92,7 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
   // Stub reorder, or a foreign Card popped into this row's own parent,
   // anchoring beside it.
   const { setNodeRef, attributes, listeners, isDragging, dropSide, sortableStyle, dataAttrs, chromeClassName } =
-    useItemRow(item.id, 'stub', { parentId: item.parentId });
+    useItemRow(item.id, 'stub', { parentId: item.parentId, sectionCardId: cardId });
   const style = { ...sortableStyle, paddingLeft: descendantsIndentPx(depth) };
 
   return (
@@ -110,14 +122,19 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
   );
 }
 
+const overflowLabel = (count: number) => `${count} ${count === 1 ? 'child' : 'children'}`;
+const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
+
 // The row that stands in for the children of the last shown level's row `row.ownerId`, which
 // the section doesn't draw: how many there are, one level under their parent, where they
 // would be. It takes part in the shuffle as any row does, so the ghost slides above or below
-// it and the live line can be drawn on it, but it is no item: nothing drags from it, and it
-// carries no `data-item-id`.
-export function OverflowRow({ row }: { row: OverflowRowData }) {
+// it and the live line can be drawn on it. It is no item: it carries no `data-item-id`, and
+// nothing drags from it, the Card's own drag included, since a press on it goes no further.
+// A click opens the hierarchy modal.
+export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; cardId: string; onOpen: () => void }) {
   const { setNodeRef, dropSide, sortableStyle, dataAttrs } = useItemRow(row.id, 'overflow', {
     parentId: row.ownerId,
+    sectionCardId: cardId,
   });
   return (
     <div
@@ -129,9 +146,97 @@ export function OverflowRow({ row }: { row: OverflowRowData }) {
       className="relative rounded"
     >
       <DropSideIndicator side={dropSide} />
-      <div className={`${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`}>
-        {row.count} {row.count === 1 ? 'child' : 'children'}
+      <button
+        type="button"
+        onClick={e => {
+          e.stopPropagation();
+          onOpen();
+        }}
+        onPointerDown={e => e.stopPropagation()}
+        title="Show the whole hierarchy"
+        className={`${OVERFLOW_TEXT_CLASS} w-full cursor-pointer text-left transition-colors hover:bg-zinc-700/40 hover:text-zinc-300`}
+      >
+        {overflowLabel(row.count)}
+      </button>
+    </div>
+  );
+}
+
+// A Stub's row drawn with no drag registration: what a Card's section shows while the hierarchy
+// modal holds the Card's rows, so the section keeps its shape under the backdrop and no item is
+// registered twice (the shuffle reads one row per item).
+function StaticStubRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
+  return (
+    <div style={{ paddingLeft: descendantsIndentPx(depth) }}>
+      <div className={STUB_ROW_BOX_CLASS}>
+        <StubBody item={item} itemTypes={itemTypes} />
       </div>
     </div>
   );
+}
+
+interface SectionRowsProps {
+  entries: readonly SectionEntry[];
+  /** The Card whose section these rows are. */
+  cardId: string;
+  itemTypes: ItemType[];
+  /** The active drag's attach-preview ghost at the Card layer, drawn as an inert row. */
+  attachGhostId?: string;
+  /** The Descendants layer's live projection for this Card, null outside that layer. */
+  projection: DescendantsProjection | null;
+  /** The item being dragged, if any. */
+  activeId?: string;
+  onCardClick?: (id: string) => void;
+  /** Opens the hierarchy modal from an overflow row. */
+  onOpenOverflow?: () => void;
+  /** Draws the rows with no drag registration (`StaticStubRow`). */
+  isStatic?: boolean;
+}
+
+// The rows of a Card's section: Stubs, with an overflow row where the section cuts a level off.
+// A section and the hierarchy modal draw the same list, so the two can't differ in how a row
+// is drawn: the active drag's own row takes the projected depth, and carries the invalid cue
+// while that state is over the cap.
+export function SectionRows({
+  entries,
+  cardId,
+  itemTypes,
+  attachGhostId,
+  projection,
+  activeId,
+  onCardClick,
+  onOpenOverflow,
+  isStatic = false,
+}: SectionRowsProps) {
+  return entries.map(entry => {
+    if (entry.kind === 'overflow') {
+      return isStatic ? (
+        <div key={entry.row.id} style={{ paddingLeft: descendantsIndentPx(entry.row.depth) }}>
+          <div className={OVERFLOW_TEXT_CLASS}>{overflowLabel(entry.row.count)}</div>
+        </div>
+      ) : (
+        <OverflowRow key={entry.row.id} row={entry.row} cardId={cardId} onOpen={() => onOpenOverflow?.()} />
+      );
+    }
+    const { item: child, depth } = entry.row;
+    if (isStatic) return <StaticStubRow key={child.id} item={child} itemTypes={itemTypes} depth={depth} />;
+    const isActiveRow = child.id === activeId;
+    // The active drag's own row previews the projected depth, not its stored one.
+    const rowDepth = projection && isActiveRow ? projection.depth : depth;
+    // This row is the active drag's own ghost (previewed attaching here, not a real Stub yet):
+    // an inert preview, not a row (`AttachGhostRow` says why).
+    return child.id === attachGhostId ? (
+      <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={rowDepth} />
+    ) : (
+      <AttachedChildRow
+        key={child.id}
+        item={child}
+        itemTypes={itemTypes}
+        depth={rowDepth}
+        cardId={cardId}
+        onCardClick={onCardClick}
+        invalid={Boolean(projection && isActiveRow && !projection.valid)}
+      />
+    );
+  });
 }

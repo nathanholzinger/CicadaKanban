@@ -11,6 +11,7 @@ import type { Item } from '../../types';
 import type { AnchorRelation } from '../../lib/hierarchyPlacement';
 import { hasParentOpinion, workphaseOnlySlot, type Placement } from './itemListOps';
 import type { CardListRegion, DragRegion } from './dragRegions';
+import type { DescendantsProjection } from './DragSessionContext';
 import type { PopSession } from './popSession';
 
 // The region a placement is resolved against: the locked context, or — at
@@ -75,6 +76,7 @@ export interface PlacementSubject {
   origin: Placement;
   containingCardId: string | null;
   priorPlacement: Placement | null;
+  projection?: Pick<DescendantsProjection, 'slotHidden'> | null;
 }
 
 // The ghost: always the *locked* context's own within-action when there is
@@ -148,9 +150,11 @@ export function placementFor(
   //     there's no `origin`/`priorPlacement` restore point here (nothing to
   //     "set back down" to), so the ghost previews attaching as
   //     `region.cardId`'s last child — the Card layer's own append
-  //     convention, one layer up.
+  //     convention, one layer up. So does a Stub of this Card whose own
+  //     slot the section doesn't draw (`projection.slotHidden`): a ghost
+  //     can't be drawn in a slot that isn't there.
   if (region.kind === 'descendants') {
-    if (region.cardId === containingCardId) return priorPlacement ?? origin;
+    if (region.cardId === containingCardId && !subject.projection?.slotHidden) return priorPlacement ?? origin;
     return { parentId: region.cardId, slot: 'last' };
   }
 
