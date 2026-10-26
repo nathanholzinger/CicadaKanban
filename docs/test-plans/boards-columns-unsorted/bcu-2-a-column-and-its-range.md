@@ -15,7 +15,7 @@
 | BCU-2.7 | An edit whose range passes fixes a broken column | P2 | Automated |
 | BCU-2.8 | A column whose start comes after its end still covers the workphases between its two ends | P2 | Automated |
 | BCU-2.9 | A column with an end outside the workflow is broken, and covers no workphase | P2 | Automated |
-| BCU-2.10 | A column's start or end given as an empty string names no workphase, and is refused | P2 | Open |
+| BCU-2.10 | A column's start or end given as an empty string names no workphase, and is refused | P2 | Automated |
 
 ---
 
@@ -102,8 +102,8 @@
 
 ## BCU-2.10 — A column's start or end given as an empty string names no workphase, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §5, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki boards-columns-unsorted §5, wiki row-references §1
 
 *Given* the setup, *when* a column is created on `B` from `""` to `W2`, or from `W1` to `""`, *then* each is refused with a 400, and `B`'s columns are unchanged. *Given* column `A` on `B` from `W1` to `W2`, *when* `A` is edited to start at `""`, or to end at `""`, *then* each is refused with a 400, and `A` still runs from `W1` to `W2`. An end that's another workflow's workphase, or no workphase at all, is [BCU-2.5](bcu-2-a-column-and-its-range.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/columns.test.ts`

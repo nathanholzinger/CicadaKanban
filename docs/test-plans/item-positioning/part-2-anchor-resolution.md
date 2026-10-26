@@ -36,7 +36,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
 | TC-2.32 | A write can't name a final position | P1 | Automated |
 | TC-2.33 | A Free item's true neighbor, or its anchor, can be in another project on the same workflow | P1 | Automated |
-| TC-2.34 | An anchor given as an empty string names no item, and is refused | P2 | Open |
+| TC-2.34 | An anchor given as an empty string names no item, and is refused | P2 | Automated |
 
 ---
 
@@ -78,7 +78,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a workflow whose true last Free item is at `4.2`, in any of its workphases, *when* a top-level item is created in the workflow with no anchor, *then* its position is `5`, as if placed after that item ([TC-2.4](part-2-anchor-resolution.md)).
 
-**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.7 — Bootstrap: an empty scope starts at `1.0`, and an empty workphase isn't an empty scope
 
@@ -86,7 +86,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* a workflow with no positioned item in any workphase, *when* an item is created in it with no anchor, or moved in with no position to keep, *then* its position is `1.0`. The same holds for the first attached child of a parent that has none. *And given* a workflow whose workphase `W2` is empty while `W1` holds an item at `3.0`, *when* an item is created in `W2` with no anchor, *then* its position is `4`, not `1.0`: the scope is the whole workflow, so an empty workphase never bootstraps on its own.
 
-**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/routes/items.test.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/lib/positionResolver.test.ts`
 
 ## TC-2.8 — An anchor with no position, or one that doesn't exist, is rejected
 
@@ -282,8 +282,8 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 ## TC-2.34 — An anchor given as an empty string names no item, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki positioning §2, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki positioning §2, wiki row-references §1
 
 *Given* item `X` in workphase `W1`, and items `A`, `C` and `E` in `W2`, *when* a move of `X` into `W2` names `""` as its anchor, on either side, *then* it's refused with a 400, and nothing in it is written: `X` is still in `W1`, at the same position. No fallback reads the empty string as no anchor and appends instead, as a move that leaves the anchor out does ([TC-2.31](part-2-anchor-resolution.md)). An anchor that doesn't exist is [TC-2.8](part-2-anchor-resolution.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.positioning.test.ts`

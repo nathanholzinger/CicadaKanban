@@ -12,7 +12,7 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 | TREE-6.4 | A moved project's subtree goes with it, keeping its parents and positions | P1 | Automated |
 | TREE-6.5 | A move naming the project itself as its neighbor is refused | P2 | Automated |
 | TREE-6.6 | A move can't name a position | P1 | Automated |
-| TREE-6.7 | A neighbor given as an empty string names no project, and is refused | P2 | Open |
+| TREE-6.7 | A neighbor given as an empty string names no project, and is refused | P2 | Automated |
 
 ---
 
@@ -83,8 +83,8 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 
 ## TREE-6.7 — A neighbor given as an empty string names no project, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §6, wiki positioning §2, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §6, wiki positioning §2, wiki row-references §1
 
 *Given* top-level projects `A`, `X` and `P`, where `P` has children `P1` and `P2`, *when* `X` is moved under `P` naming `""` as its neighbor, *then* it's refused with a 400, whether the empty string is named as the sibling `X` goes after or as the one it goes before, and `X`'s parent and position are unchanged. No fallback reads it as no neighbor and places `X` after its last sibling, as a move naming none does ([TREE-6.2](tree-6-moving-a-project.md)). A neighbor that's no project is [TREE-6.3](tree-6-moving-a-project.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/projects.test.ts`

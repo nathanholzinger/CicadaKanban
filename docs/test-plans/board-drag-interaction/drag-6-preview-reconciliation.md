@@ -19,7 +19,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
 | DRAG-6.14 | The board records no inversion for a write it didn't preview | P2 | Automated |
-| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Open |
+| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Automated |
 
 ---
 
@@ -129,8 +129,8 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.15 — A reload that lands mid-drag stops the drag, and nothing is written
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
 *Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag, whatever caused the reload, *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. The resync after another item's failed drop ([DRAG-6.6](drag-6-preview-reconciliation.md)) and the one after a stale response carrying reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)) are two such reloads; a test of any reload the board makes asserts the case.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useBoardDnd.test.ts`

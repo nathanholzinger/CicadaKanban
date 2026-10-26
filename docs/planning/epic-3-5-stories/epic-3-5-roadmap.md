@@ -695,11 +695,12 @@ deferral and keep landing with their stories.
      (`epic-4-decisions.md` §12), and TC-2.32, 6.10 and 7.18 to A5b, which
      took over A5a's close-out. TC-6.12 moved to A5c's boards catalog as
      BCU-3.4.
-   - **From A6's Reconciler run, 2 cases** (the Test Planner, 2026-10-22),
-     new and `Open`, with no test: DRAG-6.15, a reload that lands
-     mid-drag stops the drag; and TREE-1.13, the sidebar's top level for
+   - **From A6's Reconciler run, 1 case** (the Test Planner, 2026-10-22),
+     new and `Open`, with no test: TREE-1.13, the sidebar's top level for
      a subtree already taller than the project cap, beside TREE-1.11's
-     test in `tests/ui/project-tree-drag.spec.ts`.
+     test in `tests/ui/project-tree-drag.spec.ts`. DRAG-6.15, a reload
+     that lands mid-drag stops the drag, was routed here too, and closed
+     in A6 on a hook-level test Nathan approved (2026-10-26).
    - **Closed in A6, 7 cases** (Nathan, 2026-10-23; `Automated` at A6's
      re-check the same day), so they leave the list above: DRAG-1.14, 2.9,
      3.5 and 6.6, whose internal tests he approved, and DRAG-4.12, 6.2 and

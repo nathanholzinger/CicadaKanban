@@ -68,7 +68,7 @@
 
 *when* a board of `WF` is read, *then* its items are `a`, `b` and `c`, and not `d`, `e` or `z`: `D` uses its own workflow, and `E` uses `D`'s, its nearest ancestor that has one. *When* a board of `WF2` is read, *then* its items are `d` and `e`, and not `z`: `Z` uses only its own. *And given* `A` also holds `a0`, with no workphase, *then* `WF`'s board returns `a0` too ([BCU-5.2](bcu-5-unsorted.md)).
 
-**Automation test:** `server/tests/routes/boards.test.ts`
+**Automation test:** `server/tests/routes/boards.test.ts`, `tests/ui/workflow-inheritance.spec.ts`
 
 ## BCU-1.6 — A project that comes to use another workflow takes its items to that workflow's boards
 

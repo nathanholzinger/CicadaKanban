@@ -16,7 +16,7 @@
 | ATT-4.9 | The UI and the API agree on every target's legality | P0 | Open |
 | ATT-4.10 | Every write that can give an item a parent enforces the same rules | P0 | Automated |
 | ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Automated |
-| ATT-4.14 | A parent given as an empty string names no item, and is refused | P1 | Open |
+| ATT-4.14 | A parent given as an empty string names no item, and is refused | P1 | Automated |
 
 ---
 
@@ -108,7 +108,7 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 
 ## ATT-4.14 — A parent given as an empty string names no item, and is refused
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §7, wiki row-references §1
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki item-attachment §7, wiki row-references §1
 
 *Given* project `P1` holding top-level item `X`, *when* each of these writes names `parentId: ""`:
 - a create in `P1`;
@@ -117,4 +117,4 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 
 *then* each is refused with a 400, no item is created, and `X` is unchanged: still top-level, at the same position. An empty string is never "no parent": a create says that by leaving the parent out ([ATT-10.1](att-10-creating-an-item.md)), and an edit or a move by naming `null` ([ATT-7.7](att-7-detach-preserves-parent.md)). A parent that doesn't exist is [ATT-4.1](att-4-legal-parent-depth-cap.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`

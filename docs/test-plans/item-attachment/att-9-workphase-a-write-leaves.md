@@ -18,7 +18,7 @@
 | ATT-9.10 | A detach that also reparents, naming no workphase, leaves the item in the one it was shown in | P2 | Automated |
 | ATT-9.11 | Naming `workphaseId: null` leaves an item Free with no workphase, whatever it was shown in | P2 | Automated |
 | ATT-9.12 | A write that names a workphase that doesn't exist is refused | P2 | Automated |
-| ATT-9.13 | A workphase given as an empty string names no workphase, and is refused | P2 | Open |
+| ATT-9.13 | A workphase given as an empty string names no workphase, and is refused | P2 | Automated |
 
 ---
 
@@ -134,7 +134,7 @@
 
 ## ATT-9.13 — A workphase given as an empty string names no workphase, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §2a, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §2a, wiki row-references §1
 
 *Given* the setup, *when* each of these writes names `workphaseId: ""`:
 - a create of a top-level item in `P1`;
@@ -145,4 +145,4 @@
 
 *then* each is refused with a 400, no item is created, and `R` and `X` are unchanged. An empty string isn't `null`, which leaves an item Free with no workphase ([ATT-9.11](att-9-workphase-a-write-leaves.md)), and it isn't a workphase left out, which keeps an item where it's shown ([ATT-9.4](att-9-workphase-a-write-leaves.md)). A workphase that doesn't exist is [ATT-9.12](att-9-workphase-a-write-leaves.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.workphase.test.ts`

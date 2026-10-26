@@ -10,7 +10,7 @@ The rules every write is held to hold for a create too. A parentless create's at
 | ATT-10.2 | A child is created Attached unless the create clears the flag | P1 | Automated |
 | ATT-10.3 | A create may omit the workphase | P2 | Automated |
 | ATT-10.4 | A create naming a project that doesn't exist is refused, and nothing is stored | P2 | Automated |
-| ATT-10.5 | A create whose project is an empty string is refused, and nothing is stored | P2 | Open |
+| ATT-10.5 | A create whose project is an empty string is refused, and nothing is stored | P2 | Automated |
 
 ---
 
@@ -54,8 +54,8 @@ A parent alone is [ATT-5.6](att-5-cross-project-reparenting.md)'s, and a project
 
 ## ATT-10.5 — A create whose project is an empty string is refused, and nothing is stored
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §14, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki item-attachment §14, wiki row-references §1
 
 *Given* project `P1` holding item `P`, *when* a create names `projectId: ""` and no parent, *then* it's refused with a 400, and no item is created. *When* a create names `projectId: ""` and `P` as the parent, *then* it's refused with a 400 the same way: an empty string names no project, not the parent's. A create naming only its parent takes the parent's project ([ATT-5.6](att-5-cross-project-reparenting.md)), and a project that doesn't exist is [ATT-10.4](att-10-creating-an-item.md)'s.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/items.test.ts`

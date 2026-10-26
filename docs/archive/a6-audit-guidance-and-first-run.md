@@ -301,6 +301,7 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
     - ATT-1.3 and ATT-1.6, in `items.attached.test.ts`: the root's move expects its 200.
     - TC-5a.4, in `positionedWrite.test.ts`: today only two tests together prove the case. The test of an unheld pair also gets a held one, so it proves the case alone, and the first test drops the ID.
     - TC-2.6 and TC-2.7: the two IDs come off `items.test.ts`'s test that states them in workphase terms, since `items.positioning.test.ts` proves both.
+  - *Done 2026-10-26,* with the Coder's three one-line fixes for ATT-10.5, TREE-3.10 and TREE-6.7 at Nathan's direction. *Checked the same day:* `docs/audits/test-reconciliation-a6-last-round.md`.
 - **The Architect's follow-ups:**
   - after 6c, `testing-strategy.md` for #16's fixtures (Open questions, the re-run's "For the Architect"), done;
   - after 6f, `audit-workflow.md`'s §2, the persona and the four agents point at the script, and moved code leaves them, done; 6g brings the script in line;
@@ -1360,3 +1361,5 @@ Batches 3 and 4 touched about 150 code files, so the audit runs again straight a
   - **Tests.** ATT-10.5's and TREE-3.10's tests are whole, and TREE-6.7 has its own: both sides, and the append kept. Each fails with its read put back. No client path sends an empty string for any of the three: the app sends `undefined` or `null`, and the MCP server sends what its caller gives.
   - **Bruno.** `create-item.bru` says `projectId` takes an id or is left out for the parent's, and that an empty string names no row in any of the three; `move-project.bru` says the same for `parentId`, `prevId` and `nextId`.
   - **Checks.** `npm run check` passes: 413 server tests, 456 client, 185 script, no `check:docs` hits. `npm run test:e2e` passes: 166 passed and 8 skipped.
+- **2026-10-26, the Reconciler's check of the last round (Test Planner):** ATT-4.14, ATT-9.13, ATT-10.5, TC-2.34, TREE-3.10, TREE-6.7 and BCU-2.10 are `Automated`. TC-5a.1, TC-5a.5 and BCU-1.5 gained the tests that now carry their IDs, and TC-2.6's and TC-2.7's lines dropped `items.test.ts`. No case lost its test. DRAG-6.15 stays `Open` until Nathan rules on its hook-level test. The catalog stands at 357 cases: 286 `Automated`, 64 `Open`, 4 `Manual`, 1 `Planned` and 2 `Pending PO`.
+- **2026-10-26, the last check's three notes (Nathan):** DRAG-6.15's hook-level test in `useBoardDnd.test.ts` is approved as it is, so the case is `Automated` and leaves Story 10's list, which leaves the catalog at 287 `Automated` and 63 `Open`. TC-2.7 needs nothing more: its route and library tests cover it whole. BCU-2.10's test may pin its error message: where the wiki states a rule but not its message, a test may decide the message.

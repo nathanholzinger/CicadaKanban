@@ -19,7 +19,7 @@ These hold for any client that keeps a locally ordered list. What the board adds
 
 *Given* a list the client renders, *when* a write that returns positions succeeds, whether it's a board move, a sibling reorder, an inline create or a Sheet edit, and whether or not it triggered a reindex, *then* the list reads in the server's saved order (by position, then the tie-break of [TC-5a.5](part-5a-client-reconciliation.md)). The list isn't reloaded, and every row other than the written item keeps its order relative to the rest. A failed write, or a stale response that carried reindex pairs, resyncs instead ([DRAG-6.6](../board-drag-interaction/drag-6-preview-reconciliation.md), [DRAG-6.7](../board-drag-interaction/drag-6-preview-reconciliation.md)).
 
-**Automation test:** `tests/ui/item-positioning.spec.ts`, `client/src/lib/positionedWrite.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
+**Automation test:** `tests/ui/item-positioning.spec.ts`, `client/src/lib/positionedWrite.test.ts`, `client/src/components/workflow/dragRequest.test.ts`, `client/src/components/ItemDetailPanel.test.tsx`
 
 ## TC-5a.2 — Applying the reindex pairs before comparing records no false inversion
 
@@ -43,4 +43,4 @@ These hold for any client that keeps a locally ordered list. What the board adds
 
 *Given* any list the client sorts by position, including the order it reads first and last from ([TC-7.3](part-7-board-placement-intents.md)), *when* two items have the same `position`, *then* the one created earlier sorts first. *And when* one item has no `position`, *then* it sorts as though its position were `0`. A client that sorts ties any other way disagrees with the server ([TC-5.6](part-5-reindex.md)).
 
-**Automation test:** `client/src/components/workflow/itemListOps.test.ts`
+**Automation test:** `client/src/components/workflow/itemListOps.test.ts`, `client/src/lib/hierarchy.test.ts`
