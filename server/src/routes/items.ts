@@ -110,8 +110,10 @@ router.post('/', (req, res) => {
   }
 
   const parent = parentId ? (getParent(parentId) ?? null) : null;
-  const resolvedProjectId = projectId || parent?.projectId;
-  if (!resolvedProjectId) {
+  // A create that leaves its project out, or names null, takes its parent's. An empty string
+  // names no project, so it is refused below, not read as left out (wiki row-references §1).
+  const resolvedProjectId = projectId ?? parent?.projectId;
+  if (resolvedProjectId === undefined || resolvedProjectId === null) {
     res.status(400).json({ error: 'projectId is required (or provide a parentId to inherit it)' });
     return;
   }

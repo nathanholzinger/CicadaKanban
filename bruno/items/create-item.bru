@@ -25,7 +25,8 @@ docs {
   Name the item's `projectId`, its `parentId`, or both; with neither it's a
   400. A `parentId` alone makes a child in the parent's project, and a
   `projectId` other than the parent's is a 400. `parentId` and `agentId` take an
-  id, or `null` for none: an empty string names no row, and is a 400.
+  id, or `null` for none; `projectId` takes an id, or is left out for the
+  parent's. An empty string names no row in any of them, and is a 400.
 
   A top-level item's attachment flag is clear, and `isAttached: true`
   without a `parentId` is a 400. A child is created attached unless

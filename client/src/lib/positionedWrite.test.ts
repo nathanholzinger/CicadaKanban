@@ -10,7 +10,7 @@ const projectResponse = (written: Project, reindexed?: ReindexedPosition[]) => (
 
 // The client half of reindex disclosure (wiki positioning §7), over a list of items.
 describe('applyWriteResponse, over items', () => {
-  it('TC-5a.1, TC-5a.4: applies every reindexed pair the list holds, then the written item', () => {
+  it('TC-5a.1: applies every reindexed pair the list holds, then the written item', () => {
     const result = applyWriteResponse(workedList(), workedResponse);
     const positionOf = (id: string) => result.find(i => i.id === id)!.position;
     expect([positionOf('A'), positionOf('X'), positionOf('C'), positionOf('E')]).toEqual([1, 2, 3, 4]);
@@ -22,9 +22,16 @@ describe('applyWriteResponse, over items', () => {
     expect(applyWriteResponse(workedList(), response).find(i => i.id === 'X')!.position).toBe(2.5);
   });
 
-  it('TC-5a.4: ignores pairs for ids not in the list — "not in this view," never missing data', () => {
-    const response = { ...makeItem('X', { position: 2 }), reindexed: [{ id: 'unseen', position: 1 }] };
+  it('TC-5a.4: applies the pairs for ids the list holds and skips the rest — "not in this view," never missing data', () => {
+    const response = {
+      ...makeItem('X', { position: 2 }),
+      reindexed: [
+        { id: 'unseen', position: 1 },
+        { id: 'A', position: 1.25 },
+      ],
+    };
     const result = applyWriteResponse(workedList(), response);
+    expect(result.find(i => i.id === 'A')!.position).toBe(1.25);
     expect(result).toHaveLength(4);
     expect(result.some(i => i.id === 'unseen')).toBe(false);
   });

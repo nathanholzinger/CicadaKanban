@@ -1,6 +1,6 @@
 # TREE-3 — What makes a project a legal parent
 
-**Next ID:** TREE-3.10
+**Next ID:** TREE-3.11
 
 **Terms.** Every depth case is written against the project cap, `PCAP`, never a number, since its value is open. Top-level projects are at depth 1, and `H` is the moving project's subtree height: the levels below it, so a project with no children has height 0.
 
@@ -15,6 +15,7 @@
 | TREE-3.7 | The project cap gates writes that give a parent, not existing data | P2 | Automated |
 | TREE-3.8 | A subtree already taller than the cap allows can't be moved, even to a shallower place | P2 | Automated |
 | TREE-3.9 | The sidebar's project cap is the one the API enforces | P1 | Automated |
+| TREE-3.10 | A parent given as an empty string names no project, and is refused | P1 | Open |
 
 ---
 
@@ -94,3 +95,11 @@
 *Given* the project cap the API enforces, `PCAP`, where a write that puts the moving subtree's deepest project at depth `PCAP` is accepted, and one that puts it at `PCAP + 1` is refused ([TREE-3.5](tree-3-legal-parent-and-cap.md)), *when* the API is asked for the project cap, *then* it reports `PCAP`. The sidebar marks tab states against that reported value, holding none of its own ([TREE-1.11](tree-1-gap-and-depth.md)), so a state it shows as valid is never one the API refuses.
 
 **Automation test:** `server/tests/routes/projects.test.ts`, `tests/ui/project-tree-drag.spec.ts`
+
+## TREE-3.10 — A parent given as an empty string names no project, and is refused
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §3, wiki row-references §1
+
+*Given* top-level project `X`, *when* a project is created naming `""` as its parent, *then* it's refused with a 400, and no project is stored: `GET /api/projects` lists the same projects as before. *When* an edit names `""` as `X`'s parent, or a move names it as `X`'s new parent, *then* each is refused with a 400, and `X` is still top-level, at the same position. An empty string is never the top level, which a write names by leaving the parent out or naming `null`. A parent that isn't a project is [TREE-3.1](tree-3-legal-parent-and-cap.md)'s and [TREE-3.4](tree-3-legal-parent-and-cap.md)'s.
+
+**Automation test:** —

@@ -8,6 +8,7 @@ import {
   setItemParent,
   workflowWithPhases,
   setupWorkflow,
+  getRow,
   move,
   put,
 } from '../fixtures.js';
@@ -439,6 +440,23 @@ describe('position resolution', () => {
     expect(await fetchItem(a.id)).toMatchObject({ workphaseId: todo.id, position: a.position, completedAt: null });
   });
 
+  it('TC-2.34: an anchorId given as an empty string names no item, and a move is refused on either side, writing nothing', async () => {
+    const {
+      project,
+      phases: [w1, w2],
+    } = await workflowWithPhases(['W1', 'W2']);
+    const x = await createItem({ projectId: project.id, workphaseId: w1.id, title: 'X' });
+    for (const title of ['A', 'C', 'E']) await createItem({ projectId: project.id, workphaseId: w2.id, title });
+    const before = getRow(x.id);
+
+    for (const side of ['before', 'after']) {
+      const res = await move(x.id, { workphaseId: w2.id, anchorId: '', side });
+      expect(res.status, side).toBe(400);
+      expect(res.body.error, side).toMatch(/anchorId does not reference an existing item/);
+      expect(getRow(x.id), side).toEqual(before);
+    }
+  });
+
   it('TC-2.8: move rejects anchoring to a done item (no position to anchor against)', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const active = await createItem({ projectId: project.id, workphaseId: todo.id });
@@ -677,11 +695,20 @@ describe('position resolution', () => {
       expect(doneItem.body.completedAt).toBeGreaterThan(0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
-      await move(mover.id, { anchorId: itemT1.id, side: 'after' });
+      const doneBefore = getRow(doneItem.body.id);
+      const res = await move(mover.id, { anchorId: itemT1.id, side: 'after' });
 
-      const reread = await request(app).get(`/api/items/${doneItem.body.id}`);
-      expect(reread.body.position).toBeNull();
-      expect(reread.body.completedAt).toBe(doneItem.body.completedAt);
+      // The reindex ran over the workflow's active scope, and the done item isn't among its pairs.
+      expect(res.status).toBe(200);
+      expect(res.body.reindexed).toEqual([
+        { id: itemT1.id, position: 1 },
+        { id: itemT2.id, position: 2 },
+        { id: itemP1.id, position: 3 },
+        { id: mover.id, position: 1.5 },
+      ]);
+      // Its whole row is as it was: no position, the same completion, nothing else written.
+      expect(getRow(doneItem.body.id)).toEqual(doneBefore);
+      expect(doneBefore.position).toBeNull();
     });
   });
 

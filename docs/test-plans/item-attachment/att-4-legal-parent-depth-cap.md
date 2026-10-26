@@ -1,6 +1,6 @@
 # ATT-4 — What makes a target a legal parent, and the depth cap
 
-**Next ID:** ATT-4.14
+**Next ID:** ATT-4.15
 
 **Terms.** Every depth case is written against `CAP`, never a number, since the cap's value is open. Root items are at depth 1, and `H` is the moving item's subtree height: the levels below it, so a leaf has height 0. The board's copy of `CAP` is [DRAG-2.10](../board-drag-interaction/drag-2-target-classification.md)'s.
 
@@ -16,6 +16,7 @@
 | ATT-4.9 | The UI and the API agree on every target's legality | P0 | Open |
 | ATT-4.10 | Every write that can give an item a parent enforces the same rules | P0 | Automated |
 | ATT-4.11 | A move that makes an over-cap tree shallower, but still over the cap, is rejected | P1 | Automated |
+| ATT-4.14 | A parent given as an empty string names no item, and is refused | P1 | Open |
 
 ---
 
@@ -95,7 +96,7 @@
 
 and nothing is stored in any of them. *When* it names a legal parent, *then* each write accepts it: for example, creating a leaf under a parent at depth `CAP − 1` is accepted, and under a parent at depth `CAP` is rejected. No write enforces a rule another write skips.
 
-**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`, `server/tests/routes/items.attached.test.ts`
+**Automation test:** `server/tests/routes/items.hierarchy.test.ts`, `server/tests/routes/items.test.ts`
 
 ## ATT-4.11 — A move that makes an over-cap tree shallower, but still over the cap, is rejected
 
@@ -104,3 +105,16 @@ and nothing is stored in any of them. *When* it names a legal parent, *then* eac
 *Given* item `M` at depth 3 in a tree already deeper than `CAP`, with subtree height `H` such that `1 + 1 + H > CAP`, *when* `M` is reparented to a shallower target, one that would bring its deepest leaf up but not back within `CAP` (a root item at depth 1, for instance), *then* the reparent is rejected, and `M` is unchanged. *When* `M` is moved to the top level instead, by a move or by editing its parent, *then* its deepest leaf would land at depth `1 + H`. With `H` at `CAP` or more, that's still past `CAP`, and the write is rejected the same way. With `H` at `CAP − 1`, it's exactly `CAP`, and the write is accepted, though the tree `M` leaves was over the cap. The formula judges only the resulting depth, not whether the move improves it, so a subtree of height `CAP` or more can be moved only once it's dismantled.
 
 **Automation test:** `server/tests/routes/items.hierarchy.test.ts`
+
+## ATT-4.14 — A parent given as an empty string names no item, and is refused
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki item-attachment §7, wiki row-references §1
+
+*Given* project `P1` holding top-level item `X`, *when* each of these writes names `parentId: ""`:
+- a create in `P1`;
+- an edit of `X`;
+- a move of `X`;
+
+*then* each is refused with a 400, no item is created, and `X` is unchanged: still top-level, at the same position. An empty string is never "no parent": a create says that by leaving the parent out ([ATT-10.1](att-10-creating-an-item.md)), and an edit or a move by naming `null` ([ATT-7.7](att-7-detach-preserves-parent.md)). A parent that doesn't exist is [ATT-4.1](att-4-legal-parent-depth-cap.md)'s.
+
+**Automation test:** —

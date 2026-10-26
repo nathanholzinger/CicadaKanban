@@ -7,7 +7,9 @@ and [`../../test-plans/project-tree/`](../../test-plans/project-tree/).
 
 **Related:** [`../item-positioning/`](../item-positioning/) (an item's
 scopes, the active/done split, and the board's placements) ·
-[`../project-tree/`](../project-tree/) §4 (a project's siblings)
+[`../project-tree/`](../project-tree/) §4 (a project's siblings) ·
+[`../row-references/`](../row-references/) §1 (a reference that names no
+row)
 
 This page answers "how does a write place an entry among others, and how
 does a client keep the order the server saved." Its rules are shared:
@@ -61,7 +63,7 @@ once.
 **A named neighbor must be one the entry can be placed against.** A
 write is refused with a 400, and nothing in it changes, when its
 neighbor:
-- doesn't exist;
+- doesn't exist ([`../row-references/`](../row-references/) §1);
 - has no position, since resolution starts from the neighbor's position
   (§3);
 - isn't in the entry's *resulting* scope, the one it's in after the
@@ -236,9 +238,10 @@ The disclosure's shape:
   for both sides.
 - **`{id, position}` and nothing more.** A reindex changes positions and
   never any other field, so a full row would imply otherwise.
-- **The written entry is included** when it was part of the reindexed
-  scope, so a caller has exactly one rule, to apply every pair, rather
-  than a merge with a precedence to reason about.
+- **The written entry is included whenever it has a position,** whether
+  or not the reindex renumbered it, so a caller has exactly one rule, to
+  apply every pair, rather than a merge with a precedence to reason
+  about.
 - **Absent or empty means no reindex happened,** which is by far the
   common case, and costs nothing to report.
 - **It covers the whole reindexed scope,** which may be far wider than

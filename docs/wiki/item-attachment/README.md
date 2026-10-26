@@ -5,7 +5,9 @@
 **Related:** [`../item-positioning/`](../item-positioning/) (what an
 item's position compares against) · [`../positioning/`](../positioning/)
 (how a position resolves) · [`../board-drag-interaction/`](../board-drag-interaction/)
-(the gesture that drives these rules from a board)
+(the gesture that drives these rules from a board) ·
+[`../row-references/`](../row-references/) (a reference that names no
+row, and how a write names none)
 
 This page answers "what does it mean for one item to be attached to
 another, and what is a legal parent," and what follows from those: which
@@ -194,7 +196,7 @@ A candidate parent is legal for a given moving item if **all** of the
 following hold:
 
 1. **It exists.** A parent reference that names no item is rejected, not
-   stored.
+   stored ([`../row-references/`](../row-references/) §1).
 2. **It is not the moving item itself.**
 3. **It is not a descendant of the moving item.** Moving an item into its
    own subtree would form a cycle.
@@ -392,7 +394,8 @@ descendants, wherever they sit.
 - Neither is refused with a 400.
 
 A create naming a project that doesn't exist is refused with a 400, and
-nothing is stored, as one naming a parent that doesn't exist is (§7).
+nothing is stored, as one naming a parent that doesn't exist is (§7;
+[`../row-references/`](../row-references/) §1).
 
 **A child is created Attached unless the create clears the flag.** Under
 §11, an item becomes Free by an explicit detach, so a child created Free

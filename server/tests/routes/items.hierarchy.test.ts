@@ -57,6 +57,25 @@ describe('PATCH /items/:id/move — request validation', () => {
     expect(getRow(x.id).parentId).toBeNull();
   });
 
+  it('ATT-4.14: an empty-string parentId names no item: a move and a PUT refuse it, and null is how each says top-level', async () => {
+    const { project, todo } = await setupWorkflow();
+    const x = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'X' });
+    const before = getRow(x.id);
+
+    for (const [write, res] of [
+      ['move', await move(x.id, { parentId: '' })],
+      ['PUT', await put(x.id, { parentId: '' })],
+    ] as const) {
+      expect(res.status, write).toBe(400);
+      expect(res.body.error, write).toMatch(/parentId does not reference an existing item/);
+      expect(getRow(x.id), write).toEqual(before);
+    }
+
+    expect((await move(x.id, { parentId: null })).status).toBe(200);
+    expect((await put(x.id, { parentId: null })).status).toBe(200);
+    expect(getRow(x.id)).toMatchObject({ parentId: null, position: before.position });
+  });
+
   it('ATT-2.2, ATT-4.2, ATT-4.3, ATT-4.10: rejects the item itself and its descendants as parents; accepts moving up the tree', async () => {
     const { project, todo } = await setupWorkflow();
     const a = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'A' });

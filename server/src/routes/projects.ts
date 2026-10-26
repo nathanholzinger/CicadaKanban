@@ -40,6 +40,10 @@ function parentError(moving: { id: string; parentId: string | null } | null, par
   return parentRefusal('project', moving, parentId);
 }
 
+// Whether a neighbor field names a project. An empty string does: it is checked and refused,
+// never read as naming none (wiki row-references §1).
+const isNamed = (id: string | null | undefined): id is string => typeof id === 'string';
+
 // The position a write gives a project in the sibling group it ends with: after
 // the sibling `prevId` names, before the one `nextId` names, or, naming none,
 // after the group's true last, never trusting that the group is empty. One
@@ -54,8 +58,12 @@ function resolveProjectPosition(
   reindexed: ReindexedPosition[],
 ): number {
   const scope = projectPositionScope(parentId, projectId ?? undefined);
-  if (neighbor.prevId) return resolvePositionByAnchorAndSide(projects, scope, tx, 'after', neighbor.prevId, reindexed);
-  if (neighbor.nextId) return resolvePositionByAnchorAndSide(projects, scope, tx, 'before', neighbor.nextId, reindexed);
+  if (isNamed(neighbor.prevId)) {
+    return resolvePositionByAnchorAndSide(projects, scope, tx, 'after', neighbor.prevId, reindexed);
+  }
+  if (isNamed(neighbor.nextId)) {
+    return resolvePositionByAnchorAndSide(projects, scope, tx, 'before', neighbor.nextId, reindexed);
+  }
   return resolveAppendPosition(projects, scope, tx, reindexed);
 }
 
@@ -105,7 +113,8 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'name is required' });
     return;
   }
-  const resolvedParentId = parentId || null;
+  // Left out or null is the top level; an empty string names no project (wiki row-references §1).
+  const resolvedParentId: string | null = parentId ?? null;
   const createError = parentError(null, resolvedParentId);
   if (createError) {
     res.status(400).json({ error: createError });
@@ -230,7 +239,11 @@ router.patch('/:id/move', (req, res) => {
   // a reindex's. Keeping every bail-out outside the transaction matters too: a
   // db.transaction callback in better-sqlite3 only rolls back on throw, so a bail-out
   // inside it, after some other write had already run, would still commit that write.
-  const neighbor = prevId ? { id: prevId, field: 'prevId' } : nextId ? { id: nextId, field: 'nextId' } : null;
+  const neighbor = isNamed(prevId)
+    ? { id: prevId, field: 'prevId' }
+    : isNamed(nextId)
+      ? { id: nextId, field: 'nextId' }
+      : null;
   if (neighbor) {
     const refusal = anchorRefusal(projects, projectPositionScope(targetParentId, project.id), neighbor.id, project.id);
     if (refusal) {

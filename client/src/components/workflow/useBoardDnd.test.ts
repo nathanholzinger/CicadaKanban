@@ -54,7 +54,7 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
     vi.mocked(moveItem).mockReset();
   });
 
-  it('ends an item drag that began while the save was in flight, and the release writes nothing', async () => {
+  it('DRAG-6.15: ends an item drag that began while the save was in flight, and the release writes nothing', async () => {
     let failSave!: () => void;
     const saveFails = new Promise<void>(resolve => {
       failSave = resolve;

@@ -1,6 +1,6 @@
 # TC-2 — Anchor and side resolution
 
-**Next ID:** TC-2.34
+**Next ID:** TC-2.35
 
 The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a locally ordered list. What the board adds is [DRAG-6](../board-drag-interaction/drag-6-preview-reconciliation.md)'s.
 
@@ -36,6 +36,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 | TC-2.31 | A move within the item's own workphase that names no anchor appends it | P2 | Automated |
 | TC-2.32 | A write can't name a final position | P1 | Automated |
 | TC-2.33 | A Free item's true neighbor, or its anchor, can be in another project on the same workflow | P1 | Automated |
+| TC-2.34 | An anchor given as an empty string names no item, and is refused | P2 | Open |
 
 ---
 
@@ -61,7 +62,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* anchor `A` at `2.4`, the true last item in its comparison scope, *when* an item is placed after `A`, *then* its position is `3`: `A`'s position plus `1.0`, rounded. It isn't `3.4`.
 
-**Automation test:** `server/tests/routes/items.positioning.test.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.5 — Prepend fallback: before the true first item, floor-bounded and never negative
 
@@ -101,7 +102,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* the true order `A` (`1.0`), `B` (`2.8`), `C` (`3.0`), `D` (`4.0`), and a view that shows only `A`, `C` and `D`, *when* `D` is placed before `C`, *then* its position is `2.9`: between `C` and its true predecessor `B`. It's never below `2.8`, which would put `D` ahead of `B`, an item the view never saw.
 
-**Automation test:** `tests/api/itemRepositioningCrossColumn.spec.ts`, `server/tests/lib/positionResolver.test.ts`
+**Automation test:** `tests/api/itemRepositioningCrossColumn.spec.ts`
 
 ## TC-2.10 — A Free item's comparison scope is its whole workflow
 
@@ -165,7 +166,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* an item in a non-terminal workphase with no `parentId`, whose attachment flag is set, *when* its `positionScope` is computed, *then* it is `"workflow"`, not `"attached-siblings"`, which needs both the flag and a parent.
 
-**Automation test:** `server/tests/routes/items.attached.test.ts`
+**Automation test:** `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.18 — `position` is a number or `null`
 
@@ -213,7 +214,7 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 
 *Given* Free item `X` at a position the append fallback wouldn't produce, such as `2.37`, *when* `X` moves to another workphase of the same workflow with no anchor, *then* `X.position` is exactly `2.37`: its scope is the workflow either way. *And given* `X` has no position to keep, as a reopened done item has none ([TC-6.9](part-6-active-done-split.md)), *then* it takes the append fallback instead.
 
-**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.crossProject.test.ts`
+**Automation test:** `server/tests/routes/items.test.ts`, `server/tests/routes/items.positioning.test.ts`
 
 ## TC-2.25 — A parent's workphase cascade leaves its attached children's positions alone
 
@@ -278,3 +279,11 @@ The client cases (TC-2.11 and TC-2.27–2.30) hold for any client that keeps a l
 *Given* projects `P1` and `P2` on one workflow, and, in one workphase, Free items `A` (`1.0`), `D` (`3.0`) and `C` (`5.0`) in `P1` and `B` (`2.0`) in `P2`, *when* `C` is placed after `A`, as `P1`'s board asks, since it doesn't show `B`, *then* `C`'s position is `1.5`: `A`'s true neighbor is `B`, whatever its project ([TC-2.9](part-2-anchor-resolution.md)). *And when* `C` is instead placed with `{anchorId: B, side: after}`, *then* it's accepted, and `C`'s position is `2.5`, between `B` and `D`: `B` is in `C`'s scope, though not in its project.
 
 **Automation test:** `tests/api/itemRepositioningCrossProject.spec.ts`
+
+## TC-2.34 — An anchor given as an empty string names no item, and is refused
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki positioning §2, wiki row-references §1
+
+*Given* item `X` in workphase `W1`, and items `A`, `C` and `E` in `W2`, *when* a move of `X` into `W2` names `""` as its anchor, on either side, *then* it's refused with a 400, and nothing in it is written: `X` is still in `W1`, at the same position. No fallback reads the empty string as no anchor and appends instead, as a move that leaves the anchor out does ([TC-2.31](part-2-anchor-resolution.md)). An anchor that doesn't exist is [TC-2.8](part-2-anchor-resolution.md)'s.
+
+**Automation test:** —

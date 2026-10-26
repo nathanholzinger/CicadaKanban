@@ -130,7 +130,10 @@ describe('attached children', () => {
     // Attached under the detached child — inherits its phase, but must not follow the root.
     const branchChild = await createItem({ projectId: project.id, parentId: detached.id, title: 'Branch Child' });
 
-    await request(app).patch(`/api/items/${root.id}/move`).send({ workphaseId: inProgress.id });
+    // Without this a refused move would leave both children in Todo too.
+    const moved = await request(app).patch(`/api/items/${root.id}/move`).send({ workphaseId: inProgress.id });
+    expect(moved.status).toBe(200);
+    expect(getRow(root.id).workphaseId).toBe(inProgress.id);
 
     expect((await request(app).get(`/api/items/${detached.id}`)).body.workphaseId).toBe(todo.id);
     expect((await request(app).get(`/api/items/${branchChild.id}`)).body.workphaseId).toBe(todo.id);

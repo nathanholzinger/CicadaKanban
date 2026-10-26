@@ -301,6 +301,24 @@ describe('a project’s parent, on an edit and on a move', () => {
     expect(await placeOf(x.id)).toEqual(before);
   });
 
+  it('TREE-3.10: a parent given as an empty string names no project: a create, an edit and a move refuse it, and nothing changes', async () => {
+    const x = await createProject({ name: 'X' });
+    const projectsBefore = await listProjects();
+    const before = await placeOf(x.id);
+
+    const created = await request(app).post('/api/projects').send({ name: 'Orphan', parentId: '' });
+    expect(created.status).toBe(400);
+    expect(created.body.error).toMatch(/existing project/i);
+    expect(await listProjects()).toEqual(projectsBefore);
+
+    for (const write of [editProject, moveProject]) {
+      const res = await write(x.id, { parentId: '' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/existing project/i);
+    }
+    expect(await placeOf(x.id)).toEqual(before);
+  });
+
   it('a parent that is neither a string nor null is refused, and nothing changes', async () => {
     const x = await createProject({ name: 'X' });
     const before = await placeOf(x.id);
@@ -427,6 +445,27 @@ describe('PATCH /api/projects/:id/move', () => {
         expect(await placeOf(x.id), `${label}, ${side}`).toEqual(before);
       }
     }
+  });
+
+  it('TREE-6.7: a neighbor given as an empty string names no project, and is refused, as the one before or the one after', async () => {
+    await createProject({ name: 'A' });
+    const x = await createProject({ name: 'X' });
+    const p = await createProject({ name: 'P' });
+    await createProject({ name: 'P1', parentId: p.id });
+    await createProject({ name: 'P2', parentId: p.id });
+    const before = await placeOf(x.id);
+
+    for (const side of ['prevId', 'nextId']) {
+      const res = await moveProject(x.id, { parentId: p.id, [side]: '' });
+      expect(res.status, side).toBe(400);
+      expect(res.body.error, side).toMatch(/does not reference an existing project/);
+      expect(await placeOf(x.id), side).toEqual(before);
+    }
+
+    // A move naming none still appends after P's true last child.
+    const appended = await moveProject(x.id, { parentId: p.id, prevId: null, nextId: null });
+    expect(appended.status).toBe(200);
+    expect(await placeOf(x.id)).toEqual({ parentId: p.id, position: 3 });
   });
 
   it('TREE-6.5: a move naming the project itself as its neighbor is refused', async () => {

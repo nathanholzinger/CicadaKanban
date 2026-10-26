@@ -131,10 +131,6 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag, for either reason:
-- a drop of another item, released earlier, fails ([DRAG-6.6](drag-6-preview-reconciliation.md));
-- a stale response carrying reindex pairs arrives ([DRAG-6.7](drag-6-preview-reconciliation.md));
-
-*then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request.
+*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag, whatever caused the reload, *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. The resync after another item's failed drop ([DRAG-6.6](drag-6-preview-reconciliation.md)) and the one after a stale response carrying reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)) are two such reloads; a test of any reload the board makes asserts the case.
 
 **Automation test:** —

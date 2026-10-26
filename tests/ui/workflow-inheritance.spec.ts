@@ -55,7 +55,7 @@ test.describe('items visibility with inherited workflow', () => {
     await expect(article(column(page, 'Todo'), 'Child-owned item')).toBeVisible();
   });
 
-  test('item created in child project also appears on the parent board', async ({ page, projectSidebar }) => {
+  test('BCU-1.5: item created in child project also appears on the parent board', async ({ page, projectSidebar }) => {
     await projectSidebar.openBoard('Parent Project');
 
     await expect(article(column(page, 'Todo'), 'Child-owned item')).toBeVisible();
@@ -154,7 +154,7 @@ test.describe('child project with own workflow', () => {
     });
   });
 
-  test('item in child own workflow is not visible on parent board', async ({ page, projectSidebar }) => {
+  test('BCU-1.5: item in child own workflow is not visible on parent board', async ({ page, projectSidebar }) => {
     // On its own board first, so its absence from the parent's is not an item that never rendered.
     await projectSidebar.openBoard('Child With Own Workflow');
     await expect(article(column(page, 'Todo'), 'Child-only item')).toBeVisible();

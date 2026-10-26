@@ -146,6 +146,32 @@ describe('POST /api/columns', () => {
     expect([after.startWorkphaseId, after.endWorkphaseId]).toEqual([w[0].id, w[1].id]);
   });
 
+  it('BCU-2.10: a start or end given as an empty string names no workphase: a create and an edit refuse it, and nothing changes', async () => {
+    const { board, w } = await setupFour();
+
+    for (const [label, start, end] of [
+      ['a start', '', w[1].id],
+      ['an end', w[0].id, ''],
+    ] as const) {
+      const res = await postColumn(board.id, start, end);
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(/startWorkphaseId and endWorkphaseId are required/);
+      expect((await readBoard(board.id)).columns, label).toEqual([]);
+    }
+
+    const a = await createColumn(board.id, w[0].id, w[1].id);
+    for (const [label, body] of [
+      ['a start', { startWorkphaseId: '' }],
+      ['an end', { endWorkphaseId: '' }],
+    ] as const) {
+      const res = await putColumn(a.id, body);
+      expect(res.status, label).toBe(400);
+      expect(res.body.error, label).toMatch(/belong to this board's workflow/);
+      const after = await columnOn(board.id, a.id);
+      expect([after.startWorkphaseId, after.endWorkphaseId], label).toEqual([w[0].id, w[1].id]);
+    }
+  });
+
   it('BCU-2.6: a column’s start can’t come after its end', async () => {
     const { board, w } = await setupFour();
 

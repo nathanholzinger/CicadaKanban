@@ -1,6 +1,6 @@
 # TREE-6 — Moving a project
 
-**Next ID:** TREE-6.7
+**Next ID:** TREE-6.8
 
 What a move does to the workflow the project and its subtree use is [TREE-10.2](tree-10-which-workflow.md)'s, and what it does to their items is [BCU-1.6](../boards-columns-unsorted/bcu-1-boards-and-what-they-show.md)'s and [TC-7.20](../item-positioning/part-7-board-placement-intents.md)'s.
 
@@ -12,6 +12,7 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 | TREE-6.4 | A moved project's subtree goes with it, keeping its parents and positions | P1 | Automated |
 | TREE-6.5 | A move naming the project itself as its neighbor is refused | P2 | Automated |
 | TREE-6.6 | A move can't name a position | P1 | Automated |
+| TREE-6.7 | A neighbor given as an empty string names no project, and is refused | P2 | Open |
 
 ---
 
@@ -79,3 +80,11 @@ What a move does to the workflow the project and its subtree use is [TREE-10.2](
 *Given* top-level projects `X` (`2.0`) and `A` (`4.0`), *when* a move names `position: 3.0` for `X`, alone or with `A` as the sibling it goes after, *then* it's refused with a 400 whose message says to name a neighbor instead, and `X.position` is still `2.0`.
 
 **Automation test:** `server/tests/routes/projects.test.ts`
+
+## TREE-6.7 — A neighbor given as an empty string names no project, and is refused
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §6, wiki positioning §2, wiki row-references §1
+
+*Given* top-level projects `A`, `X` and `P`, where `P` has children `P1` and `P2`, *when* `X` is moved under `P` naming `""` as its neighbor, *then* it's refused with a 400, whether the empty string is named as the sibling `X` goes after or as the one it goes before, and `X`'s parent and position are unchanged. No fallback reads it as no neighbor and places `X` after its last sibling, as a move naming none does ([TREE-6.2](tree-6-moving-a-project.md)). A neighbor that's no project is [TREE-6.3](tree-6-moving-a-project.md)'s.
+
+**Automation test:** —

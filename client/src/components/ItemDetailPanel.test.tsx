@@ -70,7 +70,7 @@ beforeEach(() => {
 
 // The disclosure reaches the board only if nothing on the way copies the row
 // without its `reindexed` pairs, so each write path must hand on the whole response.
-describe("the Sheet hands a write's whole response to the board", () => {
+describe("TC-5a.1: the Sheet hands a write's whole response to the board", () => {
   it('from the parent picker', async () => {
     const response = { ...makeItem('X', { parentId: 'P' }), reindexed };
     vi.mocked(updateItem).mockResolvedValue(response);

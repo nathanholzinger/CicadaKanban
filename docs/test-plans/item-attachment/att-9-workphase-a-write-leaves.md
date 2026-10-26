@@ -1,6 +1,6 @@
 # ATT-9 — The workphase a write leaves an item in
 
-**Next ID:** ATT-9.13
+**Next ID:** ATT-9.14
 
 **The setup,** for the cases that name it: workflow `WF`, with non-terminal workphases `W1`, `W2` and `W3`, and project `P1` on `WF`. In `P1`, `R` is a top-level item in `W1`, and `D` is a detached child of `R`, in `W2`. `A` is attached to `D`, and `X` is attached to `A`, so `A` and `X` are Stubs in `D`'s Card, and `D` is the nearest Free ancestor of each.
 
@@ -18,6 +18,7 @@
 | ATT-9.10 | A detach that also reparents, naming no workphase, leaves the item in the one it was shown in | P2 | Automated |
 | ATT-9.11 | Naming `workphaseId: null` leaves an item Free with no workphase, whatever it was shown in | P2 | Automated |
 | ATT-9.12 | A write that names a workphase that doesn't exist is refused | P2 | Automated |
+| ATT-9.13 | A workphase given as an empty string names no workphase, and is refused | P2 | Open |
 
 ---
 
@@ -30,7 +31,7 @@
 - a move that attaches `F` to `A` and names `W2` is accepted, and `F` is attached, in `W2`. One that names `W1`, `F`'s own workphase, is refused the same way;
 - a move that detaches `X` and names `W3` is accepted, and `X` is Free in `W3`.
 
-**Automation test:** `server/tests/routes/items.workphase.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.workphase.test.ts`
 
 ## ATT-9.2 — A create that makes an Attached child can't name a workphase other than its parent's
 
@@ -90,7 +91,7 @@
 
 *Given* project `P1` on workflow `WF1`, another workflow `WF2` with workphase `v`, Free item `F` in `P1` at workphase `w1` of `WF1`, and item `B` in `P1`, *when* a move names `v` for `F`, with no reparent, or while reparenting `F` under `B` and leaving it Free, *then* each is refused with a 400, and `F` is unchanged. A cross-workflow reparent that names a workphase of the new workflow is [ATT-5.9](att-5-cross-project-reparenting.md)'s.
 
-**Automation test:** `server/tests/routes/items.crossProject.test.ts`
+**Automation test:** `server/tests/routes/items.workphase.test.ts`
 
 ## ATT-9.9 — A create can't name a workphase its project's workflow doesn't use
 
@@ -98,7 +99,7 @@
 
 *Given* the projects and workflows of [ATT-9.8](att-9-workphase-a-write-leaves.md), *when* a create makes a top-level item in `P1`, or a detached child of `B`, and names `v`, *then* it's refused with a 400, and no item is created. Under an attached parent, naming `v` is [ATT-9.2](att-9-workphase-a-write-leaves.md)'s.
 
-**Automation test:** `server/tests/routes/items.crossProject.test.ts`
+**Automation test:** `server/tests/routes/items.workphase.test.ts`
 
 ## ATT-9.10 — A detach that also reparents, naming no workphase, leaves the item in the one it was shown in
 
@@ -130,3 +131,18 @@
 *then* each is refused with a 400, no item is created, and `R` and `X` are unchanged. A workphase that doesn't exist is neither the parent's nor one `WF` uses, so it's refused whether the write leaves the item Attached ([ATT-9.1](att-9-workphase-a-write-leaves.md), [ATT-9.2](att-9-workphase-a-write-leaves.md)) or Free ([ATT-9.8](att-9-workphase-a-write-leaves.md), [ATT-9.9](att-9-workphase-a-write-leaves.md)).
 
 **Automation test:** `server/tests/routes/items.workphase.test.ts`
+
+## ATT-9.13 — A workphase given as an empty string names no workphase, and is refused
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki item-attachment §2a, wiki row-references §1
+
+*Given* the setup, *when* each of these writes names `workphaseId: ""`:
+- a create of a top-level item in `P1`;
+- a create of a child attached to `A`;
+- a create of a detached child of `A`;
+- a move of `R`, which leaves it Free;
+- a move that leaves `X` attached to `A`;
+
+*then* each is refused with a 400, no item is created, and `R` and `X` are unchanged. An empty string isn't `null`, which leaves an item Free with no workphase ([ATT-9.11](att-9-workphase-a-write-leaves.md)), and it isn't a workphase left out, which keeps an item where it's shown ([ATT-9.4](att-9-workphase-a-write-leaves.md)). A workphase that doesn't exist is [ATT-9.12](att-9-workphase-a-write-leaves.md)'s.
+
+**Automation test:** —

@@ -1,6 +1,6 @@
 # BCU-2 — A column and its range
 
-**Next ID:** BCU-2.10
+**Next ID:** BCU-2.11
 
 **The setup,** for the cases that name it: workflow `WF` with non-terminal workphases `W1`, `W2`, `W3` and `W4`, in that order, and board `B` of `WF`, holding only the columns each case names. `V1` is a workphase of another workflow, `WF2`.
 
@@ -15,6 +15,7 @@
 | BCU-2.7 | An edit whose range passes fixes a broken column | P2 | Automated |
 | BCU-2.8 | A column whose start comes after its end still covers the workphases between its two ends | P2 | Automated |
 | BCU-2.9 | A column with an end outside the workflow is broken, and covers no workphase | P2 | Automated |
+| BCU-2.10 | A column's start or end given as an empty string names no workphase, and is refused | P2 | Open |
 
 ---
 
@@ -98,3 +99,11 @@
 *then*, each time, `B`'s read flags `A` `broken`, `A` covers no workphase, shows none of the three items, and is named "(empty range)". `unsorted.uncovered` lists `W1`, `W2` and `W3`, and not `W4`. `C` isn't `broken`. *When* `A`, with its end at `V1`, is then edited to run from `W1` to `W3`, *then* it's accepted, `A` isn't `broken`, it covers `W1`, `W2` and `W3` again with their items, and `uncovered` is empty. That a broken column takes no drop is [DRAG-1.9](../board-drag-interaction/drag-1-contexts-and-popping.md)'s and [DRAG-2.8](../board-drag-interaction/drag-2-target-classification.md)'s.
 
 **Automation test:** `server/tests/routes/columns.test.ts`
+
+## BCU-2.10 — A column's start or end given as an empty string names no workphase, and is refused
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki boards-columns-unsorted §5, wiki row-references §1
+
+*Given* the setup, *when* a column is created on `B` from `""` to `W2`, or from `W1` to `""`, *then* each is refused with a 400, and `B`'s columns are unchanged. *Given* column `A` on `B` from `W1` to `W2`, *when* `A` is edited to start at `""`, or to end at `""`, *then* each is refused with a 400, and `A` still runs from `W1` to `W2`. An end that's another workflow's workphase, or no workphase at all, is [BCU-2.5](bcu-2-a-column-and-its-range.md)'s.
+
+**Automation test:** —

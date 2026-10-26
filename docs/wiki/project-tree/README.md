@@ -7,7 +7,9 @@ gap-and-depth rule the sidebar places by, and the depth cap) ·
 [`../positioning/`](../positioning/) (how a project's position
 resolves) · [`../boards-columns-unsorted/`](../boards-columns-unsorted/)
 (which projects' items a board shows) ·
-[`../item-attachment/`](../item-attachment/) (an item's own tree)
+[`../item-attachment/`](../item-attachment/) (an item's own tree) ·
+[`../row-references/`](../row-references/) (a reference that names no
+row)
 
 This page answers "what is the project tree, how does a write change it,
 and which workflow does each project use." Its numbered sections state
@@ -79,7 +81,7 @@ move (§6). What the sidebar adds:
 **A project with no parent is top-level. A write that gives a project a
 parent, a create, an edit or a move, names a legal one, or none, for the
 top level.** A candidate parent is legal if:
-1. **It exists.**
+1. **It exists** ([`../row-references/`](../row-references/) §1).
 2. **It isn't the project itself.**
 3. **It isn't in the project's subtree,** which would form a cycle.
 4. **It leaves the project's subtree within the project cap** (below).
@@ -151,7 +153,8 @@ its current one, next to a named sibling or at the end:**
 - **A neighbor the move can't use is refused with a 400, and nothing
   changes:** one that doesn't exist, one with no position, the project
   itself, or one that isn't a sibling in the resulting group, the new
-  parent's children ([`../positioning/`](../positioning/) §2).
+  parent's children ([`../positioning/`](../positioning/) §2;
+  [`../row-references/`](../row-references/) §1).
 - **With no neighbor named, the project goes after its true last sibling
   in the resulting group,** even when its parent doesn't change, so a
   move always places the project ([`../positioning/`](../positioning/)

@@ -30,5 +30,6 @@ docs {
   before/after," which reads ambiguously either direction) — each is
   verified as a real, current sibling in the resulting scope before its
   position is trusted. Omitting both appends to the end of the resulting
-  scope.
+  scope. An empty string for `parentId`, `prevId` or `nextId` names no
+  project, and is a 400, not none.
 }

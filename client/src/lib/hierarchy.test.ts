@@ -157,7 +157,7 @@ describe('isWithinDepthCap', () => {
   });
 });
 
-describe('byPositionThenCreatedAt', () => {
+describe('TC-5a.5: byPositionThenCreatedAt', () => {
   const sorted = (nodes: NamedNode[]) => [...nodes].sort(byPositionThenCreatedAt).map(n => n.id);
 
   it('orders by position first, whatever the creation order', () => {

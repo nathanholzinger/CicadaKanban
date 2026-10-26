@@ -155,7 +155,33 @@ describe('POST /api/items', () => {
     expect(created.body).toMatchObject({ type: type.id, agentId: agent.id });
   });
 
-  it('returns 400 for an empty-string parentId or agentId, which names no row, and creates nothing', async () => {
+  it('ATT-10.5: a create whose projectId is an empty string is refused, with a parent or without, and nothing is stored', async () => {
+    const project = await createProject();
+    const parent = await createItem({ projectId: project.id, title: 'P' });
+    const before = countItems();
+
+    for (const [label, body] of [
+      ['no parent', {}],
+      ['a parent', { parentId: parent.id }],
+    ] as const) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'T', projectId: '', ...body });
+      expect(res.status, label).toBe(400);
+    }
+    expect(countItems()).toBe(before);
+
+    // A create naming only its parent takes the parent's project, and null says the same.
+    for (const body of [{}, { projectId: null }]) {
+      const res = await request(app)
+        .post('/api/items')
+        .send({ title: 'T', parentId: parent.id, ...body });
+      expect(res.status, JSON.stringify(body)).toBe(201);
+      expect(res.body.projectId).toBe(project.id);
+    }
+  });
+
+  it('ATT-4.14: returns 400 for an empty-string parentId or agentId, which names no row, and creates nothing', async () => {
     const project = await createProject();
     const before = countItems();
 
@@ -276,7 +302,7 @@ describe('POST /api/items', () => {
     }
   });
 
-  it('TC-2.6, TC-2.7: positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
+  it('positions the first item in a workphase at 1.0 and the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const phase = await createWorkphase(workflow.id);

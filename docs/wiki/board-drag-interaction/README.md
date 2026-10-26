@@ -867,9 +867,10 @@ resyncs the board from the server. §3.2 should make this nearly
 unreachable — an invalid target shouldn't have been poppable — so a
 rejection arriving at all means the two enforcement points have drifted.
 
-**A reload that lands mid-drag stops the drag.** Either resync above,
-a failed drop's or a stale response's, can land while the user is
-dragging an item. The drag ends at once and nothing is written. The item
+**A reload that lands mid-drag stops the drag, whatever caused it.**
+Either resync above, a failed drop's or a stale response's, can land
+while the user is dragging an item, and so can any other reload of the
+board. The drag ends at once and nothing is written. The item
 is wherever the reloaded board shows it, which is where the server has
 it and may not be where the drag picked it up. A reload is the path for
 when something has gone wrong, and picking the item up again costs

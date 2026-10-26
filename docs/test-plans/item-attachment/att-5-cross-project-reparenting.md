@@ -23,7 +23,7 @@ What a cross-project or cross-workflow reparent does to positions is item-positi
 
 *Given* projects `P1` and `P2`, both on workflow `W`, Free Card `X` in `P1`, and Card `B` in `P2`, *when* `X` is attached to `B`, *then* it is accepted: `X.parentId = B`, `X` attached, `X.projectId = P2`, and `X.workphaseId = B.workphaseId`, a workphase of `W`. A different project doesn't disqualify a parent.
 
-**Automation test:** `server/tests/routes/items.crossProject.test.ts`, `server/tests/routes/items.attached.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`
 
 ## ATT-5.2 — The new project cascades to the entire descendant subtree, detached descendants included
 
@@ -33,7 +33,7 @@ What a cross-project or cross-workflow reparent does to positions is item-positi
 
 The project cascade changes no workphase: `X1`, attached, takes `B`'s workphase through the ordinary cascade, and `X2` and `X2a`, detached, keep their own.
 
-**Automation test:** `server/tests/routes/items.crossProject.test.ts`, `server/tests/routes/items.hierarchy.test.ts`
+**Automation test:** `server/tests/routes/items.crossProject.test.ts`
 
 ## ATT-5.6 — An item created under a parent takes the parent's project
 

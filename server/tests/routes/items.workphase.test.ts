@@ -38,6 +38,46 @@ async function setupShownWithChain(name = 'P1') {
   return { project, workflow, w1, w2, w3, r, d, a, x };
 }
 
+// Every write that can name a workphase, naming `workphaseId` where no workphase has that id
+// (ATT-9.12, ATT-9.13): each is refused with the one message, whether it leaves the item Free
+// or Attached, and nothing is created or changed. Returns the setup for a test to go on from.
+async function expectEveryWriteRefusesWorkphase(workphaseId: string) {
+  const chain = await setupShownWithChain();
+  const { project, r, a, x } = chain;
+  const rBefore = getRow(r.id);
+  const xBefore = getRow(x.id);
+  const before = countItems();
+  const refused = /workphaseId does not reference an existing workphase/;
+
+  const creates = [
+    ['a create of a top-level item', { projectId: project.id }],
+    ['a create of a child attached to A', { parentId: a.id }],
+    ['a create of a detached child of A', { parentId: a.id, isAttached: false }],
+  ] as const;
+  for (const [label, body] of creates) {
+    const res = await request(app)
+      .post('/api/items')
+      .send({ title: 'Y', workphaseId, ...body });
+    expect(res.status, label).toBe(400);
+    expect(res.body.error, label).toMatch(refused);
+  }
+
+  const moves = [
+    ['a move of R, which leaves it Free', r.id, {}],
+    ['a move that leaves X attached to A', x.id, { parentId: a.id, isAttached: true }],
+  ] as const;
+  for (const [label, id, body] of moves) {
+    const res = await move(id, { ...body, workphaseId });
+    expect(res.status, label).toBe(400);
+    expect(res.body.error, label).toMatch(refused);
+  }
+
+  expect(countItems()).toBe(before);
+  expect(getRow(r.id)).toEqual(rBefore);
+  expect(getRow(x.id)).toEqual(xBefore);
+  return chain;
+}
+
 // The two ways out of the refusal when D, the Free item an item is shown with,
 // has no workphase: naming one in the same write, or filing D into one first.
 const WAYS_OUT = /workphaseId in the same write, or file "D" into a workphase first/;
@@ -106,38 +146,15 @@ describe('the workphase a write gives an item', () => {
   });
 
   it("ATT-9.12: a write that names a workphase that doesn't exist is refused, whether it leaves the item Free or Attached", async () => {
-    const { project, r, a, x } = await setupShownWithChain();
-    const rBefore = getRow(r.id);
-    const xBefore = getRow(x.id);
-    const before = countItems();
-    const refused = /workphaseId does not reference an existing workphase/;
+    await expectEveryWriteRefusesWorkphase('no-such-workphase');
+  });
 
-    const creates = [
-      ['a create of a top-level item', { projectId: project.id }],
-      ['a create of a child attached to A', { parentId: a.id }],
-      ['a create of a detached child of A', { parentId: a.id, isAttached: false }],
-    ] as const;
-    for (const [label, body] of creates) {
-      const res = await request(app)
-        .post('/api/items')
-        .send({ title: 'Y', workphaseId: 'no-such-workphase', ...body });
-      expect(res.status, label).toBe(400);
-      expect(res.body.error, label).toMatch(refused);
-    }
+  it('ATT-9.13: a workphase given as an empty string names no workphase, and is refused, where null leaves the item with none', async () => {
+    const { r } = await expectEveryWriteRefusesWorkphase('');
 
-    const moves = [
-      ['a move of R, which leaves it Free', r.id, {}],
-      ['a move that leaves X attached to A', x.id, { parentId: a.id, isAttached: true }],
-    ] as const;
-    for (const [label, id, body] of moves) {
-      const res = await move(id, { ...body, workphaseId: 'no-such-workphase' });
-      expect(res.status, label).toBe(400);
-      expect(res.body.error, label).toMatch(refused);
-    }
-
-    expect(countItems()).toBe(before);
-    expect(getRow(r.id)).toEqual(rBefore);
-    expect(getRow(x.id)).toEqual(xBefore);
+    const cleared = await move(r.id, { workphaseId: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.workphaseId).toBeNull();
   });
 
   it('ATT-9.4: a detach that names no workphase leaves the item in the one it was shown in', async () => {

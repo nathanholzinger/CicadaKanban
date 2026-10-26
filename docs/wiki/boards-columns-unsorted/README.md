@@ -5,7 +5,9 @@
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
 (dragging items on a board) · [`../item-positioning/`](../item-positioning/)
 (how a column orders its items) · [`../project-tree/`](../project-tree/)
-(which workflow a project uses)
+(which workflow a project uses) ·
+[`../row-references/`](../row-references/) (a reference that names no
+row)
 
 This page answers "what is a board, which items does it show, what does a
 column cover, and where does an item go that no column covers." Its
@@ -83,9 +85,10 @@ every workphase of its workflow is then in `uncovered`.
 ## 5. A column's range is checked when it's written
 
 **A column create or edit is refused with a 400, and nothing changes,**
-when its start or its end isn't a workphase of the board's workflow, or
-when its start comes after its end in the workflow's order. So no column
-write makes a broken column (§9), and an edit whose range passes fixes
+when its start or its end isn't a workphase of the board's workflow
+([`../row-references/`](../row-references/) §1), or when its start comes
+after its end in the workflow's order. So no column write makes a broken
+column (§9), and an edit whose range passes fixes
 one.
 
 ## 6. A board's columns don't overlap or mix done and active
