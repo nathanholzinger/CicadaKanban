@@ -30,7 +30,7 @@ This pass **owns all duplication findings,** including duplicated Tailwind class
 Your scope file marks some files read whole (`.claude/guides/audit-workflow.md`, "What each pass gets"):
 - **A file marked read whole:** look for near-duplicates of its new code anywhere in the codebase, not only beside the listed lines. A file that gained code is where a new copy of existing logic is most likely.
 - **Any other file:** compare only the logic on its listed lines with what already exists.
-- **Moved lines:** check they moved rather than being copied. The source file shouldn't still hold the same logic, and the new home shouldn't repeat a helper that already exists elsewhere.
+- **Copied code is listed as changed lines:** its source still holds the same lines, so that source is what to compare it with.
 - **Removal sites:** a caller that now repeats what the removed code did.
 
 ## What isn't your responsibility

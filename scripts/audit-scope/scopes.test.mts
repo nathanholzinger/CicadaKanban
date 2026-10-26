@@ -20,7 +20,7 @@ const scanOf = (
   files: FileScope[],
   deleted: RangeScan['deleted'] = [],
   renamed: RangeScan['renamed'] = [],
-): RangeScan => ({ base: 'base', end: 'end', commits: 1, files, deleted, renamed });
+): RangeScan => ({ base: 'base', end: 'end', commits: 1, files, movedLines: 0, deleted, renamed });
 
 describe('ranges', () => {
   it('writes consecutive numbers as one range, in order, once each', () => {
@@ -30,12 +30,12 @@ describe('ranges', () => {
 });
 
 describe('renderScope', () => {
-  it('lists what to read whole, what changed, what moved in, where code was removed, and the paths that went', () => {
+  it('lists what to read whole, what changed, where code was removed, and the paths that went, and not what moved in', () => {
     const files = [
       file({ path: 'server/src/new.ts', isNew: true, readWhole: 'new file', changed: [1, 2, 3, 7] }),
       file({
         path: 'server/src/kept.ts',
-        readWhole: 'received moved code',
+        readWhole: 'marked by the orchestrator',
         changed: [10],
         moved: new Map([['server/src/old.ts', [4, 5, 6, 7]]]),
         removalSites: [20, 30],
@@ -51,14 +51,11 @@ describe('renderScope', () => {
       [
         '**Read these files whole** (the range may have changed their shape):',
         '- `server/src/new.ts` (new file)',
-        '- `server/src/kept.ts` (received moved code)',
+        '- `server/src/kept.ts` (marked by the orchestrator)',
         '',
         '**Code changed since the last audit:**',
         '- `server/src/new.ts` (new file) (lines 1-3, 7)',
         '- `server/src/kept.ts` (lines 10)',
-        '',
-        '**Code moved here unchanged from another file since the last audit** (the source file as it stood at the last audit):',
-        '- `server/src/kept.ts` (lines 4-7, from `server/src/old.ts`)',
         '',
         '**Lines removed since the last audit with nothing added in their place** (the line numbers are the lines just above each removal, as the file stands now):',
         '- `server/src/kept.ts` (after lines 20, 30)',

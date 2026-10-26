@@ -8,6 +8,10 @@ import { extractCode, scriptKindOf } from '../check-docs/extract.mts';
 
 export type LineKind = 'blank' | 'comment' | 'title' | 'import' | 'code';
 
+/** A line that doesn't say whether code moved: blank, a comment or a test title. */
+export const isFiller = (kind: LineKind | undefined): boolean =>
+  kind === undefined || kind === 'blank' || kind === 'comment' || kind === 'title';
+
 /** A file the TypeScript parse reads. Anything else has no comments or imports to tell apart. */
 export const isScriptFile = (file: string): boolean => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(file);
 
@@ -87,17 +91,20 @@ export function lineKinds(fileName: string, text: string): LineKind[] {
 }
 
 /**
- * The file's lines with comments and test titles blanked, whitespace collapsed and empty lines
- * dropped. Two versions of a file that differ only in their comments and test titles strip to
- * the same lines.
+ * The file's code: its lines with comments and test titles blanked, whitespace collapsed, and
+ * import declarations, empty lines and the lines numbered in `skip` dropped. Two versions of a
+ * file that differ only in their comments, test titles and imports strip to the same lines.
  */
-export function strippedCode(fileName: string, text: string): string[] {
+export function strippedCode(fileName: string, text: string, skip: ReadonlySet<number> = new Set()): string[] {
   const { lines, comments, titles } = cover(fileName, text);
+  const imports = importLines(fileName, text);
   return lines
     .map((line, i) =>
-      blankOut(line, [...comments[i], ...titles[i]])
-        .replace(/\s+/g, ' ')
-        .trim(),
+      imports.has(i) || skip.has(i + 1)
+        ? ''
+        : blankOut(line, [...comments[i], ...titles[i]])
+            .replace(/\s+/g, ' ')
+            .trim(),
     )
     .filter(line => line !== '');
 }

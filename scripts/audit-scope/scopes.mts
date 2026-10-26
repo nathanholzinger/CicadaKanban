@@ -1,10 +1,10 @@
 // Turns a range's scan into scope files, one per pass instance. Which passes read a file:
 //
-//   - a file the range changed in its comments and test titles only, or in its imports only,
+//   - a file the range changed in its comments, test titles and imports only, in any mix,
 //     goes to the drift pass alone, and so does an agent-instruction file;
 //   - every other file goes to all four passes;
 //   - the file-responsibility pass takes only the files marked read whole;
-//   - moved lines are listed apart, and the drift pass also gets the deleted and renamed paths.
+//   - moved lines are left out, and the drift pass also gets the deleted and renamed paths.
 //
 // A scope file lists, for each of its files, line numbers as they stand at the end of the range.
 
@@ -66,16 +66,6 @@ export function renderScope(files: readonly FileScope[], extras: Extras): string
     sections.push([
       '**Code changed since the last audit:**',
       ...changed.map(file => `- \`${file.path}\`${file.isNew ? ' (new file)' : ''} (lines ${ranges(file.changed)})`),
-    ]);
-  }
-
-  const moved = files.flatMap(file =>
-    [...file.moved].sort().map(([origin, lines]) => `- \`${file.path}\` (lines ${ranges(lines)}, from \`${origin}\`)`),
-  );
-  if (moved.length > 0) {
-    sections.push([
-      '**Code moved here unchanged from another file since the last audit** (the source file as it stood at the last audit):',
-      ...moved,
     ]);
   }
 

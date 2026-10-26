@@ -11,8 +11,9 @@ import { scanRange, type FileScope, type RangeScan } from './scan.mts';
 import { buildScopes } from './scopes.mts';
 
 // A throwaway repository with a range's worth of history: a base commit (tagged as an audit's
-// end), then commits that change code, comments and imports, move a block, copy one, rename
-// and delete files, format a file, and move code that the range itself wrote.
+// end), then commits that change code, comments and imports, move a block, split one out into
+// a new file, put one in a removed line's place, copy one, rename and delete files, format a
+// file, and move code that the range itself wrote.
 
 const lines = (...parts: string[]): string => parts.join('\n') + '\n';
 
@@ -51,6 +52,26 @@ const OLD_NAME_WORK = [
   "  const joined = numbered.join('; ').replace(/\\s+/g, ' ');",
   '  const clipped = joined.length > 200 ? joined.slice(0, 200) : joined;',
   '  return clipped;',
+  '}',
+];
+
+const SPLIT_WORK = [
+  'export function splitWork(count: number): number[] {',
+  '  const steps = Array.from({ length: count }, (_, i) => i * 7);',
+  '  const odd = steps.filter(step => step % 2 === 1);',
+  '  const halved = odd.map(step => Math.floor(step / 2));',
+  '  const capped = halved.map(step => Math.min(step, 99));',
+  '  return capped;',
+  '}',
+];
+
+const PLACED_WORK = [
+  'export function placedWork(text: string): number {',
+  "  const vowels = text.split('').filter(ch => 'aeiou'.includes(ch));",
+  '  const unique = new Set(vowels);',
+  '  const weighted = unique.size * 13 + vowels.length;',
+  '  const bounded = weighted % 1000;',
+  '  return bounded;',
   '}',
 ];
 
@@ -105,6 +126,12 @@ describe('a range scanned end to end', () => {
     );
     write(`${A}moved.ts`, lines('// Holds code that moves out.', ...MOVED_WORK));
     write(`${A}receiver.ts`, lines('export const receiver = 1;'));
+    write(`${A}splitsrc.ts`, lines('// Holds code that splits out.', ...SPLIT_WORK, 'export const splitStays = 1;'));
+    write(
+      `${A}placed.ts`,
+      lines('export const before = 1;', 'export const placeholder = 0;', 'export const after = 2;'),
+    );
+    write(`${A}placedsrc.ts`, lines(...PLACED_WORK, 'export const placedStays = 1;'));
     write(`${A}copysrc.ts`, lines(...COPIED_WORK));
     write(`${A}oldname.ts`, lines(...OLD_NAME_WORK));
     write(`${A}comments.ts`, lines('// The old header comment.', 'export const answer = 42;'));
@@ -142,7 +169,11 @@ describe('a range scanned end to end', () => {
       ),
     );
     write(`${A}moved.ts`, lines('// Holds code that moves out.'));
-    write(`${A}receiver.ts`, lines('export const receiver = 1;', '', ...MOVED_WORK));
+    write(`${A}receiver.ts`, lines("import { x } from './x.ts';", 'export const receiver = 1;', '', ...MOVED_WORK));
+    write(`${A}splitsrc.ts`, lines('// Holds code that splits out.', 'export const splitStays = 1;'));
+    write(`${A}split.ts`, lines('// A module split out.', "import { z } from './z.ts';", '', ...SPLIT_WORK));
+    write(`${A}placed.ts`, lines('export const before = 1;', ...PLACED_WORK, 'export const after = 2;'));
+    write(`${A}placedsrc.ts`, lines('export const placedStays = 1;'));
     write(`${A}copydst.ts`, lines(...COPIED_WORK));
     write(`${A}copydst2.ts`, lines('// A copy of the function that is about to change names.', '', ...OLD_NAME_WORK));
     write(`${A}comments.ts`, lines('// A rewritten header comment,', '// on two lines.', 'export const answer = 42;'));
@@ -196,14 +227,32 @@ describe('a range scanned end to end', () => {
     assert.deepEqual([fresh.isNew, fresh.readWhole], [true, 'new file']);
   });
 
-  it('lists code moved in apart from the changed lines, and marks the file that received it read whole', () => {
+  it('sets code moved in aside: the file that received it, with the import it needs, goes to the drift pass alone', () => {
     const receiver = scanned(`${A}receiver.ts`);
     const moved = receiver.moved.get(`${A}moved.ts`) ?? [];
-    for (const line of [3, 4, 5, 6, 7, 8]) {
+    for (const line of [4, 5, 6, 7, 8, 9]) {
       assert.ok(moved.includes(line), `line ${line} moved in`);
       assert.ok(!receiver.changed.includes(line), `line ${line} is not also changed`);
     }
-    assert.deepEqual([receiver.reading, receiver.readWhole], ['all', 'received moved code']);
+    assert.ok(receiver.changed.includes(1), 'the import is changed');
+    assert.deepEqual([receiver.reading, receiver.readWhole], ['drift', null]);
+  });
+
+  it("doesn't read whole a new file whose only code moved there, and gives it to the drift pass alone", () => {
+    const split = scanned(`${A}split.ts`);
+    assert.ok((split.moved.get(`${A}splitsrc.ts`) ?? []).length >= 6, 'the block moved in');
+    assert.deepEqual([split.isNew, split.reading, split.readWhole], [true, 'drift', null]);
+  });
+
+  it('lists where moved code took the place of a removed line, since no list names that code', () => {
+    const placed = scanned(`${A}placed.ts`);
+    assert.ok((placed.moved.get(`${A}placedsrc.ts`) ?? []).length >= 6, 'the block moved in');
+    assert.deepEqual([placed.reading, placed.removalSites], ['all', [1]]);
+  });
+
+  it('counts the moved lines every scope leaves out', () => {
+    const counted = scan.files.reduce((sum, file) => sum + [...file.moved.values()].flat().length, 0);
+    assert.ok(scan.movedLines >= counted && counted >= 18, `${scan.movedLines} moved, ${counted} in files read`);
   });
 
   it("lists where the source of a move lost its lines, and doesn't call them changed", () => {
@@ -284,10 +333,9 @@ describe('a range scanned end to end', () => {
     assert.match(text('scope-drift-S1.md'), /`server\/src\/renamed\.ts` \(renamed to `server\/src\/renamed2\.ts`\)/);
     assert.doesNotMatch(text('scope-correctness-S1.md'), /comments\.ts|imports\.ts|gone\.ts/);
     assert.match(text('scope-correctness-S1.md'), /`server\/src\/kept\.ts` \(lines 5-6\)/);
-    assert.match(
-      text('scope-correctness-S1.md'),
-      /`server\/src\/receiver\.ts` \(lines 3-\d, from `server\/src\/moved\.ts`\)/,
-    );
+    assert.doesNotMatch(text('scope-correctness-S1.md'), /receiver\.ts|split\.ts/);
+    assert.match(text('scope-drift-S1.md'), /`server\/src\/receiver\.ts` \(lines 1(, 3)?\)/);
+    for (const scope of scopes) assert.doesNotMatch(scope.text, /Code moved here/, scope.name);
 
     const responsibility = text('scope-fileresp-server.md');
     assert.match(responsibility, /Read these files whole/);
@@ -299,7 +347,7 @@ describe('a range scanned end to end', () => {
     const main = path.join(import.meta.dirname, 'main.mts');
     const run = spawnSync(process.execPath, [main, '--repo', root, '--out', out], { encoding: 'utf8' });
     assert.equal(run.status, 0, run.stderr);
-    assert.match(run.stdout, /story-audited\.\.HEAD: 4 commits/);
+    assert.match(run.stdout, /story-audited\.\.HEAD: 4 commits, \d+ files to read, \d+ moved lines left out/);
     assert.ok(readdirSync(out).includes('scope-correctness-S1.md'));
     assert.match(readFileSync(path.join(out, 'scope-drift-S1.md'), 'utf8'), /comments\.ts/);
   });

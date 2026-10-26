@@ -187,7 +187,7 @@ KanbanApp/
 │   ├── archive/         ← closed plans, audits, reports and walkthroughs (frozen — skip unless asked)
 │   ├── wiki/            ← feature-organized source of truth (hardened, testable rules) — read before touching positioning, attachment, board drag, hierarchy placement, the project tree, or boards/columns/Unsorted
 │   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/ (a page of shared rules has none)
-├── scripts/             ← repo tooling (check-docs)
+├── scripts/             ← repo tooling (check-docs, audit-scope)
 ├── server/src/          ← see module headers in lib/*.ts for what each shared module owns
 ├── client/src/          ← see module headers; the drag layer's conventions are in components/workflow/CLAUDE.md
 ├── tests/               ← Playwright E2E (api/, helpers/, pages/, ui/)

@@ -48,6 +48,14 @@ describe('removalSites', () => {
     ];
     assert.deepEqual(removalSites(hunks), [11, 19]);
   });
+
+  it('takes a hunk whose new side is only moved code, at the line just above it', () => {
+    const replaced = { oldStart: 5, oldCount: 1, newStart: 5, newCount: 7 };
+    const inserted = { oldStart: 9, oldCount: 0, newStart: 15, newCount: 4 };
+    const rewritten = { oldStart: 20, oldCount: 2, newStart: 26, newCount: 2 };
+    const onlyMovedIn = (hunk: { newStart: number }): boolean => hunk.newStart !== 26;
+    assert.deepEqual(removalSites([replaced, inserted, rewritten], onlyMovedIn), [4]);
+  });
 });
 
 describe('touchedLines', () => {

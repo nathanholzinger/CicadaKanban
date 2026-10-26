@@ -28,12 +28,14 @@ Each pass is an agent in `.claude/agents/`:
 ## Your job (every pass)
 
 - **Review the scope you're given, through your pass's lens only.** Other lenses belong to other passes.
-- **Read your scope file for what changed.** It lists each file's lines as they stand now, in up to three lists, and marks some files read whole (`.claude/guides/audit-workflow.md`, "What each pass gets"):
+- **Read your scope file for what changed.** It lists each file's lines as they stand now, and marks some files read whole (`.claude/guides/audit-workflow.md`, "What each pass gets"):
   - **changed lines:** review them;
-  - **moved lines:** the move didn't change them, so check only what the move can break, as your agent says;
-  - **removal sites:** check what's left around each one.
+  - **removal sites:** check what's left around each one;
+  - **deleted and renamed paths,** in a drift scope only: search for what still names them.
+
+  Code that moved unchanged from another file isn't listed. It was audited where it was written.
 - **Read a file marked read whole all through,** and ask your lens's questions of the file as a whole. **Read any other file at its listed lines,** with enough around them to understand them, and the code they call.
-- **Report a finding only on a listed line,** or on a problem a listed line creates or leaves in place somewhere else.
+- **Report whatever you find in what you read,** old code included, and any problem a listed line creates or leaves in place somewhere else. The limits above are on what you read, to keep an audit's cost down, not on what a finding may be about.
 - **Return a prioritized list of findings,** not a narrative or a rewrite.
 - **Be specific.** Give the file path and line range, the problem, and the fix. For a correctness finding, add a concrete failure scenario: which inputs or state lead to which wrong result.
 - **Tag each finding** Fix Now, Watch List, Covered by `<epic>`, or Informational. The audit guide defines the tiers. Two of its rules matter while tagging:

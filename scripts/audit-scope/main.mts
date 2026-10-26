@@ -52,8 +52,10 @@ const out = path.resolve(args.out);
 mkdirSync(out, { recursive: true });
 for (const scope of scopes) writeFileSync(path.join(out, scope.name), scope.text, { encoding: 'utf8' });
 
-console.log(`${base}..${args.end}: ${scan.commits} commits, ${scan.files.length} files to read`);
-console.log(`${'scope'.padEnd(36)} files changed moved removal-sites`);
+console.log(
+  `${base}..${args.end}: ${scan.commits} commits, ${scan.files.length} files to read, ${scan.movedLines} moved lines left out`,
+);
+console.log(`${'scope'.padEnd(36)} files changed removal-sites`);
 for (const scope of scopes) {
   const count = (pick: (file: (typeof scope.files)[number]) => number): number =>
     scope.files.reduce((sum, file) => sum + pick(file), 0);
@@ -61,7 +63,6 @@ for (const scope of scopes) {
     scope.name.padEnd(36),
     String(scope.files.length).padStart(5),
     String(count(file => file.changed.length)).padStart(7),
-    String(count(file => [...file.moved.values()].reduce((sum, lines) => sum + lines.length, 0))).padStart(5),
     String(count(file => file.removalSites.length)).padStart(13),
   ];
   console.log(row.join(' '));

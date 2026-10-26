@@ -52,9 +52,33 @@ describe('settleMoves', () => {
     assert.deepEqual(result, { changed: [3, 4, 5, 6], moved: new Map([['src.ts', [9, 10, 11, 12]]]) });
   });
 
-  it("counts what's left of a source as changed once a copy takes it below the minimum", () => {
-    const result = settleMoves([], new Map([['src.ts', [3, 4, 5, 6, 9, 10]]]), text, sourceHolding(3, 4, 5, 6));
-    assert.deepEqual(result, { changed: [3, 4, 5, 6, 9, 10], moved: new Map() });
+  it('applies the minimum to each run, not to all a source gave the file', () => {
+    const result = settleMoves([], new Map([['src.ts', [3, 4, 5, 6, 9, 10]]]), text, () => null);
+    assert.deepEqual(result, { changed: [9, 10], moved: new Map([['src.ts', [3, 4, 5, 6]]]) });
+  });
+
+  it('counts scattered single lines that match a source as changed: they are edits, not a move', () => {
+    const result = settleMoves([], new Map([['src.ts', [2, 5, 9, 12]]]), text, () => null);
+    assert.deepEqual(result, { changed: [2, 5, 9, 12], moved: new Map() });
+  });
+
+  it("doesn't let blank lines break a run, in the file or in a copy's source", () => {
+    const spaced = ['a();', 'b();', '', 'c();', '  ', 'd();'];
+    const moved = new Map([['src.ts', [1, 2, 4, 6]]]);
+    assert.deepEqual(settleMoves([], moved, spaced, () => null).moved, moved);
+    const copied = settleMoves([], moved, spaced, () => ['a();', '', 'b();', 'c();', 'd();']);
+    assert.deepEqual(copied, { changed: [1, 2, 4, 6], moved: new Map() });
+  });
+
+  it('lets a rewritten comment sit inside a move, and counts only lines of code toward the minimum', () => {
+    const block = ['a();', '// a rewritten comment', '// on two lines', 'b();', 'c();', 'd();', '// moved too'];
+    const isComment = (line: number): boolean => block[line - 1].startsWith('//');
+    const moved = new Map([['src.ts', [1, 4, 5, 6]]]);
+    assert.deepEqual(settleMoves([2, 3], moved, block, () => null, isComment).moved, moved);
+    const short = new Map([['src.ts', [1, 4, 5, 7]]]);
+    assert.deepEqual(settleMoves([2, 3], short, block, () => null, isComment).moved, new Map());
+    const copied = settleMoves([2, 3], moved, block, () => ['a();', 'b();', 'c();', 'd();'], isComment);
+    assert.deepEqual(copied.moved, new Map());
   });
 
   it('keeps each source apart', () => {

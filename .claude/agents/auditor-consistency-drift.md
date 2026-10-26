@@ -15,9 +15,9 @@ This pass compares code against the rest of the codebase, not against first prin
 - **Changes to comments only.** Read each changed comment against the code beside it. A rewrite that states something the code doesn't do, or that dropped the reason a piece of code looks the way it does, is your finding.
 - **Changes to a file's imports only.** Check each import against the conventions: routes import from `lib/`, never from each other (root `CLAUDE.md`), and no import may cross an edge a module header rules out.
 
-**Moved code, removal sites, and files read at their listed lines** (`.claude/guides/audit-workflow.md`, "What each pass gets"):
-- **Moved lines:** check only that their comments, test titles and describe names still hold in the new file, especially anything that points at their old neighbours or their old file, and that the new file's header doesn't misdescribe what the file now holds.
-- **Removal sites:** a comment, module header or `CLAUDE.md` line that still describes the removed code.
+**Removal sites, deleted and renamed paths, and files read at their listed lines** (`.claude/guides/audit-workflow.md`, "What each pass gets"):
+- **Removal sites:** a comment, module header or `CLAUDE.md` line that still describes the removed code, including code that moved to another file.
+- **Deleted and renamed paths:** search for each old path. A comment, module header or `CLAUDE.md` line that still names one is your finding.
 - **A file not marked read whole:** check its module header too, where the listed lines remove or rename something it names.
 
 ## What you look for

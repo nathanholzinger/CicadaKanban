@@ -55,15 +55,35 @@ describe('lineKinds', () => {
 describe('strippedCode', () => {
   const stripped = (text: string): string[] => strippedCode('a.ts', text);
 
-  it('is the same for two versions that differ only in comments and test titles', () => {
-    const before = lines('// old header', "it('one', () => {", '  run(); // note', '});');
-    const after = lines('// a rewritten', '// header', '', "it('two', () => {", '  run();', '});');
+  it('is the same for two versions that differ only in comments, test titles and imports', () => {
+    const before = lines(
+      "import { a } from './a.ts';",
+      '// old header',
+      "it('one', () => {",
+      '  run(); // note',
+      '});',
+    );
+    const after = lines(
+      'import {',
+      '  b,',
+      "} from './b.ts';",
+      '// a rewritten',
+      '// header',
+      '',
+      "it('two', () => {",
+      '  run();',
+      '});',
+    );
     assert.deepEqual(stripped(before), stripped(after));
   });
 
   it('differs when the code does', () => {
     assert.notDeepEqual(stripped(lines('run(1);')), stripped(lines('run(2);')));
-    assert.notDeepEqual(stripped(lines("import { a } from './a.ts';")), stripped(lines('')));
+    assert.notDeepEqual(stripped(lines('run(1);')), stripped(lines('run(1);', 'stop();')));
+  });
+
+  it('drops the lines it is told to skip, numbered from 1', () => {
+    assert.deepEqual(strippedCode('a.ts', lines('run(1);', 'stop();', 'go();'), new Set([2])), ['run(1);', 'go();']);
   });
 
   it("keeps a string that holds comment characters, which isn't a comment", () => {

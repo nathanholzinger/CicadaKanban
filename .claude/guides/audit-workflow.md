@@ -28,32 +28,34 @@ The range runs from that base to HEAD when the audit starts. It takes in the pre
 
 **The range comes from tags and commits, never from commit messages,** since a message's label can lag the work. If the working tree holds uncommitted work, or the range holds commits from more than one story, confirm the scope with Nathan before spawning anything.
 
-**Sort the range before spawning:**
+**Build the scope with the script.** `npm run audit:scope -- --out docs/audits/<scope>-scopes` sorts the range and writes one scope file per pass instance into that folder. It takes the base from the newest `*-audited` tag and the end from HEAD unless it's given others, and warns when the working tree has uncommitted changes, which it leaves out. How it finds each list is the script's own (`scripts/audit-scope/`, from `main.mts`). The rules it applies are these:
 
 | What changed | Passes |
 |---|---|
 | Formatting only, in commits listed in `.git-blame-ignore-revs` | None |
-| Comments and test titles only, proven by the story's own comparison of the code with comments stripped | Drift |
-| A file's imports only, with nothing else in that file changed over the range | Drift |
+| Code moved unchanged from another file, written before the base | None (see What each pass gets) |
+| Comments, test titles and imports only, in any mix, with nothing else in the file changed over the range | Drift |
 | A `CLAUDE.md` file, root or directory | Drift |
-| Code moved unchanged from one file to another | All four, listed apart (see What each pass gets) |
 | Any other code, tests or config | All four |
 | Docs outside the code: the wiki, test plans, plans, guides, personas and agents | None |
 
-Whether a file changed only in its imports is mechanical: its diff over the range touches nothing but import statements.
+A file is sorted on what's left once its formatting commits and moved lines are set aside, so one that received moved code and the imports it needs goes to Drift.
 
-Write the scope down: the range, the files each group touches (`git diff --stat`), and which passes read each group.
-
-**A share too large for one pass** runs as several instances of that pass, in parallel, each over its own part of the scope. Split it by code area, not by commit, so each file has one reader per lens however many commits changed it. Keep code that shares logic in one Duplication instance: a split between the two halves would hide the duplication that lens looks for.
+**The split is the orchestrator's.** A share too large for one pass runs as several instances of that pass, in parallel, each over its own part of the scope. Split it by code area, not by commit, so each file has one reader per lens however many commits changed it. Keep code that shares logic in one Duplication instance: a split between the two halves would hide the duplication that lens looks for.
+- **The script's default split** is the area groups and instances in `scripts/audit-scope/config.mts`. A run that needs another passes a config file (`--config`), saved in the scope folder.
+- **The script exits 1** when a file a pass should read falls in no instance of that pass, so a split can't drop a file unnoticed.
 
 ### What each pass gets
 
-**A scope file per instance.** It lists the instance's files with line numbers as they stand at HEAD, so a pass needs no git. Each file can have three lists:
-- **Changed lines:** the lines `git blame` over the range attributes to a commit in it, skipping the commits in `.git-blame-ignore-revs`.
-- **Moved lines,** listed apart with the file each came from: lines plain blame puts in the range, but `git blame -M -C -C`, bounded at the base, traces to an older line in another file. A run of fewer than four lines from one source counts as changed instead: short matches are usually braces and imports. A move doesn't change the code, so a pass checks only what a move can break, as its agent says.
-- **Removal sites:** where lines were deleted with nothing added in their place, the hunks of `git diff -U0` over the range that add nothing. Blame can't see them, so they're listed for a pass to check what's left around each one.
+**A scope file per instance.** It lists the instance's files with line numbers as they stand at the end of the range, so a pass needs no git:
+- **the files to read whole,** each with the reason it's marked;
+- **changed lines:** the lines the range wrote. A copy counts as changed, since its source still holds the lines, and so does code the range wrote and then moved: both are new code to the passes. So do a few scattered lines that match another file: a move is a block of code, and short matches are usually edits;
+- **removal sites:** where lines were deleted with nothing added in their place, the source side of a move included. Blame can't see them, so they're listed for a pass to check what's left around each one;
+- **in a Drift scope only, the files the range deleted or renamed,** under their old paths, so the pass can search for what still names them.
 
-**How far to read.** The orchestrator marks a file **read whole** when the range may have changed its shape: the file is new, it received moved code, or 10 or more of its changed lines are code: imports, comments, test titles and blank lines don't count. It marks any other file whose growth calls its shape into question too.
+**Moved code isn't in the scope.** Code moved unchanged from another file, written before the base, was audited when it was written, and the gates and tests show the move safe. No pass reviews it, and it doesn't count toward a file's read-whole mark.
+
+**How far to read.** A file is marked **read whole** when the range may have changed its shape: it's new, unless all its code moved there, or 10 or more of its changed lines are code: imports, comments, test titles and blank lines don't count. The orchestrator marks any other file whose growth calls its shape into question too, in the config's `readWhole`.
 - **A marked file** is read whole, and each lens asks its questions of the file as a whole: whether it still owns one concept, whether its new code repeats code elsewhere, whether its header still covers it.
 - **An unmarked file** is read at its listed lines, enough around them to understand them, and the code they call. A change of a few lines rarely changes what a file owns, and reading the whole file for it costs more than it finds.
 - **File Responsibility's scope holds only the marked files.**
@@ -72,7 +74,7 @@ Spawn the four audit agents in parallel:
 - **The prompt carries only the scope:** the path of the instance's scope file. The persona says how to read it, and each agent's definition names the guide sections it reads.
 - **The passes run cold.** They get no story plan, no earlier audit, no ledger and no wiki page. A pass that has read the plan audits what was intended, not what was built. What was planned or ruled is the orchestrator's input, at Reconcile.
 - **Run them in the foreground** unless the scope is large. The reconcile step needs all four results.
-- **Launch a large audit's instances a few at a time** when there are more than one usage window holds, so a usage limit stops some of them, not all. A stopped instance resumes where it left off.
+- **Launch a large audit's instances a few at a time** when there are more instances than one usage window holds, so a usage limit stops some of them, not all. A stopped instance resumes where it left off.
 
 ## 4. Test code
 
@@ -95,7 +97,6 @@ The orchestrating session does this itself; it's never delegated.
   - *Amendments:* which rules changed while the story was open, when judging whether code is vestigial.
   - *Code map:* for a cleanup refactor, each item on a "Makes dead" list is gone.
   - *Handoff items addressed to the audit,* or to "the next story or audit" and not routed anywhere since. Each one matches a pass's finding, or the orchestrator rules on it and tiers the ruling.
-- **The previous audit, and only that one,** from `docs/archive/`, for recurrence. Each report restates the full chain for anything it carries, so one report back is enough.
 - **The wiki passage each correctness finding touches,** to classify it.
 
 Nothing else in the archive gets read.
@@ -139,9 +140,9 @@ Passes tag findings Fix Now, Watch List, Covered by `<epic>` or Informational. O
 - **Watch List:** a correctness risk that isn't a defect yet, or structural work that's a judgment call: a split or a consolidation worth doing if the code grows, or when it's next reworked.
 - **Informational:** confirmations and context, including structural work considered and judged not worth doing, with the reason.
 
-**A structural finding is Fix Now only when the code is already harder to change correctly because of it:** a shared rule written twice whose copies have started to differ, a helper copied rather than called, a file whose concepts are tangled enough that a change to one breaks the other. Otherwise a file to split, or logic to consolidate, is a judgment call, and goes on the Watch List or Informational. Fix Now structural work is ordered after any correctness fixes that touch the same code, or it's Routed to a story's plan. A structural item carried on the Watch List isn't forgotten: the rule below makes it required on its third consecutive audit, or the report says why it stays optional.
+**A structural finding is Fix Now only when the code is already harder to change correctly because of it:** a shared rule written twice whose copies have started to differ, a helper copied rather than called, a file whose concepts are tangled enough that a change to one breaks the other. Otherwise a file to split, or logic to consolidate, is a judgment call, and goes on the Watch List or Informational. A structural finding that passes this test is Fix Now, ordered after any correctness fixes that touch the same code, or Routed to a story certain to rework that code.
 
-**An optional finding becomes required on its third consecutive audit.** Keeping it optional needs a reason written in the report. A recurring finding lists the earlier audits it appeared in, and under which numbers.
+**An optional finding lasts only as long as its audit.** It's there for whoever plans this audit's fix batches. Once the report is archived, no later audit or session reads it, and the next audit judges the same code afresh: a structural problem that has grown until the code is harder to change correctly is Fix Now then. Anything that should outlive the audit is routed into a plan (see Close-out).
 
 **A ruling is required until its site records it.** The orchestrator may rule on a question a pass raised: "deliberately separate", "looks wrong but isn't", "can't happen, because …". If no comment at the site records that ruling yet, the ruling is a required finding. Its fix is a one-line present-tense comment there, with the reason (`.claude/guides/code-comments.md`, rule (f)). Without it, the next cold audit works the same question out again.
 
@@ -151,10 +152,10 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
 
 **Opening:**
 - the range, `<base>..<end>`, and the tag the base came from;
-- the groups the range sorted into, and which passes read each (see Scope);
-- what the passes got: how many lines changed and moved, how many removal sites there were, and which files were marked read whole;
+- the split: the instances each pass ran as, and the config if the run used one (see Scope);
+- what the passes got, from the script's summary: how many lines changed, how many removal sites there were, how many moved lines were left out, and which files were marked read whole;
 - the number of files, and a sentence on what the range contains;
-- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans, and which earlier audit).
+- how it ran: that the passes ran cold, which findings were re-traced by hand, and what the merge step read (which plans).
 
 **Findings:**
 - **Numbered once across the whole report,** not per section, so a finding's number identifies it on its own.
@@ -170,7 +171,6 @@ Write it to `docs/audits/code-quality-audit-<scope>.md`.
   - the problem, plus, for a correctness finding, a concrete failure scenario: which inputs or state lead to which wrong result;
   - the fix;
   - for a correctness finding, its wiki bucket and pointer;
-  - for a recurring finding, the earlier audits and numbers it appeared under;
   - for an optional finding in a file a Fix Now finding already changes, a note naming that finding: "can ride along with #N".
 - **An optional finding keeps its own tier,** even when it sits beside a Fix Now. The ride-along note tells whoever plans the fix batches that it costs little to include; folding it into the Fix Now would make that choice for them.
 
@@ -201,11 +201,10 @@ The audit stays open while its Fix Now work lands. It closes when every required
 
 **Check each disposition against the current code, not against memory.** A finding can get fixed as a side effect of other work. A note can also say a finding is fixed when it isn't. Read the file before writing the row.
 
-**Then the report moves to `docs/archive/`.** For a story's audit, that happens at the story's sign-off. After the move, nothing edits the report. A later audit that finds the same thing says so in its own report.
+**Then the report moves to `docs/archive/`, and the scope folder is deleted:** the tags and the config rebuild it. For a story's audit, that happens at the story's sign-off. After the move, nothing edits the report. A later audit that finds the same thing says so in its own report.
 
 ## 10. The epic-wide audit
 
 - **Range:** from the previous `epic-N-complete` tag to HEAD, sorted and run cold like any other. It overlaps every story audit in the epic on purpose: its value is what no single story's range shows, such as duplication and drift between stories.
-- **Merge** reads the epic's last story audit for recurrence, one report back as above.
 - **Close-out** is the same as a story audit's. Routes land in the epic's roadmap, since no story plan is open.
 - **It should be light.** A finding the story audits missed points to a gap in some pass's lens. The report names the lens, so that agent's definition can be tightened.

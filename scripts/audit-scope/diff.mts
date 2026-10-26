@@ -1,5 +1,5 @@
 // Reading `git diff` for the scope script: which paths a range changed, and the hunks of one
-// file's diff, from which come its removal sites and the lines an import-only check looks at.
+// file's diff, from which come its removal sites.
 
 export type ChangeStatus = 'A' | 'M' | 'R' | 'D';
 
@@ -51,11 +51,16 @@ export function parseHunks(diff: string): Hunk[] {
 }
 
 /**
- * Where lines were removed with nothing added in their place: the hunks with no new side. A
- * hunk's start is then the line just above the removal, as the file stands now.
+ * Where lines were removed with nothing new in their place, at the line just above each
+ * removal, as the file stands now: the hunks with no new side, whose start is that line, and
+ * those `onlyMovedIn` says put nothing but moved code in the removed lines' place, which no
+ * scope lists.
  */
-export function removalSites(hunks: readonly Hunk[]): number[] {
-  return hunks.filter(hunk => hunk.newCount === 0).map(hunk => hunk.newStart);
+export function removalSites(hunks: readonly Hunk[], onlyMovedIn: (hunk: Hunk) => boolean = () => false): number[] {
+  return hunks.flatMap(hunk => {
+    if (hunk.newCount === 0) return [hunk.newStart];
+    return hunk.oldCount > 0 && onlyMovedIn(hunk) ? [hunk.newStart - 1] : [];
+  });
 }
 
 const span = (start: number, count: number): number[] => Array.from({ length: count }, (_, i) => start + i);
