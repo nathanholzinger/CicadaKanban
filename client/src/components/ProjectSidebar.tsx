@@ -1,5 +1,6 @@
 // Project tree with dnd-kit drag reorder (server-resolved via prevId/nextId;
-// the drag itself is `sidebar/useProjectDragReorder.ts`).
+// the drag itself is `sidebar/useProjectDragReorder.ts`), and a handle on its
+// right edge that sets its width (`sidebar/useSidebarResize.ts`).
 
 import { useState } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
@@ -7,6 +8,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Project } from '../types';
 import { flattenTree } from './sidebar/projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './sidebar/useProjectDragReorder';
+import { useSidebarResize } from './sidebar/useSidebarResize';
 import { SortableProjectRow, DragGhost } from './sidebar/SortableProjectRow';
 import { PlusIcon, ICON_BUTTON_SM } from './icons';
 
@@ -48,57 +50,70 @@ export default function ProjectSidebar({
   }
 
   const drag = useProjectDragReorder(projects, flatItems, onReorderProject, expand, projectDepthCap);
+  const resize = useSidebarResize();
 
+  // The list scrolls in a box inside the aside, so the handle on the aside's edge
+  // stays put while the list scrolls.
   return (
-    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-zinc-800">
-      <div className="flex items-center justify-between px-3 pt-4 pb-2">
-        <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Projects</span>
-        <button
-          onClick={() => onCreateProject(undefined)}
-          className={ICON_BUTTON_SM}
-          aria-label="New project"
-          title="New project"
-        >
-          <PlusIcon />
-        </button>
+    <aside className="relative flex shrink-0 flex-col border-r border-zinc-800" style={{ width: resize.width }}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex items-center justify-between px-3 pt-4 pb-2">
+          <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Projects</span>
+          <button
+            onClick={() => onCreateProject(undefined)}
+            className={ICON_BUTTON_SM}
+            aria-label="New project"
+            title="New project"
+          >
+            <PlusIcon />
+          </button>
+        </div>
+
+        {projects.length === 0 ? (
+          <p className="px-4 py-3 text-xs text-zinc-600">No projects yet.</p>
+        ) : (
+          <DndContext
+            sensors={drag.sensors}
+            collisionDetection={closestCenter}
+            onDragStart={drag.handleDragStart}
+            onDragMove={drag.handleDragMove}
+            onDragEnd={drag.handleDragEnd}
+            onDragCancel={drag.handleDragCancel}
+          >
+            <SortableContext items={drag.rowIds} strategy={verticalListSortingStrategy}>
+              <div className="pb-4">
+                {flatItems.map(item => (
+                  <SortableProjectRow
+                    key={item.id}
+                    item={item}
+                    selectedProjectId={selectedProjectId}
+                    isActive={item.id === drag.activeItem?.id}
+                    isDescendantOfActive={drag.descendantIds.has(item.id)}
+                    indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
+                    indicatorDepth={drag.projectedDepth ?? item.depth}
+                    indicatorInvalid={drag.dropInvalid}
+                    expandedIds={expandedIds}
+                    onToggleExpand={toggleExpand}
+                    onSelectProject={onSelectProject}
+                    onCreateSubproject={onCreateProject}
+                    onDelete={onDeleteProject}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+
+            <DragOverlay>{drag.activeItem && <DragGhost name={drag.activeItem.project.name} />}</DragOverlay>
+          </DndContext>
+        )}
       </div>
 
-      {projects.length === 0 ? (
-        <p className="px-4 py-3 text-xs text-zinc-600">No projects yet.</p>
-      ) : (
-        <DndContext
-          sensors={drag.sensors}
-          collisionDetection={closestCenter}
-          onDragStart={drag.handleDragStart}
-          onDragMove={drag.handleDragMove}
-          onDragEnd={drag.handleDragEnd}
-          onDragCancel={drag.handleDragCancel}
-        >
-          <SortableContext items={drag.rowIds} strategy={verticalListSortingStrategy}>
-            <div className="pb-4">
-              {flatItems.map(item => (
-                <SortableProjectRow
-                  key={item.id}
-                  item={item}
-                  selectedProjectId={selectedProjectId}
-                  isActive={item.id === drag.activeItem?.id}
-                  isDescendantOfActive={drag.descendantIds.has(item.id)}
-                  indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
-                  indicatorDepth={drag.projectedDepth ?? item.depth}
-                  indicatorInvalid={drag.dropInvalid}
-                  expandedIds={expandedIds}
-                  onToggleExpand={toggleExpand}
-                  onSelectProject={onSelectProject}
-                  onCreateSubproject={onCreateProject}
-                  onDelete={onDeleteProject}
-                />
-              ))}
-            </div>
-          </SortableContext>
-
-          <DragOverlay>{drag.activeItem && <DragGhost name={drag.activeItem.project.name} />}</DragOverlay>
-        </DndContext>
-      )}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        {...resize.handleProps}
+        className={`absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none select-none ${resize.resizing ? 'bg-zinc-600' : 'hover:bg-zinc-700'}`}
+      />
     </aside>
   );
 }

@@ -60,6 +60,11 @@ export class ProjectSidebarPage {
     return this.locator.getByLabel('Drag to reorder');
   }
 
+  // The handle on the sidebar's right edge that sets its width.
+  get resizeHandle() {
+    return this.locator.getByRole('separator', { name: 'Resize sidebar' });
+  }
+
   // The line a drag draws at its gap, on the side of one row.
   get dropLine() {
     return this.locator.locator('[data-drop-line]');

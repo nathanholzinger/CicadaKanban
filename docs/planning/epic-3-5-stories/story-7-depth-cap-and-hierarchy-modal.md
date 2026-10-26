@@ -191,7 +191,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 | Symbol | Carries |
 |---|---|
 | `server/src/lib/itemTree.ts::ITEM_DEPTH_CAP`, `PROJECT_DEPTH_CAP` | D1: the value picked in Phase 5 |
-| `client/src/components/ProjectSidebar.tsx` | D2: the width and its handle |
+| `client/src/components/ProjectSidebar.tsx`, `sidebar/useSidebarResize.ts`, `sidebar/sidebarWidth.ts` | D2: the aside takes the width; its list scrolls in a box inside it, so the handle on the aside's right edge stays put. The hook is the handle's pointer handlers, and the module holds the default, the limits and the storage |
 | `client/src/components/workflow/dragTuning.ts::DragTuning` | D3's section depth; E3's hold |
 | `client/src/components/workflow/itemListOps.ts::hierarchyRows` (or a function beside it) | D3–D5, E1: the visible rows and the placeholders |
 | `client/src/components/StubRows.tsx` | D4: the placeholder row |
@@ -255,5 +255,10 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - item-attachment §8's grounding for 6, which names the hierarchy modal, and its Open question "`CAP`'s real value";
   - project-tree's Open question "The project cap's real value".
 - **Implementation passages to place:**
+  - **The sidebar's width (D2), built in Phase 1,** a working placeholder beside the sidebar's other controls in project-tree's Open questions. What exists:
+    - a handle on the sidebar's right edge, dragged with the pointer;
+    - 240px by default, held between 120px and 420px;
+    - kept in the browser, per viewer, stored when the drag ends and read at load, where a stored width outside the limits is pulled inside them;
+    - no keyboard control and no reset gesture.
 - **Test-plan cases affected:**
 - **Wiki sections added, changed, moved or removed** (PO, at close):
