@@ -43,6 +43,9 @@ const POP_FIELDS: Field[] = [
   { kind: 'number', key: 'descendantsPopInDelayMs', label: 'Descendants zoom-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
+const SECTION_FIELDS: Field[] = [
+  { kind: 'number', key: 'sectionLevels', label: 'Levels a section shows', step: 1, min: 1 },
+];
 const OVERLAY_FIELDS: Field[] = [
   { kind: 'text', key: 'overlayFreeDescendantColor', label: 'Free-descendant ring' },
   { kind: 'number', key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
@@ -97,7 +100,9 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
       </div>
 
       <div className="space-y-1.5">
-        <h4 className={SECTION_LABEL}>Overlays</h4>
+        <h4 className={SECTION_LABEL}>Section</h4>
+        {renderFields(SECTION_FIELDS)}
+        <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={() => onChange(DEFAULT_DRAG_TUNING)} className={BTN_CANCEL}>

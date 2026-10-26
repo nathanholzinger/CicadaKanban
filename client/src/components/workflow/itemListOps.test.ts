@@ -6,6 +6,10 @@ import {
   getAttachedChildrenFrom,
   hierarchyRows,
   descendantsChildrenOf,
+  sectionEntries,
+  shownLevels,
+  overflowRowId,
+  overflowOwnerOf,
   computeChildCounts,
   removeItemAndDescendants,
   applyPlacements,
@@ -226,6 +230,95 @@ describe('hierarchyRows', () => {
     const stopAtLate = (parentId: string) => (parentId === 'late' ? [] : getAttachedChildrenFrom(items, parentId));
     const rows = hierarchyRows('root', stopAtLate);
     expect(rows.map(r => r.item.id)).toEqual(['early', 'late']);
+  });
+});
+
+describe('shownLevels', () => {
+  it('holds the tuning value to a whole number of at least 1', () => {
+    expect(shownLevels(3)).toBe(3);
+    expect(shownLevels(3.9)).toBe(3);
+    expect(shownLevels(1)).toBe(1);
+    expect(shownLevels(0)).toBe(1);
+    expect(shownLevels(-2)).toBe(1);
+  });
+});
+
+describe('overflowRowId', () => {
+  it("names its owner, and no item's id reads as an overflow row's", () => {
+    expect(overflowOwnerOf(overflowRowId('r'))).toBe('r');
+    expect(overflowOwnerOf('r')).toBeNull();
+    expect(overflowOwnerOf('0c1f8c1e-uuid-like-id')).toBeNull();
+  });
+
+  it('is a different id from its owner’s', () => {
+    expect(overflowRowId('r')).not.toBe('r');
+  });
+});
+
+// A Card's section as drawn: cut at the last shown level, with an overflow row for the
+// children it hides. The tree: Card P holds A (then Q, which holds R and T) and B. R holds
+// R1 (which holds R1a) and R2, and has a Free child F. T has only a Free child G.
+describe('sectionEntries', () => {
+  const items = [
+    item('P'),
+    item('A', { parentId: 'P', position: 1 }),
+    item('B', { parentId: 'P', position: 2 }),
+    item('Q', { parentId: 'A' }),
+    item('R', { parentId: 'Q', position: 1 }),
+    item('T', { parentId: 'Q', position: 2 }),
+    item('R1', { parentId: 'R', position: 1 }),
+    item('R2', { parentId: 'R', position: 2 }),
+    item('R1a', { parentId: 'R1' }),
+    item('F', { parentId: 'R', isAttached: 0 }),
+    item('G', { parentId: 'T', isAttached: 0 }),
+  ];
+  const rowsOf = (list = items) => hierarchyRows('P', parentId => getAttachedChildrenFrom(list, parentId));
+  const shape = (levels: number, activeId?: string, list = items) =>
+    sectionEntries(rowsOf(list), levels, activeId).map(e =>
+      e.kind === 'item' ? `${e.row.item.id}@${e.row.depth}` : `${e.row.id}@${e.row.depth}×${e.row.count}`,
+    );
+
+  it('shows every level down to the last, and an overflow row one level under the row whose children are hidden', () => {
+    expect(shape(3)).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×2', 'T@2', 'B@0']);
+  });
+
+  it('counts the owner’s attached children, not their descendants or its Free children', () => {
+    const entries = sectionEntries(rowsOf(), 3);
+    const overflow = entries.find(e => e.kind === 'overflow');
+    expect(overflow?.kind === 'overflow' && overflow.row).toMatchObject({ ownerId: 'R', depth: 3, count: 2 });
+  });
+
+  it('draws no overflow row under a last-level row with no attached children, a Free child apart', () => {
+    expect(shape(3)).not.toContain('overflow:T@3×1');
+    expect(shape(3).filter(s => s.startsWith('overflow'))).toEqual(['overflow:R@3×2']);
+  });
+
+  it('shows more, and moves the overflow row, as the level count rises', () => {
+    expect(shape(4)).toEqual(['A@0', 'Q@1', 'R@2', 'R1@3', 'overflow:R1@4×1', 'R2@3', 'T@2', 'B@0']);
+  });
+
+  it('draws no overflow row once every level shows', () => {
+    expect(shape(5)).toEqual(['A@0', 'Q@1', 'R@2', 'R1@3', 'R1a@4', 'R2@3', 'T@2', 'B@0']);
+    expect(shape(12)).toEqual(shape(5));
+  });
+
+  it('puts the overflow row under a first-level row when one level shows', () => {
+    expect(shape(1)).toEqual(['A@0', 'overflow:A@1×1', 'B@0']);
+  });
+
+  it('leaves the dragged item out of the count, and draws none when it was the only child', () => {
+    expect(shape(3, 'R1')).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×1', 'T@2', 'B@0']);
+    const onlyChild = items.filter(i => i.id !== 'R2');
+    expect(shape(3, 'R1', onlyChild)).toEqual(['A@0', 'Q@1', 'R@2', 'T@2', 'B@0']);
+  });
+
+  it('reads a level count that is not a whole number, or below 1, as shownLevels does', () => {
+    expect(shape(3.9)).toEqual(shape(3));
+    expect(shape(0)).toEqual(shape(1));
+  });
+
+  it('draws a section with no rows as none', () => {
+    expect(sectionEntries([], 3)).toEqual([]);
   });
 });
 

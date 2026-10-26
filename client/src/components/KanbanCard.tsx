@@ -20,7 +20,7 @@ import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { cardRegionKey, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
-import { hierarchyRows } from './workflow/itemListOps';
+import { hierarchyRows, sectionEntries } from './workflow/itemListOps';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
 import {
@@ -31,7 +31,7 @@ import {
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
 import { ACTIVE_CONTEXT_OUTLINE, DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
-import { AttachGhostRow, AttachedChildRow, StubBody } from './StubRows';
+import { AttachGhostRow, AttachedChildRow, OverflowRow, StubBody } from './StubRows';
 
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
@@ -197,7 +197,8 @@ export default function KanbanCard({
   // slot (itemListOps.ts). None while ghost-like: a shortCard shows no
   // children at all, not even collapsed.
   //
-  // The whole section, every depth, as one flat DFS list —
+  // The whole section, every depth, as one flat DFS list (what the board places
+  // against; `entries` below is the part of it drawn) —
   // `itemListOps.ts::hierarchyRows` walks `getAttachedChildren`. The active
   // drag's own attach-preview ghost (`attachGhostId`) stays a leaf, matching
   // `AttachGhostRow`'s own non-recursive rendering below — real children of
@@ -214,6 +215,9 @@ export default function KanbanCard({
   // ghost isn't a region: entering it would offer one slot at depth 0, the
   // same drop Card layer already makes.
   const sectionIsRegion = rows.some(r => r.item.id !== attachGhostId);
+  // What the section draws: `rows` cut at the last shown level, with an overflow row for the
+  // children it hides. The board still places against all of `rows`.
+  const entries = sectionEntries(rows, dragTuning.sectionLevels, cardDragSession?.activeItem.id);
 
   return (
     <div
@@ -292,23 +296,26 @@ export default function KanbanCard({
             </div>
           )}
 
-          {/* The whole descendants section, every depth, one flat sortable
-              list — draggable among siblings. This wrapper doubles as the
+          {/* The descendants section, one flat sortable list down to its last
+              shown level, with an overflow row for what that hides — Stubs
+              draggable among siblings. This wrapper doubles as the
               Card's Descendants region — where a Stub's drag starts
               and pops back out to, one layer per Card, never one per Stub.
               It only exists while there's something to render, and is a
               region only while it holds a real child (`sectionIsRegion`,
               above). Its SortableContext is its own, never shared with
               CardList.tsx's: that one holds a card list's Free Cards, this
-              one the section's rows at every depth, and each list's shuffle
-              stays within its own rows. */}
+              one the section's rows, and each list's shuffle stays within
+              its own rows. */}
           {rows.length > 0 && getAttachedChildren && (
             <div
               className="mt-2 space-y-1"
               {...(sectionIsRegion ? dragRegionProps(descendantsRegionKey(item.id)) : {})}
             >
-              <SortableContext items={rows.map(r => r.item.id)} strategy={verticalListSortingStrategy}>
-                {rows.map(({ item: child, depth }) => {
+              <SortableContext items={entries.map(e => e.row.id)} strategy={verticalListSortingStrategy}>
+                {entries.map(entry => {
+                  if (entry.kind === 'overflow') return <OverflowRow key={entry.row.id} row={entry.row} />;
+                  const { item: child, depth } = entry.row;
                   const isActiveRow = child.id === cardDragSession?.activeItem.id;
                   // The active drag's own row previews the projected depth,
                   // not its stored one.

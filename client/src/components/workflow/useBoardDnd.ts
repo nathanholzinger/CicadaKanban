@@ -254,6 +254,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       namedAnchor: namedAnchorRef.current,
       pointerX: pointerRef.current?.x ?? null,
       getAttachedChildren: latest.current.getAttachedChildren,
+      sectionLevels: latest.current.tuning.sectionLevels,
     });
   }
 

@@ -1,5 +1,6 @@
 // The Stub tier's own rows — StubBody (the shared type-pill + title), AttachGhostRow
-// (a preview of an item about to attach), AttachedChildRow (a real, draggable Stub).
+// (a preview of an item about to attach), AttachedChildRow (a real, draggable Stub),
+// OverflowRow (the count standing in for a row's hidden children).
 // The Card tier's own render is KanbanCard.tsx; this is everything a
 // Descendants-section row renders as.
 
@@ -7,6 +8,7 @@ import type { Item, ItemType } from '../types';
 import TypePill from './item-detail/TypePill';
 import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useItemRow } from './dragChrome';
+import type { OverflowRowData } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
 // shares — AttachGhostRow and AttachedChildRow below, and KanbanCard's own
@@ -59,8 +61,8 @@ interface AttachedChildRowProps {
 }
 
 // One row in the flat section, indented by `depth` — not recursive: the
-// Card's single flat list carries every depth (`KanbanCard.tsx`'s own
-// `rows` walk the whole subtree).
+// Card's single flat list carries every shown depth (`KanbanCard.tsx`'s own
+// `entries` cut the subtree's walk at the last shown level).
 export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid = false }: AttachedChildRowProps) {
   // Draggable within the section's one shared `SortableContext`, through
   // the same pop machine as a Card, not a separate board-level path. `type`
@@ -104,6 +106,32 @@ export function AttachedChildRow({ item, itemTypes, depth, onCardClick, invalid 
       >
         <StubBody item={item} itemTypes={itemTypes} />
       </button>
+    </div>
+  );
+}
+
+// The row that stands in for the children of the last shown level's row `row.ownerId`, which
+// the section doesn't draw: how many there are, one level under their parent, where they
+// would be. It takes part in the shuffle as any row does, so the ghost slides above or below
+// it and the live line can be drawn on it, but it is no item: nothing drags from it, and it
+// carries no `data-item-id`.
+export function OverflowRow({ row }: { row: OverflowRowData }) {
+  const { setNodeRef, dropSide, sortableStyle, dataAttrs } = useItemRow(row.id, 'overflow', {
+    parentId: row.ownerId,
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...sortableStyle, paddingLeft: descendantsIndentPx(row.depth) }}
+      {...dataAttrs}
+      data-item-id={undefined}
+      data-overflow-row={row.ownerId}
+      className="relative rounded"
+    >
+      <DropSideIndicator side={dropSide} />
+      <div className={`${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`}>
+        {row.count} {row.count === 1 ? 'child' : 'children'}
+      </div>
     </div>
   );
 }

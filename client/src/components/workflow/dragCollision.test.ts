@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { CollisionDetection, Over } from '@dnd-kit/core';
 import { rect } from '../../test/dragFixtures';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
+import { overflowRowId } from './itemListOps';
 import {
   dropAnchorFor,
   resolveBoardCollisions,
@@ -9,6 +10,8 @@ import {
   columnData,
   isColumnData,
   isItemData,
+  isOverflowRow,
+  isSectionRow,
   itemRowData,
   namedAnchorFor,
   travelingRowsFor,
@@ -87,6 +90,32 @@ describe('resolveBoardCollisions', () => {
     expect(result.map(r => r.id)).toContain('grandchild-c');
     expect(result.map(r => r.id)).not.toContain('other-section-d');
     expect(result.map(r => r.id)).not.toContain('col-1');
+  });
+
+  // An overflow row slides with the Stubs, so it's a candidate beside them; it is no target
+  // for a drop at the Card layer or the Board.
+  it('a Descendants context: an overflow row inside the section is a candidate', () => {
+    const sectionRect = rect(0, 0, 100, 400);
+    const session: CollisionSession = { hoverContainerId: null, context: null, descendantsSectionRect: sectionRect };
+    const ids = resolveBoardCollisions(
+      collisionArgs('child-a', itemRowData('stub', 'parent-1'), [
+        { id: overflowRowId('child-b'), data: itemRowData('overflow', 'child-b'), rect: rect(5, 40, 90, 20) },
+        { id: overflowRowId('elsewhere'), data: itemRowData('overflow', 'elsewhere'), rect: rect(500, 0, 90, 20) },
+      ]),
+      session,
+    ).map(c => c.id);
+    expect(ids).toEqual([overflowRowId('child-b')]);
+  });
+
+  it('excludes an overflow row from a Card drag, as it does a Stub row', () => {
+    const result = resolveBoardCollisions(
+      collisionArgs('card-a', itemRowData('card'), [
+        { id: overflowRowId('child-1'), data: itemRowData('overflow', 'child-1') },
+        { id: 'col-1', data: columnData() },
+      ]),
+      null,
+    );
+    expect(result.map(r => r.id)).toEqual(['col-1']);
   });
 
   // As at a column, holding still over its own slot must be `over` itself:
@@ -225,7 +254,7 @@ describe('resolveDropSide', () => {
 // computes the ghost's middle from the constant. Only the dragged copy's
 // center is compared, never its height.
 describe('dropAnchorFor', () => {
-  function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' = 'card'): Over {
+  function overRow(id: string, top: number, items: string[], role: 'card' | 'stub' | 'overflow' = 'card'): Over {
     return {
       id,
       rect: rect(0, top, 100, 100),
@@ -333,6 +362,27 @@ describe('dropAnchorFor', () => {
     });
   });
 
+  // The overflow row is a row of the same list, so the ghost's slot is read against it as against
+  // a Stub, with a Stub row's ghost height, and it is named as a neighbor like any other.
+  it('over an overflow row: the same shuffle-slot rule as a Stub row, and the row is named as a neighbor', () => {
+    const o = overflowRowId('r');
+    const items = ['r', o, 't', 'x'];
+    const ghostMiddle = 110 + STUB_ROW_HEIGHT_PX / 2; // top-aligned to the overflow row (top 110)
+    expect(dropAnchorFor(dragged('x', ghostMiddle - 6), overRow(o, 110, items, 'overflow'))).toEqual({
+      anchorId: 'r',
+      side: 'after',
+    });
+    expect(dropAnchorFor(dragged('x', ghostMiddle + 6), overRow(o, 110, items, 'overflow'))).toEqual({
+      anchorId: o,
+      side: 'before',
+    });
+    // The ghost moving up onto the Stub below the overflow row names it as the row above.
+    expect(dropAnchorFor(dragged('x', 140), overRow('t', 140, items, 'stub'))).toEqual({
+      anchorId: o,
+      side: 'after',
+    });
+  });
+
   it("over a Stub row not in over's own sortable list: over itself, on the which-half side", () => {
     expect(dropAnchorFor(dragged('x', 125), overRow('b', 110, ['a', 'b'], 'stub'))).toEqual({
       anchorId: 'b',
@@ -393,13 +443,29 @@ describe('dropAnchorFor', () => {
 });
 
 describe('isItemData / isColumnData', () => {
-  it("tell an item row (Card or Stub alike) from a column by the registration's type", () => {
+  it("tell an item row (Card, Stub or overflow row alike) from a column by the registration's type", () => {
     expect(isItemData(itemRowData('card'))).toBe(true);
     expect(isItemData(itemRowData('stub', 'p'))).toBe(true);
+    expect(isItemData(itemRowData('overflow', 'p'))).toBe(true);
     expect(isItemData(columnData())).toBe(false);
     expect(isColumnData(columnData())).toBe(true);
     expect(isColumnData(itemRowData('card'))).toBe(false);
     expect(isItemData(undefined)).toBe(false);
+  });
+});
+
+describe('isOverflowRow / isSectionRow', () => {
+  it('tell the section’s rows from the Cards, and an overflow row from a Stub', () => {
+    expect(
+      [itemRowData('card'), itemRowData('stub', 'p'), itemRowData('overflow', 'p'), columnData(), undefined].map(
+        isOverflowRow,
+      ),
+    ).toEqual([false, false, true, false, false]);
+    expect(
+      [itemRowData('card'), itemRowData('stub', 'p'), itemRowData('overflow', 'p'), columnData(), undefined].map(
+        isSectionRow,
+      ),
+    ).toEqual([false, true, true, false, false]);
   });
 });
 
@@ -409,6 +475,16 @@ describe('travelingRowsFor', () => {
   it("at a Descendants context: the dragged subtree (classification's own subtreeIds)", () => {
     const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
     expect(['x', 'xa', 's1'].map(id => travels?.(id))).toEqual([true, true, false]);
+  });
+
+  // The overflow row of a row that travels stands for children that travel with it.
+  it('at a Descendants context: the overflow row of a traveling row, and no other', () => {
+    const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
+    expect([overflowRowId('x'), overflowRowId('xa'), overflowRowId('s1')].map(id => travels?.(id))).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 
   it('anywhere else: none — at a column a Free descendant is a real anchor', () => {

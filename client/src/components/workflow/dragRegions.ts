@@ -109,8 +109,8 @@ export interface CardRegion extends RegionCommon {
   parentRegionKey: string;
 }
 
-// A Card's Descendants region: the section of its attached descendants at
-// every depth — one per Card, never one per Stub — where a Stub's drag
+// A Card's Descendants region: the section of its attached descendants down
+// to its last shown level — one per Card, never one per Stub — where a Stub's drag
 // starts and where manual gap + depth placement happens. Carries no
 // workphase/card-count fields, same reasoning as `CardRegion`: the
 // within-action reads `parentId` off the resolved placement instead of this

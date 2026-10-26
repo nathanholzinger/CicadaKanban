@@ -30,3 +30,9 @@ export function itemPanel(page: Page): Locator {
 export function itemRow(page: Page, id: string): Locator {
   return page.locator(`[data-item-id="${id}"]`);
 }
+
+// The overflow row standing in for the hidden children of the row `ownerId`
+// (`StubRows.tsx::OverflowRow`). It is no item, so it has no `data-item-id`.
+export function overflowRow(page: Page, ownerId: string): Locator {
+  return page.locator(`[data-overflow-row="${ownerId}"]`);
+}

@@ -1,13 +1,14 @@
 // Row-data typing, collision detection, and anchor naming for the board drag
 // gesture: itemRowData/columnData and their readers (isItemData/isColumnData/
-// isCardRow/isStubRow), resolveBoardCollisions, and dropAnchorFor/
-// namedAnchorFor (the anchor + lean). The request-shape half
+// isCardRow/isStubRow/isOverflowRow/isSectionRow), resolveBoardCollisions, and
+// dropAnchorFor/namedAnchorFor (the anchor + lean). The request-shape half
 // (toRequest/isIdentity/sendItemMove) is dragRequest.ts.
 
 import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
 import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
 import type { AnchorRelation, DropSide } from '../../lib/hierarchyPlacement';
 import { containsPoint, descendantsCardIdOf, type Rect } from './dragRegions';
+import { overflowOwnerOf } from './itemListOps';
 import type { DragClassification } from './dragClassification';
 import type { PopSession } from './popSession';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
@@ -17,9 +18,11 @@ import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 // Stub's row and a popped-out Card row for the same id — holds by
 // construction, not by convention alone: an untyped literal lets
 // `role: 'stubs'` compile without complaint. `itemRowData`/`columnData` are
-// the one write path; `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`
-// the one read path, so no caller re-types the literal.
-export type ItemRowRole = 'card' | 'stub';
+// the one write path; `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`/
+// `isOverflowRow` the one read path, so no caller re-types the literal. An
+// overflow row is a section row that is no item: it slides with the Stubs and
+// can be named as a neighbor, and nothing about it is a drag source.
+export type ItemRowRole = 'card' | 'stub' | 'overflow';
 export type ItemRowData = { type: 'item'; role: ItemRowRole; parentId?: string | null };
 export type DragRowData = ItemRowData | { type: 'column' };
 
@@ -49,6 +52,15 @@ export function isStubRow(data: Record<string, unknown> | undefined): data is It
   return isItemData(data) && data.role === 'stub';
 }
 
+export function isOverflowRow(data: Record<string, unknown> | undefined): data is ItemRowData & { role: 'overflow' } {
+  return isItemData(data) && data.role === 'overflow';
+}
+
+// A row of a Card's Descendants section, whatever it stands for: a Stub or an overflow row.
+export function isSectionRow(data: Record<string, unknown> | undefined): boolean {
+  return isStubRow(data) || isOverflowRow(data);
+}
+
 // What the collision closure needs to know about the live pop session — a
 // read-only view the hook keeps in a ref.
 export interface CollisionSession {
@@ -58,7 +70,7 @@ export interface CollisionSession {
   context: { containerId: string; rect: Rect } | null;
   /**
    * Locked at a Descendants context, that region's own measured rect —
-   * candidates are every Stub row (any depth) whose center falls inside it,
+   * candidates are every section row (a Stub at any depth, or an overflow row) whose center falls inside it,
    * the same rect-containment test the column branch below uses for its own
    * in-context candidates. The section renders as one flat list, so "is this
    * row inside the section" is the whole scope: any row of the section, at
@@ -116,7 +128,7 @@ export function resolveBoardCollisions(
     // safe: the two differ only while the Card carries a sortable transform,
     // which at the default clocks can't overlap a Descendants lock.
     const droppableContainers = args.droppableContainers.filter(container => {
-      if (!isStubRow(container.data.current)) return false;
+      if (!isSectionRow(container.data.current)) return false;
       const rect = args.droppableRects.get(container.id);
       return rect !== undefined && rectCenterInside(rect, sectionRect);
     });
@@ -125,7 +137,7 @@ export function resolveBoardCollisions(
 
   const droppableContainers = args.droppableContainers.filter(container => {
     const data = container.data.current;
-    if (isStubRow(data)) return false; // never a valid target for a Card-layer or Board drop
+    if (isSectionRow(data)) return false; // never a valid target for a Card-layer or Board drop
     // In a locked column/sub-row the dragged card's own row *is* a
     // candidate, as in stock dnd-kit sortable: over its own slot, `over` is
     // itself and nothing shuffles (the lean still names a neighbor,
@@ -186,8 +198,8 @@ export function resolveDropSide(
 // (`popSession.ts::namedCardCandidate`) all read, through `namedAnchorFor`, so
 // they can't disagree (wiki board-drag-interaction §2 and §7.1).
 //
-// Over an item row — a Card in a column/sub-row's own list, or a Stub in a
-// Card's flat Descendants section — dnd-kit's sortable shuffle decides the
+// Over an item row — a Card in a column/sub-row's own list, or a Stub or an
+// overflow row in a Card's flat Descendants section — dnd-kit's sortable shuffle decides the
 // ghost's slot, stock dnd-kit semantics (the drop lands where the gap is),
 // and the dragged copy only picks which neighbor names it: above the
 // ghost's middle, "after" the row
@@ -232,7 +244,7 @@ export function dropAnchorFor(
   if (!isItemData(overData)) return null;
   const onOver = (): AnchorRelation => ({ anchorId: String(over.id), side: resolveDropSide(translated, over.rect) });
   if (!hasSortableData(over)) return onOver();
-  const ghostHeightPx = isStubRow(overData) ? STUB_ROW_HEIGHT_PX : SHORT_CARD_HEIGHT_PX;
+  const ghostHeightPx = isSectionRow(overData) ? STUB_ROW_HEIGHT_PX : SHORT_CARD_HEIGHT_PX;
   const { items, index: overIndex } = over.data.current.sortable;
   const activeIndex = items.indexOf(active.id);
   if (activeIndex === -1) return onOver();
@@ -261,7 +273,8 @@ export function dropAnchorFor(
 // layer: a dragged Stub's own descendants stay rendered in the flat section
 // below it, but they travel with it, so they're never Top or Bottom
 // (wiki board-drag-interaction §7.2) — they're out of the projection's rows
-// too (`classification.subtreeIds`). Named, the gap would jump to the
+// too (`classification.subtreeIds`). So is the overflow row of a traveling
+// row: it stands for the children that travel. Named, the gap would jump to the
 // section's end. Never at a column: there a Free descendant of the dragged
 // Card is a real anchor. One predicate for the blue line and the gap
 // (through `namedAnchorFor`), so they can't disagree.
@@ -274,7 +287,10 @@ export function dropAnchorFor(
 export function travelingRowsFor(session: AnchorSession | null): ((id: string) => boolean) | undefined {
   if (!session || !descendantsCardIdOf(session.pop.contextKey)) return undefined;
   const { subtreeIds } = session.classification;
-  return id => subtreeIds.has(id);
+  return id => {
+    const ownerId = overflowOwnerOf(id);
+    return subtreeIds.has(ownerId ?? id);
+  };
 }
 
 // The slice of a drag session the anchor reads.

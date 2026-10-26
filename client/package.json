@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:deep": "node --env-file=.env.deep ./node_modules/vite/bin/vite.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json}\"",

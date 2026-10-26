@@ -3,7 +3,7 @@ import { makeItem } from '../../test/itemFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
 import { cardRegionKey, descendantsRegionKey } from './dragRegions';
-import { getAttachedChildrenFrom } from './itemListOps';
+import { getAttachedChildrenFrom, overflowRowId } from './itemListOps';
 import {
   NO_PROJECTION,
   advanceProjection,
@@ -41,6 +41,7 @@ function sample(fields: Partial<ProjectionSample> & { cap?: number } = {}): Proj
     namedAnchor: null,
     pointerX: START_X,
     getAttachedChildren,
+    sectionLevels: 3,
     ...rest,
   };
 }
@@ -113,6 +114,134 @@ describe('advanceProjection', () => {
     const back = advanceProjection(left, sample({ previousContextKey: cardRegionKey(P), pointerX: START_X + 300 }));
     expect(back.projection).toMatchObject({ gap: 1, depth: 0 });
     expect(descendantsReleasePlacement(back.projection, P)).toBeNull();
+  });
+});
+
+// A section that draws fewer levels than it holds. Card P's tree, depth below the Card in
+// brackets:
+//   A (0)
+//     Q (1)
+//       R (2)            R's children are hidden when three levels show
+//         R1 (3)
+//           R1a (4)
+//         R2 (3)
+//       T (2)            T has only a Free child, G
+//   B (0)
+// plus a Free Card X from outside, and R's Free child F.
+describe('advanceProjection under a cut-off section', () => {
+  const deep = [
+    makeItem(P),
+    makeItem('A', { parentId: P, position: 1 }),
+    makeItem('B', { parentId: P, position: 2 }),
+    makeItem('Q', { parentId: 'A' }),
+    makeItem('R', { parentId: 'Q', position: 1 }),
+    makeItem('T', { parentId: 'Q', position: 2 }),
+    makeItem('R1', { parentId: 'R', position: 1 }),
+    makeItem('R2', { parentId: 'R', position: 2 }),
+    makeItem('R1a', { parentId: 'R1' }),
+    makeItem('F', { parentId: 'R', isAttached: 0 }),
+    makeItem('G', { parentId: 'T', isAttached: 0 }),
+    makeItem('X'),
+  ];
+  const deepSample = (fields: Partial<ProjectionSample> = {}): ProjectionSample => ({
+    previousContextKey: null,
+    contextKey: section,
+    classification: classifyDragTargets('X', deep, 20),
+    originCardId: null,
+    namedAnchor: null,
+    pointerX: START_X,
+    getAttachedChildren: parentId => getAttachedChildrenFrom(deep, parentId),
+    sectionLevels: 3,
+    ...fields,
+  });
+  // X enters at the last gap, then the ghost is named a neighbor, with the pointer `tabs`
+  // indents from where it entered.
+  function hover(anchor: ProjectionSample['namedAnchor'], tabs = 0, fields: Partial<ProjectionSample> = {}) {
+    const entered = advanceProjection(NO_PROJECTION, deepSample(fields));
+    return advanceProjection(
+      entered,
+      deepSample({
+        previousContextKey: section,
+        namedAnchor: anchor,
+        pointerX: START_X + tabs * DESCENDANTS_INDENT_PX,
+        ...fields,
+      }),
+    ).projection;
+  }
+  const R_OVERFLOW = overflowRowId('R');
+
+  it('DRAG-7.3: between R and its overflow row, one state: R’s first child', () => {
+    for (const anchor of [
+      { anchorId: 'R', side: 'after' },
+      { anchorId: R_OVERFLOW, side: 'before' },
+    ] as const) {
+      for (const tabs of [-5, 0, 5]) {
+        expect(hover(anchor, tabs), `${anchor.anchorId} ${anchor.side} ${tabs}`).toMatchObject({
+          gap: 3,
+          depth: 3,
+          valid: true,
+          resolved: { parentId: 'R', anchor: { anchorId: 'R1', side: 'before' } },
+        });
+      }
+    }
+  });
+
+  it('DRAG-7.4: below R’s overflow row, R’s last child, or tabbed left R’s next sibling, and none right of the row', () => {
+    for (const anchor of [
+      { anchorId: R_OVERFLOW, side: 'after' },
+      { anchorId: 'T', side: 'before' },
+    ] as const) {
+      // The pointer's tabs are from depth 0, where X entered. Level 3 is the overflow row's own.
+      const last = { gap: 6, depth: 3, resolved: { parentId: 'R', anchor: { anchorId: 'R2', side: 'after' } } };
+      expect(hover(anchor, 3), anchor.anchorId).toMatchObject(last);
+      // Pushed right, it stays at the overflow row's level.
+      expect(hover(anchor, 9), anchor.anchorId).toMatchObject(last);
+      // One tab left: R’s next sibling, after R’s whole subtree, hidden levels included.
+      const sibling = { depth: 2, resolved: { parentId: 'Q', anchor: { anchorId: 'R', side: 'after' } } };
+      expect(hover(anchor, 2), anchor.anchorId).toMatchObject(sibling);
+      // T is Bottom, at the level of R, so nothing shallower is offered.
+      expect(hover(anchor, -9), anchor.anchorId).toMatchObject(sibling);
+    }
+  });
+
+  it('DRAG-7.4: with no row below it, the states run from the top level to R’s last child, and no further', () => {
+    const withoutT = deep.filter(i => i.id !== 'T');
+    const anchor = { anchorId: R_OVERFLOW, side: 'after' } as const;
+    const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(withoutT, parentId);
+    expect(hover(anchor, 0, { getAttachedChildren })).toMatchObject({
+      depth: 0,
+      resolved: { parentId: P, anchor: { anchorId: 'A', side: 'after' } },
+    });
+    expect(hover(anchor, 1, { getAttachedChildren })).toMatchObject({
+      depth: 1,
+      resolved: { parentId: 'A', anchor: { anchorId: 'Q', side: 'after' } },
+    });
+    expect(hover(anchor, 3, { getAttachedChildren })).toMatchObject({
+      depth: 3,
+      resolved: { parentId: 'R', anchor: { anchorId: 'R2', side: 'after' } },
+    });
+    expect(hover(anchor, 9, { getAttachedChildren })).toMatchObject({ depth: 3 });
+  });
+
+  it('DRAG-7.5: below a last-level row with no attached children, one tab right makes the item its only child', () => {
+    const anchor = { anchorId: 'T', side: 'after' } as const;
+    expect(hover(anchor, 2)).toMatchObject({ gap: 7, depth: 2 });
+    const tabbed = hover(anchor, 3);
+    expect(tabbed).toMatchObject({ depth: 3, valid: true, resolved: { parentId: 'T', anchor: null } });
+    expect(descendantsReleasePlacement(tabbed, P)).toEqual({ parentId: 'T', slot: 'first' });
+    // Pushed on right, no deeper than that.
+    expect(hover(anchor, 9)).toMatchObject({ depth: 3, resolved: { parentId: 'T', anchor: null } });
+  });
+
+  it('reads an owner that is no row as no row named: below everything', () => {
+    expect(hover({ anchorId: overflowRowId('gone'), side: 'before' })).toMatchObject({ gap: 8, depth: 0 });
+  });
+
+  it('shows no overflow row, and clamps nothing, once the levels it holds are all shown', () => {
+    // With five levels shown, the gap after R2 offers R2's first child at depth 4; with three it stops at 3.
+    const anchor = { anchorId: 'R2', side: 'after' } as const;
+    expect(hover(anchor, 9, { sectionLevels: 5 })).toMatchObject({ depth: 4 });
+    expect(hover(anchor, 9)).toMatchObject({ depth: 3 });
   });
 });
 

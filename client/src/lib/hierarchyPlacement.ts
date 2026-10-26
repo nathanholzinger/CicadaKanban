@@ -191,6 +191,9 @@ export interface Projection {
 // transition), `deltaX` the pointer's travel from wherever that seed was
 // taken, so a caller re-derives the same absolute depth every sample
 // regardless of how many times the gap itself has changed underneath it.
+// `maxDepth` is the deepest state a surface offers when it draws fewer levels
+// than its rows hold (the board's section, which cuts its rows at the last
+// shown level); the sidebar draws every level and passes none.
 export function computeProjection(
   rows: readonly Row[],
   gap: number,
@@ -200,9 +203,10 @@ export function computeProjection(
   rootId: string | null,
   childrenOf: (parentId: string | null) => readonly string[],
   exclude: ReadonlySet<string> = new Set(),
+  maxDepth = Infinity,
 ): Projection {
   const { lo, hi } = depthRangeFor(rows, gap);
   const raw = seedDepth + Math.round(deltaX / indentPx);
-  const depth = Math.max(lo, Math.min(hi, raw));
+  const depth = Math.max(lo, Math.min(hi, maxDepth, raw));
   return { depth, placement: resolvePlacement(rows, gap, depth, rootId, childrenOf, exclude) };
 }

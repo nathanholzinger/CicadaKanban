@@ -3,7 +3,9 @@
 // depth the pointer has chosen, seeded on each entry into a section and
 // advanced every sample. Pure — the hook (`useBoardDnd.ts`) keeps the state
 // between samples and hands in the pointer, the named anchor and the
-// board's children accessor.
+// board's children accessor. It places against the whole section, whatever
+// levels the section draws: an overflow row is only ever a neighbor to name,
+// and turns into the gap among all the rows before anything is resolved.
 
 import type { Item } from '../../types';
 import {
@@ -17,7 +19,7 @@ import {
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { isValidParent, type DragClassification } from './dragClassification';
 import { descendantsCardIdOf } from './dragRegions';
-import { descendantsChildrenOf, hierarchyRows, type PlacementSlot } from './itemListOps';
+import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels, type PlacementSlot } from './itemListOps';
 import type { DescendantsProjection } from './DragSessionContext';
 
 // What the depth is measured from: the gap and depth the section was
@@ -42,10 +44,12 @@ export interface ProjectionSample {
   classification: DragClassification;
   /** The Card whose section a Stub's drag started in; null for a Free Card's drag. */
   originCardId: string | null;
-  /** The row `dropAnchorFor` names this sample, if any. */
+  /** The row `dropAnchorFor` names this sample, if any: an item's row, or an overflow row. */
   namedAnchor: AnchorRelation | null;
   pointerX: number | null;
   getAttachedChildren: (parentId: string) => readonly Item[];
+  /** The tuning value for the levels a section shows (`itemListOps.ts::shownLevels`). */
+  sectionLevels: number;
 }
 
 // One sample. Outside a section there's no projection. On entry the seed is
@@ -59,7 +63,9 @@ export interface ProjectionSample {
 // slot" rule Column layer uses — or, with no row named (a hover over the
 // section between rows, or before dnd-kit's first move event), stays where
 // it was. The depth is the seed's plus the pointer's travel since, in
-// indents, clamped to the gap's range.
+// indents, clamped to the gap's range and to one past the last shown level:
+// an overflow row stands for the children one level deeper than the section
+// draws, and nothing is offered right of it.
 export function advanceProjection(state: ProjectionState, sample: ProjectionSample): ProjectionState {
   const cardId = descendantsCardIdOf(sample.contextKey);
   if (!cardId) return NO_PROJECTION;
@@ -77,7 +83,7 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   const previousGap = seed === state.seed ? (state.projection?.gap ?? null) : null;
 
   const anchor = sample.namedAnchor;
-  const gap = anchor ? gapIndexFor(rows, anchor.anchorId, anchor.side) : (previousGap ?? seed.gap);
+  const gap = anchor ? gapForAnchor(rows, anchor) : (previousGap ?? seed.gap);
   const pointerX = sample.pointerX ?? seed.pointerX;
   const { depth, placement } = computeProjection(
     rows,
@@ -88,6 +94,7 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
     cardId,
     descendantsChildrenOf(getAttachedChildren),
     exclude,
+    shownLevels(sample.sectionLevels),
   );
   // The depth cap, per state, against the resolved parent
   // (wiki board-drag-interaction §7.2) — the same answer, off the same
@@ -96,6 +103,22 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   const valid = isValidParent(classification, placement.parentId ?? cardId);
   const atOwnSlot = own !== null && gap === own.gap && depth === own.depth;
   return { seed, projection: { gap, depth, valid, resolved: placement, atOwnSlot } };
+}
+
+// The gap a named neighbor puts the ghost in, among all the section's rows. An item's row
+// is the gap beside it. An overflow row stands for the hidden children of its owner, so just
+// above it is the gap under the owner, before its first child, and just below it the gap after
+// the owner's whole subtree, hidden levels included. An owner that isn't a row reads as no
+// row named, as `gapIndexFor` does: below everything.
+function gapForAnchor(rows: readonly Row[], anchor: AnchorRelation): number {
+  const ownerId = overflowOwnerOf(anchor.anchorId);
+  if (ownerId === null) return gapIndexFor(rows, anchor.anchorId, anchor.side);
+  const at = rows.findIndex(r => r.id === ownerId);
+  if (at === -1) return rows.length;
+  if (anchor.side === 'before') return at + 1;
+  let end = at + 1;
+  while (end < rows.length && rows[end].depth > rows[at].depth) end++;
+  return end;
 }
 
 // Deliberately separate from the sidebar's seed (its drag's own depth at

@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:deep": "tsx watch --env-file=.env.deep src/index.ts",
+    "seed:deep": "tsx src/db/seedDeep.ts",
     "mcp": "tsx src/mcp.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",

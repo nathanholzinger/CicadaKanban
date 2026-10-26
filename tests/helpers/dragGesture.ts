@@ -183,6 +183,14 @@ export async function awaitDragState(page: Page, state: 'locked' | 'popped-out',
   await expect(dragMachine(page)).toHaveAttribute('data-drag-state', state, { timeout });
 }
 
+// The Descendants layer's live gap and depth, as the board root reports them
+// (`data-drag-projection`): `"<gap>:<depth>:<valid>"`, the gap counted among all
+// the section's rows without the dragged subtree, the depth from the Card's
+// own children at 0. Retries until it matches.
+export async function awaitProjection(page: Page, projection: string | RegExp, timeout?: number) {
+  await expect(dragMachine(page)).toHaveAttribute('data-drag-projection', projection, { timeout });
+}
+
 // `null` asserts no context at all (popped out).
 export async function awaitDragContext(page: Page, regionKey: string | null, timeout?: number) {
   if (regionKey === null) await expect(dragMachine(page)).not.toHaveAttribute('data-drag-context', /./, { timeout });

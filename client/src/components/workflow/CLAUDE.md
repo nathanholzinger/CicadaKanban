@@ -47,7 +47,12 @@ its own header.
   (wiki board-drag-interaction §3.2, §7.2). A dragged Stub's own descendants stay
   rendered below it but travel with it, so `dropAnchorFor` steps past them
   (`travelingRowsFor` — Descendants only; at a column a Free descendant is a real
-  anchor). The carried Stub shows the projected depth by indenting an inner box
+  anchor). A section can draw fewer levels than it holds: below a row at the last
+  shown level, an **overflow row** stands for its hidden children. It is a row of the
+  section's shuffle, so it can be the named neighbor, and the projection turns that
+  into a gap among *all* the rows (`descendantsProjection.ts::gapForAnchor`) and
+  offers no depth past the overflow row's level. Nothing past the projection sees its
+  id. An overflow row is not an item: nothing drags from it. The carried Stub shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
@@ -88,10 +93,12 @@ The drag gesture's pure, unit-tested modules:
 - `dragRequest.ts` — turning a placement into the API request, and sending it.
 - `dragClassification.ts` — classifying every item against the carried one, once per
   drag start.
-- `descendantsProjection.ts` — the Descendants layer's live gap and depth.
+- `descendantsProjection.ts` — the Descendants layer's live gap and depth, placed
+  against the whole section whatever levels it draws.
 - `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
   across a form switch, and its clamp to the current context.
-- `itemListOps.ts` — list selectors and ordinal placements over the board's items.
+- `itemListOps.ts` — list selectors and ordinal placements over the board's items, and
+  the rows a Card's section draws (`sectionEntries`).
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
 - `dragTuning.ts` — every tunable threshold, band and overlay value, and where they
   persist.
@@ -138,7 +145,8 @@ active-context outline, the drop line's shape).
   for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
   column/sub-row DOM query. Never `startsWith`, `slice` or `split` a key by hand.
 - **Row data:** written only by `dragCollision.ts::itemRowData`/`columnData`, read
-  only through `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`. Never read
+  only through `isItemData`/`isColumnData`/`isCardRow`/`isStubRow`/`isOverflowRow`.
+  A section's row is a Stub or an overflow row (`isSectionRow`). Never read
   `data.type` by hand.
 - **The anchor a drop names:** `dragCollision.ts::namedAnchorFor`, the one call shape
   the blue line, the pop machine and the release all use.
@@ -150,6 +158,10 @@ active-context outline, the drop line's shape).
   gate and the over-cap cue both read it, so they can't disagree.
 - **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
+- **What the section draws:** `itemListOps.ts::sectionEntries` over those rows, cut at
+  `shownLevels(tuning.sectionLevels)`. The render and the drop math both read the level
+  count through `shownLevels`, so they can't disagree about which levels exist. The
+  overflow row's id is `overflowRowId(ownerId)`, read back with `overflowOwnerOf`.
 - **The latest value of a prop or callback in a ref:** `useLatest.ts::useLatest`.
 - **Starting and ending a drag:** `useBoardDnd.ts::beginDragAt` starts a Card's drag
   and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`
@@ -185,10 +197,12 @@ active-context outline, the drop line's shape).
 - The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
   `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
   `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and
-  its hold stage), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, present only
-  while locked at a `descendants:` context). Cards/Stubs carry `data-item-id` and
+  its hold stage), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, the gap
+  counted among all the section's rows, present only while locked at a `descendants:`
+  context). Cards/Stubs carry `data-item-id` and
   `data-drop-state`, `data-pending` while their write is in flight, and
-  `data-placement-valid` on the active row while over cap. The carried copy carries
+  `data-placement-valid` on the active row while over cap. An overflow row carries
+  `data-overflow-row` (its owner's id) and no `data-item-id`. The carried copy carries
   `data-drag-overlay` (`dragRegions.ts::DRAG_OVERLAY_ATTR`, which the E2E helper's
   "drag finished" wait counts down) and `data-drag-overlay-form`, and a Card that is
   the locked context `data-active-context`. A region's element carries

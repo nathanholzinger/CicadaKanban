@@ -357,6 +357,18 @@ describe('computeProjection', () => {
     expect(result).toEqual({ depth: 0, placement: { parentId: 'P', anchor: { anchorId: 'S1', side: 'after' } } });
   });
 
+  // A surface that draws fewer levels than its rows hold offers no state past its last one.
+  it('stops at maxDepth when the delta pushes past it, and resolves the state it stops at', () => {
+    const result = computeProjection(rows, gap, 2, 500, 10, 'P', childrenOf, new Set(), 2);
+    expect(result).toEqual({ depth: 2, placement: { parentId: 'S1a', anchor: { anchorId: 'S1a1', side: 'after' } } });
+  });
+
+  it('leaves a depth under maxDepth, and the low end of the range, alone', () => {
+    expect(computeProjection(rows, gap, 2, 0, 10, 'P', childrenOf, new Set(), 2).depth).toBe(2);
+    expect(computeProjection(rows, gap, 2, -500, 10, 'P', childrenOf, new Set(), 2).depth).toBe(0);
+    expect(computeProjection(rows, gap, 1, 0, 10, 'P', childrenOf, new Set(), 2).depth).toBe(1);
+  });
+
   it('excludes the dragged subtree from the resolved placement too', () => {
     const exclude = new Set(['S1a', 'S1a1']);
     const withoutDraggedSubtree = flattenHierarchy('P', childrenOf, exclude);
