@@ -18,12 +18,17 @@ Then set the real cap, one value for items and projects, from how deep the modal
 - **Collapsing or hiding the sidebar.** That comes later, so a user may drag it to a useless width for now, as long as dragging it back out is easy.
 - **Depth so great that indenting each level no longer fits the modal or the sidebar** (the roadmap entry's deferral, and item-attachment's "Beyond the cap" open question).
 - **Aligning drag across the sidebar and the board** (D12).
+- **Folding the Card layer into the Descendants layer.** It's an optional story in the Epic 3.5 roadmap (Nathan, 2026-10-26), so this story keeps the Card layer.
 - **Free descendants in the section or the modal** (D7).
 
 ## Scope
 
-- **Wiki passages:** *(PO, once D2–D11 are written in as Planned)*
-- **Test-plan cases:** *(Test Planner, once the passages exist)*
+- **Wiki passages:** wiki board-drag-interaction §3.1, §7, §7.1, §7.3 and §9; wiki item-attachment §12. D2 has none: it's a working placeholder (Open questions, For the PO).
+- **Test-plan cases:**
+  - DRAG-7.1–7.20, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), all `Planned`. DRAG-7.20 is the hold's feel, `Manual` once built.
+  - DRAG-1.34, the new tuning values (§3.1), `Planned`.
+  - DRAG-7.21–7.23, `Pending PO` (Open questions, For the PO).
+  - **To check when the cut-off is built:** DRAG-4's tree and DRAG-5.13's run three levels below the Card, so they assume a section shows at least three.
 
 ## Inbound deferrals
 
@@ -51,18 +56,20 @@ Nathan ruled these on 2026-10-26.
 **D3. A Card's section shows a set number of levels:** 3, counted from the Card. A Card at depth 4 shows depths 5 to 7. The number is a Drag tuning panel value, defaulting to 3, so it can be tuned in the same hands-on as the cap.
 
 **D4. A placeholder stands in for the hidden levels.**
-- Below a row at the last shown level (call it R) whose children are hidden, the section draws one placeholder row, "N children", one level under R.
+- Below a row at the last shown level (call it R) whose children are hidden, the section draws one placeholder row, "1 child" or "N children", one level under R.
 - N is R's direct children. That they can have children of their own, and why they're hidden, should read as self-evident: a Card can show only so much.
+- N counts attached children only: a Free child shows as a Card of its own (D7), so a row whose children are all Free has no placeholder. While one of R's children is dragged, N leaves it out, since the ghost shows it.
+- The PO's name for it is the overflow row.
 
-**D5. R and its placeholder are one block.**
-- In the section's shuffle, the ghost goes above R or below its placeholder, never between them.
-- If the placeholder were an ordinary row, the gap between R and it would mean "R's first child" and the gap below it "R's last child". That's two precise spots, and precise placement among R's children belongs to the modal (D6).
+**D5. The placeholder moves like any row.** It slides above or below the ghost, the way every Stub does, so there are two gaps beside it. Each is read by wiki hierarchy-placement §1 as it stands, with the placeholder standing in for R's children:
+- **Between R and its placeholder:** one state, R's first child, as in the gap under any row whose children follow it.
+- **Below the placeholder:** R's last child at the placeholder's level, or, tabbed left, R's sibling or higher.
+- **One exception:** no state lies right of the placeholder, since it isn't an item and can't take a child.
 
-**D6. A drop in the section can go one level deeper than the section shows,** as R's last child.
-- **Below R's placeholder,** at the level under R, the item lands as R's last child, and the placeholder's count goes up by one.
+**D6. A drop in the section can go one level deeper than the section shows,** as R's first or last child.
+- **R's first or last child,** by the two gaps of D5. The placeholder's count goes up by one.
 - **Under a last-level row with no children,** the item becomes its only child, and the section then draws it as a new placeholder.
 - **Placing precisely among R's children** takes the modal.
-- **Last, not first:** a ghost drawn after "N children" reads as coming after them, and the Card layer's auto-drop is last child too.
 
 **D7. The modal shows a Card's whole hierarchy:**
 - **The set:** the same set the section draws, the Card's attached descendants, at every level, with the Card as the root. Free descendants stay out, as they do from the section: they show on the board as Cards of their own.
@@ -70,7 +77,7 @@ Nathan ruled these on 2026-10-26.
 
 **D8. How it opens:**
 - **By click** on a placeholder when no drag is running.
-- **By hover** over a placeholder during a drag, past a hold. That works for any item that has reached the Descendants layer, including a Free Card that zoomed in.
+- **By a hold** during a drag, while the ghost sits in either gap beside a placeholder at the placeholder's level (D5). It works like zooming into a Card (wiki board-drag-interaction §6.1): a silent wait, then a cue on the placeholder. Letting go before the cue completes drops the item where the ghost shows. Any item that has reached the Descendants layer can open it, including a Free Card that zoomed in.
 
 **D9. During a drag, the modal is the Card's Descendants layer, drawn whole.** While it's open:
 - **Which rows count:** the modal's box bounds the layer, and the cursor and the ghost are read against the modal's rows. The Card's box and its section, under the backdrop, take no part.
@@ -79,9 +86,10 @@ Nathan ruled these on 2026-10-26.
 
   The alternative, a layer of its own below Descendants, would drop the drag back into the section first. That's three pops to leave, and the first lands somewhere that shows less than the modal.
 - **After the drag ends in it,** by a release or a cancel, the modal stays open, where it opened. The user gets a moment to check where the item landed, and can pick it back up if it's wrong (D11). A write still in flight shows in the modal as it would in the section (wiki board-drag-interaction §10).
+- **Back in the section after leaving it:** a Stub whose own slot is behind a placeholder starts as an item from outside does, in the last gap as the Card's last child, so a release right after the zoom moves it there. The section can't draw a ghost in a slot it doesn't show. Folding the Card layer in (Out of scope) would remove this case.
 
 **D10. Where it opens during a drag: under the cursor.**
-- **Placement:** the modal is placed so that the spot the ghost would take among R's children (R's last child, D6) sits under the cursor, so the ghost stays in about the same place.
+- **Placement:** the modal is placed so that the spot the ghost held in the section, R's first or last child (D6), sits under the cursor, so the ghost stays in about the same place.
 - **At a window edge:** the modal is kept inside the window. When that shifts it, the cursor still lies inside it, because the modal is smaller than the window. The ghost then goes where the cursor reads against the modal's rows, not where it was in the section.
 - **Opening re-reads the gap and the depth from the cursor.** Zooming into a section, by contrast, doesn't move the ghost.
 - **A long list:** if R's children run longer than the modal, the modal scrolls its list to put that spot under the cursor.
@@ -105,8 +113,14 @@ These are the Architect's, for the Coder. They're the places where the decisions
 
 **E1. One cut-off, read by the render and by the drop math alike.**
 - The section's visible rows, placeholders included, come from one function: `itemListOps.ts::hierarchyRows` or one beside it. `KanbanCard.tsx` and `descendantsProjection.ts` both read that list, as they read `hierarchyRows` today, so they can't disagree about which row is where.
-- D5's block rule lives where the named anchor becomes a gap, the way `travelingRowsFor` steps past a dragged subtree.
-- The release's anchors come from the board's full data: the board has every row, and only the drawing is cut.
+- **The placeholder is a row of its own.** It joins the section's `SortableContext` with an id of its own and a row type of its own in `dragCollision.ts`'s row data, so it slides with the rest.
+- **D5's gaps map onto the full hierarchy.** The projection turns a gap beside a placeholder into the matching gap among all of the Card's descendants:
+  - above it, the gap under R, before R's first child;
+  - below it, the gap after R's last descendant.
+
+  Then it clamps the depth at the placeholder's level. `lib/hierarchyPlacement.ts`, shared with the sidebar, then gives first child, last child and the shallower states unchanged, and never sees a placeholder.
+- **One clamp for both cases:** no state deeper than the shown levels plus one. That covers D5's exception and D6's childless row.
+- **Nothing past the projection sees a placeholder id:** not the anchors, the release or `dragRequest.ts::toRequest`. The board has every row, and only the drawing is cut.
 
 **E2. One drag registration per item, and one element per region.**
 - **The rows:** while the modal is open, the Card's section rows don't register with dnd-kit. The modal's rows register through `dragChrome.tsx::useItemRow`, as the section's do. Two rows registered under one item id would break the shuffle.
@@ -114,8 +128,8 @@ These are the Architect's, for the Coder. They're the places where the decisions
 
 **E3. Opening the modal isn't a layer change.**
 - **The pop machine:** the context key stays the Card's Descendants. What changes is the structure, which `dragStructure.ts` re-resolves after the switch as it does after a remount, and the projection's seed (E5).
-- **The hold:** it's a new clock in `popSession.ts`, with the other clocks, and a new tuning value starting at the Card zoom-in's.
-- **Naming the placeholder:** start with the mechanism that names a Card to zoom into, the ghost's neighbor (wiki board-drag-interaction §6.1). The section shuffles like a column, and that mechanism already handles rows moving under a cursor that hasn't moved. Phase 4's hands-on settles it.
+- **The hold:** it's a new clock in `popSession.ts`, with the other clocks. It has a dwell and a cue like the Card zoom-in's, with tuning values of its own starting at that zoom-in's.
+- **What the hold keys on:** the projection's gap and depth, not the named neighbor. In the gap between R and its placeholder, the named neighbor flips between "after R" and "before the placeholder" as the carried copy crosses the ghost's middle (`dragCollision.ts::dropAnchorFor`), while the gap stays the same. A clock keyed on the neighbor would restart on each flip.
 
 **E4. The carried copy draws above the modal.**
 - `dragOverlayGeometry.ts::clampToCurrentContext` reads the locked region's rect, so with E2 it clamps to the modal's box with no change.
@@ -148,8 +162,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 - Then:
   - the tuning value;
   - the placeholder row;
-  - the block rule;
-  - the drop one level past the shown levels.
+  - its two gaps and the depth clamp.
 
 **Phase 3: the modal, opened by click** (D7, D9, D11, E2, E4, E5)
 - It shows the whole hierarchy, and a drag can start in it, place by gap and depth, and pull away to the Card layer.
@@ -183,13 +196,29 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 | `client/src/components/workflow/itemListOps.ts::hierarchyRows` (or a function beside it) | D3–D5, E1: the visible rows and the placeholders |
 | `client/src/components/StubRows.tsx` | D4: the placeholder row |
 | `client/src/components/KanbanCard.tsx` | D3, D4: the section's render; E2: no registration while the modal is open |
-| `client/src/components/workflow/descendantsProjection.ts` | D5, D6, E1: the block rule and the one-deeper drop; E5: the modal's depth reading |
+| `client/src/components/workflow/dragCollision.ts` (row data) | E1: the placeholder's row type |
+| `client/src/components/workflow/descendantsProjection.ts` | D5, D6, E1: the placeholder's gaps and the depth clamp; E3: what the hold keys on; E5: the modal's depth reading |
 | `client/src/components/workflow/popSession.ts` | E3: the hold that opens the modal |
 | `client/src/components/workflow/dragStructure.ts` | E2, E3: the modal as the Descendants region |
 | the modal component, and `client/src/components/ModalShell.tsx` if it's shared | D7, D9–D11: its rows, its placement under the cursor, its centered form |
 | the deep seed (a dev script; its home is the Coder's call) | D13 |
 
 ## Amendments
+
+- **2026-10-26, D5 replaced (Nathan and the PO, with the Architect's cost check).** The placeholder moves like any row, not as one block with R. The section now offers R's first child and R's last child, which D6, D8, D10, E1 and E3 now say.
+  - **Why:** it's the shared placement rule as it stands, and it's the cheaper build. A row that stays put needs a sorting strategy of its own, since rows that slide past a fixed row overlap it. It also needs a collision exception that draws the ghost below the row while the carried copy is over it.
+- **2026-10-26, Phase 0 written (PO).** Nathan took the PO's recommendations on D8's cue and D9's hidden slot, and the PO answered the plan's three questions (Open questions).
+  - **Changed in place:**
+    - **Scope:** its wiki passages.
+    - **D4:** the wording, and what N counts.
+    - **D9:** the hidden slot.
+  - **D4's attached-only count, a deduction:** from D7. The modal shows only attached descendants, and a Free child shows as its own Card.
+  - **D4's dragged child left out, a deduction:** from wiki board-drag-interaction §7.2 and hierarchy-placement §4. A dragged item's subtree travels with the carried copy, and the ghost already shows the item.
+  - **The wiki:**
+    - **board-drag-interaction:** §3.1 (the tuning values), §7 (the hidden slot), §7.1 (the overflow row's gaps), a new §7.3 (the modal during a drag) and §9 (the cut-off, the overflow row, the modal), all Planned. §9 is retitled "Depth overflow and the hierarchy modal", and its "Not settled" now states today's rule, a section that lists every level. §7.2's pointer to the Open question is gone, and so is the Open question. The look of the overflow row, the modal and the hold's cue is under Open questions.
+    - **item-attachment:** §12 (Planned), and "expanded-hierarchy modal" renamed "hierarchy modal" in §8 and Open questions.
+    - No section number changed.
+- **2026-10-26, Phase 0's cases (Test Planner):** a new suite, DRAG-7, for §9's cut-off, overflow row and modal, §7.1's overflow-row gaps, §7.3, and §7's hidden slot; and DRAG-1.34 for §3.1's new tuning values. No live case changed. Three cases are `Pending PO`.
 
 ## Open questions
 
@@ -198,19 +227,32 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - **D6:** last child.
   - **D11:** a drag that starts in a modal opened by click works as in a drag-opened one.
   - **D9:** a release in the modal leaves it open, rather than closing it as recommended, so the user can check the drop and redo it. An X or a click outside closes it.
+- **For Nathan, from the PO, answered 2026-10-26** (on the PO's recommendations):
+  - **D8's hold:** a silent wait, then a cue, as for zooming into a Card.
+  - **D9, a Stub whose own slot is hidden:** back in the section, it starts as an item from outside does. The simplest fix, since that start is already built.
 - **For the PO:**
   - **D2:** a rule, or a working placeholder under project-tree's Open questions?
+    - **Answered (PO):** a working placeholder, beside the sidebar's other controls. Its values are tuned by feel, Nathan wants to try it before deciding more, and collapsing the sidebar comes later. So no test cases come from it. The PO writes it in once Phase 1 builds it, since the entry describes what exists.
   - **D4:** the placeholder's wording.
-  - **Hierarchy-placement §1** depends on nothing being missing between Top and Bottom. Does D5's block rule need a sentence there, or only in board-drag-interaction §7.1?
-- **For the Test Planner:** E7's specs, in Phase 5.
+    - **Answered (PO):** "1 child" or "N children". Not "See N children": during a drag the row opens by a hold, not a click. The wiki calls it an overflow row, since "placeholder" already names the placeholder Stub (wiki board-drag-interaction §6.1) and working placeholders.
+  - **Hierarchy-placement §1** depends on nothing being missing between Top and Bottom. Does D5's placeholder, which stands in for R's children and takes no child, need a sentence there, or only in board-drag-interaction §7.1?
+    - **Answered (PO):** only §7.1. The shared page leaves how a surface shows the gap to the surface, as project-tree §1 handles collapsed projects on its own page.
+  - **From the Test Planner's cases, each `Pending PO` with its lean in the case:**
+    - **DRAG-7.21:** does the hold that opens the modal run in an over-cap state beside an overflow row? §7.3 sets no condition, and a Card's zoom-in never starts on an invalid target (§6.1). The Test Planner leans no: every placement among `R`'s children is at that level, so the modal would offer nothing valid that the section doesn't.
+    - **DRAG-7.22:** what does a drag started from an overflow row pick up? The row isn't an item. The Test Planner leans nothing, since it's a control, though it could pick up its Card.
+    - **DRAG-7.23:** what does a board reload do to an open modal, mid-drag (§10 stops the drag) or after a failed release in it? The Test Planner leans: it stays open on the reloaded hierarchy while its Card still has attached descendants, and closes otherwise.
+- **For the Test Planner:**
+  - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
+    - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
+  - E7's specs, in Phase 5.
 
 ## Living-docs handoff
 
 - **Behavior decisions made while building, for the PO to rule on:**
 - **Planned passages now built:**
 - **Passages superseded** *(expected)*:
-  - board-drag-interaction §9's "Not settled", and its Open question "Whether a Card shows its whole hierarchy";
-  - item-attachment §8's grounding for 6, which names an "expanded-hierarchy modal", and its Open question "`CAP`'s real value";
+  - board-drag-interaction §9's "at every level", and §7's "in its own slot", for a Stub whose slot is hidden (the Open question "Whether a Card shows its whole hierarchy" went in Phase 0);
+  - item-attachment §8's grounding for 6, which names the hierarchy modal, and its Open question "`CAP`'s real value";
   - project-tree's Open question "The project cap's real value".
 - **Implementation passages to place:**
 - **Test-plan cases affected:**

@@ -241,7 +241,7 @@ It's set on its own, apart from any other feature's cap
 ([`../hierarchy-placement/`](../hierarchy-placement/) §6).
 
 **Grounding for the provisional 6:** an indented hierarchy has to stay
-legible in the project sidebar and the expanded-hierarchy modal. The
+legible in the project sidebar and the hierarchy modal. The
 sidebar is 240px wide, indents 14px per level from a 12px base, so a
 depth-6 row still leaves ~158px for its label — roughly twenty
 characters. Depth 8 leaves ~130px, which is where it stops reading as a
@@ -359,6 +359,9 @@ none of it is stored):
 - **Card** — a Free item as the board's draggable unit: title, description
   snippet, and a collapsible list of descendant Stubs.
 - **Planned:** a Card also shows its item's tags.
+- **Planned:** a Card's list of Stubs shows a set number of levels, and
+  the hierarchy modal shows them all
+  ([`../board-drag-interaction/`](../board-drag-interaction/) §9).
 - **Sheet** — the full item detail view
   ([`../item-sheet/`](../item-sheet/)). The only place non-positional data
   is edited.
@@ -430,7 +433,7 @@ Not settled. Don't derive test cases from anything in this section. Everything o
 - **`CAP`'s real value.** 6 is a provisional working number derived from
   sidebar arithmetic (§8), not from looking at real hierarchies.
 - **Beyond the cap.** Trees deep enough that per-level indentation fits
-  neither the sidebar nor the expanded-hierarchy modal have no answer yet.
+  neither the sidebar nor the hierarchy modal have no answer yet.
   A pagination or folder scheme would be needed.
 - **How a create under a parent reads in the activity lists (§11a).** One
   idea is a single entry that the child shows as "Created on {date} as a

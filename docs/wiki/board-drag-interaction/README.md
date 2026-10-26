@@ -351,6 +351,10 @@ locked-layer outline). The panel is a tool for the humans doing the
 tuning, and it's retired once the values lock and become constants.
 Where it lives and who sees it is open (Open questions).
 
+**Planned:** the panel also holds how many levels a Card's section
+shows (§9), and the dwell and the cue of the hold that opens the
+hierarchy modal (§7.3). They persist like the rest.
+
 ### 3.2 Invalid targets are never poppable
 
 **A context the drop would be rejected from must not be enterable.** If the
@@ -705,6 +709,13 @@ last child, for an item from outside (§6); in its own slot, for `P`'s own
 Stub coming back in (§8). The cursor moves it from there. So a release
 right after the zoom commits what it would have at the Card layer.
 
+**Planned:** a Stub whose own slot the section doesn't show, one picked
+up in the hierarchy modal and pulled back out (§7.3), starts as an item
+from outside does: in the last gap, as `P`'s last child. A release right
+after the zoom then moves it there. Replaces §7's "in its own slot" for
+such a Stub. Why not start it in its own slot: the slot is behind an
+overflow row (§9), and the section can't draw a ghost there.
+
 Why not a band on the Card (top half for first child, bottom half for
 last child, a middle to hold): a Card's within-action is the auto-drop
 (§6), and placement here is a **range** of depths, not three fixed
@@ -734,6 +745,23 @@ with Card `P`'s descendants section as the hierarchy. On the board:
   anchor, because items the view doesn't show can sit between the
   neighbors (§2, rule 5).
 
+**Planned:** the section places against the whole hierarchy, though it
+shows only some of its levels (§9). An overflow row stands for the
+hidden children of the row above it, `R`, at their level, and slides
+aside for the ghost as any row does:
+- **Between `R` and its overflow row** there's one state: `R`'s first
+  child, as in the gap under any row whose child is below it
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §1).
+- **Below the overflow row** the states run from Bottom's depth up to
+  the overflow row's level, where the item becomes `R`'s last child.
+  Nothing is tabbed right of an overflow row. That would place the item
+  inside a hidden subtree the user can't see.
+- **Below a row at the last shown level with no attached children,**
+  tabbed once right, the item becomes that row's only child, one level
+  deeper than the section shows.
+- **Anywhere else among `R`'s children** is the hierarchy modal's
+  (§7.3).
+
 ### 7.2 What travels with the item, and what's invalid
 
 **The dragged item carries its whole subtree**
@@ -754,9 +782,60 @@ up. This is the one exception to §3.2's "never enterable," for the
 reason given there. Sibling states in the same gap that do fit stay
 valid; validity is per state, never per gap.
 
-Whether a Card on the board always shows its whole hierarchy, as
-[`../hierarchy-placement/`](../hierarchy-placement/) §1 needs, is open
-(Open questions).
+### 7.3 The hierarchy modal during a drag
+
+**Planned:** a hold beside an overflow row opens the hierarchy modal
+(§9). It runs while the ghost sits directly above or below an overflow
+row, at that row's level, so as `R`'s first or last child (§7.1).
+Moving the ghost to another gap or another level resets it. Any item at
+the Descendants layer can open it: one of the Card's Stubs, or an item
+that zoomed in from outside. The hold has a zoom-in's two stages
+(§6.1): a dwell with nothing new shown, then a visible cue on the
+overflow row that shows its progress. A release before it completes
+commits where the ghost is. Why a dwell first: a pause beside an
+overflow row is also a drop as `R`'s first or last child, so an
+ordinary pause there mustn't open the modal.
+
+**Planned:** while the modal is open during a drag, it's the Card's
+Descendants layer, drawn whole, not a layer of its own:
+- **It bounds the layer.** The carried copy is bounded by the modal's
+  box, and the gap and the depth are read from where the cursor is over
+  the modal's rows. The Card and its section, under the backdrop, take
+  no part.
+- **Its rows are classified as the section's are** (§4).
+- **A release places by gap and depth** among the Card's descendants,
+  as in the section (§7.1, §7.2). The modal shows every level, so it
+  has no overflow rows. An over-cap tab state is reachable there too,
+  and commits nothing.
+- **Leaving it is the pop out of Descendants** (§8). Past the pop-out
+  threshold outside the modal's box, the modal closes and the drag is
+  at the Card layer, so detaching still takes two pops. Back in the
+  section, a hold beside an overflow row opens it again, as often as
+  the drag needs. Why not a layer of its own below Descendants: leaving
+  it would drop the drag back into the section first, three pops to
+  leave the Card, and the first would land where less is shown.
+
+**Planned:** a hold opens the modal under the cursor, placed so that
+the ghost's spot among `R`'s children, first or last, sits under it,
+and the ghost stays about where it was. If `R`'s children run longer
+than the modal, its list scrolls to put that spot under the cursor. The
+modal is kept inside the window. When that shifts it, the cursor still
+lies inside it, since the modal is smaller than the window, and the
+ghost goes where the cursor is over the modal's rows. So opening reads
+the gap and the depth afresh from the cursor, where a zoom into the
+section doesn't move the ghost (§7).
+
+**Planned:** in a modal opened by a click (§9), a drag can start from
+any row. It starts at the Card's Descendants layer, as any Stub's drag
+does (§1), and goes on as in a modal opened by a hold. Pulling the row
+out of the modal closes it, and the drag is at the Card layer.
+
+**Planned:** after a drag ends in the modal, by a release or a cancel,
+the modal stays open where it is, so the user can check where the item
+landed, and pick it up again if it's wrong. A write still in flight
+shows in the modal as in the section (§10). Escape during a drag
+cancels the drag and leaves the modal open. Only with no drag running
+does Escape close it (§9).
 
 ## 8. Stub → out: detach
 
@@ -809,12 +888,44 @@ silently walk that child back to the entry workphase.
 
 **A detach writes `isAttached: false` and leaves `parentId` untouched.**
 
-## 9. Depth overflow
+## 9. Depth overflow and the hierarchy modal
 
-**Not settled — see Open questions.** What happens to a hierarchy too
-deep for a Card to show isn't a rule yet. Whatever is decided, §7's
-placement rule applies unchanged inside any surface that shows the
-hierarchy.
+**A Card's section lists its attached descendants at every level**
+(§1).
+
+**Planned:** a Card's section shows a set number of levels below the
+Card, by default 3, a tuning-panel value (§3.1). A Card at depth 4
+shows its descendants at depths 5 to 7. Replaces §9's "at every level".
+A Card has room for only so many levels, and the hierarchy modal shows
+the rest.
+
+**Planned:** below a row at the last shown level, `R`, whose attached
+children are hidden, the section draws an **overflow row**, one level
+under `R`, with their count: "1 child" or "N children". It counts
+`R`'s attached children, not their descendants, since it sits at their
+level and stands for them. A Free child shows as a Card of its own, so
+it isn't counted, and a row whose children are all Free has no overflow
+row. An item dropped beside the overflow row (§7.1) joins the count.
+One of `R`'s children being dragged is left out of it, since the ghost
+shows it.
+
+**Planned:** the **hierarchy modal** shows a Card's whole hierarchy:
+its attached descendants at every level, with the Card as the root.
+It's the set the section shows, without the cut-off. Free descendants
+stay out, as they do from the section: they show on the board as Cards
+of their own.
+
+**Planned:** clicking an overflow row opens the modal, centered, when
+no drag is running. During a drag, a hold beside an overflow row opens
+it instead. A drag can start in it, and a drag in it is §7.3's.
+
+**Planned:** the modal closes by its X button, a click anywhere outside
+it, or Escape. During a drag, Escape cancels the drag instead, and the
+modal stays open (§7.3).
+
+How the overflow row and the modal look, including the modal's size
+and how it shows the Card at its root, isn't a rule yet (Open
+questions).
 
 ## 10. Optimistic preview, reconciliation, and failure
 
@@ -929,7 +1040,8 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   highlight of its own), the zoom-in cue (§6.1) and the invalid tab-state cue
   (§3.2, §7.2) each have a working placeholder; their final palette,
   weight and animation are best tuned against real gestures rather than
-  guessed up front. The cue for a drag a reload stops (§10) has no
+  guessed up front. The cue for a drag a reload stops (§10), and the cue
+  of the hold that opens the hierarchy modal (§7.3), have no
   placeholder. Today's zoom-in cue is a dashed outline in the
   attach-preview blue — the same dashed style as the placeholder Stub a
   Card shows once you're inside it — and a thin bar along the card's
@@ -940,19 +1052,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   instant.
 - **Where the tuning panel lives, and who sees it (§3.1).** Today it opens
   from the board toolbar ("Drag tuning").
-- **Whether a Card shows its whole hierarchy (§7, §9).** Hierarchy
-  placement depends on knowing nothing is missing between Top and Bottom
-  ([`../hierarchy-placement/`](../hierarchy-placement/) §1). The project
-  sidebar always has the whole tree
-  ([`../project-tree/`](../project-tree/) §1). A Card on the board
-  may not, and the board may not know when it doesn't. A hierarchy too
-  deep to show is one such case: it could get a "see X children"
-  placeholder that opens a wider modal on click or on a held drag-over,
-  or be capped at what the UI can display. Where a Card's section can't
-  be trusted to be complete, placement there would change, for example to
-  offering only an anchor and side against a visible Stub, and so would a
-  set-down in its own gap (§7.1). Until this is decided, a Card's
-  descendants section follows §7 as written.
+- **How the overflow row and the hierarchy modal look (§9).** The
+  overflow row's style, the modal's size, and how the modal shows the
+  Card at its root. Neither has a placeholder.
 - **Zooming into a Card in a done column (§2, rule 6; §6.1).** The Card
   zoomed into is the one the side highlight names, a neighbor of the
   ghost. A done list's ghost doesn't move, so only the Cards beside it

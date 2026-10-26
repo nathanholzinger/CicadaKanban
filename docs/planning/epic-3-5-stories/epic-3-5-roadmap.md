@@ -452,6 +452,59 @@ The plan holds the decisions. The hold threshold above is its E3.
 
 ---
 
+### Optional — Fold the Card layer into the Descendants layer
+**Goal:** remove the Card layer from the drag's stack, so that zooming into a
+Card lands straight in its Descendants layer, bounded by the whole Card.
+Every Card gets that layer, including one with no children, whose only spot
+is the Card's only child (wiki hierarchy-placement §2's empty hierarchy).
+
+Raised while planning Story 7 (Nathan, 2026-10-26). The Card layer hasn't
+proved useful hands-on, and Story 7's overflow modal brings an edge case
+that only the Card layer raises. Left out of Story 7 to keep its scope.
+
+**What carries over:**
+- **A release right after zooming in** still makes an item from outside the
+  last child, and still sets the Card's own Stub back down. The Descendants
+  layer already starts the ghost where the Card layer places it.
+- **A Card with no children** still takes a child, through its one-spot
+  Descendants layer.
+
+**What changes:**
+- **Detaching is one pop,** leaving the Card's box. The safe stop when a drag
+  drifts out of the section goes (DRAG-5.12's set-down at the Card layer).
+- **One hold fewer:** the Card → Descendants zoom, and
+  `descendantsPopInDelayMs` with it.
+- **The modal's edge case goes.** Pulling out of Story 7's modal lands in
+  the column, so the case of a Stub whose spot the section hides, pulled
+  out to the Card layer, no longer arises.
+
+**Cost:** mostly docs and tests.
+- **The PO:** wiki board-drag-interaction §1.1, §6, §7 and §8.
+- **The Test Planner:** DRAG-4.1, DRAG-5.12, and the cases that zoom from
+  the Card layer into Descendants.
+- **The specs:** `drag-card-zoom-in.spec.ts` and `drag-5-stub-detach.spec.ts`.
+- **The code:** mostly deletion, of `popSession.ts`'s Card state and
+  `placement.ts`'s Card branch, plus moving the Descendants region onto
+  the Card's box.
+
+**It reverses a recorded decision:** "No two-layer pop out of Descendants"
+(Decisions of 2026-09-17, below), which keeps "The Card-layer stop … a real,
+if brief, state".
+
+**Sequencing, if taken:**
+- **Before Story 10,** which automates Card-layer cases (DRAG-1.17, 1.21 and
+  4.1 among them).
+- **Ideally before Story 8,** whose feel tuning covers layer changes, this
+  one included.
+- **Decided alongside Story 9.** Story 6.1's dry run put Story 9's "reparent
+  but stay Free" at the Card layer, as a third meaning of a release there.
+  Without the layer, Story 9 needs another home for it, or concludes it
+  isn't a board gesture.
+
+**Status:** optional, not scheduled (Nathan, 2026-10-26).
+
+---
+
 ### Story 8 — Visual cue polish and feel tuning
 **Goal:** once every gesture works, settle how the drag looks and how it
 feels. That covers:

@@ -1,6 +1,6 @@
 # DRAG-1 — Contexts, the layer stack, and popping
 
-**Next ID:** DRAG-1.34
+**Next ID:** DRAG-1.35
 
 **Terms.** *Sustained* means the cursor stays for at least the named tuning-panel value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
 
@@ -38,6 +38,7 @@
 | DRAG-1.31 | The tuning panel exposes every threshold and overlay value, and its values persist | P1 | Open |
 | DRAG-1.32 | Popping feels deliberate: never incidental, never sluggish | P1 | Manual |
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
+| DRAG-1.34 | The tuning panel also exposes the section's level count and the modal hold, and they persist | P1 | Planned |
 
 ---
 
@@ -368,5 +369,13 @@ The exceptions:
 
 - `X`'s own Stubs aren't shown while it's dragged ([DRAG-3.19](drag-3-card-column-bands.md)). After the release, `X`'s list is back as the user set it, collapsed or expanded.
 - *When* the drag zooms into collapsed `C` ([DRAG-4.19](drag-4-attach-and-stub-placement.md)), *then* `C` opens. *When* the drag then pops out of `C` and is released elsewhere, *then* `C` is collapsed again. *When* `X` is instead attached into `C`, *then* `C` stays open after the release, so `X`'s new place is in view.
+
+**Automation test:** —
+
+## DRAG-1.34 — The tuning panel also exposes the section's level count and the modal hold, and they persist
+
+**Priority:** P1 · **Status:** Planned · **Rule:** wiki board-drag-interaction §3.1
+
+*Given* the tuning panel, *when* it's opened, *then* it also exposes the number of levels a Card's section shows ([DRAG-7.1](drag-7-overflow-and-hierarchy-modal.md)), and the dwell and the cue of the hold that opens the hierarchy modal ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)). *When* one of them is changed, *then* the board takes the new value without a rebuild: a Card's section shows the new number of levels, and the next hold takes the new dwell or cue. *And when* the page is reloaded, *then* the changed value is still in effect. The panel's other values are [DRAG-1.31](drag-1-contexts-and-popping.md)'s.
 
 **Automation test:** —
