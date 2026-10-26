@@ -59,7 +59,9 @@ export function isSuiteFile(rel: string): boolean {
   return isInTestPlans(rel) && rel.endsWith('.md') && !/(?:^|\/)(?:README|INDEX)\.md$/.test(rel);
 }
 
-const WIKI_PAGE_PATH = new RegExp(`^${WIKI_DIR}/([^/]+)(?:/(README\\.md)?)?$`);
+// A page is a folder, so its segment has no dot: that keeps the wiki's own README.md from
+// reading as a page named "README.md".
+const WIKI_PAGE_PATH = new RegExp(`^${WIKI_DIR}/([^/.]+)(?:/(README\\.md)?)?$`);
 
 /** The page a wiki path names, a page's folder or its README; null for any other path. */
 export function wikiPageAt(rel: string): string | null {

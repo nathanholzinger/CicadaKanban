@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isSuiteFile } from './files.mts';
 import { caseHeadings, declaredNames, headingSections } from './repoIndex.mts';
 
 describe('headingSections', () => {
@@ -52,15 +51,6 @@ describe('caseHeadings', () => {
   it('reads no case from inside a fence that shows a shorter one', () => {
     const text = ['````md', '```', '## DRAG-5.9 — Shown in the example', '```', '````', '## DRAG-5.1 — Real'];
     assert.deepEqual(caseHeadings(text.join('\n')), ['DRAG-5.1']);
-  });
-});
-
-describe('isSuiteFile', () => {
-  it('takes every test-plan Markdown file but the README and INDEX files', () => {
-    assert.ok(isSuiteFile('docs/test-plans/item-attachment/att-4-legal-parent-depth-cap.md'));
-    assert.ok(!isSuiteFile('docs/test-plans/README.md'));
-    assert.ok(!isSuiteFile('docs/test-plans/item-attachment/INDEX.md'));
-    assert.ok(!isSuiteFile('docs/wiki/item-attachment/README.md'));
   });
 });
 

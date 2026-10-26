@@ -138,6 +138,16 @@ describe('wiki-pointer', () => {
     assert.deepEqual(rulesIn(page, lines('See [the drag rules](../board-drag-interaction/)', '§7.1 for the gap.')), []);
   });
 
+  it('skips a section after a link to the wiki index, which is no page', () => {
+    assert.deepEqual(rulesIn('docs/wiki/item-attachment/README.md', 'See [the wiki index](../README.md) §3.'), []);
+  });
+
+  it("reads a section after a link to the page's own heading as this page's", () => {
+    const page = 'docs/wiki/item-attachment/README.md';
+    assert.deepEqual(rulesIn(page, 'See [the cap](#depth-cap) §8.'), []);
+    assert.deepEqual(rulesIn(page, 'See [the cap](#depth-cap) §99.'), ['wiki-pointer']);
+  });
+
   it('flags another page named without a link or the "wiki" prefix, even in the wiki', () => {
     assert.deepEqual(rulesIn('docs/wiki/item-attachment/README.md', 'See board-drag-interaction §2.'), [
       'wiki-pointer',
@@ -387,7 +397,7 @@ describe('a Bruno request', () => {
   });
 
   it('honors an ignore marker in the docs block', () => {
-    const marker = '  <!-- check-docs-ignore-next-line transient-id -- a fixture -->';
+    const marker = `  ${IGNORE_MD('transient-id')}`;
     assert.deepEqual(found(lines('docs {', marker, '  Added 2026-09-24.', '}')), []);
     assert.deepEqual(found(lines('docs {', marker, '  Nothing to ignore here.', '}')), [['ignore-marker', 2, 3]]);
   });

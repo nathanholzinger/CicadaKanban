@@ -319,7 +319,7 @@ Filled in as the audit closes. One row per required finding (#1–2, #4–16, #2
 | 1 | Fixed | Batch 6a, `onColumnDrop` takes the drag layer's resync |
 | 4 | Fixed | Batch 6c (1 of 2) |
 | 5 | Fixed | Batch 6a |
-| 2 | open | — |
+| 2 | Fixed | Batch 6f, with #23 |
 | 6 | Fixed | Batch 6b, with #38 and #39 |
 | 10 | Fixed | Batch 6c (2 of 2), with #41 and #42 |
 | 7 | Fixed | Batch 6d |

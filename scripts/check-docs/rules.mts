@@ -170,7 +170,10 @@ function sectionRefs(
       named !== undefined && named !== context.wikiPage && index.wikiSections(named) ? named : null;
     if (page === null && namedPage === null && context.inWiki) {
       const link = LINK_BEFORE.exec(lead);
-      if (link) {
+      if (link?.[1].startsWith('#')) {
+        // A link to this page's own heading.
+        page = context.wikiPage;
+      } else if (link) {
         const target = resolveLink(context.path, link[1]);
         page = target === null ? null : wikiPageAt(target);
         followsNonWikiLink = page === null;

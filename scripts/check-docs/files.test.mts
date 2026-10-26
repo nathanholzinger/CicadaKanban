@@ -11,6 +11,7 @@ import {
   isInTestPlans,
   isInWiki,
   isNeverChecked,
+  isSuiteFile,
   resolveLink,
   wikiPageAt,
   wikiPageOfReadme,
@@ -42,6 +43,7 @@ describe('the docs layout', () => {
     assert.equal(wikiPageAt('docs/wiki/item-attachment/README.md'), 'item-attachment');
     assert.equal(wikiPageAt('docs/wiki/item-attachment/'), 'item-attachment');
     assert.equal(wikiPageAt('docs/wiki/item-attachment/notes.md'), null);
+    assert.equal(wikiPageAt('docs/wiki/README.md'), null);
     assert.equal(wikiPageOfReadme('docs/wiki/item-attachment/README.md'), 'item-attachment');
     assert.equal(wikiPageOfReadme('docs/wiki/item-attachment/'), null);
     assert.equal(wikiPageOfReadme('docs/wiki/README.md'), null);
@@ -60,6 +62,15 @@ describe('the docs layout', () => {
     );
     assert.equal(resolveLink(from, 'https://example.com/a'), null);
     assert.equal(resolveLink(from, '#8'), null);
+  });
+});
+
+describe('isSuiteFile', () => {
+  it('takes every test-plan Markdown file but the README and INDEX files', () => {
+    assert.ok(isSuiteFile('docs/test-plans/item-attachment/att-4-legal-parent-depth-cap.md'));
+    assert.ok(!isSuiteFile('docs/test-plans/README.md'));
+    assert.ok(!isSuiteFile('docs/test-plans/item-attachment/INDEX.md'));
+    assert.ok(!isSuiteFile('docs/wiki/item-attachment/README.md'));
   });
 });
 
