@@ -408,6 +408,8 @@ phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Built
 ---
 
 ### Story 7 — Depth cap determination + depth overflow
+**Plan:** [`story-7-depth-cap-and-hierarchy-modal.md`](story-7-depth-cap-and-hierarchy-modal.md)
+
 **Goal:** derive the real cap empirically from what the project sidebar can
 display comfortably, then decide what happens to a hierarchy that exceeds
 what a Card can show — **either** the previously sketched "see X children"
@@ -438,6 +440,15 @@ it in dnd-kit's order (`travelingRowsFor`), and the sidebar maps it to
 "after the nearest eligible predecessor" (`resolveGap`). Story 6.1's
 ledger rejected merging the two for now (L1-7b); this is the natural
 place to revisit.
+
+**Status: planning, 2026-10-26.** Nathan ruled:
+- **The overflow:** the modal is in. A Card's section shows 3 levels, and a placeholder stands in for the rest.
+- **The sidebar:** its width becomes draggable.
+- **The caps:** both take one value, at least 10, set by how deep the modal shows comfortably.
+- **Breadth:** out of scope.
+- **The to-consider item above:** the sidebar and the board keep their own drag code, so L1-7b stands.
+
+The plan holds the decisions. The hold threshold above is its E3.
 
 ---
 
