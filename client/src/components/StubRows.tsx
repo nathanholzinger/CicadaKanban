@@ -9,8 +9,9 @@
 import type { Item, ItemType } from '../types';
 import TypePill from './item-detail/TypePill';
 import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
-import { DropSideIndicator, INVALID_PLACEMENT_CLASS, useItemRow } from './dragChrome';
-import type { DescendantsProjection } from './workflow/DragSessionContext';
+import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
+import { useModalHoldPhase, type DescendantsProjection } from './workflow/DragSessionContext';
+import { useDragTuning } from './workflow/DragTuningContext';
 import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
@@ -130,12 +131,16 @@ const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 // would be. It takes part in the shuffle as any row does, so the ghost slides above or below
 // it and the live line can be drawn on it. It is no item: it carries no `data-item-id`, and
 // nothing drags from it, the Card's own drag included, since a press on it goes no further.
-// A click opens the hierarchy modal.
+// A click opens the hierarchy modal, and so does a hold during a drag: the cue of that hold shows
+// on the row (`ZoomCue`, as a Card's zoom-in cue does).
 export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; cardId: string; onOpen: () => void }) {
   const { setNodeRef, dropSide, sortableStyle, dataAttrs } = useItemRow(row.id, 'overflow', {
     parentId: row.ownerId,
     sectionCardId: cardId,
   });
+  // While the hold that opens the modal is on this row, its cue shows once the dwell is over.
+  const holdPhase = useModalHoldPhase(row.ownerId);
+  const { modalHoldCueMs } = useDragTuning();
   return (
     <div
       ref={setNodeRef}
@@ -146,18 +151,21 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
       className="relative rounded"
     >
       <DropSideIndicator side={dropSide} />
-      <button
-        type="button"
-        onClick={e => {
-          e.stopPropagation();
-          onOpen();
-        }}
-        onPointerDown={e => e.stopPropagation()}
-        title="Show the whole hierarchy"
-        className={`${OVERFLOW_TEXT_CLASS} w-full cursor-pointer text-left transition-colors hover:bg-zinc-700/40 hover:text-zinc-300`}
-      >
-        {overflowLabel(row.count)}
-      </button>
+      <div className="relative">
+        {holdPhase === 'cue' && <ZoomCue cueMs={modalHoldCueMs} />}
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onOpen();
+          }}
+          onPointerDown={e => e.stopPropagation()}
+          title="Show the whole hierarchy"
+          className={`${OVERFLOW_TEXT_CLASS} w-full cursor-pointer text-left transition-colors hover:bg-zinc-700/40 hover:text-zinc-300`}
+        >
+          {overflowLabel(row.count)}
+        </button>
+      </div>
     </div>
   );
 }

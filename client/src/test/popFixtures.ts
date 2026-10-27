@@ -64,6 +64,8 @@ export const POP_TEST_TUNING: DragTuning = {
   cardZoomDwellMs: 400,
   cardPopInDelayMs: 600,
   descendantsPopInDelayMs: 500,
+  modalHoldDwellMs: 350,
+  modalHoldCueMs: 650,
 };
 
 const BOARD = threeColumnBoard();

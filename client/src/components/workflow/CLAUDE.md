@@ -65,7 +65,25 @@ its own header.
   in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
   draw (picked up in the modal and pulled back out) comes back into the section as an item
   from outside does: the projection's seed is the last gap, `projection.slotHidden`, and
-  `placement.ts::placementFor` previews it as the Card's last child. The carried Stub shows the projected depth by indenting an inner box
+  `placement.ts::placementFor` previews it as the Card's last child. The list is the layer's
+  region and the dialog its bounds (`dragRegions.ts::DRAG_BOUNDS_ATTR`, read into the region's
+  `boundsRect`), so a cursor over the header is still in the modal. A click opens it centered.
+  **A hold during a drag opens it under the cursor.** While the ghost sits directly above or
+  below an overflow row, at its level (`DescendantsProjection.overflowBeside`, which
+  `descendantsProjection.ts::modalHoldTarget` turns into the hold's target, and not in an
+  over-cap state), a Card's zoom-in shape runs, a dwell and then a cue
+  (`popSession.ts::advanceModalHold`, `PopSession.modalHold`). It is keyed on that gap, depth and side, never on
+  the named neighbor, which flips between the row's owner and the overflow row while the gap
+  stays. It runs only with the cursor inside the layer, is not a layer change, and the context
+  key stays the Card's Descendants. When it has run its length `useBoardDnd.ts::evaluatePop`
+  opens the modal with the cursor (`BoardView.tsx::openHierarchyModalAt`); the modal places
+  itself in a layout effect (`HierarchyModal.tsx`, the pure geometry in `modalPlacement.ts`):
+  the spot the ghost held under the cursor, the list scrolled to bring it there, the dialog held
+  inside the window. It then reports what the cursor reads against its rows, the gap and the
+  depth from the cursor's x against its own indents, which `useBoardDnd.ts::readModalPlacement`
+  reseeds the projection with (`descendantsProjection.ts::reseedProjection`), so a modal that
+  fitted keeps the ghost's spot and a shifted one reads where the cursor is. The carried Stub
+  shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
@@ -92,7 +110,8 @@ its own header.
 The drag gesture's pure, unit-tested modules:
 
 - `popSession.ts` — the pop state machine: locked or popped out at each layer, and the
-  clocks that move a drag between them. It holds no placement rules.
+  clocks that move a drag between them, and the hold that opens the hierarchy modal, which
+  moves it nowhere. It holds no placement rules.
 - `placement.ts` — the ghost's placement at every layer, and which form the carried
   copy draws as.
 - `dragRegions.ts` — the regions' vocabulary (Board/Column/sub-row/Card/Descendants):
@@ -107,7 +126,12 @@ The drag gesture's pure, unit-tested modules:
 - `dragClassification.ts` — classifying every item against the carried one, once per
   drag start.
 - `descendantsProjection.ts` — the Descendants layer's live gap and depth, placed
-  against the whole section whatever levels it draws.
+  against the whole section whatever levels it draws, and the overflow row the ghost is
+  beside.
+- `modalPlacement.ts` — where the hierarchy modal opens during a drag and what the cursor
+  reads there: the dialog's position and the list's scroll, the gap a row under the cursor
+  gives the ghost, and the depth at the cursor's x. Numbers in, numbers out; the modal
+  measures the DOM.
 - `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
   across a form switch, and its clamp to the current context.
 - `itemListOps.ts` — list selectors and ordinal placements over the board's items, and
@@ -155,8 +179,8 @@ active-context outline, the drop line's shape).
   write `kind !== 'card'` to mean it.
 - **Registering an element as a drag region:** `dragRegions.ts::dragRegionProps`,
   spread onto the region's own root element. An element that isn't inside its parent
-  region's (the hierarchy modal's list) passes the parent's key as `parentKey`. A test builds the elements it reads with
-  `client/src/test/dragFixtures.ts::regionEl`.
+  region's (the hierarchy modal's list) passes the parent's key as `parentKey`. A test
+  builds the elements it reads with `client/src/test/dragFixtures.ts::regionEl`.
 - **Reading a region key:** `dragRegions.ts::parseRegionKey`, with `descendantsCardIdOf`
   for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
   column/sub-row DOM query. Never `startsWith`, `slice` or `split` a key by hand.
@@ -174,6 +198,9 @@ active-context outline, the drop line's shape).
   gate and the over-cap cue both read it, so they can't disagree.
 - **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
+- **Where the hierarchy modal opens during a drag:** `modalPlacement.ts`
+  (`placeModal`, `slotForGap`, `gapAtSlot`, `depthAtCursor`). The same functions place it and
+  read it, so a modal that fitted reads back the spot it was placed for.
 - **What the section draws:** `itemListOps.ts::sectionEntries` over those rows, cut at
   `shownLevels(tuning.sectionLevels)`. The render and the drop math both read the level
   count through `shownLevels`, so they can't disagree about which levels exist. The
@@ -204,8 +231,11 @@ active-context outline, the drop line's shape).
   `POP_TEST_TUNING`, which pins the values the cases depend on; `POP_TEST_METRICS`;
   `step`, `runPop`, `hoverAt`).
   Use `dragGesture.ts`
-  (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`)
-  — never hand-roll a drag or read `boundingBox()` directly for a drop target.
+  (`pickUp`/`hoverTo`/`release`/`cancel`/`dragTo`/`awaitDragContext`/`awaitPoppedOut`,
+  and `awaitModalHold` for the modal hold) — never hand-roll a drag or read `boundingBox()`
+  directly for a drop target. What a spec asserts about where something is drawn, such as the
+  ghost under the cursor, it reads with `paintedBoxOf`, which includes the shuffle's
+  transforms where `boxOf` does not.
 - What needs `useBoardDnd`'s live session, such as a reload landing mid-drag, is tested by
   rendering the hook: `useBoardDnd.test.ts` starts a drag on a board with no columns,
   which begins in no context, and calls the hook's handlers with the events they read.
@@ -213,7 +243,8 @@ active-context outline, the drop line's shape).
 - The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
   `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
   `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and
-  its hold stage), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, the gap
+  its hold stage), `data-drag-modal-hold` (`"<overflow row owner id>:<dwell|cue>"`, the hold
+  that opens the hierarchy modal, absent while none runs), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, the gap
   counted among all the section's rows, present only while locked at a `descendants:`
   context). Cards/Stubs carry `data-item-id` and
   `data-drop-state`, `data-pending` while their write is in flight, and

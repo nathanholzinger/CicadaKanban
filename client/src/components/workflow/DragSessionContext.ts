@@ -8,7 +8,7 @@ import type { DragClassification, DropTargetState } from './dragClassification';
 import { cardRegionKey, parseRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
-import type { ResolvedPlacement } from '../../lib/hierarchyPlacement';
+import type { DropSide, ResolvedPlacement } from '../../lib/hierarchyPlacement';
 
 // The Descendants layer's own tab state: which gap the ghost sits in, which
 // depth is currently chosen within that gap's range, and whether the
@@ -43,6 +43,12 @@ export interface DescendantsProjection {
    * child, and `atOwnSlot` never holds. Read by `placement.ts::placementFor`.
    */
   slotHidden: boolean;
+  /**
+   * The overflow row the ghost sits directly above (`'before'`: the row's owner's first child) or
+   * below (`'after'`: its last child), at that row's level: where the hold that opens the
+   * hierarchy modal runs. Null anywhere else, and in the modal, which has no overflow rows.
+   */
+  overflowBeside: { ownerId: string; side: DropSide } | null;
 }
 
 // Everything about the drag in progress, in one value: the carried item,
@@ -148,6 +154,14 @@ export function useZoomCandidatePhase(itemId: string): 'dwell' | 'cue' | null {
   const hover = useContext(DragSessionContext)?.pop.hover;
   if (!hover?.phase || hover.regionKey !== cardRegionKey(itemId)) return null;
   return hover.phase;
+}
+
+// Whether the hold that opens the hierarchy modal is running on the overflow row standing for
+// `ownerId`'s hidden children, and which stage it is in: `'dwell'` shows nothing, `'cue'` is when
+// the row draws its cue (`dragChrome.tsx::ZoomCue`).
+export function useModalHoldPhase(ownerId: string): 'dwell' | 'cue' | null {
+  const hold = useContext(DragSessionContext)?.pop.modalHold;
+  return hold?.ownerId === ownerId ? hold.phase : null;
 }
 
 // The ordinal placements (itemListOps.ts) — the live ghost and every

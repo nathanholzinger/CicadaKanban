@@ -46,6 +46,16 @@ interface RegionCommon {
    * content, never about how much of it happens to be scrolled into view.
    */
   contentRect: Rect;
+  /**
+   * The box the locked-context "is the cursor still inside" test and the pop-out distance
+   * measure against, when that is more than `rect` (`popSession.ts::containmentRect`). A merged
+   * column's is its own outer body, never clipped to visible scroll, so a short column's empty
+   * space below its last card reads as still inside instead of nowhere. The hierarchy modal's
+   * Descendants region is its list, and its bounds the whole dialog: the header above the list
+   * is not a region of its own, but a cursor over it is still in the modal. Undefined for a
+   * sub-row (its own `rect` already is its full bound), a Card and a section.
+   */
+  boundsRect?: Rect;
 }
 
 // A card-list region — a merged column's list or an expanded column's
@@ -83,18 +93,6 @@ export interface CardListRegion extends RegionCommon {
    */
   cardCount: number;
   parentRegionKey: null;
-  /**
-   * Merged columns only — the column's own outer body element (its
-   * scrolling body), never clipped to visible scroll the way `rect` is.
-   * `rect`/`contentRect` stay content-sized, feeding `bandBoundaries`/
-   * `bandFor`/the carve-out render; `boundsRect` is read by
-   * `popSession.ts::containmentRect`, for the locked-context "is the cursor
-   * still inside" test and the pop-out distance, so a short merged column's
-   * own empty space below the last card reads as still-inside instead of
-   * nowhere. Undefined for a sub-row (its own `rect` already is its full
-   * bound — nothing to add).
-   */
-  boundsRect?: Rect;
 }
 
 // A Card region — reachable only as a zoom-in target from the column/sub-row
@@ -157,6 +155,9 @@ export const DRAG_OVERLAY_ATTR = 'data-drag-overlay';
 // its Card, so the walk up the DOM finds the parent, and the hierarchy modal
 // is drawn apart from its Card, so it names it.
 export const DRAG_PARENT_REGION_ATTR = 'data-drag-parent-region';
+// Set on the element whose box is a Descendants region's `boundsRect`, with that region's key as
+// its value: the hierarchy modal's dialog, which holds the list that is the region.
+export const DRAG_BOUNDS_ATTR = 'data-drag-bounds';
 
 // The one spelling of "register this element as a drag region." It leaves
 // out DRAG_CARD_COUNT_ATTR, which only a card list's element carries, set

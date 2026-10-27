@@ -5,7 +5,10 @@
 // between samples and hands in the pointer, the named anchor and the
 // board's children accessor. It places against the whole section, whatever
 // levels the section draws: an overflow row is only ever a neighbor to name,
-// and turns into the gap among all the rows before anything is resolved.
+// and turns into the gap among all the rows before anything is resolved. It also names the
+// overflow row the ghost sits directly beside, at its level, which the hold that opens the
+// hierarchy modal keys on (`overflowBeside`, `modalHoldTarget`), and takes a reading from the
+// cursor when the modal has just opened under it (`reseedProjection`).
 
 import type { Item } from '../../types';
 import {
@@ -21,6 +24,7 @@ import { isValidParent, type DragClassification } from './dragClassification';
 import { descendantsCardIdOf } from './dragRegions';
 import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels, type PlacementSlot } from './itemListOps';
 import type { DescendantsProjection } from './DragSessionContext';
+import type { ModalHoldTarget } from './popSession';
 
 // What the depth is measured from: the gap and depth the section was
 // entered at, and where the pointer was then. `slotHidden`: the dragged Stub's
@@ -107,7 +111,58 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   // a region at all.
   const valid = isValidParent(classification, placement.parentId ?? cardId);
   const atOwnSlot = !seed.slotHidden && own !== null && gap === own.gap && depth === own.depth;
-  return { seed, projection: { gap, depth, valid, resolved: placement, atOwnSlot, slotHidden: seed.slotHidden } };
+  const overflowBeside = overflowBesideGhost(rows, gap, depth, shownLevels(sample.sectionLevels));
+  return {
+    seed,
+    projection: { gap, depth, valid, resolved: placement, atOwnSlot, slotHidden: seed.slotHidden, overflowBeside },
+  };
+}
+
+// The overflow row the ghost sits directly above or below, at the row's level: the one place the
+// hold that opens the hierarchy modal runs (wiki board-drag-interaction §7.3). The overflow row
+// of a last-level row `R` stands for its attached children outside the dragged subtree, so `R`
+// has one exactly when `rows` holds a child of it:
+//   - directly above: the gap just under `R`, with its first hidden child below it;
+//   - directly below: the gap at the end of `R`'s subtree, past at least one hidden row.
+// Both at `levels`, `R`'s children's level: any shallower state at the second gap is a sibling
+// of `R` or higher, and a ghost there is beside the overflow row without being on it. With every
+// level drawn (the modal, `levels` infinite) there is no overflow row and nothing to find.
+function overflowBesideGhost(
+  rows: readonly Row[],
+  gap: number,
+  depth: number,
+  levels: number,
+): DescendantsProjection['overflowBeside'] {
+  if (depth !== levels) return null;
+  const top = rows[gap - 1];
+  const bottom = rows[gap];
+  if (!top) return null;
+  if (top.depth === levels - 1) return bottom && bottom.depth > top.depth ? { ownerId: top.id, side: 'before' } : null;
+  if (top.depth < levels || (bottom && bottom.depth >= levels)) return null;
+  // `top` is a hidden row, and the gap ends its owner's subtree: the owner is the nearest row
+  // above at the last shown level.
+  for (let i = gap - 2; i >= 0; i--) {
+    if (rows[i].depth < levels) return { ownerId: rows[i].id, side: 'after' };
+  }
+  return null;
+}
+
+// What the hold that opens the modal keys on, off the projection: nothing in an over-cap state,
+// as a Card's zoom-in never starts on an invalid target (wiki board-drag-interaction §6.1).
+export function modalHoldTarget(projection: DescendantsProjection | null): ModalHoldTarget | null {
+  if (!projection?.valid || !projection.overflowBeside) return null;
+  const { ownerId, side } = projection.overflowBeside;
+  return { ownerId, side, gap: projection.gap, depth: projection.depth };
+}
+
+// The projection read afresh from where the cursor is over a layer that has just changed shape
+// under it (the modal opening): the next sample resolves from this gap and depth, and the pointer
+// it measures its travel from is `pointerX`. The hold's own reading is dropped, and nothing else.
+export function reseedProjection(
+  state: ProjectionState,
+  read: { gap: number; depth: number; pointerX: number },
+): ProjectionState {
+  return state.seed ? { seed: { ...state.seed, ...read }, projection: null } : state;
 }
 
 // The gap a named neighbor puts the ghost in, among all the section's rows. An item's row

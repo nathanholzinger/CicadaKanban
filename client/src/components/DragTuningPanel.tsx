@@ -45,6 +45,8 @@ const POP_FIELDS: Field[] = [
 ];
 const SECTION_FIELDS: Field[] = [
   { kind: 'number', key: 'sectionLevels', label: 'Levels a section shows', step: 1, min: 1 },
+  { kind: 'number', key: 'modalHoldDwellMs', label: 'Hierarchy modal hold dwell (ms)', step: 50, min: 0 },
+  { kind: 'number', key: 'modalHoldCueMs', label: 'Hierarchy modal hold cue (ms)', step: 50, min: 0 },
 ];
 const OVERLAY_FIELDS: Field[] = [
   { kind: 'text', key: 'overlayFreeDescendantColor', label: 'Free-descendant ring' },

@@ -25,6 +25,7 @@ import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/drag
 import { DragTuningContext } from './workflow/DragTuningContext';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
 import { popState } from './workflow/popSession';
+import type { Point } from './workflow/dragRegions';
 import DragTuningPanel from './DragTuningPanel';
 
 interface BoardViewProps {
@@ -46,8 +47,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // reload.
   const [dragTuning, setDragTuningState] = useState(loadDragTuning);
   const [showDragTuning, setShowDragTuning] = useState(false);
-  // The Card whose whole hierarchy the modal shows, when it's open.
-  const [hierarchyModalCardId, setHierarchyModalCardId] = useState<string | null>(null);
+  // The Card whose whole hierarchy the modal shows, when it's open, and where the cursor was if a
+  // hold during a drag opened it (a click opens it centered, with no anchor).
+  const [hierarchyModalOpen, setHierarchyModalOpen] = useState<{ cardId: string; anchor: Point | null } | null>(null);
+  const hierarchyModalCardId = hierarchyModalOpen?.cardId ?? null;
   const boardRootRef = useRef<HTMLDivElement>(null);
 
   function setDragTuning(next: DragTuning) {
@@ -102,10 +105,15 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       .catch(err => console.error('Failed to load item types:', err));
   }, []);
 
-  const closeHierarchyModal = useCallback(() => setHierarchyModalCardId(null), []);
+  const closeHierarchyModal = useCallback(() => setHierarchyModalOpen(null), []);
+  const openHierarchyModal = useCallback((cardId: string) => setHierarchyModalOpen({ cardId, anchor: null }), []);
+  const openHierarchyModalAt = useCallback(
+    (cardId: string, anchor: Point) => setHierarchyModalOpen({ cardId, anchor }),
+    [],
+  );
   const hierarchyModal = useMemo(
-    () => ({ openCardId: hierarchyModalCardId, open: setHierarchyModalCardId, close: closeHierarchyModal }),
-    [hierarchyModalCardId, closeHierarchyModal],
+    () => ({ openCardId: hierarchyModalCardId, open: openHierarchyModal, close: closeHierarchyModal }),
+    [hierarchyModalCardId, openHierarchyModal, closeHierarchyModal],
   );
   // The modal shows a Card that has attached descendants. A Card that is gone, or has none left,
   // has nothing to show, so it closes.
@@ -114,7 +122,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   useEffect(() => {
     if (hierarchyModalCardId !== null && !(hierarchyModalCard && hierarchyModalHasRows)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- a reaction to the items, which this component doesn't own
-      setHierarchyModalCardId(null);
+      setHierarchyModalOpen(null);
     }
   }, [hierarchyModalCardId, hierarchyModalCard, hierarchyModalHasRows]);
 
@@ -209,6 +217,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleDragMove,
     handleDragEnd,
     handleDragCancel,
+    readModalPlacement,
   } = useBoardDnd({
     board,
     items,
@@ -223,6 +232,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     loadBoard,
     rootRef: boardRootRef,
     hierarchyModalCardId,
+    openHierarchyModalAt,
     closeHierarchyModal,
   });
 
@@ -331,7 +341,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     tab state ("<gap>:<depth>:<valid>") — a test surface.
                     Undefined whenever the drag isn't currently locked at a
                     `descendants:` context (`session.projection` is null
-                    then too). */}
+                    then too).
+                    data-drag-modal-hold: the hold that opens the hierarchy
+                    modal ("<overflow row owner id>:<dwell|cue>") — a test
+                    surface, undefined while none runs. */}
                   <div
                     ref={boardRootRef}
                     style={overlayVars}
@@ -343,6 +356,11 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     data-drag-projection={
                       session?.projection
                         ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
+                        : undefined
+                    }
+                    data-drag-modal-hold={
+                      session?.pop.modalHold
+                        ? `${session.pop.modalHold.ownerId}:${session.pop.modalHold.phase}`
                         : undefined
                     }
                     className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
@@ -380,11 +398,13 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     {/* Inside the board root, so the drag's regions are read under one element and
                       the overlay colors reach its rows. Its backdrop is `fixed`, so it takes no
                       part in the board's own layout. */}
-                    {hierarchyModalCard && hierarchyModalHasRows && (
+                    {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
                       <HierarchyModal
                         card={hierarchyModalCard}
                         itemTypes={itemTypes}
                         getAttachedChildren={getAttachedChildren}
+                        anchor={hierarchyModalOpen.anchor}
+                        onPlaced={readModalPlacement}
                         onClose={closeHierarchyModal}
                       />
                     )}

@@ -3,6 +3,9 @@
 // (live rects, per sample). The only code that reads the DOM for them; the region
 // types and keys are `dragRegions.ts`'s.
 //
+// A Descendants region may carry a bounds element (the hierarchy modal's dialog), whose box is
+// its `boundsRect`: the modal's list is the region, and the header above it is still the modal.
+//
 // Unsorted, a broken column, an expanded column's outer wrapper, a column's
 // header/footer, the gaps between columns and between sub-rows, and the space below
 // the last sub-row register no region (wiki board-drag-interaction §1): they are
@@ -11,6 +14,7 @@
 // fully out of view registers no region at all until it scrolls back in.
 
 import {
+  DRAG_BOUNDS_ATTR,
   DRAG_CARD_COUNT_ATTR,
   DRAG_PARENT_REGION_ATTR,
   DRAG_REGION_ATTR,
@@ -53,9 +57,11 @@ export interface DropColumn {
 interface DomHandles {
   element: HTMLElement;
   scrollAncestor: HTMLElement | null;
+  /** A Descendants region's bounds element (`DRAG_BOUNDS_ATTR`), if it has one. */
+  bounds: HTMLElement | null;
 }
-type LiveFacts = 'rect' | 'contentRect';
-type CardListStructure = { dom: DomHandles } & Omit<CardListRegion, LiveFacts | 'cardCount' | 'boundsRect'>;
+type LiveFacts = 'rect' | 'contentRect' | 'boundsRect';
+type CardListStructure = { dom: DomHandles } & Omit<CardListRegion, LiveFacts | 'cardCount'>;
 type CardStructure = { dom: DomHandles } & Omit<CardRegion, LiveFacts>;
 type DescendantsStructure = { dom: DomHandles } & Omit<DescendantsRegion, LiveFacts>;
 export type DragStructure = readonly (CardListStructure | CardStructure | DescendantsStructure)[];
@@ -90,7 +96,11 @@ export function resolveDragStructure(
     const parsed = key ? parseRegionKey(key) : null;
     if (!key || !parsed) continue;
     const scrollAncestor = findVerticalScrollAncestor(el, root);
-    const dom = { element: el, scrollAncestor };
+    const dom = {
+      element: el,
+      scrollAncestor,
+      bounds: parsed.kind === 'descendants' ? boundsElementOf(root, key) : null,
+    };
     const record =
       parsed.kind === 'card' || parsed.kind === 'descendants'
         ? cardScopedStructure(
@@ -136,7 +146,8 @@ export function measureRegions(structure: DragStructure, scope: string | null): 
     const rect = scrollAncestorRect ? clipToVisible(contentRect, scrollAncestorRect) : contentRect;
     if (!rect) continue;
     if (!isCardList(facts)) {
-      regions.push({ ...facts, rect, contentRect });
+      const boundsRect = dom.bounds ? paintedRect(dom.bounds) : undefined;
+      regions.push({ ...facts, rect, contentRect, ...(boundsRect ? { boundsRect } : {}) });
       continue;
     }
     // A card list's two live facts beyond geometry: its rendered card count
@@ -157,7 +168,15 @@ export function regionElements(root: ParentNode): HTMLElement[] {
 // resolved. A detached element measures as an empty box, so `measureRegions`
 // would drop its region without a sound; the caller re-resolves instead.
 export function hasDetachedElements(structure: DragStructure): boolean {
-  return structure.some(s => !s.dom.element.isConnected || s.dom.scrollAncestor?.isConnected === false);
+  return structure.some(
+    s =>
+      !s.dom.element.isConnected || s.dom.scrollAncestor?.isConnected === false || s.dom.bounds?.isConnected === false,
+  );
+}
+
+// The element a Descendants region's bounds are read from: the one marked for its key.
+function boundsElementOf(root: ParentNode, regionKey: string): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`[${DRAG_BOUNDS_ATTR}="${regionKey}"]`);
 }
 
 // The other half of the same staleness check: whether a region element has

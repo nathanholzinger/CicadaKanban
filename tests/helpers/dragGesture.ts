@@ -119,6 +119,15 @@ export async function boxOf(locator: Locator) {
   return box;
 }
 
+// The element's box as it is painted right now, every transform included: what the user sees,
+// where `boxOf` is what dnd-kit's collision sees. For asserting where something is drawn, such as
+// the ghost under the cursor, never for aiming a drag.
+export async function paintedBoxOf(locator: Locator) {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('element not visible/measurable');
+  return box;
+}
+
 // A point on the element's vertical centre line, `fraction` of the way down
 // its box — the one shape every "aim at part of a card / a band of a
 // region" helper reduces to.
@@ -189,6 +198,14 @@ export async function awaitDragState(page: Page, state: 'locked' | 'popped-out',
 // own children at 0. Retries until it matches.
 export async function awaitProjection(page: Page, projection: string | RegExp, timeout?: number) {
   await expect(dragMachine(page)).toHaveAttribute('data-drag-projection', projection, { timeout });
+}
+
+// The hold that opens the hierarchy modal, as the board root reports it (`data-drag-modal-hold`):
+// `"<overflow row owner id>:<dwell|cue>"`. `null` asserts no hold is running. Retries until it
+// matches.
+export async function awaitModalHold(page: Page, hold: string | RegExp | null, timeout?: number) {
+  if (hold === null) await expect(dragMachine(page)).not.toHaveAttribute('data-drag-modal-hold', /./, { timeout });
+  else await expect(dragMachine(page)).toHaveAttribute('data-drag-modal-hold', hold, { timeout });
 }
 
 // `null` asserts no context at all (popped out).

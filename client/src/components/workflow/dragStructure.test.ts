@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
+  DRAG_BOUNDS_ATTR,
   DRAG_PARENT_REGION_ATTR,
   DRAG_REGION_ATTR,
   cardRegionKey,
@@ -230,6 +231,36 @@ describe('resolveDragStructure / measureRegions', () => {
       parentRegionKey: cardRegionKey('card-p'),
       rect: rect(500, 0, 200, 300),
     });
+  });
+
+  // The modal's list is the region and its dialog the bounds: the header above the list is no
+  // region of its own, but a cursor over it is still in the modal.
+  it('DRAG-7.16: a section element inside a marked dialog gets that dialog’s box as its boundsRect', () => {
+    const key = descendantsRegionKey('card-p');
+    const list = regionEl(key, rect(520, 100, 200, 300));
+    list.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));
+    const dialog = document.createElement('div');
+    dialog.setAttribute(DRAG_BOUNDS_ATTR, key);
+    mockRect(dialog, rect(500, 0, 240, 420));
+    dialog.append(list);
+    document.body.append(regionEl(columnRegionKey('col-1'), rect(0, 0, 300, 400)), dialog);
+
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
+    const section = measureRegions(structure, cardRegionKey('card-p')).find(r => r.kind === 'descendants');
+    expect(section).toMatchObject({ rect: rect(520, 100, 200, 300), boundsRect: rect(500, 0, 240, 420) });
+
+    // Gone with the modal: the structure reads as detached, so a sample re-resolves.
+    expect(hasDetachedElements(structure)).toBe(false);
+    dialog.remove();
+    expect(hasDetachedElements(structure)).toBe(true);
+  });
+
+  it('a section with no marked dialog has no boundsRect', () => {
+    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
+    const section = measureRegions(structure, cardRegionKey('card-p')).find(r => r.kind === 'descendants');
+    expect(section).toBeDefined();
+    expect(section?.boundsRect).toBeUndefined();
   });
 
   it('a section element outside any region that names no parent resolves to nothing', () => {

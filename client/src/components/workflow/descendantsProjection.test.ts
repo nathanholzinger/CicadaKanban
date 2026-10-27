@@ -8,6 +8,8 @@ import {
   NO_PROJECTION,
   advanceProjection,
   descendantsReleasePlacement,
+  modalHoldTarget,
+  reseedProjection,
   sameProjection,
   type ProjectionSample,
 } from './descendantsProjection';
@@ -59,6 +61,7 @@ describe('advanceProjection', () => {
       resolved: { parentId: P, anchor: { anchorId: 'S1', side: 'after' } },
       atOwnSlot: true,
       slotHidden: false,
+      overflowBeside: null,
     });
   });
 
@@ -78,6 +81,7 @@ describe('advanceProjection', () => {
       resolved: { parentId: P, anchor: { anchorId: 'S3', side: 'after' } },
       atOwnSlot: false,
       slotHidden: false,
+      overflowBeside: null,
     });
     // A release right away commits the Card layer's own attach: last among P's children.
     expect(descendantsReleasePlacement(projection, P)).toEqual({
@@ -235,6 +239,37 @@ describe('advanceProjection under a cut-off section', () => {
     expect(hover(anchor, 9)).toMatchObject({ depth: 3, resolved: { parentId: 'T', anchor: null } });
   });
 
+  it('DRAG-7.13: names the overflow row the ghost sits directly above or below, at its level, and no other state', () => {
+    // Above it, R's first child; below it, R's last child. Either neighbor of the gap reads the same.
+    for (const anchor of [
+      { anchorId: 'R', side: 'after' },
+      { anchorId: R_OVERFLOW, side: 'before' },
+    ] as const) {
+      expect(hover(anchor)?.overflowBeside, anchor.anchorId).toEqual({ ownerId: 'R', side: 'before' });
+    }
+    for (const anchor of [
+      { anchorId: R_OVERFLOW, side: 'after' },
+      { anchorId: 'T', side: 'before' },
+    ] as const) {
+      expect(hover(anchor, 3)?.overflowBeside, anchor.anchorId).toEqual({ ownerId: 'R', side: 'after' });
+      // One tab left is R's next sibling: beside the overflow row, and not on it.
+      expect(hover(anchor, 2)?.overflowBeside, anchor.anchorId).toBeNull();
+    }
+    // Under a last-level row with no hidden children (T), or among the shown rows.
+    expect(hover({ anchorId: 'T', side: 'after' }, 3)?.overflowBeside).toBeNull();
+    expect(hover({ anchorId: 'Q', side: 'after' })?.overflowBeside).toBeNull();
+    // The modal draws every level and has no overflow rows.
+    expect(hover({ anchorId: R_OVERFLOW, side: 'before' }, 0, { sectionLevels: Infinity })?.overflowBeside).toBeNull();
+  });
+
+  it('DRAG-7.13, DRAG-7.21: the hold keys on the gap and depth, and not in an over-cap state', () => {
+    const above = hover({ anchorId: R_OVERFLOW, side: 'before' });
+    expect(modalHoldTarget(above)).toEqual({ ownerId: 'R', side: 'before', gap: 3, depth: 3 });
+    expect(modalHoldTarget(above && { ...above, valid: false })).toBeNull();
+    expect(modalHoldTarget(hover({ anchorId: 'Q', side: 'after' }))).toBeNull();
+    expect(modalHoldTarget(null)).toBeNull();
+  });
+
   it('reads an owner that is no row as no row named: below everything', () => {
     expect(hover({ anchorId: overflowRowId('gone'), side: 'before' })).toMatchObject({ gap: 8, depth: 0 });
   });
@@ -256,6 +291,7 @@ describe('advanceProjection under a cut-off section', () => {
         resolved: { parentId: P, anchor: { anchorId: 'B', side: 'after' } },
         atOwnSlot: false,
         slotHidden: true,
+        overflowBeside: null,
       });
       // A release right away moves it there.
       expect(descendantsReleasePlacement(projection, P)).toEqual({
@@ -328,6 +364,22 @@ describe('descendantsReleasePlacement', () => {
     const { projection } = advanceProjection(entered, held({ cap: 2, pointerX: START_X + DESCENDANTS_INDENT_PX }));
     expect(descendantsReleasePlacement(projection, P)).toBeNull();
     expect(descendantsReleasePlacement(null, P)).toBeNull();
+  });
+});
+
+describe('reseedProjection', () => {
+  it('DRAG-7.15: takes the gap and depth it is given, measures the pointer’s travel from the new pointer, and drops the old reading', () => {
+    const entered = advanceProjection(NO_PROJECTION, sample());
+    const reseeded = reseedProjection(entered, { gap: 2, depth: 0, pointerX: 400 });
+    expect(reseeded.projection).toBeNull();
+    expect(advanceProjection(reseeded, held({ pointerX: 400 })).projection).toMatchObject({ gap: 2, depth: 0 });
+    // After S3, one indent right of where it was read is S3's first child.
+    const tabbed = advanceProjection(reseeded, held({ pointerX: 400 + DESCENDANTS_INDENT_PX })).projection;
+    expect(tabbed).toMatchObject({ gap: 2, depth: 1, resolved: { parentId: 'S3' } });
+  });
+
+  it('has nothing to reseed before the section was entered', () => {
+    expect(reseedProjection(NO_PROJECTION, { gap: 2, depth: 0, pointerX: 400 })).toBe(NO_PROJECTION);
   });
 });
 

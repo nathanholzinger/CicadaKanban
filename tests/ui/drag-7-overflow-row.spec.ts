@@ -1,22 +1,10 @@
-import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import { seedTemplatedWorkflow, pickWorkphases, seedItem, fetchItem } from '../helpers/seed';
-import {
-  pickUp,
-  hoverTo,
-  release,
-  topQuarter,
-  awaitDragContext,
-  awaitProjection,
-  seedDragTuning,
-  NO_POP,
-  type Point,
-} from '../helpers/dragGesture';
+import { release, topQuarter, awaitProjection, seedDragTuning, NO_POP } from '../helpers/dragGesture';
 import { article, itemRow, overflowRow } from '../helpers/boardLocators';
-import { sectionRows, seedOverflowTree } from '../helpers/overflowTree';
-import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
-import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
+import { holdAt, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
+import { descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
 // A Card's section shows a set number of levels, and an overflow row stands for the hidden
@@ -31,21 +19,6 @@ test.beforeEach(async () => {
 });
 
 const L = DEFAULT_DRAG_TUNING.sectionLevels;
-
-// Picks X up in its own section and aims the carried copy at the top of `target`, `depth` levels
-// in from where X's own row starts: its own depth, 0, is where the seed puts it.
-async function holdAt(page: Page, x: { id: string }, p: { id: string }, target: () => Promise<Point>, depth: number) {
-  const from = await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
-  await awaitDragContext(page, descendantsRegionKey(p.id));
-  const aim = async (levels: number) => {
-    const point = await target();
-    await hoverTo(page, { x: from.x + levels * DESCENDANTS_INDENT_PX, y: point.y });
-  };
-  // The rows slide aside as the ghost approaches, so the second pass aims at where they settle.
-  await aim(depth);
-  await aim(depth);
-  return aim;
-}
 
 test('DRAG-7.1, DRAG-7.2: a section shows L levels below its Card, and an overflow row counts the hidden children', async ({
   page,

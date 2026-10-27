@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { DragTuning } from './dragTuning';
-import { advancePopSession, isLocked, popDueAt, startPopSession } from './popSession';
-import { rect, region } from '../../test/dragFixtures';
+import {
+  advanceModalHold,
+  advancePopSession,
+  isLocked,
+  modalHoldElapsed,
+  popDueAt,
+  startPopSession,
+  type ModalHoldTarget,
+} from './popSession';
+import { descendantsRegion, rect, region } from '../../test/dragFixtures';
 import {
   POP_TEST_METRICS as metrics,
   POP_TEST_TUNING as tuning,
@@ -26,7 +34,7 @@ const CUE = tuning.cardPopInDelayMs;
 
 describe('locked', () => {
   it('DRAG-1.1: starts locked in the origin context with nothing tracked', () => {
-    expect(startPopSession(A.key)).toEqual({ contextKey: A.key, hover: null, outsideSince: null });
+    expect(startPopSession(A.key)).toEqual({ contextKey: A.key, hover: null, outsideSince: null, modalHold: null });
     expect(isLocked(startPopSession(A.key))).toBe(true);
   });
 
@@ -60,6 +68,7 @@ describe('locked', () => {
     expect(out).toEqual({
       contextKey: null,
       outsideSince: null,
+      modalHold: null,
       hover: {
         regionKey: B.key,
         band: 'middle',
@@ -138,6 +147,17 @@ describe('locked', () => {
       expect(near.contextKey).toBe(M.key);
       const far = advancePopSession(startPopSession(M.key), { x: 50, y: 470 }, [M], withDistance, metrics, 0); // 70px past the outer body
       expect(far.contextKey).toBeNull();
+    });
+  });
+
+  it('DRAG-7.16: a Descendants region with a boundsRect is still inside over that box, the hierarchy modal’s header above its list', () => {
+    const list = descendantsRegion('card-m', rect(0, 100, 200, 300), { boundsRect: rect(0, 0, 200, 400) });
+    const inHeader = { x: 100, y: 40 };
+    expect(step(startPopSession(list.key), inHeader, 0, [list])).toEqual(startPopSession(list.key));
+    const bare = descendantsRegion('card-m', rect(0, 100, 200, 300));
+    expect(step(startPopSession(bare.key), inHeader, 0, [bare])).toEqual({
+      ...startPopSession(bare.key),
+      outsideSince: 0,
     });
   });
 
@@ -342,7 +362,7 @@ describe('popped out', () => {
       ],
       outInB,
     );
-    expect(s).toEqual({ contextKey: A.key, hover: null, outsideSince: null });
+    expect(s).toEqual({ contextKey: A.key, hover: null, outsideSince: null, modalHold: null });
   });
 
   it('DRAG-1.11: the top and bottom bands never pop in, however long; moving to another column restarts the clock', () => {
@@ -416,5 +436,64 @@ describe('popDueAt', () => {
   it('DRAG-1.11: popped out, the pop-in clock only from a middle band', () => {
     expect(popDueAt(step(startPopSession(null), bMiddle, 100, regions), regions, tuning)).toBe(100 + IN);
     expect(popDueAt(step(startPopSession(null), bTop, 100, regions), regions, tuning)).toBeNull();
+  });
+});
+
+// The hold that opens the hierarchy modal: a dwell and then a cue, keyed on where the ghost
+// sits beside an overflow row, never on the named neighbor.
+describe('the hierarchy modal hold', () => {
+  const DWELL_M = tuning.modalHoldDwellMs;
+  const CUE_M = tuning.modalHoldCueMs;
+  const locked = startPopSession(descendantsP.key);
+  const above: ModalHoldTarget = { ownerId: 'r', side: 'before', gap: 3, depth: 3 };
+  const hold = (session = locked, target: ModalHoldTarget | null = above, now = 0) =>
+    advanceModalHold(session, target, tuning, now);
+
+  it('DRAG-7.13: a silent dwell, then a cue, then the hold has run its length', () => {
+    const started = hold();
+    expect(started.modalHold).toEqual({ key: 'r:before:3:3', ownerId: 'r', since: 0, phase: 'dwell' });
+    // Held steady: the same session, nothing new to draw, until the dwell is over.
+    expect(hold(started, above, DWELL_M - 1)).toBe(started);
+    const cue = hold(started, above, DWELL_M);
+    expect(cue.modalHold).toMatchObject({ since: 0, phase: 'cue' });
+    expect(hold(cue, above, DWELL_M + 1)).toBe(cue);
+    expect(modalHoldElapsed(cue.modalHold!, tuning, DWELL_M + CUE_M - 1)).toBe(false);
+    expect(modalHoldElapsed(cue.modalHold!, tuning, DWELL_M + CUE_M)).toBe(true);
+  });
+
+  it('DRAG-7.14: resets when the gap, the depth or the side changes, and the cue goes at once', () => {
+    const cue = hold(hold(), above, DWELL_M + 10);
+    expect(cue.modalHold?.phase).toBe('cue');
+    for (const changed of [{ gap: 6 }, { depth: 2 }, { side: 'after' as const }, { ownerId: 'r2' }]) {
+      const reset = hold(cue, { ...above, ...changed }, DWELL_M + 20);
+      expect(reset.modalHold, JSON.stringify(changed)).toMatchObject({ since: DWELL_M + 20, phase: 'dwell' });
+    }
+    // Anywhere else ends it.
+    expect(hold(cue, null, DWELL_M + 20).modalHold).toBeNull();
+  });
+
+  it('DRAG-7.14: the hold starts over after it ended, with a fresh dwell', () => {
+    const ended = hold(hold(), null, 100);
+    expect(hold(ended, above, 200).modalHold).toMatchObject({ since: 200, phase: 'dwell' });
+  });
+
+  it('DRAG-7.13: popDueAt reports the cue, then the end of the hold', () => {
+    expect(popDueAt(hold(), [descendantsP], tuning)).toBe(DWELL_M);
+    const cue = hold(hold(), above, DWELL_M);
+    expect(popDueAt(cue, [descendantsP], tuning)).toBe(DWELL_M + CUE_M);
+  });
+
+  it('resting outside the section ends the hold: it runs with the cursor inside', () => {
+    const running = hold();
+    const away = step(running, aboveSection, 10, [A, P, descendantsP]);
+    expect(away.modalHold).toBeNull();
+    expect(away.outsideSince).toBe(10);
+  });
+
+  it('a layer change clears it', () => {
+    const away = step(hold(), aboveSection, 10, [A, P, descendantsP]);
+    const popped = step(away, aboveSection, 10 + OUT, [A, P, descendantsP]);
+    expect(popped.contextKey).toBe(P.key);
+    expect(popped.modalHold).toBeNull();
   });
 });

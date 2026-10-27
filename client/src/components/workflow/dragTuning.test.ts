@@ -43,6 +43,16 @@ describe('loadDragTuning', () => {
   });
 });
 
+describe('the hierarchy modal hold', () => {
+  it('DRAG-1.34: starts at a Card zoom-in’s dwell and cue, and persists a change', () => {
+    expect(DEFAULT_DRAG_TUNING.modalHoldDwellMs).toBe(DEFAULT_DRAG_TUNING.cardZoomDwellMs);
+    expect(DEFAULT_DRAG_TUNING.modalHoldCueMs).toBe(DEFAULT_DRAG_TUNING.cardPopInDelayMs);
+    const s = storage();
+    saveDragTuning({ ...DEFAULT_DRAG_TUNING, modalHoldDwellMs: 250, modalHoldCueMs: 400 }, s);
+    expect(loadDragTuning(s)).toMatchObject({ modalHoldDwellMs: 250, modalHoldCueMs: 400 });
+  });
+});
+
 describe('saveDragTuning', () => {
   it('round-trips through storage', () => {
     const s = storage();

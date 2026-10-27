@@ -23,6 +23,11 @@
 //     `releaseDescendants`), or, popped out, through that region's band —
 //     and the write goes out with its pending placement attached.
 //
+// The hold that opens the hierarchy modal (`popSession.ts::advanceModalHold`) is advanced here,
+// after the projection it keys on; when it has run its length the modal opens with the cursor
+// (`BoardView.tsx::openHierarchyModalAt`), places itself under it, and reports what the cursor
+// reads against its rows (`readModalPlacement`), which the projection carries on from.
+//
 // Position values are never computed here: the request carries relative
 // intent and the server's number lands through the write tracker. A column
 // dropped on another goes to `onColumnDrop`, which owns the reorder.
@@ -66,7 +71,16 @@ import {
   type DragStructure,
 } from './dragStructure';
 import type { DragTuning } from './dragTuning';
-import { advancePopSession, popDueAt, startPopSession, type ParentKeyOf, type PopSession } from './popSession';
+import {
+  advanceModalHold,
+  advancePopSession,
+  modalHoldElapsed,
+  popDueAt,
+  startPopSession,
+  type ParentKeyOf,
+  type PopSession,
+} from './popSession';
+import type { ModalReading } from './modalPlacement';
 import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
 import { renderedIsStub, renderedParentId, renderedWorkphaseId, type Placement, type Placements } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
@@ -75,6 +89,8 @@ import {
   NO_PROJECTION,
   advanceProjection,
   descendantsReleasePlacement,
+  modalHoldTarget,
+  reseedProjection,
   sameProjection,
   type ProjectionState,
 } from './descendantsProjection';
@@ -116,6 +132,8 @@ export interface BoardDndDeps {
   rootRef: RefObject<HTMLElement | null>;
   /** The Card whose hierarchy modal is open, if any: it is that Card's Descendants layer, drawn whole. */
   hierarchyModalCardId: string | null;
+  /** Opens the modal for a hold during a drag, with the cursor where it was: the modal is placed under it. */
+  openHierarchyModalAt: (cardId: string, cursor: Point) => void;
   closeHierarchyModal: () => void;
 }
 
@@ -249,6 +267,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     previousContextKey: string | null,
     pop: PopSession,
     classification: DragClassification,
+    modalCardId = latest.current.hierarchyModalCardId,
   ) {
     projectionRef.current = advanceProjection(projectionRef.current, {
       previousContextKey,
@@ -258,16 +277,15 @@ export function useBoardDnd(deps: BoardDndDeps) {
       namedAnchor: namedAnchorRef.current,
       pointerX: pointerRef.current?.x ?? null,
       getAttachedChildren: latest.current.getAttachedChildren,
-      sectionLevels: levelsDrawnAt(pop.contextKey),
+      sectionLevels: levelsDrawnAt(pop.contextKey, modalCardId),
     });
   }
 
   // How many levels the section at `contextKey` draws: every one while it is the hierarchy
-  // modal's, the tuning value otherwise.
-  function levelsDrawnAt(contextKey: string | null): number {
-    const { hierarchyModalCardId, tuning } = latest.current;
+  // modal's (`modalCardId` is the Card whose modal is open), the tuning value otherwise.
+  function levelsDrawnAt(contextKey: string | null, modalCardId: string | null): number {
     const cardId = descendantsCardIdOf(contextKey);
-    return cardId !== null && cardId === hierarchyModalCardId ? Infinity : tuning.sectionLevels;
+    return cardId !== null && cardId === modalCardId ? Infinity : latest.current.tuning.sectionLevels;
   }
 
   // A context's parent, off the structure rather than a measured region: a
@@ -276,8 +294,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
   const parentKeyOf: ParentKeyOf = key => structureRef.current.find(s => s.key === key)?.parentRegionKey ?? null;
 
   // One step of the pop machine against the current pointer; re-arms the
-  // pop timer when the cursor is resting in a pop-eligible band.
-  function evaluatePop() {
+  // pop timer when the cursor is resting in a pop-eligible band. `modalCardId`: the Card whose
+  // hierarchy modal is open, when the caller knows it before a render has told the hook (the
+  // modal reporting its placement from the commit that mounted it).
+  function evaluatePop(modalCardId = latest.current.hierarchyModalCardId) {
     const current = sessionRef.current;
     const pointer = pointerRef.current;
     if (!current || !pointer) return;
@@ -321,8 +341,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
       regions = sampleRegions(pop.contextKey);
       pop = step(pop, regions);
     }
-    updateDescendantsProjection(priorContextKey, pop, current.classification);
+    updateDescendantsProjection(priorContextKey, pop, current.classification, modalCardId);
     const { projection } = projectionRef.current;
+    // The hold that opens the hierarchy modal runs on the projection just read, with the cursor
+    // inside the layer. When it has run its whole length the modal opens, and the hold is done.
+    pop = advanceModalHold(pop, pop.outsideSince === null ? modalHoldTarget(projection) : null, tuning, now);
+    const holdOpensCardId =
+      pop.modalHold && modalHoldElapsed(pop.modalHold, tuning, now) ? descendantsCardIdOf(pop.contextKey) : null;
+    if (holdOpensCardId) pop = advanceModalHold(pop, null, tuning, now);
     // The projection can change (a fresh gap or depth choice) on a sample
     // where `pop` itself doesn't — a locked
     // Descendants context has no further child region, so
@@ -335,11 +361,12 @@ export function useBoardDnd(deps: BoardDndDeps) {
       setGhost(current.activeItem.id, placementFor(next, regions));
       // Leaving the modal's layer closes it: the drag is at the Card layer, and the section
       // under the backdrop is the layer's again.
-      const modalCardId = latest.current.hierarchyModalCardId;
       if (modalCardId !== null && pop.contextKey !== descendantsRegionKey(modalCardId)) {
         latest.current.closeHierarchyModal();
       }
     }
+    // Placed under the cursor once it has mounted (`readModalPlacement`).
+    if (holdOpensCardId) latest.current.openHierarchyModalAt(holdOpensCardId, pointer);
     clearPopTimer(popTimer);
     const due = popDueAt(pop, regions, tuning);
     if (due !== null) popTimer.current = setTimeout(() => evaluateRef.current(), Math.max(0, due - now));
@@ -608,6 +635,23 @@ export function useBoardDnd(deps: BoardDndDeps) {
     evaluateRef.current();
   }
 
+  // The hierarchy modal, opened under the cursor by a hold and now placed, reports what the cursor
+  // reads against its rows (`HierarchyModal.tsx`). Opening re-reads the gap and the depth from the
+  // cursor, where a zoom into a section doesn't move the ghost (wiki board-drag-interaction §7.3):
+  // the projection carries on from them, and the neighbor named in the section, which the modal's
+  // rows replaced, is dropped for the next move to name afresh. Called from the commit that
+  // mounted the modal, before the hook has seen the modal's Card in its deps, so the Card is
+  // taken off the drag's own context, which the modal is the layer of.
+  function readModalPlacement(reading: ModalReading) {
+    const current = sessionRef.current;
+    const pointer = pointerRef.current;
+    const cardId = descendantsCardIdOf(current?.pop.contextKey ?? null);
+    if (!current || !pointer || !cardId) return;
+    projectionRef.current = reseedProjection(projectionRef.current, { ...reading, pointerX: pointer.x });
+    namedAnchorRef.current = null;
+    evaluatePop(cardId);
+  }
+
   // Escape / a cancelled gesture: nothing was written, so the ghost is the
   // only thing to undo.
   function handleDragCancel() {
@@ -739,5 +783,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
     handleDragMove,
     handleDragEnd,
     handleDragCancel,
+    readModalPlacement,
   };
 }

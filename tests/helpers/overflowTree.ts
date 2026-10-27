@@ -1,6 +1,9 @@
 import type { APIRequestContext, Page } from '@playwright/test';
 import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
+import { awaitDragContext, hoverTo, pickUp, type Point } from './dragGesture';
+import { itemRow } from './boardLocators';
 import { DRAG_REGION_ATTR, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { DESCENDANTS_INDENT_PX } from '../../client/src/components/cardMetrics';
 
 // The tree of the overflow-row and hierarchy-modal cases, with the section at its default of
 // three levels. Card `P` in Todo holds A, then B, then X. A holds Q, which holds R and T; R holds
@@ -26,6 +29,31 @@ export async function seedOverflowTree(request: APIRequestContext, name: string)
   const b = await child('B', p);
   const x = await child('X', p);
   return { project, workflow, todo, p, a, q, r, t, r1, r2, r1a, f, g, b, x };
+}
+
+// Picks `item`, a Stub of `p`, up in its own section, which starts the drag at the Descendants
+// layer with no pop, and aims the carried copy at `target`, `depth` levels in from where the item's
+// own row starts. Returns the aim, to tab to another depth over the same target; its `at()` is
+// where the cursor was last put.
+export async function holdAt(
+  page: Page,
+  item: { id: string; title: string },
+  p: { id: string },
+  target: () => Promise<Point>,
+  depth: number,
+) {
+  const from = await pickUp(page, itemRow(page, item.id).getByRole('button', { name: item.title, exact: true }));
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  let last: Point = from;
+  const aim = async (levels: number) => {
+    const point = await target();
+    last = { x: from.x + levels * DESCENDANTS_INDENT_PX, y: point.y };
+    await hoverTo(page, last);
+  };
+  // The rows slide aside as the ghost approaches, so the second pass aims at where they settle.
+  await aim(depth);
+  await aim(depth);
+  return Object.assign(aim, { at: () => last });
 }
 
 // The ids of what P's section draws, in order: an item's id, or `overflow:<owner id>`.

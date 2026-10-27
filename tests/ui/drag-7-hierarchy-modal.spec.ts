@@ -349,6 +349,30 @@ test('DRAG-7.10: a second pop, out of the Card’s box, detaches the item: two p
   expect(detached.workphaseId).toBe(todo.id);
 });
 
+test('DRAG-7.10: the modal’s header is part of the modal: a cursor resting over it pops nothing', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Header Project';
+  const { p, r, r2 } = await seedOverflowTree(request, name);
+  const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+
+  // The header holds the title and the X, above the list that is the layer's region. Resting there
+  // past the pop-out delay is still inside the modal.
+  await pickUpRow(page, modal, r2.id, 'R2');
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await hoverTo(page, await center(modal.getByRole('heading', { name: 'P', exact: true })));
+  await page.waitForTimeout(tuning.popDelayMs * 3);
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await expect(modal).toBeVisible();
+  await cancel(page);
+});
+
 test('DRAG-7.11: while the modal is open, the Card and its section under the backdrop take no part in the drag', async ({
   page,
   request,

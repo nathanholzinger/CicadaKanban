@@ -18,6 +18,9 @@
 //     the dwell and then the cue (`namedCardCandidate`).
 //   - Zoom in, a Card → its Descendants section: the cursor rests on the
 //     section past `descendantsPopInDelayMs`.
+// Not a layer change: the hold that opens the hierarchy modal (wiki board-drag-interaction
+// §7.3). It runs inside the Descendants layer, keyed on the projection's gap and depth beside
+// an overflow row (`advanceModalHold`), and the owner opens the modal when it has elapsed.
 
 import type { DragTuning } from './dragTuning';
 import {
@@ -77,6 +80,27 @@ export interface PopHover {
   phase?: 'dwell' | 'cue';
 }
 
+// The hold that opens the hierarchy modal, while the ghost sits directly above or below an
+// overflow row at its level. `key` is what it holds steady, the gap and the depth with the row:
+// it resets when any of them changes, and not while the carried copy moves within the gap.
+export interface ModalHold {
+  key: string;
+  /** The row whose hidden children the overflow row stands for: where the cue shows. */
+  ownerId: string;
+  since: number;
+  /** `'dwell'` shows nothing; `'cue'` runs until the modal opens. Recomputed from `since` every sample, as `PopHover.phase` is. */
+  phase: 'dwell' | 'cue';
+}
+
+// What the projection says the hold is on: the overflow row's owner, which side of the row the
+// ghost sits, and the gap and depth it holds.
+export interface ModalHoldTarget {
+  ownerId: string;
+  side: DropSide;
+  gap: number;
+  depth: number;
+}
+
 export interface PopSession {
   /**
    * The region the carried item currently belongs to — and is clamped
@@ -96,6 +120,8 @@ export interface PopSession {
   hover: PopHover | null;
   /** Locked only: when the cursor left the context — the pop-out clock. Null while it's inside. */
   outsideSince: number | null;
+  /** Locked at a Descendants context only: the hold that opens the hierarchy modal. Null otherwise, and on every layer change. */
+  modalHold: ModalHold | null;
 }
 
 // The parent of a context the machine can't see: its region missing from
@@ -108,7 +134,7 @@ export type ParentKeyOf = (contextKey: string) => string | null;
 const NO_PARENT_LOOKUP: ParentKeyOf = () => null;
 
 export function startPopSession(contextKey: string | null): PopSession {
-  return { contextKey, hover: null, outsideSince: null };
+  return { contextKey, hover: null, outsideSince: null, modalHold: null };
 }
 
 // Whether the card is currently bounded by a context.
@@ -212,9 +238,10 @@ export function advancePopSession(
     const parentKey = contextRegion ? contextRegion.parentRegionKey : parentKeyOf(session.contextKey);
     return transitionTo(parentKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
   }
-  return session.hover === null && session.outsideSince === outsideSince
+  // Resting outside the context is no hold on anything inside it.
+  return session.hover === null && session.outsideSince === outsideSince && session.modalHold === null
     ? session
-    : { ...session, hover: null, outsideSince };
+    : { ...session, hover: null, outsideSince, modalHold: null };
 }
 
 // Every "pop into/out of `key`": a fresh session at `key`, re-evaluated
@@ -231,16 +258,7 @@ function transitionTo(
   namedAnchor: AnchorRelation | null,
   parentKeyOf: ParentKeyOf,
 ): PopSession {
-  return advancePopSession(
-    { contextKey: key, hover: null, outsideSince: null },
-    pointer,
-    regions,
-    tuning,
-    metrics,
-    now,
-    namedAnchor,
-    parentKeyOf,
-  );
+  return advancePopSession(startPopSession(key), pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
 }
 
 // A locked Card's own child, its Descendants section, is found by a hit
@@ -328,8 +346,9 @@ function hoverFor(
 // never pop out while the cursor is still somewhere inside it
 // (wiki board-drag-interaction §2). `rect`/`contentRect` are content-sized,
 // so a short merged column's own empty space below its last card is
-// nowhere in that box; `boundsRect` (merged columns only) is the column's
-// own outer, un-clipped body instead. `rect` itself stays content-sized:
+// nowhere in that box; `boundsRect` (a merged column, or the hierarchy
+// modal's list) is the column's own outer, un-clipped body, or the modal's
+// whole box with its header, instead. `rect` itself stays content-sized:
 // enlarging it would move the Board-layer bottom-band boundary down with
 // it, turning that same empty space into the *middle* band (no-op) instead
 // of *bottom* (append). A sub-row's own `rect` already is its full bound,
@@ -341,7 +360,7 @@ function hoverFor(
 // this decides whether the context still holds, and a merged column
 // answers the two against different boxes.
 function containmentRect(region: DragRegion): Rect {
-  return region.kind === 'column' && region.boundsRect ? region.boundsRect : region.rect;
+  return region.boundsRect ?? region.rect;
 }
 
 // `outsideSince` is the pop-out clock as this sample found it: null when
@@ -380,6 +399,8 @@ function popOutDue(
 // region can't be found (the shallower of the two).
 export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
   if (session.contextKey !== null && session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
+  // A hold on the modal runs only with the cursor inside, where no hover is pending.
+  if (session.modalHold) return modalHoldDueAt(session.modalHold, tuning);
   const hover = session.hover;
   if (!hover?.poppable) return null;
   const candidate = regions.find(r => r.key === hover.regionKey);
@@ -391,4 +412,47 @@ export function popDueAt(session: PopSession, regions: readonly DragRegion[], tu
   // was already over.
   if (kind === 'card' && hover.phase !== 'cue') return hover.since + tuning.cardZoomDwellMs;
   return hover.since + popInDelayFor(kind, tuning);
+}
+
+// The hold that opens the hierarchy modal (wiki board-drag-interaction §7.3): a Card's zoom-in
+// shape, a silent dwell and then a cue, but keyed on what the ghost holds steady rather than the
+// named neighbor. Beside an overflow row the named neighbor flips between "after the owner" and
+// "before the overflow row" as the carried copy crosses the ghost's middle (`dragCollision.ts::
+// dropAnchorFor`) while the gap stays the same, and a clock keyed on it would restart on each
+// flip. `target` is null with the ghost anywhere else, which ends the hold.
+//
+// Returns the same session when nothing changed. `phase` is recomputed from `since` every sample,
+// so a hold that crosses the dwell with the cursor perfectly still still returns a changed
+// session, which is what makes the owner re-render and mount the cue.
+export function advanceModalHold(
+  session: PopSession,
+  target: ModalHoldTarget | null,
+  tuning: DragTuning,
+  now: number,
+): PopSession {
+  const next = nextModalHold(session.modalHold, target, tuning, now);
+  return next === session.modalHold ? session : { ...session, modalHold: next };
+}
+
+function nextModalHold(
+  current: ModalHold | null,
+  target: ModalHoldTarget | null,
+  tuning: DragTuning,
+  now: number,
+): ModalHold | null {
+  if (!target) return null;
+  const key = `${target.ownerId}:${target.side}:${target.gap}:${target.depth}`;
+  const staying = current?.key === key ? current : null;
+  const since = staying?.since ?? now;
+  const phase: ModalHold['phase'] = now - since < tuning.modalHoldDwellMs ? 'dwell' : 'cue';
+  return staying && staying.phase === phase ? staying : { key, ownerId: target.ownerId, since, phase };
+}
+
+function modalHoldDueAt(hold: ModalHold, tuning: DragTuning): number {
+  return hold.since + tuning.modalHoldDwellMs + (hold.phase === 'cue' ? tuning.modalHoldCueMs : 0);
+}
+
+// Whether the hold has run its whole length, dwell and cue: the modal opens now.
+export function modalHoldElapsed(hold: ModalHold, tuning: DragTuning, now: number): boolean {
+  return now - hold.since >= tuning.modalHoldDwellMs + tuning.modalHoldCueMs;
 }

@@ -56,6 +56,14 @@ export interface DragTuning {
    * holds it to a whole number of at least 1.
    */
   sectionLevels: number;
+  /**
+   * How long the ghost must sit directly above or below an overflow row, at its level, before the
+   * hold that opens the hierarchy modal shows its cue (`popSession.ts::advanceModalHold`). A pause
+   * there is also a drop as the row's first or last child, so an ordinary one must show nothing.
+   */
+  modalHoldDwellMs: number;
+  /** The modal hold's cue: once the dwell has passed, how much longer the ghost must stay before the modal opens. */
+  modalHoldCueMs: number;
   /** Classification overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
   overlayFreeDescendantColor: string;
   overlayDepthCappedOpacity: number;
@@ -78,6 +86,8 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   descendantsPopInDelayMs: 800,
   popSnapMs: 150,
   sectionLevels: 3,
+  modalHoldDwellMs: 500,
+  modalHoldCueMs: 800,
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',

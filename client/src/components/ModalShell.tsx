@@ -1,6 +1,6 @@
 // Shared modal chrome (backdrop, header, footer, Esc) — all centered modals wrap this.
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode, type Ref } from 'react';
 import { XIcon } from './icons';
 
 interface ModalShellProps {
@@ -12,6 +12,12 @@ interface ModalShellProps {
   maxHeight?: string; // e.g. 'max-h-[80vh]' — only needed when children manage their own flex-1 scroll region
   showCloseButton?: boolean;
   footer?: ReactNode;
+  /** Places the dialog at these window coordinates instead of centering it. */
+  position?: { left: number; top: number };
+  /** The dialog element, for a modal that measures itself. */
+  dialogRef?: Ref<HTMLDivElement>;
+  /** Further attributes for the dialog element. */
+  dialogProps?: Record<string, string>;
   children: ReactNode;
 }
 
@@ -30,6 +36,9 @@ export default function ModalShell({
   maxHeight,
   showCloseButton,
   footer,
+  position,
+  dialogRef,
+  dialogProps,
   children,
 }: ModalShellProps) {
   useEffect(() => {
@@ -41,13 +50,16 @@ export default function ModalShell({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className={`fixed inset-0 z-50 ${position ? '' : 'flex items-center justify-center'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-label={ariaLabel}
-        className={`relative z-10 w-full ${maxWidth} mx-4 flex flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl ${maxHeight ?? ''}`}
+        {...dialogProps}
+        style={position}
+        className={`z-10 ${position ? 'absolute w-[calc(100%-1rem)]' : 'relative mx-4 w-full'} ${maxWidth} flex flex-col overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl ${maxHeight ?? ''}`}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-800 px-6 pt-6 pb-4">
           <div>
