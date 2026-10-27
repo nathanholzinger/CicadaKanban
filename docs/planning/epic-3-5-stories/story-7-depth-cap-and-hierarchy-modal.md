@@ -278,6 +278,13 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - **The sidebar at a deeper cap** (Open questions, For Nathan): its maximum width, 420px, was sized for a 10th-level name. Nothing is changed.
   - **Mutation check:** without the seeded section depth, the classification spec fails (the deepest row isn't drawn). Without the whole-name match, and without the wide sidebar, TREE-3.7 failed before each fix. DRAG-7.9's edit is the one that no value up to 12 can tell from its absence; it fails at 15 without it.
   - **Checks:** `npm run check` passes (420 server tests, 543 client, 185 script), and `npm run test:e2e` passes at 12 with 207 and 8 skipped.
+- **2026-10-27, Nathan's rulings on the cap and the open edges, and the wiki written (PO).**
+  - **The cap (D1):** 12, for items and projects, as built. Depth would be unlimited if the UI could show it. 12 is a value the UI is known to show well, and deep enough that real use should rarely want more.
+  - **The sidebar at 12:** a deep project or a long name is read by dragging the sidebar wider, as in an IDE's file pane, and a narrow sidebar hides much of it. That's expected, and the maximum width stays 420px. The width itself stays a working placeholder (D2).
+  - **A click on a row in the modal** stays inert. Opening the Sheet from the modal is for Story 8 or a story of its own, and is under board-drag-interaction's Open questions.
+  - **DRAG-7.23:** a reload leaves the modal open while its Card has attached descendants, and after a reload a modal a hold opened is centered, as one opened by a click is. The centering is Planned: it's audit finding #2's fix.
+  - **DRAG-7.21 and DRAG-7.22,** and Phases 2–5's behavior decisions in the handoff, taken as built. DRAG-7.22 covers the overflow row's count. The row's indent belongs to the Card, as beside a Stub row (audit #46).
+  - **The wiki:** the handoff's built passages lose their markers, and the rulings go in. The sections are listed in the handoff (Wiki sections added, changed, moved or removed).
 
 ## Open questions
 
@@ -300,9 +307,15 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - **DRAG-7.21:** does the hold that opens the modal run in an over-cap state beside an overflow row? §7.3 sets no condition, and a Card's zoom-in never starts on an invalid target (§6.1). The Test Planner leans no: every placement among `R`'s children is at that level, so the modal would offer nothing valid that the section doesn't.
     - **DRAG-7.22:** what does a drag started from an overflow row pick up? The row isn't an item. The Test Planner leans nothing, since it's a control, though it could pick up its Card.
     - **DRAG-7.23:** what does a board reload do to an open modal, mid-drag (§10 stops the drag) or after a failed release in it? The Test Planner leans: it stays open on the reloaded hierarchy while its Card still has attached descendants, and closes otherwise.
+    - **Answered 2026-10-27 (Nathan, on the PO's recommendations):**
+      - **DRAG-7.21:** the lean. The hold doesn't run in an over-cap state (wiki board-drag-interaction §7.3).
+      - **DRAG-7.22:** the lean, for a press on the row's count. A press on the row's indent is the Card's, as beside a Stub row (wiki board-drag-interaction §9).
+      - **DRAG-7.23:** the lean, with one change: the modal is centered after a reload, not left where it was, since a hold-opened modal's placement came from a drag that has ended. The centering is Planned (wiki board-drag-interaction §9).
 - **For Nathan, from Phase 5:**
   - **The cap's value.** Both constants are 12 as built, a starting value: the depth the deep seed goes to, and one line each to change. D1 has the pick settled in the hands-on, at least 10. The specs hold at 10, 12 and 15 (Amendments, Phase 5).
+    - **Answered 2026-10-27:** 12, for both (Amendments).
   - **The sidebar's widest width** was sized for a 10th-level name (D2). At 12 levels, a 30-character name starts 214px in and needs about 450px, so it is cut off at 420px. Whether the maximum follows the cap, or a long name at the deepest level may be cut, is part of the same hands-on.
+    - **Answered 2026-10-27:** a long name at the deepest level may be cut. Widening the sidebar is how it's read, and the maximum stays 420px (Amendments).
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
 - **For the Test Planner:**
@@ -311,6 +324,10 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - E7's specs, in Phase 5.
     - **Done 2026-10-27 (Coder).** The specs are adjusted (Amendments, Phase 5).
   - **Phase 5's check of att-4 and any case built on a chain of 6:** the Coder found no literal 6 in a case. ATT-4, TREE-1.x, TREE-3 and DRAG-2 are written against `CAP`, `PCAP` and the cap the board reports, and DRAG-7's terms say `CAP` is deep enough for the states a case names. The Test Planner confirms.
+  - **The PO's rulings are in the wiki** (Amendments, 2026-10-27), for the Test Planner's pass:
+    - DRAG-7.21–7.23 are answered (For the PO). DRAG-7.23's then-clause changes: the modal is centered after the reload, not left where it is.
+    - New rules with no case yet: the hold resets when the cursor leaves the section (board-drag-interaction §7.3); the modal's header is inside its box for the pop-out clock (§7.3, which DRAG-7.10's spec already covers); a dragged `R` carries its overflow row (§9); a click on a row in the modal opens nothing (§9); the modal closes when its Card is gone or has no attached descendants left (§9).
+    - The project-tree §3 example now runs to `P11`, and a narrow sidebar cutting deep names short is a rule (§3).
 
 ## Living-docs handoff
 
@@ -391,3 +408,14 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - DRAG-1.34's panel half, the level count, is asserted through the panel and a reload, and its hold values are Phase 4's.
     - DRAG-4's tree and DRAG-5.13's pass unchanged (Scope).
 - **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **Written 2026-10-27.** No section added, moved or removed, and no number changed.
+  - **board-drag-interaction:**
+    - §3.1: the three new tuning values join the panel's list, with the hold's two values. Marker off.
+    - §7: the hidden slot, marker off, and the "in its own slot" it replaced narrowed to a slot the section shows.
+    - §7.1: the overflow row's gaps, marker off. The overflow row can be the side highlight's neighbor.
+    - §7.3: markers off. New: the hold needs the cursor inside the section, and doesn't run in an over-cap state (DRAG-7.21); the modal's box includes its header, and the carried copy is held to its list.
+    - §9: markers off, and "at every level" deleted. New: `sectionLevels` is at least 1; a dragged `R` carries its overflow row; the overflow row is a control (DRAG-7.22); a click on a row in the modal opens nothing; the modal closes when its Card is gone or has no attached descendants; a reload leaves it open (DRAG-7.23), with the centering after a reload Planned.
+    - Open questions: the hold's cue borrows the zoom-in's look; the overflow row's and the modal's placeholder looks; new, opening a Sheet from the modal.
+  - **item-attachment:** §8, `CAP` is 12, with its grounding rewritten; §12, the levels bullet's marker off. Open questions: "`CAP`'s real value" deleted, and "Beyond the cap" reworded.
+  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder.
+  - **Planning docs:** `mvp-roadmap.md`, `epic-3-5-roadmap.md` and `epic-8-decisions.md` no longer say "provisionally 6".

@@ -94,13 +94,21 @@ is at most the cap, with top-level projects at depth 1, and `H` the
 height of the project's subtree, every descendant project counting
 ([`../hierarchy-placement/`](../hierarchy-placement/) §6). A create has
 no subtree, so its `H` is 0. The project cap is set apart from the item
-cap, and is provisionally 6, the depth the sidebar can indent legibly,
-as for items ([`../item-attachment/`](../item-attachment/) §8). Its real
-value is open (Open questions).
+cap, and is 12, for the item cap's reason
+([`../item-attachment/`](../item-attachment/) §8): depth would be
+unlimited if the UI could show any depth, and 12 shows well while
+leaving room real use should rarely outgrow.
 
-Example, with the cap at 6: a chain of projects runs from `P1`, at the
-top level, down to `P5`, at depth 5. A project with one child can be
-moved under `P4` (4 + 1 + 1 = 6), but not under `P5` (5 + 1 + 1 = 7).
+**The sidebar's width doesn't limit the cap.** A deep project, or a
+long name, is read in full by dragging the sidebar wider, as in an
+IDE's file pane. A narrow sidebar cuts the deepest names short, or
+leaves them no room at all. That's the trade a user makes for a wider
+board.
+
+Example, with the cap at 12: a chain of projects runs from `P1`, at the
+top level, down to `P11`, at depth 11. A project with one child can be
+moved under `P10` (10 + 1 + 1 = 12), but not under `P11`
+(11 + 1 + 1 = 13).
 
 ## 4. A project's position compares among its siblings
 
@@ -276,14 +284,17 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   the delete asks before deleting, the collapse chevrons, and the
   remembered selection. The create dialog trims a name, and refuses an
   empty one.
+- **The sidebar's width (§3).** A handle on the sidebar's right edge
+  drags it wider or narrower: 240px by default, held between 120px and
+  420px, and kept in the browser for each viewer. It has no keyboard
+  control and no reset gesture. At 420px, a long name at the deepest
+  level is still cut short. Collapsing or hiding the sidebar is
+  undesigned.
 - **How the user learns that a project write failed (§4).** A failed
   create's dialog shows an error. A failed parent change puts the
   dropdown back on the stored parent, and reaches the user only as a
   console error.
 - **How an over-cap tab state looks (§1).**
-- **The project cap's real value (§3).** 6 is a provisional working
-  number, taken from the sidebar's arithmetic for the item cap
-  ([`../item-attachment/`](../item-attachment/) §8).
 - **A project that uses no workflow (§10).** It shows "Set up a
   Workflow", and has no board
   ([`../boards-columns-unsorted/`](../boards-columns-unsorted/), Open

@@ -420,8 +420,8 @@ nothing for it (DRAG-5.6–5.8 withdrawn).
 
 **The project cap too** (Nathan, 2026-10-05, ruled during A5d): projects get
 a depth cap of their own, configured apart from the item cap, though the
-two will very likely share a value. Until this story sets it, it's
-provisionally 6, like the item cap. A5d writes the cap's rules that hold
+two will very likely share a value. This story set both at 12
+(2026-10-27). A5d writes the cap's rules that hold
 whatever the number on the hierarchy-placement page, so this story sets
 each value without restating them.
 

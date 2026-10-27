@@ -343,7 +343,7 @@ A5d writes the project tree's API rules out in full. It treats the project page,
 
 - **The project page:** the breadcrumb, the tabs, the Overview tab with its description, parent dropdown and subprojects list, and the banner over an inherited board.
   - The parent dropdown offers the top level and every project outside the project's own subtree, which is what the API accepts.
-  - Whether it also leaves out a parent that would put the subtree past the project depth cap is open. A5d plans that cap, provisionally 6.
+  - Whether it also leaves out a parent that would put the subtree past the project depth cap is open. Epic 3.5's Story 7 set that cap at 12.
 - **The sidebar's other controls:** the create and delete buttons, how a delete asks first, the collapse chevrons, and the remembered selection. The create dialog trims a name, and refuses an empty one.
 - **How the user learns that a project write failed** (A5d's call 11). Nathan ruled that the sidebar puts the project back where it was, which it does today. He deferred telling the user more visibly.
   - A failed create's dialog shows an error.
@@ -354,4 +354,4 @@ A5d writes the project tree's API rules out in full. It treats the project page,
 - **Overriding an inherited workflow from the project page** (A5d's G8). Nathan ruled that any project can be given a workflow of its own, and otherwise inherits one. The API accepts an override, and nothing on the page offers one yet.
   - An override, like a move under a different workflow, leaves the subtree's items holding the old workflow's workphases, so they show in Unsorted. Re-filing them is undesigned (`epic-7-decisions.md`'s Q2, and item-attachment's Open questions).
 
-**Not on this list:** the project cap's real value, which Epic 3.5's Story 7 sets for items and projects alike.
+**Not on this list:** the project cap's value, which Epic 3.5's Story 7 set at 12 for items and projects alike.

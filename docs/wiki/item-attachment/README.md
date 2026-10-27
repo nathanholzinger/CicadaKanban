@@ -236,16 +236,16 @@ item's subtree height. What's particular to items:
 alike.** A detached descendant still sits under the moving item in the
 hierarchy and still moves with it, so it counts toward the height.
 
-**`CAP` is provisionally 6.** Its real value is open (Open questions).
-It's set on its own, apart from any other feature's cap
-([`../hierarchy-placement/`](../hierarchy-placement/) §6).
+**`CAP` is 12.** It's set on its own, apart from any other feature's
+cap ([`../hierarchy-placement/`](../hierarchy-placement/) §6).
 
-**Grounding for the provisional 6:** an indented hierarchy has to stay
-legible in the project sidebar and the hierarchy modal. The
-sidebar is 240px wide, indents 14px per level from a 12px base, so a
-depth-6 row still leaves ~158px for its label — roughly twenty
-characters. Depth 8 leaves ~130px, which is where it stops reading as a
-label and starts reading as a truncation.
+**Why 12:** an item's depth would be unlimited if the board could show
+any depth. It can't: an indented hierarchy has to stay legible, and the
+hierarchy modal, which shows every level of a Card's hierarchy
+([`../board-drag-interaction/`](../board-drag-interaction/) §9), shows
+12 levels well. 12 is also deep enough that real use should rarely want
+more. A Card's own section shows fewer levels, and an overflow row
+stands for the rest, so the section doesn't limit the cap.
 
 ## 9. Cross-project reparenting
 
@@ -359,8 +359,8 @@ none of it is stored):
 - **Card** — a Free item as the board's draggable unit: title, description
   snippet, and a collapsible list of descendant Stubs.
 - **Planned:** a Card also shows its item's tags.
-- **Planned:** a Card's list of Stubs shows a set number of levels, and
-  the hierarchy modal shows them all
+- A Card's list of Stubs shows a set number of levels, and the
+  hierarchy modal shows them all
   ([`../board-drag-interaction/`](../board-drag-interaction/) §9).
 - **Sheet** — the full item detail view
   ([`../item-sheet/`](../item-sheet/)). The only place non-positional data
@@ -430,11 +430,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   stay Free" — a third meaning the UI would have to disambiguate against
   attach-on-drop and reposition-on-drop. Undecided whether to build it,
   defer it, or conclude it isn't a board action that makes sense.
-- **`CAP`'s real value.** 6 is a provisional working number derived from
-  sidebar arithmetic (§8), not from looking at real hierarchies.
-- **Beyond the cap.** Trees deep enough that per-level indentation fits
-  neither the sidebar nor the hierarchy modal have no answer yet.
-  A pagination or folder scheme would be needed.
+- **Beyond the cap.** Depth past `CAP` (§8) needs a way to show levels
+  that per-level indentation can't fit in the hierarchy modal, such as
+  pagination or a folder scheme. None is designed.
 - **How a create under a parent reads in the activity lists (§11a).** One
   idea is a single entry that the child shows as "Created on {date} as a
   child of {parent}" and the parent shows as "Child {child} created on
