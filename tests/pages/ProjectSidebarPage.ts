@@ -39,8 +39,9 @@ export class ProjectSidebarPage {
     return this.locator.getByText(name, { exact: true }).locator('..');
   }
 
+  // Exact, so `P1` is not also `P10`: a chain of projects numbers its levels.
   projectName(name: string) {
-    return this.locator.getByText(name);
+    return this.locator.getByText(name, { exact: true });
   }
 
   // The rows named any of `names`, in render order, for `toHaveText` to read an

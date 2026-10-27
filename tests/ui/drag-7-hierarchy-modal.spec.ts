@@ -13,7 +13,6 @@ import {
   atFraction,
   awaitDragContext,
   awaitProjection,
-  bottomQuarter,
   boxOf,
   cancel,
   center,
@@ -277,12 +276,17 @@ test('DRAG-7.9, DRAG-7.12: a tab state past the depth cap is reachable in the mo
   await expect(modalRow(modal, tOver.id)).toHaveAttribute('data-drop-state', 'depth-capped');
 
   // Below the deepest row, tabbed right to the level under it: past the cap, so invalid. The
-  // state is reached, and a release in it writes nothing.
+  // state is reached, and a release in it writes nothing. The deepest row is the list's last, and
+  // the gap under it takes the cursor at the row's lower edge, not a quarter up from it: the
+  // sortable puts the ghost in the last slot only once the carried copy has passed the slot's
+  // middle, which a few pixels' measuring slack can put out of reach of a row's lower quarter.
   const last = modalRow(modal, tOver.id);
   const writes = watchWrites(page);
   const tabbed = from.x + (cap - 2) * DESCENDANTS_INDENT_PX;
-  await hoverTo(page, { x: tabbed, y: (await bottomQuarter(last)).y });
-  await hoverTo(page, { x: tabbed, y: (await bottomQuarter(last)).y });
+  const lastBox = await boxOf(last);
+  const below = { x: tabbed, y: lastBox.y + lastBox.height + 2 };
+  await hoverTo(page, below);
+  await hoverTo(page, below);
   await awaitProjection(page, new RegExp(`^\\d+:${cap - 2}:false$`));
   await release(page);
 

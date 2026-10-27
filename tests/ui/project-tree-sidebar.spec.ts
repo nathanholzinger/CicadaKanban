@@ -11,6 +11,7 @@ import {
   seedProjects,
 } from '../helpers/seed';
 import { projectRowIndentPx } from '../../client/src/components/sidebar/projectTreeUtils';
+import { SIDEBAR_MAX_WIDTH_PX, SIDEBAR_WIDTH_STORAGE_KEY } from '../../client/src/components/sidebar/sidebarWidth';
 
 test.beforeEach(async () => {
   await resetAndSeedDb();
@@ -203,6 +204,12 @@ test('TREE-3.7: the sidebar shows every project of a tree past the project cap, 
   ]);
   await pinProjectParent(request, ids[beyond[0]], ids[chain[chain.length - 1]]);
   await pinProjectParent(request, ids[beyond[1]], ids[beyond[0]]);
+  // At the default width the deepest names have no room left after their indents, so they draw at
+  // no width. The widest sidebar leaves each name room.
+  await page.addInitScript(([key, value]) => localStorage.setItem(key, value), [
+    SIDEBAR_WIDTH_STORAGE_KEY,
+    String(SIDEBAR_MAX_WIDTH_PX),
+  ] as const);
   await page.goto('/');
 
   for (const name of [...chain, ...beyond]) await expect(projectSidebar.projectName(name)).toBeVisible();

@@ -191,7 +191,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 
 | Symbol | Carries |
 |---|---|
-| `server/src/lib/itemTree.ts::ITEM_DEPTH_CAP`, `PROJECT_DEPTH_CAP` | D1: the value picked in Phase 5 |
+| `server/src/lib/itemTree.ts::ITEM_DEPTH_CAP`, `PROJECT_DEPTH_CAP` | D1: 12 each, as built in Phase 5, until Nathan's hands-on picks the value (Amendments, Phase 5) |
 | `client/src/components/ProjectSidebar.tsx`, `sidebar/useSidebarResize.ts`, `sidebar/sidebarWidth.ts` | D2: the aside takes the width; its list scrolls in a box inside it, so the handle on the aside's right edge stays put. The hook is the handle's pointer handlers, and the module holds the default, the limits and the storage |
 | `client/src/components/workflow/dragTuning.ts::DragTuning`, `client/src/components/DragTuningPanel.tsx` | D3's section depth, as `sectionLevels` (default 3), with its panel field; E3's hold, as `modalHoldDwellMs` and `modalHoldCueMs` (500 and 800, a Card zoom-in's), with their panel fields |
 | `client/src/components/workflow/itemListOps.ts::sectionEntries`, with `shownLevels`, `overflowRowId` and `overflowOwnerOf`, beside `hierarchyRows` | D3–D5, E1: the rows the section draws, an overflow row under each last-level row that has attached children. The render and the drop math both read the level count through `shownLevels` |
@@ -267,6 +267,17 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - The reading is taken at the modal's levels (`evaluatePop(cardId)` in `readModalPlacement`), because the hook has not yet seen the modal's Card in its deps in the commit that mounted it. Without that, the one sample taken there clamps the depth to the section's levels, and the next sample, from the seed, reads the right one.
     - Both are kept because they state the rule; neither shows once a second sample has run.
   - **Checks:** `npm run check` passes (420 server tests, 543 client, 185 script), and `npm run test:e2e` passes with 207 and 8 skipped.
+- **2026-10-27, Phase 5 built (Coder).** The cap raised, and the specs that assumed 6.
+  - **The value:** both constants are 12. Nathan hasn't picked yet, so 12 is a starting value for his hands-on (D1), chosen as the depth the deep seed goes to. The section depth's default stays 3. To try another value, change the two constants and restart the server. The code comments on them no longer name a number, so a new value is a one-line change each.
+  - **The suite at other values:** the server and client tests and the test-plan cases are written against the constants, so they hold at any value. The full E2E suite passes at 12 (207 passed, 8 skipped), and passed at 10 before DRAG-7.9's edit below. At 15 the full suite had that one spec failing. After the fixes, the three spec files that depend on the cap (the hierarchy modal's, the classification's and the project-tree sidebar's, 24 tests) pass at 10, 12, 15 and 20. Only those three were run at 20.
+  - **What assumed 6, and what changed:**
+    - **E7, the classification spec** (DRAG-2.1 to DRAG-2.4, DRAG-2.7, DRAG-2.10): its chain of Stubs runs to `cap − 3`, nine levels at 12, so its deepest rows sat behind overflow rows and drew no state. It seeds the section depth to the cap.
+    - **TREE-3.7's spec:** two things. Its chain's names run `P1` to `P12`, and the page object's `projectName` matched by substring, so `P1` found four rows. It matches the whole name now, and every caller already passes one. And at the default 240px a name at the 13th or 14th level has no room left after its indents and draws at no width, so the spec seeds the widest sidebar.
+    - **DRAG-7.9's over-cap spec:** at 15 it rested the cursor on the last row's lower quarter, and the ghost stayed above that row. Probing fresh drags, the last gap was reached only with the cursor at or below the row's lower edge at 15, and from about six pixels above it at 12. That is the sortable's side rule (`dragCollision.ts::dropAnchorFor`, the carried copy's centre against the slot's), which depends on measured rects. I didn't trace why the threshold moves with the row count, and it isn't new: the section's list works the same way. The spec now rests the cursor at the row's lower edge, still inside the list.
+    - **Nothing else:** the other specs read the cap from the board or the API, or build no chain toward it.
+  - **The sidebar at a deeper cap** (Open questions, For Nathan): its maximum width, 420px, was sized for a 10th-level name. Nothing is changed.
+  - **Mutation check:** without the seeded section depth, the classification spec fails (the deepest row isn't drawn). Without the whole-name match, and without the wide sidebar, TREE-3.7 failed before each fix. DRAG-7.9's edit is the one that no value up to 12 can tell from its absence; it fails at 15 without it.
+  - **Checks:** `npm run check` passes (420 server tests, 543 client, 185 script), and `npm run test:e2e` passes at 12 with 207 and 8 skipped.
 
 ## Open questions
 
@@ -289,12 +300,17 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - **DRAG-7.21:** does the hold that opens the modal run in an over-cap state beside an overflow row? §7.3 sets no condition, and a Card's zoom-in never starts on an invalid target (§6.1). The Test Planner leans no: every placement among `R`'s children is at that level, so the modal would offer nothing valid that the section doesn't.
     - **DRAG-7.22:** what does a drag started from an overflow row pick up? The row isn't an item. The Test Planner leans nothing, since it's a control, though it could pick up its Card.
     - **DRAG-7.23:** what does a board reload do to an open modal, mid-drag (§10 stops the drag) or after a failed release in it? The Test Planner leans: it stays open on the reloaded hierarchy while its Card still has attached descendants, and closes otherwise.
+- **For Nathan, from Phase 5:**
+  - **The cap's value.** Both constants are 12 as built, a starting value: the depth the deep seed goes to, and one line each to change. D1 has the pick settled in the hands-on, at least 10. The specs hold at 10, 12 and 15 (Amendments, Phase 5).
+  - **The sidebar's widest width** was sized for a 10th-level name (D2). At 12 levels, a 30-character name starts 214px in and needs about 450px, so it is cut off at 420px. Whether the maximum follows the cap, or a long name at the deepest level may be cut, is part of the same hands-on.
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
 - **For the Test Planner:**
   - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
     - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
   - E7's specs, in Phase 5.
+    - **Done 2026-10-27 (Coder).** The specs are adjusted (Amendments, Phase 5).
+  - **Phase 5's check of att-4 and any case built on a chain of 6:** the Coder found no literal 6 in a case. ATT-4, TREE-1.x, TREE-3 and DRAG-2 are written against `CAP`, `PCAP` and the cap the board reports, and DRAG-7's terms say `CAP` is deep enough for the states a case names. The Test Planner confirms.
 
 ## Living-docs handoff
 
@@ -315,6 +331,9 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - The cue is a Card zoom-in's cue on the overflow row, a placeholder look; the dwell and the cue start at a Card zoom-in's 500 and 800 ms.
     - A modal shifted at a window edge reads a gap and a depth of its own from the cursor, which can put the ghost anywhere in the list, including a level deeper than the hold's (§7.3 says so).
     - The ghost's row slides into its slot in the modal for about 200 ms after it appears, as a row does between gaps. Whether that reads as the ghost jumping is DRAG-7.20's hands-on.
+  - **Phase 5, the cap:**
+    - The value is Nathan's pick (D1); 12 is what was built in until he makes it. The PO writes the picked number.
+    - At the default sidebar width the deepest levels of a deep project tree draw no name: at 12 levels a name has about 26px. The sidebar's resize handle is the way to read them (D2), and its maximum was sized for a 10th-level name (Open questions, For Nathan).
 - **Planned passages now built:**
   - **Phase 4:**
     - board-drag-interaction §7.3's hold, its placement under the cursor, the scroll of a long list, the shift at a window edge, opening again in the same drag, and §3.1's two hold values;
@@ -333,6 +352,13 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - board-drag-interaction §9's "at every level", and §7's "in its own slot", for a Stub whose slot is hidden (the Open question "Whether a Card shows its whole hierarchy" went in Phase 0);
   - item-attachment §8's grounding for 6, which names the hierarchy modal, and its Open question "`CAP`'s real value";
   - project-tree's Open question "The project cap's real value".
+- **Passages that name 6, once the value is picked** (Phase 5, found by searching the wiki, the test plans and the planning docs):
+  - **The wiki (PO):**
+    - **item-attachment §8:** "`CAP` is provisionally 6", and the paragraph "Grounding for the provisional 6", whose sidebar arithmetic (240px, a depth-6 row leaving about 158px, depth 8 about 130px) is for the PO to redo against the picked value and the resizable sidebar.
+    - **project-tree §3:** "is provisionally 6, the depth the sidebar can indent legibly", and the example "with the cap at 6" (`P1` to `P5`, a move under `P4` but not `P5`), whose numbers follow the cap.
+    - **The two Open questions** on the cap's real value (item-attachment's and project-tree's), already expected above.
+  - **The test plans (Test Planner):** none. No case holds a literal 6 (Open questions, For the Test Planner).
+  - **The planning docs,** which the closing checklist doesn't list, so they need an owner when the value is picked: `mvp-roadmap.md`'s Projects and Work Items lines ("provisionally 6", "Story 7 sets it"), `epic-3-5-roadmap.md` (the A5d paragraph, "provisionally 6, like the item cap") and `epic-8-decisions.md` ("A5d plans that cap, provisionally 6").
 - **Implementation passages to place:**
   - **The sidebar's width (D2), built in Phase 1,** a working placeholder beside the sidebar's other controls in project-tree's Open questions. What exists:
     - a handle on the sidebar's right edge, dragged with the pointer;
@@ -341,6 +367,11 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - no keyboard control and no reset gesture.
   - **The section's cut-off and the overflow row (Phase 2),** placed in the module headers of `descendantsProjection.ts`, `itemListOps.ts` and `StubRows.tsx`, in the site comments of `dragCollision.ts` and `KanbanCard.tsx`, and in the drag layer's `CLAUDE.md` (the mental model, the concerns, "one way to do each of these", and the test surfaces).
 - **Test-plan cases affected:**
+  - **Phase 5:**
+    - DRAG-2.1 to DRAG-2.4, DRAG-2.7 and DRAG-2.10's spec shows every level its chain reaches (the section depth seeded to the cap), where the chain's deepest rows would otherwise sit behind an overflow row and carry no state to read. The cases are unchanged.
+    - DRAG-7.9's over-cap spec rests the cursor at the lower edge of the list's last row, not a quarter up from it, so the last gap is reached whatever the cap.
+    - TREE-3.7's spec seeds the widest sidebar, so the deepest names have room to be seen.
+    - The page object's `projectName` matches the whole name now, so `P1` is not also `P10`.
   - **Phase 4:**
     - DRAG-7.13 to DRAG-7.18 have E2E specs in `tests/ui/drag-7-modal-hold.spec.ts`, which carry their IDs. They seed short values for the dwell and the cue and assert the stages and what a release writes, never that the values feel right.
     - DRAG-7.14's third clause, the carried copy moving within the gap, is asserted by the cue running on across moves that cross the ghost's middle, and by the projection's unit test that both neighbors name one target.

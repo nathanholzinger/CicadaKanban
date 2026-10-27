@@ -66,7 +66,9 @@ test.describe('drag-target classification', () => {
     // V: an unrelated Card in the other column, to hover across to.
     const v = await seedItem(request, { title: 'V', projectId: project.id, workphaseId: inProgress.id });
 
-    await seedDragTuning(page, NO_POP);
+    // The chain runs deeper than a Card's section shows by default, and a row behind an overflow
+    // row isn't drawn to carry a state: show every level the cap allows.
+    await seedDragTuning(page, { ...NO_POP, sectionLevels: cap });
     await projectSidebar.openBoard(PROJECT);
     await expect(page.getByRole('article', { name: 'X', exact: true })).toBeVisible();
 

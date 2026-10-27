@@ -58,17 +58,17 @@ export function assertValidReparent(
 // (wiki hierarchy-placement §6), each feature's own cap.
 // ============================================================
 
-// The item depth cap, provisionally 6 (wiki item-attachment §8). One definition
+// The item depth cap, provisionally (wiki item-attachment §8). One definition
 // for every parent-giving write, and the board's drag classification reads the
 // same value off GET /boards/:id's `itemDepthCap`, so the UI and the API always
 // enforce the same cap (wiki hierarchy-placement §6).
-export const ITEM_DEPTH_CAP = 6;
+export const ITEM_DEPTH_CAP = 12;
 
-// The project depth cap, provisionally 6 (wiki project-tree §3). Set apart from
+// The project depth cap, provisionally (wiki project-tree §3). Set apart from
 // the item cap, though it starts at the same number: changing one never changes
 // the other. The sidebar reads it off GET /projects/depth-cap, so the UI and the
 // API enforce the same cap.
-export const PROJECT_DEPTH_CAP = 6;
+export const PROJECT_DEPTH_CAP = 12;
 
 // The rows above `id`, nearest first: its parent, that row's parent, and so on up to the
 // top. A caller keeps its own stop rule by reading only as far as it needs. The walk ends at a
