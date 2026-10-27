@@ -324,6 +324,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - E7's specs, in Phase 5.
     - **Done 2026-10-27 (Coder).** The specs are adjusted (Amendments, Phase 5).
   - **Phase 5's check of att-4 and any case built on a chain of 6:** the Coder found no literal 6 in a case. ATT-4, TREE-1.x, TREE-3 and DRAG-2 are written against `CAP`, `PCAP` and the cap the board reports, and DRAG-7's terms say `CAP` is deep enough for the states a case names. The Test Planner confirms.
+    - **Confirmed 2026-10-27 (Test Planner):** no case holds a literal 6 or a chain sized by one. The fixed depths left are ATT-4.6's root and leaf (`1 + 1 + 0 = 2`), and TREE-1's and TREE-3.8's project `M` at depth 3 with a subtree height of `PCAP` or more. Both hold at any cap of 10 or more.
   - **The PO's rulings are in the wiki** (Amendments, 2026-10-27), for the Test Planner's pass:
     - DRAG-7.21–7.23 are answered (For the PO). DRAG-7.23's then-clause changes: the modal is centered after the reload, not left where it is.
     - New rules with no case yet: the hold resets when the cursor leaves the section (board-drag-interaction §7.3); the modal's header is inside its box for the pop-out clock (§7.3, which DRAG-7.10's spec already covers); a dragged `R` carries its overflow row (§9); a click on a row in the modal opens nothing (§9); the modal closes when its Card is gone or has no attached descendants left (§9).
