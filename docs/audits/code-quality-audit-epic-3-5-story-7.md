@@ -3,6 +3,7 @@
 **Range:** `a6-rerun-audited..da2bf56`, 18 commits. The base is the newest `*-audited` tag (`git describe --tags --match '*-audited' --abbrev=0`), on `7ccb35b`. The end is Story 7 Phase 5. Nathan tags the end commit `epic-3-5-story-7-audited`.
 
 **What the range holds:** A6's batch 6 (6a–6g), the Fix Now batches of the A6 re-run, and the Reconciler's two commits after it. Story 7's plan says its range takes these in (Phases, "After Phase 5"). Then come Story 7's planning commit and its Phases 0–5:
+
 - the resizable sidebar;
 - the deep seed and the section's cut-off at a set number of levels, with the overflow row;
 - the hierarchy modal, opened by a click and by a hold during a drag;
@@ -13,6 +14,7 @@ The range also adds `scripts/audit-scope/`, the scope script this audit used for
 ## How the range sorted
 
 The scope came from `npm run audit:scope` (`docs/audits/epic-3-5-story-7-scopes/`). It found 132 files to read:
+
 - 7,192 changed lines;
 - 37 removal sites;
 - 128 moved lines left out.
@@ -20,6 +22,7 @@ The scope came from `npm run audit:scope` (`docs/audits/epic-3-5-story-7-scopes/
 72 files were marked read whole: the 30 new files, and 42 files with 10 or more changed lines of code. Of the new files, 22 are the scope script and its tests, plus the two `.env.deep` files. The config added no `readWhole` marks of its own.
 
 **The split.** The seven default area groups (C1 the drag layer, C1t its tests, C2 the rest of the client, S1 `server/src/` and root `CLAUDE.md`, S1t `server/tests/`, E2E `tests/`, T everything else) ran as 23 instances. The run used a config, `docs/audits/epic-3-5-story-7-scopes/config.json`. It splits the default config's `E2E-T` instance into an E2E instance and a T instance for every pass, because E2E and T together came to about 3,800 changed lines in 50 files: the new Story 7 specs, plus the 22 new script files.
+
 - **Correctness & Security** and **Consistency & Drift:** seven each (C1, C1t, C2, S1, S1t, E2E, T).
 - **Duplication & Abstraction:** five: client source, client tests, server, E2E, T.
 - **File Responsibility:** four: client, server, E2E, T.
@@ -48,6 +51,7 @@ The scope came from `npm run audit:scope` (`docs/audits/epic-3-5-story-7-scopes/
 **The Story 7 build traces correct in its core.** The correctness passes re-derived the overflow row's gaps against `gapIndexFor`, the depth clamp at the overflow level, the inverse in `modalPlacement.ts`, the hold's timer and its resets, and the collision scoping by `sectionCardId`. None of them turned up a defect. Every route change in A6's batch 6 holds. That covers the empty-string refusals and `isNamed`.
 
 **What the findings are:**
+
 - **One real defect in the modal (#2):** a modal opened by a hold can come back after a resync with no drag to place it, and sits at the window's top-left corner.
 - **The deep seed (#1, #9):** it orders Free items by workphase, which breaks the rule it says it follows, and its test locks that in. Its depth claims also went stale when Phase 5 set the cap to the seed's own depth.
 - **Two new E2E specs that can pass without testing their subject (#6, #7).** One older server test has the same problem (#8).
@@ -621,6 +625,6 @@ The plan asks whether anything in the finished rules still needs changing. Five 
 
 Filled in as the audit closes. One row per required finding (#1–#35).
 
-| # | Disposition | Where it landed (routes) |
-|---|---|---|
-| | | |
+| #   | Disposition | Where it landed (routes) |
+| --- | ----------- | ------------------------ |
+|     |             |                          |
