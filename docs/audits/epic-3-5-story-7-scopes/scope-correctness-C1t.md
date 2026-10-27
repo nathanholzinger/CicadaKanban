@@ -1,0 +1,23 @@
+**Read these files whole** (the range may have changed their shape):
+- `client/src/components/workflow/descendantsProjection.test.ts` (158 changed lines of code)
+- `client/src/components/workflow/dragCollision.test.ts` (123 changed lines of code)
+- `client/src/components/workflow/dragStructure.test.ts` (31 changed lines of code)
+- `client/src/components/workflow/itemListOps.test.ts` (58 changed lines of code)
+- `client/src/components/workflow/modalPlacement.test.ts` (new file)
+- `client/src/components/workflow/popSession.test.ts` (52 changed lines of code)
+- `client/src/components/workflow/useBoardDnd.test.ts` (new file)
+- `client/src/components/workflow/useColumnManagement.test.ts` (12 changed lines of code)
+
+**Code changed since the last audit:**
+- `client/src/components/workflow/descendantsProjection.test.ts` (lines 6, 11-12, 46, 63-64, 83-84, 126-152, 155-156, 159-286, 288-296, 299-332, 370-371, 373-385)
+- `client/src/components/workflow/dragCollision.test.ts` (lines 5, 13-14, 79-84, 86-89, 100-108, 110-123, 125-130, 132-145, 148, 153-155, 160-165, 167-169, 186-191, 194, 213-218, 234-239, 249-254, 261-266, 322, 430-450, 511, 514, 522-536, 545-546, 548-554)
+- `client/src/components/workflow/dragRegions.test.ts` (lines 4, 12, 20-29)
+- `client/src/components/workflow/dragStructure.test.ts` (lines 3-4, 217-226, 232-252, 254, 256-258, 260-271)
+- `client/src/components/workflow/dragTuning.test.ts` (lines 46-55)
+- `client/src/components/workflow/itemListOps.test.ts` (lines 9-12, 236-324)
+- `client/src/components/workflow/modalPlacement.test.ts` (new file) (lines 1-141)
+- `client/src/components/workflow/placement.test.ts` (lines 257-264)
+- `client/src/components/workflow/popSession.test.ts` (lines 4-13, 37, 51, 61, 71, 153-163, 229, 365, 441-446, 448-495, 497-499)
+- `client/src/components/workflow/useBoardDnd.test.ts` (new file) (lines 1-101)
+- `client/src/components/workflow/useColumnManagement.test.ts` (lines 16, 18-23, 33, 44, 47-49, 52, 56, 59)
+- `client/src/test/popFixtures.ts` (lines 67-68)
