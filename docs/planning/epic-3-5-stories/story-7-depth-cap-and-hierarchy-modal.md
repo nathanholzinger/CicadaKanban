@@ -25,10 +25,11 @@ Then set the real cap, one value for items and projects, from how deep the modal
 
 - **Wiki passages:** wiki board-drag-interaction §3.1, §7, §7.1, §7.3 and §9; wiki item-attachment §12. D2 has none: it's a working placeholder (Open questions, For the PO).
 - **Test-plan cases:**
-  - DRAG-7.1–7.19 and DRAG-7.21–7.24, DRAG-7.26–7.30, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
-  - DRAG-7.25, a hold-opened modal centered after a reload (§9), `Planned`: it's built by audit #2's fix.
+  - DRAG-7.1–7.19 and DRAG-7.21–7.30, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
   - DRAG-1.34, the new tuning values (§3.1), `Open`.
   - TREE-3.11, a deep project's name in a narrow sidebar (wiki project-tree §3), `Open`.
+  - TREE-10.5–10.9, where a new workflow's workphases come from, and a reference that names no row refused (wiki project-tree §10), `Open`.
+  - TREE-10.10 and TREE-10.11, a `null` reference and a create naming both, `Pending PO` (Open questions, For the PO).
   - **To check when the cut-off is built:** DRAG-4's tree and DRAG-5.13's run three levels below the Card, so they assume a section shows at least three.
     - **Checked in Phase 2:** the specs that carry them pass unchanged at the default of three levels.
 
@@ -186,6 +187,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 - **The range:** its base is `a6-rerun-audited`, so it also takes in A6's batch 6 and the Reconciler's two commits after it. A6's plan intended that.
 - **First under the finished rules:** it's the first audit of a story's own diff under them, so its report notes whether anything in them still needs changing.
 - **Then its Fix Now,** in the batches below.
+- **Then a second pass** of the test reconciliation and the audit, after batch 7 (Nathan, 2026-10-27). Its base is still `epic-3-5-story-7-audited`, so it covers the test follow-ups and every batch.
 
 ### The audit's Fix Now, in batches
 
@@ -313,9 +315,48 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - #50 and #51.
 - **Gate:** `npm run check`, which runs the script's tests.
 
+**Batch 7: the hold-opened modal, and a create naming both references** (Nathan, 2026-10-27). These aren't audit findings. Batch 1 found the hold from above, the test follow-ups found DRAG-7.13's untested main drag, and the create naming both was the open question For the Architect. The batch lands before the second pass, so that pass audits it.
+- **A hold from above names the wrong gap** (Open questions, For Nathan, from the Fix Now batch 1).
+  - **The rule:** board-drag-interaction §7.3's. The modal opens with the ghost's spot under the cursor, so a release right after it opens commits that placement (DRAG-7.15).
+  - **What batch 1 found:**
+    - The reading the modal reports is right, and `readModalPlacement` reseeds the projection with it.
+    - Then a drag-move event names an anchor against rows that the sortable shuffle is still moving, and with the cursor still, nothing corrects it.
+    - A hold from below is unaffected.
+  - **First, find the event** that names the anchor while the cursor is still. The fix has to hold against that event, not only against the next pointer move.
+  - **The fix to try** (batch 1's): after `readModalPlacement`, the projection keeps its reading until the pointer moves, and any anchor named before then is dropped.
+    - **Where the rule lives** is the Coder's call. If it fits in `descendantsProjection.ts`, which is pure, a unit test can pin it there. The rule needs the whole pointer, since a vertical move leaves x alone.
+    - **Not the defect:** a pointer move during the rows' slide. That anchor is named as on any list mid-shuffle, and the next move corrects it.
+    - **If keeping the reading isn't enough,** stop and report. The next option changes how the Descendants layer names a neighbor, which is the drag layer's core and needs a plan of its own.
+  - **Tests:**
+    - **E2E, DRAG-7.15:** a hold from above. An item first in `P` (batch 1's probe `W`) is held below `R`'s overflow row until the modal opens, then released without moving. What's written is what the modal showed. The spec carries DRAG-7.15, whose text now names both directions and an item with an attached child (Open questions, For the Test Planner).
+    - **E2E, the guard batch 1 couldn't write for #31:** the same hold, with a child under the held item so its subtree travels. It checks the spot under the cursor and what the release writes. It carries DRAG-7.15 too.
+    - **A unit test** for the kept reading, wherever the rule lives.
+    - **Both specs** are shown failing on today's code, then passing.
+- **DRAG-7.13's main drag gets its spec** (Open questions, For Nathan, from the test follow-ups).
+  - **The case:** a Free Card from outside `P` zooms into `P`'s Card and on into its section, and a hold there opens the modal.
+  - **What the test follow-ups found:** inside the section, the projection stuck at `0:0:true` wherever the cursor went.
+  - **First, trace why.**
+    - **If the gesture is at fault,** fix it: in the spec, or in `dragGesture.ts` if the helper is.
+    - **If the drag layer is,** stop and report before fixing. A Free Card that can't be placed in a section it zoomed into is a defect beyond the modal, and DRAG-1.21 and DRAG-4.1, which have no passing spec, depend on the same thing.
+  - **The spec** carries DRAG-7.13.
+- **`POST /workflows` naming both `templateId` and `sourceWorkflowId` is refused** (Open questions, For the Architect).
+  - **The fix:** a 400 that creates nothing, checked ahead of each field's existence check in `routes/workflows.ts`. A field that's `null` doesn't count as named, as batch 2 reads it, so naming one with the other `null` creates from the one.
+  - **Tests** in `workflows.test.ts`, beside batch 2's:
+    - both named: a 400, and nothing created;
+    - one named with the other `null`: created from the one.
+  - **Case IDs:**
+    - **The refusal's test** carries TREE-10.11, and the `null` test TREE-10.10. Both cases are `Pending PO` until the PO writes the rule into project-tree §10. If the batch lands first, the IDs follow once the cases are `Open`.
+    - **Beside them:** batch 2's two `''` refusals take TREE-10.9's ID now, and its two `null` tests take TREE-10.10's, on the same terms.
+  - **Callers:**
+    - `SetupWorkflowModal.tsx` sends one field or the other, and no MCP tool sends either.
+    - `create-workflow.bru`'s docs block says they can't be sent together.
+- **Size:** the fix for the hold depends on the trace, and so does the DRAG-7.13 spec. The route guard is a few lines and two tests.
+- **Gate:** `npm run check` and `npm run test:e2e`.
+- **Close-out:** none of the three is an audit finding, so the report's Close-out table gains no row. The batch's Amendments entry records them.
+
 **Across the batches:**
 - **Each batch** ends with its gate and a stop for Nathan's review and commit, and fills in its rows in the report's Close-out table.
-- **A test that moves keeps its case ID.** The Reconciler's one run (`.claude/guides/story-done-checklist.md`, step 5) comes after batch 6.
+- **A test that moves keeps its case ID.** The Reconciler's one run (`.claude/guides/story-done-checklist.md`, step 5) comes after batch 7.
 - **Comment-only files stay comment-only:**
   - **Which:** `popSession.ts`, `descendantsProjection.ts`, `dragRegions.ts`, `StubRows.tsx` and `cardMetrics.ts` get only batch 4's comments. So Story 8's audit gives them to the drift pass alone.
   - **What that rules out:** #57, the hold's timing in `popSession.ts`, and #58, the `data-item-id` literal in `StubRows.tsx`. With #36, a renamed attribute now centers the modal and warns, rather than leaving it unplaced in silence.
@@ -324,7 +365,11 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Informational:** every finding except the #69 lines above.
 - **At close-out:**
   - The report's "For other roles" go to Open questions (`.claude/guides/audit-workflow.md` §9).
-  - The Architect widens `.claude/guides/testing-strategy.md`'s "Server lib" row, since `deepSeed.test.ts` tests `server/src/db/`.
+    - *Done 2026-10-27 (Architect): every one is settled, so none is open.*
+    - The Reconciler's were taken by the proposing run, as its items A–H.
+    - The PO's are in the wiki (Amendments, 2026-10-27).
+    - The last two are below and under For the Architect.
+  - The Architect widens `.claude/guides/testing-strategy.md`'s "Server lib" row, since `deepSeed.test.ts` tests `server/src/db/`. *Done 2026-10-27.*
 
 ## Code map
 
@@ -567,6 +612,45 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Not taken, as planned:** #44, #50 and #51. `.claude/guides/audit-workflow.md` §2 points at `config.mts` for the default split and needs no edit.
   - **Close-out:** rows for #4, #5, #18 and #29. #43, #45, #49 and #77 are optional.
   - **Checks:** `npm run check` passes (424 server, 561 client, 209 script tests; `check:docs` clean). The E2E suite wasn't run, since nothing it exercises changed.
+- **2026-10-28, batch 7: the hold-opened modal, and a create naming both references (Coder).** The Architect's batch 7. Two of its three parts are built. The third, DRAG-7.13's main drag, stopped at the trace, as the batch plan says it should if the drag layer is at fault.
+  - **A hold from above names the wrong gap: built.**
+    - **The event:** the modal opens and `readModalPlacement` reseeds the projection with the right reading, gap 6 and depth 3 in the probe. A few milliseconds later dnd-kit fires a drag-move with the pointer where it was and `delta.x` 101px different. Opening the modal swaps the layer the carried copy is clamped to, so its translate changes with no pointer move, and dnd-kit reports a move. The `over` it names comes from that shifted rect against rows still sliding, `B`, after, so the projection went to gap 7. From below the gap it names matched the reading in batch 1's probes, which is why only a hold from above showed it; I haven't traced why. In the probe it is the one event, and nothing after it fires until the pointer moves.
+    - **The rule:** `descendantsProjection.ts` keeps the reading while the pointer is where it was read.
+      - `reseedProjection` records that point as `ProjectionState.held`, and `holdsReading(state, pointer)` says whether it still stands.
+      - `advanceProjection` ignores a named anchor while it does, and clears `held` on the first sample with the pointer elsewhere, on either axis. A return to the same point doesn't hold it again.
+      - `ProjectionSample` gains `pointerY`, since a vertical move leaves x alone.
+      - `useBoardDnd.ts::handleDragMove` stores no anchor while the reading is held, so the one named against settling rows isn't left to be read once the pointer has moved. `readModalPlacement` passes the whole pointer.
+    - **Tests:**
+      - **Unit,** in `descendantsProjection.test.ts` (DRAG-7.15): an anchor named with the pointer still is dropped, on this sample and the next; a move on either axis lets go and takes the anchor named since; a return to the point doesn't hold again; `holdsReading` by pointer. The first and last failed before.
+      - **E2E, two specs in `drag-7-modal-hold.spec.ts`,** both carrying DRAG-7.15: `W`, first in `P`, held down to the gap below `R`'s overflow row until the modal opens and released without moving, once alone and once with a child under it, `WC`, whose subtree travels. Each checks the cursor is in the modal and the ghost under it, then that what the release writes is what the modal drew (R's last child, after R2), and the second that `WC` is still `W`'s. **Both failed before,** at the written parent against the shown one, and pass after. They are the guard for #31 that batch 1 couldn't write.
+    - **Checked, no change:** a scroll of the modal's list with the pointer still, the one case where a move event could be the user's and not the layer swap's. The harness's wheel doesn't scroll the list during a drag, so it was a programmatic scroll of 200px over a list of 29 rows. The projection stayed at 8:3 with the rule and without it, so the rule changes nothing there.
+  - **DRAG-7.13's main drag: the trace says the drag layer is at fault, so no spec and no fix.**
+    - **The gesture:** a Free Card `F0`, first in `P`'s column, picked up and held on `P`'s Card until the context reads `card:`, then on in `P`'s section until it reads `descendants:`. The zoom needs a re-aim: the Card opens and its section moves, so the first aim lands on the Card and the second, measured again, in the section. The pop-out is out of the way (60 s), the zoom-in's clocks short.
+    - **What it does:** the projection reads `0:0:true` from the entry, and stays there as the cursor goes over `A`, `T` and `R`'s overflow row.
+    - **Not the gesture:**
+      - In a window 1800px tall, nothing scrolls (the page and every scroller read 0), and it is the same. In the 720px window the column's own scroller moves, 150px at the entry and back to 0 after, which is dnd-kit's auto-scroll and a confound, but not the cause.
+      - The moves are real mouse events, the same as a hand's.
+    - **What the log shows,** in the tall window, with the cursor going up from 493 to 392: the clamp's input follows the cursor (`reanchorOverlayTransform`'s output y runs -105 to -205) and its output doesn't. It stays at 98, which is `context.rect.top` (389) less `draggingNodeRect.top` (290), the lowest translate that keeps the carried copy inside the section. The translate never changes, so dnd-kit fires no drag-move, the named anchor is the one from the entry, and the projection never moves.
+    - **Two rects disagree:**
+      - `draggingNodeRect.top` is 290, where the Card was at pickup (`F0` first in the column). Its height is 26, the Stub's, so it is a measurement of two moments (the clamp's comment in `useBoardDnd.ts` says the overlay's observer is bound at the first mount). dnd-kit takes it from `dragOverlay.rect ?? activeNodeRect`.
+      - `activeNodeRect.top` is 499.75, the ghost row in the section, which moves with the gap. `reanchorOverlayTransform` measures the translate against it, so the carried copy lands under the cursor.
+      - A Stub picked up in its own section never reanchors, so there is one rect. A Card picked up elsewhere and drawn as a Stub in a section has the two about 210px apart.
+    - **Both effects follow:**
+      - The clamp is given `draggingNodeRect`, so its bounds are the section's less 290, where the translate is relative to 500, and the output sits at the lowest bound for any cursor in the section. That is the pinned 98.
+      - dnd-kit's collision rect is `getAdjustedRect(draggingNodeRect, modifiedTranslate)` (`@dnd-kit/core`'s `core.esm.js`, where `collisionRect` is set). The same stale rect with the same translate puts it about 210px above the cursor, so the rows it names are the top ones. That is not read off a probe; it is read off the library and fits what the probe shows.
+    - **A throwaway experiment, reverted:** clamping against `activeNodeRect` made the clamp's output follow the cursor, and the projection still read `0:0:true`, which fits the collision rect still being displaced. The fix is likely to give dnd-kit the live rect too, which is the drag layer's own design of the overlay (`draggingNodeRect` is read from the DragOverlay's measurement, which the layer's comment says can't be trusted). I haven't tried it.
+    - **What is affected:** a Free Card, or any item picked up as a Card, that zooms into a section and is moved there. The Card-zoom specs for it are skipped for the layout shifting under the cursor (`drag-card-zoom-in.spec.ts`), which may be this. DRAG-1.21 and DRAG-4.1 have no passing spec and go through it. DRAG-7.13's `B` clause, a Stub of `P`, is covered and unaffected.
+    - **Left alone:** `reanchorOverlayTransform`, `clampToCurrentContext`, the collision rect. They are the drag layer's core, and the batch plan says to stop. The question For Nathan is under "From the test follow-ups".
+  - **`POST /workflows` naming both references: built.** `routes/workflows.ts` refuses a create that names both `templateId` and `sourceWorkflowId`, a 400 that creates nothing, ahead of either field's existence check, so bogus ids on both give this error and not the first existence one. A field that is `null` isn't named (batch 2's `namesARow`), so a create naming one with the other `null` is made from the one. `startingWorkphases`' comment no longer says it takes the template's.
+    - **Tests** in `workflows.test.ts`, beside batch 2's: both named with real ids, a 400 that names both fields and creates nothing; both named with ids that don't exist, the same message, which pins the order; and a `null` for each field, created from the other, the two of which passed before and guard.
+    - **Case IDs:** batch 2's two `''` refusals carry TREE-10.9 now, as the Test Planner said they could. The two `null` tests and the two both-named tests carry none: TREE-10.10 and TREE-10.11 read `Pending PO` in the test plans still, though wiki project-tree §10 answers both, and their IDs follow once the cases are `Open` (For the Test Planner).
+    - **Callers:** `SetupWorkflowModal.tsx` sends one field and no MCP tool sends either, so nothing changes. `create-workflow.bru`'s docs say they can't be sent together and that a `null` isn't named.
+  - **The drag layer's `CLAUDE.md`** says the modal's reading is held until the pointer moves, and that `handleDragMove` stores no anchor meanwhile.
+  - **Mutation checks, each restored:**
+    - **`holdsReading` made false:** it fails the unit tests that hold the reading and both new specs, which is today's code, as they failed before.
+    - **The hook's half removed,** `handleDragMove` storing the anchor again: both specs still pass. The pure layer's half carries them. The hook's half only keeps the stale neighbor from being read for a frame once the pointer moves, which no spec can see, so nothing guards it. It is three lines and can go if that isn't worth keeping.
+  - **Debug instrumentation:** the traces ran on temporary `console.log` lines in `useBoardDnd.ts` and a probe spec, `tests/ui/zz-probe.spec.ts`, both removed. A search for `PROBEDBG` and `zz-probe` finds nothing.
+  - **Checks:** `npm run check` passes (428 server, 565 client, 209 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 228 and 8 skipped, the two new specs on the 226 before.
 
 ## Open questions
 
@@ -595,6 +679,12 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **DRAG-7.23:** the lean, with one change: the modal is centered after a reload, not left where it was, since a hold-opened modal's placement came from a drag that has ended. The centering is Planned (wiki board-drag-interaction §9).
   - **From the Test Reconciler's proposing run** (`docs/audits/test-reconciliation-epic-3-5-story-7.md`, Candidate New Cases), via the Test Planner: `POST /workflows` takes `templateId` and `sourceWorkflowId`, which name rows, and audit #3 found `''` read as none there. Wiki row-references §1 refuses that, but says each feature's page names its own references, and no page names these two, so no catalog has a case for them. Which page should name them as references?
     - **Answered 2026-10-27 (PO):** project-tree §10, beside the rule that `POST /api/workflows` gives a project its workflow. It names both as references, says each copies its row's workphases, and that leaving both out makes a workflow with no workphases. TREE's catalog takes the cases. What a create naming both does is left out until the Architect says (For the Architect).
+  - **From the Test Planner's TREE-10 cases, each `Pending PO` with its lean in the case:**
+    - **TREE-10.10:** what does `null` mean in `templateId` or `sourceWorkflowId`? Wiki row-references §2 leaves it to the field's page, and project-tree §10 says what leaving both out means, not `null`. The Test Planner leans none, as leaving the field out. Batch 2 built it that way, and batch 7 relies on it.
+    - **TREE-10.11:** a create naming both. The Architect ruled it in batch 7: a 400 that creates nothing, where a `null` field isn't named. The Test Planner's lean is the same. Written into §10 with TREE-10.10's answer, it settles both cases at once.
+    - **Answered 2026-10-28 (PO, on the Architect's ruling):** both leans, in wiki project-tree §10.
+      - **TREE-10.10:** `null` names none, as leaving the field out does. Unmarked, since batch 2 built it.
+      - **TREE-10.11:** refused, a 400 that creates nothing, and a `null` field isn't named. `**Planned:**` until batch 7 lands.
 - **For Nathan, from Phase 5:**
   - **The cap's value.** Both constants are 12 as built, a starting value: the depth the deep seed goes to, and one line each to change. D1 has the pick settled in the hands-on, at least 10. The specs hold at 10, 12 and 15 (Amendments, Phase 5).
     - **Answered 2026-10-27:** 12, for both (Amendments).
@@ -602,12 +692,22 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **Answered 2026-10-27:** a long name at the deepest level may be cut. Widening the sidebar is how it's read, and the maximum stays 420px (Amendments).
 - **For Nathan, from the test follow-ups:**
   - **Does a Free Card that has zoomed into a section follow the cursor there?** The spec for DRAG-7.13's main drag found the ghost stuck at the section's top (`0:0:true`) once a Free Card from the same column had zoomed into `P` and on into its section (Amendments, 2026-10-28, second stop). Dragging the deep stack's "Free Card to drag in" onto a Card and into its section by hand settles whether that is the spec's doing or a defect. If it is a defect, it also bears on DRAG-1.21 and DRAG-4.1, which have no passing spec either.
+    - **Answered 2026-10-27:** add the spec. Batch 7 traces the stuck projection first, and stops and reports if the drag layer is at fault.
+    - **Traced 2026-10-28 (Coder, batch 7):** the drag layer is at fault, so the batch stopped there and no spec was written. The finding and what to decide are in Amendments, 2026-10-28, batch 7, and the question below.
+  - **A Free Card that has zoomed into a section doesn't follow the cursor in it** (Amendments, 2026-10-28, batch 7). The projection reads `0:0:true` from the entry on, wherever the cursor goes, in a window where nothing scrolls. It is the drag layer's and not the gesture's, in the carried copy's geometry, which is the layer's core. DRAG-1.21 and DRAG-4.1 go through it. Is it fixed as a change of its own, with its own plan, or does it wait for the next story that reworks the drag layer, with DRAG-7.13's spec held until then?
 - **For Nathan, from the Fix Now batch 1:**
   - **A hold from above opens the modal with the projection a gap or more off the line the modal draws** (Amendments, 2026-10-28, batch 1). It predates the batch and the audit didn't find it, so it is outside the batch's list. The wiki rule is board-drag-interaction §7.3's: the modal opens with the ghost's spot under the cursor, so a release right after commits that placement. By hand: pick an item above `R`'s overflow row, hold it just below the row until the modal opens, and let go without moving. It should write the placement the modal shows, and by the probes it writes one gap further down.
   - **Fix it in this story,** as a batch of its own after the modal's, or route it? The fix I'd try, untried, is to keep the placement's reading until the pointer moves. It is in the drag layer's core and needs its own test. It would also let the E2E spec for audit #31 be written. Or it goes to the next story that reworks the drag layer, with the spec held until then.
+    - **Answered 2026-10-27:** fix it in this story, as batch 7.
+    - **Done 2026-10-28 (Coder, batch 7):** the projection keeps the modal's reading until the pointer moves (Amendments, 2026-10-28, batch 7).
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
+    - **Done 2026-10-27 (Architect).**
   - **From the PO, for wiki project-tree §10:** what does `POST /api/workflows` do when it names both `templateId` and `sourceWorkflowId`? Is it refused, or is one of them taken, and which? The wiki says nothing about it until then (For the PO).
+    - **Answered 2026-10-27 (Architect):** refused, a 400 that creates nothing. A field that's `null` isn't named.
+      - **Why:** no caller sends both. `SetupWorkflowModal.tsx` sends one or the other, and no MCP tool sends either. Quietly taking one would hide a caller's mistake.
+      - **Next:** batch 7 builds it. The PO writes it into §10, which settles TREE-10.11 (For the PO).
+      - **Done 2026-10-28 (Coder, batch 7):** `POST /workflows` refuses a create that names both, a 400 that creates nothing (Amendments, 2026-10-28, batch 7).
 - **For the Test Planner:**
   - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
     - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
@@ -633,8 +733,13 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **The suite's terms:** `X` is any childless item at `P`'s Descendants layer, a Free Card zoomed in or a Stub of `P`'s outside the tree, since placement there is the same for both. DRAG-7.13 now names a Free Card from outside `P` for its main drag, so that its two origins stay distinct.
       - **The cap at 12:** no case changes. ATT-4's and TREE-3's terms no longer say the value is open. They still name it by `CAP` and `PCAP`.
   - **A hold from a row above the target** (Open questions, For Nathan, from the Fix Now batch 1): DRAG-7.15's text covers it, since a release right after the modal opens commits what the modal shows, but every hold spec drags an item up to the gap, so none drives it. Once it is fixed, a spec for it, or a clause in the case naming the direction, is the Test Planner's call.
+    - **Done 2026-10-28 (Test Planner):** a clause in the case, written now so batch 7's specs have it to carry. DRAG-7.15 holds whichever way the cursor came to the gap, down from the rows above or up from those below, and for an item with an attached child of its own, as batch 7's guard for #31 drags.
   - **Project-tree §10 names a workflow create's two references** (For the PO), ready for cases: what each copies, what leaving both out makes, and the refusal of one that names no row, `''` included (wiki row-references §1). The `''` refusal is audit #3's fix, so its test comes with that batch.
     - **Done 2026-10-28 (Coder, Fix Now batch 2):** the tests are in `server/tests/routes/workflows.test.ts` without IDs, until the cases are written: a refusal for each `''`, and a `null` for each read as none. A create that names both is not tested (For the Architect).
+    - **Done 2026-10-28 (Test Planner):** TREE-10.5–10.9 are `Open` (Scope). Batch 2's `''` refusals are TREE-10.9's, and can carry its ID now, with batch 7 adding its tests beside them. The `null` tests and batch 7's create naming both wait on TREE-10.10 and TREE-10.11, `Pending PO` (For the PO).
+  - **Project-tree §10 answers TREE-10.10 and TREE-10.11** (For the PO): TREE-10.10's rule is unmarked, and TREE-10.11's is `**Planned:**` until batch 7 builds it.
+  - **Board-drag-interaction §9's centering after a reload is unmarked** (Living-docs handoff, Planned passages now built, Fix Now batch 1): DRAG-7.25 is ready to move to `Open`.
+    - **Done 2026-10-28 (Test Planner):** DRAG-7.25 is `Open` (Scope).
 
 ## Living-docs handoff
 
@@ -660,6 +765,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - At the default sidebar width the deepest levels of a deep project tree draw no name: at 12 levels a name has about 26px. The sidebar's resize handle is the way to read them (D2), and its maximum was sized for a 10th-level name (Open questions, For Nathan).
 - **Planned passages now built:**
   - **Fix Now batch 1:** board-drag-interaction §9's sentence that after a reload a modal a hold opened is centered, as one a click opens is (DRAG-7.25).
+    - **Marker off (PO).**
   - **Phase 4:**
     - board-drag-interaction §7.3's hold, its placement under the cursor, the scroll of a long list, the shift at a window edge, opening again in the same drag, and §3.1's two hold values;
     - §9's hold beside an overflow row opening the modal;
@@ -725,8 +831,8 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - §7: the hidden slot, marker off, and the "in its own slot" it replaced narrowed to a slot the section shows.
     - §7.1: the overflow row's gaps, marker off. The overflow row can be the side highlight's neighbor.
     - §7.3: markers off. New: the hold needs the cursor inside the section, and doesn't run in an over-cap state (DRAG-7.21); the modal's box includes its header, and the carried copy is held to its list.
-    - §9: markers off, and "at every level" deleted. New: `sectionLevels` is at least 1; a dragged `R` carries its overflow row; the overflow row is a control (DRAG-7.22); a click on a row in the modal opens nothing; the modal closes when its Card is gone or has no attached descendants; a reload leaves it open (DRAG-7.23), with the centering after a reload Planned.
+    - §9: markers off, and "at every level" deleted. New: `sectionLevels` is at least 1; a dragged `R` carries its overflow row; the overflow row is a control (DRAG-7.22); a click on a row in the modal opens nothing; the modal closes when its Card is gone or has no attached descendants; a reload leaves it open (DRAG-7.23), with the centering after a reload Planned. That marker came off once Fix Now batch 1 built it (DRAG-7.25).
     - Open questions: the hold's cue borrows the zoom-in's look; the overflow row's and the modal's placeholder looks; new, opening a Sheet from the modal.
   - **item-attachment:** §8, `CAP` is 12, with its grounding rewritten; §12, the levels bullet's marker off. Open questions: "`CAP`'s real value" deleted, and "Beyond the cap" reworded.
-  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder. §10, a workflow create's `templateId` and `sourceWorkflowId` named as references (For the PO).
+  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder. §10, a workflow create's `templateId` and `sourceWorkflowId` named as references, `null` naming none, and, Planned until batch 7, a create naming both refused (For the PO).
   - **Planning docs:** `mvp-roadmap.md`, `epic-3-5-roadmap.md` and `epic-8-decisions.md` no longer say "provisionally 6".

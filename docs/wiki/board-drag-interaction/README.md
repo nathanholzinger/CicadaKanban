@@ -943,9 +943,9 @@ attached descendants, showing the hierarchy as the reloaded board has
 it. That holds whatever caused the reload: a failed release in the
 modal, or a reload that lands mid-drag and stops the drag (§10).
 
-**Planned:** after a reload, a modal a hold opened is centered, as one
-opened by a click is. The drag that placed it under the cursor has
-ended (§10), so nothing places it there again.
+**After a reload, a modal a hold opened is centered,** as one opened by
+a click is. The drag that placed it under the cursor has ended (§10),
+so nothing places it there again.
 
 How the overflow row and the modal look, including the modal's size
 and how it shows the Card at its root, isn't a rule yet (Open

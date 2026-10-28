@@ -37,7 +37,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.22 | A press on an overflow row's count starts no drag, and a click on it opens the modal, not the Card's Sheet | P2 | Open |
 | DRAG-7.23 | A board reload leaves an open modal open while its Card still has attached descendants | P2 | Open |
 | DRAG-7.24 | A press on an overflow row's indent is the Card's | P2 | Open |
-| DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Planned |
+| DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Open |
 | DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Open |
 | DRAG-7.27 | A dragged row carries its overflow row, which is never a neighbor | P2 | Open |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Open |
@@ -189,6 +189,8 @@ This case asserts the clock's logic, with its thresholds as parameters; its pass
 
 *Given* the modal hold beside `R`'s overflow row completes with the cursor still, where a modal placed under the cursor fits inside the window, *then* the modal opens with the ghost's spot under the cursor: from the gap above the overflow row, the gap before `R1`, at `R1`'s level; from the gap below it, the gap after `R2`, at `R2`'s level. The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened: `X` first among `R`'s attached children, before `R1`, or last, after `R2` ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)). No pop happened: the drag is still at `P`'s Descendants layer.
 
+The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor, and a release right after commits the item there, its child still under it.
+
 **Automation test:** —
 
 ## DRAG-7.16 — A modal kept inside the window at an edge reads the ghost afresh from the cursor
@@ -265,7 +267,7 @@ This case asserts the clock's logic, with its thresholds as parameters; its pass
 
 ## DRAG-7.25 — After a reload, a modal a hold opened is centered
 
-**Priority:** P2 · **Status:** Planned · **Rule:** wiki board-drag-interaction §9
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
 
 *Given* the modal opened by a hold during a drag, under the cursor and away from the window's center ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)), *when* the board reloads, mid-drag or after a release in the modal whose write failed, and the modal stays open ([DRAG-7.23](drag-7-overflow-and-hierarchy-modal.md)), *then* the modal is centered in the window, as one opened by a click is ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)). A modal opened by a click stays centered across the reload.
 

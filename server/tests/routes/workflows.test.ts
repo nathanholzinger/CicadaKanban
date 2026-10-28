@@ -163,7 +163,7 @@ describe('POST /api/workflows', () => {
   // An empty string names no row, so it is refused and nothing is created, where it would otherwise
   // read as none and make a workflow with no workphases (wiki row-references §1).
   it.each(['templateId', 'sourceWorkflowId'])(
-    'returns 400, and creates nothing, when %s is an empty string',
+    'TREE-10.9: returns 400, and creates nothing, when %s is an empty string',
     async field => {
       const project = await createProject();
       const res = await request(app)
@@ -187,6 +187,55 @@ describe('POST /api/workflows', () => {
       expect(res.body.workphases).toEqual([]);
     },
   );
+
+  // A create that names both would have to drop one without a sign, so it is refused whole, ahead of
+  // either field's existence check.
+  it('returns 400, and creates nothing, when both templateId and sourceWorkflowId are named', async () => {
+    const project = await createProject();
+    const source = await createWorkflow((await createProject()).id);
+    await createWorkphase(source.id, { name: 'Backlog' });
+    const flow = await findTemplateByName('flow');
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: flow.id, sourceWorkflowId: source.id });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('templateId');
+    expect(res.body.error).toContain('sourceWorkflowId');
+    expect((await request(app).get(`/api/workflows?projectId=${project.id}`)).body).toEqual([]);
+  });
+
+  it('refuses a create that names both ahead of checking that either exists', async () => {
+    const project = await createProject();
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: 'no-template', sourceWorkflowId: 'no-workflow' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('templateId');
+    expect(res.body.error).toContain('sourceWorkflowId');
+    expect(res.body.error).not.toMatch(/does not reference/);
+  });
+
+  // A field that is `null` isn't named, so a caller that always sends both can ask for the one it means.
+  it('creates from the template when sourceWorkflowId is null', async () => {
+    const project = await createProject();
+    const flow = await findTemplateByName('flow');
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: flow.id, sourceWorkflowId: null });
+    expect(res.status).toBe(201);
+    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
+  });
+
+  it('creates from the source workflow when templateId is null', async () => {
+    const source = await createWorkflow((await createProject()).id);
+    await createWorkphase(source.id, { name: 'Backlog' });
+    const project = await createProject();
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: null, sourceWorkflowId: source.id });
+    expect(res.status).toBe(201);
+    expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog']);
+  });
 
   it('clones phases from a template when templateId is given', async () => {
     const project = await createProject();

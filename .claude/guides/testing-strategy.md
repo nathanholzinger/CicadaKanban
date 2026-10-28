@@ -21,7 +21,7 @@ There's no CI; everything runs locally.
 | Playwright UI | `tests/ui/` | User-facing flows through the browser. Drags go through `tests/helpers/dragGesture.ts`, and setup through the `tests/helpers/seed.ts` helpers, never by hand. |
 | Playwright API | `tests/api/` | The REST API, through the running server. |
 | Server routes | `server/tests/routes/` | Vitest and supertest against the exported app, with a real database. Runs one file at a time, since every file shares one SQLite database. Setup comes from `server/tests/fixtures.ts`, such as `workflowWithPhases` for a project, its workflow, board and workphases, and `move`, `put` and `getRow` for an item's writes and its stored row. Its `create*` helpers assert their status, so a refused setup step fails at its own line; a test of a refusal sends the request itself. `server/tests/itemHierarchyFixtures.ts` adds what only the hierarchy tests share. |
-| Server lib | `server/tests/lib/` | Shared domain logic in `server/src/lib/`. |
+| Server lib | `server/tests/lib/` | Shared domain logic in `server/src/lib/`, and the deep seed in `server/src/db/`. |
 | Client units | Next to the code, as `*.test.ts(x)` | Pure modules and hooks, in jsdom with Testing Library. Items come from `itemFixture.ts::makeItem` and projects from `projectFixture.ts::makeProject`, never a hand-written literal. |
 | Scripts | Next to the code in `scripts/`, as `*.test.mts` | Repo tooling, such as the docs checker, on `node:test`. |
 

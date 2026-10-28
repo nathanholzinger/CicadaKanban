@@ -257,10 +257,18 @@ Example: `P` owns `W1`, and has a child `C`, whose child `D` owns `W2`.
 **A workflow create may name where its workphases come from:** a
 template, by `templateId`, or another workflow, by `sourceWorkflowId`.
 The new workflow starts with a copy of that one's workphases. Leaving
-both out makes a workflow with no workphases. Both fields are
-references ([`../row-references/`](../row-references/) §1), so one that
-names no template, or no workflow, is refused with a 400, and nothing is
+both out makes a workflow with no workphases, and a field given as
+`null` names none, as leaving it out does. Both fields are references
+([`../row-references/`](../row-references/) §1), so one that names no
+template, or no workflow, is refused with a 400, and nothing is
 created.
+
+**Planned:** a create naming both a template and a workflow is refused
+with a 400, and nothing is created. A field given as `null` isn't
+named, so a create naming a template, with `sourceWorkflowId: null`,
+starts with the template's workphases. Why refuse it: taking either one
+would drop the other without a sign, and hide the caller's mistake, as
+a fallback would ([`../row-references/`](../row-references/) §1).
 
 **What changes the workflow a project uses:**
 - a move (§6), when the project has no workflow of its own, and its new

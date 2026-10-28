@@ -8,7 +8,8 @@
 // and turns into the gap among all the rows before anything is resolved. It also names the
 // overflow row the ghost sits directly beside, at its level, which the hold that opens the
 // hierarchy modal keys on (`overflowBeside`, `modalHoldTarget`), and takes a reading from the
-// cursor when the modal has just opened under it (`reseedProjection`).
+// cursor when the modal has just opened under it (`reseedProjection`), and keeps that reading
+// until the pointer moves (`holdsReading`).
 
 import type { Item } from '../../types';
 import {
@@ -36,12 +37,19 @@ interface ProjectionSeed {
   slotHidden: boolean;
 }
 
+interface Pointer {
+  x: number;
+  y: number;
+}
+
 export interface ProjectionState {
   seed: ProjectionSeed | null;
   projection: DescendantsProjection | null;
+  /** Where the pointer was when the modal's reading was taken, while that reading is held (`holdsReading`). */
+  held: Pointer | null;
 }
 
-export const NO_PROJECTION: ProjectionState = { seed: null, projection: null };
+export const NO_PROJECTION: ProjectionState = { seed: null, projection: null, held: null };
 
 export interface ProjectionSample {
   /** The context the sample started in (null at pickup). A different one than `contextKey` means the section was just entered. */
@@ -53,6 +61,7 @@ export interface ProjectionSample {
   /** The row `dropAnchorFor` names this sample, if any: an item's row, or an overflow row. */
   namedAnchor: AnchorRelation | null;
   pointerX: number | null;
+  pointerY: number | null;
   getAttachedChildren: (parentId: string) => readonly Item[];
   /** How many levels the section draws (`itemListOps.ts::shownLevels`): the tuning value, or `EVERY_LEVEL` in the hierarchy modal. */
   sectionLevels: number;
@@ -73,7 +82,8 @@ export interface ProjectionSample {
 // it was. The depth is the seed's plus the pointer's travel since, in
 // indents, clamped to the gap's range and to one past the last shown level:
 // an overflow row stands for the children one level deeper than the section
-// draws, and nothing is offered right of it.
+// draws, and nothing is offered right of it. A reading the modal took stands, and no neighbor
+// named meanwhile moves it, while the pointer is where it was taken (`holdsReading`).
 export function advanceProjection(state: ProjectionState, sample: ProjectionSample): ProjectionState {
   const cardId = descendantsCardIdOf(sample.contextKey);
   if (!cardId) return NO_PROJECTION;
@@ -91,7 +101,10 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
       : state.seed;
   const previousGap = seed === state.seed ? (state.projection?.gap ?? null) : null;
 
-  const anchor = sample.namedAnchor;
+  const pointer =
+    sample.pointerX === null || sample.pointerY === null ? null : { x: sample.pointerX, y: sample.pointerY };
+  const held = seed === state.seed && holdsReading(state, pointer) ? state.held : null;
+  const anchor = held ? null : sample.namedAnchor;
   const gap = anchor ? gapForAnchor(rows, anchor) : (previousGap ?? seed.gap);
   const pointerX = sample.pointerX ?? seed.pointerX;
   const { depth, placement } = computeProjection(
@@ -115,6 +128,7 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   return {
     seed,
     projection: { gap, depth, valid, resolved: placement, atOwnSlot, slotHidden: seed.slotHidden, overflowBeside },
+    held,
   };
 }
 
@@ -157,14 +171,28 @@ export function modalHoldTarget(projection: DescendantsProjection | null): Modal
 
 // The projection read afresh from where the cursor is over a layer that has just changed shape
 // under it (the modal opening): the next sample resolves from this gap and depth, and the pointer
-// it measures its travel from is `pointerX`. The hold's own reading is dropped, and nothing else:
+// it measures its travel from is at `pointerX`. The hold's own reading is dropped, and nothing else:
 // `slotHidden` stays, because the rows `own` is read from still place the Stub as the Card's last
-// child, where a real move would be taken for its own slot and dropped.
+// child, where a real move would be taken for its own slot and dropped. The reading is held where
+// the pointer is (`holdsReading`).
 export function reseedProjection(
   state: ProjectionState,
-  read: { gap: number; depth: number; pointerX: number },
+  read: { gap: number; depth: number; pointerX: number; pointerY: number },
 ): ProjectionState {
-  return state.seed ? { seed: { ...state.seed, ...read }, projection: null } : state;
+  const { gap, depth, pointerX, pointerY } = read;
+  if (!state.seed) return state;
+  return { seed: { ...state.seed, gap, depth, pointerX }, projection: null, held: { x: pointerX, y: pointerY } };
+}
+
+// Whether the reading the modal took still stands: the pointer is where it was taken. Opening the
+// modal re-clamps the carried copy with the pointer still, and the move event that follows names a
+// neighbor against rows that are still sliding into place, a gap or more from the one the modal
+// drew under the cursor (wiki board-drag-interaction §7.3). A neighbor named with the pointer
+// still is that event's, not the user's, so the reading is kept until the pointer moves, along
+// either axis. Once it has moved, the reading is no longer held, and a return to the same point
+// doesn't hold it again.
+export function holdsReading(state: ProjectionState, pointer: Pointer | null): boolean {
+  return state.held !== null && pointer !== null && state.held.x === pointer.x && state.held.y === pointer.y;
 }
 
 // The gap a named neighbor puts the ghost in, among all the section's rows. An item's row

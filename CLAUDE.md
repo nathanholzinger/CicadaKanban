@@ -215,6 +215,9 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:3001`
 - Drizzle Studio (DB browser): `cd server && npm run db:studio`
+- Deep stack, for item and project trees that reach the depth caps: `npm run seed:deep`, then
+  `npm run dev:deep`, in `server/`, and `npm run dev:deep` in `client/` (client 5175 →
+  server 3003 on `deep.db`, apart from the dev database)
 - Gates: `npm run check` (from project root) — type-check, lint (which runs
   `check:docs`), format check, and unit tests across `client/`, `server/` and `scripts/`
 - E2E tests: `npm run test:e2e` (from project root) — slower, so kept out of `check`.

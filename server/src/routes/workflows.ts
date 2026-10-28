@@ -43,7 +43,7 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
 const namesARow = (value: unknown): boolean => value !== undefined && value !== null;
 
 // The workphases a new workflow starts with: the named template's, else the named workflow's,
-// else none. A create that names both takes the template's.
+// else none. The route refuses a create that names both, so at most one is named here.
 function startingWorkphases(tx: Tx, templateId: unknown, sourceWorkflowId: unknown) {
   if (namesARow(templateId)) {
     return tx
@@ -125,6 +125,12 @@ router.post('/', (req, res) => {
   const owned = db.select({ name: workflows.name }).from(workflows).where(eq(workflows.projectId, projectId)).get();
   if (owned) {
     res.status(409).json({ error: `Project already has a workflow: "${owned.name}"` });
+    return;
+  }
+  // A workflow starts from a template or from another workflow, not both: taking either would
+  // drop the other without a sign (wiki project-tree §10).
+  if (namesARow(templateId) && namesARow(sourceWorkflowId)) {
+    res.status(400).json({ error: 'templateId and sourceWorkflowId cannot both be given' });
     return;
   }
   // Neither is an FK, so a bogus id here wouldn't crash — it would just

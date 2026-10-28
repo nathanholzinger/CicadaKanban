@@ -311,6 +311,70 @@ test('DRAG-7.15, DRAG-7.19: the modal opens with the ghost’s spot under the cu
   expect((await fetchItem(request, b.id)).position).toBeGreaterThan((await fetchItem(request, r2.id)).position);
 });
 
+// `W`, an item first in P, so that a hold at the gap below R's overflow row comes down from the rows
+// above it, where the cases above bring an item up to it. With `childTitle`, it has a child of its own.
+async function seedFirstItem(
+  request: Parameters<typeof seedItem>[0],
+  tree: Awaited<ReturnType<typeof seedOverflowTree>>,
+  childTitle?: string,
+) {
+  const w = await seedItem(request, { title: 'W', parentId: tree.p.id });
+  await moveItem(request, w.id, { parentId: tree.p.id, anchorId: tree.a.id, side: 'before' });
+  const child = childTitle ? await seedItem(request, { title: childTitle, parentId: w.id }) : null;
+  return { w, child };
+}
+
+test('DRAG-7.15: held from above, down to the gap below R’s overflow row, the modal opens with the ghost’s spot under the cursor, and a release right after commits it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold From Above Project';
+  const tree = await seedOverflowTree(request, name);
+  const { p, r, r2, t } = tree;
+  const { w } = await seedFirstItem(request, tree);
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // R's last child, after R2, where the hold from below puts an item: the gap after R's whole subtree.
+  const last = await holdAt(page, w, p, () => topQuarter(itemRow(page, t.id)), L);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectInside(modal, last.at());
+  await expectGhostUnder(modal, w.id, last.at());
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+
+  // What a release writes is what the modal draws, with the cursor where it opened.
+  const shown = await expectReleaseCommitsShown(page, request, modal, w, p);
+  expect([shown.parentId, shown.prevId]).toEqual([r.id, r2.id]);
+});
+
+test('DRAG-7.15: the same hold for an item with a child of its own, whose subtree travels with it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold From Above With Child Project';
+  const tree = await seedOverflowTree(request, name);
+  const { p, r, r2, t } = tree;
+  const { w, child } = await seedFirstItem(request, tree, 'WC');
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  const last = await holdAt(page, w, p, () => topQuarter(itemRow(page, t.id)), L);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectInside(modal, last.at());
+  await expectGhostUnder(modal, w.id, last.at());
+
+  // R's last child, after R2, with the child still W's.
+  const shown = await expectReleaseCommitsShown(page, request, modal, w, p);
+  expect([shown.parentId, shown.prevId]).toEqual([r.id, r2.id]);
+  expect((await fetchItem(request, child!.id)).parentId).toBe(w.id);
+});
+
 // The modal's middle is the window's, as one a click opens sits (DRAG-7.7).
 async function expectCentered(page: Page, modal: Locator) {
   const viewport = page.viewportSize()!;

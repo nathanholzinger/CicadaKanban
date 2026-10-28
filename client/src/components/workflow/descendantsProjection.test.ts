@@ -8,6 +8,7 @@ import {
   NO_PROJECTION,
   advanceProjection,
   descendantsReleasePlacement,
+  holdsReading,
   modalHoldTarget,
   reseedProjection,
   sameProjection,
@@ -30,6 +31,7 @@ const items = [
 const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(items, parentId);
 const section = descendantsRegionKey(P);
 const START_X = 100;
+const START_Y = 200;
 
 // A sample of S2's own drag, held in P's section (entered this sample,
 // unless `previousContextKey` says otherwise), with any field overridden.
@@ -42,6 +44,7 @@ function sample(fields: Partial<ProjectionSample> & { cap?: number } = {}): Proj
     originCardId: P,
     namedAnchor: null,
     pointerX: START_X,
+    pointerY: START_Y,
     getAttachedChildren,
     sectionLevels: 3,
     ...rest,
@@ -156,6 +159,7 @@ describe('advanceProjection under a cut-off section', () => {
     originCardId: null,
     namedAnchor: null,
     pointerX: START_X,
+    pointerY: START_Y,
     getAttachedChildren: parentId => getAttachedChildrenFrom(deep, parentId),
     sectionLevels: 3,
     ...fields,
@@ -368,18 +372,59 @@ describe('descendantsReleasePlacement', () => {
 });
 
 describe('reseedProjection', () => {
+  const READ_AT = { pointerX: 400, pointerY: 300 };
+
   it('DRAG-7.15: takes the gap and depth it is given, measures the pointer’s travel from the new pointer, and drops the old reading', () => {
     const entered = advanceProjection(NO_PROJECTION, sample());
-    const reseeded = reseedProjection(entered, { gap: 2, depth: 0, pointerX: 400 });
+    const reseeded = reseedProjection(entered, { gap: 2, depth: 0, ...READ_AT });
     expect(reseeded.projection).toBeNull();
-    expect(advanceProjection(reseeded, held({ pointerX: 400 })).projection).toMatchObject({ gap: 2, depth: 0 });
+    expect(advanceProjection(reseeded, held(READ_AT)).projection).toMatchObject({ gap: 2, depth: 0 });
     // After S3, one indent right of where it was read is S3's first child.
-    const tabbed = advanceProjection(reseeded, held({ pointerX: 400 + DESCENDANTS_INDENT_PX })).projection;
+    const tabbed = advanceProjection(reseeded, held({ ...READ_AT, pointerX: 400 + DESCENDANTS_INDENT_PX })).projection;
     expect(tabbed).toMatchObject({ gap: 2, depth: 1, resolved: { parentId: 'S3' } });
   });
 
   it('has nothing to reseed before the section was entered', () => {
-    expect(reseedProjection(NO_PROJECTION, { gap: 2, depth: 0, pointerX: 400 })).toBe(NO_PROJECTION);
+    expect(reseedProjection(NO_PROJECTION, { gap: 2, depth: 0, ...READ_AT })).toBe(NO_PROJECTION);
+  });
+
+  // The modal opening re-clamps the carried copy with the pointer still, and the move event that
+  // follows names a neighbor against rows that are still sliding into place. The reading is
+  // the placement the modal drew under the cursor, so it stands until the pointer moves.
+  describe('DRAG-7.15: the reading holds until the pointer moves', () => {
+    const entered = advanceProjection(NO_PROJECTION, sample());
+    // Between S1 and S3. A neighbor named for S3's far side would put the ghost after S3, at gap 2.
+    const reseeded = reseedProjection(entered, { gap: 1, depth: 0, ...READ_AT });
+    const afterS3 = { anchorId: 'S3', side: 'after' } as const;
+
+    it('drops an anchor named with the pointer where it was read', () => {
+      const named = advanceProjection(reseeded, held({ ...READ_AT, namedAnchor: afterS3 }));
+      expect(named.projection).toMatchObject({ gap: 1, depth: 0 });
+      // And on every sample after, while the pointer stays.
+      const again = advanceProjection(named, held({ ...READ_AT, namedAnchor: afterS3 }));
+      expect(again.projection).toMatchObject({ gap: 1, depth: 0 });
+    });
+
+    it('lets go once the pointer moves, along either axis, and takes the anchor named since', () => {
+      for (const moved of [{ pointerX: 401 }, { pointerY: 301 }, { pointerX: 399, pointerY: 299 }]) {
+        const named = advanceProjection(reseeded, held({ ...READ_AT, ...moved, namedAnchor: afterS3 }));
+        expect(named.projection, JSON.stringify(moved)).toMatchObject({ gap: 2 });
+      }
+    });
+
+    it('does not hold again if the pointer comes back to where it was read', () => {
+      const away = advanceProjection(reseeded, held({ ...READ_AT, pointerY: 320 }));
+      const back = advanceProjection(away, held({ ...READ_AT, namedAnchor: afterS3 }));
+      expect(back.projection).toMatchObject({ gap: 2 });
+    });
+
+    it('says whether it holds, by the pointer it is asked about', () => {
+      expect(holdsReading(reseeded, { x: 400, y: 300 })).toBe(true);
+      expect(holdsReading(reseeded, { x: 400, y: 301 })).toBe(false);
+      expect(holdsReading(reseeded, null)).toBe(false);
+      expect(holdsReading(entered, { x: 400, y: 300 })).toBe(false);
+      expect(holdsReading(NO_PROJECTION, { x: 400, y: 300 })).toBe(false);
+    });
   });
 });
 

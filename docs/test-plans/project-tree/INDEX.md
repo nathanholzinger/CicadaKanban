@@ -17,4 +17,4 @@ Projects apply three pages of shared rules, which have no catalog of their own, 
 | [TREE-7 — An edit can change a project's parent](tree-7-editing-the-parent.md) | An edit that keeps the parent, and one that changes it |
 | [TREE-8 — A project always has a name](tree-8-a-projects-name.md) | A create's name, an edit that leaves the name out, and an empty, `null` or blank name |
 | [TREE-9 — Deleting a project deletes its subtree](tree-9-deleting-a-project.md) | What a delete removes, an item of another project left in a deleted workphase, and what a delete leaves alone |
-| [TREE-10 — Which workflow a project uses](tree-10-which-workflow.md) | A workflow given to a project, a move, a deleted workflow, and at most one workflow per project |
+| [TREE-10 — Which workflow a project uses](tree-10-which-workflow.md) | A workflow given to a project, a move, a deleted workflow, at most one workflow per project, and where a new workflow's workphases come from |

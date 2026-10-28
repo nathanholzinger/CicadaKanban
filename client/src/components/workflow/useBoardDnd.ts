@@ -96,6 +96,7 @@ import {
   NO_PROJECTION,
   advanceProjection,
   descendantsReleasePlacement,
+  holdsReading,
   modalHoldTarget,
   reseedProjection,
   sameProjection,
@@ -283,6 +284,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       originCardId: originCardIdRef.current,
       namedAnchor: namedAnchorRef.current,
       pointerX: pointerRef.current?.x ?? null,
+      pointerY: pointerRef.current?.y ?? null,
       getAttachedChildren: latest.current.getAttachedChildren,
       sectionLevels: levelsDrawnAt(pop.contextKey, modalCardId),
     });
@@ -639,7 +641,11 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // could show the cue a frame late, but never leaves it stale.
   function handleDragMove(event: DragMoveEvent) {
     if (isColumnData(event.active.data.current)) return;
-    namedAnchorRef.current = namedAnchorFor(event.active, event.over, sessionRef.current);
+    // While the modal's reading is held (`holdsReading`) no neighbor is stored, so that one named
+    // against rows still settling isn't left behind to be read once the pointer has moved.
+    namedAnchorRef.current = holdsReading(projectionRef.current, pointerRef.current)
+      ? null
+      : namedAnchorFor(event.active, event.over, sessionRef.current);
     evaluateRef.current();
   }
 
@@ -655,7 +661,11 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const pointer = pointerRef.current;
     const cardId = descendantsCardIdOf(current?.pop.contextKey ?? null);
     if (!current || !pointer || !cardId) return;
-    projectionRef.current = reseedProjection(projectionRef.current, { ...reading, pointerX: pointer.x });
+    projectionRef.current = reseedProjection(projectionRef.current, {
+      ...reading,
+      pointerX: pointer.x,
+      pointerY: pointer.y,
+    });
     namedAnchorRef.current = null;
     evaluatePop(cardId);
   }

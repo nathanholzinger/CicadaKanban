@@ -86,7 +86,12 @@ its own header.
   inside the window. It then reports what the cursor reads against its rows, the gap and the
   depth from the cursor's x against its own indents, which `useBoardDnd.ts::readModalPlacement`
   reseeds the projection with (`descendantsProjection.ts::reseedProjection`), so a modal that
-  fitted keeps the ghost's spot and a shifted one reads where the cursor is. The carried Stub
+  fitted keeps the ghost's spot and a shifted one reads where the cursor is. That reading is
+  held while the cursor is where it was read (`descendantsProjection.ts::holdsReading`): the
+  modal's layer swap re-clamps the carried copy with the cursor still, and the drag-move event
+  that follows names a neighbor against rows still sliding into place, so none named until the
+  cursor moves, along either axis, is taken (`useBoardDnd.ts::handleDragMove` stores none
+  either). The carried Stub
   shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**

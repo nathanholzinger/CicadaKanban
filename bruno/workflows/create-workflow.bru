@@ -23,7 +23,9 @@ docs {
 
   `templateId` (a template from List Workflow Templates) or `sourceWorkflowId`
   (another workflow) names where the new workflow's workphases are copied from.
-  Leave both out, or send `null`, for a workflow with no workphases. Both are
-  references: one that names no row is a 400, and so is an empty string, which
-  is what this request sends until `templateId` is set in the environment.
+  Leave both out, or send `null`, for a workflow with no workphases. They can't
+  be sent together: naming both is a 400 that creates nothing, and a field that
+  is `null` isn't named. Both are references: one that names no row is a 400,
+  and so is an empty string, which is what this request sends until
+  `templateId` is set in the environment.
 }
