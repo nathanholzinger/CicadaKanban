@@ -12,8 +12,8 @@ import { buildScopes } from './scopes.mts';
 
 // A throwaway repository with a range's worth of history: a base commit (tagged as an audit's
 // end), then commits that change code, comments and imports, move a block, split one out into
-// a new file, put one in a removed line's place, copy one, rename and delete files, format a
-// file, and move code that the range itself wrote.
+// a new file, put one in a removed line's place, copy one, rename and delete files, unwrap a
+// guard, format a file, and move code that the range itself wrote.
 
 const lines = (...parts: string[]): string => parts.join('\n') + '\n';
 
@@ -81,6 +81,8 @@ describe('a range scanned end to end', () => {
   let root: string;
   let scan: RangeScan;
   let baseSha: string;
+  let configDir: string;
+  let globalConfig: string | undefined;
 
   const git = (...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   const write = (rel: string, text: string): void => {
@@ -99,6 +101,13 @@ describe('a range scanned end to end', () => {
   };
 
   before(() => {
+    // The user's own global git config (colored diffs, an external diff tool) must not reach the
+    // repository or the script, so an empty one stands in for it.
+    configDir = mkdtempSync(path.join(tmpdir(), 'audit-scope-config-'));
+    writeFileSync(path.join(configDir, 'gitconfig'), '');
+    globalConfig = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = path.join(configDir, 'gitconfig');
+
     root = mkdtempSync(path.join(tmpdir(), 'audit-scope-'));
     git('init', '-q', '-b', 'main');
     for (const [key, value] of [
@@ -149,6 +158,22 @@ describe('a range scanned end to end', () => {
       ),
     );
     write(`${A}format.ts`, lines('export const label = "text";'));
+    write(
+      `${A}unguarded.ts`,
+      lines('export function run(exists: boolean): void {', '  if (!exists) {', '    doThing();', '  }', '}'),
+    );
+    write(
+      `${A}requoted.ts`,
+      lines(
+        'export function pick(flag: boolean): string {',
+        '  const label = "text";',
+        '  if (!flag) {',
+        '    return label;',
+        '  }',
+        '  return label;',
+        '}',
+      ),
+    );
     write('.git-blame-ignore-revs', lines('# formatting commits'));
     baseSha = commit('base');
     git('tag', 'story-audited');
@@ -194,10 +219,21 @@ describe('a range scanned end to end', () => {
       ),
     );
     write(`${A}fresh.ts`, lines('// Written in the range.', ...FRESH_WORK));
+    // A guard unwrapped: its body stays, one level out. And a guard removed from beside a line that
+    // the formatting commit below re-quotes.
+    write(`${A}unguarded.ts`, lines('export function run(exists: boolean): void {', '  doThing();', '}'));
+    write(
+      `${A}requoted.ts`,
+      lines('export function pick(flag: boolean): string {', '  const label = "text";', '  return label;', '}'),
+    );
     commit('range: changes');
 
     // A formatting commit, then the list that names it.
     write(`${A}format.ts`, lines("export const label = 'text';"));
+    write(
+      `${A}requoted.ts`,
+      lines('export function pick(flag: boolean): string {', "  const label = 'text';", '  return label;', '}'),
+    );
     const formatting = commit('range: formatting');
     write('.git-blame-ignore-revs', lines('# formatting commits', formatting));
     commit('range: ignore the formatting');
@@ -211,7 +247,12 @@ describe('a range scanned end to end', () => {
     scan = scanRange({ git: gitIn(root), root, base: baseSha, end: 'HEAD', config: DEFAULT_CONFIG });
   });
 
-  after(() => rmSync(root, { recursive: true, force: true }));
+  after(() => {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(configDir, { recursive: true, force: true });
+    if (globalConfig === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = globalConfig;
+  });
 
   it('counts the commits in the range', () => {
     assert.equal(scan.commits, 4);
@@ -323,6 +364,29 @@ describe('a range scanned end to end', () => {
     assert.deepEqual([renamed.changed, renamed.removalSites, renamed.moved.size], [[2], [3], 0]);
   });
 
+  it('lists where a guard was unwrapped, though the line left in its place only changed its indent', () => {
+    const unguarded = scanned(`${A}unguarded.ts`);
+    assert.deepEqual([unguarded.reading, unguarded.changed, unguarded.removalSites], ['all', [], [1]]);
+  });
+
+  it('lists where a guard was removed from beside a line that a formatting commit re-quoted', () => {
+    const requoted = scanned(`${A}requoted.ts`);
+    assert.deepEqual([requoted.reading, requoted.changed, requoted.removalSites], ['all', [], [1]]);
+  });
+
+  it("isn't misled by a git config that colors diffs or hands them to another program", () => {
+    const sitesOf = (found: RangeScan) => found.files.map(file => [file.path, file.removalSites]);
+    git('config', 'color.diff', 'always');
+    git('config', 'diff.external', 'echo');
+    try {
+      const again = scanRange({ git: gitIn(root), root, base: baseSha, end: 'HEAD', config: DEFAULT_CONFIG });
+      assert.deepEqual(sitesOf(again), sitesOf(scan));
+    } finally {
+      git('config', '--unset', 'color.diff');
+      git('config', '--unset', 'diff.external');
+    }
+  });
+
   it('builds scope files that put each file with the passes that read it', () => {
     const { scopes, unassigned } = buildScopes(scan, DEFAULT_CONFIG);
     const text = (name: string): string => scopes.find(scope => scope.name === name)?.text ?? '';
@@ -335,7 +399,12 @@ describe('a range scanned end to end', () => {
     assert.match(text('scope-correctness-S1.md'), /`server\/src\/kept\.ts` \(lines 5-6\)/);
     assert.doesNotMatch(text('scope-correctness-S1.md'), /receiver\.ts|split\.ts/);
     assert.match(text('scope-drift-S1.md'), /`server\/src\/receiver\.ts` \(lines 1(, 3)?\)/);
-    for (const scope of scopes) assert.doesNotMatch(scope.text, /Code moved here/, scope.name);
+    // No scope says where moved code came from: the line for the file it moved into doesn't name the file it left.
+    for (const scope of scopes) {
+      for (const line of scope.text.split('\n').filter(entry => entry.includes('server/src/receiver.ts'))) {
+        assert.doesNotMatch(line, /moved\.ts/, scope.name);
+      }
+    }
 
     const responsibility = text('scope-fileresp-server.md');
     assert.match(responsibility, /Read these files whole/);
@@ -350,6 +419,37 @@ describe('a range scanned end to end', () => {
     assert.match(run.stdout, /story-audited\.\.HEAD: 4 commits, \d+ files to read, \d+ moved lines left out/);
     assert.ok(readdirSync(out).includes('scope-correctness-S1.md'));
     assert.match(readFileSync(path.join(out, 'scope-drift-S1.md'), 'utf8'), /comments\.ts/);
+  });
+
+  it('clears the last run’s scope files from the folder before writing, and leaves the other files', () => {
+    const out = path.join(root, 'scope-out-rerun');
+    mkdirSync(out);
+    writeFileSync(path.join(out, 'config.json'), '{}');
+    const main = path.join(import.meta.dirname, 'main.mts');
+    const first = spawnSync(process.execPath, [main, '--repo', root, '--out', out], { encoding: 'utf8' });
+    assert.equal(first.status, 0, first.stderr);
+    assert.ok(readdirSync(out).includes('scope-correctness-S1.md'));
+
+    // A range with nothing in it writes no scope file, so none of the first run's may stay.
+    const second = spawnSync(process.execPath, [main, '--repo', root, '--base', 'HEAD', '--out', out], {
+      encoding: 'utf8',
+    });
+    assert.equal(second.status, 0, second.stderr);
+    assert.deepEqual(readdirSync(out), ['config.json']);
+  });
+
+  it('prints git’s own message when it cannot find the base, after saying what it guessed', () => {
+    const main = path.join(import.meta.dirname, 'main.mts');
+    const run = spawnSync(
+      process.execPath,
+      [main, '--repo', root, '--end', 'typo-ref', '--out', path.join(root, 'o4')],
+      {
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(run.status, 2);
+    assert.match(run.stderr, /audit-scope: no tag ending an audit \(\*-audited\) is reachable; give --base/);
+    assert.match(run.stderr, /typo-ref/);
   });
 
   it('exits 1, naming the file, when no instance of a pass takes a file that pass reads', () => {
@@ -376,5 +476,20 @@ describe('a range scanned end to end', () => {
     );
     assert.equal(run.status, 2);
     assert.match(run.stderr, /bad\.json: unknown config key instance/);
+  });
+
+  it('exits 2, not with a stack trace, for a config whose group pattern is not a regular expression', () => {
+    const config = path.join(root, 'bad-pattern.json');
+    writeFileSync(config, JSON.stringify({ groups: [{ name: 'all', pattern: '(' }] }));
+    const main = path.join(import.meta.dirname, 'main.mts');
+    const run = spawnSync(
+      process.execPath,
+      [main, '--repo', root, '--config', config, '--out', path.join(root, 'o5')],
+      {
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(run.status, 2);
+    assert.match(run.stderr, /bad-pattern\.json: group all: .*regular expression/);
   });
 });

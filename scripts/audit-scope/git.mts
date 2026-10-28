@@ -17,11 +17,16 @@ export function gitIn(cwd: string): Git {
     });
 }
 
-/** A file's text at a revision; null when the revision has no such file. */
+/**
+ * A file's text at a revision; null when the revision has no such file. Any other failure
+ * throws, with git's message: a revision git can't read is not a file that isn't there.
+ */
 export function showAt(git: Git, rev: string, file: string): string | null {
   try {
     return git(['show', `${rev}:${file}`]);
-  } catch {
-    return null;
+  } catch (error) {
+    // The tree answers for the path alone: no entry means no file, and it fails itself on a bad revision.
+    if (git(['ls-tree', '--name-only', rev, '--', file]).trim() === '') return null;
+    throw error;
   }
 }

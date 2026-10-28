@@ -1,8 +1,21 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isScriptFile, lineKinds, strippedCode } from './lineKinds.mts';
+import { isScriptFile, lineKinds, splitLines, strippedCode } from './lineKinds.mts';
 
 const lines = (...parts: string[]): string => parts.join('\n') + '\n';
+
+describe('splitLines', () => {
+  it('drops the carriage return of each line, and ends with the empty line after the last break', () => {
+    assert.deepEqual(splitLines('a\r\nb\n'), ['a', 'b', '']);
+  });
+
+  it('numbers the lines as lineKinds does, for a script and for any other file', () => {
+    const text = 'const a = 1;\r\n\r\n// note\r\nconst b = 2;\n';
+    for (const file of ['a.ts', 'a.json', 'a.md']) {
+      assert.equal(lineKinds(file, text).length, splitLines(text).length, file);
+    }
+  });
+});
 
 describe('lineKinds', () => {
   it('sorts the lines of a script into blank, comment, title, import and code', () => {

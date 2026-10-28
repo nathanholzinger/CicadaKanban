@@ -7,9 +7,9 @@ import path from 'node:path';
 import { traceFile, type BlameRange } from './blame.mts';
 import { readingOf, readWholeReason, type Reading } from './classify.mts';
 import { groupOf, type ScopeConfig } from './config.mts';
-import { parseHunks, parseNameStatus, removalSites, touchedLines, type Hunk, type PathChange } from './diff.mts';
+import { parseHunks, parseNameStatus, removalSites, type PathChange } from './diff.mts';
 import { showAt, type Git } from './git.mts';
-import { isFiller, lineKinds } from './lineKinds.mts';
+import { isFiller, lineKinds, splitLines } from './lineKinds.mts';
 import { settleMoves } from './moves.mts';
 
 /** What a run audits: code, tests and config, not the docs. */
@@ -66,7 +66,9 @@ export interface ScanOptions {
   config: ScopeConfig;
 }
 
-const splitLines = (text: string): string[] => text.split('\n').map(line => line.replace(/\r$/, ''));
+// Every diff runs without the user's color setting or external diff tool, which would change the
+// output the hunks are read from.
+const DIFF = ['diff', '--no-color', '--no-ext-diff'];
 
 export function scanRange({ git, root, base, end, config }: ScanOptions): RangeScan {
   const inRange = new Set(
@@ -82,7 +84,7 @@ export function scanRange({ git, root, base, end, config }: ScanOptions): RangeS
     ignoreRevs: existsSync(path.join(root, '.git-blame-ignore-revs')),
   };
   const changes = parseNameStatus(
-    git(['diff', '--name-status', '-z', '-M', `${base}..${end}`, '--', ...INCLUDE]),
+    git([...DIFF, '--name-status', '-z', '-M', `${base}..${end}`, '--', ...INCLUDE]),
   ).filter(change => !isLockfile(change.path));
   const groupFor = groupOf(config.groups);
   const marked = new Set(config.readWhole);
@@ -131,8 +133,6 @@ interface FileContext {
   sourceLines: (origin: string) => string[] | null;
 }
 
-const isBlank = (line: string | undefined): boolean => (line ?? '').trim() === '';
-
 /** One file's scope. Its reading is `none` when nothing in it is left to read. */
 function scanFile(change: PathChange, ctx: FileContext): FileScope {
   const { git, base, end } = ctx;
@@ -140,7 +140,7 @@ function scanFile(change: PathChange, ctx: FileContext): FileScope {
   const ownPaths = change.oldPath === null ? [change.path] : [change.path, change.oldPath];
   const newText = showAt(git, end, change.path) ?? '';
   const oldText = isNew ? null : showAt(git, base, change.oldPath ?? change.path);
-  const hunks = isNew ? [] : parseHunks(git(['diff', '-U0', '-M', `${base}..${end}`, '--', ...ownPaths]));
+  const hunks = isNew ? [] : parseHunks(git([...DIFF, '-U0', '-M', `${base}..${end}`, '--', ...ownPaths]));
 
   const newLines = splitLines(newText);
   const oldLines = oldText === null ? [] : splitLines(oldText);
@@ -151,17 +151,9 @@ function scanFile(change: PathChange, ctx: FileContext): FileScope {
   );
   const movedLines = new Set([...moved.values()].flat());
 
-  // Removed lines whose place only moved code took, blank lines aside: no list names that
-  // code, so the removal is a site of its own.
-  const onlyMovedIn = (hunk: Hunk): boolean => {
-    const { removed, added } = touchedLines([hunk]);
-    return (
-      removed.some(line => !isBlank(oldLines[line - 1])) &&
-      added.some(line => movedLines.has(line)) &&
-      added.every(line => movedLines.has(line) || isBlank(newLines[line - 1]))
-    );
-  };
-  const sites = removalSites(hunks, onlyMovedIn);
+  // Removed code whose place took nothing a scope lists: no list names what stands there now,
+  // so the removal is a site of its own.
+  const sites = removalSites(hunks, { oldLines, newLines, changed: new Set(changed) });
 
   const facts = {
     path: change.path,

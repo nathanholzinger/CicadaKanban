@@ -1,12 +1,17 @@
 // Sorts a file's lines into blank, comment, test title, import and code, and strips a file
 // down to its code. The checker's parse finds the comments and test titles
 // (`extractCode`), and the same TypeScript parse gives the import declarations, multi-line
-// ones included, which a regex can't tell from the code around them.
+// ones included, which a regex can't tell from the code around them. `splitLines` is the one
+// split of a text into lines, so a line's number means the same to the kinds and to the scan
+// that pairs them with blame's.
 
 import ts from 'typescript';
 import { extractCode, scriptKindOf } from '../check-docs/extract.mts';
 
 export type LineKind = 'blank' | 'comment' | 'title' | 'import' | 'code';
+
+/** A text's lines, the carriage return at the end of each dropped. The first line is at index 0. */
+export const splitLines = (text: string): string[] => text.split('\n').map(line => line.replace(/\r$/, ''));
 
 /** A line that doesn't say whether code moved: blank, a comment or a test title. */
 export const isFiller = (kind: LineKind | undefined): boolean =>
@@ -26,7 +31,7 @@ interface Covered {
 }
 
 function cover(fileName: string, text: string): Covered {
-  const lines = text.split('\n').map(line => line.replace(/\r$/, ''));
+  const lines = splitLines(text);
   const comments = lines.map((): Span[] => []);
   const titles = lines.map((): Span[] => []);
   const { segments, markers } = extractCode(fileName, text);
@@ -78,7 +83,7 @@ function importLines(fileName: string, text: string): Set<number> {
 export function lineKinds(fileName: string, text: string): LineKind[] {
   if (!isScriptFile(fileName)) {
     const kind = fileName.endsWith('.md') ? 'comment' : 'code';
-    return text.split('\n').map(line => (line.trim() === '' ? 'blank' : kind));
+    return splitLines(text).map(line => (line.trim() === '' ? 'blank' : kind));
   }
   const { lines, comments, titles } = cover(fileName, text);
   const imports = importLines(fileName, text);

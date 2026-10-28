@@ -1,11 +1,12 @@
 // `npm run audit:scope -- --out <dir> [--base <ref>] [--end <ref>] [--config <file>] [--repo <dir>]`:
-// builds an audit's scope files, one per pass instance, into <dir>. The range runs from the
+// builds an audit's scope files, one per pass instance, into <dir>, clearing the `scope-*.md`
+// files an earlier run left there first and leaving any other file. The range runs from the
 // base, by default the newest tag that ends an audit (`*-audited`), to the end, by default
 // HEAD. The config (JSON) can replace the area groups, the instances each pass runs as, and
 // the files marked read whole; see config.mts. Exits 1 when a file a pass should read falls in
 // no instance of it, or 2 on a usage error.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from './args.mts';
 import { DEFAULT_CONFIG, parseConfig } from './config.mts';
@@ -35,8 +36,10 @@ let base = args.base;
 if (base === null) {
   try {
     base = git(['describe', '--tags', '--match', '*-audited', '--abbrev=0', args.end]).trim();
-  } catch {
+  } catch (error) {
+    // The guess may be wrong (a mistyped --end, a shallow clone, no git), so git's own words follow it.
     console.error('audit-scope: no tag ending an audit (*-audited) is reachable; give --base');
+    console.error(`audit-scope: git said: ${error instanceof Error ? error.message.trim() : String(error)}`);
     process.exit(2);
   }
 }
@@ -48,8 +51,11 @@ if (args.end === 'HEAD' && git(['status', '--porcelain', '--untracked-files=no',
 const scan = scanRange({ git, root, base, end: args.end, config });
 const { scopes, empty, unassigned } = buildScopes(scan, config);
 
+// The last run's scope files go first: an instance that comes out empty this time writes none,
+// and an old one left beside the new would be read as this run's.
 const out = path.resolve(args.out);
 mkdirSync(out, { recursive: true });
+for (const name of readdirSync(out)) if (/^scope-.*\.md$/.test(name)) rmSync(path.join(out, name));
 for (const scope of scopes) writeFileSync(path.join(out, scope.name), scope.text, { encoding: 'utf8' });
 
 console.log(

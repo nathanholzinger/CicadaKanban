@@ -92,7 +92,7 @@ describe('buildScopes', () => {
 
   it('names a scope file for a pass and an instance, and holds its group', () => {
     assert.deepEqual(pathsIn('scope-correctness-S1.md'), ['server/src/a.ts', 'server/src/d.ts']);
-    assert.deepEqual(pathsIn('scope-correctness-E2E-T.md'), ['tests/x.spec.ts']);
+    assert.deepEqual(pathsIn('scope-correctness-E2E.md'), ['tests/x.spec.ts']);
     assert.deepEqual(pathsIn('scope-duplication-server.md'), ['server/src/a.ts', 'server/src/d.ts']);
   });
 
@@ -108,8 +108,8 @@ describe('buildScopes', () => {
 
   it('gives the file-responsibility pass only the files marked read whole', () => {
     assert.deepEqual(pathsIn('scope-fileresp-server.md'), ['server/src/a.ts']);
-    assert.equal(scopeOf('scope-fileresp-E2E-T.md'), undefined);
-    assert.ok(built.empty.some(item => item.pass === 'fileresp' && item.instance === 'E2E-T'));
+    assert.equal(scopeOf('scope-fileresp-E2E.md'), undefined);
+    assert.ok(built.empty.some(item => item.pass === 'fileresp' && item.instance === 'E2E'));
   });
 
   it('gives the drift pass the deleted and renamed paths, by the group of each', () => {

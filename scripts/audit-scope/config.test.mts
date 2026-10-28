@@ -1,9 +1,19 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'node:test';
-import { DEFAULT_CONFIG, groupOf, parseConfig, specTakes } from './config.mts';
+import { BOARD_COMPONENTS, DEFAULT_CONFIG, PASSES, groupOf, parseConfig, parseSpec, specTakes } from './config.mts';
 
 describe('the default groups', () => {
   const groupFor = groupOf(DEFAULT_CONFIG.groups);
+
+  it('name only board components that exist', () => {
+    const components = path.join(import.meta.dirname, '../../client/src/components');
+    for (const name of BOARD_COMPONENTS) {
+      const found = ['.tsx', '.ts'].some(extension => existsSync(path.join(components, `${name}${extension}`)));
+      assert.ok(found, `${name} names no file in client/src/components/`);
+    }
+  });
 
   it('sort the repository into the seven area groups', () => {
     const expected: [string, string][] = [
@@ -15,8 +25,11 @@ describe('the default groups', () => {
       ['client/src/components/workflow/dragStructure.ts', 'C1'],
       ['client/src/components/workflow/CLAUDE.md', 'C1'],
       ['client/src/components/KanbanCard.tsx', 'C1'],
+      ['client/src/components/HierarchyModal.tsx', 'C1'],
+      ['client/src/components/ModalShell.tsx', 'C1'],
       ['client/src/components/workflow/dragStructure.test.ts', 'C1t'],
       ['client/src/components/KanbanCard.test.tsx', 'C1t'],
+      ['client/src/components/HierarchyModal.test.tsx', 'C1t'],
       ['client/src/test/itemFixture.ts', 'C1t'],
       ['client/src/components/ItemDetailPanel.tsx', 'C2'],
       ['client/src/lib/hierarchy.test.ts', 'C2'],
@@ -27,6 +40,34 @@ describe('the default groups', () => {
       ['server/package.json', 'T'],
     ];
     for (const [file, group] of expected) assert.equal(groupFor(file), group, file);
+  });
+});
+
+describe('the default instances', () => {
+  it('give E2E and T an instance each in every pass, where together they came to more than one instance can read', () => {
+    for (const pass of PASSES) {
+      const instances = Object.entries(DEFAULT_CONFIG.instances[pass]);
+      for (const group of ['E2E', 'T']) {
+        const reading = instances.filter(([, specs]) => specs.some(spec => parseSpec(spec).group === group));
+        assert.deepEqual(
+          reading.map(([, specs]) => specs),
+          [[group]],
+          `${pass} reads ${group}`,
+        );
+      }
+    }
+  });
+});
+
+describe('parseSpec', () => {
+  it('reads a group, with a kind that takes only its source files or its test files', () => {
+    assert.deepEqual(parseSpec('C2'), { group: 'C2', kind: null });
+    assert.deepEqual(parseSpec('C2:src'), { group: 'C2', kind: 'src' });
+    assert.deepEqual(parseSpec('C2:test'), { group: 'C2', kind: 'test' });
+  });
+
+  it('refuses a kind it does not know, which would otherwise take the whole group', () => {
+    for (const spec of ['C2:tests', 'C2:', 'C2:src:test']) assert.throws(() => parseSpec(spec), /src or test/, spec);
   });
 });
 
@@ -70,5 +111,29 @@ describe('parseConfig', () => {
     const instances = { correctness: { a: ['nowhere'] }, drift: {}, duplication: {}, fileresp: {} };
     assert.throws(() => parseConfig(JSON.stringify({ instances })), /correctness instance a reads "nowhere"/);
     assert.throws(() => parseConfig('[]'), /must be a JSON object/);
+  });
+
+  it('rejects an instance whose spec has a kind it does not know', () => {
+    const instances = { correctness: { a: ['C2:tests'] }, drift: {}, duplication: {}, fileresp: {} };
+    assert.throws(() => parseConfig(JSON.stringify({ instances })), /correctness instance a: .*src or test/);
+  });
+
+  it('rejects a value of the wrong shape, naming the key', () => {
+    const wrong: [unknown, RegExp][] = [
+      [{ readWhole: 'server/src/a.ts' }, /readWhole must be a list of file paths/],
+      [{ readWhole: [1] }, /readWhole must be a list of file paths/],
+      [{ groups: 'S1' }, /groups must be a list of/],
+      [{ groups: [{ name: 'S1' }] }, /groups must be a list of/],
+      [{ groups: [{ name: 'S1', pattern: 5 }] }, /groups must be a list of/],
+      [{ instances: [] }, /instances must be an object/],
+      [{ instances: { correctness: [] } }, /instances\.correctness must map each instance/],
+      [{ instances: { correctness: { a: 'S1' } } }, /instances\.correctness\.a must be a list of group names/],
+    ];
+    for (const [config, message] of wrong) assert.throws(() => parseConfig(JSON.stringify(config)), message);
+  });
+
+  it('rejects a group pattern that is not a regular expression, naming the group', () => {
+    const groups = [{ name: 'odd', pattern: '(' }];
+    assert.throws(() => parseConfig(JSON.stringify({ groups })), /group odd: .*regular expression/);
   });
 });

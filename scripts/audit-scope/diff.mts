@@ -50,20 +50,39 @@ export function parseHunks(diff: string): Hunk[] {
   }));
 }
 
-/**
- * Where lines were removed with nothing new in their place, at the line just above each
- * removal, as the file stands now: the hunks with no new side, whose start is that line, and
- * those `onlyMovedIn` says put nothing but moved code in the removed lines' place, which no
- * scope lists.
- */
-export function removalSites(hunks: readonly Hunk[], onlyMovedIn: (hunk: Hunk) => boolean = () => false): number[] {
-  return hunks.flatMap(hunk => {
-    if (hunk.newCount === 0) return [hunk.newStart];
-    return hunk.oldCount > 0 && onlyMovedIn(hunk) ? [hunk.newStart - 1] : [];
-  });
+const span = (start: number, count: number): number[] => Array.from({ length: count }, (_, i) => start + i);
+
+const isBlank = (line: string | undefined): boolean => (line ?? '').trim() === '';
+
+// What formatting changes in a line's text: its whitespace, quote style, parentheses, commas and
+// semicolons. Two texts that fold to the same string differ only in how they are written.
+const foldFormatting = (text: string): string => text.replace(/[\s"'(),;]/g, '');
+
+export interface SiteContext {
+  /** The file at the base and at the end, one entry per line, the first at index 0. */
+  oldLines: readonly string[];
+  newLines: readonly string[];
+  /** The lines (numbered at the end) that a scope lists as changed, moved code left out. */
+  changed: ReadonlySet<number>;
 }
 
-const span = (start: number, count: number): number[] => Array.from({ length: count }, (_, i) => start + i);
+/**
+ * Where code was removed and nothing a scope lists was written in its place, at the line just
+ * above each removal, as the file stands now. A hunk is one when it removes a line that isn't
+ * blank and none of the lines it adds is changed: it adds nothing, or only moved code, or lines
+ * that blame, which ignores whitespace and the formatting commits, puts before the range. A
+ * hunk that only re-writes its lines (the same text, formatted another way) removes nothing.
+ */
+export function removalSites(hunks: readonly Hunk[], { oldLines, newLines, changed }: SiteContext): number[] {
+  return hunks.flatMap(hunk => {
+    const { removed, added } = touchedLines([hunk]);
+    const removedText = removed.map(line => oldLines[line - 1] ?? '');
+    if (removedText.every(isBlank) || added.some(line => changed.has(line))) return [];
+    const addedText = added.map(line => newLines[line - 1] ?? '');
+    if (added.length > 0 && foldFormatting(removedText.join('')) === foldFormatting(addedText.join(''))) return [];
+    return [hunk.newCount === 0 ? hunk.newStart : hunk.newStart - 1];
+  });
+}
 
 /** The lines a diff touches: those it removes, numbered in the old file, and those it adds, in the new. */
 export function touchedLines(hunks: readonly Hunk[]): { removed: number[]; added: number[] } {
