@@ -1,4 +1,4 @@
-import type { APIRequestContext, Locator, Page, Route } from '@playwright/test';
+import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
@@ -22,6 +22,7 @@ import {
   gapBetween,
   awaitDragState,
   awaitDragContext,
+  delayMoveResponses,
   seedDragTuning,
   awaitPoppedOut,
   NO_POP,
@@ -735,19 +736,6 @@ test.describe('Card → column drop bands', () => {
 });
 
 test.describe('ordinal preview and reconciliation', () => {
-  // Holds every move response for `ms` — the request still reaches the
-  // server immediately, so the server's order of operations is the real one
-  // and only the *client's* view of it is delayed.
-  async function delayMoveResponses(page: Page, ms: (n: number) => number) {
-    let n = 0;
-    await page.route('**/api/items/*/move', async (route: Route) => {
-      const wait = ms(n++);
-      const response = await route.fetch();
-      await new Promise(r => setTimeout(r, wait));
-      await route.fulfill({ response });
-    });
-  }
-
   test('DRAG-6.1, DRAG-6.2: the drop is drawn at its slot and marked pending until the response lands, then settles unchanged', async ({
     page,
     request,

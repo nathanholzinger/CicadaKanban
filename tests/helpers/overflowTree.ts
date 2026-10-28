@@ -1,9 +1,9 @@
-import type { APIRequestContext, Page } from '@playwright/test';
+import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
 import { awaitDragContext, hoverTo, pickUp, type Point } from './dragGesture';
 import { itemRow } from './boardLocators';
 import { DRAG_REGION_ATTR, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
-import { DESCENDANTS_INDENT_PX } from '../../client/src/components/cardMetrics';
+import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 
 // The tree of the overflow-row and hierarchy-modal cases, with the section at its default of
 // three levels. Card `P` in Todo holds A, then B, then X. A holds Q, which holds R and T; R holds
@@ -54,6 +54,57 @@ export async function holdAt(
   await aim(depth);
   await aim(depth);
   return Object.assign(aim, { at: () => last });
+}
+
+// Where a release would put the ghost in the hierarchy modal, read off what the modal paints:
+// the ghost's row at its indent among the other rows, as the user sees them. `parentId` is null
+// when the ghost sits at the first level, under the Card itself, and `prevId` and `nextId` are the
+// siblings the ghost lies between under that parent (null at either end). A spec compares this
+// with what the release wrote, so it holds the ghost's place on screen to the committed one.
+export async function placementShown(modal: Locator, ghostId: string) {
+  const rows = await modal.locator('[data-item-id]').evaluateAll(
+    (els, indent) =>
+      els
+        .map(el => ({
+          id: el.getAttribute('data-item-id') as string,
+          y: el.getBoundingClientRect().y,
+          depth: Math.round((parseFloat(getComputedStyle(el).paddingLeft) - indent.base) / indent.step),
+        }))
+        .sort((a, b) => a.y - b.y),
+    { base: descendantsIndentPx(0), step: DESCENDANTS_INDENT_PX },
+  );
+  const at = rows.findIndex(row => row.id === ghostId);
+  if (at < 0) throw new Error(`the ghost ${ghostId} has no row in the modal`);
+  const { depth } = rows[at];
+  const above = rows.slice(0, at).reverse();
+  const below = rows.slice(at + 1);
+
+  // The nearest row above at the level of the ghost's parent is its parent. Rows above it at the
+  // ghost's own level, before that parent, are siblings, the nearest being the one before it.
+  const parentAt = above.findIndex(row => row.depth === depth - 1);
+  const siblingsAbove = above.slice(0, parentAt < 0 ? above.length : parentAt).filter(row => row.depth === depth);
+  const untilParentEnds = below.findIndex(row => row.depth < depth);
+  const siblingsBelow = below.slice(0, untilParentEnds < 0 ? below.length : untilParentEnds);
+  return {
+    parentId: depth === 0 ? null : (above[parentAt]?.id ?? null),
+    prevId: siblingsAbove[0]?.id ?? null,
+    nextId: siblingsBelow.find(row => row.depth === depth)?.id ?? null,
+  };
+}
+
+// The row the live drop line is drawn on right now, as an item's id or `overflow:<owner id>`, and
+// the side of it; null with no line. The line is drawn on the row the side highlight names.
+export async function dropLineOn(page: Page): Promise<{ row: string; side: string } | null> {
+  const lines = await page.locator('[data-drop-side]').evaluateAll(els =>
+    els.map(el => {
+      const row = el.closest('[data-item-id], [data-overflow-row]');
+      return {
+        row: row?.getAttribute('data-item-id') ?? `overflow:${row?.getAttribute('data-overflow-row')}`,
+        side: el.getAttribute('data-drop-side') as string,
+      };
+    }),
+  );
+  return lines[0] ?? null;
 }
 
 // The ids of what P's section draws, in order: an item's id, or `overflow:<owner id>`.

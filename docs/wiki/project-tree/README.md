@@ -254,6 +254,14 @@ Example: `P` owns `W1`, and has a child `C`, whose child `D` owns `W2`.
 `C` uses `W1`, and `D` and its descendants use `W2`. A workflow given to
 `C` makes `C` use it, and leaves `D` as it is.
 
+**A workflow create may name where its workphases come from:** a
+template, by `templateId`, or another workflow, by `sourceWorkflowId`.
+The new workflow starts with a copy of that one's workphases. Leaving
+both out makes a workflow with no workphases. Both fields are
+references ([`../row-references/`](../row-references/) §1), so one that
+names no template, or no workflow, is refused with a 400, and nothing is
+created.
+
 **What changes the workflow a project uses:**
 - a move (§6), when the project has no workflow of its own, and its new
   nearest ancestor with one uses a different one;

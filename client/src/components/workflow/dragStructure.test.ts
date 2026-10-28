@@ -235,7 +235,7 @@ describe('resolveDragStructure / measureRegions', () => {
 
   // The modal's list is the region and its dialog the bounds: the header above the list is no
   // region of its own, but a cursor over it is still in the modal.
-  it('DRAG-7.16: a section element inside a marked dialog gets that dialog’s box as its boundsRect', () => {
+  it('DRAG-7.10: a section element inside a marked dialog gets that dialog’s box as its boundsRect', () => {
     const key = descendantsRegionKey('card-p');
     const list = regionEl(key, rect(520, 100, 200, 300));
     list.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));

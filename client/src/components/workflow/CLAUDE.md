@@ -248,7 +248,9 @@ active-context outline, the drop line's shape).
   counted among all the section's rows, present only while locked at a `descendants:`
   context). Cards/Stubs carry `data-item-id` and
   `data-drop-state`, `data-pending` while their write is in flight, and
-  `data-placement-valid` on the active row while over cap. An overflow row carries
+  `data-placement-valid` on the active row while over cap. The live drop line is drawn on
+  the row the side highlight names, an overflow row included, and carries `data-drop-side`
+  (`before`/`after`). An overflow row carries
   `data-overflow-row` (its owner's id) and no `data-item-id`. The hierarchy modal is a
   `role=dialog` named `Hierarchy of <title>`, whose rows carry `data-item-id` (the section's
   rows under it draw with none). The carried copy carries

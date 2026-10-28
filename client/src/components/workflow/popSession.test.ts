@@ -150,7 +150,7 @@ describe('locked', () => {
     });
   });
 
-  it('DRAG-7.16: a Descendants region with a boundsRect is still inside over that box, the hierarchy modal’s header above its list', () => {
+  it('DRAG-7.10: a Descendants region with a boundsRect is still inside over that box, the hierarchy modal’s header above its list', () => {
     const list = descendantsRegion('card-m', rect(0, 100, 200, 300), { boundsRect: rect(0, 0, 200, 400) });
     const inHeader = { x: 100, y: 40 };
     expect(step(startPopSession(list.key), inHeader, 0, [list])).toEqual(startPopSession(list.key));
@@ -490,9 +490,12 @@ describe('the hierarchy modal hold', () => {
     expect(away.outsideSince).toBe(10);
   });
 
-  it('a layer change clears it', () => {
-    const away = step(hold(), aboveSection, 10, [A, P, descendantsP]);
-    const popped = step(away, aboveSection, 10 + OUT, [A, P, descendantsP]);
+  // Resting outside already ends the hold, so a pop with one running can't come through `step`:
+  // the session is built with a hold and an outside clock that has run out.
+  it('a pop out of the section starts a fresh session, with no hold carried over', () => {
+    const running = { ...hold(), outsideSince: 0 };
+    expect(running.modalHold).not.toBeNull();
+    const popped = step(running, aboveSection, OUT, [A, P, descendantsP]);
     expect(popped.contextKey).toBe(P.key);
     expect(popped.modalHold).toBeNull();
   });

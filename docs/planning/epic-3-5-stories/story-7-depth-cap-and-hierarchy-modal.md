@@ -286,6 +286,54 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - **DRAG-7.23:** a reload leaves the modal open while its Card has attached descendants, and after a reload a modal a hold opened is centered, as one opened by a click is. The centering is Planned: it's audit finding #2's fix.
   - **DRAG-7.21 and DRAG-7.22,** and Phases 2–5's behavior decisions in the handoff, taken as built. DRAG-7.22 covers the overflow row's count. The row's indent belongs to the Card, as beside a Stub row (audit #46).
   - **The wiki:** the handoff's built passages lose their markers, and the rulings go in. The sections are listed in the handoff (Wiki sections added, changed, moved or removed).
+- **2026-10-28, the proposing reconciliation's test follow-ups, first stop (Coder).** `docs/audits/test-reconciliation-epic-3-5-story-7.md` ran before the audit's Fix Now batches, so that tests which are missing or can't fail get fixed first and then guard the fixes. The Coder's part of it is in three stops: this one makes the tests that exist sound and puts case IDs on them; the next writes the specs the Open cases still lack; the Fix Now batches follow, each with its guard test (the report's "Regression guards").
+  - **Stamps (surface tests, so no approval):**
+    - DRAG-7.2 on the DRAG-7.6 spec that reads "1 child" while `R1` is dragged;
+    - DRAG-7.10 on the spec that pulls out of a hold-opened modal;
+    - DRAG-7.6 and DRAG-7.11 on the pop-out spec, which now also watches writes;
+    - DRAG-7.19 on the specs that release in the modal, or cancel in it, and check its box;
+    - DRAG-7.21 and DRAG-7.22, now that the PO has ruled them.
+    - DRAG-7.14 stays on the spec for the hold ending when the cursor rests outside the section: the Test Planner folded it into the case as its third reset.
+  - **Specs that couldn't fail, now able to:**
+    - **DRAG-7.11 (audit #6):** the carried copy is measured where it is painted. The ghost is checked to stay in the dragged row's own gap while the cursor rests behind the backdrop, at the height of that row.
+    - **DRAG-7.16, bottom edge (audit #7, and the report's item C):** the spec reads the parent and siblings the painted ghost lies between, waits on the move's response, and holds what was written to them. It was "not R's first child"; a release that always wrote the Card as the parent now fails it.
+    - **DRAG-7.14, within the gap (item M):** each read is taken once, a few frames after the move, with a dwell of 1.5 s. The old read retried, so by the Reconciler's reading (item M) a hold that started over reached the cue again inside the wait and passed. A cue that restarts on every sample fails the new one.
+    - **DRAG-7.21:** the old spec's "no modal" check was `toHaveCount(0)`, which passes at once, so it never waited out the hold. It waits for the whole hold and more, from both gaps, and checks that the level where the item fits starts none either. Without the validity check on the hold, it fails.
+    - **DRAG-7.19:** the pending mark is held and read in the modal; the modal's box is checked after a release, a release that writes nothing, a cancel, and a release in a hold-opened modal.
+    - **DRAG-7.9:** the released item's workphase and `isAttached` are read.
+    - **DRAG-1.34:** the next hold takes the changed cue, as well as the dwell.
+    - **DRAG-7.22:** a click on the count opens the modal and not the Sheet; the press goes through `pickUp` and `hoverTo`, not a hand-rolled drag (audit #26).
+  - **Unit and server tests (items A, B and audit #8, #11, #22):** the hold-clearing test builds a session with a running hold and an expired outside clock, since resting outside already ends the hold; it fails when a pop carries the hold over. The cycle test reads the exact depths the server's walk gives. TC-2.8's setup creates are checked, and its done-anchor test asserts the message and the unchanged row. Two tests that carried DRAG-7.16 are retitled DRAG-7.10. A comment on the sidebar's depth is corrected.
+  - **Smaller fixes from the audit:** #20 (a comment), #21 (a title), #37 and #38 (reads that didn't wait, and a write check that didn't watch writes).
+  - **Helpers:** `delayMoveResponses` moved from the DRAG-6 spec to `dragGesture.ts`, and `placementShown` joins `overflowTree.ts`.
+  - **Where the report's proposals went differently:** the test of a layer change clearing the hold was rebuilt, not deleted. A pickup's own 10px nudge reads as depth 4 for the dragged row, not its own 3, so the DRAG-7.11 spec asserts the gap and leaves the depth out.
+  - **Mutation checks, each shown failing and then restored:** the carried copy's horizontal clamp removed (DRAG-7.11); a cue that restarts on every sample (DRAG-7.14); the hold ignoring the over-cap state (DRAG-7.21); a release always writing the Card as the parent (DRAG-7.16); a pop that carries the hold over (the unit test); a refused setup create (TC-2.8). Not shown failing, no mutation tried: the pending mark and the modal's box after a release, a no-op release and a cancel (DRAG-7.19), the cue (DRAG-1.34), and the workphase and `isAttached` read (DRAG-7.9).
+  - **Checks:** `npm run check` passes. The full `npm run test:e2e` passes with 207 and 8 skipped.
+- **2026-10-28, the proposing reconciliation's test follow-ups, second stop (Coder).** The specs the Open cases still lacked, in the same commit as the first stop.
+  - **New specs, by case:**
+    - **DRAG-7.2:** with `R`'s only attached child dragged, `R` has no overflow row (the modal, pulled out and zoomed back in).
+    - **DRAG-7.4:** the tree without `T`, so `B` is Bottom: the states run from the first level to the hidden children's level, and a release at the second level makes the item `A`'s child.
+    - **DRAG-7.6:** `R`, whose slot the section shows, comes back in its own slot, and a release there writes nothing.
+    - **DRAG-7.10:** a brief excursion out of the modal leaves the drag in it; two stays outside, each shorter than the pop-out delay and together longer, with a return between.
+    - **DRAG-7.12:** the classification on the rows of a modal a hold opened, `R1a` Depth-capped and dimmer than `R`.
+    - **DRAG-7.16, top edge:** the modal is pulled down to the margin by a list that fills the window, its list scrolls to bring the spot back under the cursor, and the release commits what the ghost showed.
+    - **DRAG-7.17, the gap above the row:** with a long run of hidden rows before `R`, so `R`'s first child lies far down the list.
+    - **DRAG-7.23:** a failed release in the modal, and a reload that lands mid-drag in it. The modal is open after both, with the rows as the server has them, and the mid-drag reload writes nothing for the drag it stops.
+    - **DRAG-7.24:** a click on the overflow row's indent opens the Card's Sheet, and a press on it carries the Card.
+    - **DRAG-7.26:** the modal closes when the reloaded board has no Card, and when the Card has no attached descendants.
+    - **DRAG-7.27:** a dragged `R` carries its overflow row: the gap after `Q` runs to `T`, the line is never drawn on it, and at the first level `R`'s children show.
+    - **DRAG-7.28:** a click on a row in the modal opens no Sheet and writes nothing.
+    - **DRAG-7.29:** the line is drawn on the overflow row at one point of the carried copy's sweep across the ghost's middle, and a release there places by gap and depth.
+    - **DRAG-7.30:** a level count of 0 in the panel shows one level.
+    - **TREE-3.11:** a deep name is cut short at the default width, shows more as the sidebar is dragged wider and all of it at the widest, and a project under the deepest is refused at any width.
+  - **Test surface added to the app:** the board's live drop line carries `data-drop-side` (`before`/`after`), as the sidebar's carries `data-drop-line`. DRAG-7.27 and DRAG-7.29 read which row the line is on. The drag layer's `CLAUDE.md` lists it.
+  - **Not done, with what was found:**
+    - **DRAG-7.13, an item from outside `P`.** A Free Card from `P`'s column zooms into `P`'s Card and on into its section with the real gesture (the context reads `card:` and then `descendants:`). Inside the section, the projection then stays at `0:0:true` wherever the cursor goes, at the entry and after, with the layout settled. I didn't trace whether that is a drag-layer defect or an artifact of how the spec drives it: the Card-zoom specs for it are already skipped for the layout shifting under the cursor (`drag-card-zoom-in.spec.ts`). DRAG-7.13's main drag stays untested; its `B` clause is covered.
+    - **DRAG-7.16, left edge,** stays on the geometry's unit test: a cursor can't be brought near it. The top edge could, so the Phase 4 note that it couldn't was wrong.
+    - **DRAG-7.10, "bounded by `P`'s box"** at the Card layer: the carried copy there is wider than `P`'s box, and moving the cursor out of it starts the pop-out clock, so the bound can't be read.
+    - **DRAG-7.25** (`Planned`) and the failure paths of audit #2's fix: they come with that fix.
+  - **Mutation checks, each shown failing and then restored:** a dragged row no longer carrying its overflow row (DRAG-7.27); the modal staying open with nothing left to show (DRAG-7.26, the no-descendants half; the Card-gone half has no mutation); the level count not held to one (DRAG-7.30); the overflow count and the hidden-slot preview both no longer leaving out the dragged child (DRAG-7.2; either alone is enough, so one mutation alone passes); a press on the overflow row's indent no longer reaching the Card (DRAG-7.24). Not shown failing: DRAG-7.4's, 7.6's, 7.10's, 7.12's, 7.17's, 7.23's, 7.28's, 7.29's and TREE-3.11's new specs, and DRAG-7.16's top edge.
+  - **Checks:** `npm run check` passes. The full `npm run test:e2e` passes with 224 and 8 skipped.
 
 ## Open questions
 
@@ -313,13 +361,17 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
       - **DRAG-7.22:** the lean, for a press on the row's count. A press on the row's indent is the Card's, as beside a Stub row (wiki board-drag-interaction §9).
       - **DRAG-7.23:** the lean, with one change: the modal is centered after a reload, not left where it was, since a hold-opened modal's placement came from a drag that has ended. The centering is Planned (wiki board-drag-interaction §9).
   - **From the Test Reconciler's proposing run** (`docs/audits/test-reconciliation-epic-3-5-story-7.md`, Candidate New Cases), via the Test Planner: `POST /workflows` takes `templateId` and `sourceWorkflowId`, which name rows, and audit #3 found `''` read as none there. Wiki row-references §1 refuses that, but says each feature's page names its own references, and no page names these two, so no catalog has a case for them. Which page should name them as references?
+    - **Answered 2026-10-27 (PO):** project-tree §10, beside the rule that `POST /api/workflows` gives a project its workflow. It names both as references, says each copies its row's workphases, and that leaving both out makes a workflow with no workphases. TREE's catalog takes the cases. What a create naming both does is left out until the Architect says (For the Architect).
 - **For Nathan, from Phase 5:**
   - **The cap's value.** Both constants are 12 as built, a starting value: the depth the deep seed goes to, and one line each to change. D1 has the pick settled in the hands-on, at least 10. The specs hold at 10, 12 and 15 (Amendments, Phase 5).
     - **Answered 2026-10-27:** 12, for both (Amendments).
   - **The sidebar's widest width** was sized for a 10th-level name (D2). At 12 levels, a 30-character name starts 214px in and needs about 450px, so it is cut off at 420px. Whether the maximum follows the cap, or a long name at the deepest level may be cut, is part of the same hands-on.
     - **Answered 2026-10-27:** a long name at the deepest level may be cut. Widening the sidebar is how it's read, and the maximum stays 420px (Amendments).
+- **For Nathan, from the test follow-ups:**
+  - **Does a Free Card that has zoomed into a section follow the cursor there?** The spec for DRAG-7.13's main drag found the ghost stuck at the section's top (`0:0:true`) once a Free Card from the same column had zoomed into `P` and on into its section (Amendments, 2026-10-28, second stop). Dragging the deep stack's "Free Card to drag in" onto a Card and into its section by hand settles whether that is the spec's doing or a defect. If it is a defect, it also bears on DRAG-1.21 and DRAG-4.1, which have no passing spec either.
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
+  - **From the PO, for wiki project-tree §10:** what does `POST /api/workflows` do when it names both `templateId` and `sourceWorkflowId`? Is it refused, or is one of them taken, and which? The wiki says nothing about it until then (For the PO).
 - **For the Test Planner:**
   - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
     - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
@@ -344,6 +396,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
       - **Folded into existing cases:** the hold resetting when the cursor leaves the section, as a third reset in DRAG-7.14 (its spec already asserts it under that ID). The header inside the modal's box goes in DRAG-7.10. The carried copy held to the modal's list goes in DRAG-7.11.
       - **The suite's terms:** `X` is any childless item at `P`'s Descendants layer, a Free Card zoomed in or a Stub of `P`'s outside the tree, since placement there is the same for both. DRAG-7.13 now names a Free Card from outside `P` for its main drag, so that its two origins stay distinct.
       - **The cap at 12:** no case changes. ATT-4's and TREE-3's terms no longer say the value is open. They still name it by `CAP` and `PCAP`.
+  - **Project-tree §10 names a workflow create's two references** (For the PO), ready for cases: what each copies, what leaving both out makes, and the refusal of one that names no row, `''` included (wiki row-references §1). The `''` refusal is audit #3's fix, so its test comes with that batch.
 
 ## Living-docs handoff
 
@@ -408,16 +461,16 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
   - **Phase 4:**
     - DRAG-7.13 to DRAG-7.18 have E2E specs in `tests/ui/drag-7-modal-hold.spec.ts`, which carry their IDs. They seed short values for the dwell and the cue and assert the stages and what a release writes, never that the values feel right.
     - DRAG-7.14's third clause, the carried copy moving within the gap, is asserted by the cue running on across moves that cross the ghost's middle, and by the projection's unit test that both neighbors name one target.
-    - DRAG-7.16 is asserted at the bottom edge and the right edge. The top and left edges are covered by the geometry's unit tests only, since a cursor can't be brought near them.
-    - DRAG-7.17 is asserted by the list's scroll and a release.
+    - DRAG-7.16 is asserted at the bottom, right and top edges. The left edge is covered by the geometry's unit test only, since a cursor can't be brought near it.
+    - DRAG-7.17 is asserted by the list's scroll and a release, from the gap below the overflow row and from the one above it.
     - DRAG-7.20 stays `Manual`: it is Nathan's hands-on.
     - DRAG-1.34's hold half is asserted through the panel: the fields, the next hold taking the new dwell, and a reload keeping them.
-    - A ghost in an over-cap state beside an overflow row starts no hold (DRAG-7.21's lean): its spec carries no ID, as the case is `Pending PO`.
+    - A ghost in an over-cap state beside an overflow row starts no hold: DRAG-7.21's spec, which carries the ID now that the PO has ruled it.
     - The header counts as part of the modal for the pop-out clock (DRAG-7.10's box): a spec in `tests/ui/drag-7-hierarchy-modal.spec.ts`, which carries DRAG-7.10.
   - **Phase 3:**
     - DRAG-7.6 to DRAG-7.12 and DRAG-7.19 have E2E specs in `tests/ui/drag-7-hierarchy-modal.spec.ts`, which carry their IDs. DRAG-7.7 is the click, and its two clauses on `P`'s size and look are open and not asserted. DRAG-7.9's over-cap state is built from the cap the board reports. DRAG-7.12 is asserted on the modal's rows under a drag of an item with a child. DRAG-7.10's two pops are timing-driven, as the section's are.
     - DRAG-7.2's dragged-child clause is asserted by DRAG-7.6's spec: the overflow row reads "1 child" meanwhile.
-    - A press and drag from an overflow row picks nothing up (`DRAG-7.22`'s lean): its spec carries no ID, as the case is `Pending PO`.
+    - A press and drag from an overflow row's count picks nothing up, and a click on it opens the modal and not the Sheet: DRAG-7.22's spec, which carries the ID now that the PO has ruled it.
     - Not yet reachable: DRAG-7.13 to DRAG-7.18 and DRAG-7.20 (the hold), and DRAG-7.21 and DRAG-7.23 (`Pending PO`).
   - **Phase 2:**
     - DRAG-7.1 to DRAG-7.5 have E2E specs in `tests/ui/drag-7-overflow-row.spec.ts`, which carry their IDs. They drive `X` as a Stub of `P` picked up in its own section, which starts at the Descendants layer with no pop, where the cases name a Free Card zoomed in. Placement there is the same for any item at the layer. DRAG-7.2's dragged-child clause waits for Phase 3.
@@ -433,5 +486,5 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - §9: markers off, and "at every level" deleted. New: `sectionLevels` is at least 1; a dragged `R` carries its overflow row; the overflow row is a control (DRAG-7.22); a click on a row in the modal opens nothing; the modal closes when its Card is gone or has no attached descendants; a reload leaves it open (DRAG-7.23), with the centering after a reload Planned.
     - Open questions: the hold's cue borrows the zoom-in's look; the overflow row's and the modal's placeholder looks; new, opening a Sheet from the modal.
   - **item-attachment:** §8, `CAP` is 12, with its grounding rewritten; §12, the levels bullet's marker off. Open questions: "`CAP`'s real value" deleted, and "Beyond the cap" reworded.
-  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder.
+  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder. §10, a workflow create's `templateId` and `sourceWorkflowId` named as references (For the PO).
   - **Planning docs:** `mvp-roadmap.md`, `epic-3-5-roadmap.md` and `epic-8-decisions.md` no longer say "provisionally 6".

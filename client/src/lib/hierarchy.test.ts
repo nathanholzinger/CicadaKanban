@@ -50,11 +50,12 @@ describe('getDescendantIds', () => {
   });
 });
 
-// The client half of the depth-cap math: `getDepth` and a `getSubtree`'s
-// height are what the board's drag-target classification and the sidebar's
-// over-cap cue pass to `isWithinDepthCap`. Same counting convention as the
-// server's `itemTree.ts::hierarchyDepth` and `subtreeHeight` (root = 1, leaf
-// height = 0).
+// The client half of the depth-cap math: `isWithinDepthCap` takes a target's
+// depth and a dragged subtree's height. The board's drag-target classification
+// reads the depth with `getDepth`, and the sidebar's over-cap cue passes its
+// drag projection's depth; both read the height off `getSubtree`. Same counting
+// convention as the server's `itemTree.ts::hierarchyDepth` and `subtreeHeight`
+// (root = 1, leaf height = 0).
 describe('getDepth', () => {
   const nodes = [node('root'), node('a', 'root'), node('b', 'root'), node('a1', 'a'), node('a1x', 'a1'), node('other')];
 
@@ -71,9 +72,12 @@ describe('getDepth', () => {
     expect(getDepth('ghost', orphan)).toBe(1);
   });
 
-  it('terminates against a parentId cycle', () => {
+  // The walk stops at a revisit and never counts the node itself, as the server's
+  // `itemTree.ts::ancestorsOf` does, so both sides read a cycle's depth alike.
+  it('reads a parentId cycle once: the walk stops at a revisit', () => {
     const cyclic = [node('a', 'b'), node('b', 'a'), node('c', 'a')];
-    expect(typeof getDepth('a', cyclic)).toBe('number');
+    expect(getDepth('a', cyclic)).toBe(2); // b, then a again
+    expect(getDepth('c', cyclic)).toBe(3); // a, b, then a again
   });
 });
 

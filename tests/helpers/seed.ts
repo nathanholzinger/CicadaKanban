@@ -230,6 +230,13 @@ export async function seedPositionedItems<K extends string>(
   return items;
 }
 
+// DELETE /items/:id with the status asserted: the item and its whole subtree go, behind the
+// open page's back.
+export async function deleteItem(request: APIRequestContext, id: string): Promise<void> {
+  const res = await request.delete(`${API}/items/${id}`);
+  expect(res.ok(), `DELETE /items/${id} → ${res.status()}`).toBe(true);
+}
+
 // GETs one item by id, with the status asserted.
 export async function fetchItem(request: APIRequestContext, id: string) {
   return checkedJson(await request.get(`${API}/items/${id}`), `GET /items/${id}`);

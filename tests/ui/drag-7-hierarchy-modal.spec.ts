@@ -3,8 +3,10 @@ import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import {
   columnForWorkphase,
+  deleteItem,
   fetchDefaultBoard,
   fetchItem,
+  moveItem,
   pickWorkphases,
   seedItem,
   seedTemplatedWorkflow,
@@ -17,7 +19,10 @@ import {
   cancel,
   center,
   clocksMargin,
+  delayMoveResponses,
+  dragMachine,
   hoverTo,
+  paintedBoxOf,
   pickUp,
   release,
   seedDragTuning,
@@ -25,11 +30,17 @@ import {
   NO_POP,
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
-import { article, hierarchyModal, itemRow, overflowRow } from '../helpers/boardLocators';
+import { article, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
 import { sectionRows, seedOverflowTree } from '../helpers/overflowTree';
 import { watchWrites } from '../helpers/projectTreeDrag';
-import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import {
+  DRAG_OVERLAY_ATTR,
+  cardRegionKey,
+  columnRegionKey,
+  descendantsRegionKey,
+} from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
+import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
 // The hierarchy modal: a Card's whole hierarchy, opened by a click on an overflow row. While it's
 // open it is the Card's Descendants layer, drawn whole. The cases assert what it draws and what a
@@ -56,6 +67,51 @@ const modalRowIds = (modal: Locator) =>
 // Picks a row of the modal up by its title.
 const pickUpRow = (page: Page, modal: Locator, id: string, title: string) =>
   pickUp(page, modalRow(modal, id).getByRole('button', { name: title, exact: true }));
+
+// Picks `row` up in the open modal, pulls it out to P's own box, which closes the modal and leaves
+// the drag at the Card layer, and zooms it back into P's section, where the cursor rests mid-way
+// down it.
+async function pullOutAndZoomBack(
+  page: Page,
+  modal: Locator,
+  cardId: string,
+  row: { id: string; title: string },
+  tuning: { popDelayMs: number; descendantsPopInDelayMs: number },
+) {
+  await pickUpRow(page, modal, row.id, row.title);
+  await awaitDragContext(page, descendantsRegionKey(cardId));
+  const card = await boxOf(article(page, 'P'));
+  await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
+  await awaitDragContext(page, cardRegionKey(cardId), clocksMargin(tuning.popDelayMs));
+  await expect(modal).toHaveCount(0);
+  const section = page.locator(`[data-drag-region="${descendantsRegionKey(cardId)}"]`);
+  await hoverTo(page, await atFraction(section, 0.5));
+  await awaitDragContext(page, descendantsRegionKey(cardId), clocksMargin(tuning.descendantsPopInDelayMs));
+}
+
+// Refuses every move the page sends, so that a release resyncs the board from the server.
+async function refuseMoves(page: Page) {
+  await page.route('**/api/items/*/move', route =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
+  );
+}
+
+// The board read the client makes when it resyncs.
+const boardReload = (page: Page) =>
+  page.waitForResponse(res => res.request().method() === 'GET' && /\/api\/boards\/[^/?]+$/.test(res.url()));
+
+// Drags R2 in the open modal to the gap between R1 and R1a and lets go, with every move refused:
+// the client reloads the board from the server.
+async function releaseRefusedMove(page: Page, modal: Locator, rows: { r2: { id: string }; r1a: { id: string } }) {
+  await refuseMoves(page);
+  await pickUpRow(page, modal, rows.r2.id, 'R2');
+  await hoverTo(page, await topQuarter(modalRow(modal, rows.r1a.id)));
+  await hoverTo(page, await topQuarter(modalRow(modal, rows.r1a.id)));
+  await awaitProjection(page, '4:4:true');
+  const reloaded = boardReload(page);
+  await release(page);
+  await reloaded;
+}
 
 test('DRAG-7.7: clicking an overflow row opens the hierarchy modal, centered, with every attached descendant at its level', async ({
   page,
@@ -116,11 +172,13 @@ test('DRAG-7.7: any of the section’s overflow rows opens the same modal, the C
   expect(await sectionRows(page, p.id)).toContain(`overflow:${t.id}`);
 
   await overflowRow(page, t.id).click();
+  await expect(hierarchyModal(page, 'P')).toBeVisible();
   const fromT = await modalRowIds(hierarchyModal(page, 'P'));
   await page.keyboard.press('Escape');
   await expect(hierarchyModal(page, 'P')).toHaveCount(0);
 
   await overflowRow(page, r.id).click();
+  await expect(hierarchyModal(page, 'P')).toBeVisible();
   expect(await modalRowIds(hierarchyModal(page, 'P'))).toEqual(fromT);
   expect(fromT).toHaveLength(10);
 });
@@ -166,7 +224,7 @@ test('DRAG-7.9: a drag in the modal starts at the Descendants layer, and between
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal First Child Project';
-  const { p, r, r1, r1a, r2 } = await seedOverflowTree(request, name);
+  const { todo, p, r, r1, r1a, r2 } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
@@ -184,7 +242,8 @@ test('DRAG-7.9: a drag in the modal starts at the Descendants layer, and between
 
   await expect.poll(async () => (await fetchItem(request, r2.id)).parentId).toBe(r1.id);
   const placed = await fetchItem(request, r2.id);
-  expect(placed.isAttached).toBe(1);
+  // R2 stays attached throughout, with P's workphase.
+  expect([placed.isAttached, placed.workphaseId]).toEqual([1, todo.id]);
   expect(placed.position).toBeLessThan((await fetchItem(request, r1a.id)).position);
 });
 
@@ -194,7 +253,7 @@ test('DRAG-7.9: in the gap R2 sits in, one tab right of its own depth, it is R1�
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Last Child Project';
-  const { r, r1, r1a, r2 } = await seedOverflowTree(request, name);
+  const { todo, r, r1, r1a, r2 } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
@@ -209,10 +268,12 @@ test('DRAG-7.9: in the gap R2 sits in, one tab right of its own depth, it is R1�
   await release(page);
 
   await expect.poll(async () => (await fetchItem(request, r2.id)).parentId).toBe(r1.id);
-  expect((await fetchItem(request, r2.id)).position).toBeGreaterThan((await fetchItem(request, r1a.id)).position);
+  const placed = await fetchItem(request, r2.id);
+  expect([placed.isAttached, placed.workphaseId]).toEqual([1, todo.id]);
+  expect(placed.position).toBeGreaterThan((await fetchItem(request, r1a.id)).position);
 });
 
-test('DRAG-7.9: set back down in its own gap and depth, an item writes nothing', async ({
+test('DRAG-7.9, DRAG-7.19: set back down in its own gap and depth, an item writes nothing, and the modal stays open where it is', async ({
   page,
   request,
   projectSidebar,
@@ -225,6 +286,7 @@ test('DRAG-7.9: set back down in its own gap and depth, an item writes nothing',
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
   const modal = hierarchyModal(page, 'P');
+  const placedBefore = await boxOf(modal);
 
   const from = await pickUpRow(page, modal, r2.id, 'R2');
   const writes = watchWrites(page);
@@ -235,6 +297,8 @@ test('DRAG-7.9: set back down in its own gap and depth, an item writes nothing',
   expect(writes).toEqual([]);
   const after = await fetchItem(request, r2.id);
   expect([after.parentId, after.position]).toEqual([before.parentId, before.position]);
+  await expect(modal).toBeVisible();
+  expect(await boxOf(modal)).toEqual(placedBefore);
 });
 
 test('DRAG-7.9, DRAG-7.12: a tab state past the depth cap is reachable in the modal and writes nothing, and the rows carry the drag’s classification', async ({
@@ -294,7 +358,7 @@ test('DRAG-7.9, DRAG-7.12: a tab state past the depth cap is reachable in the mo
   expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
 });
 
-test('DRAG-7.10: leaving the modal for the Card’s box closes it, and the drag is at the Card layer; a second pop detaches', async ({
+test('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pops out of it, the modal closes and the drag is at the Card layer, where a release sets the Stub back down and writes nothing', async ({
   page,
   request,
   projectSidebar,
@@ -311,14 +375,16 @@ test('DRAG-7.10: leaving the modal for the Card’s box closes it, and the drag 
   await awaitDragContext(page, descendantsRegionKey(p.id));
 
   // A point inside P's own box and outside the modal's: the left edge of P, which the centered
-  // modal doesn't reach.
+  // modal doesn't reach. The pop-out clock runs there as it does anywhere outside the modal.
   const card = await boxOf(article(page, 'P'));
   await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
   await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
   await expect(modal).toHaveCount(0);
+  const writes = watchWrites(page);
   await release(page);
 
-  // The Card layer's auto-drop: R2 is set back down.
+  // The Card layer's auto-drop: R2, whose own slot is behind R's overflow row, is set back down.
+  expect(writes).toEqual([]);
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
   await expect(article(page, 'P')).toBeVisible();
 });
@@ -347,10 +413,13 @@ test('DRAG-7.10: a second pop, out of the Card’s box, detaches the item: two p
   await expect(modal).toHaveCount(0);
   await release(page);
 
-  const detached = await fetchItem(request, r2.id);
-  expect(detached.isAttached).toBe(0);
-  expect(detached.parentId).toBe(r.id);
-  expect(detached.workphaseId).toBe(todo.id);
+  // R2 is Free, keeps its parent and its workphase.
+  await expect
+    .poll(async () => {
+      const detached = await fetchItem(request, r2.id);
+      return [detached.isAttached, detached.parentId, detached.workphaseId];
+    })
+    .toEqual([0, r.id, todo.id]);
 });
 
 test('DRAG-7.10: the modal’s header is part of the modal: a cursor resting over it pops nothing', async ({
@@ -397,17 +466,23 @@ test('DRAG-7.11: while the modal is open, the Card and its section under the bac
   await expect(modal.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`)).toHaveCount(1);
   for (const row of [a, q, r, t]) await expect(itemRow(page, row.id)).toHaveCount(1);
 
-  // The cursor rests on P's own section row for A, behind the backdrop: left of the modal's box.
+  // The cursor rests on P's own section, behind the backdrop and left of the modal's box, at the
+  // height of R2's own row: were the section's rows candidates, the ghost would go to a gap among
+  // them. It stays in R2's own gap, among the modal's rows.
+  const ownRow = await center(modalRow(modal, r2.id));
   await pickUpRow(page, modal, r2.id, 'R2');
   await awaitDragContext(page, descendantsRegionKey(p.id));
+  await awaitProjection(page, /^5:\d+:true$/);
   const behind = await boxOf(article(page, 'P'));
-  await hoverTo(page, { x: behind.x + 6, y: behind.y + behind.height * 0.5 });
+  await hoverTo(page, { x: behind.x + 6, y: ownRow.y });
+  await awaitProjection(page, /^5:\d+:true$/);
   await awaitDragContext(page, descendantsRegionKey(p.id));
   await expect(modal).toBeVisible();
 
-  // The carried copy stays inside the modal's list, and the drag is still the modal's.
-  const list = await boxOf(regions);
-  const carried = await boxOf(page.locator('[data-drag-overlay]'));
+  // The carried copy stays inside the modal's list, measured where it is painted: it follows the
+  // cursor by a transform, which a layout-space box would not see.
+  const list = await paintedBoxOf(regions);
+  const carried = await paintedBoxOf(page.locator(`[${DRAG_OVERLAY_ATTR}]`));
   expect(carried.x).toBeGreaterThanOrEqual(list.x - 1);
   expect(carried.x + carried.width).toBeLessThanOrEqual(list.x + list.width + 1);
   expect(carried.y).toBeGreaterThanOrEqual(list.y - 1);
@@ -415,7 +490,7 @@ test('DRAG-7.11: while the modal is open, the Card and its section under the bac
   await cancel(page);
 });
 
-test('DRAG-7.19: after a release in the modal it stays open where it is, showing the item where it landed', async ({
+test('DRAG-7.19: after a release in the modal it stays open where it is, showing the item where it landed, marked pending until the response lands', async ({
   page,
   request,
   projectSidebar,
@@ -428,6 +503,7 @@ test('DRAG-7.19: after a release in the modal it stays open where it is, showing
   await overflowRow(page, r.id).click();
   const modal = hierarchyModal(page, 'P');
   const placedBefore = await boxOf(modal);
+  await delayMoveResponses(page, () => 1500);
 
   await pickUpRow(page, modal, r2.id, 'R2');
   await hoverTo(page, await topQuarter(modalRow(modal, r1a.id)));
@@ -435,14 +511,22 @@ test('DRAG-7.19: after a release in the modal it stays open where it is, showing
   await awaitProjection(page, '4:4:true');
   await release(page);
 
-  // Still open, in the same place, with R2 under R1 and before R1a, at R1a's level.
+  // Still open, in the same place, with R2 under R1 and before R1a, at R1a's level, and marked
+  // pending while the response is held.
   await expect(modal).toBeVisible();
+  const moved = modalRow(modal, r2.id);
+  await expect(moved).toHaveAttribute('data-pending', 'true');
   expect(await boxOf(modal)).toEqual(placedBefore);
-  await expect.poll(async () => (await fetchItem(request, r2.id)).parentId).toBe(r1.id);
   const ids = await modalRowIds(modal);
   expect(ids.indexOf(r2.id)).toBe(ids.indexOf(r1.id) + 1);
   expect(ids.indexOf(r1a.id)).toBe(ids.indexOf(r2.id) + 1);
-  await expect(modalRow(modal, r2.id)).toHaveCSS('padding-left', `${descendantsIndentPx(4)}px`);
+  await expect(moved).toHaveCSS('padding-left', `${descendantsIndentPx(4)}px`);
+
+  // Once the response lands the mark clears, and R2 is in the same place.
+  await expect(moved).not.toHaveAttribute('data-pending', 'true', { timeout: 5000 });
+  expect(await boxOf(modal)).toEqual(placedBefore);
+  expect(await modalRowIds(modal)).toEqual(ids);
+  await expect.poll(async () => (await fetchItem(request, r2.id)).parentId).toBe(r1.id);
 
   // The item can be picked up again from its row in the modal.
   await pickUpRow(page, modal, r2.id, 'R2');
@@ -462,15 +546,18 @@ test('DRAG-7.19: Escape during a drag in the modal cancels the drag and leaves i
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
   const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
   const rowsBefore = await modalRowIds(modal);
+  const placedBefore = await boxOf(modal);
 
   await pickUpRow(page, modal, r2.id, 'R2');
   await hoverTo(page, await topQuarter(modalRow(modal, r1a.id)));
   const writes = watchWrites(page);
   await cancel(page);
 
-  // Nothing was written, R2 is back where it was picked up, and the modal is open.
+  // Nothing was written, R2 is back where it was picked up, and the modal is open in the same place.
   await expect(modal).toBeVisible();
+  expect(await boxOf(modal)).toEqual(placedBefore);
   expect(await modalRowIds(modal)).toEqual(rowsBefore);
   expect(writes).toEqual([]);
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
@@ -479,7 +566,7 @@ test('DRAG-7.19: Escape during a drag in the modal cancels the drag and leaves i
   await expect(modal).toHaveCount(0);
 });
 
-test('DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow row starts as the Card’s last child', async ({
+test('DRAG-7.2, DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow row starts as the Card’s last child, and the overflow row leaves it out of its count', async ({
   page,
   request,
   projectSidebar,
@@ -492,21 +579,11 @@ test('DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow
   await overflowRow(page, r.id).click();
   const modal = hierarchyModal(page, 'P');
 
-  // R1 is picked up in the modal, and pulled out of it to P's own box: the modal closes, and the
-  // drag is at the Card layer.
-  await pickUpRow(page, modal, r1.id, 'R1');
-  await awaitDragContext(page, descendantsRegionKey(p.id));
-  const card = await boxOf(article(page, 'P'));
-  await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
-  await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
-  await expect(modal).toHaveCount(0);
-
-  // Zoomed back into the section, the ghost is in the last gap, at the first level, as P's last
-  // child, and not in R1's own slot, which the section doesn't draw. R's overflow row leaves R1
-  // out of its count meanwhile.
-  const section = page.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`);
-  await hoverTo(page, await atFraction(section, 0.5));
-  await awaitDragContext(page, descendantsRegionKey(p.id), clocksMargin(tuning.descendantsPopInDelayMs));
+  // R1 is picked up in the modal, pulled out of it to P's own box and zoomed back into the
+  // section: the ghost is in the last gap, at the first level, as P's last child, and not in R1's
+  // own slot, which the section doesn't draw. R's overflow row leaves R1 out of its count
+  // meanwhile.
+  await pullOutAndZoomBack(page, modal, p.id, r1, tuning);
   await awaitProjection(page, '7:0:true');
   await expect(overflowRow(page, r.id)).toHaveText('1 child');
   await release(page);
@@ -519,8 +596,13 @@ test('DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow
   expect((await fetchItem(request, r1a.id)).parentId).toBe(r1.id);
 });
 
-// A press on an overflow row goes no further: it picks up neither the row nor the Card it is part of.
-test('a press and drag from an overflow row picks nothing up', async ({ page, request, projectSidebar }) => {
+// A press on an overflow row's count goes no further: it picks up neither the row nor the Card it
+// is part of, and a click on it opens the modal and not the Card's Sheet.
+test('DRAG-7.22: a press and drag from an overflow row’s count starts no drag, and a click on it opens the modal, not the Card’s Sheet', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
   const name = 'Overflow Row Press Project';
   const { r, p } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
@@ -528,15 +610,240 @@ test('a press and drag from an overflow row picks nothing up', async ({ page, re
   await expect(article(page, 'P')).toBeVisible();
   const before = await sectionRows(page, p.id);
   const writes = watchWrites(page);
+  const modal = hierarchyModal(page, 'P');
 
-  const start = await center(overflowRow(page, r.id));
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(start.x + 60, start.y + 80, { steps: 10 });
-  await expect(page.locator('[data-drag-state]')).toHaveCount(0);
-  await page.mouse.up();
+  // A click opens the modal, and P's Sheet stays shut.
+  await overflowRow(page, r.id).click();
+  await expect(modal).toBeVisible();
+  await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
+
+  // A press that moves well past the distance that starts a drag anywhere else starts none.
+  const start = await pickUp(page, overflowRow(page, r.id));
+  await hoverTo(page, { x: start.x + 60, y: start.y + 80 });
+  await expect(dragMachine(page)).toHaveCount(0);
+  await expect(page.locator(`[${DRAG_OVERLAY_ATTR}]`)).toHaveCount(0);
+  await release(page);
 
   expect(await sectionRows(page, p.id)).toEqual(before);
-  await expect(hierarchyModal(page, 'P')).toHaveCount(0);
+  await expect(modal).toHaveCount(0);
+  expect(writes).toEqual([]);
+});
+
+test('DRAG-7.2: with R’s only attached child dragged, back in the section R has no overflow row', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Only Child Project';
+  const { p, r, r1, r2, b } = await seedOverflowTree(request, name);
+  // R2 goes under B, so R1 is R's only attached child.
+  await moveItem(request, r2.id, { parentId: b.id });
+  const tuning = await seedDragTuning(page, { ...POP_OUT_ONLY, descendantsPopInDelayMs: 150 });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await expect(overflowRow(page, r.id)).toHaveText('1 child');
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+
+  // R1 is dragged, so R has no hidden child left to count, and the section draws no overflow row
+  // for it. A dropped R1 comes back to it.
+  await pullOutAndZoomBack(page, modal, p.id, r1, tuning);
+  await expect(overflowRow(page, r.id)).toHaveCount(0);
+  await cancel(page);
+  await expect(overflowRow(page, r.id)).toHaveText('1 child');
+});
+
+test('DRAG-7.6: back in the section, a Stub whose own slot the section shows comes back in that slot, and a release there writes nothing', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Own Slot Back Project';
+  const { p, q, r } = await seedOverflowTree(request, name);
+  const tuning = await seedDragTuning(page, { ...POP_OUT_ONLY, descendantsPopInDelayMs: 150 });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+
+  // R is picked up in the modal and pulled out the same way. Zoomed back in, its ghost starts
+  // in its own slot, between Q and T, at R's level.
+  await pullOutAndZoomBack(page, modal, p.id, r, tuning);
+  await awaitProjection(page, `${2}:${DEFAULT_DRAG_TUNING.sectionLevels - 1}:true`);
+  const writes = watchWrites(page);
+  await release(page);
+
+  expect(writes).toEqual([]);
+  expect((await fetchItem(request, r.id)).parentId).toBe(q.id);
+});
+
+test('DRAG-7.10: a brief excursion out of the modal, shorter than the pop-out delay, leaves the drag in it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Excursion Project';
+  const { p, r, r2 } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, { ...NO_POP, popDelayMs: 1500 });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+
+  await pickUpRow(page, modal, r2.id, 'R2');
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  const card = await boxOf(article(page, 'P'));
+  const outside = { x: card.x + 6, y: card.y + card.height * 0.08 };
+  const inside = await center(modal.getByRole('heading', { name: 'P', exact: true }));
+
+  // Two stays outside, each shorter than the delay and together longer than it, with a return
+  // between: the clock starts over on coming back, so it never runs out.
+  for (let stay = 0; stay < 2; stay++) {
+    await hoverTo(page, outside);
+    await page.waitForTimeout(800);
+    await hoverTo(page, inside);
+    await page.waitForTimeout(100);
+  }
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await expect(modal).toBeVisible();
+  await cancel(page);
+});
+
+test('DRAG-7.23: after a release in the modal whose write failed, the reloaded board leaves it open, with the rows as the server has them', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Failed Release Project';
+  const { r, r2, r1a } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const rowsBefore = await modalRowIds(modal);
+
+  await releaseRefusedMove(page, modal, { r2, r1a });
+
+  // The board came back from the server with R2 where it was, and the modal is open over it.
+  await expect(modal).toBeVisible();
+  await expect.poll(() => modalRowIds(modal)).toEqual(rowsBefore);
+  await expect(modalRow(modal, r2.id)).not.toHaveAttribute('data-pending', 'true');
+  expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
+});
+
+test('DRAG-7.23: a reload that lands mid-drag in the modal stops the drag, writes nothing for it, and leaves the modal open', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Reload Mid Drag Project';
+  const { p, r, r1, r1a, r2 } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const rowsBefore = await modalRowIds(modal);
+
+  // The first release's write is refused after a delay, so the reload it causes lands while the
+  // next drag is under way.
+  await page.route('**/api/items/*/move', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
+  });
+  const writes = watchWrites(page);
+  await pickUpRow(page, modal, r2.id, 'R2');
+  await hoverTo(page, await topQuarter(modalRow(modal, r1a.id)));
+  await hoverTo(page, await topQuarter(modalRow(modal, r1a.id)));
+  await awaitProjection(page, '4:4:true');
+  const reloaded = boardReload(page);
+  await release(page);
+
+  await pickUpRow(page, modal, r1a.id, 'R1a');
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await reloaded;
+
+  // The drag is over, with no carried copy left and no write for it, and the modal is open over
+  // the reloaded board.
+  await expect(dragMachine(page)).toHaveCount(0);
+  await expect(page.locator(`[${DRAG_OVERLAY_ATTR}]`)).toHaveCount(0);
+  await expect(modal).toBeVisible();
+  await expect.poll(() => modalRowIds(modal)).toEqual(rowsBefore);
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect(writes).toHaveLength(1);
+  expect((await fetchItem(request, r1a.id)).parentId).toBe(r1.id);
+  expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
+});
+
+test('DRAG-7.26: the modal closes when the reloaded board no longer has its Card', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Card Gone Project';
+  const { p, r, r2, r1a } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+
+  // P is deleted behind the open page's back, and a refused release reloads the board.
+  await deleteItem(request, p.id);
+  await releaseRefusedMove(page, modal, { r2, r1a });
+
+  await expect(modal).toHaveCount(0);
+  await expect(article(page, 'P')).toHaveCount(0);
+});
+
+test('DRAG-7.26: the modal closes when the reloaded board leaves its Card with no attached descendants', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Hierarchy Modal Nothing Left Project';
+  const { p, a, b, x, r, r2, r1a } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+
+  // Every attached child of P is deleted, so its subtree goes with them and only P is left.
+  for (const gone of [a, b, x]) await deleteItem(request, gone.id);
+  await releaseRefusedMove(page, modal, { r2, r1a });
+
+  await expect(modal).toHaveCount(0);
+  await expect(article(page, 'P')).toBeVisible();
+  expect(await sectionRows(page, p.id)).toEqual([]);
+});
+
+test('DRAG-7.28: a click on a row in the modal opens nothing', async ({ page, request, projectSidebar }) => {
+  const name = 'Hierarchy Modal Row Click Project';
+  const { r, r1 } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  await overflowRow(page, r.id).click();
+  const modal = hierarchyModal(page, 'P');
+  await expect(modal).toBeVisible();
+  const placed = await boxOf(modal);
+  const writes = watchWrites(page);
+
+  await modalRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
+  await page.waitForTimeout(300);
+
+  // No Sheet, the modal as it was, and nothing written.
+  await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+  await expect(modal).toBeVisible();
+  expect(await boxOf(modal)).toEqual(placed);
   expect(writes).toEqual([]);
 });

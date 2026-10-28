@@ -1,13 +1,14 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { fetchDefaultBoard, fetchItem, seedItem } from '../helpers/seed';
+import { fetchDefaultBoard, fetchItem, moveItem, seedItem } from '../helpers/seed';
 import {
   atFraction,
   awaitDragContext,
   awaitModalHold,
   awaitProjection,
   boxOf,
+  cancel,
   clocksMargin,
   dragMachine,
   hoverTo,
@@ -18,7 +19,7 @@ import {
   NO_POP,
 } from '../helpers/dragGesture';
 import { article, hierarchyModal, itemRow, overflowRow } from '../helpers/boardLocators';
-import { holdAt, seedOverflowTree } from '../helpers/overflowTree';
+import { holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
 import { watchWrites } from '../helpers/projectTreeDrag';
 import { descendantsRegionKey, cardRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
@@ -41,11 +42,18 @@ test.beforeEach(async () => {
 const HOLD = { modalHoldDwellMs: 600, modalHoldCueMs: 900 };
 // A cue too long to run out during a case that asserts across it.
 const LONG_CUE = { modalHoldDwellMs: 300, modalHoldCueMs: 60_000 };
+// A dwell long enough that a hold which started over still reads as the dwell a few frames later,
+// and a cue too long to run out.
+const STEADY_CUE = { modalHoldDwellMs: 1500, modalHoldCueMs: 60_000 };
 // Short, for the cases that are not about the stages.
 const QUICK = { modalHoldDwellMs: 200, modalHoldCueMs: 300 };
 const opens = (tuning: { modalHoldDwellMs: number; modalHoldCueMs: number }) => ({
   timeout: clocksMargin(tuning.modalHoldDwellMs, tuning.modalHoldCueMs),
 });
+// Waits out a hold's whole length and then some, for a case that asserts no hold ran: a check that
+// no modal is there passes at once, so it has to come after the wait.
+const outwait = (page: Page, tuning: { modalHoldDwellMs: number; modalHoldCueMs: number }) =>
+  page.waitForTimeout(tuning.modalHoldDwellMs + tuning.modalHoldCueMs + 500);
 
 // The levels a section shows, which the cases hold at the default.
 const L = DEFAULT_DRAG_TUNING.sectionLevels;
@@ -225,26 +233,29 @@ test('DRAG-7.14: the carried copy moving within the gap, across the ghost’s mi
 }) => {
   const name = 'Modal Hold Within Gap Project';
   const { p, r, x } = await seedOverflowTree(request, name);
-  await seedDragTuning(page, { ...NO_POP, ...LONG_CUE });
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...STEADY_CUE });
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
 
   await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await awaitProjection(page, '3:3:true');
-  await awaitModalHold(page, `${r.id}:cue`);
+  await awaitModalHold(page, `${r.id}:cue`, clocksMargin(tuning.modalHoldDwellMs));
 
   // Up and down across the ghost's middle: the line it names flips between R and the overflow row,
-  // and the gap and the level stay, so the cue runs on.
+  // and the gap and the level stay, so the cue runs on. Each read is taken once, a few frames after
+  // the move: a hold that started over would show its dwell, for as long as the dwell is, where a
+  // read that retries would wait for the cue to come round again and pass.
   const row = await boxOf(overflowRow(page, r.id));
   for (const dy of [2, 14, 5, 16, 3]) {
     await hoverTo(page, { x: row.x + row.width / 2, y: row.y + dy });
     await awaitProjection(page, '3:3:true');
-    await awaitModalHold(page, `${r.id}:cue`);
+    await page.waitForTimeout(100);
+    expect(await dragMachine(page).getAttribute('data-drag-modal-hold')).toBe(`${r.id}:cue`);
   }
   await release(page);
 });
 
-test('DRAG-7.15: the modal opens with the ghost’s spot under the cursor, so a release right after commits the same placement', async ({
+test('DRAG-7.15, DRAG-7.19: the modal opens with the ghost’s spot under the cursor, so a release right after commits the same placement, and the modal stays where it opened', async ({
   page,
   request,
   projectSidebar,
@@ -260,6 +271,7 @@ test('DRAG-7.15: the modal opens with the ghost’s spot under the cursor, so a 
   // cursor, between R and R1, and no pop happened.
   const first = await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await expect(modal).toBeVisible(opens(tuning));
+  const opened = await boxOf(modal);
   await expectInside(modal, first.at());
   await expectGhostUnder(modal, x.id, first.at());
   await expect
@@ -280,9 +292,12 @@ test('DRAG-7.15: the modal opens with the ghost’s spot under the cursor, so a 
   await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(r.id);
   expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
 
+  // The modal a hold opened stays open after the release, in the place it opened.
+  await expect(modal).toBeVisible();
+  expect(await boxOf(modal)).toEqual(opened);
+
   // From the gap below it: the gap after R2, at R2's level. X is R's child now, out of the
   // section's sight, so it is B that is dragged.
-  await expect(modal).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(modal).toHaveCount(0);
   const last = await holdAt(page, b, p, () => topQuarter(itemRow(page, t.id)), L);
@@ -294,6 +309,26 @@ test('DRAG-7.15: the modal opens with the ghost’s spot under the cursor, so a 
   await expect.poll(async () => (await fetchItem(request, b.id)).parentId).toBe(r.id);
   expect((await fetchItem(request, b.id)).position).toBeGreaterThan((await fetchItem(request, r2.id)).position);
 });
+
+// A release without moving the cursor commits what the ghost shows in the modal: the parent it sits
+// under and the siblings it lies between, read off the painted rows. Returns what was shown.
+async function expectReleaseCommitsShown(
+  page: Page,
+  request: Parameters<typeof fetchItem>[0],
+  modal: Locator,
+  x: { id: string },
+  p: { id: string },
+) {
+  const shown = await placementShown(modal, x.id);
+  const written = page.waitForResponse(res => res.request().method() === 'PATCH' && res.url().endsWith('/move'));
+  await release(page);
+  expect((await written).ok()).toBe(true);
+  const placed = await fetchItem(request, x.id);
+  expect(placed.parentId).toBe(shown.parentId ?? p.id);
+  if (shown.prevId) expect(placed.position).toBeGreaterThan((await fetchItem(request, shown.prevId)).position);
+  if (shown.nextId) expect(placed.position).toBeLessThan((await fetchItem(request, shown.nextId)).position);
+  return shown;
+}
 
 // The same tree with `count` more children under R, so R's children run longer than the modal.
 async function seedLongTree(request: Parameters<typeof seedOverflowTree>[0], name: string, count: number) {
@@ -333,13 +368,39 @@ test('DRAG-7.16: a modal kept inside the window at the bottom edge reads the gho
   await expect(dragMachine(page)).not.toHaveAttribute('data-drag-projection', '3:3:true');
   await awaitDragContext(page, descendantsRegionKey(p.id));
 
-  // A release commits what the ghost shows: not R's first child.
-  const writes = watchWrites(page);
-  await release(page);
-  await expect.poll(() => writes.length).toBeGreaterThan(0);
-  const placed = await fetchItem(request, x.id);
-  const moved = placed.parentId !== r.id || placed.position > (await fetchItem(request, r.id)).position;
-  expect(moved).toBe(true);
+  // A release without moving the cursor commits what the ghost shows, and that is not R's first
+  // child.
+  const shown = await placementShown(modal, x.id);
+  expect([shown.parentId, shown.prevId]).not.toEqual([r.id, null]);
+  await expectReleaseCommitsShown(page, request, modal, x, p);
+});
+
+test('DRAG-7.16: a modal kept inside the window at the top edge reads the ghost afresh from the cursor', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold Top Edge Project';
+  const { p, r, t, x, extras } = await seedLongTree(request, name, 12);
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // R's last child, deep in a list that fills the window: placed with that spot under the cursor,
+  // the modal would cross the top edge, so it is pulled down to the margin, and its list scrolls
+  // to bring the spot back under the cursor.
+  const last = await holdAt(page, x, p, () => topQuarter(itemRow(page, t.id)), L);
+  await expect(modal).toBeVisible(opens(tuning));
+  const box = await boxOf(modal);
+  expect(Math.abs(box.y - MODAL_EDGE_MARGIN_PX)).toBeLessThanOrEqual(0.5);
+  await expectInside(modal, last.at());
+  await expectGhostUnder(modal, x.id, last.at());
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+
+  // A release commits what the ghost shows: R's last child, after the last extra.
+  const shown = await expectReleaseCommitsShown(page, request, modal, x, p);
+  expect([shown.parentId, shown.prevId]).toEqual([r.id, extras[extras.length - 1].id]);
 });
 
 test('DRAG-7.16: a modal kept inside the window at the right edge reads the depth at the cursor’s x', async ({
@@ -403,7 +464,75 @@ test('DRAG-7.17: when R’s children run longer than the modal, its list scrolls
   );
 });
 
-test('DRAG-7.18: after leaving the modal, a hold beside an overflow row opens it again in the same drag', async ({
+test('DRAG-7.17: from the gap above R’s overflow row, a list that scrolls puts the ghost’s spot under the cursor too', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold Long List Above Project';
+  const count = 20;
+  const tree = await seedOverflowTree(request, name);
+  const { p, q, r, r1, x } = tree;
+  // S, a sibling before R with `count` children of its own behind an overflow row, so R's first
+  // child lies far down the modal's list.
+  const s = await seedItem(request, { title: 'S', parentId: q.id });
+  await moveItem(request, s.id, { parentId: q.id, anchorId: r.id, side: 'before' });
+  for (let i = 0; i < count; i++) await seedItem(request, { title: `S${i}`, parentId: s.id });
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // R's first child, after A, Q, S and its children, and R.
+  const first = await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
+  const gap = 4 + count;
+  await awaitProjection(page, `${gap}:3:true`);
+  await expect(modal).toBeVisible(opens(tuning));
+  const list = modal.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`);
+  expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expectInside(modal, first.at());
+  await expectGhostUnder(modal, x.id, first.at());
+  await awaitProjection(page, `${gap}:3:true`);
+  await release(page);
+
+  await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(r.id);
+  expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
+});
+
+test('DRAG-7.12: a modal a hold opens carries the drag’s classification: a row too deep for the dragged item is de-emphasized, and R is not', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold Classification Project';
+  const { workflow, p, r, r1, r1a, x } = await seedOverflowTree(request, name);
+  const cap: number = (await fetchDefaultBoard(request, workflow.id)).itemDepthCap;
+
+  // X carries a chain of `cap - 6` descendants, so it fits as R's child (depth 5, its deepest
+  // descendant at cap - 1) and as R1's, but not as R1a's (depth 7, its deepest at cap + 1).
+  let tail: { id: string } = x;
+  for (let level = 1; level <= cap - 6; level++)
+    tail = await seedItem(request, { title: `X${level}`, parentId: tail.id });
+
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // The modal opens during the drag, and the classification, read once at its start, is on its
+  // rows: R1a is Depth-capped and drawn dimmer than R, which is valid.
+  await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
+  await awaitProjection(page, '3:3:true');
+  await expect(modal).toBeVisible(opens(tuning));
+  await expect(modalRow(modal, r1a.id)).toHaveAttribute('data-drop-state', 'depth-capped');
+  for (const fits of [r, r1]) await expect(modalRow(modal, fits.id)).toHaveAttribute('data-drop-state', 'valid');
+  const opacity = (id: string) => modalRow(modal, id).evaluate(el => parseFloat(getComputedStyle(el).opacity));
+  expect(await opacity(r1a.id)).toBeLessThan(1);
+  expect(await opacity(r.id)).toBe(1);
+  await cancel(page);
+});
+
+test('DRAG-7.10, DRAG-7.18: after leaving a modal a hold opened, a hold beside an overflow row opens it again in the same drag', async ({
   page,
   request,
   projectSidebar,
@@ -445,18 +574,18 @@ test('DRAG-7.18: after leaving the modal, a hold beside an overflow row opens it
   expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
 });
 
-test('a ghost in an over-cap state beside an overflow row starts no hold', async ({
+test('DRAG-7.21: a ghost in an over-cap state beside an overflow row starts no hold, from either gap, and none runs a level up where it fits', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  // The case for this edge is waiting on the PO; a Card’s zoom-in never starts on an invalid target.
   const name = 'Modal Hold Over Cap Project';
-  const { p, r, x, workflow } = await seedOverflowTree(request, name);
+  const { p, r, t, x, workflow } = await seedOverflowTree(request, name);
   const cap: number = (await fetchDefaultBoard(request, workflow.id)).itemDepthCap;
 
-  // X is a child of R at depth 5 (P is 1, A 2, Q 3, R 4). A chain of `cap - 4` descendants puts
-  // its deepest one at cap + 1, so every placement among R's children is past the cap.
+  // X would sit at depth 5 under R (P is 1, A 2, Q 3, R 4). A chain of `cap - 4` descendants puts
+  // its deepest one at cap + 1, so every placement among R's children is past the cap, and one
+  // level up, as R's next sibling, it just fits.
   let tail: { id: string } = x;
   for (let level = 1; level <= cap - 4; level++)
     tail = await seedItem(request, { title: `X${level}`, parentId: tail.id });
@@ -465,17 +594,36 @@ test('a ghost in an over-cap state beside an overflow row starts no hold', async
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   const writes = watchWrites(page);
+  const modal = hierarchyModal(page, 'P');
 
+  // Above the overflow row: R's first child, past the cap. Waited out for the whole hold and more:
+  // no dwell, no cue, no modal, and a release commits nothing.
   await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await awaitProjection(page, '3:3:false');
-  // Well past the whole hold: no cue, no modal.
-  await expect(hierarchyModal(page, 'P')).toHaveCount(0, { timeout: opens(tuning).timeout });
+  await outwait(page, tuning);
   await awaitModalHold(page, null);
   await expect(cueOn(page, r.id)).toHaveCount(0);
+  await expect(modal).toHaveCount(0);
   await release(page);
-
   expect(writes).toEqual([]);
   expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
+
+  // Below it: R's last child, past the cap the same way. Tabbed one level left, R's next sibling
+  // fits, so it is a valid state, and no hold runs there either: it runs at the overflow row's
+  // level only.
+  const aim = await holdAt(page, x, p, () => topQuarter(itemRow(page, t.id)), L);
+  await awaitProjection(page, '6:3:false');
+  await outwait(page, tuning);
+  await awaitModalHold(page, null);
+  await expect(modal).toHaveCount(0);
+  await aim(L - 1);
+  await awaitProjection(page, '6:2:true');
+  await outwait(page, tuning);
+  await awaitModalHold(page, null);
+  await expect(cueOn(page, r.id)).toHaveCount(0);
+  await expect(modal).toHaveCount(0);
+  await cancel(page);
+  expect(writes).toEqual([]);
 });
 
 test('DRAG-1.34: the modal hold’s dwell and cue are tuning-panel values, taken by the next hold and kept across a reload', async ({
@@ -504,12 +652,25 @@ test('DRAG-1.34: the modal hold’s dwell and cue are tuning-panel values, taken
   await awaitModalHold(page, `${r.id}:dwell`);
   await page.waitForTimeout(DEFAULT_DRAG_TUNING.modalHoldDwellMs + 700);
   await awaitModalHold(page, `${r.id}:dwell`);
-  await release(page);
+  await cancel(page);
+
+  // With a short dwell, the next hold takes the new cue: the cue is still showing well past the
+  // default cue's length, and the modal hasn't opened.
+  await page.getByRole('button', { name: 'Drag tuning' }).click();
+  await dwell.fill('300');
+  await page.getByRole('button', { name: 'Drag tuning' }).click();
+  await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
+  await awaitProjection(page, '3:3:true');
+  await awaitModalHold(page, `${r.id}:cue`, clocksMargin(300));
+  await page.waitForTimeout(DEFAULT_DRAG_TUNING.modalHoldCueMs + 700);
+  await awaitModalHold(page, `${r.id}:cue`);
+  await expect(hierarchyModal(page, 'P')).toHaveCount(0);
+  await cancel(page);
 
   await page.reload();
   await projectSidebar.showBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await page.getByRole('button', { name: 'Drag tuning' }).click();
-  await expect(dwell).toHaveValue('4000');
+  await expect(dwell).toHaveValue('300');
   await expect(cue).toHaveValue('7000');
 });

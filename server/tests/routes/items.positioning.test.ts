@@ -460,12 +460,13 @@ describe('position resolution', () => {
   it('TC-2.8: move rejects anchoring to a done item (no position to anchor against)', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const active = await createItem({ projectId: project.id, workphaseId: todo.id });
-    const doneItem = await request(app)
-      .post('/api/items')
-      .send({ title: 'Done item', projectId: project.id, workphaseId: done.id });
+    const doneItem = await createItem({ title: 'Done item', projectId: project.id, workphaseId: done.id });
+    const before = getRow(active.id);
 
-    const res = await move(active.id, { anchorId: doneItem.body.id, side: 'after' });
+    const res = await move(active.id, { anchorId: doneItem.id, side: 'after' });
     expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/no position to anchor against/);
+    expect(getRow(active.id)).toEqual(before);
   });
 
   describe("move rejects an anchorId outside the subject's position scope", () => {
@@ -556,12 +557,10 @@ describe('position resolution', () => {
   it('TC-6.2, TC-6.9: moving out of a terminal workphase clears completedAt and assigns a fresh position', async () => {
     const { project, todo, done } = await setupTwoPhases();
     const existing = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Existing' }); // position 1.0
-    const item = await request(app)
-      .post('/api/items')
-      .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
-    expect(item.body.completedAt).toBeGreaterThan(0);
+    const item = await createItem({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    expect(item.completedAt).toBeGreaterThan(0);
 
-    const res = await move(item.body.id, { workphaseId: todo.id });
+    const res = await move(item.id, { workphaseId: todo.id });
     expect(res.status).toBe(200);
     expect(res.body.completedAt).toBeNull();
     // TC-6.9: proves the fresh position specifically follows append-fallback
@@ -615,11 +614,9 @@ describe('position resolution', () => {
 
   it('TC-2.15: GET returns positionScope = "none" for a done item', async () => {
     const { project, done } = await setupTwoPhases();
-    const item = await request(app)
-      .post('/api/items')
-      .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+    const item = await createItem({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
 
-    const res = await request(app).get(`/api/items/${item.body.id}`);
+    const res = await request(app).get(`/api/items/${item.id}`);
     expect(res.status).toBe(200);
     expect(res.body.positionScope).toBe('none');
   });
@@ -688,14 +685,12 @@ describe('position resolution', () => {
       const itemP1 = await createItem({ projectId: project.id, workphaseId: inProgress.id, title: 'P1' });
       setItemPosition(itemP1.id, 5.0);
 
-      const doneItem = await request(app)
-        .post('/api/items')
-        .send({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
-      expect(doneItem.body.position).toBeNull();
-      expect(doneItem.body.completedAt).toBeGreaterThan(0);
+      const doneItem = await createItem({ title: 'Shipped', projectId: project.id, workphaseId: done.id });
+      expect(doneItem.position).toBeNull();
+      expect(doneItem.completedAt).toBeGreaterThan(0);
 
       const mover = await createItem({ projectId: project.id, workphaseId: todo.id, title: 'Mover' });
-      const doneBefore = getRow(doneItem.body.id);
+      const doneBefore = getRow(doneItem.id);
       const res = await move(mover.id, { anchorId: itemT1.id, side: 'after' });
 
       // The reindex ran over the workflow's active scope, and the done item isn't among its pairs.
@@ -707,7 +702,7 @@ describe('position resolution', () => {
         { id: mover.id, position: 1.5 },
       ]);
       // Its whole row is as it was: no position, the same completion, nothing else written.
-      expect(getRow(doneItem.body.id)).toEqual(doneBefore);
+      expect(getRow(doneItem.id)).toEqual(doneBefore);
       expect(doneBefore.position).toBeNull();
     });
   });

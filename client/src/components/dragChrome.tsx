@@ -133,9 +133,10 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
   };
 }
 
+// `data-drop-side` is a test surface: which row the line is drawn on, and on which side.
 export function DropSideIndicator({ side }: { side: DropSide | null }) {
-  if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} />;
-  if (side === 'after') return <div className={DROP_INDICATOR_AFTER} />;
+  if (side === 'before') return <div className={DROP_INDICATOR_BEFORE} data-drop-side="before" />;
+  if (side === 'after') return <div className={DROP_INDICATOR_AFTER} data-drop-side="after" />;
   return null;
 }
 

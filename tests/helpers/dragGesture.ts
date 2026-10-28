@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, type Route } from '@playwright/test';
 import { CARD_LIST_REGION_SELECTOR, DRAG_OVERLAY_ATTR } from '../../client/src/components/workflow/dragRegions';
 import {
   DEFAULT_DRAG_TUNING,
@@ -45,7 +45,11 @@ export type Point = { x: number; y: number };
 // targeting is tuned to the timing of an immediate approach. The gap that
 // matters is the one *before* pickup — see `release`.
 export async function pickUp(page: Page, source: Locator): Promise<Point> {
-  const start = await center(source);
+  return pickUpAt(page, await center(source));
+}
+
+// `pickUp` at a point, for a press on part of an element, such as a row's indent.
+export async function pickUpAt(page: Page, start: Point): Promise<Point> {
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x + 10, start.y + 10, { steps: 5 });
@@ -245,6 +249,19 @@ export async function seedDragTuning(page: Page, override: Partial<DragTuning> =
     JSON.stringify(tuning),
   ] as const);
   return tuning;
+}
+
+// Holds every move response for `ms(n)`, `n` counting the moves from 0. The request still
+// reaches the server at once, so the server's order of operations is the real one and only the
+// client's view of it is delayed: a drop stays marked pending until the held response lands.
+export async function delayMoveResponses(page: Page, ms: (n: number) => number) {
+  let n = 0;
+  await page.route('**/api/items/*/move', async (route: Route) => {
+    const wait = ms(n++);
+    const response = await route.fetch();
+    await new Promise(r => setTimeout(r, wait));
+    await route.fulfill({ response });
+  });
 }
 
 // A threshold seeded far longer than any single hover in these gestures
