@@ -14,7 +14,7 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.6 | A workflow created from another workflow starts with a copy of that workflow's workphases | P1 | Open |
 | TREE-10.7 | A workflow created from neither starts with no workphases | P2 | Open |
 | TREE-10.8 | A template or a source workflow that doesn't exist is refused, and nothing is created | P2 | Open |
-| TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Open |
+| TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Automated |
 | TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Open |
 | TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Planned |
 
@@ -86,11 +86,11 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.9 — A template or a source workflow given as an empty string names no row, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10, wiki row-references §1
 
 *Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` with `templateId: ""`, or with `sourceWorkflowId: ""`, *then* each is refused with a 400, and no workflow is created, as in [TREE-10.8](tree-10-which-workflow.md). No fallback reads the empty string as none and makes a workflow with no workphases, as a create that leaves both out does ([TREE-10.7](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.10 — A template or a source workflow given as `null` names none
 
