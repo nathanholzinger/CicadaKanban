@@ -48,6 +48,7 @@ There was no shell, so no gate or test was run. The Coder's last results stand: 
   - **No guard test passes with a defect present.**
   - **Two guards pass with or without their change, by design,** because the change is a refactor: #31's component test, and #30's cursor-x test.
   - **Three Fix Now changes have no guard:** batch 7's hook half, #75's key, and batch 2's refusal of `0` and `false`.
+  - **Ruled by Nathan, 2026-10-28:** batch 7's hook half is deleted, and #75's key and the `0`/`false` refusal need no new test. None of the three is a test-plan matter (Fix Now guard tests, items 3–5).
 - **One run-2 item is retired:** DRAG-7.21's table row and body now both read `Open` (run 2's item S).
 
 Aliases (line numbers at `b61ece1`):
@@ -517,8 +518,11 @@ The same deferral reaches one clause it doesn't name: DRAG-7.10's item from outs
    - The E2E guard batch 1 couldn't write is MH:353, from batch 7.
 2. **MP:81, "DRAG-7.15: rests the cursor the inset past where a row at that depth is drawn",** is #30's guard (batch 3). It passed before, since the two formulas agreed. It fails if they drift (the Coder's mutation). Same kind as item 1.
 3. **No guard: batch 7's hook half.** `useBoardDnd.ts::handleDragMove` stores no anchor while the reading is held. The Coder removed it, and every test passed: the pure layer carries the specs. The Coder offers to delete those three lines if they aren't worth keeping. That's a Coder or Architect call; as it stands, nothing guards them.
+   - **Ruled (Nathan, 2026-10-28): delete the three lines.** The behavior they serve, the modal's reading held until the pointer moves, is DRAG-7.15's, and the pure layer carries it. Without them nothing a user or a spec can see changes, so they add code no test can hold.
 4. **No guard: #75's `key={hierarchyModalCard.id}`.** The audit finds it unreachable today, and batch 1 left it untested.
+   - **Ruled (Nathan, 2026-10-28): no new test.** The key makes "read once per open" structural on a path the app can't reach. No user-visible behavior depends on it, so it's no rule for the wiki, and a test would have to build a state the app can't reach.
 5. **No test: batch 2's refusal of `0` and `false`** for `templateId` and `sourceWorkflowId` ("refused too, where they read as none"). WF has no test for either. No case names them (Candidate New Cases).
+   - **Ruled (Nathan, 2026-10-28): no new test, and no case.** Wiki row-references §2 says a write names none only by leaving the field out or naming `null`, so `0` and `false` name a row, and §1 refuses one that names no row. The wiki settles it. The empty string has its cases because the wiki names it and it was a real fallback. A value of the wrong type is the request's shape, which belongs to the developers' tests if anyone's, not a case per reference field.
 
 ### Concerns from this run
 
@@ -571,6 +575,7 @@ In the story's new and changed test files only.
 2. **A workflow create naming `templateId: ""` or `sourceWorkflowId: ""`** (run 2's item 4). **Closed:** TREE-10.9, now `Automated`.
 3. **An item's agent that names no row is refused** (from `docs/archive/test-reconciliation-a6-last-round.md`, Candidate New Cases, item 1). **Still open, a Test Planner gap.**
 4. **New, with no test yet: `0` or `false` as `templateId` or `sourceWorkflowId` is refused.** Batch 2 built it, as the Amendments say, but no test exercises it. Wiki row-references §2 leaves a non-string value to the field's page, and project-tree §10 names only `null`. So whether `0` and `false` are refusals or "none" is a **PO gap**, and a test should follow either way.
+   - **Not a candidate (Nathan, 2026-10-28):** no PO gap, since row-references §1 and §2 already settle it, and no case (Fix Now guard tests, item 5).
 
 No other candidate. Every rule wiki §7.3, §9 and project-tree §10 state has a case.
 
