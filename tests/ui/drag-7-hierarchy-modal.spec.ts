@@ -41,7 +41,7 @@ import {
   overflowRow,
   region,
 } from '../helpers/boardLocators';
-import { rowIds, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
+import { expectCentered, expectInside, rowIds, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
 import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
@@ -457,7 +457,9 @@ test('DRAG-7.11: while the modal is open, the Card and its section under the bac
   await awaitDragContext(page, descendantsRegionKey(p.id));
   await awaitProjection(page, /^5:\d+:true$/);
   const behind = await boxOf(article(page, 'P'));
-  await hoverTo(page, { x: behind.x + 6, y: ownRow.y });
+  const rest = { x: behind.x + 6, y: ownRow.y };
+  await expectInside(article(page, 'P'), rest);
+  await hoverTo(page, rest);
   await awaitProjection(page, /^5:\d+:true$/);
   await awaitDragContext(page, descendantsRegionKey(p.id));
   await expect(modal).toBeVisible();
@@ -659,13 +661,13 @@ test('DRAG-7.10: a brief excursion out of the modal, shorter than the pop-out de
   await cancel(page);
 });
 
-test('DRAG-7.23: after a release in the modal whose write failed, the reloaded board leaves it open, with the rows as the server has them', async ({
+test('DRAG-7.23, DRAG-7.25: after a release in the modal whose write failed, the reloaded board leaves it open, centered, with the rows as the server has them', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Failed Release Project';
-  const { r, r2, r1a } = await seedOverflowTree(request, name);
+  const { p, a, b, r, r2, r1a } = await seedOverflowTree(request, name);
   await seedDragTuning(page, NO_POP);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
@@ -674,13 +676,18 @@ test('DRAG-7.23: after a release in the modal whose write failed, the reloaded b
   await expect(modal).toBeVisible();
   const rowsBefore = await rowIds(modal);
 
+  // B is moved ahead of A on the server behind the open page's back, so the reloaded board's rows
+  // differ from the ones the drag started with, and only a client that draws the reload shows them.
+  await moveItem(request, b.id, { parentId: p.id, anchorId: a.id, side: 'before' });
   await releaseRefusedMove(page, modal, { r2, r1a });
 
-  // The board came back from the server with R2 where it was, and the modal is open over it.
+  // The board came back from the server with B first and R2 where it was, and the modal is open
+  // over it, where a click opened it.
   await expect(modal).toBeVisible();
-  await expect.poll(() => rowIds(modal)).toEqual(rowsBefore);
+  await expect.poll(() => rowIds(modal)).toEqual([b.id, ...rowsBefore.filter(id => id !== b.id)]);
   await expect(itemRow(modal, r2.id)).not.toHaveAttribute('data-pending', 'true');
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
+  await expectCentered(page, modal);
 });
 
 test('DRAG-7.23: a reload that lands mid-drag in the modal stops the drag, writes nothing for it, and leaves the modal open', async ({
@@ -761,13 +768,16 @@ test('DRAG-7.26: the modal closes when the reloaded board leaves its Card with n
   const modal = hierarchyModal(page, 'P');
   await expect(modal).toBeVisible();
 
-  // Every attached child of P is deleted, so its subtree goes with them and only P is left.
-  for (const gone of [a, b, x]) await deleteItem(request, gone.id);
+  // Every attached child of P is detached, so P still has its descendants, with none of them
+  // attached: A and B keep their subtrees, and each is a Free Card on the board now.
+  for (const detached of [a, b, x]) await moveItem(request, detached.id, { isAttached: false });
   await releaseRefusedMove(page, modal, { r2, r1a });
 
   await expect(modal).toHaveCount(0);
   await expect(article(page, 'P')).toBeVisible();
   expect(await sectionRows(page, p.id)).toEqual([]);
+  expect((await fetchItem(request, a.id)).parentId).toBe(p.id);
+  await expect(article(page, 'A')).toBeVisible();
 });
 
 test('DRAG-7.28: a click on a row in the modal opens nothing', async ({ page, request, projectSidebar }) => {

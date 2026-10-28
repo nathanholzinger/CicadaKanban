@@ -340,6 +340,7 @@ test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carri
   // A click there opens P's Sheet, and the modal stays shut.
   await page.mouse.click(indent.x, indent.y);
   await expect(itemPanel(page)).toHaveClass(/translate-x-0/);
+  await expect(itemPanel(page).getByRole('heading', { name: 'P', exact: true })).toBeVisible();
   await expect(modal).toHaveCount(0);
   await page.mouse.click(8, 8);
   await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
@@ -423,4 +424,27 @@ test('DRAG-7.29: the side highlight can name an overflow row, and a release stil
   await release(page);
   await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(r.id);
   expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
+});
+
+test('DRAG-7.29: from the gap below the overflow row, at its level, the line is drawn on the overflow row, and a release places by gap and depth', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Overflow Row Side Highlight Below Project';
+  const { p, r, r2, t, x } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+
+  // The ghost is in the gap between the overflow row and T, at the overflow row's level, and the
+  // row above it is the overflow row, so the line is drawn on its lower side.
+  await holdAt(page, x, p, () => topQuarter(itemRow(page, t.id)), L);
+  await awaitProjection(page, `${6}:${L}:true`);
+  await expect.poll(() => dropLineOn(page)).toEqual({ row: `overflow:${r.id}`, side: 'after' });
+
+  // A release with the line on the overflow row places X by the gap and depth: R's last child.
+  await release(page);
+  await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(r.id);
+  expect((await fetchItem(request, x.id)).position).toBeGreaterThan((await fetchItem(request, r2.id)).position);
 });

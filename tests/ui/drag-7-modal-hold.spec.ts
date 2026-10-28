@@ -10,6 +10,7 @@ import {
   boardReload,
   boxOf,
   cancel,
+  center,
   clocksMargin,
   dragMachine,
   hoverTo,
@@ -22,7 +23,7 @@ import {
   NO_POP,
 } from '../helpers/dragGesture';
 import { article, hierarchyModal, itemRow, overflowRow, region } from '../helpers/boardLocators';
-import { holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
+import { expectCentered, expectInside, holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
 import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { descendantsRegionKey, cardRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
@@ -34,8 +35,9 @@ import { MODAL_EDGE_MARGIN_PX } from '../../client/src/components/workflow/modal
 // writes. The dwell and the cue are seeded values: only the clock's logic is asserted here, and
 // whether they feel right is DRAG-7.20, by hand.
 //
-// Where a case drags `X` or `B`, it's a Stub of `P` picked up in its own section, which starts at
-// the Descendants layer with no pop. Any item at that layer can open the modal.
+// Where a case drags `X`, `B` or `W`, it's a Stub of `P` picked up in its own section, which starts
+// at the Descendants layer with no pop. Any item at that layer can open the modal. `X` and `B`
+// come up to the overflow row from below it; `W`, first in `P`, comes down to it from above.
 
 test.beforeEach(async () => {
   await resetAndSeedDb();
@@ -64,16 +66,6 @@ const L = DEFAULT_DRAG_TUNING.sectionLevels;
 // The cue drawn on an overflow row: the fill bar a hold runs, timed by an animation of the cue's
 // length (`dragChrome.tsx::ZoomCue`).
 const cueOn = (page: Page, ownerId: string) => overflowRow(page, ownerId).locator('[style*="cue-fill"]');
-
-// The cursor is inside the modal's box. The modal is smaller than the window, so keeping it inside
-// the window never takes it off the cursor.
-async function expectInside(modal: Locator, cursor: { x: number; y: number }) {
-  const box = await boxOf(modal);
-  expect(cursor.x).toBeGreaterThanOrEqual(box.x);
-  expect(cursor.x).toBeLessThanOrEqual(box.x + box.width);
-  expect(cursor.y).toBeGreaterThanOrEqual(box.y);
-  expect(cursor.y).toBeLessThanOrEqual(box.y + box.height);
-}
 
 // The ghost is drawn under the cursor: the dragged item's own row in the modal, painted where the
 // cursor is. The row slides into its slot as any row does, so this waits for it to settle.
@@ -311,8 +303,9 @@ test('DRAG-7.15, DRAG-7.19: the modal opens with the ghost’s spot under the cu
   expect((await fetchItem(request, b.id)).position).toBeGreaterThan((await fetchItem(request, r2.id)).position);
 });
 
-// `W`, an item first in P, so that a hold at the gap below R's overflow row comes down from the rows
-// above it, where the cases above bring an item up to it. With `childTitle`, it has a child of its own.
+// `W`, an item first in P, so that a hold at either gap beside R's overflow row comes down to it from
+// the rows above, where the cases above bring an item up to it. With `childTitle`, it has a child of
+// its own.
 async function seedFirstItem(
   request: Parameters<typeof seedItem>[0],
   tree: Awaited<ReturnType<typeof seedOverflowTree>>,
@@ -375,20 +368,57 @@ test('DRAG-7.15: the same hold for an item with a child of its own, whose subtre
   expect((await fetchItem(request, child!.id)).parentId).toBe(w.id);
 });
 
-// The modal's middle is the window's, as one a click opens sits (DRAG-7.7).
-async function expectCentered(page: Page, modal: Locator) {
-  const viewport = page.viewportSize()!;
-  await expect(modal).toBeVisible();
-  await expect
-    .poll(async () => {
-      const box = await boxOf(modal);
-      return Math.max(
-        Math.abs(box.x + box.width / 2 - viewport.width / 2),
-        Math.abs(box.y + box.height / 2 - viewport.height / 2),
-      );
-    })
-    .toBeLessThan(2);
-}
+test('DRAG-7.15: held from above, down to the gap above R’s overflow row, the modal opens with the ghost’s spot under the cursor, and a release right after commits it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold From Above To First Child Project';
+  const tree = await seedOverflowTree(request, name);
+  const { p, r, r1 } = tree;
+  const { w } = await seedFirstItem(request, tree);
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // R's first child, before R1, where the hold from below puts an item: W comes down to it past
+  // A, Q and R, and not up from the rows below. The rows between W's slot and the ghost slide up
+  // a row as it passes, so the overflow row is drawn where R's own box is, and the aim is there.
+  const first = await holdAt(page, w, p, () => center(itemRow(page, r.id)), 0);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectInside(modal, first.at());
+  await expectGhostUnder(modal, w.id, first.at());
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+
+  const shown = await expectReleaseCommitsShown(page, request, modal, w, p);
+  expect([shown.parentId, shown.prevId, shown.nextId]).toEqual([r.id, null, r1.id]);
+});
+
+test('DRAG-7.15: the same hold, down to the gap above R’s overflow row, for an item with a child of its own, whose subtree travels with it', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold From Above To First Child With Child Project';
+  const tree = await seedOverflowTree(request, name);
+  const { p, r, r1 } = tree;
+  const { w, child } = await seedFirstItem(request, tree, 'WC');
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  const first = await holdAt(page, w, p, () => center(itemRow(page, r.id)), 0);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectInside(modal, first.at());
+  await expectGhostUnder(modal, w.id, first.at());
+
+  // R's first child, before R1, with the child still W's.
+  const shown = await expectReleaseCommitsShown(page, request, modal, w, p);
+  expect([shown.parentId, shown.prevId, shown.nextId]).toEqual([r.id, null, r1.id]);
+  expect((await fetchItem(request, child!.id)).parentId).toBe(w.id);
+});
 
 // The modal opened under the cursor, away from the window's middle, which a case about where it
 // sits afterward has to start from.
@@ -663,20 +693,21 @@ test('DRAG-7.12: a modal a hold opens carries the drag’s classification: a row
   for (let level = 1; level <= cap - 6; level++)
     tail = await seedItem(request, { title: `X${level}`, parentId: tail.id });
 
-  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  // A value that is not the default, so that a row drawn at the default's or at a fixed value fails.
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK, overlayDepthCappedOpacity: 0.25 });
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   const modal = hierarchyModal(page, 'P');
 
   // The modal opens during the drag, and the classification, read once at its start, is on its
-  // rows: R1a is Depth-capped and drawn dimmer than R, which is valid.
+  // rows: R1a is Depth-capped and drawn at the tuned opacity, and R, which is valid, at full.
   await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await awaitProjection(page, '3:3:true');
   await expect(modal).toBeVisible(opens(tuning));
   await expect(itemRow(modal, r1a.id)).toHaveAttribute('data-drop-state', 'depth-capped');
   for (const fits of [r, r1]) await expect(itemRow(modal, fits.id)).toHaveAttribute('data-drop-state', 'valid');
   const opacity = (id: string) => itemRow(modal, id).evaluate(el => parseFloat(getComputedStyle(el).opacity));
-  expect(await opacity(r1a.id)).toBeLessThan(1);
+  await expect.poll(() => opacity(r1a.id)).toBe(tuning.overlayDepthCappedOpacity);
   expect(await opacity(r.id)).toBe(1);
   await cancel(page);
 });

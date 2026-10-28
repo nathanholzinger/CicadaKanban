@@ -1,6 +1,6 @@
-import type { APIRequestContext, Locator, Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
-import { awaitDragContext, hoverTo, pickUp, type Point } from './dragGesture';
+import { awaitDragContext, boxOf, hoverTo, pickUp, type Point } from './dragGesture';
 import { itemRow, region } from './boardLocators';
 import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
@@ -97,6 +97,30 @@ export async function placementShown(modal: Locator, ghostId: string) {
     prevId: siblingsAbove[0]?.id ?? null,
     nextId: siblingsBelow.find(row => row.depth === depth)?.id ?? null,
   };
+}
+
+// The point is inside the box `locator` draws.
+export async function expectInside(locator: Locator, point: Point) {
+  const box = await boxOf(locator);
+  expect(point.x).toBeGreaterThanOrEqual(box.x);
+  expect(point.x).toBeLessThanOrEqual(box.x + box.width);
+  expect(point.y).toBeGreaterThanOrEqual(box.y);
+  expect(point.y).toBeLessThanOrEqual(box.y + box.height);
+}
+
+// The modal's middle is the window's, as one a click opens sits (DRAG-7.7).
+export async function expectCentered(page: Page, modal: Locator) {
+  const viewport = page.viewportSize()!;
+  await expect(modal).toBeVisible();
+  await expect
+    .poll(async () => {
+      const box = await boxOf(modal);
+      return Math.max(
+        Math.abs(box.x + box.width / 2 - viewport.width / 2),
+        Math.abs(box.y + box.height / 2 - viewport.height / 2),
+      );
+    })
+    .toBeLessThan(2);
 }
 
 // The row the live drop line is drawn on right now, as an item's id or `overflow:<owner id>`, and
