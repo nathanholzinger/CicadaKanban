@@ -519,6 +519,30 @@ Deliberately late, so all of it is tuned against real, working gestures.
 *(Broadened 2026-09-24 from "visual cue polish" to include feel tuning:
 Story 6's hands-on found feel problems that aren't about any one cue's look.)*
 
+**How this story runs: code first** (Nathan, 2026-10-28). It's a tuning
+and feel story, so it departs from the usual order in three ways:
+- **Code leads, and the docs follow.** The Coder builds candidate
+  solutions, and Nathan tries them hands-on. The PO writes the wiki, and
+  the Test Planner the cases, once Nathan has approved a solution. They
+  don't write Planned passages ahead of the build.
+- **The drag specs aren't kept green.** When a change makes a drag spec
+  fail, and we're reasonably sure the spec is giving a false failure, the
+  spec is skipped, not updated. The skip carries a one-line reason. Story
+  10 takes the skips up, since it ends with none.
+- **No new drag tests** until the story's decisions are final, at its end,
+  or until Story 10.
+
+"Drag tests" here are the Playwright specs that drive a drag, the ones that
+depend on cursor placement or timing (Story 10's line). Unit tests of pure
+modules, API tests and `npm run check` work as usual, with one exception:
+if the drag layer's unit tests keep failing on changes that are only being
+tried out, they can be skipped on the same terms, and Story 10 takes them
+up too. Most of them set their own timings and geometry, and read the
+shared sizes by name, so a changed tuning value or size shouldn't fail
+them. A changed rule will, such as what a layer change moves or what a
+trigger reads. The story still closes by the story-done checklist, and any
+case it leaves without a test is routed to Story 10 by ID.
+
 **Carried in from Story 6's hands-on (2026-09-24):**
 
 - **The blue anchor line is partly hidden behind the dragged card.** Since
@@ -667,7 +691,9 @@ other gestures exist.
 once the gesture has stopped moving, and decide — case by case — what the
 automation suite is *for*: which cases it asserts, which stay manual by
 rule, and which are precise enough to be flakier as automation than they
-are worth. Ends with **zero skipped Playwright tests** in `tests/`.
+are worth. Ends with **zero skipped Playwright tests** in `tests/`, and
+none of the drag layer's unit tests that Story 8 skipped still skipped
+(Story 8, "How this story runs").
 
 **Why a story and not the checklist step.** This is the Definition of
 Done's standard test-reconciler pass (`.claude/guides/epic-done-checklist.md`
