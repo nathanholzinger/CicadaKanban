@@ -42,7 +42,7 @@ import {
   region,
 } from '../helpers/boardLocators';
 import { rowIds, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
-import { watchWrites } from '../helpers/projectTreeDrag';
+import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
@@ -277,7 +277,7 @@ test('DRAG-7.9, DRAG-7.19: set back down in its own gap and depth, an item write
   await awaitProjection(page, '5:3:true');
   await release(page);
 
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   const after = await fetchItem(request, r2.id);
   expect([after.parentId, after.position]).toEqual([before.parentId, before.position]);
   await expect(modal).toBeVisible();
@@ -337,7 +337,7 @@ test('DRAG-7.9, DRAG-7.12: a tab state past the depth cap is reachable in the mo
   await awaitProjection(page, new RegExp(`^\\d+:${cap - 2}:false$`));
   await release(page);
 
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
 });
 
@@ -367,7 +367,7 @@ test('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pops out
   await release(page);
 
   // The Card layer's auto-drop: R2, whose own slot is behind R's overflow row, is set back down.
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
   await expect(article(page, 'P')).toBeVisible();
 });
@@ -542,7 +542,7 @@ test('DRAG-7.19: Escape during a drag in the modal cancels the drag and leaves i
   await expect(modal).toBeVisible();
   expect(await boxOf(modal)).toEqual(placedBefore);
   expect(await rowIds(modal)).toEqual(rowsBefore);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
 
   await page.keyboard.press('Escape');
@@ -623,7 +623,7 @@ test('DRAG-7.6: back in the section, a Stub whose own slot the section shows com
   const writes = watchWrites(page);
   await release(page);
 
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect((await fetchItem(request, r.id)).parentId).toBe(q.id);
 });
 
@@ -700,10 +700,7 @@ test('DRAG-7.23: a reload that lands mid-drag in the modal stops the drag, write
 
   // The first release's write is refused after a delay, so the reload it causes lands while the
   // next drag is under way.
-  await page.route('**/api/items/*/move', async route => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
-  });
+  await refuseMoves(page, { afterMs: 1500 });
   const writes = watchWrites(page);
   await pickUpRow(page, modal, r2.id, 'R2');
   await hoverTo(page, await topQuarter(itemRow(modal, r1a.id)));
@@ -723,8 +720,7 @@ test('DRAG-7.23: a reload that lands mid-drag in the modal stops the drag, write
   await expect(modal).toBeVisible();
   await expect.poll(() => rowIds(modal)).toEqual(rowsBefore);
   await page.mouse.up();
-  await page.waitForTimeout(300);
-  expect(writes).toHaveLength(1);
+  expect(await settledWrites(page, writes)).toHaveLength(1);
   expect((await fetchItem(request, r1a.id)).parentId).toBe(r1.id);
   expect((await fetchItem(request, r2.id)).parentId).toBe(r.id);
 });
@@ -787,11 +783,10 @@ test('DRAG-7.28: a click on a row in the modal opens nothing', async ({ page, re
   const writes = watchWrites(page);
 
   await itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }).click();
-  await page.waitForTimeout(300);
 
   // No Sheet, the modal as it was, and nothing written.
   await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
   await expect(modal).toBeVisible();
   expect(await boxOf(modal)).toEqual(placed);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
 });

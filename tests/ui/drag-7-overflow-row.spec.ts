@@ -17,7 +17,7 @@ import {
 } from '../helpers/dragGesture';
 import { article, dragOverlay, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
 import { dropLineOn, holdAt, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
-import { watchWrites } from '../helpers/projectTreeDrag';
+import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
@@ -317,7 +317,7 @@ test('DRAG-7.22: a press and drag from an overflow row’s count starts no drag,
 
   expect(await sectionRows(page, p.id)).toEqual(before);
   await expect(modal).toHaveCount(0);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
 });
 
 test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carries the Card, and a click opens the Card’s Sheet, not the modal', async ({
@@ -351,7 +351,7 @@ test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carri
   await expect(dragOverlay(page)).toHaveCount(1);
   await expect(dragOverlay(page)).toHaveAttribute('aria-label', 'P');
   await cancel(page);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
 });
 
 test('DRAG-7.27: a dragged R carries its overflow row, which is never a neighbor, and at the first level its children show', async ({

@@ -902,6 +902,26 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Not taken:** #13, a warning on a refused write. The header's ruling is that a value holds for the session and nothing else.
   - **Checks:** `npm run check` passes (430 server, 565 client, 217 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 227 and 8 skipped, the new spec on the 226 before.
   - **Close-out:** a row for #7.
+- **2026-10-28, batch 12: the E2E helpers (Coder).** Rerun #6, #8, #11, #12; with #19, #20 and #22; and the audit's note on checks for no write. Only `tests/` changed.
+  - **#6:** `holdAt`'s comment says `depth` counts "indents right of where the pointer picked the item up (negative for left)".
+  - **#8: `outwait` calls `clocksMargin`.** I read why they differ before choosing. `clocksMargin` is the ceiling of a retrying assertion and `outwait` is a sleep that proves a hold didn't run, but the slack is the same one: the sample-driven cascade after the last clock's due time has to land before the wait ends. A sleep that is too short for it passes against a hold that was merely late. So the two are one spelling, and `dragGesture.ts`'s claim stands. The cost is 1.5 s more at each of three waits in one spec.
+  - **#11:** `drag-card-zoom-in.spec.ts` calls `region(...)` and its `regionOf` is gone (two callers, where the audit counted three). `drag-column-bands.spec.ts` calls it at the two inline spellings, and its own `regionOf(col)` stays.
+  - **#12:** `refuseMoves(page, { afterMs })`, at the column-bands copy and at the two copies with a 1500 ms delay in the hierarchy-modal and modal-hold specs. `drag-column-bands.spec.ts` waits for the reload with `boardReload(page)`. Its wait for the refusal stays, since it asserts the status.
+  - **#22:** `dragTo`'s local is `refined`.
+  - **#19: `placementShown` reads a parent or throws.**
+    - **The change:** the parent is the first row above that is shallower than the ghost, and at any level but the first it has to be one level up, or the helper throws and says what it found. Before, a ghost with no such row read as `null`, the same as "under the Card", and the search passed over a shallower row that ends the subtree.
+    - **The run:** the full suite passes. Every placement check that reads it (`expectReleaseCommitsShown`, about 20 of them, and the two direct reads) read a real parent already, so no spec was passing on one it never read.
+    - **Not taken:** the third problem the audit lists, the dragged item's own descendants, which its fix leaves out. The two specs with a child of the dragged item (batch 7's, `W` and `WC`) read the same parent as before. `dropLineOn`'s placeholder row id is not in the plan.
+  - **#20: setup writes are checked.**
+    - **`seed.ts`:** `checkedOk` asserts a response's status and `checkedJson` calls it. `deleteItem` and the four `pin*` helpers use it where each spelled the assertion. New `deleteColumn`, `updateColumn` and `reorderWorkphases` use it, called at `drag-column-bands.spec.ts` (the fold, twice) and `boards-layer.spec.ts` (the broken-column reorder).
+    - **The column reorder at `boards-layer.spec.ts:324`** is that test's subject, so the test asserts its status itself, in place, and no helper hides it.
+    - **Still unchecked,** outside the plan's sites: `attached-children.spec.ts:95`'s workphase delete, `workflow-creation.spec.ts:95`'s project delete, and `project-sidebar-resize.spec.ts:120`, whose status the test reads.
+  - **The checks for no write:** `projectTreeDrag.ts::settledWrites(page, writes)` waits 300 ms and returns the writes `watchWrites` has seen, so a caller reads them a beat after the gesture has settled. It is a wait for an absence, which nothing the page shows can stand in for, and the file says so. It replaces the immediate read at the plan's eight sites, `HM:280`, `:370`, `:626` and `:796`, `MH:760` and `:778`, and `OR:322` and `:356`, and the fixed 300 ms waits at `HM:726` (which now reads the one write it expects) and `HM:790`. Two more sites in the hierarchy-modal spec check for no write straight after a drag ends, the release at `:340` and the cancel at `:545`, and take it too. The two checks at `:141` and `:201` follow no drag.
+  - **Mutation checks:** the helpers have no tests of their own, so a throwaway spec, deleted, drove them on a page of hand-built rows and a timed fetch.
+    - **`placementShown`:** it throws for a depth-2 ghost under a depth-0 row, and for a depth-2 ghost whose nearest shallower row is depth 0 with a depth-1 row further up. The old helper resolved for the first, reading `null`, and for the second read the depth-1 row as the parent. It reads a real parent and the first level as before.
+    - **`settledWrites`:** a write sent 150 ms after the gesture is not in the list at once and is in the one `settledWrites` returns.
+  - **Checks:** `npm run check` passes (430 server, 565 client, 217 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 227 and 8 skipped, as before.
+  - **Close-out:** rows for #6, #8, #11 and #12, with #19, #20 and #22. That fills all twelve.
 
 ## Open questions
 

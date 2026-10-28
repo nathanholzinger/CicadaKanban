@@ -32,9 +32,9 @@ export async function seedOverflowTree(request: APIRequestContext, name: string)
 }
 
 // Picks `item`, a Stub of `p`, up in its own section, which starts the drag at the Descendants
-// layer with no pop, and aims the carried copy at `target`, `depth` levels in from where the item's
-// own row starts. Returns the aim, to tab to another depth over the same target; its `at()` is
-// where the cursor was last put.
+// layer with no pop, and aims the carried copy at `target`, `depth` indents right of where the
+// pointer picked the item up (negative for left). Returns the aim, to tab to another depth over
+// the same target; its `at()` is where the cursor was last put.
 export async function holdAt(
   page: Page,
   item: { id: string; title: string },
@@ -60,7 +60,8 @@ export async function holdAt(
 // the ghost's row at its indent among the other rows, as the user sees them. `parentId` is null
 // when the ghost sits at the first level, under the Card itself, and `prevId` and `nextId` are the
 // siblings the ghost lies between under that parent (null at either end). A spec compares this
-// with what the release wrote, so it holds the ghost's place on screen to the committed one.
+// with what the release wrote, so it holds the ghost's place on screen to the committed one. Throws
+// for a ghost at a level with no row one level up above it, which the modal never draws.
 export async function placementShown(modal: Locator, ghostId: string) {
   const rows = await modal.locator('[data-item-id]').evaluateAll(
     (els, indent) =>
@@ -79,14 +80,20 @@ export async function placementShown(modal: Locator, ghostId: string) {
   const above = rows.slice(0, at).reverse();
   const below = rows.slice(at + 1);
 
-  // The nearest row above at the level of the ghost's parent is its parent. Rows above it at the
-  // ghost's own level, before that parent, are siblings, the nearest being the one before it.
-  const parentAt = above.findIndex(row => row.depth === depth - 1);
+  // The first row above that is shallower than the ghost ends the ghost's siblings and is its
+  // parent, so it has to be one level up. Rows above it at the ghost's own level are the ghost's
+  // siblings, the nearest being the one before it. At the first level there is no such row: the
+  // ghost is under the Card.
+  const parentAt = above.findIndex(row => row.depth < depth);
+  if (depth > 0 && above[parentAt]?.depth !== depth - 1) {
+    const found = parentAt < 0 ? 'no shallower row' : `one at level ${above[parentAt].depth}`;
+    throw new Error(`the ghost ${ghostId} at level ${depth} has ${found} above it, not a parent one level up`);
+  }
   const siblingsAbove = above.slice(0, parentAt < 0 ? above.length : parentAt).filter(row => row.depth === depth);
   const untilParentEnds = below.findIndex(row => row.depth < depth);
   const siblingsBelow = below.slice(0, untilParentEnds < 0 ? below.length : untilParentEnds);
   return {
-    parentId: depth === 0 ? null : (above[parentAt]?.id ?? null),
+    parentId: depth === 0 ? null : above[parentAt].id,
     prevId: siblingsAbove[0]?.id ?? null,
     nextId: siblingsBelow.find(row => row.depth === depth)?.id ?? null,
   };

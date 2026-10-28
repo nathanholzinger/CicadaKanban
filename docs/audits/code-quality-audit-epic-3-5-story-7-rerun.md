@@ -401,13 +401,17 @@ These go to the Open questions of Story 7's plan at close-out, addressed to each
 
 Filled in as the audit closes. One row per required finding (#1–#12).
 
-| #   | Disposition | Where it landed (routes) |
-| --- | ----------- | ------------------------ |
-| 1   | Fixed       | Batch 8, with #18        |
-| 4   | Fixed       | Batch 8                  |
-| 2   | Fixed       | Batch 9, with #3         |
-| 3   | Fixed       | Batch 9, with #2         |
-| 9   | Fixed       | Batch 9                  |
-| 10  | Fixed       | Batch 9                  |
-| 5   | Fixed       | Batch 10, with #14–#16   |
-| 7   | Fixed       | Batch 11                 |
+| #   | Disposition | Where it landed (routes)        |
+| --- | ----------- | ------------------------------- |
+| 1   | Fixed       | Batch 8, with #18               |
+| 4   | Fixed       | Batch 8                         |
+| 2   | Fixed       | Batch 9, with #3                |
+| 3   | Fixed       | Batch 9, with #2                |
+| 9   | Fixed       | Batch 9                         |
+| 10  | Fixed       | Batch 9                         |
+| 5   | Fixed       | Batch 10, with #14–#16          |
+| 7   | Fixed       | Batch 11                        |
+| 6   | Fixed       | Batch 12                        |
+| 8   | Fixed       | Batch 12                        |
+| 11  | Fixed       | Batch 12                        |
+| 12  | Fixed       | Batch 12, with #19, #20 and #22 |

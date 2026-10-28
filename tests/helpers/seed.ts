@@ -12,11 +12,17 @@ interface SeededWorkflow {
   workphases: Array<{ id: string; name: string }>;
 }
 
+// A response whose status is asserted. A failed write that carried on would show up steps later
+// as a board not in the state the spec set up.
+function checkedOk(res: APIResponse, what: string): void {
+  expect(res.ok(), `${what} → ${res.status()}`).toBe(true);
+}
+
 // The body of a response whose status is asserted. A failed create or read that
 // handed back its `{ error }` body would show up steps later as a card that never
 // appeared or a chain link missing its parent.
 async function checkedJson(res: APIResponse, what: string) {
-  expect(res.ok(), `${what} → ${res.status()}`).toBe(true);
+  checkedOk(res, what);
   return res.json();
 }
 
@@ -109,6 +115,27 @@ export async function seedColumn(
   return checkedJson(await request.post(`${API}/columns`, { data }), `POST /columns ${JSON.stringify(data)}`);
 }
 
+// DELETE /columns/:id with the status asserted.
+export async function deleteColumn(request: APIRequestContext, id: string): Promise<void> {
+  checkedOk(await request.delete(`${API}/columns/${id}`), `DELETE /columns/${id}`);
+}
+
+// PUT /columns/:id with the status asserted: a column's range and display mode, as the route takes them.
+export async function updateColumn(request: APIRequestContext, id: string, data: Record<string, unknown>) {
+  checkedOk(await request.put(`${API}/columns/${id}`, { data }), `PUT /columns/${id} ${JSON.stringify(data)}`);
+}
+
+// PATCH /workphases/reorder with the status asserted: each workphase to the position given.
+export async function reorderWorkphases(
+  request: APIRequestContext,
+  workphaseOrders: ReadonlyArray<{ id: string; position: number }>,
+): Promise<void> {
+  checkedOk(
+    await request.patch(`${API}/workphases/reorder`, { data: { workphaseOrders } }),
+    `PATCH /workphases/reorder ${JSON.stringify(workphaseOrders)}`,
+  );
+}
+
 export interface SeededItem {
   id: string;
   title: string;
@@ -173,23 +200,29 @@ export async function pinProjectPosition(
   id: string,
   position: number | null,
 ): Promise<void> {
-  const res = await request.patch(`${API}/test/projects/${id}/position`, { data: { position } });
-  expect(res.ok(), `pin project ${id} at ${position} → ${res.status()}`).toBe(true);
+  checkedOk(
+    await request.patch(`${API}/test/projects/${id}/position`, { data: { position } }),
+    `pin project ${id} at ${position}`,
+  );
 }
 
 // Pins one project's creation time through the test-only route
 // `PATCH /api/test/projects/:id/created-at`, so a tie's order is certain.
 export async function pinProjectCreatedAt(request: APIRequestContext, id: string, createdAt: number): Promise<void> {
-  const res = await request.patch(`${API}/test/projects/${id}/created-at`, { data: { createdAt } });
-  expect(res.ok(), `pin project ${id} created at ${createdAt} → ${res.status()}`).toBe(true);
+  checkedOk(
+    await request.patch(`${API}/test/projects/${id}/created-at`, { data: { createdAt } }),
+    `pin project ${id} created at ${createdAt}`,
+  );
 }
 
 // Gives one project a parent by writing the row, through the test-only route
 // `PATCH /api/test/projects/:id/parent`: no project write builds a tree deeper
 // than the project cap.
 export async function pinProjectParent(request: APIRequestContext, id: string, parentId: string | null): Promise<void> {
-  const res = await request.patch(`${API}/test/projects/${id}/parent`, { data: { parentId } });
-  expect(res.ok(), `pin project ${id} under ${parentId} → ${res.status()}`).toBe(true);
+  checkedOk(
+    await request.patch(`${API}/test/projects/${id}/parent`, { data: { parentId } }),
+    `pin project ${id} under ${parentId}`,
+  );
 }
 
 // The project depth cap the API enforces, which the sidebar offers tab states
@@ -212,8 +245,10 @@ export interface PositionedItemPlan<K extends string> {
 // `PATCH /api/test/items/:id/position`: the item API takes no final position
 // (wiki positioning §2).
 export async function pinItemPosition(request: APIRequestContext, id: string, position: number): Promise<void> {
-  const res = await request.patch(`${API}/test/items/${id}/position`, { data: { position } });
-  expect(res.ok(), `pin ${id} at ${position} → ${res.status()}`).toBe(true);
+  checkedOk(
+    await request.patch(`${API}/test/items/${id}/position`, { data: { position } }),
+    `pin ${id} at ${position}`,
+  );
 }
 
 // Creates items and pins each to an explicit position ("plan → create → pin"),
@@ -243,8 +278,7 @@ export async function seedPositionedItems<K extends string>(
 // DELETE /items/:id with the status asserted: the item and its whole subtree go, behind the
 // open page's back.
 export async function deleteItem(request: APIRequestContext, id: string): Promise<void> {
-  const res = await request.delete(`${API}/items/${id}`);
-  expect(res.ok(), `DELETE /items/${id} → ${res.status()}`).toBe(true);
+  checkedOk(await request.delete(`${API}/items/${id}`), `DELETE /items/${id}`);
 }
 
 // GETs one item by id, with the status asserted.

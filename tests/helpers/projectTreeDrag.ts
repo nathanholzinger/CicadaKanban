@@ -12,6 +12,16 @@ export function watchWrites(page: Page): string[] {
   return writes;
 }
 
+const WRITE_GRACE_MS = 300;
+
+// The writes `watchWrites` has seen, read a beat after the gesture has settled: a handler that
+// sends its write a tick after the drop would be missed by a check made at once, and nothing the
+// page shows says no write is coming, so the absence has to be waited out.
+export async function settledWrites(page: Page, writes: readonly string[]): Promise<readonly string[]> {
+  await page.waitForTimeout(WRITE_GRACE_MS);
+  return writes;
+}
+
 // Aims the live sidebar drag at the top or bottom of a row, `tabs` indents right
 // of where the pointer picked the project up (negative for left). Where the
 // dragged project is top-level, `tabs` is the depth aimed at.

@@ -23,7 +23,7 @@ import {
 } from '../helpers/dragGesture';
 import { article, hierarchyModal, itemRow, overflowRow, region } from '../helpers/boardLocators';
 import { holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
-import { watchWrites } from '../helpers/projectTreeDrag';
+import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
 import { descendantsRegionKey, cardRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 import { MODAL_EDGE_MARGIN_PX } from '../../client/src/components/workflow/modalPlacement';
@@ -56,7 +56,7 @@ const opens = (tuning: { modalHoldDwellMs: number; modalHoldCueMs: number }) => 
 // Waits out a hold's whole length and then some, for a case that asserts no hold ran: a check that
 // no modal is there passes at once, so it has to come after the wait.
 const outwait = (page: Page, tuning: { modalHoldDwellMs: number; modalHoldCueMs: number }) =>
-  page.waitForTimeout(tuning.modalHoldDwellMs + tuning.modalHoldCueMs + 500);
+  page.waitForTimeout(clocksMargin(tuning.modalHoldDwellMs, tuning.modalHoldCueMs));
 
 // The levels a section shows, which the cases hold at the default.
 const L = DEFAULT_DRAG_TUNING.sectionLevels;
@@ -442,10 +442,7 @@ test('DRAG-7.25: after a reload that lands mid-drag, a modal a hold opened is ce
 
   // The first release's write is refused after a delay, so the reload it causes lands while the
   // next drag is under way.
-  await page.route('**/api/items/*/move', async route => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
-  });
+  await refuseMoves(page, { afterMs: 1500 });
   await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await expect(modal).toBeVisible(opens(tuning));
   await expectOffCenter(page, modal);
@@ -757,7 +754,7 @@ test('DRAG-7.21: a ghost in an over-cap state beside an overflow row starts no h
   await expect(cueOn(page, r.id)).toHaveCount(0);
   await expect(modal).toHaveCount(0);
   await release(page);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
   expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
 
   // Below it: R's last child, past the cap the same way. Tabbed one level left, R's next sibling
@@ -775,5 +772,5 @@ test('DRAG-7.21: a ghost in an over-cap state beside an overflow row starts no h
   await expect(cueOn(page, r.id)).toHaveCount(0);
   await expect(modal).toHaveCount(0);
   await cancel(page);
-  expect(writes).toEqual([]);
+  expect(await settledWrites(page, writes)).toEqual([]);
 });

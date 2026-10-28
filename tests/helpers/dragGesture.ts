@@ -90,9 +90,9 @@ export async function dragTo(page: Page, source: Locator, resolveTarget: () => P
   await pickUp(page, source);
   await hoverTo(page, await resolveTarget());
   // Re-resolve after the reflow (see header comment) for the precise approach.
-  const settled = await resolveTarget();
-  await page.mouse.move(settled.x, settled.y, { steps: 10 });
-  await page.mouse.move(settled.x, settled.y, { steps: 2 });
+  const refined = await resolveTarget();
+  await page.mouse.move(refined.x, refined.y, { steps: 10 });
+  await page.mouse.move(refined.x, refined.y, { steps: 2 });
   await release(page);
 }
 
@@ -265,11 +265,14 @@ export async function delayMoveResponses(page: Page, ms: (n: number) => number) 
   });
 }
 
-// Refuses every move the page sends, so that a release resyncs the board from the server.
-export async function refuseMoves(page: Page) {
-  await page.route('**/api/items/*/move', (route: Route) =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
-  );
+// Refuses every move the page sends, so that a release resyncs the board from the server. With
+// `afterMs`, each refusal comes that long after the request, so the reload it causes can land while
+// a later drag is under way.
+export async function refuseMoves(page: Page, { afterMs = 0 }: { afterMs?: number } = {}) {
+  await page.route('**/api/items/*/move', async (route: Route) => {
+    if (afterMs > 0) await new Promise(resolve => setTimeout(resolve, afterMs));
+    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
+  });
 }
 
 // The board read the client makes when it resyncs.

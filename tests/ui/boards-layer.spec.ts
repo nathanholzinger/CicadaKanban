@@ -6,6 +6,7 @@ import { atFraction, hoverTo, pickUp, release } from '../helpers/dragGesture';
 import {
   seedBareWorkflow,
   addWorkphases,
+  reorderWorkphases,
   seedBoard,
   seedColumn,
   seedItem,
@@ -177,14 +178,10 @@ test.describe('broken column detection', () => {
     await seedColumn(request, workflow.id, todo.id, inProgress.id);
 
     // Invert their order — the column's start now sorts after its end
-    await request.patch(`${API}/workphases/reorder`, {
-      data: {
-        workphaseOrders: [
-          { id: todo.id, position: 2 },
-          { id: inProgress.id, position: 1 },
-        ],
-      },
-    });
+    await reorderWorkphases(request, [
+      { id: todo.id, position: 2 },
+      { id: inProgress.id, position: 1 },
+    ]);
 
     await projectSidebar.openBoard('Broken Column Project');
 
@@ -321,7 +318,7 @@ test.describe('board and column lifecycle', () => {
     const colA = await seedColumn(request, workflow.id, todo.id);
     const colB = await seedColumn(request, workflow.id, done.id);
 
-    await request.patch(`${API}/columns/reorder`, {
+    const reorder = await request.patch(`${API}/columns/reorder`, {
       data: {
         columnOrders: [
           { id: colA.id, position: 2 },
@@ -329,6 +326,7 @@ test.describe('board and column lifecycle', () => {
         ],
       },
     });
+    expect(reorder.ok(), `PATCH /columns/reorder → ${reorder.status()}`).toBe(true);
 
     await projectSidebar.openBoard('Column Reorder UI Project');
 

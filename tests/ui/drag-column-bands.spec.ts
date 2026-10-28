@@ -1,6 +1,5 @@
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
-import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import {
   seedTemplatedWorkflow,
@@ -10,6 +9,8 @@ import {
   seedPositionedItems,
   fetchDefaultBoard,
   fetchItem,
+  deleteColumn,
+  updateColumn,
   type SeededColumn,
 } from '../helpers/seed';
 import {
@@ -23,6 +24,8 @@ import {
   awaitDragState,
   awaitDragContext,
   delayMoveResponses,
+  boardReload,
+  refuseMoves,
   dragMachine,
   seedDragTuning,
   awaitPoppedOut,
@@ -31,7 +34,7 @@ import {
   SUSTAINED,
   type Point,
 } from '../helpers/dragGesture';
-import { article, column, titlesIn } from '../helpers/boardLocators';
+import { article, column, region, titlesIn } from '../helpers/boardLocators';
 import { columnOrder, fullOrder } from '../helpers/itemRepositioningScenario';
 import type { DragTuning } from '../../client/src/components/workflow/dragTuning';
 import { DRAG_REGION_ATTR, columnRegionKey, subrowRegionKey } from '../../client/src/components/workflow/dragRegions';
@@ -110,9 +113,11 @@ async function foldReviewIntoInProgress(
 ): Promise<{ col: Scenario['columns'][number]; y: { id: string } }> {
   const col = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
   const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
-  await request.delete(`${API}/columns/${reviewCol.id}`);
-  await request.put(`${API}/columns/${col.id}`, {
-    data: { startWorkphaseId: s.phase.inProgress.id, endWorkphaseId: s.phase.review.id, displayMode },
+  await deleteColumn(request, reviewCol.id);
+  await updateColumn(request, col.id, {
+    startWorkphaseId: s.phase.inProgress.id,
+    endWorkphaseId: s.phase.review.id,
+    displayMode,
   });
   const { Y: y } = await seedPositionedItems(request, [
     { key: 'Y', projectId: s.projectId, workphaseId: s.phase.review.id, position: 5 },
@@ -343,13 +348,15 @@ test.describe('Card → column drop bands', () => {
     // start genuinely empty.
     const inProgressCol = s.columns.find(c => c.entryWorkphaseId === s.phase.inProgress.id)!;
     const reviewCol = s.columns.find(c => c.entryWorkphaseId === s.phase.review.id)!;
-    await request.delete(`${API}/columns/${reviewCol.id}`);
-    await request.put(`${API}/columns/${inProgressCol.id}`, {
-      data: { startWorkphaseId: s.phase.inProgress.id, endWorkphaseId: s.phase.review.id, displayMode: 'expanded' },
+    await deleteColumn(request, reviewCol.id);
+    await updateColumn(request, inProgressCol.id, {
+      startWorkphaseId: s.phase.inProgress.id,
+      endWorkphaseId: s.phase.review.id,
+      displayMode: 'expanded',
     });
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     await openBoard(page, projectSidebar);
-    const reviewRow = page.locator(`[${DRAG_REGION_ATTR}="${subrowRegionKey(inProgressCol.id, s.phase.review.id)}"]`);
+    const reviewRow = region(page, subrowRegionKey(inProgressCol.id, s.phase.review.id));
     // The merged range's own displayName isn't the literal "In Progress"
     // (the DRAG-3.6, DRAG-3.7 case below meets the same thing) — matched by
     // substring here too.
@@ -635,7 +642,7 @@ test.describe('Card → column drop bands', () => {
     const tuning = await seedDragTuning(page, POP_OUT_ONLY);
     const { col } = await foldReviewIntoInProgress(request, s, 'expanded');
     await openBoard(page, projectSidebar);
-    const reviewRow = page.locator(`[${DRAG_REGION_ATTR}="${subrowRegionKey(col.id, s.phase.review.id)}"]`);
+    const reviewRow = region(page, subrowRegionKey(col.id, s.phase.review.id));
 
     // X from Todo into the Review sub-row's top band: before Y, exactly
     // Review. X starts locked to Todo, so it also has to pop out to Board
@@ -819,18 +826,14 @@ test.describe('ordinal preview and reconciliation', () => {
     // The server has X in Review, which the open board doesn't know: it still draws X in Todo.
     await moveItem(request, s.items.X.id, { workphaseId: s.phase.review.id });
     await expect(article(todo, 'Item X')).toBeVisible();
-    await page.route('**/api/items/*/move', route =>
-      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
-    );
+    await refuseMoves(page);
 
     await pickUp(page, article(page, 'Item X'));
     await hoverTo(page, await gapBetween(todo, inProgress));
     await awaitPoppedOut(page, tuning);
     await settleOnBottomBand(page, regionOf(inProgress));
     const refused = page.waitForResponse(res => res.url().endsWith('/move'));
-    const reloaded = page.waitForResponse(
-      res => res.request().method() === 'GET' && res.url().endsWith(`/api/boards/${s.boardId}`),
-    );
+    const reloaded = boardReload(page);
     await release(page);
     expect((await refused).status()).toBe(400);
     await reloaded;

@@ -1,4 +1,3 @@
-import type { Locator } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
 import {
@@ -20,8 +19,8 @@ import {
   seedDragTuning,
   clocksMargin,
 } from '../helpers/dragGesture';
-import { article, column } from '../helpers/boardLocators';
-import { DRAG_REGION_ATTR, cardRegionKey, columnRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { article, column, region } from '../helpers/boardLocators';
+import { cardRegionKey, columnRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // The Column → Card zoom-in, reached after the drag has passed through
 // Board layer (DRAG-4.15 for a Card in another column).
@@ -49,10 +48,6 @@ import { DRAG_REGION_ATTR, cardRegionKey, columnRegionKey } from '../../client/s
 // `popDelayMs` 500ms) likely self-corrects long before that. They stay
 // skipped while the target Card can move out from under the cursor
 // mid-cue, unless the gesture is confirmed fine by hand.
-
-function regionOf(group: Locator, regionKey: string): Locator {
-  return group.locator(`[${DRAG_REGION_ATTR}="${regionKey}"]`);
-}
 
 test.describe('Card zoom-in after passing through Board layer', () => {
   test.beforeAll(async () => {
@@ -83,7 +78,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
     await awaitPoppedOut(page, tuning);
 
-    await hoverTo(page, await center(regionOf(inProgressGroup, columnRegionKey(inProgressCol.id))));
+    await hoverTo(page, await center(region(inProgressGroup, columnRegionKey(inProgressCol.id))));
     await awaitDragContext(page, columnRegionKey(inProgressCol.id), clocksMargin(tuning.popInDelayMs));
     // Locking in redraws the column (the zones gone): aim at Q where it now sits.
     await hoverTo(page, await center(article(inProgressGroup, 'Q')));
@@ -118,7 +113,7 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await gapBetween(todoGroup, inProgressGroup));
     await awaitPoppedOut(page, tuning);
 
-    await hoverTo(page, await center(regionOf(todoGroup, columnRegionKey(todoCol.id))));
+    await hoverTo(page, await center(region(todoGroup, columnRegionKey(todoCol.id))));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popInDelayMs));
     await hoverTo(page, await center(article(todoGroup, 'Q')));
     await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
