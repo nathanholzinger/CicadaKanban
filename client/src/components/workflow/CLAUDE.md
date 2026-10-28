@@ -59,7 +59,7 @@ its own header.
   region key and names the Card as its parent region, since it isn't inside the Card's
   element; the Card's own section draws static and is no region, so one element carries the
   key and each item registers one row. The drop math draws every level there
-  (`useBoardDnd.ts::levelsDrawnAt`). Its own `descendantsSectionRect` and Card id bound the
+  (`useBoardDnd.ts::levelsDrawnAt`, `itemListOps.ts::EVERY_LEVEL`). Its own `descendantsSectionRect` and Card id bound the
   collision candidates: the modal sits over the board, so another Card's rows can lie inside
   its box. Leaving its box is the usual pop out of Descendants and closes it; a drag that ends
   in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
@@ -67,7 +67,10 @@ its own header.
   from outside does: the projection's seed is the last gap, `projection.slotHidden`, and
   `placement.ts::placementFor` previews it as the Card's last child. The list is the layer's
   region and the dialog its bounds (`dragRegions.ts::DRAG_BOUNDS_ATTR`, read into the region's
-  `boundsRect`), so a cursor over the header is still in the modal. A click opens it centered.
+  `boundsRect`), so a cursor over the header is still in the modal. A click opens it centered,
+  and so does a mount with no drag running: whether the cursor places the modal is decided
+  once, as it mounts (`HierarchyModal.tsx`), so a board reload that remounts a modal a hold
+  opened doesn't leave it at the window's corner.
   **A hold during a drag opens it under the cursor.** While the ghost sits directly above or
   below an overflow row, at its level (`DescendantsProjection.overflowBeside`, which
   `descendantsProjection.ts::modalHoldTarget` turns into the hold's target, and not in an
@@ -192,15 +195,16 @@ active-context outline, the drop line's shape).
   the blue line, the pop machine and the release all use.
 - **The rows that travel with the dragged item:** `dragClassification.ts`'s
   `subtreeIds`, read by both the projection's exclusion and
-  `dragCollision.ts::travelingRowsFor`. Never re-derive it by filtering for
-  cycle-forming states.
+  `dragCollision.ts::travelingRowsFor` (which the hierarchy modal's placement reads too).
+  Never re-derive it by filtering for cycle-forming states.
 - **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
   gate and the over-cap cue both read it, so they can't disagree.
 - **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
 - **Where the hierarchy modal opens during a drag:** `modalPlacement.ts`
-  (`placeModal`, `slotForGap`, `gapAtSlot`, `depthAtCursor`). The same functions place it and
-  read it, so a modal that fitted reads back the spot it was placed for.
+  (`placeModal`, `centerModal`, `slotForGap`, `gapAtSlot`, `depthAtCursor`). The same
+  functions place it and read it, so a modal that fitted reads back the spot it was placed
+  for.
 - **What the section draws:** `itemListOps.ts::sectionEntries` over those rows, cut at
   `shownLevels(tuning.sectionLevels)`. The render and the drop math both read the level
   count through `shownLevels`, so they can't disagree about which levels exist. The

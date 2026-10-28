@@ -15,6 +15,7 @@ import {
   atFraction,
   awaitDragContext,
   awaitProjection,
+  boardReload,
   boxOf,
   cancel,
   center,
@@ -24,6 +25,7 @@ import {
   hoverTo,
   paintedBoxOf,
   pickUp,
+  refuseMoves,
   release,
   seedDragTuning,
   topQuarter,
@@ -88,17 +90,6 @@ async function pullOutAndZoomBack(
   await hoverTo(page, await atFraction(section, 0.5));
   await awaitDragContext(page, descendantsRegionKey(cardId), clocksMargin(tuning.descendantsPopInDelayMs));
 }
-
-// Refuses every move the page sends, so that a release resyncs the board from the server.
-async function refuseMoves(page: Page) {
-  await page.route('**/api/items/*/move', route =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
-  );
-}
-
-// The board read the client makes when it resyncs.
-const boardReload = (page: Page) =>
-  page.waitForResponse(res => res.request().method() === 'GET' && /\/api\/boards\/[^/?]+$/.test(res.url()));
 
 // Drags R2 in the open modal to the gap between R1 and R1a and lets go, with every move refused:
 // the client reloads the board from the server.

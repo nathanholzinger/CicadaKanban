@@ -1,4 +1,5 @@
-// Shared modal chrome (backdrop, header, footer, Esc) — all centered modals wrap this.
+// Shared modal chrome (backdrop, header, footer, Esc) — every modal wraps this. It centers the
+// dialog unless given a `position`.
 
 import { useEffect, type ReactNode, type Ref } from 'react';
 import { XIcon } from './icons';
@@ -21,12 +22,13 @@ interface ModalShellProps {
   children: ReactNode;
 }
 
-// Shared chrome for centered modal dialogs: backdrop (click-to-close),
+// Shared chrome for modal dialogs: backdrop (click-to-close),
 // dialog frame, header (title/subtitle + optional close button), and an
-// optional footer bar. Body content is passed as `children` — modals whose
-// body+footer need native <form> submit semantics (Enter-to-submit) wrap
-// their own <form> around body+footer inside `children` rather than using
-// the `footer` prop.
+// optional footer bar. The dialog is centered, or placed at `position` for a
+// modal that places itself (`dialogRef` is its handle to measure it). Body
+// content is passed as `children` — modals whose body+footer need native
+// <form> submit semantics (Enter-to-submit) wrap their own <form> around
+// body+footer inside `children` rather than using the `footer` prop.
 export default function ModalShell({
   onClose,
   ariaLabel,

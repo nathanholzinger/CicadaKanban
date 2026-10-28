@@ -264,6 +264,17 @@ export async function delayMoveResponses(page: Page, ms: (n: number) => number) 
   });
 }
 
+// Refuses every move the page sends, so that a release resyncs the board from the server.
+export async function refuseMoves(page: Page) {
+  await page.route('**/api/items/*/move', (route: Route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) }),
+  );
+}
+
+// The board read the client makes when it resyncs.
+export const boardReload = (page: Page) =>
+  page.waitForResponse(res => res.request().method() === 'GET' && /\/api\/boards\/[^/?]+$/.test(res.url()));
+
 // A threshold seeded far longer than any single hover in these gestures
 // could last, so an accidental pop under a slow run never fires — never a
 // value anything computes a wait *from*.

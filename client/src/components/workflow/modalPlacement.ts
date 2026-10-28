@@ -71,6 +71,22 @@ export function placeModal({ cursor, viewport, dialog, spotX, spotY, maxScroll }
   return { left, top, scrollTop };
 }
 
+// The dialog's position when nothing places it at the cursor: in the middle of the window, where a
+// click opens it, and inside the margin when it is larger than the window.
+export function centerModal(
+  viewport: ModalPlacementInput['viewport'],
+  dialog: ModalPlacementInput['dialog'],
+): ModalPlacement {
+  return placeModal({
+    cursor: { x: viewport.width / 2, y: viewport.height / 2 },
+    viewport,
+    dialog,
+    spotX: dialog.width / 2,
+    spotY: dialog.height / 2,
+    maxScroll: 0,
+  });
+}
+
 // The gap the ghost lands in when the cursor is over the row at `overIndex` of the list's
 // sortable `items`, as the count of rows before it that don't travel with it. dnd-kit's shuffle
 // puts the ghost in the slot of the row `over` names, so this is the gap the projection reads off

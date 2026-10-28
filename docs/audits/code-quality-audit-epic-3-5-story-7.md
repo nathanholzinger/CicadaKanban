@@ -625,6 +625,16 @@ The plan asks whether anything in the finished rules still needs changing. Five 
 
 Filled in as the audit closes. One row per required finding (#1–#35).
 
-| #   | Disposition | Where it landed (routes) |
-| --- | ----------- | ------------------------ |
-|     |             |                          |
+| #   | Disposition | Where it landed (routes)       |
+| --- | ----------- | ------------------------------ |
+| 6   | Fixed       | `31009c7`, the test follow-ups |
+| 7   | Fixed       | `31009c7`, the test follow-ups |
+| 8   | Fixed       | `31009c7`, the test follow-ups |
+| 11  | Fixed       | `31009c7`, the test follow-ups |
+| 20  | Fixed       | `31009c7`, the test follow-ups |
+| 21  | Fixed       | `31009c7`, the test follow-ups |
+| 22  | Fixed       | `31009c7`, the test follow-ups |
+| 26  | Fixed       | `31009c7`, the test follow-ups |
+| 2   | Fixed       | Batch 1, with #36 and #75      |
+| 31  | Fixed       | Batch 1                        |
+| 10  | Fixed       | Batch 1                        |

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import {
   MODAL_EDGE_MARGIN_PX,
+  centerModal,
   cursorXInList,
   depthAtCursor,
   gapAtSlot,
@@ -58,6 +59,20 @@ describe('placeModal', () => {
       cursor: { x: 600, y: 400 },
     });
     expect(placed).toMatchObject({ left: MODAL_EDGE_MARGIN_PX, top: MODAL_EDGE_MARGIN_PX });
+  });
+});
+
+describe('centerModal', () => {
+  it('DRAG-7.25: puts a dialog that fits in the middle of the window, with the list unscrolled', () => {
+    expect(centerModal(viewport, dialog)).toEqual({ left: 312, top: 200, scrollTop: 0 });
+  });
+
+  it('keeps a dialog taller or wider than the window at the margin', () => {
+    expect(centerModal(viewport, { width: 2000, height: 2000 })).toEqual({
+      left: MODAL_EDGE_MARGIN_PX,
+      top: MODAL_EDGE_MARGIN_PX,
+      scrollTop: 0,
+    });
   });
 });
 

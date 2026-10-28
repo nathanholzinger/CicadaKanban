@@ -7,12 +7,15 @@ import {
   awaitDragContext,
   awaitModalHold,
   awaitProjection,
+  boardReload,
   boxOf,
   cancel,
   clocksMargin,
   dragMachine,
   hoverTo,
   paintedBoxOf,
+  pickUp,
+  refuseMoves,
   release,
   seedDragTuning,
   topQuarter,
@@ -308,6 +311,93 @@ test('DRAG-7.15, DRAG-7.19: the modal opens with the ghost’s spot under the cu
   await release(page);
   await expect.poll(async () => (await fetchItem(request, b.id)).parentId).toBe(r.id);
   expect((await fetchItem(request, b.id)).position).toBeGreaterThan((await fetchItem(request, r2.id)).position);
+});
+
+// The modal's middle is the window's, as one a click opens sits (DRAG-7.7).
+async function expectCentered(page: Page, modal: Locator) {
+  const viewport = page.viewportSize()!;
+  await expect(modal).toBeVisible();
+  await expect
+    .poll(async () => {
+      const box = await boxOf(modal);
+      return Math.max(
+        Math.abs(box.x + box.width / 2 - viewport.width / 2),
+        Math.abs(box.y + box.height / 2 - viewport.height / 2),
+      );
+    })
+    .toBeLessThan(2);
+}
+
+// The modal opened under the cursor, away from the window's middle, which a case about where it
+// sits afterward has to start from.
+async function expectOffCenter(page: Page, modal: Locator) {
+  const viewport = page.viewportSize()!;
+  const box = await boxOf(modal);
+  const offBy = Math.max(
+    Math.abs(box.x + box.width / 2 - viewport.width / 2),
+    Math.abs(box.y + box.height / 2 - viewport.height / 2),
+  );
+  expect(offBy).toBeGreaterThan(40);
+}
+
+test('DRAG-7.25: after a reload that follows a release in it, a modal a hold opened is centered', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold Reload After Release Project';
+  const { p, r, x } = await seedOverflowTree(request, name);
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+  await refuseMoves(page);
+
+  await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectOffCenter(page, modal);
+
+  // The write is refused, so the client reloads the board from the server, with the modal open
+  // over it.
+  const reloaded = boardReload(page);
+  await release(page);
+  await reloaded;
+  await expectCentered(page, modal);
+  expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
+});
+
+test('DRAG-7.25: after a reload that lands mid-drag, a modal a hold opened is centered', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Modal Hold Reload Mid Drag Project';
+  const { p, r, r1, x } = await seedOverflowTree(request, name);
+  const tuning = await seedDragTuning(page, { ...NO_POP, ...QUICK });
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const modal = hierarchyModal(page, 'P');
+
+  // The first release's write is refused after a delay, so the reload it causes lands while the
+  // next drag is under way.
+  await page.route('**/api/items/*/move', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: 'refused' }) });
+  });
+  await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
+  await expect(modal).toBeVisible(opens(tuning));
+  await expectOffCenter(page, modal);
+  const reloaded = boardReload(page);
+  await release(page);
+
+  await pickUp(page, modalRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }));
+  await awaitDragContext(page, descendantsRegionKey(p.id));
+  await reloaded;
+
+  // The drag is over, and the modal is open over the reloaded board, centered.
+  await expect(dragMachine(page)).toHaveCount(0);
+  await expectCentered(page, modal);
+  await page.mouse.up();
 });
 
 // A release without moving the cursor commits what the ghost shows in the modal: the parent it sits

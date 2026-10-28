@@ -185,6 +185,146 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 **After Phase 5: the story's audit** (Auditor)
 - **The range:** its base is `a6-rerun-audited`, so it also takes in A6's batch 6 and the Reconciler's two commits after it. A6's plan intended that.
 - **First under the finished rules:** it's the first audit of a story's own diff under them, so its report notes whether anything in them still needs changing.
+- **Then its Fix Now,** in the batches below.
+
+### The audit's Fix Now, in batches
+
+*By the Architect, from `docs/audits/code-quality-audit-epic-3-5-story-7.md`. Each finding was checked against the code at `31009c7`.*
+
+**Already fixed** by the test follow-ups (`31009c7`):
+- the Fix Now findings #6, #7, #8, #11, #20, #21, #22 and #26;
+- the Watch List's #37 and #38.
+
+Batch 1 writes the Fix Now ones' Close-out rows, as fixed in `31009c7`.
+
+**Order.** The batches go area by area, as A6's batch 6 did. Within an area, correctness comes first, then structure, then comments, so that each comment is written once, beside its final code.
+- **The modal goes first:** #2 is the one defect a user can reach.
+- **The scope script goes last:** nothing runs it until Story 8's audit. It still has to land before that audit (the report's "The audit rules", item 3).
+
+**Decisions on the audit rules, approved by Nathan 2026-10-27.** These are from the report's "The audit rules, after their first story audit."
+1. **Item 1:** the default config gives E2E and T an instance each, as this run's config did. In batch 6.
+2. **Item 2:** `HierarchyModal.tsx` and `ModalShell.tsx` join `config.mts::BOARD_COMPONENTS`, so the modal's code sits in C1 with the rest of the board. In batch 6.
+3. **Item 4:** a comment or test title that's wrong about the code is Fix Now, however small. *Done (Architect):* in `.claude/guides/audit-workflow.md` §6, the persona's tagging rules, and the drift agent.
+
+The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no guide edit.
+
+**Batch 1: the hierarchy modal.** #2, with #36 and #75; #31; then #55, #10, and #23's modal half.
+- **#2:**
+  - **The fix:** `HierarchyModal.tsx` decides once, when it mounts, whether to place itself at the cursor: it does when it has an anchor and a drag is running. `position` and the layout effect's guard both read that decision. A mount with no drag centers the modal, as a click does.
+  - **Why it covers both failure scenarios and DRAG-7.25:** every reload goes through `BoardView.tsx::loadBoard`, which unmounts the board.
+  - **Leave `anchor` alone:** BoardView doesn't clear it after placing (the report says why).
+- **#36:** when the placement comes back null (no projection, or no row for the spot), the modal centers in the same way and warns. The finding's reading derived from the cursor isn't built, since that path is unreachable today.
+- **#75:** a `key` on the modal in `BoardView.tsx`, from its Card's id. One line.
+- **#31:** `placeAtCursor` passes `travelingRowsFor(session) ?? (() => false)`, and its own check goes. One line; the result is unchanged.
+- **#55:** one exported constant for "every level", beside `itemListOps.ts::shownLevels`. `HierarchyModal.tsx` and `useBoardDnd.ts::levelsDrawnAt` read it in place of a bare `Infinity`.
+- **Comments:**
+  - #10, `ModalShell.tsx`'s header and comment;
+  - #23's pointer, `wiki board-drag-interaction §9`, in the modal's header;
+  - #69's line on `HierarchyModalContext.ts`: only the Card reads the context.
+- **Guard tests.** The reconciliation report's "Regression guards" found none for #2 or #31.
+  - **DRAG-7.25:** a hold-opened modal is centered after a reload, both after a release whose write fails and after a reload mid-drag (set up as DRAG-7.23's specs are). The case is `Planned`. The spec carries its ID, and the handoff lists the centering as built.
+  - **Failure scenario (b),** a release between the hold running out and the mount, can't be timed by a spec. The same decision at mount covers it.
+  - **For #31:** a hold that opens the modal while the dragged item has descendants: the spot under the cursor, and what a release writes. No spec drags an item with a subtree into the modal today.
+- **Size:**
+  - **Code:** about 15 lines in `HierarchyModal.tsx`; 1 in `BoardView.tsx`; 2–3 each in `itemListOps.ts` and `useBoardDnd.ts`.
+  - **Comments only:** two files.
+  - **Tests:** two or three new specs.
+- **Gate:** `npm run check` and `npm run test:e2e`.
+
+**Batch 2: the server.** #1 with #9; #3; #19.
+- **#1:**
+  - **The fix:** each Free item gets its position from `positionResolver.ts::resolveAppendPosition` over `itemPositionScope.ts::positionScopeFor`, inside the seed's transaction. `freePositions` and `nextFreePosition` go.
+  - **The test:** it asserts positions unique among every Free item of the workflow, and its title says "ordered across the workflow" (the reconciliation report's item D).
+- **#9:**
+  - **The header:** the seed writes directly, so no cap holds it. Items go one level past the cap, and projects reach it.
+  - **The tests:** they read `ITEM_DEPTH_CAP` and `PROJECT_DEPTH_CAP` and are titled "to the caps". The last one asserts a depth, not a count.
+- **In `deepSeed.ts` beside them:**
+  - a Free child's type is `kindAt(0)`, the Informational note under #36;
+  - the letters comment at 87–88, #69.
+- **#52:**
+  - **The fix:** one `lib/` helper copies a list of workphases into a new workflow, and the seed and both of the route's branches (template and copy) call it. About 30 lines come out and one function goes in.
+  - **Where it lives** is the Coder's call: beside `defaultBoard.ts::createDefaultBoard`, which every new workflow also gets, or in a module of its own.
+  - **Guards:** `workflows.test.ts`'s template and copy tests, and the seed's tests.
+- **#3:**
+  - **The fix:** both guards test `!== undefined && !== null` and call `getOrNotFound.ts::existsById`. So does the project check above them, which is #53's part in this file.
+  - **The behavior change:** `templateId: ''` or `sourceWorkflowId: ''` is now a 400, where today it's a 201. No client path or MCP tool sends either.
+  - **Tests:** a refusal for each `''`, and a `null` for each, read as none, the guard the reconciliation report says no test has.
+  - **No case ID yet:** project-tree §10's cases are the Test Planner's (Open questions, For the Test Planner). If they land first, the tests carry their IDs.
+  - **Unchanged:** a create that names both. Both are still checked, and the template is taken (Open questions, For the Architect).
+- **#19:** `move-project.bru`'s doc.
+- **Gate:** `npm run check` and `npm run test:e2e`, since every spec's setup creates a workflow through this route.
+
+**Batch 3: client structure.** #28, #30, #35.
+- **#28:** a new `client/src/lib/browserStorage.ts`, which `sidebarWidth.ts` and `dragTuning.ts` both call.
+  - **What it holds:** the storage interface, `browserStorage()`, and a guarded read and write.
+  - **What changes:** `dragTuning.ts` gets the guard, so a refused write no longer throws out of the tuning panel's `onChange`.
+  - **Tests:** one memory fake in `client/src/test/`, with a variant that refuses, serves both test files. New tests cover a refused write and a read that throws, for the drag tuning; the reconciliation report lists neither.
+- **#30:** `cursorXInList` and `depthAtCursor` go through `cardMetrics.ts::descendantsIndentPx`. Two lines.
+- **#35:** the test calls `buildCardInColumn`.
+- **Beside #28:** #69's line in `sidebarWidth.ts`. The widest width is sized for a 10th-level name, and a deeper one may be cut (Nathan, 2026-10-27).
+- **Not taken:** #28's optional ride-along, the direct `localStorage` calls in `App.tsx` and `useBoardManagement.ts`. They're older code with no defect found, and taking them would bring `App.tsx` into Story 8's audit.
+- **Gate:** `npm run check` and `npm run test:e2e`. Every drag spec loads the tuning through `seedDragTuning`, and the modal-hold specs read #30's placement.
+
+**Batch 4: the drag layer's comments.** Comments and test titles only. #12–#17 and #24; #23's half at `itemListOps.ts::sectionEntries` (`wiki board-drag-interaction §9` and `item-attachment §12`); with #46, #60 and #69's client lines.
+- **#15** takes its own Informational note with it: `dragChrome.tsx`'s header, the `useItemRow` comment and `ItemRowOptions.parentId`.
+- **#46** is now ruled: the overflow row's indent is the Card's (DRAG-7.24). `StubRows.tsx`'s comment and the drag layer's `CLAUDE.md` narrow "a press on it goes no further" to a press on its count.
+- **#60:** `dragCollision.test.ts`'s title gains "of the context Card".
+- **#69's lines:**
+  - `popSession.ts:420-421`, the reference split across a line, which `check:docs` can't read;
+  - the consumers of `hierarchyRows` in `itemListOps.ts:239-245` and `itemListOps.test.ts:202`;
+  - overflow rows in `useBoardDnd.ts:404-407` and in `AttachedChildRow`'s comment;
+  - `dragCollision.test.ts:313-320`'s ghost-height header.
+- **Gate:** `npm run check`, which runs `check:docs`.
+
+**Batch 5: E2E.** #27, #32, #33, #34, #25; with #47, part of #61, and part of #65.
+- **#27:**
+  - `project-sidebar.spec.ts` moves onto `seedProject` and `seedProjects`, and drops the `API` import.
+  - A new `seed.ts::seedBoard` replaces `boards-layer.spec.ts:239`'s hand-rolled post.
+  - **With #61's sidebar delete sequence:** one `ProjectSidebarPage` method, used by `project-sidebar.spec.ts` and `project-page.spec.ts`.
+- **#32:** `overflowTree.ts` exports `rowIds(scope)`. `sectionRows` calls it, and `modalRowIds` goes.
+- **#33:** `itemRow` takes a `Page` or a `Locator`, and both `modalRow` copies go.
+  - **With #47:** a `region(scope, key)` locator in `boardLocators.ts` and an exported overlay locator replace the literal `data-drag-region` and `data-drag-overlay` in the two DRAG-7 specs.
+- **#34:** `boards.spec.ts` calls `seedTemplatedWorkflow`.
+- **#25:** a one-line rule (f) reason at `dragHandleBy`, which stays in its spec. TREE-3.11 now uses it too, in the same file.
+- **#65:** DRAG-7.22's spec moves to `drag-7-overflow-row.spec.ts`, beside DRAG-7.24's, and keeps its ID.
+- **#26's ride-along:** `drag-column-bands.spec.ts:189` uses `dragMachine`.
+- **Not taken:**
+  - **#61's Stub-handle locator:** its nine sites in `drag-5-stub-detach.spec.ts` and `drag-target-classification.spec.ts` differ in `exact`, so sharing it changes a selector at each site; it isn't a move.
+  - #61's other helpers, and #65's split of the placement specs.
+- **Size:** 13 files, all test code.
+- **Gate:** `npm run check` and `npm run test:e2e`.
+
+**Batch 6: the scope script.** #4 with #43; #5 with #45, #77 and #49; #29; #18. Then the config defaults (decisions 1 and 2).
+- **#4:** a hunk is a removal site when it removes a non-blank line and none of the lines it adds is in the settled changed list. `scan.test.mts`'s fixture gains a commit that unwraps a guard.
+- **#43:** the diffs run with `--no-color --no-ext-diff`, and `scan.test.mts` points `GIT_CONFIG_GLOBAL` at an empty file.
+- **#5:** git's own `error.message` prints after the guess. With it:
+  - **#45:** `main.mts` clears `scope-*.md` in `--out` first.
+  - **#77:** `parseConfig` checks the shapes of the values, a bad regular expression fails inside the config's `try`, and `showAt` tells a missing path from a git failure.
+  - **#49:** one `parseSpec`, which refuses a kind it doesn't know.
+- **#29:** `lineKinds.mts` exports `splitLines`, and `scan.mts` calls it.
+- **#18:** the assertion checks that no scope names the file the code moved from as a source, or it's deleted.
+- **#69's line:** `AttachGhostRow`, which names no file, comes out of `BOARD_COMPONENTS`.
+- **The config defaults:**
+  - **E2E and T:** every pass gets an E2E instance and a T instance in place of `E2E-T`, as this run's `docs/audits/epic-3-5-story-7-scopes/config.json` split them. That's 23 instances in all.
+  - **The board group:** `HierarchyModal` and `ModalShell` join `BOARD_COMPONENTS`, so the files and their tests fall in C1 and C1t.
+  - **Tests:** `config.test.mts` and `scopes.test.mts`, which name `E2E-T` instances, follow.
+- **Not taken:**
+  - **#44,** a copy beside a move hidden as moved. It's the same kind of gap as #4, but its fix changes how moves are found; it isn't a one-line rule.
+  - #50 and #51.
+- **Gate:** `npm run check`, which runs the script's tests.
+
+**Across the batches:**
+- **Each batch** ends with its gate and a stop for Nathan's review and commit, and fills in its rows in the report's Close-out table.
+- **A test that moves keeps its case ID.** The Reconciler's one run (`.claude/guides/story-done-checklist.md`, step 5) comes after batch 6.
+- **Comment-only files stay comment-only:**
+  - **Which:** `popSession.ts`, `descendantsProjection.ts`, `dragRegions.ts`, `StubRows.tsx` and `cardMetrics.ts` get only batch 4's comments. So Story 8's audit gives them to the drift pass alone.
+  - **What that rules out:** #57, the hold's timing in `popSession.ts`, and #58, the `data-item-id` literal in `StubRows.tsx`. With #36, a renamed attribute now centers the modal and warns, rather than leaving it unplaced in silence.
+- **The optional findings left out:**
+  - **Watch List:** #39–#42, #44, #48, #50, #51, #53's helper across the routes (the API contract epic's Story 2 may take it), #54, #56–#59, #61's other helpers, and #62–#66;
+  - **Informational:** every finding except the #69 lines above.
+- **At close-out:**
+  - The report's "For other roles" go to Open questions (`.claude/guides/audit-workflow.md` §9).
+  - The Architect widens `.claude/guides/testing-strategy.md`'s "Server lib" row, since `deepSeed.test.ts` tests `server/src/db/`.
 
 ## Code map
 
@@ -196,7 +336,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
 | `client/src/components/ProjectSidebar.tsx`, `sidebar/useSidebarResize.ts`, `sidebar/sidebarWidth.ts` | D2: the aside takes the width; its list scrolls in a box inside it, so the handle on the aside's right edge stays put. The hook is the handle's pointer handlers, and the module holds the default, the limits and the storage |
 | `client/src/components/workflow/dragTuning.ts::DragTuning`, `client/src/components/DragTuningPanel.tsx` | D3's section depth, as `sectionLevels` (default 3), with its panel field; E3's hold, as `modalHoldDwellMs` and `modalHoldCueMs` (500 and 800, a Card zoom-in's), with their panel fields |
 | `client/src/components/workflow/itemListOps.ts::sectionEntries`, with `shownLevels`, `overflowRowId` and `overflowOwnerOf`, beside `hierarchyRows` | D3–D5, E1: the rows the section draws, an overflow row under each last-level row that has attached children. The render and the drop math both read the level count through `shownLevels` |
-| `client/src/components/StubRows.tsx::OverflowRow`, `SectionRows` | D4: the overflow row, a button that opens the modal, with no drag source (a press on it goes no further than the row), `data-overflow-row` and no `data-item-id`; D8: it draws the hold's cue (`ZoomCue`). `SectionRows` is the one list of rows that a section and the modal both draw, with a static drawing for the section while the modal is open |
+| `client/src/components/StubRows.tsx::OverflowRow`, `SectionRows` | D4: the overflow row, a button that opens the modal, with no drag source (a press on its count goes no further than the row, and a press on its indent is the Card's, DRAG-7.24), `data-overflow-row` and no `data-item-id`; D8: it draws the hold's cue (`ZoomCue`). `SectionRows` is the one list of rows that a section and the modal both draw, with a static drawing for the section while the modal is open |
 | `client/src/components/KanbanCard.tsx` | D3, D4: the section's render, through `sectionEntries` and `SectionRows`; E2: while the modal is open the section draws static and is no region |
 | `client/src/components/workflow/dragCollision.ts` (row data) | E1: the row role `'overflow'`, and a section row's `sectionCardId`, which the section collision filter matches against the context's Card (the modal sits over other Cards' rows), with `isOverflowRow` and `isSectionRow` (a collision candidate in a section, no Card-layer target, a Stub row's ghost height), and `travelingRowsFor` stepping past the overflow row of a traveling row |
 | `client/src/components/workflow/descendantsProjection.ts` | D5, D6, E1: `gapForAnchor`, which turns an overflow-row neighbor into the gap among all the rows, and the depth clamp, handed to the shared library as a number; E3: `overflowBeside` and `modalHoldTarget`, what the hold keys on; E5: `reseedProjection`, which the reading at the cursor goes into |
@@ -334,6 +474,29 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - **DRAG-7.25** (`Planned`) and the failure paths of audit #2's fix: they come with that fix.
   - **Mutation checks, each shown failing and then restored:** a dragged row no longer carrying its overflow row (DRAG-7.27); the modal staying open with nothing left to show (DRAG-7.26, the no-descendants half; the Card-gone half has no mutation); the level count not held to one (DRAG-7.30); the overflow count and the hidden-slot preview both no longer leaving out the dragged child (DRAG-7.2; either alone is enough, so one mutation alone passes); a press on the overflow row's indent no longer reaching the Card (DRAG-7.24). Not shown failing: DRAG-7.4's, 7.6's, 7.10's, 7.12's, 7.17's, 7.23's, 7.28's, 7.29's and TREE-3.11's new specs, and DRAG-7.16's top edge.
   - **Checks:** `npm run check` passes. The full `npm run test:e2e` passes with 224 and 8 skipped.
+- **2026-10-28, the audit's Fix Now, batch 1: the hierarchy modal (Coder).** The Architect's batch 1 (The audit's Fix Now, in batches), with the Close-out rows for what `31009c7` fixed.
+  - **#2:** `HierarchyModal.tsx` decides once, as it mounts, whether the cursor places it: `placeAt` is the anchor when a drag is running, and none otherwise. `position` and the layout effect both read it, so a mount with no drag centers the modal as a click does. That covers the remount after a board reload (both failure scenarios in the audit, and DRAG-7.25) and an open the drag ended before it committed. `BoardView.tsx` still doesn't clear the anchor.
+  - **#36:** a placement with no projection, or no row for the spot, centers the modal (`modalPlacement.ts::centerModal`), warns once, and reports nothing, so the drag keeps the gap and depth it had. The reading derived from the cursor isn't built, as the batch plan says.
+  - **#75:** `key={hierarchyModalCard.id}` on the modal, so each open is its own mount. The decision above depends on it: without the key, a modal for another Card would keep the last one's `placeAt`.
+  - **#31:** the placement passes `travelingRowsFor(session) ?? (() => false)`, and the modal's own check is gone.
+  - **#55:** `itemListOps.ts::EVERY_LEVEL`, read by the modal and by `useBoardDnd.ts::levelsDrawnAt`.
+  - **Comments:** #10 (`ModalShell.tsx`'s header and comment), #23's pointer in the modal's header (the half at `sectionEntries` is batch 4's), and #69's line on `HierarchyModalContext.ts`. The drag layer's `CLAUDE.md` now says the decision is made at mount, names `EVERY_LEVEL` and `centerModal`, and lists the modal's placement among the readers of `travelingRowsFor`.
+  - **Guard tests:**
+    - **DRAG-7.25, two specs in `drag-7-modal-hold.spec.ts`:** one after a release whose write is refused, one after a reload that lands mid-drag. Each first checks that the modal opened away from the window's middle, then that it is centered after the reload. Both failed before the fix, with the modal at the window's corner, 352px off, and pass after.
+    - **`HierarchyModal.test.tsx`, new** (jsdom, with the layout stood in for): a mount with an anchor and no drag centers the modal, and a drag that begins afterward doesn't move it (DRAG-7.25), as a click does. It failed before. A hold-opened modal rests the cursor on the row of the ghost's gap, past a dragged item's child that travels with it (DRAG-7.15), which is #31's guard: it passes before and after, since the result is unchanged. #36's two paths center the modal, warn once and report nothing, which failed before.
+    - **`modalPlacement.test.ts`:** `centerModal`. **`itemListOps.test.ts`:** `EVERY_LEVEL` is past any depth, and a section drawn at it has no overflow row.
+    - **#75 has no test:** the audit finds it unreachable today.
+    - **Failure scenario (b),** a release between the hold running out and the mount, isn't timed by a spec, as planned. The component test mounts the modal with no drag running, which is its state.
+  - **Mutation checks, each restored:** the modal's `travels` replaced by "nothing travels" fails the DRAG-7.15 component test (the dialog at 142px, not 110px). The DRAG-7.25 specs and the component test's mount and #36 cases were shown failing on the unfixed code. Not shown failing before the code: `EVERY_LEVEL`'s tests, which were written with the constant.
+  - **The E2E spec the batch plan asks for under #31 isn't written.** A dragged item's subtree only changes the placement when the item is held below it, a downward hold, and a downward hold hits the defect below. The component test is #31's guard in the meantime.
+  - **A defect, not in the audit and not fixed: a hold from above names the wrong gap once the modal opens.**
+    - **What happens:** the modal opens as it should, with the item's spot under the cursor and the placement's own reading right, and the carried copy painted under the cursor. Then the next drag-move event names its anchor against the sortable shuffle while the rows are still moving, and the cursor never moves to correct it. The projection ends one or more gaps from the line the modal draws, and a release commits that, not what the modal shows.
+    - **Probed** on the overflow tree with a new item `W` first in `P`, held with the same gesture as DRAG-7.15's: below `R`'s overflow row, the section reads gap 6 and the modal 7, with the line before `T`; above it, with a child under `W`, 3 and then 6. From below (an item the hold moves up), it holds: `X` and `B`, the items DRAG-7.15's specs drag, and a probe with a child under `B`. It needs no subtree, and the unfixed `HierarchyModal.tsx` from `31009c7` does the same, so it predates the batch.
+    - **Why no spec saw it:** every hold spec drags an item up to the gap.
+    - **A fix to try,** in the drag layer: after `readModalPlacement`, keep its reading until the pointer moves. It needs its own test, and then the spec for #31 can be written. See Open questions, For Nathan.
+  - **Helpers:** `refuseMoves` and `boardReload` moved from the hierarchy-modal spec to `dragGesture.ts`, for the new specs.
+  - **Close-out:** rows for #6, #7, #8, #11, #20, #21, #22 and #26, each checked against the code, since they were fixed in `31009c7`, and for #2, #10 and #31. #23's row waits for batch 4.
+  - **Checks:** `npm run check` passes (420 server, 551 client, 185 script tests). The full `npm run test:e2e` passes with 226 and 8 skipped.
 
 ## Open questions
 
@@ -369,6 +532,9 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - **Answered 2026-10-27:** a long name at the deepest level may be cut. Widening the sidebar is how it's read, and the maximum stays 420px (Amendments).
 - **For Nathan, from the test follow-ups:**
   - **Does a Free Card that has zoomed into a section follow the cursor there?** The spec for DRAG-7.13's main drag found the ghost stuck at the section's top (`0:0:true`) once a Free Card from the same column had zoomed into `P` and on into its section (Amendments, 2026-10-28, second stop). Dragging the deep stack's "Free Card to drag in" onto a Card and into its section by hand settles whether that is the spec's doing or a defect. If it is a defect, it also bears on DRAG-1.21 and DRAG-4.1, which have no passing spec either.
+- **For Nathan, from the Fix Now batch 1:**
+  - **A hold from above opens the modal with the projection a gap or more off the line the modal draws** (Amendments, 2026-10-28, batch 1). It predates the batch and the audit didn't find it, so it is outside the batch's list. The wiki rule is board-drag-interaction §7.3's: the modal opens with the ghost's spot under the cursor, so a release right after commits that placement. By hand: pick an item above `R`'s overflow row, hold it just below the row until the modal opens, and let go without moving. It should write the placement the modal shows, and by the probes it writes one gap further down.
+  - **Fix it in this story,** as a batch of its own after the modal's, or route it? The fix I'd try, untried, is to keep the placement's reading until the pointer moves. It is in the drag layer's core and needs its own test. It would also let the E2E spec for audit #31 be written. Or it goes to the next story that reworks the drag layer, with the spec held until then.
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
   - **From the PO, for wiki project-tree §10:** what does `POST /api/workflows` do when it names both `templateId` and `sourceWorkflowId`? Is it refused, or is one of them taken, and which? The wiki says nothing about it until then (For the PO).
@@ -396,6 +562,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
       - **Folded into existing cases:** the hold resetting when the cursor leaves the section, as a third reset in DRAG-7.14 (its spec already asserts it under that ID). The header inside the modal's box goes in DRAG-7.10. The carried copy held to the modal's list goes in DRAG-7.11.
       - **The suite's terms:** `X` is any childless item at `P`'s Descendants layer, a Free Card zoomed in or a Stub of `P`'s outside the tree, since placement there is the same for both. DRAG-7.13 now names a Free Card from outside `P` for its main drag, so that its two origins stay distinct.
       - **The cap at 12:** no case changes. ATT-4's and TREE-3's terms no longer say the value is open. They still name it by `CAP` and `PCAP`.
+  - **A hold from a row above the target** (Open questions, For Nathan, from the Fix Now batch 1): DRAG-7.15's text covers it, since a release right after the modal opens commits what the modal shows, but every hold spec drags an item up to the gap, so none drives it. Once it is fixed, a spec for it, or a clause in the case naming the direction, is the Test Planner's call.
   - **Project-tree §10 names a workflow create's two references** (For the PO), ready for cases: what each copies, what leaving both out makes, and the refusal of one that names no row, `''` included (wiki row-references §1). The `''` refusal is audit #3's fix, so its test comes with that batch.
 
 ## Living-docs handoff
@@ -421,6 +588,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - The value is Nathan's pick (D1); 12 is what was built in until he makes it. The PO writes the picked number.
     - At the default sidebar width the deepest levels of a deep project tree draw no name: at 12 levels a name has about 26px. The sidebar's resize handle is the way to read them (D2), and its maximum was sized for a 10th-level name (Open questions, For Nathan).
 - **Planned passages now built:**
+  - **Fix Now batch 1:** board-drag-interaction §9's sentence that after a reload a modal a hold opened is centered, as one a click opens is (DRAG-7.25).
   - **Phase 4:**
     - board-drag-interaction §7.3's hold, its placement under the cursor, the scroll of a long list, the shift at a window edge, opening again in the same drag, and §3.1's two hold values;
     - §9's hold beside an overflow row opening the modal;
@@ -453,6 +621,9 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - no keyboard control and no reset gesture.
   - **The section's cut-off and the overflow row (Phase 2),** placed in the module headers of `descendantsProjection.ts`, `itemListOps.ts` and `StubRows.tsx`, in the site comments of `dragCollision.ts` and `KanbanCard.tsx`, and in the drag layer's `CLAUDE.md` (the mental model, the concerns, "one way to do each of these", and the test surfaces).
 - **Test-plan cases affected:**
+  - **Fix Now batch 1:**
+    - DRAG-7.25 has two E2E specs in `tests/ui/drag-7-modal-hold.spec.ts` (after a release whose write is refused, and after a reload that lands mid-drag), which carry the ID, and a component test in `client/src/components/HierarchyModal.test.tsx` for a mount with no drag. The mid-drag half sets up as DRAG-7.23's does.
+    - DRAG-7.15's and DRAG-7.25's IDs are also on `HierarchyModal.test.tsx`'s placement cases and `modalPlacement.test.ts`'s `centerModal`.
   - **Phase 5:**
     - DRAG-2.1 to DRAG-2.4, DRAG-2.7 and DRAG-2.10's spec shows every level its chain reaches (the section depth seeded to the cap), where the chain's deepest rows would otherwise sit behind an overflow row and carry no state to read. The cases are unchanged.
     - DRAG-7.9's over-cap spec rests the cursor at the lower edge of the list's last row, not a quarter up from it, so the last gap is reached whatever the cap.

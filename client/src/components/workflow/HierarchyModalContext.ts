@@ -1,7 +1,7 @@
 // Which Card's hierarchy modal is open, and how to open and close it. A context rather than props
-// for the reason `DragSessionContext.ts` is one: a Card's overflow row and its section read it
-// without it drilling through BoardColumn and CardList. `BoardView.tsx` owns the state, which the
-// drag hook (`useBoardDnd.ts`) also reads and closes.
+// for the reason `DragSessionContext.ts` is one: a Card reads it without it drilling through
+// BoardColumn and CardList (its overflow row gets `onOpen` as a prop). `BoardView.tsx` owns the
+// state, which the drag hook (`useBoardDnd.ts`) also reads and closes.
 
 import { createContext, useContext } from 'react';
 

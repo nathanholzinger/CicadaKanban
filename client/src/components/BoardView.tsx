@@ -400,6 +400,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                       part in the board's own layout. */}
                     {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
                       <HierarchyModal
+                        key={hierarchyModalCard.id}
                         card={hierarchyModalCard}
                         itemTypes={itemTypes}
                         getAttachedChildren={getAttachedChildren}

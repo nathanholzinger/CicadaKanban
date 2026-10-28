@@ -273,6 +273,9 @@ export function shownLevels(sectionLevels: number): number {
   return Math.max(1, Math.floor(sectionLevels));
 }
 
+// The level count of a section drawn whole, with no overflow row: the hierarchy modal's.
+export const EVERY_LEVEL = Infinity;
+
 const OVERFLOW_ROW_ID_PREFIX = 'overflow:';
 
 // The id an overflow row registers under in the section's `SortableContext`, beside the items'.

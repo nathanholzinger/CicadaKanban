@@ -8,6 +8,7 @@ import {
   descendantsChildrenOf,
   sectionEntries,
   shownLevels,
+  EVERY_LEVEL,
   overflowRowId,
   overflowOwnerOf,
   computeChildCounts,
@@ -241,6 +242,11 @@ describe('shownLevels', () => {
     expect(shownLevels(0)).toBe(1);
     expect(shownLevels(-2)).toBe(1);
   });
+
+  it('keeps EVERY_LEVEL past any depth', () => {
+    expect(EVERY_LEVEL).toBeGreaterThan(1000);
+    expect(shownLevels(EVERY_LEVEL)).toBe(EVERY_LEVEL);
+  });
 });
 
 describe('overflowRowId', () => {
@@ -300,6 +306,7 @@ describe('sectionEntries', () => {
   it('draws no overflow row once every level shows', () => {
     expect(shape(5)).toEqual(['A@0', 'Q@1', 'R@2', 'R1@3', 'R1a@4', 'R2@3', 'T@2', 'B@0']);
     expect(shape(12)).toEqual(shape(5));
+    expect(shape(EVERY_LEVEL)).toEqual(shape(5));
   });
 
   it('puts the overflow row under a first-level row when one level shows', () => {

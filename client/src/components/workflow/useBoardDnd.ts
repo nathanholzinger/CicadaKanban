@@ -82,7 +82,14 @@ import {
 } from './popSession';
 import type { ModalReading } from './modalPlacement';
 import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
-import { renderedIsStub, renderedParentId, renderedWorkphaseId, type Placement, type Placements } from './itemListOps';
+import {
+  EVERY_LEVEL,
+  renderedIsStub,
+  renderedParentId,
+  renderedWorkphaseId,
+  type Placement,
+  type Placements,
+} from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 import type { DragSession } from './DragSessionContext';
 import {
@@ -285,7 +292,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // modal's (`modalCardId` is the Card whose modal is open), the tuning value otherwise.
   function levelsDrawnAt(contextKey: string | null, modalCardId: string | null): number {
     const cardId = descendantsCardIdOf(contextKey);
-    return cardId !== null && cardId === modalCardId ? Infinity : latest.current.tuning.sectionLevels;
+    return cardId !== null && cardId === modalCardId ? EVERY_LEVEL : latest.current.tuning.sectionLevels;
   }
 
   // A context's parent, off the structure rather than a measured region: a
