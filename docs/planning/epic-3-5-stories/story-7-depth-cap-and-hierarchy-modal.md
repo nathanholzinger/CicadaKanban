@@ -28,8 +28,8 @@ Then set the real cap, one value for items and projects, from how deep the modal
   - DRAG-7.1–7.19 and DRAG-7.21–7.30, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
   - DRAG-1.34, the new tuning values (§3.1), `Open`.
   - TREE-3.11, a deep project's name in a narrow sidebar (wiki project-tree §3), `Open`.
-  - TREE-10.5–10.9, where a new workflow's workphases come from, and a reference that names no row refused (wiki project-tree §10), `Open`.
-  - TREE-10.10 and TREE-10.11, a `null` reference and a create naming both, `Pending PO` (Open questions, For the PO).
+  - TREE-10.5–10.10, where a new workflow's workphases come from, a reference that names no row refused, and a `null` naming none (wiki project-tree §10), `Open`.
+  - TREE-10.11, a create naming both, `Planned` while its passage in project-tree §10 is marked, though batch 7 built it (For the Test Planner).
   - **To check when the cut-off is built:** DRAG-4's tree and DRAG-5.13's run three levels below the Card, so they assume a section shows at least three.
     - **Checked in Phase 2:** the specs that carry them pass unchanged at the default of three levels.
 
@@ -743,6 +743,8 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **Done 2026-10-28 (Coder, Fix Now batch 2):** the tests are in `server/tests/routes/workflows.test.ts` without IDs, until the cases are written: a refusal for each `''`, and a `null` for each read as none. A create that names both is not tested (For the Architect).
     - **Done 2026-10-28 (Test Planner):** TREE-10.5–10.9 are `Open` (Scope). Batch 2's `''` refusals are TREE-10.9's, and can carry its ID now, with batch 7 adding its tests beside them. The `null` tests and batch 7's create naming both wait on TREE-10.10 and TREE-10.11, `Pending PO` (For the PO).
   - **Project-tree §10 answers TREE-10.10 and TREE-10.11** (For the PO): TREE-10.10's rule is unmarked, and TREE-10.11's is `**Planned:**` until batch 7 builds it.
+    - **Done 2026-10-28 (Test Planner):** TREE-10.10 is `Open`, with the PO's answer written in. TREE-10.11 is `Planned`, its passage's marker. Batch 7 has built it, so once the PO takes the marker off, it moves to `Open`, and its tests can carry its ID.
+    - **For the PO:** project-tree §10's create naming both is still marked `**Planned:**`, though batch 7 built it (Amendments, 2026-10-28, batch 7).
   - **Board-drag-interaction §9's centering after a reload is unmarked** (Living-docs handoff, Planned passages now built, Fix Now batch 1): DRAG-7.25 is ready to move to `Open`.
     - **Done 2026-10-28 (Test Planner):** DRAG-7.25 is `Open` (Scope).
 
