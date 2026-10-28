@@ -235,14 +235,6 @@ describe('hierarchyRows', () => {
 });
 
 describe('shownLevels', () => {
-  it('holds the tuning value to a whole number of at least 1', () => {
-    expect(shownLevels(3)).toBe(3);
-    expect(shownLevels(3.9)).toBe(3);
-    expect(shownLevels(1)).toBe(1);
-    expect(shownLevels(0)).toBe(1);
-    expect(shownLevels(-2)).toBe(1);
-  });
-
   it('keeps EVERY_LEVEL past any depth', () => {
     expect(EVERY_LEVEL).toBeGreaterThan(1000);
     expect(shownLevels(EVERY_LEVEL)).toBe(EVERY_LEVEL);
@@ -317,11 +309,6 @@ describe('sectionEntries', () => {
     expect(shape(3, 'R1')).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×1', 'T@2', 'B@0']);
     const onlyChild = items.filter(i => i.id !== 'R2');
     expect(shape(3, 'R1', onlyChild)).toEqual(['A@0', 'Q@1', 'R@2', 'T@2', 'B@0']);
-  });
-
-  it('reads a level count that is not a whole number, or below 1, as shownLevels does', () => {
-    expect(shape(3.9)).toEqual(shape(3));
-    expect(shape(0)).toEqual(shape(1));
   });
 
   it('draws a section with no rows as none', () => {

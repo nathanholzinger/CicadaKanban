@@ -87,33 +87,31 @@ test('DRAG-7.1, DRAG-7.2: the levels count from the Card, and one hidden child r
   await expect(overflowRow(page, r.id)).toHaveText('1 child');
 });
 
-test('DRAG-7.1, DRAG-1.34: the level count is a tuning-panel value, taken at once and kept across a reload', async ({
+test('DRAG-7.1: with the level count one higher, R1 and R2 show at the new last level, R1 has an overflow row for R1a, and R has none', async ({
   page,
   request,
   projectSidebar,
 }) => {
-  const name = 'Overflow Row Tuning Project';
+  const name = 'Overflow Row Level Count Project';
   const { p, a, q, r, t, r1, r2, r1a, b, x } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, { ...NO_POP, sectionLevels: L + 1 });
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
-  await expect(overflowRow(page, r.id)).toHaveText('2 children');
 
-  // One more level shows R1 and R2, with an overflow row under R1 for R1a, and R has none.
-  await page.getByRole('button', { name: 'Drag tuning' }).click();
-  const levels = page.getByRole('spinbutton', { name: 'Levels a section shows' });
-  await expect(levels).toHaveValue(String(L));
-  await levels.fill(String(L + 1));
-  await expect
-    .poll(() => sectionRows(page, p.id))
-    .toEqual([a.id, q.id, r.id, r1.id, `overflow:${r1.id}`, r2.id, t.id, b.id, x.id]);
+  expect(await sectionRows(page, p.id)).toEqual([
+    a.id,
+    q.id,
+    r.id,
+    r1.id,
+    `overflow:${r1.id}`,
+    r2.id,
+    t.id,
+    b.id,
+    x.id,
+  ]);
   await expect(overflowRow(page, r1.id)).toHaveText('1 child');
   await expect(overflowRow(page, r.id)).toHaveCount(0);
   await expect(itemRow(page, r1a.id)).toHaveCount(0);
-
-  await page.reload();
-  await projectSidebar.showBoard(name);
-  await expect(article(page, 'P')).toBeVisible();
-  await expect(overflowRow(page, r1.id)).toHaveText('1 child');
 });
 
 test('DRAG-7.3, DRAG-7.2: between a row and its overflow row, the one state is the row’s first child', async ({
@@ -230,7 +228,7 @@ test('DRAG-7.5: below a last-level row with no attached children, one tab right 
   await expect(itemRow(page, x.id)).toHaveCount(0);
 });
 
-test('DRAG-7.1, DRAG-1.34: the drop math takes the level count the section is drawn with', async ({
+test('DRAG-7.1: the drop math takes the level count the section is drawn with', async ({
   page,
   request,
   projectSidebar,
@@ -425,28 +423,4 @@ test('DRAG-7.29: the side highlight can name an overflow row, and a release stil
   await release(page);
   await expect.poll(async () => (await fetchItem(request, x.id)).parentId).toBe(r.id);
   expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
-});
-
-test('DRAG-7.30: a section shows at least one level', async ({ page, request, projectSidebar }) => {
-  const name = 'Overflow Row One Level Project';
-  const { project, workflow } = await seedTemplatedWorkflow(request, name);
-  const [todo] = pickWorkphases(workflow, 'Todo');
-  const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-  const a = await seedItem(request, { title: 'A', parentId: p.id });
-  const r = await seedItem(request, { title: 'R', parentId: a.id });
-  const t = await seedItem(request, { title: 'T', parentId: a.id });
-  const b = await seedItem(request, { title: 'B', parentId: p.id });
-
-  // Two levels show A, then R and T under it.
-  await seedDragTuning(page, { ...NO_POP, sectionLevels: 2 });
-  await projectSidebar.openBoard(name);
-  await expect(article(page, 'P')).toBeVisible();
-  expect(await sectionRows(page, p.id)).toEqual([a.id, r.id, t.id, b.id]);
-
-  // Set below one in the panel, it shows one: A and B, with an overflow row under A for R and T.
-  await page.getByRole('button', { name: 'Drag tuning' }).click();
-  await page.getByRole('spinbutton', { name: 'Levels a section shows' }).fill('0');
-  await expect.poll(() => sectionRows(page, p.id)).toEqual([a.id, `overflow:${a.id}`, b.id]);
-  await expect(overflowRow(page, a.id)).toHaveText('2 children');
-  for (const hidden of [r, t]) await expect(itemRow(page, hidden.id)).toHaveCount(0);
 });

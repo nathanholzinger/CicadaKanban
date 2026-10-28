@@ -789,6 +789,30 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **What goes:** the inversion log, the check that fills it, and "nothing goes to the console". With the panel gone, nothing a user sees records an inversion, so the check is mechanism. Whether the code keeps it as a developer's diagnostic, and where it reports, is the code's call.
     - item-positioning §5a's two mentions of the log go with it.
   - **Project-tree §10:** the create naming both loses its marker, since batch 7 built it.
+- **2026-10-28, batch 14: the tuning panel's tests go (Coder).** The second pass's first batch, ahead of batch 8. It removes and narrows tests only, and no production file changed.
+  - **Removed:**
+    - `dragTuning.test.ts`, all of it: seven tests of the panel's defaults, persistence and refusals, with batch 3's two refusal cases. `browserStorage.test.ts` keeps the guard's own.
+    - **`itemListOps.test.ts`:** the two tests of a typed level count, `shownLevels` and `sectionEntries` reading 3.9 as 3 and anything below 1 as 1. `shownLevels` keeps its `EVERY_LEVEL` test.
+    - **E2E:** DRAG-1.34's spec in `drag-7-modal-hold.spec.ts` and DRAG-7.30's in `drag-7-overflow-row.spec.ts`.
+    - **`itemWriteReconciliation.test.ts`:** DRAG-6.14's test.
+    - **Fixtures:** none went. `memoryStorage` and `refusingStorage` are still used by `browserStorage.test.ts` and `sidebarWidth.test.ts`.
+  - **Narrowed:**
+    - **DRAG-7.1's two specs in `drag-7-overflow-row.spec.ts`** lose the DRAG-1.34 ID.
+      - **The drop-math spec** already seeded the level count, so only its title changed.
+      - **The other spec was kept and rewritten.** It was the one place DRAG-7.1's last clause is asserted: with the count one higher, `R1` has an overflow row for `R1a` and `R` has none. The drop-math spec checks the drop at the higher count and not that. It now seeds `L + 1` and reads the section once, with no panel and no reload.
+    - **`itemWriteReconciliation.test.ts`:**
+      - **DRAG-6.4** asserts the case's new *Then*: after a response that sorts `X` after `E`, the list reads `A, C, E, X`, with `X` unmarked and holding the response's position, 1.9.
+      - **TC-5a.2** asserts that the list reads `A, X, C, E` after the response, with `X` unmarked, and keeps its ID. "`X` never shows after `E` while it's applied" can't be seen by a test: `completeItemWrite` is one synchronous step, so there is no state between the pairs and the row. The final order is what the log compared, so nothing is lost.
+  - **One step past the listed sites:** four other tests asserted that `inversions` is empty, and the cases no longer say so. DRAG-6.1's unit test is the one the batch plan names. DRAG-6.9's, TC-2.28's and TC-2.29's are the others. All four lose the assertion, and DRAG-6.9's title and comment stop naming the tripwire. DRAG-6.1's E2E spec never checked the log, so it is unchanged.
+  - **Kept, with no ID:** `findInversion`'s and `freeItemOrder`'s tests at the top of `itemWriteReconciliation.test.ts`. The code still keeps the check as a diagnostic, and a test of it can stay (the batch plan). They go when the panel does.
+  - **Kept as planned:** `seedDragTuning`, every spec that seeds the panel's values, and `POP_TEST_TUNING`.
+  - **The drag layer's `CLAUDE.md`:** no change. It lists no test surface of the panel's, so there was nothing to take out.
+  - **Mutation checks, each restored:**
+    - **The reindex pairs not applied** (`completeItemWrite` given a response with no `reindexed`): TC-5a.2 fails on the order, `A, C, E, X`.
+    - **The placement not cleared:** TC-5a.2, DRAG-6.4 and "leaves other pending placements alone" fail.
+    - **The rewritten DRAG-7.1 spec seeded at the default count:** it fails on the section's rows.
+  - **Checks:** `npm run check` passes (428 server, 555 client, 209 script tests: the client's 565 less seven in `dragTuning.test.ts`, two in `itemListOps.test.ts` and DRAG-6.14's). `check:docs` reads 380 files with 0 hits, so the six withdrawn-ID hits are gone. The full `npm run test:e2e` passes with 226 and 8 skipped, the 228 less the two specs removed.
+  - **Close-out:** none. The batch has no audit finding.
 
 ## Open questions
 
@@ -864,6 +888,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **Narrowed:** DRAG-6.4 to the PO's rule, with a response that sorts `X` after `E`, and DRAG-6.1 loses "no inversion recorded". TC-5a.2 keeps its rule, the pairs applied before anything is compared, narrowed to what shows: the written item never out of order while the response is applied.
       - **Swept:** DRAG-1's terms, DRAG-1.26 (the outline is drawn in the tunable color, with no "changing that value") and DRAG-1.32; DRAG-2.5 and DRAG-2.6; DRAG-3's terms and DRAG-3.5; DRAG-7's terms, which name `sectionLevels`, `modalHoldDwellMs` and `modalHoldCueMs`, and DRAG-7.1, whose other level count is now a Given; the DRAG index; TC-5a's preamble; and the catalog's README.
       - **For batch 14** (For the Architect): DRAG-6.14's and TC-5a.2's tests.
+        - **Done 2026-10-28 (Coder, batch 14):** DRAG-6.14's test is removed and TC-5a.2's asserts the order shown (Amendments, 2026-10-28, batch 14). TC-5a.2's text, "never out of order while the response is applied", names an intermediate state no test can see, since the reducer is one synchronous step. The test asserts the final order, which fails if the pairs aren't applied. The Test Planner may want the case to say the list reads `A, X, C, E` after the response (For the Test Planner).
     - **For the Architect,** once they're withdrawn: Story 10's list drops DRAG-1.31, and DRAG-6.4 if it goes.
   - **Rerun #1's test.** `templateId: false` is a 500, not the 400 your ruling took for granted (run 3, Fix Now guard tests, item 5). Reopen it for one route test with no case ID? *Recommended: yes.* The ruling that it needs no case stands. The test guards against a crash.
   - **DRAG-7.16's left edge on `modalPlacement.test.ts:27–32`** (run 3, Proposed Internal Mappings, item 1). No cursor can reach the left edge, and with the approval DRAG-7.16 is `Automated`. *Recommended: approve.*
@@ -882,6 +907,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - DRAG-6.14 is deleted, and its test in `itemWriteReconciliation.test.ts` carries the ID. TC-5a.2's test there asserts the inversion log, which the case no longer names.
     - `check:docs` flags every test that carries a deleted ID, so until batch 14 runs, batches 8 to 13's gates fail on them. Batch 14 removes tests only, so it can go first.
     - *Answered 2026-10-28 (Nathan): batch 14 goes first. Written into batch 14 and the Order by the Test Planner, with the other tests the pass reaches.*
+    - **Done 2026-10-28 (Coder, batch 14):** the six withdrawn-ID hits are gone, and `check:docs` reads 0 (Amendments, 2026-10-28, batch 14).
 - **For the Test Planner:**
   - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
     - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
@@ -923,6 +949,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **Done 2026-10-28 (Test Planner):** taken. The Given is the rows before the ghost's spot running longer than the modal, with each gap's tree: `R`'s many children for the gap below, and many rows before `R`, such as a sibling's children, for the gap above. The title follows.
     - **For the PO, a gap from the Reconciler's candidates** (run 3, Candidate New Cases, item 1): §9 says the level count is at least 1, not that it's read as a whole number (3.9 reads 3). The handoff lists it among Phase 2's behavior decisions.
       - **Answered 2026-10-28 (Nathan):** not a rule. How the level count reads a typed value is the tuning panel's, and the panel is out of the wiki and the tests (For Nathan, from the second pass). §9's "at least 1" goes too, and the candidate closes.
+    - **TC-5a.2's text** says the written item is "never out of order while the response is applied". No test can see that: the reducer applies the pairs and the row in one step. The test asserts the list after the response, `A, X, C, E`, and fails if the pairs aren't applied (Amendments, 2026-10-28, batch 14). Should the case say what the list reads after the response?
   - **Board-drag-interaction §9's centering after a reload is unmarked** (Living-docs handoff, Planned passages now built, Fix Now batch 1): DRAG-7.25 is ready to move to `Open`.
     - **Done 2026-10-28 (Test Planner):** DRAG-7.25 is `Open` (Scope).
 

@@ -54,26 +54,18 @@ describe('completeItemWrite', () => {
   const xPlacement: Placement = { slot: { anchorId: 'A', side: 'after' } };
   const pending = () => withPlacement({ ...EMPTY_ITEM_LIST_STATE, items: workedList() }, 'X', xPlacement);
 
-  it('TC-5a.2: applies the reindex first, so a correct response is not read as an inversion; clears the placement', () => {
+  it('TC-5a.2: applies the reindex first, so the list reads A, X, C, E after the response, with X unmarked', () => {
     const next = completeItemWrite(pending(), workedResponse, xPlacement);
     expect(freeItemOrder(next.items, next.placements)).toEqual(['A', 'X', 'C', 'E']);
     expect(next.placements.has('X')).toBe(false);
-    expect(next.inversions).toEqual([]);
   });
 
-  it('DRAG-6.4: a response that inverts the previewed order is applied *and* recorded as an inversion', () => {
+  it('DRAG-6.4: a response that sorts the item after E is shown as the server saved it, never adjusted to the preview', () => {
     // The server put X after E — not where the preview drew it.
     const next = completeItemWrite(pending(), item('X', { position: 1.9 }), xPlacement);
     expect(freeItemOrder(next.items, next.placements)).toEqual(['A', 'C', 'E', 'X']);
-    expect(next.inversions).toEqual([{ itemId: 'X', expected: ['A', 'X', 'C', 'E'], actual: ['A', 'C', 'E', 'X'] }]);
-  });
-
-  it('DRAG-6.14: a write the board never previewed (a Sheet edit, an inline create) is folded in with no tripwire, even when the id has an unrelated placement', () => {
-    const next = completeItemWrite(pending(), item('X', { position: 1.9 }));
-    expect(next.inversions).toEqual([]);
     expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);
-    // Untouched — this call never claimed to own X's placement.
-    expect(next.placements.get('X')).toBe(xPlacement);
+    expect(next.placements.has('X')).toBe(false);
   });
 
   it('leaves other pending placements alone', () => {
@@ -84,16 +76,14 @@ describe('completeItemWrite', () => {
   });
 
   // A response landing while the item is being re-dragged (its placement
-  // now the live ghost, not this write's marker) must not clear that ghost
-  // or log a false inversion — this write isn't the one that owns the
-  // current placement.
-  it("DRAG-6.9: a response for a write whose placement has since been replaced (a re-drag's ghost, or a different write) applies the rows but leaves the current placement and the tripwire alone", () => {
+  // now the live ghost, not this write's marker) must not clear that ghost —
+  // this write isn't the one that owns the current placement.
+  it("DRAG-6.9: a response for a write whose placement has since been replaced (a re-drag's ghost, or a different write) applies the rows but leaves the current placement alone", () => {
     const liveGhost: Placement = { slot: 'first' };
     const state = withPlacement(pending(), 'X', liveGhost);
     const next = completeItemWrite(state, item('X', { position: 1.9 }), xPlacement);
     expect(next.items.find(i => i.id === 'X')!.position).toBe(1.9);
     expect(next.placements.get('X')).toBe(liveGhost);
-    expect(next.inversions).toEqual([]);
   });
 });
 
@@ -120,11 +110,10 @@ describe('the preview through its responses', () => {
       expect(todoList(state)).toEqual(['A', 'X', 'C', 'E']);
       const next = completeItemWrite(state, item('X', { position: resolved }), placement);
       expect(todoList(next)).toEqual(['A', 'X', 'C', 'E']);
-      expect(next.inversions).toEqual([]);
     }
   });
 
-  it("DRAG-6.1, TC-2.28: a top or bottom band drop is marked pending as the anchor it sends, so the board draws the same order before the server's answer and after it, with no inversion", async () => {
+  it("DRAG-6.1, TC-2.28: a top or bottom band drop is marked pending as the anchor it sends, so the board draws the same order before the server's answer and after it", async () => {
     // Positions run across the workphases: Todo holds A and C, Doing holds B.
     const items = () => [
       item('A', { workphaseId: 'todo', position: 1 }),
@@ -162,7 +151,6 @@ describe('the preview through its responses', () => {
       expect(state.items.find(i => i.id === 'X')!.position, band).toBe(4);
       const next = completeItemWrite(state, response, marker);
       expect(freeItemOrder(next.items, next.placements), band).toEqual(order);
-      expect(next.inversions, band).toEqual([]);
     }
   });
 
@@ -192,7 +180,6 @@ describe('the preview through its responses', () => {
     // X's own write resolved after Y's new position.
     state = completeItemWrite(state, item('X', { position: 2.5 }), xPlacement);
     expect(todoList(state)).toEqual(['A', 'Y', 'X', 'C', 'E']);
-    expect(state.inversions).toEqual([]);
   });
 
   it("TC-2.30, DRAG-6.2: a pending item keeps its position and its place when another item's response re-sorts the list", () => {
