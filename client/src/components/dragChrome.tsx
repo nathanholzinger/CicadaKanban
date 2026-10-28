@@ -19,7 +19,7 @@ import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 // BoardColumn/BoardView — and names the anchor the way useBoardDnd's
 // handleDragEnd does (`namedAnchorFor`), so the line shown here always
 // matches what gets sent, at every row dropAnchorFor could ever name: a
-// Card row or a Stub row, whichever the active drag happens to be. It's
+// Card row, a Stub row or an overflow row, whichever the active drag happens to be. It's
 // never narrowed to a subset of roles, which would hide the line for a
 // Stub leaving its Card into a column, exactly the case it most needs to
 // show. In a column the anchor is a neighbor of the ghost, not necessarily

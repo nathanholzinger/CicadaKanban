@@ -171,7 +171,7 @@ export function modalHoldTarget(projection: DescendantsProjection | null): Modal
 
 // The projection read afresh from where the cursor is over a layer that has just changed shape
 // under it (the modal opening): the next sample resolves from this gap and depth, and the pointer
-// it measures its travel from is at `pointerX`. The hold's own reading is dropped, and nothing else:
+// it measures its travel from is at `pointerX`. The previous projection is dropped, and nothing else:
 // `slotHidden` stays, because the rows `own` is read from still place the Stub as the Card's last
 // child, where a real move would be taken for its own slot and dropped. The reading is held where
 // the pointer is (`holdsReading`).

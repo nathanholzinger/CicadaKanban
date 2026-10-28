@@ -20,10 +20,13 @@ export const MODAL_EDGE_MARGIN_PX = 8;
 export const MODAL_CURSOR_INSET_PX = 16;
 
 // What the cursor reads against the modal's rows once it is placed: the gap the ghost takes and
-// the depth it is tabbed to.
+// the depth it is tabbed to, and the point of the window it read them at. The drag measures the
+// pointer's travel from that point, however far the pointer has moved by the time it hears.
 export interface ModalReading {
   gap: number;
   depth: number;
+  pointerX: number;
+  pointerY: number;
 }
 
 // The cursor's x in a list of rows, from the list's left edge, when it is at `depth`: the inset
@@ -47,6 +50,8 @@ export interface ModalPlacementInput {
   spotX: number;
   /** The spot's centre from the dialog's top edge, the list scrolled to its top. */
   spotY: number;
+  /** Where the list's top edge lies in the dialog, from the dialog's top edge: the header sits above it. */
+  listTop: number;
   /** How far the list can scroll. */
   maxScroll: number;
 }
@@ -63,11 +68,21 @@ function fitInside(start: number, size: number, extent: number): number {
 
 // The dialog's position and the list's scroll that put the spot under the cursor, or as near as
 // the window allows. The window comes first: a dialog that would cross an edge is pulled inside
-// it. The list's scroll then makes up what the dialog's position couldn't, as far as it can.
-export function placeModal({ cursor, viewport, dialog, spotX, spotY, maxScroll }: ModalPlacementInput): ModalPlacement {
+// it. The list's scroll then makes up what the dialog's position couldn't, as far as it can, and
+// no further than brings the spot to the list's top edge: past that it is under the header, and
+// the cursor would read the rows below it.
+export function placeModal({
+  cursor,
+  viewport,
+  dialog,
+  spotX,
+  spotY,
+  listTop,
+  maxScroll,
+}: ModalPlacementInput): ModalPlacement {
   const left = fitInside(cursor.x - spotX, dialog.width, viewport.width);
   const top = fitInside(cursor.y - spotY, dialog.height, viewport.height);
-  const scrollTop = Math.max(0, Math.min(maxScroll, spotY - (cursor.y - top)));
+  const scrollTop = Math.max(0, Math.min(maxScroll, spotY - (cursor.y - top), spotY - listTop));
   return { left, top, scrollTop };
 }
 
@@ -83,6 +98,7 @@ export function centerModal(
     dialog,
     spotX: dialog.width / 2,
     spotY: dialog.height / 2,
+    listTop: 0,
     maxScroll: 0,
   });
 }

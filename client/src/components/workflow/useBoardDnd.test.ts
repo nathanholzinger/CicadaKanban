@@ -52,6 +52,31 @@ function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
   };
 }
 
+describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
+  it('closes the modal, and reads nothing from it, when the drag is no longer in the modal’s layer', () => {
+    const deps = depsWith(async () => {});
+    const { result } = renderHook(() => useBoardDnd(deps));
+    // The drag began in no context, as one that popped out of the modal's Card before the modal
+    // mounted would be.
+    act(() => result.current.handleDragStart(itemPickup));
+    const before = result.current.session;
+
+    act(() => result.current.readModalPlacement('p', { gap: 1, depth: 0, pointerX: 5, pointerY: 5 }));
+
+    expect(deps.closeHierarchyModal).toHaveBeenCalledOnce();
+    expect(result.current.session).toBe(before);
+  });
+
+  it('does nothing with no drag running', () => {
+    const deps = depsWith(async () => {});
+    const { result } = renderHook(() => useBoardDnd(deps));
+
+    act(() => result.current.readModalPlacement('p', { gap: 1, depth: 0, pointerX: 5, pointerY: 5 }));
+
+    expect(deps.closeHierarchyModal).not.toHaveBeenCalled();
+  });
+});
+
 describe('useBoardDnd: a column reorder whose save fails', () => {
   beforeEach(() => {
     vi.mocked(moveItem).mockReset();

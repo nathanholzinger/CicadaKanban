@@ -9,7 +9,8 @@
 // Opened by a click it is centered. Opened by a hold during a drag it is placed under the cursor
 // (`workflow/modalPlacement.ts`): once mounted it measures itself, moves so that the spot the
 // ghost held is under the cursor, scrolls its list to bring it there, and reports the gap and
-// depth the cursor reads against its rows, for the drag to carry on from. Whether the cursor
+// depth the cursor reads against its rows and the point it read them at, for the drag to carry on
+// from. Whether the cursor
 // places it is decided as it mounts: one that mounts with no drag running, remounted by a board
 // reload or opened by a hold the drag ended before it committed, is centered as a click opens it.
 
@@ -47,8 +48,8 @@ interface HierarchyModalProps {
   getAttachedChildren: (parentId: string) => readonly Item[];
   /** Where the cursor was when a hold opened it during a drag; null for a click, which centers it. Read as it mounts. */
   anchor: Point | null;
-  /** Called once, when a modal opened by a hold is placed, with what the cursor reads against it. */
-  onPlaced: (reading: ModalReading) => void;
+  /** Called once, when a modal opened by a hold is placed, with its Card and what the cursor reads against it. */
+  onPlaced: (cardId: string, reading: ModalReading) => void;
   onClose: () => void;
 }
 
@@ -103,6 +104,7 @@ function placeAtCursor(
       dialog: size,
       spotX: listBox.left - dialogBox.left + cursorXInList(projection.depth),
       spotY: dialog.clientTop + spotRow.offsetTop + spotRow.offsetHeight / 2,
+      listTop: listBox.top - dialogBox.top,
       maxScroll: Math.max(0, list.scrollHeight - list.clientHeight),
     }),
   );
@@ -125,7 +127,9 @@ function placeAtCursor(
   const nearest = nearestRowIndex(inView, cursor.y);
   if (nearest === null) return null;
   const gap = gapAtSlot(items, activeId, inView[nearest].index, travels);
-  return gap === null ? null : { gap, depth: depthAtCursor(cursor.x, placedList.left) };
+  return gap === null
+    ? null
+    : { gap, depth: depthAtCursor(cursor.x, placedList.left), pointerX: cursor.x, pointerY: cursor.y };
 }
 
 export default function HierarchyModal({
@@ -149,6 +153,7 @@ export default function HierarchyModal({
   // across a remount, or a drag that ends before the open commits, mounts it with no drag, and it
   // is centered. A modal for another Card is another mount (the caller keys it by Card).
   const [placeAt] = useState<Point | null>(() => (session ? anchor : null));
+  const cardId = card.id;
 
   // The placement runs once, before the first paint, on the render that mounted the modal.
   const latest = useLatest({ session, entries, onPlaced });
@@ -158,8 +163,8 @@ export default function HierarchyModal({
     const mounted = latest.current;
     if (!placeAt || !dialog || !list || !mounted.session) return;
     const reading = placeAtCursor(dialog, list, placeAt, mounted.session, mounted.entries);
-    if (reading) mounted.onPlaced(reading);
-  }, [placeAt, latest]);
+    if (reading) mounted.onPlaced(cardId, reading);
+  }, [placeAt, cardId, latest]);
 
   return (
     <ModalShell

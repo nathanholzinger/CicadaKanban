@@ -142,7 +142,8 @@ describe('the hierarchy modal opened by a hold during a drag', () => {
     expect(dialog.style.top).toBe(`${CURSOR.y - (LIST.y + 3 * ROW.step + ROW.height / 2)}px`);
     expect(dialog.style.left).toBe(`${CURSOR.x - (LIST.x + cursorXInList(0))}px`);
     expect(onPlaced).toHaveBeenCalledTimes(1);
-    expect(onPlaced).toHaveBeenCalledWith({ gap: 2, depth: 0 });
+    // With the Card it is for, and the point it was read at, which is where the hold opened it.
+    expect(onPlaced).toHaveBeenCalledWith(CARD.id, { gap: 2, depth: 0, pointerX: CURSOR.x, pointerY: CURSOR.y });
   });
 
   it.each([

@@ -14,7 +14,7 @@ import {
 
 const viewport = { width: 1200, height: 800 };
 const dialog = { width: 576, height: 400 };
-const base = { viewport, dialog, spotX: 100, spotY: 150, maxScroll: 0 };
+const base = { viewport, dialog, spotX: 100, spotY: 150, listTop: 60, maxScroll: 0 };
 
 describe('placeModal', () => {
   it('DRAG-7.15: puts the spot under the cursor when the dialog fits', () => {
@@ -51,6 +51,23 @@ describe('placeModal', () => {
     const atEnd = placeModal({ ...base, cursor: { x: 600, y: 100 }, spotY: 700, maxScroll: 200 });
     expect(atEnd.scrollTop).toBe(200);
     expect(placeModal({ ...base, cursor: { x: 600, y: 100 }, spotY: 700, maxScroll: 0 }).scrollTop).toBe(0);
+  });
+
+  it('DRAG-7.17: stops the scroll where the spot reaches the top of the list, so the header never covers it', () => {
+    // The cursor is near the top of the window and the spot far down a long list. The dialog can't
+    // move up past the margin, and the scroll that would bring the spot to the cursor puts it above
+    // the list's top edge, under the header, two rows off what the cursor is read against.
+    const placed = placeModal({ ...base, cursor: { x: 600, y: 40 }, spotY: 700, maxScroll: 2000 });
+    expect(placed.top).toBe(MODAL_EDGE_MARGIN_PX);
+    expect(placed.scrollTop).toBe(700 - base.listTop);
+    // The spot sits at the list's top edge.
+    expect(placed.top + 700 - placed.scrollTop).toBe(placed.top + base.listTop);
+  });
+
+  it('DRAG-7.17: scrolls all the way to the spot when the cursor is low enough that it stays below the header', () => {
+    const placed = placeModal({ ...base, cursor: { x: 600, y: 100 }, spotY: 700, maxScroll: 2000 });
+    expect(placed.scrollTop).toBe(700 - (100 - MODAL_EDGE_MARGIN_PX));
+    expect(placed.top + 700 - placed.scrollTop).toBe(100);
   });
 
   it('keeps a dialog taller or wider than the window at the margin', () => {

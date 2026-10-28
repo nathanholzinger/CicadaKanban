@@ -384,6 +384,23 @@ describe('reseedProjection', () => {
     expect(tabbed).toMatchObject({ gap: 2, depth: 1, resolved: { parentId: 'S3' } });
   });
 
+  it('DRAG-7.15: counts the pointer’s travel from the point the reading was taken at, whatever it has done since', () => {
+    // The reading is at (400, 300). By the next sample the pointer is an indent right and 40px down,
+    // and the neighbor named is S3's far side: nothing holds the reading, and the depth is the
+    // reading's plus the one indent.
+    const reseeded = reseedProjection(advanceProjection(NO_PROJECTION, sample()), { gap: 1, depth: 0, ...READ_AT });
+    const moved = advanceProjection(
+      reseeded,
+      held({
+        pointerX: READ_AT.pointerX + DESCENDANTS_INDENT_PX,
+        pointerY: READ_AT.pointerY + 40,
+        namedAnchor: { anchorId: 'S3', side: 'after' },
+      }),
+    );
+    expect(moved.projection).toMatchObject({ gap: 2, depth: 1, resolved: { parentId: 'S3' } });
+    expect(moved.held).toBeNull();
+  });
+
   it('has nothing to reseed before the section was entered', () => {
     expect(reseedProjection(NO_PROJECTION, { gap: 2, depth: 0, ...READ_AT })).toBe(NO_PROJECTION);
   });

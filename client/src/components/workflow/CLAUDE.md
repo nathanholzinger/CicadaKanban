@@ -83,15 +83,17 @@ its own header.
   opens the modal with the cursor (`BoardView.tsx::openHierarchyModalAt`); the modal places
   itself in a layout effect (`HierarchyModal.tsx`, the pure geometry in `modalPlacement.ts`):
   the spot the ghost held under the cursor, the list scrolled to bring it there, the dialog held
-  inside the window. It then reports what the cursor reads against its rows, the gap and the
-  depth from the cursor's x against its own indents, which `useBoardDnd.ts::readModalPlacement`
-  reseeds the projection with (`descendantsProjection.ts::reseedProjection`), so a modal that
-  fitted keeps the ghost's spot and a shifted one reads where the cursor is. That reading is
+  inside the window, its list scrolled no further than the spot's reaching the list's top, under
+  the header. It then reports what the cursor reads against its rows, the gap and the
+  depth from the cursor's x against its own indents, and the point it read them at, which
+  `useBoardDnd.ts::readModalPlacement` reseeds the projection with
+  (`descendantsProjection.ts::reseedProjection`), so a modal that fitted keeps the ghost's spot
+  and a shifted one reads where the cursor is. If the drag has left the modal's layer since the
+  hold opened it, nothing is read and the modal closes. The reading is
   held while the cursor is where it was read (`descendantsProjection.ts::holdsReading`): the
   modal's layer swap re-clamps the carried copy with the cursor still, and the drag-move event
   that follows names a neighbor against rows still sliding into place, so none named until the
-  cursor moves, along either axis, is taken (`useBoardDnd.ts::handleDragMove` stores none
-  either). The carried Stub
+  cursor moves, along either axis, is taken. The carried Stub
   shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**

@@ -868,6 +868,24 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **A real run:** the script over `epic-3-5-story-7-audited..HEAD`, written to a scratch folder, completes and lists the scopes, so the tokenizer holds on this repository's real diffs.
   - **Checks:** `npm run check` passes (430 server, 555 client, 217 script tests; `check:docs` clean). The E2E suite wasn't run, since nothing it exercises changed.
   - **Close-out:** rows for #2, with #3, and #9 and #10.
+- **2026-10-28, batch 10: the hold-opened modal (Coder).** Nathan's ruling on batch 7's hook half; rerun #5; with #14, #15 and #16. The drag layer's `CLAUDE.md` is updated to match.
+  - **The hook half is gone** (Nathan, 2026-10-28). `handleDragMove` names the neighbor as it did before batch 7, with no check on the held reading. The pure layer's `holdsReading` carries the DRAG-7.15 specs, and they pass as they were, in the full run. `holdsReading` is no longer imported by the hook.
+  - **#5:** `useLiveDropSide`'s comment lists "a Card row, a Stub row or an overflow row".
+  - **#14: the reading carries the point it was read at.**
+    - **`ModalReading`** gains `pointerX` and `pointerY`, the same shape `reseedProjection` takes. `HierarchyModal.tsx::placeAtCursor` fills them from the cursor it placed the modal for, which is the point the hold opened it at. `readModalPlacement` hands the reading to `reseedProjection` as it is, so the seed's pointer and `held` are that point, where they were the live pointer before.
+    - **A pointermove between the hold and the commit** that mounts the modal no longer shifts the depth's boundaries for the rest of the drag, and `held` is keyed to where the reading was taken.
+  - **#15: a modal whose layer the drag has left closes.**
+    - **`readModalPlacement(cardId, reading)`** reads nothing unless the drag's context is that Card's Descendants, and closes the modal otherwise. The modal says which Card it is (`onPlaced(card.id, reading)`), since the hook's own copy of the modal's Card isn't there yet at the commit that mounted it. That is why the plan's two lines are a signature change too.
+    - **With no drag running** it does nothing, as before.
+  - **#16: the scroll stops at the list's top.** `placeModal` takes `listTop`, the list's top edge in the dialog (`listBox.top - dialogBox.top`, as `spotX` is measured), and caps the scroll at `spotY - listTop`. With the cursor in the top 90px or so over a long list, the spot is now at the list's top edge, half under the header at most, where it was above the list and the reading landed two rows off. `centerModal` passes 0 and scrolls nothing. The bottom edge has no such case: nothing sits below the list.
+  - **Tests:**
+    - **#16:** a `modalPlacement.test.ts` case with the cursor at y = 40 over a list whose spot is 700px down: the scroll is 640 where it was 668, and the spot lies at the list's top edge. A second case at y = 100 shows the cap doesn't bind below the header. The first failed before.
+    - **#14:** `HierarchyModal.test.tsx`'s DRAG-7.15 test expects `onPlaced` to be called with the Card's id and a reading that carries the cursor's x and y. It failed before. In `descendantsProjection.test.ts`, one case reseeds at a point and then samples a pointer an indent right and 40px down with S3's far side named: the depth is the reading's plus one indent, the anchor is taken, and `held` is clear. That case passed before: the pure layer already measured from the point it was given, and the defect was in what the hook gave it. The component's test is the guard.
+    - **#15:** `useBoardDnd.test.ts` starts a drag in no context and calls `readModalPlacement('p', …)`: the modal closes and the session is untouched. It failed before. A second case checks nothing happens with no drag. The other side, a drag that is in the modal's layer and isn't closed, needs a measured region the harness doesn't have; DRAG-7.15's E2E specs run it.
+  - **Not taken:** #23, which would have `ProjectionSample` carry one `Point` where it carries `pointerX` and `pointerY` and the projection rebuilds the pair. #14's change doesn't shrink it: the reading carries its point as the same pair `reseedProjection` takes. Also #24 to #26 and #31, as planned.
+  - **Beside it:** `reseedProjection`'s comment says "the previous projection is dropped" (rerun #33).
+  - **Checks:** `npm run check` passes (430 server, 560 client, 217 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped, as before, with DRAG-7.15's specs unchanged.
+  - **Close-out:** a row for #5, with #14 to #16.
 
 ## Open questions
 

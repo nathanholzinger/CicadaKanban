@@ -96,7 +96,6 @@ import {
   NO_PROJECTION,
   advanceProjection,
   descendantsReleasePlacement,
-  holdsReading,
   modalHoldTarget,
   reseedProjection,
   sameProjection,
@@ -641,11 +640,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // could show the cue a frame late, but never leaves it stale.
   function handleDragMove(event: DragMoveEvent) {
     if (isColumnData(event.active.data.current)) return;
-    // While the modal's reading is held (`holdsReading`) no neighbor is stored, so that one named
-    // against rows still settling isn't left behind to be read once the pointer has moved.
-    namedAnchorRef.current = holdsReading(projectionRef.current, pointerRef.current)
-      ? null
-      : namedAnchorFor(event.active, event.over, sessionRef.current);
+    namedAnchorRef.current = namedAnchorFor(event.active, event.over, sessionRef.current);
     evaluateRef.current();
   }
 
@@ -654,18 +649,18 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // cursor, where a zoom into a section doesn't move the ghost (wiki board-drag-interaction §7.3):
   // the projection carries on from them, and the neighbor named in the section, which the modal's
   // rows replaced, is dropped for the next move to name afresh. Called from the commit that
-  // mounted the modal, before the hook has seen the modal's Card in its deps, so the Card is
-  // taken off the drag's own context, which the modal is the layer of.
-  function readModalPlacement(reading: ModalReading) {
+  // mounted the modal, before the hook has seen the modal's Card in its deps, so the modal says
+  // which Card it is. The drag may have left the modal's layer since the hold opened it, popping
+  // out to the Card layer or into another Card's section: nothing is read then, and the modal closes.
+  // The reading carries the point it was read at, which the pointer may have left by now.
+  function readModalPlacement(cardId: string, reading: ModalReading) {
     const current = sessionRef.current;
-    const pointer = pointerRef.current;
-    const cardId = descendantsCardIdOf(current?.pop.contextKey ?? null);
-    if (!current || !pointer || !cardId) return;
-    projectionRef.current = reseedProjection(projectionRef.current, {
-      ...reading,
-      pointerX: pointer.x,
-      pointerY: pointer.y,
-    });
+    if (!current) return;
+    if (current.pop.contextKey !== descendantsRegionKey(cardId)) {
+      latest.current.closeHierarchyModal();
+      return;
+    }
+    projectionRef.current = reseedProjection(projectionRef.current, reading);
     namedAnchorRef.current = null;
     evaluatePop(cardId);
   }
