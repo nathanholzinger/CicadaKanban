@@ -14,6 +14,9 @@ export function memoryStorage(
     setItem: (key, value) => {
       data[key] = value;
     },
+    removeItem: key => {
+      delete data[key];
+    },
   };
 }
 
@@ -23,5 +26,8 @@ export const refusingStorage: KeyValueStorage = {
   },
   setItem: () => {
     throw new Error('quota');
+  },
+  removeItem: () => {
+    throw new Error('blocked');
   },
 };

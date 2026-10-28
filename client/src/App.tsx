@@ -20,8 +20,11 @@ import ProjectPage from './components/ProjectPage';
 import ProjectSidebar from './components/ProjectSidebar';
 import AgentsModal from './components/AgentsModal';
 import NotificationsBell from './components/NotificationsBell';
+import { browserStorage, readStored, removeStored, writeStored } from './lib/browserStorage';
 import { findNearestAncestor, getAncestors } from './lib/hierarchy';
 import { applyWriteResponse } from './lib/positionedWrite';
+
+const ACTIVE_PROJECT_STORAGE_KEY = 'activeProjectId';
 
 export default function App() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -32,7 +35,7 @@ export default function App() {
   // The cap the sidebar offers tab states against; null until the server's is read.
   const [projectDepthCap, setProjectDepthCap] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
-    localStorage.getItem('activeProjectId'),
+    readStored(browserStorage(), ACTIVE_PROJECT_STORAGE_KEY),
   );
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
   const [createProjectParentId, setCreateProjectParentId] = useState<string | undefined>(undefined);
@@ -83,10 +86,11 @@ export default function App() {
   }
 
   useEffect(() => {
+    const storage = browserStorage();
     if (selectedProjectId) {
-      localStorage.setItem('activeProjectId', selectedProjectId);
+      writeStored(storage, ACTIVE_PROJECT_STORAGE_KEY, selectedProjectId);
     } else {
-      localStorage.removeItem('activeProjectId');
+      removeStored(storage, ACTIVE_PROJECT_STORAGE_KEY);
     }
   }, [selectedProjectId]);
 

@@ -886,6 +886,22 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Beside it:** `reseedProjection`'s comment says "the previous projection is dropped" (rerun #33).
   - **Checks:** `npm run check` passes (430 server, 560 client, 217 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped, as before, with DRAG-7.15's specs unchanged.
   - **Close-out:** a row for #5, with #14 to #16.
+- **2026-10-28, batch 11: the client's storage (Coder).** Rerun #7, option (a), as Nathan ruled.
+  - **The fix:** `App.tsx` (the active project) and `useBoardManagement.ts` (each workflow's active board) read and write through `readStored` and `writeStored`, where they used raw `localStorage`. `App.tsx`'s remove goes through a new guarded `removeStored`. `KeyValueStorage` gains `removeItem`, and so do the memory and refusing fakes in `test/storageFixtures.ts`. Each key is a named constant or function in its file, where it was a literal repeated at its sites. No raw `localStorage` use is left in the client outside `browserStorage.ts` and its tests.
+  - **Docs:** `browserStorage.ts`'s header names its four callers. The drag layer's `CLAUDE.md` line lists `removeStored` and the two new callers, so "every site that persists calls it" is true.
+  - **What a viewer sees:**
+    - **`App.tsx`** read the active project in a `useState` initializer, so storage that throws stopped the app mounting at all, and its effect threw as a project was selected.
+    - **`useBoardManagement.ts`** read inside `loadBoards`' `try`, so a throw there was logged as "Failed to load boards" and the workflow showed none. A write threw into the handler that created or chose a board.
+    - With the fix, the app mounts, the boards load on the first, and a choice holds for the session.
+  - **Tests,** two beyond the plan's (`browserStorage.test.ts` alone), since both callers' failures are what a viewer meets:
+    - **`browserStorage.test.ts`** (plan): `removeStored` removes the key and leaves the others, and does nothing without storage, for a key not there, or when the remove throws. Failed before.
+    - **`useBoardManagement.test.ts`** (new, 3 tests): the first board is the start and a choice is found by a later visit; a remembered board that is gone falls back to the first; and with `localStorage` throwing, the boards still load and a choice still sets. The last failed before: no boards loaded, the active board was null.
+    - **`tests/ui/blocked-site-data.spec.ts`** (new, 1 spec, no case ID): with `localStorage` replaced by a getter that throws, before the page loads, the app mounts, the project selects and its board shows an item. Failed before: the app never mounted.
+  - **`sidebarWidth.test.ts`:** its spy storage is `{ ...memoryStorage(), setItem }` where it was a literal of two methods, which no longer satisfies `KeyValueStorage`.
+  - **Mutation checks, each restored:** `App.tsx`'s read, and its write, each through raw `localStorage` again: the E2E spec fails. The board hook's read, and its write, each the same: the hook's third test fails.
+  - **Not taken:** #13, a warning on a refused write. The header's ruling is that a value holds for the session and nothing else.
+  - **Checks:** `npm run check` passes (430 server, 565 client, 217 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 227 and 8 skipped, the new spec on the 226 before.
+  - **Close-out:** a row for #7.
 
 ## Open questions
 

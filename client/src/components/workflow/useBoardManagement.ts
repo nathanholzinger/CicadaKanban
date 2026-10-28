@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Board } from '../../types';
 import { fetchBoards, createBoard, updateBoard, deleteBoard } from '../../api/boards';
+import { browserStorage, readStored, writeStored } from '../../lib/browserStorage';
+
+const activeBoardStorageKey = (workflowId: string) => `kanban_active_board_${workflowId}`;
 
 export function useBoardManagement(workflowId: string) {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -14,7 +17,7 @@ export function useBoardManagement(workflowId: string) {
       const sorted = [...data].sort((a, b) => a.position - b.position);
       setBoards(sorted);
 
-      const stored = localStorage.getItem(`kanban_active_board_${workflowId}`);
+      const stored = readStored(browserStorage(), activeBoardStorageKey(workflowId));
       let resolved: string | null = sorted[0]?.id ?? null;
       if (stored && sorted.some(b => b.id === stored)) resolved = stored;
       setActiveBoardIdState(resolved);
@@ -33,7 +36,7 @@ export function useBoardManagement(workflowId: string) {
 
   function setActiveBoardId(id: string) {
     setActiveBoardIdState(id);
-    localStorage.setItem(`kanban_active_board_${workflowId}`, id);
+    writeStored(browserStorage(), activeBoardStorageKey(workflowId), id);
   }
 
   async function handleCreateBoard(name: string) {

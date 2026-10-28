@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { memoryStorage, refusingStorage } from '../test/storageFixtures';
-import { browserStorage, readStored, writeStored } from './browserStorage';
+import { browserStorage, readStored, removeStored, writeStored } from './browserStorage';
 
 // `localStorage` as the page sees it, put back after a test that replaces it.
 const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -51,5 +51,19 @@ describe('writeStored', () => {
   it('does nothing without storage, and survives a write that throws', () => {
     expect(() => writeStored(null, 'k', 'v')).not.toThrow();
     expect(() => writeStored(refusingStorage, 'k', 'v')).not.toThrow();
+  });
+});
+
+describe('removeStored', () => {
+  it('removes the value stored under the key, and leaves the others', () => {
+    const storage = memoryStorage({ k: 'v', other: 'x' });
+    removeStored(storage, 'k');
+    expect(storage.data).toEqual({ other: 'x' });
+  });
+
+  it('does nothing without storage or for a key that is not there, and survives a remove that throws', () => {
+    expect(() => removeStored(null, 'k')).not.toThrow();
+    expect(() => removeStored(memoryStorage(), 'k')).not.toThrow();
+    expect(() => removeStored(refusingStorage, 'k')).not.toThrow();
   });
 });

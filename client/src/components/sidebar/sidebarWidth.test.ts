@@ -74,9 +74,9 @@ describe('saveSidebarWidth', () => {
 
   it('stores a clamped, whole-pixel width', () => {
     const setItem = vi.fn();
-    saveSidebarWidth(9999, { getItem: () => null, setItem });
+    saveSidebarWidth(9999, { ...memoryStorage(), setItem });
     expect(setItem).toHaveBeenCalledWith(SIDEBAR_WIDTH_STORAGE_KEY, String(SIDEBAR_MAX_WIDTH_PX));
-    saveSidebarWidth(200.4, { getItem: () => null, setItem });
+    saveSidebarWidth(200.4, { ...memoryStorage(), setItem });
     expect(setItem).toHaveBeenLastCalledWith(SIDEBAR_WIDTH_STORAGE_KEY, '200');
   });
 
