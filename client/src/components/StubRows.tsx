@@ -15,11 +15,11 @@ import { useDragTuning } from './workflow/DragTuningContext';
 import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
-// shares — AttachGhostRow and AttachedChildRow below, and KanbanCard's own
-// overlay-Stub branch. Extracted so the three can't drift apart from each
-// other; each still owns its own outer box (dashed ghost, sortable row,
-// carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the Card tier's own
-// `TypePill`, hidden for an unknown type the same way.
+// shares — AttachGhostRow, AttachedChildRow and StaticStubRow below, and
+// KanbanCard's own overlay-Stub branch. Extracted so they can't drift apart
+// from each other; each still owns its own outer box (dashed ghost, sortable
+// row, static row, carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the
+// Card tier's own `TypePill`, hidden for an unknown type the same way.
 export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
   return (
     <>
@@ -84,7 +84,9 @@ export function AttachedChildRow({
   // and remounts as one. `parentId` is this row's own real parent; it
   // doesn't scope collisions (the whole section's rect does,
   // `dragCollision.ts::CollisionSession`), and is carried the way every
-  // row's data carries it.
+  // row's data carries it. `sectionCardId` names the Card whose section the
+  // row is in, which a row drawn in the hierarchy modal, away from the Card,
+  // would not otherwise say; an overflow row registers the same way.
   //
   // Stubs are classified individually during a Card drag
   // (wiki board-drag-interaction §4) — same attributes and overlay as a
@@ -130,9 +132,11 @@ const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 // the section doesn't draw: how many there are, one level under their parent, where they
 // would be. It takes part in the shuffle as any row does, so the ghost slides above or below
 // it and the live line can be drawn on it. It is no item: it carries no `data-item-id`, and
-// nothing drags from it, the Card's own drag included, since a press on it goes no further.
-// A click opens the hierarchy modal, and so does a hold during a drag: the cue of that hold shows
-// on the row (`ZoomCue`, as a Card's zoom-in cue does).
+// nothing drags from it. A press on its count goes no further, so it neither starts the Card's
+// drag nor opens the Sheet; a press on its indent is the Card's, as beside a Stub row
+// (wiki board-drag-interaction §9). A click on the count opens the hierarchy modal, and so does
+// a hold during a drag: the cue of that hold shows on the row (`ZoomCue`, as a Card's zoom-in
+// cue does).
 export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; cardId: string; onOpen: () => void }) {
   const { setNodeRef, dropSide, sortableStyle, dataAttrs } = useItemRow(row.id, 'overflow', {
     parentId: row.ownerId,

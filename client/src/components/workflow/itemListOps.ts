@@ -237,9 +237,10 @@ export function getAttachedChildrenFrom(
 export type HierarchyRow = HierarchyNode<Item>;
 
 // A Card's whole descendants section as one flat, depth-first list, for
-// `KanbanCard.tsx`'s single `SortableContext` and the Descendants layer's
-// projection (`descendantsProjection.ts`, which drops the dragged subtree
-// with `toRows`) — one walk, so the two can't disagree. `childrenOf` is the
+// `KanbanCard.tsx`'s single `SortableContext`, the hierarchy modal's
+// (`HierarchyModal.tsx`) and the Descendants layer's projection
+// (`descendantsProjection.ts`, which drops the dragged subtree with
+// `toRows`) — one walk, so the three can't disagree. `childrenOf` is the
 // caller's view of a parent's children: ordinarily `getAttachedChildren`,
 // placement-aware, so an item previewing into the section already appears
 // at its slot.
@@ -303,8 +304,9 @@ export interface OverflowRowData {
 export type SectionEntry = { kind: 'item'; row: HierarchyRow } | { kind: 'overflow'; row: OverflowRowData };
 
 // What a Card's section draws, in order: its rows down to the last shown level, with an
-// overflow row under each last-level row that has attached children. `rows` is the whole
-// section (`hierarchyRows`); the board places against all of it, and only the drawing is cut.
+// overflow row under each last-level row that has attached children
+// (wiki board-drag-interaction §9, wiki item-attachment §12). `rows` is the whole section
+// (`hierarchyRows`); the board places against all of it, and only the drawing is cut.
 // The dragged item is left out of an overflow row's count, since the ghost shows it. A row
 // whose children are all Free has none, as `rows` holds attached children only.
 export function sectionEntries(

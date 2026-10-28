@@ -72,9 +72,9 @@ describe('resolveBoardCollisions', () => {
 
   // The Descendants-context scope comes from the *live session's* own
   // measured section rect (`descendantsSectionRect`), never from the active
-  // row's own `data`: every Stub row inside it is a candidate, at any depth
+  // row's own `data`: every Stub row of the context Card inside it is a candidate, at any depth
   // and under any real `parentId`.
-  it("scopes a Descendants context's collisions to every Stub row inside the section's rect, any real parent", () => {
+  it("scopes a Descendants context's collisions to every Stub row of the context Card inside the section's rect, any real parent", () => {
     const sectionRect = rect(0, 0, 100, 400);
     const session: CollisionSession = {
       hoverContainerId: null,
@@ -315,7 +315,7 @@ describe('resolveDropSide', () => {
 // middle, picks which neighbor names it. Rows 100 tall, `over` rects
 // unshifted (as dnd-kit measures them). The ghost's own height is read off
 // `over`'s own kind — `SHORT_CARD_HEIGHT_PX` over a Card row,
-// `STUB_ROW_HEIGHT_PX` over a Stub row — so a case that depends on it
+// `STUB_ROW_HEIGHT_PX` over a Stub row or an overflow row — so a case that depends on it
 // computes the ghost's middle from the constant. Only the dragged copy's
 // center is compared, never its height.
 describe('dropAnchorFor', () => {

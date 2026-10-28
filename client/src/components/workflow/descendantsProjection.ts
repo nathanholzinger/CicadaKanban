@@ -54,7 +54,7 @@ export interface ProjectionSample {
   namedAnchor: AnchorRelation | null;
   pointerX: number | null;
   getAttachedChildren: (parentId: string) => readonly Item[];
-  /** The tuning value for the levels a section shows (`itemListOps.ts::shownLevels`). */
+  /** How many levels the section draws (`itemListOps.ts::shownLevels`): the tuning value, or `EVERY_LEVEL` in the hierarchy modal. */
   sectionLevels: number;
 }
 
@@ -157,7 +157,9 @@ export function modalHoldTarget(projection: DescendantsProjection | null): Modal
 
 // The projection read afresh from where the cursor is over a layer that has just changed shape
 // under it (the modal opening): the next sample resolves from this gap and depth, and the pointer
-// it measures its travel from is `pointerX`. The hold's own reading is dropped, and nothing else.
+// it measures its travel from is `pointerX`. The hold's own reading is dropped, and nothing else:
+// `slotHidden` stays, because the rows `own` is read from still place the Stub as the Card's last
+// child, where a real move would be taken for its own slot and dropped.
 export function reseedProjection(
   state: ProjectionState,
   read: { gap: number; depth: number; pointerX: number },
@@ -209,8 +211,8 @@ export function sameProjection(a: DescendantsProjection | null, b: DescendantsPr
 // and anchor, or nothing (null) with no projection or over the cap — a
 // state that's reachable but commits nothing
 // (wiki board-drag-interaction §7.2). Also nothing at the dragged Stub's own
-// gap and depth: with the whole hierarchy shown, no unseen item can sit
-// between its neighbors, so it's already there
+// gap and depth: the gap is counted among all the section's rows, drawn or
+// not, so no hidden item can sit between its neighbors and it's already there
 // (wiki board-drag-interaction §7.1). The resolved parent is never null for
 // a board section, whose root is always a real Card; `cardId` only stands in
 // to keep the type honest.

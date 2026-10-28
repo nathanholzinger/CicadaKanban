@@ -230,10 +230,10 @@ export function resolveDropSide(
 // the list, none (null).
 //
 // The ghost's own height is the hovered row's own kind — `SHORT_CARD_HEIGHT_PX`
-// over a Card row, `STUB_ROW_HEIGHT_PX` over a Stub row — never a value the
-// caller has to know to pass in: which list this is (a column's Cards or a
-// Descendants section's Stubs) already decides which ghost is sliding
-// through it, and `over`'s own row kind already carries that fact.
+// over a Card row, `STUB_ROW_HEIGHT_PX` over a Stub row or an overflow row —
+// never a value the caller has to know to pass in: which list this is (a
+// column's Cards or a Descendants section's rows) already decides which ghost
+// is sliding through it, and `over`'s own row kind already carries that fact.
 //
 // The ghost's middle follows dnd-kit's vertical strategy: over its own
 // slot when `over` is itself, top-aligned to `over` when it moved up,

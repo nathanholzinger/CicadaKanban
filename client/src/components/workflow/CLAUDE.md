@@ -52,8 +52,9 @@ its own header.
   section's shuffle, so it can be the named neighbor, and the projection turns that
   into a gap among *all* the rows (`descendantsProjection.ts::gapForAnchor`) and
   offers no depth past the overflow row's level. Nothing past the projection sees its
-  id. An overflow row is not an item: nothing drags from it, and a press on it goes no
-  further than the row, so it doesn't pick up the Card either.
+  id. An overflow row is not an item: nothing drags from it, and a press on its count goes
+  no further, so it doesn't pick up the Card either. A press on the row's indent is the
+  Card's, as beside a Stub row (wiki board-drag-interaction §9).
   **The hierarchy modal is that same layer, drawn whole.** While it's open (`BoardView.tsx`
   holds which Card's, `HierarchyModalContext.ts`), its list carries the Card's Descendants
   region key and names the Card as its parent region, since it isn't inside the Card's
@@ -91,13 +92,13 @@ its own header.
   nothing dnd-kit measures changes. **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
 - **Every item row shares one dnd-kit registration:**
-  `data: {type: 'item', role: 'card' | 'stub', parentId?}`, never a `type` that
+  `data: {type: 'item', role: 'card' | 'stub' | 'overflow', parentId?, sectionCardId?}`, never a `type` that
   differs between a Stub's row and a popped-out Card row for the same id — the hazard
   that guards against is `active.data.current` lagging a mid-drag remount as a Stub's
   row unmounts from its Descendants section and remounts as a Card row. Every policy
   decision (`resolveBoardCollisions`, the pop machine) reads the session's own state
   instead — never `role`/`parentId` off the _active_ row, only off a _droppable_ one.
-  A Card row and a Stub row both register through `dragChrome.tsx::useItemRow`.
+  A Card row, a Stub row and an overflow row all register through `dragChrome.tsx::useItemRow`.
 - **The ghost is a `Placement`, never a position** (`itemListOps.ts`). Nothing in
   `items` mutates during a drag. On release the placement becomes the pending marker;
   `dragRequest.ts::toRequest` turns it into the actual API request, and `isIdentity`

@@ -205,9 +205,9 @@ export function parseRegionKey(key: string): ParsedRegionKey | null {
 }
 
 // The Card whose Descendants section `key` names, or null for any other key
-// (or none): the "is this context a section, and whose" question that
-// `dragCollision.ts::travelingRowsFor` and
-// `descendantsProjection.ts::advanceProjection` both ask.
+// (or none): the "is this context a section, and whose" question the drag layer asks
+// wherever it branches on it, such as `dragCollision.ts::travelingRowsFor` and
+// `descendantsProjection.ts::advanceProjection`.
 export function descendantsCardIdOf(key: string | null): string | null {
   const parsed = key === null ? null : parseRegionKey(key);
   return parsed?.kind === 'descendants' ? parsed.id : null;

@@ -46,8 +46,8 @@ export const CARD_CONTENT_INSET_PX = 13;
 // yet decided.
 export const STUB_ROW_HEIGHT_PX = 24;
 export const CARRIED_STUB_HEIGHT_PX = 26;
-// The box all three Stub rows share, so the heights above stay true of each
-// — each row adds only its own border, fill and states.
+// The box every Stub-sized row shares — the Stub rows, the carried copy and the overflow row —
+// so the heights above stay true of each; each adds only its own border, fill and states.
 export const STUB_ROW_BOX_CLASS = 'flex items-center gap-1.5 rounded px-1.5 py-1';
 // The flat descendants section's own per-row indent step: depth 0 (a Card's
 // direct Stub) lands 12px in, and each level deeper adds another 12px. One

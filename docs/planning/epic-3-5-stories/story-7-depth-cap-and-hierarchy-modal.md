@@ -517,6 +517,24 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **#69:** `sidebarWidth.ts`'s comment says a name below the 10th level may be cut off, and that dragging the sidebar wider is how it is read.
   - **Not taken, as planned:** `App.tsx`'s and `useBoardManagement.ts`'s direct `localStorage` calls.
   - **Checks:** `npm run check` passes (424 server, 561 client, 185 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped on its second run. The first had one failure, `attached-children.spec.ts`'s "dragging a parent card across columns cascades its attached child": the card never showed in the target column. It passed six times in a row alone and in the second full run, so I take it for a miss of its pop-out (a 150 ms delay) under load, but I haven't shown that it isn't this batch.
+- **2026-10-28, the audit's Fix Now, batch 4: the drag layer's comments (Coder).** The Architect's batch 4. Comments, and one test title; the diff has no other change.
+  - **#12:** `ZoomCue`'s comment names both holds that draw it, with each one's clock, phase and reset: a Card's zoom-in (`cardPopInDelayMs`, `useZoomCandidatePhase`, `namedCardCandidate`) and the hold that opens the modal (`modalHoldCueMs`, `useModalHoldPhase`, `nextModalHold`). `cueMs` is the caller's clock.
+  - **#13:** `dragRegions.ts` no longer lists two readers of `descendantsCardIdOf` as if they were all.
+  - **#14:** `popSession.ts::popDueAt` lists the modal hold as a fourth clock, with its own, and says it runs only with the cursor inside the Descendants layer, where neither `hover` nor `outsideSince` is set.
+  - **#15:** the drag layer's `CLAUDE.md` gives the registration three roles and `sectionCardId`, and lists the overflow row among `useItemRow`'s callers. The Informational note with it: `dragChrome.tsx`'s header, the `useItemRow` comment and `ItemRowOptions.parentId` say so too.
+  - **#16:** `StubBody`'s comment names `StaticStubRow` as a fourth user, and `STUB_ROW_BOX_CLASS`'s no longer counts its users.
+  - **#17:** `descendantsProjection.ts` documents `sectionLevels` as the tuning value or `EVERY_LEVEL` in the modal, and the release comment says the own-slot result holds because the gap is counted among all the section's rows, drawn or not.
+  - **#23:** `sectionEntries` cites `wiki board-drag-interaction §9` and `wiki item-attachment §12`. The modal's header cites §9, from batch 1.
+  - **#24:** `reseedProjection` records the ruling: `slotHidden` stays, because the rows `own` is read from still place the Stub as the Card's last child, where a real move would be taken for its own slot and dropped.
+  - **Beside them:**
+    - **#46:** `StubRows.tsx`'s comment and the `CLAUDE.md` narrow "a press on it goes no further" to a press on its count, and say a press on the indent is the Card's (wiki board-drag-interaction §9).
+    - **#60:** `dragCollision.test.ts`'s Descendants-scope title gains "of the context Card", the one non-comment change.
+    - **#69:**
+      - the `popSession.ts` reference that `check:docs` couldn't read, split across a line;
+      - `hierarchyRows`'s consumers, in `itemListOps.ts` and its test;
+      - overflow rows in `useBoardDnd.ts`'s candidate comment, `AttachedChildRow`'s comment (which also says what `sectionCardId` is) and `dragCollision.ts`'s ghost-height comment, with the test's header.
+  - **Close-out:** rows for #12–#17, #23 and #24. #23 is done with this batch, as its modal half landed in batch 1.
+  - **Checks:** `npm run check` passes (424 server, 561 client, 185 script tests; `check:docs` clean). The diff was read for non-comment lines, and the only one is the title. The E2E suite wasn't run, since no code changed.
 
 ## Open questions
 

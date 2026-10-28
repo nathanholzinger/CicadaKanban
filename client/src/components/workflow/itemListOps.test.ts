@@ -200,8 +200,8 @@ describe('getAttachedChildrenFrom', () => {
   });
 });
 
-// The whole descendants section as one flat DFS list, for KanbanCard.tsx's
-// single SortableContext.
+// The whole descendants section as one flat DFS list, for the SortableContext of
+// KanbanCard.tsx's section and of HierarchyModal.tsx.
 describe('hierarchyRows', () => {
   const items = [
     item('root'),

@@ -1,6 +1,6 @@
-// The drag-time chrome a Card and a Stub share: an item row's registration
-// and drop-target chrome (`useItemRow`), the live side indicator, and the
-// zoom-in cue, with the looks they draw (the active-context outline, the
+// The drag-time chrome a Card, a Stub and an overflow row share: a row's
+// registration and drop-target chrome (`useItemRow`), the live side indicator,
+// and the zoom-in cue, with the looks they draw (the active-context outline, the
 // invalid-placement outline) and the drop line's shape, which the project
 // sidebar draws too. The Card tier's own render is KanbanCard.tsx, the Stub
 // tier's StubRows.tsx.
@@ -84,7 +84,7 @@ export const INVALID_PLACEMENT_CLASS = 'outline-2 outline-dashed outline-red-500
 export const ACTIVE_CONTEXT_OUTLINE = 'ring-2 ring-(--active-context-outline)';
 
 interface ItemRowOptions {
-  /** A Stub row's own parent, carried on its registration. */
+  /** A Stub row's own parent, or the row an overflow row stands under, carried on its registration. */
   parentId?: string | null;
   /** A section row's Card, carried on its registration (`dragCollision.ts::ItemRowData`). */
   sectionCardId?: string;
@@ -94,12 +94,12 @@ interface ItemRowOptions {
   overlayForm?: OverlayForm;
 }
 
-// One item row's dnd-kit registration and drag chrome, for a Card row and a
-// Stub row alike: the sortable registration (`itemRowData` — every item row
-// registers `type: 'item'`) and its transform, the drop-target
-// attributes and overlay, the pending marker, and the dimming while this row
-// is the one being dragged. The row draws `DropSideIndicator` for
-// `dropSide` itself. The one export that is neither a component nor a
+// One row's dnd-kit registration and drag chrome, for a Card row, a Stub row
+// and an overflow row alike (`role`): the sortable registration
+// (`itemRowData` — every row registers `type: 'item'`) and its transform, the
+// drop-target attributes and overlay, the pending marker, and the dimming
+// while this row is the one being dragged. The row draws `DropSideIndicator`
+// for `dropSide` itself. The one export that is neither a component nor a
 // constant: it belongs next to the indicator.
 // eslint-disable-next-line react-refresh/only-export-components -- Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
 export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOptions = {}) {
@@ -140,20 +140,26 @@ export function DropSideIndicator({ side }: { side: DropSide | null }) {
   return null;
 }
 
-// The zoom-in cue (wiki board-drag-interaction §6.1) — shown only once the
-// dwell has elapsed (`useZoomCandidatePhase` returns `'cue'`; the dwell
-// itself shows nothing new beyond the blue line). Absolutely
-// positioned and `pointer-events-none`, the same way the locked-layer
-// outline and the blue line already are, so it can never feed back into
-// layout or collision. The fill bar's `animation-duration` is the cue's
-// own clock (`cardPopInDelayMs`, read live so the dev panel's tuning takes
+// The cue of a hold that ends in a layer change, shown only once the hold's
+// dwell has elapsed (the dwell itself shows nothing new beyond the blue
+// line). Two holds draw it, each with its own clock, phase and reset:
+//   - a Card's zoom-in (wiki board-drag-interaction §6.1): `cardPopInDelayMs`,
+//     `useZoomCandidatePhase`, restarted at `'dwell'` by any change to the
+//     named relation (`popSession.ts::namedCardCandidate`);
+//   - the hold on an overflow row that opens the hierarchy modal
+//     (wiki board-drag-interaction §7.3): `modalHoldCueMs`, `useModalHoldPhase`,
+//     restarted by a change to the gap, depth or side the ghost holds
+//     (`popSession.ts::nextModalHold`).
+// Absolutely positioned and `pointer-events-none`, the same way the
+// locked-layer outline and the blue line already are, so it can never feed
+// back into layout or collision. The fill bar's `animation-duration` is the
+// caller's cue clock (`cueMs`, read live so the dev panel's tuning takes
 // effect without a rebuild) — a static `@keyframes` (index.css) driven by
 // inline style, since a Tailwind utility class can't parameterize a
 // runtime duration. No explicit `key`/reset is needed: this element only
-// exists while `phase === 'cue'`, so a reset (any change to the named
-// relation restarts at `'dwell'`, per `popSession.ts::namedCardCandidate`)
-// unmounts it and the *next* cue mounts a fresh instance, which is what
-// restarts the CSS animation from empty.
+// exists while the caller's phase is `'cue'`, so a reset unmounts it and the
+// *next* cue mounts a fresh instance, which is what restarts the CSS
+// animation from empty.
 const ZOOM_CUE_OUTLINE = 'pointer-events-none absolute inset-0 rounded-lg border-2 border-dashed border-blue-500/70';
 const ZOOM_CUE_TRACK =
   'pointer-events-none absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-lg bg-blue-500/20';

@@ -387,16 +387,20 @@ function popOutDue(
 
 // When the pending transition would fire if the cursor didn't move — for
 // the owner to schedule a timer. Null when nothing is pending. At most one
-// of {a locked pop-out, a locked zoom-in, a Board-layer pop-in} is ever
-// pending at once (advancePopSession never sets both `hover` and
-// `outsideSince`), so there's no ambiguity about which clock this reports.
-// One expression over `hover.poppable` + `popInDelayFor` covers every layer
-// alike — a Board-layer hover's own region is always a column/sub-row
-// (`popInDelayMs`), and a locked hover's is either a Card
-// (`namedCardCandidate`) or, one layer further in, its own Descendants
-// section (`descendantsPopInDelayMs`, `hoverForChildRegion`); `regions`
-// resolves which, and a locked hover falls back to the Card's clock if its
-// region can't be found (the shallower of the two).
+// of {a locked pop-out, a locked zoom-in, a Board-layer pop-in, the modal
+// hold} is ever pending at once (advancePopSession never sets both `hover`
+// and `outsideSince`, and the modal hold runs only while the cursor is
+// inside the Descendants layer, with neither set), so there's no ambiguity
+// about which clock this reports.
+// The three hover clocks are one expression over `hover.poppable` +
+// `popInDelayFor`, which covers every layer alike — a Board-layer hover's
+// own region is always a column/sub-row (`popInDelayMs`), and a locked
+// hover's is either a Card (`namedCardCandidate`) or, one layer further in,
+// its own Descendants section (`descendantsPopInDelayMs`,
+// `hoverForChildRegion`); `regions` resolves which, and a locked hover falls
+// back to the Card's clock if its region can't be found (the shallower of the
+// two). The modal hold has a clock of its own, `modalHoldDueAt`, ahead of
+// them.
 export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
   if (session.contextKey !== null && session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
   // A hold on the modal runs only with the cursor inside, where no hover is pending.
@@ -417,9 +421,9 @@ export function popDueAt(session: PopSession, regions: readonly DragRegion[], tu
 // The hold that opens the hierarchy modal (wiki board-drag-interaction §7.3): a Card's zoom-in
 // shape, a silent dwell and then a cue, but keyed on what the ghost holds steady rather than the
 // named neighbor. Beside an overflow row the named neighbor flips between "after the owner" and
-// "before the overflow row" as the carried copy crosses the ghost's middle (`dragCollision.ts::
-// dropAnchorFor`) while the gap stays the same, and a clock keyed on it would restart on each
-// flip. `target` is null with the ghost anywhere else, which ends the hold.
+// "before the overflow row" as the carried copy crosses the ghost's middle
+// (`dragCollision.ts::dropAnchorFor`) while the gap stays the same, and a clock keyed on it would
+// restart on each flip. `target` is null with the ghost anywhere else, which ends the hold.
 //
 // Returns the same session when nothing changed. `phase` is recomputed from `since` every sample,
 // so a hold that crosses the dwell with the cursor perfectly still still returns a changed

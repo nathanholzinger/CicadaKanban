@@ -409,7 +409,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const hover = pop.hover ? regions.find(r => r.key === pop.hover?.regionKey) : undefined;
       const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
       // Locked at a Descendants context, the in-context candidates are every
-      // Stub row inside the section's own rect (any depth: the section is
+      // row of the section (a Stub row or an overflow row) inside the
+      // section's own rect (any depth: the section is
       // one flat list) — read off the region we already measured, never
       // dnd-kit's `active.data.current`, which can lag a mid-drag remount.
       const descendantsSectionRect = context?.kind === 'descendants' ? context.rect : null;
