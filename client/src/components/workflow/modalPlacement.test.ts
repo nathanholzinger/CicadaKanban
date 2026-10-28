@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
+import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../cardMetrics';
 import {
+  MODAL_CURSOR_INSET_PX,
   MODAL_EDGE_MARGIN_PX,
   centerModal,
   cursorXInList,
@@ -77,6 +78,12 @@ describe('centerModal', () => {
 });
 
 describe('depth in the modal’s indents', () => {
+  it('DRAG-7.15: rests the cursor the inset past where a row at that depth is drawn', () => {
+    for (let depth = 0; depth < 12; depth++) {
+      expect(cursorXInList(depth)).toBe(descendantsIndentPx(depth) + MODAL_CURSOR_INSET_PX);
+    }
+  });
+
   it('DRAG-7.15: reads back the depth the cursor was placed at, at every level', () => {
     for (let depth = 0; depth < 12; depth++) {
       expect(depthAtCursor(1000 + cursorXInList(depth), 1000)).toBe(depth);

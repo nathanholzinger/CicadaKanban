@@ -10,7 +10,7 @@
 // fitted reads the spot it was placed for, and one that was shifted reads where the cursor is.
 
 import { arrayMove } from '@dnd-kit/sortable';
-import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
+import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../cardMetrics';
 
 // The gap kept between the modal and each window edge.
 export const MODAL_EDGE_MARGIN_PX = 8;
@@ -26,17 +26,17 @@ export interface ModalReading {
   depth: number;
 }
 
-// The cursor's x in a list of rows, from the list's left edge, when it is at `depth`. A row at
-// depth `d` starts `(d + 1)` indents in (`cardMetrics.ts::descendantsIndentPx`).
+// The cursor's x in a list of rows, from the list's left edge, when it is at `depth`: the inset
+// past where a row at that depth starts (`cardMetrics.ts::descendantsIndentPx`).
 export function cursorXInList(depth: number): number {
-  return (depth + 1) * DESCENDANTS_INDENT_PX + MODAL_CURSOR_INSET_PX;
+  return descendantsIndentPx(depth) + MODAL_CURSOR_INSET_PX;
 }
 
 // The depth the cursor's x is at, against the modal's own indents: the inverse of `cursorXInList`,
 // to the nearest level. It may come out negative, left of the first level, which the projection
 // holds to the gap's range.
 export function depthAtCursor(cursorX: number, listLeft: number): number {
-  return Math.round((cursorX - listLeft - MODAL_CURSOR_INSET_PX) / DESCENDANTS_INDENT_PX) - 1;
+  return Math.round((cursorX - listLeft - MODAL_CURSOR_INSET_PX - descendantsIndentPx(0)) / DESCENDANTS_INDENT_PX);
 }
 
 export interface ModalPlacementInput {

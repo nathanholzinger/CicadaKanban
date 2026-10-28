@@ -7,24 +7,12 @@ import {
   clampSidebarWidth,
   loadSidebarWidth,
   saveSidebarWidth,
-  type WidthStorage,
 } from './sidebarWidth';
+import { memoryStorage, refusingStorage } from '../../test/storageFixtures';
 
 // A storage holding `stored` under the sidebar's key, or nothing.
-function storageHolding(stored?: string): WidthStorage {
-  const map = new Map<string, string>();
-  if (stored !== undefined) map.set(SIDEBAR_WIDTH_STORAGE_KEY, stored);
-  return { getItem: key => map.get(key) ?? null, setItem: (key, value) => void map.set(key, value) };
-}
-
-const refusingStorage: WidthStorage = {
-  getItem: () => {
-    throw new Error('blocked');
-  },
-  setItem: () => {
-    throw new Error('quota');
-  },
-};
+const storageHolding = (stored?: string) =>
+  memoryStorage(stored === undefined ? {} : { [SIDEBAR_WIDTH_STORAGE_KEY]: stored });
 
 describe('clampSidebarWidth', () => {
   it('holds a width inside the limits', () => {

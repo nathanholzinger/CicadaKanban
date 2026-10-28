@@ -1,27 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import {
-  DEFAULT_DRAG_TUNING,
-  DRAG_TUNING_STORAGE_KEY,
-  loadDragTuning,
-  saveDragTuning,
-  type TuningStorage,
-} from './dragTuning';
-
-function storage(initial: Record<string, string> = {}): TuningStorage & { data: Record<string, string> } {
-  const data = { ...initial };
-  return {
-    data,
-    getItem: key => data[key] ?? null,
-    setItem: (key, value) => {
-      data[key] = value;
-    },
-  };
-}
+import { DEFAULT_DRAG_TUNING, DRAG_TUNING_STORAGE_KEY, loadDragTuning, saveDragTuning } from './dragTuning';
+import { memoryStorage as storage, refusingStorage } from '../../test/storageFixtures';
 
 describe('loadDragTuning', () => {
   it('returns the defaults with no storage or nothing stored', () => {
     expect(loadDragTuning(null)).toEqual(DEFAULT_DRAG_TUNING);
     expect(loadDragTuning(storage())).toEqual(DEFAULT_DRAG_TUNING);
+  });
+
+  it('returns the defaults when reading the storage throws', () => {
+    expect(loadDragTuning(refusingStorage)).toEqual(DEFAULT_DRAG_TUNING);
   });
 
   it('merges a partial override over the defaults', () => {
@@ -59,5 +47,12 @@ describe('saveDragTuning', () => {
     const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 250 };
     saveDragTuning(tuning, s);
     expect(loadDragTuning(s)).toEqual(tuning);
+  });
+
+  // The panel's `onChange` calls it unguarded, so a throw would escape into a React handler.
+  it('does nothing without storage, and survives a write that throws', () => {
+    const tuning = { ...DEFAULT_DRAG_TUNING, popDelayMs: 250 };
+    expect(() => saveDragTuning(tuning, null)).not.toThrow();
+    expect(() => saveDragTuning(tuning, refusingStorage)).not.toThrow();
   });
 });

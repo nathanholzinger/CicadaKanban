@@ -10,6 +10,8 @@
 // shortCard component (`cardMetrics.ts::SHORT_CARD_HEIGHT_PX`), not a value
 // found by feel (wiki board-drag-interaction §5).
 
+import { browserStorage, readStored, writeStored, type KeyValueStorage } from '../../lib/browserStorage';
+
 export interface DragTuning {
   /** How long the cursor must stay outside the card's context before the card pops out and follows it. */
   popDelayMs: number;
@@ -95,26 +97,11 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
 
 export const DRAG_TUNING_STORAGE_KEY = 'kanban_drag_tuning';
 
-// The subset of Storage this module touches — localStorage in the app, a
-// plain object in tests.
-export interface TuningStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
-
-function browserStorage(): TuningStorage | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
-
 // Stored values are a *partial* override merged over the defaults, so a new
 // parameter added later picks up its default without anyone clearing
 // storage. A value of the wrong type (or a non-finite number) is ignored.
-export function loadDragTuning(storage: TuningStorage | null = browserStorage()): DragTuning {
-  const raw = storage?.getItem(DRAG_TUNING_STORAGE_KEY);
+export function loadDragTuning(storage: KeyValueStorage | null = browserStorage()): DragTuning {
+  const raw = readStored(storage, DRAG_TUNING_STORAGE_KEY);
   if (!raw) return DEFAULT_DRAG_TUNING;
   let parsed: unknown;
   try {
@@ -134,6 +121,8 @@ export function loadDragTuning(storage: TuningStorage | null = browserStorage())
   return tuning;
 }
 
-export function saveDragTuning(tuning: DragTuning, storage: TuningStorage | null = browserStorage()): void {
-  storage?.setItem(DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning));
+// Storage can refuse a write; the tuning then holds for the session and nothing else, so the
+// panel's `onChange` never throws.
+export function saveDragTuning(tuning: DragTuning, storage: KeyValueStorage | null = browserStorage()): void {
+  writeStored(storage, DRAG_TUNING_STORAGE_KEY, JSON.stringify(tuning));
 }

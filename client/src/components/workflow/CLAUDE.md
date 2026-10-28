@@ -209,6 +209,9 @@ active-context outline, the drop line's shape).
   `shownLevels(tuning.sectionLevels)`. The render and the drop math both read the level
   count through `shownLevels`, so they can't disagree about which levels exist. The
   overflow row's id is `overflowRowId(ownerId)`, read back with `overflowOwnerOf`.
+- **Reading and writing what persists in the browser:** `lib/browserStorage.ts`
+  (`browserStorage`, `readStored`, `writeStored`), which `dragTuning.ts` and the sidebar's
+  width both call. Guarded, so blocked or full storage never throws into a handler.
 - **The latest value of a prop or callback in a ref:** `useLatest.ts::useLatest`.
 - **Starting and ending a drag:** `useBoardDnd.ts::beginDragAt` starts a Card's drag
   and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`

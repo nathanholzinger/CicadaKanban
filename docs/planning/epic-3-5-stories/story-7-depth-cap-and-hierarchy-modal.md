@@ -509,6 +509,14 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Not taken:** #53's `namesMissingRow` helper for the other routes (optional; the API contract epic's Story 2 moves them to schemas), and the seed's own `node.workphase ?? 'Todo'`, a copy of `resolveCreate`'s rule (#74) that agrees today.
   - **Close-out:** rows for #1, #3, #9 and #19.
   - **Checks:** `npm run check` passes (424 server, 551 client, 185 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped.
+- **2026-10-28, the audit's Fix Now, batch 3: client structure (Coder).** The Architect's batch 3.
+  - **#28:** new `client/src/lib/browserStorage.ts`: `KeyValueStorage`, `browserStorage()`, and a guarded `readStored` and `writeStored`. `sidebarWidth.ts` and `dragTuning.ts` both call it; `WidthStorage`, `TuningStorage` and the two copies of `browserStorage()` are gone. `dragTuning.ts` has the guard now: a read that throws gives the defaults, and a write storage refuses is dropped, so `BoardView.tsx::setDragTuning`, the panel's unguarded `onChange`, can't throw. The drag layer's `CLAUDE.md` lists the module among "one way to do each of these".
+  - **#28's tests:** `client/src/test/storageFixtures.ts` holds one memory storage and one that refuses, and both test files use them. New: `browserStorage.test.ts`, and the drag tuning's two refusal cases, a read that throws and a write that does. They failed before, the write with the quota error reaching the caller, and the module's test had nothing to import.
+  - **#30:** `cursorXInList` is `descendantsIndentPx(depth)` plus the inset, and `depthAtCursor` subtracts `descendantsIndentPx(0)` where it had a literal. A new DRAG-7.15 test holds the cursor's x to the row indent plus the inset. It passed before, since the two formulas agreed, so it guards: with the old copy back and the row indent changed, it and the round-trip tests fail.
+  - **#35:** the `dragStructure` test calls `buildCardInColumn`.
+  - **#69:** `sidebarWidth.ts`'s comment says a name below the 10th level may be cut off, and that dragging the sidebar wider is how it is read.
+  - **Not taken, as planned:** `App.tsx`'s and `useBoardManagement.ts`'s direct `localStorage` calls.
+  - **Checks:** `npm run check` passes (424 server, 561 client, 185 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped on its second run. The first had one failure, `attached-children.spec.ts`'s "dragging a parent card across columns cascades its attached child": the card never showed in the target column. It passed six times in a row alone and in the second full run, so I take it for a miss of its pop-out (a 150 ms delay) under load, but I haven't shown that it isn't this batch.
 
 ## Open questions
 

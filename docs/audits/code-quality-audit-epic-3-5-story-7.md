@@ -642,3 +642,6 @@ Filled in as the audit closes. One row per required finding (#1–#35).
 | 9   | Fixed       | Batch 2, with #1               |
 | 3   | Fixed       | Batch 2, with #52              |
 | 19  | Fixed       | Batch 2                        |
+| 28  | Fixed       | Batch 3                        |
+| 30  | Fixed       | Batch 3                        |
+| 35  | Fixed       | Batch 3                        |

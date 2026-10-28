@@ -217,8 +217,7 @@ describe('resolveDragStructure / measureRegions', () => {
   // The hierarchy modal is drawn apart from its Card, so no walk up the DOM from its list
   // reaches the Card: the element names it.
   it('a section element outside its Card in the DOM resolves under the parent it names', () => {
-    const card = regionEl(cardRegionKey('card-p'), rect(0, 0, 100, 200));
-    document.body.append(regionEl(columnRegionKey('col-1'), rect(0, 0, 300, 400), card));
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-p', rect(0, 0, 100, 200));
     const apart = regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300));
     apart.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));
     document.body.append(apart);
