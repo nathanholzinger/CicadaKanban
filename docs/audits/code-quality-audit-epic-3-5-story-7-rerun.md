@@ -140,6 +140,7 @@ Each batch is small.
   - **(a)** Move both sites onto `readStored` and `writeStored`. `App.tsx` also removes a key, so add a guarded `removeStored` (and `removeItem` to `KeyValueStorage` and `memoryStorage`). Then list the new callers in the header.
   - **(b)** Narrow the `CLAUDE.md` line and the header to the two values they cover.
   - (a) is the one the line describes.
+- **Ruling (Nathan 10/28):** we will use option (a)
 
 ### 8. `clocksMargin`'s comment calls it the one spelling of a wait past more than one clock; `outwait` waits with its own margin `[Duplication & Abstraction (E2E)]`
 
