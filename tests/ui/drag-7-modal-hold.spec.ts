@@ -21,7 +21,7 @@ import {
   topQuarter,
   NO_POP,
 } from '../helpers/dragGesture';
-import { article, hierarchyModal, itemRow, overflowRow } from '../helpers/boardLocators';
+import { article, hierarchyModal, itemRow, overflowRow, region } from '../helpers/boardLocators';
 import { holdAt, placementShown, seedOverflowTree } from '../helpers/overflowTree';
 import { watchWrites } from '../helpers/projectTreeDrag';
 import { descendantsRegionKey, cardRegionKey } from '../../client/src/components/workflow/dragRegions';
@@ -61,8 +61,6 @@ const outwait = (page: Page, tuning: { modalHoldDwellMs: number; modalHoldCueMs:
 // The levels a section shows, which the cases hold at the default.
 const L = DEFAULT_DRAG_TUNING.sectionLevels;
 
-const modalRow = (modal: Locator, id: string) => modal.locator(`[data-item-id="${id}"]`);
-
 // The cue drawn on an overflow row: the fill bar a hold runs, timed by an animation of the cue's
 // length (`dragChrome.tsx::ZoomCue`).
 const cueOn = (page: Page, ownerId: string) => overflowRow(page, ownerId).locator('[style*="cue-fill"]');
@@ -82,7 +80,7 @@ async function expectInside(modal: Locator, cursor: { x: number; y: number }) {
 async function expectGhostUnder(modal: Locator, ghostId: string, cursor: { x: number; y: number }) {
   await expect
     .poll(async () => {
-      const box = await paintedBoxOf(modalRow(modal, ghostId));
+      const box = await paintedBoxOf(itemRow(modal, ghostId));
       return cursor.y >= box.y - 1 && cursor.y <= box.y + box.height + 1;
     })
     .toBe(true);
@@ -279,9 +277,9 @@ test('DRAG-7.15, DRAG-7.19: the modal opens with the ghost’s spot under the cu
   await expectGhostUnder(modal, x.id, first.at());
   await expect
     .poll(async () => {
-      const above = await paintedBoxOf(modalRow(modal, r.id));
-      const ghost = await paintedBoxOf(modalRow(modal, x.id));
-      const below = await paintedBoxOf(modalRow(modal, r1.id));
+      const above = await paintedBoxOf(itemRow(modal, r.id));
+      const ghost = await paintedBoxOf(itemRow(modal, x.id));
+      const below = await paintedBoxOf(itemRow(modal, r1.id));
       return ghost.y >= above.y + above.height - 1 && ghost.y + ghost.height <= below.y + 1;
     })
     .toBe(true);
@@ -390,7 +388,7 @@ test('DRAG-7.25: after a reload that lands mid-drag, a modal a hold opened is ce
   const reloaded = boardReload(page);
   await release(page);
 
-  await pickUp(page, modalRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }));
+  await pickUp(page, itemRow(modal, r1.id).getByRole('button', { name: 'R1', exact: true }));
   await awaitDragContext(page, descendantsRegionKey(p.id));
   await reloaded;
 
@@ -541,7 +539,7 @@ test('DRAG-7.17: when R’s children run longer than the modal, its list scrolls
   const gap = 6 + count;
   await awaitProjection(page, `${gap}:3:true`);
   await expect(modal).toBeVisible(opens(tuning));
-  const list = modal.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`);
+  const list = region(modal, descendantsRegionKey(p.id));
   expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await expectInside(modal, last.at());
   await expectGhostUnder(modal, x.id, last.at());
@@ -578,7 +576,7 @@ test('DRAG-7.17: from the gap above R’s overflow row, a list that scrolls puts
   const gap = 4 + count;
   await awaitProjection(page, `${gap}:3:true`);
   await expect(modal).toBeVisible(opens(tuning));
-  const list = modal.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`);
+  const list = region(modal, descendantsRegionKey(p.id));
   expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await expectInside(modal, first.at());
   await expectGhostUnder(modal, x.id, first.at());
@@ -614,9 +612,9 @@ test('DRAG-7.12: a modal a hold opens carries the drag’s classification: a row
   await holdAt(page, x, p, () => topQuarter(overflowRow(page, r.id)), 0);
   await awaitProjection(page, '3:3:true');
   await expect(modal).toBeVisible(opens(tuning));
-  await expect(modalRow(modal, r1a.id)).toHaveAttribute('data-drop-state', 'depth-capped');
-  for (const fits of [r, r1]) await expect(modalRow(modal, fits.id)).toHaveAttribute('data-drop-state', 'valid');
-  const opacity = (id: string) => modalRow(modal, id).evaluate(el => parseFloat(getComputedStyle(el).opacity));
+  await expect(itemRow(modal, r1a.id)).toHaveAttribute('data-drop-state', 'depth-capped');
+  for (const fits of [r, r1]) await expect(itemRow(modal, fits.id)).toHaveAttribute('data-drop-state', 'valid');
+  const opacity = (id: string) => itemRow(modal, id).evaluate(el => parseFloat(getComputedStyle(el).opacity));
   expect(await opacity(r1a.id)).toBeLessThan(1);
   expect(await opacity(r.id)).toBe(1);
   await cancel(page);
@@ -649,7 +647,7 @@ test('DRAG-7.10, DRAG-7.18: after leaving a modal a hold opened, a hold beside a
   await expect(modal).toHaveCount(0);
 
   // Back into the section, and a hold beside the overflow row again.
-  const section = page.locator(`[data-drag-region="${descendantsRegionKey(p.id)}"]`);
+  const section = region(page, descendantsRegionKey(p.id));
   await hoverTo(page, await atFraction(section, 0.5));
   await awaitDragContext(page, descendantsRegionKey(p.id), clocksMargin(tuning.descendantsPopInDelayMs));
   await hoverTo(page, await topQuarter(overflowRow(page, r.id)));

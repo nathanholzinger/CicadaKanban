@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -73,6 +73,16 @@ export class ProjectSidebarPage {
 
   async select(name: string) {
     await this.locator.getByText(name, { exact: true }).click();
+  }
+
+  // The sidebar row's own delete: hover reveals its control, and the inline prompt takes a "Yes". A
+  // project's page has its own delete trigger, which a spec drives from the page.
+  async deleteProject(name: string) {
+    const row = this.row(name);
+    await row.hover();
+    await expect(row.getByTitle('Delete project')).toBeVisible();
+    await row.getByTitle('Delete project').click();
+    await row.getByRole('button', { name: 'Yes' }).click();
   }
 
   async toggle(name: string) {

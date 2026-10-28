@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { DRAG_OVERLAY_ATTR, DRAG_REGION_ATTR } from '../../client/src/components/workflow/dragRegions';
 
 // The board's own card and column locators, spelled once for the specs to share.
 
@@ -26,9 +27,20 @@ export function itemPanel(page: Page): Locator {
 }
 
 // Every Card/Stub row's own identifying attribute, set on every row but the
-// carried overlay copy by `dragChrome.tsx::useItemRow`.
-export function itemRow(page: Page, id: string): Locator {
-  return page.locator(`[data-item-id="${id}"]`);
+// carried overlay copy by `dragChrome.tsx::useItemRow`. `scope` is the whole page, or a
+// `Locator` such as the hierarchy modal, to find the row only there.
+export function itemRow(scope: Page | Locator, id: string): Locator {
+  return scope.locator(`[data-item-id="${id}"]`);
+}
+
+// The drag region with the key `regionKey` (`dragRegions.ts`'s `*RegionKey` builders), in `scope`.
+export function region(scope: Page | Locator, regionKey: string): Locator {
+  return scope.locator(`[${DRAG_REGION_ATTR}="${regionKey}"]`);
+}
+
+// The carried copy of the item being dragged, which exists only for the length of the drag.
+export function dragOverlay(page: Page): Locator {
+  return page.locator(`[${DRAG_OVERLAY_ATTR}]`);
 }
 
 // The hierarchy modal of the Card titled `cardTitle` (`HierarchyModal.tsx`).

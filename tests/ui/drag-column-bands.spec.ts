@@ -23,6 +23,7 @@ import {
   awaitDragState,
   awaitDragContext,
   delayMoveResponses,
+  dragMachine,
   seedDragTuning,
   awaitPoppedOut,
   NO_POP,
@@ -186,9 +187,8 @@ async function settleOnBand(page: Page, region: Locator, edge: 'top' | 'bottom')
   const rough = await stableCenter(carveZone(region, edge));
   await hoverTo(page, rough);
   let point = rough;
-  const bandAttr = page.locator('[data-drag-state]');
   for (let attempt = 0; attempt < 20; attempt++) {
-    if ((await bandAttr.getAttribute('data-drag-band')) === edge) return;
+    if ((await dragMachine(page).getAttribute('data-drag-band')) === edge) return;
     const box = await boxOf(region);
     const step = edge === 'top' ? -8 : 8;
     point = { x: point.x, y: Math.max(box.y + 2, Math.min(box.y + box.height - 2, point.y + step)) };

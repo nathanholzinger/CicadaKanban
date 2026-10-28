@@ -18,7 +18,8 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-// Drags the sidebar's handle `dx` px to the right (left when negative) and lets go.
+// Drags the sidebar's handle `dx` px to the right (left when negative) and lets go. It is no dnd-kit
+// drag, and `dragGesture.ts::pickUp`'s 10px nudge would move the handle and change the width measured.
 async function dragHandleBy(page: Page, sidebar: ProjectSidebarPage, dx: number) {
   const grab = await center(sidebar.resizeHandle);
   await page.mouse.move(grab.x, grab.y);

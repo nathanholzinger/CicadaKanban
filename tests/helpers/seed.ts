@@ -86,6 +86,16 @@ async function defaultBoardId(request: APIRequestContext, workflowId: string): P
   return boards[0].id;
 }
 
+// A further board on the workflow, bootstrapped one column to a workphase like the default one.
+export async function seedBoard(
+  request: APIRequestContext,
+  workflowId: string,
+  name: string,
+): Promise<{ id: string; name: string }> {
+  const data = { workflowId, name };
+  return checkedJson(await request.post(`${API}/boards`, { data }), `POST /boards ${JSON.stringify(data)}`);
+}
+
 // A column on the workflow's default board covering `startWorkphaseId` through
 // `endWorkphaseId`, one workphase when the end is left out. A workflow made bare,
 // with its phases added after, starts with no columns, so a spec builds them.

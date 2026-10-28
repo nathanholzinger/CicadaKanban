@@ -49,11 +49,7 @@ test('deleting the selected project returns to the placeholder', async ({ page, 
   await projectSidebar.select('Doomed Project');
   await expect(page.getByRole('heading', { level: 1, name: 'Doomed Project' })).toBeVisible();
 
-  const row = projectSidebar.row('Doomed Project');
-  await row.hover();
-  await expect(row.getByTitle('Delete project')).toBeVisible();
-  await row.getByTitle('Delete project').click();
-  await row.getByRole('button', { name: 'Yes' }).click();
+  await projectSidebar.deleteProject('Doomed Project');
 
   await expect(page.getByText('Select a project to get started.')).toBeVisible();
 });

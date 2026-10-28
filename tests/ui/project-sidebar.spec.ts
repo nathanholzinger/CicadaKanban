@@ -1,6 +1,6 @@
 import { expect, test } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { API } from '../helpers/api';
+import { seedProject, seedProjects } from '../helpers/seed';
 
 test.beforeAll(async () => {
   await resetAndSeedDb();
@@ -15,7 +15,7 @@ test('sidebar shows no projects in zero state', async ({ projectSidebar }) => {
 });
 
 test('project created via api appears in sidebar after refresh', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'My First Project' } });
+  await seedProject(request, { name: 'My First Project' });
   await page.reload();
   await expect(projectSidebar.projectName('My First Project')).toBeVisible();
 });
@@ -41,7 +41,7 @@ test('creates a subproject nested under a parent', async ({ page, projectSidebar
 });
 
 test('delete shows red deleting state then removes the project', async ({ page, projectSidebar, request }) => {
-  await request.post(`${API}/projects`, { data: { name: 'To Be Deleted' } });
+  await seedProject(request, { name: 'To Be Deleted' });
   await page.reload();
 
   await page.route('**/api/projects/*', async route => {
@@ -51,20 +51,17 @@ test('delete shows red deleting state then removes the project', async ({ page, 
     await route.continue();
   });
 
-  const row = projectSidebar.row('To Be Deleted');
-  await row.hover();
-  await expect(row.getByTitle('Delete project')).toBeVisible();
-  await row.getByTitle('Delete project').click();
-  await row.getByRole('button', { name: 'Yes' }).click();
+  await projectSidebar.deleteProject('To Be Deleted');
 
   await expect(projectSidebar.locator.getByText('Deleting…')).toBeVisible();
   await expect(projectSidebar.projectName('To Be Deleted')).not.toBeVisible();
 });
 
 test('collapses and expands subprojects via the chevron', async ({ page, projectSidebar, request }) => {
-  const parent = await request.post(`${API}/projects`, { data: { name: 'Collapsible Parent' } });
-  const { id: parentId } = await parent.json();
-  await request.post(`${API}/projects`, { data: { name: 'Hidden Child', parentId } });
+  await seedProjects(request, [
+    ['Collapsible Parent', null],
+    ['Hidden Child', 'Collapsible Parent'],
+  ]);
   await page.reload();
 
   // Child is visible by default (expanded)

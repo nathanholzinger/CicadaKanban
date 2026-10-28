@@ -535,6 +535,20 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - overflow rows in `useBoardDnd.ts`'s candidate comment, `AttachedChildRow`'s comment (which also says what `sectionCardId` is) and `dragCollision.ts`'s ghost-height comment, with the test's header.
   - **Close-out:** rows for #12–#17, #23 and #24. #23 is done with this batch, as its modal half landed in batch 1.
   - **Checks:** `npm run check` passes (424 server, 561 client, 185 script tests; `check:docs` clean). The diff was read for non-comment lines, and the only one is the title. The E2E suite wasn't run, since no code changed.
+- **2026-10-28, the audit's Fix Now, batch 5: E2E (Coder).** The Architect's batch 5. Test code only: no spec's assertions changed, and the specs the batch moves or re-aims keep their IDs and titles.
+  - **#27:** `project-sidebar.spec.ts` creates its projects through `seedProject` and `seedProjects` (the collapse case's two become one `seedProjects` call), and drops the `API` import. A new `seed.ts::seedBoard` replaces `boards-layer.spec.ts`'s hand-rolled board post.
+  - **#61's sidebar delete sequence:** `ProjectSidebarPage::deleteProject(name)` is the hover, the control, and the "Yes", for `project-sidebar.spec.ts` and `project-page.spec.ts`. The page's own delete trigger (`project-page.spec.ts`'s other case) stays in the spec, since it is not on the sidebar's row.
+  - **#32:** `overflowTree.ts::rowIds(scope)` is the one reader of the `overflow:<owner id>` encoding. `sectionRows` calls it, and the hierarchy-modal spec's `modalRowIds` is gone.
+  - **#33:** `boardLocators.ts::itemRow` takes a `Page` or a `Locator`, and both `modalRow` copies are gone.
+  - **#47:** `boardLocators.ts` has `region(scope, regionKey)` and `dragOverlay(page)`. The two DRAG-7 specs, `drag-7-overflow-row.spec.ts` and `overflowTree.ts::sectionRows` use them in place of `data-drag-region` and the overlay selector. `dragGesture.ts::settled` calls `dragOverlay` too, so the selector has one spelling in the helpers; that file is not on the batch plan's list.
+  - **#34:** `boards.spec.ts` calls `seedTemplatedWorkflow`. The `description` it dropped was never read.
+  - **#25:** `dragHandleBy` stays in `project-sidebar-resize.spec.ts`, with the reason at its site: it is no dnd-kit drag, and `pickUp`'s 10px nudge would move the handle and change the width measured. TREE-3.11 uses it too, in the same file.
+  - **#65's part:** DRAG-7.22's spec moved to `drag-7-overflow-row.spec.ts`, ahead of DRAG-7.24's, with its comment and its ID. It is the case the audit lists at `drag-7-hierarchy-modal.spec.ts:522-542`, which `31009c7` had already moved onto `pickUp` and `hoverTo` (#26). The reconciliation report's `HM:523` for DRAG-7.22 is now in `drag-7-overflow-row.spec.ts`; the test plans name no spec file for it.
+  - **#26's ride-along:** `drag-column-bands.spec.ts`'s `settleOnBand` reads `dragMachine(page)`.
+  - **Mutation checks, each restored:** `rowIds` with its prefix changed fails a section case in `drag-7-overflow-row.spec.ts` and a modal case in `drag-7-hierarchy-modal.spec.ts`, so one edit reaches both scopes. `seedBoard` given a workflow that doesn't exist fails at the seed with `POST /boards {…} → 404`, where the hand-rolled post would have gone on to a board that never existed.
+  - **Not taken, as planned:** #61's Stub-handle locator, whose nine sites differ in `exact`; its other helpers; #65's split of the placement specs. `drag-card-zoom-in.spec.ts` and `drag-column-bands.spec.ts` still write the region selector out with `DRAG_REGION_ATTR`. That is rename-safe, so they are left for the day one of them is edited.
+  - **Close-out:** rows for #27, #32, #33, #34 and #25. #47 is optional and has none.
+  - **Checks:** `npm run check` passes (424 server, 561 client, 185 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped, the same count as before the batch (a move and a re-aim, no spec added or dropped).
 
 ## Open questions
 

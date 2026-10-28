@@ -3,7 +3,14 @@ import { API } from '../helpers/api';
 import { resetAndSeedDb } from '../helpers/db';
 import { column, titlesIn } from '../helpers/boardLocators';
 import { atFraction, hoverTo, pickUp, release } from '../helpers/dragGesture';
-import { seedBareWorkflow, addWorkphases, seedColumn, seedItem, seedTemplatedWorkflow } from '../helpers/seed';
+import {
+  seedBareWorkflow,
+  addWorkphases,
+  seedBoard,
+  seedColumn,
+  seedItem,
+  seedTemplatedWorkflow,
+} from '../helpers/seed';
 
 // This file's templated workflows use "quick" (Todo/Done) rather than the
 // seed helper's "flow" default, so its workphases exist at workflow-creation
@@ -236,7 +243,7 @@ test.describe('board and column lifecycle', () => {
 
   test('deletes a board and falls back to the remaining board', async ({ page, request, projectSidebar }) => {
     const { workflow } = await createTemplatedWorkflow(request, 'Board Delete UI Project');
-    await request.post(`${API}/boards`, { data: { workflowId: workflow.id, name: 'Doomed Board' } });
+    await seedBoard(request, workflow.id, 'Doomed Board');
 
     await projectSidebar.openBoard('Board Delete UI Project');
     const main = page.locator('main');

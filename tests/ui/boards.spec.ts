@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 import { resetAndSeedDb } from '../helpers/db';
-import { pickWorkphases, seedItem, seedProject, seedWorkflow } from '../helpers/seed';
+import { pickWorkphases, seedItem, seedTemplatedWorkflow } from '../helpers/seed';
 
 // ─────────────────────────────────────────────────────────────────
 // Core board interaction
@@ -13,10 +13,8 @@ test.describe('board basics', () => {
   test.beforeAll(async ({ request }) => {
     await resetAndSeedDb();
 
-    const project = await seedProject(request, { name: 'My First Project', description: 'Board test project' });
+    const { project, workflow } = await seedTemplatedWorkflow(request, 'My First Project');
     projectId = project.id;
-
-    const workflow = await seedWorkflow(request, project.id, 'My First Project', 'flow');
     const [todo] = pickWorkphases(workflow, 'Todo');
     todoWorkphaseId = todo.id;
   });

@@ -8,16 +8,16 @@ import {
   center,
   dragMachine,
   hoverTo,
+  pickUp,
   pickUpAt,
   release,
   seedDragTuning,
   topQuarter,
   NO_POP,
 } from '../helpers/dragGesture';
-import { article, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
+import { article, dragOverlay, hierarchyModal, itemPanel, itemRow, overflowRow } from '../helpers/boardLocators';
 import { dropLineOn, holdAt, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
 import { watchWrites } from '../helpers/projectTreeDrag';
-import { DRAG_OVERLAY_ATTR } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
@@ -287,6 +287,41 @@ test('DRAG-7.4: with no row below the overflow row at its level, B is Bottom, an
   expect((await fetchItem(request, x.id)).position).toBeGreaterThan((await fetchItem(request, q.id)).position);
 });
 
+// A press on an overflow row's count goes no further: it picks up neither the row nor the Card it
+// is part of, and a click on it opens the modal and not the Card's Sheet.
+test('DRAG-7.22: a press and drag from an overflow row’s count starts no drag, and a click on it opens the modal, not the Card’s Sheet', async ({
+  page,
+  request,
+  projectSidebar,
+}) => {
+  const name = 'Overflow Row Press Project';
+  const { r, p } = await seedOverflowTree(request, name);
+  await seedDragTuning(page, NO_POP);
+  await projectSidebar.openBoard(name);
+  await expect(article(page, 'P')).toBeVisible();
+  const before = await sectionRows(page, p.id);
+  const writes = watchWrites(page);
+  const modal = hierarchyModal(page, 'P');
+
+  // A click opens the modal, and P's Sheet stays shut.
+  await overflowRow(page, r.id).click();
+  await expect(modal).toBeVisible();
+  await expect(itemPanel(page)).toHaveClass(/translate-x-full/);
+  await page.keyboard.press('Escape');
+  await expect(modal).toHaveCount(0);
+
+  // A press that moves well past the distance that starts a drag anywhere else starts none.
+  const start = await pickUp(page, overflowRow(page, r.id));
+  await hoverTo(page, { x: start.x + 60, y: start.y + 80 });
+  await expect(dragMachine(page)).toHaveCount(0);
+  await expect(dragOverlay(page)).toHaveCount(0);
+  await release(page);
+
+  expect(await sectionRows(page, p.id)).toEqual(before);
+  await expect(modal).toHaveCount(0);
+  expect(writes).toEqual([]);
+});
+
 test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carries the Card, and a click opens the Card’s Sheet, not the modal', async ({
   page,
   request,
@@ -315,8 +350,8 @@ test('DRAG-7.24: a press on an overflow row’s indent is the Card’s: it carri
   const start = await pickUpAt(page, indent);
   await hoverTo(page, { x: start.x + 60, y: start.y + 80 });
   await expect(dragMachine(page)).toHaveAttribute('data-drag-state', /./);
-  await expect(page.locator(`[${DRAG_OVERLAY_ATTR}]`)).toHaveCount(1);
-  await expect(page.locator(`[${DRAG_OVERLAY_ATTR}]`)).toHaveAttribute('aria-label', 'P');
+  await expect(dragOverlay(page)).toHaveCount(1);
+  await expect(dragOverlay(page)).toHaveAttribute('aria-label', 'P');
   await cancel(page);
   expect(writes).toEqual([]);
 });

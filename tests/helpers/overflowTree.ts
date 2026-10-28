@@ -1,8 +1,8 @@
 import type { APIRequestContext, Locator, Page } from '@playwright/test';
 import { pickWorkphases, seedItem, seedTemplatedWorkflow } from './seed';
 import { awaitDragContext, hoverTo, pickUp, type Point } from './dragGesture';
-import { itemRow } from './boardLocators';
-import { DRAG_REGION_ATTR, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { itemRow, region } from './boardLocators';
+import { descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 
 // The tree of the overflow-row and hierarchy-modal cases, with the section at its default of
@@ -107,12 +107,16 @@ export async function dropLineOn(page: Page): Promise<{ row: string; side: strin
   return lines[0] ?? null;
 }
 
-// The ids of what P's section draws, in order: an item's id, or `overflow:<owner id>`.
-export async function sectionRows(page: Page, cardId: string): Promise<string[]> {
-  const section = page.locator(`[${DRAG_REGION_ATTR}="${descendantsRegionKey(cardId)}"]`);
-  return section
+// The ids of the rows drawn in `scope`, in order: an item's id, or `overflow:<owner id>`.
+export function rowIds(scope: Locator): Promise<string[]> {
+  return scope
     .locator('[data-item-id], [data-overflow-row]')
     .evaluateAll(els =>
       els.map(el => el.getAttribute('data-item-id') ?? `overflow:${el.getAttribute('data-overflow-row')}`),
     );
+}
+
+// The ids of what a Card's section draws, in order (`rowIds`).
+export function sectionRows(page: Page, cardId: string): Promise<string[]> {
+  return rowIds(region(page, descendantsRegionKey(cardId)));
 }
