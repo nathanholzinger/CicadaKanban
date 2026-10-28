@@ -27,9 +27,10 @@ docs {
   All fields optional: `parentId` omitted keeps the current parent, `null`
   reparents to root. `prevId`/`nextId` name the project's resulting
   *predecessor*/*successor* in the sibling sequence (not "the project I go
-  before/after," which reads ambiguously either direction) — each is
-  verified as a real, current sibling in the resulting scope before its
-  position is trusted. Omitting both appends to the end of the resulting
-  scope. An empty string for `parentId`, `prevId` or `nextId` names no
+  before/after," which reads ambiguously either direction) — the one the
+  move names is verified as a real, current sibling in the resulting scope
+  before its position is trusted. When both are named, `prevId` is used and
+  `nextId` is not checked. Omitting both appends to the end of the
+  resulting scope. An empty string for `parentId`, `prevId` or `nextId` names no
   project, and is a 400, not none.
 }

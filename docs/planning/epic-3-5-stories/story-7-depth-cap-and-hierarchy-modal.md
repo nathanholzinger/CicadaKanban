@@ -497,6 +497,18 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Helpers:** `refuseMoves` and `boardReload` moved from the hierarchy-modal spec to `dragGesture.ts`, for the new specs.
   - **Close-out:** rows for #6, #7, #8, #11, #20, #21, #22 and #26, each checked against the code, since they were fixed in `31009c7`, and for #2, #10 and #31. #23's row waits for batch 4.
   - **Checks:** `npm run check` passes (420 server, 551 client, 185 script tests). The full `npm run test:e2e` passes with 226 and 8 skipped.
+- **2026-10-28, the audit's Fix Now, batch 2: the server (Coder).** The Architect's batch 2.
+  - **#1:** the deep seed gives each Free item `positionResolver.ts::resolveAppendPosition` over `itemPositionScope.ts::positionScopeFor`, inside its transaction, so Free items are ordered across the workflow as the API orders them. The per-workphase counters are gone. The test asserts positions unique among every Free item, which sit in more than one workphase, and its title says "ordered across the workflow". It failed before, with 5 distinct positions among 6 Free items.
+  - **#9:** the seed's test reads `ITEM_DEPTH_CAP` and `PROJECT_DEPTH_CAP`: the project chain reaches the project cap and the item chains go one level past the item cap. The last case asserts the deepest item and project depths the API reads, where it counted projects. The header says the seed writes directly, so no cap holds it. Both caps raised to 13 fail the first case, which the old literal passed.
+  - **Beside them in `deepSeed.ts`:** a Free child is typed from level 0, so `F` and `G` are Epics, where they had an attached child's type (the Informational note under #36); the letters comment says the Card is `P` and its title carries no letter (#69). `level` and `nodeLevel` are told apart in `insertNode`'s comment.
+  - **#52:** `lib/workflowWorkphases.ts::copyWorkphases` is the one copy: the create route's template and copy branches and the seed call it. It is a module of its own, since `createDefaultBoard` also serves `POST /boards` and the migrations. The route's `startingWorkphases` picks the list, the template first as before. The guards are the template and copy tests with flags added (the template's `isTerminal`; the copy's `triggersNotification` and `isTerminal`), and the seed test's read of the flow template's flags. A helper that drops `isTerminal` fails all three.
+  - **#3:** both fields are guarded by `namesARow` (not left out, not `null`) and checked through `getOrNotFound.ts::existsById`, as the project check above them now is (#53's part in this file). `templateId: ''` and `sourceWorkflowId: ''` are a 400 and nothing is created. `null` reads as none. The tests, with no case ID since project-tree §10's cases aren't written: a refusal for each `''`, which failed before (a 201), and a `null` for each, which passed before and guards. `0` and `false` are refused too, where they read as none; no client sends either.
+  - **A create that names both** is unchanged, the template taken, and no test pins it: it is the open question For the Architect.
+  - **#19:** `move-project.bru`'s doc now says the neighbor the move names is verified, and `prevId` is used when both are named.
+  - **Bruno:** `create-workflow.bru` sends `{{templateId}}`, blank in the environment until set, so it is now a 400 until then, as a blank `projectId` is. It gets a docs block saying what the two fields do.
+  - **Not taken:** #53's `namesMissingRow` helper for the other routes (optional; the API contract epic's Story 2 moves them to schemas), and the seed's own `node.workphase ?? 'Todo'`, a copy of `resolveCreate`'s rule (#74) that agrees today.
+  - **Close-out:** rows for #1, #3, #9 and #19.
+  - **Checks:** `npm run check` passes (424 server, 551 client, 185 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped.
 
 ## Open questions
 
@@ -564,6 +576,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **The cap at 12:** no case changes. ATT-4's and TREE-3's terms no longer say the value is open. They still name it by `CAP` and `PCAP`.
   - **A hold from a row above the target** (Open questions, For Nathan, from the Fix Now batch 1): DRAG-7.15's text covers it, since a release right after the modal opens commits what the modal shows, but every hold spec drags an item up to the gap, so none drives it. Once it is fixed, a spec for it, or a clause in the case naming the direction, is the Test Planner's call.
   - **Project-tree §10 names a workflow create's two references** (For the PO), ready for cases: what each copies, what leaving both out makes, and the refusal of one that names no row, `''` included (wiki row-references §1). The `''` refusal is audit #3's fix, so its test comes with that batch.
+    - **Done 2026-10-28 (Coder, Fix Now batch 2):** the tests are in `server/tests/routes/workflows.test.ts` without IDs, until the cases are written: a refusal for each `''`, and a `null` for each read as none. A create that names both is not tested (For the Architect).
 
 ## Living-docs handoff
 

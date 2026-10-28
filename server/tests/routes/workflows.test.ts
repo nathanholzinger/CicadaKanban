@@ -160,6 +160,34 @@ describe('POST /api/workflows', () => {
     expect(res.body.error).toMatch(/sourceWorkflowId/);
   });
 
+  // An empty string names no row, so it is refused and nothing is created, where it would otherwise
+  // read as none and make a workflow with no workphases (wiki row-references §1).
+  it.each(['templateId', 'sourceWorkflowId'])(
+    'returns 400, and creates nothing, when %s is an empty string',
+    async field => {
+      const project = await createProject();
+      const res = await request(app)
+        .post('/api/workflows')
+        .send({ name: 'W', projectId: project.id, [field]: '' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain(field);
+      expect((await request(app).get(`/api/workflows?projectId=${project.id}`)).body).toEqual([]);
+    },
+  );
+
+  // `null` names none, as leaving the field out does (wiki row-references §2).
+  it.each(['templateId', 'sourceWorkflowId'])(
+    'reads %s: null as none, making a workflow with no workphases',
+    async field => {
+      const project = await createProject();
+      const res = await request(app)
+        .post('/api/workflows')
+        .send({ name: 'W', projectId: project.id, [field]: null });
+      expect(res.status).toBe(201);
+      expect(res.body.workphases).toEqual([]);
+    },
+  );
+
   it('clones phases from a template when templateId is given', async () => {
     const project = await createProject();
     const flow = await findTemplateByName('flow');
@@ -171,6 +199,7 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
     expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
+    expect(res.body.workphases.map((p: { isTerminal: number }) => p.isTerminal)).toEqual([0, 0, 0, 1]);
 
     // A default board is bootstrapped 1:1 with the just-created workphases
     const boards = await boardsOf(res.body.id);
@@ -181,8 +210,8 @@ describe('POST /api/workflows', () => {
 
   it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
     const source = await createWorkflow((await createProject()).id);
-    await createWorkphase(source.id, { name: 'Backlog' });
-    await createWorkphase(source.id, { name: 'Done' });
+    await createWorkphase(source.id, { name: 'Backlog', triggersNotification: 1 });
+    await createWorkphase(source.id, { name: 'Done', isTerminal: 1 });
     const other = await createProject();
 
     const res = await request(app).post('/api/workflows').send({
@@ -192,6 +221,8 @@ describe('POST /api/workflows', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog', 'Done']);
+    expect(res.body.workphases.map((p: { triggersNotification: number }) => p.triggersNotification)).toEqual([1, 0]);
+    expect(res.body.workphases.map((p: { isTerminal: number }) => p.isTerminal)).toEqual([0, 1]);
 
     const [board] = await boardsOf(res.body.id);
     const detail = await readBoard(board.id);

@@ -1,14 +1,18 @@
 // The dev-only deep seed: project and item hierarchies about twelve levels down, with names
-// as long as real ones, for looking at how the UI draws depth. It writes rows directly, so it
-// goes past any depth cap: a cap gates writes and never invalidates data, so what is seeded
-// stays readable at any cap (wiki hierarchy-placement §6). `seedDeep.ts` runs it against a
-// database file of its own.
+// as long as real ones, for looking at how the UI draws depth. It writes rows directly, so no
+// depth cap holds it: its project chain reaches the project cap and its item chains go one
+// level past the item cap (`itemTree.ts`; `deepSeed.test.ts` holds both). A cap gates writes
+// and never invalidates data, so what is seeded stays readable at any cap
+// (wiki hierarchy-placement §6). `seedDeep.ts` runs it against a database file of its own.
 
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { db } from './index.js';
 import { items, projects, workflowTemplatePhases, workflowTemplates, workflows, workphases } from './schema.js';
 import { createDefaultBoard } from '../lib/defaultBoard.js';
+import { positionScopeFor } from '../lib/itemPositionScope.js';
+import { resolveAppendPosition } from '../lib/positionResolver.js';
+import { copyWorkphases } from '../lib/workflowWorkphases.js';
 
 // The seeded project hierarchy: one chain, root first, with a few siblings along it and a
 // second root beside it.
@@ -84,8 +88,8 @@ const FREE_CHILD_CHAIN_TITLES = [
   'Schedule the send outside the billing window',
 ];
 
-// Letters mark the rows a hierarchy-modal and overflow-row walkthrough names: `P` is the
-// Card, `A` heads a chain down to `Q`, which has `R` and `T`, and so on.
+// Letters mark the rows a hierarchy-modal and overflow-row walkthrough names: the Card is `P`
+// (its title carries no letter), `A` heads a chain down to `Q`, which has `R` and `T`, and so on.
 const CHECKOUT_CARD: SeedNode = {
   title: 'Overhaul the checkout and payment flow',
   description: 'The tree the overflow row and hierarchy modal are walked through on.',
@@ -210,19 +214,7 @@ export function seedDeepData(): DeepSeedSummary {
       .where(eq(workflowTemplatePhases.templateId, flow.id))
       .orderBy(workflowTemplatePhases.position)
       .all();
-    for (const phase of templatePhases) {
-      tx.insert(workphases)
-        .values({
-          id: randomUUID(),
-          workflowId,
-          name: phase.name,
-          position: phase.position,
-          triggersNotification: phase.triggersNotification,
-          isTerminal: phase.isTerminal,
-          createdAt: at,
-        })
-        .run();
-    }
+    copyWorkphases(tx, workflowId, templatePhases, at);
     const phases = tx.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
     createDefaultBoard(workflowId, 'Default Board', phases, at, tx);
     const phaseId = (name: string) => {
@@ -232,16 +224,18 @@ export function seedDeepData(): DeepSeedSummary {
     };
 
     // ── Items ──
-    // Free items (Cards and Free children) are ordered within their workphase.
-    const freePositions = new Map<string, number>();
-    const nextFreePosition = (workphaseId: string) => {
-      const position = (freePositions.get(workphaseId) ?? 0) + 1;
-      freePositions.set(workphaseId, position);
-      return position;
-    };
+    // Free items (Cards and Free children) are ordered across every workphase of the workflow,
+    // as an append by the API would place them (wiki item-positioning §2).
+    const nextFreePosition = (workphaseId: string) =>
+      resolveAppendPosition(
+        items,
+        positionScopeFor({ isAttached: false, parentId: null, workphaseId }, undefined, tx),
+        tx,
+      );
     let deepestItemDepth = 0;
 
-    // `level` counts from the nearest Free ancestor (0 at a Card or a Free child).
+    // `level` is the node's depth below its parent's nearest Free ancestor, and `nodeLevel` its
+    // own, counted from the nearest Free ancestor (0 at a Card or a Free child).
     function insertNode(
       node: SeedNode,
       parent: { id: string; workphaseId: string } | null,
@@ -249,13 +243,14 @@ export function seedDeepData(): DeepSeedSummary {
       siblingPosition: number,
     ) {
       const isFree = parent === null || node.free === true;
+      const nodeLevel = isFree ? 0 : level;
       const workphaseId = isFree ? phaseId(node.workphase ?? 'Todo') : parent.workphaseId;
       const id = randomUUID();
       const at = stamp();
       tx.insert(items)
         .values({
           id,
-          type: ITEM_TYPE_IDS[kindAt(parent === null ? 0 : level)],
+          type: ITEM_TYPE_IDS[kindAt(nodeLevel)],
           parentId: parent?.id ?? null,
           projectId: rootProjectId,
           workphaseId,
@@ -267,9 +262,8 @@ export function seedDeepData(): DeepSeedSummary {
           updatedAt: at,
         })
         .run();
-      const childLevel = isFree ? 1 : level + 1;
-      deepestItemDepth = Math.max(deepestItemDepth, isFree ? 0 : level);
-      (node.children ?? []).forEach((child, i) => insertNode(child, { id, workphaseId }, childLevel, i + 1));
+      deepestItemDepth = Math.max(deepestItemDepth, nodeLevel);
+      (node.children ?? []).forEach((child, i) => insertNode(child, { id, workphaseId }, nodeLevel + 1, i + 1));
     }
     SEED_CARDS.forEach(card => insertNode(card, null, 0, 0));
 

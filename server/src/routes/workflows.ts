@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { workflows, workphases, items, workflowTemplates, workflowTemplatePhases, projects } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from '../lib/defaultBoard.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
+import { copyWorkphases } from '../lib/workflowWorkphases.js';
 import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteWorkflowsById } from '../lib/workflowCascade.js';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
 
 type ItemRow = typeof items.$inferSelect;
@@ -36,6 +37,31 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
   }
 
   return itemRows.map(item => ({ ...item, depth: getDepth(item.id) }));
+}
+
+// A reference field names a row unless it was left out or is `null` (wiki row-references §2).
+const namesARow = (value: unknown): boolean => value !== undefined && value !== null;
+
+// The workphases a new workflow starts with: the named template's, else the named workflow's,
+// else none. A create that names both takes the template's.
+function startingWorkphases(tx: Tx, templateId: unknown, sourceWorkflowId: unknown) {
+  if (namesARow(templateId)) {
+    return tx
+      .select()
+      .from(workflowTemplatePhases)
+      .where(eq(workflowTemplatePhases.templateId, String(templateId)))
+      .orderBy(workflowTemplatePhases.position)
+      .all();
+  }
+  if (namesARow(sourceWorkflowId)) {
+    return tx
+      .select()
+      .from(workphases)
+      .where(eq(workphases.workflowId, String(sourceWorkflowId)))
+      .orderBy(workphases.position)
+      .all();
+  }
+  return [];
 }
 
 const router = Router();
@@ -91,8 +117,7 @@ router.post('/', (req, res) => {
     return;
   }
   // A bogus projectId would otherwise surface as an opaque FK-violation 500.
-  const projectExists = Boolean(db.select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).get());
-  if (!projectExists) {
+  if (!existsById(projects, projectId)) {
     res.status(400).json({ error: 'projectId does not reference an existing project' });
     return;
   }
@@ -104,22 +129,15 @@ router.post('/', (req, res) => {
   }
   // Neither is an FK, so a bogus id here wouldn't crash — it would just
   // silently produce a zero-workphase workflow, which is just as confusing.
-  // Guarded by `templateId &&`/`sourceWorkflowId &&` before querying (not just
-  // before checking the result) — eq() against an omitted, undefined id would
-  // otherwise reach better-sqlite3 as an invalid bind parameter.
-  const templateExists =
-    !templateId ||
-    Boolean(
-      db.select({ id: workflowTemplates.id }).from(workflowTemplates).where(eq(workflowTemplates.id, templateId)).get(),
-    );
-  if (!templateExists) {
+  // Only a field left out or `null` names none; an empty string names no row, so it is
+  // refused with the rest (wiki row-references §1, §2). The check is guarded before
+  // querying — eq() against an omitted, undefined id would otherwise reach
+  // better-sqlite3 as an invalid bind parameter.
+  if (namesARow(templateId) && !existsById(workflowTemplates, templateId)) {
     res.status(400).json({ error: 'templateId does not reference an existing template' });
     return;
   }
-  const sourceWorkflowExists =
-    !sourceWorkflowId ||
-    Boolean(db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, sourceWorkflowId)).get());
-  if (!sourceWorkflowExists) {
+  if (namesARow(sourceWorkflowId) && !existsById(workflows, sourceWorkflowId)) {
     res.status(400).json({ error: 'sourceWorkflowId does not reference an existing workflow' });
     return;
   }
@@ -143,49 +161,7 @@ router.post('/', (req, res) => {
       })
       .run();
 
-    if (templateId) {
-      const templatePhases = tx
-        .select()
-        .from(workflowTemplatePhases)
-        .where(eq(workflowTemplatePhases.templateId, templateId))
-        .orderBy(workflowTemplatePhases.position)
-        .all();
-
-      for (const phase of templatePhases) {
-        tx.insert(workphases)
-          .values({
-            id: randomUUID(),
-            workflowId,
-            name: phase.name,
-            position: phase.position,
-            triggersNotification: phase.triggersNotification,
-            isTerminal: phase.isTerminal,
-            createdAt: now,
-          })
-          .run();
-      }
-    } else if (sourceWorkflowId) {
-      const sourcePhases = tx
-        .select()
-        .from(workphases)
-        .where(eq(workphases.workflowId, sourceWorkflowId))
-        .orderBy(workphases.position)
-        .all();
-
-      for (const phase of sourcePhases) {
-        tx.insert(workphases)
-          .values({
-            id: randomUUID(),
-            workflowId,
-            name: phase.name,
-            position: phase.position,
-            triggersNotification: phase.triggersNotification,
-            isTerminal: phase.isTerminal,
-            createdAt: now,
-          })
-          .run();
-      }
-    }
+    copyWorkphases(tx, workflowId, startingWorkphases(tx, templateId, sourceWorkflowId), now);
 
     const createdWorkphases = tx.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
 

@@ -6,6 +6,7 @@ import { db } from '../../src/db/index.js';
 import { boards, columns, items, projects, workflows, workphases } from '../../src/db/schema.js';
 import { DEFAULT_DEEP_DB_PATH, resolveDeepDbPath } from '../../src/db/deepDbPath.js';
 import { seedDeepData } from '../../src/db/deepSeed.js';
+import { ITEM_DEPTH_CAP, PROJECT_DEPTH_CAP } from '../../src/lib/itemTree.js';
 
 describe('resolveDeepDbPath', () => {
   it('defaults to the deep database', () => {
@@ -34,10 +35,12 @@ describe('resolveDeepDbPath', () => {
 });
 
 describe('seedDeepData', () => {
-  it('seeds projects and items past the depth caps', () => {
+  // The seed writes rows directly, so no cap holds it. Depths here count a root as 1, where the
+  // summary counts it from 0, and an item's from its Free ancestor.
+  it('seeds a project chain to the project cap and item chains one level past the item cap', () => {
     const summary = seedDeepData();
-    expect(summary.deepestProjectDepth + 1).toBeGreaterThanOrEqual(12);
-    expect(summary.deepestItemDepth).toBeGreaterThanOrEqual(12);
+    expect(summary.deepestProjectDepth + 1).toBeGreaterThanOrEqual(PROJECT_DEPTH_CAP);
+    expect(summary.deepestItemDepth + 1).toBeGreaterThanOrEqual(ITEM_DEPTH_CAP + 1);
 
     const all = db.select().from(projects).all();
     const depthOf = (id: string | null): number => {
@@ -47,7 +50,7 @@ describe('seedDeepData', () => {
     expect(Math.max(...all.map(p => depthOf(p.id)))).toBe(summary.deepestProjectDepth + 1);
   });
 
-  it('seeds rows as the API would write them: attached items follow their Card, Free ones are ordered by workphase', () => {
+  it('seeds rows as the API would write them: attached items follow their Card, Free ones are ordered across the workflow', () => {
     const { rootProjectId } = seedDeepData();
     const rows = db.select().from(items).all();
     const byId = new Map(rows.map(i => [i.id, i]));
@@ -65,10 +68,12 @@ describe('seedDeepData', () => {
       }
     }
 
-    // Free items (Cards and Free children) share one position per workphase.
+    // Free items (Cards and Free children) are ordered across every workphase of the workflow, so
+    // no two share a position, whichever workphase each is in (wiki item-positioning §2).
     const free = rows.filter(i => i.isAttached === 0);
-    const positions = free.map(i => `${i.workphaseId}:${i.position}`);
+    const positions = free.map(i => i.position);
     expect(new Set(positions).size).toBe(positions.length);
+    expect(new Set(free.map(i => i.workphaseId)).size).toBeGreaterThan(1);
     expect(free.some(i => i.parentId !== null)).toBe(true);
   });
 
@@ -79,22 +84,30 @@ describe('seedDeepData', () => {
     const phases = db.select().from(workphases).where(eq(workphases.workflowId, workflow!.id)).all();
     const board = db.select().from(boards).where(eq(boards.workflowId, workflow!.id)).get();
     expect(phases.length).toBeGreaterThan(0);
+    // The workphases are the "flow" template's, flags included.
+    expect(phases.filter(p => p.isTerminal === 1).map(p => p.name)).toEqual(['Done']);
+    expect(phases.find(p => p.name === 'Review')?.triggersNotification).toBe(1);
     expect(board).toBeDefined();
     expect(db.select().from(columns).where(eq(columns.boardId, board!.id)).all()).toHaveLength(phases.length);
   });
 
-  it('is read by the app as it reads any data, depths past the caps included', async () => {
-    const { rootProjectId } = seedDeepData();
+  it('is read by the app as it reads any data, the deepest item and project included', async () => {
+    const summary = seedDeepData();
     const listed = await request(app).get('/api/workflows');
     expect(listed.status).toBe(200);
-    const workflow = listed.body.find((w: { projectId: string }) => w.projectId === rootProjectId);
+    const workflow = listed.body.find((w: { projectId: string }) => w.projectId === summary.rootProjectId);
 
     const detail = await request(app).get(`/api/workflows/${workflow.id}`);
     expect(detail.status).toBe(200);
-    expect(Math.max(...detail.body.items.map((i: { depth: number }) => i.depth))).toBeGreaterThanOrEqual(12);
+    expect(Math.max(...detail.body.items.map((i: { depth: number }) => i.depth))).toBe(summary.deepestItemDepth);
 
     const projectsRes = await request(app).get('/api/projects');
     expect(projectsRes.status).toBe(200);
-    expect(projectsRes.body.length).toBeGreaterThanOrEqual(12);
+    const listedProjects = projectsRes.body as Array<{ id: string; parentId: string | null }>;
+    const depthOf = (id: string | null): number => {
+      const project = listedProjects.find(p => p.id === id);
+      return project ? 1 + depthOf(project.parentId) : 0;
+    };
+    expect(Math.max(...listedProjects.map(p => depthOf(p.id)))).toBe(summary.deepestProjectDepth + 1);
   });
 });
