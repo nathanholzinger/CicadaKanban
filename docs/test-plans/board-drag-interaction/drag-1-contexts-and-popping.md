@@ -38,7 +38,7 @@
 | DRAG-1.31 | The tuning panel exposes every threshold and overlay value, and its values persist | P1 | Open |
 | DRAG-1.32 | Popping feels deliberate: never incidental, never sluggish | P1 | Manual |
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
-| DRAG-1.34 | The tuning panel also exposes the section's level count and the modal hold, and they persist | P1 | Planned |
+| DRAG-1.34 | The tuning panel also exposes the section's level count and the modal hold, and they persist | P1 | Open |
 
 ---
 
@@ -374,7 +374,7 @@ The exceptions:
 
 ## DRAG-1.34 — The tuning panel also exposes the section's level count and the modal hold, and they persist
 
-**Priority:** P1 · **Status:** Planned · **Rule:** wiki board-drag-interaction §3.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.1
 
 *Given* the tuning panel, *when* it's opened, *then* it also exposes the number of levels a Card's section shows ([DRAG-7.1](drag-7-overflow-and-hierarchy-modal.md)), and the dwell and the cue of the hold that opens the hierarchy modal ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)). *When* one of them is changed, *then* the board takes the new value without a rebuild: a Card's section shows the new number of levels, and the next hold takes the new dwell or cue. *And when* the page is reloaded, *then* the changed value is still in effect. The panel's other values are [DRAG-1.31](drag-1-contexts-and-popping.md)'s.
 

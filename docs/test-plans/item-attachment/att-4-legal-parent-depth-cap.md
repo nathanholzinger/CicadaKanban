@@ -2,7 +2,7 @@
 
 **Next ID:** ATT-4.15
 
-**Terms.** Every depth case is written against `CAP`, never a number, since the cap's value is open. Root items are at depth 1, and `H` is the moving item's subtree height: the levels below it, so a leaf has height 0. The board's copy of `CAP` is [DRAG-2.10](../board-drag-interaction/drag-2-target-classification.md)'s.
+**Terms.** Every depth case is written against `CAP`, never a number, so it holds whatever value the cap is set to. Root items are at depth 1, and `H` is the moving item's subtree height: the levels below it, so a leaf has height 0. The board's copy of `CAP` is [DRAG-2.10](../board-drag-interaction/drag-2-target-classification.md)'s.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|

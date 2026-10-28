@@ -10,7 +10,7 @@ Projects apply three pages of shared rules, which have no catalog of their own, 
 |---|---|
 | [TREE-1 — Dragging a project places it by gap and depth](tree-1-gap-and-depth.md) | The indicator line, each gap's depths and their placements, the boundaries and the top level, a collapsed project, the dragged subtree, a tab state past the project cap, a set-down in its own gap, and the move a release sends |
 | [TREE-2 — What the drag shows](tree-2-what-the-drag-shows.md) | The dragged project's descendants dimmed, and a collapsed project opening on a drop into it, and staying open if the move fails |
-| [TREE-3 — What makes a project a legal parent](tree-3-legal-parent-and-cap.md) | A parent that exists, isn't the project and isn't in its subtree, a create's parent, and the project cap |
+| [TREE-3 — What makes a project a legal parent](tree-3-legal-parent-and-cap.md) | A parent that exists, isn't the project and isn't in its subtree, a create's parent, the project cap, and a deep name in a narrow sidebar |
 | [TREE-4 — A project's position compares among its siblings](tree-4-sibling-order.md) | Siblings as the comparison and reindex scope, their order in the list and the sidebar, a missing position, disclosing a reindex and applying it, and the sidebar after a failed write |
 | [TREE-5 — Creating a project](tree-5-creating-a-project.md) | A create's parent and its place after its siblings |
 | [TREE-6 — Moving a project](tree-6-moving-a-project.md) | A named neighbor, no neighbor, a neighbor the move can't use, the subtree going with it, the project as its own neighbor, and a named position |

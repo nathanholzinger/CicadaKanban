@@ -25,9 +25,10 @@ Then set the real cap, one value for items and projects, from how deep the modal
 
 - **Wiki passages:** wiki board-drag-interaction §3.1, §7, §7.1, §7.3 and §9; wiki item-attachment §12. D2 has none: it's a working placeholder (Open questions, For the PO).
 - **Test-plan cases:**
-  - DRAG-7.1–7.20, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), all `Planned`. DRAG-7.20 is the hold's feel, `Manual` once built.
-  - DRAG-1.34, the new tuning values (§3.1), `Planned`.
-  - DRAG-7.21–7.23, `Pending PO` (Open questions, For the PO).
+  - DRAG-7.1–7.19 and DRAG-7.21–7.24, DRAG-7.26–7.30, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
+  - DRAG-7.25, a hold-opened modal centered after a reload (§9), `Planned`: it's built by audit #2's fix.
+  - DRAG-1.34, the new tuning values (§3.1), `Open`.
+  - TREE-3.11, a deep project's name in a narrow sidebar (wiki project-tree §3), `Open`.
   - **To check when the cut-off is built:** DRAG-4's tree and DRAG-5.13's run three levels below the Card, so they assume a section shows at least three.
     - **Checked in Phase 2:** the specs that carry them pass unchanged at the default of three levels.
 
@@ -311,6 +312,7 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
       - **DRAG-7.21:** the lean. The hold doesn't run in an over-cap state (wiki board-drag-interaction §7.3).
       - **DRAG-7.22:** the lean, for a press on the row's count. A press on the row's indent is the Card's, as beside a Stub row (wiki board-drag-interaction §9).
       - **DRAG-7.23:** the lean, with one change: the modal is centered after a reload, not left where it was, since a hold-opened modal's placement came from a drag that has ended. The centering is Planned (wiki board-drag-interaction §9).
+  - **From the Test Reconciler's proposing run** (`docs/audits/test-reconciliation-epic-3-5-story-7.md`, Candidate New Cases), via the Test Planner: `POST /workflows` takes `templateId` and `sourceWorkflowId`, which name rows, and audit #3 found `''` read as none there. Wiki row-references §1 refuses that, but says each feature's page names its own references, and no page names these two, so no catalog has a case for them. Which page should name them as references?
 - **For Nathan, from Phase 5:**
   - **The cap's value.** Both constants are 12 as built, a starting value: the depth the deep seed goes to, and one line each to change. D1 has the pick settled in the hands-on, at least 10. The specs hold at 10, 12 and 15 (Amendments, Phase 5).
     - **Answered 2026-10-27:** 12, for both (Amendments).
@@ -329,6 +331,19 @@ Each phase ends with the gate (`npm run check`, and the E2E suite against the te
     - DRAG-7.21–7.23 are answered (For the PO). DRAG-7.23's then-clause changes: the modal is centered after the reload, not left where it is.
     - New rules with no case yet: the hold resets when the cursor leaves the section (board-drag-interaction §7.3); the modal's header is inside its box for the pop-out clock (§7.3, which DRAG-7.10's spec already covers); a dragged `R` carries its overflow row (§9); a click on a row in the modal opens nothing (§9); the modal closes when its Card is gone or has no attached descendants left (§9).
     - The project-tree §3 example now runs to `P11`, and a narrow sidebar cutting deep names short is a rule (§3).
+    - **Done 2026-10-28 (Test Planner):**
+      - **Statuses:** DRAG-7.1–7.19 and DRAG-1.34 `Planned` → `Open`, and DRAG-7.20 `Manual`.
+      - **The rulings:** DRAG-7.21–7.23 are `Open`, with the leans written in. DRAG-7.22 is narrowed to the count, and a press on the indent is a new case, DRAG-7.24. DRAG-7.23 no longer says where the modal sits. The centering after a reload is DRAG-7.25, `Planned`.
+      - **New cases for the new rules:**
+        - the modal closing when its Card is gone or has no attached descendants, DRAG-7.26;
+        - a dragged `R` carrying its overflow row, DRAG-7.27;
+        - a click on a row in the modal opening nothing, DRAG-7.28;
+        - the overflow row as the side highlight's neighbor (§7.1), DRAG-7.29;
+        - `sectionLevels` at least 1 (§9), DRAG-7.30;
+        - the narrow sidebar (project-tree §3), TREE-3.11.
+      - **Folded into existing cases:** the hold resetting when the cursor leaves the section, as a third reset in DRAG-7.14 (its spec already asserts it under that ID). The header inside the modal's box goes in DRAG-7.10. The carried copy held to the modal's list goes in DRAG-7.11.
+      - **The suite's terms:** `X` is any childless item at `P`'s Descendants layer, a Free Card zoomed in or a Stub of `P`'s outside the tree, since placement there is the same for both. DRAG-7.13 now names a Free Card from outside `P` for its main drag, so that its two origins stay distinct.
+      - **The cap at 12:** no case changes. ATT-4's and TREE-3's terms no longer say the value is open. They still name it by `CAP` and `PCAP`.
 
 ## Living-docs handoff
 

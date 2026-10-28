@@ -1,8 +1,8 @@
 # TREE-3 — What makes a project a legal parent
 
-**Next ID:** TREE-3.11
+**Next ID:** TREE-3.12
 
-**Terms.** Every depth case is written against the project cap, `PCAP`, never a number, since its value is open. Top-level projects are at depth 1, and `H` is the moving project's subtree height: the levels below it, so a project with no children has height 0.
+**Terms.** Every depth case is written against the project cap, `PCAP`, never a number, so it holds whatever value the cap is set to. Top-level projects are at depth 1, and `H` is the moving project's subtree height: the levels below it, so a project with no children has height 0.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | TREE-3.8 | A subtree already taller than the cap allows can't be moved, even to a shallower place | P2 | Automated |
 | TREE-3.9 | The sidebar's project cap is the one the API enforces | P1 | Automated |
 | TREE-3.10 | A parent given as an empty string names no project, and is refused | P1 | Automated |
+| TREE-3.11 | A deep project's name, cut short by a narrow sidebar, shows more as the sidebar is dragged wider | P2 | Open |
 
 ---
 
@@ -103,3 +104,11 @@
 *Given* top-level project `X`, *when* a project is created naming `""` as its parent, *then* it's refused with a 400, and no project is stored: `GET /api/projects` lists the same projects as before. *When* an edit names `""` as `X`'s parent, or a move names it as `X`'s new parent, *then* each is refused with a 400, and `X` is still top-level, at the same position. An empty string is never the top level, which a write names by leaving the parent out or naming `null`. A parent that isn't a project is [TREE-3.1](tree-3-legal-parent-and-cap.md)'s and [TREE-3.4](tree-3-legal-parent-and-cap.md)'s.
 
 **Automation test:** `server/tests/routes/projects.test.ts`
+
+## TREE-3.11 — A deep project's name, cut short by a narrow sidebar, shows more as the sidebar is dragged wider
+
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §3
+
+*Given* a chain of projects from a top-level project down to `D`, at depth `PCAP`, where `D`'s name is too long to show in full at the sidebar's default width, *when* the sidebar is at its default width, *then* `D`'s row is listed, under its parent, with its name cut short. *When* the sidebar is dragged wider by its right edge, *then* more of `D`'s name is drawn than before, and a name that fits the wider row is drawn in full. At every width, `D`'s row still carries its full name, so it can be found by name, and nothing about the cap changes: a write that would put a project at depth `PCAP + 1` is refused at any width ([TREE-3.5](tree-3-legal-parent-and-cap.md)). The widths themselves are open, and aren't asserted.
+
+**Automation test:** —
