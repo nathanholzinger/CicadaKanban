@@ -1,6 +1,7 @@
-// Runs git for the scope script. One function takes a command's arguments and returns its
-// standard output as text, so a test can hand the rest of the script a throwaway repository,
-// and every caller reads git's output the same way: as UTF-8, not the console's code page.
+// Runs git for the scope script. `gitIn` makes a function that takes a command's arguments and
+// returns its standard output as text, so a test can hand the rest of the script a throwaway
+// repository, and every caller reads git's output the same way: as UTF-8, not the console's
+// code page. `showAt` reads a file at a revision through it.
 
 import { execFileSync } from 'node:child_process';
 

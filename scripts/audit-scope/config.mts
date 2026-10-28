@@ -95,15 +95,23 @@ function groupsOf(value: unknown): GroupRule[] {
   });
 }
 
+// A pass the config leaves out has no instances, so its files go unread and the run says so.
 function instancesOf(value: unknown): Instances {
-  if (!isRecord(value)) throw new Error('instances must be an object, with a key for each pass');
-  const instances = { ...value } as Instances;
+  if (!isRecord(value)) {
+    throw new Error(`instances must be an object, with a key for each pass it names (${PASSES.join(', ')})`);
+  }
+  const unknownPasses = Object.keys(value).filter(key => !(PASSES as readonly string[]).includes(key));
+  if (unknownPasses.length > 0) {
+    throw new Error(`unknown pass ${unknownPasses.join(', ')} in instances; the passes are ${PASSES.join(', ')}`);
+  }
+  const instances: Instances = { correctness: {}, drift: {}, duplication: {}, fileresp: {} };
   for (const pass of PASSES) {
     const given = value[pass];
     if (given === undefined) continue;
     if (!isRecord(given)) throw new Error(`instances.${pass} must map each instance name to a list of group names`);
     for (const [instance, specs] of Object.entries(given)) {
       if (!isStringList(specs)) throw new Error(`instances.${pass}.${instance} must be a list of group names`);
+      instances[pass][instance] = specs;
     }
   }
   return instances;
@@ -132,7 +140,7 @@ export function parseConfig(json: string): ScopeConfig {
 
   const names = new Set(config.groups.map(group => group.name));
   for (const pass of PASSES) {
-    for (const [instance, specs] of Object.entries(config.instances[pass] ?? {})) {
+    for (const [instance, specs] of Object.entries(config.instances[pass])) {
       for (const spec of specs) {
         let group: string;
         try {

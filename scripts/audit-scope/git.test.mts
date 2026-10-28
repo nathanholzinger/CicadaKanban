@@ -1,35 +1,23 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { gitIn, showAt, type Git } from './git.mts';
+import { makeTestRepo, type TestRepo } from './testRepo.mts';
 
 describe('showAt', () => {
-  let root: string;
+  let repo: TestRepo;
   let git: Git;
 
   before(() => {
-    root = mkdtempSync(path.join(tmpdir(), 'audit-scope-git-'));
-    const run = (...args: string[]): void => {
-      execFileSync('git', args, { cwd: root });
-    };
-    run('init', '-q', '-b', 'main');
-    for (const [key, value] of [
-      ['user.name', 'Test'],
-      ['user.email', 'test@example.com'],
-      ['commit.gpgsign', 'false'],
-    ]) {
-      run('config', key, value);
-    }
-    writeFileSync(path.join(root, 'a.txt'), 'one\n');
-    run('add', '-A');
-    run('commit', '-q', '-m', 'base');
-    git = gitIn(root);
+    repo = makeTestRepo('audit-scope-git-');
+    writeFileSync(path.join(repo.root, 'a.txt'), 'one\n');
+    repo.git('add', '-A');
+    repo.git('commit', '-q', '-m', 'base');
+    git = gitIn(repo.root);
   });
 
-  after(() => rmSync(root, { recursive: true, force: true }));
+  after(() => repo.remove());
 
   it('gives a file’s text at a revision', () => {
     assert.equal(showAt(git, 'HEAD', 'a.txt'), 'one\n');

@@ -51,7 +51,8 @@ describe('removalSites', () => {
     oldLines: string[],
     newLines: string[],
     changed: number[] = [],
-  ): number[] => removalSites(hunks, { oldLines, newLines, changed: new Set(changed) });
+    path = 'x.ts',
+  ): number[] => removalSites(hunks, { path, oldLines, newLines, changed: new Set(changed) });
 
   it('takes a hunk that removes code and adds nothing, at the line just above the removal', () => {
     const oldLines = ['keep', 'if (x) {', '  drop();', '}', 'keep'];
@@ -71,7 +72,7 @@ describe('removalSites', () => {
     const oldLines = ['keep', 'if (!ok) {', '  run();', '}'];
     assert.deepEqual(sitesOf([hunk(2, 3, 2, 1)], oldLines, ['keep', 'run();']), [1]);
     // Moved-in code takes a removed line's place just the same.
-    assert.deepEqual(sitesOf([hunk(2, 1, 2, 3)], ['keep', 'placeholder();'], ['keep', 'moved(a);', 'moved(b);']), [1]);
+    assert.deepEqual(sitesOf([hunk(2, 1, 2, 2)], ['keep', 'placeholder();'], ['keep', 'moved(a);', 'moved(b);']), [1]);
   });
 
   it('leaves out a hunk that adds a changed line, which a scope lists', () => {
@@ -82,6 +83,38 @@ describe('removalSites', () => {
   it('leaves out a hunk that only reformats its lines: quotes, a wrapped call, a trailing comma', () => {
     assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], ['const label = "text";'], ["const label = 'text';"]), []);
     assert.deepEqual(sitesOf([hunk(1, 1, 1, 4)], ['foo(a, b);'], ['foo(', '  a,', '  b,', ');']), []);
+  });
+
+  it('takes a hunk that changes the text inside a string, a template or a regular expression', () => {
+    const sitesOfLine = (before: string, after: string): number[] => sitesOf([hunk(1, 1, 1, 1)], [before], [after]);
+    // A split on a space becomes a split into characters: a space in a string is its value.
+    assert.deepEqual(sitesOfLine("const words = s.split(' ');", "const words = s.split('');"), [0]);
+    assert.deepEqual(sitesOfLine("const isSpace = x === ' ';", "const isSpace = x === '';"), [0]);
+    assert.deepEqual(sitesOfLine("const list = items.join(', ');", "const list = items.join(',');"), [0]);
+    assert.deepEqual(sitesOfLine('const text = `a b`;', 'const text = `ab`;'), [0]);
+    assert.deepEqual(sitesOfLine('const text = `a ${x} b`;', 'const text = `a ${x}b`;'), [0]);
+    assert.deepEqual(sitesOfLine('const words = /a b/;', 'const words = /ab/;'), [0]);
+    // The parentheses and commas a formatter moves are text inside a regular expression: dropping the
+    // group changes what it captures.
+    assert.deepEqual(sitesOfLine('const pair = /(a|b)/;', 'const pair = /a|b/;'), [0]);
+    assert.deepEqual(sitesOfLine('const pair = /a,b/;', 'const pair = /ab/;'), [0]);
+    assert.deepEqual(sitesOfLine("const clean = s.replace(/a b/g, '');", "const clean = s.replace(/ab/g, '');"), [0]);
+  });
+
+  it('leaves out a hunk that only swaps the quotes of a string with spaces, commas and parentheses in it', () => {
+    assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], ['const s = "a, (b); c";'], ["const s = 'a, (b); c';"]), []);
+  });
+
+  it('reads a slash after a value as a division, so spacing around it is formatting', () => {
+    assert.deepEqual(
+      sitesOf([hunk(1, 1, 1, 1)], ['const half = total / 2 / count;'], ['const half = total/2/count;']),
+      [],
+    );
+    assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], ['const mean = (a + b) / 2;'], ['const mean = (a + b)/2;']), []);
+  });
+
+  it('folds the whitespace, quotes and punctuation of a file it does not read as code, as it always has', () => {
+    assert.deepEqual(sitesOf([hunk(1, 1, 1, 2)], ['one "two" three'], ['one two', 'three'], [], 'notes.md'), []);
   });
 
   it('takes a hunk that removes a guard beside a line that was only reformatted', () => {

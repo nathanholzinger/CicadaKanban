@@ -1,6 +1,11 @@
 // Reading `git diff` for the scope script: which paths a range changed, and the hunks of one
 // file's diff, from which come its removal sites.
 
+import ts from 'typescript';
+import { isScriptFile } from './lineKinds.mts';
+
+const { SyntaxKind } = ts;
+
 export type ChangeStatus = 'A' | 'M' | 'R' | 'D';
 
 export interface PathChange {
@@ -54,11 +59,90 @@ const span = (start: number, count: number): number[] => Array.from({ length: co
 
 const isBlank = (line: string | undefined): boolean => (line ?? '').trim() === '';
 
-// What formatting changes in a line's text: its whitespace, quote style, parentheses, commas and
+// What formatting changes in a text: its whitespace, quote style, parentheses, commas and
 // semicolons. Two texts that fold to the same string differ only in how they are written.
 const foldFormatting = (text: string): string => text.replace(/[\s"'(),;]/g, '');
 
+// The tokens a formatter adds and takes away, which the fold of code leaves out.
+const FORMATTING_TOKENS = new Set<ts.SyntaxKind>([
+  SyntaxKind.OpenParenToken,
+  SyntaxKind.CloseParenToken,
+  SyntaxKind.CommaToken,
+  SyntaxKind.SemicolonToken,
+]);
+
+// The tokens that end a value, after which a `/` divides. After any other token, an operator, an
+// opening bracket or a keyword such as `return`, it starts a regular expression.
+const ENDS_A_VALUE = new Set<ts.SyntaxKind>([
+  SyntaxKind.Identifier,
+  SyntaxKind.PrivateIdentifier,
+  SyntaxKind.NumericLiteral,
+  SyntaxKind.BigIntLiteral,
+  SyntaxKind.StringLiteral,
+  SyntaxKind.NoSubstitutionTemplateLiteral,
+  SyntaxKind.TemplateTail,
+  SyntaxKind.RegularExpressionLiteral,
+  SyntaxKind.CloseParenToken,
+  SyntaxKind.CloseBracketToken,
+  SyntaxKind.CloseBraceToken,
+  SyntaxKind.PlusPlusToken,
+  SyntaxKind.MinusMinusToken,
+  SyntaxKind.ThisKeyword,
+  SyntaxKind.SuperKeyword,
+  SyntaxKind.TrueKeyword,
+  SyntaxKind.FalseKeyword,
+  SyntaxKind.NullKeyword,
+]);
+
+const endsAValue = (kind: ts.SyntaxKind | undefined): boolean =>
+  kind !== undefined &&
+  (ENDS_A_VALUE.has(kind) ||
+    // A contextual keyword (`type`, `of`, `async`) is a name wherever it is not used as one.
+    (kind >= SyntaxKind.FirstKeyword &&
+      kind <= SyntaxKind.LastKeyword &&
+      (kind < SyntaxKind.FirstReservedWord || kind > SyntaxKind.LastReservedWord)));
+
+/**
+ * A script's tokens, less the parentheses, commas and semicolons a formatter moves. A string
+ * compares by its value, so a `"` against a `'` is the same token, and a space inside one is not
+ * left out. A template or a regular expression compares by its exact text.
+ */
+function codeTokens(text: string): string[] {
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, text);
+  const tokens: string[] = [];
+  // The braces and templates still open, so a `}` that closes a substitution is read as the rest of its template.
+  const open: Array<'block' | 'template'> = [];
+  let previous: ts.SyntaxKind | undefined;
+  for (let kind = scanner.scan(); kind !== SyntaxKind.EndOfFileToken; kind = scanner.scan()) {
+    if (kind === SyntaxKind.CloseBraceToken && open.at(-1) === 'template') {
+      kind = scanner.reScanTemplateToken(false);
+    } else if ((kind === SyntaxKind.SlashToken || kind === SyntaxKind.SlashEqualsToken) && !endsAValue(previous)) {
+      kind = scanner.reScanSlashToken();
+    }
+    if (kind === SyntaxKind.OpenBraceToken) open.push('block');
+    else if (kind === SyntaxKind.TemplateHead) open.push('template');
+    else if (kind === SyntaxKind.CloseBraceToken || kind === SyntaxKind.TemplateTail) open.pop();
+    previous = kind;
+    if (FORMATTING_TOKENS.has(kind)) continue;
+    tokens.push(kind === SyntaxKind.StringLiteral ? JSON.stringify(scanner.getTokenValue()) : scanner.getTokenText());
+  }
+  return tokens;
+}
+
+/**
+ * Whether two texts differ only in how they are written. A script is compared by its tokens, so
+ * a change inside a string, a template or a regular expression is a change. Any other file has
+ * no literals to tell apart, and its text is folded whole.
+ */
+function writtenAlike(path: string, before: string, after: string): boolean {
+  if (!isScriptFile(path)) return foldFormatting(before) === foldFormatting(after);
+  const [a, b] = [codeTokens(before), codeTokens(after)];
+  return a.length === b.length && a.every((token, i) => token === b[i]);
+}
+
 export interface SiteContext {
+  /** The file's path, which says how its text is read. */
+  path: string;
   /** The file at the base and at the end, one entry per line, the first at index 0. */
   oldLines: readonly string[];
   newLines: readonly string[];
@@ -73,13 +157,13 @@ export interface SiteContext {
  * that blame, which ignores whitespace and the formatting commits, puts before the range. A
  * hunk that only re-writes its lines (the same text, formatted another way) removes nothing.
  */
-export function removalSites(hunks: readonly Hunk[], { oldLines, newLines, changed }: SiteContext): number[] {
+export function removalSites(hunks: readonly Hunk[], { path, oldLines, newLines, changed }: SiteContext): number[] {
   return hunks.flatMap(hunk => {
     const { removed, added } = touchedLines([hunk]);
     const removedText = removed.map(line => oldLines[line - 1] ?? '');
     if (removedText.every(isBlank) || added.some(line => changed.has(line))) return [];
     const addedText = added.map(line => newLines[line - 1] ?? '');
-    if (added.length > 0 && foldFormatting(removedText.join('')) === foldFormatting(addedText.join(''))) return [];
+    if (added.length > 0 && writtenAlike(path, removedText.join('\n'), addedText.join('\n'))) return [];
     return [hunk.newCount === 0 ? hunk.newStart : hunk.newStart - 1];
   });
 }

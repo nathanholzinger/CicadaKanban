@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { traceFile } from './blame.mts';
@@ -9,6 +8,7 @@ import { DEFAULT_CONFIG } from './config.mts';
 import { gitIn } from './git.mts';
 import { scanRange, type FileScope, type RangeScan } from './scan.mts';
 import { buildScopes } from './scopes.mts';
+import { makeTestRepo, type TestRepo } from './testRepo.mts';
 
 // A throwaway repository with a range's worth of history: a base commit (tagged as an audit's
 // end), then commits that change code, comments and imports, move a block, split one out into
@@ -78,13 +78,12 @@ const PLACED_WORK = [
 const A = 'server/src/';
 
 describe('a range scanned end to end', () => {
+  let repo: TestRepo;
   let root: string;
   let scan: RangeScan;
   let baseSha: string;
-  let configDir: string;
-  let globalConfig: string | undefined;
 
-  const git = (...args: string[]): string => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  const git = (...args: string[]): string => repo.git(...args);
   const write = (rel: string, text: string): void => {
     mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     writeFileSync(path.join(root, rel), text);
@@ -101,23 +100,8 @@ describe('a range scanned end to end', () => {
   };
 
   before(() => {
-    // The user's own global git config (colored diffs, an external diff tool) must not reach the
-    // repository or the script, so an empty one stands in for it.
-    configDir = mkdtempSync(path.join(tmpdir(), 'audit-scope-config-'));
-    writeFileSync(path.join(configDir, 'gitconfig'), '');
-    globalConfig = process.env.GIT_CONFIG_GLOBAL;
-    process.env.GIT_CONFIG_GLOBAL = path.join(configDir, 'gitconfig');
-
-    root = mkdtempSync(path.join(tmpdir(), 'audit-scope-'));
-    git('init', '-q', '-b', 'main');
-    for (const [key, value] of [
-      ['user.name', 'Test'],
-      ['user.email', 'test@example.com'],
-      ['commit.gpgsign', 'false'],
-      ['core.autocrlf', 'false'],
-    ]) {
-      git('config', key, value);
-    }
+    repo = makeTestRepo('audit-scope-');
+    root = repo.root;
 
     write('CLAUDE.md', lines('# Notes', '', 'One line.'));
     write(
@@ -247,12 +231,7 @@ describe('a range scanned end to end', () => {
     scan = scanRange({ git: gitIn(root), root, base: baseSha, end: 'HEAD', config: DEFAULT_CONFIG });
   });
 
-  after(() => {
-    rmSync(root, { recursive: true, force: true });
-    rmSync(configDir, { recursive: true, force: true });
-    if (globalConfig === undefined) delete process.env.GIT_CONFIG_GLOBAL;
-    else process.env.GIT_CONFIG_GLOBAL = globalConfig;
-  });
+  after(() => repo.remove());
 
   it('counts the commits in the range', () => {
     assert.equal(scan.commits, 4);

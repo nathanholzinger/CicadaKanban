@@ -106,11 +106,31 @@ describe('parseConfig', () => {
     assert.deepEqual(config.instances, instances);
   });
 
-  it('rejects a key it does not know, and an instance that reads a group the config lacks', () => {
+  it('rejects a key it does not know, an instance that reads a group the config lacks, and a config that is not an object', () => {
     assert.throws(() => parseConfig('{"instance": {}}'), /unknown config key instance/);
     const instances = { correctness: { a: ['nowhere'] }, drift: {}, duplication: {}, fileresp: {} };
     assert.throws(() => parseConfig(JSON.stringify({ instances })), /correctness instance a reads "nowhere"/);
     assert.throws(() => parseConfig('[]'), /must be a JSON object/);
+  });
+
+  it('rejects a pass it does not know, which would otherwise read nothing and look like a pass left out', () => {
+    const instances = { corectness: { a: ['all'] }, drift: {}, duplication: {}, fileresp: {} };
+    const groups = [{ name: 'all', pattern: '' }];
+    assert.throws(
+      () => parseConfig(JSON.stringify({ groups, instances })),
+      /unknown pass corectness.*the passes are correctness/,
+    );
+  });
+
+  it('gives a pass the config leaves out no instances, and returns every pass', () => {
+    const groups = [{ name: 'all', pattern: '' }];
+    const config = parseConfig(JSON.stringify({ groups, instances: { drift: { everything: ['all'] } } }));
+    assert.deepEqual(config.instances, {
+      correctness: {},
+      drift: { everything: ['all'] },
+      duplication: {},
+      fileresp: {},
+    });
   });
 
   it('rejects an instance whose spec has a kind it does not know', () => {

@@ -839,6 +839,35 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **No mutation** for TREE-10.8's and TREE-10.11's nothing-created reads, which restate that the transaction hasn't begun, or for #18.
   - **Checks:** `npm run check` passes (430 server, 555 client, 209 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped, as before.
   - **Close-out:** rows for #1, with #18, and #4.
+- **2026-10-28, batch 9: the scope script (Coder).** Rerun #2 with #3; #9; #10. Only `scripts/audit-scope/` changed.
+  - **Rerun #2: the formatting fold reads a literal by its value.**
+    - **The fix:** `diff.mts` compares a script's removed and added text by its tokens (`ts.createScanner`), less the parentheses, commas and semicolons a formatter moves. A string compares by its value, so a `"` against a `'` still folds and a space inside one doesn't. A template and a regular expression compare by their exact text.
+    - **The scanner** needs two contexts the text alone doesn't give it. A `}` that closes a template's substitution is read as the rest of the template, so the script keeps a stack of open braces and templates. A `/` after a value is a division, and after an operator, an opening bracket or a keyword such as `return` it starts a regular expression. A contextual keyword (`type`, `of`) counts as a name.
+    - **A file that isn't a script** (`CLAUDE.md`, the JSON and Bruno files) folds as it always did. A Markdown paragraph with an apostrophe would otherwise read as an unterminated string. `removalSites` takes the file's path for it (`SiteContext.path`), and `scan.mts` passes it. A string in a JSON file that gains or loses a space is still folded away; the audit's finding is about code, and I left it.
+    - **The plan's pointer:** it says `lineKinds.mts` already uses `ts.createScanner`. It parses with `createSourceFile`. The `typescript` dependency is there either way.
+    - **Tests,** in `diff.test.mts`:
+      - **The audit's case:** `split(' ')` becomes `split('')`, and a space or comma in a string, a template, a template with a substitution and a regular expression, each a site. Failing before.
+      - **Held:** a quote swap around a string with spaces, commas and parentheses still folds; a `/` after a value or a `)` is a division; a file that isn't a script folds as before.
+      - **Regular expressions with the characters a formatter moves:** `/(a|b)/` against `/a|b/` and `/a,b/` against `/ab/` are sites. A regex with a space in it differs in its token count with or without the rescan, so those cases don't need it.
+  - **#3:** the fixture's hunk is `hunk(2, 1, 2, 2)`, the two lines the file has.
+  - **#9: `instancesOf` returns what its type says.**
+    - **The fix:** a key that isn't a pass is refused ("unknown pass corectness in instances; the passes are correctness, drift, duplication, fileresp"), and a pass left out is `{}`. Both `?? {}` are gone, in `parseConfig` and `buildScopes`. The first message says what is checked.
+    - **Tests,** in `config.test.mts`: a misspelled pass is refused, and a config that gives one pass returns all four. Both failed before.
+    - **Beside it:** the title of the test that rejects a non-object config says so (rerun #33).
+  - **#10: one test repository.**
+    - **`testRepo.mts::makeTestRepo(prefix)`** makes the repository with the empty global git config standing in for the developer's, the init, the identity, no signing and no line-ending conversion. It returns `{ root, git, remove }`, and `remove` deletes both folders and gives `GIT_CONFIG_GLOBAL` back. `git.test.mts` and `scan.test.mts` call it, so `showAt` is tested with the isolation it lacked, and `core.autocrlf` is off there too.
+    - **`testRepo.test.mts`** (two tests) pins what the helper is for: the global config is empty while the repository exists and the variable is restored, and the repository starts on `main` with signing and conversion off.
+    - **Beside it:** `git.mts`'s header names `showAt` (rerun #33).
+  - **Not taken:** #21, as planned.
+  - **Mutation checks, each restored:**
+    - **A `/` always starting a regular expression:** the division test fails.
+    - **A `/` never rescanned as a regular expression:** the regex cases fail. The first set of regex cases passed with it, which is how the `/(a|b)/` case came to be added.
+    - **A template's substitution not rescanned:** the template case fails.
+    - **A string compared by its text, quotes included:** the quote-swap tests fail.
+    - **The global git config not replaced:** `testRepo.test.mts` fails.
+  - **A real run:** the script over `epic-3-5-story-7-audited..HEAD`, written to a scratch folder, completes and lists the scopes, so the tokenizer holds on this repository's real diffs.
+  - **Checks:** `npm run check` passes (430 server, 555 client, 217 script tests; `check:docs` clean). The E2E suite wasn't run, since nothing it exercises changed.
+  - **Close-out:** rows for #2, with #3, and #9 and #10.
 
 ## Open questions
 

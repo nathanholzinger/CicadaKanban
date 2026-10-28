@@ -153,7 +153,7 @@ function scanFile(change: PathChange, ctx: FileContext): FileScope {
 
   // Removed code whose place took nothing a scope lists: no list names what stands there now,
   // so the removal is a site of its own.
-  const sites = removalSites(hunks, { oldLines, newLines, changed: new Set(changed) });
+  const sites = removalSites(hunks, { path: change.path, oldLines, newLines, changed: new Set(changed) });
 
   const facts = {
     path: change.path,

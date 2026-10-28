@@ -109,7 +109,7 @@ export function buildScopes(scan: RangeScan, config: ScopeConfig): ScopeSet {
   const unassigned: Unassigned[] = [];
 
   for (const pass of PASSES) {
-    const instances = Object.entries(config.instances[pass] ?? {});
+    const instances = Object.entries(config.instances[pass]);
     for (const [instance, specs] of instances) {
       const inGroups = (group: string, file: string): boolean => specs.some(spec => specTakes(spec, group, file));
       const files = scan.files.filter(file => reads(pass, file) && inGroups(file.group, file.path));
