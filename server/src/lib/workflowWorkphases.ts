@@ -12,9 +12,9 @@ type WorkphaseSource = Pick<
 
 // Inserts a copy of each of `source` into `workflowId`, in the order given, each with an id of
 // its own. The one place a new workflow's workphases are made from a template's or another
-// workflow's, so the create route's two branches and the deep seed can't drift apart on a field.
-// Runs in the caller's transaction, since a workflow's row, its workphases and its default board
-// commit together.
+// workflow's, so the create route, whichever source it starts from, and the deep seed copy a
+// workphase's fields alike. Runs in the caller's transaction, since a workflow's row, its
+// workphases and its default board commit together.
 export function copyWorkphases(tx: Tx, workflowId: string, source: readonly WorkphaseSource[], createdAt: number) {
   for (const phase of source) {
     tx.insert(workphases)

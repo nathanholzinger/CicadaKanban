@@ -813,6 +813,32 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **The rewritten DRAG-7.1 spec seeded at the default count:** it fails on the section's rows.
   - **Checks:** `npm run check` passes (428 server, 555 client, 209 script tests: the client's 565 less seven in `dragTuning.test.ts`, two in `itemListOps.test.ts` and DRAG-6.14's). `check:docs` reads 380 files with 0 hits, so the six withdrawn-ID hits are gone. The full `npm run test:e2e` passes with 226 and 8 skipped, the 228 less the two specs removed.
   - **Close-out:** none. The batch has no audit finding.
+- **2026-10-28, batch 8: the server (Coder).** Rerun #1 with #18 and #4, then the TREE-10 stamps. Only `routes/workflows.ts`, `lib/workflowWorkphases.ts`, its test file and the Bruno docs changed.
+  - **Rerun #1: a reference that isn't a string is a 400.**
+    - **The fix:** a `templateId` or `sourceWorkflowId` that is named and isn't a string is refused with "`<field>` must be a string or null", ahead of the both-named check and either existence check. That follows `projects.ts`'s `parentError`, which says the same of `parentId`.
+    - **With it,** `startingWorkphases` takes `string | null | undefined` and its `String(...)` coercions are gone. `namesARow` became a type guard (`value is T`), so a named reference reaches the query as a string with no cast.
+    - **Order:** the shape check comes before the both-named check, so `templateId: false` beside a real `sourceWorkflowId` is the shape error, where it would be "cannot both be given" the other way round. Either is a 400, and nothing is created.
+    - **The test,** with no case ID (Nathan, 2026-10-28): for each field, `false`, `0`, `{}` and `[]` give a 400 that names the field, and the project has no workflow after. That is more than the plan's `templateId: false`, since `{}` and `[]` throw a different error in better-sqlite3 (`RangeError`, where `false` is a `TypeError`) and `0` now takes this path and not the existence check. Shown failing before the fix: both fields answered 500 for `false`.
+  - **#18:** the re-select of the created workflow's workphases orders by `position`. No test: the tests passed on insertion order before and do after, and no way to create a workflow reads them in another order.
+  - **#4:** `workflowWorkphases.ts`'s header says "so the create route, whichever source it starts from, and the deep seed copy a workphase's fields alike".
+  - **The TREE-10 stamps** (run 3, Proposed Stamps 1 to 5 and 7), all in `workflows.test.ts`:
+    - **TREE-10.5** on the template create. It reads the settings of all four workphases, not `Review`'s only (run 3, concern 8): `triggersNotification` `[0, 0, 1, 0]`, `isTerminal` `[0, 0, 0, 1]`, and the name, position and both flags equal to the template's own, read from the template route. The ids are the copy's own.
+    - **TREE-10.6** on the source create. It reads `W1`'s workphases before the create and after it, and after renaming the clone's first, and all three are equal. The clone's rename reads back.
+    - **TREE-10.7** on the bare create.
+    - **TREE-10.8** on the two refusals of an id no row has. Each also checks that the project has no workflow after, through a test-local `workflowsOf`.
+    - **TREE-10.10** on the three `null` tests.
+    - **TREE-10.11** on the two both-named tests. The first also makes the create naming the template alone, which is accepted with the template's four workphases. The second also checks nothing was created.
+    - **TREE-10.9's** read of the project's list goes through `workflowsOf` too.
+  - **Beside them:** the cycle test reads the exact depths (run 3, run 2's item B). The walk meets one of the two first, which counts its parent, which counts the first as a synthetic root, so the pair reads 1 and 2. The test sorts them, so it doesn't depend on which comes first.
+  - **Not taken, as planned:** #28 (`namesARow` to `lib/`), #27, #17.
+  - **Bruno:** `create-workflow.bru`'s docs say a value that isn't a string is a 400.
+  - **Mutation checks, each restored:**
+    - **The cycle's synthetic root counted as 5:** the cycle test fails, where the old `typeof … 'number'` test passed.
+    - **A Done phase also triggering a notification:** TREE-10.5 fails (and TREE-10.6), where the old `Review`-only check would have passed.
+    - **A source create that re-homes the source's workphases and doesn't copy them:** TREE-10.6 fails on the source's list. The test of the clone's names alone passed.
+    - **No mutation** for TREE-10.8's and TREE-10.11's nothing-created reads, which restate that the transaction hasn't begun, or for #18.
+  - **Checks:** `npm run check` passes (430 server, 555 client, 209 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 226 and 8 skipped, as before.
+  - **Close-out:** rows for #1, with #18, and #4.
 
 ## Open questions
 
@@ -891,6 +917,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
         - **Done 2026-10-28 (Coder, batch 14):** DRAG-6.14's test is removed and TC-5a.2's asserts the order shown (Amendments, 2026-10-28, batch 14). TC-5a.2's text, "never out of order while the response is applied", names an intermediate state no test can see, since the reducer is one synchronous step. The test asserts the final order, which fails if the pairs aren't applied. The Test Planner may want the case to say the list reads `A, X, C, E` after the response (For the Test Planner).
     - **For the Architect,** once they're withdrawn: Story 10's list drops DRAG-1.31, and DRAG-6.4 if it goes.
   - **Rerun #1's test.** `templateId: false` is a 500, not the 400 your ruling took for granted (run 3, Fix Now guard tests, item 5). Reopen it for one route test with no case ID? *Recommended: yes.* The ruling that it needs no case stands. The test guards against a crash.
+    - **Done 2026-10-28 (Coder, batch 8):** the route refuses a reference that isn't a string, and the test is in `workflows.test.ts` with no case ID (Amendments, 2026-10-28, batch 8).
   - **DRAG-7.16's left edge on `modalPlacement.test.ts:27–32`** (run 3, Proposed Internal Mappings, item 1). No cursor can reach the left edge, and with the approval DRAG-7.16 is `Automated`. *Recommended: approve.*
   - **DRAG-7.10 routed to Story 10.** Its two missing parts are the item from outside `P`, which the Free Card defect you deferred blocks, and "bounded by `P`'s box", which is DRAG-1.28's rule and already Story 10's (run 3, For sign-off). *Recommended: route it.* It's written into Story 10's entry, beside DRAG-7.13.
   - **An audit rule** (the second audit's "The audit rules, after a second pass"): add "a copy that agrees and has one caller isn't" to the persona's rule for a structural Fix Now. Two of the three tags it re-tiered were that case (#17 and #29). *Recommended: yes.* It goes in the persona and `.claude/guides/audit-workflow.md`'s Tiers.
@@ -942,6 +969,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **For the PO:** project-tree §10's create naming both is still marked `**Planned:**`, though batch 7 built it (Amendments, 2026-10-28, batch 7).
       - *Done 2026-10-28 (PO): marker off.* TREE-10.11 can move to `Open`.
       - *Done 2026-10-28 (Test Planner):* TREE-10.11 is `Open` (Scope), for batch 8's stamp.
+      - **Done 2026-10-28 (Coder, batch 8):** TREE-10.5 to TREE-10.8, TREE-10.10 and TREE-10.11 are stamped on their tests in `workflows.test.ts`, beside TREE-10.9's (Amendments, 2026-10-28, batch 8). The Reconciler maps them at its next run.
   - **From the second pass** (The second pass's follow-ups, in batches):
     - **DRAG-7.27's `L` = 2 instance,** `R1`'s "1 child" overflow row after the move: keep it, and batch 13 writes its spec, or drop the clause (run 3, For sign-off).
       - **Done 2026-10-28 (Test Planner): dropped.** It's DRAG-7.1's cut-off at `R`'s new place. The case now says `R` has no overflow row at level 1, and `R1` and `R2` show below it, which run 3 reads OR:359 as asserting. Batch 13 writes no spec for it.

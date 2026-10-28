@@ -40,16 +40,21 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
 }
 
 // A reference field names a row unless it was left out or is `null` (wiki row-references §2).
-const namesARow = (value: unknown): boolean => value !== undefined && value !== null;
+const namesARow = <T>(value: T | null | undefined): value is T => value !== undefined && value !== null;
 
 // The workphases a new workflow starts with: the named template's, else the named workflow's,
-// else none. The route refuses a create that names both, so at most one is named here.
-function startingWorkphases(tx: Tx, templateId: unknown, sourceWorkflowId: unknown) {
+// else none. The route has refused a reference that isn't a string, and a create that names both,
+// so at most one is named here.
+function startingWorkphases(
+  tx: Tx,
+  templateId: string | null | undefined,
+  sourceWorkflowId: string | null | undefined,
+) {
   if (namesARow(templateId)) {
     return tx
       .select()
       .from(workflowTemplatePhases)
-      .where(eq(workflowTemplatePhases.templateId, String(templateId)))
+      .where(eq(workflowTemplatePhases.templateId, templateId))
       .orderBy(workflowTemplatePhases.position)
       .all();
   }
@@ -57,7 +62,7 @@ function startingWorkphases(tx: Tx, templateId: unknown, sourceWorkflowId: unkno
     return tx
       .select()
       .from(workphases)
-      .where(eq(workphases.workflowId, String(sourceWorkflowId)))
+      .where(eq(workphases.workflowId, sourceWorkflowId))
       .orderBy(workphases.position)
       .all();
   }
@@ -127,6 +132,17 @@ router.post('/', (req, res) => {
     res.status(409).json({ error: `Project already has a workflow: "${owned.name}"` });
     return;
   }
+  // A reference is a string, or `null` for none: no other value can name a row, and better-sqlite3
+  // throws on binding most of them, a 500 where the wiki promises a 400 (wiki row-references §1).
+  for (const [field, value] of [
+    ['templateId', templateId],
+    ['sourceWorkflowId', sourceWorkflowId],
+  ]) {
+    if (namesARow(value) && typeof value !== 'string') {
+      res.status(400).json({ error: `${field} must be a string or null` });
+      return;
+    }
+  }
   // A workflow starts from a template or from another workflow, not both: taking either would
   // drop the other without a sign (wiki project-tree §10).
   if (namesARow(templateId) && namesARow(sourceWorkflowId)) {
@@ -169,7 +185,12 @@ router.post('/', (req, res) => {
 
     copyWorkphases(tx, workflowId, startingWorkphases(tx, templateId, sourceWorkflowId), now);
 
-    const createdWorkphases = tx.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all();
+    const createdWorkphases = tx
+      .select()
+      .from(workphases)
+      .where(eq(workphases.workflowId, workflowId))
+      .orderBy(workphases.position)
+      .all();
 
     // Every workflow needs at least one valid board to be usable — bootstrap a
     // default one with 1:1 columns matching whatever workphases now exist

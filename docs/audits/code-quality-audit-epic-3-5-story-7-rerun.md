@@ -403,4 +403,5 @@ Filled in as the audit closes. One row per required finding (#1–#12).
 
 | #   | Disposition | Where it landed (routes) |
 | --- | ----------- | ------------------------ |
-|     |             |                          |
+| 1   | Fixed       | Batch 8, with #18        |
+| 4   | Fixed       | Batch 8                  |

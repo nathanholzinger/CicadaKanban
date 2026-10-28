@@ -81,8 +81,10 @@ describe('GET /api/workflows/:id', () => {
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(200);
     const items = res.body.items as Array<{ id: string; depth: number }>;
-    expect(typeof items.find(i => i.id === a.id)?.depth).toBe('number');
-    expect(typeof items.find(i => i.id === b.id)?.depth).toBe('number');
+    // The walk meets one of the two first. That one counts its parent, which counts the first as a
+    // synthetic root, so the pair reads 1 and 2, whichever order they come in.
+    const depths = [a, b].map(item => items.find(i => i.id === item.id)?.depth);
+    expect(depths.sort()).toEqual([1, 2]);
   });
 
   it('attaches positionScope to every item, matching GET /api/items/:id for the same rows', async () => {
@@ -122,6 +124,19 @@ describe('GET /api/workflows/:id', () => {
 });
 
 describe('POST /api/workflows', () => {
+  const workflowsOf = async (projectId: string) =>
+    (await request(app).get(`/api/workflows?projectId=${projectId}`)).body;
+  // What a workphase is copied by (its id and its owner are its own).
+  const settingsOf = (
+    phases: Array<{ name: string; position: number; triggersNotification: number; isTerminal: number }>,
+  ) =>
+    phases.map(({ name, position, triggersNotification, isTerminal }) => ({
+      name,
+      position,
+      triggersNotification,
+      isTerminal,
+    }));
+
   it('returns 400 when name is missing', async () => {
     const project = await createProject();
     const res = await request(app).post('/api/workflows').send({ projectId: project.id });
@@ -142,22 +157,24 @@ describe('POST /api/workflows', () => {
     expect(res.body.error).toMatch(/projectId/);
   });
 
-  it('returns 400 with a specific message when templateId does not reference an existing template', async () => {
+  it('TREE-10.8: returns 400 with a specific message, and creates nothing, when templateId does not reference an existing template', async () => {
     const project = await createProject();
     const res = await request(app)
       .post('/api/workflows')
       .send({ name: 'W', projectId: project.id, templateId: 'does-not-exist' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/templateId/);
+    expect(await workflowsOf(project.id)).toEqual([]);
   });
 
-  it('returns 400 with a specific message when sourceWorkflowId does not reference an existing workflow', async () => {
+  it('TREE-10.8: returns 400 with a specific message, and creates nothing, when sourceWorkflowId does not reference an existing workflow', async () => {
     const project = await createProject();
     const res = await request(app)
       .post('/api/workflows')
       .send({ name: 'W', projectId: project.id, sourceWorkflowId: 'does-not-exist' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/sourceWorkflowId/);
+    expect(await workflowsOf(project.id)).toEqual([]);
   });
 
   // An empty string names no row, so it is refused and nothing is created, where it would otherwise
@@ -171,13 +188,30 @@ describe('POST /api/workflows', () => {
         .send({ name: 'W', projectId: project.id, [field]: '' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain(field);
-      expect((await request(app).get(`/api/workflows?projectId=${project.id}`)).body).toEqual([]);
+      expect(await workflowsOf(project.id)).toEqual([]);
+    },
+  );
+
+  // A value that isn't a string can't name a row, and better-sqlite3 throws on binding most of them, so
+  // the shape is refused before the existence check, where it would otherwise be a 500.
+  it.each(['templateId', 'sourceWorkflowId'])(
+    'returns 400, and creates nothing, when %s is not a string',
+    async field => {
+      const project = await createProject();
+      for (const value of [false, 0, {}, []]) {
+        const res = await request(app)
+          .post('/api/workflows')
+          .send({ name: 'W', projectId: project.id, [field]: value });
+        expect(res.status, JSON.stringify(value)).toBe(400);
+        expect(res.body.error, JSON.stringify(value)).toContain(field);
+      }
+      expect(await workflowsOf(project.id)).toEqual([]);
     },
   );
 
   // `null` names none, as leaving the field out does (wiki row-references §2).
   it.each(['templateId', 'sourceWorkflowId'])(
-    'reads %s: null as none, making a workflow with no workphases',
+    'TREE-10.10: reads %s: null as none, making a workflow with no workphases',
     async field => {
       const project = await createProject();
       const res = await request(app)
@@ -190,7 +224,7 @@ describe('POST /api/workflows', () => {
 
   // A create that names both would have to drop one without a sign, so it is refused whole, ahead of
   // either field's existence check.
-  it('returns 400, and creates nothing, when both templateId and sourceWorkflowId are named', async () => {
+  it('TREE-10.11: returns 400, and creates nothing, when both templateId and sourceWorkflowId are named', async () => {
     const project = await createProject();
     const source = await createWorkflow((await createProject()).id);
     await createWorkphase(source.id, { name: 'Backlog' });
@@ -201,10 +235,22 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('templateId');
     expect(res.body.error).toContain('sourceWorkflowId');
-    expect((await request(app).get(`/api/workflows?projectId=${project.id}`)).body).toEqual([]);
+    expect(await workflowsOf(project.id)).toEqual([]);
+
+    // The project still has no workflow of its own, so a create naming the template alone is accepted.
+    const alone = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: project.id, templateId: flow.id });
+    expect(alone.status).toBe(201);
+    expect(alone.body.workphases.map((p: { name: string }) => p.name)).toEqual([
+      'Todo',
+      'In Progress',
+      'Review',
+      'Done',
+    ]);
   });
 
-  it('refuses a create that names both ahead of checking that either exists', async () => {
+  it('TREE-10.11: refuses a create that names both ahead of checking that either exists', async () => {
     const project = await createProject();
     const res = await request(app)
       .post('/api/workflows')
@@ -213,10 +259,11 @@ describe('POST /api/workflows', () => {
     expect(res.body.error).toContain('templateId');
     expect(res.body.error).toContain('sourceWorkflowId');
     expect(res.body.error).not.toMatch(/does not reference/);
+    expect(await workflowsOf(project.id)).toEqual([]);
   });
 
   // A field that is `null` isn't named, so a caller that always sends both can ask for the one it means.
-  it('creates from the template when sourceWorkflowId is null', async () => {
+  it('TREE-10.10: creates from the template when sourceWorkflowId is null', async () => {
     const project = await createProject();
     const flow = await findTemplateByName('flow');
     const res = await request(app)
@@ -226,7 +273,7 @@ describe('POST /api/workflows', () => {
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
   });
 
-  it('creates from the source workflow when templateId is null', async () => {
+  it('TREE-10.10: creates from the source workflow when templateId is null', async () => {
     const source = await createWorkflow((await createProject()).id);
     await createWorkphase(source.id, { name: 'Backlog' });
     const project = await createProject();
@@ -237,7 +284,7 @@ describe('POST /api/workflows', () => {
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Backlog']);
   });
 
-  it('clones phases from a template when templateId is given', async () => {
+  it('TREE-10.5: clones phases from a template when templateId is given', async () => {
     const project = await createProject();
     const flow = await findTemplateByName('flow');
     const res = await request(app).post('/api/workflows').send({
@@ -247,8 +294,15 @@ describe('POST /api/workflows', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.workphases.map((p: { name: string }) => p.name)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
-    expect(res.body.workphases.find((p: { name: string }) => p.name === 'Review').triggersNotification).toBe(1);
+    expect(res.body.workphases.map((p: { triggersNotification: number }) => p.triggersNotification)).toEqual([
+      0, 0, 1, 0,
+    ]);
     expect(res.body.workphases.map((p: { isTerminal: number }) => p.isTerminal)).toEqual([0, 0, 0, 1]);
+    // Each is a copy of the template's phase: the same settings, and an id of its own.
+    expect(settingsOf(res.body.workphases)).toEqual(settingsOf(flow.workphases));
+    expect(res.body.workphases.map((p: { id: string }) => p.id)).not.toEqual(
+      flow.workphases.map((p: { id: string }) => p.id),
+    );
 
     // A default board is bootstrapped 1:1 with the just-created workphases
     const boards = await boardsOf(res.body.id);
@@ -257,10 +311,13 @@ describe('POST /api/workflows', () => {
     expect(detail.columns.map(c => c.displayName)).toEqual(['Todo', 'In Progress', 'Review', 'Done']);
   });
 
-  it('clones phases from an existing workflow when sourceWorkflowId is given', async () => {
+  it('TREE-10.6: clones phases from an existing workflow when sourceWorkflowId is given', async () => {
     const source = await createWorkflow((await createProject()).id);
     await createWorkphase(source.id, { name: 'Backlog', triggersNotification: 1 });
     await createWorkphase(source.id, { name: 'Done', isTerminal: 1 });
+    const workphasesOf = async (workflowId: string) =>
+      (await request(app).get(`/api/workflows/${workflowId}`)).body.workphases as Array<{ id: string; name: string }>;
+    const before = await workphasesOf(source.id);
     const other = await createProject();
 
     const res = await request(app).post('/api/workflows').send({
@@ -276,9 +333,17 @@ describe('POST /api/workflows', () => {
     const [board] = await boardsOf(res.body.id);
     const detail = await readBoard(board.id);
     expect(detail.columns.map(c => c.displayName)).toEqual(['Backlog', 'Done']);
+
+    // They are the clone's own: the source still has its workphases, unchanged, and renaming one of
+    // the clone's leaves its counterpart's name alone.
+    expect(await workphasesOf(source.id)).toEqual(before);
+    const rename = await request(app).put(`/api/workphases/${res.body.workphases[0].id}`).send({ name: 'Renamed' });
+    expect(rename.status).toBe(200);
+    expect((await workphasesOf(res.body.id)).map(p => p.name)).toEqual(['Renamed', 'Done']);
+    expect(await workphasesOf(source.id)).toEqual(before);
   });
 
-  it('creates a bare workflow with no phases when neither templateId nor sourceWorkflowId is given', async () => {
+  it('TREE-10.7: creates a bare workflow with no phases when neither templateId nor sourceWorkflowId is given', async () => {
     const project = await createProject();
     const res = await request(app).post('/api/workflows').send({ name: 'Bare', projectId: project.id });
     expect(res.status).toBe(201);
