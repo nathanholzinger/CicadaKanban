@@ -1,0 +1,8 @@
+{
+  "instances": {
+    "correctness": { "client": ["C1", "C1t", "C2"], "server": ["S1", "S1t"], "E2E": ["E2E"], "T": ["T"] },
+    "drift": { "client": ["C1", "C1t", "C2"], "server": ["S1", "S1t"], "E2E": ["E2E"], "T": ["T"] },
+    "duplication": { "client": ["C1", "C1t", "C2"], "server": ["S1", "S1t"], "E2E": ["E2E"], "T": ["T"] },
+    "fileresp": { "client": ["C1", "C1t", "C2"], "server": ["S1", "S1t"], "E2E": ["E2E"], "T": ["T"] }
+  }
+}

@@ -14,9 +14,9 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.6 | A workflow created from another workflow starts with a copy of that workflow's workphases | P1 | Open |
 | TREE-10.7 | A workflow created from neither starts with no workphases | P2 | Open |
 | TREE-10.8 | A template or a source workflow that doesn't exist is refused, and nothing is created | P2 | Open |
-| TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Open |
-| TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Pending PO |
-| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Pending PO |
+| TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Automated |
+| TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Open |
+| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Planned |
 
 ---
 
@@ -86,24 +86,24 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.9 — A template or a source workflow given as an empty string names no row, and is refused
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10, wiki row-references §1
 
 *Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` with `templateId: ""`, or with `sourceWorkflowId: ""`, *then* each is refused with a 400, and no workflow is created, as in [TREE-10.8](tree-10-which-workflow.md). No fallback reads the empty string as none and makes a workflow with no workphases, as a create that leaves both out does ([TREE-10.7](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.10 — A template or a source workflow given as `null` names none
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10
 
-*Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` with `templateId: null` and no source workflow, or with `sourceWorkflowId: null` and no template, *then* — **question for the PO:** what does `null` mean in these two fields? That's the field's page's to say (wiki row-references §2), and wiki project-tree §10 says what leaving both out means, not what `null` means. A create has nothing to clear, so `null` either names none or is refused. The Test Planner's lean: it names none, as leaving the field out does, so each create is accepted with no workphases ([TREE-10.7](tree-10-which-workflow.md)). A caller that always sends both fields, one of them `null`, then asks for the one source it names.
+*Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` with `templateId: null` and no source workflow, *then* it's accepted, and the new workflow has no workphases, as a create that leaves both out does ([TREE-10.7](tree-10-which-workflow.md)). The same holds for `sourceWorkflowId: null` and no template. *Given* template `T`, with workphases, *when* a workflow is created for another project with no workflow of its own, naming `T` by `templateId`, with `sourceWorkflowId: null`, *then* it's accepted, with a copy of `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)). *And given* workflow `W1`, with workphases, *when* one is created naming `W1` by `sourceWorkflowId`, with `templateId: null`, *then* it's accepted, with a copy of `W1`'s ([TREE-10.6](tree-10-which-workflow.md)).
 
 **Automation test:** —
 
 ## TREE-10.11 — A create naming both a template and a source workflow is refused, and nothing is created
 
-**Priority:** P2 · **Status:** Pending PO
+**Priority:** P2 · **Status:** Planned · **Rule:** wiki project-tree §10
 
-*Given* project `P`, with no workflow of its own, template `T`, and workflow `W1` of another project, *when* a workflow is created for `P` naming both `T` by `templateId` and `W1` by `sourceWorkflowId`, *then* — **question for the PO:** is it refused, or is one of them taken, and which? The page says what each field copies (wiki project-tree §10), not what naming both does. The Test Planner's lean: it's refused with a 400, and no workflow is created, since taking either would drop the other without a sign, the fault wiki row-references §1 finds in a fallback. A field given as `null` isn't named ([TREE-10.10](tree-10-which-workflow.md)), so a create naming `T` with `sourceWorkflowId: null` is accepted, with `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)).
+*Given* project `P`, with no workflow of its own, template `T`, and workflow `W1` of another project, *when* a workflow is created for `P` naming both `T` by `templateId` and `W1` by `sourceWorkflowId`, *then* it's refused with a 400, and no workflow is created: `P` still has none of its own, and a create for it naming `T` alone is then accepted, with `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)). The refusal doesn't depend on which of the two exists: a create naming a `templateId` no template has and a `sourceWorkflowId` no workflow has is refused too, and nothing is created. A field given as `null` isn't named ([TREE-10.10](tree-10-which-workflow.md)).
 
 **Automation test:** —

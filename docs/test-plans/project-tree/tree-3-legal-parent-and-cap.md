@@ -16,7 +16,7 @@
 | TREE-3.8 | A subtree already taller than the cap allows can't be moved, even to a shallower place | P2 | Automated |
 | TREE-3.9 | The sidebar's project cap is the one the API enforces | P1 | Automated |
 | TREE-3.10 | A parent given as an empty string names no project, and is refused | P1 | Automated |
-| TREE-3.11 | A deep project's name, cut short by a narrow sidebar, shows more as the sidebar is dragged wider | P2 | Open |
+| TREE-3.11 | A deep project's name, cut short by a narrow sidebar, shows more as the sidebar is dragged wider | P2 | Automated |
 
 ---
 
@@ -107,8 +107,8 @@
 
 ## TREE-3.11 — A deep project's name, cut short by a narrow sidebar, shows more as the sidebar is dragged wider
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §3
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §3
 
 *Given* a chain of projects from a top-level project down to `D`, at depth `PCAP`, where `D`'s name is too long to show in full at the sidebar's default width, *when* the sidebar is at its default width, *then* `D`'s row is listed, under its parent, with its name cut short. *When* the sidebar is dragged wider by its right edge, *then* more of `D`'s name is drawn than before, and a name that fits the wider row is drawn in full. At every width, `D`'s row still carries its full name, so it can be found by name, and nothing about the cap changes: a write that would put a project at depth `PCAP + 1` is refused at any width ([TREE-3.5](tree-3-legal-parent-and-cap.md)). The widths themselves are open, and aren't asserted.
 
-**Automation test:** —
+**Automation test:** `tests/ui/project-sidebar-resize.spec.ts`

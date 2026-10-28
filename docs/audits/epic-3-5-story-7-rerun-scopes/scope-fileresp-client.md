@@ -1,0 +1,23 @@
+**Read these files whole** (the range may have changed their shape):
+- `client/src/components/HierarchyModal.test.tsx` (new file)
+- `client/src/components/HierarchyModal.tsx` (29 changed lines of code)
+- `client/src/components/workflow/descendantsProjection.test.ts` (31 changed lines of code)
+- `client/src/components/workflow/descendantsProjection.ts` (19 changed lines of code)
+- `client/src/components/workflow/modalPlacement.test.ts` (11 changed lines of code)
+- `client/src/components/workflow/modalPlacement.ts` (15 changed lines of code)
+- `client/src/components/workflow/useBoardDnd.ts` (10 changed lines of code)
+- `client/src/lib/browserStorage.test.ts` (new file)
+- `client/src/lib/browserStorage.ts` (new file)
+- `client/src/test/storageFixtures.ts` (new file)
+
+**Code changed since the last audit:**
+- `client/src/components/HierarchyModal.test.tsx` (new file) (lines 1-164)
+- `client/src/components/HierarchyModal.tsx` (lines 1-3, 12-14, 16, 22, 30, 32, 39, 48, 58, 62-63, 67-70, 78, 81, 86-87, 90-100, 102-103, 107-108, 145-151, 153, 158-162, 177)
+- `client/src/components/workflow/descendantsProjection.test.ts` (lines 11, 34, 47, 162, 375-376, 379, 381, 383, 388-394, 396-427)
+- `client/src/components/workflow/descendantsProjection.ts` (lines 11-12, 40-44, 48-49, 52, 64, 66, 85-86, 104-107, 131, 174-177, 180, 182-195, 242-243)
+- `client/src/components/workflow/modalPlacement.test.ts` (lines 2, 4, 6, 66-68, 72-79, 81, 83-86)
+- `client/src/components/workflow/modalPlacement.ts` (lines 13, 29-30, 32, 39, 74-89)
+- `client/src/components/workflow/useBoardDnd.ts` (lines 85-92, 99, 287, 297, 414-415, 644-648, 664-668)
+- `client/src/lib/browserStorage.test.ts` (new file) (lines 1-55)
+- `client/src/lib/browserStorage.ts` (new file) (lines 1-14, 22-38)
+- `client/src/test/storageFixtures.ts` (new file) (lines 1-9, 20)
