@@ -55,7 +55,7 @@ The classification states are asserted, never the overlays' colors or weights: t
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4
 
-*Given* a drag of `X` with a detached descendant `D`, a Card elsewhere on the board, *when* the drag begins, *then* `D` carries the relationship overlay ("these are yours") for the whole drag, as well as being Cycle-forming ([DRAG-2.2](drag-2-target-classification.md)). This case asserts that the overlay is there; its color is a tuning-panel value (`overlayFreeDescendantColor`), and its final look is open.
+*Given* a drag of `X` with a detached descendant `D`, a Card elsewhere on the board, *when* the drag begins, *then* `D` carries the relationship overlay ("these are yours") for the whole drag, as well as being Cycle-forming ([DRAG-2.2](drag-2-target-classification.md)). This case asserts that the overlay is there; its shade is tunable (`overlayFreeDescendantColor`), and its final look is open.
 
 **Automation test:** —
 
@@ -63,7 +63,7 @@ The classification states are asserted, never the overlays' colors or weights: t
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §4
 
-*Given* a Depth-capped target as in [DRAG-2.3](drag-2-target-classification.md), *when* the drag begins, *then* it is still rendered in its place (not removed, not collapsed) and is dimmed relative to a Valid target, by the tuning panel's `overlayDepthCappedOpacity`. It is a real target that this item can't use, unlike a place that's no target at all, which isn't classified ([DRAG-2.8](drag-2-target-classification.md)).
+*Given* a Depth-capped target as in [DRAG-2.3](drag-2-target-classification.md), *when* the drag begins, *then* it is still rendered in its place (not removed, not collapsed) and is dimmed relative to a Valid target, by the tunable `overlayDepthCappedOpacity`. It is a real target that this item can't use, unlike a place that's no target at all, which isn't classified ([DRAG-2.8](drag-2-target-classification.md)).
 
 **Automation test:** —
 

@@ -40,7 +40,7 @@ Each pass is an agent in `.claude/agents/`:
 - **Be specific.** Give the file path and line range, the problem, and the fix. For a correctness finding, add a concrete failure scenario: which inputs or state lead to which wrong result.
 - **Tag each finding** Fix Now, Watch List, Covered by `<epic>`, or Informational. The audit guide defines the tiers. Three of its rules matter while tagging:
   - the Watch List holds correctness risks, and structural work that's a judgment call;
-  - a structural finding (a file to split, or logic to consolidate) is Fix Now only when the code is already harder to change correctly because of it. Otherwise it goes on the Watch List, or is Informational with the reason it isn't worth doing;
+  - a structural finding (a file to split, or logic to consolidate) is Fix Now only when the code is already harder to change correctly because of it, which a copy that still agrees and has one caller isn't. Otherwise it goes on the Watch List, or is Informational with the reason it isn't worth doing;
   - a comment or test title that's wrong about the code is Fix Now, however small.
 - **Don't report what the gates report.** `npm run check` is a given, and its lint step runs `npm run check:docs`: if they pass, their findings don't exist.
 - **Notes for the orchestrator go at the end of your list,** one line each, and aren't findings: a wiki page, test-plan case or plan that contradicts the code, or a test that may not prove its case.

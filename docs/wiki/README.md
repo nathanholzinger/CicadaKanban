@@ -12,7 +12,7 @@ The PO owns the wiki. Other roles hand changes off to the PO rather than editing
 |---|---|
 | Behavior, and the reason for it | File paths |
 | API routes, request and response fields, status codes | Function, component, hook and constant names |
-| Tuning-panel value names | DOM and test attributes |
+| Tunable value names | DOM and test attributes |
 | Item types and representations (Epic, Card, Stub, Sheet) | Database column names: use the API field name, or plain words |
 | | Code expressions: "position, then creation time", not the comparator |
 | | How the client or the server is built |
@@ -32,7 +32,7 @@ A rule that holds on every surface is stated once. A drag, the Sheet, the API an
 - **A rule that meets another says how they combine.** When a rule interacts with one on this page or a Related page, the page states the interaction rather than leaving the reader to work it out.
 - **What isn't allowed is a rule too.** State what happens when it's tried: the response, what's stored, and what the user sees.
 - **A rule that computes an order or a position comes with a worked example.** An example can't be misread the way a description can.
-- **Tunable values.** A value set on the tuning panel is named, given its current approximate value, and called tunable. That's a standing property, not a status. Test plans use the name and never pin the number.
+- **Tunable values.** A value found by feel, such as a delay, a distance, a color or a level count, is named, given its current approximate value, and called tunable. That's a standing property, not a status. Test plans use the name and never pin the number.
 - **Feel is part of the rules.** A page states how an interaction should feel as well as what it resolves to, and may say which is which. Which cases can be pinned to precise assertions, and which are judged by hand, is the test plans' call.
 
 ## Page layout

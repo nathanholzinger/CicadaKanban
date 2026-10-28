@@ -138,9 +138,8 @@ what a release does.
 
 **The locked layer itself always gets an outline, at every layer** —
 whichever region or Card is currently locked — so which layer you're in
-is legible on the board itself, not only from the tuning panel's text
-readout. Its color is a tuning-panel value, `activeContextOutlineColor`
-(§3.1).
+is legible on the board itself. Its color is tunable,
+`activeContextOutlineColor`.
 
 **A drag leaves every Card's list of Stubs as the user set it**,
 collapsed or expanded, through every layer change and after the release.
@@ -259,8 +258,7 @@ each way moves exactly one layer of §1.1's stack:
   instead, still locked, just one layer shallower; Descendants' parent is
   its Card (§8). The snap is a short tween from where the card was
   clamped to the cursor (or to the new, wider context), chasing it if it
-  moves meanwhile; its length is a tuning-panel value (`popSnapMs`; 0
-  teleports).
+  moves meanwhile; its length is tunable (`popSnapMs`; 0 teleports).
 - **Pop in.** From Board, a popped-out item enters a column/sub-row when
   the cursor has stayed in that context's *region* past the pop-in
   threshold and is in the middle band (§5) when the clock runs out — any
@@ -339,21 +337,6 @@ Unsorted or a broken column, the cursor is nowhere and a release there
 writes nothing (subject to §2's "always the locked context's own
 within-action" once anything is locked at all).
 
-**The tuning panel exposing every threshold is part of this feature, not
-a debugging convenience.** The correct value can only be found by feel,
-and feel can only be compared by changing one number between two
-attempts without a rebuild. The panel also exposes the overlay colors of
-§4. Its values persist in the browser across reloads: `popDelayMs`,
-`popDistancePx`, `popInDelayMs`, `cardZoomDwellMs`, `cardPopInDelayMs`,
-`descendantsPopInDelayMs`, `popSnapMs`, `overlayFreeDescendantColor`,
-`overlayDepthCappedOpacity`, `activeContextOutlineColor` (§1.1's
-locked-layer outline), `sectionLevels` (how many levels a Card's
-section shows, §9), and `modalHoldDwellMs` and `modalHoldCueMs` (the
-dwell and the cue of the hold that opens the hierarchy modal, about 500
-and 800 ms, §7.3). The panel is a tool for the humans doing the
-tuning, and it's retired once the values lock and become constants.
-Where it lives and who sees it is open (Open questions).
-
 ### 3.2 Invalid targets are never poppable
 
 **A context the drop would be rejected from must not be enterable.** If the
@@ -411,9 +394,9 @@ Settled overlay assignments:
 
 - **Free descendants of the carried item** get the **green** relationship
   overlay — "these are yours," visible on the board while you hold their
-  ancestor.
+  ancestor. Its shade is tunable, `overlayFreeDescendantColor`.
 - **Depth-capped targets** are **de-emphasized**, not hidden — "real
-  target, not for this item." They're dimmed by a tuning-panel value,
+  target, not for this item." They're dimmed by a tunable opacity,
   `overlayDepthCappedOpacity`.
 
 **Every Stub is classified individually**, like any other target.
@@ -508,7 +491,7 @@ commits the band's meaning.
 are fixed facts about the card component (§5a). The dividers, both
 dead-zone heights and the one-card exception above all derive from the
 same two numbers, so what the guides draw always matches what a release
-resolves to. Neither is a tuning-panel value.
+resolves to. Neither is tunable.
 
 **A band reads the region's live content rect and live card count on
 every sample, never one frozen at drag start.** Why not freeze it: the
@@ -685,7 +668,7 @@ zooming in by accident while repositioning (§2's bias).
   nothing has been entered yet).
 
 Both stages are durations, so §1.1 rule 3 (zooming in is duration-only)
-still holds, and both are tuning-panel values like every other (§3.1).
+still holds, and both are tunable, like every other threshold (§3.1).
 The Card's own box keeps its other jobs: bounding the carried copy once
 inside, and deciding when the drag pops back out. A ghost alone in its
 list names no card, so there is nothing to zoom into from there.
@@ -792,8 +775,10 @@ cursor inside the section's box. Moving the ghost to another gap or
 another level resets it, and so does the cursor leaving the section.
 Any item at the Descendants layer can open it: one of the Card's Stubs,
 or an item that zoomed in from outside. The hold has a zoom-in's two
-stages (§6.1): a dwell with nothing new shown, then a visible cue on the
-overflow row that shows its progress. A release before it completes
+stages (§6.1): a dwell with nothing new shown (`modalHoldDwellMs`,
+about 500 ms), then a visible cue on the overflow row that shows its
+progress (`modalHoldCueMs`, about 800 ms). Both are tunable, like every
+other threshold (§3.1). A release before it completes
 commits where the ghost is. Why a dwell first: a pause beside an
 overflow row is also a drop as `R`'s first or last child, so an
 ordinary pause there mustn't open the modal.
@@ -901,7 +886,7 @@ silently walk that child back to the entry workphase.
 ## 9. Depth overflow and the hierarchy modal
 
 **A Card's section shows a set number of levels below the Card,**
-`sectionLevels`, by default 3, at least 1, a tuning-panel value (§3.1).
+`sectionLevels`, a tunable value of 3.
 A Card at depth 4 shows its descendants at depths 5 to 7. A Card has
 room for only so many levels, and the hierarchy modal shows the rest.
 
@@ -971,20 +956,18 @@ position" (a done item), and would sort the pending item to the top of the
 list ([`../item-positioning/`](../item-positioning/) §2).
 
 **On the response**, in this order: apply any reindex pairs, assign the
-authoritative position, clear the pending marker, and only then check for
-inversions. The order matters; see
-[`../positioning/`](../positioning/) §8.
+authoritative position, clear the pending marker, and only then compare
+anything. The order matters; see [`../positioning/`](../positioning/)
+§8.
 
-**An inversion is a tripwire, not routine maintenance.** Given the property
-above, a correctly reconciled response should never invert the rendered
-order. If one fires, the client and server disagreed about what the drop
-meant — worth surfacing, not silently repairing.
-
-**The check runs only for a write the board previewed.** A Sheet edit
-that reassigns a position made no ordinal claim. The board compares the
-rendered order of positioned Free items with the pending placement to
-the order after the response, with the placement cleared, and a
-difference goes in the inversion log (below).
+**A response that orders the item differently from its preview is shown
+as the server saved it,** never adjusted to match the preview, so the
+difference shows on the board at once
+([`../item-positioning/`](../item-positioning/) §5a). Given the property
+above, a correctly reconciled response never does: a difference means
+the client and the server disagreed about what the drop meant. Why not
+keep the preview: the board would show an order the server doesn't
+hold, until a reload moved the item, far from the drop that caused it.
 
 **Re-dragging an item whose write is still pending** puts two writes in
 flight against one row. Responses must be sequenced per item so a stale one
@@ -1043,10 +1026,7 @@ item.**
   Hover displacement moves it from there exactly as for any Card.
 
 The placement is the ghost during the drag and the pending marker after
-release; nothing in the item is touched until the response. An inversion
-is recorded in the tuning panel's inversion log (kept across board
-reloads while the board is open) — the panel is where it surfaces;
-nothing goes to the console.
+release; nothing in the item is touched until the response.
 
 **A done list orders a previewed item as the newest completion, not the
 oldest.** A card dragged into a done column has no `completedAt` yet; the
@@ -1075,8 +1055,6 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   it) is undesigned.
 - **Whether the ghost's expansion on drop animates (§5a).** Today it's
   instant.
-- **Where the tuning panel lives, and who sees it (§3.1).** Today it opens
-  from the board toolbar ("Drag tuning").
 - **How the overflow row and the hierarchy modal look (§9).** The
   overflow row's style, the modal's size, and how the modal shows the
   Card at its root. Today's overflow row is a muted count in a row the

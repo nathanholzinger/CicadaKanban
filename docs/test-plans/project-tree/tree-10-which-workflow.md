@@ -16,7 +16,7 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.8 | A template or a source workflow that doesn't exist is refused, and nothing is created | P2 | Open |
 | TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Automated |
 | TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Open |
-| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Planned |
+| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Open |
 
 ---
 
@@ -102,7 +102,7 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.11 — A create naming both a template and a source workflow is refused, and nothing is created
 
-**Priority:** P2 · **Status:** Planned · **Rule:** wiki project-tree §10
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10
 
 *Given* project `P`, with no workflow of its own, template `T`, and workflow `W1` of another project, *when* a workflow is created for `P` naming both `T` by `templateId` and `W1` by `sourceWorkflowId`, *then* it's refused with a 400, and no workflow is created: `P` still has none of its own, and a create for it naming `T` alone is then accepted, with `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)). The refusal doesn't depend on which of the two exists: a create naming a `templateId` no template has and a `sourceWorkflowId` no workflow has is refused too, and nothing is created. A field given as `null` isn't named ([TREE-10.10](tree-10-which-workflow.md)).
 

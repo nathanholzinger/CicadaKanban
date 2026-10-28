@@ -2,7 +2,7 @@
 
 **Next ID:** DRAG-1.35
 
-**Terms.** *Sustained* means the cursor stays for at least the named tuning-panel value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
+**Terms.** *Sustained* means the cursor stays for at least the named tunable value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -35,10 +35,8 @@
 | DRAG-1.28 | The carried card is bounded by its context | P1 | Open |
 | DRAG-1.29 | After a pop out, the carried card snaps to the cursor over `popSnapMs` | P2 | Manual |
 | DRAG-1.30 | The pop-out clock runs from leaving the context, wherever the cursor goes, and resets on return | P1 | Automated |
-| DRAG-1.31 | The tuning panel exposes every threshold and overlay value, and its values persist | P1 | Open |
 | DRAG-1.32 | Popping feels deliberate: never incidental, never sluggish | P1 | Manual |
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
-| DRAG-1.34 | The tuning panel also exposes the section's level count and the modal hold, and they persist | P1 | Automated |
 
 ---
 
@@ -305,7 +303,7 @@ A `P` with no attached children has no descendants section, so its Descendants l
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1
 
-*Given* a drag, *when* it is locked in a column or sub-row, *then* that column or sub-row shows the locked outline. *When* it zooms into a Card, *then* the outline moves to that Card. Exactly one outline marks the locked context at a time, and it follows the lock as the drag pops. At Board layer nothing is locked, and no outline shows. The outline is drawn in the tuning panel's `activeContextOutlineColor`: changing that value changes the outline.
+*Given* a drag, *when* it is locked in a column or sub-row, *then* that column or sub-row shows the locked outline. *When* it zooms into a Card, *then* the outline moves to that Card. Exactly one outline marks the locked context at a time, and it follows the lock as the drag pops. At Board layer nothing is locked, and no outline shows. The outline is drawn in the tunable `activeContextOutlineColor`.
 
 **Automation test:** —
 
@@ -343,19 +341,11 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 **Automation test:** `client/src/components/workflow/popSession.test.ts`
 
-## DRAG-1.31 — The tuning panel exposes every threshold and overlay value, and its values persist
-
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.1
-
-*Given* the tuning panel, *when* it is opened, *then* it exposes `popDelayMs`, `popDistancePx`, `popInDelayMs`, `cardZoomDwellMs`, `cardPopInDelayMs`, `descendantsPopInDelayMs`, `popSnapMs`, `overlayFreeDescendantColor`, `overlayDepthCappedOpacity` and `activeContextOutlineColor`. *When* one of them is changed, *then* the next drag behaves by the new value without a rebuild. *And when* the page is reloaded, *then* the changed value is still in effect. Where the panel lives and who sees it are open questions, and aren't asserted.
-
-**Automation test:** —
-
 ## DRAG-1.32 — Popping feels deliberate: never incidental, never sluggish
 
 **Priority:** P1 · **Status:** Manual · **Rule:** wiki board-drag-interaction §3.1
 
-*Given* ordinary use at a natural pace (reordering within a column, moving a card to another column, zooming into a Card), *when* a person drags, *then* brushing past a neighboring context while reordering never pops, and a deliberate move into another context pops without feeling sluggish. This is the judgment the tuning panel's values are set by.
+*Given* ordinary use at a natural pace (reordering within a column, moving a card to another column, zooming into a Card), *when* a person drags, *then* brushing past a neighboring context while reordering never pops, and a deliberate move into another context pops without feeling sluggish. This is the judgment the thresholds are tuned by.
 
 **Automation test:** none — manual: judged by feel against the tuned values.
 
@@ -371,11 +361,3 @@ The exceptions:
 - *When* the drag zooms into collapsed `C` ([DRAG-4.19](drag-4-attach-and-stub-placement.md)), *then* `C` opens. *When* the drag then pops out of `C` and is released elsewhere, *then* `C` is collapsed again. *When* `X` is instead attached into `C`, *then* `C` stays open after the release, so `X`'s new place is in view.
 
 **Automation test:** —
-
-## DRAG-1.34 — The tuning panel also exposes the section's level count and the modal hold, and they persist
-
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3.1
-
-*Given* the tuning panel, *when* it's opened, *then* it also exposes the number of levels a Card's section shows ([DRAG-7.1](drag-7-overflow-and-hierarchy-modal.md)), and the dwell and the cue of the hold that opens the hierarchy modal ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)). *When* one of them is changed, *then* the board takes the new value without a rebuild: a Card's section shows the new number of levels, and the next hold takes the new dwell or cue. *And when* the page is reloaded, *then* the changed value is still in effect. The panel's other values are [DRAG-1.31](drag-1-contexts-and-popping.md)'s.
-
-**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `tests/ui/drag-7-modal-hold.spec.ts`

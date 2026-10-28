@@ -2,7 +2,7 @@
 
 **Next ID:** DRAG-3.25
 
-**Terms.** Cases are at Board layer unless they say otherwise. `h` is shortCard's height, and `gap` is the card lists' shared gap: fixed facts about the card component, not tuning-panel values. *Released without popping in* means a release at Board layer before the region's pop in has fired. Each band produces a request shape catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md); cases here assert which request a release produces.
+**Terms.** Cases are at Board layer unless they say otherwise. `h` is shortCard's height, and `gap` is the card lists' shared gap: fixed facts about the card component, not tunable values. *Released without popping in* means a release at Board layer before the region's pop in has fired. Each band produces a request shape catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md); cases here assert which request a release produces.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -67,7 +67,7 @@
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §5
 
-*Given* a region with two or more cards, not terminal and not the hover target, *when* a release happens just above the top divider (less than `h` below the content's top edge) and just below it (more than `h` below), *then* they resolve by the top band ([DRAG-3.1](drag-3-card-column-bands.md)) and the middle band ([DRAG-3.3](drag-3-card-column-bands.md)) respectively, and the same holds mirrored at the bottom divider ([DRAG-3.2](drag-3-card-column-bands.md)). Each dead zone outside the list is `(h + gap) / 2` tall. Every divider position and dead-zone height comes from `h` and `gap`; no tuning-panel value moves them. That the top divider cuts through the first card (and the bottom one through the last) is intended.
+*Given* a region with two or more cards, not terminal and not the hover target, *when* a release happens just above the top divider (less than `h` below the content's top edge) and just below it (more than `h` below), *then* they resolve by the top band ([DRAG-3.1](drag-3-card-column-bands.md)) and the middle band ([DRAG-3.3](drag-3-card-column-bands.md)) respectively, and the same holds mirrored at the bottom divider ([DRAG-3.2](drag-3-card-column-bands.md)). Each dead zone outside the list is `(h + gap) / 2` tall. Every divider position and dead-zone height comes from `h` and `gap`; no tunable value moves them. That the top divider cuts through the first card (and the bottom one through the last) is intended.
 
 **Automation test:** `client/src/components/workflow/dragBands.test.ts`
 

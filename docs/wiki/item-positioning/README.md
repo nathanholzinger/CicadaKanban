@@ -197,12 +197,10 @@ instead.
 
 The client applies the pairs first, then the written item's position,
 and only then compares anything
-([`../positioning/`](../positioning/) §8). On the board, a
-comparison made before the pairs land would be a false entry in the
-inversion log.
+([`../positioning/`](../positioning/) §8).
 
-**On the board,** which writes the comparison checks, and what happens
-to a difference, are
+**On the board,** a response that orders the item differently from the
+drop's preview is
 [`../board-drag-interaction/`](../board-drag-interaction/) §10's.
 
 Every client sort of items breaks ties by

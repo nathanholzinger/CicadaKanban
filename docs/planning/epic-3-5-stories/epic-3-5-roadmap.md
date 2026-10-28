@@ -944,9 +944,22 @@ deferral and keep landing with their stories.
    improvement, a state-machine unit test, or a manual note. Record the
    decision per case; "flaky, kept anyway" is not an allowed end state.
 
+9. **Deferred from Story 7** (Nathan, 2026-10-28): a Free Card that has
+   zoomed into a section doesn't follow the cursor there. Its projection
+   stays at the section's top, because the carried copy's clamp and
+   collision rect read the overlay's stale `draggingNodeRect`. The trace
+   is in Story 7's plan, Amendments, "2026-10-28, batch 7".
+   - **The fix,** in the drag layer's core. DRAG-1.21 and DRAG-4.1 go
+     through the same path, and it may be why `drag-card-zoom-in.spec.ts`'s
+     two tests are skipped. Story 8's work on the carried copy at a layer
+     change touches the same rects, so check there first.
+   - **Routed here by ID:** DRAG-7.13's first clause, the hold by a Free
+     Card from outside `P`; and DRAG-7.10, whose item from outside `P`
+     needs the fix, and whose "bounded by `P`'s box" is DRAG-1.28's rule.
+
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
-test:e2e` and `npm run test:unit` green; every case routed here (item 1)
-is `Automated` or `Manual`; the epic-done checklist's Tests items
+test:e2e` and `npm run test:unit` green; every case routed here (items 1
+and 9) is `Automated` or `Manual`; the epic-done checklist's Tests items
 checkable.
 
 **Depends on:** Stories 5–8 (the gesture and its thresholds stop moving);

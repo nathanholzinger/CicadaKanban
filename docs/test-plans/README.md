@@ -52,7 +52,7 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 
 - **The *Then* names concrete expected values,** so whoever writes the test doesn't choose what to assert, and the Reconciler can check that the test asserts what the case says.
 - **A title states the rule, never a bug.** A case that guards against a known mistake may say which mistake, in the present tense ("… so hovering over a covered member never moves it to the entry workphase"). It never says where or when the mistake was found.
-- **A value the wiki names goes by its name,** never as a literal: a tuning-panel value, or a limit such as `CAP`. A test reads the configured value; a case never pins today's number.
+- **A value the wiki names goes by its name,** never as a literal: a tunable value, or a limit such as `CAP`. A test reads the configured value; a case never pins today's number.
 - **A `Manual` case is as specific as its rule allows.** Its *Then* says what the person checking looks for, so two people checking it would judge the same thing.
 - **One status per case.** If part of a rule can be pinned to precise assertions and part can't, it's two cases.
 - **Current truth only.** No provenance, dates, story or audit IDs, build status, forward references, or "was" notes (`.claude/guides/documentation-standards.md`).

@@ -25,11 +25,9 @@ Then set the real cap, one value for items and projects, from how deep the modal
 
 - **Wiki passages:** wiki board-drag-interaction §3.1, §7, §7.1, §7.3 and §9; wiki item-attachment §12. D2 has none: it's a working placeholder (Open questions, For the PO).
 - **Test-plan cases:**
-  - DRAG-7.1–7.19 and DRAG-7.21–7.30, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
-  - DRAG-1.34, the new tuning values (§3.1), `Open`.
+  - DRAG-7.1–7.19 and DRAG-7.21–7.29, a new suite for the overflow row and the hierarchy modal (wiki board-drag-interaction §7, §7.1, §7.3 and §9), `Open`. DRAG-7.20 is the hold's feel, `Manual`.
   - TREE-3.11, a deep project's name in a narrow sidebar (wiki project-tree §3), `Open`.
-  - TREE-10.5–10.10, where a new workflow's workphases come from, a reference that names no row refused, and a `null` naming none (wiki project-tree §10), `Open`.
-  - TREE-10.11, a create naming both, `Planned` while its passage in project-tree §10 is marked, though batch 7 built it (For the Test Planner).
+  - TREE-10.5–10.11, where a new workflow's workphases come from, a reference that names no row refused, a `null` naming none, and a create naming both refused (wiki project-tree §10), `Open`.
   - **To check when the cut-off is built:** DRAG-4's tree and DRAG-5.13's run three levels below the Card, so they assume a section shows at least three.
     - **Checked in Phase 2:** the specs that carry them pass unchanged at the default of three levels.
 
@@ -371,6 +369,133 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - The last two are below and under For the Architect.
   - The Architect widens `.claude/guides/testing-strategy.md`'s "Server lib" row, since `deepSeed.test.ts` tests `server/src/db/`. *Done 2026-10-27.*
 
+### The second pass's follow-ups, in batches
+
+*By the Architect, 2026-10-28. The sources are the second audit (`docs/audits/code-quality-audit-epic-3-5-story-7-rerun.md`) and the Reconciler's third run (`docs/audits/test-reconciliation-epic-3-5-story-7-run-3.md`). Finding numbers here are the second audit's, written "rerun #N". The batches go on from batch 7.*
+
+**Order.** The batches go area by area, as before: the server, the scope script, the drag layer, the client's storage, then E2E. The E2E helpers come before the specs for the open cases, so that the new specs use them.
+
+**Batch 14 runs first,** ahead of batch 8, and keeps its number (Nathan, 2026-10-28). The Test Planner's pass withdrew IDs its tests carry, and `check:docs` fails every other gate until they go.
+
+**Before the batches:**
+- **Nathan's calls** (Open questions, For Nathan, from the second pass): a test for rerun #1, the left edge of DRAG-7.16, and DRAG-7.10's route to Story 10. *Answered 2026-10-28: all as recommended.*
+- **The PO** takes the marker off project-tree §10's refusal of a create naming both. Batch 7 built it. **The Test Planner** then makes TREE-10.11 `Open`, so batch 8 can stamp it. If that hasn't happened when batch 8 runs, its stamp waits. *The PO's part done 2026-10-28, and the Test Planner's.*
+- **The Test Planner** says whether DRAG-7.27 keeps its `L` = 2 instance. If it doesn't, batch 13 writes no spec for it. *Done 2026-10-28: it doesn't* (Open questions, For the Test Planner, from the second pass).
+
+**Batch 14: the tuning panel's tests go** (Nathan, 2026-10-28; Open questions, For Nathan, from the second pass). It runs first (Order). The Test Planner withdrew DRAG-1.31, DRAG-1.34, DRAG-7.30 and DRAG-6.14 on 2026-10-28, and narrowed DRAG-6.1, DRAG-6.4, TC-5a.2 and DRAG-7.1 (Open questions, For Nathan, from the second pass). Until this batch lands, `check:docs` flags the six tests that carry a withdrawn ID, so every other batch's gate fails.
+- **Removed:**
+  - `client/src/components/workflow/dragTuning.test.ts`, the panel's defaults, persistence and refusals. That includes batch 3's two refusal cases. `browserStorage.test.ts` keeps the guard's own tests.
+  - `itemListOps.test.ts`'s two tests of a typed level count, at lines 238 and 322: 3.9 reads 3, and below 1 reads 1.
+  - `drag-7-modal-hold.spec.ts:781` (DRAG-1.34), and `drag-7-overflow-row.spec.ts:430` (DRAG-7.30).
+  - `itemWriteReconciliation.test.ts:71` (DRAG-6.14), whose rule, that the board records no inversion for a write it didn't preview, went with the log. If the code keeps the inversion check as a developer's diagnostic, a test of it can stay, with no case ID.
+  - **Test fixtures** that only those tests use.
+- **Narrowed:**
+  - `drag-7-overflow-row.spec.ts:90` and `:233` carry DRAG-7.1 as well as DRAG-1.34. Each loses the DRAG-1.34 ID and its panel half: the value taken at once and kept across a reload.
+  - `:233`'s drop math at a level count other than the default is DRAG-7.1's. It keeps it, with the value seeded.
+  - `:90` is deleted if none of what's left is DRAG-7.1's alone. Before it goes, check that a spec still carrying DRAG-7.1 asserts the case's clause for a level count one higher, with the value seeded: `R1` and `R2` at the new last level, an overflow row under `R1` for `R1a`, and none under `R`. If `:90` was the only one, that part stays, as DRAG-7.1's.
+  - `itemWriteReconciliation.test.ts:64` (DRAG-6.4) asserts the case's new *Then*, not the log. After a response that sorts `X` after `E`, the list reads `A, C, E, X`, with `X` unmarked and holding the response's position.
+  - **TC-5a.2's test** in `itemWriteReconciliation.test.ts` asserts the order shown, not that the log gains no entry: the list reads `A, X, C, E` after the response, and `X` never shows after `E` while it's applied. If only the log can show that, the test drops the ID and the batch reports it, for the Test Planner to revisit the case.
+  - **DRAG-6.1's tests,** in `drag-column-bands.spec.ts` and `itemWriteReconciliation.test.ts`: any check that no inversion was recorded goes, since the case no longer says it.
+- **Kept:** `seedDragTuning` and every spec that seeds the panel's values to set its own thresholds, and `POP_TEST_TUNING`. Those are setup, not tests of the panel.
+- **The drag layer's `CLAUDE.md`:** its test surfaces stop listing the panel's.
+- **Gate:** `npm run check`, with `check:docs` clean of the six withdrawn-ID hits, and `npm run test:e2e`.
+
+**Batch 8: the server.** Rerun #1 with #18 and #4, then the TREE-10 stamps.
+- **#1:**
+  - **The fix:** a reference named with a value that isn't a string is a 400, checked before either existence check, as `projects.ts:39` does for its own reference. With it, `startingWorkphases`' `String(...)` coercions go.
+  - **The test:** one route test for `templateId: false`, with no case ID (Nathan, 2026-10-28). His ruling that it needs no case stands. This test only guards a 500.
+- **#18:** `.orderBy(workphases.position)` on the re-select.
+- **#4:** `workflowWorkphases.ts`'s header, in the report's words.
+- **The TREE-10 stamps** (run 3, Proposed Stamps, 1–5 and 7):
+  - **TREE-10.5** on `WF:240`. While there, it reads the flags of more than `Review` (run 3, concern 8).
+  - **TREE-10.6** on `WF:260`. It also checks that `W1`'s workphases are unchanged after the copy, and that renaming one of `W2`'s leaves `W1`'s alone.
+  - **TREE-10.7** on `WF:281`.
+  - **TREE-10.8** on `WF:145` and `WF:154`. Each also checks that nothing was created.
+  - **TREE-10.10** on `WF:179`, `WF:219` and `WF:229`.
+  - **TREE-10.11** on `WF:193` and `WF:207`, once the case is `Open`. `WF:193` then also makes a create naming `T` alone.
+- **Beside them:** `WF:72`'s cycle test asserts its exact depth, not only that it's a number (run 3, run 2's item B).
+- **Not taken:**
+  - **#28, `namesARow` moved to `lib/`:** the API contract epic's schemas take that ground.
+  - **#27, the rest of the create shared with the seed.**
+  - **#17, the seed's depth count:** the data is right today.
+- **Gate:** `npm run check` and `npm run test:e2e`, since every spec's setup creates a workflow through this route.
+
+**Batch 9: the scope script.** Rerun #2 with #3; #9; #10.
+- **#2:**
+  - **The fix:** `foldFormatting` folds only between tokens. String, template and regex literals compare by their exact value, through `ts.createScanner`, which `lineKinds.mts` already uses. A `"` against a `'` still folds.
+  - **The test:** a `diff.test.mts` case where `split(' ')` becomes `split('')` and is a site.
+- **#3:** `hunk(2, 1, 2, 2)`.
+- **#9:** `instancesOf` refuses a key that isn't in `PASSES` and fills a missing pass with `{}`. Both `?? {}` go, and the message says what's checked.
+  - **Beside it:** `config.test.mts:109`'s title names the case that isn't an object, which it also asserts (rerun #33).
+- **#10:** one `scripts/audit-scope/testRepo.mts::makeTestRepo(prefix)`, with the isolation, the init and config, and the cleanup. Both test files call it.
+  - **Beside it:** `git.mts`'s header names `showAt` (rerun #33).
+- **Not taken:** #21. A blame run with `-b`, the exit codes, and splitting `scan.test.mts` wait.
+- **Gate:** `npm run check`.
+
+**Batch 10: the hold-opened modal.** Nathan's ruling on batch 7's hook half; rerun #5; with #14, #15 and #16.
+- **The hook half, deleted** (Nathan, 2026-10-28; run 3, Fix Now guard tests, item 3). These are the three lines in `useBoardDnd.ts::handleDragMove` that store no anchor while the reading is held, and their comment. The drag layer's `CLAUDE.md` stops saying `handleDragMove` stores no anchor meanwhile.
+- **#5:** `useLiveDropSide`'s comment adds the overflow row.
+- **#15:** `readModalPlacement` reseeds only when the live context is the modal's own Descendants, and otherwise closes the modal. Two lines.
+- **#14:** `ModalReading` carries the point it was read at. The reseed takes `pointerX` and `held` from that point, not from the live pointer.
+  - **Beside it:** `reseedProjection`'s "The hold's own reading is dropped" becomes "the previous projection is dropped" (rerun #33).
+- **#16:** `placeModal` takes the list's offset in the dialog, and caps the scroll there, so the spot is never scrolled under the header.
+- **Tests:**
+  - **#16:** a `modalPlacement.test.ts` case with the cursor near the window's top over a long list.
+  - **#14:** a `descendantsProjection.test.ts` case where the reading and the live pointer differ.
+  - **#15:** a hook test, if `useBoardDnd.test.ts` can reach `readModalPlacement`. If it can't, nothing: a pop between the hold and the mount can't be timed by a spec, as with batch 1's failure scenario (b).
+  - **Unchanged:** DRAG-7.15's specs pass as they are.
+- **Not taken:** #23, which rides with #14 only if #14's change leaves it a one-line follow-on. Also #24–#26 and #31.
+- **Gate:** `npm run check` and `npm run test:e2e`.
+
+**Batch 11: the client's storage.** Rerun #7, option (a), as Nathan ruled.
+- **The fix:**
+  - `useBoardManagement.ts` and `App.tsx` read and write through `readStored` and `writeStored`.
+  - A guarded `removeStored` serves `App.tsx`'s remove. `KeyValueStorage` and the memory fake in `test/storageFixtures.ts` gain `removeItem`.
+  - `browserStorage.ts`'s header lists the callers. The drag layer's `CLAUDE.md` line is then true as it stands.
+- **The user-visible part:** `App.tsx` reads in a `useState` initializer, so storage that throws stops the app from mounting today. After this, it mounts.
+- **Tests:** `browserStorage.test.ts` gains `removeStored`, refused and throwing. Neither caller has a test file, and the module's tests carry the guard.
+- **Not taken:** #13, a warning on a refused write. The header's ruling is that the value holds for the session and nothing else.
+- **Gate:** `npm run check` and `npm run test:e2e`, since every spec mounts the app and opens a board.
+
+**Batch 12: the E2E helpers.** Rerun #6, #8, #11, #12; with #19, #20 and #22; and the audit's note on checks for no write.
+- **#6:** `holdAt`'s comment says `depth` counts from the pickup point, in `projectTreeDrag.ts::aim`'s words.
+- **#8:** `outwait` calls `clocksMargin`. If the two are separate on purpose, `outwait` gets a one-line rule (f) reason instead, and `dragGesture.ts`'s claim narrows. Read why they differ first.
+- **#11:** `region(...)` at the three sites, and `drag-card-zoom-in.spec.ts`'s `regionOf` goes. `drag-column-bands.spec.ts`'s own `regionOf(col)` is another query and stays.
+- **#12:** `refuseMoves(page, { afterMs })`, called at all three copies. `boardReload(page)` replaces `drag-column-bands.spec.ts:831-833`.
+- **#22:** `dragTo`'s local `settled` is renamed.
+- **#19:** `placementShown` stops at the first shallower row, and throws unless that row is one level up. About 20 placement checks read it, so if one fails, stop and report: the spec was passing on a parent it never read.
+- **#20:** checked `deleteColumn`, `updateColumn` and `reorder*` helpers in `seed.ts`, on one `checkedOk` that `deleteItem` and the `pin*` helpers share. They're used at `drag-column-bands.spec.ts:113-116, 346-349` and `boards-layer.spec.ts:180-187`. At `boards-layer.spec.ts:324` the reorder is the test's subject, so the test asserts it. This is root `CLAUDE.md`'s "never hand-roll E2E setup".
+- **No write after a release** (the audit's note for the Reconciler):
+  - **The sites:** `HM:280`, `:370`, `:626` and `:796`, `MH:760` and `:778`, and `OR:322` and `:356`. Each checks for no write straight after a release, so a write that lands later passes.
+  - **The fix:** one helper, waiting for the drag to settle and then checking that `watchWrites` saw none. `HM:726`'s fixed 300 ms wait moves onto it too.
+- **Not taken:** #29, #30 and #32.
+- **Gate:** `npm run check` and `npm run test:e2e`. No assertion changes except through #19 and the no-write helper.
+
+**Batch 13: the cases in Scope still `Open`** (run 3, For sign-off). Each new or extended spec is shown failing on a mutation where one exists.
+- **DRAG-7.15:** the gap above `R`'s overflow row, reached from the rows above. `W` is held down to it, alone and with `WC`, in `MH`'s `W` pattern. `MH`'s header names `W` among the dragged items (rerun #33).
+- **DRAG-7.25:** `HM:662` or `HM:686` asserts that a click-opened modal is centered after the reload, and carries the ID.
+  - **If it's `HM:662`:** a row is changed on the server before the refused release, which pins "as the reloaded board has them" (run 3, concern 7).
+- **DRAG-7.26:** `HM:754`'s setup detaches `P`'s descendants instead of deleting them, or a sibling spec does. Then "no attached descendants" is told apart from "no descendants" (run 3, concern 1).
+- **DRAG-7.27:** one spec on the `L` = 2 tree: `R1`'s "1 child" overflow row after the move. This is skipped if the Test Planner drops the clause. *Skipped: the clause is dropped (Before the batches).*
+- **DRAG-7.29:** `OR:398` goes on to a release from the gap below, at `L + 1`, with the line on the overflow row.
+- **Beside them, in the files touched** (run 3, concerns 3, 4 and 6):
+  - `HM:432` checks that its resting point is inside `P`'s box;
+  - `MH:654` compares against the capped opacity, not "below 1";
+  - `OR:325` checks that the Sheet that opens is `P`'s.
+- **Not here:**
+  - **DRAG-7.16,** which closes on Nathan's approval of `MP:27–32`;
+  - **DRAG-7.13 and DRAG-7.10,** routed to Story 10;
+  - **the TREE-10 cases,** in batch 8.
+- **Gate:** `npm run check` and `npm run test:e2e`.
+
+**Across these batches:**
+- **Each batch** ends with its gate and a stop for Nathan's review and commit. A batch with required findings fills in their rows in the second audit's Close-out table.
+- **The Reconciler** runs after batch 13, the last to run, re-checking only the gaps (`.claude/guides/story-done-checklist.md`, step 5): the 12 unrouted cases, the stamps, the audit's other notes for it, and the cases the Test Planner reworded on 2026-10-28, which are DRAG-6.1, DRAG-6.4, TC-5a.2, DRAG-7.1, DRAG-7.17 and DRAG-7.27. Those are the reads of `sectionLevels - 1`, `HMT`'s DRAG-7.15 with no scroll height, and DRAG-7.10's unit tests.
+- **The optional findings left out:**
+  - **Watch List:** #13, #17, #21, #23–#32;
+  - **Informational:** everything but the #33 lines above.
+- **At close-out:** the report's "For other roles" go to Open questions, and `epic-3-5-story-7-rerun-audited` is tagged on `f8160c5`, the report's end, before Story 8's audit runs.
+
 ## Code map
 
 *What's expected, by the Architect. The Coder corrects it as built.*
@@ -652,6 +777,18 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - **The hook's half removed,** `handleDragMove` storing the anchor again: both specs still pass. The pure layer's half carries them. The hook's half only keeps the stale neighbor from being read for a frame once the pointer moves, which no spec can see, so nothing guards it. It is three lines and can go if that isn't worth keeping.
   - **Debug instrumentation:** the traces ran on temporary `console.log` lines in `useBoardDnd.ts` and a probe spec, `tests/ui/zz-probe.spec.ts`, both removed. A search for `PROBEDBG` and `zz-probe` finds nothing.
   - **Checks:** `npm run check` passes (428 server, 565 client, 209 script tests; `check:docs` clean). The full `npm run test:e2e` passes with 228 and 8 skipped, the two new specs on the 226 before.
+- **2026-10-28, the tuning panel out of the wiki, and project-tree §10's marker off (PO).**
+  - **The panel** (Nathan, 2026-10-28; Open questions, For Nathan, from the second pass):
+    - board-drag-interaction §3.1's paragraph on the panel goes, with the Open question on where it lives;
+    - "a tuning-panel value" becomes "tunable" in §1.1, §3, §4, §5, §6.1 and §9;
+    - §3.1's paragraph was the only place that named `overlayFreeDescendantColor` and the hold's two values, so they move to §4 and §7.3, the hold's with their approximate values;
+    - §9's "at least 1" goes, and `sectionLevels` is a tunable value of 3;
+    - the wiki README's "Tunable values" convention, and its table, name a value found by feel, not a value set on the panel.
+  - **DRAG-6.4, deduced:** the rule stands, narrowed to what a user sees.
+    - **What stays:** a response that orders the item differently from its preview is shown as the server saved it, never adjusted to match the preview (board-drag-interaction §10). It follows from positioning §8, which holds for every write.
+    - **What goes:** the inversion log, the check that fills it, and "nothing goes to the console". With the panel gone, nothing a user sees records an inversion, so the check is mechanism. Whether the code keeps it as a developer's diagnostic, and where it reports, is the code's call.
+    - item-positioning §5a's two mentions of the log go with it.
+  - **Project-tree §10:** the create naming both loses its marker, since batch 7 built it.
 
 ## Open questions
 
@@ -704,6 +841,34 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Fix it in this story,** as a batch of its own after the modal's, or route it? The fix I'd try, untried, is to keep the placement's reading until the pointer moves. It is in the drag layer's core and needs its own test. It would also let the E2E spec for audit #31 be written. Or it goes to the next story that reworks the drag layer, with the spec held until then.
     - **Answered 2026-10-27:** fix it in this story, as batch 7.
     - **Done 2026-10-28 (Coder, batch 7):** the projection keeps the modal's reading until the pointer moves (Amendments, 2026-10-28, batch 7).
+- **For Nathan, from the second pass** (The second pass's follow-ups, in batches). Each has the Architect's recommendation.
+  - **Answered 2026-10-28:** all four as recommended. The test for #1 goes in batch 8. DRAG-7.16 closes on the internal test at the Reconciler's next run. DRAG-7.10 is Story 10's. *Done (Architect):* the audit rule is in `.claude/guides/audit-workflow.md`'s Tiers and the persona's tagging rules.
+  - **The drag tuning panel** (Nathan, 2026-10-28): "the tuning panel is a temporary feature. It doesn't belong in the wiki and we don't need any tests around it."
+    - **This reverses** wiki board-drag-interaction §3.1's "the tuning panel exposing every threshold is part of this feature, not a debugging convenience".
+    - **The tunable values stay** as the drag's behavior: a delay or a level count is named, given its approximate value, and called tunable (wiki `README.md`, "Tunable values"). Each is assumed to become a locked constant when the panel is removed (Nathan, 2026-10-28). A few may later move to a board configuration panel, but that's decided when it comes up, and the wiki doesn't anticipate it. What goes is the panel: that it exposes them, persists them and keeps a log, where it lives, and how it reads a typed value.
+    - *Done (Architect):* `.claude/guides/testing-strategy.md`, "What isn't tested".
+    - **For the PO:**
+      - take the panel out of the wiki: §3.1's paragraph, "a tuning-panel value" across board-drag-interaction, the Open question on where the panel lives, and §9's "at least 1";
+      - reword the README's "Tunable values" convention so it doesn't define a value by the panel;
+      - decide whether DRAG-6.4's rule, an inversion applied and not silently repaired, stands without the panel's log.
+      - *Done 2026-10-28 (PO), all three (Amendments, 2026-10-28, the tuning panel out of the wiki).* DRAG-6.4's rule stands, narrowed: a response that orders the item differently from its preview is shown as the server saved it, never adjusted to match the preview (board-drag-interaction §10). The log, and the check behind it, are out of the wiki. The Test Planner's steps below can go ahead. DRAG-6.1's "no inversion recorded" goes with the log.
+    - **For the Test Planner,** after the PO:
+      - withdraw DRAG-1.31, DRAG-1.34 and DRAG-7.30, which are about the panel;
+      - narrow DRAG-6.4 by the PO's answer;
+      - sweep the panel out of the other cases' wording (DRAG-2, DRAG-3, DRAG-7, item-positioning part 5a, the catalog's README).
+
+      DRAG-1.34 and DRAG-7.30 leave Story 7's Scope. Batch 14 removes their tests.
+
+      *Done 2026-10-28 (Test Planner):*
+      - **Deleted:** DRAG-1.31, DRAG-1.34 and DRAG-7.30, now out of Scope. DRAG-6.14 goes too: its rule, that the check runs only for a write the board previewed, went with the log.
+      - **Narrowed:** DRAG-6.4 to the PO's rule, with a response that sorts `X` after `E`, and DRAG-6.1 loses "no inversion recorded". TC-5a.2 keeps its rule, the pairs applied before anything is compared, narrowed to what shows: the written item never out of order while the response is applied.
+      - **Swept:** DRAG-1's terms, DRAG-1.26 (the outline is drawn in the tunable color, with no "changing that value") and DRAG-1.32; DRAG-2.5 and DRAG-2.6; DRAG-3's terms and DRAG-3.5; DRAG-7's terms, which name `sectionLevels`, `modalHoldDwellMs` and `modalHoldCueMs`, and DRAG-7.1, whose other level count is now a Given; the DRAG index; TC-5a's preamble; and the catalog's README.
+      - **For batch 14** (For the Architect): DRAG-6.14's and TC-5a.2's tests.
+    - **For the Architect,** once they're withdrawn: Story 10's list drops DRAG-1.31, and DRAG-6.4 if it goes.
+  - **Rerun #1's test.** `templateId: false` is a 500, not the 400 your ruling took for granted (run 3, Fix Now guard tests, item 5). Reopen it for one route test with no case ID? *Recommended: yes.* The ruling that it needs no case stands. The test guards against a crash.
+  - **DRAG-7.16's left edge on `modalPlacement.test.ts:27–32`** (run 3, Proposed Internal Mappings, item 1). No cursor can reach the left edge, and with the approval DRAG-7.16 is `Automated`. *Recommended: approve.*
+  - **DRAG-7.10 routed to Story 10.** Its two missing parts are the item from outside `P`, which the Free Card defect you deferred blocks, and "bounded by `P`'s box", which is DRAG-1.28's rule and already Story 10's (run 3, For sign-off). *Recommended: route it.* It's written into Story 10's entry, beside DRAG-7.13.
+  - **An audit rule** (the second audit's "The audit rules, after a second pass"): add "a copy that agrees and has one caller isn't" to the persona's rule for a structural Fix Now. Two of the three tags it re-tiered were that case (#17 and #29). *Recommended: yes.* It goes in the persona and `.claude/guides/audit-workflow.md`'s Tiers.
 - **For the Architect:**
   - **Root `CLAUDE.md`, "Running the App":** it could list the deep stack: `npm run seed:deep` and `npm run dev:deep` in `server/`, and `npm run dev:deep` in `client/`, for a database of 12-level trees on ports 3003 and 5175 (Amendments, Phase 2).
     - **Done 2026-10-27 (Architect).**
@@ -712,7 +877,11 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
       - **Why:** no caller sends both. `SetupWorkflowModal.tsx` sends one or the other, and no MCP tool sends either. Quietly taking one would hide a caller's mistake.
       - **Next:** batch 7 builds it. The PO writes it into §10, which settles TREE-10.11 (For the PO).
       - **Done 2026-10-28 (Coder, batch 7):** `POST /workflows` refuses a create that names both, a 400 that creates nothing (Amendments, 2026-10-28, batch 7).
-  - **Story 10's entry in the roadmap** lists DRAG-1 to DRAG-6 and not DRAG-7.13. Nathan deferred the Free Card that doesn't follow the cursor in a section, with its fix and DRAG-7.13's first-clause spec, to Story 10 (2026-10-28). The entry could name it, with DRAG-1.21 and DRAG-4.1, which go through the same path (For Nathan, from the test follow-ups).
+  - **Story 10's entry in the roadmap** lists DRAG-1 to DRAG-6 and not DRAG-7.13. *Done 2026-10-28 (Architect): its item 9, with DRAG-7.10 (For Nathan, from the second pass).* Nathan deferred the Free Card that doesn't follow the cursor in a section, with its fix and DRAG-7.13's first-clause spec, to Story 10 (2026-10-28). The entry could name it, with DRAG-1.21 and DRAG-4.1, which go through the same path (For Nathan, from the test follow-ups).
+  - **Batch 14's reach, from the Test Planner's pass** (For Nathan, from the second pass):
+    - DRAG-6.14 is deleted, and its test in `itemWriteReconciliation.test.ts` carries the ID. TC-5a.2's test there asserts the inversion log, which the case no longer names.
+    - `check:docs` flags every test that carries a deleted ID, so until batch 14 runs, batches 8 to 13's gates fail on them. Batch 14 removes tests only, so it can go first.
+    - *Answered 2026-10-28 (Nathan): batch 14 goes first. Written into batch 14 and the Order by the Test Planner, with the other tests the pass reaches.*
 - **For the Test Planner:**
   - **Phase 0's Planned passages are written** (Scope). They're ready for cases. The Open question "Whether a Card shows its whole hierarchy" is deleted, since §9 answers it.
     - **Done 2026-10-26 (Test Planner):** the cases are in Scope. Three edges the passages leave open are `Pending PO` (For the PO).
@@ -745,6 +914,15 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
   - **Project-tree §10 answers TREE-10.10 and TREE-10.11** (For the PO): TREE-10.10's rule is unmarked, and TREE-10.11's is `**Planned:**` until batch 7 builds it.
     - **Done 2026-10-28 (Test Planner):** TREE-10.10 is `Open`, with the PO's answer written in. TREE-10.11 is `Planned`, its passage's marker. Batch 7 has built it, so once the PO takes the marker off, it moves to `Open`, and its tests can carry its ID.
     - **For the PO:** project-tree §10's create naming both is still marked `**Planned:**`, though batch 7 built it (Amendments, 2026-10-28, batch 7).
+      - *Done 2026-10-28 (PO): marker off.* TREE-10.11 can move to `Open`.
+      - *Done 2026-10-28 (Test Planner):* TREE-10.11 is `Open` (Scope), for batch 8's stamp.
+  - **From the second pass** (The second pass's follow-ups, in batches):
+    - **DRAG-7.27's `L` = 2 instance,** `R1`'s "1 child" overflow row after the move: keep it, and batch 13 writes its spec, or drop the clause (run 3, For sign-off).
+      - **Done 2026-10-28 (Test Planner): dropped.** It's DRAG-7.1's cut-off at `R`'s new place. The case now says `R` has no overflow row at level 1, and `R1` and `R2` show below it, which run 3 reads OR:359 as asserting. Batch 13 writes no spec for it.
+    - **DRAG-7.17's Given** gives `R` many attached children "from either gap". From the gap above, `R`'s first child sits just under `R`, so no scroll is needed. The Reconciler suggests "the rows before the spot run longer than the modal" (run 3, concern 5).
+      - **Done 2026-10-28 (Test Planner):** taken. The Given is the rows before the ghost's spot running longer than the modal, with each gap's tree: `R`'s many children for the gap below, and many rows before `R`, such as a sibling's children, for the gap above. The title follows.
+    - **For the PO, a gap from the Reconciler's candidates** (run 3, Candidate New Cases, item 1): §9 says the level count is at least 1, not that it's read as a whole number (3.9 reads 3). The handoff lists it among Phase 2's behavior decisions.
+      - **Answered 2026-10-28 (Nathan):** not a rule. How the level count reads a typed value is the tuning panel's, and the panel is out of the wiki and the tests (For Nathan, from the second pass). §9's "at least 1" goes too, and the candidate closes.
   - **Board-drag-interaction §9's centering after a reload is unmarked** (Living-docs handoff, Planned passages now built, Fix Now batch 1): DRAG-7.25 is ready to move to `Open`.
     - **Done 2026-10-28 (Test Planner):** DRAG-7.25 is `Open` (Scope).
 
@@ -771,6 +949,7 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - The value is Nathan's pick (D1); 12 is what was built in until he makes it. The PO writes the picked number.
     - At the default sidebar width the deepest levels of a deep project tree draw no name: at 12 levels a name has about 26px. The sidebar's resize handle is the way to read them (D2), and its maximum was sized for a 10th-level name (Open questions, For Nathan).
 - **Planned passages now built:**
+  - **Batch 7:** project-tree §10's refusal of a create naming both a template and a workflow (TREE-10.11). *Added by the Architect: the batch built it, and the handoff didn't list it.*
   - **Fix Now batch 1:** board-drag-interaction §9's sentence that after a reload a modal a hold opened is centered, as one a click opens is (DRAG-7.25).
     - **Marker off (PO).**
   - **Phase 4:**
@@ -841,5 +1020,9 @@ The guide's §2 points at `config.mts` for the default split, so 1 and 2 need no
     - §9: markers off, and "at every level" deleted. New: `sectionLevels` is at least 1; a dragged `R` carries its overflow row; the overflow row is a control (DRAG-7.22); a click on a row in the modal opens nothing; the modal closes when its Card is gone or has no attached descendants; a reload leaves it open (DRAG-7.23), with the centering after a reload Planned. That marker came off once Fix Now batch 1 built it (DRAG-7.25).
     - Open questions: the hold's cue borrows the zoom-in's look; the overflow row's and the modal's placeholder looks; new, opening a Sheet from the modal.
   - **item-attachment:** §8, `CAP` is 12, with its grounding rewritten; §12, the levels bullet's marker off. Open questions: "`CAP`'s real value" deleted, and "Beyond the cap" reworded.
-  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder. §10, a workflow create's `templateId` and `sourceWorkflowId` named as references, `null` naming none, and, Planned until batch 7, a create naming both refused (For the PO).
+  - **project-tree:** §3, the project cap is 12, the sidebar's width doesn't limit it, and the example runs to `P11`. Open questions: "The project cap's real value" deleted, and the sidebar's width added as a working placeholder. §10, a workflow create's `templateId` and `sourceWorkflowId` named as references, `null` naming none, and, Planned until batch 7, a create naming both refused (For the PO). That marker came off once batch 7 built it.
+  - **Written 2026-10-28: the tuning panel out of the wiki** (Amendments, 2026-10-28). No section added, moved or removed, and no number changed.
+    - **board-drag-interaction:** §3.1's paragraph on the panel deleted, and the Open question on where it lives. "A tuning-panel value" becomes "tunable" in §1.1, §3, §4, §5, §6.1 and §9. `overlayFreeDescendantColor` is named in §4, and the hold's `modalHoldDwellMs` and `modalHoldCueMs` in §7.3. §9's "at least 1" deleted. §10: the inversion log, its check and "nothing goes to the console" deleted. New: a response that orders the item differently from its preview is shown as the server saved it.
+    - **item-positioning:** §5a's two mentions of the inversion log.
+    - **The wiki's `README.md`:** the "Tunable values" convention and the table's row name a value found by feel, not one set on the panel.
   - **Planning docs:** `mvp-roadmap.md`, `epic-3-5-roadmap.md` and `epic-8-decisions.md` no longer say "provisionally 6".

@@ -2,14 +2,14 @@
 
 **Next ID:** DRAG-7.31
 
-**Terms.** `L` is the number of levels a Card's section shows, a tuning-panel value. A row's *level* is its depth below Card `P`: `P`'s children are at level 1, so the section shows levels 1 to `L`, and an overflow row sits at the level of the children it stands for. *The tree* is `P`'s hierarchy, with `P` top-level, `L` at least 2, and `CAP` deep enough for every state a case names, unless a case says otherwise:
+**Terms.** `L` is `sectionLevels`, the tunable number of levels a Card's section shows. A row's *level* is its depth below Card `P`: `P`'s children are at level 1, so the section shows levels 1 to `L`, and an overflow row sits at the level of the children it stands for. *The tree* is `P`'s hierarchy, with `P` top-level, `L` at least 2, and `CAP` deep enough for every state a case names, unless a case says otherwise:
 - `A`, at level 1, heads a chain of attached Stubs, one per level, down to `Q`, at level `L − 1`. When `L` is 2, `Q` is `A`.
 - `Q` has two attached children at level `L`: `R`, then `T`.
 - `R` has attached children `R1`, then `R2`, at level `L + 1`, and `R1` has an attached child, `R1a`, at level `L + 2`. `R` also has a Free child, `F`.
 - `T` has no attached children, and one Free child, `G`.
 - `B`, at level 1, comes after `A`'s subtree, with no children.
 
-So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and the modal's are `A` … `Q`, `R`, `R1`, `R1a`, `R2`, `T` and `B`. Where a case drags `X`, it's an item with no children at `P`'s Descendants layer: a Free Card from elsewhere on the board, zoomed into `P` and on into its section ([DRAG-1.21](drag-1-contexts-and-popping.md)), or a Stub of `P`'s outside the tree, picked up in the section ([DRAG-5.9](drag-5-detach-and-overflow.md)). Placement at the layer is the same for both, so a case holds for either, unless it names one. *The modal hold* is the hold that opens the modal during a drag: a dwell, then a cue, each a tuning-panel value. Placement by gap and depth is [DRAG-4](drag-4-attach-and-stub-placement.md)'s; cases here assert what the overflow row and the modal add to it.
+So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and the modal's are `A` … `Q`, `R`, `R1`, `R1a`, `R2`, `T` and `B`. Where a case drags `X`, it's an item with no children at `P`'s Descendants layer: a Free Card from elsewhere on the board, zoomed into `P` and on into its section ([DRAG-1.21](drag-1-contexts-and-popping.md)), or a Stub of `P`'s outside the tree, picked up in the section ([DRAG-5.9](drag-5-detach-and-overflow.md)). Placement at the layer is the same for both, so a case holds for either, unless it names one. *The modal hold* is the hold that opens the modal during a drag: a dwell, `modalHoldDwellMs`, then a cue, `modalHoldCueMs`, each tunable. Placement by gap and depth is [DRAG-4](drag-4-attach-and-stub-placement.md)'s; cases here assert what the overflow row and the modal add to it.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -29,7 +29,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.14 | The modal hold resets when the ghost changes gap or level or the cursor leaves the section, not while the carried copy moves within the gap | P1 | Automated |
 | DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Open |
 | DRAG-7.16 | A modal kept inside the window at an edge reads the ghost afresh from the cursor | P1 | Open |
-| DRAG-7.17 | When the row's children run longer than the modal, its list scrolls to put the ghost's spot under the cursor | P2 | Automated |
+| DRAG-7.17 | When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor | P2 | Automated |
 | DRAG-7.18 | After leaving the modal, a hold beside an overflow row opens it again in the same drag | P2 | Automated |
 | DRAG-7.19 | After a drag ends in the modal, by a release or a cancel, the modal stays open where it is | P1 | Automated |
 | DRAG-7.20 | The modal hold feels deliberate, and the ghost doesn't jump as the modal opens | P2 | Manual |
@@ -42,7 +42,6 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.27 | A dragged row carries its overflow row, which is never a neighbor | P2 | Open |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Open |
-| DRAG-7.30 | A section shows at least one level | P2 | Automated |
 
 ---
 
@@ -50,7 +49,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9, wiki item-attachment §12
 
-*Given* the tree, *when* the board renders, *then* `P`'s section shows `A` … `Q`, `R`, an overflow row one level under `R`, at level `L + 1`, then `T` and `B`, each at its level. `R1`, `R2` and `R1a` aren't in the section: they're the modal's ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)). Every row above level `L` shows its attached children, so only a row at level `L` can have an overflow row. *Given* instead `P` is a detached child at depth `d` in the workflow, *then* the section shows the same rows, at depths `d + 1` to `d + L`: the levels count from the Card, not from the top of the tree. *When* `L` is raised by one in the tuning panel, *then* `R1` and `R2` show at the new last level, `R1` with an overflow row under it for `R1a`, and `R` has none.
+*Given* the tree, *when* the board renders, *then* `P`'s section shows `A` … `Q`, `R`, an overflow row one level under `R`, at level `L + 1`, then `T` and `B`, each at its level. `R1`, `R2` and `R1a` aren't in the section: they're the modal's ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)). Every row above level `L` shows its attached children, so only a row at level `L` can have an overflow row. *Given* instead `P` is a detached child at depth `d` in the workflow, *then* the section shows the same rows, at depths `d + 1` to `d + L`: the levels count from the Card, not from the top of the tree. *Given* instead `L` is one higher, *then* `R1` and `R2` show at the new last level, `R1` with an overflow row under it for `R1a`, and `R` has none.
 
 **Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`
 
@@ -201,11 +200,11 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 **Automation test:** —
 
-## DRAG-7.17 — When the row's children run longer than the modal, its list scrolls to put the ghost's spot under the cursor
+## DRAG-7.17 — When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor
 
 **Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
 
-*Given* `R` with more attached children than the modal can show at once, *when* the modal hold completes from either gap beside `R`'s overflow row, *then* the modal's list is scrolled so that the ghost's spot ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) sits under the cursor, and a release without moving the cursor commits it: `X` first, or last, among `R`'s attached children.
+*Given* a tree whose modal rows before the ghost's spot ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) run longer than the modal can show at once, *when* the modal hold completes beside `R`'s overflow row, *then* the modal's list is scrolled so that the spot sits under the cursor, and a release without moving the cursor commits it. From the gap below the overflow row, that's `R` with many attached children, and the release commits `X` last among them. From the gap above it, the spot is just under `R`, so it's many rows before `R`, such as a sibling of `R`'s before it with many attached children of its own, and the release commits `X` first among `R`'s attached children.
 
 **Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`
 
@@ -285,7 +284,7 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2
 
-*Given* the tree, *when* `R` is picked up in the section, *then* its overflow row travels with it, as `R`'s subtree does: it isn't one of the rows the ghost moves among, and while `R` is dragged the side highlight never names it. Every gap reads as though `R`'s overflow row weren't in the list: the gap after `Q` runs to `T`. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so its children show in the section, and `R1` has an overflow row reading "1 child" when `L` is 2.
+*Given* the tree, *when* `R` is picked up in the section, *then* its overflow row travels with it, as `R`'s subtree does: it isn't one of the rows the ghost moves among, and while `R` is dragged the side highlight never names it. Every gap reads as though `R`'s overflow row weren't in the list: the gap after `Q` runs to `T`. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
 
 **Automation test:** —
 
@@ -304,11 +303,3 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 *Given* the tree, with the ghost of `X` in a gap beside `R`'s overflow row, *when* the side highlight names the overflow row as the ghost's neighbor, *then* it's drawn on the overflow row, as it is on any row it names. A release commits what the gap and the depth say, never `X` as a child of the overflow row: from the gap between `R` and the overflow row, `R`'s first child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md)); from the gap below it at level `L + 1`, `R`'s last child ([DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** —
-
-## DRAG-7.30 — A section shows at least one level
-
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §3.1
-
-*Given* the tree, built with `L` at 2, so `A` is `Q`, with children `R` and `T`, *when* the section's level count is then set below 1 in the tuning panel, such as to 0, *then* `P`'s section shows one level: `A` and `B`, with an overflow row under `A` reading "2 children", for `R` and `T`. A section never shows `P` with no rows while `P` has attached children.
-
-**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`

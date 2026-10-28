@@ -6,7 +6,7 @@
 
 | Suite | What it covers |
 |---|---|
-| [DRAG-1 — Contexts, the layer stack, and popping](drag-1-contexts-and-popping.md) | Where a drag starts, the four layers and their three rules, placing by the ghost in a column, popping out and in, and the tuning panel |
+| [DRAG-1 — Contexts, the layer stack, and popping](drag-1-contexts-and-popping.md) | Where a drag starts, the four layers and their three rules, placing by the ghost in a column, and popping out and in |
 | [DRAG-2 — Target classification at drag start](drag-2-target-classification.md) | The three classification states, and the relationship and Depth-capped overlays |
 | [DRAG-3 — Board-layer drop bands, and the dragged card's shape](drag-3-card-column-bands.md) | What a release at Board layer commits in each band, how the bands are carved, done and empty regions, and shortCard and Stub-row copies |
 | [DRAG-4 — Card → Card attach (Card layer) and hierarchy placement (Descendants layer)](drag-4-attach-and-stub-placement.md) | Zooming into a Card, the auto-drop, and placement by gap and depth |
