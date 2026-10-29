@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–7 committed, Phase 4's hands-on done; Phase 8, from the story's code audit, built, for review; the audit's close-out is next
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–8 committed, the audit's close-out table filled in; Phase 9 built, for review; then sign-off
 
 ## Goal
 
@@ -313,6 +313,29 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 **After Phase 8:** the audit's close-out table is filled in from the code as it then stands (`audit-workflow.md` §9). That includes any finding rejected with its reason. The Story 10 route (#14) is already verified.
 
+**Phase 9: the drag's targets read the tree as the pending writes leave it** (Nathan, 2026-10-29, from Phase 7's Open question)
+- **The defect:** `classifyDragTargets` is handed the stored items at pickup (`useBoardDnd.ts:602`).
+  - **When it shows:** an ancestor's attach is still pending. The classifier then counts depths over the stored tree.
+  - **The effect:** at the cap's edge, the board offers a target as valid that the drawn tree puts one level past the cap. The server refuses the write, and the board resyncs (wiki board-drag-interaction §3.2, hierarchy-placement §6).
+  - **Phase 7's probe:** `A` previewed under `B`, `A`'s other child `Y`, cap 3. `Y` read `valid` over the stored tree and `depth-capped` over the drawn one.
+- **What the classifier reads: each item's parent once its pending write lands, not the parent as drawn.** The two differ for a detach.
+  - A pending detach is drawn with no parent (`renderedParentId`'s `null`), but a detach keeps its parent (ATT-7.1). Depth and cycles count that link (ATT-4.5).
+  - Handed the drawn parents, a Card whose child's detach is still pending could be offered that child as a target. That's a cycle, which the server refuses.
+  - So the parent is a placement's `parentId` when it names one, an attach or a reparent. Otherwise, with no parent opinion or a detach, it's the stored `parentId`.
+- **One mapping, built once at pickup, read by both:**
+  - **The helper:** the items with that parent, built by one helper beside `itemListOps.ts::renderedParentId`.
+  - **The two readers:** `handleDragStart` builds it once and hands it to `classifyDragTargets` and to `containingCardIdOf`, which drops its own `drawn` map.
+  - **Why the walk can take it:** it stops at the first ancestor drawn Free (`renderedIsStub`). A detach's kept parent sits only on an item drawn Free, so the walk never follows it. Phase 7's tests pin that, unchanged.
+- **The one other place the classifier reads Stub status:** `freeDescendantIds` uses the stored `isStub`. A pending attach or detach inside the dragged subtree can make it wrong.
+  - It only draws a cue (`DragSessionContext.ts`, `isFreeDescendant`).
+  - Fix it in the same change only if the classifier can read `renderedIsStub` without a second mapping. Otherwise record it in the amendment.
+- **Tests,** in `useBoardDnd.test.ts` beside Phase 7's case. Show the first two failing first.
+  - Phase 7's probe made permanent: `Y` reads `depth-capped`.
+  - A pending detach: the detaching child stays `cycle-forming` for its parent's drag, and keeps its depth.
+  - A Stub under a Card whose own detach is pending starts in that Card's layer.
+- **Size:** one helper, and the two calls at the pickup. Every drag's classification runs through it.
+- **Gate:** `npm run check` and `npm run test:e2e`. Then a stop for review and commit.
+
 ## Code map
 
 | Symbol | Carries |
@@ -329,6 +352,7 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 | `KanbanCard.tsx` | D3, D8, E1: the region on the Card's root, always, a childless Card included; forced open while locked; no attach ghost. |
 | `HierarchyModal.tsx` | D6, E2: the list names its Card for its parent. |
 | `dragOverlayGeometry.ts::overlayWidthFor` | D2: the Card's box less its inset on the board, the list's width in the modal. |
+| `itemListOps.ts::withPendingParents`, `dragClassification.ts::classifyDragTargets`'s `isStubOf` | Phase 9: the tree the pickup counts over, each item's parent once its pending write lands, built once in `handleDragStart`; the Stub test the Free-descendant cue reads, as drawn. |
 
 ## Amendments
 
@@ -501,8 +525,27 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **Deferred:** #14, to Story 10, already verified.
   - **A route that came out of the work:** `classifyDragTargets` reading the items as drawn (Open questions).
 
+**2026-10-29, Phase 9 (Coder)**
+1. **The helper.** `itemListOps.ts::withPendingParents(items, placements)` returns the items with the parent each will have once its pending write lands: a placement's `parentId` when it names one (an attach or a reparent), else the stored one. A detach keeps its stored parent, which `renderedParentId` would drop to `null`. It sits beside `renderedParentId`, and its comment says why the two differ.
+2. **Its two readers.** `handleDragStart` builds it once, as `tree`, and hands it to `classifyDragTargets` and to `containingCardIdOf`. `containingCardIdOf` now takes the item's id and the tree, and its own `drawn` map and the `start` copy are gone. It still stops at the first ancestor `renderedIsStub` calls Free, so it never follows a detach's kept parent.
+3. **`freeDescendantIds`: fixed in the same change, because the new mapping needed it.** `classifyDragTargets` takes an optional fourth argument, `isStubOf`, defaulting to the stored `isStub`, and the pickup hands it `renderedIsStub(item, placements)`. That is a call to the existing predicate, not a second mapping. It was more than a stale cue: with the new tree, an item attached into the dragged Card by a pending write would be a descendant stored as Free, and would get the green "these are yours" cue as a Stub inside the carried Card. A detaching child, drawn as its own Card but stored attached, had gone without the cue. Other callers pass three arguments, as before.
+4. **Tests, in `useBoardDnd.test.ts` beside Phase 7's.** The helper's six cases are in `itemListOps.test.ts`, and the `isStubOf` case in `dragClassification.test.ts`.
+   - **Failing on the unchanged code:** the probe made permanent (`Y` reads `depth-capped`, `A` stays `valid`); a pending attach into the dragged Card (`cycle-forming`, no cue); and a pending detach's child in the cue set for its parent's drag.
+   - **Passing on the unchanged code, pinning the choice:** the detaching child keeps its depth for another item's drag, and a Stub under a Card whose own detach is pending starts in that Card's layer. **The plan expected the first two tests to fail first.** The first of the pair can't, because the stored tree already keeps a detach's parent. The second can't either, since the walk checks the nearest ancestor first and stops at the detaching Card before its kept parent matters. Each is shown failing against a variant instead (mutation checks 1 and 5).
+5. **Mutation checks, each restored:**
+   - the helper reading the drawn parents, so a detach becomes `null`: fails the helper's detach case and both detach tests in the hook;
+   - the Free-descendant cue reading the stored attachment, in the classifier and again at the call: fails the unit case and the cue cases;
+   - the classification handed the stored items: fails the depth case and the attach-into-the-Card case;
+   - the walk handed the stored items: fails Phase 7's case and the depth case;
+   - the walk stopping at a stored Free ancestor: fails Phase 7's case and the detaching Card's.
+6. **For the Test Planner:** the new tests carry no case ID. They state a rule for a board with a write in flight: classification and the starting layer count over the tree its pending writes leave. DRAG-2.3 (the cap edge) and DRAG-2.4 (classified once at drag start) state the rule for a settled board and are the nearest.
+7. **For the PO:** wiki board-drag-interaction §4 doesn't say which tree the classification counts over. Nathan ruled it is the tree as pending writes leave it (a detach keeps its parent, wiki item-attachment §11). A line in §4 is the PO's to add if wanted.
+- **Size:** one helper, the optional argument, and the two calls at the pickup, as planned. `AGENTS.md` in `components/workflow/` gains a bullet for the tree a pickup counts over, and its `dragClassification.ts` line says "over the tree its pending writes leave".
+- **Checks:** `npm run check` passes (432 server, 603 client, 235 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 15 skipped, none failed.
+
 ## Open questions
 
+- **Answered (Nathan, 2026-10-29): yes, as Phase 9.** It reads the tree as the pending writes leave it, not as drawn, which differs for a detach (Phase 9). The question as asked:
 - **Should `classifyDragTargets` read the items as drawn, as Phase 7's #1 now does for the starting Card?** (Found checking #1.) A pending ancestor attachment shifts the depth of everything under it, and the classifier counts depths over the stored items, so a target can read `valid` where the board draws it one level past the cap. It shows only at the cap's edge, and the server refuses such a write, so the cost is a drop that resyncs. Fixing it means handing `classifyDragTargets` the same drawn items from `handleDragStart`. That is a second use of the one mapping, not a new walk, and it widens #1, so it waits for Nathan.
 
 - **For the Test Reconciler — two workflow-test claims from the full Codex audit:**
@@ -510,6 +553,7 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - `server/tests/routes/workflows.test.ts:519–536` promises that deleting an orphan workflow leaves every project's items untouched, but seeds no project or item and checks only the workflow's deletion. Assess the missing preservation check and route any test work.
   - These are targeted follow-ups from `docs/audits/code-quality-audit-epic-3-5-story-8-1.md`, not new requests about the skipped drag specs already routed to Story 10. The audit reports them as test-quality notes, outside its findings.
 
+- **Answered (2026-10-29): `slotHidden` stays, for the preview, and a set-down at the pickup slot in the modal writes nothing.** That's the wiki's rule (DRAG-7.31). Phase 6 built it, and Phase 7's #2 carried it into the session. Nathan and the PO made no other ruling. The question as asked:
 - **Should `slotHidden` still be carried across the modal opening?** (Finding 11.) `reseedProjection` keeps the seed's flag. Its old reason, that `own` was read from rows that place the Stub as the Card's last child, is gone: `own` comes from the pickup snapshot. The comment now says only what the flag records. What the flag still does there is a behavior, which this pass left alone: the modal draws every level, so a hidden pickup slot is drawn in it, and with the flag carried a Stub put back in that slot counts as a move and writes (to where it already is), where cleared it would be its own slot and write nothing. Read from the code, not tried in the browser. For the PO to rule on with the Phase 4 behavior decisions.
   - *Since then:* the Test Planner reads the wiki as already answering it: a set-down at the pickup slot in the modal writes nothing (DRAG-7.31). **Phase 6 built that (2026-10-29)**, with no other ruling in between. It stays open only if Nathan or the PO overrules the wiki; see the Phase 6 amendment.
 - **Answered (Nathan, 2026-10-29): `itemListOps.test.ts:307` is approved as an internal pointer for DRAG-7.2.**
@@ -527,7 +571,7 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **Reconciler:** compare the changed cases afresh, including the unskipped parts of DRAG-7.2 and DRAG-7.11. The story's report of remaining unit coverage isn't itself a mapping approval or proof of the revised cases. Restore Automated only when tests assert the whole current case.
 - **For the Reconciler, once Phase 5 lands:** Nathan approved `itemListOps.test.ts`'s DRAG-7.2 count test, "leaves the dragged item out of the count, and draws none when it was the only child", as an internal pointer for DRAG-7.2 (2026-10-29). Write it beside the case's surface tests. Restore `Automated` if together they assert the whole case.
 - **Reconciler → Test Planner** (the 2026-10-29 run's Candidate New Cases): an immediate new drag of an item just detached. `drag-5-stub-detach.spec.ts`'s "immediately after a detach, the same item drags and reorders normally as a Card" tests it, untagged. It may extend an existing pickup or reposition case rather than need its own.
-- **Behavior decisions made while building, for the PO to rule on:** filled in by the Coder, in Phase 4.
+- **Behavior decisions made while building, for the PO to rule on:** none beyond the PO's two deductions, §7.3's hold reach and §8's title and padding (Amendments, "the wiki"). Nathan let both stand on 2026-10-29.
 - **Passages superseded,** for the PO once Nathan approves. These are wiki board-drag-interaction's, by what each says now. *Written 2026-10-29 (PO), as listed; Amendments, "the wiki", has the deductions.*
   - **§1:** "A Card" as a context goes. A Card's Descendants context is reached from its column, bounded by the whole Card.
   - **§1.1:**
@@ -588,8 +632,9 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - `drag-5-stub-detach.spec.ts`: DRAG-5.1, DRAG-5.10 ("two pops detach the Stub"), DRAG-5.11, DRAG-1.14 ("cascades Descendants -> Card -> Column": the Stub now takes one hop, so the multi-hop cascade is no longer what it exercises, though the release still detaches), and DRAG-5.4 (its comments count two pops before the zoom). *Settled by the comment drift pass and Phase 5: the titles and comments say one pop, and the yank test is titled DRAG-1.14 only.*
   - `drag-7-hierarchy-modal.spec.ts`: DRAG-7.10 ("a second pop, out of the Card's box … two pops"). *Settled by the drift pass.*
   - `drag-card-zoom-in.spec.ts`'s two tests stay skipped for the reason they gave before this story: the target Card moves under the cursor as the ghost row draws. They now wait for `descendantsRegionKey`. Whether that reason still holds after the fold hasn't been tried.
-- **For the Architect, at close:**
-  - **Story 10's roadmap entry** names code this story deletes, in item 2: `placementFor`'s Card branch, `AttachGhostRow`, the `cardRegion` fixture and `useCardContextLayer`'s Card half. It also names `childRegionAt(…, null)`, which Phase 3b renames. Its items 1 and 4 name Card-layer cases too.
-  - **The roadmap's "Decisions of 2026-09-17"** keep "No two-layer pop out of Descendants", which this story reverses.
-  - **Story 8's carried-in items** that name the Card layer: the zoom-in morph's "popping into a Card", and the depth cue's.
+- **For the Architect, at close:** *done 2026-10-29*, except the last bullet, which waits for sign-off.
+  - **Story 10's roadmap entry** names code this story deletes, in item 2: `placementFor`'s Card branch, `AttachGhostRow`, the `cardRegion` fixture and `useCardContextLayer`'s Card half. It also names `childRegionAt(…, null)`, which Phase 3b renames. Its items 1 and 4 name Card-layer cases too. *Item 2 has a "Since Story 8.1" note mapping its four unit cases to today's tests. Items 1 and 4 drop the retired IDs, and item 1 notes the DRAG-1.17 spec's single pop.*
+  - **The roadmap's "Decisions of 2026-09-17"** keep "No two-layer pop out of Descendants", which this story reverses. *Marked reversed. The auto-drop decision notes that the seed carries both outcomes.*
+  - **Story 8's carried-in items** that name the Card layer: the zoom-in morph's "popping into a Card", and the depth cue's. *Both follow the fold. The morph also gains Phase 3's watch item, the zoomed-into Card that snaps to rest, and Story 8.3 gains Phase 7's DRAG-7.17 failure as one to watch for.*
+  - **At sign-off:** Story 8.1's roadmap heading gets its ✅ and a status line. This plan and its reports move to `docs/archive/`: the audit, the test reconciliation, the cleanup review and the drift review. The roadmap's links to them follow. The scope folder and the two `.log` files in `docs/audits/` are deleted.
 - **Implementation passages to place:** none expected.

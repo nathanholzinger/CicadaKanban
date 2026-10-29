@@ -5,7 +5,8 @@
 //
 // Computed once at drag start and never again for the gesture — the item
 // being carried doesn't change mid-drag, so neither does what any target is
-// to it. The region gate reads it to decide what's poppable
+// to it. Over the tree the writes still in flight leave, not the stored one
+// (see `classifyDragTargets`). The region gate reads it to decide what's poppable
 // (`isValidParent`), and it drives the `data-drop-state` attribute and the
 // overlays.
 //
@@ -55,7 +56,18 @@ export function isValidParent(classification: Pick<DragClassification, 'states'>
   return classification.states.get(id) === 'valid';
 }
 
-export function classifyDragTargets(activeId: string, items: readonly Item[], cap: number): DragClassification {
+// `items` is the tree the drag counts over: handed the parent each item will
+// have once the writes in flight land (`itemListOps.ts::withPendingParents`),
+// since a pending attach shifts the depth of everything under it, and one that
+// puts an item in the dragged subtree makes it a cycle. `isStubOf` is whether an
+// item is drawn as a Stub, which only the marker for Free descendants reads; it
+// defaults to the stored attachment, for a tree with nothing pending.
+export function classifyDragTargets(
+  activeId: string,
+  items: readonly Item[],
+  cap: number,
+  isStubOf: (item: Item) => boolean = isStub,
+): DragClassification {
   const active = items.find(i => i.id === activeId);
   const states = new Map<string, DropTargetState>();
   const freeDescendantIds = new Set<string>();
@@ -71,7 +83,7 @@ export function classifyDragTargets(activeId: string, items: readonly Item[], ca
       // descendant is never a "real target" for its ancestor — this wins
       // over depth-capped.
       states.set(item.id, 'cycle-forming');
-      if (item.id !== activeId && !isStub(item)) freeDescendantIds.add(item.id);
+      if (item.id !== activeId && !isStubOf(item)) freeDescendantIds.add(item.id);
       continue;
     }
     // A Stub is classified on exactly the same terms as a Card — full

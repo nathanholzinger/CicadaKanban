@@ -5,26 +5,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
-import type { BoardWithDetails } from '../../types';
+import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { makeItem } from '../../test/itemFixture';
 import { DEFAULT_DRAG_TUNING } from './dragTuning';
-import { NO_PLACEMENTS } from './itemListOps';
+import { NO_PLACEMENTS, type Placement, type Placements } from './itemListOps';
 import { useBoardDnd, type BoardDndDeps } from './useBoardDnd';
 
 vi.mock('../../api/items');
 
 // The board has no columns: the drag starts in no context, which is all the session needs.
-const board = { columns: [], itemDepthCap: 4 } as unknown as BoardWithDetails;
+const boardWithCap = (itemDepthCap: number): BoardWithDetails =>
+  ({ columns: [], itemDepthCap }) as unknown as BoardWithDetails;
+const board = boardWithCap(4);
 
 const columnDrop = {
   active: { id: 'a', data: { current: { type: 'column' } } },
   over: { id: 'b' },
 } as unknown as DragEndEvent;
-const itemPickup = {
-  active: { id: 'x', data: { current: {} } },
-  activatorEvent: { clientX: 5, clientY: 5 },
-} as unknown as DragStartEvent;
+const pickupOf = (id: string): DragStartEvent =>
+  ({ active: { id, data: { current: {} } }, activatorEvent: { clientX: 5, clientY: 5 } }) as unknown as DragStartEvent;
+const itemPickup = pickupOf('x');
 const itemRelease = { active: { id: 'x', data: { current: {} } }, over: null } as unknown as DragEndEvent;
 
 function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
@@ -77,6 +78,15 @@ describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
   });
 });
 
+// Picks `id` up on a board of `items` with `placements` still pending, and returns the session the
+// pickup began.
+function pickupSession(id: string, items: Item[], placements: Placements, cap = 4) {
+  const deps = { ...depsWith(async () => {}), board: boardWithCap(cap), items, placements };
+  const { result } = renderHook(() => useBoardDnd(deps));
+  act(() => result.current.handleDragStart(pickupOf(id)));
+  return result.current.session;
+}
+
 // A Stub's drag starts at its containing Card's layer, the nearest Free ancestor as the board draws
 // it: another item's attachment that has not landed yet moves the Stub's whole ancestry.
 describe('useBoardDnd: where a Stub’s drag starts', () => {
@@ -103,6 +113,64 @@ describe('useBoardDnd: where a Stub’s drag starts', () => {
     act(() => result.current.handleDragStart(itemPickup));
 
     expect(result.current.session?.containingCardId).toBe('b');
+  });
+
+  it('is a Card whose own detach is still pending, which is drawn Free', () => {
+    // P holds C, which holds X. C has been pulled out and the write is in flight, so the board draws C
+    // as a Card of its own, with X in it. P is behind C, which the detach keeps as C's parent.
+    const items = [makeItem('p'), makeItem('c', { parentId: 'p' }), makeItem('x', { parentId: 'c' })];
+    const placements = new Map<string, Placement>([['c', { parentId: null, slot: 'last' }]]);
+
+    expect(pickupSession('x', items, placements)?.containingCardId).toBe('c');
+  });
+});
+
+// The drag's targets are classified once at pickup (wiki board-drag-interaction §4), against the tree
+// as the writes still in flight leave it: depths and cycles count the parent each item will have.
+describe('useBoardDnd: what a drag’s targets are classified against', () => {
+  const pendingAttach = new Map<string, Placement>([['a', { parentId: 'b', slot: 'last' }]]);
+
+  it('counts depth through an ancestor whose attachment is still pending', () => {
+    // A is Free and holds X and Y. A has been dropped on B and the write is in flight, so the board
+    // draws B → A → Y. With a cap of 3, Y is one level too deep for X to go under, and A is not.
+    const items = [makeItem('b'), makeItem('a'), makeItem('x', { parentId: 'a' }), makeItem('y', { parentId: 'a' })];
+    const { states } = pickupSession('x', items, pendingAttach, 3)!.classification;
+
+    expect(states.get('y')).toBe('depth-capped');
+    expect(states.get('a')).toBe('valid');
+  });
+
+  it('classifies an item a pending attachment puts in the dragged Card as its descendant', () => {
+    // F is Free and has been dropped on P, the write in flight: F is drawn as one of P's Stubs, so it
+    // can't take P, and it is no Card of its own to mark.
+    const items = [makeItem('p'), makeItem('f')];
+    const placements = new Map<string, Placement>([['f', { parentId: 'p', slot: 'last' }]]);
+    const { states, freeDescendantIds } = pickupSession('p', items, placements)!.classification;
+
+    expect(states.get('f')).toBe('cycle-forming');
+    expect(freeDescendantIds.has('f')).toBe(false);
+  });
+
+  describe('a detach that is still pending, which keeps its parent', () => {
+    // P holds C, and C has been pulled out to Free with the write in flight. The board draws C with no
+    // parent, but a detach leaves C under P (wiki item-attachment §11), so the tree has it there.
+    const detaching = new Map<string, Placement>([['c', { parentId: null, slot: 'last' }]]);
+
+    it('is still a descendant of its parent, and now a Card of its own to mark', () => {
+      const items = [makeItem('p'), makeItem('c', { parentId: 'p' })];
+      const { states, freeDescendantIds } = pickupSession('p', items, detaching)!.classification;
+
+      expect(states.get('c')).toBe('cycle-forming');
+      expect(freeDescendantIds.has('c')).toBe(true);
+    });
+
+    it('still sits one level down, for the depth of what is put under it', () => {
+      // Z carries a Stub, so it needs two levels under a target: C at depth 2 leaves it one past the
+      // cap of 3, where C as a root would leave it exactly at the cap.
+      const items = [makeItem('p'), makeItem('c', { parentId: 'p' }), makeItem('z'), makeItem('zc', { parentId: 'z' })];
+
+      expect(pickupSession('z', items, detaching, 3)!.classification.states.get('c')).toBe('depth-capped');
+    });
   });
 });
 

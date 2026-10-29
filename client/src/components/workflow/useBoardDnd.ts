@@ -91,6 +91,7 @@ import {
   renderedIsStub,
   renderedParentId,
   renderedWorkphaseId,
+  withPendingParents,
   type Placement,
   type Placements,
 } from './itemListOps';
@@ -115,17 +116,17 @@ import { SHORT_CARD_METRICS } from '../cardMetrics';
 // nearest Free ancestor, whatever the Stub's own depth beneath it. Built on
 // `hierarchy.ts::findNearestAncestor` (cycle-safe) rather than a bespoke
 // parentId walk, so a corrupted parentId cycle in the data degrades the
-// same way it already does everywhere else in the hierarchy math. The walk
-// is over the items as the board draws them (`renderedParentId`,
-// `renderedIsStub`), the Stub's own link included: an ancestor whose
-// attachment is still in flight is already a Stub under its new parent, and
-// the Free ancestor it stopped being has no region to start in. `null` only
-// if every ancestor up to a dangling/missing parentId is itself a Stub,
-// which the depth cap makes unreachable in practice.
-function containingCardIdOf(item: Item, items: readonly Item[], placements: Placements): string | null {
-  const drawn = items.map(i => ({ ...i, parentId: renderedParentId(i, placements) }));
-  const start = { ...item, parentId: renderedParentId(item, placements) };
-  return findNearestAncestor(start, drawn, n => !renderedIsStub(n, placements))?.id ?? null;
+// same way it already does everywhere else in the hierarchy math. `tree` is
+// the pickup's items with the parents their pending writes leave
+// (`withPendingParents`), and Stub status is read as drawn (`renderedIsStub`):
+// an ancestor whose attachment is still in flight is already a Stub under its
+// new parent, and the Free ancestor it stopped being has no region to start
+// in. `null` only if every ancestor up to a dangling/missing parentId is
+// itself a Stub, which the depth cap makes unreachable in practice.
+function containingCardIdOf(itemId: string, tree: readonly Item[], placements: Placements): string | null {
+  const start = tree.find(i => i.id === itemId);
+  if (!start) return null;
+  return findNearestAncestor(start, tree, n => !renderedIsStub(n, placements))?.id ?? null;
 }
 
 export interface BoardDndDeps {
@@ -597,9 +598,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activeItem = { ...stored, workphaseId: renderedWorkphaseId(stored, placements) };
     const parentId = renderedParentId(stored, placements);
 
-    // The cap comes off the board response (never hard-coded client-side)
-    // so the server's constant governs both enforcement points.
-    const classification = classifyDragTargets(activeId, deps.items, board.itemDepthCap);
+    // Depths and cycles are counted over the tree as the writes still in
+    // flight leave it, not the stored one: an attach pending above this item
+    // shifts everything under it a level, and the server will judge any write
+    // against that tree. Built once here for the classification and the walk
+    // to a Stub's containing Card below. The cap comes off the board response
+    // (never hard-coded client-side) so the server's constant governs both
+    // enforcement points.
+    const tree = withPendingParents(deps.items, placements);
+    const classification = classifyDragTargets(activeId, tree, board.itemDepthCap, item =>
+      renderedIsStub(item, placements),
+    );
 
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
@@ -609,7 +618,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // is registered by `dragChrome.tsx::useItemRow` and read only off droppable
     // rows, where the collision filters rely on it.
     if (renderedIsStub(stored, placements)) {
-      const containingCardId = containingCardIdOf(stored, deps.items, placements);
+      const containingCardId = containingCardIdOf(activeId, tree, placements);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
       // A Stub's own stored `workphaseId` is a cache that goes stale the
       // moment its containing Card is moved through a client-observed write

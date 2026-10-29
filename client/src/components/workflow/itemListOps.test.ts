@@ -18,6 +18,7 @@ import {
   renderedIsStub,
   renderedParentId,
   renderedWorkphaseId,
+  withPendingParents,
   type Placement,
 } from './itemListOps';
 
@@ -52,6 +53,44 @@ describe('rendered reads (what a drag starts from)', () => {
   it('a pending detach (parentId: null): Free, under the workphase it detaches to', () => {
     const detaching = placements([['s', { parentId: null, workphaseId: 'w2', slot: 'last' }]]);
     expect([renderedIsStub(stub, detaching), renderedWorkphaseId(stub, detaching)]).toEqual([false, 'w2']);
+  });
+});
+
+// The tree the drag's depths and cycles are counted over: each item's parent once its pending write
+// has landed, which is not the parent it is drawn under for a detach.
+describe('withPendingParents', () => {
+  const parents = (items: ReturnType<typeof item>[], pending: Array<[string, Placement]>) =>
+    Object.fromEntries(withPendingParents(items, placements(pending)).map(i => [i.id, i.parentId]));
+
+  it('with no placement, the stored parents', () => {
+    expect(parents([item('a'), item('b', { parentId: 'a' })], [])).toEqual({ a: null, b: 'a' });
+  });
+
+  it('a pending attach: the new parent', () => {
+    expect(parents([item('a'), item('b')], [['b', { parentId: 'a', slot: 'last' }]])).toEqual({ a: null, b: 'a' });
+  });
+
+  it('a pending reparent: the new parent, not the stored one', () => {
+    const items = [item('a'), item('c'), item('b', { parentId: 'a' })];
+    expect(parents(items, [['b', { parentId: 'c', slot: 'last' }]])).toEqual({ a: null, c: null, b: 'c' });
+  });
+
+  it('a pending detach: the stored parent, which a detach keeps', () => {
+    const items = [item('a'), item('b', { parentId: 'a' })];
+    expect(parents(items, [['b', { parentId: null, slot: 'last' }]])).toEqual({ a: null, b: 'a' });
+  });
+
+  it('a placement with no opinion about the parent: the stored parent', () => {
+    const items = [item('a'), item('b', { parentId: 'a' })];
+    expect(parents(items, [['b', { workphaseId: 'w2', slot: 'last' }]])).toEqual({ a: null, b: 'a' });
+  });
+
+  it('changes the parent and nothing else, and leaves the stored items as they were', () => {
+    const items = [item('a'), item('b', { workphaseId: 'w1' })];
+    const [, moved] = withPendingParents(items, placements([['b', { parentId: 'a', slot: 'last' }]]));
+
+    expect(moved).toEqual({ ...items[1], parentId: 'a' });
+    expect(items[1].parentId).toBeNull();
   });
 });
 

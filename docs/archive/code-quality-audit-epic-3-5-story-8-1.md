@@ -270,16 +270,16 @@ Required findings remain open until their dispositions are verified against the 
 
 | Finding | Disposition | Evidence / destination |
 |---|---|---|
-| 1 | Open — Fix Now | Placement-aware containing ancestry required |
-| 2 | Open — Fix Now | Publish changed own-slot release state to the session |
-| 3 | Open — Fix Now | Validate workflow owner reference shape before DB binding |
-| 4 | Open — Fix Now | Preserve literal context in scope comparison |
-| 5 | Open — Fix Now | Correct unregistered-space release claim |
-| 6 | Open — Fix Now | Correct containment/clamp branch description |
-| 7 | Open — Fix Now | Correct foreign-hover/drop description |
-| 8 | Open — Fix Now | Correct Playwright event-mechanism claim |
-| 9 | Open — Fix Now | Correct overflow fixture title |
-| 10 | Open — Fix Now | Correct workflow creation response type |
+| 1 | Fixed — Fix Now | Placement-aware containing ancestry required |
+| 2 | Fixed — Fix Now | Publish changed own-slot release state to the session |
+| 3 | Fixed — Fix Now | Validate workflow owner reference shape before DB binding |
+| 4 | Fixed — Fix Now | Preserve literal context in scope comparison |
+| 5 | Fixed — Fix Now | Correct unregistered-space release claim |
+| 6 | Fixed — Fix Now | Correct containment/clamp branch description |
+| 7 | Fixed — Fix Now | Correct foreign-hover/drop description |
+| 8 | Fixed — Fix Now | Correct Playwright event-mechanism claim |
+| 9 | Fixed — Fix Now | Correct overflow fixture title |
+| 10 | Fixed — Fix Now | Correct workflow creation response type |
 | 14 | Deferred — existing destination verified | Epic 3.5 roadmap, Story 10 item 7 names both helper consolidation and reconciliation split |
 
 Optional findings #11–#13 and #15 require no close-out row. The two new Reconciler questions are recorded in the current plan, so their routing does not depend on a future reader finding this report.

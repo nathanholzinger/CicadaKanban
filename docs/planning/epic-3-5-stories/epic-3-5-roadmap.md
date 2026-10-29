@@ -527,6 +527,68 @@ story-done checklist:
   its stories, by the checklist. Any case still without a test is routed
   to Story 10 by ID then.
 
+**Carried from Story 8.1 to Story 8's close-out — Test Planner and Test Reconciler.**
+These follow-ups remain here after the 8.1 plan is archived. They are
+queued for the umbrella close-out, not additional reconciliation work
+required before 8.1 signs off. The interim report predates Phase 5's
+test additions/stamps and Phase 6's hidden-slot fix; re-check the current
+tests rather than carrying its coverage verdicts forward unchanged.
+
+**Test Planner:**
+- **Pending-ancestor pickup:** the untagged test in
+  `client/src/components/workflow/useBoardDnd.test.ts` covers pickup while
+  an ancestor's attachment is still pending, using the containing Card as
+  drawn. Decide whether to extend DRAG-1.1 or DRAG-6.13, or add a case.
+  Neither case explicitly covers an ancestor's pending attachment today;
+  do not assign an ID merely because the scenarios are related.
+- **Malformed workflow owner reference:** two untagged tests in
+  `server/tests/routes/workflows.test.ts` cover non-string `projectId`
+  values on `POST /workflows`: shape refusal with nothing created, and
+  shape refusal before the already-owned-project check. The catalog has
+  no case for a malformed owner reference. Derive coverage from wiki
+  row-references §1 and the workflow-owner rules, then hand any required
+  ID stamps to the Coder.
+- **Pickup immediately after detaching:** the untagged
+  `tests/ui/drag-5-stub-detach.spec.ts` test, "immediately after a detach,
+  the same item drags and reorders normally as a Card", is the interim
+  Reconciler's candidate case. Decide whether it extends an existing
+  pickup/reposition case or needs its own case, then hand off the stamp.
+
+**Test Reconciler:**
+- **DRAG-7.2's approved mapping:** Nathan approved
+  `client/src/components/workflow/itemListOps.test.ts`'s test, "leaves the
+  dragged item out of the count, and draws none when it was the only
+  child", as an internal pointer. Phase 5 stamped it. Write the pointer
+  alongside the surface tests; restore `Automated` only if they jointly
+  assert the whole case. This approval does not extend to other display
+  tests.
+- **DRAG-7.31's category:** Phase 6 added
+  `client/src/components/workflow/descendantsProjection.test.ts`'s
+  "DRAG-7.31: set down at its own slot in the modal, after coming in with
+  the slot hidden, a release writes nothing" and fixed the behavior.
+  Assess whether its projection/release assertions fall within a standing
+  approved internal category. DRAG-4.29's existing pointer is a comparison,
+  not automatic approval of this mapping. If outside the categories,
+  propose the mapping for Nathan's approval. Its whole surface path is
+  still Story 10's.
+- **The auditor's two workflow-test questions:** in
+  `server/tests/routes/workflows.test.ts`, the ordered-workphases test
+  (audit location `:49–73`) seeds only one workphase and checks its count;
+  the orphan-workflow deletion test (`:519–536`) claims preservation of
+  every project's items but seeds no project or item and checks only the
+  deletion. Assess what each actually proves, identify any missing
+  assertions, and route the test work. These are targeted test-quality
+  questions, not skipped-DnD findings; the audit locations may move.
+- **Re-check Phase 5's coverage:** its added request/clock tests and ID
+  stamps may change the interim verdicts for DRAG-1.14, DRAG-1.28,
+  DRAG-1.35, DRAG-3.22, DRAG-4.1, DRAG-4.12, DRAG-4.30, DRAG-4.34,
+  DRAG-5.1, DRAG-5.4, DRAG-5.13, DRAG-7.2, DRAG-7.11 and DRAG-7.14.
+  Check their full cases and approval requirements; a stamped partial test
+  alone does not make a case `Automated`. The separate mapping proposals
+  for DRAG-1.28, DRAG-3.22 and DRAG-4.12 remain unapproved and wait for
+  Story 10. Route any remaining gesture-dependent coverage to Story 10
+  by ID at close-out, under its existing catch-up scope.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer
@@ -633,6 +695,14 @@ reproduction is in Story 7's plan, Open questions, "For Nathan, from batch
 one-step move would carry DRAG-7.15, and waits under "No new drag tests"
 (How Story 8 runs).
 
+**A failure to watch for alongside it** (Story 8.1, Phase 7, 2026-10-29).
+`drag-7-modal-hold.spec.ts`'s DRAG-7.17 test failed once in a full E2E
+run: from the gap above `R`'s overflow row, a list that scrolls puts the
+ghost's spot under the cursor. It didn't reproduce in 30 runs of the spec
+alone, five of its file, or a second full run. It reads the same modal
+placement as this story's defect, and Phase 7 changed when a modal reading
+reaches the session. If it fails again, trace it with this story's.
+
 ---
 
 ### Story 8.4 — A cue when the board stops a drag
@@ -701,7 +771,7 @@ board-drag-interaction's Open questions.
 - **The depth cue at the Descendants layer deserves a tuning pass**
   (carried in from Story 6's hands-on, 2026-09-24). Story 6 ships a simple
   stand-in (the Phase D hands-on, 2026-09-24): the carried Stub stays
-  pinned to the section's width, and its visible box steps right by one
+  pinned to a section row's width, and its visible box steps right by one
   indent per level, so it shows the depth it will land at. It was built to
   test placement against, not as the final look. To tune:
   - **Travel per level.** 12 px is both the visual indent and the pointer
@@ -749,6 +819,15 @@ into a Card lands in its Descendants layer, so the morph ends there.
   construction if the target's own position never has to move out from
   under the cursor mid-cue — worth checking against this specific case
   once the morph's built, not just against the happy path.
+  *Since Story 8.1:* the zoom lands straight in the Card's section, and
+  the ghost is a row of the section's shuffle (the attach-preview row is
+  gone). The item's row still leaves the column list at the zoom.
+- **The zoomed-into Card snaps to rest** (Story 8.1, Phase 3). While a Card
+  holds the drag, its sortable transition is off (`KanbanCard.tsx`,
+  `lockedHere`), so its section's rows mount, and are measured, where the
+  Card rests. It used to slide back over about 200 ms, with a colour fade.
+  If the snap reads badly hands-on, the slide needs another way to be kept
+  that still leaves the rows measured at rest.
 - **Things jump at a layer change, and then the triggers disagree** (PO,
   2026-09-24).
   - **What moves.** Switching context (popping in or out, zooming into a
@@ -869,9 +948,13 @@ deferral and keep landing with their stories.
        sample has no region for" block, and `drag-5-stub-detach.spec.ts`'s
        DRAG-5.1/DRAG-5.10 test, for its two back-to-back pops. The spec
        waits for the column after two pops' time, but never observes the
-       Card layer between them.
+       Card layer between them. *Since Story 8.1,* the Stub takes one pop
+       to the column, so the spec shows no back-to-back pops, and only the
+       `popSession.test.ts` block is left a candidate.
      - **DRAG-1.21, the zoom-in half only:** `popSession.test.ts`'s "locked
-       Card: zoom-in into its own Descendants section" block.
+       Card: zoom-in into its own Descendants section" block. *Retired by
+       Story 8.1,* with the block: a zoom from the column now lands in the
+       section (DRAG-1.35, item 10).
      - **DRAG-4.15 and 4.20:** `drag-card-zoom-in.spec.ts`'s header names
        them, but both its tests are skipped, so they cover nothing yet.
        They aren't among item 3's six skips.
@@ -902,7 +985,10 @@ deferral and keep landing with their stories.
      re-check the same day), so they leave the list above: DRAG-1.14, 2.9,
      3.5 and 6.6, whose internal tests he approved, and DRAG-4.12, 6.2 and
      6.11, whose passing client tests needed only their IDs. That leaves
-     59 of the 66 board-drag-interaction cases here. A6 also
+     59 of the 66 board-drag-interaction cases here. *Since Story 8.1*
+     (its test-plan pass, 2026-10-29): DRAG-1.21, 4.14, 4.16 and 5.11 are
+     retired with the Card layer, which leaves 55. The cases the fold
+     revised are item 10's too. A6 also
      puts IDs on the request-level tests of DRAG-1.24, 3.11, 3.23, 3.24,
      6.7 and 6.9, which stay here for their on-screen halves.
    - **Drag tests A6's run found short, left for this story** (Nathan,
@@ -912,7 +998,9 @@ deferral and keep landing with their stories.
      `docs/archive/test-reconciliation-a6-project-tree.md`, give each:
      - DRAG-5.13's row order at the Card layer, DRAG-5.1 landing after
        `Q`, and DRAG-3.11's ghost resting last before a bottom-band
-       release (Proposed Stamps, item 7);
+       release (Proposed Stamps, item 7). *Since Story 8.1,* DRAG-5.13's
+       pop goes straight to the column, and its pop-out test is among item
+       10's skips;
      - `watchWrites` in place of unchanged-field checks, DRAG-5.2's merged
        column, and DRAG-1.12's missing neighbor (Other concerns, 15–17);
      - the sidebar's TREE-1.8 and 1.9 tests pinning the line's side, not
@@ -958,6 +1046,22 @@ deferral and keep landing with their stories.
      the detached-child re-attach from audit #1); the client's
      `isIdentity`/`toRequest` half is unit-covered in
      `dragRequest.test.ts`.
+   - *Since Story 8.1:* the Card layer is gone, with `placementFor`'s Card
+     branch, `useCardContextLayer`, `AttachGhostRow`, the `cardRegion`
+     fixture and `childRegionAt` (now `dragRegions.ts::cardListAt`). The
+     unit half's four cases now read:
+     - a column-locked hold on a valid Card zooms into its Descendants
+       layer (`popSession.test.ts`'s zoom-in candidate cases);
+     - a Board-layer point over a Card finds the column, not the Card
+       (`dragRegions.test.ts`'s `cardListAt` case);
+     - leaving the Card's box pops to its column (`popSession.test.ts`,
+       DRAG-5.1 and DRAG-5.13);
+     - an item from outside previews as the Card's last child
+       (`placement.test.ts`, DRAG-5.4), and the projection seeds it there
+       (`descendantsProjection.test.ts`, DRAG-4.30).
+
+     Check them against those tests before writing any. What's left is the
+     E2E half, DRAG-4.1 and 4.17, which item 10 lists too.
 
 3. **The six existing `test.skip`s** — `item-repositioning-cross-column-dnd.spec.ts`
    1.a/2.a and `item-repositioning-cross-project-dnd.spec.ts`
@@ -987,7 +1091,9 @@ deferral and keep landing with their stories.
    E2E anyway is item 8's call. The parts those tests don't cover were split
    out as DRAG-4.32 (the over-cap cue, from 4.18) and DRAG-4.33 (the states
    below a nested last item, from 4.11), and are routed here with DRAG-1.21,
-   4.13 and 5.9. `dragGesture.ts` gains a `tabBy(n)` that moves the
+   4.13 and 5.9. *Since Story 8.1,* DRAG-1.21 is retired: a hold on the
+   Card from its column lands in the section, which is DRAG-1.35's, in
+   item 10. `dragGesture.ts` gains a `tabBy(n)` that moves the
    pointer horizontally by `n × INDENT`. Story 6 ships the
    `data-drag-projection` hook these assert against. Also Story 6 Phase C's
    carried Stub: the overlay's `data-drag-overlay-form` is `stub` once
@@ -1131,6 +1237,10 @@ rules live in `wiki/board-drag-interaction/`.
   **first** child of that item. And the auto-drop for the Card's *own*
   Stub is "set back down, nothing written," distinguished by where the
   drag started rather than by anything about the release.
+  *Since Story 8.1:* there's no Card layer to auto-place. The zoom into
+  the Card seeds both outcomes: an item from outside at the last gap, as
+  the last child, and the Card's own Stub at its own slot, where a release
+  writes nothing.
 
 - **No two-layer pop out of Descendants.** The design doc floated a
   special rule letting Descendants pop straight to the column — possibly
@@ -1140,6 +1250,9 @@ rules live in `wiki/board-drag-interaction/`.
   distance term of the pop-out clock is expected to make a decisive yank
   fire both pops back to back without a special case. The Card-layer
   stop stays a real, if brief, state with a defined release meaning.
+  *Reversed by Story 8.1* (Nathan, 2026-10-26 and 2026-10-28): the Card
+  layer is gone, so a pop out of Descendants lands in the column. That's
+  still one layer, with none left between them.
 
 - **Overflow (§9) demoted to an open question.** Story 7 will choose
   between the placeholder/modal and a hard display-depth restriction;

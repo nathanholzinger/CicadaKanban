@@ -65,6 +65,13 @@ describe('classifyDragTargets — Card drag', () => {
     expect(freeDescendantIds).toEqual(new Set(['D', 'D2']));
   });
 
+  it('marks the descendants that are Free by the Stub test it is handed, not by their stored attachment', () => {
+    // S is stored attached and D stored detached, but the board draws S as a Card and D as a Stub.
+    const items = [item('X'), item('S', 'X'), item('D', 'X', false)];
+    const drawnAsStub = (i: Item) => i.id === 'D';
+    expect(classifyDragTargets('X', items, CAP, drawnAsStub).freeDescendantIds).toEqual(new Set(['S']));
+  });
+
   it.each([4, 6, 8])('DRAG-2.3: depth-caps a target one level too deep, parameterized on cap = %i', cap => {
     // T_ok at depth cap - 1 with a leaf mover: exactly cap. T_over sits under it.
     const targets = chain('T', cap); // T1..T{cap}: T{cap-1} is T_ok, T{cap} is T_over

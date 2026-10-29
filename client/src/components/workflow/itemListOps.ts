@@ -100,6 +100,23 @@ export function renderedParentId(item: Item, placements: Placements): string | n
   return placement && hasParentOpinion(placement) ? (placement.parentId ?? null) : item.parentId;
 }
 
+// The items with the parent each will have once its pending write lands: a
+// placement's `parentId` when it names one (an attach or a reparent), else the
+// stored one. Not `renderedParentId`: a pending detach is drawn with no parent,
+// but a detach keeps its parent (wiki item-attachment §11), so the item still
+// sits under it when the write lands: the depth rule counts it there
+// (wiki item-attachment §8), and the server refuses a cycle through it.
+// The drag's pickup builds this once; `classifyDragTargets` counts over it, and
+// the walk to a Stub's containing Card (`useBoardDnd.ts`) reads the ancestry
+// from it. That walk stops at the first ancestor drawn Free, and a detach's
+// kept parent sits only on such an item, so the walk never follows it.
+export function withPendingParents(items: readonly Item[], placements: Placements): Item[] {
+  return items.map(item => {
+    const pendingParentId = placements.get(item.id)?.parentId;
+    return pendingParentId ? { ...item, parentId: pendingParentId } : item;
+  });
+}
+
 // Whether the item renders as a Stub — nested inside a parent Card — under
 // its current placement. Also read by `itemWriteReconciliation.ts::freeItemOrder`.
 // A placement carrying a `parentId` opinion always

@@ -143,7 +143,7 @@ The drag gesture's pure, unit-tested modules:
   drop lands beside.
 - `dragRequest.ts` — turning a placement into the API request, and sending it.
 - `dragClassification.ts` — classifying every item against the carried one, once per
-  drag start.
+  drag start, over the tree its pending writes leave.
 - `descendantsProjection.ts` — the Descendants layer's live gap and depth, placed
   against the whole section whatever levels it draws, and the overflow row the ghost is
   beside.
@@ -225,6 +225,11 @@ active-context outline, the drop line's shape).
   Never re-derive it by filtering for cycle-forming states.
 - **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
   gate and the over-cap cue both read it, so they can't disagree.
+- **The tree a pickup counts over:** `itemListOps.ts::withPendingParents`, each item's
+  parent once its pending write lands. A placement's `parentId` when it names one, else
+  the stored one, so a pending detach keeps its parent (not `renderedParentId`'s `null`).
+  `handleDragStart` builds it once, for `classifyDragTargets` and the walk to a Stub's
+  containing Card. Never hand either the stored `items`.
 - **A Card's descendants as rows:** `itemListOps.ts::hierarchyRows`, the one walk. The
   projection drops the dragged subtree from the same list rather than walking again.
 - **Where the hierarchy modal opens during a drag:** `modalPlacement.ts`
