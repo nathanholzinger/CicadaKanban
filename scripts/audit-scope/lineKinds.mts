@@ -76,6 +76,37 @@ function importLines(fileName: string, text: string): Set<number> {
 }
 
 /**
+ * The lines (numbered from 1) of a script that are the text of a template literal: each line a
+ * piece of one reaches after the line it starts on, and the line a piece that continues a
+ * substitution starts on, when the template opened on an earlier line. Read from the whole file,
+ * since a line of it alone can't say: it carries no backtick, and its words read as code. Such a
+ * line is the literal's value, down to its spaces.
+ */
+export function templateLines(fileName: string, text: string): Set<number> {
+  const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+  const lineOf = (pos: number): number => sourceFile.getLineAndCharacterOfPosition(pos).line;
+  const found = new Set<number>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isTemplateHead(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+      addLines(found, lineOf(node.getStart(sourceFile)) + 1, lineOf(node.getEnd() - 1));
+    } else if (ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
+      // A piece's parent is its span, and the span's is the whole template.
+      const opened = lineOf(node.parent.parent.getStart(sourceFile));
+      const first = lineOf(node.getStart(sourceFile));
+      addLines(found, first > opened ? first : first + 1, lineOf(node.getEnd() - 1));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
+/** Adds the lines from `from` to `to`, both counted from 0, as numbers counted from 1. */
+function addLines(into: Set<number>, from: number, to: number): void {
+  for (let line = from; line <= to; line++) into.add(line + 1);
+}
+
+/**
  * The kind of each line, the first line at index 0. A line that holds a test title is a title
  * line, whatever else is on it. A Markdown file is prose throughout, and any other file that
  * isn't script is code.
@@ -98,18 +129,22 @@ export function lineKinds(fileName: string, text: string): LineKind[] {
 /**
  * The file's code: its lines with comments and test titles blanked, whitespace collapsed, and
  * import declarations, empty lines and the lines numbered in `skip` dropped. Two versions of a
- * file that differ only in their comments, test titles and imports strip to the same lines.
+ * file that differ only in their comments, test titles and imports strip to the same lines. The
+ * text of a template literal that spans lines is its value, so those lines stay as they are,
+ * spaces and blank lines included (a test title is still a title).
  */
 export function strippedCode(fileName: string, text: string, skip: ReadonlySet<number> = new Set()): string[] {
   const { lines, comments, titles } = cover(fileName, text);
   const imports = importLines(fileName, text);
+  const templates = isScriptFile(fileName) ? templateLines(fileName, text) : new Set<number>();
   return lines
-    .map((line, i) =>
-      imports.has(i) || skip.has(i + 1)
-        ? ''
-        : blankOut(line, [...comments[i], ...titles[i]])
-            .replace(/\s+/g, ' ')
-            .trim(),
-    )
+    .map((line, i) => {
+      if (imports.has(i) || skip.has(i + 1)) return '';
+      // Quoted, so a blank line of a template is a line of its own, not one the filter below drops.
+      if (templates.has(i + 1) && titles[i].length === 0) return JSON.stringify(line);
+      return blankOut(line, [...comments[i], ...titles[i]])
+        .replace(/\s+/g, ' ')
+        .trim();
+    })
     .filter(line => line !== '');
 }

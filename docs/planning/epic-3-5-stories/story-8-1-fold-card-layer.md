@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–6 committed, Phase 4's hands-on done; Phase 7, from the story's code audit, built, for review; Phase 8 next
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–7 committed, Phase 4's hands-on done; Phase 8, from the story's code audit, built, for review; the audit's close-out is next
 
 ## Goal
 
@@ -476,6 +476,30 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Not tried in the browser:** #1's state (a drag begun before the Card's attachment lands) and #2's modal gesture. The unit tests cover the pickup and the comparator; the E2E suite does not reach either.
 - **Checks:** `npm run check` passes (430 server, 591 client, 218 script tests; `check:docs` 386 files, 0 hits).
   - **`npm run test:e2e`:** the first run had one failure, `DRAG-7.17: from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too` (222 expected passing; 221 passed, 1 failed, 15 skipped). It does not reproduce: that spec passed 30 of 30 repeats alone, the whole `drag-7-modal-hold.spec.ts` file passed 5 repeats (95 passed, 10 skipped), and a second full run passed 222, skipped 15, failed 0. I cannot say what it was. It touches the modal's reading, which item 2 affects, so it is worth a second look if it shows again.
+
+**2026-10-29, Phase 8: the workflow route and the scope script (Coder)**
+- **All of #3, #4, #10 and the #12 ride-along landed.** None was rejected: each held against the code. No drag code changed.
+1. **#3, a malformed `projectId` on `POST /workflows`.**
+   - **Test first:** two cases in `workflows.test.ts`. One sends `true`, `false`, `7`, `0`, `{}`, `[]` and `[project.id]` as the `projectId` and expects a 400 naming it, with nothing created; the other sends `[owner.id]` for a project that already has a workflow and expects the shape refusal, not the ownership one. **Shown failing on the unchanged route:** `true` gave a 500, and the array got as far as the ownership check (409), which also shows it passes the existence check.
+   - **The fix:** `typeof projectId !== 'string'` is a 400, `projectId must be a string`, between the required check and the existence check. The order is the one the plan keeps: required, shape, exists, not already owned. `false` and `0` are caught by the required check first, with the same 400.
+   - **No case ID.** TREE-10.8 to 10.11 cover a template and a source workflow, and the catalog has no case for a malformed owner reference, so the tests are untagged. For the Test Planner.
+2. **#10, the client's `createWorkflow` promised `items`.** `types.ts` has `CreatedWorkflow` (a `Workflow` and its `workphases`), and `createWorkflow` returns it. `WorkflowWithDetails` stays the GET's. `App.tsx`'s caller keeps the result in a `Workflow[]`, which it still fits.
+3. **#12, one read of a workflow's workphases in order.** `workphaseOrder.ts::workphasesInOrder(workflowId, client = db)` takes `db` or a transaction, typed `Tx | typeof db` as `columnRanges.ts` already did, so the typing came easily. `getOrderedWorkphases` builds on it, and the five sites call it: `routes/workflows.ts` twice (the source workflow's copy and the created list, both in the transaction), `routes/workphases.ts`, and `columnRanges.ts` twice. The template branch of `startingWorkphases` reads another table and stays. Three files beyond #3's, as the plan said (`workphaseOrder.ts`, `workphases.ts`, `columnRanges.ts`). It is a refactor, so it was not shown failing: the route and lib tests, which pass unchanged, are the pin.
+4. **#4, the scope script drops a change inside a multiline template.**
+   - **Tests first, through `testRepo.mts`:** a real repository with the audit's two versions and the real `scanRange` (`scan.test.mts`), and unit cases in `diff.test.mts` beside the single-line literal ones. **Shown failing on the unchanged script:** four unit cases and the end-to-end case.
+   - **The fix:** `lineKinds.mts::templateLines` reads the lines that are a template's text from the TypeScript parse of the whole old and new file (the parse `importLines` already uses, so JSX is right). `removalSites` then treats a hunk that removes a line inside a template, blank or not, or adds one while removing, as never formatting-only, and keeps the site. It reads each side lazily, only when a hunk reaches that decision. A hunk that only adds keeps its old behavior, so moved code that carries a template doesn't start producing sites.
+   - **The rule for a template's lines:** the lines it reaches after the one it opens on, and the line a continuation of a substitution starts on when the template opened on an earlier line. The opening line is read with its backtick in the fragment, so a change before the backtick is still only formatting.
+   - **One step beyond the plan's wording, found by the end-to-end test.** With the site kept, the file reached the drift pass alone (`reading: drift`), not every pass: `classify.mts::readingOf` compares both versions through `strippedCode`, which collapses whitespace on every line, so `a b` and `a  b` stripped to the same code. A changed runtime value must reach the correctness pass, so `strippedCode` now keeps a template's lines verbatim, blank lines included (a test title is still a title). `strippedCode` has no other caller.
+   - **Mutation checks, each restored:** blank lines not checked against the template, formatting winning inside a template, `strippedCode` collapsing template lines again, a continuation's start line not counted, and a same-line continuation counted. Each fails exactly the cases written for it.
+   - **A throwaway probe through `scanRange`, deleted:** a space or an indent added to a template line, and a blank line removed, now each reach the scan with `reading: all`. A blank line *added* inside a template already reached it, as a changed line from blame, so that case needed nothing.
+   - **Size:** the scope script only, `diff.mts` and `lineKinds.mts` and their tests. No app code.
+- **For the Test Planner:** the two `workflows.test.ts` cases for a `projectId` that isn't a string carry no case ID (item 1).
+- **Checks:** `npm run check` passes (432 server, 591 client, 235 script tests; `check:docs` 386 files, 0 hits). Prettier moved two test files' layout on its first run and nothing else. No E2E run: no drag code changed, as the plan says.
+- **The audit's close-out table is not filled in here.** The report is the Auditor's, and the guide has each row checked against the code as it stands when the audit closes (`audit-workflow.md` §9). The dispositions, each read against the code after its phase, are:
+  - **Fixed:** #1, #2, #5–#9 (Phase 7) and #3, #4, #10 (Phase 8). None was rejected.
+  - **Optional:** #12 taken; #11, #13 and #15 not taken, for the reasons the plan gives.
+  - **Deferred:** #14, to Story 10, already verified.
+  - **A route that came out of the work:** `classifyDragTargets` reading the items as drawn (Open questions).
 
 ## Open questions
 

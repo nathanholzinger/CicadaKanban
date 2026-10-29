@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { db, type Tx } from '../db/index.js';
-import { workflows, workphases, items, workflowTemplates, workflowTemplatePhases, projects } from '../db/schema.js';
+import { workflows, items, workflowTemplates, workflowTemplatePhases, projects } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from '../lib/defaultBoard.js';
-import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
+import { getOrderedWorkphases, workphasesInOrder } from '../lib/workphaseOrder.js';
 import { copyWorkphases } from '../lib/workflowWorkphases.js';
 import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteWorkflowsById } from '../lib/workflowCascade.js';
@@ -58,14 +58,7 @@ function startingWorkphases(
       .orderBy(workflowTemplatePhases.position)
       .all();
   }
-  if (namesARow(sourceWorkflowId)) {
-    return tx
-      .select()
-      .from(workphases)
-      .where(eq(workphases.workflowId, sourceWorkflowId))
-      .orderBy(workphases.position)
-      .all();
-  }
+  if (namesARow(sourceWorkflowId)) return workphasesInOrder(sourceWorkflowId, tx);
   return [];
 }
 
@@ -119,6 +112,12 @@ router.post('/', (req, res) => {
   }
   if (!projectId) {
     res.status(400).json({ error: 'projectId is required' });
+    return;
+  }
+  // An id is a string: better-sqlite3 throws on binding most other values (a 500), and flattens an
+  // array to the id it holds, so that would pass the checks below (wiki row-references §1).
+  if (typeof projectId !== 'string') {
+    res.status(400).json({ error: 'projectId must be a string' });
     return;
   }
   // A bogus projectId would otherwise surface as an opaque FK-violation 500.
@@ -185,12 +184,7 @@ router.post('/', (req, res) => {
 
     copyWorkphases(tx, workflowId, startingWorkphases(tx, templateId, sourceWorkflowId), now);
 
-    const createdWorkphases = tx
-      .select()
-      .from(workphases)
-      .where(eq(workphases.workflowId, workflowId))
-      .orderBy(workphases.position)
-      .all();
+    const createdWorkphases = workphasesInOrder(workflowId, tx);
 
     // Every workflow needs at least one valid board to be usable — bootstrap a
     // default one with 1:1 columns matching whatever workphases now exist

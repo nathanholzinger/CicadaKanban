@@ -101,6 +101,50 @@ describe('removalSites', () => {
     assert.deepEqual(sitesOfLine("const clean = s.replace(/a b/g, '');", "const clean = s.replace(/ab/g, '');"), [0]);
   });
 
+  // A line inside a template literal is its value, but alone it reads as words: the hunk's lines
+  // don't carry the backtick that opened it. The whole file says which lines are inside one.
+  describe('a change inside a template literal that spans lines', () => {
+    const template = (middle: string): string[] => ['export const text = `', middle, '`;'];
+
+    it('takes a hunk that changes a middle line, though its words are the same', () => {
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 1)], template('a b'), template('a  b')), [1]);
+      // The parentheses and commas a formatter moves are the value here too.
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 1)], template('a, (b)'), template('a (b),')), [1]);
+    });
+
+    it('takes a hunk that changes the text between substitutions', () => {
+      const text = (middle: string): string[] => ['const s = `a ${x}', middle, 'e`;'];
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 1)], text('b c ${y} d'), text('b  c ${y} d')), [1]);
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 1)], text('b c ${y} d'), text('b c ${y}  d')), [1]);
+    });
+
+    it('takes a hunk that changes the text after a substitution that closes on a line of its own', () => {
+      const text = (tail: string): string[] => ['const s = `a ${', '  x', tail, 'more`;'];
+      assert.deepEqual(sitesOf([hunk(3, 1, 3, 1)], text('} text'), text('}  text')), [2]);
+    });
+
+    it('takes a hunk that removes a blank line from inside it, which is part of the value', () => {
+      const old = ['export const text = `', 'a', '', 'b', '`;'];
+      assert.deepEqual(sitesOf([hunk(3, 1, 2, 0)], old, ['export const text = `', 'a', 'b', '`;']), [2]);
+    });
+
+    it('takes a hunk that adds a line inside it in place of one removed', () => {
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 2)], template('a b'), ['export const text = `', 'a', 'b', '`;']), [1]);
+    });
+
+    it('leaves a hunk beside it, outside it, as formatting', () => {
+      const file = (label: string): string[] => [label, 'export const text = `', 'a b', '`;'];
+      assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], file('const label = "text";'), file("const label = 'text';")), []);
+      // The line it opens on is read with its backtick, so spacing before the backtick is only spacing.
+      assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], template('a b'), ['export const text =  `', 'a b', '`;']), []);
+    });
+
+    it('still reads the code beside a template on one line as code', () => {
+      const file = (call: string): string[] => ['const t = `a b`;', call];
+      assert.deepEqual(sitesOf([hunk(2, 1, 2, 1)], file('foo(a, b);'), file('foo(a, b)')), []);
+    });
+  });
+
   it('leaves out a hunk that only swaps the quotes of a string with spaces, commas and parentheses in it', () => {
     assert.deepEqual(sitesOf([hunk(1, 1, 1, 1)], ['const s = "a, (b); c";'], ["const s = 'a, (b); c';"]), []);
   });

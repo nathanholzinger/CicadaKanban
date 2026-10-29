@@ -59,6 +59,12 @@ describe('readingOf', () => {
     assert.equal(readingOf(facts({ changed: [], removalSites: [1], oldText, newText })), 'all');
   });
 
+  it('gives a file that changed one space inside a multiline template to every pass, since that is its value', () => {
+    const oldText = lines('export const text = `', 'a b', '`;');
+    const newText = lines('export const text = `', 'a  b', '`;');
+    assert.equal(readingOf(facts({ changed: [], removalSites: [1], oldText, newText })), 'all');
+  });
+
   it('reads nothing of a file whose only change is code moved in', () => {
     const oldText = lines('run(1);');
     const newText = lines('run(1);', 'stop();', 'go();', 'wait();', 'end();');

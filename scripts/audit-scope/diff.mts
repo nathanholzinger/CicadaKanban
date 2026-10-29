@@ -2,7 +2,7 @@
 // file's diff, from which come its removal sites.
 
 import ts from 'typescript';
-import { isScriptFile } from './lineKinds.mts';
+import { isScriptFile, templateLines } from './lineKinds.mts';
 
 const { SyntaxKind } = ts;
 
@@ -156,14 +156,31 @@ export interface SiteContext {
  * blank and none of the lines it adds is changed: it adds nothing, or only moved code, or lines
  * that blame, which ignores whitespace and the formatting commits, puts before the range. A
  * hunk that only re-writes its lines (the same text, formatted another way) removes nothing.
+ *
+ * A line inside a template literal is its value, so a hunk that removes one, blank or not, or
+ * adds one is never only formatting, whatever its lines read as alone: the script keeps the site
+ * when it can't tell.
  */
 export function removalSites(hunks: readonly Hunk[], { path, oldLines, newLines, changed }: SiteContext): number[] {
+  // Each side read from its whole file, and only when a hunk reaches a decision that needs it.
+  const isScript = isScriptFile(path);
+  const lazy = <T,>(read: () => T): (() => T) => {
+    let value: T | undefined;
+    return () => (value ??= read());
+  };
+  const oldTemplates = lazy(() => templateLines(path, oldLines.join('\n')));
+  const newTemplates = lazy(() => templateLines(path, newLines.join('\n')));
+
   return hunks.flatMap(hunk => {
     const { removed, added } = touchedLines([hunk]);
+    if (added.some(line => changed.has(line))) return [];
+    const removesValue = (): boolean => isScript && removed.some(line => oldTemplates().has(line));
+    const addsValue = (): boolean => isScript && added.some(line => newTemplates().has(line));
     const removedText = removed.map(line => oldLines[line - 1] ?? '');
-    if (removedText.every(isBlank) || added.some(line => changed.has(line))) return [];
+    if (removedText.every(isBlank) && !removesValue()) return [];
     const addedText = added.map(line => newLines[line - 1] ?? '');
-    if (added.length > 0 && writtenAlike(path, removedText.join('\n'), addedText.join('\n'))) return [];
+    const formatting = added.length > 0 && writtenAlike(path, removedText.join('\n'), addedText.join('\n'));
+    if (formatting && !removesValue() && !addsValue()) return [];
     return [hunk.newCount === 0 ? hunk.newStart : hunk.newStart - 1];
   });
 }

@@ -472,3 +472,35 @@ describe('a range scanned end to end', () => {
     assert.match(run.stderr, /bad-pattern\.json: group all: .*regular expression/);
   });
 });
+
+// One line inside a multiline template changes by a space. The runtime value changes, but the line
+// alone reads as the same two words, and blame, which ignores whitespace, lists no changed line, so
+// the removal site is the file's only way into a scope.
+describe('a range that changes one line inside a multiline template literal', () => {
+  const FILE = 'server/src/text.ts';
+  let repo: TestRepo;
+  let scan: RangeScan;
+
+  const commitFile = (text: string, message: string): void => {
+    mkdirSync(path.dirname(path.join(repo.root, FILE)), { recursive: true });
+    writeFileSync(path.join(repo.root, FILE), text);
+    repo.git('add', '-A');
+    repo.git('commit', '-q', '-m', message);
+  };
+
+  before(() => {
+    repo = makeTestRepo('audit-scope-template-');
+    commitFile(lines('export const text = `', 'a b', '`;'), 'base');
+    const base = repo.git('rev-parse', 'HEAD').trim();
+    commitFile(lines('export const text = `', 'a  b', '`;'), 'range: widen the gap');
+    scan = scanRange({ git: gitIn(repo.root), root: repo.root, base, end: 'HEAD', config: DEFAULT_CONFIG });
+  });
+
+  after(() => repo.remove());
+
+  it('keeps the file, with a site at the line above the changed one', () => {
+    const found = scan.files.find(file => file.path === FILE);
+    assert.ok(found, `${FILE} is in the scan`);
+    assert.deepEqual([found.reading, found.removalSites], ['all', [1]]);
+  });
+});

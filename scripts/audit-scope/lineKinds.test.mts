@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isScriptFile, lineKinds, splitLines, strippedCode } from './lineKinds.mts';
+import { isScriptFile, lineKinds, splitLines, strippedCode, templateLines } from './lineKinds.mts';
 
 const lines = (...parts: string[]): string => parts.join('\n') + '\n';
 
@@ -103,6 +103,70 @@ describe('strippedCode', () => {
     assert.deepEqual(stripped(lines("const url = 'http://example.com'; // the site")), [
       "const url = 'http://example.com';",
     ]);
+  });
+
+  // A line inside a multiline template is its value: collapsed or dropped, two versions that differ
+  // in a space or a blank line would strip to the same code.
+  describe('a template literal that spans lines', () => {
+    const template = (...body: string[]): string => lines('export const text = `', ...body, '`;');
+
+    it('differs when a line inside it gains a space, or loses a blank line', () => {
+      assert.notDeepEqual(stripped(template('a b')), stripped(template('a  b')));
+      assert.notDeepEqual(stripped(template('a b')), stripped(template(' a b')));
+      assert.notDeepEqual(stripped(template('a', '', 'b')), stripped(template('a', 'b')));
+    });
+
+    it('differs when text between its substitutions does', () => {
+      const text = (middle: string): string => lines('const s = `a ${x}', middle, 'e`;');
+      assert.notDeepEqual(stripped(text('b c ${y} d')), stripped(text('b  c ${y} d')));
+    });
+
+    it('is the same for two versions that differ only in the code around it', () => {
+      const before = lines('// old', 'export const text = `', 'a  b', '`;');
+      const after = lines('// a longer', '// header', 'export const text =  `', 'a  b', '`;');
+      assert.deepEqual(stripped(before), stripped(after));
+    });
+
+    it('still drops a line of it that it is told to skip', () => {
+      assert.deepEqual(strippedCode('a.ts', template('a', 'b'), new Set([3])).includes('"b"'), false);
+    });
+  });
+});
+
+describe('templateLines', () => {
+  it('numbers the lines a template reaches after the one it starts on', () => {
+    const text = lines(
+      'const one = `x`;', // 1: one line
+      'const two = `', // 2: starts here, so it is read with its backtick
+      'a b', // 3
+      '`;', // 4
+      'const three = `a ${x}', // 5: starts here, so it is read with its backtick too
+      'b ${y} c', // 6: a piece of it starts at the `}` after y, with no backtick before it
+      'd`;', // 7
+      'run();', // 8
+    );
+    assert.deepEqual(
+      [...templateLines('a.ts', text)].sort((a, b) => a - b),
+      [3, 4, 6, 7],
+    );
+  });
+
+  it('numbers the line a substitution closes on, when the template opened on an earlier line', () => {
+    // The text after the `}` on line 3 is the template's, though the line has no backtick before it.
+    const text = lines('const s = `a ${', '  x', '} text', 'more`;');
+    assert.deepEqual(
+      [...templateLines('a.ts', text)].sort((a, b) => a - b),
+      [3, 4],
+    );
+  });
+
+  it('is empty for a file with no template that spans lines', () => {
+    assert.equal(templateLines('a.ts', lines('const a = `x`;', 'run(`y ${a}`);')).size, 0);
+  });
+
+  it('reads a template inside JSX, which a scan of the text alone would not', () => {
+    const text = lines('export const view = (', '  <p title={`a', 'b`}>it’s</p>', ');');
+    assert.deepEqual([...templateLines('a.tsx', text)], [3]);
   });
 });
 

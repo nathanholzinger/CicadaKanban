@@ -1,4 +1,4 @@
-import type { Workflow, WorkflowWithDetails } from '../types';
+import type { CreatedWorkflow, Workflow, WorkflowWithDetails } from '../types';
 import { apiJson, apiVoid } from './shared';
 
 export function fetchWorkflows(): Promise<Workflow[]> {
@@ -16,7 +16,7 @@ export type CreateWorkflowInput = {
   sourceWorkflowId?: string;
 };
 
-export function createWorkflow(data: CreateWorkflowInput): Promise<WorkflowWithDetails> {
+export function createWorkflow(data: CreateWorkflowInput): Promise<CreatedWorkflow> {
   return apiJson('/workflows', { method: 'POST', body: data }, 'Failed to create workflow');
 }
 

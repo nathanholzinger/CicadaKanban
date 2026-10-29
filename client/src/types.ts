@@ -68,6 +68,12 @@ export interface Item {
   completedAt: number | null;
 }
 
+// What `POST /workflows` returns: the new workflow and the workphases it starts with. A new
+// workflow has no items, so the response carries none (`WorkflowWithDetails` is the GET's).
+export interface CreatedWorkflow extends Workflow {
+  workphases: Workphase[];
+}
+
 export interface WorkflowWithDetails extends Workflow {
   workphases: Workphase[];
   items: Item[];

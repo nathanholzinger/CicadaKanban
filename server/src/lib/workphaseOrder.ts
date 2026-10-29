@@ -1,7 +1,7 @@
 // Workphase rank/order helpers: a workflow's workphases in order, and the rank map derived
 // from that order.
 
-import { db } from '../db/index.js';
+import { db, type Tx } from '../db/index.js';
 import { workphases } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
@@ -23,16 +23,23 @@ export function buildRankMap(orderedWorkphases: Workphase[]): Map<string, number
   return map;
 }
 
-// Fetches a workflow's workphases ordered by position plus the rank map
-// derived from them — the query + buildRankMap pairing every route needing
-// column-range math repeats (though not every caller needs the rank map;
-// workflows.ts GET /:id, for one, only uses `workphases`).
-export function getOrderedWorkphases(workflowId: string): { workphases: Workphase[]; rankMap: Map<string, number> } {
-  const ordered = db
+// A workflow's workphases ordered by position: the one query every read of that
+// order runs. Pass `client` (a transaction's `tx`, or `db`) to read inside a
+// caller's transaction; omit it to read standalone, as `existsById` does.
+export function workphasesInOrder(workflowId: string, client: Tx | typeof db = db): Workphase[] {
+  return client
     .select()
     .from(workphases)
     .where(eq(workphases.workflowId, workflowId))
     .orderBy(workphases.position)
     .all();
+}
+
+// Fetches a workflow's workphases ordered by position plus the rank map
+// derived from them — the query + buildRankMap pairing every route needing
+// column-range math repeats (though not every caller needs the rank map;
+// workflows.ts GET /:id, for one, only uses `workphases`).
+export function getOrderedWorkphases(workflowId: string): { workphases: Workphase[]; rankMap: Map<string, number> } {
+  const ordered = workphasesInOrder(workflowId);
   return { workphases: ordered, rankMap: buildRankMap(ordered) };
 }

@@ -5,6 +5,7 @@ import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { findColumnsMixingTerminalAfterFlip, shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { workphasesInOrder } from '../lib/workphaseOrder.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { nextPosition, resolveAppendPosition } from '../lib/positionResolver.js';
 import { positionScopeFor } from '../lib/itemPositionScope.js';
@@ -25,12 +26,7 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const existing = db
-    .select()
-    .from(workphases)
-    .where(eq(workphases.workflowId, workflowId))
-    .orderBy(workphases.position)
-    .all();
+  const existing = workphasesInOrder(workflowId);
 
   const id = randomUUID();
 

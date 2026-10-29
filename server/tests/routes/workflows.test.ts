@@ -157,6 +157,32 @@ describe('POST /api/workflows', () => {
     expect(res.body.error).toMatch(/projectId/);
   });
 
+  // A projectId that isn't a string can't name a project. better-sqlite3 throws on binding most of
+  // them (a 500), and flattens an array to the one id it holds, so that creates the workflow
+  // (wiki row-references §1).
+  it('returns 400, and creates nothing, when projectId is not a string', async () => {
+    const project = await createProject();
+    for (const value of [true, false, 7, 0, {}, [], [project.id]]) {
+      const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: value });
+      expect(res.status, JSON.stringify(value)).toBe(400);
+      expect(res.body.error, JSON.stringify(value)).toContain('projectId');
+    }
+    expect(await workflowsOf(project.id)).toEqual([]);
+  });
+
+  // The checks run in order: a value that isn't a string is refused as one, ahead of whether it
+  // names a project or whether that project already has a workflow of its own.
+  it('refuses a projectId that is not a string ahead of the ownership check', async () => {
+    const owner = await createProject();
+    await createWorkflow(owner.id);
+    const res = await request(app)
+      .post('/api/workflows')
+      .send({ name: 'W', projectId: [owner.id] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('projectId');
+    expect(res.body.error).not.toMatch(/already has a workflow/);
+  });
+
   it('TREE-10.8: returns 400 with a specific message, and creates nothing, when templateId does not reference an existing template', async () => {
     const project = await createProject();
     const res = await request(app)

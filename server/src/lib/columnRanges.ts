@@ -5,7 +5,7 @@
 import { db, type Tx } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
-import { buildRankMap } from './workphaseOrder.js';
+import { buildRankMap, workphasesInOrder } from './workphaseOrder.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ColumnRow = typeof columns.$inferSelect;
@@ -158,12 +158,7 @@ export function shrinkColumnsForDeletedWorkphase(
 
   // Includes the doomed workphase so each column's original coverage can be
   // computed before it's gone.
-  const originalWorkphases = client
-    .select()
-    .from(workphases)
-    .where(eq(workphases.workflowId, workflowId))
-    .orderBy(workphases.position)
-    .all();
+  const originalWorkphases = workphasesInOrder(workflowId, client);
   const originalRankMap = buildRankMap(originalWorkphases);
 
   const shrunkColumns: ColumnRow[] = [];
@@ -216,13 +211,9 @@ export function findColumnsMixingTerminalAfterFlip(
   const allColumns = client.select().from(columns).where(inArray(columns.boardId, boardIds)).all();
   if (allColumns.length === 0) return [];
 
-  const orderedWorkphases = client
-    .select()
-    .from(workphases)
-    .where(eq(workphases.workflowId, workflowId))
-    .orderBy(workphases.position)
-    .all()
-    .map(w => (w.id === flippedWorkphaseId ? { ...w, isTerminal: newIsTerminal ? 1 : 0 } : w));
+  const orderedWorkphases = workphasesInOrder(workflowId, client).map(w =>
+    w.id === flippedWorkphaseId ? { ...w, isTerminal: newIsTerminal ? 1 : 0 } : w,
+  );
   const rankMap = buildRankMap(orderedWorkphases);
 
   return allColumns.filter(col => {
