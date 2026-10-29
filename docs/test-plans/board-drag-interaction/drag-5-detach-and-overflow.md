@@ -9,8 +9,8 @@
 | DRAG-5.1 | A Stub popped out to the column becomes Free, and is placed by the column's within-action | P0 | Open |
 | DRAG-5.2 | Detaching in place keeps the inherited workphase, even a merged column's non-entry workphase | P0 | Open |
 | DRAG-5.3 | Detaching into a different column goes through Board and takes that column's workphase by its band | P0 | Open |
-| DRAG-5.4 | A Stub zoomed into a different Card is reparented, as that Card's last child | P0 | Automated |
-| DRAG-5.5 | A momentary excursion out of the Card's box doesn't detach | P0 | Open |
+| DRAG-5.4 | A Stub zoomed into a different Card is reparented, as that Card's last child | P0 | Open |
+| DRAG-5.5 | A momentary excursion out of the Card's box doesn't detach | P0 | Automated |
 | DRAG-5.9 | A Stub drag's within-action is hierarchy placement: reorder and reparent inside the Card need no detach | P0 | Open |
 | DRAG-5.10 | A detached Stub is shown as a Card from the column layer on | P1 | Open |
 | DRAG-5.13 | A nested Stub starts in its containing Card's Descendants and pops to that Card's column | P1 | Open |
@@ -45,21 +45,21 @@
 
 ## DRAG-5.4 — A Stub zoomed into a different Card is reparented, as that Card's last child
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §8, wiki board-drag-interaction §6
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §8, wiki board-drag-interaction §6
 
 *Given* Stub `X` attached to `P`, and a different Valid Card `Q` in the same column, *when* `X` pops out to the column ([DRAG-5.1](drag-5-detach-and-overflow.md)), the side highlight names `Q` for the full zoom-in hold, and the user releases immediately after the zoom without moving the cursor, *then* the commit is a reparent: `X.parentId = Q`, attached, workphase inherited from `Q`, and last among `Q`'s children, since `X` arrived from outside `Q` ([DRAG-4.1](drag-4-attach-and-stub-placement.md), [ATT-7.5](../item-attachment/att-7-detach-preserves-parent.md)). It never passes through a committed detach that leaves `parentId = P`. Moving the cursor after the zoom places `X` precisely at the same Descendants layer ([DRAG-4.34](drag-4-attach-and-stub-placement.md)). A `Q` in another column is reached the same way, after Board and that column's pop in ([DRAG-4.15](drag-4-attach-and-stub-placement.md)).
 
-**Automation test:** `tests/ui/drag-5-stub-detach.spec.ts`
+**Automation test:** —
 
 ## DRAG-5.5 — A momentary excursion out of the Card's box doesn't detach
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.1, wiki board-drag-interaction §8
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3.1, wiki board-drag-interaction §8
 
 *Given* Stub `X` attached to `P`, with siblings `S1, S2`, at `P`'s Descendants layer, *when* the cursor briefly leaves the whole Card's box without satisfying either `popDelayMs` or the enabled `popDistancePx`, comes back during a sibling reorder, and the user releases with the ghost below `S2` at `S2`'s depth, *then* no pop happened, and the commit is a sibling reorder within `P`, `{anchorId: S2, side: after}` ([TC-3.1](../item-positioning/part-3-attached-sibling-reorder.md), [DRAG-4.9](drag-4-attach-and-stub-placement.md)), with `X` still attached to `P`. Returning inside the Card resets the pop-out clock: the next excursion starts at zero.
 
 This case asserts the clock's logic, with its threshold as a parameter; its pass never depends on the tuned values. Whether they feel right is [DRAG-1.32](drag-1-contexts-and-popping.md).
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/popSession.test.ts`, `client/src/components/workflow/dragRequest.test.ts`
 
 ## DRAG-5.9 — A Stub drag's within-action is hierarchy placement: reorder and reparent inside the Card need no detach
 

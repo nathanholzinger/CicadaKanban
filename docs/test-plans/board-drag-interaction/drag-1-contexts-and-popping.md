@@ -8,7 +8,7 @@
 |---|---|---|---|
 | DRAG-1.1 | A drag starts in exactly one layer, set by the item and its column's display mode | P0 | Open |
 | DRAG-1.2 | A release at Column layer lands the item exactly where the ghost is | P0 | Open |
-| DRAG-1.3 | A sustained signal outside the locked context pops out one layer | P0 | Automated |
+| DRAG-1.3 | A sustained signal outside the locked context pops out one layer | P0 | Open |
 | DRAG-1.4 | Brushing past a Card while repositioning never attaches | P0 | Automated |
 | DRAG-1.5 | After a zoom in, a release commits the new layer's within-action | P0 | Open |
 | DRAG-1.6 | Expanded mode: a sibling sub-row is a different context, reached only through Board | P0 | Open |
@@ -70,13 +70,13 @@ In both, `X` lands between `A` and `B`, where the ghost was, and `workphaseId`, 
 
 ## DRAG-1.3 — A sustained signal outside the locked context pops out one layer
 
-**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3, wiki board-drag-interaction §3.1
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §3, wiki board-drag-interaction §3.1
 
 *Given* a Card locked in its column, *when* the cursor leaves the context (into another column, a sibling sub-row, or nowhere) and stays out for `popDelayMs`, *then* the item pops out to Board: it belongs to no context and follows the cursor freely. It doesn't yet belong to whatever region the cursor is in; entering one is a separate act ([DRAG-1.5](drag-1-contexts-and-popping.md), [DRAG-1.11](drag-1-contexts-and-popping.md)).
 
 The same clock pops Descendants out to its containing Card's column/sub-row ([DRAG-1.17](drag-1-contexts-and-popping.md)). This case asserts that the pop is reachable; its pass never depends on the clock's value. [DRAG-1.30](drag-1-contexts-and-popping.md) covers a momentary excursion.
 
-**Automation test:** `tests/ui/drag-column-bands.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.4 — Brushing past a Card while repositioning never attaches
 

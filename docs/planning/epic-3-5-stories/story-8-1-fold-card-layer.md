@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3 committed; Phase 3b, the cleanup batch, built, for review
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3b committed, Phase 4's hands-on done; Phases 5 and 6, from the test reconciliation, next
 
 ## Goal
 
@@ -209,6 +209,61 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Then** the Coder writes the handoff's behavior decisions, and the PO and the Test Planner work from the handoff.
 - **No audit runs for this story alone.** Story 8 closes with one over all its stories (roadmap, Story 8, "How each story closes"). Nathan may call one sooner.
 
+**Phases 5 and 6: from the test reconciliation** (Nathan, 2026-10-29)
+- **Where they come from:** the Reconciler's run over the cases the fold changed (`docs/audits/test-reconciliation-story-8-1-codex-trial.md`). It found one defect against the wiki and a set of test-title and unit-test gaps. The surface specs it found missing are Story 10's (roadmap, Story 10, item 10), under "No new drag tests".
+- **Phase 5 runs first:** `check:docs` reports two retired case IDs in test titles, so `npm run check` fails until it lands. Line numbers are at `e964a51`.
+
+**Phase 5: test titles and unit tests** (no production code)
+1. **Restore the docs gate** (the Test Planner's handoff, below).
+   - **Delete** `drag-5-stub-detach.spec.ts`'s skipped DRAG-5.12 test (`:147–183`). It asserts the safe stop the fold removed. Its rule is now DRAG-5.15's, whose spec Story 10 writes fresh.
+   - **The yank test at `:244`:** drop the retired DRAG-5.11 and keep DRAG-1.14. With every clock off, it still shows a distance-term pop out of the section, landing with the column's regions measured.
+   - **Its title and comments claim one pointer sample** (`:236–243`, `:256–261`, `:268–270`), but `hoverTo` sends 15 moves and then 2. Say what it does: one yank past the distance, with every clock off. The gesture doesn't change.
+   - **In the handoff's skipped-tests list,** DRAG-5.12's entry says the test is deleted.
+2. **A title that's wrong about the code:** `dragRequest.test.ts:182`.
+   - It says an attach is "never an anchor — always an append". But `toRequest` sends an anchor for an attach whenever the Card has other children (`'last'` becomes after its last child) or the slot is the cursor's.
+   - **Retitle it to what it asserts:** an attach into a Card with no other children sends `parentId` and `isAttached`, and no anchor. Its IDs become DRAG-4.12 and DRAG-5.4. Drop DRAG-4.1, whose Card has children.
+   - **Add the case the title denied,** for DRAG-4.1's request: an attach as the last child of a Card with children sends the anchor after its last child.
+   - **Stamp DRAG-4.34** on `:235`, the reparent with an anchor slot into another Card.
+3. **Stamp unit tests with the cases they cover.** Titles only. These are the report's Proposed Stamps, plus one it missed.
+   - **`descendantsProjection.test.ts`:** the `D4:` prefix on `:146`, `:152` and `:164` becomes `DRAG-4.30:`. A plan's decision number doesn't belong in a test title.
+   - **`popSession.test.ts`:**
+     - `:251`: DRAG-1.35;
+     - `:270`: DRAG-5.1, DRAG-5.13;
+     - `:276`: DRAG-1.14;
+     - `:467`: DRAG-7.14.
+   - **`placement.test.ts:369`:** DRAG-3.22, DRAG-1.35.
+   - **`dragOverlayGeometry.test.ts`:**
+     - DRAG-1.28 on the `clampToCurrentContext` rows at `:57–61`. Put it in the `'%s'` title, not on the describe, so the describe's other tests don't inherit it.
+     - DRAG-3.22 on `:101`, `:118` and `:138`.
+   - **`itemListOps.test.ts:307`**, which leaves the dragged item out of an overflow row's count and draws no row when it was the only child: DRAG-7.2. Those two clauses are the ones only skipped specs reach today. Nathan approved it as DRAG-7.2's internal pointer (Open questions).
+   - A partial test carries its case's ID by convention. Whether that makes the case `Automated` is the Reconciler's call.
+4. **A clock test for DRAG-7.11's missing clause** (the report's Test Quality Concerns, 3).
+   - **The setup:** locked at the modal's list, a Descendants region with a `boundsRect`. The pointer rests outside the dialog's box, over the region of a Card under the backdrop.
+   - **What it shows:** the pop-out clock starts, and after `popDelayMs` the drag pops to the modal Card's column. Only the context's own box counts as inside.
+   - **Title:** it starts `DRAG-7.11:`. It's in the README's approved clock category.
+- **Gate:** `npm run check`, and `drag-5-stub-detach.spec.ts` run alone. The phase's only spec changes are a deleted skipped test, a title and comments. Then a stop for review and commit.
+
+**Phase 6: a hidden Stub set down at its own slot in the modal** (DRAG-7.31)
+- **The defect:**
+  - Its setup is a Stub whose pickup slot the section hides. It comes back into the section from its column (`slotHidden`), the drag opens the modal by a hold, and the Stub is set down in its own gap and depth.
+  - Today the code writes a move to where the Stub already is.
+  - Wiki board-drag-interaction §7.1 and §7.3, with hierarchy-placement §5, say it writes nothing. DRAG-7.31 states it.
+  - This answers the plan's Open question as the wiki stands. Nathan or the PO can rule otherwise before this phase.
+- **Test first.** In `descendantsProjection.test.ts`'s "a Stub whose own slot the section does not draw" describe, one test runs the whole history:
+  - the entry with the slot hidden;
+  - `reseedProjection` at the Stub's own gap and depth, as the modal's reading;
+  - a sample at `sectionLevels: EVERY_LEVEL`;
+  - then `descendantsReleasePlacement` returns null.
+
+  Its title starts `DRAG-7.31:`. Show it failing on today's code. The modal test at `:390` enters the modal fresh, so it doesn't reach this.
+- **The likely fix:** `advanceProjection`'s `atOwnSlot` loses its `!seed.slotHidden` term.
+  - `own` is already null wherever the section hides the slot, so the term only matters in the modal after such an entry.
+  - It guarded an `own` read from the previewed rows, which put the Stub at the Card's last child. Since Phase 1, `own` is the pickup snapshot (`pickupSlot`).
+- **`slotHidden` itself stays:** `placementFor` still previews the Stub as the Card's last child, so the modal's rows don't move under the cursor as it opens.
+- **Comments that follow:** `DragSessionContext.ts`'s `slotHidden` ("`atOwnSlot` never holds") and `reseedProjection`'s.
+- **No drag spec.** DRAG-7.31's surface path is Story 10's.
+- **Gate:** `npm run check` and `npm run test:e2e`. Then a stop for review and commit.
+
 ## Code map
 
 | Symbol | Carries |
@@ -318,6 +373,12 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 ## Open questions
 
 - **Should `slotHidden` still be carried across the modal opening?** (Finding 11.) `reseedProjection` keeps the seed's flag. Its old reason, that `own` was read from rows that place the Stub as the Card's last child, is gone: `own` comes from the pickup snapshot. The comment now says only what the flag records. What the flag still does there is a behavior, which this pass left alone: the modal draws every level, so a hidden pickup slot is drawn in it, and with the flag carried a Stub put back in that slot counts as a move and writes (to where it already is), where cleared it would be its own slot and write nothing. Read from the code, not tried in the browser. For the PO to rule on with the Phase 4 behavior decisions.
+  - *Since then:* the Test Planner reads the wiki as already answering it: a set-down at the pickup slot in the modal writes nothing (DRAG-7.31). Phase 6 builds that, unless Nathan or the PO rules otherwise first.
+- **Answered (Nathan, 2026-10-29): `itemListOps.test.ts:307` is approved as an internal pointer for DRAG-7.2.**
+  - **The case's missing clauses:** while a dragged child is back in the section, its owner's overflow row leaves it out of the count, and draws no row when it was the only child. Only skipped specs reach them today. The unit test asserts both against `sectionEntries`, which the render reads.
+  - **Why it needed approval:** it's a display rule, outside the README's two approved categories.
+  - **What follows:** Phase 5 stamps the ID. The Reconciler then writes the pointer (Living-docs handoff).
+  - **Not asked:** the report's three other mapping proposals (DRAG-1.28, 3.22, 4.12). Each would leave its case `Open` even if approved, so they wait for Story 10.
 
 ## Living-docs handoff
 
@@ -326,6 +387,8 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
   - **Coder cleanup needed for the docs gate now:** `check:docs` reports `tests/ui/drag-5-stub-detach.spec.ts:148` for the retired DRAG-5.12 and `:244` for the retired DRAG-5.11. Remove the obsolete skipped safe-stop test, and remove DRAG-5.11 from the distance-detach test's title, retaining DRAG-1.14 only if it still asserts that case. Do not relabel either with a new case ID unless the assertions cover the new case. The Test Planner leaves test code to the Coder.
   - **Story 10's rework:** use the current cases rather than restoring retired expectations. Direct zoom is DRAG-1.35; immediate release and initial seeds are DRAG-4.1 and DRAG-4.30; subsequent cursor placement is DRAG-4.34; one-pop exits are DRAG-5.1, DRAG-5.13 and DRAG-7.10; title/padding and modal-hold bounds are DRAG-5.15 and DRAG-7.14. DRAG-7.6, DRAG-7.18 and DRAG-7.31 cover returning from the column and reopening the modal. DRAG-1.19 covers the actual two-pop cascade, ending at Board.
   - **Reconciler:** compare the changed cases afresh, including the unskipped parts of DRAG-7.2 and DRAG-7.11. The story's report of remaining unit coverage isn't itself a mapping approval or proof of the revised cases. Restore Automated only when tests assert the whole current case.
+- **For the Reconciler, once Phase 5 lands:** Nathan approved `itemListOps.test.ts`'s DRAG-7.2 count test, "leaves the dragged item out of the count, and draws none when it was the only child", as an internal pointer for DRAG-7.2 (2026-10-29). Write it beside the case's surface tests. Restore `Automated` if together they assert the whole case.
+- **Reconciler → Test Planner** (the 2026-10-29 run's Candidate New Cases): an immediate new drag of an item just detached. `drag-5-stub-detach.spec.ts`'s "immediately after a detach, the same item drags and reorders normally as a Card" tests it, untagged. It may extend an existing pickup or reposition case rather than need its own.
 - **Behavior decisions made while building, for the PO to rule on:** filled in by the Coder, in Phase 4.
 - **Passages superseded,** for the PO once Nathan approves. These are wiki board-drag-interaction's, by what each says now. *Written 2026-10-29 (PO), as listed; Amendments, "the wiki", has the deductions.*
   - **§1:** "A Card" as a context goes. A Card's Descendants context is reached from its column, bounded by the whole Card.

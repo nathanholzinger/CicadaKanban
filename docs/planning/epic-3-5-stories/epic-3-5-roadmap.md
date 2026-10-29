@@ -1062,9 +1062,41 @@ deferral and keep landing with their stories.
      against the modal's box (`popDistancePx` above 0), which a
      `popSession.test.ts` case would close.
 
+10. **Deferred from Story 8.1** (Nathan, 2026-10-29): the drag specs its
+    test reconciliation found missing or too weak
+    (`docs/audits/test-reconciliation-story-8-1-codex-trial.md`). Story
+    8.1's plan lists the specs it skipped, under Living-docs handoff. Story
+    8's close-out Reconciler run settles the final list by ID, since later
+    8.N stories can change it; this is its starting point.
+    - **Specs that pass but miss a clause:**
+      - **DRAG-5.4:** the reparent spec counts no writes. It would pass if
+        a detach were committed on the way out and an attach on release.
+        Observe no request before the release, and exactly one after.
+      - **DRAG-1.3:** no spec shows the carried copy following the cursor
+        once it has popped out to Board. The context labels don't show it.
+      - **DRAG-1.14 / DRAG-1.19:** the yank spec in
+        `drag-5-stub-detach.spec.ts` moves in many pointer samples
+        (`hoverTo`). A true one-sample yank from a section to Board, the
+        two-pop cascade, is DRAG-1.19's and has no spec.
+      - **DRAG-7.11:** the isolation spec seeds `NO_POP`, so it never
+        shows the pop-out clock running over the Card under the backdrop.
+        Story 8.1's Phase 5 adds the clock's unit test. A surface check
+        is needed only if the Reconciler still finds the case short.
+    - **Skipped specs to rework or delete:** DRAG-5.13's pop-out test;
+      DRAG-7.2 and 7.6's three `pullOutAndZoomBack` tests; DRAG-7.6, 7.10
+      and 7.11's pop-out test; DRAG-7.10 and 7.18's reopen test; DRAG-7.14's
+      padding test, which now contradicts the rule; and
+      `drag-card-zoom-in.spec.ts`'s two.
+    - **Cases whose surface path has no spec yet,** new or revised by the
+      fold: DRAG-1.5, 1.16, 1.18, 1.19, 1.28, 1.35; DRAG-3.20, 3.22;
+      DRAG-4.1, 4.3, 4.5, 4.12, 4.13, 4.15, 4.17, 4.19, 4.20, 4.30, 4.34;
+      DRAG-5.1, 5.10, 5.13, 5.15; DRAG-7.2, 7.6, 7.10, 7.14, 7.18, 7.31.
+      Some may close sooner through unit tests and approved internal
+      pointers.
+
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
-test:e2e` and `npm run test:unit` green; every case routed here (items 1
-and 9) is `Automated` or `Manual`; the epic-done checklist's Tests items
+test:e2e` and `npm run test:unit` green; every case routed here (items 1,
+9 and 10) is `Automated` or `Manual`; the epic-done checklist's Tests items
 checkable.
 
 **Depends on:** Stories 5–7 and every Story 8.N (the gesture and its

@@ -14,7 +14,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | DRAG-7.1 | A Card's section shows `L` levels below the Card, and an overflow row stands for a row's hidden children | P1 | Automated |
-| DRAG-7.2 | An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged | P1 | Automated |
+| DRAG-7.2 | An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged | P1 | Open |
 | DRAG-7.3 | Between a row and its overflow row, the one state is the row's first child | P0 | Automated |
 | DRAG-7.4 | Below an overflow row, the states run from Bottom's depth to the hidden children's level, and none lies right of it | P0 | Automated |
 | DRAG-7.5 | Below a last-level row with no attached children, one tab right makes the item its only attached child | P1 | Automated |
@@ -23,7 +23,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.8 | With no drag running, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
 | DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Automated |
 | DRAG-7.10 | Leaving the modal closes it and pops directly to the Card's column or sub-row | P1 | Open |
-| DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Automated |
+| DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Open |
 | DRAG-7.12 | The modal's rows carry the drag's classification, as the section's do | P2 | Automated |
 | DRAG-7.13 | A hold beside an overflow row is a silent dwell, then a cue on the row, ending in the modal opening | P1 | Open |
 | DRAG-7.14 | The modal hold resets on a gap or level change or leaving the Card, and runs on in its padding | P1 | Open |
@@ -56,13 +56,13 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 
 ## DRAG-7.2 — An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
 
 *Given* the tree, *then* `R`'s overflow row reads "2 children", for `R1` and `R2`. It doesn't count `R1a`, a grandchild: the overflow row sits at `R`'s children's level and stands for them. Nor does it count `F`, `R`'s Free child, which shows on the board as a Card of its own. `T`, whose only child `G` is Free, has no overflow row. *Given* instead `R`'s only attached child is `R1`, *then* it reads "1 child".
 
 *When* an item is dropped beside `R`'s overflow row, as `R`'s first or last child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)), *then* from the release on it reads "3 children". *When* `R1` is picked up in the modal, pulled out to the column and zoomed back into `P` ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), *then* while it's dragged in the section the overflow row reads "1 child", leaving `R1` out, since the ghost shows it. *And given* `R1` is `R`'s only attached child, *then* `R` has no overflow row while `R1` is dragged.
 
-**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.3 — Between a row and its overflow row, the one state is the row's first child
 
@@ -144,11 +144,11 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 ## DRAG-7.11 — While the modal is open, the Card and its section under the backdrop take no part in the drag
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* a drag in the modal, *when* the cursor rests over `P`'s Card or its section, outside the modal's box, behind the backdrop, *then* none of the section's rows is Top or Bottom: the ghost doesn't move to a gap in the section, the carried copy stays inside the modal's list, and the pop-out clock runs as it does anywhere outside the modal's box ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)). While the modal is open, only its rows place the item.
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.12 — The modal's rows carry the drag's classification, as the section's do
 
