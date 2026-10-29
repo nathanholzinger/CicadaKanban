@@ -10,13 +10,13 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.2 | A move changes the workflow a project with none of its own uses, and its subtree's | P1 | Automated |
 | TREE-10.3 | After the workflow a project uses is deleted, it uses the nearest one left above it, or none | P2 | Automated |
 | TREE-10.4 | A project has at most one workflow of its own | P1 | Automated |
-| TREE-10.5 | A workflow created from a template starts with a copy of the template's workphases | P1 | Open |
-| TREE-10.6 | A workflow created from another workflow starts with a copy of that workflow's workphases | P1 | Open |
-| TREE-10.7 | A workflow created from neither starts with no workphases | P2 | Open |
-| TREE-10.8 | A template or a source workflow that doesn't exist is refused, and nothing is created | P2 | Open |
+| TREE-10.5 | A workflow created from a template starts with a copy of the template's workphases | P1 | Automated |
+| TREE-10.6 | A workflow created from another workflow starts with a copy of that workflow's workphases | P1 | Automated |
+| TREE-10.7 | A workflow created from neither starts with no workphases | P2 | Automated |
+| TREE-10.8 | A template or a source workflow that doesn't exist is refused, and nothing is created | P2 | Automated |
 | TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Automated |
-| TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Open |
-| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Open |
+| TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Automated |
+| TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Automated |
 
 ---
 
@@ -54,35 +54,35 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.5 — A workflow created from a template starts with a copy of the template's workphases
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §10
 
 *Given* project `P`, with no workflow of its own, and template `T`, with workphases, *when* a workflow is created for `P` naming `T` by `templateId`, *then* it's accepted, and the new workflow's workphases are a copy of `T`'s: the same names, in `T`'s order, each with its counterpart's settings, its terminal flag among them.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.6 — A workflow created from another workflow starts with a copy of that workflow's workphases
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §10
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki project-tree §10
 
 *Given* top-level project `Q`, owning workflow `W1`, with workphases, and project `P`, with no workflow of its own, *when* workflow `W2` is created for `P` naming `W1` by `sourceWorkflowId`, *then* it's accepted, and `W2`'s workphases are a copy of `W1`'s: the same names, in `W1`'s order, each with its counterpart's settings, its terminal flag among them. They're `W2`'s own: `W1` still has its workphases, unchanged. *When* one of `W2`'s workphases is renamed, *then* its counterpart in `W1` keeps its name.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.7 — A workflow created from neither starts with no workphases
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10
 
 *Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` that leaves out both `templateId` and `sourceWorkflowId`, *then* it's accepted, and the new workflow has no workphases.
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.8 — A template or a source workflow that doesn't exist is refused, and nothing is created
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10, wiki row-references §1
 
 *Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` naming a `templateId` no template has, or a `sourceWorkflowId` no workflow has, *then* each is refused with a 400, and no workflow is created: `P` still has none of its own, so a create for it that leaves both out is then accepted, where a second workflow would be refused ([TREE-10.4](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.9 — A template or a source workflow given as an empty string names no row, and is refused
 
@@ -94,16 +94,16 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.10 — A template or a source workflow given as `null` names none
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10
 
 *Given* project `P`, with no workflow of its own, *when* a workflow is created for `P` with `templateId: null` and no source workflow, *then* it's accepted, and the new workflow has no workphases, as a create that leaves both out does ([TREE-10.7](tree-10-which-workflow.md)). The same holds for `sourceWorkflowId: null` and no template. *Given* template `T`, with workphases, *when* a workflow is created for another project with no workflow of its own, naming `T` by `templateId`, with `sourceWorkflowId: null`, *then* it's accepted, with a copy of `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)). *And given* workflow `W1`, with workphases, *when* one is created naming `W1` by `sourceWorkflowId`, with `templateId: null`, *then* it's accepted, with a copy of `W1`'s ([TREE-10.6](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.11 — A create naming both a template and a source workflow is refused, and nothing is created
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10
 
 *Given* project `P`, with no workflow of its own, template `T`, and workflow `W1` of another project, *when* a workflow is created for `P` naming both `T` by `templateId` and `W1` by `sourceWorkflowId`, *then* it's refused with a 400, and no workflow is created: `P` still has none of its own, and a create for it naming `T` alone is then accepted, with `T`'s workphases ([TREE-10.5](tree-10-which-workflow.md)). The refusal doesn't depend on which of the two exists: a create naming a `templateId` no template has and a `sourceWorkflowId` no workflow has is refused too, and nothing is created. A field given as `null` isn't named ([TREE-10.10](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`

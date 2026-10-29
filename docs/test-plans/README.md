@@ -97,6 +97,7 @@ The Test Planner owns the catalog. The Test Reconciler writes two fields on each
 - **`Manual`, by the Test Planner's judgment,** when the case is written: its outcome can't be reduced to precise assertions. That covers feel ("the drag reads as one continuous motion"), and a case whose pass depends on a tunable drag threshold's value (`.claude/guides/testing-strategy.md`, "What stays manual"), such as whether the tuned values feel right. A part of the same rule that can be pinned, such as reaching the gesture, the write it makes, or a clock's logic, is its own case.
 - **`Manual`, by Nathan's approval,** for a case that could be automated but isn't worth it: too flaky, or too costly. The Reconciler proposes it, one case at a time or for a named category.
 - **A `Manual` reason is a present-tense condition.** When it stops holding, the case goes back to `Open`.
+- **A skipped test doesn't count.** A case whose only tests are skipped is `Open`, routed by ID to the story that takes the skip up. The skipped test keeps the case's ID in its title, so that story finds it.
 
 ## How tests and cases point at each other
 

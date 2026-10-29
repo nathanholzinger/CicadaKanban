@@ -7,7 +7,7 @@ These hold for any client that keeps a locally ordered list. What the board adds
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | TC-5a.1 | After a successful position write, the list shows the server's order without a reload | P0 | Automated |
-| TC-5a.2 | Applying the reindex pairs before comparing never shows the written item out of order | P0 | Automated |
+| TC-5a.2 | A response that carries reindex pairs shows the written item where the server saved it | P0 | Automated |
 | TC-5a.4 | Disclosed ids the client doesn't hold are ignored, not fetched | P1 | Automated |
 | TC-5a.5 | Every client sort breaks ties the same way: position, a missing one as `0`, then creation time | P1 | Automated |
 
@@ -21,11 +21,11 @@ These hold for any client that keeps a locally ordered list. What the board adds
 
 **Automation test:** `tests/ui/item-positioning.spec.ts`, `client/src/lib/positionedWrite.test.ts`, `client/src/components/workflow/dragRequest.test.ts`, `client/src/components/ItemDetailPanel.test.tsx`
 
-## TC-5a.2 — Applying the reindex pairs before comparing never shows the written item out of order
+## TC-5a.2 — A response that carries reindex pairs shows the written item where the server saved it
 
 **Priority:** P0 · **Status:** Automated · **Rule:** wiki positioning §8, wiki item-positioning §5a
 
-*Given* a board rendering `A` (`1.0`), `C` (`1.5`) and `E` (`1.75`), with `X` previewed after `A` (`A, X, C, E`), *when* the response arrives with `X = 2`, and `reindexed` holding `A → 1`, `X → 2`, `C → 3` and `E → 4`, *then* afterwards the positions read `A = 1`, `X = 2`, `C = 3`, `E = 4`, the list reads `A, X, C, E`, and at no point while the response is applied does `X` show after `E`. A comparison made before the pairs landed, against `A = 1.0`, `X = 2`, `C = 1.5` and `E = 1.75`, would put `X` after `E`, an order the server never saved.
+*Given* a board rendering `A` (`1.0`), `C` (`1.5`) and `E` (`1.75`), with `X` previewed after `A` (`A, X, C, E`), *when* the response arrives with `X = 2`, and `reindexed` holding `A → 1`, `X → 2`, `C → 3` and `E → 4`, *then* once the response is applied the positions read `A = 1`, `X = 2`, `C = 3`, `E = 4`, and the list reads `A, X, C, E`. Read against the old `C = 1.5` and `E = 1.75`, `X = 2` would sort `X` after `E`, an order the server never saved, so the list shows the server's order only once the pairs are applied.
 
 **Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`
 

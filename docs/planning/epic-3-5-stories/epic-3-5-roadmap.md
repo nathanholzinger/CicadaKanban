@@ -664,6 +664,30 @@ case it leaves without a test is routed to Story 10 by ID.
   carries the cue as Planned, and its look under Open questions. This
   story designs the look, builds it, and clears the marker.
 
+**Carried in from Story 7 (Nathan, 2026-10-28):** a defect in the code that
+a drag test or a trace finds is fixed here, whichever story finds it. A
+drag spec that fails because the spec is wrong, not because it catches a
+defect, is skipped with a one-line reason, and Story 10 takes it up.
+
+- **A Free Card that has zoomed into a section doesn't follow the cursor
+  there.** Its projection stays at the section's top, because the carried
+  copy's clamp and collision rect read the overlay's stale
+  `draggingNodeRect`. The trace is in Story 7's plan, Amendments,
+  "2026-10-28, batch 7". The fix is in the drag layer's core, and this
+  story's work on the carried copy at a layer change touches the same
+  rects. DRAG-1.21 and DRAG-4.1 go through the same path, and it may be
+  why `drag-card-zoom-in.spec.ts`'s two tests are skipped. The specs it
+  unblocks are Story 10's (its items 1 and 9).
+- **A hold from above, with a child under the dragged item, can draw the
+  modal's ghost a row away from what a release writes** (DRAG-7.15). `W`,
+  first in `P` with a child `WC`, is moved in one step to the top of
+  `R`'s overflow row and held. The modal opens with the projection at
+  `R`'s first child, before `R1`, and draws the ghost after `R1`. The same
+  point reached in small steps reads another gap, so the reading depends
+  on the path. It's untraced. The reproduction is in Story 7's plan, Open
+  questions, "For Nathan, from batch 13". Its spec carries DRAG-7.15,
+  under "No new drag tests" above.
+
 ---
 
 ### Story 9 — Free-item reparent keeping Free status (gesture only)
@@ -715,7 +739,8 @@ deferral and keep landing with their stories.
    approval (`docs/test-plans/README.md`). The story closes with the
    standard Reconciler run (story-done checklist step 5); there's no
    separate reconciliation pass.
-   - **board-drag-interaction, 66 cases** (A3 batch 3). What each test
+   - **board-drag-interaction, 64 cases** (A3 batch 3, less DRAG-1.31,
+     deleted, and DRAG-6.4, closed in Story 7). What each test
      asserts is in the Gaps section and Addendum of
      `docs/archive/test-reconciliation-a3-board-drag-interaction.md`. Its
      "Confirming run" section lists the 18 tests that carry a case's ID
@@ -724,14 +749,14 @@ deferral and keep landing with their stories.
      one, or put the ID on another test that asserts the missing part
      (`docs/test-plans/README.md`).
      - DRAG-1.1, 1.2, 1.5, 1.6, 1.9, 1.12, 1.13, 1.14, 1.16, 1.17, 1.18,
-       1.19, 1.20, 1.21, 1.22, 1.24, 1.26, 1.27, 1.28, 1.31, 1.33;
+       1.19, 1.20, 1.21, 1.22, 1.24, 1.26, 1.27, 1.28, 1.33;
      - DRAG-2.4, 2.5, 2.6, 2.8, 2.9;
      - DRAG-3.5, 3.11, 3.12, 3.16, 3.17, 3.18, 3.19, 3.20, 3.22, 3.23,
        3.24;
      - DRAG-4.1, 4.3, 4.5, 4.12, 4.13, 4.14, 4.15, 4.16, 4.17, 4.20,
        4.21, 4.22, 4.32, 4.33;
      - DRAG-5.1, 5.2, 5.3, 5.9, 5.10, 5.11, 5.13, 5.14;
-     - DRAG-6.2, 6.4, 6.6, 6.7, 6.8, 6.9, 6.11.
+     - DRAG-6.2, 6.6, 6.7, 6.8, 6.9, 6.11.
 
      **The client-rule category reaches these cases too** (Nathan, A3
      batch 6's Stop 1). The category approved at batch 5's Stop 1 is a
@@ -944,18 +969,16 @@ deferral and keep landing with their stories.
    improvement, a state-machine unit test, or a manual note. Record the
    decision per case; "flaky, kept anyway" is not an allowed end state.
 
-9. **Deferred from Story 7** (Nathan, 2026-10-28): a Free Card that has
-   zoomed into a section doesn't follow the cursor there. Its projection
-   stays at the section's top, because the carried copy's clamp and
-   collision rect read the overlay's stale `draggingNodeRect`. The trace
-   is in Story 7's plan, Amendments, "2026-10-28, batch 7".
-   - **The fix,** in the drag layer's core. DRAG-1.21 and DRAG-4.1 go
-     through the same path, and it may be why `drag-card-zoom-in.spec.ts`'s
-     two tests are skipped. Story 8's work on the carried copy at a layer
-     change touches the same rects, so check there first.
+9. **Deferred from Story 7** (Nathan, 2026-10-28): the specs two Story 7
+   cases still lack. The defect that blocks some of them, a Free Card
+   that doesn't follow the cursor once it has zoomed into a section, is
+   Story 8's to fix (Story 8, "Carried in from Story 7").
    - **Routed here by ID:** DRAG-7.13's first clause, the hold by a Free
-     Card from outside `P`; and DRAG-7.10, whose item from outside `P`
-     needs the fix, and whose "bounded by `P`'s box" is DRAG-1.28's rule.
+     Card from outside `P`, which needs the fix. And DRAG-7.10's three
+     misses: its item from outside `P`, which needs the fix too; "bounded
+     by `P`'s box", which is DRAG-1.28's rule; and the distance term
+     against the modal's box (`popDistancePx` above 0), which a
+     `popSession.test.ts` case would close.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1

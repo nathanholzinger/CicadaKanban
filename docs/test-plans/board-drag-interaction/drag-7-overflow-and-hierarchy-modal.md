@@ -27,8 +27,8 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.12 | The modal's rows carry the drag's classification, as the section's do | P2 | Automated |
 | DRAG-7.13 | A hold beside an overflow row is a silent dwell, then a cue on the row, ending in the modal opening | P1 | Open |
 | DRAG-7.14 | The modal hold resets when the ghost changes gap or level or the cursor leaves the section, not while the carried copy moves within the gap | P1 | Automated |
-| DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Open |
-| DRAG-7.16 | A modal kept inside the window at an edge reads the ghost afresh from the cursor | P1 | Open |
+| DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Automated |
+| DRAG-7.16 | A modal kept inside the window at an edge reads the ghost afresh from the cursor | P1 | Automated |
 | DRAG-7.17 | When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor | P2 | Automated |
 | DRAG-7.18 | After leaving the modal, a hold beside an overflow row opens it again in the same drag | P2 | Automated |
 | DRAG-7.19 | After a drag ends in the modal, by a release or a cancel, the modal stays open where it is | P1 | Automated |
@@ -37,11 +37,11 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.22 | A press on an overflow row's count starts no drag, and a click on it opens the modal, not the Card's Sheet | P2 | Automated |
 | DRAG-7.23 | A board reload leaves an open modal open while its Card still has attached descendants | P2 | Automated |
 | DRAG-7.24 | A press on an overflow row's indent is the Card's | P2 | Automated |
-| DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Open |
-| DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Open |
-| DRAG-7.27 | A dragged row carries its overflow row, which is never a neighbor | P2 | Open |
+| DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Automated |
+| DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Automated |
+| DRAG-7.27 | A dragged row carries its overflow row, which is never a neighbor | P2 | Automated |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
-| DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Open |
+| DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 
 ---
 
@@ -184,21 +184,21 @@ This case asserts the clock's logic, with its thresholds as parameters; its pass
 
 ## DRAG-7.15 — A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* the modal hold beside `R`'s overflow row completes with the cursor still, where a modal placed under the cursor fits inside the window, *then* the modal opens with the ghost's spot under the cursor: from the gap above the overflow row, the gap before `R1`, at `R1`'s level; from the gap below it, the gap after `R2`, at `R2`'s level. The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened: `X` first among `R`'s attached children, before `R1`, or last, after `R2` ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)). No pop happened: the drag is still at `P`'s Descendants layer.
 
 The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor, and a release right after commits the item there, its child still under it.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`
 
 ## DRAG-7.16 — A modal kept inside the window at an edge reads the ghost afresh from the cursor
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* `R`'s overflow row near an edge of the window, top, bottom, left or right, so that a modal placed with the ghost's spot under the cursor ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) would cross that edge, *when* the modal hold completes, *then* the modal lies wholly inside the window, the cursor lies inside the modal's box, and the ghost is at the gap and the depth the cursor reads over the modal's rows, which needn't be `R`'s first or last child. A release without moving the cursor commits that placement. Opening the modal reads the ghost afresh from the cursor, where a zoom into the section doesn't move it ([DRAG-4.30](drag-4-attach-and-stub-placement.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`, `client/src/components/workflow/modalPlacement.test.ts`
 
 ## DRAG-7.17 — When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor
 
@@ -266,27 +266,27 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.25 — After a reload, a modal a hold opened is centered
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
 *Given* the modal opened by a hold during a drag, under the cursor and away from the window's center ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)), *when* the board reloads, mid-drag or after a release in the modal whose write failed, and the modal stays open ([DRAG-7.23](drag-7-overflow-and-hierarchy-modal.md)), *then* the modal is centered in the window, as one opened by a click is ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)). A modal opened by a click stays centered across the reload.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
 ## DRAG-7.26 — The modal closes when its Card is gone or has no attached descendants left
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
-*Given* the modal open, with no drag running, *when* the board reloads and `P` has been deleted, *then* the modal closes. *When* instead the board reloads and `P` still exists but none of its descendants is attached, *then* the modal closes, and `P`'s section has no rows. *Given* the reloaded board still shows `P` with at least one attached descendant, *then* the modal stays open ([DRAG-7.23](drag-7-overflow-and-hierarchy-modal.md)).
+*Given* the modal open, with no drag running, *when* the board reloads and `P` has been deleted, *then* the modal closes. *When* instead the board reloads and `P` still exists and still has children, but none of them is attached, so it has no attached descendants left, *then* the modal closes, and `P`'s section has no rows. *Given* the reloaded board still shows `P` with at least one attached descendant, *then* the modal stays open ([DRAG-7.23](drag-7-overflow-and-hierarchy-modal.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
 ## DRAG-7.27 — A dragged row carries its overflow row, which is never a neighbor
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2
 
 *Given* the tree, *when* `R` is picked up in the section, *then* its overflow row travels with it, as `R`'s subtree does: it isn't one of the rows the ghost moves among, and while `R` is dragged the side highlight never names it. Every gap reads as though `R`'s overflow row weren't in the list: the gap after `Q` runs to `T`. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`
 
 ## DRAG-7.28 — A click on a row in the modal opens nothing
 
@@ -298,8 +298,8 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.29 — The side highlight can name an overflow row, and a release still places by gap and depth
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.1, wiki board-drag-interaction §7
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.1, wiki board-drag-interaction §7
 
 *Given* the tree, with the ghost of `X` in a gap beside `R`'s overflow row, *when* the side highlight names the overflow row as the ghost's neighbor, *then* it's drawn on the overflow row, as it is on any row it names. A release commits what the gap and the depth say, never `X` as a child of the overflow row: from the gap between `R` and the overflow row, `R`'s first child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md)); from the gap below it at level `L + 1`, `R`'s last child ([DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)).
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`

@@ -8,7 +8,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 |---|---|---|---|
 | DRAG-6.1 | The board shows the drop's placement at the moment of release, before the request is sent, with no position invented | P0 | Automated |
 | DRAG-6.2 | The previewed item is marked pending; its `position` is left alone, and isn't `null` | P0 | Automated |
-| DRAG-6.4 | A response that orders the item differently from its preview is shown as the server saved it | P1 | Open |
+| DRAG-6.4 | A response that orders the item differently from its preview is shown as the server saved it | P1 | Automated |
 | DRAG-6.5 | Re-dragging a pending item: responses are sequenced per item, so a stale one can't land last | P0 | Automated |
 | DRAG-6.6 | A failed drop resyncs the board from the server; the guess is never kept | P0 | Automated |
 | DRAG-6.7 | A stale response carrying reindex pairs triggers a resync, not a guess | P1 | Open |
@@ -40,11 +40,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.4 — A response that orders the item differently from its preview is shown as the server saved it
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki item-positioning §5a
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10, wiki item-positioning §5a
 
 *Given* a column rendering `A, C, E`, and `X` released after `A`, so the board previews `A, X, C, E` ([DRAG-6.1](drag-6-preview-reconciliation.md)), *when* the response gives `X` a position that sorts it after `E`, which a correct response never does ([TC-2.28](../item-positioning/part-2-anchor-resolution.md)), *then* as soon as the response is applied the list reads `A, C, E, X`, with `X` unmarked and `X.position` the response's. The board shows the order the server saved, without a reload: it doesn't keep `X` at its previewed slot, and doesn't adjust any item's position to match the preview. A difference like this means the client and the server disagreed about what the drop meant.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/itemWriteReconciliation.test.ts`
 
 ## DRAG-6.5 — Re-dragging a pending item: responses are sequenced per item, so a stale one can't land last
 
