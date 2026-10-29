@@ -54,7 +54,7 @@ rationale in `epic-3-5-decisions.md`.
 ## Stories
 
 ### Story 1 — Server: atomic reparent-with-placement ✅ (done 2026-09-11)
-**Plan / record:** [`story-1-server-reparent-with-placement.md`](story-1-server-reparent-with-placement.md)
+**Plan / record:** [`story-1-server-reparent-with-placement.md`](../../archive/story-1-server-reparent-with-placement.md)
 
 **Goal:** `PATCH /items/:id/move` accepts parent and attachment changes
 alongside workphase and placement, so one gesture commits in one transaction.
@@ -78,7 +78,8 @@ adding a fourth and fifth hand-rolled copy — see `epic-3-5-decisions.md` Q2.
   compares against anything (`wiki/item-positioning/` §7.3).
 - **Free-item reparent is supported at the API** (§4): `parentId` and
   `isAttached` are independent; omitting the flag keeps the item's current
-  state. Story 9 is only about whether the *gesture* offers it.
+  state. Whether the *gesture* offers it is a tech-debt story's question
+  (`docs/planning/tech-debt-stories/free-item-reparent-gesture.md`).
 - **`parentId: null` on move = reparent to root** (§11) — clears the flag
   too, per §1's invariant; workphase unchanged.
 - **Reindex disclosure** — the `{id, position}[]` response collection from
@@ -104,7 +105,7 @@ adding a fourth and fifth hand-rolled copy — see `epic-3-5-decisions.md` Q2.
 ---
 
 ### Story 2 — Drop-target validity + relationship overlays ✅ (done 2026-09-11)
-**Plan / record:** [`story-2-drop-target-classification.md`](story-2-drop-target-classification.md)
+**Plan / record:** [`story-2-drop-target-classification.md`](../../archive/story-2-drop-target-classification.md)
 
 **Goal:** decide, at drag start, what every visible target *is* for the item
 currently being carried — valid, cycle-forming, depth-capped, or inert — and
@@ -140,7 +141,7 @@ see the story plan's decisions):
 ---
 
 ### Story 3 — Pop state machine + Card→Column drop bands ✅ (done 2026-09-11)
-**Plan / record:** [`story-3-pop-state-machine-column-bands.md`](story-3-pop-state-machine-column-bands.md)
+**Plan / record:** [`story-3-pop-state-machine-column-bands.md`](../../archive/story-3-pop-state-machine-column-bands.md)
 
 **Goal:** the core interaction model. Cards stay locked to their context until
 the cursor pulls them out, then pop and follow freely. Includes the
@@ -186,7 +187,7 @@ Product Owner.** §5's drop bands were rebuilt from a percentage-of-the-
 rendered-slice model to pixel carve-outs anchored to real content, with
 Board-layer space reservation (`ghostCardHeightPx`), and both visible
 copies of a dragged card were collapsed to a fixed shape (§5a). Recorded in
-full in [`story-3-pop-state-machine-column-bands.md`](story-3-pop-state-machine-column-bands.md)'s
+full in [`story-3-pop-state-machine-column-bands.md`](../../archive/story-3-pop-state-machine-column-bands.md)'s
 own addendum section rather than as a new story — same subject Story 3
 already owns, not new capability. Kept here rather than folded into Story
 8: Story 8 is unrelated (§4's relationship-overlay palette/animation, not
@@ -195,7 +196,7 @@ started).
 ---
 
 ### Story 4 — Card → Card = attach ✅ (done 2026-09-16)
-**Plan / record:** [`story-4-card-to-card-attach.md`](story-4-card-to-card-attach.md)
+**Plan / record:** [`story-4-card-to-card-attach.md`](../../archive/story-4-card-to-card-attach.md)
 
 **Goal:** the headline gesture. Dropping a Card onto another Card attaches it
 as a Stub, inheriting the parent's workphase. Covers the cross-project case
@@ -237,10 +238,10 @@ the audit's #1 fix (`isIdentity`, `toRequest`) is covered in
 
 ---
 
-### Story 4.1 — Drag-layer efficiency refactor (vestige removal)
-**Plan / record:** [`story-4-1-efficiency-refactor.md`](story-4-1-efficiency-refactor.md)
-· anchor: [`story-4-1-anchor-draft.md`](story-4-1-anchor-draft.md)
-· comparison: [`story-4-1-comparison.md`](story-4-1-comparison.md)
+### Story 4.1 — Drag-layer efficiency refactor (vestige removal) ✅ (done 2026-09-18)
+**Plan / record:** [`story-4-1-efficiency-refactor.md`](../../archive/story-4-1-efficiency-refactor.md)
+· anchor: [`story-4-1-anchor-draft.md`](../../archive/story-4-1-anchor-draft.md)
+· comparison: [`story-4-1-comparison.md`](../../archive/story-4-1-comparison.md)
 
 **Goal:** no rule changes. Stories 3 and 4 were built hands-on while the
 rules changed several times; this story removes what the iteration left
@@ -276,14 +277,16 @@ every phase; one new E2E case (the reservation invariant); hands-on for the
 pinned ghost and the Phase 4 items.
 
 **Status: Phases 0–4 implemented 2026-09-18** — see the plan doc's own
-"As built" section for the per-phase detail and the two hands-on
+"As built" section for the per-phase detail. Its two hands-on
 Product-Owner feel-checks (Phase 1's shortCard/carve-out, Phase 4's
-merged-column pop-out/exit-clock) left open there.
+merged-column pop-out/exit-clock) were closed without being run (Nathan,
+2026-10-28): Stories 5–7 built on both, and Story 8's manual testing
+covers anything still off.
 
 ---
 
-### Story 5 — Stub → out = detach
-**Plan / record:** [`story-5-stub-detach.md`](story-5-stub-detach.md)
+### Story 5 — Stub → out = detach ✅ (done 2026-09-21)
+**Plan / record:** [`story-5-stub-detach.md`](../../archive/story-5-stub-detach.md)
 (planned 2026-09-17; its seven planning decisions ratified by the Product
 Owner 2026-09-21 — 1/3/5/6 as rules, now in the wiki; 2/4/7 left to the
 Architect; **built 2026-09-21**, same day, against the post-4.1 code — see
@@ -317,8 +320,8 @@ manual placement inside it — sequence the two accordingly, or build Story
 
 ---
 
-### Story 6 — Stub → Stub hierarchy placement
-**Plan / record:** [`story-6-descendants-placement.md`](story-6-descendants-placement.md)
+### Story 6 — Stub → Stub hierarchy placement ✅ (done 2026-09-25)
+**Plan / record:** [`story-6-descendants-placement.md`](../../archive/story-6-descendants-placement.md)
 (planned 2026-09-17; its eight planning decisions ratified by the Product
 Owner 2026-09-23, decision 1 with a PO hands-on gate before the machine
 phase; in progress — Phase A (the shared placement library, the sidebar's
@@ -374,8 +377,8 @@ drag.
 
 ---
 
-### Story 6.1 — Drag-layer refactor against stock dnd-kit (vestige removal after Story 6)
-**Plan / record:** [`story-6-1-library-first-refactor.md`](story-6-1-library-first-refactor.md)
+### Story 6.1 — Drag-layer refactor against stock dnd-kit (vestige removal after Story 6) ✅ (done 2026-09-24)
+**Plan / record:** [`story-6-1-library-first-refactor.md`](../../archive/story-6-1-library-first-refactor.md)
 
 **Goal:** no rule changes. Story 6 was built hands-on, and several rules
 changed along the way. One of them reversed the drag layer's direction: the
@@ -407,8 +410,8 @@ phases, 1 already fixed in Story 6, 5 deferred, 7 rejected. Built
 
 ---
 
-### Story 7 — Depth cap determination + depth overflow
-**Plan:** [`story-7-depth-cap-and-hierarchy-modal.md`](story-7-depth-cap-and-hierarchy-modal.md)
+### Story 7 — Depth cap determination + depth overflow ✅ (done 2026-10-28)
+**Plan / record:** [`story-7-depth-cap-and-hierarchy-modal.md`](../../archive/story-7-depth-cap-and-hierarchy-modal.md)
 
 **Goal:** derive the real cap empirically from what the project sidebar can
 display comfortably, then decide what happens to a hierarchy that exceeds
@@ -441,7 +444,7 @@ it in dnd-kit's order (`travelingRowsFor`), and the sidebar maps it to
 ledger rejected merging the two for now (L1-7b); this is the natural
 place to revisit.
 
-**Status: planning, 2026-10-26.** Nathan ruled:
+**Planned 2026-10-26.** Nathan ruled:
 - **The overflow:** the modal is in. A Card's section shows 3 levels, and a placeholder stands in for the rest.
 - **The sidebar:** its width becomes draggable.
 - **The caps:** both take one value, at least 10, set by how deep the modal shows comfortably.
@@ -450,58 +453,9 @@ place to revisit.
 
 The plan holds the decisions. The hold threshold above is its E3.
 
----
-
-### Optional — Fold the Card layer into the Descendants layer
-**Goal:** remove the Card layer from the drag's stack, so that zooming into a
-Card lands straight in its Descendants layer, bounded by the whole Card.
-Every Card gets that layer, including one with no children, whose only spot
-is the Card's only child (wiki hierarchy-placement §2's empty hierarchy).
-
-Raised while planning Story 7 (Nathan, 2026-10-26). The Card layer hasn't
-proved useful hands-on, and Story 7's overflow modal brings an edge case
-that only the Card layer raises. Left out of Story 7 to keep its scope.
-
-**What carries over:**
-- **A release right after zooming in** still makes an item from outside the
-  last child, and still sets the Card's own Stub back down. The Descendants
-  layer already starts the ghost where the Card layer places it.
-- **A Card with no children** still takes a child, through its one-spot
-  Descendants layer.
-
-**What changes:**
-- **Detaching is one pop,** leaving the Card's box. The safe stop when a drag
-  drifts out of the section goes (DRAG-5.12's set-down at the Card layer).
-- **One hold fewer:** the Card → Descendants zoom, and
-  `descendantsPopInDelayMs` with it.
-- **The modal's edge case goes.** Pulling out of Story 7's modal lands in
-  the column, so the case of a Stub whose spot the section hides, pulled
-  out to the Card layer, no longer arises.
-
-**Cost:** mostly docs and tests.
-- **The PO:** wiki board-drag-interaction §1.1, §6, §7 and §8.
-- **The Test Planner:** DRAG-4.1, DRAG-5.12, and the cases that zoom from
-  the Card layer into Descendants.
-- **The specs:** `drag-card-zoom-in.spec.ts` and `drag-5-stub-detach.spec.ts`.
-- **The code:** mostly deletion, of `popSession.ts`'s Card state and
-  `placement.ts`'s Card branch, plus moving the Descendants region onto
-  the Card's box.
-
-**It reverses a recorded decision:** "No two-layer pop out of Descendants"
-(Decisions of 2026-09-17, below), which keeps "The Card-layer stop … a real,
-if brief, state".
-
-**Sequencing, if taken:**
-- **Before Story 10,** which automates Card-layer cases (DRAG-1.17, 1.21 and
-  4.1 among them).
-- **Ideally before Story 8,** whose feel tuning covers layer changes, this
-  one included.
-- **Decided alongside Story 9.** Story 6.1's dry run put Story 9's "reparent
-  but stay Free" at the Card layer, as a third meaning of a release there.
-  Without the layer, Story 9 needs another home for it, or concludes it
-  isn't a board gesture.
-
-**Status:** optional, not scheduled (Nathan, 2026-10-26).
+**Status: done 2026-10-28.** Both caps are 12. Its two defects left open
+are Story 8.2, which Story 8.1 took in, and Story 8.3. The specs 8.2's
+fix unblocks are Story 10's item 9.
 
 ---
 
@@ -519,8 +473,23 @@ Deliberately late, so all of it is tuned against real, working gestures.
 *(Broadened 2026-09-24 from "visual cue polish" to include feel tuning:
 Story 6's hands-on found feel problems that aren't about any one cue's look.)*
 
-**How this story runs: code first** (Nathan, 2026-10-28). It's a tuning
-and feel story, so it departs from the usual order in three ways:
+**A series of stories** (Nathan, 2026-10-28). Story 8 is a small epic of
+its own, run as discrete 8.N stories, in this order:
+1. **Story 8.1** folds the Card layer into the Descendants layer. It was
+   this roadmap's optional story, and it takes in Story 8.2's fix.
+2. **Stories 8.3–8.6** fix the bugs and build the missed features that
+   earlier stories deferred here.
+3. **The cues' final look,** a story of its own.
+4. **The zoom-in morph,** last. It's what Story 8 was first written for.
+
+The last two get their numbers when they're picked up. More 8.N stories
+are expected from manual testing, such as one for a Stub in the hierarchy
+modal opening its Sheet on a click. Each is added when it's found, and
+numbered ahead of the last two. Each story gets its plan when it's picked
+up.
+
+**How Story 8 runs: code first** (Nathan, 2026-10-28). It's a tuning and
+feel story, so every 8.N departs from the usual order in three ways:
 - **Code leads, and the docs follow.** The Coder builds candidate
   solutions, and Nathan tries them hands-on. The PO writes the wiki, and
   the Test Planner the cases, once Nathan has approved a solution. They
@@ -529,7 +498,7 @@ and feel story, so it departs from the usual order in three ways:
   fail, and we're reasonably sure the spec is giving a false failure, the
   spec is skipped, not updated. The skip carries a one-line reason. Story
   10 takes the skips up, since it ends with none.
-- **No new drag tests** until the story's decisions are final, at its end,
+- **No new drag tests** until Story 8's decisions are final, at its end,
   or until Story 10.
 
 "Drag tests" here are the Playwright specs that drive a drag, the ones that
@@ -540,14 +509,224 @@ tried out, they can be skipped on the same terms, and Story 10 takes them
 up too. Most of them set their own timings and geometry, and read the
 shared sizes by name, so a changed tuning value or size shouldn't fail
 them. A changed rule will, such as what a layer change moves or what a
-trigger reads. The story still closes by the story-done checklist, and any
-case it leaves without a test is routed to Story 10 by ID.
+trigger reads.
+
+**A defect is fixed in Story 8, whichever story finds it** (Nathan,
+2026-10-28). A defect in the code that a drag test or a trace finds is
+fixed in an 8.N story. A drag spec that fails because the spec is wrong,
+not because it catches a defect, is skipped with a one-line reason, and
+Story 10 takes it up.
+
+**How each story closes** (Nathan, 2026-10-28). Not strictly by the
+story-done checklist:
+- Once a story's code is settled, the PO and the Test Planner bring the
+  wiki and the test plans up to it.
+- An audit or a Reconciler run happens when it seems worth it, not for
+  every story.
+- **Story 8 ends with a close-out audit and a Reconciler run** over all
+  its stories, by the checklist. Any case still without a test is routed
+  to Story 10 by ID then.
+
+---
+
+### Story 8.1 — Fold the Card layer into the Descendants layer
+**Plan:** [`story-8-1-fold-card-layer.md`](story-8-1-fold-card-layer.md)
+
+**Goal:** remove the Card layer from the drag's stack, so that zooming into a
+Card lands straight in its Descendants layer, bounded by the whole Card.
+Every Card gets that layer, including one with no children, whose only spot
+is the Card's only child (wiki hierarchy-placement §2's empty hierarchy).
+
+Raised while planning Story 7 (Nathan, 2026-10-26). The Card layer hasn't
+proved useful hands-on, and Story 7's overflow modal brings an edge case
+that only the Card layer raises. Left out of Story 7 to keep its scope, and
+taken into Story 8 as its first story (Nathan, 2026-10-28).
+
+**What carries over:**
+- **A release right after zooming in** still makes an item from outside the
+  last child, and still sets the Card's own Stub back down. The Descendants
+  layer already starts the ghost where the Card layer places it.
+- **A Card with no children** still takes a child, through its one-spot
+  Descendants layer.
+
+**What changes:**
+- **Detaching is one pop,** leaving the Card's box. The safe stop when a drag
+  drifts out of the section goes (DRAG-5.12's set-down at the Card layer).
+- **One hold fewer:** the Card → Descendants zoom, and
+  `descendantsPopInDelayMs` with it.
+- **The modal's edge case goes.** Pulling out of Story 7's modal lands in
+  the column, so the case of a Stub whose spot the section hides, pulled
+  out to the Card layer, no longer arises.
+
+**It settles the Card layer's pass-through** (PO, 2026-09-25, carried in
+from the Story 6 + 6.1 audit fixes). After a zoom into a Card with
+children, the pointer usually rests over its descendants section, so about
+0.8 s later (`descendantsPopInDelayMs`) the drag goes one layer deeper. The
+Card layer's own drop (attach as the last child) held only while the
+pointer stayed on the Card outside its section. The PO found this fine in
+use, and was weighing whether the Card layer's stop was worth keeping for a
+Card with children. This story removes the stop for every Card.
+
+**Cost:** mostly docs and tests.
+- **The PO:** wiki board-drag-interaction §1.1, §6, §7 and §8.
+- **The Test Planner:** DRAG-4.1, DRAG-5.12, and the cases that zoom from
+  the Card layer into Descendants.
+- **The specs:** `drag-card-zoom-in.spec.ts` and `drag-5-stub-detach.spec.ts`.
+  Under code first, a spec this breaks is skipped, and Story 10 takes it up.
+- **The code:** mostly deletion, of `popSession.ts`'s Card state and
+  `placement.ts`'s Card branch, plus moving the Descendants region onto
+  the Card's box.
+
+**It takes in Story 8.2's fix** (Nathan, 2026-10-29). After the fold,
+every Free Card that zooms into a Card lands in its section, the path
+Story 8.2's defect is on. Without the fix, attaching a Free Card could make
+it the first child, where the Card layer always made it the last, so the
+fold's main gesture would regress.
+
+**It reverses a recorded decision:** "No two-layer pop out of Descendants"
+(Decisions of 2026-09-17, below), which keeps "The Card-layer stop … a real,
+if brief, state".
+
+**Sequencing:**
+- **Before Story 10,** which automates Card-layer cases (DRAG-1.17, 1.21 and
+  4.1 among them).
+- **First in Story 8,** whose feel tuning covers layer changes, this one
+  included.
+- **The Free reparent's candidate home goes with the layer.** Story 6.1's
+  dry run put "reparent but stay Free" at the Card layer, as a third
+  meaning of a release there. That question has left this roadmap (Nathan,
+  2026-10-28) for a tech-debt story,
+  `docs/planning/tech-debt-stories/free-item-reparent-gesture.md`, which
+  starts from a board without the Card layer.
+
+---
+
+### Story 8.2 — A Free Card zoomed into a section doesn't follow the cursor
+**Carried in from Story 7** (Nathan, 2026-10-28). **Folded into Story
+8.1** (Nathan, 2026-10-29), as its plan's Phase 3. The number isn't
+reused, so Stories 8.3–8.6 keep theirs.
+
+A Free Card that has zoomed into a section doesn't follow the cursor there.
+Its projection stays at the section's top, because the carried copy's clamp
+and collision rect read the overlay's stale `draggingNodeRect`. The trace is
+in Story 7's plan, Amendments, "2026-10-28, batch 7". The fix is in the drag
+layer's core, and the morph's work on the carried copy at a layer change
+touches the same rects. DRAG-1.21 and DRAG-4.1 go through the same path,
+and it may be why `drag-card-zoom-in.spec.ts`'s two tests are skipped. The
+specs it unblocks are Story 10's (its items 1 and 9).
+
+The fix starts by reproducing the defect on the folded code.
+
+---
+
+### Story 8.3 — A hold from above draws the modal's ghost a row off (DRAG-7.15)
+**Carried in from Story 7** (Nathan, 2026-10-28).
+
+A hold from above, with a child under the dragged item, can draw the
+modal's ghost a row away from what a release writes. `W`, first in `P`
+with a child `WC`, is moved in one step to the top of `R`'s overflow row
+and held. The modal opens with the projection at `R`'s first child, before
+`R1`, and draws the ghost after `R1`. The same point reached in small steps
+reads another gap, so the reading depends on the path. It's untraced. The
+reproduction is in Story 7's plan, Open questions, "For Nathan, from batch
+13". DRAG-7.15's specs reach the gap in small steps. A spec for the
+one-step move would carry DRAG-7.15, and waits under "No new drag tests"
+(How Story 8 runs).
+
+---
+
+### Story 8.4 — A cue when the board stops a drag
+**Carried in from A4's PO handoff** (Nathan, 2026-09-30).
+
+If an earlier drop's write fails, or a stale response resyncs the board,
+while the user is dragging, the reload cancels the drag and nothing is
+written (wiki board-drag-interaction §10). Nathan wants a visual cue for
+that forced stop, so the drag's end doesn't read as the user's own slip.
+The wiki carries the cue as Planned, and its look under Open questions.
+This story designs the look and builds it, and the PO clears the marker
+once Nathan approves it.
+
+---
+
+### Story 8.5 — A dragged Stub's children read as off-limits
+**Carried in from Story 6's hands-on** (PO, 2026-09-24).
+
+- **What's there.** The guards are right: a picked-up Stub's descendants
+  travel with it, so it can't be dropped into its own branch (Story 6,
+  Phase D's hands-on finding, item 3).
+- **What's missing.** Nothing on screen says so. The children stay drawn
+  at full strength where they were, while the Stub's ghost moves away
+  from them.
+- **Options, smallest first:**
+  - **Grey them out** for the drag, so the branch reads as off-limits.
+    The project sidebar already dims a dragged project's descendants
+    (Story 6 decision 5). The change is small: the rows are the
+    classification's cycle-forming set, which today gets no overlay
+    style at all (`KanbanCard.tsx::dropTargetClass`).
+  - **Carry them visibly:** the children leave the section and ride with
+    the carried copy as a small stack. It's bigger than it looks.
+    Removing rows at pickup shifts layout under the cursor (the jump
+    problem in the morph's story), and a taller, multi-row copy changes
+    the box dnd-kit measures for collisions.
+
+---
+
+### Story 8.6 — One height for every Stub row
+**Carried in from the Story 6 + 6.1 audit fixes** (audit #8, 2026-09-25).
+
+A type pill makes a Stub row 5 px taller: a sortable row is 24 px, or 29
+with a pill; the ghost row and the carried copy are 26 px, or 31. The drag
+math reads the pill-less heights (`cardMetrics.ts::STUB_ROW_HEIGHT_PX`,
+`CARRIED_STUB_HEIGHT_PX`), so on a typed row the lean's ghost middle and
+the carried copy's re-anchor sit up to 2.5 px off. Giving every Stub row
+one height, pill or not, would make both exact. It's a look decision.
+
+---
+
+### Story 8.? — The cues' final look
+**Goal:** settle the final look of the drag's cues, against working
+gestures. A story of its own, just before the morph, and numbered when
+it's picked up (Nathan, 2026-10-28). The wiki holds each look under
+board-drag-interaction's Open questions.
+
+- **The relationship overlays,** and every other "this item relates to
+  these items" cue (wiki board-drag-interaction §4).
+- **The other provisional cues:** the band guides (§5), the over-cap
+  outline (§3.2, §7.2), the hold's cue on the overflow row (§7.3), and the
+  looks of the overflow row and the hierarchy modal (§9). The hold's cue
+  borrows the zoom-in cue's look, so it may wait for the morph, which
+  redesigns that cue.
+- **Whether the ghost's expansion on drop animates (§5a).** Today it's
+  instant.
+- **The depth cue at the Descendants layer deserves a tuning pass**
+  (carried in from Story 6's hands-on, 2026-09-24). Story 6 ships a simple
+  stand-in (the Phase D hands-on, 2026-09-24): the carried Stub stays
+  pinned to the section's width, and its visible box steps right by one
+  indent per level, so it shows the depth it will land at. It was built to
+  test placement against, not as the final look. To tune:
+  - **Travel per level.** 12 px is both the visual indent and the pointer
+    travel per level (`DESCENDANTS_INDENT_PX`), so a 6 px sideways wobble
+    while moving vertically changes the depth. It may want its own tunable
+    value, or a dead band before a level changes.
+  - **Pinned vs. following.** Whether the carried copy should also move
+    sideways with the pointer, or stay pinned and only snap.
+  - **The snap itself.** Today it's a 75 ms margin transition. Also how
+    the over-cap state looks on the copy: today it's the ghost row's
+    provisional red dashed outline, reused.
+
+  The ghost row hidden under the carried copy is the morph's, with the
+  blue line.
+
+---
+
+### Story 8.? — The zoom-in morph
+**Goal:** build the zoom-in morph Story 8 was first written for, and settle
+the jumps at a layer change that it's meant to solve. Last in Story 8, and
+numbered when it's picked up (Nathan, 2026-10-28). After Story 8.1, a zoom
+into a Card lands in its Descendants layer, so the morph ends there.
 
 **Carried in from Story 6's hands-on (2026-09-24):**
 
-- **The blue anchor line is partly hidden behind the dragged card.** Since
-  the drop lands where the ghost is and the dragged copy sits over the
-  ghost, the line (above or below the ghost) is often under the copy.
 - **The zoom-in morph.** Story 6 ships a simple cue for the Column → Card
   zoom-in (the named card outlined, filling in). The full version, as the
   PO pictured it: the target card expands, a dashed placeholder Stub grows
@@ -570,22 +749,6 @@ case it leaves without a test is routed to Story 10 by ID.
   construction if the target's own position never has to move out from
   under the cursor mid-cue — worth checking against this specific case
   once the morph's built, not just against the happy path.
-- **The depth cue at the Descendants layer deserves a tuning pass.** Story
-  6 ships a simple stand-in (the Phase D hands-on, 2026-09-24): the carried
-  Stub stays pinned to the section's width, and its visible box steps right
-  by one indent per level, so it shows the depth it will land at. It was
-  built to test placement against, not as the final look. To tune:
-  - **Travel per level.** 12 px is both the visual indent and the pointer
-    travel per level (`DESCENDANTS_INDENT_PX`), so a 6 px sideways wobble
-    while moving vertically changes the depth. It may want its own panel
-    value, or a dead band before a level changes.
-  - **Pinned vs. following.** Whether the carried copy should also move
-    sideways with the pointer, or stay pinned and only snap.
-  - **The snap itself.** Today it's a 75 ms margin transition. Also how
-    the over-cap state looks on the copy: today it's the ghost row's
-    provisional red dashed outline, reused.
-  - **The ghost row under the copy.** It shows the same depth but is
-    hidden under the carried copy — the same issue as the blue line above.
 - **Things jump at a layer change, and then the triggers disagree** (PO,
   2026-09-24).
   - **What moves.** Switching context (popping in or out, zooming into a
@@ -614,99 +777,18 @@ case it leaves without a test is routed to Story 10 by ID.
     - have every trigger read one reference point.
   - Story 6.1's "who decides" table records which trigger reads which
     point. That's the input to this.
-- **Picking up a Stub that has children** (PO, 2026-09-24).
-  - **What's there.** The guards are right: its descendants travel with
-    it, so it can't be dropped into its own branch (Story 6, Phase D's
-    hands-on finding, item 3).
-  - **What's missing.** Nothing on screen says so. The children stay drawn
-    at full strength where they were, while the Stub's ghost moves away
-    from them.
-  - **Options, smallest first:**
-    - **Grey them out** for the drag, so the branch reads as off-limits.
-      The project sidebar already dims a dragged project's descendants
-      (Story 6 decision 5). The change is small: the rows are the
-      classification's cycle-forming set, which today gets no overlay
-      style at all (`KanbanCard.tsx::dropTargetClass`).
-    - **Carry them visibly:** the children leave the section and ride with
-      the carried copy as a small stack. It's bigger than it looks.
-      Removing rows at pickup shifts layout under the cursor (the jump
-      problem above), and a taller, multi-row copy changes the box dnd-kit
-      measures for collisions.
+- **The blue anchor line is partly hidden behind the dragged card.** Since
+  the drop lands where the ghost is and the dragged copy sits over the
+  ghost, the line (above or below the ghost) is often under the copy. The
+  Descendants layer's ghost row has the same problem: it shows the depth
+  the item will land at, but it's hidden under the carried copy.
 
-**Carried in from the Story 6 + 6.1 audit fixes (2026-09-25):**
-
-- **Stub rows come in two heights.** A type pill makes a Stub row 5 px
-  taller: a sortable row is 24 px, or 29 with a pill; the ghost row and
-  the carried copy are 26 px, or 31. The drag math reads the pill-less
-  heights (`cardMetrics.ts::STUB_ROW_HEIGHT_PX`,
-  `CARRIED_STUB_HEIGHT_PX`), so on a typed row the lean's ghost middle and
-  the carried copy's re-anchor sit up to 2.5 px off. Giving every Stub row
-  one height, pill or not, would make both exact. It's a look decision
-  (audit #8).
-- **The Card layer is a pass-through for a Card with children** (PO,
-  2026-09-25). After a zoom into a Card, the pointer usually rests over
-  its descendants section, so about 0.8 s later
-  (`descendantsPopInDelayMs`) the drag goes one layer deeper. The Card
-  layer's own drop (attach as the last child) holds only while the pointer
-  stays on the Card outside its section. A childless Card has no section,
-  so its drop always happens at the Card layer. The PO has found this fine
-  in use, and is weighing whether the Card layer's stop is worth keeping
-  for a Card with children. Skipping it would change wiki §1.1's layer
-  stack, so it's a rule decision as well as a feel one.
-
-**Carried in from A4's PO handoff (Nathan, 2026-09-30):**
-
-- **A cue when the board stops a drag.** If an earlier drop's write fails,
-  or a stale response resyncs the board, while the user is dragging, the
-  reload cancels the drag and nothing is written (wiki
-  board-drag-interaction §10). Nathan wants a visual cue for that forced
-  stop, so the drag's end doesn't read as the user's own slip. The wiki
-  carries the cue as Planned, and its look under Open questions. This
-  story designs the look, builds it, and clears the marker.
-
-**Carried in from Story 7 (Nathan, 2026-10-28):** a defect in the code that
-a drag test or a trace finds is fixed here, whichever story finds it. A
-drag spec that fails because the spec is wrong, not because it catches a
-defect, is skipped with a one-line reason, and Story 10 takes it up.
-
-- **A Free Card that has zoomed into a section doesn't follow the cursor
-  there.** Its projection stays at the section's top, because the carried
-  copy's clamp and collision rect read the overlay's stale
-  `draggingNodeRect`. The trace is in Story 7's plan, Amendments,
-  "2026-10-28, batch 7". The fix is in the drag layer's core, and this
-  story's work on the carried copy at a layer change touches the same
-  rects. DRAG-1.21 and DRAG-4.1 go through the same path, and it may be
-  why `drag-card-zoom-in.spec.ts`'s two tests are skipped. The specs it
-  unblocks are Story 10's (its items 1 and 9).
-- **A hold from above, with a child under the dragged item, can draw the
-  modal's ghost a row away from what a release writes** (DRAG-7.15). `W`,
-  first in `P` with a child `WC`, is moved in one step to the top of
-  `R`'s overflow row and held. The modal opens with the projection at
-  `R`'s first child, before `R1`, and draws the ghost after `R1`. The same
-  point reached in small steps reads another gap, so the reading depends
-  on the path. It's untraced. The reproduction is in Story 7's plan, Open
-  questions, "For Nathan, from batch 13". Its spec carries DRAG-7.15,
-  under "No new drag tests" above.
-
----
-
-### Story 9 — Free-item reparent keeping Free status (gesture only)
-**Goal:** decide whether the *board* offers a drop that reparents a Free item
-while keeping it Free — implement it, defer it, or conclude it isn't a board
-action that makes sense. The API side is already Story 1's
-(`wiki/item-attachment/` §4: `parentId` and `isAttached` are independent, and
-omitting the flag keeps the current state).
-
-Additionally, we will decide here rules surrounding dual position values (or theoretically more than 2, even tho there are only 2 know cases now). Right now
-an detached item has one postion to relate it to fellow free items, but it
-likely should also maintain a postion relative to it's siblings if there is ever a context where all siblings are meant to be shown side-by-side regardless of
-attachment status. Alternatively we could decide that interleaved side-by-side
-is not possible and so we can only display children amongst their siblings in 
-two separate buckets
-
-Last by design: nothing left to build on the server, but it adds a third
-drop-meaning to disambiguate in the UI, and that's only judgeable once the
-other gestures exist.
+**Zooming into a Card in a done column** (Nathan, 2026-10-28: here, since
+the side highlight is the zoom-in's cue). The Card zoomed into is the one
+the side highlight names, a neighbor of the ghost. A done list's ghost
+doesn't move, so only the Cards beside it could be named, and today the
+highlight is drawn as if the ghost had slid. What it should show is under
+wiki board-drag-interaction's Open questions.
 
 ---
 
@@ -717,7 +799,7 @@ automation suite is *for*: which cases it asserts, which stay manual by
 rule, and which are precise enough to be flakier as automation than they
 are worth. Ends with **zero skipped Playwright tests** in `tests/`, and
 none of the drag layer's unit tests that Story 8 skipped still skipped
-(Story 8, "How this story runs").
+(Story 8, "How Story 8 runs").
 
 **Why a story and not the checklist step.** This is the Definition of
 Done's standard test-reconciler pass (`.claude/guides/epic-done-checklist.md`
@@ -972,7 +1054,7 @@ deferral and keep landing with their stories.
 9. **Deferred from Story 7** (Nathan, 2026-10-28): the specs two Story 7
    cases still lack. The defect that blocks some of them, a Free Card
    that doesn't follow the cursor once it has zoomed into a section, is
-   Story 8's to fix (Story 8, "Carried in from Story 7").
+   Story 8.2's, which Story 8.1 fixes.
    - **Routed here by ID:** DRAG-7.13's first clause, the hold by a Free
      Card from outside `P`, which needs the fix. And DRAG-7.10's three
      misses: its item from outside `P`, which needs the fix too; "bounded
@@ -985,8 +1067,8 @@ test:e2e` and `npm run test:unit` green; every case routed here (items 1
 and 9) is `Automated` or `Manual`; the epic-done checklist's Tests items
 checkable.
 
-**Depends on:** Stories 5–8 (the gesture and its thresholds stop moving);
-Story 9 if it implements a gesture. **Blocks:** the epic's ✅.
+**Depends on:** Stories 5–7 and every Story 8.N (the gesture and its
+thresholds stop moving). **Blocks:** the epic's ✅.
 
 ---
 
