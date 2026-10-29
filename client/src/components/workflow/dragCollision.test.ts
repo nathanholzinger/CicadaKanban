@@ -119,7 +119,7 @@ describe('resolveBoardCollisions', () => {
   });
 
   // An overflow row slides with the Stubs, so it's a candidate beside them; it is no target
-  // for a drop at the Card layer or the Board.
+  // for a drop at a column/sub-row or the Board.
   it('a Descendants context: an overflow row inside the section is a candidate', () => {
     const sectionRect = rect(0, 0, 100, 400);
     const session: CollisionSession = {

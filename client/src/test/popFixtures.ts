@@ -7,7 +7,7 @@ import { advancePopSession, startPopSession, type PopSession } from '../componen
 import type { ShortCardMetrics } from '../components/workflow/dragBands';
 import type { DragRegion, Point } from '../components/workflow/dragRegions';
 import type { AnchorRelation } from '../lib/hierarchyPlacement';
-import { cardRegion, descendantsRegion, rect, region } from './dragFixtures';
+import { descendantsRegion, rect, region } from './dragFixtures';
 
 // Column A (the origin) and column B side by side, 100 wide, 20 gap, 400
 // tall; column C further right, all fixture-default 2-card regions. With
@@ -15,25 +15,22 @@ import { cardRegion, descendantsRegion, rect, region } from './dragFixtures';
 // the one-card edge is the only formula `gapPx` enters into, and this board
 // has no one-card region. The points are the ones both suites aim at.
 //
-// Column A also holds two Cards: P, with a Descendants section filling its
-// lower 60, and Q below it. They are not in `regions`, which stays the
-// columns, so a case adds the ones it needs. `inA` rests below both Cards, so
-// a case that names a Card has to name it, not point at it; `inSection` and
-// `aboveSection` are inside P, in and out of its section.
+// Column A also holds two Cards, each a Descendants region: P, and Q below it. They
+// are not in `regions`, which stays the columns, so a case adds the ones it needs.
+// `inA` rests below both Cards, so a case that names a Card has to name it, not
+// point at it; `inP` and `aboveP` are inside P's box and above it.
 export function threeColumnBoard() {
   const A = region('column:a', rect(0, 0, 100, 400));
   const B = region('column:b', rect(120, 0, 100, 400));
   const C = region('column:c', rect(240, 0, 100, 400));
-  const P = cardRegion('card-p', rect(10, 10, 80, 100), A.key);
-  const descendantsP = descendantsRegion('card-p', rect(10, 50, 80, 60));
-  const Q = cardRegion('card-q', rect(10, 120, 80, 60), A.key);
+  const P = descendantsRegion('card-p', rect(10, 10, 80, 100), A.key);
+  const Q = descendantsRegion('card-q', rect(10, 120, 80, 60), A.key);
   return {
     A,
     B,
     C,
     P,
     Q,
-    descendantsP,
     regions: [A, B, C],
     points: {
       inA: { x: 50, y: 200 },
@@ -42,8 +39,8 @@ export function threeColumnBoard() {
       bBottom: { x: 170, y: 360 },
       cMiddle: { x: 290, y: 200 },
       gap: { x: 110, y: 200 }, // between A and B: no region at all
-      inSection: { x: 50, y: 100 },
-      aboveSection: { x: 50, y: 30 },
+      inP: { x: 50, y: 100 },
+      aboveP: { x: 50, y: 5 },
     },
   };
 }
@@ -63,7 +60,6 @@ export const POP_TEST_TUNING: DragTuning = {
   popInDelayMs: 200,
   cardZoomDwellMs: 400,
   cardPopInDelayMs: 600,
-  descendantsPopInDelayMs: 500,
   modalHoldDwellMs: 350,
   modalHoldCueMs: 650,
 };

@@ -40,15 +40,6 @@ export interface DragTuning {
    * anything before it's over.
    */
   cardZoomDwellMs: number;
-  /**
-   * How long the cursor must rest on a locked Card's own descendants
-   * section before the drag zooms into it — its own, duration-only clock,
-   * with no dwell/cue split the way the Column → Card edge has: the target
-   * here is always the same one section, never a choice between named
-   * neighbors, so there's nothing for a dwell to guard against. Defaults to
-   * the same value as `cardPopInDelayMs`.
-   */
-  descendantsPopInDelayMs: number;
   /** How long the card takes to travel from its clamped position to the cursor on a pop. 0 teleports. */
   popSnapMs: number;
   /**
@@ -70,8 +61,8 @@ export interface DragTuning {
   overlayFreeDescendantColor: string;
   overlayDepthCappedOpacity: number;
   /**
-   * An outline drawn around whichever region — column, sub-row, or Card —
-   * is the pop machine's current `contextKey`, so the locked layer is
+   * An outline drawn around whichever region — column, sub-row, or a Card's
+   * Descendants layer — is the pop machine's current `contextKey`, so the locked layer is
    * legible without reading the dev panel's text readout. Never
    * drawn at Board layer: nothing is a singular "current region" while
    * genuinely popped out.
@@ -85,7 +76,6 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   popInDelayMs: 500,
   cardPopInDelayMs: 800,
   cardZoomDwellMs: 500,
-  descendantsPopInDelayMs: 800,
   popSnapMs: 150,
   sectionLevels: 3,
   modalHoldDwellMs: 500,

@@ -97,6 +97,7 @@ import {
   advanceProjection,
   descendantsReleasePlacement,
   modalHoldTarget,
+  pickupSlot,
   reseedProjection,
   sameProjection,
   type ProjectionState,
@@ -171,9 +172,14 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // notice a region that mounted since.
   const structureElementsRef = useRef<ReadonlySet<Element>>(new Set());
   // The Card whose section a Stub's drag started in, null for a Free Card's
-  // drag: its Card and Descendants regions resolve regardless of
-  // `isValidCard`. Set by `beginDragAt`.
+  // drag: its Descendants region resolves regardless of `isValidCard`. Set by
+  // `beginDragAt`.
   const originCardIdRef = useRef<string | null>(null);
+  // Where that Stub sat in the section at pickup, null for a Free Card's drag.
+  // The projection seeds from it on every entry into the Stub's own section,
+  // a return from the column included, where the Stub is previewed Free and
+  // has no row in the section to read it off. Set by `beginDragAt`.
+  const ownSlotRef = useRef<{ gap: number; depth: number } | null>(null);
   // The carried copy's form at pickup — a Stub for a Stub's drag, the
   // shortCard for a Free Card's. `clampToContext`'s re-anchor reads it to
   // know whether the *current* form differs from the one the pointer's
@@ -243,17 +249,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // The per-sample read: live rects and live card counts, scoped to
   // exactly what the locked layer can use — `scope` is the pop machine's
   // current `contextKey`, so this is the context region itself plus its
-  // own children (Board never reads a Card region; a locked column never
-  // reads another column's).
+  // own children (Board never reads a Descendants region; a locked column
+  // never reads another column's).
   //
   // Re-resolves first if the DOM has changed under the structure since the
   // last resolve: a cached element gone (a remount — it would measure as an
   // empty box, so its region would silently drop out), or a region element
   // that wasn't there. A layer change re-resolves synchronously, *before*
   // React renders the new layer, so whatever that render mounts or remounts
-  // lands after it: a column's Cards remounted by a render, or a collapsed
-  // Card, forced open by the zoom-in into it, mounting its Descendants
-  // section only then — without this, that layer could never be entered. No
+  // lands after it: a column's Cards remounted by a render, or the hierarchy
+  // modal's list, mounted by the hold that opens it, taking the layer's key
+  // from its Card — without this, that layer could never be entered. No
   // session yet means the drag is starting and the structure was resolved a
   // moment ago.
   function sampleRegions(scope: string | null): DragRegion[] {
@@ -281,6 +287,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       contextKey: pop.contextKey,
       classification,
       originCardId: originCardIdRef.current,
+      ownSlot: ownSlotRef.current,
       namedAnchor: namedAnchorRef.current,
       pointerX: pointerRef.current?.x ?? null,
       pointerY: pointerRef.current?.y ?? null,
@@ -367,8 +374,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const next = { ...current, pop, projection };
       updateSession(next);
       setGhost(current.activeItem.id, placementFor(next, regions));
-      // Leaving the modal's layer closes it: the drag is at the Card layer, and the section
-      // under the backdrop is the layer's again.
+      // Leaving the modal's layer closes it: the drag is out in the Card's column, and the
+      // Card's own section under the backdrop is no longer the layer.
       if (modalCardId !== null && pop.contextKey !== descendantsRegionKey(modalCardId)) {
         latest.current.closeHierarchyModal();
       }
@@ -376,7 +383,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // Placed under the cursor once it has mounted (`readModalPlacement`).
     if (holdOpensCardId) latest.current.openHierarchyModalAt(holdOpensCardId, pointer);
     clearPopTimer(popTimer);
-    const due = popDueAt(pop, regions, tuning);
+    const due = popDueAt(pop, tuning);
     if (due !== null) popTimer.current = setTimeout(() => evaluateRef.current(), Math.max(0, due - now));
   }
   // The pop timer calls back into the evaluation; a ref so the timeout
@@ -411,20 +418,17 @@ export function useBoardDnd(deps: BoardDndDeps) {
       const context = pop.contextKey === null ? undefined : regions.find(r => r.key === pop.contextKey);
       // Locked at a Descendants context, the in-context candidates are every
       // row of the section (a Stub row or an overflow row) inside the
-      // section's own rect (any depth: the section is
-      // one flat list) — read off the region we already measured, never
-      // dnd-kit's `active.data.current`, which can lag a mid-drag remount.
+      // region's own rect, the Card's box on the board or the modal's list
+      // (any depth: the section is one flat list) — read off the region we
+      // already measured, never dnd-kit's `active.data.current`, which can lag
+      // a mid-drag remount.
       const descendantsSectionRect = context?.kind === 'descendants' ? context.rect : null;
       const descendantsCardId = context?.kind === 'descendants' ? context.cardId : null;
       live = {
-        // A Card hover (locked column/sub-row, tracking a zoom-in
-        // candidate) never forces `over` — a mere hover, not yet a pop,
-        // must never drive anything a release would act on.
+        // A zoom-in candidate (a locked column/sub-row's hover on a Card's
+        // Descendants layer) never forces `over` — a mere hover, not yet a
+        // pop, must never drive anything a release would act on.
         hoverContainerId: hover && isCardList(hover) ? hover.containerId : null,
-        // A locked Card context has no `over` either: its within-action is
-        // a constant, never a preview — otherwise the target Card would be
-        // its own only collision candidate, which could light the live side
-        // indicator on it for no reason a release would ever honor.
         // Descendants has its own branch above instead (a card-list
         // container concept doesn't apply to it).
         context: context && isCardList(context) ? { containerId: context.containerId, rect: context.rect } : null,
@@ -460,7 +464,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // it, never after.
   //
   // `reanchorOverlayTransform` runs first, before the clamp — the carried
-  // copy's own form switch (shortCard -> Stub, at the Card-layer boundary)
+  // copy's own form switch (shortCard -> Stub, at the zoom into a Card's
+  // Descendants layer)
   // shrinks the box out from under dnd-kit's own pointer-glued transform
   // (dnd-kit tracks the *pickup* point, not a fraction of the box, so a box
   // that shrinks leaves the pointer beside it, not on it). Targets the
@@ -497,8 +502,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // reference so passing it to both doesn't create a new one every render.
   const dragModifiers = useMemo(() => [clampToContext], [clampToContext]);
 
-  // Card lists only: a Card region's within-action, the auto-drop, never
-  // consults the region's rendered items.
+  // Card lists only: a Descendants release resolves from its projection
+  // (`releaseDescendants`), never from the region's rendered items.
   //
   // A call of its own, never merged with `BoardColumn.tsx`'s render lists:
   // both already read the same selectors (`getMergedColumnItems`,
@@ -514,9 +519,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // "Which list is this release against" — one derivation, read by both
   // `placementOver`'s anchor/bare-container distinction and `others`'
   // candidate rows. Card-list regions only: a Descendants release resolves
-  // through `releaseDescendants` instead, before this is ever called; a
-  // Card region (or no region at all) has no release list either, `null`
-  // both ways.
+  // through `releaseDescendants` instead, before this is ever called; no
+  // region at all has no release list either, `null` both ways.
   function releaseListFor(region: DragRegion | undefined): { rows: Item[]; containerId: string } | null {
     if (!region) return null;
     if (isCardList(region)) return { rows: regionItems(region), containerId: region.containerId };
@@ -526,13 +530,16 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // Where a drag starts, and its session (wiki board-drag-interaction §1). A
   // Stub's drag starts at its containing Card's Descendants layer —
   // deterministic, not hit-tested; a Free Card's in the column or sub-row
-  // under the cursor, since a Card is never a starting context, or in none
-  // from Unsorted. The rest is the same for both: resolve the structure, start
+  // under the cursor (a hit test), or in none from Unsorted. The rest is the
+  // same for both: resolve the structure, start
   // the pop machine there, seed the projection (a Stub's drag enters its own
   // section), and set the ghost from the session's own placement.
   function beginDragAt(start: Omit<DragSession, 'pop' | 'projection'>) {
     const { containingCardId, classification } = start;
     originCardIdRef.current = containingCardId;
+    ownSlotRef.current = containingCardId
+      ? pickupSlot(containingCardId, classification.activeId, latest.current.getAttachedChildren)
+      : null;
     pickupFormRef.current = containingCardId ? 'stub' : 'short-card';
     resolveStructure(classification);
     const pointer = pointerRef.current;
@@ -651,7 +658,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // rows replaced, is dropped for the next move to name afresh. Called from the commit that
   // mounted the modal, before the hook has seen the modal's Card in its deps, so the modal says
   // which Card it is. The drag may have left the modal's layer since the hold opened it, popping
-  // out to the Card layer or into another Card's section: nothing is read then, and the modal closes.
+  // out to the column or into another Card's section: nothing is read then, and the modal closes.
   // The reading carries the point it was read at, which the pointer may have left by now.
   function readModalPlacement(cardId: string, reading: ModalReading) {
     const current = sessionRef.current;
@@ -733,8 +740,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // No fresh geometry at release — `regionsRef` already holds exactly
     // what the machine's own final state needs, scoped to `current.pop`'s
     // own contextKey/hover by the last sample. `over` only means anything
-    // while locked in a column/sub-row or a Descendants section (Board-band
-    // and Card are `placementFor`'s own branches); a bare container hover or
+    // while locked in a column/sub-row or a Descendants layer (the Board-layer
+    // band is `placementFor`'s own branch); a bare container hover or
     // a done region's own card both fall back to the same no-anchor slot
     // `placementFor`'s in-context branch already uses mid-drag, so `over`
     // only ever narrows toward a specific anchor, never introduces a new

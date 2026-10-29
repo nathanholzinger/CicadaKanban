@@ -6,32 +6,31 @@
 // regions. It holds no placement rules: `placement.ts::placementFor` reads the
 // session to name the ghost and the release, and never writes it.
 //
-// States: locked into a context (a column/sub-row, a Card, or a Card's
-// Descendants section), or popped out to Board (`contextKey === null`). What
-// moves between them:
+// States: locked into a context (a column/sub-row, or a Card's Descendants
+// layer), or popped out to Board (`contextKey === null`). What moves between
+// them:
 //   - Pop out, from any layer: the cursor stays outside the context past
 //     `popDelayMs`, or gets `popDistancePx` beyond it. The drag lands on the
-//     context's parent, read off `DragRegion.parentRegionKey`.
+//     context's parent, read off `DragRegion.parentRegionKey`: the column/sub-row
+//     for a Card's Descendants layer, Board for a column/sub-row.
 //   - Pop in, Board → a column/sub-row: the cursor rests in its region past
 //     `popInDelayMs`, and is in the middle band when that runs out.
-//   - Zoom in, a column/sub-row → a Card: the named relation holds through
-//     the dwell and then the cue (`namedCardCandidate`).
-//   - Zoom in, a Card → its Descendants section: the cursor rests on the
-//     section past `descendantsPopInDelayMs`.
+//   - Zoom in, a column/sub-row → a Card's Descendants layer: the named
+//     relation holds through the dwell and then the cue (`namedCardCandidate`).
 // Not a layer change: the hold that opens the hierarchy modal (wiki board-drag-interaction
 // §7.3). It runs inside the Descendants layer, keyed on the projection's gap and depth beside
 // an overflow row (`advanceModalHold`), and the owner opens the modal when it has elapsed.
 
 import type { DragTuning } from './dragTuning';
 import {
-  cardRegionKey,
   childRegionAt,
   containsPoint,
+  descendantsRegionKey,
   isCardList,
+  type CardListRegion,
   type DragRegion,
   type Point,
   type Rect,
-  type RegionKind,
 } from './dragRegions';
 import { bandFor, distanceOutside, type Band, type ShortCardMetrics } from './dragBands';
 // The named anchor arrives as plain data (`{anchorId, side}`), the way
@@ -53,10 +52,10 @@ export interface PopHover {
    */
   band?: Band;
   /**
-   * Whether resting here past its own `popInDelayFor` pops the candidate
-   * in. A card list candidate: the middle band. Any other candidate (a
-   * Card, or a Card's Descendants section): always, since it has no band.
-   * Set once here, so no call site re-derives it from the kind.
+   * Whether resting here past its own clock pops the candidate in. A card
+   * list candidate: the middle band. A Card's Descendants layer: always,
+   * since it has no band. Set once here, so no call site re-derives it from
+   * the kind.
    */
   poppable?: boolean;
   /**
@@ -112,10 +111,9 @@ export interface PopSession {
    * Board layer: the cursor is hovering a column/sub-row, tracked for its
    * band and its own zoom-in clock. Locked in a column/sub-row: the *named*
    * card (`dropAnchorFor`'s own answer, not the cursor's physical position)
-   * is tracked toward zooming into it (no band). Locked in a Card: the
-   * cursor resting on its own Descendants section, by a hit test. Null
-   * otherwise — including always, while locked into Descendants, which has
-   * no further child to zoom into.
+   * is tracked toward zooming into its Descendants layer (no band). Null
+   * otherwise — including always, while locked into a Descendants layer, which
+   * has no further child to zoom into.
    */
   hover: PopHover | null;
   /** Locked only: when the cursor left the context — the pop-out clock. Null while it's inside. */
@@ -128,7 +126,7 @@ export interface PopSession {
 // the sample, clipped out of view, so its own `parentRegionKey` can't be
 // read off it. The owner passes a structural lookup (the parent chain
 // doesn't depend on what's visible); without one, a pop-out from a context
-// it can't see lands on Board, skipping every layer between
+// it can't see lands on Board, skipping the layer between
 // (wiki board-drag-interaction §1.1, rule 2).
 export type ParentKeyOf = (contextKey: string) => string | null;
 const NO_PARENT_LOOKUP: ParentKeyOf = () => null;
@@ -151,22 +149,12 @@ export function popState(session: PopSession): PopState {
   return isLocked(session) ? 'locked' : 'popped-out';
 }
 
-// How long a candidate of this kind takes to pop into. A Card candidate's
-// total is the dwell *plus* the cue — the whole hold — and this is the one
-// place that total is computed, read by both the pop check below and
-// `popDueAt`. A Descendants candidate has its own duration-only clock, with
-// no dwell and cue, since that edge names no neighbor to hold steady
-// against.
-//
-// A genuine per-kind table: each kind has its own tuning value. The other
-// kind tests (`hoverFor`'s band, `containmentRect`,
-// `dragOverlayGeometry.ts::clampToCurrentContext`'s y clamp) are separate
-// properties that only happen to split the kinds the same way today, so they
-// stay out of it: one table would couple them.
-function popInDelayFor(kind: RegionKind, tuning: DragTuning): number {
-  if (kind === 'card') return tuning.cardZoomDwellMs + tuning.cardPopInDelayMs;
-  if (kind === 'descendants') return tuning.descendantsPopInDelayMs;
-  return tuning.popInDelayMs;
+// How long a zoom-in into a Card's Descendants layer takes: the dwell *plus*
+// the cue — the whole hold. The one place that total is computed, read by
+// both the pop check below and `popDueAt`. (A Board-layer hover on a
+// column/sub-row waits `popInDelayMs` instead.)
+function zoomInDelay(tuning: DragTuning): number {
+  return tuning.cardZoomDwellMs + tuning.cardPopInDelayMs;
 }
 
 // One pointer sample. Returns the same object when nothing changed, so a
@@ -194,9 +182,9 @@ export function advancePopSession(
     // zoom-in clock into it. `childRegionAt(regions, pointer, null)` finds
     // exactly those: every column/sub-row's own `parentRegionKey` is null.
     const region = childRegionAt(regions, pointer, null);
-    if (!region) return session.hover ? { ...session, hover: null } : session;
+    if (!region || !isCardList(region)) return session.hover ? { ...session, hover: null } : session;
     const hover = hoverFor(session.hover, region, pointer, metrics, now);
-    if (hover.poppable && now - hover.since >= popInDelayFor(region.kind, tuning)) {
+    if (hover.poppable && now - hover.since >= tuning.popInDelayMs) {
       return transitionTo(region.key, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
     }
     return hover === session.hover ? session : { ...session, hover };
@@ -206,11 +194,10 @@ export function advancePopSession(
   // no matter where the bare cursor is. What's left to track: has the
   // cursor left long/far enough to pop back out (to the parent layer, read
   // straight off `parentRegionKey` — null for every column/sub-row, so a
-  // locked one always pops to Board with no branch); and is it resting on
-  // one of *this* context's own child regions long enough to pop into it. A
-  // locked column/sub-row's own child is a Card, found by the *named
-  // relation*, not a hit test; `childRegionAt` finds a locked Card's own
-  // child instead — its Descendants section.
+  // locked one always pops to Board with no branch); and, in a column/sub-row,
+  // is a Card's Descendants layer held as the named relation long enough to
+  // zoom into it. That candidate is found by the *named relation*, not a hit
+  // test; a Descendants layer has no further child to zoom into.
   const contextRegion = regions.find(r => r.key === session.contextKey);
   const inside = contextRegion !== undefined && containsPoint(containmentRect(contextRegion), pointer);
 
@@ -218,10 +205,9 @@ export function advancePopSession(
     const hover =
       contextRegion && isCardList(contextRegion)
         ? namedCardCandidate(session.hover, namedAnchor, regions, tuning, now)
-        : hoverForChildRegion(session.hover, regions, pointer, session.contextKey, metrics, now);
+        : null;
     if (hover) {
-      const candidateKind = regions.find(r => r.key === hover.regionKey)?.kind ?? 'card';
-      if (hover.poppable && now - hover.since >= popInDelayFor(candidateKind, tuning)) {
+      if (hover.poppable && now - hover.since >= zoomInDelay(tuning)) {
         return transitionTo(hover.regionKey, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
       }
       return hover === session.hover && session.outsideSince === null
@@ -261,35 +247,19 @@ function transitionTo(
   return advancePopSession(startPopSession(key), pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
 }
 
-// A locked Card's own child, its Descendants section, is found by a hit
-// test: `childRegionAt` resolves one for any Valid Card with a section, so
-// this is what zooms a locked Card into it. A locked Descendants context
-// has no child region of its own, so this returns null from there.
-function hoverForChildRegion(
-  current: PopHover | null,
-  regions: readonly DragRegion[],
-  pointer: Point,
-  parentKey: string,
-  metrics: ShortCardMetrics,
-  now: number,
-): PopHover | null {
-  const candidate = childRegionAt(regions, pointer, parentKey);
-  return candidate ? hoverFor(current, candidate, pointer, metrics, now) : null;
-}
-
 // A locked column/sub-row's own zoom-in candidate: not whichever Card the
 // cursor physically rests on, but the Card `dropAnchorFor` names as a
 // neighbor of the ghost — the same relation the live blue line draws
-// (`dragChrome.tsx::useLiveDropSide`). Holding that relation steady is the
-// signal (wiki board-drag-interaction §6.1). `namedAnchor` is null with
-// nothing named (alone in the list, or hovering nothing) — no candidate,
-// same as `childRegionAt` finding nothing.
+// (`dragChrome.tsx::useLiveDropSide`) — and the candidate is that Card's
+// Descendants layer. Holding that relation steady is the signal
+// (wiki board-drag-interaction §6.1). `namedAnchor` is null with nothing
+// named (alone in the list, or hovering nothing) — no candidate.
 //
 // Resolving the name against `regions` — rather than trusting it outright
 // — is what keeps an invalid target (Cycle-forming, Depth-capped) from
 // ever becoming a candidate, with no validity check of its own: it relies on
-// `dragStructure.ts::resolveDragStructure` registering a `card:` region only
-// for a Valid Card. An invalid Card can still be named for a reposition,
+// `dragStructure.ts::resolveDragStructure` registering a `descendants:` region
+// only for a Valid Card. An invalid Card can still be named for a reposition,
 // but is never a zoom-in candidate (wiki board-drag-interaction §3.2).
 //
 // `since` resets on *either* a different card or the same card's other
@@ -305,7 +275,8 @@ function namedCardCandidate(
   now: number,
 ): PopHover | null {
   if (!namedAnchor) return null;
-  const region = regions.find(r => r.kind === 'card' && r.key === cardRegionKey(namedAnchor.anchorId));
+  const key = descendantsRegionKey(namedAnchor.anchorId);
+  const region = regions.find(r => r.key === key);
   if (!region) return null;
   const staying = current?.regionKey === region.key && current.side === namedAnchor.side ? current : null;
   const since = staying?.since ?? now;
@@ -315,26 +286,20 @@ function namedCardCandidate(
     : { regionKey: region.key, since, poppable: true, side: namedAnchor.side, phase };
 }
 
-// A Board-layer hover, or (via `hoverForChildRegion`) a locked Card's hover
-// on its own Descendants section. A locked column/sub-row's Card candidate
-// comes from `namedCardCandidate` instead. Keeps the entry time while the
-// cursor stays in the same region, returning the same object when nothing
-// tracked has changed. Only a card list has a band, read off the region's
-// *live* rect and card count: the reservation is exact, so the hover never
-// changes the region's size. A Descendants candidate has no band at all,
-// so it's always `poppable` — the kind's own rule, set once here so no call
-// site re-derives it.
+// A Board-layer hover on a column/sub-row. A locked column/sub-row's Card
+// candidate comes from `namedCardCandidate` instead. Keeps the entry time while
+// the cursor stays in the same region, returning the same object when nothing
+// tracked has changed. The band is read off the region's *live* rect and card
+// count: the reservation is exact, so the hover never changes the region's
+// size.
 function hoverFor(
   current: PopHover | null,
-  region: DragRegion,
+  region: CardListRegion,
   pointer: Point,
   metrics: ShortCardMetrics,
   now: number,
 ): PopHover {
   const staying = current?.regionKey === region.key ? current : null;
-  if (!isCardList(region)) {
-    return staying ?? { regionKey: region.key, since: now, poppable: true };
-  }
   const since = staying?.since ?? now;
   const band = bandFor(pointer.y, region, metrics);
   const poppable = band === 'middle';
@@ -352,8 +317,7 @@ function hoverFor(
 // enlarging it would move the Board-layer bottom-band boundary down with
 // it, turning that same empty space into the *middle* band (no-op) instead
 // of *bottom* (append). A sub-row's own `rect` already is its full bound,
-// and a Card's within-action has no such ambiguity, so both fall through
-// unchanged.
+// and a Card's has no such ambiguity, so both fall through unchanged.
 //
 // Not the inverse of `dragOverlayGeometry.ts::clampToCurrentContext`'s
 // `!== 'column'`: that decides how far the carried copy follows the cursor,
@@ -392,30 +356,25 @@ function popOutDue(
 // and `outsideSince`, and the modal hold runs only while the cursor is
 // inside the Descendants layer, with neither set), so there's no ambiguity
 // about which clock this reports.
-// The three hover clocks are one expression over `hover.poppable` +
-// `popInDelayFor`, which covers every layer alike — a Board-layer hover's
-// own region is always a column/sub-row (`popInDelayMs`), and a locked
-// hover's is either a Card (`namedCardCandidate`) or, one layer further in,
-// its own Descendants section (`descendantsPopInDelayMs`,
-// `hoverForChildRegion`); `regions` resolves which, and a locked hover falls
-// back to the Card's clock if its region can't be found (the shallower of the
-// two). The modal hold has a clock of its own, `modalHoldDueAt`, ahead of
-// them.
-export function popDueAt(session: PopSession, regions: readonly DragRegion[], tuning: DragTuning): number | null {
+// The two hover clocks are one expression over `hover.poppable`: a hover
+// with a `phase` is a locked column/sub-row's zoom-in candidate
+// (`namedCardCandidate`, the only hover that sets one) and runs the dwell
+// and then the cue (`zoomInDelay`); any other is a Board-layer hover on a
+// column/sub-row (`popInDelayMs`). The modal hold has a clock of its own,
+// `modalHoldDueAt`, ahead of them.
+export function popDueAt(session: PopSession, tuning: DragTuning): number | null {
   if (session.contextKey !== null && session.outsideSince !== null) return session.outsideSince + tuning.popDelayMs;
   // A hold on the modal runs only with the cursor inside, where no hover is pending.
   if (session.modalHold) return modalHoldDueAt(session.modalHold, tuning);
   const hover = session.hover;
   if (!hover?.poppable) return null;
-  const candidate = regions.find(r => r.key === hover.regionKey);
-  const kind = candidate?.kind ?? 'card';
-  // A Card candidate's hold has an intermediate milestone worth its own
+  // A zoom-in candidate's hold has an intermediate milestone worth its own
   // timer — the dwell's own end, when the cue mounts — not just the final
   // pop. Without this, a hold with the pointer perfectly still would only
   // ever schedule the final pop, and the cue would never appear until it
   // was already over.
-  if (kind === 'card' && hover.phase !== 'cue') return hover.since + tuning.cardZoomDwellMs;
-  return hover.since + popInDelayFor(kind, tuning);
+  if (hover.phase === 'dwell') return hover.since + tuning.cardZoomDwellMs;
+  return hover.since + (hover.phase === 'cue' ? zoomInDelay(tuning) : tuning.popInDelayMs);
 }
 
 // The hold that opens the hierarchy modal (wiki board-drag-interaction §7.3): a Card's zoom-in

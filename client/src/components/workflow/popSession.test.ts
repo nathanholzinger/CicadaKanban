@@ -23,9 +23,9 @@ import {
 // number such as 0.5 s.
 
 // The shared board (`test/popFixtures.ts`): columns A, B, C, with A the origin and
-// holding the Cards P and Q.
-const { A, B, C, P, Q, descendantsP, regions, points } = threeColumnBoard();
-const { inA, bTop, bMiddle, bBottom, cMiddle, gap, inSection, aboveSection } = points;
+// holding the Cards P and Q, each a Descendants region.
+const { A, B, C, P, Q, regions, points } = threeColumnBoard();
+const { inA, bTop, bMiddle, bBottom, cMiddle, gap, inP, aboveP } = points;
 
 const OUT = tuning.popDelayMs;
 const IN = tuning.popInDelayMs;
@@ -151,10 +151,10 @@ describe('locked', () => {
   });
 
   it('DRAG-7.10: a Descendants region with a boundsRect is still inside over that box, the hierarchy modal’s header above its list', () => {
-    const list = descendantsRegion('card-m', rect(0, 100, 200, 300), { boundsRect: rect(0, 0, 200, 400) });
+    const list = descendantsRegion('card-m', rect(0, 100, 200, 300), A.key, { boundsRect: rect(0, 0, 200, 400) });
     const inHeader = { x: 100, y: 40 };
     expect(step(startPopSession(list.key), inHeader, 0, [list])).toEqual(startPopSession(list.key));
-    const bare = descendantsRegion('card-m', rect(0, 100, 200, 300));
+    const bare = descendantsRegion('card-m', rect(0, 100, 200, 300), A.key);
     expect(step(startPopSession(bare.key), inHeader, 0, [bare])).toEqual({
       ...startPopSession(bare.key),
       outsideSince: 0,
@@ -183,12 +183,13 @@ describe('locked', () => {
 
 // A locked column/sub-row's zoom-in candidate comes from the *named
 // relation* (`dragCollision.ts::dropAnchorFor`'s answer, passed as
-// `namedAnchor`), not a hit test. `inA` below is deliberately nowhere near
-// either card's rect throughout, so the pointer's position can't be what
-// picks the Card.
+// `namedAnchor`), not a hit test, and it is the named Card's Descendants layer:
+// the zoom lands there at once, with no stop at the Card between. `inA` below is
+// deliberately nowhere near either card's rect throughout, so the pointer's
+// position can't be what picks the Card.
 describe('locked column/sub-row: the named-card zoom-in candidate', () => {
   const withCards = [A, B, C, P, Q];
-  const namedP = (side: DropSide = 'after') => ({ anchorId: P.attachToCardId, side });
+  const namedP = (side: DropSide = 'after') => ({ anchorId: P.cardId, side });
 
   it('DRAG-1.4: holding the named relation past the dwell shows the cue phase, still locked in the column — nothing pops on the dwell alone', () => {
     let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
@@ -198,17 +199,18 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
     expect(s.contextKey).toBe(A.key);
   });
 
-  it('DRAG-4.19: holding it through the cue pops into the named Card, wherever the bare cursor happens to be', () => {
+  it('DRAG-4.19: holding it through the cue zooms straight into the named Card’s Descendants layer, wherever the bare cursor happens to be', () => {
     const s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     const popped = step(s, inA, DWELL + CUE, withCards, namedP());
     expect(popped.contextKey).toBe(P.key);
+    expect(popped.hover).toBeNull();
   });
 
   it('DRAG-1.4: a different named card resets the hold from the dwell, even mid-cue', () => {
     let s = step(startPopSession(A.key), inA, 0, withCards, namedP());
     s = step(s, inA, DWELL + 10, withCards, namedP());
     expect(s.hover?.phase).toBe('cue');
-    s = step(s, inA, DWELL + 20, withCards, { anchorId: Q.attachToCardId, side: 'after' });
+    s = step(s, inA, DWELL + 20, withCards, { anchorId: Q.cardId, side: 'after' });
     expect(s.hover).toEqual({ regionKey: Q.key, since: DWELL + 20, poppable: true, side: 'after', phase: 'dwell' });
   });
 
@@ -233,60 +235,49 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
 
   it('popDueAt schedules the dwell-end milestone first (so the cue can mount with the cursor perfectly still), then the final pop once the cue has started', () => {
     const dwelling = step(startPopSession(A.key), inA, 0, withCards, namedP());
-    expect(popDueAt(dwelling, withCards, tuning)).toBe(DWELL);
+    expect(popDueAt(dwelling, tuning)).toBe(DWELL);
     const cueing = step(dwelling, inA, DWELL, withCards, namedP());
-    expect(popDueAt(cueing, withCards, tuning)).toBe(DWELL + CUE);
+    expect(popDueAt(cueing, tuning)).toBe(DWELL + CUE);
+  });
+
+  it('a Card’s Descendants layer is never a Board-layer target: the column under it is what a hover finds', () => {
+    expect(step(startPopSession(null), inP, 0, [A, B, C, P]).hover?.regionKey).toBe(A.key);
   });
 });
 
-// A locked Card's zoom-in into its Descendants section (DRAG-1.21's zoom-in
-// half) is a plain, duration-only hold with no dwell/cue split, found by
-// `dragRegions.ts::childRegionAt`. It runs on `descendantsPopInDelayMs`, not
-// `cardPopInDelayMs`/`cardZoomDwellMs`.
-describe('locked Card: zoom-in into its own Descendants section', () => {
-  const withDescendants = [A, P, descendantsP];
-  const DESC = tuning.descendantsPopInDelayMs;
+describe('locked at a Card’s Descendants layer', () => {
+  const inLayer = [A, P];
 
-  it('resting inside the section short of the threshold stays locked at Card', () => {
-    const first = step(startPopSession(P.key), inSection, 0, withDescendants);
-    expect(first.hover).toEqual({ regionKey: descendantsP.key, since: 0, poppable: true });
-    const s = step(first, inSection, DESC - 1, withDescendants);
-    expect(s.contextKey).toBe(P.key);
+  it('there is no further child to zoom into: resting in the layer, however long, holds it', () => {
+    const locked = startPopSession(P.key);
+    expect(step(locked, inP, DWELL + CUE, inLayer, { anchorId: Q.cardId, side: 'after' })).toBe(locked);
   });
 
-  it('resting past the threshold zooms into the Descendants section, wherever the bare cursor happens to be', () => {
-    const first = step(startPopSession(P.key), inSection, 0, withDescendants);
-    const s = step(first, inSection, DESC, withDescendants);
-    expect(s.contextKey).toBe(descendantsP.key);
-  });
-
-  it('DRAG-4.12: a childless Card (no Descendants region at all) never pops any further — the auto-drop is its only outcome', () => {
-    const s = step(startPopSession(P.key), inSection, DESC, [A, P]);
-    expect(s.contextKey).toBe(P.key);
-  });
-
-  it('once locked at Descendants, there is no further child to zoom into (the layer table\'s own "(none)")', () => {
-    const s = step(startPopSession(descendantsP.key), inSection, DESC, withDescendants);
-    expect(s.contextKey).toBe(descendantsP.key);
-    expect(s.hover).toBeNull();
-  });
-});
-
-describe('locked at a Descendants section', () => {
-  const withDescendants = [A, P, descendantsP];
-
-  it('DRAG-5.5: an excursion out of the section shorter than popDelayMs pops nothing, and coming back resets the clock', () => {
-    const locked = startPopSession(descendantsP.key);
-    const away = step(locked, aboveSection, 0, withDescendants);
+  it('DRAG-5.5: an excursion out of the layer shorter than popDelayMs pops nothing, and coming back resets the clock', () => {
+    const locked = startPopSession(P.key);
+    const away = step(locked, aboveP, 0, inLayer);
     expect(away.outsideSince).toBe(0);
-    const back = step(away, inSection, OUT - 1, withDescendants);
+    const back = step(away, inP, OUT - 1, inLayer);
     expect(back).toEqual(locked);
 
     // A second excursion runs its own clock: the two together outlast popDelayMs, and still nothing pops.
-    const awayAgain = step(back, aboveSection, OUT, withDescendants);
-    const s = step(awayAgain, aboveSection, 2 * OUT - 1, withDescendants);
-    expect(s.contextKey).toBe(descendantsP.key);
+    const awayAgain = step(back, aboveP, OUT, inLayer);
+    const s = step(awayAgain, aboveP, 2 * OUT - 1, inLayer);
+    expect(s.contextKey).toBe(P.key);
     expect(s.outsideSince).toBe(OUT);
+  });
+
+  it('leaving the Card’s box for popDelayMs is one pop, to the column the Card sits in', () => {
+    const away = step(startPopSession(P.key), aboveP, 0, inLayer);
+    const popped = step(away, aboveP, OUT, inLayer);
+    expect(popped.contextKey).toBe(A.key);
+  });
+
+  it('the pop-out distance term measures against the Card’s box', () => {
+    const withDistance = { ...tuning, popDistancePx: 4 };
+    // `aboveP` is 5px above P's top edge, inside the column.
+    const s = advancePopSession(startPopSession(P.key), aboveP, inLayer, withDistance, metrics, 0);
+    expect(s.contextKey).toBe(A.key);
   });
 });
 
@@ -294,10 +285,10 @@ describe('locked at a Descendants section', () => {
 // in the sample.
 describe('popping out of a context the sample has no region for', () => {
   // The owner's structural lookup: the stack doesn't change with what's visible.
-  const parentKeyOf = (key: string) => (key === descendantsP.key ? P.key : key === P.key ? A.key : null);
+  const parentKeyOf = (key: string) => (key === P.key ? A.key : null);
 
   it('a context clipped out of view pops to its structural parent, not straight to Board', () => {
-    // Locked at card:p, scrolled out of its column's view: only the column is measured.
+    // Locked at descendants:card-p, scrolled out of its column's view: only the column is measured.
     const exited = advancePopSession(startPopSession(P.key), inA, [A], tuning, metrics, 0, null, parentKeyOf);
     const s = advancePopSession(exited, inA, [A], tuning, metrics, OUT, null, parentKeyOf);
     expect(s.contextKey).toBe(A.key);
@@ -305,28 +296,18 @@ describe('popping out of a context the sample has no region for', () => {
 
   it('popDelayMs = 0: the exit only starts the clock, then pops one layer, not through to Board', () => {
     const zero: DragTuning = { ...tuning, popDelayMs: 0 };
-    const sectionScope = [descendantsP]; // sampled while locked at the section: no card:p
-    const exited = advancePopSession(
-      startPopSession(descendantsP.key),
-      aboveSection,
-      sectionScope,
-      zero,
-      metrics,
-      0,
-      null,
-      parentKeyOf,
-    );
-    expect(exited.contextKey).toBe(descendantsP.key);
-    const s = advancePopSession(exited, aboveSection, sectionScope, zero, metrics, 1, null, parentKeyOf);
-    expect(s.contextKey).toBe(P.key);
+    const layerScope = [P]; // sampled while locked at the layer: no column
+    const exited = advancePopSession(startPopSession(P.key), aboveP, layerScope, zero, metrics, 0, null, parentKeyOf);
+    expect(exited.contextKey).toBe(P.key);
+    const s = advancePopSession(exited, aboveP, layerScope, zero, metrics, 1, null, parentKeyOf);
+    expect(s.contextKey).toBe(A.key);
 
-    // The owner's next sample is scoped to the Card: it pops again only if
+    // The owner's next sample is scoped to the column: it pops again only if
     // the pointer really is outside it.
-    const cardScope = [P, descendantsP];
-    expect(advancePopSession(s, aboveSection, cardScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBe(P.key);
-    expect(advancePopSession(s, { x: 300, y: 300 }, cardScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBe(
-      A.key,
-    );
+    const columnScope = [A, P];
+    expect(advancePopSession(s, aboveP, columnScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBe(A.key);
+    const farOut = { x: 300, y: 300 };
+    expect(advancePopSession(s, farOut, columnScope, zero, metrics, 1, null, parentKeyOf).contextKey).toBeNull();
   });
 });
 
@@ -339,7 +320,7 @@ describe('popped out', () => {
   it('follows the cursor: over nothing there is no hover, and no pop pending', () => {
     const s = step(outInB, gap, OUT + 1, regions);
     expect(s).toEqual(startPopSession(null));
-    expect(popDueAt(s, regions, tuning)).toBeNull();
+    expect(popDueAt(s, tuning)).toBeNull();
   });
 
   it('DRAG-1.11: resting in a middle band past the pop-in threshold locks the card into that column', () => {
@@ -351,7 +332,7 @@ describe('popped out', () => {
 
   it('DRAG-1.11: the pop-in clock starts at the pop-out, not at the region entry — the popped-out state is always reachable', () => {
     // Entered B at 0, popped out at OUT; pop-in is due at OUT + IN, never at OUT.
-    expect(popDueAt(outInB, regions, tuning)).toBe(OUT + IN);
+    expect(popDueAt(outInB, tuning)).toBe(OUT + IN);
   });
 
   it('can pop back into the column it just left', () => {
@@ -428,14 +409,14 @@ describe('popped out', () => {
 
 describe('popDueAt', () => {
   it('locked: the pop-out clock while outside, nothing inside', () => {
-    expect(popDueAt(runPop([[bTop, 100]]), regions, tuning)).toBe(100 + OUT);
-    expect(popDueAt(runPop([[gap, 100]]), regions, tuning)).toBe(100 + OUT);
-    expect(popDueAt(startPopSession(A.key), regions, tuning)).toBeNull();
+    expect(popDueAt(runPop([[bTop, 100]]), tuning)).toBe(100 + OUT);
+    expect(popDueAt(runPop([[gap, 100]]), tuning)).toBe(100 + OUT);
+    expect(popDueAt(startPopSession(A.key), tuning)).toBeNull();
   });
 
   it('DRAG-1.11: popped out, the pop-in clock only from a middle band', () => {
-    expect(popDueAt(step(startPopSession(null), bMiddle, 100, regions), regions, tuning)).toBe(100 + IN);
-    expect(popDueAt(step(startPopSession(null), bTop, 100, regions), regions, tuning)).toBeNull();
+    expect(popDueAt(step(startPopSession(null), bMiddle, 100, regions), tuning)).toBe(100 + IN);
+    expect(popDueAt(step(startPopSession(null), bTop, 100, regions), tuning)).toBeNull();
   });
 });
 
@@ -444,7 +425,7 @@ describe('popDueAt', () => {
 describe('the hierarchy modal hold', () => {
   const DWELL_M = tuning.modalHoldDwellMs;
   const CUE_M = tuning.modalHoldCueMs;
-  const locked = startPopSession(descendantsP.key);
+  const locked = startPopSession(P.key);
   const above: ModalHoldTarget = { ownerId: 'r', side: 'before', gap: 3, depth: 3 };
   const hold = (session = locked, target: ModalHoldTarget | null = above, now = 0) =>
     advanceModalHold(session, target, tuning, now);
@@ -478,25 +459,25 @@ describe('the hierarchy modal hold', () => {
   });
 
   it('DRAG-7.13: popDueAt reports the cue, then the end of the hold', () => {
-    expect(popDueAt(hold(), [descendantsP], tuning)).toBe(DWELL_M);
+    expect(popDueAt(hold(), tuning)).toBe(DWELL_M);
     const cue = hold(hold(), above, DWELL_M);
-    expect(popDueAt(cue, [descendantsP], tuning)).toBe(DWELL_M + CUE_M);
+    expect(popDueAt(cue, tuning)).toBe(DWELL_M + CUE_M);
   });
 
-  it('resting outside the section ends the hold: it runs with the cursor inside', () => {
+  it('resting outside the layer ends the hold: it runs with the cursor inside', () => {
     const running = hold();
-    const away = step(running, aboveSection, 10, [A, P, descendantsP]);
+    const away = step(running, aboveP, 10, [A, P]);
     expect(away.modalHold).toBeNull();
     expect(away.outsideSince).toBe(10);
   });
 
   // Resting outside already ends the hold, so a pop with one running can't come through `step`:
   // the session is built with a hold and an outside clock that has run out.
-  it('a pop out of the section starts a fresh session, with no hold carried over', () => {
+  it('a pop out of the layer starts a fresh session, with no hold carried over', () => {
     const running = { ...hold(), outsideSince: 0 };
     expect(running.modalHold).not.toBeNull();
-    const popped = step(running, aboveSection, OUT, [A, P, descendantsP]);
-    expect(popped.contextKey).toBe(P.key);
+    const popped = step(running, aboveP, OUT, [A, P]);
+    expect(popped.contextKey).toBe(A.key);
     expect(popped.modalHold).toBeNull();
   });
 });

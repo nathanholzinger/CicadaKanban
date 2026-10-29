@@ -5,6 +5,8 @@
 //
 // A Descendants region may carry a bounds element (the hierarchy modal's dialog), whose box is
 // its `boundsRect`: the modal's list is the region, and the header above it is still the modal.
+// A Card's own region is its root element; the modal's list is drawn apart from its Card, so it
+// names the Card (`DRAG_PARENT_CARD_ATTR`) and its column is read off the Card's element.
 //
 // Unsorted, a broken column, an expanded column's outer wrapper, a column's
 // header/footer, the gaps between columns and between sub-rows, and the space below
@@ -15,14 +17,14 @@
 
 import {
   DRAG_BOUNDS_ATTR,
+  DRAG_CARD_ATTR,
   DRAG_CARD_COUNT_ATTR,
-  DRAG_PARENT_REGION_ATTR,
+  DRAG_PARENT_CARD_ATTR,
   DRAG_REGION_ATTR,
   isCardList,
   parseRegionKey,
   subrowContainerId,
   type CardListRegion,
-  type CardRegion,
   type DescendantsRegion,
   type DragRegion,
   type ParsedRegionKey,
@@ -44,10 +46,10 @@ export interface DropColumn {
 // facts derived from the column definitions. None of this changes for the
 // life of a single drag except across a layer change, when a ghost
 // migrating lists can remount the DOM underneath a cached element
-// reference, or a Card forced open mounts its section — the reason
-// `resolveDragStructure` below runs again after one, and whenever
-// `hasDetachedElements`/`hasNewRegionElements` find a change that landed
-// later, not only at drag start.
+// reference, or the hierarchy modal opens and takes the layer's key from its
+// Card — the reason `resolveDragStructure` below runs again after one, and
+// whenever `hasDetachedElements`/`hasNewRegionElements` find a change that
+// landed later, not only at drag start.
 //
 // A structure entry is exactly its region minus the live facts, plus the
 // DOM handles those are read from (kept under one `dom` key so the facts
@@ -62,9 +64,8 @@ interface DomHandles {
 }
 type LiveFacts = 'rect' | 'contentRect' | 'boundsRect';
 type CardListStructure = { dom: DomHandles } & Omit<CardListRegion, LiveFacts | 'cardCount'>;
-type CardStructure = { dom: DomHandles } & Omit<CardRegion, LiveFacts>;
 type DescendantsStructure = { dom: DomHandles } & Omit<DescendantsRegion, LiveFacts>;
-export type DragStructure = readonly (CardListStructure | CardStructure | DescendantsStructure)[];
+export type DragStructure = readonly (CardListStructure | DescendantsStructure)[];
 
 // Resolves every `[data-drag-region]` element under `root` into its
 // structural facts, joined with the column definitions for the workphase
@@ -73,15 +74,15 @@ export type DragStructure = readonly (CardListStructure | CardStructure | Descen
 // per-sample half.
 //
 // `isValidCard` decides per Card whether *this* drag can target it at all;
-// false skips its `card:` and `descendants:` elements the same way an
-// unresolvable column key already does (`cardScopedStructure`). Omitted,
-// only the origin's own Card and section resolve, so a test fixture that
-// passes neither sees only the card lists.
+// false skips its `descendants:` element the same way an unresolvable column
+// key already does (`descendantsStructure`). Omitted, only the origin's own
+// Card resolves, so a test fixture that passes neither sees only the card
+// lists.
 //
 // `originCardId`: the Stub drag's own containing Card, if this drag started
-// as one — undefined for a Free Card drag. Its `card:` and `descendants:`
-// regions resolve regardless of `isValidCard`: a Stub's drag must be able to
-// pop back out to its own Card even when that Card wouldn't be a valid
+// as one — undefined for a Free Card drag. Its `descendants:` region
+// resolves regardless of `isValidCard`: a Stub's drag must be able to
+// zoom back into its own Card even when that Card wouldn't be a valid
 // *target* for it.
 export function resolveDragStructure(
   root: ParentNode,
@@ -90,7 +91,7 @@ export function resolveDragStructure(
   originCardId?: string,
 ): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
-  const structure: (CardListStructure | CardStructure | DescendantsStructure)[] = [];
+  const structure: (CardListStructure | DescendantsStructure)[] = [];
   for (const el of regionElements(root)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
     const parsed = key ? parseRegionKey(key) : null;
@@ -102,16 +103,8 @@ export function resolveDragStructure(
       bounds: parsed.kind === 'descendants' ? boundsElementOf(root, key) : null,
     };
     const record =
-      parsed.kind === 'card' || parsed.kind === 'descendants'
-        ? cardScopedStructure(
-            parsed.kind,
-            parsed.id,
-            key,
-            dom,
-            findParentRegionKey(el, root),
-            isValidCard,
-            originCardId,
-          )
+      parsed.kind === 'descendants'
+        ? descendantsStructure(parsed.id, key, dom, findParentRegionKey(el, root), isValidCard, originCardId)
         : cardListStructure(parsed, key, dom, byId);
     if (record) structure.push(record);
   }
@@ -126,7 +119,7 @@ export function resolveDragStructure(
 // current `contextKey` — only the region matching it and that region's
 // own children (`parentRegionKey === scope`) are worth reading at all,
 // since nothing else is reachable from where the drag currently is (Board
-// never reads a Card region; a locked column never reads another
+// never reads a Descendants region; a locked column never reads another
 // column's). At Board (`scope: null`) that's every column/sub-row,
 // none of which ever carry a non-null `parentRegionKey`. A region whose
 // element sits inside a vertically scrolling ancestor (a sub-row, inside
@@ -183,9 +176,10 @@ function boundsElementOf(root: ParentNode, regionKey: string): HTMLElement | nul
 // mounted since the structure was resolved. `seen` is every region element
 // present at that resolve (`regionElements`), including the ones that
 // resolved to nothing (an invalid Card), so those don't read as new on every
-// sample. A zoom-in re-resolves *before* React renders the layer it entered,
-// so an element that mounts because of that zoom-in lands after it: a
-// collapsed Card, forced open, mounts its Descendants section only then.
+// sample. A layer change re-resolves *before* React renders the layer it
+// entered, so an element that mounts because of it lands after it: the
+// hierarchy modal's list, mounted by the hold that opens it, is the layer's
+// region from then on.
 export function hasNewRegionElements(root: ParentNode, seen: ReadonlySet<Element>): boolean {
   return regionElements(root).some(el => !seen.has(el));
 }
@@ -212,42 +206,35 @@ export function clipToVisible(rect: Rect, bounds: Rect): Rect | null {
   return { top, bottom, left: rect.left, right: rect.right, width: rect.width, height: bottom - top };
 }
 
-// The element's painted box, for every region kind. A Card region's rect is read by
+// The element's painted box, for every region kind. A Card's region rect is read by
 // `popSession.ts::containmentRect` (the locked-context "still inside" test) and
 // `dragOverlayGeometry.ts::clampToCurrentContext` (the overlay clamp); both want where
-// the Card is drawn right now. The sortable shuffle's transform on a Card already reads
-// `none` by the frame its region becomes the locked context, so the painted box and the
-// layout box agree whenever either reads it. No zoom-in candidate is chosen by a rect
-// test (that's `dragCollision.ts::dropAnchorFor`'s named relation), so nothing needs the
-// transform backed out.
+// the Card is drawn right now, a sortable shuffle's transform included. No zoom-in
+// candidate is chosen by a rect test (that's `dragCollision.ts::dropAnchorFor`'s named
+// relation), so nothing needs the transform backed out.
 function paintedRect(el: HTMLElement): Rect {
   return toRect(el.getBoundingClientRect());
 }
 
-// A Card region's or a Descendants region's structural identity — the two
-// differ only in kind and the name of the Card id's field.
+// A Card's Descendants region's structural identity.
 // No `isValidCard`, an id it says is invalid for this drag, or no
 // resolvable parent region resolves to nothing at all: an invalid target
 // (Cycle-forming, Depth-capped) is never a zoom-in candidate, with no
 // separate check (wiki board-drag-interaction §3.2). The one exception is
-// the Stub drag's own containing Card (`originCardId`): its Card and its
-// section always resolve, since a Stub starts there and must be able to
-// pop back out to its own Card even when that Card isn't a valid *target*
-// for it.
-function cardScopedStructure(
-  kind: 'card' | 'descendants',
+// the Stub drag's own containing Card (`originCardId`): its region always
+// resolves, since a Stub starts there and must be able to zoom back into
+// its own Card even when that Card isn't a valid *target* for it.
+function descendantsStructure(
   cardId: string,
   key: string,
   dom: DomHandles,
   parentRegionKey: string | null,
   isValidCard: ((cardId: string) => boolean) | undefined,
   originCardId: string | undefined,
-): CardStructure | DescendantsStructure | null {
+): DescendantsStructure | null {
   if (!parentRegionKey) return null;
   if (cardId !== originCardId && !isValidCard?.(cardId)) return null;
-  return kind === 'card'
-    ? { dom, key, kind, attachToCardId: cardId, parentRegionKey }
-    : { dom, key, kind, cardId, parentRegionKey };
+  return { dom, key, kind: 'descendants', cardId, parentRegionKey };
 }
 
 // The card count a column/sub-row's own element carries
@@ -260,21 +247,22 @@ function cardCountOf(el: HTMLElement): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-// The region that contains this element — for a Card, its column/sub-row;
-// for a Descendants section, its Card — walking up the DOM to the nearest
-// ancestor that also carries `[data-drag-region]`. An element that names its
-// parent (`DRAG_PARENT_REGION_ATTR`: the hierarchy modal, drawn apart from its
-// Card) is not walked for. Safe as a simple walk
+// The region that contains a Card — its column/sub-row — walking up the DOM
+// from the Card's element to the nearest ancestor that also carries
+// `[data-drag-region]`. A Descendants region on the Card's own root walks up
+// from `el`; one that names its Card (`DRAG_PARENT_CARD_ATTR`: the hierarchy
+// modal's list, drawn apart from its Card) walks up from the Card's element
+// instead, found by `DRAG_CARD_ATTR`. Safe as a simple walk
 // (never has to consider a *second* card in between): only a top-level,
 // still-Free Card registers a region at all (an already-attached Stub's row
-// carries no `[data-drag-region]`), so nothing nests a card region inside
+// carries no `[data-drag-region]`), so nothing nests a Card's region inside
 // another one. No parent found (a Card rendered outside any registered
-// region, which shouldn't happen) means no region at all — same as an id
-// `isValidCard` rejects.
+// region, such as in Unsorted, or a named Card that isn't drawn) means no
+// region at all — same as an id `isValidCard` rejects.
 function findParentRegionKey(el: HTMLElement, root: ParentNode): string | null {
-  const named = el.getAttribute(DRAG_PARENT_REGION_ATTR);
-  if (named) return named;
-  for (let node = el.parentElement; node && node !== root; node = node.parentElement) {
+  const namedCardId = el.getAttribute(DRAG_PARENT_CARD_ATTR);
+  const cardEl = namedCardId === null ? el : root.querySelector<HTMLElement>(`[${DRAG_CARD_ATTR}="${namedCardId}"]`);
+  for (let node = cardEl?.parentElement ?? null; node && node !== root; node = node.parentElement) {
     const key = node.getAttribute(DRAG_REGION_ATTR);
     if (key) return key;
   }

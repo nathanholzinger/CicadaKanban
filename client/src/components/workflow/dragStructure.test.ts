@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
   DRAG_BOUNDS_ATTR,
-  DRAG_PARENT_REGION_ATTR,
+  DRAG_CARD_ATTR,
+  DRAG_PARENT_CARD_ATTR,
   DRAG_REGION_ATTR,
-  cardRegionKey,
   columnRegionKey,
   descendantsRegionKey,
   subrowRegionKey,
@@ -62,25 +62,28 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(measureRegions(structure, null)).toEqual([]);
   });
 
-  // A Card's region built from the DOM, so `resolveDragStructure` and
-  // `measureRegions` produce the `kind: 'card'` shape end to end
-  // (`dragFixtures.ts::cardRegion` builds one directly where the DOM isn't
-  // the subject).
+  // A Card's Descendants region built from the DOM, on the Card's root element, so
+  // `resolveDragStructure` and `measureRegions` produce the `kind: 'descendants'` shape end
+  // to end (`dragFixtures.ts::descendantsRegion` builds one directly where the DOM isn't the
+  // subject). The Card holds nothing: a childless Card has the region all the same.
   function buildCardInColumn(columnId: string, columnRect: Rect, cardId: string, cardRect: Rect) {
-    document.body.append(regionEl(columnRegionKey(columnId), columnRect, regionEl(cardRegionKey(cardId), cardRect)));
+    document.body.append(
+      regionEl(columnRegionKey(columnId), columnRect, regionEl(descendantsRegionKey(cardId), cardRect)),
+    );
   }
 
-  it("registers a valid card as its own kind:'card' region, parented to the column that contains it — reachable by scoping to that column", () => {
+  it("registers a valid card's Descendants region on its root, parented to the column that contains it — reachable by scoping to that column", () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], id => id === 'item-1');
     const regions = measureRegions(structure, columnRegionKey('col-1')); // the column itself, plus its own children
     expect(regions).toHaveLength(2);
-    const card = regions.find(r => r.kind === 'card');
+    const card = regions.find(r => r.kind === 'descendants');
     expect(card).toMatchObject({
-      key: cardRegionKey('item-1'),
-      kind: 'card',
-      attachToCardId: 'item-1',
+      key: descendantsRegionKey('item-1'),
+      kind: 'descendants',
+      cardId: 'item-1',
       parentRegionKey: columnRegionKey('col-1'),
+      rect: rect(5, 10, 90, 50),
     });
   });
 
@@ -88,7 +91,7 @@ describe('resolveDragStructure / measureRegions', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => false);
     const regions = measureRegions(structure, columnRegionKey('col-1'));
-    expect(regions.find(r => r.kind === 'card')).toBeUndefined();
+    expect(regions.find(r => r.kind === 'descendants')).toBeUndefined();
   });
 
   // A locked column never reads another column's Cards, and Board never
@@ -101,10 +104,18 @@ describe('resolveDragStructure / measureRegions', () => {
     const structure = resolveDragStructure(document, [column('col-1', ['w1']), column('col-2', ['w2'])], () => true);
 
     const scopedToCol1 = measureRegions(structure, columnRegionKey('col-1'));
-    expect(scopedToCol1.map(r => r.key).sort()).toEqual([cardRegionKey('item-1'), columnRegionKey('col-1')]);
+    expect(scopedToCol1.map(r => r.key).sort()).toEqual([columnRegionKey('col-1'), descendantsRegionKey('item-1')]);
 
     const board = measureRegions(structure, null);
     expect(board.map(r => r.key).sort()).toEqual([columnRegionKey('col-1'), columnRegionKey('col-2')]);
+  });
+
+  it("a locked Card's layer reads its own region and nothing else: no children to zoom into", () => {
+    buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
+    buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-2', rect(5, 70, 90, 50));
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true);
+    const layer = measureRegions(structure, descendantsRegionKey('item-1'));
+    expect(layer.map(r => r.key)).toEqual([descendantsRegionKey('item-1')]);
   });
 
   it('hasDetachedElements: false while every cached element is in the document, true once one is replaced', () => {
@@ -112,7 +123,7 @@ describe('resolveDragStructure / measureRegions', () => {
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true);
     expect(hasDetachedElements(structure)).toBe(false);
 
-    const cardEl = elementOf(cardRegionKey('item-1'));
+    const cardEl = elementOf(descendantsRegionKey('item-1'));
     cardEl.replaceWith(cardEl.cloneNode());
     expect(hasDetachedElements(structure)).toBe(true);
     expect(hasDetachedElements(resolveDragStructure(document, [column('col-1', ['w1'])], () => true))).toBe(false);
@@ -122,10 +133,11 @@ describe('resolveDragStructure / measureRegions', () => {
     buildCardInColumn('col-1', rect(0, 0, 100, 400), 'item-1', rect(5, 10, 90, 50));
     const seen = new Set(regionElements(document));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => false);
-    expect(structure.some(s => s.kind === 'card')).toBe(false); // an invalid Card: seen, never resolved
+    expect(structure.some(s => s.kind === 'descendants')).toBe(false); // an invalid Card: seen, never resolved
     expect(hasNewRegionElements(document, seen)).toBe(false);
 
-    elementOf(cardRegionKey('item-1')).append(regionEl(descendantsRegionKey('item-1')));
+    // The hierarchy modal's list mounting is the one a layer change brings.
+    document.body.append(regionEl(descendantsRegionKey('item-2')));
     expect(hasNewRegionElements(document, seen)).toBe(true);
     expect(hasNewRegionElements(document, new Set(regionElements(document)))).toBe(false);
   });
@@ -162,90 +174,103 @@ describe('resolveDragStructure / measureRegions', () => {
   });
 
   // A `descendants:<cardId>` element resolves for the drag's own
-  // `originCardId`, and for any other Card only when `isValidCard` accepts
-  // it, the same gate as a `card:` region.
-  function buildCardWithDescendants(columnId: string, cardId: string, cardRect: Rect, descendantsRect: Rect) {
-    const card = regionEl(cardRegionKey(cardId), cardRect, regionEl(descendantsRegionKey(cardId), descendantsRect));
-    document.body.append(regionEl(columnRegionKey(columnId), rect(0, 0, 300, 400), card));
-  }
-
-  it("resolves the origin's own Descendants section, parented to its Card", () => {
-    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+  // `originCardId`, and for any other Card only when `isValidCard` accepts it.
+  it("resolves the origin's own Descendants region, parented to its column", () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-p', rect(0, 0, 100, 200));
     const structure = resolveDragStructure(
       document,
       [column('col-1', ['w1'])],
       id => id === 'card-p',
       'card-p', // originCardId
     );
-    const regions = measureRegions(structure, cardRegionKey('card-p'));
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     const descendants = regions.find(r => r.kind === 'descendants');
     expect(descendants).toMatchObject({
       key: descendantsRegionKey('card-p'),
       kind: 'descendants',
       cardId: 'card-p',
-      parentRegionKey: cardRegionKey('card-p'),
+      parentRegionKey: columnRegionKey('col-1'),
     });
   });
 
-  it("resolves a different Card's section too, when isValidCard says yes", () => {
-    buildCardWithDescendants('col-1', 'card-q', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+  it("resolves a different Card's region too, when isValidCard says yes", () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-q', rect(0, 0, 100, 200));
     const structure = resolveDragStructure(
       document,
       [column('col-1', ['w1'])],
       () => true,
-      'card-p', // originCardId — a *different* card than the one with the section
+      'card-p', // originCardId — a *different* card than the one with the region
     );
-    const regions = measureRegions(structure, cardRegionKey('card-q'));
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     expect(regions.find(r => r.kind === 'descendants')).toMatchObject({
       key: descendantsRegionKey('card-q'),
       cardId: 'card-q',
     });
   });
 
-  it("resolves nothing for a different Card's section when isValidCard says no", () => {
-    buildCardWithDescendants('col-1', 'card-q', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+  it("resolves nothing for a different Card's region when isValidCard says no", () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-q', rect(0, 0, 100, 200));
     const structure = resolveDragStructure(
       document,
       [column('col-1', ['w1'])],
       () => false,
-      'card-p', // originCardId — a *different* card than the one with the section
+      'card-p', // originCardId — a *different* card than the one with the region
     );
-    const regions = measureRegions(structure, cardRegionKey('card-q'));
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     expect(regions.find(r => r.kind === 'descendants')).toBeUndefined();
   });
 
   // The hierarchy modal is drawn apart from its Card, so no walk up the DOM from its list
-  // reaches the Card: the element names it.
-  it('a section element outside its Card in the DOM resolves under the parent it names', () => {
-    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-p', rect(0, 0, 100, 200));
+  // reaches the Card: the element names the Card, and the column is read off the Card's own
+  // element, which no longer carries the region.
+  function buildCardHeldByModal(cardId: string) {
+    const card = document.createElement('div');
+    card.setAttribute(DRAG_CARD_ATTR, cardId);
+    document.body.append(regionEl(columnRegionKey('col-1'), rect(0, 0, 300, 400), card));
+  }
+
+  it('a Descendants element outside its Card in the DOM resolves under the column its Card sits in', () => {
+    buildCardHeldByModal('card-p');
     const apart = regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300));
-    apart.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));
+    apart.setAttribute(DRAG_PARENT_CARD_ATTR, 'card-p');
     document.body.append(apart);
 
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
-    const regions = measureRegions(structure, cardRegionKey('card-p'));
+    const regions = measureRegions(structure, columnRegionKey('col-1'));
     expect(regions.find(r => r.kind === 'descendants')).toMatchObject({
       key: descendantsRegionKey('card-p'),
       cardId: 'card-p',
-      parentRegionKey: cardRegionKey('card-p'),
+      parentRegionKey: columnRegionKey('col-1'),
       rect: rect(500, 0, 200, 300),
     });
   });
 
+  it('finds the column of the Card it names, not of another Card', () => {
+    buildCardHeldByModal('card-q');
+    const apart = regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300));
+    apart.setAttribute(DRAG_PARENT_CARD_ATTR, 'card-p');
+    document.body.append(apart);
+
+    // No Card element for card-p is drawn, so the list has no column to be parented to.
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
+    expect(structure.find(r => r.kind === 'descendants')).toBeUndefined();
+  });
+
   // The modal's list is the region and its dialog the bounds: the header above the list is no
   // region of its own, but a cursor over it is still in the modal.
-  it('DRAG-7.10: a section element inside a marked dialog gets that dialog’s box as its boundsRect', () => {
+  it('DRAG-7.10: a Descendants element inside a marked dialog gets that dialog’s box as its boundsRect', () => {
     const key = descendantsRegionKey('card-p');
     const list = regionEl(key, rect(520, 100, 200, 300));
-    list.setAttribute(DRAG_PARENT_REGION_ATTR, cardRegionKey('card-p'));
+    list.setAttribute(DRAG_PARENT_CARD_ATTR, 'card-p');
     const dialog = document.createElement('div');
     dialog.setAttribute(DRAG_BOUNDS_ATTR, key);
     mockRect(dialog, rect(500, 0, 240, 420));
     dialog.append(list);
-    document.body.append(regionEl(columnRegionKey('col-1'), rect(0, 0, 300, 400)), dialog);
+    buildCardHeldByModal('card-p');
+    document.body.append(dialog);
 
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
-    const section = measureRegions(structure, cardRegionKey('card-p')).find(r => r.kind === 'descendants');
+    const section = measureRegions(structure, columnRegionKey('col-1')).find(r => r.kind === 'descendants');
     expect(section).toMatchObject({ rect: rect(520, 100, 200, 300), boundsRect: rect(500, 0, 240, 420) });
 
     // Gone with the modal: the structure reads as detached, so a sample re-resolves.
@@ -254,25 +279,25 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(hasDetachedElements(structure)).toBe(true);
   });
 
-  it('a section with no marked dialog has no boundsRect', () => {
-    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+  it("a Card's own region has no boundsRect", () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-p', rect(0, 0, 100, 200));
     const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
-    const section = measureRegions(structure, cardRegionKey('card-p')).find(r => r.kind === 'descendants');
+    const section = measureRegions(structure, columnRegionKey('col-1')).find(r => r.kind === 'descendants');
     expect(section).toBeDefined();
     expect(section?.boundsRect).toBeUndefined();
   });
 
-  it('a section element outside any region that names no parent resolves to nothing', () => {
+  it('a Descendants element outside any region that names no Card resolves to nothing', () => {
     document.body.append(regionEl(descendantsRegionKey('card-p'), rect(500, 0, 200, 300)));
     const structure = resolveDragStructure(document, [], () => true, 'card-p');
     expect(structure).toEqual([]);
   });
 
-  // The origin's own `card:` element resolves regardless of `isValidCard`:
-  // a Stub must be able to pop back out to its own Card even when that Card
+  // The origin's own `descendants:` element resolves regardless of `isValidCard`:
+  // a Stub must be able to zoom back into its own Card even when that Card
   // wouldn't be offered as a *target* for it.
-  it("resolves the origin's own card: region even when isValidCard rejects it", () => {
-    buildCardWithDescendants('col-1', 'card-p', rect(0, 0, 100, 200), rect(0, 40, 100, 100));
+  it("resolves the origin's own Descendants region even when isValidCard rejects it", () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-p', rect(0, 0, 100, 200));
     const structure = resolveDragStructure(
       document,
       [column('col-1', ['w1'])],
@@ -280,7 +305,7 @@ describe('resolveDragStructure / measureRegions', () => {
       'card-p',
     );
     const regions = measureRegions(structure, columnRegionKey('col-1'));
-    expect(regions.find(r => r.key === cardRegionKey('card-p'))).toBeDefined();
+    expect(regions.find(r => r.key === descendantsRegionKey('card-p'))).toBeDefined();
   });
 });
 

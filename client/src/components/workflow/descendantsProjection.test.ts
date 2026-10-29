@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeItem } from '../../test/itemFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
-import { cardRegionKey, descendantsRegionKey } from './dragRegions';
+import { columnRegionKey, descendantsRegionKey } from './dragRegions';
 import { getAttachedChildrenFrom, overflowRowId } from './itemListOps';
 import {
   NO_PROJECTION,
@@ -10,6 +10,7 @@ import {
   descendantsReleasePlacement,
   holdsReading,
   modalHoldTarget,
+  pickupSlot,
   reseedProjection,
   sameProjection,
   type ProjectionSample,
@@ -42,6 +43,7 @@ function sample(fields: Partial<ProjectionSample> & { cap?: number } = {}): Proj
     contextKey: section,
     classification: classifyDragTargets('S2', items, cap),
     originCardId: P,
+    ownSlot: pickupSlot(P, 'S2', getAttachedChildren),
     namedAnchor: null,
     pointerX: START_X,
     pointerY: START_Y,
@@ -74,6 +76,7 @@ describe('advanceProjection', () => {
     const foreign = sample({
       classification: classifyDragTargets('X', nested, 10),
       originCardId: null,
+      ownSlot: null,
       getAttachedChildren: parentId => getAttachedChildrenFrom(nested, parentId),
     });
     const { projection } = advanceProjection(NO_PROJECTION, foreign);
@@ -86,7 +89,7 @@ describe('advanceProjection', () => {
       slotHidden: false,
       overflowBeside: null,
     });
-    // A release right away commits the Card layer's own attach: last among P's children.
+    // A release right away attaches it as the Card's last child.
     expect(descendantsReleasePlacement(projection, P)).toEqual({
       parentId: P,
       slot: { anchorId: 'S3', side: 'after' },
@@ -116,13 +119,72 @@ describe('advanceProjection', () => {
   });
 
   it('DRAG-4.30: leaving the section clears it; coming back reseeds at the own slot, wherever the pointer is now', () => {
+    const column = columnRegionKey('a');
     const entered = advanceProjection(NO_PROJECTION, sample());
     const moved = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
-    const left = advanceProjection(moved, held({ contextKey: cardRegionKey(P) }));
+    const left = advanceProjection(moved, held({ contextKey: column }));
     expect(left).toEqual(NO_PROJECTION);
-    const back = advanceProjection(left, sample({ previousContextKey: cardRegionKey(P), pointerX: START_X + 300 }));
+    const back = advanceProjection(left, sample({ previousContextKey: column, pointerX: START_X + 300 }));
     expect(back.projection).toMatchObject({ gap: 1, depth: 0 });
     expect(descendantsReleasePlacement(back.projection, P)).toBeNull();
+  });
+});
+
+// The zoom into a section from its column: the sample that enters it is still the column's, and
+// the neighbor it names is a Card in that column, never a row of the section.
+describe('advanceProjection on the entry sample', () => {
+  const column = columnRegionKey('a');
+  // A Card in the column, named for the zoom-in: P itself, or one beside it.
+  const columnCard = { anchorId: P, side: 'after' } as const;
+  // S2 out in the column, previewed Free: no row of the section, so what is read off the rows
+  // would not find it.
+  const away = new Map([['S2', { parentId: null, workphaseId: 'w1', slot: 'last' as const }]]);
+  const awayChildren = (parentId: string) => getAttachedChildrenFrom(items, parentId, away);
+  const enter = (fields: Partial<ProjectionSample> = {}) =>
+    advanceProjection(NO_PROJECTION, sample({ previousContextKey: column, namedAnchor: columnCard, ...fields }));
+
+  it("D4: the Card's own Stub coming back in from its column seeds at its own slot, and a release there writes nothing", () => {
+    const { projection } = enter({ getAttachedChildren: awayChildren });
+    expect(projection).toMatchObject({ gap: 1, depth: 0, atOwnSlot: true, slotHidden: false });
+    expect(descendantsReleasePlacement(projection, P)).toBeNull();
+  });
+
+  it('D4: an item from outside seeds at the last gap as the Card’s last child, the column’s anchor or none', () => {
+    const outside = { originCardId: null, ownSlot: null, classification: classifyDragTargets('X', items, 10) };
+    for (const namedAnchor of [columnCard, null]) {
+      const { projection } = enter({ ...outside, namedAnchor });
+      expect(projection, JSON.stringify(namedAnchor)).toMatchObject({ gap: 3, depth: 0, atOwnSlot: false });
+      expect(descendantsReleasePlacement(projection, P)).toEqual({
+        parentId: P,
+        slot: { anchorId: 'S3', side: 'after' },
+      });
+    }
+  });
+
+  it('D4: an overflow row of a row that is not in the section names no gap either', () => {
+    const { projection } = enter({
+      getAttachedChildren: awayChildren,
+      namedAnchor: { anchorId: overflowRowId('gone'), side: 'after' },
+    });
+    expect(projection).toMatchObject({ gap: 1, atOwnSlot: true });
+  });
+
+  it('a neighbor that is a row of the section is taken on the entry sample, as on any other', () => {
+    const { projection } = enter({ namedAnchor: { anchorId: 'S3', side: 'after' } });
+    expect(projection).toMatchObject({ gap: 2, depth: 0 });
+  });
+
+  it('the column’s neighbor is dropped on the entry sample only: the next sample takes the one it names', () => {
+    const entered = enter({ getAttachedChildren: awayChildren });
+    const next = advanceProjection(entered, held({ namedAnchor: { anchorId: 'S3', side: 'after' } }));
+    expect(next.projection).toMatchObject({ gap: 2 });
+  });
+
+  it('DRAG-7.6: the pickup slot is read once, so a return finds it when the row is not in the section now', () => {
+    expect(pickupSlot(P, 'S2', awayChildren)).toBeNull();
+    expect(pickupSlot(P, 'S2', getAttachedChildren)).toEqual({ gap: 1, depth: 0 });
+    expect(pickupSlot(P, 'S3', getAttachedChildren)).toEqual({ gap: 2, depth: 0 });
+    expect(pickupSlot(P, 'X', getAttachedChildren)).toBeNull();
   });
 });
 
@@ -157,6 +219,7 @@ describe('advanceProjection under a cut-off section', () => {
     contextKey: section,
     classification: classifyDragTargets('X', deep, 20),
     originCardId: null,
+    ownSlot: null,
     namedAnchor: null,
     pointerX: START_X,
     pointerY: START_Y,
@@ -282,7 +345,11 @@ describe('advanceProjection under a cut-off section', () => {
   // behind an overflow row, where the section can't draw a ghost.
   describe('a Stub whose own slot the section does not draw', () => {
     const own = (id: string, fields: Partial<ProjectionSample> = {}): ProjectionSample => ({
-      ...deepSample({ classification: classifyDragTargets(id, deep, 20), originCardId: P }),
+      ...deepSample({
+        classification: classifyDragTargets(id, deep, 20),
+        originCardId: P,
+        ownSlot: pickupSlot(P, id, parentId => getAttachedChildrenFrom(deep, parentId)),
+      }),
       ...fields,
     });
 

@@ -11,7 +11,7 @@
 // exactly this height, so the board's carve-out reservation
 // (BandGuides.tsx) has one exact fact to reserve, not an approximation of
 // whatever a real card's footer happens to add. The DragOverlay copy
-// matches it too, except while locked at a Card or Descendants layer, where
+// matches it too, except while locked at a Card's Descendants layer, where
 // it's a Stub instead — the reservation is unaffected either way, since
 // it's the in-list ghost's height that's reserved, never the overlay's.
 export const SHORT_CARD_HEIGHT_PX = 96;
@@ -26,16 +26,15 @@ export const CARD_LIST_GAP_CLASS = 'gap-2';
 export const SHORT_CARD_METRICS = { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_LIST_GAP_PX };
 // The Card's own outer inset (CARD_BASE in KanbanCard.tsx: a 1px border plus
 // `p-3`'s 12px padding) — a descendants-section row spans the Card's full
-// content width, so this is what turns a measured Card region's own
-// (outer) rect into a row's width when the section itself hasn't resolved
-// (the carried Stub, locked at the Card layer before any Descendants
-// zoom-in).
+// content width, so this is what turns a measured Card's own (outer) rect,
+// its Descendants region on the board, into a row's width (the carried Stub,
+// locked at a childless Card, has no section to measure).
 export const CARD_CONTENT_INSET_PX = 13;
 // The Stub tier's two row heights, measured rather than derived from the
 // classes. A sortable row in a Descendants
 // section (`StubRows.tsx::AttachedChildRow`, the dragged item's own row there
-// included) is 24px; the bordered ones (`AttachGhostRow`, `KanbanCard.tsx`'s
-// carried Stub) are 26px — the title line (`text-xs`, 16px) plus `py-1`,
+// included) is 24px; the bordered one (`KanbanCard.tsx`'s carried Stub) is
+// 26px — the title line (`text-xs`, 16px) plus `py-1`,
 // plus the border. A type pill adds 5px to either: it's 21px tall (10px text
 // at the inherited 1.5 line height, `py-0.5`, a 1px border), taller than the
 // title. The readers use the pill-less heights, so on a typed row they sit

@@ -34,7 +34,7 @@ function anchorFor(
 // A placement that resolves to the list and ordinal the item already
 // occupies writes nothing — one rule for every "nothing to write": a
 // covered-set member released in the middle band, an empty or done region,
-// a Card-layer "set back down", a bare-container fallback, and a null
+// a Stub put back at its own slot, a bare-container fallback, and a null
 // placement. At a column/sub-row layer, though, a real, non-trivial anchor
 // is never identity, even in the item's own slot: the release there always
 // sends the anchor `dropAnchorFor` named, since "after the card above" and
@@ -109,7 +109,7 @@ export function toRequest(
     }
     // A genuinely different parent: attach (or reparent) with whatever
     // placement it resolved to. `anchorFor` degrades to `{}` for `'last'`
-    // with no siblings, so the Card auto-drop into a childless Card sends
+    // with no siblings, so an attach into a childless Card sends
     // no anchor; a real anchor slot here is a reparent with a placement
     // among a different Card's Stubs.
     return { parentId: placement.parentId, isAttached: true, ...anchorFor(placement.slot, others) };

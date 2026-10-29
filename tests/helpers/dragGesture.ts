@@ -231,7 +231,7 @@ export async function awaitDragContext(page: Page, regionKey: string | null, tim
 // Descendants section, so a bare `.last()` would pick one of those instead of the column's own region (or, in expanded mode, its
 // last sub-row) — landing inside a card rather than genuinely past the
 // column's content. `CARD_LIST_REGION_SELECTOR` names the column/sub-row
-// kinds positively: an "anything but `card:`" exclusion would aim at the last
+// kinds positively: an "anything but `descendants:`" exclusion would aim at the last
 // Card's section once a column has Stubs.
 export async function pastColumnEnd(columnGroup: Locator): Promise<Point> {
   const region = columnGroup.locator(CARD_LIST_REGION_SELECTOR).last();
@@ -308,7 +308,6 @@ export const NO_POP: Partial<DragTuning> = {
   popInDelayMs: NEVER_MS,
   cardZoomDwellMs: NEVER_MS,
   cardPopInDelayMs: NEVER_MS,
-  descendantsPopInDelayMs: NEVER_MS,
 };
 // A band only ever means anything at Board layer — locked always commits
 // its own context, regardless of a foreign hover. So a case that wants to reach a

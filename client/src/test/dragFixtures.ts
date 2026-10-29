@@ -1,16 +1,11 @@
 // Test fixtures for drag geometry, shared by the drag tests (regions, the pop machine,
-// band resolution, placement): the `Rect`, the three region kinds, the two `origin`
+// band resolution, placement): the `Rect`, the two region shapes, the two `origin`
 // shapes, a board's columns, and the DOM elements a region is read from. One place for
 // each shape, so a new field lands in one fixture rather than in every test.
 
-import type { CardListRegion, CardRegion, DescendantsRegion, Rect } from '../components/workflow/dragRegions';
+import type { CardListRegion, DescendantsRegion, Rect } from '../components/workflow/dragRegions';
 import type { DropColumn } from '../components/workflow/dragStructure';
-import {
-  cardRegionKey,
-  descendantsRegionKey,
-  dragRegionProps,
-  parseRegionKey,
-} from '../components/workflow/dragRegions';
+import { descendantsRegionKey, dragRegionProps, parseRegionKey } from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
 
 export function rect(left: number, top: number, width: number, height: number): Rect {
@@ -43,31 +38,12 @@ export function region(key: string, r: Rect, overrides: Partial<CardListRegion> 
   };
 }
 
-// A Card region: it attaches into the Card its key names, so `attachToCardId` is
-// `cardId`. `parentRegionKey` is the key of the card list the Card sits in, in the
-// `region()` fixture's own key convention.
-export function cardRegion(
-  cardId: string,
-  r: Rect,
-  parentRegionKey: string,
-  overrides: Partial<CardRegion> = {},
-): CardRegion {
-  return {
-    key: cardRegionKey(cardId),
-    rect: r,
-    contentRect: r,
-    kind: 'card',
-    attachToCardId: cardId,
-    parentRegionKey,
-    ...overrides,
-  };
-}
-
-// A Card's Descendants region; its `parentRegionKey` is that same Card's own
-// `card:<cardId>` key, always one layer up.
+// A Card's Descendants region, the Card's whole box. `parentRegionKey` is the key of the
+// card list the Card sits in, in the `region()` fixture's own key convention.
 export function descendantsRegion(
   cardId: string,
   r: Rect,
+  parentRegionKey: string,
   overrides: Partial<DescendantsRegion> = {},
 ): DescendantsRegion {
   return {
@@ -76,7 +52,7 @@ export function descendantsRegion(
     contentRect: r,
     kind: 'descendants',
     cardId,
-    parentRegionKey: cardRegionKey(cardId),
+    parentRegionKey,
     ...overrides,
   };
 }

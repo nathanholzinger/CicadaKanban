@@ -79,12 +79,13 @@ export function isSectionRow(data: Record<string, unknown> | undefined): boolean
 export interface CollisionSession {
   /** Board layer, hovering a column/sub-row: that region's droppable container. Never set for a Card hover: a mere hover never drives `over`. */
   hoverContainerId: string | null;
-  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), is locked at a Card, or is genuinely popped out (Board layer). */
+  /** The context region — in-context candidates are its container and the cards inside it. Null when the drag began outside any region (Unsorted), is locked at a Descendants layer (`descendantsSectionRect`), or is genuinely popped out (Board layer). */
   context: { containerId: string; rect: Rect } | null;
   /**
-   * Locked at a Descendants context, that region's own measured rect —
-   * candidates are every section row (a Stub at any depth, or an overflow row) of the
-   * context's own Card (`descendantsCardId`) whose center falls inside it,
+   * Locked at a Descendants context, that region's own measured rect — the Card's box on
+   * the board, the modal's list in the modal. Candidates are every section row (a Stub at any
+   * depth, or an overflow row) of the context's own Card (`descendantsCardId`) whose center
+   * falls inside it,
    * the same rect-containment test the column branch below uses for its own
    * in-context candidates. The section renders as one flat list, so "is this
    * row inside the section" is the whole scope: any row of the section, at
@@ -108,9 +109,6 @@ export interface CollisionSession {
 //     closestCorners over the context's container and the cards (or, at a
 //     Descendants context, the section's rows) whose rect lies inside it — the
 //     in-context reorder.
-//   - Card or Stub drag, locked at a Card: no candidates, so no `over`. Its
-//     within-action is the auto-drop, which reads none, and with no `over`
-//     dnd-kit shifts no sibling against a hover the locked layer ignores.
 //   - Card or Stub drag, Board layer (popped out), hovering a region:
 //     `over` is that region's container and never a card in it, so the
 //     target column's sortable doesn't shift against a hover the band
@@ -158,7 +156,7 @@ export function resolveBoardCollisions(
 
   const droppableContainers = args.droppableContainers.filter(container => {
     const data = container.data.current;
-    if (isSectionRow(data)) return false; // never a valid target for a Card-layer or Board drop
+    if (isSectionRow(data)) return false; // never a valid target for a column/sub-row or Board drop
     // In a locked column/sub-row the dragged card's own row *is* a
     // candidate, as in stock dnd-kit sortable: over its own slot, `over` is
     // itself and nothing shuffles (the lean still names a neighbor,

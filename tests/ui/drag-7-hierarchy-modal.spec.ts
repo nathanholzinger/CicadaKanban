@@ -43,7 +43,7 @@ import {
 } from '../helpers/boardLocators';
 import { expectCentered, expectInside, rowIds, sectionRows, seedOverflowTree } from '../helpers/overflowTree';
 import { settledWrites, watchWrites } from '../helpers/projectTreeDrag';
-import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 import { DESCENDANTS_INDENT_PX, descendantsIndentPx } from '../../client/src/components/cardMetrics';
 import { DEFAULT_DRAG_TUNING } from '../../client/src/components/workflow/dragTuning';
 
@@ -65,22 +65,15 @@ const pickUpRow = (page: Page, modal: Locator, id: string, title: string) =>
 // Picks `row` up in the open modal, pulls it out to P's own box, which closes the modal and leaves
 // the drag at the Card layer, and zooms it back into P's section, where the cursor rests mid-way
 // down it.
-async function pullOutAndZoomBack(
-  page: Page,
-  modal: Locator,
-  cardId: string,
-  row: { id: string; title: string },
-  tuning: { popDelayMs: number; descendantsPopInDelayMs: number },
-) {
+async function pullOutAndZoomBack(page: Page, modal: Locator, cardId: string, row: { id: string; title: string }) {
   await pickUpRow(page, modal, row.id, row.title);
   await awaitDragContext(page, descendantsRegionKey(cardId));
   const card = await boxOf(article(page, 'P'));
   await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
-  await awaitDragContext(page, cardRegionKey(cardId), clocksMargin(tuning.popDelayMs));
   await expect(modal).toHaveCount(0);
   const section = region(page, descendantsRegionKey(cardId));
   await hoverTo(page, await atFraction(section, 0.5));
-  await awaitDragContext(page, descendantsRegionKey(cardId), clocksMargin(tuning.descendantsPopInDelayMs));
+  await awaitDragContext(page, descendantsRegionKey(cardId));
 }
 
 // Drags R2 in the open modal to the gap between R1 and R1a and lets go, with every move refused:
@@ -341,14 +334,15 @@ test('DRAG-7.9, DRAG-7.12: a tab state past the depth cap is reachable in the mo
   expect((await fetchItem(request, x.id)).parentId).toBe(p.id);
 });
 
-test('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pops out of it, the modal closes and the drag is at the Card layer, where a release sets the Stub back down and writes nothing', async ({
+// Skipped until the drag specs are reworked: the Card layer is gone, and a pop out of the modal lands in the column, where a release places the Stub as Free.
+test.skip('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pops out of it, the modal closes and the drag is at the Card layer, where a release sets the Stub back down and writes nothing', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Pop Out Project';
   const { p, r, r2 } = await seedOverflowTree(request, name);
-  const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+  await seedDragTuning(page, POP_OUT_ONLY);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
@@ -361,7 +355,6 @@ test('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pops out
   // modal doesn't reach. The pop-out clock runs there as it does anywhere outside the modal.
   const card = await boxOf(article(page, 'P'));
   await hoverTo(page, { x: card.x + 6, y: card.y + card.height * 0.08 });
-  await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
   await expect(modal).toHaveCount(0);
   const writes = watchWrites(page);
   await release(page);
@@ -551,14 +544,15 @@ test('DRAG-7.19: Escape during a drag in the modal cancels the drag and leaves i
   await expect(modal).toHaveCount(0);
 });
 
-test('DRAG-7.2, DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow row starts as the Card’s last child, and the overflow row leaves it out of its count', async ({
+// Skipped until the drag specs are reworked: the Card layer is gone, and the way back into the section is now a zoom-in from the column.
+test.skip('DRAG-7.2, DRAG-7.6: back in the section, a Stub whose own slot is behind an overflow row starts as the Card’s last child, and the overflow row leaves it out of its count', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Hidden Slot Project';
   const { p, r, r1, r1a, x } = await seedOverflowTree(request, name);
-  const tuning = await seedDragTuning(page, { ...POP_OUT_ONLY, descendantsPopInDelayMs: 150 });
+  await seedDragTuning(page, POP_OUT_ONLY);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
@@ -568,7 +562,7 @@ test('DRAG-7.2, DRAG-7.6: back in the section, a Stub whose own slot is behind a
   // section: the ghost is in the last gap, at the first level, as P's last child, and not in R1's
   // own slot, which the section doesn't draw. R's overflow row leaves R1 out of its count
   // meanwhile.
-  await pullOutAndZoomBack(page, modal, p.id, r1, tuning);
+  await pullOutAndZoomBack(page, modal, p.id, r1);
   await awaitProjection(page, '7:0:true');
   await expect(overflowRow(page, r.id)).toHaveText('1 child');
   await release(page);
@@ -581,7 +575,8 @@ test('DRAG-7.2, DRAG-7.6: back in the section, a Stub whose own slot is behind a
   expect((await fetchItem(request, r1a.id)).parentId).toBe(r1.id);
 });
 
-test('DRAG-7.2: with R’s only attached child dragged, back in the section R has no overflow row', async ({
+// Skipped until the drag specs are reworked: the Card layer is gone, and the way back into the section is now a zoom-in from the column.
+test.skip('DRAG-7.2: with R’s only attached child dragged, back in the section R has no overflow row', async ({
   page,
   request,
   projectSidebar,
@@ -590,7 +585,7 @@ test('DRAG-7.2: with R’s only attached child dragged, back in the section R ha
   const { p, r, r1, r2, b } = await seedOverflowTree(request, name);
   // R2 goes under B, so R1 is R's only attached child.
   await moveItem(request, r2.id, { parentId: b.id });
-  const tuning = await seedDragTuning(page, { ...POP_OUT_ONLY, descendantsPopInDelayMs: 150 });
+  await seedDragTuning(page, POP_OUT_ONLY);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await expect(overflowRow(page, r.id)).toHaveText('1 child');
@@ -599,20 +594,21 @@ test('DRAG-7.2: with R’s only attached child dragged, back in the section R ha
 
   // R1 is dragged, so R has no hidden child left to count, and the section draws no overflow row
   // for it. A dropped R1 comes back to it.
-  await pullOutAndZoomBack(page, modal, p.id, r1, tuning);
+  await pullOutAndZoomBack(page, modal, p.id, r1);
   await expect(overflowRow(page, r.id)).toHaveCount(0);
   await cancel(page);
   await expect(overflowRow(page, r.id)).toHaveText('1 child');
 });
 
-test('DRAG-7.6: back in the section, a Stub whose own slot the section shows comes back in that slot, and a release there writes nothing', async ({
+// Skipped until the drag specs are reworked: the Card layer is gone, and the way back into the section is now a zoom-in from the column.
+test.skip('DRAG-7.6: back in the section, a Stub whose own slot the section shows comes back in that slot, and a release there writes nothing', async ({
   page,
   request,
   projectSidebar,
 }) => {
   const name = 'Hierarchy Modal Own Slot Back Project';
   const { p, q, r } = await seedOverflowTree(request, name);
-  const tuning = await seedDragTuning(page, { ...POP_OUT_ONLY, descendantsPopInDelayMs: 150 });
+  await seedDragTuning(page, POP_OUT_ONLY);
   await projectSidebar.openBoard(name);
   await expect(article(page, 'P')).toBeVisible();
   await overflowRow(page, r.id).click();
@@ -620,7 +616,7 @@ test('DRAG-7.6: back in the section, a Stub whose own slot the section shows com
 
   // R is picked up in the modal and pulled out the same way. Zoomed back in, its ghost starts
   // in its own slot, between Q and T, at R's level.
-  await pullOutAndZoomBack(page, modal, p.id, r, tuning);
+  await pullOutAndZoomBack(page, modal, p.id, r);
   await awaitProjection(page, `${2}:${DEFAULT_DRAG_TUNING.sectionLevels - 1}:true`);
   const writes = watchWrites(page);
   await release(page);

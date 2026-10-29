@@ -9,14 +9,16 @@ its own header.
 
 ## The mental model
 
-- **Board → a Column/sub-row → one of its own Cards → its own Descendants section**
+- **Board → a Column/sub-row → one of its own Cards' Descendants layer**
   is a strict stack, never more than one layer deep from wherever the cursor is. A
   drag starts in exactly one **context**: a Stub's is
   `descendantsRegionKey(containingCardId)`, deterministically; a Free Card's is the
   column or sub-row under the cursor at pickup (a hit test,
   `useBoardDnd.ts::beginDragAt`), or none from Unsorted. It is either **locked** to it
   (DragOverlay clamped, cursor roaming inside) or **popped out** (cursor left past a
-  delay/distance threshold, card follows the cursor at the parent layer).
+  delay/distance threshold, card follows the cursor at the parent layer). A pop out of a
+  Descendants layer lands in the Card's column or sub-row, Free, so detaching a Stub is one
+  pop; a pop out of a column lands at Board.
 - **A release always commits the locked layer's own within-action** — never a foreign
   region's — regardless of where the bare cursor rests. Column/sub-row and Descendants
   alike: the drop lands where the ghost is — dnd-kit's sortable shuffle decides its
@@ -28,16 +30,19 @@ its own header.
   `over` names no anchor at all). A done list is the exception: it has no slot to
   choose, so its rows never slide (`CardList.tsx`'s no-shuffle strategy), and the
   ghost stays where a release will land it (wiki board-drag-interaction §2, rule 6).
-  Card: `origin` itself ("set back down") for the
-  drag's own containing Card, else append as the last child (an item from outside,
-  including a Stub from another Card's section — full anchor + side placement _among_
-  a Card's Stubs happens one layer further in, at Descendants). Descendants: the gap +
+  Descendants: the gap +
   depth rule (wiki hierarchy-placement §1, as wiki board-drag-interaction §7.1 applies it) —
   the named neighbor picks the **gap**, horizontal offset from a seeded depth picks the
   **depth** (`descendantsProjection.ts`,
-  `DragSessionContext.ts::DescendantsProjection`). The seed is where the ghost already
-  was, so zooming in never moves it: a Stub's own slot, or the Card's last child for an
-  item from outside. Release writes the last sample's resolved placement (the
+  `DragSessionContext.ts::DescendantsProjection`). **Every Card has the layer**, a childless
+  one included, whose one spot is its only child; the layer is the Card's whole box
+  (`KanbanCard.tsx` puts the region on its root, and a zoom-in from the column lands in it
+  with no stop at the Card). The seed is where the ghost already
+  was, so zooming in never moves it: a Stub's own slot (its slot at pickup, `pickupSlot`,
+  kept even while the Stub previews Free in its column and has no row in the section), or the
+  Card's last child for an item from outside. The sample that enters the layer still carries
+  the column's named neighbor, a Card in the column, so on that sample a neighbor that isn't
+  a row of the section names no gap and the seed holds. Release writes the last sample's resolved placement (the
   projection's `resolved` field; `lib/hierarchyPlacement.ts::resolvePlacement` runs per
   sample), and nothing at the Stub's own
   gap and depth; a foreign item's _first_ entry
@@ -57,13 +62,14 @@ its own header.
   Card's, as beside a Stub row (wiki board-drag-interaction §9).
   **The hierarchy modal is that same layer, drawn whole.** While it's open (`BoardView.tsx`
   holds which Card's, `HierarchyModalContext.ts`), its list carries the Card's Descendants
-  region key and names the Card as its parent region, since it isn't inside the Card's
-  element; the Card's own section draws static and is no region, so one element carries the
-  key and each item registers one row. The drop math draws every level there
+  region key and names the Card (`DRAG_PARENT_CARD_ATTR`), since it isn't inside the Card's
+  element: `dragStructure.ts` reads the Card's column off the Card's own element
+  (`DRAG_CARD_ATTR`). The Card's root gives up the key and its section draws static, so one
+  element carries the key and each item registers one row. The drop math draws every level there
   (`useBoardDnd.ts::levelsDrawnAt`, `itemListOps.ts::EVERY_LEVEL`). Its own `descendantsSectionRect` and Card id bound the
   collision candidates: the modal sits over the board, so another Card's rows can lie inside
-  its box. Leaving its box is the usual pop out of Descendants and closes it; a drag that ends
-  in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
+  its box. Leaving its box is the usual pop out of Descendants, to the Card's column, and closes
+  it; a drag that ends in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
   draw (picked up in the modal and pulled back out) comes back into the section as an item
   from outside does: the projection's seed is the last gap, `projection.slotHidden`, and
   `placement.ts::placementFor` previews it as the Card's last child. The list is the layer's
@@ -125,8 +131,8 @@ The drag gesture's pure, unit-tested modules:
   moves it nowhere. It holds no placement rules.
 - `placement.ts` — the ghost's placement at every layer, and which form the carried
   copy draws as.
-- `dragRegions.ts` — the regions' vocabulary (Board/Column/sub-row/Card/Descendants):
-  their kinds, keys and DOM attributes, and hit-testing by containment.
+- `dragRegions.ts` — the regions' vocabulary (Column/sub-row, and a Card's Descendants
+  layer): their kinds, keys and DOM attributes, and hit-testing by containment.
 - `dragStructure.ts` — the regions read off the live DOM: their structure (resolved at
   pickup, and again after a layer change or when a remount outdates it) and their live
   rects (measured per sample).
@@ -187,10 +193,10 @@ active-context outline, the drop line's shape).
   mid-drag ghost and the release both read it.
 - **What kind a region is:** `dragRegions.ts::isCardList` — a column or sub-row (a
   flat list of Free items with bands and a workphase) against anything else. Never
-  write `kind !== 'card'` to mean it.
+  write `kind !== 'descendants'` to mean it.
 - **Registering an element as a drag region:** `dragRegions.ts::dragRegionProps`,
-  spread onto the region's own root element. An element that isn't inside its parent
-  region's (the hierarchy modal's list) passes the parent's key as `parentKey`. A test
+  spread onto the region's own root element. An element that isn't inside its Card
+  (the hierarchy modal's list) passes the Card's id as `parentCardId`. A test
   builds the elements it reads with `client/src/test/dragFixtures.ts::regionEl`.
 - **Reading a region key:** `dragRegions.ts::parseRegionKey`, with `descendantsCardIdOf`
   for "is this context a section, and whose", and `CARD_LIST_REGION_SELECTOR` for the
@@ -259,8 +265,8 @@ active-context outline, the drop line's shape).
   The gesture itself is tested through the pure modules and the E2E specs.
 - The board root carries, for tests: `data-drag-state` (`locked`/`popped-out`),
   `data-drag-context`, `data-drag-band` (the hovered band, Board layer only),
-  `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in and
-  its hold stage), `data-drag-modal-hold` (`"<overflow row owner id>:<dwell|cue>"`, the hold
+  `data-drag-zoom-candidate`/`data-drag-zoom-phase` (the Card named for a zoom-in, as its
+  `descendants:` key, and its hold stage), `data-drag-modal-hold` (`"<overflow row owner id>:<dwell|cue>"`, the hold
   that opens the hierarchy modal, absent while none runs), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, the gap
   counted among all the section's rows, present only while locked at a `descendants:`
   context). Cards/Stubs carry `data-item-id` and
@@ -273,6 +279,9 @@ active-context outline, the drop line's shape).
   rows under it draw with none). The carried copy carries
   `data-drag-overlay` (`dragRegions.ts::DRAG_OVERLAY_ATTR`, which the E2E helper's
   "drag finished" wait counts down) and `data-drag-overlay-form`, and a Card that is
-  the locked context `data-active-context`. A region's element carries
+  the locked context `data-active-context`. `data-drag-context` is a `column:`, `subrow:`
+  or `descendants:` key, never a Card's own. A region's element carries
   `data-drag-region` (its key), a card list's also `data-drag-card-count`, and the
-  carve-out's zones and dividers `data-carve-zone` and `data-carve-divider`.
+  carve-out's zones and dividers `data-carve-zone` and `data-carve-divider`. A Card's root
+  is its Descendants region, so it carries `data-drag-region` and, always, `data-drag-card`
+  (its id).

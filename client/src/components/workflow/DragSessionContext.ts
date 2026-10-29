@@ -5,7 +5,7 @@
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
 import type { DragClassification, DropTargetState } from './dragClassification';
-import { cardRegionKey, parseRegionKey } from './dragRegions';
+import { descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
 import type { DropSide, ResolvedPlacement } from '../../lib/hierarchyPlacement';
@@ -85,9 +85,9 @@ export interface DragSession {
    * The Stub drag's own containing Card — the nearest Free ancestor,
    * whatever the Stub's depth beneath it — null for a Free Card drag.
    * Distinct from `origin`'s own `parentId`: this is the section root
-   * `placementFor`'s Card-branch compares a locked Card region against to
-   * tell "this is where I started" (→ `origin`, set back down) from "this is
-   * a different Card" (→ attach as its last child), regardless of how many
+   * `placementFor` compares a locked Descendants region against to tell
+   * "this is where I started" (→ the Stub's own slot) from "this is a
+   * different Card" (→ attach as its last child), regardless of how many
    * Stub generations sit in between.
    */
   containingCardId: string | null;
@@ -128,19 +128,14 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
   return { state, isFreeDescendant: session.classification.freeDescendantIds.has(itemId) };
 }
 
-// Which of this Card's own layers the drag is locked at: its Card layer,
-// its Descendants section, or neither (null). Merely being hovered toward a
-// zoom-in (before the threshold fires) doesn't count: a release
-// right now would still commit the column's within-action. KanbanCard reads
-// it three ways — forced open while either layer is locked (a collapsed Card
+// Whether the drag is locked at this Card's Descendants layer. Merely being
+// hovered toward a zoom-in (before the threshold fires) doesn't count: a
+// release right now would still commit the column's within-action. KanbanCard
+// reads it two ways — forced open while the layer is locked (a collapsed Card
 // can't show the ghost landing inside it, nor keep a Stub's own section
-// drawn), the attach ghost at the Card layer, and the projected depth in the
-// section.
-export function useCardContextLayer(itemId: string): 'card' | 'descendants' | null {
-  const contextKey = useContext(DragSessionContext)?.pop.contextKey;
-  const parsed = contextKey ? parseRegionKey(contextKey) : null;
-  if (!parsed || parsed.id !== itemId) return null;
-  return parsed.kind === 'card' || parsed.kind === 'descendants' ? parsed.kind : null;
+// drawn), and the projected depth in the section.
+export function useIsLockedAtCard(itemId: string): boolean {
+  return useContext(DragSessionContext)?.pop.contextKey === descendantsRegionKey(itemId);
 }
 
 // Whether this Card is the locked column/sub-row's current zoom-in
@@ -152,7 +147,7 @@ export function useCardContextLayer(itemId: string): 'card' | 'descendants' | nu
 // so no extra check is needed to tell them apart.
 export function useZoomCandidatePhase(itemId: string): 'dwell' | 'cue' | null {
   const hover = useContext(DragSessionContext)?.pop.hover;
-  if (!hover?.phase || hover.regionKey !== cardRegionKey(itemId)) return null;
+  if (!hover?.phase || hover.regionKey !== descendantsRegionKey(itemId)) return null;
   return hover.phase;
 }
 

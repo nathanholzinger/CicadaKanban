@@ -15,7 +15,7 @@
 
 import type { Modifier } from '@dnd-kit/core';
 import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
-import type { DragRegion, Point } from './dragRegions';
+import { isModalList, type DragRegion, type Point } from './dragRegions';
 import type { PopSession } from './popSession';
 import { overlayFormFor, placementRegion, type OverlayForm } from './placement';
 
@@ -23,17 +23,15 @@ export type OverlayTransform = Parameters<Modifier>[0]['transform'];
 export type OverlayRect = Parameters<Modifier>[0]['draggingNodeRect'];
 
 // How wide the carried Stub draws — a row's own width in the context Card's
-// section, read off whichever region is currently locked. A `descendants`
-// region's rect already *is* that width (a row spans its section's full
-// box); a `card` region's rect is the Card's own outer bound, so a row's
-// width is that minus the Card's own inset on both sides — the same number
-// whether or not the section itself has resolved (a childless Card has
+// section, read off whichever region is currently locked. The hierarchy
+// modal's region is its list, whose rect already *is* that width (a row spans
+// the list's full box); on the board the region is the Card's own outer
+// box, so a row's width is that minus the Card's own inset on both sides —
+// the same number whether or not the section has rows (a childless Card has
 // none).
 export function overlayWidthFor(region: DragRegion | undefined): number | null {
-  if (!region) return null;
-  if (region.kind === 'descendants') return region.rect.width;
-  if (region.kind === 'card') return region.rect.width - 2 * CARD_CONTENT_INSET_PX;
-  return null;
+  if (region?.kind !== 'descendants') return null;
+  return isModalList(region) ? region.rect.width : region.rect.width - 2 * CARD_CONTENT_INSET_PX;
 }
 
 // Which form the carried copy draws as right now, and how wide: one
@@ -51,7 +49,7 @@ export function overlayShapeFor(pop: PopSession | null, regions: readonly DragRe
 }
 
 // Keeps the pointer on the carried copy across its own form switch into a
-// Stub, at the Card-layer boundary. dnd-kit's own transform only ever
+// Stub, at the zoom into a Card's Descendants layer. dnd-kit's own transform only ever
 // tracks the *pickup* point (pure pointer delta since activation,
 // independent of the dragged node's size: the overlay case never folds a
 // node-rect delta into `transform`), so a box that shrinks after pickup
@@ -128,8 +126,8 @@ export function clampToCurrentContext(
   const context = regions.find(r => r.key === pop.contextKey);
   if (!context) return transform;
   const x = clampAxis(transform.x, rect.left, rect.width, context.rect.left, context.rect.right);
-  // A sub-row bounds both axes; so do a Card and its Descendants section —
-  // a merged column bounds x only.
+  // A sub-row bounds both axes; so does a Card's Descendants layer — a merged
+  // column bounds x only.
   const y =
     context.kind !== 'column'
       ? clampAxis(transform.y, rect.top, rect.height, context.rect.top, context.rect.bottom)

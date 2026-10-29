@@ -19,15 +19,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Item, ItemType } from '../types';
 import ModalShell from './ModalShell';
 import { SectionRows } from './StubRows';
-import { useCardContextLayer, useDragSession, type DragSession } from './workflow/DragSessionContext';
+import { useDragSession, useIsLockedAtCard, type DragSession } from './workflow/DragSessionContext';
 import { travelingRowsFor } from './workflow/dragCollision';
-import {
-  DRAG_BOUNDS_ATTR,
-  cardRegionKey,
-  descendantsRegionKey,
-  dragRegionProps,
-  type Point,
-} from './workflow/dragRegions';
+import { DRAG_BOUNDS_ATTR, descendantsRegionKey, dragRegionProps, type Point } from './workflow/dragRegions';
 import { EVERY_LEVEL, hierarchyRows, sectionEntries, type SectionEntry } from './workflow/itemListOps';
 import {
   centerModal,
@@ -141,7 +135,7 @@ export default function HierarchyModal({
   onClose,
 }: HierarchyModalProps) {
   const session = useDragSession();
-  const contextLayer = useCardContextLayer(card.id);
+  const lockedHere = useIsLockedAtCard(card.id);
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Computed once per render: `getAttachedChildren` returns a fresh array every call, and the
@@ -187,7 +181,7 @@ export default function HierarchyModal({
     >
       <div
         ref={listRef}
-        {...dragRegionProps(descendantsRegionKey(card.id), cardRegionKey(card.id))}
+        {...dragRegionProps(descendantsRegionKey(card.id), card.id)}
         className="min-h-0 flex-1 space-y-1 overflow-y-auto py-3"
       >
         <SortableContext items={entries.map(e => e.row.id)} strategy={verticalListSortingStrategy}>
@@ -195,7 +189,7 @@ export default function HierarchyModal({
             entries={entries}
             cardId={card.id}
             itemTypes={itemTypes}
-            projection={session && contextLayer === 'descendants' ? session.projection : null}
+            projection={session && lockedHere ? session.projection : null}
             activeId={session?.activeItem.id}
           />
         </SortableContext>

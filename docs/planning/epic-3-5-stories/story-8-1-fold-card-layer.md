@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** planning
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phase 1 built, for review
 
 ## Goal
 
@@ -169,12 +169,32 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Code map
 
-Filled in by the Coder while building.
-
 | Symbol | Carries |
 |---|---|
+| `dragRegions.ts::DescendantsRegion` | D1, D2, D3: a Card's whole box on the board, the modal's list while the modal holds the layer. Its `parentRegionKey` is the column or sub-row. `CardRegion`, `cardRegionKey` and the `'card'` kind are gone. |
+| `dragRegions.ts::DRAG_CARD_ATTR`, `DRAG_PARENT_CARD_ATTR`, `dragRegionProps(key, parentCardId?)` | E1, E2: every Card's root names its id; the modal's list names its Card. |
+| `dragRegions.ts::isModalList` | D2: tells the modal's list from a Card's box, for the carried Stub's width. |
+| `dragStructure.ts::findParentRegionKey` | E2: walks up from the Card's element, found by `DRAG_CARD_ATTR` when the modal's list names it. |
+| `popSession.ts::namedCardCandidate`, `zoomInDelay`, `popDueAt` | D1, E3: the named Card's `descendants:` region as the candidate, the dwell plus the cue as its clock. A hover's `phase` says which clock `popDueAt` reports. |
+| `placement.ts::placementFor`, `overlayFormFor` | E4: no Card branch; a Stub at the Descendants layer only. |
+| `descendantsProjection.ts::advanceProjection`, `namesRowOf` | D4, E5: on the entry sample, a named neighbor that isn't a row of the section names no gap. |
+| `descendantsProjection.ts::pickupSlot`, `ProjectionSample.ownSlot`, `useBoardDnd.ts::ownSlotRef` | D4: the Stub's own slot, read once at pickup. |
+| `DragSessionContext.ts::useIsLockedAtCard`, `useZoomCandidatePhase` | E4: whether the drag is locked at this Card's layer; the zoom candidate keyed on the `descendants:` key. |
+| `KanbanCard.tsx` | D3, D8, E1: the region on the Card's root, always, a childless Card included; forced open while locked; no attach ghost. |
+| `HierarchyModal.tsx` | D6, E2: the list names its Card for its parent. |
+| `dragOverlayGeometry.ts::overlayWidthFor` | D2: the Card's box less its inset on the board, the list's width in the modal. |
 
 ## Amendments
+
+**2026-10-29, Phase 1 (Coder)**
+- **D4 needed two rules, not one.** The entry sample's neighbor is the column's (D4, built as written). The Card's own Stub also has no row in its section on that sample: it is previewed Free in the column, so a read off the section's rows finds no own slot and seeds the last gap. Before the fold the Card layer put the Stub back in its section first, which hid this. The Stub's slot is now read once, at pickup (`pickupSlot`, kept in `useBoardDnd.ts::ownSlotRef`), and every entry seeds from it. Both rules have a unit test that fails when the rule is taken out.
+- **E2's DOM contract.** The Card's root gives up the region key while the modal holds the layer, so the modal's list has no region element to walk to. Every Card's root now carries its id (`DRAG_CARD_ATTR`), and the list names its Card (`DRAG_PARENT_CARD_ATTR`, which replaces `DRAG_PARENT_REGION_ATTR`, whose value was a region key).
+- **`useCardContextLayer` is now `useIsLockedAtCard`,** and returns a boolean. `popDueAt` lost its `regions` argument: a hover with a `phase` is the zoom-in candidate, and nothing else sets one.
+- **E6's E2E edits started in Phase 1.** The gate is `npm run check`, whose root type-check covers `tests/`, so the removed names (`cardRegionKey`, `descendantsPopInDelayMs`) had to leave the specs and `dragGesture.ts`'s `NO_POP` now. Where a spec waited for the Card layer, or for the zoom back into a section by the removed clock, the lines using the names are gone and the test is skipped: DRAG-5.12, DRAG-5.13, DRAG-7.6/7.10/7.11 (the pop-out test), DRAG-7.2/7.6 (the three `pullOutAndZoomBack` tests) and DRAG-7.10/7.18 (the reopen test in `drag-7-modal-hold.spec.ts`). The test that zooms into a different Card (DRAG-5.4) and `drag-card-zoom-in.spec.ts`'s two skipped tests wait for `descendantsRegionKey` now. Phase 2 runs the suite and decides the rest.
+- **A skip reason can't name a story.** `check:docs` refuses a story ID in a code comment, so each reason states the fact ("the Card layer is gone, and …"). The Living-docs handoff names the story.
+- **Unit tests beyond E6's list:** `KanbanCard.test.tsx` pins the region on every Card's root (a childless Card, a Card the modal holds, the DragOverlay's copy), and `dragTuning.test.ts` pins that a stored value for a key the tuning doesn't have is ignored (E6's last bullet).
+- **To watch in Phase 4:** a Card's region rect is its painted box. At a zoom-in from the column, the target Card may carry the column's shuffle for a moment, which would shift the clamp and the containment test until it settles. The pop-out clock outlasts it, but a jump under a still cursor is how a layer change feels, which this story leaves to the zoom-in morph.
+- **Checks:** `npm run check` passes (430 server, 581 client, 217 script tests; `check:docs` 386 files, 0 hits). `drag-5-stub-detach.spec.ts` runs: 6 passed, 2 skipped. The full E2E suite is Phase 2's.
 
 ## Open questions
 

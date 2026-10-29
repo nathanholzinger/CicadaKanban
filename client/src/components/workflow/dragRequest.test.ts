@@ -67,11 +67,10 @@ describe('isIdentity', () => {
     expect(isIdentity(detachedChildOrigin, { parentId: 'card-1', slot: 'existing' }, [])).toBe(false);
   });
 
-  // DRAG-5.12: a Stub released at its own containing Card's layer previews
-  // `origin` itself (`placement.ts::placementFor`'s Card branch) — proving
-  // that's recognized as identity here too, not just structurally equal by
-  // construction.
-  it("DRAG-5.12: a Stub's own origin, placed back at itself, is identity — the set-back-down", () => {
+  // A Stub previewed at its own origin (`placement.ts::placementFor`'s Descendants
+  // branch, its own Card's section) — proving that's recognized as identity here too, not
+  // just structurally equal by construction.
+  it("a Stub's own origin, placed back at itself, is identity", () => {
     const fromCardP = stubOrigin('card-p');
     expect(isIdentity(fromCardP, fromCardP, others)).toBe(true);
   });

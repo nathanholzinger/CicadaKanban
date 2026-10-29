@@ -40,7 +40,6 @@ const POP_FIELDS: Field[] = [
   { kind: 'number', key: 'popInDelayMs', label: 'Pop-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'cardZoomDwellMs', label: 'Card zoom-in dwell (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'cardPopInDelayMs', label: 'Card zoom-in cue (ms)', step: 50, min: 0 },
-  { kind: 'number', key: 'descendantsPopInDelayMs', label: 'Descendants zoom-in delay (ms)', step: 50, min: 0 },
   { kind: 'number', key: 'popSnapMs', label: 'Snap to cursor (ms)', step: 25, min: 0 },
 ];
 const SECTION_FIELDS: Field[] = [

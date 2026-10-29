@@ -1,5 +1,5 @@
 // The drag's region vocabulary: the boxes a drag can be in — a merged column's body,
-// one sub-row of an expanded column, a Card, or a Card's Descendants section — their
+// one sub-row of an expanded column, or a Card's Descendants layer — their
 // kinds and parent chain, the one spelling of each region's DOM key and attributes
 // (the key builders, `parseRegionKey`, `dragRegionProps`, `CARD_LIST_REGION_SELECTOR`),
 // and hit-testing by containment (`containsPoint`, `childRegionAt`). Pure: it reads no
@@ -10,9 +10,9 @@
 // (wiki board-drag-interaction §1).
 //
 // Each region names its parent layer in `parentRegionKey`: null for a
-// column/sub-row, the containing column/sub-row for a Card, and the Card for
-// its Descendants section. Popping out lands there, and a zoom-in reaches
-// only a region whose parent is the current context (`childRegionAt`).
+// column/sub-row, and the containing column/sub-row for a Card's Descendants
+// layer. Popping out lands there, and Board's hit test reaches only a region whose
+// parent is Board (`childRegionAt`).
 // `DragRegion` is a discriminated union on `kind`: each kind carries only
 // what its kind reads, and every function downstream reads `region.kind`,
 // never a key prefix.
@@ -31,10 +31,10 @@ export interface Point {
   y: number;
 }
 
-export type RegionKind = 'column' | 'subrow' | 'card' | 'descendants';
+export type RegionKind = 'column' | 'subrow' | 'descendants';
 
 interface RegionCommon {
-  /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `card:<id>` / `descendants:<id>` — also the DOM attribute value. */
+  /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `descendants:<id>` — also the DOM attribute value. */
   key: string;
   rect: Rect;
   /**
@@ -53,7 +53,7 @@ interface RegionCommon {
    * space below its last card reads as still inside instead of nowhere. The hierarchy modal's
    * Descendants region is its list, and its bounds the whole dialog: the header above the list
    * is not a region of its own, but a cursor over it is still in the modal. Undefined for a
-   * sub-row (its own `rect` already is its full bound), a Card and a section.
+   * sub-row (its own `rect` already is its full bound) and a Card's own box.
    */
   boundsRect?: Rect;
 }
@@ -63,11 +63,10 @@ interface RegionCommon {
 // Named for the property every consumer actually tests rather than for the
 // column it happens to resemble: Free items are the ones with a workphase
 // and a workflow-scoped position, which is why this kind alone has bands, a
-// target workphase, and an anchor+side within-action. A Card region holds
-// Stubs (attached — none of that applies), and a Descendants region is a
-// Stub *list*, still not a card list. Board is a card list's parent layer
-// unconditionally: `parentRegionKey` is always null, never a branch
-// elsewhere has to ask.
+// target workphase, and an anchor+side within-action. A Descendants region
+// holds Stubs (attached — none of that applies): a Stub *list*, not a card
+// list. Board is a card list's parent layer unconditionally:
+// `parentRegionKey` is always null, never a branch elsewhere has to ask.
 export interface CardListRegion extends RegionCommon {
   kind: 'column' | 'subrow';
   /** The dnd-kit droppable id a drop in this region resolves against. */
@@ -95,40 +94,36 @@ export interface CardListRegion extends RegionCommon {
   parentRegionKey: null;
 }
 
-// A Card region — reachable only as a zoom-in target from the column/sub-row
-// that contains it (`parentRegionKey`), never a Board-layer target in its
-// own right. Carries only what a Card's within-action reads: no workphase
-// fields, no card count, since the auto-drop reads neither.
-export interface CardRegion extends RegionCommon {
-  kind: 'card';
-  /** The Card a drop here attaches into — the same id as the key's own suffix. */
-  attachToCardId: string;
-  /** The column/sub-row that contains this Card — where its own pop-out lands (never Board directly). */
-  parentRegionKey: string;
-}
-
-// A Card's Descendants region: the section of its attached descendants down
-// to its last shown level — one per Card, never one per Stub — where a Stub's drag
-// starts and where manual gap + depth placement happens. Carries no
-// workphase/card-count fields, same reasoning as `CardRegion`: the
+// A Card's Descendants region: the Card's whole box on the board, or the hierarchy
+// modal's list while the modal holds the layer. One per Card, never one per Stub, and
+// every Card has one, a childless Card included. Reachable only as a zoom-in target
+// from the column/sub-row that contains the Card (`parentRegionKey`), never a
+// Board-layer target in its own right. It is where a Stub's drag starts and where manual
+// gap + depth placement happens. Carries no workphase/card-count fields: the
 // within-action reads `parentId` off the resolved placement instead of this
 // region's own identity.
 export interface DescendantsRegion extends RegionCommon {
   kind: 'descendants';
-  /** The Card whose descendants section this is — same id as the key's own suffix. */
+  /** The Card whose descendants layer this is — same id as the key's own suffix. */
   cardId: string;
-  /** Always that Card's own `card:<id>` region — one layer up. */
+  /** The column/sub-row that contains this Card — where its own pop-out lands (never Board directly). */
   parentRegionKey: string;
 }
 
-export type DragRegion = CardListRegion | CardRegion | DescendantsRegion;
+export type DragRegion = CardListRegion | DescendantsRegion;
+
+// Whether a Descendants region is the hierarchy modal's list, drawn apart from its Card, rather
+// than the Card's own box: only the modal's carries a bounds element (`boundsRect`).
+export function isModalList(region: DragRegion): boolean {
+  return region.kind === 'descendants' && region.boundsRect !== undefined;
+}
 
 // The one question every "which kind is this" site asks: is this a card
 // list — a flat list of Free items with bands, a workphase to write, and an
 // anchor+side reposition — or not? Named by the property, so a site that
 // needs a *different* property (a sortable container for `over`, say —
 // which a Descendants region also has) has to say so rather than ride a
-// `kind !== 'card'` that silently includes every kind added later. Typed by
+// `kind !== 'descendants'` that silently includes every kind added later. Typed by
 // `kind` alone, so a structure entry that has no live rects yet
 // (`dragStructure.ts::measureRegions`) can ask it too.
 export function isCardList<T extends Pick<DragRegion, 'kind'>>(
@@ -150,23 +145,27 @@ export const DRAG_CARD_COUNT_ATTR = 'data-drag-card-count';
 // rename on one surface can't leave the wait passing at once.
 export const DRAG_OVERLAY_ATTR = 'data-drag-overlay';
 
-// Set beside DRAG_REGION_ATTR on a region element that isn't nested in its
-// parent region's element: the parent's key. A Descendants section sits inside
-// its Card, so the walk up the DOM finds the parent, and the hierarchy modal
-// is drawn apart from its Card, so it names it.
-export const DRAG_PARENT_REGION_ATTR = 'data-drag-parent-region';
+// A Card's root element, with the Card's id: set on every Card the board draws (never on
+// the DragOverlay's copy), whether or not the Card's root is the region. Where the
+// hierarchy modal's list finds its Card, the modal being drawn apart from it.
+export const DRAG_CARD_ATTR = 'data-drag-card';
+// Set beside DRAG_REGION_ATTR on a region element that isn't nested in its Card: the
+// Card's id. A Card's root is its own region, so the walk up the DOM finds the column
+// it sits in, and the hierarchy modal is drawn apart from its Card, so it names it
+// (`dragStructure.ts` finds that Card by DRAG_CARD_ATTR and walks up from there).
+export const DRAG_PARENT_CARD_ATTR = 'data-drag-parent-card';
 // Set on the element whose box is a Descendants region's `boundsRect`, with that region's key as
 // its value: the hierarchy modal's dialog, which holds the list that is the region.
 export const DRAG_BOUNDS_ATTR = 'data-drag-bounds';
 
 // The one spelling of "register this element as a drag region." It leaves
 // out DRAG_CARD_COUNT_ATTR, which only a card list's element carries, set
-// alongside this. `parentKey` only for an element outside its parent
-// region's own (`DRAG_PARENT_REGION_ATTR`).
-export function dragRegionProps(key: string, parentKey?: string): Record<string, string> {
-  return parentKey === undefined
+// alongside this. `parentCardId` only for an element outside its Card's own
+// (`DRAG_PARENT_CARD_ATTR`).
+export function dragRegionProps(key: string, parentCardId?: string): Record<string, string> {
+  return parentCardId === undefined
     ? { [DRAG_REGION_ATTR]: key }
-    : { [DRAG_REGION_ATTR]: key, [DRAG_PARENT_REGION_ATTR]: parentKey };
+    : { [DRAG_REGION_ATTR]: key, [DRAG_PARENT_CARD_ATTR]: parentCardId };
 }
 
 export function columnRegionKey(columnId: string): string {
@@ -177,34 +176,28 @@ export function subrowRegionKey(columnId: string, workphaseId: string): string {
   return `subrow:${columnId}:${workphaseId}`;
 }
 
-// A Card's own key. Kept alongside the column/sub-row key builders above so
-// every region-key format has one owner.
-export function cardRegionKey(itemId: string): string {
-  return `card:${itemId}`;
-}
-
-// A Card's Descendants region key — the section a Stub's drag starts in.
+// A Card's Descendants region key — the layer a Stub's drag starts in.
 export function descendantsRegionKey(cardId: string): string {
   return `descendants:${cardId}`;
 }
 
 // The one reader of the formats the builders above write — never parse a
 // key by hand with `startsWith`/`slice`/`split`. `id` is
-// the column's, the Card's, or (a Descendants key) the section's own Card's;
+// the column's, or (a Descendants key) the layer's own Card's;
 // a sub-row key also names its workphase. Null for anything that isn't a
 // region key.
 export type ParsedRegionKey =
-  { kind: 'column' | 'card' | 'descendants'; id: string } | { kind: 'subrow'; id: string; workphaseId: string };
+  { kind: 'column' | 'descendants'; id: string } | { kind: 'subrow'; id: string; workphaseId: string };
 
 export function parseRegionKey(key: string): ParsedRegionKey | null {
   const [kind, id, workphaseId, ...rest] = key.split(':');
   if (!id || rest.length > 0) return null;
   if (kind === 'subrow') return workphaseId ? { kind, id, workphaseId } : null;
   if (workphaseId !== undefined) return null;
-  return kind === 'column' || kind === 'card' || kind === 'descendants' ? { kind, id } : null;
+  return kind === 'column' || kind === 'descendants' ? { kind, id } : null;
 }
 
-// The Card whose Descendants section `key` names, or null for any other key
+// The Card whose Descendants layer `key` names, or null for any other key
 // (or none): the "is this context a section, and whose" question the drag layer asks
 // wherever it branches on it, such as `dragCollision.ts::travelingRowsFor` and
 // `descendantsProjection.ts::advanceProjection`.
@@ -214,9 +207,9 @@ export function descendantsCardIdOf(key: string | null): string | null {
 }
 
 // Every card-list (column/sub-row) region element, and nothing nested in
-// one — a Card and its Descendants section register regions inside a
-// column too. Positive, so a region kind added later isn't swept in, the
-// way an "anything but `card:`" selector sweeps in Descendants sections.
+// one — a Card's Descendants region sits inside a column too. Positive, so a
+// region kind added later isn't swept in, the way an "anything but
+// `descendants:`" selector would sweep in the Cards.
 export const CARD_LIST_REGION_SELECTOR = `[${DRAG_REGION_ATTR}^="column:"], [${DRAG_REGION_ATTR}^="subrow:"]`;
 
 // Encodes a droppable id for an expanded column's per-workphase sub-row. Also
@@ -234,19 +227,16 @@ export function containsPoint(rect: Rect, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-// Which of `parentKey`'s own children contains the point — Board's own
-// column/sub-row regions when `parentKey` is null (every one of them has
-// `parentRegionKey: null`), or a locked Card's own Descendants section when
-// `parentKey` is its key. Reachable only from *this* parent — never a
-// foreign column's Card, never two layers in one hop
-// (wiki board-drag-interaction §1.1, rule 2) — because nothing but a true
-// child ever carries a matching `parentRegionKey`. Never called with a
-// column/sub-row key: a locked column/sub-row's own zoom-in candidate is the
-// *named relation* instead (`popSession.ts::namedCardCandidate`), not a hit
-// test here. Null over a column's header/footer, the gaps between columns or
-// sub-rows, the space below the last sub-row, a region currently scrolled
-// out of view, or (at Board layer) always a Card: a Card is never a
-// Board-layer target in its own right.
+// Which of `parentKey`'s own children contains the point. Called with a null
+// `parentKey` only: Board's own column/sub-row regions (every one of them has
+// `parentRegionKey: null`), at the Board layer and at a Free Card's pickup
+// (`useBoardDnd.ts::beginDragAt`). Reachable only from *this* parent — never a
+// Card's Descendants layer, which only a locked column/sub-row's *named
+// relation* zooms into (`popSession.ts::namedCardCandidate`), not a hit test
+// here — because nothing but a true child ever carries a matching
+// `parentRegionKey`. Null over a column's header/footer, the gaps between
+// columns or sub-rows, the space below the last sub-row, or a region currently
+// scrolled out of view.
 export function childRegionAt(
   regions: readonly DragRegion[],
   point: Point,

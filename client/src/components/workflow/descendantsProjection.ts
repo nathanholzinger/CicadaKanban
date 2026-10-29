@@ -58,6 +58,12 @@ export interface ProjectionSample {
   classification: DragClassification;
   /** The Card whose section a Stub's drag started in; null for a Free Card's drag. */
   originCardId: string | null;
+  /**
+   * Where the dragged Stub sat in `originCardId`'s section at pickup (`pickupSlot`); null for a Free
+   * Card's drag. Read once, because the Stub has no row in the section while it is previewed Free in
+   * its column, and the section's other rows don't move during a drag, so it holds at every entry.
+   */
+  ownSlot: { gap: number; depth: number } | null;
   /** The row `dropAnchorFor` names this sample, if any: an item's row, or an overflow row. */
   namedAnchor: AnchorRelation | null;
   pointerX: number | null;
@@ -68,18 +74,19 @@ export interface ProjectionSample {
 }
 
 // One sample. Outside a section there's no projection. On entry the seed is
-// set where the ghost already is, so zooming in never moves it
+// set where the ghost is shown, so zooming in never moves it
 // (wiki board-drag-interaction §7): the drag's own section seeds at the
-// dragged row's own slot and depth, so resting still resolves to where it
+// dragged Stub's own slot and depth, so resting still resolves to where it
 // came from; any other section seeds at its last gap at depth 0, the Card's
-// last child, where the Card layer's auto-drop showed it. So does the drag's
-// own section when its slot is at a level the section doesn't draw: that
-// slot has no row to hold a ghost. Never at the last
-// row's depth: when that row is nested, the ghost would become its sibling.
-// Then the gap follows the named row — the same "the gap is the ghost's
-// slot" rule Column layer uses — or, with no row named (a hover over the
-// section between rows, or before dnd-kit's first move event), stays where
-// it was. The depth is the seed's plus the pointer's travel since, in
+// last child. So does the drag's own section when its slot is at a level the
+// section doesn't draw: that slot has no row to hold a ghost. Never at the
+// last row's depth: when that row is nested, the ghost would become its
+// sibling. The entry sample's named neighbor is the layer before's, a Card
+// in the column the drag zoomed out of, so it names no gap unless it is a row
+// of this section, and the seed holds. Then the gap follows the named row —
+// the same "the gap is the ghost's slot" rule Column layer uses — or, with no
+// row named (a hover over the section between rows, or before dnd-kit's first
+// move event), stays where it was. The depth is the seed's plus the pointer's travel since, in
 // indents, clamped to the gap's range and to one past the last shown level:
 // an overflow row stands for the children one level deeper than the section
 // draws, and nothing is offered right of it. A reading the modal took stands, and no neighbor
@@ -90,21 +97,22 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   const { classification, getAttachedChildren } = sample;
   // The dragged item and its whole subtree are never a Top or Bottom.
   const exclude = classification.subtreeIds;
-  const allRows = toRows(hierarchyRows(cardId, getAttachedChildren));
-  const rows = toRows(allRows, exclude);
+  const rows = toRows(hierarchyRows(cardId, getAttachedChildren), exclude);
 
-  const ownRow = cardId === sample.originCardId ? ownSlotOf(allRows, classification.activeId) : null;
+  const ownRow = cardId === sample.originCardId ? sample.ownSlot : null;
   const own = ownRow && ownRow.depth < shownLevels(sample.sectionLevels) ? ownRow : null;
   const seed =
     !state.seed || sample.contextKey !== sample.previousContextKey
       ? seedFor(own, ownRow !== null && own === null, rows, sample.pointerX ?? 0)
       : state.seed;
-  const previousGap = seed === state.seed ? (state.projection?.gap ?? null) : null;
+  const entering = seed !== state.seed;
+  const previousGap = entering ? null : (state.projection?.gap ?? null);
 
   const pointer =
     sample.pointerX === null || sample.pointerY === null ? null : { x: sample.pointerX, y: sample.pointerY };
-  const held = seed === state.seed && holdsReading(state, pointer) ? state.held : null;
-  const anchor = held ? null : sample.namedAnchor;
+  const held = !entering && holdsReading(state, pointer) ? state.held : null;
+  const named = entering && sample.namedAnchor && !namesRowOf(rows, sample.namedAnchor) ? null : sample.namedAnchor;
+  const anchor = held ? null : named;
   const gap = anchor ? gapForAnchor(rows, anchor) : (previousGap ?? seed.gap);
   const pointerX = sample.pointerX ?? seed.pointerX;
   const { depth, placement } = computeProjection(
@@ -195,6 +203,24 @@ export function holdsReading(state: ProjectionState, pointer: Pointer | null): b
   return state.held !== null && pointer !== null && state.held.x === pointer.x && state.held.y === pointer.y;
 }
 
+// Where the dragged Stub sits in its own Card's section as the board draws it at pickup, as a gap
+// and depth (`ownSlotOf`): null if it isn't a row there. `getAttachedChildren` is the board's, so a
+// re-dragged Stub whose earlier write is still pending is read at the slot it is drawn at.
+export function pickupSlot(
+  cardId: string,
+  activeId: string,
+  getAttachedChildren: (parentId: string) => readonly Item[],
+): { gap: number; depth: number } | null {
+  return ownSlotOf(toRows(hierarchyRows(cardId, getAttachedChildren)), activeId);
+}
+
+// Whether the named neighbor is a row of this section: an item's row, or the overflow row standing
+// for one of its rows' hidden children.
+function namesRowOf(rows: readonly Row[], anchor: AnchorRelation): boolean {
+  const rowId = overflowOwnerOf(anchor.anchorId) ?? anchor.anchorId;
+  return rows.some(r => r.id === rowId);
+}
+
 // The gap a named neighbor puts the ghost in, among all the section's rows. An item's row
 // is the gap beside it. An overflow row stands for the hidden children of its owner, so just
 // above it is the gap under the owner, before its first child, and just below it the gap after
@@ -214,8 +240,8 @@ function gapForAnchor(rows: readonly Row[], anchor: AnchorRelation): number {
 // Deliberately separate from the sidebar's seed (its drag's own depth at
 // pickup, in `useProjectDragReorder.ts::handleDragMove`): a sidebar drag
 // always starts at its own row, but a board drag can also enter a section
-// from the Card layer, and that entry seeds where the Card layer showed the
-// ghost. The depth step itself is shared
+// from its column, and that entry seeds at the Card's last child, or at the
+// Stub's own slot when it is coming back. The depth step itself is shared
 // (`hierarchyPlacement.ts::computeProjection`).
 function seedFor(
   own: { gap: number; depth: number } | null,

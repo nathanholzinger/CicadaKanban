@@ -1,5 +1,5 @@
-// The Stub tier's own rows — StubBody (the shared type-pill + title), AttachGhostRow
-// (a preview of an item about to attach), AttachedChildRow (a real, draggable Stub),
+// The Stub tier's own rows — StubBody (the shared type-pill + title),
+// AttachedChildRow (a real, draggable Stub, the carried item's ghost included),
 // OverflowRow (the count standing in for a row's hidden children, which opens the
 // hierarchy modal), their static drawings, and SectionRows, the one list of them that
 // a Card's section and the hierarchy modal both draw.
@@ -15,7 +15,7 @@ import { useDragTuning } from './workflow/DragTuningContext';
 import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
-// shares — AttachGhostRow, AttachedChildRow and StaticStubRow below, and
+// shares — AttachedChildRow and StaticStubRow below, and
 // KanbanCard's own overlay-Stub branch. Extracted so they can't drift apart
 // from each other; each still owns its own outer box (dashed ghost, sortable
 // row, static row, carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the
@@ -26,27 +26,6 @@ export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[
       <TypePill item={item} itemTypes={itemTypes} />
       <span className="truncate text-xs text-zinc-300">{item.title}</span>
     </>
-  );
-}
-
-// A purely visual stand-in for the active drag's own item once it's
-// previewed attaching here — same slot, same small pill treatment as a real
-// AttachedChildRow, indented by `depth`. Deliberately separate from
-// `AttachedChildRow`, with which it shares `StubBody`, the box class and the
-// indent: that row is a live participant in the drag (a sortable
-// registration, a drag handle, a click target, `data-item-id`, the drop
-// chrome, and the dimmed look a dragged item's own row gets), and this one
-// must be none of them. The dragged item's own row is unmounted while it
-// previews, and nothing at this layer sorts or takes a drop against it; the
-// preview is drawn dashed blue instead.
-export function AttachGhostRow({ item, itemTypes, depth }: { item: Item; itemTypes: ItemType[]; depth: number }) {
-  return (
-    <div
-      className={`${STUB_ROW_BOX_CLASS} border border-dashed border-blue-500/50 bg-blue-500/10`}
-      style={{ marginLeft: descendantsIndentPx(depth) }}
-    >
-      <StubBody item={item} itemTypes={itemTypes} />
-    </div>
   );
 }
 
@@ -192,8 +171,6 @@ interface SectionRowsProps {
   /** The Card whose section these rows are. */
   cardId: string;
   itemTypes: ItemType[];
-  /** The active drag's attach-preview ghost at the Card layer, drawn as an inert row. */
-  attachGhostId?: string;
   /** The Descendants layer's live projection for this Card, null outside that layer. */
   projection: DescendantsProjection | null;
   /** The item being dragged, if any. */
@@ -213,7 +190,6 @@ export function SectionRows({
   entries,
   cardId,
   itemTypes,
-  attachGhostId,
   projection,
   activeId,
   onCardClick,
@@ -235,11 +211,7 @@ export function SectionRows({
     const isActiveRow = child.id === activeId;
     // The active drag's own row previews the projected depth, not its stored one.
     const rowDepth = projection && isActiveRow ? projection.depth : depth;
-    // This row is the active drag's own ghost (previewed attaching here, not a real Stub yet):
-    // an inert preview, not a row (`AttachGhostRow` says why).
-    return child.id === attachGhostId ? (
-      <AttachGhostRow key={child.id} item={child} itemTypes={itemTypes} depth={rowDepth} />
-    ) : (
+    return (
       <AttachedChildRow
         key={child.id}
         item={child}

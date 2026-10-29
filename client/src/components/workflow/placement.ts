@@ -27,7 +27,7 @@ export function placementRegion(session: PopSession | null, regions: readonly Dr
 }
 
 // Which form the carried copy (the DragOverlay) draws as — a Stub row, so it
-// looks like the rows it will be placed among, while locked at a Card or
+// looks like the rows it will be placed among, while locked at a Card's
 // Descendants layer; the shortCard everywhere else (Board, Column/sub-row,
 // or popped out) (wiki board-drag-interaction §5a). Reads
 // `placementRegion`'s own result rather than a second, independently-typed
@@ -37,7 +37,7 @@ export function placementRegion(session: PopSession | null, regions: readonly Dr
 // reasoning as `placementRegion` itself.
 export type OverlayForm = 'stub' | 'short-card';
 export function overlayFormFor(region: DragRegion | undefined): OverlayForm {
-  return region?.kind === 'card' || region?.kind === 'descendants' ? 'stub' : 'short-card';
+  return region?.kind === 'descendants' ? 'stub' : 'short-card';
 }
 
 // The no-anchor fallback within a card-list region (no specific card
@@ -82,18 +82,18 @@ export interface PlacementSubject {
 // The ghost: always the *locked* context's own within-action when there is
 // one — Column/sub-row: the slot a real drop resolved to (`over`), or
 // 'existing' while that's still unknown (mid-drag); Board layer: the
-// hovered band's slot; Card: 'last' for an item arriving from outside (no
-// band, no anchor), or `origin` itself for the drag's own containing Card —
-// "set back down," not "attach". Never previews a foreign region a mere
-// hover hasn't actually reached: the ghost only ever shows what a drop
-// right now would do. Null when the card belongs nowhere and the cursor is
-// over nothing: it's drawn where it already is.
+// hovered band's slot; a Card's Descendants layer: the Card's last child for
+// an item arriving from outside, or the drag's own slot for the drag's own
+// containing Card. Never previews a foreign region a mere hover hasn't
+// actually reached: the ghost only ever shows what a drop right now would
+// do. Null when the card belongs nowhere and the cursor is over nothing:
+// it's drawn where it already is.
 //
 // `origin` is where the drag genuinely started — a `parentId` key marks a
 // Stub's origin, a `workphaseId` key a Free Card's. `containingCardId` is
 // the Stub's *section-root* Card — distinct from `origin.parentId` for a
 // grandchild, whose real direct parent is a Stub further down, not the
-// section root — so the Card-branch's "is this my own restore point" test
+// section root — so the Descendants branch's "is this my own section" test
 // compares against this, never `origin.parentId`. Null for a Free Card
 // drag.
 //
@@ -105,9 +105,8 @@ export interface PlacementSubject {
 // visibly jump the ghost the instant the item is picked up, or again the
 // moment it pops back into the context it started in. Only in the list it
 // draws the item in, though (`drawsInList`): locked in any other list, it
-// would leave the ghost behind in the old one. Not consulted for a Card
-// context (see the Card branch), or once `over` names a real resolved
-// drop: there's nothing left to jump.
+// would leave the ghost behind in the old one. Not consulted once `over`
+// names a real resolved drop: there's nothing left to jump.
 export function placementFor(
   subject: PlacementSubject,
   regions: readonly DragRegion[],
@@ -118,41 +117,24 @@ export function placementFor(
   const region = placementRegion(session, regions);
   if (!region) return null;
 
-  // A Card's within-action (wiki board-drag-interaction §6): "set back
-  // down" for the drag's own containing Card (`origin` itself —
-  // `region.attachToCardId === containingCardId`), else attach as the last
-  // child, including a Stub's reparent into a *different* Card.
-  //
-  // `origin`, never `priorPlacement`, unlike the Descendants branch below:
-  // a set-down here must write nothing, and `origin` is what `isIdentity`
-  // compares it against. An earlier write's pending marker is put back
-  // after that release (`usePendingGhostGuard.ts::restorePriorPlacement`),
-  // never re-sent.
-  if (region.kind === 'card') {
-    if (region.attachToCardId === containingCardId) return origin;
-    return { parentId: region.attachToCardId, slot: 'last' };
-  }
-
-  // A Descendants section's within-action, mid-drag only: a release there
+  // A Card's Descendants layer's within-action, mid-drag only: a release there
   // resolves the gap + depth rule against the session's own live
   // projection instead (`useBoardDnd.ts::releaseDescendants`), so this
-  // branch never sees a real `over`. Two cases, mirroring the Card branch
-  // above:
+  // branch never sees a real `over`. Two cases:
   //
   //   - **Same section** (`region.cardId === containingCardId` — a Stub of
   //     this Card, or one of its own descendants, reordering within the
-  //     section it's already in): the ghost sits at `origin` (or
-  //     `priorPlacement`, for the same no-jump reason as any other
-  //     context) — dnd-kit's own sortable strategy already draws the
-  //     reorder among the section's rows.
+  //     section it's already in, or coming back into it from its column):
+  //     the ghost sits at `origin` (or `priorPlacement`, for the same
+  //     no-jump reason as any other context) — dnd-kit's own sortable
+  //     strategy already draws the reorder among the section's rows.
   //   - **A foreign item** (a Free Card, or a Stub detached from a
   //     *different* Card, zooming into this section for the first time):
-  //     there's no `origin`/`priorPlacement` restore point here (nothing to
-  //     "set back down" to), so the ghost previews attaching as
-  //     `region.cardId`'s last child — the Card layer's own append
-  //     convention, one layer up. So does a Stub of this Card whose own
-  //     slot the section doesn't draw (`projection.slotHidden`): a ghost
-  //     can't be drawn in a slot that isn't there.
+  //     there's no `origin`/`priorPlacement` restore point here, so the
+  //     ghost previews attaching as `region.cardId`'s last child. So does a
+  //     Stub of this Card whose own slot the section doesn't draw
+  //     (`projection.slotHidden`): a ghost can't be drawn in a slot that
+  //     isn't there.
   if (region.kind === 'descendants') {
     if (region.cardId === containingCardId && !subject.projection?.slotHidden) return priorPlacement ?? origin;
     return { parentId: region.cardId, slot: 'last' };

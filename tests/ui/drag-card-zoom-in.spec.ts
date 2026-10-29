@@ -20,7 +20,7 @@ import {
   clocksMargin,
 } from '../helpers/dragGesture';
 import { article, column, region } from '../helpers/boardLocators';
-import { cardRegionKey, columnRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // The Column → Card zoom-in, reached after the drag has passed through
 // Board layer (DRAG-4.15 for a Card in another column).
@@ -43,7 +43,7 @@ import { cardRegionKey, columnRegionKey } from '../../client/src/components/work
 // locks in. With a short seeded `popDelayMs` (150ms here) and Playwright's
 // frozen pointer (it never self-corrects the way a real hand's jitter
 // would), the pop-out clock this starts can undo the whole hold before the
-// next sample observes it locked in: the DOM briefly reads `card:<id>` for
+// next sample observes it locked in: the DOM briefly reads `descendants:<id>` for
 // ~150ms, then bounces back to the column. Real usage (default
 // `popDelayMs` 500ms) likely self-corrects long before that. They stay
 // skipped while the target Card can move out from under the cursor
@@ -82,7 +82,11 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await awaitDragContext(page, columnRegionKey(inProgressCol.id), clocksMargin(tuning.popInDelayMs));
     // Locking in redraws the column (the zones gone): aim at Q where it now sits.
     await hoverTo(page, await center(article(inProgressGroup, 'Q')));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
+    await awaitDragContext(
+      page,
+      descendantsRegionKey(q.id),
+      clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+    );
     await release(page);
 
     const updated = await fetchItem(request, x.id);
@@ -116,7 +120,11 @@ test.describe('Card zoom-in after passing through Board layer', () => {
     await hoverTo(page, await center(region(todoGroup, columnRegionKey(todoCol.id))));
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popInDelayMs));
     await hoverTo(page, await center(article(todoGroup, 'Q')));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
+    await awaitDragContext(
+      page,
+      descendantsRegionKey(q.id),
+      clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+    );
     await release(page);
 
     const updated = await fetchItem(request, x.id);

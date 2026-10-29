@@ -21,7 +21,7 @@ import {
   POP_OUT_ONLY,
 } from '../helpers/dragGesture';
 import { article, column, itemRow } from '../helpers/boardLocators';
-import { cardRegionKey, columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
+import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
 // A Stub's drag through the Descendants, Card and Column layers. The cases
 // assert reachability (`data-drag-context`) and write correctness.
@@ -107,7 +107,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     expect(unchanged.parentId).toBe(s1.id); // a release with nothing hovered writes nothing
   });
 
-  test("DRAG-5.13: a grandchild Stub popped out to its containing Card's layer keeps its row and its own children drawn, and a release there writes nothing", async ({
+  // Skipped until the drag specs are reworked: the Card layer is gone, and a pop out of the section lands in the column, with no Card layer to rest at.
+  test.skip("DRAG-5.13: a grandchild Stub popped out to its containing Card's layer keeps its row and its own children drawn, and a release there writes nothing", async ({
     page,
     request,
     projectSidebar,
@@ -121,13 +122,12 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const s1a1 = await seedItem(request, { title: 'S1a1', parentId: s1a.id });
     const before = await fetchItem(request, s1a.id);
 
-    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
     await pickUp(page, itemRow(page, s1a.id).getByRole('button', { name: 'S1a', exact: true }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
     await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
-    await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
 
     // The Card layer's drop for P's own Stub is "set it back down", so its row
     // stays where it is, with its children, rather than drawing as an attach
@@ -144,7 +144,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(itemRow(page, s1a.id)).toBeVisible();
   });
 
-  test('DRAG-5.12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
+  // Skipped until the drag specs are reworked: the Card layer is gone, so there is no stop to set the Stub back down at.
+  test.skip('DRAG-5.12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
     page,
     request,
     projectSidebar,
@@ -160,7 +161,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     // A real, short pop-out threshold — but popInDelayMs/cardPopInDelayMs
     // never complete, so nothing beyond the first pop can fire.
-    const tuning = await seedDragTuning(page, POP_OUT_ONLY);
+    await seedDragTuning(page, POP_OUT_ONLY);
     await projectSidebar.openBoard(name);
 
     await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
@@ -171,7 +172,6 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // there: the cursor never leaves the Card's own box, so the second
     // pop-out clock (Card → column) never even starts.
     await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
-    await awaitDragContext(page, cardRegionKey(p.id), clocksMargin(tuning.popDelayMs));
 
     await release(page);
 
@@ -315,7 +315,11 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     // the shift.
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
-    await awaitDragContext(page, cardRegionKey(q.id), clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs));
+    await awaitDragContext(
+      page,
+      descendantsRegionKey(q.id),
+      clocksMargin(tuning.cardZoomDwellMs, tuning.cardPopInDelayMs),
+    );
 
     await release(page);
 

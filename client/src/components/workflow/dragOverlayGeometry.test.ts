@@ -9,7 +9,7 @@ import {
 } from './dragOverlayGeometry';
 import { startPopSession } from './popSession';
 import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
-import { cardRegion, descendantsRegion, rect, region } from '../../test/dragFixtures';
+import { descendantsRegion, rect, region } from '../../test/dragFixtures';
 
 // Every transform here is in dnd-kit's delta space (a translation from the
 // dragged node's resting position); every rect is in screen space.
@@ -57,8 +57,7 @@ describe('clampToCurrentContext', () => {
   it.each([
     ['a merged column bounds x only', region('column:c1', bounds), { x: 50, y: 500 }],
     ['a sub-row bounds both axes', region('subrow:c1:w1', bounds), { x: 50, y: 80 }],
-    ['a Card bounds both axes', cardRegion('p', bounds, 'column:c1'), { x: 50, y: 80 }],
-    ['a Descendants section bounds both axes', descendantsRegion('p', bounds), { x: 50, y: 80 }],
+    ['a Card’s Descendants layer bounds both axes', descendantsRegion('p', bounds, 'column:c1'), { x: 50, y: 80 }],
   ])('%s', (_, context, expected) => {
     expect(clampToCurrentContext(far, overlay, startPopSession(context.key), [context])).toEqual({
       ...far,
@@ -94,12 +93,15 @@ describe('clampToCurrentContext', () => {
 });
 
 describe('overlayWidthFor', () => {
-  it("is a Descendants section's own width: a row spans the whole section", () => {
-    expect(overlayWidthFor(descendantsRegion('p', rect(0, 0, 240, 100)))).toBe(240);
+  it("is the modal list's own width: a row spans the whole list", () => {
+    const list = descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1', { boundsRect: rect(0, -40, 240, 140) });
+    expect(overlayWidthFor(list)).toBe(240);
   });
 
-  it("is a Card's width minus its content inset on both sides", () => {
-    expect(overlayWidthFor(cardRegion('p', rect(0, 0, 240, 100), 'column:c1'))).toBe(240 - 2 * CARD_CONTENT_INSET_PX);
+  it("on the board is the Card's width minus its content inset on both sides", () => {
+    expect(overlayWidthFor(descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1'))).toBe(
+      240 - 2 * CARD_CONTENT_INSET_PX,
+    );
   });
 
   it('is null for a card list (the carried copy is a shortCard there) and with no region', () => {
@@ -109,14 +111,14 @@ describe('overlayWidthFor', () => {
 });
 
 describe('overlayShapeFor', () => {
-  const cardP = cardRegion('p', rect(0, 0, 240, 100), 'column:c1');
-  const descendantsP = descendantsRegion('p', rect(0, 0, 240, 100));
+  const cardP = descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1');
+  const modalList = descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1', { boundsRect: rect(0, -40, 240, 140) });
   const columnC1 = region('column:c1', rect(0, 0, 240, 400));
 
-  it("locked at a Card or its section: the Stub, at a row's width", () => {
+  it("locked at a Card's Descendants layer, or the modal that holds it: the Stub, at a row's width", () => {
     const cardWidth = 240 - 2 * CARD_CONTENT_INSET_PX;
     expect(overlayShapeFor(startPopSession(cardP.key), [cardP])).toEqual({ form: 'stub', widthPx: cardWidth });
-    expect(overlayShapeFor(startPopSession(descendantsP.key), [descendantsP])).toEqual({ form: 'stub', widthPx: 240 });
+    expect(overlayShapeFor(startPopSession(modalList.key), [modalList])).toEqual({ form: 'stub', widthPx: 240 });
   });
 
   it('anywhere else, or with no drag: the shortCard, with no width', () => {
