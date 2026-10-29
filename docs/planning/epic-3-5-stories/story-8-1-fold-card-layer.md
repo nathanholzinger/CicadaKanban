@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3b committed, Phase 4's hands-on done; Phase 5, from the test reconciliation, built, for review; Phase 6 next
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3b committed, Phase 4's hands-on done; Phase 5 committed; Phase 6, a hidden Stub set down at its own slot in the modal, built, for review
 
 ## Goal
 
@@ -394,10 +394,22 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **For the Reconciler:** the stamps are titles on partial tests, and don't make a case `Automated` on their own (the plan's Phase 5, item 3). The DRAG-7.2 count test is Nathan's approved pointer (Open questions).
 - **Checks:** `npm run check` passes (430 server, 585 client, 218 script tests; `check:docs` 386 files, 0 hits). `drag-5-stub-detach.spec.ts` alone: 6 passed, 1 skipped. The full E2E suite wasn't run, since the phase changes no behavior and its only spec changes are the deleted skipped test, a title and comments.
 
+**2026-10-29, Phase 6: a hidden Stub set down at its own slot in the modal (Coder)**
+- **Test first.** `descendantsProjection.test.ts`'s "a Stub whose own slot the section does not draw" describe has `DRAG-7.31: set down at its own slot in the modal, after coming in with the slot hidden, a release writes nothing`. It runs the history: R1 enters with its slot hidden (`slotHidden`, the Card's last gap), `reseedProjection` reads the ghost at R1's own gap and depth (3, 3), and a sample at `EVERY_LEVEL` follows, with R1 previewed at the Card's last child as the board has it. Then `descendantsReleasePlacement` is null.
+  - **Shown failing on the unchanged code,** for the expected reason: gap 3, depth 3 and `valid` held, and `atOwnSlot` was false.
+- **The fix:** `advanceProjection`'s `atOwnSlot` lost its `!seed.slotHidden` term. `own` is already null wherever the section hides the slot, so the term only mattered in the modal after such an entry, and it guarded an `own` that is the pickup snapshot (`pickupSlot`) since Phase 1.
+  - **`slotHidden` stays,** as planned: `placementFor` still previews the Stub as the Card's last child, so the modal's rows don't move under the cursor as it opens.
+  - **A release in that state** takes `releaseDescendants`'s null-placement path: `commitRelease` restores any pending marker and sends nothing.
+- **Comments that follow:** `DragSessionContext.ts`'s `slotHidden` no longer says `atOwnSlot` never holds; `reseedProjection`'s says the modal draws the slot, so a ghost set down in it is at the Stub's own slot; `advanceProjection`'s header says the same where it explains the hidden slot's seed. `workflow/AGENTS.md`'s paragraph on a Stub whose slot is hidden gains the modal's set-down.
+- **No drag spec,** as the plan says: DRAG-7.31's surface path is Story 10's.
+- **For the Reconciler:** the new unit test is the only automated carrier of DRAG-7.31. It tests the projection's gap and depth rule, and whether that fits an approved internal category (DRAG-4.29's pointer is the nearest) is a question for Nathan, not asked here.
+- **Not tried in the browser:** the whole path, a hold opening the modal after a hidden-slot entry and a set-down at the slot. The unit test covers the projection; `reseedProjection`'s caller in `useBoardDnd.ts::readModalPlacement` and the release path are as before.
+- **Checks:** `npm run check` passes (430 server, 586 client, 218 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 15 skipped, 0 failed (the 16th skip went in Phase 5).
+
 ## Open questions
 
 - **Should `slotHidden` still be carried across the modal opening?** (Finding 11.) `reseedProjection` keeps the seed's flag. Its old reason, that `own` was read from rows that place the Stub as the Card's last child, is gone: `own` comes from the pickup snapshot. The comment now says only what the flag records. What the flag still does there is a behavior, which this pass left alone: the modal draws every level, so a hidden pickup slot is drawn in it, and with the flag carried a Stub put back in that slot counts as a move and writes (to where it already is), where cleared it would be its own slot and write nothing. Read from the code, not tried in the browser. For the PO to rule on with the Phase 4 behavior decisions.
-  - *Since then:* the Test Planner reads the wiki as already answering it: a set-down at the pickup slot in the modal writes nothing (DRAG-7.31). Phase 6 builds that, unless Nathan or the PO rules otherwise first.
+  - *Since then:* the Test Planner reads the wiki as already answering it: a set-down at the pickup slot in the modal writes nothing (DRAG-7.31). **Phase 6 built that (2026-10-29)**, with no other ruling in between. It stays open only if Nathan or the PO overrules the wiki; see the Phase 6 amendment.
 - **Answered (Nathan, 2026-10-29): `itemListOps.test.ts:307` is approved as an internal pointer for DRAG-7.2.**
   - **The case's missing clauses:** while a dragged child is back in the section, its owner's overflow row leaves it out of the count, and draws no row when it was the only child. Only skipped specs reach them today. The unit test asserts both against `sectionEntries`, which the render reads.
   - **Why it needed approval:** it's a display rule, outside the README's two approved categories.

@@ -3,7 +3,7 @@ import { makeItem } from '../../test/itemFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
 import { columnRegionKey, descendantsRegionKey } from './dragRegions';
-import { getAttachedChildrenFrom, overflowRowId } from './itemListOps';
+import { EVERY_LEVEL, getAttachedChildrenFrom, overflowRowId } from './itemListOps';
 import {
   NO_PROJECTION,
   advanceProjection,
@@ -390,6 +390,25 @@ describe('advanceProjection under a cut-off section', () => {
     it('in the hierarchy modal, which draws every level, its own slot is its own', () => {
       const { projection } = advanceProjection(NO_PROJECTION, own('R1', { sectionLevels: Infinity }));
       expect(projection).toMatchObject({ gap: 3, depth: 3, atOwnSlot: true, slotHidden: false });
+    });
+
+    // The whole history: the Stub comes back into the section with its slot hidden, the hold opens
+    // the modal, and the modal's reading puts the ghost in the Stub's own gap and depth (R1's, as
+    // the case above). The modal draws that slot, so it is the Stub's own, however the visit began.
+    it('DRAG-7.31: set down at its own slot in the modal, after coming in with the slot hidden, a release writes nothing', () => {
+      const previewed = new Map([['R1', { parentId: P, slot: 'last' as const }]]);
+      const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(deep, parentId, previewed);
+      const entered = advanceProjection(NO_PROJECTION, own('R1'));
+      expect(entered.projection).toMatchObject({ slotHidden: true });
+
+      const reseeded = reseedProjection(entered, { gap: 3, depth: 3, pointerX: START_X, pointerY: START_Y });
+      const { projection } = advanceProjection(
+        reseeded,
+        own('R1', { previousContextKey: section, sectionLevels: EVERY_LEVEL, getAttachedChildren }),
+      );
+
+      expect(projection).toMatchObject({ gap: 3, depth: 3, valid: true, atOwnSlot: true });
+      expect(descendantsReleasePlacement(projection, P)).toBeNull();
     });
   });
 

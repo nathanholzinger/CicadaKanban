@@ -79,7 +79,9 @@ export interface ProjectionSample {
 // dragged Stub's own slot and depth, so resting still resolves to where it
 // came from; any other section seeds at its last gap at depth 0, the Card's
 // last child. So does the drag's own section when its slot is at a level the
-// section doesn't draw: that slot has no row to hold a ghost. Never at the
+// section doesn't draw: that slot has no row to hold a ghost. The modal draws
+// every level, so there that slot is the Stub's own again (`atOwnSlot`), however
+// the visit began. Never at the
 // last row's depth: when that row is nested, the ghost would become its
 // sibling. The entry sample's named neighbor is the layer before's, a Card
 // in the column the drag zoomed out of, so it names no gap unless it is a row
@@ -131,7 +133,7 @@ export function advanceProjection(state: ProjectionState, sample: ProjectionSamp
   // drag-start snapshot, as the gate that decides whether this section was
   // a region at all.
   const valid = isValidParent(classification, placement.parentId ?? cardId);
-  const atOwnSlot = !seed.slotHidden && own !== null && gap === own.gap && depth === own.depth;
+  const atOwnSlot = own !== null && gap === own.gap && depth === own.depth;
   const overflowBeside = overflowBesideGhost(rows, gap, depth, shownLevels(sample.sectionLevels));
   return {
     seed,
@@ -182,8 +184,9 @@ export function modalHoldTarget(projection: DescendantsProjection | null): Modal
 // it measures its travel from is at `pointerX`. The previous projection is dropped, and nothing else:
 // `slotHidden` stays as the entry set it. It records that the Stub's pickup slot wasn't drawn when
 // the visit began, so the Stub came in as an item from outside, previewed as the Card's last child
-// (`placement.ts::placementFor`), and the modal opening doesn't make it the Stub's own slot. The
-// reading is held where the pointer is (`holdsReading`).
+// (`placement.ts::placementFor`), and the modal opening doesn't change that preview. The modal does
+// draw the slot, so a ghost set down in it is at the Stub's own slot (`atOwnSlot`). The reading is
+// held where the pointer is (`holdsReading`).
 export function reseedProjection(
   state: ProjectionState,
   read: { gap: number; depth: number; pointerX: number; pointerY: number },

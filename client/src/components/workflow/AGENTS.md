@@ -72,7 +72,9 @@ its own header.
   it; a drag that ends in it, by a release or a cancel, leaves it open. A Stub whose own slot the section doesn't
   draw (picked up in the modal and pulled back out) comes back into the section as an item
   from outside does: the projection's seed is the last gap, `projection.slotHidden`, and
-  `placement.ts::placementFor` previews it as the Card's last child. The list is the layer's
+  `placement.ts::placementFor` previews it as the Card's last child. If a hold then opens the
+  modal, which draws that slot, setting the Stub down in it writes nothing, as anywhere its own
+  slot is drawn: `atOwnSlot` doesn't read `slotHidden`. The list is the layer's
   region and the dialog its bounds (`dragRegions.ts::DRAG_BOUNDS_ATTR`, read into the region's
   `boundsRect`), so a cursor over the header is still in the modal. A click opens it centered,
   and so does a mount with no drag running: whether the cursor places the modal is decided

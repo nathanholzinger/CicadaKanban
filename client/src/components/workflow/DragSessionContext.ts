@@ -38,9 +38,11 @@ export interface DescendantsProjection {
    */
   atOwnSlot: boolean;
   /**
-   * The dragged Stub's own slot is one this section doesn't draw (a level past the last shown
-   * one), so it came in as an item from outside does: at the Card's last gap, as its last
-   * child, and `atOwnSlot` never holds. Read by `placement.ts::placementFor`.
+   * The visit began with the dragged Stub's own slot undrawn by this section (a level past the
+   * last shown one), so it came in as an item from outside does: at the Card's last gap, as its
+   * last child, which `placement.ts::placementFor` previews. Set at entry and kept when the modal
+   * opens. It doesn't bear on `atOwnSlot`: while the slot is undrawn nothing can be at it, and the
+   * modal draws it.
    */
   slotHidden: boolean;
   /**
