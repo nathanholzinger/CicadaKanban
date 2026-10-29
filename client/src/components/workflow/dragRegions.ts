@@ -2,7 +2,7 @@
 // one sub-row of an expanded column, or a Card's Descendants layer — their
 // kinds and parent chain, the one spelling of each region's DOM key and attributes
 // (the key builders, `parseRegionKey`, `dragRegionProps`, `CARD_LIST_REGION_SELECTOR`),
-// and hit-testing by containment (`containsPoint`, `childRegionAt`). Pure: it reads no
+// and hit-testing by containment (`containsPoint`, `cardListAt`). Pure: it reads no
 // DOM. `dragStructure.ts` resolves these regions from the live board. The drop-band
 // math is `dragBands.ts`'s.
 //
@@ -11,8 +11,8 @@
 //
 // Each region names its parent layer in `parentRegionKey`: null for a
 // column/sub-row, and the containing column/sub-row for a Card's Descendants
-// layer. Popping out lands there, and Board's hit test reaches only a region whose
-// parent is Board (`childRegionAt`).
+// layer. Popping out lands there, and Board's hit test reaches only the card lists
+// (`cardListAt`).
 // `DragRegion` is a discriminated union on `kind`: each kind carries only
 // what its kind reads, and every function downstream reads `region.kind`,
 // never a key prefix.
@@ -30,8 +30,6 @@ export interface Point {
   x: number;
   y: number;
 }
-
-export type RegionKind = 'column' | 'subrow' | 'descendants';
 
 interface RegionCommon {
   /** `column:<id>` / `subrow:<columnId>:<workphaseId>` / `descendants:<id>` — also the DOM attribute value. */
@@ -221,26 +219,19 @@ export function subrowContainerId(columnId: string, workphaseId: string): string
 }
 
 // Whether `point` lies inside `rect`, inclusive of the edges — the one
-// containment test, used by `childRegionAt` below. Also read by
+// containment test, used by `cardListAt` below. Also read by
 // `popSession.ts` and `dragCollision.ts`.
 export function containsPoint(rect: Rect, point: Point): boolean {
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-// Which of `parentKey`'s own children contains the point. Called with a null
-// `parentKey` only: Board's own column/sub-row regions (every one of them has
-// `parentRegionKey: null`), at the Board layer and at a Free Card's pickup
-// (`useBoardDnd.ts::beginDragAt`). Reachable only from *this* parent — never a
+// The column or sub-row containing the point: Board's own hit test, at the Board
+// layer and at a Free Card's pickup (`useBoardDnd.ts::beginDragAt`). Never a
 // Card's Descendants layer, which only a locked column/sub-row's *named
 // relation* zooms into (`popSession.ts::namedCardCandidate`), not a hit test
-// here — because nothing but a true child ever carries a matching
-// `parentRegionKey`. Null over a column's header/footer, the gaps between
-// columns or sub-rows, the space below the last sub-row, or a region currently
-// scrolled out of view.
-export function childRegionAt(
-  regions: readonly DragRegion[],
-  point: Point,
-  parentKey: string | null,
-): DragRegion | null {
-  return regions.find(r => r.parentRegionKey === parentKey && containsPoint(r.rect, point)) ?? null;
+// here. Null over a column's header/footer, the gaps between columns or
+// sub-rows, the space below the last sub-row, or a region currently scrolled
+// out of view.
+export function cardListAt(regions: readonly DragRegion[], point: Point): CardListRegion | null {
+  return regions.find((r): r is CardListRegion => isCardList(r) && containsPoint(r.rect, point)) ?? null;
 }

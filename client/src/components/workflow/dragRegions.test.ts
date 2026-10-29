@@ -3,7 +3,7 @@ import {
   CARD_LIST_REGION_SELECTOR,
   DRAG_PARENT_CARD_ATTR,
   DRAG_REGION_ATTR,
-  childRegionAt,
+  cardListAt,
   columnRegionKey,
   containsPoint,
   descendantsCardIdOf,
@@ -64,30 +64,29 @@ describe('parseRegionKey', () => {
   });
 });
 
-// `childRegionAt(regions, point, null)` is Board's lookup, since every
-// column/sub-row's `parentRegionKey` is null. A locked column/sub-row's own
+// `cardListAt` is Board's lookup: only a column or sub-row. A locked column/sub-row's own
 // Cards aren't found here: they come from the named relation,
 // `popSession.ts::namedCardCandidate`.
-describe('childRegionAt (Board layer: parentKey null)', () => {
+describe('cardListAt (Board layer)', () => {
   it('hits the region containing the point', () => {
-    expect(childRegionAt(regions, { x: 50, y: 200 }, null)).toBe(colA);
-    expect(childRegionAt(regions, { x: 150, y: 100 }, null)).toBe(subB1);
-    expect(childRegionAt(regions, { x: 150, y: 200 }, null)).toBe(subB2);
+    expect(cardListAt(regions, { x: 50, y: 200 })).toBe(colA);
+    expect(cardListAt(regions, { x: 150, y: 100 })).toBe(subB1);
+    expect(cardListAt(regions, { x: 150, y: 200 })).toBe(subB2);
   });
 
   it("is null between columns (a gap is nobody's region)", () => {
-    expect(childRegionAt(regions, { x: 110, y: 200 }, null)).toBeNull();
+    expect(cardListAt(regions, { x: 110, y: 200 })).toBeNull();
   });
 
   it('is a bounded box: above or below it is nowhere, not the column', () => {
-    expect(childRegionAt(regions, { x: 50, y: -40 }, null)).toBeNull();
-    expect(childRegionAt(regions, { x: 50, y: 900 }, null)).toBeNull();
+    expect(cardListAt(regions, { x: 50, y: -40 })).toBeNull();
+    expect(cardListAt(regions, { x: 50, y: 900 })).toBeNull();
   });
 
   it('DRAG-1.6: is null in the gap between two sub-rows (sub-rows are distinct contexts, and the gap belongs to neither)', () => {
-    expect(childRegionAt(regions, { x: 150, y: 160 }, null)).toBeNull();
-    expect(childRegionAt(regions, { x: 150, y: 179 }, null)).toBeNull();
-    expect(childRegionAt(regions, { x: 150, y: 180 }, null)).toBe(subB2);
+    expect(cardListAt(regions, { x: 150, y: 160 })).toBeNull();
+    expect(cardListAt(regions, { x: 150, y: 179 })).toBeNull();
+    expect(cardListAt(regions, { x: 150, y: 180 })).toBe(subB2);
   });
 });
 
@@ -95,8 +94,8 @@ describe("a Card's Descendants region is never found as Board's child", () => {
   it('finds the column under a Card, not the Card: the Card is reached by the named relation only', () => {
     const column = region('column:a', rect(0, 0, 100, 400));
     const card = descendantsRegion('card-p', rect(10, 10, 80, 100), column.key);
-    expect(childRegionAt([column, card], { x: 50, y: 50 }, null)).toBe(column);
-    expect(childRegionAt([card], { x: 50, y: 50 }, null)).toBeNull();
+    expect(cardListAt([column, card], { x: 50, y: 50 })).toBe(column);
+    expect(cardListAt([card], { x: 50, y: 50 })).toBeNull();
   });
 });
 

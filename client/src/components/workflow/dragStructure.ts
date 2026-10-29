@@ -91,6 +91,9 @@ export function resolveDragStructure(
   originCardId?: string,
 ): DragStructure {
   const byId = new Map(columns.map(c => [c.id, c]));
+  // Every rendered Card is a Descendants region, and only the hierarchy modal's list has a bounds
+  // element, so they are read once for the whole resolve and each region looks its own up.
+  const boundsByKey = boundsElements(root);
   const structure: (CardListStructure | DescendantsStructure)[] = [];
   for (const el of regionElements(root)) {
     const key = el.getAttribute(DRAG_REGION_ATTR);
@@ -100,7 +103,7 @@ export function resolveDragStructure(
     const dom = {
       element: el,
       scrollAncestor,
-      bounds: parsed.kind === 'descendants' ? boundsElementOf(root, key) : null,
+      bounds: parsed.kind === 'descendants' ? (boundsByKey.get(key) ?? null) : null,
     };
     const record =
       parsed.kind === 'descendants'
@@ -167,9 +170,15 @@ export function hasDetachedElements(structure: DragStructure): boolean {
   );
 }
 
-// The element a Descendants region's bounds are read from: the one marked for its key.
-function boundsElementOf(root: ParentNode, regionKey: string): HTMLElement | null {
-  return root.querySelector<HTMLElement>(`[${DRAG_BOUNDS_ATTR}="${regionKey}"]`);
+// The elements a Descendants region's bounds are read from (`DRAG_BOUNDS_ATTR`), by the key of the
+// region each is marked for. The first in document order wins a key, as a query for that key would.
+function boundsElements(root: ParentNode): Map<string, HTMLElement> {
+  const byKey = new Map<string, HTMLElement>();
+  for (const el of root.querySelectorAll<HTMLElement>(`[${DRAG_BOUNDS_ATTR}]`)) {
+    const key = el.getAttribute(DRAG_BOUNDS_ATTR);
+    if (key && !byKey.has(key)) byKey.set(key, el);
+  }
+  return byKey;
 }
 
 // The other half of the same staleness check: whether a region element has

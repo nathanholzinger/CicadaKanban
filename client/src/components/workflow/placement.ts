@@ -199,20 +199,14 @@ export function regionWorkphaseFor(region: CardListRegion, activeWorkphaseId: st
 // already-resolved facts — dnd-kit's `Over`'s id, and `dropAnchorFor`'s own
 // answer — so this file stays dnd-kit-free, never importing `Over` itself.
 // `null` `overId` covers both "no drop at all" and the release-only cases
-// `placementFor`'s own callers never see mid-drag. `list` is
-// `useBoardDnd.ts::releaseListFor`'s own return shape, narrowed to the one
-// field this needs.
+// `placementFor`'s own callers never see mid-drag. `containerId` is the
+// release's card-list region's own.
 //
 // A release over the bare container is `'container'`, which writes nothing
 // for a card already in the list. That's not a lost drop: dnd-kit doesn't
 // shuffle when `over` is the container, so the ghost never left its slot,
 // and the drop lands where the ghost is (wiki board-drag-interaction §2).
-export function resolvePlacementOver(
-  list: { containerId: string } | null,
-  overId: string | null,
-  anchor: PlacementOver,
-): PlacementOver {
-  if (!list) return null;
-  if (overId === null || overId === list.containerId) return 'container';
+export function resolvePlacementOver(containerId: string, overId: string | null, anchor: PlacementOver): PlacementOver {
+  if (overId === null || overId === containerId) return 'container';
   return anchor ?? 'container';
 }

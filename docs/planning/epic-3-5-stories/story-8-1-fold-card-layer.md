@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1 and 2 committed; Phase 3 built, for review
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3 committed; Phase 3b, the cleanup batch, built, for review
 
 ## Goal
 
@@ -156,6 +156,43 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **The specs Phase 2 listed** run again. Each passes, or fails because the spec is wrong and is skipped as E6 says.
 - **Gate:** `npm run check` and `npm run test:e2e`.
 
+**Phase 3b: the cleanup batch** (Nathan, 2026-10-29)
+- **Where it comes from:** a review of Phases 1–3's production code (`docs/audits/story-8-1-fold-cleanup-review.md`), not the story's close-out audit. It found no defect, and four optional tidy-ups the fold left behind. Nathan took them in as one batch.
+- **Nothing the user sees changes.** The four items are independent, so any order works. Line numbers are at `004185b`.
+
+1. **Delete `dragRegions.ts::RegionKind`** (review #5). Nothing reads it. One line.
+2. **Narrow the Board hit test** (review #2).
+   - `childRegionAt(regions, point, parentKey)` is only ever called with a null parent, and with null it can only return a column or sub-row. Replace it with `cardListAt(regions, point): CardListRegion | null`, which tests `isCardList` and containment.
+   - **Its callers:** `popSession.ts::advancePopSession`'s Board branch drops its extra `isCardList` check, which only narrowed the type. `useBoardDnd.ts::beginDragAt`'s hit test reads the new name.
+   - **Tests:** `dragRegions.test.ts`'s `childRegionAt` describe carries over, renamed. Its case that a Descendants region is never returned stays.
+   - **Comments that name it follow:** `dragRegions.ts`'s header and `containsPoint`'s comment, and `popSession.ts`'s Board branch.
+   - **`parentRegionKey` stays on every region:** the pop out, `parentKeyOf` and `measureRegions`' scope read it.
+   - **Size:** two modules, the hook's one call and a test file, all pure but the call.
+3. **Narrow the card-list release** (review #3).
+   - In `useBoardDnd.ts::handleDragEnd`, once the Descendants release has returned, `region` is a column, a sub-row or nothing. So `releaseListFor`'s kind check and its `{rows, containerId}` wrapper do nothing.
+   - **No region first,** through `commitRelease` with a null placement. That's what happens today, made explicit: `placementFor` returns null with no region, and `commitRelease` restores any pending marker. Don't call `restorePriorPlacement` directly; `commitRelease` stays the one tail.
+   - **Then** read the rows once with `regionItems(region)`, and give `resolvePlacementOver` the region's `containerId`.
+   - **What goes:** `releaseListFor`; `resolvePlacementOver`'s null-list branch, with its case in `placement.test.ts` (`:401`). Its comment no longer names `releaseListFor`.
+   - **If the explicit version reads longer than today's,** keep today's and say so in an amendment. The review allows that.
+   - **Two stale comments in the same file** name the Card layer:
+     - `:641–642` says "What `placementFor`'s Card branch and `isIdentity` compare a release against". It's the Descendants branch now.
+     - `:727`, `commitRelease`'s comment, says "card-list and Card releases alike". There's one card-list release.
+   - **Size:** one hook function, and one pure function's signature. Every card-list release runs it, so the E2E suite gates it.
+4. **Resolve the bounds elements once** (review #1).
+   - `dragStructure.ts::resolveDragStructure` runs one `querySelector` per Descendants region, looking for a bounds element. Since the fold every Card is a Descendants region, and only the modal's list has bounds.
+   - **The fix:** read every `DRAG_BOUNDS_ATTR` element once per resolve, into a map from region key to element, and look each region up in it. `boundsElementOf` goes.
+   - **Not the review's alternative,** which looks bounds up only for a region that names its Card (`DRAG_PARENT_CARD_ATTR`). It would tie two attributes together, and nothing says they belong together.
+   - **Optional, if it falls out of the same edit:** check a Card's validity (`isValidCard`, with the `originCardId` exception) before its DOM reads, keeping the rule in `descendantsStructure`. It saves little: in a Free Card's drag, most Cards are valid.
+   - **Don't cache painted rects.** `measureRegions` reads them live each sample, and that stays.
+   - **Size:** one function in one file. It runs at pickup, after a layer change, and when a remount outdates the structure, never each sample.
+
+- **Not in the batch: the review's #4,** the repeated child scans.
+  - Each step of a section's walk filters the board's whole item list, at every sample at the Descendants layer and in every Card's render. It predates the fold, and nobody has measured a slowdown.
+  - It's for a profile first. If one shows it, a children index built once per item snapshot in `useItemManagement.ts` serves the render and the projection together.
+- **The review's "Safeguards to retain"** are all still needed. None is a fold leftover, and the batch doesn't touch them.
+- **Gate:** `npm run check` and `npm run test:e2e`, since item 3 changes the release's code. Then a stop for review and commit.
+- **Report in an amendment:** which items landed, and any left as they were, with the reason.
+
 **Phase 4: Nathan's hands-on**
 - **What to try:**
   - **Attach a Free Card:** zoom in and release at once, which makes it the last child. Then zoom in from above the Card, and from below it, move a little, and release. The ghost now follows the carried copy, where the Card layer always appended. Coming from above, the first move can name the top row.
@@ -220,6 +257,20 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **The two skipped zoom-in specs (`drag-card-zoom-in.spec.ts`), run un-skipped once for information and put back.** Their skip reason still holds, and nothing here changes it. The own-column one passes. The cross-column one passes or fails by timing: the zoom lands at about 1.9s, the drag is popped back out to the column about 150ms later (the Card moves out from under the frozen pointer at the lock, and the spec seeds a 150ms pop-out clock), and the spec's wait sees `descendants:` only if a poll falls in that window. The context timeline, recorded in the page, is the same on the Phase 2 code (zoom, bounce at +150ms, zoom again), so the bounce is not from this phase. Whether the poll lands in the window varied between samples on both trees (the Phase 2 code passed all but one run of those I did, this phase's tree failed 2 or 3 of 12 in each controlled sample), and I could not tell a small timing shift from noise. A poll from outside the page also changes the gesture's timing, so a probe has to observe from inside it.
 - **Not verified:** by hand. The probes ran at one window size (1280x1800, nothing scrolls) on the overflow tree.
 - **Checks:** `npm run check` passes (430 server, 582 client, 217 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 16 skipped, 0 failed.
+
+**2026-10-29, Phase 3b (Coder)**
+- **All four items landed.** Nothing the user sees changes.
+  1. **`RegionKind` is deleted** from `dragRegions.ts`. Nothing read it.
+  2. **`childRegionAt` is `cardListAt(regions, point): CardListRegion | null`.** It tests `isCardList` and containment, so a Descendants region is excluded by its kind, where the parent-key match used to exclude it. `popSession.ts`'s Board branch lost its extra `isCardList` check, and `useBoardDnd.ts::beginDragAt` reads the new name. `dragRegions.test.ts`'s describe carries over, renamed, with the case that a Descendants region is never found. The header, `containsPoint`'s comment and the Board branch's comment follow.
+  3. **The card-list release is narrower.** `releaseListFor` is gone. After the Descendants release returns, `handleDragEnd` sends no region through `commitRelease(current, null, [])`, which is what `placementFor` answering null did before, made explicit, with `commitRelease` still the one tail. Then it reads the rows once with `regionItems(region)` and gives `resolvePlacementOver` the region's `containerId`. `resolvePlacementOver(containerId, overId, anchor)` lost its null-list branch and its case in `placement.test.ts`, and its comment no longer names the helper. The explicit version is shorter than the helper it replaces, so today's was not kept. The two stale comments in `useBoardDnd.ts` are fixed (the Stub's `origin` names `placementFor`'s Descendants branch; `commitRelease` names the one card-list release).
+  4. **The bounds elements are read once per resolve.** `boundsElementOf` is `boundsElements(root)`: one query for every `DRAG_BOUNDS_ATTR` element into a map from region key to element, and each Descendants region looks itself up. The first element in document order wins a key, as a query for that key found it.
+- **Left as it was: item 4's optional validity check ahead of the DOM reads.** It saves little (in a Free Card's drag most Cards are valid), and doing it either takes the rule out of `descendantsStructure` or makes the reads lazy, which the batch asked to keep. The review's #4, the repeated child scans, was not in the batch.
+- **Tests:**
+  - **New, in `dragStructure.test.ts`:** each Descendants region takes the bounds element marked for its own key (a Card's own region takes none, an element marked for a region that isn't there is ignored, the first of two for a key is used); and the bounds elements are looked for once per resolve however many Cards are drawn (it counts the root's queries that name the attribute).
+  - **Mutation checks, each restored:** a query per region again fails the once-per-resolve case; the last element winning a key fails the own-key case; any element serving any region fails the own-key case; `cardListAt` without its kind test fails the "column under a Card, not the Card" case.
+  - **No unit test for the no-region early return:** it is in the hook. It takes the path today's code took.
+- **For the Architect:** the roadmap still names `childRegionAt(…, null)` at `epic-3-5-roadmap.md:935`.
+- **Checks:** `npm run check` passes (430 server, 583 client, 217 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 16 skipped, 0 failed.
 
 ## Open questions
 
@@ -289,7 +340,7 @@ None.
   - `drag-7-hierarchy-modal.spec.ts`: DRAG-7.10 ("a second pop, out of the Card's box … two pops").
   - `drag-card-zoom-in.spec.ts`'s two tests stay skipped for the reason they gave before this story: the target Card moves under the cursor as the ghost row draws. They now wait for `descendantsRegionKey`. Whether that reason still holds after the fold hasn't been tried.
 - **For the Architect, at close:**
-  - **Story 10's roadmap entry** names code this story deletes, in item 2: `placementFor`'s Card branch, `AttachGhostRow`, the `cardRegion` fixture and `useCardContextLayer`'s Card half. Its items 1 and 4 name Card-layer cases too.
+  - **Story 10's roadmap entry** names code this story deletes, in item 2: `placementFor`'s Card branch, `AttachGhostRow`, the `cardRegion` fixture and `useCardContextLayer`'s Card half. It also names `childRegionAt(…, null)`, which Phase 3b renames. Its items 1 and 4 name Card-layer cases too.
   - **The roadmap's "Decisions of 2026-09-17"** keep "No two-layer pop out of Descendants", which this story reverses.
   - **Story 8's carried-in items** that name the Card layer: the zoom-in morph's "popping into a Card", and the depth cue's.
 - **Implementation passages to place:** none expected.

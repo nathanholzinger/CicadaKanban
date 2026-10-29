@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   DRAG_BOUNDS_ATTR,
   DRAG_CARD_ATTR,
@@ -277,6 +277,54 @@ describe('resolveDragStructure / measureRegions', () => {
     expect(hasDetachedElements(structure)).toBe(false);
     dialog.remove();
     expect(hasDetachedElements(structure)).toBe(true);
+  });
+
+  // The bounds elements are read once for the resolve and matched to regions by key: a Card's
+  // own region takes none, an element marked for a region that isn't there is ignored, and the
+  // first element marked for a key is the one used.
+  it('DRAG-7.10: each Descendants region takes the bounds element marked for its own key', () => {
+    buildCardInColumn('col-1', rect(0, 0, 300, 400), 'card-q', rect(0, 0, 100, 200));
+    const list = regionEl(descendantsRegionKey('card-p'), rect(520, 100, 200, 300));
+    list.setAttribute(DRAG_PARENT_CARD_ATTR, 'card-p');
+    const dialog = (key: string, r: Rect) => {
+      const el = document.createElement('div');
+      el.setAttribute(DRAG_BOUNDS_ATTR, key);
+      mockRect(el, r);
+      return el;
+    };
+    const first = dialog(descendantsRegionKey('card-p'), rect(500, 0, 240, 420));
+    first.append(list);
+    buildCardHeldByModal('card-p');
+    document.body.append(
+      dialog(descendantsRegionKey('nobody'), rect(0, 0, 10, 10)),
+      first,
+      dialog(descendantsRegionKey('card-p'), rect(900, 0, 50, 50)),
+    );
+
+    const structure = resolveDragStructure(document, [column('col-1', ['w1'])], () => true, 'card-p');
+    const [card, modalList] = ['card-q', 'card-p'].map(id =>
+      measureRegions(structure, columnRegionKey('col-1')).find(r => r.key === descendantsRegionKey(id)),
+    );
+    expect(card?.boundsRect).toBeUndefined();
+    expect(modalList?.boundsRect).toEqual(rect(500, 0, 240, 420));
+  });
+
+  it('looks for the bounds elements once per resolve, however many Cards are drawn', () => {
+    for (const id of ['a', 'b', 'c'])
+      buildCardInColumn(`col-${id}`, rect(0, 0, 300, 400), `card-${id}`, rect(0, 0, 100, 50));
+    const queries = [vi.spyOn(document, 'querySelector'), vi.spyOn(document, 'querySelectorAll')];
+
+    resolveDragStructure(
+      document,
+      ['a', 'b', 'c'].map(id => column(`col-${id}`, ['w1'])),
+      () => true,
+    );
+
+    const searchedForBounds = queries
+      .flatMap(spy => spy.mock.calls.map(([selector]) => String(selector)))
+      .filter(s => s.includes(DRAG_BOUNDS_ATTR));
+    vi.restoreAllMocks();
+    expect(searchedForBounds).toHaveLength(1);
   });
 
   it("a Card's own region has no boundsRect", () => {

@@ -58,7 +58,7 @@ import {
 } from './dragOverlayGeometry';
 import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
 import {
-  childRegionAt,
+  cardListAt,
   descendantsCardIdOf,
   descendantsRegionKey,
   isCardList,
@@ -535,17 +535,6 @@ export function useBoardDnd(deps: BoardDndDeps) {
       : getWorkphaseItems(region.targetWorkphaseId, region.isTerminal);
   }
 
-  // "Which list is this release against" — one derivation, read by both
-  // `placementOver`'s anchor/bare-container distinction and `others`'
-  // candidate rows. Card-list regions only: a Descendants release resolves
-  // through `releaseDescendants` instead, before this is ever called; no
-  // region at all has no release list either, `null` both ways.
-  function releaseListFor(region: DragRegion | undefined): { rows: Item[]; containerId: string } | null {
-    if (!region) return null;
-    if (isCardList(region)) return { rows: regionItems(region), containerId: region.containerId };
-    return null;
-  }
-
   // Where a drag starts, and its session (wiki board-drag-interaction §1). A
   // Stub's drag starts at its containing Card's Descendants layer —
   // deterministic, not hit-tested; a Free Card's in the column or sub-row
@@ -564,7 +553,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const pointer = pointerRef.current;
     const startContextKey = containingCardId
       ? descendantsRegionKey(containingCardId)
-      : pointer && (childRegionAt(sampleRegions(null), pointer, null)?.key ?? null);
+      : pointer && (cardListAt(sampleRegions(null), pointer)?.key ?? null);
     const regions = sampleRegions(startContextKey);
     const pop = startPopSession(startContextKey);
     updateDescendantsProjection(null, pop, classification);
@@ -638,7 +627,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
         priorPlacement,
         // Where the drag started: the Stub's own direct parent (not
         // necessarily `containingCardId` — a grandchild's direct parent is
-        // another Stub), at its sorted slot. What `placementFor`'s Card
+        // another Stub), at its sorted slot. What `placementFor`'s Descendants
         // branch and `isIdentity` compare a release against.
         origin: { parentId, slot: 'existing' },
         containingCardId,
@@ -724,7 +713,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   }
 
   // The one release tail, for a Descendants release and `handleDragEnd`'s
-  // card-list and Card releases alike: `placement` against the target list's
+  // card-list release alike: `placement` against the target list's
   // other rows becomes the request (`dragRequest.ts::toRequest`, then
   // `sendItemMove`). Nothing to write — a null placement (drawn where it
   // already is, or an over-cap state), or an identity — means the ghost
@@ -779,7 +768,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
       return;
     }
 
-    const list = releaseListFor(region);
+    // No region at all: nothing to place against. `placementFor` answers null, so the item stays
+    // where it was and `commitRelease` restores any pending marker.
+    if (!region) {
+      await commitRelease(current, null, []);
+      return;
+    }
+
     // Release always gives a decisive answer while locked in a column/
     // sub-row (`null` is reserved for `placementFor`'s mid-drag calls,
     // where there's genuinely nothing fresh yet to prefer over
@@ -799,8 +794,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // with no neighbor at all has nothing to anchor to: the bare
     // container's slot (`resolvePlacementOver`).
     const anchor = namedAnchorFor(active, over, current);
-    const placementOver = resolvePlacementOver(list, over ? String(over.id) : null, anchor);
-    await commitRelease(current, placementFor(current, regions, placementOver), list?.rows ?? []);
+    const placementOver = resolvePlacementOver(region.containerId, over ? String(over.id) : null, anchor);
+    await commitRelease(current, placementFor(current, regions, placementOver), regionItems(region));
   }
 
   // Which form `BoardView.tsx`'s `DragOverlay` draws right now, and how

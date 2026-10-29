@@ -395,28 +395,24 @@ describe('overlayFormFor', () => {
 // The release-only anchor/bare-container distinction, beside placementFor's
 // own mid-drag half.
 describe('resolvePlacementOver', () => {
-  const list = { containerId: 'column:a' };
-
-  it('no release list at all (no region resolved): null', () => {
-    expect(resolvePlacementOver(null, 'card-x', { anchorId: 'card-x', side: 'after' })).toBeNull();
-  });
+  const containerId = 'column:a';
 
   it('no drop (over is null): the bare container', () => {
-    expect(resolvePlacementOver(list, null, null)).toBe('container');
+    expect(resolvePlacementOver(containerId, null, null)).toBe('container');
   });
 
   it("over resolves to the list's own container: the bare container, even with an anchor computed", () => {
-    expect(resolvePlacementOver(list, 'column:a', { anchorId: 'card-x', side: 'after' })).toBe('container');
+    expect(resolvePlacementOver(containerId, 'column:a', { anchorId: 'card-x', side: 'after' })).toBe('container');
   });
 
   it('over names a specific card: the anchor', () => {
-    expect(resolvePlacementOver(list, 'card-x', { anchorId: 'card-x', side: 'before' })).toEqual({
+    expect(resolvePlacementOver(containerId, 'card-x', { anchorId: 'card-x', side: 'before' })).toEqual({
       anchorId: 'card-x',
       side: 'before',
     });
   });
 
   it('over names a card but the anchor came back null (e.g. alone in the list): the bare container', () => {
-    expect(resolvePlacementOver(list, 'card-x', null)).toBe('container');
+    expect(resolvePlacementOver(containerId, 'card-x', null)).toBe('container');
   });
 });

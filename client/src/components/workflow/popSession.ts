@@ -23,7 +23,7 @@
 
 import type { DragTuning } from './dragTuning';
 import {
-  childRegionAt,
+  cardListAt,
   containsPoint,
   descendantsRegionKey,
   isCardList,
@@ -179,10 +179,9 @@ export function advancePopSession(
   if (session.contextKey === null) {
     // Board layer: a Card is never a target here (one layer at a time) —
     // only a column/sub-row is hoverable, both for its own band and for the
-    // zoom-in clock into it. `childRegionAt(regions, pointer, null)` finds
-    // exactly those: every column/sub-row's own `parentRegionKey` is null.
-    const region = childRegionAt(regions, pointer, null);
-    if (!region || !isCardList(region)) return session.hover ? { ...session, hover: null } : session;
+    // zoom-in clock into it. `cardListAt(regions, pointer)` finds exactly those.
+    const region = cardListAt(regions, pointer);
+    if (!region) return session.hover ? { ...session, hover: null } : session;
     const hover = hoverFor(session.hover, region, pointer, metrics, now);
     if (hover.poppable && now - hover.since >= tuning.popInDelayMs) {
       return transitionTo(region.key, pointer, regions, tuning, metrics, now, namedAnchor, parentKeyOf);
