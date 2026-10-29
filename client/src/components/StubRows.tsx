@@ -17,8 +17,8 @@ import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
 // The type pill + one-line title every Stub-tier render
 // shares — AttachedChildRow and StaticStubRow below, and
 // KanbanCard's own overlay-Stub branch. Extracted so they can't drift apart
-// from each other; each still owns its own outer box (dashed ghost, sortable
-// row, static row, carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the
+// from each other; each still owns its own outer box (sortable row, static
+// row, carried shadow) on `STUB_ROW_BOX_CLASS`. The pill is the
 // Card tier's own `TypePill`, hidden for an unknown type the same way.
 export function StubBody({ item, itemTypes }: { item: Item; itemTypes: ItemType[] }) {
   return (

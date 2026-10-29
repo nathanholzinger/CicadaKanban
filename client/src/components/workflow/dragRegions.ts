@@ -206,8 +206,8 @@ export function descendantsCardIdOf(key: string | null): string | null {
 
 // Every card-list (column/sub-row) region element, and nothing nested in
 // one — a Card's Descendants region sits inside a column too. Positive, so a
-// region kind added later isn't swept in, the way an "anything but
-// `descendants:`" selector would sweep in the Cards.
+// region kind added later isn't swept in, as it would be by an "anything but
+// `descendants:`" selector.
 export const CARD_LIST_REGION_SELECTOR = `[${DRAG_REGION_ATTR}^="column:"], [${DRAG_REGION_ATTR}^="subrow:"]`;
 
 // Encodes a droppable id for an expanded column's per-workphase sub-row. Also

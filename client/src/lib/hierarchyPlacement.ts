@@ -40,8 +40,7 @@ export type HierarchyNode<T> = Row & { item: T };
 
 // The one tree walk: DFS over `childrenOf`, parents before children — the
 // render order both surfaces draw in. What a caller wants left out of the
-// walk (a collapsed project's children, an attach ghost's) it leaves out of
-// `childrenOf`. `seen` stops a corrupted parentId cycle in the data from
+// walk (a collapsed project's children) it leaves out of `childrenOf`. `seen` stops a corrupted parentId cycle in the data from
 // recursing forever, as `hierarchy.ts`'s walks do: an id already walked
 // (the root included) is skipped.
 export function flattenHierarchyOf<T extends { id: string }>(

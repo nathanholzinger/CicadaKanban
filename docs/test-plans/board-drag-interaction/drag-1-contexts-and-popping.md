@@ -1,6 +1,6 @@
 # DRAG-1 — Contexts, the layer stack, and popping
 
-**Next ID:** DRAG-1.35
+**Next ID:** DRAG-1.36
 
 **Terms.** *Sustained* means the cursor stays for at least the named tunable value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
 
@@ -19,13 +19,12 @@
 | DRAG-1.11 | The Board → Column pop-in clock counts time in the region and fires only from the middle band | P1 | Automated |
 | DRAG-1.12 | A popped-out card can pop back into the column it just left | P1 | Open |
 | DRAG-1.13 | A drag picked up from Unsorted starts at Board layer, with no context | P1 | Open |
-| DRAG-1.14 | Pop-out by distance: when enabled, either the clock or the distance satisfies | P2 | Automated |
+| DRAG-1.14 | Pop-out by distance: when enabled, either the clock or the distance satisfies | P2 | Open |
 | DRAG-1.16 | Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests | P0 | Open |
 | DRAG-1.17 | Rule 2: a pop moves exactly one layer | P0 | Open |
 | DRAG-1.18 | Rule 3: distance never satisfies a zoom in | P1 | Open |
 | DRAG-1.19 | A distant yank out of a Card cascades through two pops, one layer at a time | P1 | Open |
 | DRAG-1.20 | Only the locked column's or sub-row's own Cards can be zoomed into | P0 | Open |
-| DRAG-1.21 | Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card | P1 | Open |
 | DRAG-1.22 | The dragged card's own slot counts: resting over its pickup place opens no gap elsewhere | P1 | Open |
 | DRAG-1.23 | At either end of a list the one neighbor is named; a ghost alone names nothing | P0 | Automated |
 | DRAG-1.24 | Setting a card back down in its own slot saves the named anchor; only a card alone writes nothing | P0 | Open |
@@ -37,6 +36,7 @@
 | DRAG-1.30 | The pop-out clock runs from leaving the context, wherever the cursor goes, and resets on return | P1 | Automated |
 | DRAG-1.32 | Popping feels deliberate: never incidental, never sluggish | P1 | Manual |
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
+| DRAG-1.35 | One full Card zoom-in hold reaches Descendants directly, with no further layer inside it | P1 | Open |
 
 ---
 
@@ -74,7 +74,7 @@ In both, `X` lands between `A` and `B`, where the ghost was, and `workphaseId`, 
 
 *Given* a Card locked in its column, *when* the cursor leaves the context (into another column, a sibling sub-row, or nowhere) and stays out for `popDelayMs`, *then* the item pops out to Board: it belongs to no context and follows the cursor freely. It doesn't yet belong to whatever region the cursor is in; entering one is a separate act ([DRAG-1.5](drag-1-contexts-and-popping.md), [DRAG-1.11](drag-1-contexts-and-popping.md)).
 
-The same clock pops a Card out to its column and Descendants out to its Card ([DRAG-1.17](drag-1-contexts-and-popping.md), [DRAG-1.21](drag-1-contexts-and-popping.md)). This case asserts that the pop is reachable; its pass never depends on the clock's value. [DRAG-1.30](drag-1-contexts-and-popping.md) covers a momentary excursion.
+The same clock pops Descendants out to its containing Card's column/sub-row ([DRAG-1.17](drag-1-contexts-and-popping.md)). This case asserts that the pop is reachable; its pass never depends on the clock's value. [DRAG-1.30](drag-1-contexts-and-popping.md) covers a momentary excursion.
 
 **Automation test:** `tests/ui/drag-column-bands.spec.ts`
 
@@ -95,8 +95,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 *Given* a Card that has zoomed in one layer, *when* it is released, *then* the commit is the new layer's within-action and nothing else:
 
 - **Board → Column/sub-row** (sustained `popInDelayMs` in the middle band, [DRAG-3.4](drag-3-card-column-bands.md)): the anchor and side the ghost's named neighbor gives, not the band the cursor is in. The item is now bounded by the new context.
-- **Column/sub-row → Card** (the full zoom-in hold): the auto-drop, as the **last child** for an item from outside ([DRAG-4.1](drag-4-attach-and-stub-placement.md)), wherever inside the Card the cursor is ([DRAG-4.14](drag-4-attach-and-stub-placement.md)).
-- **Card → Descendants** (sustained `descendantsPopInDelayMs`, [DRAG-1.21](drag-1-contexts-and-popping.md)): the hierarchy placement at the ghost's gap and depth ([DRAG-4.8](drag-4-attach-and-stub-placement.md)).
+- **Column/sub-row → Descendants** (the full zoom-in hold): the hierarchy placement at the ghost's gap and depth ([DRAG-4.8](drag-4-attach-and-stub-placement.md)). An immediate release attaches an item from outside as the **last child** ([DRAG-4.1](drag-4-attach-and-stub-placement.md)); after cursor movement, the release commits the chosen gap and depth ([DRAG-4.34](drag-4-attach-and-stub-placement.md)).
 
 **Automation test:** —
 
@@ -191,13 +190,13 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 ## DRAG-1.14 — Pop-out by distance: when enabled, either the clock or the distance satisfies
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §3.1
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §3.1, wiki board-drag-interaction §7, wiki board-drag-interaction §7.3
 
-*Given* `popDistancePx` set above 0, *when* the cursor moves at least that far outside the locked context's box before `popDelayMs` has elapsed, *then* the item pops out one layer at once. This holds for a column or sub-row (out to Board), a Card (out to its column) and Descendants (out to its Card) alike: one pop-out rule serves every layer. *And given* `popDistancePx` is 0, *when* the cursor moves any distance outside the context for less than `popDelayMs`, *then* no pop happens; only the clock decides.
+*Given* `popDistancePx` set above 0, *when* the cursor moves at least that far outside the locked context's box before `popDelayMs` has elapsed, *then* the item pops out one layer at once. This holds for a column or sub-row (out to Board) and Descendants (out to the column/sub-row containing its Card) alike: one pop-out rule serves every layer. Descendants uses the whole Card's box on the board and the modal's box while the modal holds it. *And given* `popDistancePx` is 0, *when* the cursor moves any distance outside the context for less than `popDelayMs`, *then* no pop happens; only the clock decides.
 
 A single cursor sample decides the distance term, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
 
-**Automation test:** `client/src/components/workflow/popSession.test.ts`, `tests/ui/drag-5-stub-detach.spec.ts`
+**Automation test:** —
 
 ## DRAG-1.16 — Rule 1: a release always commits the locked layer's within-action, wherever the bare cursor rests
 
@@ -205,7 +204,7 @@ A single cursor sample decides the distance term, so this case holds at whatever
 
 *Given* Card `X` locked in column `C1`, with the ghost after `A` and the side highlight on `A`, *when* the cursor moves, before a pop out fires, over any of: column `C2`'s list box (in any band), a sibling sub-row, a Card in `C2`, `C1`'s own header, the gap between columns, or Unsorted, and the user releases, *then* the commit is `C1`'s reposition, `{anchorId: A, side: after}`, with `workphaseId` and `parentId` unchanged. `C2`'s bands, `C2`'s Cards and "nowhere writes nothing" play no part, since none of them is the locked layer.
 
-*And given* `X` zoomed into Card `P`, *when* the cursor leaves `P`'s box and the user releases before `popDelayMs` elapses, *then* the commit is still `P`'s within-action: `X` attached as `P`'s last child ([DRAG-4.1](drag-4-attach-and-stub-placement.md)).
+*And given* `X` at Card `P`'s Descendants layer, *when* the cursor leaves `P`'s box without satisfying either pop-out threshold and the user releases with the ghost still between `S1` and `S2` at depth 0, *then* the commit is still the locked hierarchy placement: `X.parentId = P`, attached, between `S1` and `S2`. No foreign column's band or Card's hierarchy is used.
 
 **Automation test:** —
 
@@ -223,7 +222,7 @@ A single cursor sample decides the distance term, so this case holds at whatever
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1
 
-*Given* `popDistancePx` above 0, and Card `X` locked in column `K` with the side highlight naming `K`'s Card `P` and the cursor far inside `P`'s box, *when* the user releases before the full zoom-in hold completes, *then* the commit is `K`'s reposition: nothing zoomed in. How far or how fast the cursor moved never counts. The same holds for `descendantsPopInDelayMs` at Card → Descendants.
+*Given* `popDistancePx` above 0, and Card `X` locked in column `K` with the side highlight naming `K`'s Card `P` and the cursor far inside `P`'s box, *when* the user releases before the full zoom-in hold completes, *then* the commit is `K`'s reposition: nothing zoomed in. How far or how fast the cursor moved never counts. From Board, distance inside a column likewise never replaces its `popInDelayMs` hold.
 
 The case holds at whatever values the test sets; its pass never depends on the tuned values.
 
@@ -231,9 +230,9 @@ The case holds at whatever values the test sets; its pass never depends on the t
 
 ## DRAG-1.19 — A distant yank out of a Card cascades through two pops, one layer at a time
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §2, wiki board-drag-interaction §5a
 
-*Given* `popDistancePx` above 0 and Card `X` zoomed into `P` in column `K`, *when* the cursor is yanked to a point at least `popDistancePx` outside `P`'s box and at least `popDistancePx` outside `K`'s list box, *then* `X` pops out to `K`, and `K`'s own pop out, judged afresh against the same distant cursor, fires straight after, leaving `X` at Board layer. Both pops happen, in that order. *When* the cursor instead comes to rest inside `K` but outside `P`, *then* only the first pop happens, and `X` stays locked in `K`. The same cascade carries a Stub out through its Card ([DRAG-5.11](drag-5-detach-and-overflow.md)).
+*Given* `popDistancePx` above 0 and item `X` at Card `P`'s Descendants layer in column `K`, either zoomed in from outside or picked up as `P`'s Stub, *when* the cursor is yanked to a point at least `popDistancePx` outside `P`'s box and at least `popDistancePx` outside `K`'s pop-out bound (its outer body when merged, its sub-row when expanded), *then* `X` pops out to `K`, and `K`'s own pop out, judged afresh against the same distant cursor, fires straight after, leaving `X` at Board layer. Both pops happen, in that order: Descendants → Column/sub-row → Board. *When* the cursor instead comes to rest inside `K` but at least `popDistancePx` outside `P`, *then* only the first pop happens, and `X` stays locked in `K` as shortCard.
 
 A single cursor sample decides both pops, so this case holds at whatever values the test sets; its pass never depends on the tuned values.
 
@@ -246,18 +245,6 @@ A single cursor sample decides both pops, so this case holds at whatever values 
 *Given* Card `X` alone in column `C1`, so the side highlight names nothing ([DRAG-4.23](drag-4-attach-and-stub-placement.md)), and a Valid Card `Q` in column `C2`, *when* the cursor rests on `Q` for well past the full zoom-in hold while `X` is still locked in `C1` (no pop out has fired), *then* nothing zooms into `Q`: the side highlight only ever names a neighbor of the ghost in `C1`'s own list, and `Q` never becomes one. A release commits `C1`'s within-action, which for a card alone writes nothing ([DRAG-1.24](drag-1-contexts-and-popping.md)). Attaching to `Q` takes a pop out to Board, a pop into `C2`, then a zoom into `Q` ([DRAG-4.15](drag-4-attach-and-stub-placement.md)).
 
 *And given* an expanded column, with `X` alone in sub-row `W2` and Card `Q` in sub-row `W3` of the same column, *then* the same holds: `Q` is in a different context, and isn't a zoom-in target from `W2`.
-
-**Automation test:** —
-
-## DRAG-1.21 — Card → Descendants: holding over the descendants section zooms in; popping out returns to the Card
-
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §3, wiki board-drag-interaction §3.1
-
-*Given* Card `X` zoomed into Card `P`, where `P` has attached children, *when* the cursor rests on `P`'s descendants section for `descendantsPopInDelayMs`, *then* `X` zooms into `P`'s Descendants layer, with no dwell and no cue at this edge. Both copies of `X` are Stub rows among `P`'s hierarchy, bounded to the section. A release commits the hierarchy placement at the ghost's gap and depth ([DRAG-4.8](drag-4-attach-and-stub-placement.md)) instead of the auto-drop. *When* the cursor rests on `P` but outside its descendants section, *then* nothing zooms in, and a release is the auto-drop ([DRAG-4.1](drag-4-attach-and-stub-placement.md)).
-
-*And given* `X` at Descendants layer, *when* the cursor stays outside the descendants section for `popDelayMs`, *then* `X` pops out exactly one layer, to `P`'s Card layer. A release there is the auto-drop: the last child for an `X` from outside `P`, and set back down for `P`'s own Stub ([DRAG-5.12](drag-5-detach-and-overflow.md)).
-
-A `P` with no attached children has no descendants section, so its Descendants layer can't be reached, and the auto-drop is the only outcome ([DRAG-4.12](drag-4-attach-and-stub-placement.md)).
 
 **Automation test:** —
 
@@ -317,9 +304,11 @@ A `P` with no attached children has no descendants section, so its Descendants l
 
 ## DRAG-1.28 — The carried card is bounded by its context
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2, wiki board-drag-interaction §7
 
 *Given* Card `X` locked in a merged column, *when* the cursor moves sideways out of the column, *then* the carried card stays within the column's horizontal extent, while still moving freely up and down within it. *Given* `X` locked in an expanded column's sub-row, *when* the cursor drifts toward the sub-row above or below, *then* the carried card also stays within the sub-row vertically. The carried card only leaves its context through a pop.
+
+*And given* `X` at Card `P`'s Descendants layer on the board, *when* the cursor moves within `P`'s box, its title and padding included, *then* the carried Stub follows it on both axes within that whole box. If the cursor leaves without satisfying the pop-out threshold, the carried copy stays clamped to `P`'s box, rather than the smaller section. Only `P`'s hierarchy supplies placement rows.
 
 **Automation test:** —
 
@@ -327,7 +316,7 @@ A `P` with no attached children has no descendants section, so its Descendants l
 
 **Priority:** P2 · **Status:** Manual · **Rule:** wiki board-drag-interaction §3
 
-*Given* Card `X` locked in its column with the cursor well outside it, *when* `X` pops out to Board, *then* the carried card moves from where it was held to the cursor in a short tween lasting `popSnapMs`, chasing the cursor if it moves meanwhile. With `popSnapMs` at 0, it jumps to the cursor at once. A pop out of a Card to its column snaps the same way, to the wider context.
+*Given* Card `X` locked in its column with the cursor well outside it, *when* `X` pops out to Board, *then* the carried card moves from where it was held to the cursor in a short tween lasting `popSnapMs`, chasing the cursor if it moves meanwhile. With `popSnapMs` at 0, it jumps to the cursor at once. A pop out of Descendants to the containing Card's column/sub-row snaps the same way, to the wider context.
 
 **Automation test:** none — manual: judged by feel, and its length is a tunable value (`popSnapMs`).
 
@@ -359,5 +348,13 @@ The exceptions:
 
 - `X`'s own Stubs aren't shown while it's dragged ([DRAG-3.19](drag-3-card-column-bands.md)). After the release, `X`'s list is back as the user set it, collapsed or expanded.
 - *When* the drag zooms into collapsed `C` ([DRAG-4.19](drag-4-attach-and-stub-placement.md)), *then* `C` opens. *When* the drag then pops out of `C` and is released elsewhere, *then* `C` is collapsed again. *When* `X` is instead attached into `C`, *then* `C` stays open after the release, so `X`'s new place is in view.
+
+**Automation test:** —
+
+## DRAG-1.35 — One full Card zoom-in hold reaches Descendants directly, with no further layer inside it
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §3.1, wiki board-drag-interaction §6.1
+
+*Given* Free Card `X` locked in a column or expanded sub-row and the side highlight naming its Valid Card `P`, *when* the full zoom-in hold completes, *then* the drag is at `P`'s Descendants layer immediately, bounded by the whole Card, with both copies as Stub rows. No second hold is needed to place among `P`'s Stubs. This holds both when `P` has attached children and when it has none ([DRAG-4.12](drag-4-attach-and-stub-placement.md)). *When* the cursor stays over rows inside `P` for any further hold, *then* it remains at that same layer: no deeper context is entered. An overflow-row hold can open the modal, which presents the same Descendants layer ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** —

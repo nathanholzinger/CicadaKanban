@@ -182,7 +182,7 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(page, 'P').getByText('X')).toBeVisible();
   });
 
-  test('DRAG-5.1, DRAG-5.10: two pops detach the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
+  test('DRAG-5.1, DRAG-5.10: a pop out of the section detaches the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
     page,
     request,
     projectSidebar,
@@ -207,8 +207,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
-    // Q sits outside P's whole card, so both pop-outs eventually fire on
-    // the shared clock, back to back, with no further pointer movement (one
+    // Q sits outside P's whole card, so the pop-out eventually fires on the
+    // clock with no further pointer movement, landing in the column (one
     // layer per pop, DRAG-1.17) — cardPopInDelayMs is never (POP_OUT_ONLY), so
     // resting on Q's card at column layer goes no further.
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
@@ -233,15 +233,15 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(column(page, 'Todo'), 'X')).toBeVisible();
   });
 
-  // A yank far enough to clear both the Descendants and Card layers' own
-  // pop-out distances in one pointer sample must cascade through every hop
-  // it's due for — not strand at the intermediate Card layer until a timer
+  // A yank far enough to clear the Descendants region's pop-out distance in
+  // one pointer sample must pop out and have the regions measured for the
+  // layer it lands in — not strand with the old layer's regions until a timer
   // (disabled here — only the distance term can ever fire) self-corrects
   // it. A release in that exact window is what shows it: with
-  // `pop.contextKey` reporting the fully-cascaded layer but the measured
-  // regions still scoped to the intermediate one, `placementRegion` would
-  // find nothing and the release would write nothing at all.
-  test('DRAG-5.11, DRAG-1.14: a yank past both pop-out distances in one sample cascades Descendants -> Card -> Column, and an immediate release detaches', async ({
+  // `pop.contextKey` reporting the column but the measured regions still
+  // scoped to the section, `placementRegion` would find nothing and the
+  // release would write nothing at all.
+  test('DRAG-5.11, DRAG-1.14: a yank past the pop-out distance in one sample pops Descendants -> Column, and an immediate release detaches', async ({
     page,
     request,
     projectSidebar,
@@ -255,20 +255,19 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
 
     // popDelayMs/popInDelayMs/cardPopInDelayMs are all NO_POP's "never"
     // value — nothing here can advance on a timer, or on a second
-    // pointermove (there isn't one): only the cascade itself can ever move
-    // past the first hop, and only the write proves it landed with a usable
-    // region — a `data-drag-context` read can report the right layer while
-    // the regions are still scoped wrong.
+    // pointermove (there isn't one): only the distance can pop it out, and
+    // only the write proves it landed with a usable region — a
+    // `data-drag-context` read can report the right layer while the regions
+    // are still scoped wrong.
     await seedDragTuning(page, { ...NO_POP, popDistancePx: 10 });
     await projectSidebar.openBoard(name);
 
     await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
-    // Well outside P's whole card — one hoverTo, one sample; the Card
-    // fully contains its own Descendants section, so a point this far past
-    // the Card is automatically far past the section too, and both hops'
-    // own distance thresholds clear in the same evaluation.
+    // Well outside P's whole card — one hoverTo, one sample, far past P's
+    // Descendants region, so the pop-out distance clears in that same
+    // evaluation.
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
     await release(page);
 
@@ -292,10 +291,9 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     const x = await seedItem(request, { title: 'X', parentId: p.id });
     const q = await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
-    // The first two pops (out of Descendants, out of the Card) run the
-    // shared clock back to back, same as DRAG-5.1's own test; landing squarely
-    // on Q the whole time lets the third clock (the zoom-in into Q:
-    // cardZoomDwellMs, then cardPopInDelayMs) start the moment the second pop lands.
+    // The pop out of Descendants runs the pop clock, same as DRAG-5.1's own
+    // test; landing squarely on Q the whole time lets the zoom into Q
+    // (cardZoomDwellMs, then cardPopInDelayMs) start the moment the pop lands.
     const tuning = await seedDragTuning(page, {
       popDelayMs: 150,
       popInDelayMs: NO_POP.popInDelayMs,
@@ -307,10 +305,10 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
-    // The second pop (Card → column) lands the moment P's own card shrinks
-    // — losing X's nested row — which shifts Q. Wait for that pop to land,
-    // then re-aim at Q's *now-settled* position before waiting on the
-    // third clock (the dwell, then cardPopInDelayMs): an aim taken before the
+    // The pop lands the moment P's own card shrinks — X previews Free in the
+    // column, losing its nested row — which shifts Q. Wait for that pop to
+    // land, then re-aim at Q's *now-settled* position before waiting on the
+    // zoom (the dwell, then cardPopInDelayMs): an aim taken before the
     // layout shifted points at where Q was, and here the drag itself caused
     // the shift.
     await awaitDragContext(page, columnRegionKey(todoCol.id), clocksMargin(tuning.popDelayMs, tuning.popDelayMs));

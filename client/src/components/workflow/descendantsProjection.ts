@@ -180,9 +180,10 @@ export function modalHoldTarget(projection: DescendantsProjection | null): Modal
 // The projection read afresh from where the cursor is over a layer that has just changed shape
 // under it (the modal opening): the next sample resolves from this gap and depth, and the pointer
 // it measures its travel from is at `pointerX`. The previous projection is dropped, and nothing else:
-// `slotHidden` stays, because the rows `own` is read from still place the Stub as the Card's last
-// child, where a real move would be taken for its own slot and dropped. The reading is held where
-// the pointer is (`holdsReading`).
+// `slotHidden` stays as the entry set it. It records that the Stub's pickup slot wasn't drawn when
+// the visit began, so the Stub came in as an item from outside, previewed as the Card's last child
+// (`placement.ts::placementFor`), and the modal opening doesn't make it the Stub's own slot. The
+// reading is held where the pointer is (`holdsReading`).
 export function reseedProjection(
   state: ProjectionState,
   read: { gap: number; depth: number; pointerX: number; pointerY: number },

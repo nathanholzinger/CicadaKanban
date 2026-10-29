@@ -140,16 +140,17 @@ export function DropSideIndicator({ side }: { side: DropSide | null }) {
   return null;
 }
 
-// The cue of a hold that ends in a layer change, shown only once the hold's
-// dwell has elapsed (the dwell itself shows nothing new beyond the blue
-// line). Two holds draw it, each with its own clock, phase and reset:
-//   - a Card's zoom-in (wiki board-drag-interaction §6.1): `cardPopInDelayMs`,
-//     `useZoomCandidatePhase`, restarted at `'dwell'` by any change to the
-//     named relation (`popSession.ts::namedCardCandidate`);
-//   - the hold on an overflow row that opens the hierarchy modal
-//     (wiki board-drag-interaction §7.3): `modalHoldCueMs`, `useModalHoldPhase`,
-//     restarted by a change to the gap, depth or side the ghost holds
-//     (`popSession.ts::nextModalHold`).
+// The cue of a hold, shown only once the hold's dwell has elapsed (the dwell
+// itself shows nothing new beyond the blue line). Two holds draw it, each with
+// its own clock, phase and reset:
+//   - a Card's zoom-in, which ends in a layer change (wiki board-drag-interaction
+//     §6.1): `cardPopInDelayMs`, `useZoomCandidatePhase`, restarted at `'dwell'`
+//     by any change to the named relation (`popSession.ts::namedCardCandidate`);
+//   - the hold on an overflow row that opens the hierarchy modal, which is no
+//     layer change — the drag stays in the same Descendants layer, drawn in
+//     another presentation (wiki board-drag-interaction §7.3): `modalHoldCueMs`,
+//     `useModalHoldPhase`, restarted by a change to the gap, depth or side the
+//     ghost holds (`popSession.ts::nextModalHold`).
 // Absolutely positioned and `pointer-events-none`, the same way the
 // locked-layer outline and the blue line already are, so it can never feed
 // back into layout or collision. The fill bar's `animation-duration` is the

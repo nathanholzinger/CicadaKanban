@@ -28,7 +28,12 @@ Remove the Card layer from the drag's stack:
 ## Scope
 
 - **Wiki passages:** none ahead of the build, under code first. The passages the fold changes are in the Living-docs handoff, for the PO once Nathan approves.
-- **Test-plan cases:** none ahead of the build. The handoff lists the cases to sweep, for the Test Planner once Nathan approves.
+- **Test-plan cases:** the Test Planner's pass follows the live wiki diff. These are catalog changes; drag-spec rework remains Story 10's under code first.
+  - **New, Open:** DRAG-1.35 (direct entry into Descendants), DRAG-4.34 (cursor placement after entry from outside), DRAG-5.15 (title and padding stay in the layer), DRAG-7.31 (a hidden Stub's own-slot set-down after reopening the modal).
+  - **Reopened for changed expectations:** DRAG-1.14, DRAG-4.12, DRAG-4.19, DRAG-4.30, DRAG-5.5, DRAG-7.6, DRAG-7.14, DRAG-7.18. Their automation mappings need the Reconciler's fresh comparison; this pass makes no claim about test coverage.
+  - **Revised:** DRAG-1.3, DRAG-1.5, DRAG-1.16, DRAG-1.18, DRAG-1.19, DRAG-1.28, DRAG-1.29; DRAG-3.20, DRAG-3.22; DRAG-4.1, DRAG-4.3, DRAG-4.5, DRAG-4.11, DRAG-4.13, DRAG-4.15, DRAG-4.17, DRAG-4.20; DRAG-5.1, DRAG-5.4, DRAG-5.10, DRAG-5.13; DRAG-7.2, DRAG-7.10, DRAG-7.16. The feature index follows the three-layer model.
+  - **Deleted, IDs retired:** DRAG-1.21 (the separate Card → Descendants hold), DRAG-4.14 (position-independent auto-drop), DRAG-4.16 (pinned ghost), DRAG-5.11 (two pops to detach into the column), DRAG-5.12 (the intermediate Card-layer safe stop). The current two-pop cascade to Board is DRAG-1.19; one-pop detachment is DRAG-5.1, with distance logic in DRAG-1.14. There is no ID renumbering or reuse.
+  - **Reviewed, unchanged:** DRAG-4.8, DRAG-4.29, DRAG-7.7, DRAG-7.9, DRAG-7.11, DRAG-7.13, ATT-7.1 and ATT-7.6. Their rules still hold; the attachment cases describe writes independently of the board's layers.
 
 ## Inbound deferrals
 
@@ -223,6 +228,12 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Amendments
 
+**2026-10-29, the test-plan pass (Test Planner)**
+- Derived from the live board-drag-interaction wiki and its diff, with the story supplying scope and the skipped-test handoff. No production or test code was read or edited.
+- Applied the catalog changes listed in Scope. Immediate-release cases now say explicitly that the cursor hasn't moved after zoom; later movement places by gap and depth. Empty Cards, whole-Card bounds, one-pop exits, visible and hidden pickup-slot seeds, and return through the column to the modal are covered.
+- The existing `slotHidden` question below doesn't require a speculative expectation in the catalog: wiki board-drag-interaction §7.1 and §7.3, with wiki hierarchy-placement §5, already say a release in the original gap and depth in the full modal writes nothing. DRAG-7.31 covers that return path. This is a reading of the wiki, not a finding about the implementation; a different intended outcome needs the PO to change the wiki first.
+- **Checks:** no removed Card-layer terms or references to retired IDs remain in the test-plan catalog; suite tables, case bodies, statuses and Next IDs checked for agreement. `git diff --check` passes. `npm.cmd run check:docs` checks 386 files and reports exactly two references to retired IDs, both in test titles, listed under the Coder handoff below. No application tests were run for this documentation pass.
+
 **2026-10-29, Phase 1 (Coder)**
 - **D4 needed two rules, not one.** The entry sample's neighbor is the column's (D4, built as written). The Card's own Stub also has no row in its section on that sample: it is previewed Free in the column, so a read off the section's rows finds no own slot and seeds the last gap. Before the fold the Card layer put the Stub back in its section first, which hid this. The Stub's slot is now read once, at pickup (`pickupSlot`, kept in `useBoardDnd.ts::ownSlotRef`), and every entry seeds from it. Both rules have a unit test that fails when the rule is taken out.
 - **E2's DOM contract.** The Card's root gives up the region key while the modal holds the layer, so the modal's list has no region element to walk to. Every Card's root now carries its id (`DRAG_CARD_ATTR`), and the list names its Card (`DRAG_PARENT_CARD_ATTR`, which replaces `DRAG_PARENT_REGION_ATTR`, whose value was a region key).
@@ -272,14 +283,51 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **For the Architect:** the roadmap still names `childRegionAt(…, null)` at `epic-3-5-roadmap.md:935`.
 - **Checks:** `npm run check` passes (430 server, 583 client, 217 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 16 skipped, 0 failed.
 
+**2026-10-29, the wiki (PO)**
+- **Written from the handoff's "Passages superseded"** and the drift review's wiki findings 1–9 (`docs/audits/story-8-1-wiki-comment-drift-review.md`), with Nathan's go-ahead after his hands-on. Board-drag-interaction's §1, §1.1, §3, §3.1, §5, §5a, §6, §6.1, §7, §7.1, §7.3, §8 and Open questions. No section was added, moved or removed.
+- **Deduced (PO), for Nathan to overrule:**
+  - **§7.3, the hold's reach** (DRAG-7.14's third case, Phase 2). The hold runs with the cursor inside the Card's box, and the cursor leaving that box resets it, where it said the section's. It follows from D2: the layer is the whole Card, and a hold runs only inside the locked context.
+  - **§8, the Card's title and padding** are inside the layer, so a release over them places a Stub by gap and depth. It's D5's dropped safe stop, stated where DRAG-5.12's rule was.
+  - **Whys that leaned on the Card layer, rewritten to stand alone:**
+    - §1.1 gains "The Card has no layer of its own": a release there could only append or set a Stub back down, which the Descendants layer offers too, at the cost of one more hold and one more pop. It's the Goal's Why, put as a rule's reason.
+    - §7's seed: "The zoom doesn't take the ghost's gap from the cursor", since the cursor rested there to name the Card (D4's entry sample).
+    - §7's "Why not a band on the Card" loses the auto-drop.
+    - §7.3's "Why not a layer of its own below Descendants" counts two pops to leave the Card, not three.
+- **No other wiki page changes.** Hierarchy-placement §2 leaves each surface to say when its empty hierarchy arises, and §7.1 now does. Item-attachment and item-positioning name no Card layer.
+- **For the Test Planner:** the handoff's sweep list stands. Three passages it touches are gone outright, not reworded: §3.1's Card → Descendants clock, §8's two-pop list, and §8's "The intermediate stop at Card layer". §6's auto-drop is now §7's seed.
+- **Checks:** `check:docs` 386 files, 0 hits. A search of the wiki for "Card layer", `descendantsPopInDelayMs`, "auto-drop" and "placeholder Stub" finds nothing.
+
+**2026-10-29, the comment drift pass (Coder)**
+- **Written from** the drift review's findings 10–16 (production comments) and 17–23 (test-source comments). Comments and two test titles only; no code, assertion or behavior changed. The wiki references in the comments are untouched: the PO moved no section.
+- **Production comments (10–16), all landed:**
+  - `dragCollision.ts`: mixing the painted `sectionRect` with the stored `droppableRects` is safe because the Card holding the drag is at rest when its rows mount (`KanbanCard.tsx` turns its sortable transition off while locked), not because of the default clocks.
+  - `descendantsProjection.ts::reseedProjection`: `slotHidden` no longer claims `own` is read from previewed rows; it says what the flag records. See the open question.
+  - `placement.ts`: a card-list region is reached from the Descendants layer below it, not "either layer".
+  - `dragClassification.ts::isValidParent`: the region gate is a Card's Descendants region, its root box or the modal's list.
+  - `KanbanCard.tsx`: both drag copies are shortCards in a card list and at the Board; at Descendants the carried copy is a Stub and the in-list copy a section row.
+  - `StubRows.tsx::StubBody`: the dashed ghost is out of the list of outer boxes.
+  - `dragChrome.tsx::ZoomCue`: only a Card's zoom ends in a layer change; the modal hold opens another presentation of the same layer.
+- **Test-source comments (17, 19 in part, 21–23), landed:**
+  - `drag-5-stub-detach.spec.ts`: the detach, cascade-yank and reparent tests describe one pop to the column, then the named Card's dwell and cue. Two titles follow (`DRAG-5.1, DRAG-5.10` and `DRAG-5.11, DRAG-1.14`); their IDs are unchanged.
+  - `drag-7-hierarchy-modal.spec.ts`: `pullOutAndZoomBack` leaves the drag in the column and zooms back from there; the `DRAG-7.10` title drops "second pop" and "two pops".
+  - `drag-target-classification.spec.ts`, `itemListOps.test.ts`, `dragGesture.ts::pastColumnEnd`: the intermediate stop, the attach-ghost leaf and the separate section element are gone from their explanations. `pastColumnEnd` now gives the real reason for the positive selector: a region kind added later isn't swept in.
+- **Left as it was: the skipped tests' comments and titles (18, 19's `:338`/`:362`, 20).** Their bodies still assert the removed behavior, so a comment rewritten to the current behavior would contradict the assertion beside it. Each carries a skip line that says why, and the Story 10 rework rewrites them.
+- **Two more of the same, found in the sweep:** `dragRegions.ts::CARD_LIST_REGION_SELECTOR`'s comment said an "anything but `descendants:`" selector would sweep in the Cards (the same claim as 23, the other way round), and `hierarchyPlacement.ts::flattenHierarchyOf`'s header listed an attach ghost's children as something a caller leaves out. Both fixed.
+- **Checks:** `npm run check` passes. E2E not re-run: the only test-file changes are comments and two titles.
+
 ## Open questions
 
-None.
+- **Should `slotHidden` still be carried across the modal opening?** (Finding 11.) `reseedProjection` keeps the seed's flag. Its old reason, that `own` was read from rows that place the Stub as the Card's last child, is gone: `own` comes from the pickup snapshot. The comment now says only what the flag records. What the flag still does there is a behavior, which this pass left alone: the modal draws every level, so a hidden pickup slot is drawn in it, and with the flag carried a Stub put back in that slot counts as a move and writes (to where it already is), where cleared it would be its own slot and write nothing. Read from the code, not tried in the browser. For the PO to rule on with the Phase 4 behavior decisions.
 
 ## Living-docs handoff
 
+- **Test Planner → Coder and Test Reconciler:**
+  - The catalog sweep is applied; Scope lists every changed, new, reopened and retired case. Existing automation mappings are retained where expectations only needed wording changes. The eight reopened cases and four new ones are Open, with no asserted automation mapping.
+  - **Coder cleanup needed for the docs gate now:** `check:docs` reports `tests/ui/drag-5-stub-detach.spec.ts:148` for the retired DRAG-5.12 and `:244` for the retired DRAG-5.11. Remove the obsolete skipped safe-stop test, and remove DRAG-5.11 from the distance-detach test's title, retaining DRAG-1.14 only if it still asserts that case. Do not relabel either with a new case ID unless the assertions cover the new case. The Test Planner leaves test code to the Coder.
+  - **Story 10's rework:** use the current cases rather than restoring retired expectations. Direct zoom is DRAG-1.35; immediate release and initial seeds are DRAG-4.1 and DRAG-4.30; subsequent cursor placement is DRAG-4.34; one-pop exits are DRAG-5.1, DRAG-5.13 and DRAG-7.10; title/padding and modal-hold bounds are DRAG-5.15 and DRAG-7.14. DRAG-7.6, DRAG-7.18 and DRAG-7.31 cover returning from the column and reopening the modal. DRAG-1.19 covers the actual two-pop cascade, ending at Board.
+  - **Reconciler:** compare the changed cases afresh, including the unskipped parts of DRAG-7.2 and DRAG-7.11. The story's report of remaining unit coverage isn't itself a mapping approval or proof of the revised cases. Restore Automated only when tests assert the whole current case.
 - **Behavior decisions made while building, for the PO to rule on:** filled in by the Coder, in Phase 4.
-- **Passages superseded,** for the PO once Nathan approves. These are wiki board-drag-interaction's, by what each says now:
+- **Passages superseded,** for the PO once Nathan approves. These are wiki board-drag-interaction's, by what each says now. *Written 2026-10-29 (PO), as listed; Amendments, "the wiki", has the deductions.*
   - **§1:** "A Card" as a context goes. A Card's Descendants context is reached from its column, bounded by the whole Card.
   - **§1.1:**
     - the table becomes three layers;

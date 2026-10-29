@@ -157,10 +157,12 @@ export default function KanbanCard({
   // The DragOverlay copy and this same item's own in-list row while it's
   // the one being dragged (`isDragging`, from useSortable — true wherever
   // the item's pending Placement currently sorts it, its original slot
-  // included) are the drag's two visible copies, and both render as a
-  // shortCard — a fixed height the board's carve-out reservation
-  // (BandGuides.tsx) reserves exactly, not an approximation of whatever the
-  // full card's footer happens to add.
+  // included) are the drag's two visible copies. In a card list and at the
+  // Board both render as a shortCard — a fixed height the board's carve-out
+  // reservation (BandGuides.tsx) reserves exactly, not an approximation of
+  // whatever the full card's footer happens to add. At a Card's Descendants
+  // layer the carried copy is a Stub (`overlayIsStub`) and the in-list copy is
+  // a section row (`StubRows.tsx::AttachedChildRow`), neither a shortCard.
   const isGhostLike = isOverlay || isDragging;
   // Where `overlayForm` changes what this component draws (`useItemRow` only
   // reports it as `data-drag-overlay-form`) — everywhere else in this

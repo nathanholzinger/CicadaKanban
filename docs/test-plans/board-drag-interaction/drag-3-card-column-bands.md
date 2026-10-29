@@ -25,7 +25,7 @@
 | DRAG-3.19 | At Board and Column layers, both copies of a dragged Card are shortCard, and its attached children are unrendered | P2 | Open |
 | DRAG-3.20 | Band guides show only at Board layer | P2 | Open |
 | DRAG-3.21 | A band reads the region's live content on every sample | P1 | Automated |
-| DRAG-3.22 | From the Card layer down, both copies of the dragged item are Stub rows | P2 | Open |
+| DRAG-3.22 | At the Descendants layer, both copies of the dragged item are Stub rows | P2 | Open |
 | DRAG-3.23 | A Card popped into a done column is released as a workphase change with no anchor | P0 | Open |
 | DRAG-3.24 | A card set back down inside its own done column: the ghost stays in its slot, and nothing is written | P1 | Open |
 
@@ -188,7 +188,7 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5, wiki board-drag-interaction §1.1
 
-*Given* a drag at Board layer, *then* every column and sub-row region shows its two band dividers ([DRAG-3.5](drag-3-card-column-bands.md)). Which band a release resolves by is shown by the ghost, not by the guides ([DRAG-3.11](drag-3-card-column-bands.md)). *When* the drag locks into a column, sub-row or Card, *then* no region shows any dividers. This case asserts where guides appear, not how they look.
+*Given* a drag at Board layer, *then* every column and sub-row region shows its two band dividers ([DRAG-3.5](drag-3-card-column-bands.md)). Which band a release resolves by is shown by the ghost, not by the guides ([DRAG-3.11](drag-3-card-column-bands.md)). *When* the drag locks into a column, sub-row or a Card's Descendants, *then* no region shows any dividers. This case asserts where guides appear, not how they look.
 
 **Automation test:** —
 
@@ -200,11 +200,11 @@ The labels are asserted as text; their look is open.
 
 **Automation test:** `client/src/components/workflow/popSession.test.ts`
 
-## DRAG-3.22 — From the Card layer down, both copies of the dragged item are Stub rows
+## DRAG-3.22 — At the Descendants layer, both copies of the dragged item are Stub rows
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
 
-*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. *When* `X` pops back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
+*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
 
 **Automation test:** —
 

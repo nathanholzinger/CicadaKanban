@@ -141,7 +141,7 @@ export function placementFor(
   }
 
   // The moment a Stub's own list stops applying — any card-list region,
-  // reached from either layer below — the placement previews Free: a
+  // reached from the Descendants layer below it — the placement previews Free: a
   // `parentId: null` key, which `itemListOps.ts::renderedIsStub` reads as
   // Free. A Free Card's placement carries no such opinion.
   const nonComparable = hasParentOpinion(origin);

@@ -225,8 +225,7 @@ describe('hierarchyRows', () => {
   });
 
   // A `childrenOf` that returns [] for a specific id stops the walk there
-  // without needing a real "exclude" set. Also relied on by KanbanCard.tsx,
-  // to keep its attach-ghost row a leaf.
+  // without needing a real "exclude" set.
   it('never recurses into an id whose childrenOf callback returns none', () => {
     const stopAtLate = (parentId: string) => (parentId === 'late' ? [] : getAttachedChildrenFrom(items, parentId));
     const rows = hierarchyRows('root', stopAtLate);

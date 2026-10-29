@@ -1,6 +1,6 @@
 # DRAG-7 — Depth overflow and the hierarchy modal
 
-**Next ID:** DRAG-7.31
+**Next ID:** DRAG-7.32
 
 **Terms.** `L` is `sectionLevels`, the tunable number of levels a Card's section shows. A row's *level* is its depth below Card `P`: `P`'s children are at level 1, so the section shows levels 1 to `L`, and an overflow row sits at the level of the children it stands for. *The tree* is `P`'s hierarchy, with `P` top-level, `L` at least 2, and `CAP` deep enough for every state a case names, unless a case says otherwise:
 - `A`, at level 1, heads a chain of attached Stubs, one per level, down to `Q`, at level `L − 1`. When `L` is 2, `Q` is `A`.
@@ -9,7 +9,7 @@
 - `T` has no attached children, and one Free child, `G`.
 - `B`, at level 1, comes after `A`'s subtree, with no children.
 
-So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and the modal's are `A` … `Q`, `R`, `R1`, `R1a`, `R2`, `T` and `B`. Where a case drags `X`, it's an item with no children at `P`'s Descendants layer: a Free Card from elsewhere on the board, zoomed into `P` and on into its section ([DRAG-1.21](drag-1-contexts-and-popping.md)), or a Stub of `P`'s outside the tree, picked up in the section ([DRAG-5.9](drag-5-detach-and-overflow.md)). Placement at the layer is the same for both, so a case holds for either, unless it names one. *The modal hold* is the hold that opens the modal during a drag: a dwell, `modalHoldDwellMs`, then a cue, `modalHoldCueMs`, each tunable. Placement by gap and depth is [DRAG-4](drag-4-attach-and-stub-placement.md)'s; cases here assert what the overflow row and the modal add to it.
+So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and the modal's are `A` … `Q`, `R`, `R1`, `R1a`, `R2`, `T` and `B`. Where a case drags `X`, it's an item with no children at `P`'s Descendants layer: a Free Card from elsewhere on the board, zoomed directly into `P`'s Descendants ([DRAG-1.35](drag-1-contexts-and-popping.md)), or a Stub of `P`'s outside the tree, picked up in the section ([DRAG-5.9](drag-5-detach-and-overflow.md)). Placement at the layer is the same for both, so a case holds for either, unless it names one. *The modal hold* is the hold that opens the modal during a drag: a dwell, `modalHoldDwellMs`, then a cue, `modalHoldCueMs`, each tunable. Placement by gap and depth is [DRAG-4](drag-4-attach-and-stub-placement.md)'s; cases here assert what the overflow row and the modal add to it.
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -18,19 +18,19 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.3 | Between a row and its overflow row, the one state is the row's first child | P0 | Automated |
 | DRAG-7.4 | Below an overflow row, the states run from Bottom's depth to the hidden children's level, and none lies right of it | P0 | Automated |
 | DRAG-7.5 | Below a last-level row with no attached children, one tab right makes the item its only attached child | P1 | Automated |
-| DRAG-7.6 | Back in the section, a Stub whose own slot is hidden starts as the Card's last child | P1 | Automated |
+| DRAG-7.6 | Back in the section, a Stub whose own slot is hidden starts as the Card's last child | P1 | Open |
 | DRAG-7.7 | Clicking an overflow row opens the hierarchy modal, centered, with the Card's attached descendants at every level | P1 | Automated |
 | DRAG-7.8 | With no drag running, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
 | DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Automated |
-| DRAG-7.10 | Leaving the modal is the pop out of Descendants: the modal closes, and detaching still takes two pops | P1 | Open |
+| DRAG-7.10 | Leaving the modal closes it and pops directly to the Card's column or sub-row | P1 | Open |
 | DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Automated |
 | DRAG-7.12 | The modal's rows carry the drag's classification, as the section's do | P2 | Automated |
 | DRAG-7.13 | A hold beside an overflow row is a silent dwell, then a cue on the row, ending in the modal opening | P1 | Open |
-| DRAG-7.14 | The modal hold resets when the ghost changes gap or level or the cursor leaves the section, not while the carried copy moves within the gap | P1 | Automated |
+| DRAG-7.14 | The modal hold resets on a gap or level change or leaving the Card, and runs on in its padding | P1 | Open |
 | DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Automated |
 | DRAG-7.16 | A modal kept inside the window at an edge reads the ghost afresh from the cursor | P1 | Automated |
 | DRAG-7.17 | When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor | P2 | Automated |
-| DRAG-7.18 | After leaving the modal, a hold beside an overflow row opens it again in the same drag | P2 | Automated |
+| DRAG-7.18 | After leaving the modal, a hold beside an overflow row opens it again in the same drag | P2 | Open |
 | DRAG-7.19 | After a drag ends in the modal, by a release or a cancel, the modal stays open where it is | P1 | Automated |
 | DRAG-7.20 | The modal hold feels deliberate, and the ghost doesn't jump as the modal opens | P2 | Manual |
 | DRAG-7.21 | An over-cap state beside an overflow row doesn't start the modal hold | P2 | Automated |
@@ -42,6 +42,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.27 | A dragged row carries its overflow row, which is never a neighbor | P2 | Automated |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
+| DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
 
 ---
 
@@ -59,7 +60,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 
 *Given* the tree, *then* `R`'s overflow row reads "2 children", for `R1` and `R2`. It doesn't count `R1a`, a grandchild: the overflow row sits at `R`'s children's level and stands for them. Nor does it count `F`, `R`'s Free child, which shows on the board as a Card of its own. `T`, whose only child `G` is Free, has no overflow row. *Given* instead `R`'s only attached child is `R1`, *then* it reads "1 child".
 
-*When* an item is dropped beside `R`'s overflow row, as `R`'s first or last child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)), *then* from the release on it reads "3 children". *When* `R1` is dragged in the section ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), *then* while it's dragged the overflow row reads "1 child", leaving `R1` out, since the ghost shows it. *And given* `R1` is `R`'s only attached child, *then* `R` has no overflow row while `R1` is dragged.
+*When* an item is dropped beside `R`'s overflow row, as `R`'s first or last child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)), *then* from the release on it reads "3 children". *When* `R1` is picked up in the modal, pulled out to the column and zoomed back into `P` ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), *then* while it's dragged in the section the overflow row reads "1 child", leaving `R1` out, since the ghost shows it. *And given* `R1` is `R`'s only attached child, *then* `R` has no overflow row while `R1` is dragged.
 
 **Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
@@ -93,13 +94,13 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 ## DRAG-7.6 — Back in the section, a Stub whose own slot is hidden starts as the Card's last child
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7, wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7, wiki board-drag-interaction §7.3
 
-*Given* the tree, with the modal open by a click ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)), *when* `R1` is picked up in the modal and pulled out of it, so the modal closes and the drag is at `P`'s Card layer ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)), and the drag then zooms back into `P`'s section and the cursor hasn't moved since, *then* the ghost is in the last gap, below `B`, at level 1, as `P`'s last child. `R1`'s own slot, under `R`, is behind `R`'s overflow row, which reads "1 child" meanwhile ([DRAG-7.2](drag-7-overflow-and-hierarchy-modal.md)). A release then commits `R1.parentId = P`, attached, last among `P`'s attached children, after `B`, with `R1a` still its child. Released at `P`'s Card layer instead, before zooming back in, `R1` is set back down, and nothing is written ([DRAG-5.12](drag-5-detach-and-overflow.md)).
+*Given* the tree, with the modal open by a click ([DRAG-7.7](drag-7-overflow-and-hierarchy-modal.md)), *when* `R1` is picked up in the modal and pulled out of it past the pop-out threshold, so the modal closes and the drag is in `P`'s column/sub-row ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)), the side highlight names `P` for the full zoom-in hold, and the cursor hasn't moved since that zoom, *then* the ghost is in the last gap, below `B`, at level 1, as `P`'s last child. `R1`'s own slot, under `R`, is behind `R`'s overflow row, which reads "1 child" meanwhile ([DRAG-7.2](drag-7-overflow-and-hierarchy-modal.md)). A release then commits `R1.parentId = P`, attached, last among `P`'s attached children, after `B`, with `R1a` still its child. Released in the column instead, before zooming back in, `R1` becomes Free with `parentId = R`, placed by the column's within-action ([DRAG-5.1](drag-5-detach-and-overflow.md)).
 
 *Given* instead `R`, whose slot the section shows, is picked up in the modal and pulled out the same way, *then* back in the section its ghost starts in its own slot, between `Q` and `T`, at level `L`, and a release there writes nothing ([DRAG-4.30](drag-4-attach-and-stub-placement.md), [DRAG-4.29](drag-4-attach-and-stub-placement.md)).
 
-**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.7 — Clicking an overflow row opens the hierarchy modal, centered, with the Card's attached descendants at every level
 
@@ -131,11 +132,13 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 **Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
-## DRAG-7.10 — Leaving the modal is the pop out of Descendants: the modal closes, and detaching still takes two pops
+## DRAG-7.10 — Leaving the modal closes it and pops directly to the Card's column or sub-row
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §8
 
-*Given* a drag in the modal, opened by a click or by a hold, *when* the cursor stays outside the modal's box for `popDelayMs`, or is `popDistancePx` outside it when that's above 0, *then* the modal closes, and the drag is at `P`'s Card layer, bounded by `P`'s box. A release there is the Card layer's auto-drop: `P`'s own Stub is set back down, and nothing is written ([DRAG-5.12](drag-5-detach-and-overflow.md)); an item from outside `P` attaches as `P`'s last child ([DRAG-4.1](drag-4-attach-and-stub-placement.md)). *When* the cursor then stays outside `P`'s box for `popDelayMs`, *then* the item pops out to `P`'s column, Free, and a release there commits the detach ([DRAG-5.1](drag-5-detach-and-overflow.md)): two pops, as from the section. *When* the cursor instead leaves the modal's box for less than `popDelayMs` and comes back, *then* the modal stays open, and the drag stays in it ([DRAG-5.5](drag-5-detach-and-overflow.md)). The modal's box includes its header: *when* the cursor rests over the header for well past `popDelayMs`, *then* no pop happens, and the modal stays open.
+*Given* a drag in the modal, opened by a click or by a hold, with Card `P` in column or expanded sub-row `K`, *when* the cursor satisfies `popDelayMs` or the enabled `popDistancePx` outside the modal's box while remaining inside `K`, *then* exactly one pop closes the modal and takes the drag directly to `K`, Free, bounded by `K` and shown as shortCard. No further exit from `P`'s box is required. A release with the ghost after Card `Q` commits `K`'s placement, `{anchorId: Q, side: after}`: a Stub picked up attached has `isAttached: false` with its original `parentId` preserved; an item brought in Free stays Free with its original `parentId`. No attach into `P` is committed. From an expanded sub-row, reaching Board or a sibling sub-row requires another pop out of `K`.
+
+*When* the cursor instead leaves the modal's box without satisfying either pop-out threshold and comes back, *then* the modal stays open, and the drag stays at its Descendants layer. The modal's box includes its header: *when* the cursor rests over the header for well past `popDelayMs`, *then* no pop happens, and the modal stays open.
 
 **Automation test:** —
 
@@ -168,19 +171,20 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 **Automation test:** —
 
-## DRAG-7.14 — The modal hold resets when the ghost changes gap or level or the cursor leaves the section, not while the carried copy moves within the gap
+## DRAG-7.14 — The modal hold resets on a gap or level change or leaving the Card, and runs on in its padding
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* the modal hold running beside `R`'s overflow row:
 - *when* the ghost moves to another gap, such as the one below `T`, *then* the hold resets: any cue showing disappears at once, and the modal doesn't open;
 - *when* the ghost, in the gap below the overflow row, is tabbed from level `L + 1` to level `L`, *then* the hold resets the same way, and tabbing back starts a fresh dwell;
-- *when* the cursor leaves the section's box while the ghost stays in its gap, *then* the hold resets the same way, and no dwell runs until the cursor is back inside it;
+- *when* the cursor leaves the whole Card's box while the ghost stays in its gap, *then* the hold resets the same way, and no dwell runs until the cursor is back inside it;
+- *when* the cursor moves into the Card's title or padding, outside the section's smaller box, while the ghost stays in the same gap and level, *then* the dwell or cue runs on without restarting; completing the hold there opens the modal;
 - *when* the carried copy moves within the gap without the ghost changing gap or level, such as crossing the ghost's middle, *then* the hold runs on. It holds the gap and the level steady, where a Card's zoom-in resets when the named relation changes ([DRAG-4.22](drag-4-attach-and-stub-placement.md)).
 
 This case asserts the clock's logic, with its thresholds as parameters; its pass never depends on the tuned values. Whether they feel right is [DRAG-7.20](drag-7-overflow-and-hierarchy-modal.md).
 
-**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`, `client/src/components/workflow/popSession.test.ts`
+**Automation test:** —
 
 ## DRAG-7.15 — A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement
 
@@ -196,7 +200,7 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
 
-*Given* `R`'s overflow row near an edge of the window, top, bottom, left or right, so that a modal placed with the ghost's spot under the cursor ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) would cross that edge, *when* the modal hold completes, *then* the modal lies wholly inside the window, the cursor lies inside the modal's box, and the ghost is at the gap and the depth the cursor reads over the modal's rows, which needn't be `R`'s first or last child. A release without moving the cursor commits that placement. Opening the modal reads the ghost afresh from the cursor, where a zoom into the section doesn't move it ([DRAG-4.30](drag-4-attach-and-stub-placement.md)).
+*Given* `R`'s overflow row near an edge of the window, top, bottom, left or right, so that a modal placed with the ghost's spot under the cursor ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) would cross that edge, *when* the modal hold completes, *then* the modal lies wholly inside the window, the cursor lies inside the modal's box, and the ghost is at the gap and the depth the cursor reads over the modal's rows, which needn't be `R`'s first or last child. A release without moving the cursor commits that placement. Opening the modal reads the ghost afresh from the cursor, where a zoom into the Card seeds it independently ([DRAG-4.30](drag-4-attach-and-stub-placement.md)).
 
 **Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`, `client/src/components/workflow/modalPlacement.test.ts`
 
@@ -210,11 +214,11 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.18 — After leaving the modal, a hold beside an overflow row opens it again in the same drag
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
 
-*Given* a drag that opened the modal by a hold and then left it for `P`'s Card layer ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)), *when* the drag zooms back into `P`'s section and holds beside an overflow row again ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)), *then* the modal opens again, and a release in it places `X` by gap and depth ([DRAG-7.9](drag-7-overflow-and-hierarchy-modal.md)). It opens as often as the drag needs.
+*Given* a drag that opened the modal by a hold and then popped out of it to `P`'s column/sub-row ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)), *when* the side highlight names `P` for the full zoom-in hold, the drag re-enters `P`'s Descendants, and the ghost is moved beside an overflow row for the modal hold again ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)), *then* the modal opens again at the same Descendants layer, and a release in it places `X` by gap and depth ([DRAG-7.9](drag-7-overflow-and-hierarchy-modal.md)). It opens as often as the drag needs. No write occurs during the exit, re-entry or modal opening; only the final release commits the selected placement.
 
-**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.19 — After a drag ends in the modal, by a release or a cancel, the modal stays open where it is
 
@@ -303,3 +307,11 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 *Given* the tree, with the ghost of `X` in a gap beside `R`'s overflow row, *when* the side highlight names the overflow row as the ghost's neighbor, *then* it's drawn on the overflow row, as it is on any row it names. A release commits what the gap and the depth say, never `X` as a child of the overflow row: from the gap between `R` and the overflow row, `R`'s first child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md)); from the gap below it at level `L + 1`, `R`'s last child ([DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`
+
+## DRAG-7.31 — A hidden Stub returned to its pickup slot after reopening the modal writes nothing
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7, wiki board-drag-interaction §7.1, wiki board-drag-interaction §7.3, wiki hierarchy-placement §5
+
+*Given* `R2` picked up in the modal at its original position `p`, *when* it pops out to `P`'s column, zooms back into `P`, starts as `P`'s last child because its pickup slot is hidden in the section ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), then reopens the modal by a hold, and the user moves the ghost back to `R2`'s original gap after `R1a` and before `T`, at level `L + 1`, and releases, *then* no request is sent. `R2.parentId = R`, it remains attached with position `p` and `P`'s workphase, and the modal stays open showing it in that original slot. The modal shows the full hierarchy, so the section's hidden-slot seed doesn't turn this set-down into a move.
+
+**Automation test:** —

@@ -43,10 +43,10 @@ export interface DragClassification {
 }
 
 // Whether `id` is a legal parent for the carried item, off the drag-start
-// snapshot — the one answer both the region gate (does a Card, or
-// its Descendants section, resolve as a region at all) and the Descendants
-// layer's over-cap cue read, so the two can't disagree about the same
-// parent. Cycle-forming ids are never valid either, though the projection
+// snapshot — the one answer both the region gate (does a Card's Descendants
+// region, its root box or the hierarchy modal's list, resolve at all) and the
+// Descendants layer's over-cap cue read, so the two can't disagree about the
+// same parent. Cycle-forming ids are never valid either, though the projection
 // never resolves to one: the dragged subtree is out of its rows. For data
 // already past the cap this also refuses the parent the item already has,
 // which the API accepts since the cap gates only a write that reparents

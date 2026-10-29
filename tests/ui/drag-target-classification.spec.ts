@@ -135,9 +135,8 @@ test.describe('drag-target classification', () => {
 
     await pickUp(page, itemRow(page, s1.id).getByRole('button', { name: 'S1' }));
 
-    // P, Q and Q's own Stub are ordinary Valid targets (P for the
-    // intermediate Card-layer stop, Q for the zoom-in reparent, DRAG-5.4);
-    // only S1 itself is Cycle-forming.
+    // P (S1's own Card), Q (the zoom-in reparent, DRAG-5.4) and Q's own Stub
+    // are ordinary Valid targets; only S1 itself is Cycle-forming.
     await expect(itemRow(page, s2.id)).toHaveAttribute('data-drop-state', 'valid');
     await expect(itemRow(page, s1.id)).toHaveAttribute('data-drop-state', 'cycle-forming');
     await expect(itemRow(page, p.id)).toHaveAttribute('data-drop-state', 'valid');

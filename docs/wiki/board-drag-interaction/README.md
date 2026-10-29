@@ -42,15 +42,12 @@ something else. There are two kinds:
     context is **the individual sub-row**, not the column containing them.
     Sibling sub-rows are separate contexts, and moving between two sub-rows
     of the same column is a context change like any other.
-- **A Card** — the context a *Free* Card zooms into from the column/
-  sub-row that contains it (§1.1). Its within-action is the auto-drop
-  (§6).
 - **A Card's Descendants** — the context for its Stubs (its attached
   descendants, **at every depth** — one Descendants layer per Card, never
-  one per Stub; §7.1's root), one layer inside the Card (§1.1). Its
-  within-action is manual hierarchy placement (§7). Why not the Card
-  itself: the Card layer's within-action is the auto-drop, so a Stub
-  whose context was the Card could never be reordered by hand.
+  one per Stub; §7.1's root), and for any item that zooms into the Card
+  from the column/sub-row that contains it (§1.1). On the board, its
+  region is the whole Card's box (§7). Its within-action is manual
+  hierarchy placement (§7).
 
 **A region is a bounded box.** Only the box counts — not the column's
 horizontal stripe above or below it. A column's header and footer, the
@@ -59,7 +56,8 @@ space below the last one are **nowhere**: no region, no context. A region
 is also clipped to what is visible — a sub-row scrolled out of its column's
 view is not a region until it scrolls back in; you can only be in what you
 can see. Resting nowhere pops the card out (§3); releasing nowhere writes
-nothing (§5). A Card's region (§6) is the same kind of box.
+nothing (§5). A Card's region, its whole box (§7), is the same kind of
+box.
 
 Every drag starts inside exactly one, determined by what the item already
 is and how its column is currently displayed — except a drag picked up
@@ -70,8 +68,8 @@ Card is reachable only by zooming in (§1.1, §3). **A Stub's drag starts
 at its *containing Card's* Descendants layer** — the nearest Free
 ancestor's section, whatever the Stub's depth beneath it: a grandchild's
 drag starts in the same section as its parent's, and popping out of it
-lands on that Card, never on the parent Stub (§1.1, §8). Reordering it
-among its siblings costs no pop at all.
+lands in the column/sub-row that contains that Card (§1.1, §8).
+Reordering it among its siblings costs no pop at all.
 
 **Why the sub-row and not the column, in expanded mode:** an expanded
 column exists precisely to make each workphase individually targetable. If
@@ -82,19 +80,23 @@ one moment it most needs to.
 
 ### 1.1 The board is a strict stack of layers
 
-**There are exactly four layers, and a drag is always in exactly one:**
+**There are exactly three layers, and a drag is always in exactly one:**
 
 | Layer | Reached from | Zoom-in target | Within-action |
 |---|---|---|---|
 | **Board** | (the top) | a column/sub-row | §5's band, on release |
-| **Column/sub-row** | Board, or a Card popping out | one of its own Cards | reposition — the ghost's slot, named by anchor + side (§2) |
-| **Card** | its own column/sub-row; or its Descendants popping out | its own descendants section (§7) | the auto-drop (§6): last child for an item from outside; set back down for its own Stub |
-| **Descendants** | its own Card, only; or where a Stub's drag starts (at any depth beneath that Card) | *(none)* | manual hierarchy placement — gap + depth (§7) |
+| **Column/sub-row** | Board, or a Card's Descendants popping out | one of its own Cards' Descendants | reposition — the ghost's slot, named by anchor + side (§2) |
+| **Descendants** | its Card's own column/sub-row, by zooming into the Card; or where a Stub's drag starts (at any depth beneath that Card) | *(none)* | manual hierarchy placement — gap + depth (§7) |
 
-A Card with no attached children has no descendants
-section, so its Descendants layer is unreachable and the auto-drop is its
-only outcome — with nothing to reposition or reparent among, manual
-placement has nothing to offer.
+**Every Card has a Descendants layer, a childless one included.** A
+childless Card's has one state, which makes the item its only child
+(§7.1).
+
+**The Card has no layer of its own** between its column and its
+Descendants. Why not: a release there could only make the item the last
+child, or set a Stub back down where it was picked up, and the
+Descendants layer's gap and depth offer both. It would cost one more
+hold to reach the Card's Stubs, and one more pop to leave the Card.
 
 **Three rules govern every transition:**
 
@@ -105,34 +107,29 @@ placement has nothing to offer.
    be live at once, all the time, and a release could mean too many
    things. Locking one layer keeps exactly one meaning live (§2).
 2. **Popping is always exactly one layer.** Zooming in reaches only the
-   *next* layer down — Board into a column/sub-row, a column/sub-row into
-   one of *its own* Cards, a Card into its own descendants section — never
-   a foreign column's Card and never two layers in one hop. Popping out
-   always lands on the current layer's own *parent* — Descendants' is its
-   Card, a Card's is the column/sub-row that contains it, **never Board
-   directly**. Moving from one Card to a different one — even a sibling
-   in the same column — always passes back through the column layer
-   first; there is no direct sibling-to-sibling hop. There is likewise no
-   "two layers at once" pop out of Descendants: a
-   decisive pull away from the whole Card is expected to satisfy
-   Descendants' and then the Card's pop-out in quick succession through
-   rule 3's distance term, and the intermediate stop at Card layer is a
-   real state, however brief (§8).
+   *next* layer down — Board into a column/sub-row, a column/sub-row
+   into one of *its own* Cards' Descendants — never a foreign column's
+   Card and never two layers in one hop. Popping out always lands on the
+   current layer's own *parent* — Descendants' is the column/sub-row
+   that contains its Card, **never Board directly**. Moving from one
+   Card to a different one — even a sibling in the same column — always
+   passes back through the column layer first; there is no direct
+   sibling-to-sibling hop.
 3. **Zooming in is a duration-only signal; zooming out is duration *or*
    distance**, at every edge of the stack (§3.1). The asymmetry is
    deliberate: zooming in can mean a
    reparent, so it earns a sustained, unambiguous hold; zooming out never
    changes what anything *is*, so a fast, decisive yank is allowed to
-   satisfy it. A "yank a Card's own attach-preview out, and the cursor is
-   already well past the column too" gesture cascades through **two**
-   pops in quick succession as a consequence of rule 2 alone — no special
+   satisfy it. A "yank a Stub out of its Card, and the cursor is already
+   well past the column too" gesture cascades through **two** pops in
+   quick succession as a consequence of rule 2 alone — no special
    two-layer-skip case is needed: the first pop lands on the containing
    column, and that column's own zoom-out threshold is then evaluated
    fresh against the same, still-distant cursor position.
 
 **Because of rule 1, the band guides (§5) only draw anything at Board
-layer.** A locked column/sub-row shows no dashed lines
-on any *other* column, and a locked Card shows nothing at all — there is
+layer.** A locked column/sub-row shows no dashed lines on any *other*
+column, and a locked Card's Descendants shows none at all — there is
 nothing to cue, since nothing about a bare hover elsewhere would change
 what a release does.
 
@@ -253,24 +250,23 @@ each way moves exactly one layer of §1.1's stack:
   anywhere: another column, the gap between columns, Unsorted — past the
   pop-out threshold, the item pops out to its **parent layer** (§1.1 rule
   2): a column/sub-row's parent is Board — the item **snaps to the cursor
-  and follows it freely**, belonging to no context; a Card's parent is the
-  column/sub-row that contains it — the item becomes bounded by *that*
-  instead, still locked, just one layer shallower; Descendants' parent is
-  its Card (§8). The snap is a short tween from where the card was
-  clamped to the cursor (or to the new, wider context), chasing it if it
-  moves meanwhile; its length is tunable (`popSnapMs`; 0 teleports).
+  and follows it freely**, belonging to no context; Descendants' parent
+  is the column/sub-row that contains its Card — the item becomes
+  bounded by *that* instead, still locked, just one layer shallower, and
+  is shown there as a Free Card (§8). The snap is a short tween from
+  where the card was clamped to the cursor (or to the new, wider
+  context), chasing it if it moves meanwhile; its length is tunable
+  (`popSnapMs`; 0 teleports).
 - **Pop in.** From Board, a popped-out item enters a column/sub-row when
   the cursor has stayed in that context's *region* past the pop-in
   threshold and is in the middle band (§5) when the clock runs out — any
   column, **including the one it just left**. From inside a locked
   column/sub-row, the cursor resting on the card the side highlight names,
   past its own (duration-only, §1.1 rule 3) two-stage threshold (a dwell,
-  then a cue — §6.1), zooms into it instead — never a foreign column's
-  Card, and never reachable from Board directly. From inside a locked
-  Card, the cursor resting on *that Card's*
-  descendants section past its own duration-only threshold zooms into
-  Descendants (§7). Either way, the clock counts time in the region/Card, not in a
-  band: time spent in the top or bottom band of a column still counts
+  then a cue — §6.1), zooms into that Card's Descendants instead (§7) —
+  never a foreign column's Card, and never reachable from Board
+  directly. Either way, the clock counts time in the region/Card, not in
+  a band: time spent in the top or bottom band of a column still counts
   toward its own pop-in, and sliding into the middle band after it pops in
   at once. The item is now positioned within the new context under its
   rules **and bounded by it**, exactly as it was bounded by the one before.
@@ -319,18 +315,13 @@ committed. Each edge of §1.1's stack has its own clock:
   cursor enters a region (or at the pop-out itself, if the cursor is
   already in one), so the popped-out state always lasts at least
   `popInDelayMs`; fires from the middle band only.
-- **Pop-in, Column/sub-row → Card** — duration-only, in two stages keyed
-  on the relation the side highlight names (§6.1): a silent dwell
-  (`cardZoomDwellMs`, about 500 ms), then a visible cue
+- **Pop-in, Column/sub-row → a Card's Descendants** — duration-only, in
+  two stages keyed on the relation the side highlight names (§6.1): a
+  silent dwell (`cardZoomDwellMs`, about 500 ms), then a visible cue
   (`cardPopInDelayMs`, the cue's own length). The whole hold is their
   sum. It's kept apart from `popInDelayMs` because this is the edge that
   can mean a reparent, so it can be tuned to a more deliberate hold than
   an ordinary column pop-in.
-- **Pop-in, Card → Descendants** — duration-only
-  (`descendantsPopInDelayMs`, by default the same as
-  `cardPopInDelayMs`), starting when the cursor rests on the locked
-  Card's descendants section. There's no dwell and cue here: this edge
-  names no neighbor to hold steady against.
 
 The cursor's region is the bounded box of §1 — outside every box, over
 Unsorted or a broken column, the cursor is nowhere and a release there
@@ -503,11 +494,10 @@ read on every sample has nothing to get wrong.
 genuinely popped out, every column/sub-row draws two subtle dashed lines
 at the boundaries, drawn from the same live rect the drop resolves
 against. Which band a release resolves by is the ghost's to show (the
-table above). The
-moment the drag is locked into anything — a column/sub-row *or* a Card —
-every guide disappears: there are no bands to cue there (§2), and the
-absence of lines says so. Their look isn't a rule yet (Open
-questions).
+table above). The moment the drag is locked into anything — a
+column/sub-row *or* a Card's Descendants — every guide disappears: there
+are no bands to cue there (§2), and the absence of lines says so. Their
+look isn't a rule yet (Open questions).
 
 **Merged columns:** an item moved into a column covering multiple
 workphases takes the **first workphase in the column's range**. The
@@ -545,10 +535,11 @@ as shortCard**, a fixed-height compact mode. These are the only layers with
 bands (§5), so the carve-out reservation always has shortCard's one exact
 height to reserve.
 
-**From the Card layer down — Card and Descendants — both copies are a Stub
-row instead**, like the rows the item will be placed among. The carried copy switches at the zoom-in from a column into a
-Card and switches back at the pop-out to a column; a Stub's own drag starts
-at the Descendants layer, so it is a Stub from pickup. It is as wide as a
+**At the Descendants layer, both copies are a Stub row instead**, like
+the rows the item will be placed among. The carried copy switches at the
+zoom-in from a column into a Card and switches back at the pop-out to a
+column; a Stub's own drag starts at the Descendants layer, so it is a
+Stub from pickup. It is as wide as a
 row in that Card's section, keeps a "held" treatment (a shadow) so it reads
 as carried rather than as one of the rows, and stays under the pointer
 through the switch in both directions. **Why:** a shortCard held inside a
@@ -584,21 +575,13 @@ rule yet (Open questions).
 ## 6. Card → Card: attach
 
 **Dropping a Card onto another Card attaches it as a Stub, inheriting the
-new parent's workphase — always as the last child.** No band, no anchor,
-no choice of position among the parent's existing Stubs. This is the Card
-layer's **auto-drop**, and it has exactly two cases:
-
-- an item brought into the Card **from outside** — a Free Card, or a Stub
-  detached from another parent — is attached as the **last child**;
-- the Card's **own Stub**, popped out of Descendants to the Card layer and
-  released there (§8), is **set back down where it was picked up** —
-  nothing is written.
-
-Placing an item as some Stub's *first* child is a different gesture — the
-manual tabbed-right placement at Descendants layer (§7) — not a variant
-of the auto-drop. Any position among the parent's children is the
-Descendants layer's own job (§7), reached only by zooming one
-layer further in.
+new parent's workphase.** The drag zooms into the Card (§6.1), which
+lands in the Card's Descendants layer, and a release there places the
+item by gap and depth among the Card's Stubs (§7). An item brought in
+**from outside** — a Free Card, or a Stub detached from another parent
+— starts in the last gap, so a release right after the zoom attaches it
+as the **last child**. Moving the cursor first places it anywhere else
+among the Card's Stubs, at any depth the gap offers (§7.1).
 
 An attach's consequences — the reparent, the workphase inheritance, the `projectId` cascade if the two
 cards are in different projects, the legality of a done parent — are all
@@ -619,12 +602,9 @@ general principles that happen to apply. What the transition means is
 settled; how its cue finally looks isn't (Open questions).
 
 The carried card keeps following the cursor while locked into the target
-Card's context (bounded to its box, the same "clamped, not frozen"
-treatment as any other locked context, §2). It's the *ghost* — the
-placement preview among the target's Stubs — that's pinned, always at
-the last position, never tracking where inside the card the cursor
-happens to be. Since the within-action can't change no matter where the
-cursor rests, nothing about the preview is left to promise otherwise.
+Card's Descendants (bounded to the Card's box, the same "clamped, not
+frozen" treatment as any other locked context, §2), and the ghost
+follows it among the Card's Stubs (§7.1).
 
 ### 6.1 Which Card is zoomed into
 
@@ -646,9 +626,9 @@ zooming in by accident while repositioning (§2's bias).
   shows its progress, which says how long to keep holding, and that
   letting go before it completes still just repositions. When it
   completes the pop happens and the locked-layer visuals take over: the
-  card gets the locked outline (§1.1), opens with its placeholder Stub,
-  and the carried copy becomes a Stub (§5a). The cue's look isn't a rule
-  yet (Open questions).
+  card gets the locked outline (§1.1) and opens with the ghost in the
+  gap it starts in (§7), and the carried copy becomes a Stub (§5a). The
+  cue's look isn't a rule yet (Open questions).
 - **The cue never moves or resizes anything.** Nothing on screen changes
   shape while it runs, so it can't shift the ghost or change which card is
   named.
@@ -675,34 +655,38 @@ list names no card, so there is nothing to zoom into from there.
 
 ## 7. The Descendants layer: manual hierarchy placement
 
-The Descendants layer is one inside a Card (§1.1), and a Stub's drag
-*starts* there (§1, §8). A Free Card, or a Stub detaching from elsewhere,
-reaches it by zooming into any Valid Card and holding over that Card's
-descendants section (§3). Its within-action is precise placement in the
-parent's hierarchy, by the gap-and-depth rule the project sidebar uses too
-([`../hierarchy-placement/`](../hierarchy-placement/)). From the Card
-layer down **both copies are Stub rows** — the in-list ghost and the
-carried copy under the cursor — and the Column ↔ Card boundary converts
+The Descendants layer is a Card's (§1.1), and a Stub's drag *starts*
+there (§1, §8). Any other item reaches it by zooming into a Valid Card
+from the column/sub-row that contains it (§3, §6.1): a Free Card, or a
+Stub that has left its Card, back into that Card or into another. On
+the board, **the layer is bounded by the whole Card's box**, its title
+and padding included; while the hierarchy modal holds it, by the
+modal's box (§7.3). Its within-action is precise placement in the
+parent's hierarchy, by the gap-and-depth rule the project sidebar uses
+too ([`../hierarchy-placement/`](../hierarchy-placement/)). At this
+layer **both copies are Stub rows** — the in-list ghost and the carried
+copy under the cursor — and the Column ↔ Descendants boundary converts
 both, both ways (§5a, §8).
 
-**Zooming in doesn't move the ghost.** At the zoom into Descendants, the
-ghost starts where the Card layer showed it: in the last gap, as `P`'s
-last child, for an item from outside (§6); in its own slot, for `P`'s own
-Stub coming back in (§8), when the section shows that slot. The cursor
-moves it from there. So a release right after the zoom commits what it
-would have at the Card layer.
+**The zoom doesn't take the ghost's gap from the cursor.** The ghost
+starts in the last gap, as `P`'s last child, for an item from outside
+(§6); in its own slot, for `P`'s own Stub coming back in from the column
+(§8), when the section shows that slot. The cursor moves it from there.
+So a release right after the zoom attaches an item from outside as the
+last child, and sets `P`'s own Stub back down, writing nothing (§7.1).
+Why not the gap under the cursor: the cursor rested there to name the
+Card to zoom into (§6.1), not a place among its Stubs.
 
 **A Stub whose own slot the section doesn't show,** one picked up in the
-hierarchy modal and pulled back out (§7.3), starts as an item from
-outside does: in the last gap, as `P`'s last child. A release right
-after the zoom then moves it there. Why not start it in its own slot:
-the slot is behind an overflow row (§9), and the section can't draw a
-ghost there.
+hierarchy modal (§7.3), starts as an item from outside does when it
+comes back in from the column: in the last gap, as `P`'s last child. A
+release right after the zoom then moves it there. Why not start it in
+its own slot: the slot is behind an overflow row (§9), and the section
+can't draw a ghost there.
 
 Why not a band on the Card (top half for first child, bottom half for
-last child, a middle to hold): a Card's within-action is the auto-drop
-(§6), and placement here is a **range** of depths, not three fixed
-options.
+last child, a middle to hold): placement here is a **range** of depths,
+in any gap among the Card's Stubs, not three fixed options.
 
 ### 7.1 Gap and depth
 
@@ -718,9 +702,9 @@ with Card `P`'s descendants section as the hierarchy. On the board:
   children* ([`../hierarchy-placement/`](../hierarchy-placement/) §3). An
   item can never be tabbed out of `P` — leaving `P` is a zoom-out (§8),
   not a tab state.
-- **The hierarchy is never empty here.** A childless Card has no
-  Descendants layer (§1.1), so the empty-hierarchy boundary
-  ([`../hierarchy-placement/`](../hierarchy-placement/) §2) doesn't arise.
+- **A Card with no attached children is an empty hierarchy**
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §2): its one
+  state makes the item `P`'s only child.
 - **An item set back down in its own gap, at its own depth, writes
   nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
   That gap and depth resolve to the slot it was picked up from (§2, rule
@@ -771,8 +755,9 @@ valid; validity is per state, never per gap.
 **A hold beside an overflow row opens the hierarchy modal** (§9). It
 runs while the ghost sits directly above or below an overflow row, at
 that row's level, so as `R`'s first or last child (§7.1), with the
-cursor inside the section's box. Moving the ghost to another gap or
-another level resets it, and so does the cursor leaving the section.
+cursor inside the Card's box, the layer's bound (§7). Moving the ghost
+to another gap or another level resets it, and so does the cursor
+leaving the Card's box.
 Any item at the Descendants layer can open it: one of the Card's Stubs,
 or an item that zoomed in from outside. The hold has a zoom-in's two
 stages (§6.1): a dwell with nothing new shown (`modalHoldDwellMs`,
@@ -804,11 +789,12 @@ layer,** drawn whole, not a layer of its own:
   and commits nothing.
 - **Leaving it is the pop out of Descendants** (§8). Past the pop-out
   threshold outside the modal's box, the modal closes and the drag is
-  at the Card layer, so detaching still takes two pops. Back in the
-  section, a hold beside an overflow row opens it again, as often as
-  the drag needs. Why not a layer of its own below Descendants: leaving
-  it would drop the drag back into the section first, three pops to
-  leave the Card, and the first would land where less is shown.
+  in the column/sub-row that contains the Card, so detaching takes one
+  pop, as from the section. A drag that zooms back into the Card (§6.1)
+  can open it again by a hold beside an overflow row, as often as the
+  drag needs. Why not a layer of its own below Descendants: leaving it
+  would drop the drag back into the section first, two pops to leave
+  the Card, and the first would land where less is shown.
 
 **A hold opens the modal under the cursor,** placed so that
 the ghost's spot among `R`'s children, first or last, sits under it,
@@ -818,12 +804,13 @@ modal is kept inside the window. When that shifts it, the cursor still
 lies inside it, since the modal is smaller than the window, and the
 ghost goes where the cursor is over the modal's rows. So opening reads
 the gap and the depth afresh from the cursor, where a zoom into the
-section doesn't move the ghost (§7).
+Card doesn't (§7).
 
 **In a modal opened by a click** (§9), a drag can start from
 any row. It starts at the Card's Descendants layer, as any Stub's drag
 does (§1), and goes on as in a modal opened by a hold. Pulling the row
-out of the modal closes it, and the drag is at the Card layer.
+out of the modal closes it, and the drag is in the column/sub-row that
+contains the Card.
 
 **After a drag ends in the modal,** by a release or a cancel, the
 modal stays open where it is, so the user can check where the item
@@ -839,37 +826,22 @@ does Escape close it (§9).
 is still the Card's whole section, not its parent Stub's sub-list — so
 the common case — reordering it among its siblings, or moving it under a
 sibling — is the within-action there (§7) and needs no pop at all.
-Leaving the Card is a zoom-out, and by §1.1 rule 2 it is **two one-layer
-pops**:
+Leaving the Card is a zoom-out, and by §1.1 rule 2 it is **one pop**:
+the cursor rests outside the Card's box past the shared pop-out
+threshold (§3.1). The item is now **Free**: it arrives locked in the
+column that contains the Card, represented as a Card rather than a
+Stub, and is positioned by that column's within-action (anchor + side)
+— or, after a further pop out to Board, by any column's band (§5).
 
-1. **Descendants → Card** — the cursor rests outside the descendants
-   section (still inside the Card's box) past the shared pop-out
-   threshold (§3.1). The item is now at the parent's Card layer, still
-   attached, bounded by the Card.
-2. **Card → column/sub-row** — the cursor rests outside the Card's box
-   past the same threshold. The item is now **Free**: it arrives locked in
-   the column that contains the Card, represented as a Card rather than a
-   Stub, and is positioned by that column's within-action (anchor + side)
-   — or, after a further pop out to Board, by any column's band (§5).
+**The Card's title and padding are inside the layer** (§7), so a
+release over them places a Stub by gap and depth, as one over its rows
+does.
 
-There is no special "two layers at once" rule. The distance term of the
-pop-out clock (§3.1) is expected to do that work: a decisive pull away
-from the whole Card is already far outside the descendants section *and*
-far outside the Card, so the first pop fires and the second, evaluated
-fresh against the same distant cursor, fires right behind it.
-
-**The intermediate stop at Card layer is a real state, though not one the
-user is expected to linger in.** A release there is the Card layer's
-auto-drop (§6), and for the Card's own Stub that means **set it back down
-where it was picked up — nothing is written**. (An item brought in from
-*outside* the Card auto-drops as the last child; what distinguishes the
-two is where the drag started, not anything about the release.)
-
-Once Free, the item's relationship to its former parent is **preserved** —
-detaching is not un-parenting. The exception is zooming into a different
-Card, which is a reparent: the item arrives from outside and auto-drops as
-that Card's last child (§6), or goes on into its Descendants for a precise
-slot (§7). See [`../item-attachment/`](../item-attachment/) §11.
+Once Free, the item's relationship to its former parent is **preserved**
+— detaching is not un-parenting. The exception is zooming into a
+different Card, which is a reparent: the item arrives from outside, and
+a release places it among that Card's Stubs (§6, §7). See
+[`../item-attachment/`](../item-attachment/) §11.
 
 **Detaching in place keeps the inherited workphase.** A Stub's workphase is
 already its parent's, so it is already a member of the covered set of the
@@ -1047,12 +1019,10 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   guessed up front. The cue for a drag a reload stops (§10) has no
   placeholder. The cue of the hold that opens the hierarchy modal
   (§7.3) borrows the zoom-in cue's look, drawn on the overflow row.
-  Today's zoom-in cue is a dashed outline in the
-  attach-preview blue — the same dashed style as the placeholder Stub a
-  Card shows once you're inside it — and a thin bar along the card's
-  inside bottom edge, filling left to right. The fuller transition (the
-  card opening, the placeholder growing, the carried copy shrinking toward
-  it) is undesigned.
+  Today's zoom-in cue is a dashed blue outline and a thin bar along the
+  card's inside bottom edge, filling left to right. The fuller
+  transition (the card opening, its ghost row growing, the carried copy
+  shrinking toward it) is undesigned.
 - **Whether the ghost's expansion on drop animates (§5a).** Today it's
   instant.
 - **How the overflow row and the hierarchy modal look (§9).** The

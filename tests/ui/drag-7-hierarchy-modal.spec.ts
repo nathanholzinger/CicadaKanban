@@ -63,8 +63,8 @@ const pickUpRow = (page: Page, modal: Locator, id: string, title: string) =>
   pickUp(page, itemRow(modal, id).getByRole('button', { name: title, exact: true }));
 
 // Picks `row` up in the open modal, pulls it out to P's own box, which closes the modal and leaves
-// the drag at the Card layer, and zooms it back into P's section, where the cursor rests mid-way
-// down it.
+// the drag in the column, and zooms it back into P's section from there (P named for the dwell
+// and the cue), where the cursor rests mid-way down it.
 async function pullOutAndZoomBack(page: Page, modal: Locator, cardId: string, row: { id: string; title: string }) {
   await pickUpRow(page, modal, row.id, row.title);
   await awaitDragContext(page, descendantsRegionKey(cardId));
@@ -365,7 +365,7 @@ test.skip('DRAG-7.6, DRAG-7.10, DRAG-7.11: resting outside the modal’s box pop
   await expect(article(page, 'P')).toBeVisible();
 });
 
-test('DRAG-7.10: a second pop, out of the Card’s box, detaches the item: two pops, as from the section', async ({
+test('DRAG-7.10: a pop out of the modal, past the Card’s box, detaches the item, as from the section', async ({
   page,
   request,
   projectSidebar,

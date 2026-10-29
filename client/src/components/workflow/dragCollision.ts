@@ -142,9 +142,10 @@ export function resolveBoardCollisions(
     // item the *next* row's child instead of the previous one's.
     //
     // `sectionRect` is painted space (`dragStructure.ts::paintedRect`), while
-    // dnd-kit measures `droppableRects` without transforms. Mixing them is
-    // safe: the two differ only while the Card carries a sortable transform,
-    // which at the default clocks can't overlap a Descendants lock.
+    // `droppableRects` are stored ones, measured once as each row mounted.
+    // Mixing them is safe because the Card holding the drag is at rest when its
+    // rows mount: `KanbanCard.tsx` turns its sortable transition off while it is
+    // the locked context, so the painted box and the stored rects agree.
     const droppableContainers = args.droppableContainers.filter(container => {
       const data = container.data.current;
       if (!isSectionRow(data) || data?.sectionCardId !== session.descendantsCardId) return false;
