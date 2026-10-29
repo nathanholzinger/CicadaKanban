@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phase 1 built, for review
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phase 1 committed, Phase 2 done, for review
 
 ## Goal
 
@@ -196,6 +196,12 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **To watch in Phase 4:** a Card's region rect is its painted box. At a zoom-in from the column, the target Card may carry the column's shuffle for a moment, which would shift the clamp and the containment test until it settles. The pop-out clock outlasts it, but a jump under a still cursor is how a layer change feels, which this story leaves to the zoom-in morph.
 - **Checks:** `npm run check` passes (430 server, 581 client, 217 script tests; `check:docs` 386 files, 0 hits). `drag-5-stub-detach.spec.ts` runs: 6 passed, 2 skipped. The full E2E suite is Phase 2's.
 
+**2026-10-29, Phase 2 (Coder)**
+- **The first run:** 222 passed, 1 failed, 15 skipped. The failure isn't Story 8.2's defect (no Free Card's ghost or release landed at a section's top), so no spec waits for Phase 3 from this pass. The 15 skips are Phase 1's 7 and 8 that predate the story: `drag-card-zoom-in.spec.ts`'s two, which skip for another reason, and six cross-column and cross-project specs.
+- **The one failure was the hold's reach.** `drag-7-modal-hold.spec.ts`'s DRAG-7.14 test rests the cursor in P's padding, left of the section, and expects the hold to end. The hold ends when the cursor leaves the layer's box (`popSession.ts`, "Resting outside the context is no hold on anything inside it"), and the layer is the whole Card now (D2), so that point is inside it and the cue runs on. It failed the same way alone, so it isn't order. It is skipped, and the change is in the handoff as a passage to rule on (wiki §7.3 says "the section's box").
+- **Passing tests that describe the removed layer.** They pass because they assert where the drag ends up, not how many pops it took. They aren't skipped, since nothing broke; they're listed in the handoff for Story 10's rework: DRAG-5.1/5.10, DRAG-5.11/1.14, DRAG-7.10's "second pop" test, and DRAG-5.4's comment.
+- **Checks:** after the skip, `npm run test:e2e` runs 222 passed, 16 skipped, 0 failed. `npm run check` passes (430 server, 581 client, 217 script tests; `check:docs` 386 files, 0 hits). The skipped tests are listed under Living-docs handoff.
+
 ## Open questions
 
 None.
@@ -231,6 +237,7 @@ None.
     - the "Why not a band on the Card" reason loses "a Card's within-action is the auto-drop".
   - **§7.1:** "The hierarchy is never empty here" becomes the one-spot layer, wiki hierarchy-placement §2's empty hierarchy.
   - **§7.3:**
+    - the hold's reach: it runs with the cursor inside the layer's box, the whole Card's, where it says "the section's box", and the cursor leaving that box resets it, not the section (DRAG-7.14's third case);
     - leaving the modal lands in the column, Free, so detaching takes one pop;
     - "three pops to leave the Card" becomes two;
     - a drag pulled out of a click-opened modal is in the column.
@@ -239,14 +246,29 @@ None.
     - the two-pop list, the distance-term paragraph and "The intermediate stop at Card layer" go;
     - "zooming into a different Card … or goes on into its Descendants" becomes one zoom.
   - **Elsewhere:** wiki hierarchy-placement needs no change, since §2's empty hierarchy now applies to the board. Wiki item-attachment names no Card layer.
-- **Test-plan cases to sweep,** for the Test Planner once Nathan approves. These were found by searching the catalog for the Card layer, the Card → Descendants delay and a childless Card. They're a starting list, not a verdict:
-  - DRAG-1.19, 1.21;
+- **Test-plan cases to sweep,** for the Test Planner once Nathan approves. These were found by searching the catalog for the Card layer, the Card → Descendants delay and a childless Card. They're a starting list, not a verdict. DRAG-1.14, 5.11, 7.14 and 7.18 were added from the E2E pass (Phase 2):
+  - DRAG-1.14, 1.19, 1.21;
   - DRAG-3.22;
   - DRAG-4.1, 4.8, 4.14, 4.29;
-  - DRAG-5.1, 5.5, 5.10, 5.12;
-  - DRAG-7.2, 7.7, 7.9, 7.10, 7.13;
+  - DRAG-5.1, 5.5, 5.10, 5.11, 5.12;
+  - DRAG-7.2, 7.7, 7.9, 7.10, 7.13, 7.14, 7.18;
   - ATT-7.1, 7.6.
-- **Test-plan cases whose tests were skipped:** filled in by the Coder, in Phase 2.
+- **Test-plan cases whose tests were skipped,** each skipped because the fold changed what it waits for, not because it found a defect. The skip comment states the fact, and the test's body is as it was. Story 10 reworks them:
+  - `tests/ui/drag-5-stub-detach.spec.ts`:
+    - **DRAG-5.12**, released back at the Stub's own Card's layer writes nothing. The Card layer is gone, so there's no stop to set it down at. It has no other automated test.
+    - **DRAG-5.13**, a grandchild Stub popped out to its containing Card's layer keeps its row drawn. A pop out of the section lands in the column. The case's other test (DRAG-1.1, DRAG-5.13, the drag starts in the Card's whole section) still runs.
+  - `tests/ui/drag-7-hierarchy-modal.spec.ts`:
+    - **DRAG-7.6, DRAG-7.10, DRAG-7.11**, resting outside the modal's box pops out, and a release sets the Stub back down. A pop out of the modal lands in the column, where a release places the Stub Free. DRAG-7.10 and 7.11 have other tests that run. DRAG-7.6's coverage is now the unit tests (`descendantsProjection.test.ts`, `placement.test.ts`).
+    - **DRAG-7.2, DRAG-7.6**, back in the section a Stub whose slot is behind an overflow row starts as the Card's last child. The way back into the section is now a zoom-in from the column.
+    - **DRAG-7.2**, with R's only attached child dragged, back in the section R has no overflow row. The same reason.
+    - **DRAG-7.6**, back in the section a Stub whose slot the section shows comes back in that slot, and a release writes nothing. The same reason. The unit tests pin the seed.
+  - `tests/ui/drag-7-modal-hold.spec.ts`:
+    - **DRAG-7.10, DRAG-7.18**, after leaving a modal a hold opened, a hold opens it again in the same drag. The way back into the section is now a zoom-in from the column. DRAG-7.18 has no other automated test.
+    - **DRAG-7.14**, resting outside the section ends the hold. The layer is the whole Card's box now, so the Card's padding left of the section is inside it and the hold runs on. The case's other tests run. This one is a change to the rule, listed under §7.3 above.
+- **Tests that still run and describe the removed layer.** They pass because they assert where the drag ends up, not how many pops it took, so they aren't skipped. Their titles and comments name two pops, or the Card layer, which is the Test Planner's and Story 10's to settle:
+  - `drag-5-stub-detach.spec.ts`: DRAG-5.1, DRAG-5.10 ("two pops detach the Stub"), DRAG-5.11, DRAG-1.14 ("cascades Descendants -> Card -> Column": the Stub now takes one hop, so the multi-hop cascade is no longer what it exercises, though the release still detaches), and DRAG-5.4 (its comments count two pops before the zoom).
+  - `drag-7-hierarchy-modal.spec.ts`: DRAG-7.10 ("a second pop, out of the Card's box … two pops").
+  - `drag-card-zoom-in.spec.ts`'s two tests stay skipped for the reason they gave before this story: the target Card moves under the cursor as the ghost row draws. They now wait for `descendantsRegionKey`. Whether that reason still holds after the fold hasn't been tried.
 - **For the Architect, at close:**
   - **Story 10's roadmap entry** names code this story deletes, in item 2: `placementFor`'s Card branch, `AttachGhostRow`, the `cardRegion` fixture and `useCardContextLayer`'s Card half. Its items 1 and 4 name Card-layer cases too.
   - **The roadmap's "Decisions of 2026-09-17"** keep "No two-layer pop out of Descendants", which this story reverses.
