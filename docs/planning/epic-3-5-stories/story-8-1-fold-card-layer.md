@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–3b committed, Phase 4's hands-on done; Phase 5 committed; Phase 6, a hidden Stub set down at its own slot in the modal, built, for review
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–6 committed, Phase 4's hands-on done; Phases 7 and 8, from the story's code audit, next
 
 ## Goal
 
@@ -264,6 +264,55 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **No drag spec.** DRAG-7.31's surface path is Story 10's.
 - **Gate:** `npm run check` and `npm run test:e2e`. Then a stop for review and commit.
 
+**Phases 7 and 8: the story's code audit** (Nathan, 2026-10-29)
+- **Where they come from:** `docs/audits/code-quality-audit-epic-3-5-story-8-1.md`, over `3ede430..c6d99c6`. It found 10 Fix Now findings, four of them correctness. The Architect checked each against the code at `c6d99c6`, and all of them hold. Line numbers are at that commit.
+- **Split by area:** Phase 7 is the drag layer, and Phase 8 the workflow route and the audit's scope script. They're independent. Each puts correctness first, then the wrong comments.
+- **Optional findings:**
+  - **Taken:** #12 rides along in Phase 8.
+  - **Not taken:** #13, splitting the region-sampling cache out of `useBoardDnd.ts`. The zoom-in morph reworks the same layer-change sampling, so a split now would be done against code that's still moving. #11 and #15 carry no ride-along note.
+- **A required finding the code proves wrong** is rejected with the reason in the amendment, not fixed.
+
+**Phase 7: the drag layer** (audit #1, #2, #5–#9)
+1. **A Stub's drag starts in a Card that's no longer drawn** (#1).
+   - **The failure:** Free Card `A` has a child `X`. `A` is attached under `B`, and `X` is picked up before that write returns.
+   - `useBoardDnd.ts::containingCardIdOf` (`:122`) walks the stored items, so it finds `A` Free and starts the drag at `descendants:A`. The board draws `A` as a Stub under `B`, so that region doesn't exist (wiki board-drag-interaction §1, with §10's pending preview).
+   - **The fix:** walk the ancestry as the board draws it. Each ancestor's parent and Stub status come from `renderedParentId` and `renderedIsStub`. Keep `hierarchy.ts::findNearestAncestor`, which is cycle-safe: give it the items as drawn rather than writing a second walk. The pickup slot and the workphase snapshot then read the right Card with no change.
+   - **Check `classifyDragTargets`:** it's handed the stored items too. If its subtree or depth reading is wrong in the same state, say so in the amendment. Don't widen the fix without asking.
+   - **Test:** a `useBoardDnd.test.ts` case, which is the audit's deleted probe made permanent. `A` previewed under `B`, then a pickup of `X`, should give `session.containingCardId === 'B'`. Show it failing first.
+   - **Size:** one function, and the call at `:607`. Every Stub pickup runs it.
+2. **The modal's reading changes the release decision without updating the session** (#2).
+   - **Where Phase 6 stopped:** Phase 6 made `atOwnSlot` change when the modal opens, with the gap and depth unchanged. But `descendantsProjection.ts::sameProjection` compares only the gap, the depth and `valid`. So `evaluatePop` (`useBoardDnd.ts:385`) keeps the stale session, and the release, which reads the session, writes a move.
+   - **The fix:** `sameProjection` compares every field of the projection, `atOwnSlot`, `slotHidden`, `overflowBeside` and `resolved` included. That way the session never holds a projection that differs from the ref's. Its comment that "`resolved` follows from the other three" goes.
+   - **Test:** `sameProjection`'s describe gains a case where only `atOwnSlot` differs, and one where only `resolved` differs. Run a mutation check on the first.
+   - **Size:** one pure function. It gates a session update and a ghost redraw, which now also run when only one of those fields changes, which is rare.
+3. **Comments and a title that are wrong about the code** (#5–#9). Comments and one title only.
+   - **#5, `dragStructure.ts:11–16`:** a release over unregistered space writes nothing only at Board. A locked drag commits its own context's within-action wherever the cursor is.
+   - **#6, `dragOverlayGeometry.ts:118–121`:** `containmentRect` has no `=== 'column'` test. It reads `boundsRect ?? rect`. Keep the reason the clamp and the containment test differ.
+   - **#7, `tests/helpers/dragGesture.ts:19–36`:** while the drag is locked, the origin's within-action places it, and another column doesn't preview there. That column's bands apply at Board after a pop out, and its within-action once the drag pops into it.
+   - **#8, `tests/helpers/dragGesture.ts:16–17`:** Playwright's `dragTo` moves the mouse; it isn't HTML5 drag and drop. Give the helper's real reasons: the activation distance, the intermediate samples, the clocks and the re-measured target.
+   - **#9, `descendantsProjection.test.ts:280`:** "with no row below it" is wrong, since `B` stays below `R`'s subtree. Title it for the fixture. A true end-of-hierarchy case is the Test Planner's call.
+- **Gate:** `npm run check` and `npm run test:e2e`. Items 1 and 2 change the pickup and the release. Then a stop for review and commit.
+
+**Phase 8: the workflow route and the scope script** (audit #3, #4, #10, #12)
+1. **A malformed `projectId` on `POST /workflows`** (#3).
+   - **The failure:** `routes/workflows.ts:120` checks only that `projectId` is truthy. `true` reaches SQLite's binder and returns a 500. An array holding a real id passes and creates the workflow (wiki row-references §1).
+   - **The fix:** refuse a `projectId` that isn't a string with a 400, before the existence and ownership checks. Keep the existing order: required, then exists, then not already owned.
+   - **Tests:** the boolean and the array get a 400, and nothing is created. Each test carries the case that states the rule. If the catalog has none for a malformed owner reference, write it without an ID and list it in the amendment for the Test Planner.
+2. **The client's `createWorkflow` promises `items`** (#10). `api/workflows.ts:19` returns `WorkflowWithDetails`, but `POST` sends the workflow and its workphases only. Declare that shape, as `Workflow & { workphases: Workphase[] }` or a named type in `types.ts`. `WorkflowWithDetails` stays the `GET`'s.
+3. **Ride-along: one query for a workflow's workphases in order** (#12, optional).
+   - The same five-line query is written out at `routes/workflows.ts:62` and `:188`, `routes/workphases.ts:28`, and `lib/columnRanges.ts:161` and `:219`. `workphaseOrder.ts::getOrderedWorkphases` can't serve them, because it reads only the global `db` and always builds the rank map.
+   - **The fix:** give `workphaseOrder.ts` an ordered read that takes an optional `tx`, as `getOrNotFound.ts::existsById` does. `getOrderedWorkphases` builds on it, and the five sites call it.
+   - **Cost:** three files beyond #3's.
+   - **Leave it out** if the transaction typing doesn't come easily, and say so.
+4. **The audit's scope script drops a change inside a multiline template** (#4).
+   - **The failure:** `scripts/audit-scope/diff.mts::writtenAlike` compares a hunk's lines as a fragment. A change on a template's middle line tokenizes without the opening backtick, reads as identifiers on both sides, and is thrown out as formatting. With blame's `-w` contributing no changed line either, the file leaves every pass.
+   - **The fix:** a hunk whose lines sit inside a template literal in the whole old or new file is never formatting-only. Read the literal context from the whole source. When the script can't prove a hunk is formatting, it keeps the review site.
+   - **Test:** a multiline-template regression in the scope script's tests, beside the single-line literal cases, through `testRepo.mts`.
+   - **Size:** the scope script only. No app code.
+- **Gate:** `npm run check`. The route change is covered by the server's route tests, and no drag code changes. Then a stop for review and commit.
+
+**After Phase 8:** the audit's close-out table is filled in from the code as it then stands (`audit-workflow.md` §9). That includes any finding rejected with its reason. The Story 10 route (#14) is already verified.
+
 ## Code map
 
 | Symbol | Carries |
@@ -407,6 +456,11 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Checks:** `npm run check` passes (430 server, 586 client, 218 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 15 skipped, 0 failed (the 16th skip went in Phase 5).
 
 ## Open questions
+
+- **For the Test Reconciler — two workflow-test claims from the full Codex audit:**
+  - `server/tests/routes/workflows.test.ts:49–73` promises ordered workphases, but creates only one workphase and checks the count, so it cannot distinguish an ordering regression. Assess the missing assertion and route any test work.
+  - `server/tests/routes/workflows.test.ts:519–536` promises that deleting an orphan workflow leaves every project's items untouched, but seeds no project or item and checks only the workflow's deletion. Assess the missing preservation check and route any test work.
+  - These are targeted follow-ups from `docs/audits/code-quality-audit-epic-3-5-story-8-1.md`, not new requests about the skipped drag specs already routed to Story 10. The audit reports them as test-quality notes, outside its findings.
 
 - **Should `slotHidden` still be carried across the modal opening?** (Finding 11.) `reseedProjection` keeps the seed's flag. Its old reason, that `own` was read from rows that place the Stub as the Card's last child, is gone: `own` comes from the pickup snapshot. The comment now says only what the flag records. What the flag still does there is a behavior, which this pass left alone: the modal draws every level, so a hidden pickup slot is drawn in it, and with the flag carried a Stub put back in that slot counts as a move and writes (to where it already is), where cleared it would be its own slot and write nothing. Read from the code, not tried in the browser. For the PO to rule on with the Phase 4 behavior decisions.
   - *Since then:* the Test Planner reads the wiki as already answering it: a set-down at the pickup slot in the modal writes nothing (DRAG-7.31). **Phase 6 built that (2026-10-29)**, with no other ruling in between. It stays open only if Nathan or the PO overrules the wiki; see the Phase 6 amendment.
