@@ -366,7 +366,7 @@ describe('overlayFormFor', () => {
     expect(overlayFormFor(placementRegion(startPopSession(cardP.key), [cardP]))).toBe('stub');
   });
 
-  it('across a real zoom-in (Column → Card’s Descendants layer) and pop-out (back to the column), the form switches both ways', () => {
+  it('DRAG-3.22, DRAG-1.35: across a real zoom-in (Column → Card’s Descendants layer) and pop-out (back to the column), the form switches both ways', () => {
     const allRegions = [...regions, cardP];
     const inCard = { x: 50, y: 100 }; // still inside column A throughout — irrelevant to *which* Card is targeted
     const outsideCard = { x: 500, y: 500 }; // outside every region

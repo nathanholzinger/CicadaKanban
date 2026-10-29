@@ -304,7 +304,7 @@ describe('sectionEntries', () => {
     expect(shape(1)).toEqual(['A@0', 'overflow:A@1×1', 'B@0']);
   });
 
-  it('leaves the dragged item out of the count, and draws none when it was the only child', () => {
+  it('DRAG-7.2: leaves the dragged item out of the count, and draws none when it was the only child', () => {
     expect(shape(3, 'R1')).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×1', 'T@2', 'B@0']);
     const onlyChild = items.filter(i => i.id !== 'R2');
     expect(shape(3, 'R1', onlyChild)).toEqual(['A@0', 'Q@1', 'R@2', 'T@2', 'B@0']);

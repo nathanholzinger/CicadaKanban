@@ -179,11 +179,20 @@ describe('TC-2.11: toRequest', () => {
     });
   });
 
-  it('DRAG-4.1, DRAG-4.12, DRAG-5.4: attach: parentId + isAttached, never an anchor — always an append for an item arriving from outside', () => {
+  it('DRAG-4.12, DRAG-5.4: an attach into a Card with no other children: parentId + isAttached, and no anchor to send', () => {
     expect(toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { parentId: 'card-1', slot: 'last' }, [])).toEqual({
       parentId: 'card-1',
       isAttached: true,
     });
+  });
+
+  it('DRAG-4.1: an attach as the last child of a Card with children: parentId + isAttached, and the anchor after its last child', () => {
+    expect(
+      toRequest({ workphaseId: 'w1' }, freeOrigin('w1'), { parentId: 'card-1', slot: 'last' }, [
+        { id: 'S1' },
+        { id: 'S2' },
+      ]),
+    ).toEqual({ parentId: 'card-1', isAttached: true, anchorId: 'S2', side: 'after' });
   });
 
   // A Descendants-layer sibling reorder — same parent as `origin`'s own, an
@@ -232,7 +241,7 @@ describe('TC-2.11: toRequest', () => {
   // the anchor), not a bare position-only reorder that silently drops the
   // attachment change. The branch keys on parent equality, never on the
   // slot's own shape.
-  it('a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder', () => {
+  it('DRAG-4.34: a reparent with an anchor slot for a *different* parent is a full reparent-with-placement, not a bare reorder', () => {
     const origin = stubOrigin('card-p');
     expect(
       toRequest(

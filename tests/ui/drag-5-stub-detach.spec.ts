@@ -23,10 +23,10 @@ import {
 import { article, column, itemRow } from '../helpers/boardLocators';
 import { columnRegionKey, descendantsRegionKey } from '../../client/src/components/workflow/dragRegions';
 
-// A Stub's drag through the Descendants, Card and Column layers. The cases
+// A Stub's drag through the Descendants and Column layers. The cases
 // assert reachability (`data-drag-context`) and write correctness.
 
-test.describe('Stub detach — a Stub drags through the Descendants/Card/Column layers', () => {
+test.describe('Stub detach — a Stub drags through the Descendants and Column layers', () => {
   test.beforeAll(async () => {
     await resetAndSeedDb();
   });
@@ -144,44 +144,6 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(itemRow(page, s1a.id)).toBeVisible();
   });
 
-  // Skipped until the drag specs are reworked: the Card layer is gone, so there is no stop to set the Stub back down at.
-  test.skip('DRAG-5.12: released back at its own containing Card\'s layer, nothing is written — the Card layer\'s auto-drop for its own Stub is "set it back down"', async ({
-    page,
-    request,
-    projectSidebar,
-  }) => {
-    const name = 'Stub Set Back Down Project';
-    const { project, workflow } = await seedTemplatedWorkflow(request, name);
-    const [todo] = pickWorkphases(workflow, 'Todo');
-    const p = await seedItem(request, { title: 'P', projectId: project.id, workphaseId: todo.id });
-    await seedItem(request, { title: 'S1', parentId: p.id });
-    const x = await seedItem(request, { title: 'X', parentId: p.id });
-    await seedItem(request, { title: 'S2', parentId: p.id });
-    const before = await fetchItem(request, x.id);
-
-    // A real, short pop-out threshold — but popInDelayMs/cardPopInDelayMs
-    // never complete, so nothing beyond the first pop can fire.
-    await seedDragTuning(page, POP_OUT_ONLY);
-    await projectSidebar.openBoard(name);
-
-    await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
-    await awaitDragContext(page, descendantsRegionKey(p.id));
-
-    // A point inside P's own card body (its title area) but outside the
-    // attached-children section — pops Descendants → Card, and then stays
-    // there: the cursor never leaves the Card's own box, so the second
-    // pop-out clock (Card → column) never even starts.
-    await hoverTo(page, await atFraction(article(page, 'P'), 0.08));
-
-    await release(page);
-
-    const after = await fetchItem(request, x.id);
-    expect(after.parentId).toBe(p.id);
-    expect(after.isAttached).toBe(1);
-    expect(after.position).toBe(before.position);
-    await expect(article(page, 'P').getByText('X')).toBeVisible();
-  });
-
   test('DRAG-5.1, DRAG-5.10: a pop out of the section detaches the Stub into its own column — attachment clears, parentId and the inherited workphase are preserved, and it renders as a Card', async ({
     page,
     request,
@@ -233,15 +195,15 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await expect(article(column(page, 'Todo'), 'X')).toBeVisible();
   });
 
-  // A yank far enough to clear the Descendants region's pop-out distance in
-  // one pointer sample must pop out and have the regions measured for the
-  // layer it lands in — not strand with the old layer's regions until a timer
-  // (disabled here — only the distance term can ever fire) self-corrects
-  // it. A release in that exact window is what shows it: with
-  // `pop.contextKey` reporting the column but the measured regions still
-  // scoped to the section, `placementRegion` would find nothing and the
-  // release would write nothing at all.
-  test('DRAG-5.11, DRAG-1.14: a yank past the pop-out distance in one sample pops Descendants -> Column, and an immediate release detaches', async ({
+  // One yank far enough to clear the Descendants region's pop-out distance,
+  // with every clock off, must pop out on the distance term alone and have the
+  // regions measured for the layer it lands in — not strand with the old
+  // layer's regions until a timer (disabled here) self-corrects it. A release
+  // straight after is what shows it: with `pop.contextKey` reporting the
+  // column but the measured regions still scoped to the section,
+  // `placementRegion` would find nothing and the release would write nothing
+  // at all.
+  test('DRAG-1.14: a yank past the pop-out distance, with every clock off, pops Descendants -> Column, and an immediate release detaches', async ({
     page,
     request,
     projectSidebar,
@@ -254,9 +216,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await seedItem(request, { title: 'Q', projectId: project.id, workphaseId: todo.id });
 
     // popDelayMs/popInDelayMs/cardPopInDelayMs are all NO_POP's "never"
-    // value — nothing here can advance on a timer, or on a second
-    // pointermove (there isn't one): only the distance can pop it out, and
-    // only the write proves it landed with a usable region — a
+    // value — nothing here can pop on a timer: only the distance can pop it
+    // out, and only the write proves it landed with a usable region — a
     // `data-drag-context` read can report the right layer while the regions
     // are still scoped wrong.
     await seedDragTuning(page, { ...NO_POP, popDistancePx: 10 });
@@ -265,9 +226,8 @@ test.describe('Stub detach — a Stub drags through the Descendants/Card/Column 
     await pickUp(page, itemRow(page, x.id).getByRole('button', { name: 'X' }));
     await awaitDragContext(page, descendantsRegionKey(p.id));
 
-    // Well outside P's whole card — one hoverTo, one sample, far past P's
-    // Descendants region, so the pop-out distance clears in that same
-    // evaluation.
+    // Well outside P's whole card — one hoverTo, far past P's Descendants
+    // region, so the pop-out distance clears on the way.
     await hoverTo(page, await atFraction(article(page, 'Q'), 0.5));
     await release(page);
 

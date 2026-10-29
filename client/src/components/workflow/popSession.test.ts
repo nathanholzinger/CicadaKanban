@@ -161,6 +161,21 @@ describe('locked', () => {
     });
   });
 
+  // Only the context's own box counts as inside: a Card under the modal's backdrop has a region
+  // of its own, and resting over it still runs the exit clock.
+  it('DRAG-7.11: resting outside the dialog, over a Card under the backdrop, runs the pop-out clock to the modal Card’s column', () => {
+    const list = descendantsRegion('card-m', rect(300, 100, 200, 300), A.key, { boundsRect: rect(300, 0, 200, 400) });
+    const underBackdrop = descendantsRegion('card-b', rect(10, 120, 80, 60), A.key);
+    const board = [A, list, underBackdrop];
+    const overBackdropCard = { x: 50, y: 150 };
+
+    const away = step(startPopSession(list.key), overBackdropCard, 0, board);
+    expect(away.contextKey).toBe(list.key);
+    expect(away.outsideSince).toBe(0);
+    expect(step(away, overBackdropCard, OUT - 1, board).contextKey).toBe(list.key);
+    expect(step(away, overBackdropCard, OUT, board).contextKey).toBe(A.key);
+  });
+
   it("DRAG-3.21: at Board layer the band reads the region's live rect on every sample, not one frozen at entry", () => {
     const entered = step(startPopSession(null), { x: 170, y: 110 }, 0, regions);
     expect(entered.hover?.band).toBe('middle'); // 110 is within B's original 96..304 middle band
@@ -248,7 +263,7 @@ describe('locked column/sub-row: the named-card zoom-in candidate', () => {
 describe('locked at a Card’s Descendants layer', () => {
   const inLayer = [A, P];
 
-  it('there is no further child to zoom into: resting in the layer, however long, holds it', () => {
+  it('DRAG-1.35: there is no further child to zoom into: resting in the layer, however long, holds it', () => {
     const locked = startPopSession(P.key);
     expect(step(locked, inP, DWELL + CUE, inLayer, { anchorId: Q.cardId, side: 'after' })).toBe(locked);
   });
@@ -267,13 +282,13 @@ describe('locked at a Card’s Descendants layer', () => {
     expect(s.outsideSince).toBe(OUT);
   });
 
-  it('leaving the Card’s box for popDelayMs is one pop, to the column the Card sits in', () => {
+  it('DRAG-5.1, DRAG-5.13: leaving the Card’s box for popDelayMs is one pop, to the column the Card sits in', () => {
     const away = step(startPopSession(P.key), aboveP, 0, inLayer);
     const popped = step(away, aboveP, OUT, inLayer);
     expect(popped.contextKey).toBe(A.key);
   });
 
-  it('the pop-out distance term measures against the Card’s box', () => {
+  it('DRAG-1.14: the pop-out distance term measures against the Card’s box', () => {
     const withDistance = { ...tuning, popDistancePx: 4 };
     // `aboveP` is 5px above P's top edge, inside the column.
     const s = advancePopSession(startPopSession(P.key), aboveP, inLayer, withDistance, metrics, 0);
@@ -464,7 +479,7 @@ describe('the hierarchy modal hold', () => {
     expect(popDueAt(cue, tuning)).toBe(DWELL_M + CUE_M);
   });
 
-  it('resting outside the layer ends the hold: it runs with the cursor inside', () => {
+  it('DRAG-7.14: resting outside the layer ends the hold: it runs with the cursor inside', () => {
     const running = hold();
     const away = step(running, aboveP, 10, [A, P]);
     expect(away.modalHold).toBeNull();

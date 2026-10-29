@@ -58,7 +58,7 @@ describe('clampToCurrentContext', () => {
     ['a merged column bounds x only', region('column:c1', bounds), { x: 50, y: 500 }],
     ['a sub-row bounds both axes', region('subrow:c1:w1', bounds), { x: 50, y: 80 }],
     ['a Card’s Descendants layer bounds both axes', descendantsRegion('p', bounds, 'column:c1'), { x: 50, y: 80 }],
-  ])('%s', (_, context, expected) => {
+  ])('DRAG-1.28: %s', (_, context, expected) => {
     expect(clampToCurrentContext(far, overlay, startPopSession(context.key), [context])).toEqual({
       ...far,
       ...expected,
@@ -98,7 +98,7 @@ describe('overlayWidthFor', () => {
     expect(overlayWidthFor(list)).toBe(240);
   });
 
-  it("on the board is the Card's width minus its content inset on both sides", () => {
+  it("DRAG-3.22: on the board is the Card's width minus its content inset on both sides", () => {
     expect(overlayWidthFor(descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1'))).toBe(
       240 - 2 * CARD_CONTENT_INSET_PX,
     );
@@ -115,7 +115,7 @@ describe('overlayShapeFor', () => {
   const modalList = descendantsRegion('p', rect(0, 0, 240, 100), 'column:c1', { boundsRect: rect(0, -40, 240, 140) });
   const columnC1 = region('column:c1', rect(0, 0, 240, 400));
 
-  it("locked at a Card's Descendants layer, or the modal that holds it: the Stub, at a row's width", () => {
+  it("DRAG-3.22: locked at a Card's Descendants layer, or the modal that holds it: the Stub, at a row's width", () => {
     const cardWidth = 240 - 2 * CARD_CONTENT_INSET_PX;
     expect(overlayShapeFor(startPopSession(cardP.key), [cardP])).toEqual({ form: 'stub', widthPx: cardWidth });
     expect(overlayShapeFor(startPopSession(modalList.key), [modalList])).toEqual({ form: 'stub', widthPx: 240 });
@@ -135,7 +135,7 @@ describe('reanchorOverlayTransform', () => {
   const stubWidth = 120;
   const incoming = transform(300, 300);
 
-  it("keeps the pointer at the same fraction across the Stub's width, and on its vertical middle", () => {
+  it("DRAG-3.22: keeps the pointer at the same fraction across the Stub's width, and on its vertical middle", () => {
     const result = reanchorOverlayTransform(
       incoming,
       pickupRect,

@@ -143,13 +143,13 @@ describe('advanceProjection on the entry sample', () => {
   const enter = (fields: Partial<ProjectionSample> = {}) =>
     advanceProjection(NO_PROJECTION, sample({ previousContextKey: column, namedAnchor: columnCard, ...fields }));
 
-  it("D4: the Card's own Stub coming back in from its column seeds at its own slot, and a release there writes nothing", () => {
+  it("DRAG-4.30: the Card's own Stub coming back in from its column seeds at its own slot, and a release there writes nothing", () => {
     const { projection } = enter({ getAttachedChildren: awayChildren });
     expect(projection).toMatchObject({ gap: 1, depth: 0, atOwnSlot: true, slotHidden: false });
     expect(descendantsReleasePlacement(projection, P)).toBeNull();
   });
 
-  it('D4: an item from outside seeds at the last gap as the Card’s last child, the column’s anchor or none', () => {
+  it('DRAG-4.30: an item from outside seeds at the last gap as the Card’s last child, the column’s anchor or none', () => {
     const outside = { originCardId: null, ownSlot: null, classification: classifyDragTargets('X', items, 10) };
     for (const namedAnchor of [columnCard, null]) {
       const { projection } = enter({ ...outside, namedAnchor });
@@ -161,7 +161,7 @@ describe('advanceProjection on the entry sample', () => {
     }
   });
 
-  it('D4: an overflow row of a row that is not in the section names no gap either', () => {
+  it('DRAG-4.30: an overflow row of a row that is not in the section names no gap either', () => {
     const { projection } = enter({
       getAttachedChildren: awayChildren,
       namedAnchor: { anchorId: overflowRowId('gone'), side: 'after' },
