@@ -11,9 +11,12 @@
 // Unsorted, a broken column, an expanded column's outer wrapper, a column's
 // header/footer, the gaps between columns and between sub-rows, and the space below
 // the last sub-row register no region (wiki board-drag-interaction §1): they are
-// nowhere, so no drag enters them and a release there writes nothing. A sub-row (or
-// a Card) is additionally clipped to its column's visible scroll box: one scrolled
-// fully out of view registers no region at all until it scrolls back in.
+// nowhere. At Board layer no drag enters them and a release there writes nothing. A
+// locked drag is in its own context wherever the cursor is: over them it holds that
+// context until the pop-out clock or distance pops it out, and a release before then
+// commits that context's within-action (`placement.ts::placementRegion`). A sub-row
+// (or a Card) is additionally clipped to its column's visible scroll box: one
+// scrolled fully out of view registers no region at all until it scrolls back in.
 
 import {
   DRAG_BOUNDS_ATTR,

@@ -115,10 +115,12 @@ export function reanchorOverlayTransform(
 // merged column, both axes for any other context; untouched with no context
 // (wiki board-drag-interaction §2).
 //
-// Not the inverse of `popSession.ts::containmentRect`'s `=== 'column'`:
-// that decides whether the context still holds, this decides how far the
-// carried copy follows the cursor, and a merged column answers the two
-// against different boxes.
+// Not the inverse of `popSession.ts::containmentRect`, which reads the
+// region's `boundsRect` where it has one (a merged column's outer body, the
+// hierarchy modal's dialog) and its `rect` otherwise: that decides whether the
+// context still holds, this decides how far the carried copy follows the
+// cursor, and clamps to the region's `rect` alone, with y left free for a
+// merged column. The two answer against different boxes.
 export function clampToCurrentContext(
   transform: OverlayTransform,
   rect: OverlayRect,

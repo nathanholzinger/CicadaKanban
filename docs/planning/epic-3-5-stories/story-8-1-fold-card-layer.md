@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.1 — Fold the Card layer into the Descendants layer
 
-**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–6 committed, Phase 4's hands-on done; Phases 7 and 8, from the story's code audit, next
+**Type:** story · **Written:** 2026-10-28 by the Architect, from Nathan's rulings of 2026-10-26, 2026-10-28 and 2026-10-29 · **Status:** in progress — Phases 1–6 committed, Phase 4's hands-on done; Phase 7, from the story's code audit, built, for review; Phase 8 next
 
 ## Goal
 
@@ -455,7 +455,31 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Not tried in the browser:** the whole path, a hold opening the modal after a hidden-slot entry and a set-down at the slot. The unit test covers the projection; `reseedProjection`'s caller in `useBoardDnd.ts::readModalPlacement` and the release path are as before.
 - **Checks:** `npm run check` passes (430 server, 586 client, 218 script tests; `check:docs` 386 files, 0 hits). `npm run test:e2e`: 222 passed, 15 skipped, 0 failed (the 16th skip went in Phase 5).
 
+**2026-10-29, Phase 7: the drag layer (Coder)**
+- **All of #1, #2 and #5–#9 landed.** None was rejected: each held against the code.
+1. **#1, a Stub's drag starts in a Card that is no longer drawn.**
+   - **Test first:** `useBoardDnd.test.ts` has `is the Card it is drawn under, when an ancestor's attachment is still pending`. `A` holds `X` and is previewed under `B`; picking up `X` gives `containingCardId === 'b'` and an `origin` of `{ parentId: 'a', slot: 'existing' }`. **Shown failing on the unchanged code** with the audit's own result, `'a'` where `'b'` was expected. A control case with nothing pending (nearest Free ancestor) passed throughout.
+   - **The fix:** `containingCardIdOf(item, items, placements)` hands `findNearestAncestor` the items as drawn. Each item's `parentId` is its `renderedParentId`, and the test for "Free" is `!renderedIsStub`. It is the shared cycle-safe walk, with no second one written. The call at the pickup passes `stored` and `placements`, and `useBoardDnd.ts` no longer imports `isStub`. The pickup slot and the workphase snapshot read the right Card with no change, since both key on `containingCardId`.
+   - **Mutation checks, each restored:** the Stub test back to stored status, with the rendered parents kept, fails the new case; the parents back to stored, with the rendered Stub test kept, fails it too. Both halves are needed.
+   - **`classifyDragTargets` is wrong in the same state, by one level at the cap's edge, and I did not fix it.** It is handed the stored items (`useBoardDnd.ts`, the pickup), so `getDepth` counts `A` as a root. With `A` previewed under `B` and `A`'s other child `Y`, a probe at cap 3 gave `Y: valid` over the stored tree and `Y: depth-capped` over the drawn one. At cap 4 they agree. The dragged item's own subtree and the cycle reading are unaffected. The server enforces the cap at the write, so the worst case is a drop the board offers as valid that the server then refuses (Open questions). The probe is deleted.
+2. **#2, the modal's reading changes the release decision without updating the session.**
+   - **Test first:** `sameProjection`'s describe now has a case for `atOwnSlot` alone, one for `resolved` alone (the parent, the anchor's id and its side, and an anchor against none), and one for `slotHidden` and `overflowBeside`. Each failed on the unchanged comparator ("expected true to be false"); the gap, depth and validity case already passed.
+   - **The fix:** `sameProjection` compares every field. Its comment that `resolved` follows from the other three is gone, and says why a field left out is wrong: the session holds what a release reads. The evaluation's comment in `useBoardDnd.ts` says a projection can change in only what a release reads.
+   - **Mutation checks, each restored:** dropping the `atOwnSlot` clause, the `resolved` parent clause, the anchor's side or the `overflowBeside` clause each fails exactly the case written for it.
+   - **Cost:** the session update and the ghost redraw now also run when only one of those fields changes, which is rare.
+3. **#5–#9, comments and one title.**
+   - **#5** `dragStructure.ts`: no region means no drag enters it and a release writes nothing at Board only. A locked drag holds its context over those places until the pop-out clock or distance pops it out, and a release before then commits that context's within-action.
+   - **#6** `dragOverlayGeometry.ts`: `containmentRect` reads `boundsRect ?? rect`; the clamp reads the region's `rect` alone, and leaves y free for a merged column. The reason the two differ stays.
+   - **#7 and #8** `tests/helpers/dragGesture.ts`: the header says what Playwright's `dragTo` does (mouse events: press, a single move, release) and what this helper adds: the move past the activation distance, the samples, a pause for a clock to run and a target found again after the board moves. It separates a locked origin's placement and release, the Board layer's bands after the pop out, and a drag locked into a target after the pop in. I read the implementation (`coreBundle.js`, `dragAndDrop`) for this and did not rely on the audit's line numbers.
+   - **#9** `descendantsProjection.test.ts`: `DRAG-7.4: below R's overflow row with only B below R's subtree, the states run from the top level to R's last child, and no further`. The ID is unchanged. A true end-of-hierarchy case is the Test Planner's call, as the audit says.
+- **For the Test Planner:** the new `useBoardDnd.test.ts` case has no case ID. DRAG-1.1 states where a Stub's drag starts and DRAG-6.13 a re-drag of an item with its own pending write, and neither covers an ancestor's pending attachment, so I did not stamp one. Its state is a candidate for either case.
+- **Not tried in the browser:** #1's state (a drag begun before the Card's attachment lands) and #2's modal gesture. The unit tests cover the pickup and the comparator; the E2E suite does not reach either.
+- **Checks:** `npm run check` passes (430 server, 591 client, 218 script tests; `check:docs` 386 files, 0 hits).
+  - **`npm run test:e2e`:** the first run had one failure, `DRAG-7.17: from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too` (222 expected passing; 221 passed, 1 failed, 15 skipped). It does not reproduce: that spec passed 30 of 30 repeats alone, the whole `drag-7-modal-hold.spec.ts` file passed 5 repeats (95 passed, 10 skipped), and a second full run passed 222, skipped 15, failed 0. I cannot say what it was. It touches the modal's reading, which item 2 affects, so it is worth a second look if it shows again.
+
 ## Open questions
+
+- **Should `classifyDragTargets` read the items as drawn, as Phase 7's #1 now does for the starting Card?** (Found checking #1.) A pending ancestor attachment shifts the depth of everything under it, and the classifier counts depths over the stored items, so a target can read `valid` where the board draws it one level past the cap. It shows only at the cap's edge, and the server refuses such a write, so the cost is a drop that resyncs. Fixing it means handing `classifyDragTargets` the same drawn items from `handleDragStart`. That is a second use of the one mapping, not a new walk, and it widens #1, so it waits for Nathan.
 
 - **For the Test Reconciler — two workflow-test claims from the full Codex audit:**
   - `server/tests/routes/workflows.test.ts:49–73` promises ordered workphases, but creates only one workphase and checks the count, so it cannot distinguish an ordering regression. Assess the missing assertion and route any test work.

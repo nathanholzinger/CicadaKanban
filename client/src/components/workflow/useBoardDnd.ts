@@ -47,7 +47,6 @@ import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { findNearestAncestor } from '../../lib/hierarchy';
 import type { AnchorRelation } from '../../lib/hierarchyPlacement';
-import { isStub } from '../../lib/isStub';
 import { isColumnData, namedAnchorFor, resolveBoardCollisions, type CollisionSession } from './dragCollision';
 import { sendItemMove, toRequest } from './dragRequest';
 import {
@@ -116,11 +115,17 @@ import { SHORT_CARD_METRICS } from '../cardMetrics';
 // nearest Free ancestor, whatever the Stub's own depth beneath it. Built on
 // `hierarchy.ts::findNearestAncestor` (cycle-safe) rather than a bespoke
 // parentId walk, so a corrupted parentId cycle in the data degrades the
-// same way it already does everywhere else in the hierarchy math. `null`
-// only if every ancestor up to a dangling/missing parentId is itself a
-// Stub, which the depth cap makes unreachable in practice.
-function containingCardIdOf(item: Item, items: readonly Item[]): string | null {
-  return findNearestAncestor(item, items, n => !isStub(n))?.id ?? null;
+// same way it already does everywhere else in the hierarchy math. The walk
+// is over the items as the board draws them (`renderedParentId`,
+// `renderedIsStub`), the Stub's own link included: an ancestor whose
+// attachment is still in flight is already a Stub under its new parent, and
+// the Free ancestor it stopped being has no region to start in. `null` only
+// if every ancestor up to a dangling/missing parentId is itself a Stub,
+// which the depth cap makes unreachable in practice.
+function containingCardIdOf(item: Item, items: readonly Item[], placements: Placements): string | null {
+  const drawn = items.map(i => ({ ...i, parentId: renderedParentId(i, placements) }));
+  const start = { ...item, parentId: renderedParentId(item, placements) };
+  return findNearestAncestor(start, drawn, n => !renderedIsStub(n, placements))?.id ?? null;
 }
 
 export interface BoardDndDeps {
@@ -376,8 +381,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const holdOpensCardId =
       pop.modalHold && modalHoldElapsed(pop.modalHold, tuning, now) ? descendantsCardIdOf(pop.contextKey) : null;
     if (holdOpensCardId) pop = advanceModalHold(pop, null, tuning, now);
-    // The projection can change (a fresh gap or depth choice) on a sample
-    // where `pop` itself doesn't — a locked
+    // The projection can change (a fresh gap or depth choice, or only what a
+    // release reads of it) on a sample where `pop` itself doesn't — a locked
     // Descendants context has no further child region, so
     // `advancePopSession`'s own "inside" branch keeps returning the same
     // `pop` object once `hover`/`outsideSince` are already both null,
@@ -604,7 +609,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // is registered by `dragChrome.tsx::useItemRow` and read only off droppable
     // rows, where the collision filters rely on it.
     if (renderedIsStub(stored, placements)) {
-      const containingCardId = containingCardIdOf({ ...stored, parentId }, deps.items);
+      const containingCardId = containingCardIdOf(stored, deps.items, placements);
       if (!containingCardId) return; // malformed data — every ancestor is itself a Stub
       // A Stub's own stored `workphaseId` is a cache that goes stale the
       // moment its containing Card is moved through a client-observed write

@@ -77,6 +77,35 @@ describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
   });
 });
 
+// A Stub's drag starts at its containing Card's layer, the nearest Free ancestor as the board draws
+// it: another item's attachment that has not landed yet moves the Stub's whole ancestry.
+describe('useBoardDnd: where a Stub’s drag starts', () => {
+  it('is the Card it is drawn under, when an ancestor’s attachment is still pending', () => {
+    // A is Free and holds X. A has been dropped on B and the write is in flight, so the board draws
+    // B → A → X: A is a Stub now and has no Descendants region to start in.
+    const items = [makeItem('b'), makeItem('a'), makeItem('x', { parentId: 'a' })];
+    const placements = new Map([['a', { parentId: 'b', slot: 'last' as const }]]);
+    const deps = { ...depsWith(async () => {}), items, placements };
+    const { result } = renderHook(() => useBoardDnd(deps));
+
+    act(() => result.current.handleDragStart(itemPickup));
+
+    expect(result.current.session?.containingCardId).toBe('b');
+    // The origin is still the Stub's own direct parent, which is not the Card it starts in.
+    expect(result.current.session?.origin).toEqual({ parentId: 'a', slot: 'existing' });
+  });
+
+  it('is the nearest Free ancestor when nothing is pending', () => {
+    const items = [makeItem('b'), makeItem('a', { parentId: 'b' }), makeItem('x', { parentId: 'a' })];
+    const deps = { ...depsWith(async () => {}), items };
+    const { result } = renderHook(() => useBoardDnd(deps));
+
+    act(() => result.current.handleDragStart(itemPickup));
+
+    expect(result.current.session?.containingCardId).toBe('b');
+  });
+});
+
 describe('useBoardDnd: a column reorder whose save fails', () => {
   beforeEach(() => {
     vi.mocked(moveItem).mockReset();

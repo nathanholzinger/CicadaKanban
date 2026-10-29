@@ -257,12 +257,36 @@ function seedFor(
   return { gap: rows.length, depth: 0, pointerX, slotHidden };
 }
 
-// Whether two projections draw the same thing: `resolved` follows from the
-// other three.
+// Whether two projections are the same in every field. The drag session holds the projection a
+// release reads, and is updated only when this says it changed, so a field left out can differ
+// between the session and the sample while the gap and depth hold still: `atOwnSlot` does when
+// the modal opens over a hidden slot, and the release then reads the stale one.
 export function sameProjection(a: DescendantsProjection | null, b: DescendantsProjection | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  return a.gap === b.gap && a.depth === b.depth && a.valid === b.valid;
+  return (
+    a.gap === b.gap &&
+    a.depth === b.depth &&
+    a.valid === b.valid &&
+    a.atOwnSlot === b.atOwnSlot &&
+    a.slotHidden === b.slotHidden &&
+    a.resolved.parentId === b.resolved.parentId &&
+    sameAnchor(a.resolved.anchor, b.resolved.anchor) &&
+    sameOverflowBeside(a.overflowBeside, b.overflowBeside)
+  );
+}
+
+function sameAnchor(a: AnchorRelation | null, b: AnchorRelation | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.anchorId === b.anchorId && a.side === b.side;
+}
+
+function sameOverflowBeside(
+  a: DescendantsProjection['overflowBeside'],
+  b: DescendantsProjection['overflowBeside'],
+): boolean {
+  if (a === null || b === null) return a === b;
+  return a.ownerId === b.ownerId && a.side === b.side;
 }
 
 // What a release at the section writes: the last sample's resolved parent

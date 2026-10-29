@@ -3,6 +3,7 @@ import { makeItem } from '../../test/itemFixture';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
 import { classifyDragTargets } from './dragClassification';
 import { columnRegionKey, descendantsRegionKey } from './dragRegions';
+import type { DescendantsProjection } from './DragSessionContext';
 import { EVERY_LEVEL, getAttachedChildrenFrom, overflowRowId } from './itemListOps';
 import {
   NO_PROJECTION,
@@ -277,7 +278,7 @@ describe('advanceProjection under a cut-off section', () => {
     }
   });
 
-  it('DRAG-7.4: with no row below it, the states run from the top level to R’s last child, and no further', () => {
+  it('DRAG-7.4: below R’s overflow row with only B below R’s subtree, the states run from the top level to R’s last child, and no further', () => {
     const withoutT = deep.filter(i => i.id !== 'T');
     const anchor = { anchorId: R_OVERFLOW, side: 'after' } as const;
     const getAttachedChildren = (parentId: string) => getAttachedChildrenFrom(withoutT, parentId);
@@ -531,12 +532,47 @@ describe('reseedProjection', () => {
   });
 });
 
+// The drag session holds the projection a release reads, and is updated only when this says the
+// projection changed. A difference in any field is a difference to a reader, the gap and depth
+// being the same or not.
 describe('sameProjection', () => {
+  // S2's own pickup: gap 1, depth 0, at its own slot, resolving to P's child after S1.
+  const { projection } = advanceProjection(NO_PROJECTION, sample());
+  if (!projection) throw new Error('entering the section projects');
+  const changed = (fields: Partial<DescendantsProjection>) => sameProjection(projection, { ...projection, ...fields });
+
   it('compares what the projection draws: gap, depth, validity', () => {
-    const { projection } = advanceProjection(NO_PROJECTION, sample());
-    expect(sameProjection(projection, projection && { ...projection })).toBe(true);
-    expect(sameProjection(projection, projection && { ...projection, depth: 1 })).toBe(false);
+    expect(sameProjection(projection, { ...projection })).toBe(true);
+    expect(changed({ depth: 1 })).toBe(false);
+    expect(changed({ gap: 2 })).toBe(false);
+    expect(changed({ valid: false })).toBe(false);
     expect(sameProjection(null, null)).toBe(true);
     expect(sameProjection(projection, null)).toBe(false);
+  });
+
+  // The modal drawing a Stub's hidden slot changes `atOwnSlot` with the ghost where it was, and the
+  // release reads it: a stale one writes a move to where the Stub already is.
+  it('sees a change in whether it is the Stub’s own slot, with the gap and depth the same', () => {
+    expect(projection.atOwnSlot).toBe(true);
+    expect(changed({ atOwnSlot: false })).toBe(false);
+  });
+
+  it('sees a change in what a release resolves to, with the gap and depth the same', () => {
+    const { anchor } = projection.resolved;
+    expect(anchor).toEqual({ anchorId: 'S1', side: 'after' });
+    expect(changed({ resolved: { parentId: 'S3', anchor } })).toBe(false);
+    expect(changed({ resolved: { parentId: P, anchor: { anchorId: 'S3', side: 'after' } } })).toBe(false);
+    expect(changed({ resolved: { parentId: P, anchor: { anchorId: 'S1', side: 'before' } } })).toBe(false);
+    expect(changed({ resolved: { parentId: P, anchor: null } })).toBe(false);
+    expect(changed({ resolved: { parentId: P, anchor: anchor && { ...anchor } } })).toBe(true);
+  });
+
+  it('sees a change in the hidden-slot flag and in the overflow row the ghost sits beside', () => {
+    expect(changed({ slotHidden: true })).toBe(false);
+    const beside = { ...projection, overflowBeside: { ownerId: 'S1', side: 'before' as const } };
+    expect(sameProjection(projection, beside)).toBe(false);
+    expect(sameProjection(beside, { ...beside, overflowBeside: { ownerId: 'S1', side: 'after' } })).toBe(false);
+    expect(sameProjection(beside, { ...beside, overflowBeside: { ownerId: 'S2', side: 'before' } })).toBe(false);
+    expect(sameProjection(beside, { ...beside, overflowBeside: { ownerId: 'S1', side: 'before' } })).toBe(true);
   });
 });

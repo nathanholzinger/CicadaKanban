@@ -11,29 +11,36 @@ import {
 // board's, and the project sidebar's.
 //
 // dnd-kit's PointerSensor (activationConstraint: { distance: 5 }) needs a
-// real pointerdown, movement past that 5px threshold to activate the drag,
-// several intermediate pointermoves so its rect/collision recalculation
-// keeps up, then pointerup to drop. Playwright's `dragTo()`/`dragAndDrop()`
-// simulate native HTML5 DnD instead and never trigger dnd-kit at all.
+// real pointerdown, then movement past that 5px threshold to activate the
+// drag, then pointermoves it can sample as it goes (its rect and collision
+// recalculation keeps up with several, not one jump), then pointerup to drop.
+// Playwright's `dragTo()`/`dragAndDrop()` are mouse events too, but press on
+// the source, move to the target in a single step unless told otherwise, and
+// release: no movement past the activation distance first, no samples in
+// between, no pause where a pop-machine clock has to run, and a target found
+// once, before the board moves. A drag that has to hold at a point while a
+// clock runs, or aim at where the board has settled, goes through this helper.
 //
-// `resolveTarget` is a callback, not a static point: hovering another
-// column draws the dragged card's ghost there (the ordinal preview — at
-// its kept position for the middle band, first/last for the edge bands),
-// shifting whichever card used to sit at that slot. A point
-// measured once before the drag started can go stale the moment that
-// reflow happens, so this approaches in two passes: once toward the
-// target's pre-drag position (close enough to cross into the target column
-// and draw the ghost), then again after re-measuring the target's
-// post-reflow position for the final, precise approach. Every measurement
-// is in layout space (`boxOf`), which is the space dnd-kit resolves
-// collisions in — see its comment for the trap that avoids.
+// `resolveTarget` is a callback, not a static point: the board reflows under
+// a live drag (the ghost opens a gap, a Card grows or shrinks), shifting
+// whichever card used to sit where the target was. A point measured once
+// before the drag started can go stale the moment that happens, so this
+// approaches in two passes: once toward the target's pre-drag position, then
+// again after re-measuring the target's post-reflow position for the final,
+// precise approach. Every measurement is in layout space (`boxOf`), which is
+// the space dnd-kit resolves collisions in — see its comment for the trap
+// that avoids.
 //
-// Under the pop machine a release in another column resolves by *band* of
-// that column's region unless the cursor rested there past the pop
-// threshold, so a cross-column `dragTo` onto a card lands by the band the
-// card sits in, not the card. A spec that needs a particular band seeds the
-// pop threshold (`POP_OUT_ONLY`), waits for the pop out (`awaitPoppedOut`),
-// and aims at the band.
+// A drag is locked in the context it started in, and a release commits that
+// context's own within-action wherever the cursor rests: hovering another
+// column previews nothing there, and a cross-column `dragTo` released before
+// a clock has run lands in the origin. Once the pop-out clock (or distance) has
+// popped the drag out it is at Board layer, where the hovered column's *band*
+// decides a release; resting in a column's middle band past the pop-in delay
+// locks the drag into that column instead, and that column's within-action
+// applies. A spec that needs a particular band seeds the pop threshold
+// (`POP_OUT_ONLY`), waits for the pop out (`awaitPoppedOut`), and aims at the
+// band.
 export type Point = { x: number; y: number };
 
 // Pointer down on `source` and past the activation distance — the drag is
