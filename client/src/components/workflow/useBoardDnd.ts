@@ -50,7 +50,12 @@ import type { AnchorRelation } from '../../lib/hierarchyPlacement';
 import { isStub } from '../../lib/isStub';
 import { isColumnData, namedAnchorFor, resolveBoardCollisions, type CollisionSession } from './dragCollision';
 import { sendItemMove, toRequest } from './dragRequest';
-import { clampToCurrentContext, overlayShapeFor, reanchorOverlayTransform } from './dragOverlayGeometry';
+import {
+  clampToCurrentContext,
+  overlayShapeFor,
+  reanchorOverlayTransform,
+  type OverlayRect,
+} from './dragOverlayGeometry';
 import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
 import {
   childRegionAt,
@@ -185,6 +190,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // know whether the *current* form differs from the one the pointer's
   // original offset was measured against. Set by `beginDragAt`.
   const pickupFormRef = useRef<OverlayForm>('short-card');
+  // The carried copy's rect at pickup: where dnd-kit holds the DragOverlay for
+  // the whole drag (fixed at the source's first measured rect, moved only by
+  // the modifiers' transform), and the Card's width the pointer's grab is
+  // measured against. Taken from the first rect `clampToContext` sees, since
+  // `onDragStart` fires before dnd-kit has measured the source. Cleared by
+  // `handleDragStart`.
+  const pickupRectRef = useRef<OverlayRect>(null);
   // The row `dropAnchorFor` names right now — the one the blue line draws —
   // set from dnd-kit's `onDragMove` (`handleDragMove`), since this hook
   // isn't rendered under `DndContext` and can't read `useDndContext()` the
@@ -471,23 +483,30 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // that shrinks leaves the pointer beside it, not on it). Targets the
   // overlay shape's width and `CARRIED_STUB_HEIGHT_PX` — the same numbers
   // the render side already uses to size the Stub — rather than dnd-kit's
-  // own `draggingNodeRect`: swapping the overlay's rendered shape leaves
-  // that measurement stuck for a stretch (its ResizeObserver is bound once,
-  // at the DragOverlay's *first* mount, to whatever the pickup form's
-  // content happened to be), so it can't be trusted as the target's own
-  // dimensions here. Folding the
+  // own `draggingNodeRect`: that measurement's width and height catch up with
+  // the switch a few frames late (its ResizeObserver, bound at the
+  // DragOverlay's first mount), and its top and left stay where it was first
+  // measured.
+  // The transform is measured from `pickupRectRef`, where dnd-kit holds the
+  // overlay, and never from the source's live rect (`activeNodeRect`): once a
+  // Free Card zooms into a section, its row there is the ghost's, which sits
+  // elsewhere than the Card did, and a translate measured from the ghost
+  // lands the copy that far from the cursor — with the clamp and dnd-kit's
+  // collision rect, which are both the overlay's rect plus that translate,
+  // displaced the same way. Folding the
   // re-anchor in ahead of `clampToCurrentContext` means the clamp bounds
   // where the copy will *actually* sit post-re-anchor, and the snap tween
   // (already started by the same contextKey change that changes the form)
   // interpolates the whole move — position and re-anchor together — in one
   // motion, exactly like any other pop.
   const clampToContext = useCallback<Modifier>(
-    ({ transform, draggingNodeRect, activatorEvent, activeNodeRect }) => {
+    ({ transform, draggingNodeRect, activatorEvent }) => {
+      if (!pickupRectRef.current) pickupRectRef.current = draggingNodeRect;
       const pop = sessionRef.current?.pop ?? null;
       const shape = overlayShapeFor(pop, regionsRef.current);
       const reanchored = reanchorOverlayTransform(
         transform,
-        activeNodeRect,
+        pickupRectRef.current,
         activatorEvent,
         pointerRef.current,
         pickupFormRef.current,
@@ -563,6 +582,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // Reset alongside the other per-drag state, though the next
     // `onDragMove` overwrites it regardless of what a previous drag left.
     namedAnchorRef.current = null;
+    pickupRectRef.current = null;
 
     // Whatever this item's placement was *before* this drag — non-null
     // only for a re-drag of an item whose earlier write is still pending

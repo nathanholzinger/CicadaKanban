@@ -170,6 +170,12 @@ export default function KanbanCard({
 
   const style = {
     ...sortableStyle,
+    // The zoom into this Card clears the column's shuffle in the render that mounts its section's
+    // rows, and dnd-kit measures a row once, as it mounts. A Card still sliding back to rest then
+    // leaves every row's measured rect off by what is left of the slide, for the rest of the drag:
+    // the collision, `over.rect` and the sortable shuffle of the rows all read from it. So the
+    // Card that holds the drag doesn't slide.
+    ...(lockedHere ? { transition: 'none' } : {}),
     ...(isGhostLike && !overlayIsStub ? { height: SHORT_CARD_HEIGHT_PX } : {}),
     ...(overlayIsStub ? { width: overlayWidthPx ?? undefined } : {}),
   };

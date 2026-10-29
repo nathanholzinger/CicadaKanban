@@ -59,12 +59,15 @@ export function overlayShapeFor(pop: PopSession | null, regions: readonly DragRe
 //
 // Targets `stubWidthPx` (the render side's own `overlayWidthFor`) and the
 // fixed `CARRIED_STUB_HEIGHT_PX` rather than dnd-kit's live
-// `draggingNodeRect`, which doesn't follow the form switch: the
-// DragOverlay's ResizeObserver stays bound to the pickup form's content.
-// `pickupRect` (`activeNodeRect`, the *source* row, never swapped out
-// mid-drag) stands in for "the overlay's own resting position": this
-// expects the overlay to stay positioned at the pickup rect for the whole
-// drag, whichever form it draws.
+// `draggingNodeRect`, which doesn't follow the form switch at once: the
+// DragOverlay's ResizeObserver stays bound to the pickup form's content, and
+// its top and left stay where the overlay was first measured.
+// `pickupRect` is the carried copy's rect at pickup: where dnd-kit holds
+// the overlay for the whole drag, whichever form it draws, with the
+// transform the only thing that moves it. It has to be that rect and not the
+// source row's live one (`activeNodeRect`): a Free Card that zooms into a
+// section has its row swapped for the ghost's, which sits elsewhere, and a
+// translate measured from there lands the copy that far from the pointer.
 //
 // Never compensates back *out* of Stub form (`currentForm !== 'stub'`):
 // growing larger while keeping the same pickup offset can never push the

@@ -207,6 +207,16 @@ active-context outline, the drop line's shape).
   section it is a row of (`sectionCardId`). Never read `data.type` by hand.
 - **The anchor a drop names:** `dragCollision.ts::namedAnchorFor`, the one call shape
   the blue line, the pop machine and the release all use.
+- **What dnd-kit measures once, and from where:**
+  - **A droppable is measured as it mounts.** A section's rows mount at the zoom, in the
+    render that clears the column's shuffle, so the Card that holds the drag doesn't slide
+    (`KanbanCard.tsx` turns its sortable transition off while `lockedHere`). A Card still
+    sliding then leaves every row's rect off, and the collision, `over.rect` and the rows'
+    own shuffle all read it.
+  - **The DragOverlay is held at the source's first rect.** A transform put on the carried
+    copy is measured from `useBoardDnd.ts::pickupRectRef`, which `reanchorOverlayTransform`
+    takes as its `pickupRect`. Never from `activeNodeRect`, the source's live rect: it moves
+    once a Free Card's row becomes the ghost row in a section.
 - **The rows that travel with the dragged item:** `dragClassification.ts`'s
   `subtreeIds`, read by both the projection's exclusion and
   `dragCollision.ts::travelingRowsFor` (which the hierarchy modal's placement reads too).

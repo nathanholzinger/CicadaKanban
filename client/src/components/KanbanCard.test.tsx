@@ -114,4 +114,16 @@ describe('a Card the drag is locked at', () => {
 
     expect(getByRole('article', { name: CARD.title })).not.toHaveAttribute('data-active-context');
   });
+
+  // The zoom clears the column's shuffle in the render that mounts the section's rows, and dnd-kit
+  // measures each row once, as it mounts: a Card still sliding back then leaves every row's
+  // measured rect off by what is left of the slide, for the rest of the drag.
+  it('does not slide: its sortable transition is off, so its rows are measured where it rests', () => {
+    const idle = renderCard();
+    expect(idle.getByRole('article', { name: CARD.title })).not.toHaveStyle({ transition: 'none' });
+    idle.unmount();
+
+    const locked = renderCard({}, { session: lockedAtP() });
+    expect(locked.getByRole('article', { name: CARD.title })).toHaveStyle({ transition: 'none' });
+  });
 });
