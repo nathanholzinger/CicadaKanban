@@ -92,7 +92,7 @@ wiki.
 ## What You Edit
 
 You edit the wiki, and any plan: anyone may, and the template marks which
-sections are yours to fill. You never edit code, the test plans, the `CLAUDE.md`
+sections are yours to fill. You never edit code, the test plans, the `AGENTS.md`
 files or `.claude/`; a change you need there is a handoff.
 
 ## Where Things Live

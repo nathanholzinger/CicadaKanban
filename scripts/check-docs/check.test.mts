@@ -201,6 +201,7 @@ describe('bare-case-id', () => {
 describe('claude-ref', () => {
   it('flags a code comment that names an agent-instruction file', () => {
     assert.deepEqual(rulesIn(CODE, '// Read CLAUDE.md first.'), ['claude-ref']);
+    assert.deepEqual(rulesIn(CODE, '// Read AGENTS.md first.'), ['claude-ref']);
     assert.deepEqual(rulesIn(CODE, '// Per .claude/guides.'), ['claude-ref']);
   });
 

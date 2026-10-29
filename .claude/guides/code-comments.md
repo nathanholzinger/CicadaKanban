@@ -67,7 +67,7 @@ Often the tag is the only thing wrong. When the tag stands in for a reason, writ
 
 **The reason is the point: a ruling without its reason doesn't count.** "Deliberately separate" on its own invites the next reviewer to merge the two anyway.
 
-**(g) Never name `.claude/` files or `CLAUDE.md` files.** Those describe how agents work, not what the code does.
+**(g) Never name `.claude/` files or `AGENTS.md` files.** Those describe how agents work, not what the code does.
 
 ## Module headers
 
@@ -76,7 +76,7 @@ A header says what the file owns, and what it deliberately doesn't where that's 
 - **Every shared-logic module, whatever its name:** `server/src/lib/`, `client/src/lib/`, and the drag layer's modules in `client/src/components/workflow/`. Those are where a reader looks before writing a new helper.
 - **A test file only where its name doesn't say what it covers.**
 - **Two to four lines is the norm, not a cap.** A state machine's header also names its states and what moves it between them.
-- **A header is not a changelog.** Rationale for one function goes beside that function; rules that span modules go in the directory's `CLAUDE.md`.
+- **A header is not a changelog.** Rationale for one function goes beside that function; rules that span modules go in the directory's `AGENTS.md`.
 
 ## Contract comments on exported functions
 
@@ -110,7 +110,7 @@ An exported function whose contract isn't obvious from its name and types may ca
 | (c) bare section numbers | `bare-section` |
 | (c) a pointer to a page or section that doesn't exist | `wiki-pointer` |
 | (e) a `<file>::<symbol>` that doesn't resolve, or names an ambiguous file | `symbol-ref` |
-| (g) naming `.claude/` or `CLAUDE.md` | `claude-ref` |
+| (g) naming `.claude/` or `AGENTS.md` | `claude-ref` |
 
 The checker's one other rule, `wiki-code-name`, is the wiki's, not a comment's: a wiki page names no code (`.claude/guides/documentation-standards.md`, "What the checker checks").
 

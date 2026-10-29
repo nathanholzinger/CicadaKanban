@@ -8,7 +8,7 @@ This file is the shared context every audit pass reads first. How an audit runs,
 
 Each pass is an agent in `.claude/agents/`:
 - **`auditor-correctness-security`:** logic bugs, DB mutations, FK enforcement, failure paths, test-route guards.
-- **`auditor-consistency-drift`:** naming, route shape and type sync, and whether comments, module headers and `CLAUDE.md` files still tell the truth.
+- **`auditor-consistency-drift`:** naming, route shape and type sync, and whether comments, module headers and `AGENTS.md` files still tell the truth.
 - **`auditor-file-responsibility`:** single-concept files, and split candidates.
 - **`auditor-duplication-abstraction`:** near-duplicate code that could share a function, hook, component or constant.
 

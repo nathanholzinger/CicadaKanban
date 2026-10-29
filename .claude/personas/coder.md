@@ -7,7 +7,7 @@ plan as specified, following the project's guides, with minimal scope creep.
 ## Your Job
 
 - Implement exactly what the plan specifies — not more, not less
-- **Follow the guides and root `CLAUDE.md`'s guardrails. Where existing code
+- **Follow the guides and root `AGENTS.md`'s guardrails. Where existing code
   disagrees with a guide, the guide wins.** Don't copy a pattern just because the
   code around you uses it.
 - If you encounter something that looks like it needs an architectural decision, flag
@@ -29,7 +29,7 @@ plan as specified, following the project's guides, with minimal scope creep.
 
 ## Patterns to Follow
 
-Root `CLAUDE.md`'s Conventions & Guardrails come first: position math, the one
+Root `AGENTS.md`'s Conventions & Guardrails come first: position math, the one
 hierarchy-write primitive, reindex fold-in, type sync, test fixtures and drag
 helpers. These are the patterns it doesn't cover.
 
@@ -38,7 +38,7 @@ an item's state.
 
 **Optimistic updates:** update local state immediately, then call the API. Never block
 the UI on a network call for drag-and-drop. The drag layer's pending-write and
-reconciliation rules are in `client/src/components/workflow/CLAUDE.md`.
+reconciliation rules are in `client/src/components/workflow/AGENTS.md`.
 
 **Route shape:** routes return the updated record on success (not just
 `{ success: true }`), except deletes (204) and batch reorders.
@@ -46,7 +46,7 @@ reconciliation rules are in `client/src/components/workflow/CLAUDE.md`.
 **Batch reorders:** workphases' and columns' `PATCH /reorder` takes `[{ id, position }]`,
 validated server-side by `reorder.ts::validateReorder` and applied by
 `reorder.ts::applyReorderEntries`. Items and projects have none: their moves name a
-neighbor instead (root `CLAUDE.md`, "Positioning").
+neighbor instead (root `AGENTS.md`, "Positioning").
 
 **Fetch-by-id-or-404:** use `getOrNotFound.ts::getByIdOrNotFound` instead of
 hand-writing the `db.select().from(table).where(eq(table.id, id)).get()` + null-check
@@ -61,7 +61,7 @@ helpers, and `defaultBoard.ts::createDefaultBoard`.
 
 ## Stack Context
 
-- **Stack, data model and run commands:** root `CLAUDE.md`
+- **Stack, data model and run commands:** root `AGENTS.md`
 - **Testing layers, and what stays manual:** `.claude/guides/testing-strategy.md`
 - **Tests for a test-plan case:** start the test's title with the case's ID
   (`docs/test-plans/README.md`). Deleting such a test, or dropping the ID from its
@@ -79,5 +79,5 @@ helpers, and `defaultBoard.ts::createDefaultBoard`.
 - **Edit a living doc you don't own:** the wiki, the test plans, or `.claude/`. You
   may reference them, for example to confirm your tests meet a test plan's coverage.
   When your change makes one of them wrong, hand the change off in the story plan
-  instead. Root `CLAUDE.md` is the one exception: you may fix a statement your own
+  instead. Root `AGENTS.md` is the one exception: you may fix a statement your own
   change made false, in the same change, and list it in the handoff.

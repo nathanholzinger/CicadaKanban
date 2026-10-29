@@ -129,7 +129,7 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   same conversion. The `parent_id` subtree walk stays app-side by
   design (soft ref, "are you sure" delete).
 - **Board-scoped drag/drop conventions** (pop machine, drop bands, pure modules) live in
-  `client/src/components/workflow/CLAUDE.md` — loaded automatically when working in
+  `client/src/components/workflow/AGENTS.md` — read it before working in or reviewing
   that directory.
 
 ---
@@ -189,7 +189,7 @@ KanbanApp/
 │   └── test-plans/      ← feature-organized test-case catalog, folder-aligned with wiki/ (a page of shared rules has none)
 ├── scripts/             ← repo tooling (check-docs, audit-scope)
 ├── server/src/          ← see module headers in lib/*.ts for what each shared module owns
-├── client/src/          ← see module headers; the drag layer's conventions are in components/workflow/CLAUDE.md
+├── client/src/          ← see module headers; the drag layer's conventions are in components/workflow/AGENTS.md
 ├── tests/               ← Playwright E2E (api/, helpers/, pages/, ui/)
 └── bruno/               ← saved HTTP requests (manual API testing)
 ```

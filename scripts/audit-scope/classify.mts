@@ -22,7 +22,7 @@ export interface FileFacts {
   newText: string;
 }
 
-const isAgentInstructionFile = (file: string): boolean => file === 'CLAUDE.md' || file.endsWith('/CLAUDE.md');
+const isAgentInstructionFile = (file: string): boolean => /(?:^|\/)(?:AGENTS|CLAUDE)\.md$/.test(file);
 
 const sameLines = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((line, i) => line === b[i]);

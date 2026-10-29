@@ -32,7 +32,7 @@ Each section says who fills it in. The skeleton at the end is for copying.
   - behavior decisions made while building, for the PO to rule on;
   - Planned passages now built;
   - passages superseded;
-  - implementation passages to place in a module header, a site comment or a directory `CLAUDE.md`;
+  - implementation passages to place in a module header, a site comment or a directory `AGENTS.md`;
   - test-plan cases whose tests were deleted or lost their case ID;
   - wiki sections added, changed, moved or removed *(the PO fills this in at close)*.
 

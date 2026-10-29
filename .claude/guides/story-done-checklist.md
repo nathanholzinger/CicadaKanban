@@ -34,7 +34,7 @@ What happens when a story's code is complete, in order, and what must hold befor
 - No Open question is still waiting on the PO, and no case in the Scope is `Pending PO`.
 - Every Inbound deferral is done, or re-routed to a destination that names it.
 - The audit is closed out as `.claude/guides/audit-workflow.md` describes: every required finding has a disposition, and every route out of it has landed in a plan.
-- The handoff has been applied by each owner: the wiki, the test plans, and root `CLAUDE.md`.
+- The handoff has been applied by each owner: the wiki, the test plans, and root `AGENTS.md`.
 
 ## A tech-debt story
 

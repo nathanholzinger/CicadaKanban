@@ -94,6 +94,8 @@ describe('readingOf', () => {
     const newText = lines('# Notes', 'More text.');
     assert.equal(readingOf(facts({ path: 'CLAUDE.md', oldText: '# Notes', newText })), 'drift');
     assert.equal(readingOf(facts({ path: 'client/src/CLAUDE.md', isNew: true, oldText: null, newText })), 'drift');
+    assert.equal(readingOf(facts({ path: 'AGENTS.md', oldText: '# Notes', newText })), 'drift');
+    assert.equal(readingOf(facts({ path: 'client/src/AGENTS.md', isNew: true, oldText: null, newText })), 'drift');
   });
 });
 

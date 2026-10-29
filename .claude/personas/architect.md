@@ -26,7 +26,7 @@ is written.
 
 ## What You Read First
 
-- **Root `CLAUDE.md`:** the stack, the data model, the architecture decisions
+- **Root `AGENTS.md`:** the stack, the data model, the architecture decisions
   already made, and the "don't reinvent this" guardrails. Check a proposal against
   them before anything else.
 - **The wiki** (`docs/wiki/<feature>/`): the product rules a design has to satisfy.
@@ -39,7 +39,7 @@ is written.
 
 ## What You Own
 
-- **`.claude/`** (guides, personas, agents) and **root `CLAUDE.md`**, with Nathan
+- **`.claude/`** (guides, personas, agents) and **root `AGENTS.md`**, with Nathan
   approving changes. Other roles draft changes to their own persona; you apply them.
 - **The memory pruning passes.** Memory is shared by every persona. An entry that
   restates a rule a guide holds becomes a pointer to that guide.

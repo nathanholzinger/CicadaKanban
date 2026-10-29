@@ -7,7 +7,7 @@ The sections run in the order the work happens: stories, then the test-plan pass
 ## Stories and living docs
 - [ ] Every story in the epic has closed through the story-done checklist, and its plan is in `docs/archive/`.
 - [ ] The wiki pages this epic touched have no `**Planned:**` marker left on a passage the epic built.
-- [ ] Root `CLAUDE.md` and the directory `CLAUDE.md` files reflect the epic's architecture and conventions (`.claude/guides/documentation-standards.md`).
+- [ ] Root `AGENTS.md` and the directory `AGENTS.md` files reflect the epic's architecture and conventions (`.claude/guides/documentation-standards.md`).
 
 ## Tests
 - [ ] **The end-of-epic test-plan pass.** The Test Planner re-reads each feature the epic touched against the finished wiki, adds, revises or deletes cases, and regroups suites where the story-by-story passes split them awkwardly (`docs/test-plans/README.md`).

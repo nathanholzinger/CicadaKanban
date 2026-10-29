@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import { checkFile } from './check.mts';
 import {
   DEFAULT_SCOPE,
   TRANSIENT_DIR,
   TRANSIENT_FOLDERS,
+  defaultFiles,
   isBruno,
   isCheckable,
   isCode,
@@ -39,6 +41,12 @@ describe('the transient folders', () => {
 });
 
 describe('the docs layout', () => {
+  it('includes root and nested agent instructions in the default scope', () => {
+    const files = defaultFiles(path.resolve(import.meta.dirname, '../..'));
+    assert.ok(files.includes('AGENTS.md'));
+    assert.ok(files.includes('client/src/components/workflow/AGENTS.md'));
+  });
+
   it('reads a wiki page from its folder or its README, and a file as a page only by its README', () => {
     assert.equal(wikiPageAt('docs/wiki/item-attachment/README.md'), 'item-attachment');
     assert.equal(wikiPageAt('docs/wiki/item-attachment/'), 'item-attachment');

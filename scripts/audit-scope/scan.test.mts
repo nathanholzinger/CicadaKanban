@@ -103,7 +103,7 @@ describe('a range scanned end to end', () => {
     repo = makeTestRepo('audit-scope-');
     root = repo.root;
 
-    write('CLAUDE.md', lines('# Notes', '', 'One line.'));
+    write('AGENTS.md', lines('# Notes', '', 'One line.'));
     write(
       `${A}kept.ts`,
       lines(
@@ -163,7 +163,7 @@ describe('a range scanned end to end', () => {
     git('tag', 'story-audited');
 
     // The range's first commit.
-    write('CLAUDE.md', lines('# Notes', '', 'One line.', 'Another line.'));
+    write('AGENTS.md', lines('# Notes', '', 'One line.', 'Another line.'));
     write(
       `${A}kept.ts`,
       lines(
@@ -317,7 +317,7 @@ describe('a range scanned end to end', () => {
   it('gives the drift pass alone a file changed in its comments only, in its imports only, or an agent-instruction file', () => {
     assert.equal(scanned(`${A}comments.ts`).reading, 'drift');
     assert.equal(scanned(`${A}imports.ts`).reading, 'drift');
-    assert.equal(scanned('CLAUDE.md').reading, 'drift');
+    assert.equal(scanned('AGENTS.md').reading, 'drift');
   });
 
   it('leaves out a file whose only change was formatting', () => {

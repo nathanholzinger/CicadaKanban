@@ -28,7 +28,7 @@ Decide how a create and an edit treat an item's position, then state that in the
 
 **What it replaces.** wiki item-positioning §1 says an item's position is one scalar, and §2 compares it in one scope chosen by the item's state: its parent's attached children, the workflow's Free items, or none. So a detached child has no place among its parent's other children. That page's first Open question asks whether a Free child needs one, "if a surface ever shows all of a parent's children together". Nathan's direction answers yes; the PO states it.
 
-**Projects are in scope too.** Item and project positions share one anchor-and-side layer (root `CLAUDE.md`, "One position math layer"), and their tree operations are kept symmetrical. Whatever is decided for items' create and edit applies to projects' as well. A project has no attached or Free state, so its one position is already a sibling order: the items' new sibling value is the same kind of value, and should share the projects' code where it can. The Free order stays items-only.
+**Projects are in scope too.** Item and project positions share one anchor-and-side layer (root `AGENTS.md`, "One position math layer"), and their tree operations are kept symmetrical. Whatever is decided for items' create and edit applies to projects' as well. A project has no attached or Free state, so its one position is already a sibling order: the items' new sibling value is the same kind of value, and should share the projects' code where it can. The Free order stays items-only.
 
 **Out of scope:**
 - the move's refusal of a final position, which wiki positioning §2 and TC-2.32 settle;
@@ -100,4 +100,4 @@ Whatever the decisions are, later work inherits them in these places:
 - **The PO** states them in wiki positioning §2, and in item-attachment §2a for which writes can name a workphase. item-positioning §1 and §2 are rewritten for two values, and its first Open question comes off. The PO also answers the carried-in PO questions.
 - **The Test Planner** writes their cases. TC-2.32 covers only the move's refusal today. The scope cases (TC-2.13 to TC-2.17, TC-3.4, TC-7.10) are rewritten against the new §2, with the carried-in Test Planner items.
 - **The API contract epic's** items and projects schemas encode them.
-- **Root `CLAUDE.md`** (the Architect): the data model's `items` row, and "One position math layer".
+- **Root `AGENTS.md`** (the Architect): the data model's `items` row, and "One position math layer".

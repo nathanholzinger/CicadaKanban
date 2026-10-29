@@ -131,7 +131,7 @@ whether alone or with its project
 [`../wiki/project-tree/`](../wiki/project-tree/README.md) §9).
 
 **Today:** the database deletes them with the item (`ON DELETE CASCADE`,
-migration 0009; root `CLAUDE.md`), and `projects.test.ts`'s cascade test
+migration 0009; root `AGENTS.md`), and `projects.test.ts`'s cascade test
 pins it for a project's delete. The label itself survives, since labels
 are global. No test case states it, since no page does.
 

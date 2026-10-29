@@ -48,7 +48,7 @@ const BOARD_ALTERNATION = BOARD_COMPONENTS.join('|');
 export const DEFAULT_CONFIG: ScopeConfig = {
   groups: [
     { name: 'S1t', pattern: '^server/tests/' },
-    { name: 'S1', pattern: '^(?:CLAUDE\\.md$|server/src/|server/drizzle/)' },
+    { name: 'S1', pattern: '^(?:(?:AGENTS|CLAUDE)\\.md$|server/src/|server/drizzle/)' },
     { name: 'E2E', pattern: '^tests/' },
     {
       name: 'C1t',

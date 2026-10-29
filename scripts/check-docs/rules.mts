@@ -228,7 +228,7 @@ function bareCaseIds(text: string, hit: Hit): void {
 }
 
 function claudeRefs(text: string, hit: Hit): void {
-  for (const match of text.matchAll(/\.claude\/|\bCLAUDE\.md\b/g)) {
+  for (const match of text.matchAll(/\.claude\/|\b(?:AGENTS|CLAUDE)\.md\b/g)) {
     hit('claude-ref', match.index, `code comments don't name agent-instruction files ("${match[0]}")`);
   }
 }

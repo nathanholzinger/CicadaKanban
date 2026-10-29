@@ -28,9 +28,9 @@ The owner edits the doc. Everyone else hands changes off (see Handoffs).
 | `docs/wiki/**` | living | PO | Hand changes off to the PO |
 | `docs/test-plans/**` | living | Test Planner | The Test Reconciler writes each case's status and Automation test line. Everyone else hands changes off to the Test Planner |
 | Code comments and module headers | living | Whoever changes the code, in the same change | — |
-| `bruno/` requests and their `docs` blocks | living | Whoever changes the endpoint a request covers, in the same change | A `docs` block follows `.claude/guides/code-comments.md`'s rules. The checker reads it as Markdown ("What the checker checks"), so rule (g), naming no `.claude/` or `CLAUDE.md` file, holds by hand |
-| A directory's `CLAUDE.md` | living | Whoever changes code in that directory, in the same change | — |
-| Root `CLAUDE.md` | living | Architect | May fix a statement their own change made false, in the same change, and list it in the handoff |
+| `bruno/` requests and their `docs` blocks | living | Whoever changes the endpoint a request covers, in the same change | A `docs` block follows `.claude/guides/code-comments.md`'s rules. The checker reads it as Markdown ("What the checker checks"), so rule (g), naming no `.claude/` or `AGENTS.md` file, holds by hand |
+| A directory's `AGENTS.md` | living | Whoever changes code in that directory, in the same change | — |
+| Root `AGENTS.md` | living | Architect | May fix a statement their own change made false, in the same change, and list it in the handoff |
 | `.claude/` guides, personas, agents | living | Architect; Nathan approves | A role drafts changes to its own persona on request |
 | Agent memory | living, shared by every persona | Architect runs the pruning passes | Any agent writes memories |
 | Roadmaps, epic plans, story plans | transient | Whoever writes it (usually Nathan, the Architect or the PO) | Anyone may write or edit one; each role fills in its own template sections |
@@ -48,8 +48,8 @@ The wiki describes behavior, not code. How the code works lives in the code's ow
 | Scope | Home | What it holds |
 |---|---|---|
 | One file | Its module header, where the file needs one (`.claude/guides/code-comments.md`) | What the file owns, and what it deliberately doesn't. Two to four lines is the norm, not a cap: a state machine's header also names its states and what moves it between them. |
-| One directory | That directory's `CLAUDE.md` | The mental model, rules that span modules, "don't reinvent this" rules, and one line per file. Never a second copy of a module header. |
-| The whole repo | Root `CLAUDE.md` | Repo-wide architecture and conventions |
+| One directory | That directory's `AGENTS.md` | The mental model, rules that span modules, "don't reinvent this" rules, and one line per file. Never a second copy of a module header. |
+| The whole repo | Root `AGENTS.md` | Repo-wide architecture and conventions |
 | Process | `.claude/guides/` | How the work is done |
 
 There is no separate consolidated implementation doc.
@@ -67,7 +67,7 @@ A reference should run from the thing that changes more to the thing that change
   - **code,** as `<file>::<symbol>`, never a line number. The file name alone when it's unique, otherwise the shortest path that makes it unique;
   - **a feature folder,** by relative link. The wiki and the test plans share folder names.
 - **The wiki names no code.** No file paths, function names, constants, or DOM and test attributes. Behavior surfaces are fine: API routes and field names, status codes, and tuning-panel value names.
-- **Code comments never name `.claude/` files or `CLAUDE.md` files.**
+- **Code comments never name `.claude/` files or `AGENTS.md` files.**
 - **Test plan ↔ test file:** `docs/test-plans/README.md` defines how a case and its tests point at each other.
 
 **Wiki page names and section numbers are a contract.** Code pointers and test plans cite them, and the test-plan folders mirror the page names, except for a page of shared rules, which has no catalog (the wiki README).
@@ -111,13 +111,13 @@ How the marker is written on a page is the wiki README's.
 **A handoff is a request; the owner decides.** Code follows the wiki, not the other way round. A behavior the code already has becomes a rule only when it's ruled on. If the ruling goes the other way, the code changes back.
 
 - **During a story:**
-  - changes to the wiki, test plans or root `CLAUDE.md` go in the story plan's living-docs handoff;
+  - changes to the wiki, test plans or root `AGENTS.md` go in the story plan's living-docs handoff;
   - questions for another role go in the plan's Open questions, addressed to that role;
   - a ruling Nathan makes while the story is open goes into the wiki when he makes it, marked Planned if it isn't built yet, so the Test Planner can write cases before close. The plan's Amendments records it.
 - **At story close:** the owners apply the handoff, in the order `.claude/guides/story-done-checklist.md` sets.
 - **Outside a story:** the handoff goes in your report to Nathan.
 
-**Living docs you do own get fixed in the same change** that made them wrong: comments, module headers, and the `CLAUDE.md` of the directory you changed.
+**Living docs you do own get fixed in the same change** that made them wrong: comments, module headers, and the `AGENTS.md` of the directory you changed.
 
 ## The archive
 
@@ -131,7 +131,7 @@ How the marker is written on a page is the wiki README's.
 
 ## What the checker checks
 
-`npm run check:docs` enforces the mechanical parts of these rules in code, tests, `CLAUDE.md` files, `.claude/`, the wiki, the test plans and the `docs` blocks of `bruno/` requests, which it reads as Markdown (the rest of a `.bru` file isn't prose, and isn't read). It flags:
+`npm run check:docs` enforces the mechanical parts of these rules in code, tests, `AGENTS.md` files, `.claude/`, the wiki, the test plans and the `docs` blocks of `bruno/` requests, which it reads as Markdown (the rest of a `.bru` file isn't prose, and isn't read). It flags:
 - story, epic, phase, audit, ledger and decision IDs, and dates;
 - section pointers in the wrong form, or pointing at a section that doesn't exist;
 - `<file>::<symbol>` references that don't resolve;
@@ -148,4 +148,4 @@ How the marker is written on a page is the wiki README's.
 // check-docs-ignore-next-line transient-id -- a date-parsing fixture, not provenance
 ```
 
-Everything the checker can't judge, such as history narration, restated rules and wrong claims, is the writer's and the reviewer's job. A code quality audit takes only a wrong claim, in code: a comment, module header or `CLAUDE.md` that's wrong or misleading about the code.
+Everything the checker can't judge, such as history narration, restated rules and wrong claims, is the writer's and the reviewer's job. A code quality audit takes only a wrong claim, in code: a comment, module header or `AGENTS.md` that's wrong or misleading about the code.

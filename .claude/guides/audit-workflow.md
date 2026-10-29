@@ -35,7 +35,7 @@ The range runs from that base to HEAD when the audit starts. It takes in the pre
 | Formatting only, in commits listed in `.git-blame-ignore-revs` | None |
 | Code moved unchanged from another file, written before the base | None (see What each pass gets) |
 | Comments, test titles and imports only, in any mix, with nothing else in the file changed over the range | Drift |
-| A `CLAUDE.md` file, root or directory | Drift |
+| An `AGENTS.md` file, root or directory | Drift |
 | Any other code, tests or config | All four |
 | Docs outside the code: the wiki, test plans, plans, guides, personas and agents | None |
 
@@ -67,7 +67,7 @@ Spawn the four audit agents in parallel:
 | Agent | Its lens |
 |---|---|
 | `auditor-correctness-security` | Does the code do what it claims, and can it be made to misbehave? |
-| `auditor-consistency-drift` | Does it match project convention, and do its comments, module headers and `CLAUDE.md` files still tell the truth? |
+| `auditor-consistency-drift` | Does it match project convention, and do its comments, module headers and `AGENTS.md` files still tell the truth? |
 | `auditor-file-responsibility` | Does a file own more than one concept? |
 | `auditor-duplication-abstraction` | Is the same logic in more than one place, and would sharing it reduce risk? |
 

@@ -331,7 +331,7 @@ A5c writes the API's rules for boards, columns and Unsorted out in full, and tre
   - The tooltip mentions only uncovered workphases.
 - **The inherited view** (A5c's G5). A project that inherits its workflow sees its ancestor's board, filtered to its own items, with board and workphase management hidden.
   - It shows only the project's own items, not those of its descendants that inherit the same workflow. The owner's board shows them all.
-  - Boards are due to become project-owned, paired with URL routing (root `CLAUDE.md`), which would rework this view.
+  - Boards are due to become project-owned, paired with URL routing (root `AGENTS.md`), which would rework this view.
 - **A board's show-attached-children setting:** whether Cards open with their attached children showing.
 - **A project that uses no workflow** (A5c's G4), its own or an ancestor's, has no board. An item created there with no workphase shows nowhere. `epic-4-decisions.md` §12's ATT-5.11 asks a related question about workflow-less projects, which that epic's status model may settle.
 

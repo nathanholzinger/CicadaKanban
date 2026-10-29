@@ -91,7 +91,7 @@ The carried Stub is as wide as a row of the section. On the board, that's the Ca
 
 ### For the build
 
-These are the places where the decisions meet the drag layer's existing rules (`client/src/components/workflow/CLAUDE.md`).
+These are the places where the decisions meet the drag layer's existing rules (`client/src/components/workflow/AGENTS.md`).
 
 **E1. One region per Card, on its root.**
 - `descendants:<id>` moves from the section's wrapper to the Card's root element, where `card:<id>` is today.
@@ -132,8 +132,8 @@ These are the places where the decisions meet the drag layer's existing rules (`
   - **Expected:** `drag-5-stub-detach.spec.ts`'s three tests that wait for `card:`, `drag-7-hierarchy-modal.spec.ts`'s three `pullOutAndZoomBack` tests and the test at `:364`, and `drag-7-modal-hold.spec.ts`'s reopen test (`:738`). `drag-card-zoom-in.spec.ts`'s two tests are already skipped. The suite run decides the real list.
 - **The tuning panel** loses its `descendantsPopInDelayMs` field. Check that a value a browser already stored for the deleted key is ignored.
 
-**E7. Comments and the drag layer's `CLAUDE.md` follow the code.**
-- **The drag layer's `CLAUDE.md`:** the mental model's stack, the Card's release, and the modal paragraph's "Card layer". Update its test surfaces too: `data-drag-context` is never `card:`.
+**E7. Comments and the drag layer's `AGENTS.md` follow the code.**
+- **The drag layer's `AGENTS.md`:** the mental model's stack, the Card's release, and the modal paragraph's "Card layer". Update its test surfaces too: `data-drag-context` is never `card:`.
 - **Module headers and comments that name the Card layer,** among them: `popSession.ts`, `placement.ts`, `dragRegions.ts`, `dragStructure.ts`, `dragOverlayGeometry.ts`, `descendantsProjection.ts::seedFor`, `useBoardDnd.ts`, `DragSessionContext.ts`, `KanbanCard.tsx`, `StubRows.tsx` and `cardMetrics.ts`.
 - **The check:** a search for "Card layer", `card:` and `descendantsPopInDelayMs` finds them only in the wiki, the test plans and `docs/archive/`. The PO and the Test Planner change the first two.
 
@@ -261,7 +261,7 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Built, in all:**
   - **The pickup rect.** `useBoardDnd.ts` keeps the carried copy's rect from the first moment dnd-kit has one in a drag (`pickupRectRef`, cleared by `handleDragStart`) and gives that to `reanchorOverlayTransform` in place of `activeNodeRect`. `onDragStart` fires before dnd-kit has measured the source, so it can't be read there. The pure function is unchanged; its comment no longer says the source row is never swapped out. No unit test carries it: the choice of rect is in the hook, and no pure module holds it.
   - **The Card that holds the drag doesn't slide** (`KanbanCard.tsx`), with a unit test in `KanbanCard.test.tsx` that fails without the line.
-  - **The drag layer's `CLAUDE.md`** says what dnd-kit measures once and from where.
+  - **The drag layer's `AGENTS.md`** says what dnd-kit measures once and from where.
 - **Both entries tried read the control's numbers:** a Free Card from outside zoomed into `P`, and a Stub of `P` popped out to the column and zoomed back in (`0:0`, `3:3`, `7:0`, `8:0`, `6:2`, the ghost at the control's place). These are probes of two gestures, not a spec; the specs the defect blocks (DRAG-1.21, 4.1, 7.10, 7.13) stay Story 10's.
 - **Resolves Phase 1's watch item.** The "to watch in Phase 4" note above (a Card's painted rect carrying the column's shuffle at the zoom) was this: the Card now rests at the zoom, so the region's rect, the clamp and the containment test see its final box at once.
 - **To watch in Phase 4:** `P` now snaps to rest at the zoom where it used to slide back over about 200ms, and the transition-off also drops its colour fade while it holds the drag. The zoom already redraws the Card (the section opens), so the snap may read as part of it; if it doesn't, the slide wants another way to be kept that leaves the rows measured at rest, which is the zoom-in morph's territory.

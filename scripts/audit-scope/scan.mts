@@ -19,6 +19,7 @@ export const INCLUDE = [
   'tests',
   'scripts',
   'bruno',
+  'AGENTS.md',
   'CLAUDE.md',
   'eslint.config.mjs',
   'package.json',

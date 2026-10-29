@@ -100,7 +100,7 @@ When the epic closes, the API contract is generated, complete and current, and n
 | For | One definition, and no generation step | The two packages stay separate. The client compiles against the published document, so a wrong document breaks the client's build. It still works if the API moves or gains other clients |
 | Against | The client build depends on server source. Either the client compiles server-side modules (Node types, Drizzle), or the schemas move into a new package. It couples two packages the repo keeps apart today | A generation step, a staleness check in the gate, and an alias file, because generated types are verbose |
 
-**Recommendation: (b).** The published document becomes the one thing both sides agree on. The client is the strongest check that the document is right, and the document is what outlasts any change to the repo's layout. Either way, root `CLAUDE.md`'s convention that `types.ts` is manually synced with `schema.ts` gets replaced when Story 5 lands.
+**Recommendation: (b).** The published document becomes the one thing both sides agree on. The client is the strongest check that the document is right, and the document is what outlasts any change to the repo's layout. Either way, root `AGENTS.md`'s convention that `types.ts` is manually synced with `schema.ts` gets replaced when Story 5 lands.
 
 **OD2. Which OpenAPI library.** A short spike decides this at the start of Story 1.
 - **It must:** support Zod 4, produce OpenAPI 3.1, and build a registry without being tied to Express.
@@ -134,7 +134,7 @@ When the epic closes, the API contract is generated, complete and current, and n
 5. **Client types from the contract**, per OD1.
    - `types.ts` stops mirroring anything by hand.
    - `client/src/api/*` return the contract's types.
-   - Root `CLAUDE.md`'s sync convention is replaced.
+   - Root `AGENTS.md`'s sync convention is replaced.
 6. **MCP tier 2** (C5), if OD3 says yes.
 
 ## Code map
@@ -148,7 +148,7 @@ When the epic closes, the API contract is generated, complete and current, and n
 | `server/tests/*` | 1–3 | C3 test reshaping, plus C8 contract tests |
 | `server/openapi.json`, the `openapi` script, `GET /api/openapi.json` | 4 | New |
 | `client/src/types.ts`, `client/src/api/*`, and `client/src/api/generated.ts` under OD1 (b) | 5 | Types come from the contract |
-| Root `CLAUDE.md` | 5 | The `types.ts` sync convention is replaced |
+| Root `AGENTS.md` | 5 | The `types.ts` sync convention is replaced |
 
 ## Acceptance
 

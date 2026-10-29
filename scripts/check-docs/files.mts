@@ -101,10 +101,8 @@ export function defaultFiles(root: string): string[] {
   const scoped = DEFAULT_SCOPE.filter(dir => existsSync(path.join(root, dir))).flatMap(dir =>
     walkFiles(root, dir, isNeverChecked),
   );
-  const claudeFiles = walkFiles(root, '', isNeverChecked).filter(
-    rel => rel === 'CLAUDE.md' || rel.endsWith('/CLAUDE.md'),
-  );
-  return [...new Set([...scoped, ...claudeFiles])].filter(isCheckable).sort();
+  const agentFiles = walkFiles(root, '', isNeverChecked).filter(rel => /(?:^|\/)(?:AGENTS|CLAUDE)\.md$/.test(rel));
+  return [...new Set([...scoped, ...agentFiles])].filter(isCheckable).sort();
 }
 
 export interface Expansion {
