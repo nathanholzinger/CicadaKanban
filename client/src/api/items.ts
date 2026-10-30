@@ -1,15 +1,17 @@
-import type { Item, ItemDetail } from '../types';
-import { apiJson, apiVoid, type PositionedWriteResponse } from './shared';
+import type { Item } from '../types';
+import { apiJson, apiVoid } from './shared';
+import type { components } from './generated';
+import type { ItemDetailResponse, ItemWriteResponse, MoveItemInput } from './pilotTypes';
+export type { ItemWriteResponse, MoveItemInput } from './pilotTypes';
 
-export function fetchItem(id: string): Promise<ItemDetail> {
-  return apiJson(`/items/${id}`, undefined, 'Failed to fetch item');
+export function fetchItem(id: string): Promise<ItemDetailResponse> {
+  return apiJson<components['schemas']['ItemDetail']>(`/items/${id}`, undefined, 'Failed to fetch item');
 }
 
 // Every item write (POST / PUT / PATCH move) answers with the fresh row and,
 // when a lazy reindex renumbered other rows in the same transaction, the
 // `reindexed` pairs. Fold it into the board with
 // `itemWriteReconciliation.ts::completeItemWrite`.
-export type ItemWriteResponse = PositionedWriteResponse<Item>;
 
 export function createItem(data: {
   type?: string | null;
@@ -46,16 +48,13 @@ export function updateItem(id: string, data: UpdateItemInput): Promise<ItemWrite
 //
 // The server also accepts a `scopeWorkphaseIds` field, which has no effect
 // on scope; this type leaves it out.
-export interface MoveItemInput {
-  workphaseId?: string;
-  anchorId?: string;
-  side?: 'before' | 'after';
-  parentId?: string | null;
-  isAttached?: boolean;
-}
 
 export function moveItem(id: string, data: MoveItemInput): Promise<ItemWriteResponse> {
-  return apiJson(`/items/${id}/move`, { method: 'PATCH', body: data }, 'Failed to move item');
+  return apiJson<components['schemas']['ItemWrite']>(
+    `/items/${id}/move`,
+    { method: 'PATCH', body: data },
+    'Failed to move item',
+  );
 }
 
 export function deleteItem(id: string): Promise<void> {

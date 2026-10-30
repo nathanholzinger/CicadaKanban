@@ -5,6 +5,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { urlPart } from './lib/urlPart.js';
+import { callMcpItemTool, mcpItemInputSchema } from './lib/mcpItemTools.js';
 
 const API = 'http://localhost:3001/api';
 
@@ -56,13 +57,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'get_item',
       description:
         'Get full details of an item including description, children, activity log, and which workflow it belongs to',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          item_id: { type: 'string', description: 'The item ID' },
-        },
-        required: ['item_id'],
-      },
+      inputSchema: mcpItemInputSchema('get_item'),
     },
     {
       name: 'create_item',
@@ -120,14 +115,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: 'move_item',
       description:
         "Move an item to a different workphase in its workflow. The workphase must belong to the workflow its project uses. An attached item takes its parent's workphase, so move its parent instead.",
-      inputSchema: {
-        type: 'object',
-        properties: {
-          item_id: { type: 'string', description: 'The item ID' },
-          workphase_id: { type: 'string', description: 'Target workphase ID' },
-        },
-        required: ['item_id', 'workphase_id'],
-      },
+      inputSchema: mcpItemInputSchema('move_item'),
     },
     {
       name: 'add_item_comment',
@@ -171,12 +159,8 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         };
       }
 
-      case 'get_item': {
-        const item = await api(`/items/${urlPart(args!.item_id)}`);
-        return {
-          content: [{ type: 'text', text: JSON.stringify(item, null, 2) }],
-        };
-      }
+      case 'get_item':
+        return await callMcpItemTool('get_item', args, api);
 
       case 'create_item': {
         let resolvedType: string | null = null;
@@ -223,20 +207,8 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
         };
       }
 
-      case 'move_item': {
-        // No position given, so the move endpoint resolves it: a move to
-        // another workphase keeps the item's existing position
-        // (wiki item-positioning §2's workphase-only rule), an item with none
-        // to keep is appended, and a done workphase leaves it none. MCP never
-        // computes a position itself.
-        await api(`/items/${urlPart(args!.item_id)}/move`, {
-          method: 'PATCH',
-          body: JSON.stringify({ workphaseId: args!.workphase_id }),
-        });
-        return {
-          content: [{ type: 'text', text: `Moved item ${args!.item_id} to workphase ${args!.workphase_id}` }],
-        };
-      }
+      case 'move_item':
+        return await callMcpItemTool('move_item', args, api);
 
       case 'add_item_comment': {
         await api(`/items/${urlPart(args!.item_id)}/comments`, {

@@ -6,6 +6,9 @@ import { randomUUID } from 'crypto';
 import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { parentRefusal, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
 import { deleteProjectById } from '../lib/projectCascade.js';
+import { parseRequest } from '../lib/parseRequest.js';
+import { idParamsSchema } from '../schemas/common.js';
+import { parseProjectMove } from '../schemas/projects.js';
 import {
   anchorRefusal,
   resolveAppendPosition,
@@ -204,28 +207,22 @@ router.put('/:id', (req, res) => {
 // re-derives the true current children, since a caller's view of them can be
 // stale or narrower than the real group.
 router.patch('/:id/move', (req, res) => {
-  const project = getByIdOrNotFound(projects, req.params.id, res, 'Project not found');
+  const params = parseRequest(idParamsSchema, req.params, res);
+  if (!params) return;
+  const project = getByIdOrNotFound(projects, params.id, res, 'Project not found');
   if (!project) return;
 
-  const { parentId, prevId, nextId, position } = req.body;
-
-  // A move names a neighbor, never a number (wiki positioning §2).
-  if (position !== undefined) {
-    res.status(400).json({ error: 'position is not accepted: name a prevId or nextId to place the project instead' });
+  const parsed = parseProjectMove(req.body);
+  if (!parsed.data) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
-  if (prevId !== undefined && prevId !== null && typeof prevId !== 'string') {
-    res.status(400).json({ error: 'prevId must be a string or null' });
-    return;
-  }
-  if (nextId !== undefined && nextId !== null && typeof nextId !== 'string') {
-    res.status(400).json({ error: 'nextId must be a string or null' });
-    return;
-  }
+  const body = parsed.data;
+  const { parentId, prevId, nextId } = body;
 
-  const targetParentId: string | null = 'parentId' in req.body ? (parentId ?? null) : project.parentId;
+  const targetParentId: string | null = 'parentId' in body ? (parentId ?? null) : project.parentId;
 
-  const moveError = parentError(project, targetParentId);
+  const moveError = parentRefusal('project', project, targetParentId);
   if (moveError) {
     res.status(400).json({ error: moveError });
     return;

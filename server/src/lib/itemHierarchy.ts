@@ -22,6 +22,7 @@ import {
 } from './positionResolver.js';
 import { effectiveWorkflowIdForProject } from './workflowItems.js';
 import { logActivity } from './activityLog.js';
+import { parseHierarchyShape, type HierarchyInput } from '../schemas/items.js';
 
 // ============================================================
 // The one implementation of "this item changes parent / attachment /
@@ -40,16 +41,7 @@ export type ItemRow = typeof items.$inferSelect;
 
 // Always a write to the moving item: a request names the item's new parent,
 // never a parent's children (wiki item-attachment §3).
-export type HierarchyRequest = {
-  /** undefined = unchanged, so a detach keeps its parent; null = reparent to root (wiki item-attachment §11). */
-  parentId?: string | null;
-  /** undefined = keep the current state — nothing attaches by default (wiki item-attachment §4). */
-  isAttached?: boolean;
-  /** undefined = unchanged, except that an item leaving attachment takes the one it was shown in (wiki item-attachment §2a). Rejected with a 400 when the resulting state is attached and it disagrees with the parent's. */
-  workphaseId?: string | null;
-  anchorId?: string;
-  side?: Side;
-};
+export type HierarchyRequest = HierarchyInput;
 
 // Where the item will be once the request is applied — every check and
 // every scope below is evaluated against this, never against the row as it
@@ -247,22 +239,12 @@ export function resolveCreate(
   return { attached, workphaseId: resolution.workphaseId };
 }
 
-// Hand-rolled request validation. Returns the first 400 message, or null
+// Request validation. Returns the first 400 message, or null
 // when the request is legal. Order: shape → parent legality → resulting-state
 // invariants → anchor.
 export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): string | null {
-  if (req.parentId !== undefined && req.parentId !== null && typeof req.parentId !== 'string') {
-    return 'parentId must be a string or null';
-  }
-  if (req.isAttached !== undefined && typeof req.isAttached !== 'boolean') {
-    return 'isAttached must be a boolean';
-  }
-  if (req.workphaseId !== undefined && req.workphaseId !== null && typeof req.workphaseId !== 'string') {
-    return 'workphaseId must be a string or null';
-  }
-  if (req.anchorId !== undefined && req.side !== 'before' && req.side !== 'after') {
-    return "side must be 'before' or 'after' when anchorId is given";
-  }
+  const shape = parseHierarchyShape(req);
+  if (shape.error) return shape.error;
   if (typeof req.workphaseId === 'string' && !existsById(workphases, req.workphaseId)) {
     return MISSING_WORKPHASE_ERROR;
   }
@@ -310,7 +292,9 @@ export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): 
     // the new parent's children is legal although the item isn't one of them yet
     // (wiki positioning §2). A done item has no position, so it can never be an anchor
     // (wiki item-positioning §7.4).
-    const refusal = anchorRefusal(items, resultingScope(item, resulting), req.anchorId, item.id);
+    // Legacy anchor values reach SQLite without a string guard. Keep that binding boundary,
+    // including its existing failures, while the wire schema honestly leaves the value unknown.
+    const refusal = anchorRefusal(items, resultingScope(item, resulting), req.anchorId as string, item.id);
     if (refusal) return ANCHOR_ERRORS[refusal];
   }
 
@@ -380,7 +364,14 @@ export function applyHierarchyRequest(
   const reindexed: ReindexedPosition[] = [];
   const scope = () => resultingScope(item, resulting, tx);
   if (req.anchorId !== undefined) {
-    updates.position = resolvePositionByAnchorAndSide(items, scope(), tx, req.side as Side, req.anchorId, reindexed);
+    updates.position = resolvePositionByAnchorAndSide(
+      items,
+      scope(),
+      tx,
+      req.side as Side,
+      req.anchorId as string,
+      reindexed,
+    );
   } else if (scopeChanged) {
     // Scope changed with no anchor → append fallback (wiki item-positioning §2.1).
     // "Reparent but keep your position" is not an operation for an attached

@@ -10,6 +10,8 @@ import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems
 import { deleteWorkflowsById } from '../lib/workflowCascade.js';
 import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
 import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
+import { parseRequest } from '../lib/parseRequest.js';
+import { workflowQuerySchema } from '../schemas/workflows.js';
 
 type ItemRow = typeof items.$inferSelect;
 
@@ -66,7 +68,9 @@ const router = Router();
 
 // List all workflows, optionally filtered by project
 router.get('/', (req, res) => {
-  const { projectId } = req.query;
+  const query = parseRequest(workflowQuerySchema, req.query, res);
+  if (!query) return;
+  const { projectId } = query;
   const allWorkflows = projectId
     ? db
         .select()

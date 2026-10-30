@@ -1,9 +1,10 @@
 import type { Project } from '../types';
-import { apiJson, apiVoid, type PositionedWriteResponse } from './shared';
+import { apiJson, apiVoid } from './shared';
+import type { ProjectWriteResponse, MoveProjectInput } from './pilotTypes';
+export type { ProjectWriteResponse, MoveProjectInput } from './pilotTypes';
 
 // A project write answers with the fresh row and, when a lazy reindex
 // renumbered its siblings, the `reindexed` pairs (wiki positioning §7).
-export type ProjectWriteResponse = PositionedWriteResponse<Project>;
 
 export function fetchProjectDepthCap(): Promise<number> {
   return apiJson<{ projectDepthCap: number }>(
@@ -38,12 +39,6 @@ export function updateProject(id: string, data: UpdateProjectInput): Promise<Pro
 export function deleteProject(id: string): Promise<void> {
   return apiVoid(`/projects/${id}`, { method: 'DELETE' }, 'Failed to delete project');
 }
-
-export type MoveProjectInput = {
-  parentId?: string | null;
-  prevId?: string | null;
-  nextId?: string | null;
-};
 
 // Reposition and/or reparent a single project. Never computes or sends a
 // final position value — the server always resolves it against true

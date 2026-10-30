@@ -1,0 +1,466 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kanban API integration pilot",
+    "version": "0.0.0",
+    "description": "Partial development contract: four endpoints only."
+  },
+  "paths": {
+    "/api/items/{id}/move": {
+      "patch": {
+        "operationId": "moveItem",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Id" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemMove" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing success response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemWrite" } } }
+          },
+          "400": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/move": {
+      "patch": {
+        "operationId": "moveProject",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Id" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectMove" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing success response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectWrite" } } }
+          },
+          "400": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/items/{id}": {
+      "get": {
+        "operationId": "getItem",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Id" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing success response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemDetail" } } }
+          },
+          "404": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/workflows": {
+      "get": {
+        "operationId": "listWorkflows",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": { "$ref": "#/components/schemas/WorkflowProjectFilter" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing success response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowList" } } }
+          },
+          "400": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing error response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Id": { "type": "string" },
+      "IdParams": {
+        "type": "object",
+        "properties": { "id": { "$ref": "#/components/schemas/Id" } },
+        "required": ["id"]
+      },
+      "Side": { "type": "string", "enum": ["before", "after"] },
+      "PositionScope": { "type": "string", "enum": ["attached-siblings", "workflow", "none"] },
+      "ReindexedPosition": {
+        "type": "object",
+        "properties": { "id": { "$ref": "#/components/schemas/Id" }, "position": { "type": "number" } },
+        "required": ["id", "position"],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } },
+        "required": ["error"],
+        "additionalProperties": false
+      },
+      "ItemMoveFields": {
+        "type": "object",
+        "properties": {
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "isAttached": { "type": "boolean" },
+          "workphaseId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "anchorId": {},
+          "side": {},
+          "position": { "not": {} },
+          "scopeWorkphaseIds": {}
+        },
+        "additionalProperties": {}
+      },
+      "ItemMove": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ItemMoveFields" },
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": { "workphaseId": {} },
+                "required": ["workphaseId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "anchorId": {} },
+                "required": ["anchorId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "parentId": {} },
+                "required": ["parentId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "isAttached": {} },
+                "required": ["isAttached"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "scopeWorkphaseIds": { "minItems": 1, "type": "array", "items": {} } },
+                "required": ["scopeWorkphaseIds"],
+                "additionalProperties": {}
+              }
+            ]
+          },
+          {
+            "anyOf": [
+              { "type": "object", "properties": { "anchorId": { "not": {} } }, "additionalProperties": {} },
+              {
+                "type": "object",
+                "properties": { "anchorId": {}, "side": { "$ref": "#/components/schemas/Side" } },
+                "required": ["anchorId", "side"],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        ]
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "type": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "projectId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "workphaseId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "isAttached": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "assigneeType": { "type": ["string", "null"] },
+          "agentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "completedAt": {
+            "anyOf": [
+              { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "positionScope": { "$ref": "#/components/schemas/PositionScope" }
+        },
+        "required": [
+          "id",
+          "type",
+          "parentId",
+          "projectId",
+          "workphaseId",
+          "title",
+          "description",
+          "position",
+          "isAttached",
+          "assigneeType",
+          "agentId",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "positionScope"
+        ],
+        "additionalProperties": false
+      },
+      "ItemChild": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "type": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "projectId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "workphaseId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "isAttached": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "assigneeType": { "type": ["string", "null"] },
+          "agentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "completedAt": {
+            "anyOf": [
+              { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "positionScope": { "$ref": "#/components/schemas/PositionScope" },
+          "depth": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+        },
+        "required": [
+          "id",
+          "type",
+          "parentId",
+          "projectId",
+          "workphaseId",
+          "title",
+          "description",
+          "position",
+          "isAttached",
+          "assigneeType",
+          "agentId",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "positionScope",
+          "depth"
+        ],
+        "additionalProperties": false
+      },
+      "ItemDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "type": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "projectId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "workphaseId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "isAttached": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "assigneeType": { "type": ["string", "null"] },
+          "agentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "completedAt": {
+            "anyOf": [
+              { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "positionScope": { "$ref": "#/components/schemas/PositionScope" },
+          "depth": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "workflowId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "children": { "type": "array", "items": { "$ref": "#/components/schemas/ItemChild" } },
+          "activity": { "type": "array", "items": { "$ref": "#/components/schemas/Activity" } }
+        },
+        "required": [
+          "id",
+          "type",
+          "parentId",
+          "projectId",
+          "workphaseId",
+          "title",
+          "description",
+          "position",
+          "isAttached",
+          "assigneeType",
+          "agentId",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "positionScope",
+          "depth",
+          "workflowId",
+          "children",
+          "activity"
+        ],
+        "additionalProperties": false
+      },
+      "ItemWrite": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "type": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "projectId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "workphaseId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "isAttached": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "assigneeType": { "type": ["string", "null"] },
+          "agentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "completedAt": {
+            "anyOf": [
+              { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "positionScope": { "$ref": "#/components/schemas/PositionScope" },
+          "reindexed": { "type": "array", "items": { "$ref": "#/components/schemas/ReindexedPosition" } }
+        },
+        "required": [
+          "id",
+          "type",
+          "parentId",
+          "projectId",
+          "workphaseId",
+          "title",
+          "description",
+          "position",
+          "isAttached",
+          "assigneeType",
+          "agentId",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "positionScope"
+        ],
+        "additionalProperties": false
+      },
+      "Activity": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "itemId": { "$ref": "#/components/schemas/Id" },
+          "type": { "type": "string" },
+          "content": { "type": "string" },
+          "metadata": { "type": ["string", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+        },
+        "required": ["id", "itemId", "type", "content", "metadata", "createdAt"],
+        "additionalProperties": false
+      },
+      "ProjectMoveFields": {
+        "type": "object",
+        "properties": {
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "prevId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "nextId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "position": { "not": {} }
+        },
+        "additionalProperties": {}
+      },
+      "ProjectMove": {
+        "anyOf": [{ "$ref": "#/components/schemas/ProjectMoveFields" }, { "type": "array", "items": {} }]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+        },
+        "required": ["id", "parentId", "name", "description", "position", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "ProjectWrite": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "parentId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "reindexed": { "type": "array", "items": { "$ref": "#/components/schemas/ReindexedPosition" } }
+        },
+        "required": ["id", "parentId", "name", "description", "position", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "WorkflowProjectFilter": { "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+      "WorkflowQuery": {
+        "type": "object",
+        "properties": { "projectId": { "$ref": "#/components/schemas/WorkflowProjectFilter" } },
+        "additionalProperties": {}
+      },
+      "Workflow": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "projectId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 }
+        },
+        "required": ["id", "projectId", "name", "description", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "WorkflowList": { "type": "array", "items": { "$ref": "#/components/schemas/Workflow" } }
+    }
+  }
+}

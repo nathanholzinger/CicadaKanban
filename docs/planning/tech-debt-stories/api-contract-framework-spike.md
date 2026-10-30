@@ -1,6 +1,6 @@
 # API Contract Framework — Comparison Spike and Pilot
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — Batch 2 complete; Batch 3 not started · **Sequenced:** before any API-wide contract migration
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — Batch 3 complete; Batch 4 not started · **Sequenced:** before any API-wide contract migration
 
 This story is the next step in place of starting `api-contract-zod-openapi.md`. That epic remains a migration proposal to replan from this story's evidence, not authorization to adopt a particular library or change an endpoint. This story compares the options, pilots the preferred option, and stops for a decision before wider adoption.
 
@@ -12,7 +12,7 @@ The criterion is:
 
 > A future field change has one authoritative shape definition, generated consumers update mechanically, and checks expose the remaining disagreements.
 
-Deliver runnable comparison prototypes, one integrated pilot, and an evidence-backed recommendation with the costs and remaining manual responsibilities stated. A recommendation against proceeding is a valid result if the candidates do not meet the compatibility and maintenance requirements.
+Deliver runnable comparison prototypes, an initial integrated pilot with a second Zod integration trial if D4's complexity trigger is reached, and an evidence-backed recommendation with the costs and remaining manual responsibilities stated. A recommendation against proceeding is a valid result if the candidates do not meet the compatibility and maintenance requirements.
 
 **Authority and maintenance:**
 - The wiki is the primary source of business rules and observable product behavior. It does not prescribe technical implementation.
@@ -78,7 +78,7 @@ Capture expected behavior before modifying handlers. Include requests with multi
 
 Do not reduce the decision to a weighted score. Raw evidence, source examples, and limitations accompany the recommendation. Lines of code and implementation time are supporting measures. Runtime benchmarking is secondary unless the pilot exposes a noticeable regression.
 
-**D4. One preferred candidate gets integrated, not three full migrations.**
+**D4. Start with the preferred candidate; add a comparable integration trial when the complexity trigger is reached.**
 
 The comparison uses isolated prototypes and shared compatibility examples. The preferred candidate then gets a four-endpoint pilot:
 
@@ -91,6 +91,12 @@ The comparison uses isolated prototypes and shared compatibility examples. The p
 
 Integrate only enough consumer work to demonstrate the chain: generated types in the corresponding client API functions, definition reuse for existing `get_item` and `move_item` tools, one existing Bruno scenario checked against the contract, and pilot generation/coverage checks. Do not expose REST fields that the current MCP tool does not expose. If SDK registration changes would force migrating the entire tool set, demonstrate the schema reuse in an isolated adapter and record the limitation rather than widening the pilot.
 
+**Complexity trigger, Nathan's direction of 2026-10-30:** if native assembly begins requiring additional general-purpose parameter conversion, component naming/reference handling, shared input/output management, or repeated endpoint-specific workarounds already provided by `zod-openapi`, add a library-backed integration trial. Ordinary endpoint metadata and the thin native registry/conversion adapter alone do not constitute the trigger. Record the concrete requirement and custom work that triggered the comparison.
+
+The trigger expands the experiment; it does not automatically discard native assembly or select the library. Preserve the native trial and implement `zod-openapi` against the same four endpoints, shared baseline, compatibility cases, consumer expectations, and acceptance checks. Compare the triggering feature as well as overall maintenance cost. Keep the Zod definitions shared where their contract is identical. If the trials require competing edits to application files, preserve them on separate branches from a common trial baseline so both results remain reviewable and runnable.
+
+Report both trials' compatibility results, necessary custom code, field-change propagation, remaining manual responsibilities, and limitations before recommending which to retain. A documented blocker is evidence, not a passing trial. A TypeBox integration trial is not automatically added by this trigger; any further expansion needs a specific reason and agreement with Nathan.
+
 **D5. Exercise a field change without shipping one.**
 
 Make identical temporary changes in each prototype: an optional request field, a response field, and a nullability change. Observe which definitions need editing, which outputs regenerate, which consumers fail, and which disagreements remain silent. Revert the experimental changes and confirm the final pilot preserves the baseline.
@@ -99,7 +105,7 @@ Make identical temporary changes in each prototype: an optional request field, a
 
 Prefer the candidate that meets the mandatory gates with the least recurring custom machinery. Do not favor Zod simply because the branch or earlier epic names it, or favor fewer dependencies if that means owning a larger converter or framework.
 
-The comparison has an initial timebox of roughly two working days, excluding the integrated pilot. At that checkpoint, report evidence and unresolved issues before extending the comparison. If the integrated pilot invalidates the shortlist, return to the comparison with the specific blocker recorded. Wider rollout requires the results to be reviewed and the migration plan to be revised.
+The comparison has an initial timebox of roughly two working days, excluding the integrated pilot. At that checkpoint, report evidence and unresolved issues before extending the comparison. If the integrated pilot invalidates the shortlist, return to the comparison with the specific blocker recorded. Native assembly reaching D4's complexity trigger adds a `zod-openapi` integration trial and a comparison of the two; it does not settle the choice. Wider rollout requires the results to be reviewed and the migration plan to be revised.
 
 **D7. Nathan and the Architect carry out the spike directly.**
 
@@ -137,7 +143,10 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 
 ### Batch 3 — Integrated pilot and consumer checks
 
+**Complete on `api-contract-framework-pilot`, based on Batch 2 commit `843f132`.** Native Zod schemas replace the four handlers' structural checks; generated client declarations, existing MCP adapters, and an external check of the unchanged Bruno request are connected. The reversible integrated field drills and deliberate drift probes behaved as expected. The final gate passed (780 server, 604 client, 235 tooling tests), and unchanged Playwright passed (219 passed, 18 skipped); see [the results](api-contract-framework-spike-results.md). No competing integration was needed under D4's trigger, and no commits or broad rollout have been made.
+
 - Adopt the preferred candidate for the four endpoints only. Preserve lookup/parsing order, the existing hierarchy and positioning primitives, transactions, and response behavior.
+- Watch D4's complexity trigger. If reached, record the concrete requirement, preserve the native trial, and add `zod-openapi` on the same endpoint/consumer scope and common baseline. Use separate branches for competing application edits and carry shared compatibility work to both. Do not select or discard either implementation merely because the trigger was reached.
 - Add response contract assertions in tests, with no runtime response enforcement. Demonstrate reindex disclosure and the decorated/collection variants, not just a minimal success fixture.
 - Consume generated types in the selected client API functions without changing runtime requests or UI behavior. Avoid replacing all of `types.ts`; record a temporary boundary where pilot and unmigrated consumers meet.
 - Demonstrate existing MCP schema reuse and adaptations without new capabilities or changed tool behavior. Record any duplication that cannot be removed compatibly.
@@ -145,7 +154,7 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 - Demonstrate deterministic generation, a stale-output failure, a deliberate response-contract failure, and missing-registration detection against the explicit four-endpoint pilot scope. Restore each deliberate fault after recording it; do not imply API-wide coverage.
 - Repeat the maintenance exercise on the integrated chain, revert its changes, and document the actual commands and manual steps.
 
-**Gate:** `npm run check`, unchanged `npm run test:e2e`, and pilot acceptance checks pass. The Architect reviews the diff and records the results for Nathan. No separate Auditor pass is required during the pilot, and no broad migration follows automatically.
+**Gate:** `npm run check`, unchanged `npm run test:e2e`, and pilot acceptance checks pass for each successful integration trial. If the trigger added a second trial, the results compare both implementations and disclose any blockers. The Architect reviews the diffs and records the evidence for Nathan. No separate Auditor pass is required during the pilot, and no broad migration follows automatically.
 
 ### Batch 4 — Recommendation and handoff
 
@@ -159,7 +168,7 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 
 ## Code map
 
-Batches 1–2 add the corpus, isolated comparison package, generated development artifacts, and results. Production/client/MCP touch points below remain planned for Batch 3. No candidate dependency is added to the application manifests.
+Batches 1–2 add the corpus and isolated comparison package. Batch 3 adds Zod 4.6.7 as a direct server dependency, production schemas and parsing, selected generated client types, and MCP adapters. The competing libraries and generation tools remain in the isolated development package.
 
 | File or area | Batch | Change |
 |---|---|---|
@@ -173,9 +182,11 @@ Batches 1–2 add the corpus, isolated comparison package, generated development
 | `prototypes/prototypeCompatibility.test.ts`, `fieldChanges.test.ts`, `conversionEdges.test.ts`, `artifacts.test.ts` | 2 | HTTP parity, runtime/document agreement, change propagation, conversion boundaries, and artifact freshness |
 | `server/src/routes/items.ts`, `projects.ts`, `workflows.ts` | 1, 3 | Baseline inventory; four selected handlers adopt the preferred validator |
 | `server/tests/` and isolated prototype/test tooling | 1–3 | Shared compatibility cases, candidate comparisons, response and drift checks |
-| Selected schema and OpenAPI assembly modules; exact paths chosen during comparison | 2–3 | Authoritative pilot shapes and partial document generation |
+| `server/src/schemas/{common,items,projects,workflows,openapi}.ts`; `server/src/lib/parseRequest.ts` | 3 | Authoritative pilot shapes, compatibility parsing, and partial document assembly |
+| `server/contracts/pilot.openapi.json`; `client/src/api/generated.ts`; `client/src/api/pilotTypes.ts` | 3 | Generated technical contract and declarations; explicit UI compatibility aliases |
+| `prototypes/pilotArtifacts.ts`, `generatePilot.ts`, `pilotContracts.test.ts`, `pilotFieldDrills.ts` | 3 | Generation, freshness/response/registration checks, and reversible real-handler field drills |
 | `client/src/api/items.ts`, `projects.ts`, `workflows.ts`; pilot generated types | 2–3 | Type usability and selected client consumption |
-| `server/src/mcp.ts` or an isolated MCP adapter | 3 | Existing tool definition reuse without capability changes |
+| `server/src/mcp.ts`; `server/src/lib/mcpItemTools.ts` | 3 | Existing tool definition reuse and raw argument forwarding without capability changes |
 | One existing request under `bruno/` plus validation tooling | 3 | Contract check preserving the scenario and variables |
 | Relevant `package.json` and lockfiles | 2–3 | Candidate tooling and retained pilot commands; remove unused dependencies |
 | `docs/planning/tech-debt-stories/api-contract-framework-spike-results.md` | 2–4 | Reproduction commands, measurements, decision evidence, findings, and retained-artifact inventory |
@@ -184,6 +195,7 @@ Batches 1–2 add the corpus, isolated comparison package, generated development
 
 - All three approaches are evaluated on the same two move contracts and shared compatibility examples. The Zod integration-library shortlist has a recorded rationale.
 - A preferred candidate is piloted across the four named endpoints, or a reproducible blocker and evidence-backed recommendation against integration is recorded. A blocked or rejected pilot is not reported as a successful no-regression refactor.
+- If D4's complexity trigger is reached, the native trial is preserved and a `zod-openapi` integration trial is added on the same scope and baseline. The final recommendation compares both trials' evidence; the trigger alone never determines the winner.
 - An integrated pilot preserves current REST/MCP behavior, passes the existing Playwright suite unchanged, keeps existing server/client tests intact, and passes `npm run check` plus focused compatibility checks. Baseline failures and comparison limits are disclosed; tests passing are evidence, not a claim to have proven every possible input equivalent.
 - Generated output represents the pilot's actual HTTP inputs and responses; its scope is explicit, and no partial document is published as the full API contract.
 - Representative generated client types, existing MCP reuse, and one Bruno contract check are demonstrated, with unresolved limitations stated.
@@ -195,8 +207,8 @@ Batches 1–2 add the corpus, isolated comparison package, generated development
 
 ## Open questions
 
-- **For the Architect, during Batch 2:** which Zod/OpenAPI integration library merits the prototype, and what evidence distinguishes it from native conversion?
-- **For the Architect, working with Nathan during the pilot:** which compatibility cases require adapters or staged parsing, and does their recurring cost change the shortlist?
+The library shortlist and compatibility-adapter questions are answered in the Batch 2–3 results. Native conversion remains provisional; the real pilot did not reach D4's additional-trial trigger.
+
 - **For Nathan, at the final checkpoint:** adopt the recommended foundation and authorize a replanned migration, extend the evaluation for a specific unresolved issue, or stop? No stack selection is presumed by this plan.
 
 ## Handoff
@@ -218,3 +230,6 @@ Batches 1–2 add the corpus, isolated comparison package, generated development
 - **2026-10-30:** Completed Batch 1: baseline and post-corpus gates passed, all 77 captures replayed successfully, and the unchanged Playwright baseline passed with 219 passed and 18 skipped. Batch 2 remains unstarted.
 - **2026-10-30:** Nathan started Batch 2 on `api-contract-framework-spike`, inheriting the committed Batch 1 baseline saved on `api-spike-batch1-baseline`. Added three isolated prototypes and their comparisons. Native Zod conversion is the provisional pilot recommendation, subject to final verification and the real-handler integration checkpoint; no Batch 3 implementation has started.
 - **2026-10-30:** Completed Batch 2 with all three candidates matching the 77-case corpus, generated client probes checked with the app's TypeScript 6 compiler, current generated artifacts, and a passing full gate. Native Zod conversion is provisionally recommended. The generator's TypeScript 5 peer remains isolated; compiler/conversion limits and the unproven real-handler replacement are explicit in the results. No production code or saved baseline branch changed.
+- **2026-10-30:** Nathan changed the native-assembly complexity criterion from a reason to exit/switch into a reason to add a comparable `zod-openapi` integration trial. Updated D4, D6, Batch 3, and acceptance to preserve both implementations and compare their evidence before selection. No integration trial has started.
+- **2026-10-30:** Nathan started Batch 3. Created `api-contract-framework-pilot` from the committed Batch 2 comparison and implemented the four-endpoint native Zod trial, generated client boundary, existing MCP adapters, Bruno check, drift probes, and reversible real-source field drills. No second integrated trial was triggered. Full unchanged-suite verification follows the restored pilot; no commit or API-wide rollout is authorized by this amendment.
+- **2026-10-30:** Completed Batch 3 with all 77 frozen captures unchanged, all 77 responses checked against Zod/emitted schemas, nine new integrated checks, current artifacts, and passing full gate and unchanged Playwright suite. Reduced redundant fixture setup in the new response loop after Windows port exhaustion; existing tests/configuration remain untouched. Batch 4 and the final adoption/review decision remain ahead.

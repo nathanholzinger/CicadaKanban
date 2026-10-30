@@ -107,7 +107,11 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   sidebar's project writes in `App.tsx`.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
-- **`types.ts` is manually synced with `schema.ts`** — no codegen. Update both.
+- **`types.ts` is manually synced with `schema.ts`.** Update both for unmigrated
+  consumers. The four-endpoint contract pilot uses server-owned Zod schemas and
+  generated API declarations (`client/src/api/generated.ts`); regenerate with
+  `npm --prefix server/tests/contracts/prototypes run generate:pilot`. Its UI
+  compatibility aliases live in `client/src/api/pilotTypes.ts`.
 - **Never hand-write an Item or Project literal in a client test** — use
   `client/src/test/itemFixture.ts::makeItem` or `projectFixture.ts::makeProject`.
 - **Never hand-roll a drag or read `boundingBox()` in an E2E spec** — use

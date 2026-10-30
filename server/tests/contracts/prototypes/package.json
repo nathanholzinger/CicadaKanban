@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "generate": "tsx generate.ts",
-    "check:generated": "tsx generate.ts --check"
+    "check:generated": "tsx generate.ts --check",
+    "generate:pilot": "tsx generatePilot.ts",
+    "check:pilot": "tsx generatePilot.ts --check",
+    "drill:pilot": "tsx pilotFieldDrills.ts"
   },
   "devDependencies": {
     "ajv": "8.20.0",

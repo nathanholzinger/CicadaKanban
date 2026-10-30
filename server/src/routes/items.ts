@@ -17,6 +17,9 @@ import {
 } from '../lib/itemHierarchy.js';
 import { effectiveWorkflowIdForProject } from '../lib/workflowItems.js';
 import { logActivity } from '../lib/activityLog.js';
+import { parseRequest } from '../lib/parseRequest.js';
+import { idParamsSchema } from '../schemas/common.js';
+import { parseItemMove, hasExplicitItemIntent } from '../schemas/items.js';
 
 const router = Router();
 
@@ -47,13 +50,15 @@ function respondWithItem(res: Response, id: string, reindexed: ReindexedPosition
 
 // Get a single item with its children and activity log
 router.get('/:id', (req, res) => {
-  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
+  const params = parseRequest(idParamsSchema, req.params, res);
+  if (!params) return;
+  const item = getByIdOrNotFound(items, params.id, res, 'Item not found');
   if (!item) return;
 
   // The API's `depth` is 0-based (root = 0); hierarchyDepth counts from 1.
-  const depth = hierarchyDepth(req.params.id) - 1;
+  const depth = hierarchyDepth(params.id) - 1;
 
-  const rawChildren = db.select().from(items).where(eq(items.parentId, req.params.id)).all();
+  const rawChildren = db.select().from(items).where(eq(items.parentId, params.id)).all();
 
   // One batched lookup covering the item's own workphase and every child's,
   // instead of a query per row — also folds in the workflowId derivation
@@ -78,7 +83,7 @@ router.get('/:id', (req, res) => {
   const activity = db
     .select()
     .from(activityLog)
-    .where(eq(activityLog.itemId, req.params.id))
+    .where(eq(activityLog.itemId, params.id))
     .orderBy(activityLog.createdAt)
     .all();
 
@@ -298,31 +303,19 @@ router.put('/:id', (req, res) => {
 // `projectId` is never sent: a cross-project reparent derives it from the
 // new parent and cascades it to the subtree (wiki item-attachment §9).
 router.patch('/:id/move', (req, res) => {
-  const item = getByIdOrNotFound(items, req.params.id, res, 'Item not found');
+  const params = parseRequest(idParamsSchema, req.params, res);
+  if (!params) return;
+  const item = getByIdOrNotFound(items, params.id, res, 'Item not found');
   if (!item) return;
 
-  const { workphaseId, position, anchorId, side, scopeWorkphaseIds, parentId, isAttached } = req.body;
-
-  // Refused rather than ignored: the API says what to do instead.
-  if (position !== undefined) {
-    res.status(400).json({ error: 'position is not accepted: name an anchorId and side to place the item instead' });
+  const parsed = parseItemMove(req.body);
+  if (!parsed.data) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
-
-  // scopeWorkphaseIds is accepted so a bare same-column reorder-to-append
-  // request — no anchor, no workphaseId change, just "this merged group" —
-  // doesn't 400. It has no effect on scope resolution (position is
-  // workflow-wide, not workphase-narrow — see positionScopeFor), and is
-  // mapped below onto the equivalent same-workphase move.
-  const hasScopeWorkphaseIds = Array.isArray(scopeWorkphaseIds) && scopeWorkphaseIds.length > 0;
-  const hasIntent = [workphaseId, anchorId, parentId, isAttached].some(v => v !== undefined);
-  if (!hasIntent && !hasScopeWorkphaseIds) {
-    res.status(400).json({ error: 'workphaseId, parentId, isAttached, and/or anchorId+side required' });
-    return;
-  }
-
+  const { parentId, isAttached, workphaseId, anchorId, side } = parsed.data;
   const hierarchyReq: HierarchyRequest = { parentId, isAttached, workphaseId, anchorId, side };
-  if (!hasIntent) hierarchyReq.workphaseId = item.workphaseId;
+  if (!hasExplicitItemIntent(parsed.data)) hierarchyReq.workphaseId = item.workphaseId;
 
   const error = validateHierarchyRequest(item, hierarchyReq);
   if (error) {

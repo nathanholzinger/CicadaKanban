@@ -1,8 +1,8 @@
 # API Contract Framework — Spike Results
 
-**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 2 complete; integrated pilot not started
+**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 3 complete; final recommendation/handoff not started
 
-This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools are installed in an isolated test package. Native Zod conversion is provisionally recommended for the integrated pilot; no stack has been finally selected and no production handler has been changed.
+This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools are installed in an isolated test package. Native Zod conversion is implemented on a separate pilot branch; no final stack decision or API-wide rollout has been made.
 
 ## Batch 1 — Baseline
 
@@ -305,7 +305,7 @@ These are controlled contract exercises, not full feature implementations. Busin
 
 **Recommend native Zod 4 conversion plus a small OpenAPI assembly layer for the integrated pilot.** It met the same sampled compatibility and generation checks as the library-backed option, produced identical artifacts, and did not require another integration dependency. The assembly and registry code remained small and understandable for this slice. This is a modest cost/benefit preference, not evidence that an OpenAPI library has no value.
 
-`zod-openapi` remains a close alternative. It removes ownership of generic document/component/parameter assembly, has no published runtime dependencies beyond its Zod peer, and already passes the same tests. If Batch 3's real query/decorated-response/MCP work makes the native layer grow into a framework, prefer the library; the shared Zod definitions and identical outputs make that switch inexpensive.
+`zod-openapi` remains a close alternative. It removes ownership of generic document/component/parameter assembly, has no published runtime dependencies beyond its Zod peer, and already passes the same tests. Under Nathan's amended direction, if Batch 3's real query/decorated-response/MCP work starts requiring general-purpose assembly machinery or repeated workarounds already provided by the library, preserve the native trial and add a `zod-openapi` integration trial. Compare both on the same four endpoints, baseline, compatibility/consumer checks, triggering feature, and maintenance criteria. This trigger expands the comparison; it does not automatically select the library or discard native assembly. The shared Zod definitions and identical Batch 2 outputs provide a practical starting point for that second trial.
 
 TypeBox/Ajv is viable and passed the same runtime, response, generation, and field-change checks. JSON Schema is directly executable and the conditional rules need no conversion. For this app, the measured slice did not demonstrate enough maintenance benefit to prefer it over Zod: it still needs the HTTP assembler and compatibility staging, introduces compiler configuration/optional-field handling, and needs separate high-level MCP integration consideration. This conclusion is about these prototypes and consumers, not a general ranking of the libraries.
 
@@ -331,7 +331,80 @@ No integrated pilot, new branch, broad rollout, PO/Test Planner/Coder/Auditor ha
 
 ## Batch 3 — Integrated pilot
 
-Not started. Four-endpoint integration, consumer demonstrations, deliberate drift failures, and unchanged-suite verification belong here after the comparison.
+### Branch and implementation boundary
+
+The native integration is on **`api-contract-framework-pilot`**, branched from Batch 2 commit `843f132`. The comparison branch and saved Batch 1 baseline retain their committed starting points. The pilot changes and the previously agreed D4 trigger amendment are uncommitted for Nathan's review. No application edits have been built for a second integration trial.
+
+`server/src/schemas/` owns the selected request and response shapes. The item/project move handlers parse their bodies after target lookup, replacing their inline structural guards. The hierarchy primitive uses the shared structural schema while retaining database checks, their ordering, and application in the existing transaction. GET item parses the existing string path parameter; GET workflows describes raw string/repeated-string query values and keeps the handler's truthiness and `String()` conversion. No defaults or coercion are introduced by schemas.
+
+Compatibility needs explicit adapters: exact legacy error wording/precedence; undefined-body exceptions; project array bodies as empty moves; item scope-array intent; conditional side validation. Item anchors remain `unknown` on the wire because imposing a string guard would change observed failures. The two localized `as string` assertions at the existing SQLite/position-helper boundary do not convert or validate values; the frozen numeric/null/object cases retain their outcomes. This is a retained legacy mismatch, not a new claim that arbitrary anchors are valid domain references. A migration cannot erase this adapter without a later behavior decision.
+
+The shared hierarchy schema also serves the existing item edit primitive. Its structural behavior is unchanged; the remaining create/edit handler contracts are not declared migrated. No positioning, hierarchy, database, response serialization, or business-rule implementation is replaced.
+
+### Generated document, client, MCP, and Bruno
+
+- `server/src/schemas/openapi.ts` exports a partial four-operation OpenAPI 3.1 document with 21 named components. Metadata records method/path/status associations and ordinary path/query parameters. Native registry exports provide component references and input/output contexts; request conditions remain representable unions/intersections.
+- `server/contracts/pilot.openapi.json` and `client/src/api/generated.ts` are generated artifacts. Generation does not import the database or start a server. There is no new public documentation endpoint or runtime response enforcement.
+- The selected client API functions consume generated shapes. `pilotTypes.ts` derives their request subsets and UI compatibility aliases by reference. UI item rows keep optional `positionScope`, detail `depth`, and `workflowId` at the existing unloaded-data boundary; wire declarations require the fields actually returned. The client continues to expose string anchors, the two side values, and a string-only workphase field. Those are curated subsets of the permissive legacy REST input. Other client types remain manual; shared create/update response aliases derive from the same row shape without declaring those endpoint requests migrated. Existing UI code and tests are unchanged.
+- Existing `get_item` and `move_item` tool advertisements reuse Zod primitives through `mcpItemTools.ts`. Tests pin the exact old JSON schemas, including descriptions, required snake_case names, and the open unknown-field policy. The adapter preserves URL escaping, raw forwarding, payloads, result text, and exceptions. The MCP dispatcher awaits the adapter inside its existing catch. No runtime tool validation or additional capabilities are introduced. HTTP-backed adapter tests exercise both endpoints; the stdio transport itself is not newly exercised.
+- The unchanged `bruno/items/move-item.bru` is read externally, its authored variables resolved to checked fixture IDs, its JSON body validated against the emitted request component, and the PATCH executed against the app with response validation. Variables and scenario prose remain authored; no collection regeneration is required.
+- Root `AGENTS.md` has a narrowly scoped working-copy correction for the generated pilot boundary, for review with this diff. It does not declare the remaining client types generated.
+
+### Integrated field-change measurements
+
+Run from the root:
+
+```powershell
+npm.cmd --prefix server/tests/contracts/prototypes run generate:pilot
+npm.cmd --prefix server/tests/contracts/prototypes run check:pilot
+npm.cmd --prefix server/tests/contracts/prototypes run drill:pilot
+```
+
+The comparison package still requires its explicit nested install, as documented in Batch 2. Zod 4.6.7 is now pinned directly in the server manifest/lockfile; OpenAPI generation and independent Ajv checks remain development-only. Generation uses the existing `openapi-typescript` installation; generated consumer probes compile with application TypeScript 6.0.3. Formatting resolves plugins relative to each generated target so the client's Tailwind formatter works from the nested tool package.
+
+`.gitattributes` pins LF for the two pilot artifacts and the seven comparison artifacts. Their byte-for-byte freshness checks must survive a Windows checkout with `core.autocrlf=true`; ordinary source files retain the repository's existing line-ending policy.
+
+`drill:pilot` temporarily edits the actual server schema, invokes fresh-process generation, and tests real handlers in fresh Vitest processes. It saves and restores the schema and both generated files in `finally`, and removes its temporary test. Run it alone: it shares the Vitest fixture database with the server suite and must not overlap another test invocation.
+
+| Temporary edit | Authored shape edits / generated updates | Observed independent checks |
+|---|---|---|
+| Add optional item-move `clientNote: string` | 1 / OpenAPI + client declarations | New-field consumer diagnostics change from 1 to 0; real PATCH accepts a string (200) and refuses a number (400) |
+| Add required item response `contractNote: string` | 1 / item row/write/detail components + client declarations | New-field reader compiles; unchanged response fixture changes from 0 to 1 diagnostic naming the missing property; real GET response fails Zod validation naming `contractNote` |
+| Remove item request workphase nullability | 1 / request contract + client declarations | Existing null caller changes from 0 to 1 diagnostic; unchanged frozen `ATT-9.11` case fails, expected 200 and received 400 |
+
+No generator, HTTP metadata, route, or parallel client field declaration was edited for the experiments. No experiment field remains. These measurements cover contract propagation: adding product semantics or exposing a new field in the curated UI/MCP subsets still requires implementation work. New legacy-specific error wording also remains an authored decision. The ignored local drill report is `logs/api-contract-batch3-drills.log`.
+
+### Deliberate failures and ongoing checks
+
+`pilotContracts.test.ts` checks real responses from the 77 shared cases against both production Zod shapes and independently compiled emitted JSON Schemas, including reindex disclosure, decorated children/activity/depth/workflow IDs, workflow collections, and error envelopes. That loop reuses a fixture only after the capture has asserted unchanged database state; successful writes and changed fixture variants trigger reseeding. This reduces local HTTP traffic without dropping cases. A separate test compares generated/runtime request acceptance for the body examples and raw query variants. The unchanged frozen snapshots independently check exact status, response, errors, and database effects.
+
+| Introduced fault | Failure exposed |
+|---|---|
+| Change a generated artifact's contents | The same assertion used by `check:pilot` throws `Stale generated artifact: <path>` |
+| Remove `title` in an interceptor on a real GET response | Zod refuses the response; independent JSON Schema assertion reports `ItemDetail response mismatch` and the missing `title` |
+| Delete GET item from the document | Scope derived from the independent compatibility corpus reports `Missing pilot registration: get /api/items/{id}` |
+
+Faults are local test variants, not retained broken artifacts. Freshness is part of the normal server gate and is available as a separate command. Registration coverage is explicitly the four characterized endpoints; it does not discover arbitrary unregistered Express routes or claim complete API coverage. Semantic wiki alignment and authored scenario intent still require owner review and drift audits.
+
+### Native assembly complexity checkpoint
+
+**D4's trigger was not reached in this slice.** The integrated native implementation uses a local registry, ordinary component references, explicit operation metadata, and literal OpenAPI parameter descriptors. The workflow query needs no generic parameter serializer or conversion override; the item detail uses normal schema composition. MCP consumes shared primitives directly and needs neither HTTP assembly path. No custom reference rewriting, naming engine, or repeated conversion workaround was added. The explicit list selecting input components is a small remaining maintenance responsibility; future context-dependent defaults or more involved parameter serialization would require renewed comparison under D4.
+
+The metadata/assembly module is larger than the two-endpoint prototype because it now lists four operations and the complete decorated schemas. That alone does not establish a need for another dependency. This result supports continuing the provisional native recommendation; it does not compare a real library integration or remove the agreed trigger for a future concrete requirement.
+
+Supporting source counts (nonblank lines, including comments): the complete metadata/assembly module is 163 lines; shared wire primitives 15, item schemas/adapters 103, project schemas/adapters 44, and workflow schemas 15. Much of this is endpoint/field metadata that every approach needs. The adapters preserve legacy behavior; changing OpenAPI assembly libraries would not remove them. These counts describe one-time implementation size, not a maintenance score. Subsequent fields change their schema declaration; curated consumer exposure, semantics, and error decisions remain separate work.
+
+The three isolated candidate definitions remain comparison fixtures rather than additional production authorities. They do not need parallel edits for the integrated drills. Their eventual retention/removal and the broader migration's scope are Batch 4 decisions.
+
+### Verification
+
+The unchanged **`npm.cmd run test:e2e` passed: 219 passed and 18 skipped, 237 discovered, in 3.8 minutes**, matching the Batch 1 baseline. The report's `.last-run.json` says `passed` with no failed tests. No test, helper, page object, expectation, or Playwright configuration was changed. Its local log is `logs/api-contract-batch3-e2e-final.log`.
+
+The final **`npm.cmd run check` passed: 780 server tests in 29 files, 604 client tests in 34 files, and 235 tooling tests**, plus type checks, lint, formatting, and documentation checks (422 files, zero findings). Its local log is `logs/api-contract-batch3-check-retained.log`. The 780 server tests retain all 771 Batch 2 tests, including the frozen 77-case corpus and snapshots. The nine new integration tests cover all 77 response cases in one loop with safe fixture reuse, plus eight consumer/contract/drift checks. No existing server/client test was edited or removed.
+
+Generation followed by independent `check:pilot` passed for both integrated artifacts; the gate checks these and the seven comparison artifacts. All field experiments were restored. The Architect reviewed the route, hierarchy, MCP, client, dependency, and generated-artifact boundary diffs; `git diff --check` passed. The results retain the exact legacy adapters and the explicit UI boundary rather than claiming API-wide type adoption.
+
+An initial full-gate invocation was contaminated when a second server test invocation overlapped its shared SQLite database, producing lock/foreign-key failures. Concurrent local HTTP traffic also produced Windows `EADDRINUSE` failures and contaminated an overlapping Playwright run, which was stopped. Sequential reruns still exhausted the local port range (over 16,000 `TIME_WAIT` connections); the last such run passed 855 tests and failed one connection. The additional response loop was then changed to reuse demonstrably unchanged fixture state instead of reseeding for each refusal/read. Those failed runs are discarded as verification evidence. Final verification passed sequentially after connections cleared, without changing existing tests or configuration. Sandboxed Playwright startup also encountered the same `tsx` Windows user-info failure as Batch 1; the authorized unchanged command succeeded outside the sandbox.
 
 ## Batch 4 — Final recommendation
 
