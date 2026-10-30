@@ -1,6 +1,6 @@
 # API Contract Framework — Spike Results
 
-**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 3 complete; final recommendation/handoff not started
+**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 4 recommendation and review packet prepared; awaiting Nathan's decision
 
 This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools are installed in an isolated test package. Native Zod conversion is implemented on a separate pilot branch; no final stack decision or API-wide rollout has been made.
 
@@ -333,7 +333,7 @@ No integrated pilot, new branch, broad rollout, PO/Test Planner/Coder/Auditor ha
 
 ### Branch and implementation boundary
 
-The native integration is on **`api-contract-framework-pilot`**, branched from Batch 2 commit `843f132`. The comparison branch and saved Batch 1 baseline retain their committed starting points. The pilot changes and the previously agreed D4 trigger amendment are uncommitted for Nathan's review. No application edits have been built for a second integration trial.
+The native integration is on **`api-contract-framework-pilot`**, branched from Batch 2 commit `843f132` and committed by Nathan as **`7410110be18f59263a3682e6843186e29c136ee3`**. The comparison branch and saved Batch 1 baseline retain their committed starting points. No application edits have been built for a second integration trial.
 
 `server/src/schemas/` owns the selected request and response shapes. The item/project move handlers parse their bodies after target lookup, replacing their inline structural guards. The hierarchy primitive uses the shared structural schema while retaining database checks, their ordering, and application in the existing transaction. GET item parses the existing string path parameter; GET workflows describes raw string/repeated-string query values and keeps the handler's truthiness and `String()` conversion. No defaults or coercion are introduced by schemas.
 
@@ -348,7 +348,7 @@ The shared hierarchy schema also serves the existing item edit primitive. Its st
 - The selected client API functions consume generated shapes. `pilotTypes.ts` derives their request subsets and UI compatibility aliases by reference. UI item rows keep optional `positionScope`, detail `depth`, and `workflowId` at the existing unloaded-data boundary; wire declarations require the fields actually returned. The client continues to expose string anchors, the two side values, and a string-only workphase field. Those are curated subsets of the permissive legacy REST input. Other client types remain manual; shared create/update response aliases derive from the same row shape without declaring those endpoint requests migrated. Existing UI code and tests are unchanged.
 - Existing `get_item` and `move_item` tool advertisements reuse Zod primitives through `mcpItemTools.ts`. Tests pin the exact old JSON schemas, including descriptions, required snake_case names, and the open unknown-field policy. The adapter preserves URL escaping, raw forwarding, payloads, result text, and exceptions. The MCP dispatcher awaits the adapter inside its existing catch. No runtime tool validation or additional capabilities are introduced. HTTP-backed adapter tests exercise both endpoints; the stdio transport itself is not newly exercised.
 - The unchanged `bruno/items/move-item.bru` is read externally, its authored variables resolved to checked fixture IDs, its JSON body validated against the emitted request component, and the PATCH executed against the app with response validation. Variables and scenario prose remain authored; no collection regeneration is required.
-- Root `AGENTS.md` has a narrowly scoped working-copy correction for the generated pilot boundary, for review with this diff. It does not declare the remaining client types generated.
+- Root `AGENTS.md` records the narrowly scoped generated pilot boundary in the committed implementation. It does not declare the remaining client types generated.
 
 ### Integrated field-change measurements
 
@@ -408,4 +408,90 @@ An initial full-gate invocation was contaminated when a second server test invoc
 
 ## Batch 4 — Final recommendation
 
-Not started. No stack selection or API-wide migration is authorized by the baseline results.
+### Recommendation for Nathan's decision
+
+**Recommend adopting Zod 4.6.7 with native JSON Schema conversion, small OpenAPI 3.1 assembly, and generated client declarations as the foundation for a separately authorized, behavior-preserving migration.** Retain the committed four-endpoint pilot as its starting point. This is the Architect's recommendation, not Nathan's adoption decision or authorization to migrate more routes.
+
+The two Zod candidates generated identical documents/types in the controlled comparison and passed the same compatibility and field-change exercises. Native conversion also completed the real four-endpoint integration without reaching D4's complexity trigger. Adding a library now has no demonstrated maintenance saving sufficient to justify the additional integration. Conversely, avoiding that dependency is not a reason to grow our own general-purpose converter. Preserve D4: a concrete need for parameter conversion, context-dependent component management, or repeated workarounds adds a comparable `zod-openapi` integration trial before selecting either implementation.
+
+TypeBox/Ajv remains a viable alternative: it passed the same prototype gates and expresses JSON Schema directly. It did not demonstrate a maintenance advantage for these consumers, and its real-handler/client/MCP integration has not been trialed. The conclusion is limited to the pinned versions and measured contracts; it is not a general library ranking or a forecast of every remaining endpoint's cost.
+
+### Criterion-by-criterion decision record
+
+| Criterion | Native Zod | Zod + `zod-openapi` | TypeBox/Ajv | Decision implication |
+|---|---|---|---|---|
+| Behavior preserved | 77 frozen cases, real-handler replacement, full gate, unchanged Playwright passed | 77-case preflight comparison passed; no integrated trial | Same preflight scope passed; no integrated trial | Native has the most complete evidence; prototype parity alone does not prove the others' integration |
+| Accurate contract | Request/document agreement; real write/detail/collection/error responses checked; no unsupported selected refinements | Same move documents as native in the prototype | Equivalent sampled request/response acceptance with a different conditional encoding | All viable; conversion/normalization must continue to be checked independently |
+| Useful types | Actual client boundary compiles; explicit UI subsets preserve optionality | Byte-identical prototype client declarations | Representative callers compile; `{}` is statically permitted by its chosen encoding | Generation reduces duplication but does not encode every refusal; all three miss some conditional constraints |
+| Independent definitions | Selected request/client declarations replaced by references; domain/UI duplication remains below | Same source-sharing potential as native | Shared TypeBox definitions propagate mechanically | No approach removes legitimate surface differences or independently authored business rules |
+| Recurring edits | Three integrated drills: one shape edit, two generated artifacts, useful independent failures | Same three in-memory prototype drills pass | Same three prototype drills pass | Native's propagation is demonstrated through real handlers; feature semantics still need implementation |
+| Drift detection | Stale file, intercepted response, and missing characterized operation fail usefully | Same checks could be retained with library assembly; not integrated | Same fallback principle; not integrated | Checks are part of the foundation, not a benefit supplied automatically by any library |
+| Custom machinery | 163-line metadata/assembly module plus legacy parsing adapters | 46-line prototype library adapter plus shared shapes/staging; library owns document assembly | 104-line prototype schema/validator plus shared assembler/staging | Counts have different scope; no score based on line totals. Legacy adapters remain with every option |
+| Operational cost | One direct runtime dependency; nested generator and freshness checks; client formatter resolution and LF policy | Additional development integration dependency; same generator/compiler peer issue | Validator configuration plus authoring package; same generator issue | Native's small current assembly cost is acceptable; generator isolation must become normal tooling if adopted |
+| Human review | Wiki semantics, endpoint inventory, curated tool inputs, scenarios, and explanations remain reviewed | Same responsibility | Same responsibility | Retain closeout and drift audits; do not promise that nothing handwritten can disagree |
+
+### What one authoritative shape does and does not mean here
+
+The comparison fixtures are frozen evaluation definitions, not additional production authorities. Within the selected production API chain, shape edits feed runtime parsing, emitted schemas, and client declarations. Requests and responses legitimately have different optionality; MCP and UI subsets deliberately expose different contracts.
+
+| Representative field | Baseline independent declarations | Retained pilot boundary |
+|---|---|---|
+| Item request `workphaseId` | Runtime guard, server request type, client input, MCP advertised primitive | REST schema supplies runtime/inferred/generated types; MCP references the same ID primitive. REST optional/nullable, UI optional/non-null, and MCP required/non-null are still three authored exposure policies |
+| Item request `side` allowed values | Runtime check, domain `Side`, client literal union: 3 | Zod enum feeds parsing and generated UI type; domain `Side` remains separate: 2. The pilot has not unified all domain vocabulary |
+| Project `prevId`/`nextId` | Route guards, route-local type, client input: 3 sites per field | Shared optional-reference schema supplies parsing/inferred/generated types. Neighbor selection/existence is still domain behavior, not a second shape definition |
+| Response `positionScope` allowed values | Domain union and client union: 2 | Zod adds the wire enum, while both old unions remain: 3 authored enums plus generated references. This temporary increase must not be reported as completed consolidation |
+| Detail `workflowId` | Produced by the handler, absent from the handwritten detail type | One response schema declaration reaches generated wire types and the optional UI alias; computation remains in the handler |
+
+The next migration should replace remaining transport declarations as their consumers migrate and either derive domain vocabulary from a neutral shared source or check agreement where sharing would create undesirable dependencies. Do not make position math depend on HTTP schemas just to lower a count. Existing response checks cover the sampled scope values; they are not an exhaustive type-equality gate for all remaining declarations. No such consolidation was silently added during Batch 4.
+
+MCP reuse is primitive-level, not automatic projection of the complete REST request. A future field-specific REST constraint still requires review of the curated MCP adapter and HTTP-backed checks; sharing `idSchema` alone cannot guarantee that every such change updates the tool correctly.
+
+### Retained files, dependency boundaries, and cleanup disposition
+
+| Area | Disposition and reason |
+|---|---|
+| `server/src/schemas/{common,items,projects,workflows,openapi}.ts`, `lib/parseRequest.ts`, selected route/hierarchy edits | Retain as the integrated implementation; legacy adapters are necessary for compatibility |
+| `server/src/lib/mcpItemTools.ts` and selected `mcp.ts` changes | Retain current advertisement/adapter reuse; no SDK registration migration or new runtime validation |
+| `server/contracts/pilot.openapi.json`, `client/src/api/{generated,pilotTypes}.ts`, selected API function edits | Retain partial development contract, generated declarations, and explicit temporary UI boundary |
+| Frozen corpus, harness, snapshots, and `pilotContracts.test.ts` | Retain all expectations and all 77 cases; do not consolidate tests while proving compatibility |
+| `pilotArtifacts.ts`, `generatePilot.ts`, `pilotFieldDrills.ts`, `documents.ts`, `typeChecks.ts` | Retain reproducible generation/check/drill tooling and application-compiler probes; migrate reusable tooling out of the comparison package before broader adoption |
+| Three candidate directories, shared comparison modules/tests, seven `generated/` artifacts, nested manifest/lockfile | Retain as reproducible evidence through the decision/review checkpoint. They are test/development code, not application authorities. No prototype file is discarded in this batch |
+| Server `zod` 4.6.7 | Retain exact direct runtime pin. It also satisfies the installed MCP SDK's declared peer range; no SDK upgrade is part of the proposal |
+| Nested `zod-openapi`, `typebox`, `ajv`, `openapi-typescript`, Zod and generator TypeScript 5 peer | Retain development-only for reproduction. No TypeBox/Ajv/OpenAPI-library import exists under application source. Do not promote alternative candidates into runtime dependencies |
+| `.gitattributes`, root `AGENTS.md`, tooling README | Retain generated LF policy and the explicit type boundary; update the README to distinguish comparison and integrated commands |
+| Experimental fields/faults, scratch test, ignored install/build/test outputs | Field/fault edits were restored and scratch test removed in Batch 3. No experimental behavior remains to discard; local outputs are not review evidence to commit |
+
+Inspection of `server/src`, `client/src/api`, and the application TypeScript configurations confirms that candidate machinery is already outside the runtime/build import paths. Batch 4 therefore removes no application dependency or implementation file. The nested package remains required by the retained server gate; its install and comparison-test overhead are real costs. After approval, separate normal contract tooling from comparison-only dependencies, while preserving the committed comparison and its reproduction instructions. Do not delete tests or resolve the generator's TypeScript 5 peer mismatch through an app downgrade.
+
+### Revised epic proposal and earlier decisions
+
+The proposed remaining sequence and gates are recorded in [the deferred epic](api-contract-zod-openapi.md). Reuse the pilot; do not repeat its implementation as another foundation story. Re-inventory remaining routes instead of inheriting the old count of 53 endpoints. Move symmetry and create/edit positioning are independent behavior work, not prerequisites for describing today's API.
+
+| Earlier epic item | Proposed disposition |
+|---|---|
+| C1, request schemas | Keep full non-test API coverage as the eventual target; replace the requirement to eliminate every handwritten structural branch with shared shape definitions plus necessary compatibility staging/error mapping |
+| C2, errors | Keep `{ error: string }`; replace generic flattening as a universal rule with preservation of current messages, precedence, and parser/global-error outcomes |
+| C3, shape-test consolidation | Remove from this refactor. Keep existing tests and coverage unchanged; consider any test redesign separately after compatibility is established |
+| C4, publication | Keep generation/freshness and completeness before publication. A public endpoint and its exact path remain a separately approved deliverable; no partial document is advertised as complete |
+| C5 and OD3, MCP tiers | Replace with behavior-preserving reuse of existing advertised shapes and explicit adapters. Runtime validation, generic name conversion, SDK registration migration, `move_project`, and expanded `move_item` are independent decisions |
+| C6, Bruno | Confirm authored variables/scenarios. Prefer focused external checks; do not regenerate collections merely to share shapes |
+| C7, authority/documentation | Confirm wiki business authority and generated technical shape reference. Replace “nothing handwritten” and “nothing can drift” promises with generated shapes, checks, and owner review of remaining semantics |
+| C8, responses | Confirm test-only response assertions. Defer `drizzle-zod`/table-derived schema adoption: the pilot did not evaluate it, and storage types are not automatically API contracts |
+| C9, layout/parsing | Confirm resource schema modules and typed in-handler parsing. The small central operation catalog is adequate for the pilot; future colocation/registration changes must meet a concrete maintenance need |
+| OD1, client source | Recommend OpenAPI-generated declarations; selected API consumers are integrated. Keep explicit view-model boundaries and migrate the rest incrementally rather than deleting `types.ts` wholesale |
+| OD2, library | Recommend native Zod for current needs; preserve D4's additional-trial trigger. `zod-openapi` remains a supported comparison candidate, not a selected production integration |
+| Move-shape symmetry, dual positions, create/edit placement, depth-cap delivery | Exclude behavior changes from migration. Positioning owns its decisions; optional consistency/capability changes have named follow-up scope below |
+
+One-time costs still ahead: route inventory, normal generator packaging/install wiring, wider response fixtures, and remaining client/domain boundaries. Per-route recurring work: capture legacy behavior, author its technical shapes and HTTP associations, replace structural validation without moving domain checks, generate consumers, and run contract/behavior gates. Ongoing manual work: business-rule interpretation, intended exposure policies, response construction, endpoint completeness review, Bruno scenario intent, comments, and semantic drift audits. The spike does not supply a reliable full-API effort estimate; estimate the resource batches after inventory. The first migrated batch should check whether the measured maintenance benefit continues outside this pilot.
+
+### Findings, review packet, and decision checkpoint
+
+All observed disagreements and policy questions are routed with expected/observed behavior, evidence, and a decision owner in [API contract compatibility follow-ups](api-contract-compatibility-follow-ups.md). They include project-neighbor/wiki/Bruno semantics, generic 500 validation paths, permissive inputs, incomplete client declarations, MCP advertisement versus runtime acceptance, and the stale error-guide example. None is fixed or declared a confirmed product defect in this spike. Positioning receives the move-shape/dual-position deferral; no wiki or test-plan passage is changed.
+
+[The review packet](api-contract-framework-spike-review.md) gives the exact commits/diff ranges, reproduction order, compatibility limits, retained artifacts, and questions for later Coder, PO, Test Planner, and Auditor input. It has been prepared, not sent; those roles have not been invoked. Nathan decides when to request their input and whether to adopt, extend a specified comparison, or stop. No merge, publication, broad rollout, or story sign-off follows automatically.
+
+### Batch 4 verification
+
+Batch 4 changes planning documents and the tooling README only. Runtime, generated artifacts, dependencies, tests, and configuration remain the committed `7410110` implementation. Its retained-code evidence is the passing Batch 3 full gate (780 server / 604 client / 235 tooling) and unchanged Playwright (219 passed / 18 skipped). No unchanged application suite was rerun for documentation-only edits.
+
+`check:generated` passed for all seven comparison artifacts, and `check:pilot` passed for both integrated artifacts without rewriting them. `npm.cmd run check:docs` passed (422 checked files, zero findings); `git diff --check` passed. Local document link targets exist, and the working diff contains no application/test/dependency/configuration changes. Batch 4 remains uncommitted for Nathan's review; the spike is ready for the adoption/input decision, not signed off or archived.

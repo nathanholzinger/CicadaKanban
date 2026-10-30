@@ -1,6 +1,6 @@
 # API Contract Framework — Comparison Spike and Pilot
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — Batch 3 complete; Batch 4 not started · **Sequenced:** before any API-wide contract migration
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** evaluation complete — Batch 4 review packet prepared; awaiting Nathan's decision · **Sequenced:** before any API-wide contract migration
 
 This story is the next step in place of starting `api-contract-zod-openapi.md`. That epic remains a migration proposal to replan from this story's evidence, not authorization to adopt a particular library or change an endpoint. This story compares the options, pilots the preferred option, and stops for a decision before wider adoption.
 
@@ -143,7 +143,7 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 
 ### Batch 3 — Integrated pilot and consumer checks
 
-**Complete on `api-contract-framework-pilot`, based on Batch 2 commit `843f132`.** Native Zod schemas replace the four handlers' structural checks; generated client declarations, existing MCP adapters, and an external check of the unchanged Bruno request are connected. The reversible integrated field drills and deliberate drift probes behaved as expected. The final gate passed (780 server, 604 client, 235 tooling tests), and unchanged Playwright passed (219 passed, 18 skipped); see [the results](api-contract-framework-spike-results.md). No competing integration was needed under D4's trigger, and no commits or broad rollout have been made.
+**Complete on `api-contract-framework-pilot`, committed by Nathan as `7410110`, based on Batch 2 commit `843f132`.** Native Zod schemas replace the four handlers' structural checks; generated client declarations, existing MCP adapters, and an external check of the unchanged Bruno request are connected. The reversible integrated field drills and deliberate drift probes behaved as expected. The final gate passed (780 server, 604 client, 235 tooling tests), and unchanged Playwright passed (219 passed, 18 skipped); see [the results](api-contract-framework-spike-results.md). No competing integration was needed under D4's trigger, and no broad rollout has been made.
 
 - Adopt the preferred candidate for the four endpoints only. Preserve lookup/parsing order, the existing hierarchy and positioning primitives, transactions, and response behavior.
 - Watch D4's complexity trigger. If reached, record the concrete requirement, preserve the native trial, and add `zod-openapi` on the same endpoint/consumer scope and common baseline. Use separate branches for competing application edits and carry shared compatibility work to both. Do not select or discard either implementation merely because the trigger was reached.
@@ -157,6 +157,8 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 **Gate:** `npm run check`, unchanged `npm run test:e2e`, and pilot acceptance checks pass for each successful integration trial. If the trigger added a second trial, the results compare both implementations and disclose any blockers. The Architect reviews the diffs and records the evidence for Nathan. No separate Auditor pass is required during the pilot, and no broad migration follows automatically.
 
 ### Batch 4 — Recommendation and handoff
+
+**Complete — ready for the decision checkpoint.** The Architect recommends native Zod conversion plus small OpenAPI assembly and generated client declarations, subject to Nathan's adoption decision. [The results](api-contract-framework-spike-results.md#batch-4--final-recommendation) contain the criterion comparison, declaration counts, retained-artifact/dependency inventory, costs, earlier-decision dispositions and verification. [The review packet](api-contract-framework-spike-review.md) is ready for later role input. [The migration proposal](api-contract-zod-openapi.md#proposed-replan-after-the-spike) reuses the pilot and sequences remaining work without behavior redesign; [the follow-up queue](api-contract-compatibility-follow-ups.md) owns CF1–CF6. Candidate machinery is already development-only; retain it for reproduction through the decision rather than remove coverage. Both artifact freshness commands, documentation checks and whitespace/link checks passed; the retained application still has the Batch 3 gate/E2E evidence. No roles have been invoked or new implementation started.
 
 - Finish the results record with a criterion-by-criterion comparison, the integrated pilot's results, remaining risks, and a recommendation to adopt, reconsider, or stop.
 - Route correctness and documentation disagreements to named follow-up work without fixing them here. State expected versus observed behavior and the evidence needed for a later ruling.
@@ -190,6 +192,7 @@ Batches 1–2 add the corpus and isolated comparison package. Batch 3 adds Zod 4
 | One existing request under `bruno/` plus validation tooling | 3 | Contract check preserving the scenario and variables |
 | Relevant `package.json` and lockfiles | 2–3 | Candidate tooling and retained pilot commands; remove unused dependencies |
 | `docs/planning/tech-debt-stories/api-contract-framework-spike-results.md` | 2–4 | Reproduction commands, measurements, decision evidence, findings, and retained-artifact inventory |
+| `api-contract-framework-spike-review.md`; `api-contract-compatibility-follow-ups.md`; deferred epic and positioning plan | 4 | Review packet, receiving CF1–CF6 queue, proposed migration sequence and independent positioning scope |
 
 ## Acceptance
 
@@ -207,18 +210,18 @@ Batches 1–2 add the corpus and isolated comparison package. Batch 3 adds Zod 4
 
 ## Open questions
 
-The library shortlist and compatibility-adapter questions are answered in the Batch 2–3 results. Native conversion remains provisional; the real pilot did not reach D4's additional-trial trigger.
+The library shortlist and compatibility-adapter questions are answered in the Batch 2–3 results. Batch 4 recommends native conversion; adoption remains Nathan's decision. The real pilot did not reach D4's additional-trial trigger.
 
 - **For Nathan, at the final checkpoint:** adopt the recommended foundation and authorize a replanned migration, extend the evaluation for a specific unresolved issue, or stop? No stack selection is presumed by this plan.
 
 ## Handoff
 
-- **Broader API contract epic:** inherit the chosen approach, versions, commands, reusable pilot code, measured maintenance costs, and remaining decisions. Replan from this evidence; do not resume conflicting instructions from the original epic unchanged.
+- **Broader API contract epic:** the proposed replan is written at the top of `api-contract-zod-openapi.md`, with older instructions marked as historical input. If adopted, inherit the pinned approach, reusable pilot, checks, measured costs and remaining decisions; groom the resource inventory/tooling story before implementation.
 - **Behavior follow-ups:** move symmetry and dual-position design remain with `positioning-on-create-and-edit.md`. New MCP capabilities and depth-cap consistency need separate named scope if still wanted. Each new correctness finding gets an explicit destination in the results record.
-- **Coder, PO, Test Planner, and Auditor, after the pilots and comparison:** review the prepared evidence at Nathan's direction to inform the final decision. These are deferred inputs, not intermediate implementation gates or required sign-offs during the spike.
+- **Coder, PO, Test Planner, and Auditor, after the pilots and comparison:** `api-contract-framework-spike-review.md` is the prepared input packet. Nathan decides when to request their input. No role request or sign-off is claimed by preparing it.
 - **PO, for later input:** receive implementation/wiki disagreements for a later ruling. No business-rule changes or Planned wiki passages are introduced by this story. Any future removal of duplicated API reference prose is a separate owner-applied handoff after complete generated documentation exists.
 - **Test Planner, for later input:** receive compatibility coverage gaps or candidate cases, without deleting or weakening existing cases. Schema-test consolidation is subsequent work, not part of proving this refactor compatible.
-- **Architect:** record the selected pilot type boundary. Root `AGENTS.md` currently requires manual type synchronization; if retained generated pilot types make that statement inaccurate, draft the narrowly scoped correction for Nathan's approval before retention, without declaring the whole client migrated.
+- **Architect:** the pilot's explicit type boundary and narrow root `AGENTS.md` correction are committed in `7410110`. Manual synchronization still applies to unmigrated consumers. Residual domain/UI vocabulary and generator packaging are explicit migration work, not claimed complete. CF6 queues the stale guide example for a separate approved correction.
 - **Code owners:** maintain comments and applicable directory guidance for the retained implementation. Keep independent contract declarations out of explanatory prose where generated reference or a symbol pointer serves better.
 - **Subsequent migration closeout and drift audits:** retain responsibility for semantic alignment among the wiki, implementation, comments, and authored scenarios where automated checks cannot establish it. This long-term responsibility does not impose the standard workflow on the spike.
 
@@ -233,3 +236,4 @@ The library shortlist and compatibility-adapter questions are answered in the Ba
 - **2026-10-30:** Nathan changed the native-assembly complexity criterion from a reason to exit/switch into a reason to add a comparable `zod-openapi` integration trial. Updated D4, D6, Batch 3, and acceptance to preserve both implementations and compare their evidence before selection. No integration trial has started.
 - **2026-10-30:** Nathan started Batch 3. Created `api-contract-framework-pilot` from the committed Batch 2 comparison and implemented the four-endpoint native Zod trial, generated client boundary, existing MCP adapters, Bruno check, drift probes, and reversible real-source field drills. No second integrated trial was triggered. Full unchanged-suite verification follows the restored pilot; no commit or API-wide rollout is authorized by this amendment.
 - **2026-10-30:** Completed Batch 3 with all 77 frozen captures unchanged, all 77 responses checked against Zod/emitted schemas, nine new integrated checks, current artifacts, and passing full gate and unchanged Playwright suite. Reduced redundant fixture setup in the new response loop after Windows port exhaustion; existing tests/configuration remain untouched. Batch 4 and the final adoption/review decision remain ahead.
+- **2026-10-30:** Nathan committed Batch 3 as `7410110` and started Batch 4. Prepared the final Architect recommendation, criterion comparison and actual remaining definition counts, retained/development-only cleanup inventory, CF1–CF6 receiving plan, migration replan and role-review packet. Updated positioning sequencing and tooling instructions. Runtime/tests/artifacts remain the committed pilot; no final adoption, role invocation, broader migration or archival sign-off is performed.

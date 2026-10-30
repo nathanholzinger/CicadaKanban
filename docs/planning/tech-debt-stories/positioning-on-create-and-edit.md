@@ -1,6 +1,6 @@
 # Positioning on Create and Edit, and Two Position Values
 
-**Type:** tech-debt story. It changes what the app does (a second stored position for items), so it closes by the full story-done checklist, audit included · **Written:** 2026-10-05 by the Test Planner, at Nathan's request · **Revised:** 2026-10-22 by the Architect: widened to two position values at Nathan's direction, with eight of A6's open questions carried in · **Sequenced:** not yet. Grooming it before the API contract epic's Story 2 lets that story's items and projects schemas encode the answer once. It also has to land before the first surface that shows a parent's children together, attached and Free · **Ready for:** grooming
+**Type:** tech-debt story. It changes what the app does (a second stored position for items), so it closes by the full story-done checklist, audit included · **Written:** 2026-10-05 by the Test Planner, at Nathan's request · **Revised:** 2026-10-30 by the Architect: separate behavior redesign from the compatibility-preserving API contract migration · **Sequenced:** not yet. This story is independent of describing the API's current behavior with schemas; its approved behavior changes can update those contracts afterward. It must land before the first surface needing a parent's combined attached and Free sibling order · **Ready for:** grooming
 
 ## Goal
 
@@ -38,6 +38,8 @@ Decide how a create and an edit treat an item's position, then state that in the
 
 ## Inbound deferrals
 
+From the API contract framework spike, Batch 4 (2026-10-30): this story retains move-shape symmetry, dual-position design and create/edit placement decisions. The pilot preserved `anchorId`/`side` for items and `prevId`/`nextId` for projects; it did not choose a unified shape. The API migration is no longer required to wait for this redesign. [Compatibility follow-ups CF1 and CF4](api-contract-compatibility-follow-ups.md) distinguish the unused-neighbor ruling and existing `positionScope` optionality from technical schema adoption. Preserve Nathan's existing optionality decision until this story intentionally revisits it.
+
 Carried in from A6's plan (`a6-audit-guidance-and-first-run.md`, Open questions) on 2026-10-22, at Nathan's direction. Each is a question this story's answers change, so answering it before them would mean answering it twice.
 
 *From the A6 first-run audit's report (`docs/audits/code-quality-audit-a6.md`, 2026-10-07):*
@@ -72,7 +74,7 @@ None yet. To groom:
    - what each one does with a `position`.
 2. **Whether a create or an edit should take a final position.** That would reverse wiki positioning §2's rule. That section gives its reason: a client's view can be narrower than the true order, so a number computed from it can jump past a neighbor the client never saw. A reversal needs an answer to that, so the PO rules on it, with the wiki.
 3. **Whether a create or an edit should place an item at all,** or leave placement to the move. Today a create with no anchor goes after its scope's true last item (wiki positioning §3's step 5, TC-2.6).
-4. **What a write does with a field it doesn't take.** It can ignore the field, as a create and an edit do today, or refuse it, as the move does. The API contract epic's request schemas (its C1) make this choice for every field, so the two answers should agree. The MCP tools that wrap these routes follow the same answer.
+4. **What a write does with a field it doesn't take.** It can ignore the field, as a create and an edit do today, or refuse it, as the move does. The behavior-preserving API migration encodes the current answer. Any approved change here must then update its schemas, consumer contracts and deliberate behavioral expectations. The MCP tools that wrap these routes follow the approved answer without gaining new capabilities as a side effect.
    - **Position isn't the only such field.** `PUT /items/:id` ignores a `workphaseId`, so on an edit only a move can name one (the Coder and the Reconciler, at A5b's close). wiki item-attachment §2a's sentence "A write that names `workphaseId: null` is accepted and leaves the item with no workphase" reads as if any write could, but an edit that names `null` gets "where it was shown" instead.
    - **That leaves a message wrinkle.** Suppose an edit detaches an item whose Card has no workphase. It's refused with wiki item-attachment §2a's message, and the message's first way out is to name a workphase in the same write, which an edit can't do.
 
@@ -93,6 +95,10 @@ Planned once the decisions are made.
 ## Acceptance
 
 ## Open questions
+
+## Amendments
+
+- **2026-10-30:** API contract spike Batch 4 removes positioning redesign as a prerequisite for a compatibility-preserving schema migration. Added the receiving deferral for move symmetry/dual positions and CF1/CF4, preserved the existing optionality question, and clarified that approved behavior changes here update already-established contracts separately. No positioning decision or implementation changes in this amendment.
 
 ## Handoff
 
