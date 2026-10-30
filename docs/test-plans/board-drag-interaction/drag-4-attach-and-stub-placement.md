@@ -1,6 +1,6 @@
 # DRAG-4 — Card attach and hierarchy placement
 
-**Next ID:** DRAG-4.35
+**Next ID:** DRAG-4.36
 
 **Terms.** *The full zoom-in hold* is as in [DRAG-1](drag-1-contexts-and-popping.md). *The tree* is Card `P`'s hierarchy, with depths counted from `P`'s children at 0:
 
@@ -39,6 +39,7 @@ The consequences of an attach (inheritance, the project cascade, a done parent's
 | DRAG-4.32 | An over-cap tab state shows a visible invalid cue | P1 | Open |
 | DRAG-4.33 | Below a nested last item, a sibling placement after each of its ancestors is offered | P1 | Open |
 | DRAG-4.34 | After zooming in from outside, cursor movement chooses the ghost's gap and depth | P0 | Open |
+| DRAG-4.35 | A Descendants release after the last move lands at the ghost's gap and depth | P0 | Open |
 
 ---
 
@@ -275,5 +276,18 @@ From there, the cursor moves the ghost as usual ([DRAG-4.8](drag-4-attach-and-st
 - in that same gap at depth 3 → a release attaches `X` to `S1a1` as its first child.
 
 Each release lands exactly where the ghost showed. The ghost neither stays in the starting last gap nor stays at the first row as the cursor moves to later rows. This holds after naming `P` from above or from below in its column. `X` is absent from the origin column's list while inside `P`, and the origin gap closes. *Given* instead `X` is a Stub of another Card, popped out to the column in the same drag, *then* the same placements reparent it to the selected parent in one write, with the new parent's workphase inherited.
+
+**Automation test:** —
+
+## DRAG-4.35 — A Descendants release after the last move lands at the ghost's gap and depth
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §2, wiki board-drag-interaction §7.1, wiki hierarchy-placement §1
+
+*Given* Card `P` with attached children `A, B, C, X`, where `A`, `B` and `C` are leaves, *when* `X` is dragged at `P`'s Descendants layer, the final pointer move crosses into a different row, and the pointer stops, *then* the side highlight names a neighbor of the gap the rows have opened for the ghost. No further pointer move is needed to make the release agree with that shown gap and depth. *When* the user releases there without moving again or opening the hierarchy modal, *then*:
+
+- with the ghost between `B` and `C`, at depth 0, `X.parentId = P`, still attached, and `P`'s children are `A, B, X, C`. The request names the neighbor the highlight shows: `B/after` or `C/before`;
+- with the ghost in that same gap, at depth 1, `X.parentId = B`, attached as `B`'s first child, and `P`'s children are `A, B, C`.
+
+In both, `X` keeps `P`'s workphase, and the write places it where the ghost was shown at release, rather than in the gap named before the final row crossing. The same holds when `X` carries an attached child `XC`: `XC` stays attached beneath `X`, and neither travelling row is a gap neighbor. Each outcome holds when the final move approaches from above or below. Different approaches need not select the same gap at the same cursor point; each release must match its own shown placement.
 
 **Automation test:** —

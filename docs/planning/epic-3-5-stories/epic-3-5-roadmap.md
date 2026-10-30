@@ -612,6 +612,30 @@ tests rather than carrying its coverage verdicts forward unchanged.
   Story 10. Route any remaining gesture-dependent coverage to Story 10
   by ID at close-out, under its existing catch-up scope.
 
+**Carried from Story 8.3 to Story 8's close-out — Test Reconciler.**
+- **DRAG-4.35, new, Open:** the Planner added the section's
+  ghost/release agreement after a final move crosses into a new row.
+  Assess the candidate untagged hook test in
+  `client/src/components/workflow/useBoardDnd.test.ts`, "the row a Stub's
+  drag names as the ghost's neighbor", for a Coder ID stamp and any
+  required internal-mapping approval. Compare the full case; do not
+  infer painted-ghost or committed-write assertions from the title.
+  Any remaining pointer-driven surface coverage is Story 10's.
+- **DRAG-7.15 and DRAG-7.27, skipped-spec coverage:** Phase 1 skipped
+  the two below-gap DRAG-7.15 specs in `drag-7-modal-hold.spec.ts` and
+  DRAG-7.27's in `drag-7-overflow-row.spec.ts`, each with its reason,
+  for Story 10. They are skipped, not failing. The Coder reports no
+  running spec for DRAG-7.15's below-gap clause or for DRAG-7.27 until
+  then. Check all current ID-bearing tests and apply the catalog's
+  skipped-test and full-Then rules to their statuses and mappings.
+  The throwaway scan's successful checks are evidence for the fix,
+  not active automated coverage. Both case IDs remain in Story 10's
+  catch-up work even if their catalog status changes before then.
+- **DRAG-7.17:** its isolated failure remains unexplained by the
+  8.3 trace. Keep the existing watch item; investigate if it recurs.
+  The non-reproducing failure doesn't establish either a fix or a
+  reason to skip its tests.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
@@ -1231,6 +1255,31 @@ deferral and keep landing with their stories.
       DRAG-5.1, 5.10, 5.13, 5.15; DRAG-7.2, 7.6, 7.10, 7.14, 7.18, 7.31.
       Some may close sooner through unit tests and approved internal
       pointers.
+    - **From Story 8.3** (2026-10-29; its plan, Amendments, items 7, 8 and
+      10):
+      - **Three specs its fix skipped.** The hook now names the ghost's
+        neighbor from the row dnd-kit announces when the pointer stops
+        (`onDragOver`), not only from the move event before it. Each spec
+        aimed from above at a row's top quarter, and passed on the stale
+        neighbor:
+        - **DRAG-7.15's two for the gap below `R`'s overflow row,** `W`
+          alone and with `WC`. At `T`'s top quarter the section now draws
+          the ghost after `T`. The section draws the gap they mean for an
+          aim in the overflow row's band, 30 to 52px below `R`'s row top.
+        - **DRAG-7.27's,** a dragged `R` carries its overflow row. At
+          `X`'s top quarter the section now draws `R` after `X`. No aim
+          for it has been tried.
+      - **DRAG-7.15's one-step spec,** for `W` with `WC`, at two aims,
+        each reached in a single approach:
+        - **`R`'s row center** (`center(itemRow(page, r.id))`): the modal
+          opens, and a release writes what it draws;
+        - **the overflow row's top quarter**
+          (`topQuarter(overflowRow(page, r.id))`): no hold runs, the ghost
+          is after the overflow row, and a release writes the same.
+      - **DRAG-7.17's one failure in a full run** isn't explained. It was
+        seen once in Story 7 and once in Story 8.1. It hasn't failed since
+        8.3's fix, in 80 runs of the modal-hold specs. If it fails again,
+        trace it before item 8's call on it.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,

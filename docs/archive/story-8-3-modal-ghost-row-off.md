@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.3 — A hold from above draws the modal's ghost a row off
 
-**Type:** story · **Written:** 2026-10-29 by the Architect, from Nathan's ruling of 2026-10-28 · **Status:** in progress — Phase 1 built, for review; Phase 2 is Nathan's hands-on, then the handoff
+**Type:** story · **Written:** 2026-10-29 by the Architect, from Nathan's ruling of 2026-10-28 · **Status:** built — Phase 1 committed, Nathan's hands-on done (Phase 2), the handoff written; ready to close
 
 ## Goal
 
@@ -35,7 +35,9 @@ The hierarchy modal draws the ghost where a release writes it, whichever way the
 
 - **Wiki passages:** none. §7.3 already states the rule, and DRAG-7.15 states its subtree clause.
 - **Test-plan cases:**
-  - **DRAG-7.15** stays `Automated`, on the Test Planner's lean, which Nathan accepted on 2026-10-28. Its specs reach the gap in small steps, or aim at `R`'s own row, and pass.
+  - **DRAG-4.35, new, Open:** the section's ghost and release agree when the pointer stops in the move that crosses into a new row. Derived from wiki board-drag-interaction §2 and §7.1, with hierarchy-placement §1; no new wiki rule is needed.
+  - **DRAG-7.15:** the modal's spot-under-cursor and same-placement rule. Phase 1 skipped its two below-gap specs; its catalog status awaits the Reconciler's review of the running coverage, as the handoff below records.
+  - **DRAG-7.27:** its overflow-row travelling spec is skipped in Phase 1 for Story 10; the Reconciler checks the case's remaining coverage and status.
   - **DRAG-7.17,** a watch item (Inbound deferrals).
 
 ## Inbound deferrals
@@ -112,6 +114,12 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Amendments
 
+**2026-10-29, Test Planner's handoff pass**
+- Added DRAG-4.35 as P0, Open, for the Descendants section's final-row-crossing release. It covers the agreement of the shown gap/depth, named neighbor and committed placement, including a carried subtree, without requiring every approach to select the same gap.
+- DRAG-1.2 remains the column case and DRAG-7.15 the modal-opening case. The new case doesn't prescribe event ordering or a library callback.
+- **To the Coder/Reconciler:** the handoff's untagged hook test, "the row a Stub's drag names as the ghost's neighbor", is a candidate carrier of DRAG-4.35. The Planner hasn't read it or claimed coverage. Assess its assertions, add the ID where it applies, and check any internal-mapping approval needed; a partial test leaves the case Open. No new Playwright test is requested during Story 8.
+- The Reconciler's skip/status questions for DRAG-7.15 and DRAG-7.27, the candidate stamp/mapping for DRAG-4.35, and the unresolved DRAG-7.17 watch item are carried into the roadmap's Story 8 close-out entry so they remain tracked after this plan is archived. No existing case status or automation mapping changed in this Planner pass.
+
 **2026-10-29, Phase 1 (Coder)**
 1. **Reproduced on today's code,** by a throwaway spec, deleted. `W` with `WC`, `holdAt(page, w, p, () => topQuarter(overflowRow(page, r.id)), 0)`: the section reads `3:3:true` and the hold runs. The modal opens with the ghost at 535–559 under a cursor at y 532, and a release writes `R`'s first child (position 0.5 against `R1`'s 1). The controls: `W` alone at that aim reads `6:2:true` and runs no hold; `W` with `WC` at `R`'s row center reads `3:3:true` with the ghost under the cursor (501–525 against 513), and the release agrees.
 2. **Where the ghost and the projection first part: in the section, before the hold completes** (D1's exception). On the one-step path the ghost is painted after `R`'s overflow row (`W` at 529–553, the overflow row's slot), which is gap 6. The projection says gap 3, before it.
@@ -139,9 +147,15 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 11. **No new drag spec** (How Story 8 runs). The probes and the scan are in the scratchpad, not the repo.
 12. **Checks:** `npm run check` passes (432 server, 604 client, 235 script tests; `check:docs` 386 files, 0 hits). The first full `npm run test:e2e` run with the fix failed the three specs in item 10 and nothing else. With them skipped it gives 219 passed and 18 skipped, none failed. DRAG-7.15 to DRAG-7.17's eight active specs also ran ten times each, 80 runs, none failing, which neither confirms nor rules out the one failure Story 8.1 saw (item 8).
 
+**2026-10-29, Phase 2 (Nathan's hands-on; Coder's handoff)**
+- **Hands-on:** Nathan tried it on the deep stack and reports it looks good (2026-10-29). Phase 1 was committed as `de38904` before it, so the build Nathan tried is the committed one. No finding came out of it, and no code changed after it.
+- **The handoff** is the Living-docs handoff below, by role. Nothing in it waits on a decision of Nathan's: the one Open question is answered (approved as implemented; the seam is for if it shows in real use).
+- **Nothing is left for the Coder in this story.** No audit runs for it alone (plan); the close-out audit over all of Story 8 covers its code.
+
 ## Open questions
 
-- **For Nathan, from the trace:** the second part of the traced failure (item 3) is the modal's by-design re-read meeting a tie between rows, after the window pulled it off the spot. It was only reached through the stale reading, and the scan found it nowhere else. A taller or shorter window could put a legitimate reading on a seam, which this scan didn't try. If it shows hands-on, it is a trace of its own.
+- **Answered (Nathan, 2026-10-29): the work is approved as implemented, and the seam is addressed if it ever shows in real use.** Nothing to build now. The question as asked:
+- **For Nathan, from the trace:** the second part of the traced failure (item 3) is the modal's by-design re-read meeting a tie between rows, after the window pulled it off the spot. It was only reached through the stale reading, and the scan found it nowhere else. A taller or shorter window could put a legitimate reading on a seam, which this scan didn't try. The hands-on didn't show it. If it shows later, it is a trace of its own.
 
 ## Living-docs handoff
 
@@ -150,8 +164,8 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **Passages superseded:** none.
 - **Implementation passages to place:** none.
 - **Test-plan cases affected:**
-  - **Skipped specs** (Amendments, item 10): DRAG-7.15's two for the gap below `R`'s overflow row from above, and DRAG-7.27's. The Reconciler should not read them as failing: they are skipped for Story 10, with the reason on each. DRAG-7.15's clause for that gap has no running spec until then, though the scan (item 7) covers it.
+  - **Skipped specs** (Amendments, item 10): DRAG-7.15's two for the gap below `R`'s overflow row from above, and DRAG-7.27's. **For the Reconciler:** they are skipped for Story 10, with the reason on each, not failing. DRAG-7.15's clause for that gap and DRAG-7.27 each have no running spec until then, though the scan (item 7) covers the first. Whether the two cases stay `Automated` meanwhile is the Reconciler's reading; the catalog says whether a case is automated, not whether it passes.
   - **DRAG-7.15's one-step spec,** which waits for Story 10. Its gesture is a one-step approach for `W` with `WC`. The aim in Story 7's plan, `topQuarter(overflowRow(page, r.id))`, now reads `6:2:true` and runs no hold, as `W` alone does. The aim that opens the modal in one step is `R`'s row, `center(itemRow(page, r.id))`, which the spec at `drag-7-modal-hold.spec.ts:399` already uses.
   - **DRAG-7.17,** whose one failure this trace doesn't explain (Amendments, item 8).
-  - **A candidate new case,** for the Test Planner (Amendments, item 9).
-- **For the Architect, at close:** Story 10's skips gain the three above (it ends with none). Its item 10 adds the one-step spec for DRAG-7.15 with the aims above: `R`'s row center, where the modal opens and a release writes what it draws; and the overflow row's top quarter, where no hold runs, the ghost is after the overflow row, and a release writes the same.
+  - **DRAG-4.35, new, Open:** the candidate in Amendments, item 9 is now catalogued: a Descendants drag stopped at a row crossing releases at its shown gap and depth. `useBoardDnd.test.ts`'s "the row a Stub's drag names as the ghost's neighbor" still needs the Coder/Reconciler to assess the candidate stamp and mapping. The Planner has not read the test or marked the case Automated.
+- **For the Architect, at close:** *Story 10's part done 2026-10-29 (Architect),* in its item 10, under "From Story 8.3", with DRAG-7.17's unexplained failure as a watch item there. The ✅ waits for sign-off. Story 10's skips gain the three above (it ends with none). Its item 10 adds the one-step spec for DRAG-7.15 with the aims above: `R`'s row center, where the modal opens and a release writes what it draws; and the overflow row's top quarter, where no hold runs, the ghost is after the overflow row, and a release writes the same. At sign-off, Story 8.3's roadmap heading gets its ✅ and a status line.
