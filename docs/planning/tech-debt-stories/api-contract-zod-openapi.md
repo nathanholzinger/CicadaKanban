@@ -2,6 +2,8 @@
 
 **Type:** tech-debt epic · **Written:** 2026-09-26 by the Architect · **Sequenced:** after Epic 3.5 closes, before Epic 4
 
+**2026-10-30 — Deferred pending the [API contract framework comparison spike and pilot](api-contract-framework-spike.md).** That standalone story is the next work. It evaluates Zod with an OpenAPI integration library, Zod 4 native conversion with document assembly, and TypeBox/Ajv before selecting a foundation. All current behavior and existing Playwright tests must remain unchanged. This epic's earlier library commitments, behavior changes, test consolidation, and positioning prerequisite below are proposals to replan after the spike, not instructions for its implementation. The wiki remains the business-rule authority; authoritative API shapes feed generated technical reference, with checks and human review covering the remaining relationships.
+
 This epic was split out of `docs/planning/epic-4-decisions.md`, whose §1–§8 it replaces. Those decisions were recorded against Epic 4 only because Epic 4 was the next epic at the time. They were never about Quick Items. The round table (`docs/planning/round-tables/documentation-purposes-and-standards`, NZ15, A0, PO F4, Auditor F10, Architect F5) then made OpenAPI the API's documentation. Two of the carried decisions change as a result; both are marked below.
 
 This plan uses the tech-debt variant of the story template. Each story below is a placeholder, detailed when it's planned.

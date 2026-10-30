@@ -1,0 +1,2701 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HTTP compatibility corpus > ATT-1.3, ATT-1.6, TC-2.24: item workphase-only cascades attached descendants and notifies 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Moved from "Todo" to "Active"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromWorkphaseId":"<todo>","toWorkphaseId":"<active>"}",
+          "type": "status_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": "<active>",
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<movingItem>",
+        },
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": "<active>",
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+    "notifications": {
+      "added": [
+        {
+          "created_at": 1800000060000,
+          "id": "<notifications:new:1>",
+          "is_read": 0,
+          "item_id": "<movingItem>",
+          "message": ""Moving" moved to "Active"",
+          "type": "item_in_workphase",
+          "workflow_id": "<workflow>",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+  },
+  "request": {
+    "body": {
+      "workphaseId": "<active>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 2,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<active>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-1.8: item parentless attach refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": true,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "isAttached requires a parentId",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-3.11: item reparent without flag stays free 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Parented under "Parent" (detached)",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromParentId":null,"toParentId":"<parentItem>","fromAttached":false,"toAttached":false}",
+          "type": "hierarchy_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "parent_id": "<parentItem>",
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "parent_id": null,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "parentId": "<parentItem>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": "<parentItem>",
+    "position": 2,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-7.1, ATT-9.4: item detach keeps parent and takes shown workphase 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Detached from "Moving"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<attachedChild>",
+          "metadata": "{"fromParentId":"<movingItem>","toParentId":"<movingItem>","fromAttached":true,"toAttached":false}",
+          "type": "hierarchy_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "is_attached": 0,
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "is_attached": 1,
+            "position": 1,
+            "updated_at": 1800000000000,
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "isAttached": false,
+    },
+    "method": "patch",
+    "path": "/api/items/<attachedChild>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<attachedChild>",
+    "isAttached": 0,
+    "parentId": "<movingItem>",
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Attached child",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-7.7, ATT-9.5: item null parent clears attachment 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Made top-level (was under "Moving")",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<attachedChild>",
+          "metadata": "{"fromParentId":"<movingItem>","toParentId":null,"fromAttached":true,"toAttached":false}",
+          "type": "hierarchy_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "is_attached": 0,
+            "parent_id": null,
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "is_attached": 1,
+            "parent_id": "<movingItem>",
+            "position": 1,
+            "updated_at": 1800000000000,
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "parentId": null,
+    },
+    "method": "patch",
+    "path": "/api/items/<attachedChild>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<attachedChild>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Attached child",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-9.1: item attached child rejects explicit null workphase 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "workphaseId": null,
+    },
+    "method": "patch",
+    "path": "/api/items/<attachedChild>/move",
+  },
+  "response": {
+    "error": "an attached item inherits its parent's workphase; omit workphaseId or match the parent's",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-9.8: item foreign workphase refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "workphaseId": "<foreignPhase>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId belongs to a workflow this item's project does not use; name a workphase of that workflow",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > ATT-9.11: item explicit null workphase clears it 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Moved from "Todo" to "unknown"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromWorkphaseId":"<todo>","toWorkphaseId":null}",
+          "type": "status_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": null,
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<movingItem>",
+        },
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": null,
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "workphaseId": null,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 2,
+    "positionScope": "none",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": null,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.5: item before anchor resolves position 1`] = `
+{
+  "changes": {
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 0.5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 2,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "anchorId": "<prevItem>",
+      "side": "before",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 0.5,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.13: attached item detail has sibling scope and depth 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/<attachedChild>",
+  },
+  "response": {
+    "activity": [
+      {
+        "content": "Created",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:5>",
+        "itemId": "<attachedChild>",
+        "metadata": "{"workphaseId":"<todo>"}",
+        "type": "status_change",
+      },
+      {
+        "content": "Created under "Moving" (attached)",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:6>",
+        "itemId": "<attachedChild>",
+        "metadata": "{"fromParentId":null,"toParentId":"<movingItem>","fromAttached":false,"toAttached":true}",
+        "type": "hierarchy_change",
+      },
+    ],
+    "agentId": null,
+    "assigneeType": null,
+    "children": [],
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "depth": 1,
+    "description": null,
+    "id": "<attachedChild>",
+    "isAttached": 1,
+    "parentId": "<movingItem>",
+    "position": 1,
+    "positionScope": "attached-siblings",
+    "projectId": "<project>",
+    "title": "Attached child",
+    "type": null,
+    "updatedAt": 1800000000000,
+    "workflowId": "<workflow>",
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.15: done item detail has completion and no scope 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/<doneItem>",
+  },
+  "response": {
+    "activity": [
+      {
+        "content": "Created",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:12>",
+        "itemId": "<doneItem>",
+        "metadata": "{"workphaseId":"<done>"}",
+        "type": "status_change",
+      },
+    ],
+    "agentId": null,
+    "assigneeType": null,
+    "children": [],
+    "completedAt": 1800000000000,
+    "createdAt": 1800000000000,
+    "depth": 0,
+    "description": null,
+    "id": "<doneItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": null,
+    "positionScope": "none",
+    "projectId": "<project>",
+    "title": "Completed",
+    "type": null,
+    "updatedAt": 1800000000000,
+    "workflowId": "<workflow>",
+    "workphaseId": "<done>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.16: unsorted item detail has null workflow and no scope 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/<unsortedItem>",
+  },
+  "response": {
+    "activity": [
+      {
+        "content": "Created",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:11>",
+        "itemId": "<unsortedItem>",
+        "metadata": "{"workphaseId":null}",
+        "type": "status_change",
+      },
+    ],
+    "agentId": null,
+    "assigneeType": null,
+    "children": [],
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "depth": 0,
+    "description": null,
+    "id": "<unsortedItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": null,
+    "positionScope": "none",
+    "projectId": "<project>",
+    "title": "Unsorted",
+    "type": null,
+    "updatedAt": 1800000000000,
+    "workflowId": null,
+    "workphaseId": null,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.32: item explicit position wins over other faults 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": "yes",
+      "parentId": 4,
+      "position": null,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "position is not accepted: name an anchorId and side to place the item instead",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-2.34: item empty anchor is a missing row 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "",
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId does not reference an existing item",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-5.2, TC-5.9: item append after large anchor discloses reindex 1`] = `
+{
+  "changes": {
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "updated_at": 1800000000000,
+          },
+          "id": "<prevItem>",
+        },
+        {
+          "after": {
+            "position": 5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 2,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+        {
+          "after": {
+            "position": 4,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 1600,
+            "updated_at": 1800000000000,
+          },
+          "id": "<nextItem>",
+        },
+        {
+          "after": {
+            "position": 2,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 4,
+            "updated_at": 1800000000000,
+          },
+          "id": "<parentItem>",
+        },
+        {
+          "after": {
+            "position": 3,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 5,
+            "updated_at": 1800000000000,
+          },
+          "id": "<detachedChild>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "anchorId": "<nextItem>",
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 5,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "reindexed": [
+      {
+        "id": "<prevItem>",
+        "position": 1,
+      },
+      {
+        "id": "<parentItem>",
+        "position": 2,
+      },
+      {
+        "id": "<detachedChild>",
+        "position": 3,
+      },
+      {
+        "id": "<nextItem>",
+        "position": 4,
+      },
+      {
+        "id": "<movingItem>",
+        "position": 5,
+      },
+    ],
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-6.1, TC-6.3: item terminal workphase clears position and sets completion 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Moved from "Todo" to "Done"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromWorkphaseId":"<todo>","toWorkphaseId":"<done>"}",
+          "type": "status_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "completed_at": 1800000060000,
+            "position": null,
+            "updated_at": 1800000060000,
+            "workphase_id": "<done>",
+          },
+          "before": {
+            "completed_at": null,
+            "position": 2,
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<movingItem>",
+        },
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": "<done>",
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "workphaseId": "<done>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": 1800000060000,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": null,
+    "positionScope": "none",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<done>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-6.2, TC-6.9: item reopening appends and clears completion 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Moved from "Done" to "Todo"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<doneItem>",
+          "metadata": "{"fromWorkphaseId":"<done>","toWorkphaseId":"<todo>"}",
+          "type": "status_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "completed_at": null,
+            "position": 6,
+            "updated_at": 1800000060000,
+            "workphase_id": "<todo>",
+          },
+          "before": {
+            "completed_at": 1800000000000,
+            "position": null,
+            "updated_at": 1800000000000,
+            "workphase_id": "<done>",
+          },
+          "id": "<doneItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "workphaseId": "<todo>",
+    },
+    "method": "patch",
+    "path": "/api/items/<doneItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<doneItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Completed",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-7.10: item foreign anchor refused by scope 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<foreignItem>",
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId is not in this item's resulting position scope",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-7.11: item attach and anchor use resulting sibling scope 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Parented under "Parent" (attached)",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromParentId":null,"toParentId":"<parentItem>","fromAttached":false,"toAttached":true}",
+          "type": "hierarchy_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "is_attached": 1,
+            "parent_id": "<parentItem>",
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "is_attached": 0,
+            "parent_id": null,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "anchorId": "<anchorChild>",
+      "isAttached": true,
+      "parentId": "<parentItem>",
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 1,
+    "parentId": "<parentItem>",
+    "position": 2,
+    "positionScope": "attached-siblings",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-7.18: foreign item detail derives stored workflow but no scope 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/<movingItem>",
+  },
+  "response": {
+    "activity": [
+      {
+        "content": "Created",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:2>",
+        "itemId": "<movingItem>",
+        "metadata": "{"workphaseId":"<todo>"}",
+        "type": "status_change",
+      },
+    ],
+    "agentId": null,
+    "assigneeType": null,
+    "children": [
+      {
+        "agentId": null,
+        "assigneeType": null,
+        "completedAt": null,
+        "createdAt": 1800000000000,
+        "depth": 1,
+        "description": null,
+        "id": "<attachedChild>",
+        "isAttached": 1,
+        "parentId": "<movingItem>",
+        "position": 1,
+        "positionScope": "attached-siblings",
+        "projectId": "<project>",
+        "title": "Attached child",
+        "type": null,
+        "updatedAt": 1800000000000,
+        "workphaseId": "<todo>",
+      },
+      {
+        "agentId": null,
+        "assigneeType": null,
+        "completedAt": null,
+        "createdAt": 1800000000000,
+        "depth": 1,
+        "description": null,
+        "id": "<detachedChild>",
+        "isAttached": 0,
+        "parentId": "<movingItem>",
+        "position": 5,
+        "positionScope": "workflow",
+        "projectId": "<project>",
+        "title": "Detached child",
+        "type": null,
+        "updatedAt": 1800000000000,
+        "workphaseId": "<todo>",
+      },
+    ],
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "depth": 0,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 2,
+    "positionScope": "none",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000000000,
+    "workflowId": "<foreignWorkflow>",
+    "workphaseId": "<foreignPhase>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TC-X.6: item self anchor refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<movingItem>",
+      "side": "before",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId cannot be the item itself",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-3.10: project empty parent names missing row 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "parentId": "",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "parentId does not reference an existing project",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-4.5: project append after large neighbor discloses reindex 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "updated_at": 1800000000000,
+          },
+          "id": "<project>",
+        },
+        {
+          "after": {
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "updated_at": 1800000000000,
+          },
+          "id": "<foreignProject>",
+        },
+        {
+          "after": {
+            "position": 5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+        {
+          "after": {
+            "position": 3,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 4,
+            "updated_at": 1800000000000,
+          },
+          "id": "<prevProject>",
+        },
+        {
+          "after": {
+            "position": 4,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 1600,
+            "updated_at": 1800000000000,
+          },
+          "id": "<nextProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "prevId": "<nextProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 5,
+    "reindexed": [
+      {
+        "id": "<project>",
+        "position": 1,
+      },
+      {
+        "id": "<foreignProject>",
+        "position": 2,
+      },
+      {
+        "id": "<prevProject>",
+        "position": 3,
+      },
+      {
+        "id": "<nextProject>",
+        "position": 4,
+      },
+      {
+        "id": "<movingProject>",
+        "position": 5,
+      },
+    ],
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.1: project null prev permits next neighbor 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 4.5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "nextId": "<nextProject>",
+      "prevId": null,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 4.5,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.2: project both null neighbors append 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "nextId": null,
+      "prevId": null,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 6,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.2: project empty body appends 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {},
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 6,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.2: project reparent appends in resulting sibling group 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "parent_id": "<project>",
+            "position": 2,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "parent_id": null,
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "parentId": "<project>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": "<project>",
+    "position": 2,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.3: project neighbor outside resulting scope refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "parentId": "<project>",
+      "prevId": "<prevProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "prevId is not a sibling in the target scope",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.3: project neighbor without position refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "prevId": "<prevProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "prevId has no position to anchor against",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.5: project self neighbor refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "prevId": "<movingProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "prevId names the project itself: name a sibling to place it next to",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > TREE-6.6: project explicit position wins over all field shapes 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "nextId": 4,
+      "parentId": 5,
+      "position": null,
+      "prevId": 3,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "position is not accepted: name a prevId or nextId to place the project instead",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item JSON null rejected by body parser 1`] = `
+{
+  "changes": {},
+  "request": {
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+    "rawBody": "null",
+  },
+  "response": {
+    "error": "Internal server error",
+  },
+  "status": 500,
+  "unhandledErrorLogged": true,
+}
+`;
+
+exports[`HTTP compatibility corpus > item anchor-only intent requires side 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<prevItem>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "side must be 'before' or 'after' when anchorId is given",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item array body has no intent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": [],
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item detail includes children activity workflow and depths 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/<movingItem>",
+  },
+  "response": {
+    "activity": [
+      {
+        "content": "Created",
+        "createdAt": 1800000000000,
+        "id": "<activity_log:seed:2>",
+        "itemId": "<movingItem>",
+        "metadata": "{"workphaseId":"<todo>"}",
+        "type": "status_change",
+      },
+    ],
+    "agentId": null,
+    "assigneeType": null,
+    "children": [
+      {
+        "agentId": null,
+        "assigneeType": null,
+        "completedAt": null,
+        "createdAt": 1800000000000,
+        "depth": 1,
+        "description": null,
+        "id": "<attachedChild>",
+        "isAttached": 1,
+        "parentId": "<movingItem>",
+        "position": 1,
+        "positionScope": "attached-siblings",
+        "projectId": "<project>",
+        "title": "Attached child",
+        "type": null,
+        "updatedAt": 1800000000000,
+        "workphaseId": "<todo>",
+      },
+      {
+        "agentId": null,
+        "assigneeType": null,
+        "completedAt": null,
+        "createdAt": 1800000000000,
+        "depth": 1,
+        "description": null,
+        "id": "<detachedChild>",
+        "isAttached": 0,
+        "parentId": "<movingItem>",
+        "position": 5,
+        "positionScope": "workflow",
+        "projectId": "<project>",
+        "title": "Detached child",
+        "type": null,
+        "updatedAt": 1800000000000,
+        "workphaseId": "<todo>",
+      },
+    ],
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "depth": 0,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 2,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000000000,
+    "workflowId": "<workflow>",
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item done anchor refused by scope before missing position 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<doneItem>",
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId has no position to anchor against (it may be a done item)",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item empty body 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {},
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item empty legacy scope array does not provide intent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "scopeWorkphaseIds": [],
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item flag shape wins over phase shape 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": null,
+      "workphaseId": 9,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "isAttached must be a boolean",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item invalid legacy scope ignored with explicit intent 1`] = `
+{
+  "changes": {
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 2,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "scopeWorkphaseIds": 9,
+      "workphaseId": "<todo>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item invalid side ignored without anchor 1`] = `
+{
+  "changes": {
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 2,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "side": "sideways",
+      "workphaseId": "<todo>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item legacy scope string does not provide intent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "scopeWorkphaseIds": "<todo>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item malformed JSON rejected by body parser 1`] = `
+{
+  "changes": {},
+  "request": {
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+    "rawBody": "{",
+  },
+  "response": {
+    "error": "Internal server error",
+  },
+  "status": 500,
+  "unhandledErrorLogged": true,
+}
+`;
+
+exports[`HTTP compatibility corpus > item missing body reaches global error handler 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "Internal server error",
+  },
+  "status": 500,
+  "unhandledErrorLogged": true,
+}
+`;
+
+exports[`HTTP compatibility corpus > item missing side wins over nonexistent phase 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<prevItem>",
+      "workphaseId": "missing",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "side must be 'before' or 'after' when anchorId is given",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item missing target wins over malformed fields 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": null,
+      "position": 4,
+    },
+    "method": "patch",
+    "path": "/api/items/missing/move",
+  },
+  "response": {
+    "error": "Item not found",
+  },
+  "status": 404,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item nonempty legacy scope array provides intent even with null element 1`] = `
+{
+  "changes": {
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 2,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingItem>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "scopeWorkphaseIds": [
+        null,
+      ],
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 6,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<todo>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item nonexistent parent wins over parentless attach 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": true,
+      "parentId": "missing",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "parentId does not reference an existing item",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item nonexistent phase wins over nonexistent parent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "parentId": "missing",
+      "workphaseId": "missing",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId does not reference an existing workphase",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item null anchor is not omission 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": null,
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId does not reference an existing item",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item numeric anchor reaches row lookup 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": 42,
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId does not reference an existing item",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item object anchor reaches binding error 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": {},
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "Internal server error",
+  },
+  "status": 500,
+  "unhandledErrorLogged": true,
+}
+`;
+
+exports[`HTTP compatibility corpus > item parent shape wins over flag and phase shapes 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "isAttached": "yes",
+      "parentId": 4,
+      "workphaseId": 9,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "parentId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item phase shape wins over missing side 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<prevItem>",
+      "workphaseId": 9,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item side alone is not intent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "side": "after",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item unknown fields alone do not express intent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "surprise": true,
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "workphaseId, parentId, isAttached, and/or anchorId+side required",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item unknown fields ignored alongside workphase 1`] = `
+{
+  "changes": {
+    "activity_log": {
+      "added": [
+        {
+          "content": "Moved from "Todo" to "Active"",
+          "created_at": 1800000060000,
+          "id": "<activity_log:new:1>",
+          "item_id": "<movingItem>",
+          "metadata": "{"fromWorkphaseId":"<todo>","toWorkphaseId":"<active>"}",
+          "type": "status_change",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+    "items": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": "<active>",
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<movingItem>",
+        },
+        {
+          "after": {
+            "updated_at": 1800000060000,
+            "workphase_id": "<active>",
+          },
+          "before": {
+            "updated_at": 1800000000000,
+            "workphase_id": "<todo>",
+          },
+          "id": "<attachedChild>",
+        },
+      ],
+    },
+    "notifications": {
+      "added": [
+        {
+          "created_at": 1800000060000,
+          "id": "<notifications:new:1>",
+          "is_read": 0,
+          "item_id": "<movingItem>",
+          "message": ""Moving" moved to "Active"",
+          "type": "item_in_workphase",
+          "workflow_id": "<workflow>",
+        },
+      ],
+      "removed": [],
+      "updated": [],
+    },
+  },
+  "request": {
+    "body": {
+      "surprise": true,
+      "workphaseId": "<active>",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "agentId": null,
+    "assigneeType": null,
+    "completedAt": null,
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingItem>",
+    "isAttached": 0,
+    "parentId": null,
+    "position": 2,
+    "positionScope": "workflow",
+    "projectId": "<project>",
+    "title": "Moving",
+    "type": null,
+    "updatedAt": 1800000060000,
+    "workphaseId": "<active>",
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > missing item detail returns 404 without ID format validation 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/items/not-a-uuid",
+  },
+  "response": {
+    "error": "Item not found",
+  },
+  "status": 404,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project array body appends 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": [],
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 6,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project explicit null parent makes root 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "parent_id": null,
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "parent_id": "<project>",
+            "position": 1,
+            "updated_at": 1800000000000,
+          },
+          "id": "<childProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "parentId": null,
+    },
+    "method": "patch",
+    "path": "/api/projects/<childProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<childProject>",
+    "name": "Child project",
+    "parentId": null,
+    "position": 6,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project invalid selected prev does not fall back to next 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "nextId": "<nextProject>",
+      "prevId": "missing",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "prevId does not reference an existing project",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project missing body reaches global error handler 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "Internal server error",
+  },
+  "status": 500,
+  "unhandledErrorLogged": true,
+}
+`;
+
+exports[`HTTP compatibility corpus > project missing parent wins over missing neighbor 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "parentId": "missing",
+      "prevId": "missing",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "parentId does not reference an existing project",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project missing target wins over malformed fields 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "position": null,
+      "prevId": false,
+    },
+    "method": "patch",
+    "path": "/api/projects/missing/move",
+  },
+  "response": {
+    "error": "Project not found",
+  },
+  "status": 404,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project next shape wins over parent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "nextId": false,
+      "parentId": 5,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "nextId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project prev selects neighbor and ignores empty next row 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 4.5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "nextId": "",
+      "prevId": "<prevProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 4.5,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project prev selects neighbor and ignores missing next row 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 4.5,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "nextId": "missing",
+      "prevId": "<prevProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 4.5,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project prev shape wins over next and parent 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "nextId": 4,
+      "parentId": 5,
+      "prevId": false,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "prevId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project unknown fields alone still append 1`] = `
+{
+  "changes": {
+    "projects": {
+      "added": [],
+      "removed": [],
+      "updated": [
+        {
+          "after": {
+            "position": 6,
+            "updated_at": 1800000060000,
+          },
+          "before": {
+            "position": 3,
+            "updated_at": 1800000000000,
+          },
+          "id": "<movingProject>",
+        },
+      ],
+    },
+  },
+  "request": {
+    "body": {
+      "surprise": true,
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "createdAt": 1800000000000,
+    "description": null,
+    "id": "<movingProject>",
+    "name": "Moving project",
+    "parentId": null,
+    "position": 6,
+    "updatedAt": 1800000060000,
+  },
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > project unused next still gets type checked 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "nextId": 42,
+      "prevId": "<prevProject>",
+    },
+    "method": "patch",
+    "path": "/api/projects/<movingProject>/move",
+  },
+  "response": {
+    "error": "nextId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list bracket key is an unknown parameter 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?projectId[x]=<project>",
+  },
+  "response": [
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<workflow>",
+      "name": "Main workflow",
+      "projectId": "<project>",
+      "updatedAt": 1800000000000,
+    },
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<foreignWorkflow>",
+      "name": "Foreign workflow",
+      "projectId": "<foreignProject>",
+      "updatedAt": 1800000000000,
+    },
+  ],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list empty filter means no filter 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?projectId=",
+  },
+  "response": [
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<workflow>",
+      "name": "Main workflow",
+      "projectId": "<project>",
+      "updatedAt": 1800000000000,
+    },
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<foreignWorkflow>",
+      "name": "Foreign workflow",
+      "projectId": "<foreignProject>",
+      "updatedAt": 1800000000000,
+    },
+  ],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list filters by project 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?projectId=<project>",
+  },
+  "response": [
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<workflow>",
+      "name": "Main workflow",
+      "projectId": "<project>",
+      "updatedAt": 1800000000000,
+    },
+  ],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list ignores unknown query parameter 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?surprise=1",
+  },
+  "response": [
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<workflow>",
+      "name": "Main workflow",
+      "projectId": "<project>",
+      "updatedAt": 1800000000000,
+    },
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<foreignWorkflow>",
+      "name": "Foreign workflow",
+      "projectId": "<foreignProject>",
+      "updatedAt": 1800000000000,
+    },
+  ],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list nonexistent project returns empty list 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?projectId=missing",
+  },
+  "response": [],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list repeated project filter stringifies array 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows?projectId=<project>&projectId=<foreignProject>",
+  },
+  "response": [],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > workflow list without filter 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": undefined,
+    "method": "get",
+    "path": "/api/workflows",
+  },
+  "response": [
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<workflow>",
+      "name": "Main workflow",
+      "projectId": "<project>",
+      "updatedAt": 1800000000000,
+    },
+    {
+      "createdAt": 1800000000000,
+      "description": null,
+      "id": "<foreignWorkflow>",
+      "name": "Foreign workflow",
+      "projectId": "<foreignProject>",
+      "updatedAt": 1800000000000,
+    },
+  ],
+  "status": 200,
+  "unhandledErrorLogged": false,
+}
+`;
