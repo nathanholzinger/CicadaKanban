@@ -365,6 +365,17 @@ being carried**, and that classification is shown. Three states:
 doesn't change mid-gesture, so neither does what any target *is* to it.
 This is a per-drag property, not a per-hover one.
 
+**It counts over the tree as the board's pending writes leave it**
+(§10). An item whose attach or reparent is still in flight counts where
+the write puts it, and its subtree moves with it. An item whose detach
+is in flight counts as Free and keeps its parent, as a detach does
+([`../item-attachment/`](../item-attachment/) §11). So it's still a
+descendant of the Card it's leaving, for depth, for cycles and for the
+green overlay below. Why not the stored tree: the board draws a pending
+write as landed (§10), so a target at the cap's edge could read Valid
+where the board draws it a level too deep, and the server would refuse
+the drop.
+
 **Cycle-forming wins.** A descendant of the carried item is Cycle-forming
 even when it would also fail the depth cap — it is never a "real target"
 for its own ancestor.

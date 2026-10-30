@@ -1,6 +1,6 @@
 # DRAG-1 — Contexts, the layer stack, and popping
 
-**Next ID:** DRAG-1.36
+**Next ID:** DRAG-1.37
 
 **Terms.** *Sustained* means the cursor stays for at least the named tunable value. *The full zoom-in hold* is `cardZoomDwellMs` then `cardPopInDelayMs`, holding steady the relation the side highlight names ([DRAG-4.19](drag-4-attach-and-stub-placement.md)). A column is merged unless a case says expanded.
 
@@ -37,6 +37,7 @@
 | DRAG-1.32 | Popping feels deliberate: never incidental, never sluggish | P1 | Manual |
 | DRAG-1.33 | A drag leaves every Card's list of Stubs as the user set it, except a Card it zooms into | P2 | Open |
 | DRAG-1.35 | One full Card zoom-in hold reaches Descendants directly, with no further layer inside it | P1 | Open |
+| DRAG-1.36 | A Stub's starting context follows its containing Card as pending attachments preview it | P0 | Open |
 
 ---
 
@@ -356,5 +357,15 @@ The exceptions:
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1.1, wiki board-drag-interaction §3.1, wiki board-drag-interaction §6.1
 
 *Given* Free Card `X` locked in a column or expanded sub-row and the side highlight naming its Valid Card `P`, *when* the full zoom-in hold completes, *then* the drag is at `P`'s Descendants layer immediately, bounded by the whole Card, with both copies as Stub rows. No second hold is needed to place among `P`'s Stubs. This holds both when `P` has attached children and when it has none ([DRAG-4.12](drag-4-attach-and-stub-placement.md)). *When* the cursor stays over rows inside `P` for any further hold, *then* it remains at that same layer: no deeper context is entered. An overflow-row hold can open the modal, which presents the same Descendants layer ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
+
+**Automation test:** —
+
+## DRAG-1.36 — A Stub's starting context follows its containing Card as pending attachments preview it
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §1, wiki board-drag-interaction §1.1, wiki board-drag-interaction §10, wiki item-attachment §11
+
+*Given* Free Card `P` with attached Stub `X`, and a pending attach or reparent of `P` into Free Card `Q`, so the board previews `P` and `X` inside `Q`, *when* `X` is picked up before the response arrives, *then* its drag starts at **Q's Descendants layer**, bounded by `Q`'s whole box. It doesn't start in `P`'s former Descendants layer or in the column. The containing Card is the nearest ancestor previewed Free at pickup.
+
+*And given* instead `P` is attached to `Q` with `X` attached beneath `P`, and `P`'s detach is pending, so `P` previews as its own Free Card while retaining `parentId = Q`, *when* `X` is picked up, *then* its drag starts at **P's Descendants layer**, bounded by `P`'s whole box. The kept `parentId` doesn't move `X`'s pickup context back into `Q`.
 
 **Automation test:** —

@@ -39,6 +39,7 @@ import {
   useSensors,
   type CollisionDetection,
   type DragMoveEvent,
+  type DragOverEvent,
   type DragStartEvent,
   type DragEndEvent,
   type Modifier,
@@ -204,9 +205,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // `handleDragStart`.
   const pickupRectRef = useRef<OverlayRect>(null);
   // The row `dropAnchorFor` names right now — the one the blue line draws —
-  // set from dnd-kit's `onDragMove` (`handleDragMove`), since this hook
-  // isn't rendered under `DndContext` and can't read `useDndContext()` the
-  // way a row does. Fed into the pop machine and the projection as plain
+  // set from dnd-kit's `onDragMove` and `onDragOver` (`nameAnchorFrom`), since
+  // this hook isn't rendered under `DndContext` and can't read `useDndContext()`
+  // the way a row does. Fed into the pop machine and the projection as plain
   // data.
   const namedAnchorRef = useRef<AnchorRelation | null>(null);
   // The Descendants layer's projection and the seed it's measured from
@@ -668,10 +669,26 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // at once: dnd-kit's move events aren't guaranteed to interleave with the
   // raw `pointermove` listener in either order, so waiting for the next one
   // could show the cue a frame late, but never leaves it stale.
-  function handleDragMove(event: DragMoveEvent) {
+  function nameAnchorFrom(event: DragMoveEvent | DragOverEvent) {
     if (isColumnData(event.active.data.current)) return;
     namedAnchorRef.current = namedAnchorFor(event.active, event.over, sessionRef.current);
     evaluateRef.current();
+  }
+
+  // A move event carries the `over` of the render before it: the move that
+  // crosses into a new row still names the old one. Alone it leaves the anchor
+  // a row behind whenever the pointer stops there, while the section draws
+  // the ghost by the new `over`, so the projection (and the hold keyed on it)
+  // would read a gap the picture doesn't show.
+  function handleDragMove(event: DragMoveEvent) {
+    nameAnchorFrom(event);
+  }
+
+  // The announcement of the new `over`, which the move event of the same
+  // render had one render late. Moves with the pointer still, and a layout
+  // change under it, reach the hook through this alone.
+  function handleDragOver(event: DragOverEvent) {
+    nameAnchorFrom(event);
   }
 
   // The hierarchy modal, opened under the cursor by a hold and now placed, reports what the cursor
@@ -830,6 +847,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     overlayWidthPx: overlayShape?.widthPx ?? null,
     handleDragStart,
     handleDragMove,
+    handleDragOver,
     handleDragEnd,
     handleDragCancel,
     readModalPlacement,

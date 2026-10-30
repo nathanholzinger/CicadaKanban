@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import type { BoardWithDetails, Item } from '../../types';
 import { moveItem } from '../../api/items';
 import { makeItem } from '../../test/itemFixture';
@@ -171,6 +171,57 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
 
       expect(pickupSession('z', items, detaching, 3)!.classification.states.get('c')).toBe('depth-capped');
     });
+  });
+});
+
+// The row the drag names as the ghost's neighbor comes from dnd-kit's events. A move event carries
+// the `over` of the render before it, so the move that crosses into a new row still names the old
+// one, and `onDragOver` is what announces the new one: the section paints the ghost by that `over`,
+// so a projection read from the move alone parts from the picture whenever the pointer stops there.
+describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor', () => {
+  const rowsOf = ['a', 'x', 'b'];
+  const items = [
+    makeItem('p'),
+    makeItem('a', { parentId: 'p', position: 1 }),
+    makeItem('x', { parentId: 'p', position: 2 }),
+    makeItem('b', { parentId: 'p', position: 3 }),
+  ];
+  const sectionRows = (parentId: string) => items.filter(i => i.parentId === parentId);
+
+  // dnd-kit's `over` for the row `id`, and the carried copy over the bottom of its rect.
+  const eventOver = (id: string) => ({
+    active: { id: 'x', data: { current: {} }, rect: { current: { translated: { top: 100, height: 26 } } } },
+    over: {
+      id,
+      rect: { top: 100, height: 24 },
+      data: {
+        current: {
+          type: 'item',
+          role: 'stub',
+          sectionCardId: 'p',
+          sortable: { containerId: 'section', index: rowsOf.indexOf(id), items: rowsOf },
+        },
+      },
+    },
+  });
+
+  function startDragOfX() {
+    const deps = { ...depsWith(async () => {}), items, getAttachedChildren: sectionRows };
+    const hook = renderHook(() => useBoardDnd(deps));
+    act(() => hook.result.current.handleDragStart(itemPickup));
+    return hook.result;
+  }
+
+  it('is the row dnd-kit announces over a move event that names the row before it', () => {
+    const result = startDragOfX();
+
+    act(() => result.current.handleDragMove(eventOver('a') as unknown as DragMoveEvent));
+    expect(result.current.session?.projection?.gap).toBe(0);
+
+    // The pointer stops in B's row: the move that got it there still carries A, and the announcement
+    // names B, after which the ghost is the last row.
+    act(() => result.current.handleDragOver(eventOver('b') as unknown as DragOverEvent));
+    expect(result.current.session?.projection?.gap).toBe(2);
   });
 });
 

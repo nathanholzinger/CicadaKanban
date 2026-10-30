@@ -1,6 +1,6 @@
 # DRAG-2 — Target classification at drag start
 
-**Next ID:** DRAG-2.11
+**Next ID:** DRAG-2.14
 
 The classification states are asserted, never the overlays' colors or weights: the overlays' look is an open question.
 
@@ -16,6 +16,9 @@ The classification states are asserted, never the overlays' colors or weights: t
 | DRAG-2.8 | A Stub drag is classified exactly like a Card drag, and a place that's no target isn't classified | P1 | Open |
 | DRAG-2.9 | Cycle-forming wins over Depth-capped | P1 | Automated |
 | DRAG-2.10 | The board's depth cap is the one the API enforces, carried by `GET /boards/:id` | P1 | Automated |
+| DRAG-2.11 | Depth classification includes pending parent changes and a detaching item's kept parent | P0 | Open |
+| DRAG-2.12 | Cycle classification includes pending parent changes and a detaching item's kept parent | P0 | Open |
+| DRAG-2.13 | The Free-descendant cue uses the attachment state previewed at pickup | P1 | Open |
 
 ---
 
@@ -100,3 +103,33 @@ The classification states are asserted, never the overlays' colors or weights: t
 *Given* a board, *when* it is read with `GET /boards/:id`, *then* the response carries `itemDepthCap`, equal to the cap the API enforces: a write that puts the moving subtree's deepest item at depth `itemDepthCap` is accepted, and one that puts it at `itemDepthCap + 1` is refused ([ATT-4.4](../item-attachment/att-4-legal-parent-depth-cap.md)). The board classifies Depth-capped targets against that same value, so a target the board classifies Valid is never one the API refuses.
 
 **Automation test:** `server/tests/routes/boards.test.ts`, `tests/ui/drag-target-classification.spec.ts`
+
+## DRAG-2.11 — Depth classification includes pending parent changes and a detaching item's kept parent
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki hierarchy-placement §6, wiki item-attachment §11
+
+*Given* `CAP >= 3`, Free Card `A` with attached leaf `Y`, a legal target `B` at depth `CAP - 2`, and a pending write attaching or reparenting `A` under `B`, *when* unrelated leaf Card `X` is picked up before that write's response arrives, *then* classification counts `A` at depth `CAP - 1` and `Y` at depth `CAP`: `A` is **Valid** for `X`, and `Y` is **Depth-capped**. The shallower parent chain awaiting the response doesn't make `Y` Valid.
+
+*And given* instead `D` at depth `CAP`, attached to `P` at depth `CAP - 1`, with a pending detach that previews `D` as a Free Card but keeps `D.parentId = P`, *when* unrelated leaf `X` is picked up, *then* `D` is **Depth-capped**. Its depth still counts the link to `P`; appearing as a Free Card doesn't make it a root item. In both setups classification uses the parent links the pending writes leave, without waiting for their responses.
+
+**Automation test:** —
+
+## DRAG-2.12 — Cycle classification includes pending parent changes and a detaching item's kept parent
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki item-attachment §11
+
+*Given* Free Card `A` with a Free child `D` elsewhere on the board, and a pending write attaching or reparenting `A` under Card `X`, *when* `X` is picked up before the response arrives, *then* visible `D` is **Cycle-forming**: the parent chain is `D → A → X`, even though the stored parent of `A` hasn't caught up. `D` is never offered as a Valid parent for `X`.
+
+*And given* instead `D` is a child of `X` whose detach is pending, so it previews as a Free Card while keeping `parentId = X`, *when* `X` is picked up, *then* `D` is **Cycle-forming**. Detaching doesn't break the parent chain, and classification doesn't treat the preview's separate Card as an unrelated root.
+
+**Automation test:** —
+
+## DRAG-2.13 — The Free-descendant cue uses the attachment state previewed at pickup
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki board-drag-interaction §5a, wiki board-drag-interaction §10
+
+*Given* child `D` of Card `X`, with a pending detach that previews `D` as a separate Free Card while keeping `parentId = X`, *when* `X` is picked up before the response arrives, *then* `D` carries the Free-descendant relationship overlay and is **Cycle-forming**. Its stored attachment flag doesn't suppress the cue on the visible Free Card.
+
+*And given* instead Free Card `D` has a pending attach into `X` and now previews as its Stub, *when* `X` is picked up, *then* `D` is part of the carried subtree, with no separate Free Card bearing the relationship overlay. The stored Free flag doesn't give an attached descendant a Free-descendant cue. This case asserts which items carry the cue, not its color or final look.
+
+**Automation test:** —

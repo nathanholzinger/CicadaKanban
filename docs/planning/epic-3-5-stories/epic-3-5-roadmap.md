@@ -535,12 +535,25 @@ test additions/stamps and Phase 6's hidden-slot fix; re-check the current
 tests rather than carrying its coverage verdicts forward unchanged.
 
 **Test Planner:**
+- **Phase 9's pending-write hierarchy — cases drafted:** DRAG-2.11
+  (depth), DRAG-2.12 (cycles), DRAG-2.13 (Free-descendant cue) and
+  DRAG-1.36 (starting context) are `Open`, scoped here for Story 8's
+  close-out. They isolate the pending-write scenarios rather than broaden
+  DRAG-2.3's settled-tree
+  cap boundary or DRAG-2.4's mid-gesture stability case. No tests or
+  automation mappings were inspected or changed in this Planner pass.
+  Wiki board-drag-interaction §4 now states the pending-parent and
+  attachment rules explicitly; §1 and §10 supply the nearest-Free-ancestor
+  pickup context on the previewed board. The candidate IDs go to the
+  Coder/Reconciler for stamps and coverage checks. No archived plan is
+  edited.
 - **Pending-ancestor pickup:** the untagged test in
   `client/src/components/workflow/useBoardDnd.test.ts` covers pickup while
   an ancestor's attachment is still pending, using the containing Card as
-  drawn. Decide whether to extend DRAG-1.1 or DRAG-6.13, or add a case.
-  Neither case explicitly covers an ancestor's pending attachment today;
-  do not assign an ID merely because the scenarios are related.
+  drawn. DRAG-1.36 now holds the candidate expectations. DRAG-1.1 and
+  DRAG-6.13 don't explicitly cover an ancestor's pending attachment;
+  do not stamp either merely because the
+  scenarios are related.
 - **Malformed workflow owner reference:** two untagged tests in
   `server/tests/routes/workflows.test.ts` cover non-string `projectId`
   values on `POST /workflows`: shape refusal with nothing created, and
@@ -555,6 +568,16 @@ tests rather than carrying its coverage verdicts forward unchanged.
   pickup/reposition case or needs its own case, then hand off the stamp.
 
 **Test Reconciler:**
+- **Phase 9's unstamped tests:** assess the hook tests in
+  `useBoardDnd.test.ts`, the helper tests in
+  `itemListOps.test.ts`, and the attachment-predicate test in
+  `dragClassification.test.ts` against DRAG-2.11, DRAG-2.12, DRAG-2.13
+  and DRAG-1.36. The archived handoff names these as the changed test
+  groups; no mapping is claimed here. Separate tests of product rules
+  from helper-only safeguards, propose exact title stamps for the Coder,
+  and check any internal-mapping approval required. DRAG-2.4 remains the
+  separate rule that classifications stay fixed after pickup; a test of
+  the initial pending hierarchy alone doesn't prove it.
 - **DRAG-7.2's approved mapping:** Nathan approved
   `client/src/components/workflow/itemListOps.test.ts`'s test, "leaves the
   dragged item out of the count, and draws none when it was the only

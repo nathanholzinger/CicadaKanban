@@ -209,6 +209,12 @@ active-context outline, the drop line's shape).
   section it is a row of (`sectionCardId`). Never read `data.type` by hand.
 - **The anchor a drop names:** `dragCollision.ts::namedAnchorFor`, the one call shape
   the blue line, the pop machine and the release all use.
+  - **Which `over` the pop machine names it from:** both of dnd-kit's `onDragMove` and
+    `onDragOver` (`useBoardDnd.ts::nameAnchorFrom`). A move event carries the `over` of the
+    render before it, so the move that crosses into a new row still names the old one, and
+    `onDragOver` is what announces the new one. Read from the move alone, the projection and
+    the hold keyed on it part from the shuffle the section draws whenever the pointer stops
+    in that move.
 - **What dnd-kit measures once, and from where:**
   - **A droppable is measured as it mounts.** A section's rows mount at the zoom, in the
     render that clears the column's shuffle, so the Card that holds the drag doesn't slide

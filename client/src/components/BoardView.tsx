@@ -215,6 +215,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     overlayWidthPx,
     handleDragStart,
     handleDragMove,
+    handleDragOver,
     handleDragEnd,
     handleDragCancel,
     readModalPlacement,
@@ -321,6 +322,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
         modifiers={dragModifiers}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >

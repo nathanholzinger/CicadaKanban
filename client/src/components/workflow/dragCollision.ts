@@ -321,7 +321,7 @@ export type AnchorSession = {
 
 // The row a drop names right now, in the one call shape its readers share —
 // the blue line (`dragChrome.tsx`), the pop machine's zoom-in candidate and
-// the Descendants gap (`useBoardDnd.ts::handleDragMove`), and the release —
+// the Descendants gap (`useBoardDnd.ts::nameAnchorFrom`), and the release —
 // so they all step past the same traveling rows. No `over`, no anchor.
 export function namedAnchorFor(
   active: Pick<Active, 'id' | 'rect'>,
