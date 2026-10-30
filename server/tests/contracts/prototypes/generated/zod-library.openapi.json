@@ -1,0 +1,225 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kanban move contract comparison",
+    "version": "0.0.0",
+    "description": "Partial development document: two existing move endpoints only."
+  },
+  "paths": {
+    "/api/items/{id}/move": {
+      "patch": {
+        "operationId": "moveItem",
+        "parameters": [
+          { "in": "path", "name": "id", "schema": { "$ref": "#/components/schemas/Id" }, "required": true }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemMove" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored row with optional reindex disclosure",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemWrite" } } }
+          },
+          "400": {
+            "description": "Existing validation or domain refusal",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Target not found before handler validation",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing global error-handler response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/api/projects/{id}/move": {
+      "patch": {
+        "operationId": "moveProject",
+        "parameters": [
+          { "in": "path", "name": "id", "schema": { "$ref": "#/components/schemas/Id" }, "required": true }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectMove" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored row with optional reindex disclosure",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectWrite" } } }
+          },
+          "400": {
+            "description": "Existing validation or domain refusal",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Target not found before handler validation",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "500": {
+            "description": "Existing global error-handler response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Id": { "type": "string" },
+      "Side": { "type": "string", "enum": ["before", "after"] },
+      "PositionScope": { "type": "string", "enum": ["attached-siblings", "workflow", "none"] },
+      "ReindexedPosition": {
+        "type": "object",
+        "properties": { "id": { "$ref": "#/components/schemas/Id" }, "position": { "type": "number" } },
+        "required": ["id", "position"],
+        "additionalProperties": false
+      },
+      "ItemMove": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "position": { "not": {} },
+              "parentId": { "type": ["string", "null"] },
+              "isAttached": { "type": "boolean" },
+              "workphaseId": { "type": ["string", "null"] },
+              "anchorId": {},
+              "side": {},
+              "scopeWorkphaseIds": {}
+            },
+            "additionalProperties": {}
+          },
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": { "workphaseId": {} },
+                "required": ["workphaseId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "anchorId": {} },
+                "required": ["anchorId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "parentId": {} },
+                "required": ["parentId"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "isAttached": {} },
+                "required": ["isAttached"],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": { "scopeWorkphaseIds": { "minItems": 1, "type": "array", "items": {} } },
+                "required": ["scopeWorkphaseIds"],
+                "additionalProperties": {}
+              }
+            ]
+          },
+          {
+            "anyOf": [
+              { "type": "object", "properties": { "anchorId": { "not": {} } }, "additionalProperties": {} },
+              {
+                "type": "object",
+                "properties": { "anchorId": {}, "side": { "$ref": "#/components/schemas/Side" } },
+                "required": ["anchorId", "side"],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        ]
+      },
+      "ProjectMove": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "position": { "not": {} },
+              "parentId": { "type": ["string", "null"] },
+              "prevId": { "type": ["string", "null"] },
+              "nextId": { "type": ["string", "null"] }
+            },
+            "additionalProperties": {}
+          },
+          { "type": "array", "items": {} }
+        ]
+      },
+      "ItemWrite": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "type": { "type": ["string", "null"] },
+          "parentId": { "type": ["string", "null"] },
+          "projectId": { "type": ["string", "null"] },
+          "workphaseId": { "type": ["string", "null"] },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "isAttached": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "assigneeType": { "type": ["string", "null"] },
+          "agentId": { "type": ["string", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "completedAt": {
+            "anyOf": [
+              { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "positionScope": { "$ref": "#/components/schemas/PositionScope" },
+          "reindexed": { "type": "array", "items": { "$ref": "#/components/schemas/ReindexedPosition" } }
+        },
+        "required": [
+          "id",
+          "type",
+          "parentId",
+          "projectId",
+          "workphaseId",
+          "title",
+          "description",
+          "position",
+          "isAttached",
+          "assigneeType",
+          "agentId",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "positionScope"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectWrite": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "parentId": { "type": ["string", "null"] },
+          "name": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "position": { "type": ["number", "null"] },
+          "createdAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "updatedAt": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+          "reindexed": { "type": "array", "items": { "$ref": "#/components/schemas/ReindexedPosition" } }
+        },
+        "required": ["id", "parentId", "name", "description", "position", "createdAt", "updatedAt"],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": { "error": { "type": "string" } },
+        "required": ["error"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

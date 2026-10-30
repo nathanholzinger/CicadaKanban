@@ -1,8 +1,8 @@
 # API Contract Framework — Spike Results
 
-**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 1 complete; candidates not yet compared
+**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 2 complete; integrated pilot not started
 
-This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. No candidate has been selected or installed, and no production handler has been changed.
+This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools are installed in an isolated test package. Native Zod conversion is provisionally recommended for the integrated pilot; no stack has been finally selected and no production handler has been changed.
 
 ## Batch 1 — Baseline
 
@@ -198,7 +198,136 @@ No observation is treated as a confirmed product defect merely because it differ
 
 ## Batch 2 — Comparison
 
-Not started. Library versions, integration-library shortlist, three runnable prototypes, field-change measurements, contract-generation limitations, and the provisional recommendation belong here when measured.
+### Revision, isolation, and reproduction
+
+Batch 2 starts from committed Batch 1, `0565cde3c4c868877a9838610c8464bda939cfa7`. Both `api-contract-framework-spike` and the saved `api-spike-batch1-baseline` pointed there at the start. All comparison work is side by side on `api-contract-framework-spike`; no candidate branch or integration branch has been created and no commit has been made during this batch.
+
+The comparison is under `server/tests/contracts/prototypes/`, with its own manifest, pinned lockfile, and ignored `node_modules`. Root, server, and client manifests/lockfiles are unchanged. A fresh checkout needs the nested package installed explicitly before running the server gate; that extra setup is a real cost of retaining this comparison package, not a new production dependency.
+
+```powershell
+npm.cmd ci --prefix server/tests/contracts/prototypes --ignore-scripts
+npm.cmd --prefix server/tests/contracts/prototypes run generate
+npm.cmd --prefix server/tests/contracts/prototypes run check:generated
+npm.cmd --prefix server run test -- tests/contracts/prototypes tests/contracts/apiCompatibility.test.ts
+npm.cmd run check
+```
+
+Generation does not import the application or open a database. Tests retain the existing Vitest reset/seed setup and separate database. npm registry access and the existing `tsx` launcher's Windows user-info lookup required authorized outside-sandbox commands; the test suite runs in the sandbox. No workaround, test configuration change, or development-database access was introduced.
+
+### Versions and library shortlist
+
+| Tool | Pinned version | Role |
+|---|---|---|
+| Zod | 4.6.7 | Both Zod candidates' authoritative shapes and runtime structural validation |
+| zod-openapi | 6.0.2 | Library-backed document assembly |
+| TypeBox (`typebox`) | 1.4.3 | JSON Schema authoring and schema composition |
+| Ajv | 8.20.0 | TypeBox runtime checks; independent generated-schema checks for all candidates |
+| openapi-typescript | 7.13.0 | Same client type generator for all candidates |
+| Consumer TypeScript | 6.0.3 | The application's compiler, loaded explicitly for virtual consumer checks |
+
+`openapi-typescript` 7.13.0 declares a TypeScript `^5.x` peer; npm installed 5.9.3 inside the isolated package. The generator uses that peer, while `typeChecks.ts` explicitly loads the server's TypeScript 6.0.3 to check consumers. This avoids mistaking compiler-5 success for application-compiler compatibility. All candidates share this constraint. An eventual migration must retain an isolated generator toolchain or select a generator with a compatible peer range; this spike does not override peers or downgrade the app.
+
+`@asteasolutions/zod-to-openapi` 9.1.0 was inspected but not installed. Both integration libraries advertise Zod 4 support. `zod-openapi` was shortlisted because it uses native Zod metadata and provides input/output-aware document, component, and parameter assembly. Its current Node requirement is `>=22.14.0`, met by this machine's Node 24.11.1. Its published runtime dependencies are empty; Zod is its peer. The alternative offers an explicit registry and can also use native metadata, so the shortlist is not a claim that it requires monkey-patching for every usage.
+
+The existing MCP SDK remains 1.29.0 and advertises a Zod peer range of `^3.25 || ^4.0`. No SDK upgrade is required by the installed Zod version's declared compatibility. High-level MCP registration and its behavior have not been migrated or runtime-proven here. TypeBox can supply JSON Schema to the existing low-level tool-list surface; reuse with the SDK's Zod-oriented high-level registration would need its own integration evidence.
+
+Primary references consulted:
+
+- [Zod JSON Schema conversion, registries, input/output context, and unsupported constructs](https://zod.dev/json-schema).
+- [zod-openapi document assembly, parameters, components, and native metadata](https://github.com/samchungy/zod-openapi).
+- [zod-to-openapi registry and generator](https://github.com/asteasolutions/zod-to-openapi).
+- [TypeBox authoring and JSON Schema representation](https://github.com/sinclairzx81/typebox).
+- [Ajv JSON Schema dialects](https://ajv.js.org/json-schema.html) and [data-modifying options](https://ajv.js.org/guide/modifying-data.html).
+- [openapi-typescript's in-memory generation API](https://openapi-ts.dev/node).
+
+Registry metadata and installed package declarations were checked alongside the documentation. The probes below record the installed versions' actual behavior where a broad documentation statement is insufficient.
+
+### What was implemented and what parity establishes
+
+| Candidate | Shape source | Runtime checks | Document path |
+|---|---|---|---|
+| `zod-library` | Shared `zod-shapes.ts` | Zod field and aggregate checks | `zod-openapi::createDocument` |
+| `zod-native` | The same Zod definitions | The same Zod checks | Native registry conversion, with input/output exports and a small HTTP-document assembler |
+| `typebox-ajv` | `typebox-ajv/index.ts` | Compiled Ajv checks; defaults, coercion, and removal of additional properties disabled | The authored JSON Schemas and the same small HTTP-document assembler |
+
+The Zod request's intent and anchor/side conditions are represented with unions/intersections. They do not depend on a custom refinement being inferred by a generator. TypeBox expresses the same conditions with JSON Schema `anyOf`/`if`/`then`. The different encodings validate the same tested inputs; their different TypeScript results are discussed below.
+
+The common adapter retains the application's CORS/body-parser pipeline, performs target lookup first, then staged structural checks with the existing error wording/order. It forwards accepted requests to the unchanged handlers for domain validation and writes. Both item and project move requests are actually validated by each candidate; the 13 GET cases are unchanged passthrough controls. There is no fabricated success response or alternative implementation of hierarchy/position math. Additional checks compare CORS and JSON headers for preflight and body-parser errors.
+
+Each candidate replays all **77 cases** with exact equality of request capture, status, response, logged-error flag, and database deltas against a freshly seeded baseline. The original frozen 77 snapshots also replay unchanged. Candidate response validators and the emitted response schemas check every move response, including errors and reindex variants. Generated request acceptance is independently compared to runtime-schema acceptance across every body-bearing move example.
+
+**Limit:** accepted requests still encounter the old handlers' checks. This proves the preflight schemas do not change the sampled behavior and that their documents agree on the tested shapes. It does not prove the old structural checks can be removed correctly, that parsed values have been threaded through typed handlers, or that a real client/MCP integration is complete. Those remain the purpose of Batch 3.
+
+### Generated artifacts and measurable results
+
+`generated/` contains one OpenAPI 3.1 development document and one client declaration file per candidate, plus `measurements.json`. Each document covers exactly two PATCH endpoints and nine named components, including both success rows, reindex pairs, and the error payload. No document is published as the full API reference.
+
+| Measurement | Zod + library | Native Zod | TypeBox/Ajv |
+|---|---:|---:|---:|
+| Shared HTTP cases matched | 77/77 | 77/77 | 77/77 |
+| Named schemas / endpoints | 9 / 2 | 9 / 2 | 9 / 2 |
+| Component references | 19 | 19 | 12 |
+| Formatted OpenAPI bytes | 8,490 | 8,490 | 7,772 |
+| Formatted client declaration bytes | 6,071 | 6,071 | 5,379 |
+| Representative handwritten consumer compile errors | 0 | 0 | 0 |
+| Optional-field / response-field / nullability drills | All pass | All pass | All pass |
+
+The two Zod OpenAPI documents are deeply equal as JSON, and their formatted client declarations are byte-identical. Native conversion uses a local registry and component-reference URIs; it is not an artificially limited inline-only comparison. TypeBox's inline reuse still comes from shared authored schema objects and propagates mechanically; a lower reference count is not a drift defect.
+
+Supporting source counts in `measurements.json` are nonblank lines, including comments: shared Zod shapes 94, library adapter 46, native adapter 32, TypeBox shapes/validator adapter 104. Native and TypeBox additionally use the shared HTTP assembler in `model.ts`; the library supplies that function itself. Common compatibility staging and experimental harness code must not be charged to just one candidate. These counts do not establish a performance or quality ranking.
+
+### Recurring field-change exercises
+
+Each candidate's factory builds local variants in memory; no product field is patched into the application. Each drill changes one authoritative field declaration for the relevant shape, with shared response additions reused across item/project responses. The Zod candidates reuse the same authoring file. Request rules, baseline response snapshots, client consumer snippets, and baseline production handlers are not edited to accommodate a variant.
+
+| Drill | Mechanical result for every candidate | Detection in independently authored material |
+|---|---|---|
+| Add optional request `clientNote: string` | Runtime validation, OpenAPI, and generated client types change | A typed consumer of the new field has one error before generation and zero after it; a numeric value accepted as an unknown field by the baseline is rejected by the changed declaration |
+| Add required response `contractNote: string` | Both declared write responses, OpenAPI, and generated types change | A new-field reader has one error before and zero after; an unchanged real response and its typed fixture fail against the changed shape |
+| Remove request workphase nullability | Runtime validation, OpenAPI, and generated types change | The existing caller sending null changes from zero compile errors to one; both runtime and emitted-schema validators reject it |
+
+No generator, HTTP metadata, or client transport interface required a parallel field-definition edit. All baseline factories still accept the original null workphase after the exercises. Seven generated artifacts are checked for freshness in the server gate, and the standalone `check:generated` command also passes.
+
+These are controlled contract exercises, not full feature implementations. Business semantics, UI use of a new field, authored scenarios, and compatibility error wording still need deliberate work. In particular, preserving exact legacy error messages requires `requestIssue`'s mapping; a changed field's human-facing wording does not automatically rewrite itself.
+
+### Conversion and enforcement limits found by probes
+
+- **Compiler enforcement is incomplete for every candidate.** All three generated types accept `{ workphaseId: null, position: 7 }` and an anchor with an invalid side, while both runtime and emitted-schema validators refuse them. In these versions, the generated types do not preserve all `not`/conditional semantics. Request validation and compatibility tests remain necessary.
+- **The chosen encoding affects static coverage.** The Zod union/intersection encoding makes `{}` a compile error; the TypeBox `if`/`then` encoding permits it in generated TypeScript. Both runtime and emitted JSON schemas reject it. This is not a fundamental TypeBox limitation: another encoding could change the type generator's result. No candidate is rejected on this example alone.
+- **Custom Zod refinements can silently disappear from a document.** A string `startsWith` custom refinement rejects a value at runtime while both generated schemas accept it. The selected request conditions therefore use representable unions/intersections, and generation/validation agreement is tested. Native and library conversion both have this risk.
+- **Unsupported transforms fail loudly.** A string-to-length transform throws during output generation in both Zod approaches. Neither prototype uses `unrepresentable: 'any'` or a permissive fallback to hide this.
+- **Coercion needs explicit wire representation.** With Zod 4.6.7 and zod-openapi 6.0.2, `z.coerce.number()` accepts `'7'` at runtime, but both emitted input schemas describe a number and reject that string when checked with Ajv. This observed gap is pinned by a probe. The selected move endpoints do not coerce values, so it does not invalidate their parity results. Batch 3's workflow-query conversion must describe the existing wire inputs explicitly rather than assuming a coercion schema documents them accurately.
+- **Defaults distinguish input from output.** Both Zod paths correctly make a defaulted object's field optional in input and required in output. The native adapter exports both contexts and chooses request components using the endpoint metadata. More complex shared input/output differences still deserve a test during integration.
+- **Ajv mutation is optional and observable.** A probe shows enabling `useDefaults`/`coerceTypes` changes inputs and outcomes. The TypeBox candidate disables those options and `removeAdditional`, and all candidates preserve unknown properties and input values in the checks.
+- **Library parameter assembly is useful but not yet a demonstrated necessity.** A probe confirms automatic path/query parameter construction, including requiredness and integer bounds. The native prototype's assembler currently handles the two move endpoints' path parameter only. Its extension for the real GET/query surface is part of the next pilot, not an already measured full-API capability.
+
+### Cost comparison and provisional recommendation
+
+**Recommend native Zod 4 conversion plus a small OpenAPI assembly layer for the integrated pilot.** It met the same sampled compatibility and generation checks as the library-backed option, produced identical artifacts, and did not require another integration dependency. The assembly and registry code remained small and understandable for this slice. This is a modest cost/benefit preference, not evidence that an OpenAPI library has no value.
+
+`zod-openapi` remains a close alternative. It removes ownership of generic document/component/parameter assembly, has no published runtime dependencies beyond its Zod peer, and already passes the same tests. If Batch 3's real query/decorated-response/MCP work makes the native layer grow into a framework, prefer the library; the shared Zod definitions and identical outputs make that switch inexpensive.
+
+TypeBox/Ajv is viable and passed the same runtime, response, generation, and field-change checks. JSON Schema is directly executable and the conditional rules need no conversion. For this app, the measured slice did not demonstrate enough maintenance benefit to prefer it over Zod: it still needs the HTTP assembler and compatibility staging, introduces compiler configuration/optional-field handling, and needs separate high-level MCP integration consideration. This conclusion is about these prototypes and consumers, not a general ranking of the libraries.
+
+What remains independently maintained regardless of choice:
+
+- Database-dependent business rules and their intended behavior in the wiki.
+- Legacy validation precedence and message mappings until a later behavior decision changes them.
+- Endpoint methods/paths/status associations, with coverage checks to keep registration honest.
+- MCP's curated fields, snake_case adapters, differing requiredness, and result text.
+- Bruno variables, scenario intent, and business assertions.
+- Technical explanations that cannot be generated from shapes, plus owner review/closeout/drift-audit responsibilities.
+
+### Verification and next checkpoint
+
+- The final root gate, `npm.cmd run check`, passed: **771 server tests in 28 files, 604 client tests in 34 files, 235 tooling tests**, type checks, lint, formatting, and documentation checks. It ran with the final application-compiler consumer probes and CORS checks. Its ignored local log is `logs/api-contract-batch2-check.log`.
+- The 771 server tests include all 509 Batch 1 tests and **262 new prototype checks**: 231 HTTP replays, three runtime/document agreement checks, three header-parity checks, 12 field-change checks, 12 conversion/typing probes, and one seven-artifact freshness test.
+- Generation followed by independent `check:generated` passed for all seven artifacts. The baseline generation remains current after all in-memory change exercises.
+- Documentation checks passed with **409 files checked and zero findings**. `git diff --check` passed.
+- No production route, client, MCP tool, Bruno request, existing test, or frozen compatibility snapshot changed. The saved baseline branch still points at `0565cde3c4c868877a9838610c8464bda939cfa7`.
+- Playwright was not rerun for this isolated Batch 2 comparison. Its unchanged Batch 1 baseline remains 219 passed and 18 skipped; real-handler integration must run it again in Batch 3.
+
+No integrated pilot, new branch, broad rollout, PO/Test Planner/Coder/Auditor handoff, or final stack decision is performed in Batch 2. Nathan receives this evidence and the provisional recommendation before Batch 3 starts.
 
 ## Batch 3 — Integrated pilot
 

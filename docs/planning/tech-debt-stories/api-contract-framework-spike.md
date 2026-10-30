@@ -1,6 +1,6 @@
 # API Contract Framework — Comparison Spike and Pilot
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — Batch 1 complete; Batch 2 not started · **Sequenced:** before any API-wide contract migration
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — Batch 2 complete; Batch 3 not started · **Sequenced:** before any API-wide contract migration
 
 This story is the next step in place of starting `api-contract-zod-openapi.md`. That epic remains a migration proposal to replan from this story's evidence, not authorization to adopt a particular library or change an endpoint. This story compares the options, pilots the preferred option, and stops for a decision before wider adoption.
 
@@ -125,6 +125,8 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 
 ### Batch 2 — Comparable prototypes and shortlist
 
+**Complete, 2026-10-30:** three isolated candidates share the Batch 1 corpus and produce partial OpenAPI documents, generated client declarations, and reproducible field-change measurements. Native Zod conversion is provisionally recommended for the integrated pilot; the library-backed option produces identical artifacts. [The results](api-contract-framework-spike-results.md) state the evidence and limitations. The full gate passed (771 server, 604 client, 235 tooling tests); generated artifacts are current. Batch 3 has not started.
+
 - Verify supported versions and primary documentation for the three candidates. Shortlist one Zod/OpenAPI integration library with reasons.
 - Build isolated validators and response definitions for the two move contracts, produce a small OpenAPI document, and generate representative client types for each candidate. No candidate rewrites domain behavior.
 - Use the same corpus, metadata, type checks, and field-change exercises. Check input versus output representation, defaults/coercion, unknown properties, conditional constraints, nullable fields, references, and response variants.
@@ -157,13 +159,18 @@ Once the pilots and comparison are complete, prepare the evidence for Coder, PO,
 
 ## Code map
 
-Batch 1 adds only the corpus and results below. Later touch points remain planned; record exact prototype, schema, adapter, generator, and check paths as they are introduced. No candidate dependency or production implementation is added by Batch 1.
+Batches 1–2 add the corpus, isolated comparison package, generated development artifacts, and results. Production/client/MCP touch points below remain planned for Batch 3. No candidate dependency is added to the application manifests.
 
 | File or area | Batch | Change |
 |---|---|---|
 | `server/tests/contracts/compatibilityCases.ts` | 1 | Shared transport examples and fixture variants, independent of candidate libraries |
 | `server/tests/contracts/compatibilityHarness.ts` | 1 | Checked server fixture setup, deterministic IDs/time, response capture, and application-table deltas |
 | `server/tests/contracts/apiCompatibility.test.ts` and its `__snapshots__/apiCompatibility.test.ts.snap` | 1 | 77 observed baseline cases with exact response and database-change snapshots |
+| `server/tests/contracts/prototypes/package.json` and `package-lock.json` | 2 | Isolated pinned comparison tools; explicit nested install required |
+| `prototypes/zod-shapes.ts`, `zod-library/index.ts`, `zod-native/index.ts`, `typebox-ajv/index.ts` | 2 | Alternative schema/validation/document implementations sharing the same scope |
+| `prototypes/model.ts`, `preflightApp.ts`, `documents.ts`, `typeChecks.ts` | 2 | Shared endpoint metadata, compatibility staging, independent generated-schema checks, and virtual consumer compilation |
+| `prototypes/artifacts.ts`, `generate.ts`, `measure.ts`, and `generated/` | 2 | Reproducible OpenAPI/client artifacts, measurements, generation/freshness commands |
+| `prototypes/prototypeCompatibility.test.ts`, `fieldChanges.test.ts`, `conversionEdges.test.ts`, `artifacts.test.ts` | 2 | HTTP parity, runtime/document agreement, change propagation, conversion boundaries, and artifact freshness |
 | `server/src/routes/items.ts`, `projects.ts`, `workflows.ts` | 1, 3 | Baseline inventory; four selected handlers adopt the preferred validator |
 | `server/tests/` and isolated prototype/test tooling | 1–3 | Shared compatibility cases, candidate comparisons, response and drift checks |
 | Selected schema and OpenAPI assembly modules; exact paths chosen during comparison | 2–3 | Authoritative pilot shapes and partial document generation |
@@ -209,3 +216,5 @@ Batch 1 adds only the corpus and results below. Later touch points remain planne
 - **2026-10-30:** Nathan directed that he and the Architect carry out the spike directly, bypassing the standard Coder/PO/Test Planner/Auditor workflow until the pilots and comparison are ready. Added D7 and revised the gates and handoffs to defer those roles' input until the final decision stage while retaining the technical checks and compatibility requirements.
 - **2026-10-30:** Nathan started Batch 1. Added the endpoint/consumer maintenance inventory and baseline evidence in `api-contract-framework-spike-results.md`, plus a reusable 77-case compatibility corpus. The existing handlers, client, MCP, Bruno requests, and existing tests remain unchanged.
 - **2026-10-30:** Completed Batch 1: baseline and post-corpus gates passed, all 77 captures replayed successfully, and the unchanged Playwright baseline passed with 219 passed and 18 skipped. Batch 2 remains unstarted.
+- **2026-10-30:** Nathan started Batch 2 on `api-contract-framework-spike`, inheriting the committed Batch 1 baseline saved on `api-spike-batch1-baseline`. Added three isolated prototypes and their comparisons. Native Zod conversion is the provisional pilot recommendation, subject to final verification and the real-handler integration checkpoint; no Batch 3 implementation has started.
+- **2026-10-30:** Completed Batch 2 with all three candidates matching the 77-case corpus, generated client probes checked with the app's TypeScript 6 compiler, current generated artifacts, and a passing full gate. Native Zod conversion is provisionally recommended. The generator's TypeScript 5 peer remains isolated; compiler/conversion limits and the unproven real-handler replacement are explicit in the results. No production code or saved baseline branch changed.
