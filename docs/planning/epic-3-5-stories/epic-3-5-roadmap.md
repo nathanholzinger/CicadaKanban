@@ -591,8 +591,8 @@ tests rather than carrying its coverage verdicts forward unchanged.
 
 ---
 
-### Story 8.1 — Fold the Card layer into the Descendants layer
-**Plan:** [`story-8-1-fold-card-layer.md`](story-8-1-fold-card-layer.md)
+### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
+**Plan / record:** [`story-8-1-fold-card-layer.md`](../../archive/story-8-1-fold-card-layer.md)
 
 **Goal:** remove the Card layer from the drag's stack, so that zooming into a
 Card lands straight in its Descendants layer, bounded by the whole Card.
@@ -661,9 +661,15 @@ if brief, state".
   `docs/planning/tech-debt-stories/free-item-reparent-gesture.md`, which
   starts from a board without the Card layer.
 
+**Status: done 2026-10-29.** The fold is built as planned, with Story
+8.2's fix. Its test reconciliation and its audit each found defects, which
+it fixed in the same story: a hidden Stub's set-down in the modal, and a
+drag begun while an ancestor's write was in flight. The drag specs it
+skipped or found short are Story 10's item 10.
+
 ---
 
-### Story 8.2 — A Free Card zoomed into a section doesn't follow the cursor
+### Story 8.2 — A Free Card zoomed into a section doesn't follow the cursor ✅ (done 2026-10-29, in Story 8.1)
 **Carried in from Story 7** (Nathan, 2026-10-28). **Folded into Story
 8.1** (Nathan, 2026-10-29), as its plan's Phase 3. The number isn't
 reused, so Stories 8.3–8.6 keep theirs.
@@ -682,6 +688,8 @@ The fix starts by reproducing the defect on the folded code.
 ---
 
 ### Story 8.3 — A hold from above draws the modal's ghost a row off (DRAG-7.15)
+**Plan:** [`story-8-3-modal-ghost-row-off.md`](story-8-3-modal-ghost-row-off.md)
+
 **Carried in from Story 7** (Nathan, 2026-10-28).
 
 A hold from above, with a child under the dragged item, can draw the
@@ -1170,8 +1178,9 @@ deferral and keep landing with their stories.
 
 10. **Deferred from Story 8.1** (Nathan, 2026-10-29): the drag specs its
     test reconciliation found missing or too weak
-    (`docs/audits/test-reconciliation-story-8-1-codex-trial.md`). Story
-    8.1's plan lists the specs it skipped, under Living-docs handoff. Story
+    (`docs/archive/test-reconciliation-story-8-1-codex-trial.md`). Story
+    8.1's plan (`docs/archive/story-8-1-fold-card-layer.md`) lists the
+    specs it skipped, under Living-docs handoff. Story
     8's close-out Reconciler run settles the final list by ID, since later
     8.N stories can change it; this is its starting point.
     - **Specs that pass but miss a clause:**
