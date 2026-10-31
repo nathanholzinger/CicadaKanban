@@ -1,0 +1,418 @@
+# API Contract Framework Decision Round Table
+
+## Protocol
+Agents should write to this doc only when instructed to. Different agents are likely to come in with different perspectives and it is valuable to collect them all in one place, but we do not want a recursive environment of agents responding to each other unprompted. If you are an agent and this is your first time reading this round table document your role, unless the prompt that brought you here specified otherwise, is to read the proposal and provide any questions or feedback in the space reserved for your persona. You should avoid reading other agents responses at first and provide your own take. Feel free to make arguements for or against the proposal, provide any new details you find worth considering, or ask any questions that the proposal leaves unclear. If you've already been here before then you are likely being asked to provide a follow up. Leave your comment in the follow up section
+
+## Proposal for new underlying api contract framework
+We have found ourself in a position where the database, server code and comments, wiki, test plan and tests, bruno files, and mcp files have their own lever of 'stating what the truth is' and there is a high effort of maintenance to keep everything in agreement. The goal of this story is to implement a framework that automates the agreements as much as makes sense, with the understanding that some level of hand maintenance is unavoidable.
+
+The proposal is:
+1. The wiki remains behavior driven and is not concerned with specifying things like data architecture or api contracts.
+2. The specifics of api contracts can instead be auto-generated in OpenApi-style documentation
+3. Test plans start with the wiki to determine the relevant test cases but may be aware of the contracts to determine the specific expectations that prove the rule. Some tests cases can automatically be mapped as "handled by the framework" if we land on a framework that automatically tests/enforces certain rules
+4. The framework should be able to determine a single source of truth that can align several things, but ultimately Bruno and the MCP will likely require hand maintenance regardless of the framework we decide on
+5. New check scripts may be a viable way to further help highlight where maintenance is needed and, as is the current process, Drift Audits are a final check to give confidence that the pieces remain in alignment. Nothing will completely eliminate the need for this
+6. Three framework options were considered and evaluated in docs\planning\tech-debt-stories\api-contract-framework-spike.md
+7. One proposed option - **Zod 4 native conversion plus small OpenAPI 3.1 assembly and generated client declarations** - was piloted and is the currently recommended solution to move forward with. The review can be found here: docs\planning\tech-debt-stories\api-contract-framework-spike-review.md
+
+Please read the initial spike, the final review, and any additional supporting material you feel is pertinent and leave any comments you have about the proposal. The review has some 'Questions for later role input' addressed to most of you for your consideration. Please provide your perspective if you believe the review analysis has not considered how the decision effects your role or if you just have new questions or comments to add. Let us know if you are in consensus with recommendation or if you have reservations and would like to give more consideration to another option.
+
+*note: In this round table - unless clearly specified otherwise - 'Architect' is a separate instance from the arcitect that implemented the pilot and review. The purpose is to get a fresh perspective from each role.*
+
+- Nathan
+
+## Responses
+
+### Architect
+
+**Claude Architect — 2026-10-30**
+
+**I'm in consensus with the recommendation:** native Zod 4 conversion, the small OpenAPI assembly and generated client declarations. I also agree with the proposal's model: the wiki holds the rules, a generated reference holds the shapes, and checks and drift audits cover the rest.
+
+My reservations are about what happens between this decision and the migration:
+- what's in the tree when the pilot merges to main;
+- which of the known-wrong behaviors the migration should carry;
+- what a framework mapping may claim.
+
+**What I read:** the spike, the review packet, the results, the follow-up queue and the migration proposal. I also read the pilot's schema layer, its parse adapters, the client aliases and the comparison package, at `d703e6a`.
+
+**Independence:** I wrote these points before reading the Test Planner's and the Auditor's responses, which were posted while I was reading. Where we overlap, I've kept mine short.
+
+The points are numbered so others can refer to them ("Architect #4").
+
+**1. Native Zod is the right pick, for one more reason than the review gives.**
+- **The review's reasons hold.** The two Zod candidates produced byte-identical output, and D4's trigger guards against the native assembly growing into a framework of our own.
+- **The extra reason:** Zod is the MCP SDK's own input language.
+  - The SDK's high-level tool registration takes Zod shapes, and its peer range already covers our 4.6.7.
+  - If `mcp.ts` ever moves off its hand-written advertisements, our schemas plug straight in. TypeBox would need an adapter there.
+- **`openapi.ts`'s growth won't be a reason to switch.** It grows by roughly one metadata entry per operation. That isn't D4's trigger, so a long file later isn't a reason to change course.
+
+**2. Proposal point 1 needs a sharper line than "the wiki isn't concerned with API contracts."** The Auditor (#1) and the Test Planner say this too.
+- **What the wiki does today:**
+  - The earlier round table ruled that the API is a layer the user acts on, so the wiki may say what it does.
+  - Four wiki pages name request fields 33 times: `workphaseId`, `isAttached`, `anchorId` and `prevId`.
+  - Row-references §1 rules that naming a missing row is a 400.
+- **My proposed line: the wiki owns the rules, and the generated reference owns the shapes.**
+  - **The wiki may name a field** as the vocabulary of a rule. That's a pointer, like a code comment pointing at a wiki section.
+  - **It doesn't carry types, optional or nullable markers, or a request's structure.** Those are copies, and they're what the reference replaces.
+- **A test for the PO:** suppose a change to a field's type or optionality changes no behavior. If it would still force a wiki edit, the wiki is holding a shape.
+- **Two gray zones for the PO to rule on:**
+  - **Failure precedence:** which error wins when a request has several faults. CF1 hinges on whether that's a rule or an implementation detail.
+  - **Exact error messages:** tests already pin messages the wiki leaves open, and I'd keep it that way. The wording lives in the code (#5).
+
+**3. A framework mapping (proposal point 3) should mean a runtime check plus a test, never a type.**
+- **The spike's own probes show why:**
+  - every candidate's generated TypeScript misses some conditional rules;
+  - a custom refinement silently drops out of the document;
+  - coercion is described wrongly.
+- The Test Planner and the Auditor (#3) argue this at length, and I agree with both.
+- **What I'd add is a catch for the Test Planner and the Reconciler: 30 of the compatibility corpus's 77 test titles start with test-plan case IDs, 34 IDs in all.** An example is `ATT-9.11: item explicit null workphase clears it`.
+  - Under root `AGENTS.md`'s title rule, those titles claim the cases.
+  - Each one asserts a snapshot captured from what the code did. No one has checked those snapshots against the cases' Then clauses: the corpus was written under D7's exception, so no role reviewed it.
+  - Before the Reconciler next counts them, the claims should be confirmed, or the IDs dropped.
+
+**4. Rule on CF2 before the migration starts, not after.**
+- **The spike was right to preserve today's 500s.** Its job was to prove the framework changes nothing.
+- **The migration needn't carry them, and carrying them costs more with every route.** The adapters spend code reproducing those 500s:
+  - `schemas/items.ts::parseItemMove` destructures its input, so a missing body still throws;
+  - `parseHierarchyShape` rethrows any issue it doesn't map, so a body that isn't an object reaches the global middleware.
+
+  Carrying that through some 50 more operations and undoing it in a later story touches every route twice.
+- **Most of CF2 lives in one place anyway.** Malformed JSON, a missing body and JSON null go through the body parser and the global error middleware, not through any one route.
+- **My proposal:**
+  - the PO rules on CF2 first;
+  - a small behavior story lands its global part before M2, with the snapshots updated deliberately;
+  - the migration then preserves only what's been ruled intentional.
+
+  CF3 is the same case, but weaker.
+- **Question for Nathan:** is that order acceptable? It makes a behavior story a prerequisite of a refactor epic.
+
+**5. Decide now how a new field's errors read.**
+- **Two kinds of wording today:**
+  - **fields that exist now** keep their exact wording, through the ordered checks in `parseHierarchyShape` and `parseItemMove`;
+  - **a field added later** falls through to `schemas/common.ts::schemaErrorMessage`, which joins Zod's default messages ("Invalid input: expected string, received number").
+- **Left alone,** the API's errors would read two ways, depending on when each field was added.
+- **My proposal:** put each field's message in the schema, with Zod 4's per-field `error` option.
+  - The wording then sits with the shape, which is the point of the epic.
+  - The adapter shrinks to ordering the errors.
+  - Whether that reproduces the corpus's order exactly is a question for the Coder.
+
+**6. The shared vocabulary belongs to the domain code, in a module that doesn't import the database.**
+- **There are duplicates today.** After the pilot there are three `positionScope` enums and two `side` unions. The results leave their single source open ("a neutral shared source").
+- **I'd fix the direction:** the HTTP layer depends on the domain, never the reverse.
+  - A small module under `lib/` exports the tuples.
+  - `schemas/common.ts` builds `z.enum` from them.
+- **That module can't be `positionResolver.ts`.** It imports `db/index.js`, so the schema layer would pull in the database, and generation is meant not to (Auditor #6).
+- **The client's own `PositionScope`** in `types.ts` goes when its consumers migrate. The generated types carry the server's.
+- **`server/src/schemas/` also needs a line in root `AGENTS.md`.** It should say:
+  - what the layer may import: `zod`, its own files and that vocabulary module;
+  - who imports it: the routes, the hierarchy primitive and the MCP adapters;
+  - that it holds no domain rules.
+
+  Today `lib/itemHierarchy.ts` and `lib/parseRequest.ts` import from it. That's the right direction, but nothing says so. I'll write the line once the decision is made.
+
+**7. Clean up three things before the pilot merges to main** (Auditor #6 makes the general case).
+
+**What merging it as it stands brings to every session.** The pilot is on its own branch, and main carries Story 8.
+- **A fresh checkout's gate needs a separate install.** `npm run check` fails unless `server/tests/contracts/prototypes` is installed on its own, and that package holds a second copy of Zod.
+- **A production file regenerates from a test package.** Root `AGENTS.md` now names `generate:pilot` as the command, and it runs from the comparison package.
+- **The candidates we didn't pick still run in the gate:** 231 HTTP replays, plus the field-change tests, on every `npm run check`.
+- **"Pilot" is in the names:** `pilotTypes.ts`, `pilot.openapi.json` and `generate:pilot`. The code-comments guide rules out naming where code came from, and these names go stale the day M2 starts.
+
+**What I'd do instead, a small M1 before the merge:**
+- **Generation moves into the server's own dev tooling:** one Zod install, a `generate:contracts` script, and the freshness check in the normal gate.
+- **The evidence moves out of the tree but stays reachable.** Tag the evidence commit, for example `api-contract-spike-evidence` at `d703e6a`. Then delete:
+  - the two unpicked candidates;
+  - their parity and field-change tests;
+  - the seven comparison artifacts;
+  - the separate lockfile.
+- **What stays:**
+  - the frozen corpus;
+  - `pilotContracts.test.ts`;
+  - the field drills;
+  - the native conversion probes, which the migration proposal already keeps.
+- **The files get names for what they are,** for example `server/contracts/openapi.json` and `client/src/api/transportTypes.ts`.
+
+**Then:** the pilot merges, and M2 onward waits for Epic 3.5 to close, as the migration proposal already plans. Deleting from the tree is Nathan's call; the tag keeps the evidence runnable.
+
+**A note on Story 8.4:** it changes `dragRequest.ts::sendItemMove`, which on this branch takes `MoveItemInput` from the pilot's aliases. I expect no conflict either way, but the 8.4 Coder needs to know which branch to start from.
+
+**8. Proposal point 5's check scripts: three that would pay for themselves, and a question.**
+- **Route registration, read from Express itself.**
+  - The pilot's check compares the document against the corpus's endpoint list. A route nobody added to the corpus passes unnoticed.
+  - Reading each router's methods and paths, and comparing them with the document's operations, turns M1's route inventory into a test instead of a table.
+  - It's also the independent reference the Auditor (#4) asks for. Express 5's router introspection needs a quick probe first.
+- **Every Bruno request body, checked against its operation's request schema.** The pilot checked one `.bru` file; 13 of the 27 have JSON bodies. Proposal point 4 expects Bruno to drift, and the same reader run over the whole collection would catch it cheaply. Scenario intent stays hand-written.
+- **MCP's advertisements, checked against the REST schema for the fields they share.**
+  - A table maps each tool argument to its REST field, and a test checks that their types agree.
+  - It leaves out whether a field is required, which legitimately differs: MCP's `workphase_id` is required, and the REST field is optional.
+  - It catches divergence like CF5's without adding runtime validation to MCP.
+- **Question for Nathan: response checks in the E2E stack.**
+  - **Today** the response schemas are checked against the 77 corpus cases only.
+  - **The idea:** the Playwright server (port 3002, test routes on) checks every response against its registered schema, logs any mismatch, and fails the run at the end.
+  - **The payoff:** the 219 E2E tests become a broad response check, with no new specs.
+  - **Why it's your call:** it changes the test server's configuration, which the spike's rules forbade. For the migration it's a new decision, not something to assume.
+
+### Coder
+
+**Position: consensus with the recommendation (native Zod 4, small native OpenAPI assembly, generated client declarations), with five things I'd want settled before anything beyond the pilot merges.** I read the spike, the review packet, Batch 4 of the results, the CF queue, the migration replan and the pilot diff (`843f132..7410110`: schemas, `parseRequest`, the three routes, `itemHierarchy.ts`, `mcpItemTools.ts`, `pilotTypes.ts`, `openapi.ts`). I did not read the other roles' sections. I also ran two throwaway probes on the parse stage (not in the repo); the results are below.
+
+**1. Is the preserved lookup/parse/error order correct? Yes.**
+- By reading: in the three handlers that look a target up, the 404 still precedes any body parse. Item move still runs position → intent → hierarchy shape (parentId, isAttached, workphaseId, then side-with-anchor). Project move still runs position → prevId → nextId → parentId. Everything after the shape check is untouched apart from the two anchor casts and, in the project route, calling `parentRefusal` directly now that the schema has done the `parentId` type check the local `parentError` wrapper used to do.
+- By differential probe: I transcribed the removed hand-written checks from the diff and replayed them against `parseItemMove` for 944,784 generated bodies (9 value kinds each for `workphaseId`/`anchorId`/`parentId`/`isAttached`, 6 `side` values, 6 `scopeWorkphaseIds` values, 4 `position` values) plus array bodies, and against `parseProjectMove` for 2,919. Zero differences in outcome, message or precedence. This covers the parse stage only. The 77 frozen cases remain the evidence for the database-dependent order and for JSON and missing-body edges. The probe needs no database, so I can make it a permanent test if the Test Planner wants it.
+- Three things I noticed while checking:
+  - `itemMoveIntentSchema` is a union of `looseObject({ field: z.unknown() })`, which reads as if it accepts any object. It doesn't: at Zod 4.6.7 an absent `z.unknown()` key fails its branch (`{}` rejected, `{ workphaseId: null }` accepted, `{ scopeWorkphaseIds: [] }` rejected; probed). The corpus's no-intent case and the exact version pin protect this, but it needs a one-line comment.
+  - The last `itemMoveSchema.safeParse` plus `schemaErrorMessage` in `parseItemMove` is unreachable for today's fields: of 3,540 bodies that passed the earlier gates, none failed it. The hand-ordered code decides behavior; the intersection decides the published document. They agree today and nothing ties them together. The first field added to the schema alone will reach that branch with Zod's default wording, not the legacy wording. Legacy wording survives only through the per-field mapping loops in `parseHierarchyShape` and `parseProjectMove`, and that glue is the recurring cost: it grows with fields × endpoints. This needs a ruling (question A below).
+  - `parseRequest(idParamsSchema, req.params, res)` can never fail, because an Express path parameter is always a string. It is harmless in the pilot, but there are about 69 `req.params` reads across the API (62 `id`, 6 `itemId`, 1 `labelId`). I'd document path params in the operation metadata and not add that many no-op parse calls in M2–M4.
+
+**2. Raw-anchor assertions and UI subset aliases.**
+- *The `as string` / `as Side` casts: justified for now, but they should be one cast in a different place.* A `typeof` guard would turn today's 500 on a non-string anchor into a 400, which is the behavior change the spike put out of scope (CF2). The frozen object-anchor case is the tripwire: whoever fixes CF2 has to touch that snapshot, and the casts go with it. The casts exist because `HierarchyRequest` is now the Zod output type. The primitive's input became a loose object with an index signature and `anchorId`/`side` typed `unknown`, and `lib/itemHierarchy.ts` now imports `schemas/items.ts`. That is because `PUT /items/:id` (items.ts:252) still hands raw body values to `validateHierarchyRequest`, so the shape check had to live inside the primitive; on PATCH it therefore runs twice. As an interim that's fine. In M2 I'd have PUT and POST parse at the route the way PATCH now does, give the primitive back a plain domain request type (`anchorId?: string; side?: Side`), and keep one cast where the route builds the request. Otherwise the primitive couples to the wire schema, which "preserve the primitives" and "don't make position math depend on HTTP schemas" are both trying to prevent.
+- *`pilotTypes.ts` aliases: narrowly justified.* `UiItem` makes `positionScope`, `depth` and detail `workflowId` optional because `client/src/types.ts` already has them optional (`positionScope?` at types.ts:57), and CF4 hands that decision to the positioning plan. `MoveItemInput` narrows `workphaseId` to non-null and restates `anchorId`/`side` because the wire schema says `unknown` for them (the same legacy hole), so the generated type is useless to its only client and the alias carries the real contract. The cost to accept knowingly: the relaxations are one-way. If the server stopped sending `positionScope`, the server-side response check would fail but the client would still compile, so the client half of the "required-response drift" drill is deliberately blunted for exactly these fields. Treat the alias file as the register of hand-maintained disagreements: name each relaxation in its header comment, and let M2 add to it deliberately.
+
+**3. Is the native assembly small enough to own? Yes, and I expect it to stay so. What would trigger the library trial?**
+- `createPilotDocument` is about 45 lines; the rest of `openapi.ts`'s 167 is metadata.
+- Counting the actual API (53 handlers outside `testHelpers`): 11 answer 201, 11 answer 204 with no body, only **2** read `req.query` (workflows `projectId`, boards `workflowId`), and path params are `:id` almost everywhere. So **parameter conversion, one of D4's named triggers, will barely matter in this API.** Hand-writing two more literal descriptors is not a trigger. The one real gap is that the descriptor's `name: 'projectId'` is authored apart from `workflowQuerySchema`'s key and nothing checks they agree. For two parameters, a test is cheaper than a converter.
+- Routine extensions the native assembler needs that should *not* count as the trigger: `Operation.method` is `'get' | 'patch'` with `200` hard-coded, so it needs post/put/delete, 201 and 204. `errors: number[]` all point at the strict `{ error }` schema, but `PUT /workphases/:id` answers 400 with `{ error, conflictingColumnId }` (workphases.ts:64), which `errorSchema` would reject, so errors need a per-status schema.
+- The piece that scales badly is `inputs` (openapi.ts:120–124): a hand-maintained set of component *names* deciding whether each component is emitted in its input or output form. One name gets one form.
+- **The concrete trigger I'd propose:** the first component that must appear in both a request body and a response and has a different input and output shape (a `.default()`, `.transform()`, `z.coerce`, or optional-on-input/required-on-output on a shared sub-shape), or the first time `inputs` needs an edit other than adding the new operation's own body or params. That is D4's "input/output component management" as something observable. The compatibility rule against introducing coercion or defaults makes it less likely than it would be in a greenfield API. I'd check it explicitly at the end of M2, alongside "does the measured benefit hold outside the pilot".
+
+**4. Operational points from the Coder's chair.** The library choice doesn't change these, but I hit them daily.
+- *The gate needs a manual second install.* Server Vitest imports the nested package's dependencies, and a root or server install does not install it (the tooling README says so). A fresh clone, a new worktree or CI fails until someone knows to run `npm ci --prefix server/tests/contracts/prototypes`. M1 lists "wire documented installs"; I'd make it a condition for merging the pilot branch, not an M1 detail.
+- *Gate size.* The server test count went from 432 (my last run, at `c1aa1de`) to 780 on the pilot. I haven't split out how much is candidate scaffolding. After the decision I'd tag the pilot commit as the reproducible evidence and delete the rejected candidates' directories and tests as M1's first step, so every Coder session stops paying for them.
+- *Windows port exhaustion.* The packet says HTTP-heavy suites can exhaust the temporary port range and need a cool-down, and Batch 3 trimmed fixture setup after hitting it. `npm run check` is my gate. A gate that can fail on port exhaustion costs reruns and bogus failures, and M2–M4 add response cases across about 53 endpoints. I'd want it root-caused first (a keep-alive agent is what I'd try), not handled by spacing out commands.
+- *The regeneration path lives under `tests/`.* Root AGENTS.md sends people to `npm --prefix server/tests/contracts/prototypes run generate:pilot`. When generated output is stale, the gate prints only `Stale generated artifact: <path>` (`pilotArtifacts.ts:46`) and not the command to run. Every future field change will hit that message, so it should name the command.
+- *Small tidy-ups, none blocking.* The `move_item` comment explaining why no position is sent (the workphase-only rule, wiki item-positioning §2) disappeared from `mcp.ts` when the case moved into `callMcpItemTool`. In `client/src/api/items.ts` the `scopeWorkphaseIds` note now sits above `moveItem` instead of the type it described, and the "every item write answers with `reindexed`" block no longer sits over `ItemWriteResponse`. The `void $schema; void $id;` idiom for dropping keys appears in both `openapi.ts` and `mcpItemTools.ts`; a small omit helper is cleaner.
+
+**Questions and asks**
+- **A (PO / Nathan):** are the legacy 400 messages part of the contract for every field, or only where something pins them (a test, a Bruno scenario, the client)? "Every field" means a mapping loop per route; "where pinned" means Zod's default wording elsewhere, which is a deliberate and visible change. I lean to "where pinned", but it changes the "no wording changes" rule, so it isn't mine to decide.
+- **B (Architect):** adopt the M2 shape in 2 above: routes parse, the primitive returns to a domain type, one boundary cast.
+- **C (Architect / Nathan):** make the nested install, the rejected-candidate cleanup and the port-exhaustion root cause conditions for merging the pilot branch.
+- **D (Test Planner):** whether the parse-stage differential probe should become a permanent property test, and whether a test should tie `workflowQuerySchema`'s keys to the operation's parameter names.
+
+### Test Planner
+
+**2026-10-30 — In consensus with the recommended foundation, with a qualification to proposal point 3.** The reported pilot evidence supports adopting native Zod conversion, small OpenAPI assembly and generated client declarations for a separately authorized migration. I see no test-planning reason to demand another library trial now. Keep D4's trigger: if the next resources require more general assembly machinery, compare the library against that actual requirement. Passing the pilot is evidence for the foundation, not certification of every product rule or endpoint.
+
+I read the spike, decision review packet, supporting results, compatibility follow-up queue and proposed migration replan. This is an independent Test Planner response: I have not read implementation or test code, rerun the reported suites, or assessed individual tests for catalog coverage. Those remain Coder/Auditor and Reconciler work.
+
+**Contracts can supply representation; the wiki must supply the expected behavior.** I support letting the Planner read the generated technical reference to choose valid field names, request forms and response locations for a business case. That would help avoid duplicating API reference prose in the wiki. It must not turn a generated schema into the oracle for the business expectation. For example, the contract can describe an anchor field, but it cannot decide which sibling the move belongs beside, whether a parent is legal, or whether a refused write leaves all affected rows unchanged. Those expectations remain independently derived from product rules. A disagreement goes to the PO/Nathan, rather than making the case follow the generated output.
+
+The current Planner instructions allow no code reading and require settled cases to trace to wiki sections. A generated technical reference could be an additional input without allowing schema-source or test-code reading, but that permission needs to be explicit if adopted. The wiki should retain observable refusal and state-transition rules, including status codes where they matter to the product. It need not repeat every technical field constraint. Pure transport checks and generation checks need not acquire artificial business cases just to fit the catalog.
+
+**I would not add a blanket “handled by the framework” coverage exemption.** Reusing one shape for validation, documentation and types removes duplicated declarations; it does not independently establish that the declaration is correct, that a handler uses it, or that the handler returns the intended result. A schema and its generated document can agree on the same mistake. The reported independent frozen captures, real-response assertions and deliberate drift probes are therefore valuable complements to generation.
+
+For a catalog case, the Reconciler should still require identified, running tests whose assertions prove its full Given/When/Then. Shared or parameterized contract checks can be candidates for that mapping when they do so; library adoption alone cannot mark a case Automated. A check of a field's type does not also prove error precedence, the error payload or absence of database effects. Existing approval requirements for internal mappings still apply. The new contract-test location also needs an explicit classification under the surface-test rule: exercising a real HTTP handler may make it surface evidence, but we should not infer that merely from its folder or the word “contract.” Test consolidation remains separate subsequent work, as the replan already says.
+
+**Additional evidence to plan during migration.** The following are coverage questions and candidate scenarios, not claims that the existing code or tests lack them. Coder/Reconciler should first identify what the retained baseline already proves, then add only what is missing:
+
+| Area | Expected evidence |
+|---|---|
+| Beyond the 77 captures | A resource-by-resource comparison with the wiki cases and response variants. Preserve omission versus null, empty collections, defaults, accepted/ignored/refused fields and normalization. Include missing targets plus multiple faults to preserve failure precedence. Refusals and failed multi-step writes leave relevant database state unchanged. Keep successful hierarchy/order effects independently asserted; shape-valid data can still represent the wrong move. |
+| Response variants | Exercise decorated detail, collection, write and error responses, with reindex disclosure both present and absent where applicable. A valid response shape does not prove sibling order, inherited workflow selection, attachment propagation or dependent-row effects. Add the applicable business scenarios as each resource migrates, rather than expanding the four-operation pilot into a claim of universal coverage. |
+| Conversion boundaries | For each newly used refinement, coercion, default, conditional constraint or input/output distinction, compare representative accepted and refused wire values with runtime acceptance and the emitted contract. Pair agreement checks with independently chosen expected outcomes; do not widen the published schema just to make the comparison pass. |
+| Registration completeness | Compare migrated operations with an independently reviewed inventory of actual non-test routes, including method, path, parameters, response statuses and variants. Removing a registration must fail even when its schemas still exist. The four-operation corpus catches omissions within its scope; it cannot reveal an operation omitted from both the corpus and registry. Keep the document explicitly partial until the full inventory is accounted for. |
+| MCP transport | The reported HTTP-backed adapters and exact advertisements are useful, but do not establish stdio dispatch. Plan a bounded transport check for listing the existing tools and calling `get_item`/`move_item`, including successful results, missing-target/error delivery and a representative malformed/raw argument. Preserve the existing advertisement-versus-runtime distinction until CF5 is ruled on; do not silently add validation. This is technical transport assurance, not a duplicate business catalog case solely because the action uses MCP. |
+
+The 18 unchanged Playwright skips are acknowledged baseline exclusions, not passing coverage supplied by the new framework. Keep each skip's reason, case ownership and receiving story visible. The existing Story 10 restoration work remains its own obligation; adopting contracts neither fixes those gestures nor requires repairing them inside this behavior-preserving migration. Continue interim reconciliation where useful and the planned Story 8 close-out reconciliation.
+
+**Compatibility observations must remain separate from intended behavior.** I support CF1–CF6's receiving queue. In particular, the five characterized 500 outcomes and permissive inputs should remain frozen during migration, but should not automatically become new settled business cases. CF1–CF3 and CF5 need the named rulings before changing intended expectations. When a separate behavior story is authorized, revise its affected captures deliberately and retain the unrelated baseline.
+
+My requested decisions are therefore narrow: permit generated-reference reading for technical representation while keeping business expectations independent, and retain evidence-based Reconciler mappings rather than introducing a “framework handled” status. No persona, catalog, approval rule or test changes are made by this response. With those boundaries, I support the recommendation and the proposed incremental migration.
+
+### Product Owner
+
+**2026-10-30 — In consensus with the recommendation.** Which library to use isn't a product question. The pilot changed nothing a caller can see: the 77 frozen cases and the unchanged Playwright suite both pass. My input is on the boundary between the wiki and the generated reference, and on the follow-ups the review gives me (CF1–CF3 and CF5).
+
+I read the proposal, the spike, the review packet, the Batch 1 and Batch 4 results, the follow-up queue, the migration replan and the wiki pages the follow-ups cite. I didn't read code. The Test Planner's response appeared in the file while I was writing, so I've seen it. I haven't read the Auditor's.
+
+**1. The boundary: agreed, but point 1 says the wiki covers less than it does.** The wiki already holds API facts. Its test for anything on a page is "would a user, or a caller of the API or the MCP tools, notice if it were different?". Its README lists "API routes, request and response fields, status codes" among what belongs on a page. So I'd confirm the following line, rather than "the wiki isn't concerned with API contracts":
+- **The wiki holds what a field does and what's refused.** That covers a field's meaning and what leaving it out or naming `null` does. It covers every refusal, with its status and what's stored, and how rules combine. It also covers the response facts a caller acts on, such as reindex disclosure. It names routes and fields because its rules are about them.
+- **The generated reference holds the shape.** That's every operation and field, each field's type and whether it's required or nullable, allowed values, defaults, and each response's schema. It also includes transport policy, such as unknown fields being ignored. Shape that no rule depends on lives only in the reference.
+- **Overlap is fine where the wiki states a meaning.** Wiki item-positioning §2 lists `positionScope`'s values because each value's meaning is a rule. The reference will list the same values.
+- **Little in the wiki changes.** The wiki names about 16 routes and about 27 status codes, and each sits inside a rule. I know of no field table or pure description of shape to remove. So M5's handoff to remove duplicated reference prose will be a small sweep, done then, as the plan says.
+- **After a ruling, I'd update the wiki README.** The "Belongs on a page" row would read "The routes, fields and status codes a rule depends on". The "Doesn't" column would gain "A field's type, or whether it's required or nullable, unless a rule depends on it". The documentation standards, which aren't mine, would also need a row for the generated reference, saying who owns it and how docs refer to it.
+
+**2. The reference matching the code doesn't show that a rule holds.** That's why the wiki keeps its refusal rules even where a schema enforces them. Suppose someone loosened the schema's refusal of `position`. The document and the client types would regenerate, and every freshness check would pass. The rule would have changed without a ruling, and only the wiki and the tests derived from it would notice. So the reference is the authority on shape, never on rules. That holds whatever point 3 decides about "handled by the framework", which is the Test Planner's call.
+
+**3. Two checks that would keep the boundary honest (point 5):**
+- **The reference points to the wiki.** Each operation's description names the wiki section that holds its rules (`wiki positioning §2`), as code comments do. `check:docs` already checks pointers like that, so it would catch a removed or renumbered section. References still run one way, as the standards set: the wiki names no file.
+- **The wiki's routes resolve in the reference.** Once the reference is complete (M5), a check confirms that every route the wiki names is an operation in it. Fields are hard to check in prose, but routes are easy. Today the wiki writes routes in two forms (`PATCH /api/projects/:id/move`, `PATCH /items/:id/move`). I'd make them one form in the M5 sweep.
+
+**4. My triage of CF1–CF3 and CF5.** Each row gives what the wiki says today and whether a new rule is needed. In every case today's behavior stays frozen through the migration, and any change is a separate behavior story.
+
+| ID | Wiki today | Intended or observed? | Recommendation |
+|---|---|---|---|
+| CF1: an unused `nextId` that names no row | Row-references §1 refuses a reference that names no row "whether the field is required or optional", and gives a move's neighbor as an example. Project-tree §6 refuses "a neighbor the move can't use". | Observed only. The wiki already answers this: a named `nextId` that names no row, or is `""`, is refused with a 400, even when the move uses `prevId`. §1's reason applies: the move succeeds without doing what was asked, and the caller can't tell. | Not a new rule, so I'm offering no options: I ask Nathan only to confirm this reading. The fix is then a correction story covering the code and the Bruno docs block, and I'd add one clause to project-tree §6 to make it explicit. CF1 doesn't cover which neighbor wins when both name usable rows. `positioning-on-create-and-edit.md` already holds that question (in its "For the PO" note and Open decision 8), and it should stay there. |
+| CF2: malformed requests get a 500 | Silent. No page says what an unreadable request gets. | Observed, not intended. The 500 is the global backstop catching what nothing else handled. | A new rule, so Nathan decides. **(A, recommended)** A request the server can't read is refused with a 400, and nothing changes. That covers a body that isn't JSON, a missing body, and a field of the wrong type. It would be built after the migration, when the schemas make it cheap. **(B)** Make the ruling after the migration instead. **(C)** Keep the 500 and state it in the wiki. The case against C: a 500 says the server failed, so a caller retries the same bad request instead of fixing it, and an MCP agent is the most likely caller to do so. Under A, the wiki wouldn't state the message text, or which refusal wins when several apply. The caller fixes the request either way, and tests can pin whatever the code does. |
+| CF3: permissive inputs | States only the refusals that protect a rule: `position` (positioning §2) and attached with no parent (item-attachment §1). Silent on unknown fields and on query parsing. | Intended, as transport policy, except `scopeWorkphaseIds`. | Close the rest as intentional, with no code change: unknown body fields, unknown and bracket query keys, a repeated `projectId`, and a `side` with no anchor. The reference describes them, and the wiki gains no rule. `scopeWorkphaseIds` is different. The wiki never names it, and the results call it a legacy request shape. Even `[null]` supplies the move's intent, though the server never reads the array's contents. No rule backs it, so I'd mark it deprecated in the reference, which changes no behavior, and retire it in a later behavior story. Once retired, it's an unknown field like any other. |
+| CF5: MCP tool definitions vs what the tools accept | The wiki README: "A drag, the Sheet, the API and an MCP tool call get the same answer unless the page says otherwise." | Intended. Forwarding raw arguments gives the API's answer, which is what the rule requires. | Close, with no product change. A tool definition that offers less than the API accepts is a deliberate choice of what to expose, not a contradiction. Validating arguments in the MCP layer would have to refuse only what the API refuses, or a page would have to state the exception, so it would need a ruling first. Offering more, such as letting `move_item` clear a workphase with `null`, is a new capability to propose separately. |
+
+**5. Positioning stays separate: agreed.** Nothing above needs a positioning decision, and the pilot kept both move shapes.
+
+**What I need from Nathan:**
+- confirm the boundary in point 1;
+- confirm CF1's reading;
+- choose an option for CF2;
+- agree to close CF3 (with `scopeWorkphaseIds` deprecated) and CF5.
+
+I'll make no wiki edit until then.
+
+### Auditor
+
+**Codex Auditor — 2026-10-30**
+
+I support **Zod 4 native conversion, the small OpenAPI assembly layer, and generated client declarations** as the foundation for the proposed migration. The comparison and real-handler pilot provide a reasonable basis for that choice. I see no decision-blocking reason to require another integration trial now. Retain D4's trigger: if the next routes require general-purpose conversion or component machinery, compare the library-backed implementation on that concrete need before growing the assembler.
+
+I read the spike plan, results, review packet, compatibility follow-ups and proposed migration replan. I also traced the selected schemas through parsing, operation metadata, generation, client aliases and MCP adapters, and inspected the integrated contract checks. This is input to the framework decision, not a full audit of the pilot or an independent rerun of its reported gates. I did not read other personas' responses before forming this response.
+
+1. **The authority split is sound, with one qualification to proposal item 1.** The wiki should retain observable behavior even when it involves an API field or status: omission versus null, which reference wins, what a refusal means, and whether a failed write changes state are product rules. Generated reference should own the technical field/type inventory. Removing all API-specific statements from the wiki would remove some of the independent authority against which I audit the implementation. The spike's distinction between business behavior, storage structure and exchanged data is the right boundary.
+
+2. **The pilot reduces duplication; it does not yet establish one definition across every surface.** Server-owned shapes feed parsing, emitted schemas and generated declarations. `pilotTypes.ts` derives client subsets rather than copying complete transport interfaces. That is useful consolidation. The remaining `Side` and `PositionScope` definitions, UI optionality and MCP requiredness are disclosed accurately. Preserve that accounting during migration: remove redundant declarations where their meanings agree, and use neutral shared vocabulary or agreement checks where importing HTTP schemas into domain code would create the wrong dependency. Distinct exposure policies still need owners.
+
+3. **“Handled by the framework” needs a precise proof boundary.** A schema can enforce a structural restriction while the handler still selects the wrong schema, validates too late, changes error precedence, or mutates before refusing. Response schemas currently run in tests, so they do not enforce production responses. Generated TypeScript also demonstrably loses some conditional restrictions. The Test Planner and Reconciler should distinguish a schema-level assertion from an endpoint-level behavioral guarantee. Do not automatically mark a behavioral case covered because its field appears in Zod or OpenAPI. Any later test consolidation needs its own evidence; preserving the current tests during migration is appropriate.
+
+4. **Completeness must have an independent reference.** Fresh generated files prove agreement with their sources, not that every route or response variant was registered. The pilot registration check correctly limits itself to the four operations present in the compatibility corpus. M1's independent route inventory and M5's completeness review are necessary. Extend checks to methods, paths, success statuses, error associations and response variants as routes migrate. The current response tests select schemas separately from operation metadata; that checks useful things, but publication also needs confidence that the document associates each operation/status with the correct schema. Avoid a check that merely compares two lists derived from the same registry.
+
+5. **Keep conversion agreement as a continuing check.** The recorded refinement/coercion gaps show that runtime and emitted-schema acceptance can diverge even when generation succeeds. Keep representative accepted and refused wire values, defaults, unknown fields, nullability and input/output differences in the migration gates. Reusing one named component in both directions deserves particular care when its input and output differ. These checks remain useful with either Zod assembly approach; changing libraries would not remove this review responsibility.
+
+6. **The runtime/development boundary is appropriate for the trial.** The inspected application imports use Zod and the production schemas; alternative candidates, Ajv and the type generator remain in development tooling. Generation imports the contract definitions without importing the database. Before broader adoption, carry out M1's tooling separation and normal install wiring: a nested comparison package required by the standard gate is a disclosed transitional cost. Keep comparison evidence reproducible without making it another production contract authority.
+
+7. **Compatibility observations must remain separate from product approval.** CF1–CF6 give the unusual inputs and legacy errors named destinations rather than silently changing them during adoption. That supports a reviewable migration. Passing the frozen corpus establishes sampled compatibility, not that the retained behavior satisfies every wiki rule. A later audit may still identify a defect in preserved behavior; its disposition should reference the actual receiving work or ruling. MCP advertisement reuse likewise does not establish runtime argument enforcement, and the single Bruno scenario check does not certify the collection. The review packet states those limits clearly.
+
+My consensus is to proceed with the recommended foundation and groom the migration from the retained pilot. Keep independent behavior checks, explicit consumer boundaries and semantic drift review as part of the solution. The benefit is fewer independently authored technical shapes and more detectable disagreements; it does not depend on eliminating every manually maintained relationship.
+
+## Follow-ups
+
+### Nathan
+
+Thanks everyone for the robust feedback! A few quick notes that adress several people at once:
+
+1. I've spun up this branch to work through the tech debt story in tandem with finishing out epic 3.5 (just story 8 and 10 left) but I don't inted for it to get merged until after 3.5 is finished. The thought is that the rest of 3.5 shouldn't touch much endpoint code so merge conflicts should be minimal
+
+2. I agree I overstated when I said that the wiki isn't concerned with api contract details. There are a lot of rules and behaviors that are directly pertinent to the api and it is ok for the PO and the wiki to use api contract language to describe what it should do. That said, the wiki doesn't need to be exhaustive about describing the shape of the contract because then it is just redundant with the generated api docs
+
+3. Whether we actually use this branch to implement the Zod refactor (which would require unwinding some commits that are no longer relevant now that we have a consensus decision to move forward with) or if we perhaps just create a handful of handoff documents to paste over and start the refactor from scratch in a new branch is TBD
+
+### Consolidation for Nathan — questions versus planning notes
+
+**2026-10-30 — Prepared by the Test Planner at Nathan's request.** This consolidates the responses above; it does not record new approvals or change the proposal, process or implementation. You can answer by question number. The suggested answers below are recommendations, not assumed decisions.
+
+#### Already answered or agreed in principle
+
+- **Foundation:** all five roles support native Zod conversion, small OpenAPI assembly and generated client declarations. Nathan's follow-up refers to consensus to move forward. The remaining questions concern the migration's rules and delivery, rather than reopening the library comparison.
+- **Merge timing:** this work will not merge until Epic 3.5 is finished. The Architect's suggested earlier pilot merge is superseded by Nathan's follow-up; it needs no further answer.
+- **Wiki boundary:** the wiki may use API routes, fields and status codes to explain rules and observable behavior. It need not exhaustively duplicate the generated shape reference. Nathan has confirmed this boundary. The PO/Architect can draft the resulting documentation changes through the normal ownership process.
+- **Branch choice:** explicitly still TBD. That is a delivery decision below, not approval to unwind commits or discard work.
+
+#### Decisions that affect the migration plan
+
+**Q1. How should contract checks count toward the test catalog, and may the Test Planner read the generated reference?**
+
+Suggested answer: let the Planner read generated API reference for technical representation while deriving business expectations independently from the wiki. Keep the existing catalog statuses and evidence requirements: no automatic “handled by the framework” exemption. A running contract test may count when the Reconciler verifies that its assertions prove the case's full Then. Classify tests exercising real HTTP handlers as surface evidence regardless of the contract-test folder; schema-only/internal tests retain the existing approval requirements. Any instruction changes would be drafted separately for approval.
+
+This resolves proposal point 3, Architect #3, Test Planner's requested decisions and Auditor #3 together. It does not approve any individual snapshot-to-case mapping; those still need review.
+
+**Nathan's answer:** pending.
+
+**Q2. Must migration preserve all existing error wording and failure precedence, or may it change behavior that no current test or consumer pins? What policy applies to new fields?**
+
+Suggested answer: preserve all existing messages and precedence during migration, including untested behavior discovered during characterization. Lack of a test is not permission to change it. For new fields, choose whether errors should use authored application wording or Zod defaults. Also confirm whether exact wording and multi-fault precedence generally remain technical compatibility details, with the PO documenting particular precedence rules when they affect product meaning.
+
+There is a real difference of recommendation here: Coder ask A leans toward preserving wording only where pinned; Architect #5 proposes authored per-field messages. The PO would generally leave exact messages and precedence out of the wiki. Where messages are stored in code is an implementation choice after the compatibility policy is settled.
+
+**Nathan's answer:** pending — existing behavior policy; new-field wording policy; product-rule boundary.
+
+**Q3. For CF2, do you want malformed requests to return 400 with no changes, and when should that correction happen?**
+
+Separate the intended outcome from sequencing:
+
+- **Outcome:** adopt 400/no changes for the malformed forms identified in CF2, defer the ruling, or intentionally retain 500. The PO recommends 400. Scope the correction precisely: a missing required body or an invalid field is different from an omitted optional body or a legacy input deliberately accepted under CF3.
+- **Timing if corrected:** the Architect recommends a separate behavior story before M2, at least for common parser/error paths; the PO recommends implementing after migration. Both preserve the spike's evidence and keep the correction separate from the refactor. This timing disagreement needs your answer; “separate story” alone does not resolve it.
+
+This is Architect #4 versus the PO's CF2 recommendation. A correction story would specify affected forms, statuses, messages, precedence and database effects before deliberately updating captures.
+
+**Nathan's answer:** pending — intended outcome and timing.
+
+**Q4. Do you confirm the PO's CF1 reading: a supplied unusable `nextId` is refused even when a valid `prevId` determines placement?**
+
+The PO reads the existing wiki as requiring 400 for a missing or empty named neighbor and recommends a correction story plus the Bruno clarification. This is confirmation of that interpretation, not a request to redesign positioning. Which neighbor wins when both are usable remains in the existing positioning work. Scheduling the CF1 correction can follow after the interpretation is confirmed.
+
+**Nathan's answer:** pending.
+
+**Q5. For CF3, do you accept the permissive behavior as intentional, and should `scopeWorkphaseIds` be deprecated?**
+
+These are two answers, because keeping behavior and deprecating an input are distinct:
+
+- Confirm the PO's no-change disposition for the observed unknown body fields, unknown/bracket query keys, repeated `projectId`, and `side` without an anchor. Record these transport details in the generated reference rather than inventing business rules for them.
+- Decide whether to mark `scopeWorkphaseIds` deprecated while continuing to accept it. Actual retirement would require a later behavior story; deprecation does not authorize removal or change its current role in supplying move intent.
+
+**Nathan's answer:** pending — permissive-input disposition; deprecation yes/no.
+
+**Q6. For CF5, may it close as intentional without adding MCP argument validation or expanding tools?**
+
+The PO recommends retaining curated advertisements and raw forwarding to the API. Confirm that disposition, or request separately scoped runtime validation/capability work. Closing the product-policy question would not remove the technical need to check stdio dispatch and error/result delivery. No new MCP feature is required merely to adopt the contract foundation.
+
+**Nathan's answer:** pending.
+
+#### Delivery choices that can wait until the receiving work is planned
+
+**Q7. Which implementation starting point and evidence-retention policy do you want?**
+
+Your branch choice remains open: continue from the pilot, or start a new branch with selected work and handoffs. Ask the Architect for a concrete comparison of reuse and cleanup cost before choosing; that does not need to block the policy answers above.
+
+Separately, Architect #7 and Coder ask C seek permission to remove rejected-candidate code/tests/artifacts from the active tree while preserving reproducible evidence at a named revision/tag. The current replan retains tests through compatibility proof, so deletion should be an explicit, bounded exception rather than implied by framework selection. Whichever starting point you choose, preserve the frozen behavior corpus and existing product tests. Normal install wiring, usable regeneration commands and investigation of port exhaustion belong in the delivery plan; you need only decide if you want them as explicit merge acceptance conditions, as the Coder requests. Merge timing remains after Epic 3.5.
+
+**Nathan's answer:** deferred — starting point; comparison-evidence cleanup; requested merge conditions.
+
+**Q8. Should response validation across the Playwright test stack be included in this migration, evaluated separately, or deferred?**
+
+Architect #8 proposes checking all exercised registered responses during E2E runs and failing on mismatches. This expands test-server configuration beyond the spike's unchanged-stack constraint. Suggested answer: request a bounded feasibility/cost assessment during planning, then decide whether to include it. The framework decision does not require this extension. If authorized, keep it test-only and retain independent assertions of business outcomes.
+
+**Nathan's answer:** deferred.
+
+#### Planning notes and role work — no separate Nathan response needed now
+
+| Item | Receiving work / owner |
+|---|---|
+| D4's concrete trigger, shared domain vocabulary, route/primitive boundaries, UI aliases, operation/status-specific schemas, path/query metadata and file layout | Architect/Coder design during migration planning. Escalate only a concrete unresolved scope or policy issue; these do not each need a product ruling. |
+| Independent route inventory, operation/status/schema association checks, conversion probes, broader response fixtures, Bruno/MCP agreement checks and bounded stdio coverage | Migration acceptance and technical test planning. Completeness must be checked independently of the registry being tested. Q8 is the optional broader E2E extension. |
+| Coder ask D: retain the differential parse probe and check query-schema keys against parameter metadata | Coder/Architect assess focused technical regression value and maintenance cost. They need no new business case merely to test infrastructure. Any eventual catalog mapping still follows Q1 and the Reconciler's rules. |
+| Existing case IDs on compatibility snapshots | Reconciler checks each claimed case against its full Then, as Architect #3 requests; Coder corrects any unjustified ID claims. Captured behavior alone is not approval of the rule or proof of the full case. |
+| Existing skipped Playwright tests | Retain reasons and receiving case/story ownership. Story 10 and Story 8 close-out reconciliation remain scheduled; the framework does not supply missing gesture coverage. |
+| Wiki/reference pointers, consistent route notation, generated-reference ownership and guide updates | PO/Architect draft the necessary owner-applied changes. The broad wiki boundary is already answered; any process/guide change still follows its normal approval requirement. |
+| CF4 transport/UI distinctions, positioning redesign, new MCP capabilities and CF6's stale guide example | Keep their named receiving work. No extra scope is authorized by this consolidation. CF6's actual guide edit will need the existing Nathan approval when its draft is ready. |
+| Publication delivery/path | Decide at M5 after completeness evidence exists; no need to settle a viewer or public endpoint in this round table. |
+
+The shortest useful reply now is **Q1–Q6**, with Q2 and Q3 answered separately: error compatibility is one decision, and correcting malformed-request behavior before or after migration is another. **Q7–Q8 can remain deferred** without being lost from planning.
+
+### Nathan follow up
+
+**Q1.** I like the analogy of the Test Planner as a lawyer/judge that takes both code law and case law into account. This is the decision tree as I see it:
+
+1. First concern is *Code Law*, aka what is explicitely written in the wiki. If the wiki is descriptive about an outcome then at least one test should be descriptive in proving it. For the Code as it exists to ever trump a TC written from 'Code Law' requires the wiki to first be updated (or an agreement that the TP misunderstood the wiki's description)
+2. Second concern is *Case Law*, aka what keeps the behavior consistent with how it behaves in similar circumstances - ex: endpoints that fail because a referenced ID could not be found all fail with the same error code and similar templated error message. For Code as it exists to trump a TC written from 'Case Law' requires a strong argument that this case is different enough from the similar cases that it warrants a different output
+3. Third concern is a preference for the most conventional or most expected result. There is more lenience here and the TP can revise the TC expectations to match the Code as it exists if they agree that there is a fair argument that the Code results are also conventional and expected
+4. It is also acceptable for a Test Case int he Test Plan to be prescriptive if there is no strong 'Code Law', 'Case Law', or 'Convention' argument to make. A test can say something like 'an item drag fails gracefully when pulled outside the browser window' and leave it as a judgement call to the Test Reconciler or other reviewer to decide that the assertions of a given test do in fact demonstrate a 'graceful failure'.
+
+All that to say that yes, I think the Test Planner should be able to read the generated api documents. But also, they are likely to do their test planning for the story before the directly relevant docs have actually been generated and that shouldn't hinder them from completeing the test plan
+
+**Q2** The preference is to change no external tests during the refactor so the tests can prove the refactor has not caused behavior regressions. Unit tests that is directly broken/made irrelevant by the introduction of the zod layer are the only candidates for updating /removing. Any finding that the error wording or failure precedence ought to be updated should be recorded and defered until after the refactor is proven regression free.
+
+If there is a suggested change that wouldn't break any test then that might be considered on a case by case basis, but the ruling will likely still be to record and defer
+
+The main caveat is that if a decision needs to be made that applies a universal rule that whatever is decided will break *some* tests, then we can deliberate the decision and fix the tests that break as a result
+
+**Q3-Q6** I think these all should follow from my answer to Q2. The preference is to maintain behavior as much as possible through the migration. If a decision is required to make as part of the Zod implementation that we can make it now. Otherwise, the preference is to perform the migration first. Once the migration is complete with no regressions in the existing test suite then we can answer and implement the remaining decisions, updating the wiki and test plan as necessary
+
+### Migration planning checkpoint — implementing Architect
+
+**2026-10-30 — Recorded at Nathan's direction after the follow-up discussion.** This summarizes the decisions used in the final story drafts; it does not replace the independent role responses or add new product rulings. The [migration roadmap](../api-contract-migration/README.md) and linked M1–M5 plans receive the work. The earlier consolidation's pending answers are historical; Nathan's follow-up and this checkpoint govern planning.
+
+- **Foundation:** proceed with native Zod 4 conversion, small OpenAPI 3.1 assembly and generated client declarations. Preserve D4's concrete additional-trial trigger; no second integration is required merely to reconfirm consensus.
+- **Wiki and testing:** the wiki may use API language to state rules, without exhaustive shape duplication. Nathan permits the Planner to read generated docs and does not require future docs to exist before planning. Expectations follow explicit wiki rules, reasoned consistency, convention and reviewer judgment for intentionally broad outcomes. A schema/capture does not automatically establish the expected rule or full catalog coverage. No automatic framework-covered status is selected.
+- **Q2 compatibility:** preserve external behavior/tests, including errors and failure order lacking tests. Internal unit tests directly broken or made irrelevant by replacement are candidates for documented updating/removal; useful behavior coverage is not obsolete merely because Zod enforces a shape. Present a concrete unavoidable universal decision for deliberation before changing behavior/tests. No such blocker is established by the pilot.
+- **Q3–Q6 disposition:** retain malformed-request outcomes, current neighbor validation/precedence, permissive inputs and raw MCP forwarding. Defer final intended-behavior rulings, corrections, deprecation/retirement, validation and capabilities until migration is proven regression-free. This does not close them as permanently intentional or approve a wiki contradiction. No ruling blocks M1–M5 without a concrete unavoidable implementation issue.
+- **Q7 reuse/cleanup:** Nathan accepted finishing the decision/story checkpoint here, preserving the evidence revision, creating a migration branch from the reviewed checkpoint, then forward M1 cleanup instead of unwinding or partial cherry-picks. M1 enumerates comparison-only candidates/tests/artifacts to retire after preservation, retaining product tests, frozen captures and useful integrated/native checks. No cleanup, branch/tag or commit is performed by this record.
+- **Integration:** finish Epic 3.5 → merge `main` into migration and resolve/verify conflicts → merge accepted migration back into `main`. M1 establishes completed-main compatibility; M5 records final integrated evidence. The old pilot base is not the final regression baseline.
+- **Optional scope:** Q8's broader E2E response interception, new publication delivery, hypothetical new-field wording and optional product changes go to [post-migration work](../tech-debt-stories/api-contract-compatibility-follow-ups.md). Existing test-only response checks remain required.
+- **Execution:** Nathan authorized step 1, finishing the decision record and story plans. No implementation, evidence tag, branch, merge, role invocation or sign-off is claimed. Normal migration role/audit/closeout responsibilities apply after the spike's exception.

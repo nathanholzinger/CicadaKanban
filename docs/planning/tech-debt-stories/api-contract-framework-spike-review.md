@@ -1,6 +1,8 @@
 # API Contract Framework — Decision Review Packet
 
-**Prepared:** 2026-10-30 by the Architect · **Status:** ready for Nathan to request role input; no requests sent · **Implementation:** `7410110be18f59263a3682e6843186e29c136ee3` on `api-contract-framework-pilot`
+**Prepared:** 2026-10-30 by the Architect · **Status:** historical decision packet; role responses received in the round table and foundation selected for migration planning · **Implementation:** `7410110be18f59263a3682e6843186e29c136ee3` on `api-contract-framework-pilot`
+
+**Planning update:** Nathan's answers and accepted reuse/integration strategy are recorded in the [round table](../round-tables/api-contract-framework-decision). The [migration roadmap and M1–M5 plans](../api-contract-migration/README.md) are current. The questions below describe the earlier review request, not pending prerequisites to migration.
 
 ## Decision requested
 
@@ -11,7 +13,7 @@ The integrated pilot passed all 77 frozen compatibility cases, the full gate (78
 ## Read and inspect
 
 - [Results, Batch 4](api-contract-framework-spike-results.md#batch-4--final-recommendation): criterion-by-criterion comparison, actual declaration counts, costs, limitations and retained-file inventory. Earlier batches hold versions, primary references and raw measurements.
-- [Proposed migration replan](api-contract-zod-openapi.md#proposed-replan-after-the-spike): reuse the pilot; preserve behavior/tests; migrate remaining resource slices; publish only after coverage is complete.
+- [Migration roadmap](../api-contract-migration/README.md): reuse the pilot; preserve behavior/tests; migrate remaining resource slices; complete repository reference before any separately approved external delivery.
 - [Compatibility follow-up queue](api-contract-compatibility-follow-ups.md): CF1–CF6 expected versus observed behavior, evidence, owner and disposition. No correctness change has been bundled into the refactor.
 
 From the repository root:
@@ -64,4 +66,4 @@ Do not overlap server test commands: they share one SQLite fixture database. The
 - Only existing `get_item`/`move_item` advertisements/adapters and one Bruno scenario were connected; no new tools, SDK registration migration, runtime tool validation, or complete scenario catalog is claimed. MCP reuse is primitive-level: future field-specific REST constraints still require adapter review and HTTP-backed checks.
 - D4 still applies: if actual needs require general-purpose assembly or repeated workarounds, preserve native and add a comparable `zod-openapi` trial. Do not automatically switch libraries or discard either implementation.
 
-No roles have been invoked, no final stack decision recorded, and no broader migration, merge, publication or archival sign-off is authorized by this packet.
+At packet preparation no role input or final stack decision was claimed. Subsequent responses and Nathan's selected foundation are recorded in the round table. Broader implementation, merge, publication and archival sign-off are not executed by this historical packet or the planning checkpoint.

@@ -1,8 +1,10 @@
 # API Contract Framework — Spike Results
 
-**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** Batch 4 recommendation and review packet prepared; awaiting Nathan's decision
+**Written:** 2026-10-30 by the Architect · **Story:** `api-contract-framework-spike.md` · **Status:** evaluation evidence complete; foundation selected after round-table input
 
-This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools are installed in an isolated test package. Native Zod conversion is implemented on a separate pilot branch; no final stack decision or API-wide rollout has been made.
+**Decision update:** the [round table](../round-tables/api-contract-framework-decision) records Nathan's compatibility/deferral answers and accepted reuse/integration sequence. The [migration roadmap and story plans](../api-contract-migration/README.md) now receive the work. The Batch 1–4 recommendations and measurements below describe their original checkpoints; they do not supersede the later decision or certify compatibility with unfinished Epic 3.5.
+
+This is the evidence record for the comparison, not a product specification. Observed behavior is captured for compatibility; it is not a ruling that every observation is correct. Candidate tools remain in an isolated test package pending M1 cleanup. Native Zod conversion is implemented on the pilot branch and selected for migration planning; no API-wide rollout has been performed.
 
 ## Batch 1 — Baseline
 
@@ -494,4 +496,4 @@ All observed disagreements and policy questions are routed with expected/observe
 
 Batch 4 changes planning documents and the tooling README only. Runtime, generated artifacts, dependencies, tests, and configuration remain the committed `7410110` implementation. Its retained-code evidence is the passing Batch 3 full gate (780 server / 604 client / 235 tooling) and unchanged Playwright (219 passed / 18 skipped). No unchanged application suite was rerun for documentation-only edits.
 
-`check:generated` passed for all seven comparison artifacts, and `check:pilot` passed for both integrated artifacts without rewriting them. `npm.cmd run check:docs` passed (422 checked files, zero findings); `git diff --check` passed. Local document link targets exist, and the working diff contains no application/test/dependency/configuration changes. Batch 4 remains uncommitted for Nathan's review; the spike is ready for the adoption/input decision, not signed off or archived.
+`check:generated` passed for all seven comparison artifacts, and `check:pilot` passed for both integrated artifacts without rewriting them. `npm.cmd run check:docs` passed (422 checked files, zero findings); `git diff --check` passed. Local document link targets existed, and the Batch 4 diff contained no application/test/dependency/configuration changes. Nathan committed that checkpoint as `d703e6a`; subsequent role input and foundation selection are recorded in the round table and current migration plans. Archival/sign-off is not performed by the planning handoff.

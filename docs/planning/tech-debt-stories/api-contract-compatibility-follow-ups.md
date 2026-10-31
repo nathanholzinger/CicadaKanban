@@ -1,10 +1,10 @@
-# API Contract Compatibility — Follow-up Decisions
+# API Contract — Post-migration Decisions and Corrections
 
-**Type:** tech-debt planning story · **Written:** 2026-10-30 by the Architect · **Status:** awaiting grooming and Nathan's prioritization · **Sequenced:** after the behavior-preserving contract spike; independent of adopting a framework
+**Type:** tech-debt planning story · **Written:** 2026-10-30 by the Architect · **Status:** deferred until migration acceptance; decisions and implementation not started · **Sequenced:** after M5's regression-free acceptance and the migration merge; no Q3–Q6 ruling is a prerequisite without a concrete unavoidable implementation blocker
 
 ## Goal
 
-Resolve the observations carried from the [framework spike results](api-contract-framework-spike-results.md), then authorize narrowly scoped corrections separately from contract migration. This plan records destinations, not permission to change behavior. An unusual input outcome is not automatically a product defect.
+After the [migration](../api-contract-migration/README.md) is proven regression-free, resolve the observations carried from the [framework spike results](api-contract-framework-spike-results.md) and Nathan's round-table answers, then scope approved corrections separately. This plan records destinations, not permission to change behavior. An unusual input outcome is not automatically a product defect. Preserving it for the migration does not declare it permanently intentional.
 
 The wiki remains the business-rule authority. The current implementation and frozen compatibility corpus establish what the refactor must preserve until a separate ruling changes it. Any implementation story changing behavior follows the normal PO/Test Planner/Coder/audit workflow; the spike's workflow exception does not carry forward.
 
@@ -23,14 +23,25 @@ The expected/observed distinctions above are requests for decisions, not new wik
 
 ## Decisions
 
+- Nathan's Q2/Q3–Q6 answer is the migration disposition: preserve the observed outcomes first. The PO's CF1 interpretation and CF2/CF3/CF5 recommendations are received input, not presumed new approvals, deprecation or closure. Record known wiki/implementation disagreements without changing either side just to make the refactor appear correct.
 - Keep these items outside behavior-preserving library adoption. A framework choice does not resolve a product contract question.
 - Do not update golden captures merely to make a new validator pass. A later authorized behavior story records the changed rule and its deliberately revised tests.
 - Do not edit wiki/test-plan ownership surfaces here. The PO and Test Planner apply any approved changes through their own handoffs.
-- Documentation-only CF6 can be prioritized independently; it still follows the guide's Nathan-approval requirement.
+- Documentation-only CF6 is queued here by default. Nathan can prioritize it separately; the actual guide edit still follows the normal approval requirement. It is not a migration prerequisite.
+
+## Additional decisions received for the post-migration batch
+
+| Source | Decision to make after acceptance | Boundary |
+|---|---|---|
+| Q2 / Architect #5 | Policy for errors on genuinely new product fields, including schema-local authored messages versus library defaults | Existing messages/precedence stay preserved through migration; no new product field is required to adopt Zod |
+| Q5 / PO CF3 | Whether to deprecate `scopeWorkphaseIds`, then whether/when to retire it | No deprecation or removal is presumed now. Acceptance, ignored values and intent behavior remain unchanged until separately approved |
+| Q6 / CF5 | Whether raw forwarding closes as intentional, and whether any validation/SDK/capability work is wanted | Existing curated advertisements and raw runtime behavior stay unchanged; a new capability requires its own scope |
+| Q8 / Architect #8 | Whether broad test-only response interception during Playwright offers enough value | M1–M5 retain explicit response contract checks and unchanged external test configuration; this extension is optional |
+| Publication delivery | Whether complete repository artifacts need a public endpoint/viewer and which path/delivery | M5 completes the maintained repository reference. New external delivery is not necessary to prove migration complete |
 
 ## Work, in batches
 
-1. **Triage with Nathan and the relevant owners.** Confirm CF1's semantic interpretation, decide whether CF2/CF3/CF5 warrant changes, and keep CF4's technical versus product decisions distinct. Close intentional compatibility items or split approved changes into implementation stories carrying their IDs and evidence.
+1. **After M5/merge, triage with Nathan and the relevant owners.** Review CF1's interpretation, decide whether CF2/CF3/CF5 warrant changes, and resolve or explicitly retain the additional policy/delivery questions above. CF4's technical consolidation is received from M1–M4; its product optionality remains with positioning. Close intentional compatibility items or split approved changes into implementation stories carrying their IDs and evidence. No correction story is inserted before migration merely because it might reduce adapter code.
 2. **Apply authorized documentation corrections.** The request owner addresses CF1 after the PO's ruling; the Architect drafts CF6 for Nathan. Run documentation checks. Do not treat these queued corrections as already applied.
 3. **Implement only separately approved behavior work.** Each resulting story states target behavior, wiki/test-plan handoffs, affected consumers, and its compatibility exception. Use the normal workflow, full gate and Playwright; no implementation begins from this queue alone.
 
@@ -46,12 +57,16 @@ This planning story changes no implementation. Evidence lives in `server/tests/c
 
 ## Open questions
 
-- **Nathan:** which of CF1–CF6 should be groomed or corrected next? No priority or implementation authorization is assumed.
-- **PO:** does CF1's unused neighbor count as a reference under wiki row-references §1, and what should malformed transport/error precedence mean under CF2?
+- **Nathan, after migration:** which CF/policy/delivery proposals should close unchanged, receive a ruling or proceed to a separate correction? No priority or implementation authorization is assumed.
+- **PO/Nathan, after migration:** receive the PO's reading that CF1's unused neighbor is still a reference under wiki row-references §1, and decide the final correction/clarification scope along with CF2's intended malformed-request behavior. These are not open blockers of M1–M5.
 
 ## Handoff
 
-- **API migration:** preserve these observed outcomes until a separately authorized correction lands. CF4's technical type consolidation belongs in that migration.
+- **API migration:** preserve these observed outcomes through regression-free acceptance. CF4's technical vocabulary/transport work is explicitly assigned to M1–M4; do not report its product optionality decision as settled by technical consolidation.
 - **Positioning:** retains move-shape symmetry, dual positions, create/edit placement and its existing `positionScope` optionality decision. The spike is not a prerequisite to redesigning them and does not choose their answers.
 - **Optional consistency/capability work:** depth-cap delivery symmetry and new MCP tools/inputs are separate proposed scopes if Nathan wants them. They were inherited proposals, not defects established by this evaluation.
 - **PO/Test Planner/document owners:** receive approved rulings/corrections only; no living wiki, test plan or guide is edited by this queue.
+
+## Amendments
+
+- **2026-10-30:** Nathan directed preserving current behavior through migration and deferring Q3–Q6 decisions/corrections until regression-free acceptance. Sequenced this receiving story after M5/merge, received optional Q8/publication/future-field decisions, and routed CF4's technical work to the migration. No finding is closed as intentional and no behavior/guide change is performed.
