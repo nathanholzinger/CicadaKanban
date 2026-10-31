@@ -1,12 +1,12 @@
 # API Contract M1 — Foundation, Integration and Baseline
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — tooling cleanup; completed-main integration/baseline pending · **Depends on:** reviewed planning/evidence checkpoint and completed Epic 3.5 for the operative integration baseline
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** Batches 1–2 complete; Batch 3 and normal story review pending · **Depends on:** preserved planning/evidence checkpoint and current-branch baseline; Epic 3.5 completion is not a prerequisite
 
-**Execution update:** evidence is preserved on `api-contract-framework-spike-completed` at `5408bdb150cbb227298f53aba1cc57d3b7866d61`; work is on `api-contract-migration`. Nathan confirmed Epic 3.5 remains in progress and authorized cleanup now, so Batch 2 proceeds before Batch 1's completed-main gate. [The progress ledger](m1-progress.md) records file/coverage disposition and checks. No remaining endpoint migration or completed-main compatibility claim follows from this sequencing exception.
+**Execution update:** evidence is preserved on `api-contract-framework-spike-completed` at `5408bdb150cbb227298f53aba1cc57d3b7866d61`; tooling cleanup is committed as `575b33b`. Nathan clarified that all M1–M5 development may proceed while Epic 3.5 continues. [The progress ledger](m1-progress.md) distinguishes the current baseline from final integration evidence; completed-main verification belongs to the final merge gate.
 
 ## Goal
 
-Turn the retained pilot into normal maintainable infrastructure and prove its compatibility with completed Epic 3.5 before migrating more endpoints. The [roadmap decisions and shared gate](README.md) apply. Do not change any REST/MCP capability, existing error, input policy, UI behavior or database schema.
+Turn the retained pilot into maintainable infrastructure, establish a current-branch compatibility baseline and independent inventory, then enable remaining resource migrations. The [roadmap decisions and shared gate](README.md) apply. Do not change REST/MCP capabilities, errors, input policy, UI behavior or database schema. Final integration with completed Epic 3.5 is a later merge gate, not an M1 dependency.
 
 ## Inbound deferrals
 
@@ -25,19 +25,21 @@ Turn the retained pilot into normal maintainable infrastructure and prove its co
 
 ## Work, in batches
 
-### Batch 1 — Preserve evidence and establish the completed-main baseline
+### Batch 1 — Preserve evidence, current-base baseline and inventory
 
-Verify the evidence reference and migration branch exist under Nathan's selected strategy; create them only under his subsequent direction. After Epic 3.5 closes, record finished-main revision, passing gate/E2E results and owned baseline exclusions. Merge `main` into the migration branch and resolve conflicts, respecting intended Epic 3.5 behavior.
+**Complete against `575b33b`.** The [independent source inventory](m1-api-inventory.md) accounts for all 54 operations, status/response variants, client callers, eight MCP advertisements and 26 Bruno requests. A source-only TypeScript syntax-tree enumeration of actual mounts/handlers matched every inventory method/path; five test-helper operations are explicitly excluded. The [baseline and exclusions record](m1-baseline-and-exclusions.md) names the evidence revisions, reuses unchanged-code verification and assigns all 18 inherited E2E skips to existing Epic 3.5 receiving work. No fresh full-suite execution, runtime introspection, Auditor approval or catalog credit is implied. CF7 is routed to post-migration decisions, with M3/M4 responsible for HTTP characterization before replacement. Batch 3 still owns permanent discovery/association checks and the normal review handoff.
 
-Compare pilot behavior with the finished-main implementation. Where needed, run the characterization harness alone against a controlled main checkout, without carrying Zod handlers into that baseline. Preserve the original spike captures historically. Any baseline refresh must be attributable to an intentional main change demonstrated without the refactor, isolated in its own reviewed record; do not update snapshots because the feature branch disagrees. If conflicts affect drag/API consumers, verify those exact scenarios as well as the full suites.
+Record the existing evidence/migration references, current revision and main ancestry, passing gate/E2E results, frozen captures and owned baseline exclusions. Nathan has created both branches and committed Batch 2; reuse its verified test results where source content is unchanged rather than rerunning solely to change a status label. Build an independently reviewed method/path inventory now, including health, every non-test router, status/response variants and known consumers; assign each operation to the retained pilot or M2/M3/M4. Explicitly exclude test helpers and schema-only features.
 
-Build an independent method/path inventory including health and every non-test router, response/status variants and known consumers. Record exclusions explicitly. The current 54-operation source scan is an input, not the target count after integration. Assign each operation to M2/M3/M4 or the retained pilot.
+Identify remaining response/precedence characterization work for the receiving resource batches; they capture behavior before replacement. The existing 54-operation scan is a starting point, not a coverage certificate. Preserve the original spike captures and record any confirmed current-base disagreement without updating snapshots merely to make the refactor pass. Current-base inventory, exclusions and development evidence can be completed while Epic 3.5 is still in progress.
 
-**Gate:** reviewed integration diff, reproducible completed-main versus pilot evidence, owned exclusions and an independently reviewed inventory. No remaining endpoint migration starts from an unresolved regression.
+At final integration, M5's merge gate records the completed-main revision/results, merges main into migration and resolves conflicts. Compare affected behavior with main without the refactor where necessary; attribute baseline refreshes to demonstrated intentional incoming changes and revalidate affected consumers plus the full suites. That future refresh does not prevent closing the current-base portion here.
+
+**Gate:** preserved evidence, recorded current-base regression evidence/exclusions and an independently reviewed inventory/consumer-variant handoff. No resource migration starts from an unresolved current-base regression. Completed-Epic-3.5 integration is not part of this batch's completion gate.
 
 ### Batch 2 — Normal tooling, names and bounded comparison cleanup
 
-**Implementation complete, uncommitted for review.** Normal root workspace install/generation, descriptive names, comparison retirement and retained native/integrated checks pass. Final gate: 525 server / 604 client / 235 tooling tests; unchanged Playwright: 219 passed / 18 skipped. Full file/coverage disposition and limits are in [the progress ledger](m1-progress.md). This closes the cleanup batch, not M1's pending baseline, later technical work or story audit/sign-off.
+**Complete and committed as `575b33b`.** Normal root workspace install/generation, descriptive names, comparison retirement and retained native/integrated checks pass. Gate: 525 server / 604 client / 235 tooling tests; unchanged Playwright: 219 passed / 18 skipped. [The progress ledger](m1-progress.md) records file/coverage disposition and limits. Batch 1 records the current-base inventory; Batch 3 and normal story review remain separate.
 
 Move reusable generation, independent validation, type probes and drills out of comparison-only scaffolding. Prove a clean documented install makes normal generation and the gate work without an undocumented nested install. Keep runtime imports limited to the chosen foundation; keep developer-only validation/generation packages outside runtime/build imports.
 
@@ -70,7 +72,7 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 
 ## Acceptance
 
-- Completed-main revision and retained evidence references are recorded; the integrated pilot is regression-free against that baseline.
+- Current-base revision and preserved evidence references are recorded; retained characterization and required suites pass against that development baseline. Final completed-main integration is explicitly handed to the merge gate, not an M1 blocker.
 - A clean documented install supports the normal gate/generation; old hidden install and alternative runtime dependencies are absent.
 - Retained evidence is reproducible; only enumerated comparison-only experiments are retired. Product tests, corpus data and useful coverage remain.
 - Generation is deterministic, database-free and freshness-checked; stale failures explain regeneration. Domain vocabulary and generated/UI boundaries have explicit owners.
@@ -83,10 +85,12 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 
 **PO/Test Planner/Reconciler:** no new product rule or Planned passage is built. Confirm case mappings by full assertions; do not certify the corpus from its titles. Known wiki/observed disagreements stay in the named post-migration queue. No catalog edits are made by this plan.
 
-**Coder/Architect:** hand M2 the actual integrated revision, inventory, command names/paths, declared response variants, retained test account, stable transport and import rules. Fill the makes-dead inventory and normal story audit/closeout handoff before sign-off.
+**Coder/Architect:** hand M2 the current development revision, inventory, command paths, response variants, retained tests, stable transport and import rules. Fill the makes-dead inventory and normal review/closeout handoff before sign-off. Hand M5 the final-integration refresh requirements separately.
 
 ## Amendments
 
 - **2026-10-30:** Drafted under Nathan's approved reuse/integration strategy. Planning only; no evidence tag, branch, merge, cleanup or implementation has been performed.
 - **2026-10-30:** Nathan created the completed-evidence and migration branches, confirmed Epic 3.5 is still in progress, and authorized proceeding with cleanup. Started Batch 2 against the current base while retaining Batch 1's completed-main baseline as pending. No main merge, role sign-off or M1 completion is claimed.
 - **2026-10-30:** Completed the tooling-cleanup batch with clean root workspace install, retained drills/conversion probes, unchanged contract data/product tests, passing final full gate and unchanged Playwright. The current-base gate → E2E → final-gate sequence passed without cooldown/connection failure. Completed-main integration, later vocabulary/inventory/association work and normal story review remain pending; changes are uncommitted.
+- **2026-10-30:** Nathan committed cleanup as `575b33b` and clarified that all migration stories proceed alongside Epic 3.5. Corrected Batch 1 to use current-base evidence/inventory; moved completed-main comparison and refresh to the final merge gate. No remaining M1 batch waits for Epic 3.5 completion.
+- **2026-10-30:** Finished Batch 1's current-base source inventory, consumer/response handoff and owned exclusion record. Independently matched all 54 method/path rows, counted 26 Bruno requests and traced 18 existing skipped specs. Added source-observed CF7 to receiving work without changing behavior. Planning documents only; Batch 3 and normal story review remain pending.

@@ -1,8 +1,8 @@
 # API Contract Migration — Roadmap and Shared Decisions
 
-**Type:** tech-debt epic · **Written:** 2026-10-30 by the Architect · **Status:** M1 tooling-cleanup batch complete; remaining M1 work and endpoint migration pending · **Sequenced:** integrate completed Epic 3.5 before migrating the remaining endpoints
+**Type:** tech-debt epic · **Written:** 2026-10-30 by the Architect · **Status:** M1 Batches 1–2 complete; Batch 3, normal story review and endpoint migration pending · **Sequenced:** M1–M5 may proceed alongside Epic 3.5; integrate completed main and revalidate before the final merge
 
-**Execution update:** Nathan preserved the evidence branch and created `api-contract-migration` at `5408bdb`. He authorized M1 tooling cleanup while Epic 3.5 remains in progress. Only the prerequisite cleanup proceeds now; the completed-main baseline and remaining endpoint migrations retain their gates. See [M1 progress](m1-progress.md).
+**Execution update:** Nathan preserved the evidence branch and created `api-contract-migration` at `5408bdb`, then committed tooling cleanup as `575b33b`. He clarified that all of M1–M5 can proceed alongside Epic 3.5. Current-branch characterization and tests govern development now; completed-main integration/revalidation is a final merge gate, not a prerequisite of the migration stories. See [M1 progress](m1-progress.md).
 
 ## Goal
 
@@ -32,24 +32,24 @@ Keep external behavior tests, assertions, helpers and Playwright configuration u
 
 1. **Completed:** Nathan committed the planning checkpoint, including the round table, as `5408bdb`.
 2. **Completed:** Nathan preserved `api-contract-framework-spike-completed` and created `api-contract-migration` at that checkpoint. The evidence branch satisfies preservation before comparison retirement; no additional tag is required.
-3. Finish Epic 3.5 on `main`. Record its final revision and test results, then **merge `main` into the migration feature branch** and resolve conflicts. Keep intended Epic 3.5 changes; do not resolve conflicts by restoring the older pilot UI/test behavior.
-4. M1 compares the integrated pilot against completed-main behavior and establishes the migration baseline. M2–M4 then migrate remaining resources in order. If `main` advances again, repeat the integration/baseline accounting before final acceptance.
-5. Complete M5 on the integrated migration branch, then **merge the feature branch back into `main`** when Nathan authorizes it. Verify the resulting main revision. Do not merge this work before Epic 3.5 is finished.
+3. Work through M1–M5 on the migration branch while Epic 3.5 progresses separately. M1 records the current base, preserved characterization, owned test exclusions and independent inventory; each subsequent resource batch captures current behavior before replacing checks. M5 can complete implementation, reference/coverage review and feature-branch regression evidence without waiting for Epic 3.5.
+4. Before the final merge, finish Epic 3.5 on `main`, record its revision and test results, then **merge `main` into the migration feature branch** and resolve conflicts. Preserve intentional incoming changes, refresh affected inventory/characterization/consumer checks and rerun the required suites. This is the completed-main integration gate; do not resolve conflicts by restoring older pilot UI/test behavior.
+5. **Merge the accepted feature branch back into `main`** when Nathan authorizes it, then verify the resulting revision. If main advances again, repeat the affected integration accounting. No feature-to-main merge occurs before Epic 3.5 is finished and the combined result is verified.
 
-The original planning checkpoint executed no branch/tag mutations or implementation. Nathan has since created the evidence/migration branches and authorized the current M1 cleanup; the completed-main and final merge gates remain pending. Post-migration behavior work starts from the accepted migration, rather than being bundled into its merge.
+The completed-main gate does not block M1–M5 development or their current-branch checks/reviews. It blocks only final integration/merge acceptance. Post-migration behavior work starts from the accepted migration, rather than being bundled into that merge.
 
 ## Stories and initial inventory
 
 | Story | Scope | Dependency / exit |
 |---|---|---|
-| [M1 — Foundation, integration and baseline](m1-foundation-and-baseline.md) | Evidence retention, completed-main integration, normal tool install/generation, comparison cleanup, port-exhaustion investigation, independent route inventory, vocabulary and check infrastructure | Epic 3.5 integration precedes the operative baseline; infrastructure and compatibility gates pass before remaining route migrations |
+| [M1 — Foundation, integration and baseline](m1-foundation-and-baseline.md) | Evidence retention, current-branch baseline/inventory, normal tooling, comparison cleanup, stable checks and vocabulary | Current-base infrastructure/compatibility gates precede resource migrations; completed-main refresh is deferred to final integration |
 | [M2 — Items and projects](m2-items-and-projects.md) | Remaining item/project requests/responses/client transport shapes; retain and improve the existing pilot boundaries | M1; failure precedence, hierarchy, ordering, deletion and reindex variants preserved |
 | [M3 — Workflows, workphases, boards and columns](m3-workflows-and-boards.md) | Remaining workflow operations and board/workphase/column contracts, query representations and decorated responses | M2; real method/status-specific associations, cascade and response variants checked |
 | [M4 — Remaining resources and consumers](m4-remaining-resources-and-consumers.md) | Agents, attachments, labels, item types, notifications, templates, health; complete client/MCP/Bruno agreement checks | M3; inventory accounted for, existing transport capabilities unchanged |
 | [M5 — Completeness and migration acceptance](m5-completeness-and-closeout.md) | Independent completeness, maintained technical artifact, owner documentation handoffs, final regression evidence and merge readiness | M4; no mandatory behavior ruling left in migration scope; no invented publication endpoint |
 | [Post-migration decisions and corrections](../tech-debt-stories/api-contract-compatibility-follow-ups.md) | Resolve remaining Q/CF product and optional tooling decisions, then separately scope approved changes | After M5 regression acceptance and migration merge; no correction is a prerequisite of M1–M5 without a concrete unavoidable blocker |
 
-At `d703e6a`, a source scan finds **53 non-test router handlers plus health = 54 operations**: items/projects 13 (three piloted), workflow/workphase/board/column 18 (one piloted), and remaining resources/health 23. Thus 50 remain to migrate at this revision. This is planning input, not a completeness certificate. M1 rebuilds the inventory from completed Epic 3.5 and assigns every operation and response variant to a story. Test helpers are explicitly excluded; schema-only chat tables create no API work.
+M1's [independent source inventory](m1-api-inventory.md), verified against `575b33b`, confirms **53 non-test router handlers plus health = 54 operations**: items/projects 13 (three piloted), workflow/workphase/board/column 18 (one piloted), and remaining resources/health 23. Thus 50 remain to migrate. It records status/response variants, client callers, eight MCP advertisements and 26 Bruno requests; the [baseline/exclusions record](m1-baseline-and-exclusions.md) accounts for the unchanged-code results and all 18 inherited Playwright skips. This is source-reviewed planning evidence, not complete HTTP characterization or an Auditor sign-off. Batch 3 adds permanent discovery/association checks; M2–M4 capture remaining wire variants before replacement. Final integration refreshes the inventory for incoming Epic 3.5 changes. Test helpers are explicitly excluded; schema-only chat tables create no API work.
 
 ## Shared batch gate
 
@@ -64,7 +64,7 @@ No new product rule or Planned wiki passage is built by this migration. Each sto
 
 ## Acceptance and remaining decisions
 
-M5 must prove that every inventoried non-test operation and applicable status/response variant is registered, real exercised responses agree with the associated schema, selected request forms match runtime acceptance, and generated consumers are current. Existing external tests still prove the refactor did not change behavior against completed-main. Remaining hand-maintained relationships have an owner and a check or review/audit fallback.
+M5 must prove on the migration branch that every inventoried non-test operation and applicable status/response variant is registered, real exercised responses agree with its schema, selected request forms match runtime acceptance, and generated consumers are current. Existing external tests and preserved characterization establish development compatibility against the recorded current base. After completed-main integration, refresh affected evidence and rerun those checks before merge acceptance. Remaining hand-maintained relationships have an owner and a check or review/audit fallback.
 
 Implementation choices such as generator packaging, stable test transport and route introspection are resolved in M1's bounded probes. They do not require product rulings unless a concrete compatibility/scope exception appears. Q3–Q6 and optional Q8 work stay in the post-migration story. A public OpenAPI endpoint/viewer is not needed for migration acceptance; delivery beyond a maintained repository artifact is deferred there too.
 
@@ -74,3 +74,5 @@ Implementation choices such as generator packaging, stable test transport and ro
 - M1 owns evidence preservation, reusable probe retention and normal install/check ergonomics. No test code is removed by writing these plans.
 - PO/Architect own any wiki/reference vocabulary and guide drafts; Test Planner/Reconciler own catalog evidence. No living wiki/test-plan/persona/guide is edited at this checkpoint.
 - **2026-10-30:** Nathan accepted reuse of the pilot lineage and the integration order “finish Epic 3.5 → merge main into migration and resolve conflicts → merge migration back to main,” and directed step 1: finish the decision record and story plans. Foundation selection and the behavior-preserving/deferred-decision policy are carried from his round-table answers. All implementation, tags, branches, commits and merges remain subsequent work.
+- **2026-10-30:** Nathan clarified that M1–M5 may all proceed alongside Epic 3.5; only final integration/merge waits for its completion. Removed the Architect's overly restrictive completed-main prerequisites and separated current-base development evidence from final combined-branch verification.
+- **2026-10-30:** Completed M1 Batch 1's independent current-base API/consumer inventory and owned baseline-exclusion account. Batch 2 remains committed as `575b33b`; Batch 3 and normal M1 review are next. Added source-observed CF7 to post-migration receiving work; no runtime or test behavior changed.

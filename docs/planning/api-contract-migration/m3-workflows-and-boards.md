@@ -4,7 +4,7 @@
 
 ## Goal and scope
 
-Migrate this resource group's remaining requests, responses and client transport consumers without changing workflow/board behavior. The [roadmap decisions and shared gate](README.md) apply. At the planning revision there are 18 operations in this group; GET workflows is already piloted, leaving 17. M1 supplies the operative count and variants after Epic 3.5 integration.
+Migrate this resource group's remaining requests, responses and client transport consumers without changing workflow/board behavior. The [roadmap decisions and shared gate](README.md) apply. At the planning revision there are 18 operations in this group; GET workflows is already piloted, leaving 17. M1 supplies current-branch counts/variants now; final integration later refreshes affected evidence for Epic 3.5 changes. M3 does not wait for that epic to finish.
 
 Scope: workflows collection/detail/create/edit/delete; workphase create/edit/reorder/delete; board collection/detail/create/edit/delete; column create/edit/reorder/delete. Preserve any already migrated operation as a regression control.
 
@@ -12,6 +12,7 @@ Rule/catalog areas: [boards, columns and Unsorted](../../wiki/boards-columns-uns
 
 ## Inbound deferrals and decisions
 
+- M1's [source inventory](m1-api-inventory.md), I14–I31, supplies current variants and callers. Capture 409 conflicts, reorder `missingIds`, enriched range errors and workphase deletion's 200 report/204 alternative before replacement. CF7's board/column missing-reference statuses remain unchanged; this story records actual HTTP outcomes and no-write effects for the post-migration ruling.
 - Reuse M2's item/depth/scope/reindex shapes by reference; do not duplicate decorated item definitions inside each collection.
 - Round table Coder #3 / Auditor #4: metadata must associate real methods, status codes and schema variants correctly. In particular, the current workphase edit can return `400 { error, conflictingColumnId }`; do not force it into the strict generic error envelope or discard the additional field.
 - Raw `projectId`/`workflowId` query values are represented before their existing truthiness and `String()` handling. Do not introduce coercion/defaults or UUID requirements as a convenience.
@@ -79,3 +80,4 @@ Resolve new regressions, route pre-existing disagreements to receiving work, com
 ## Amendments
 
 - **2026-10-30:** Drafted under the adopted native foundation and deferred-behavior policy. Operation counts are pre-integration planning inputs, not publication evidence.
+- **2026-10-30:** Received M1 Batch 1's current-base status/response inventory and CF7 characterization handoff. No operation has been migrated by this planning update.

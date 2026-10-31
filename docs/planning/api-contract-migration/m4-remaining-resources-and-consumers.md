@@ -4,12 +4,13 @@
 
 ## Goal and scope
 
-Complete the remaining non-test API contracts and client/MCP/Bruno agreement work under the [roadmap's compatibility policy and gate](README.md). Initial scope is 23 operations: agents (4), attachments (3), labels (6), item types (4), notifications (3), workflow templates (2) and health (1). M1 confirms the completed-main inventory and any additional real routes; tables with no API do not create new endpoints.
+Complete the remaining non-test API contracts and client/MCP/Bruno agreement work under the [roadmap's compatibility policy and gate](README.md). Initial scope is 23 operations: agents (4), attachments (3), labels (6), item types (4), notifications (3), workflow templates (2) and health (1). M1 confirms the current-branch inventory and actual routes; final integration later accounts for incoming changes. Tables with no API create no new endpoints, and M4 does not wait for Epic 3.5 completion.
 
 M2/M3 own their resource schemas; this story completes cross-resource consumer agreement instead of recreating those shapes. Preserve provisional labels, current tool capabilities, authored scenarios, and exact existing response/error/normalization behavior.
 
 ## Inbound deferrals and decisions
 
+- M1's [source inventory](m1-api-inventory.md), I32–I54, supplies current variants/callers and all eight MCP/26 Bruno mappings. CF7's attachment and label missing-reference outcomes require HTTP/no-write characterization before replacement; preserve resource-specific statuses and defer policy changes until after migration.
 - Round table Architect #8 and Auditor #4/#7: expand independent registration, shared-field MCP and authored Bruno checks without confusing schema compatibility with business correctness.
 - Test Planner: bounded stdio evidence must cover tool listing, existing get/move success and error/result delivery, including a representative raw/malformed argument. HTTP-backed helper tests alone do not prove SDK dispatch.
 - CF5/Q6: no runtime MCP argument validation, SDK registration migration, generic snake-case converter, new tools or expanded inputs. Reuse primitive/field contracts only where interfaces mean the same thing; requiredness and exposure can intentionally differ.
@@ -81,3 +82,4 @@ Retain authored assertions and scenario intent. Known CF1 prose/behavior disagre
 ## Amendments
 
 - **2026-10-30:** Drafted after consensus on the foundation and Nathan's instruction to defer optional behavior decisions until migration is regression-free. No tool/collection changes are authorized by drafting this plan.
+- **2026-10-30:** Received M1 Batch 1's current-base resource/consumer inventory and CF7 characterization handoff. No operation or consumer has changed in this planning update.

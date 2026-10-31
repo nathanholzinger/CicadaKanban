@@ -1,18 +1,18 @@
 # API Contract M2 — Items and Projects
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** planned; not started · **Depends on:** M1's integrated baseline, tooling and independent inventory
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** planned; not started · **Depends on:** M1's current-branch baseline, tooling and independent inventory; no Epic 3.5 completion dependency
 
 ## Goal and scope
 
 Migrate the remaining item/project contracts and their client transport consumers while preserving their current behavior. The [roadmap decisions and shared gate](README.md) govern every batch. Keep the three retained pilot operations integrated rather than rebuilding them.
 
-Initial scope at `d703e6a`: item POST, PUT, comment POST and DELETE; project collection/detail/depth-cap GETs, POST, PUT and DELETE. M1 verifies these ten remaining operations and their status/response variants against completed Epic 3.5. Existing GET item and both PATCH moves remain regression controls and receive any necessary boundary cleanup.
+Initial scope at `d703e6a`: item POST, PUT, comment POST and DELETE; project collection/detail/depth-cap GETs, POST, PUT and DELETE. M1 verifies these ten remaining operations and their status/response variants on the current branch. Existing GET item and both PATCH moves remain regression controls and receive necessary boundary cleanup. Final integration later refreshes the inventory/evidence for incoming Epic 3.5 changes.
 
 Rule/catalog areas are [item attachment](../../wiki/item-attachment/), [item positioning](../../wiki/item-positioning/), [project tree](../../wiki/project-tree/), [positioning](../../wiki/positioning/) and [row references](../../wiki/row-references/). The PO/Test Planner identify affected existing cases before each batch; this plan adds no product rules or case IDs. Characterization is not an approval of a conflicting implementation.
 
 ## Inbound deferrals
 
-- M1 supplies actual route/status inventory, the completed-main regression baseline, normal command/artifact paths and stable HTTP fixtures.
+- M1 supplies current route/status inventory and development regression evidence, normal command/artifact paths and stable HTTP fixtures. Completed-main revalidation is the final merge gate, not an M2 prerequisite.
 - Round table Coder #1–#3: preserve structural and database failure order; separate route parsing from domain inputs; account for UI aliases and shared input/output contexts explicitly.
 - CF4: derive transport shapes and shared vocabulary while preserving existing optional UI fields. Requiring `positionScope` or changing move/create/edit placement remains in the positioning story.
 - CF1/CF2/CF3: retain unused-neighbor precedence, malformed-request outcomes, ignored inputs and legacy scope intent. No correction or deprecation is introduced here.

@@ -1,16 +1,16 @@
 # API Contract M5 — Completeness and Migration Acceptance
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** planned; not started · **Depends on:** M4, completed Epic 3.5 integration and receiving evidence from M1–M4
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** planned; not started · **Depends on:** M4 and evidence from M1–M4; completed Epic 3.5 is required only for final integration/merge acceptance
 
 ## Goal
 
-Prove the retained migration complete and regression-free, finish owner documentation handoffs, and prepare the feature-to-main merge. The [roadmap decisions and shared gate](README.md) apply. This story certifies technical coverage and compatibility within recorded evidence; it does not turn known legacy behavior into intended product rules.
+Prove the migration branch complete and regression-free against its recorded development baseline, finish owner handoffs, and prepare final integration/merge. All implementation, completeness review and current-branch validation can proceed alongside Epic 3.5. The [roadmap decisions and shared gate](README.md) apply. Final completed-main revalidation is a separate merge gate, not a prerequisite of M5 implementation. This story does not turn preserved legacy behavior into intended product rules.
 
 Maintain a complete repository OpenAPI artifact and generated consumer declarations. Adding a public document endpoint, viewer or E2E-server response interception is not necessary for acceptance and remains a post-migration decision. If an actual new delivery requirement becomes essential, obtain a concrete ruling before changing the external surface/configuration.
 
 ## Inbound deferrals
 
-- M1: independently established route inventory, normal install/generation/freshness, stable HTTP lifecycle, evidence reference and completed-main baseline.
+- M1: current-branch route inventory, normal install/generation/freshness, stable HTTP lifecycle, evidence reference and development baseline. Final completed-main comparison is received as a merge-gate task, not a missing M1 deliverable blocking this story.
 - M2–M4: actual operation/status/response associations, request representation probes, consumer boundaries and all automated/manual scenario dispositions.
 - Round table PO #1–#3 / Auditor #1/#3–#5: wiki owns meanings/refusals, generated reference owns exhaustive shapes, completeness has an independent reference, and catalog evidence is not inferred from a field's schema.
 - Q3–Q6 and optional Q8/product/publication questions remain in receiving work after migration; they do not become open blockers simply because this story closes the refactor.
@@ -39,15 +39,19 @@ Test Planner/Reconciler verify the full Given/When/Then for affected case mappin
 
 **Gate:** owner-applied handoffs or explicitly receiving work for nonessential corrections, documentation/pointer checks, justified catalog evidence and required audit/reconciliation complete. Any genuinely required approval has a concrete draft; no abstract blanket sign-off is requested.
 
-### Batch 3 — Final regression and merge readiness
+### Batch 3 — Migration-branch regression and integration readiness
 
-Verify the migration branch contains the final Epic 3.5 `main` revision and any subsequently accepted main changes. If `main` advanced, merge it into the feature branch, resolve conflicts and refresh the explicit baseline account before reporting final evidence. Do not substitute the old spike's 219/18 result or old snapshot captures for the operative baseline.
+Record the migration branch revision and the main ancestry used for development. Run the full gate, unchanged Playwright and contract/consumer checks against the retained branch implementation; compare with recorded baseline behavior and distinguish existing exclusions from regressions. Record actual operation/variant coverage, approved internal-test replacements, catalog dispositions and human maintenance. Do not substitute the spike's old counts for new results or slip deferred corrections into closeout.
 
-Run the full gate and unchanged Playwright suite plus contract/consumer checks against the retained implementation. Compare completed-main outcomes and distinguish pre-existing exclusions, intentional main changes and new regressions. Record all actual revisions, commands, operation/variant coverage, test replacements limited by the approved policy, catalog dispositions and remaining human maintenance. No deferred correction is slipped into this batch.
+Complete applicable structural-refactor review/owner handoffs and prepare an explicit final-integration checklist for Nathan. This work can complete before Epic 3.5. Record any integration-dependent release acceptance as pending without blocking other M5 work or claiming that combined branches have already been verified.
 
-Complete normal structural-refactor audit/closeout, then prepare the reviewed feature-to-main merge for Nathan. The order is completed Epic 3.5 → main into migration with resolved/verified integration → migration into main. After an authorized merge, verify the resulting main revision, generated freshness and required gates; do not discard the pre-merge evidence if integration changes require another run.
+**Development gate:** complete current-branch evidence, owner handoffs, no unresolved migration regression and a concrete final-integration checklist. M5 implementation is ready independently of Epic 3.5's completion; final merge/sign-off remains subject to the gate below.
 
-**Gate:** no unresolved migration regression, accepted exclusions/follow-up destinations, owner handoffs and final retained-code evidence. Merge and sign-off remain Nathan's actions/directions, not consequences of passing tests.
+### Final integration/merge gate — after Epic 3.5
+
+Once Epic 3.5 finishes, record its final main revision/results, merge main into the migration feature branch and resolve conflicts. Preserve intentional incoming changes. Refresh affected inventory, response variants, consumer contracts and characterization, comparing against main without the refactor where necessary. Reopen affected completeness work if main adds or changes API surface; a previously complete feature-branch artifact is not proof for new incoming code.
+
+Rerun required suites against the combined implementation and account for intentional main changes versus migration regressions. If main advances again, repeat affected integration checks. Then prepare the feature-to-main merge for Nathan and verify the resulting main revision after authorization. No feature-to-main merge occurs before Epic 3.5 completion and combined-result validation. This deferred gate does not prevent M1–M5 development or current-branch reviews from completing now.
 
 ## Code map
 
@@ -62,7 +66,7 @@ Complete normal structural-refactor audit/closeout, then prepare the reviewed fe
 
 - Every actual non-test operation is accounted for, with correct request/parameter/status/response associations, explicit bodyless cases and tested/manual variant dispositions. No partial document is called complete.
 - Generated consumers update from owned shapes; remaining intentional independent declarations and authored scenarios have agreement checks or named review/audit responsibility.
-- The integrated implementation passes the required suites against completed-main with unchanged external behavioral expectations. No test/library agreement is presented as exhaustive business correctness.
+- The migration branch passes required suites against its recorded development baseline with unchanged external behavioral expectations. Final completed-main integration refreshes affected evidence and reruns those suites before merge acceptance; it is not an implementation prerequisite. No test/library agreement is presented as exhaustive business correctness.
 - Required PO/Test Planner/Reconciler/audit/architecture handoffs are complete. Known deferred behavior decisions are received after migration rather than blocking closure under a false “everything is settled” claim.
 - The merge sequence and resulting-main verification are recorded when executed; no public endpoint/viewer, new MCP capability or E2E interception has been added as closeout cleanup.
 
@@ -77,3 +81,4 @@ Complete normal structural-refactor audit/closeout, then prepare the reviewed fe
 ## Amendments
 
 - **2026-10-30:** Drafted with repository-artifact completeness as migration acceptance. Optional new reference delivery and response interception are deferred; no code, owner handoff, merge or sign-off is performed by this plan.
+- **2026-10-30:** Nathan clarified parallel migration/Epic 3.5 work. Separated M5's implementation/reference/current-branch regression completion from the final completed-main integration/merge gate. No story waits for Epic 3.5 except that final gate.

@@ -416,3 +416,9 @@ The main caveat is that if a decision needs to be made that applies a universal 
 - **Integration:** finish Epic 3.5 → merge `main` into migration and resolve/verify conflicts → merge accepted migration back into `main`. M1 establishes completed-main compatibility; M5 records final integrated evidence. The old pilot base is not the final regression baseline.
 - **Optional scope:** Q8's broader E2E response interception, new publication delivery, hypothetical new-field wording and optional product changes go to [post-migration work](../tech-debt-stories/api-contract-compatibility-follow-ups.md). Existing test-only response checks remain required.
 - **Execution:** Nathan authorized step 1, finishing the decision record and story plans. No implementation, evidence tag, branch, merge, role invocation or sign-off is claimed. Normal migration role/audit/closeout responsibilities apply after the spike's exception.
+
+### Parallel-work clarification — implementing Architect
+
+**2026-10-30 — Nathan clarified:** all of M1–M5 may proceed alongside the remaining Epic 3.5 work. The Architect's planning restriction that completed-main integration had to precede remaining endpoint migration was too broad and has been removed.
+
+M1 establishes an independent inventory and development baseline from the current branch now. Each resource batch characterizes behavior before replacing it, and M5 can complete implementation/reference review and current-branch regression checks before Epic 3.5 finishes. The final merge still follows the agreed order: finish Epic 3.5, merge main into migration, resolve conflicts and refresh affected contracts/inventory/evidence, rerun the combined suites, then merge the accepted feature branch back into main. No intermediate migration story is blocked solely by Epic 3.5's status.
