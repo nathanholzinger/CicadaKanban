@@ -72,7 +72,7 @@ Rows 1–8 have no qualified case ID in their skipped titles; do not infer a cat
 
 | Limit | Disposition / owner |
 |---|---|
-| Corpus case-ID claims | Source recount: **30 of 77 titles**, **37 ID mentions / 34 distinct IDs**. M1 Batch 3's Reconciler handoff verifies each full Then; no automatic catalog credit is claimed by this baseline |
+| Corpus case-ID claims | Corrected source recount at `575b33b`: **31 of 77 titles**, **38 ID mentions / 35 distinct IDs**; the original scan missed `TC-X.6`. [Batch 3's source review](m1-corpus-coverage-review.md) removes that incorrect title/key association only, leaving 30/37/34. Normal Reconciler verification remains required; no automatic catalog credit is claimed |
 | Only four operations currently registered | Expected migration scope gap, not a waiver. M2/M3/M4 own 10/17/23 remaining operations; Batch 3 adds independent discovery/association checks; M5 proves complete coverage |
 | Unexercised variants on remaining operations | Source inventory identifies representations and helper statuses. Each receiving resource batch captures actual accepted/refused forms, precedence and database effects before replacing checks |
 | MCP stdio not certified by helper tests | M4 owns bounded listing/call/error transport evidence. Eight advertisements/HTTP mappings are inventoried independently; no new runtime validation or capability is authorized |

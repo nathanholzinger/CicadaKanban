@@ -1,4 +1,7 @@
-// TypeScript interfaces — manually synced with server/src/db/schema.ts. No codegen.
+// UI/domain models and unmigrated row interfaces. Shared transport vocabulary derives
+// from generated declarations; remaining row fields are manually synced with storage.
+
+import type { components } from './api/generated';
 
 export interface Project {
   id: string;
@@ -40,7 +43,7 @@ export interface Workphase {
 // against, computed server-side from isAttached/parentId/workphaseId/
 // workphase.isTerminal (never stored). Read through `isStub.ts::isStub`,
 // never re-derived from isAttached && parentId.
-export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
+export type PositionScope = components['schemas']['PositionScope'];
 
 export interface Item {
   id: string;

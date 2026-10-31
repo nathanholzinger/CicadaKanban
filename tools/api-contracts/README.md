@@ -27,3 +27,19 @@ never overlap server test invocations. Keep the full gate and Playwright sequent
 The retained native conversion probes cover defaults, unsupported transforms, refinement and
 coercion representation gaps, input mutation and conditional typing limits. They complement
 independent behavior expectations; generated types are not runtime enforcement.
+
+Operation metadata owns each method/path, parameter binding and per-status response schema.
+Bodyless responses omit content; query descriptors are checked against their query schema's
+keys, references and requiredness. `responses.ts` validates an exercised response using its
+actual method, URL and status. Callers still assert expected status and business effects.
+
+Contract tests capture real router mounts at app bootstrap and inspect declared route layers.
+Test-helper mounts are checked explicitly in both configurations; implicit HEAD/CORS OPTIONS
+do not create extra declared operations. Unsupported mount/path layouts fail for review.
+`server/tests/contracts/pendingOperations.json` names the remaining migration scope: remove
+each entry as its operation is registered. A missing registration, stale entry or newly
+discovered route fails the same completeness check; pending entries are not migrated coverage.
+
+Neutral domain vocabulary has no external/database/schema imports. Schemas import only Zod
+and neutral/schema modules; tests check this boundary recursively. A subprocess also runs
+freshness with DB_PATH pointing at a directory, so accidental SQLite initialization fails.

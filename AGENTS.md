@@ -114,6 +114,15 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   compatibility aliases live in `client/src/api/transportTypes.ts`. Root `npm ci`
   installs the isolated generator workspace in `tools/api-contracts/`; consumers
   still compile with the application's TypeScript version.
+- **Contract import direction:** neutral tuples/types live in
+  `server/src/domain/positioning.ts`, which imports neither Zod nor the database.
+  Schemas may import neutral domain modules and Zod; position arithmetic uses
+  neutral types rather than HTTP schemas. Client `PositionScope` derives from
+  generated declarations;
+  existing UI optionality remains explicit. Generation and response validation
+  tooling stay developer-only. Contract tests discover actual mounted routes and
+  compare registrations plus `server/tests/contracts/pendingOperations.json`;
+  remove an operation from that pending list as its contract lands.
 - **Never hand-write an Item or Project literal in a client test** — use
   `client/src/test/itemFixture.ts::makeItem` or `projectFixture.ts::makeProject`.
 - **Never hand-roll a drag or read `boundingBox()` in an E2E spec** — use

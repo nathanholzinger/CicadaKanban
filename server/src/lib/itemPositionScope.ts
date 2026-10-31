@@ -13,8 +13,8 @@ import { and, eq, inArray, isNotNull, not, type SQL } from 'drizzle-orm';
 import type { Tx } from '../db/index.js';
 import { db } from '../db/index.js';
 import { items, workphases } from '../db/schema.js';
-
-export type PositionScope = 'attached-siblings' | 'workflow' | 'none';
+import type { PositionScope } from '../domain/positioning.js';
+export type { PositionScope } from '../domain/positioning.js';
 
 // `workphaseIsTerminal` is null when the item's workphase isn't one of the
 // workflow its project uses (wiki item-positioning §2): the item shows in

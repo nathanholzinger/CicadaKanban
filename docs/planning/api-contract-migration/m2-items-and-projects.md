@@ -53,7 +53,7 @@ Derive client transport declarations for the selected functions; preserve projec
 
 ### Batch 4 — Maintenance check and handoff
 
-Repeat a reversible representative shape change through runtime/schema/document/types, confirm the expected producer/consumer or response failure, then restore it and verify freshness. Confirm generation imports no database. Inspect shared components for differing input/output forms and record an explicit D4 decision; a concrete context-management need adds the comparable library trial rather than a hidden converter.
+Repeat a reversible representative shape change through runtime/schema/document/types, confirm the expected producer/consumer or response failure, then restore it and verify freshness. Confirm generation imports no database. Inspect shared components for differing input/output forms and record an explicit roadmap D6 decision; a concrete context-management need adds the comparable library trial rather than a hidden converter.
 
 Audit the retained API/domain/UI declarations, including `Side`, `PositionScope` and reindex pairs. Remove redundancy where meanings match and record independently checked intentional differences. Reconciler verifies affected catalog evidence and any ID-only metadata corrections without changing behavioral assertions.
 
@@ -74,7 +74,7 @@ Audit the retained API/domain/UI declarations, including `Side`, `PositionScope`
 - Every M1-assigned item/project operation and status variant is migrated and independently checked, including the three pilot controls.
 - No create/edit positioning, move symmetry, nullability/exposure policy, raw-anchor behavior or refusal order changes. Atomic hierarchy/position effects and reindex reconciliation remain correct against the baseline.
 - Client transport shapes derive from the contracts; any UI relaxation is explicit and backed by wire-response assertions. Remaining domain duplication has a source or agreement check.
-- Reversible maintenance exercise is restored; conversion/freshness/coverage checks and all shared gates pass. D4 outcome and normal audit/Reconciler handoffs are recorded.
+- Reversible maintenance exercise is restored; conversion/freshness/coverage checks and all shared gates pass. Roadmap D6 outcome and normal audit/Reconciler handoffs are recorded.
 
 ## Open questions and handoff
 

@@ -1074,25 +1074,6 @@ exports[`HTTP compatibility corpus > TC-7.18: foreign item detail derives stored
 }
 `;
 
-exports[`HTTP compatibility corpus > TC-X.6: item self anchor refused 1`] = `
-{
-  "changes": {},
-  "request": {
-    "body": {
-      "anchorId": "<movingItem>",
-      "side": "before",
-    },
-    "method": "patch",
-    "path": "/api/items/<movingItem>/move",
-  },
-  "response": {
-    "error": "anchorId cannot be the item itself",
-  },
-  "status": 400,
-  "unhandledErrorLogged": false,
-}
-`;
-
 exports[`HTTP compatibility corpus > TREE-3.10: project empty parent names missing row 1`] = `
 {
   "changes": {},
@@ -2033,6 +2014,25 @@ exports[`HTTP compatibility corpus > item phase shape wins over missing side 1`]
   },
   "response": {
     "error": "workphaseId must be a string or null",
+  },
+  "status": 400,
+  "unhandledErrorLogged": false,
+}
+`;
+
+exports[`HTTP compatibility corpus > item self anchor refused 1`] = `
+{
+  "changes": {},
+  "request": {
+    "body": {
+      "anchorId": "<movingItem>",
+      "side": "before",
+    },
+    "method": "patch",
+    "path": "/api/items/<movingItem>/move",
+  },
+  "response": {
+    "error": "anchorId cannot be the item itself",
   },
   "status": 400,
   "unhandledErrorLogged": false,

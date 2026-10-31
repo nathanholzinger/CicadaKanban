@@ -12,6 +12,8 @@ import { eq, gt, lt, asc, desc, and, isNotNull, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { db, type Tx } from '../db/index.js';
 import { coarsestFit } from './coarsestFit.js';
+import type { Side } from '../domain/positioning.js';
+export type { Side } from '../domain/positioning.js';
 
 const MAX_REINDEX_TRIES = 1; // Reindexing should always allow for a new position to be placed. If it doesn't then something else went wrong that retries shouldn't fix
 const SOFT_MAX_POSITION = 1000; // We will reindex if a position value exceeds this soft max, unless the row count is also greater than the soft max
@@ -40,9 +42,6 @@ type PositionQueryContext = {
   // `PUT /workphases/:id` passes none, and the pairs are dropped.
   reindexed?: ReindexedPosition[];
 };
-
-// for defining anchorId + side.
-export type Side = 'before' | 'after';
 
 /**
  * finds a postion as it relates to an anchor

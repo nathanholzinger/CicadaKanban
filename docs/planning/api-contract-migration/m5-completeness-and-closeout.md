@@ -23,7 +23,7 @@ Re-inventory actual mounted non-test operations and compare with the maintained 
 
 Audit actual operation/status/schema associations, not just component existence. Validate exercised real responses via the document's association and independently expected business outcome. Demonstrate failures for a missing operation, wrong association, stale generated file and response drift; restore faults afterward. Distinguish exercised variants from untested/manual ones and close gaps in migration scope.
 
-Review every newly used refinement, default, normalization/coercion and input/output component context. Confirm D4 was checked on concrete needs and any triggered comparable trial was completed/selected with evidence. Runtime/emitted agreement is necessary but cannot prove a shared mistake matches the wiki.
+Review every newly used refinement, default, normalization/coercion and input/output component context. Confirm roadmap D6 was checked on concrete needs and any triggered comparable trial was completed/selected with evidence. Runtime/emitted agreement is necessary but cannot prove a shared mistake matches the wiki.
 
 **Gate:** complete inventory/disposition matrix, useful negative probes, restored artifacts and shared gate pass.
 

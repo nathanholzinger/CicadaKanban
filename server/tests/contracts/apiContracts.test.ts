@@ -10,18 +10,17 @@ import { compatibilityCases } from './compatibilityCases.js';
 import { captureCompatibilityCase, createCompatibilityFixture } from './compatibilityHarness.js';
 import { documentValidator } from '../../../tools/api-contracts/document.js';
 import { assertCurrentArtifact, renderContractArtifacts } from '../../../tools/api-contracts/artifacts.js';
+import { responseAssertion } from '../../../tools/api-contracts/responses.js';
 
 const document = createContractDocument();
-const validators = Object.fromEntries(
-  ['ItemWrite', 'ProjectWrite', 'ItemDetail', 'WorkflowList', 'Error'].map(name => [
-    name,
-    documentValidator(document, name),
-  ]),
-);
-
-function assertResponse(name: keyof typeof validators, body: unknown) {
-  const validate = validators[name];
-  if (!validate(body)) throw new Error(`${name} response mismatch: ${JSON.stringify(validate.errors)}`);
+const assertDocumentResponse = responseAssertion(document);
+function assertResponse(method: string, path: string, status: number, body: unknown, text?: string) {
+  const name = assertDocumentResponse({ method, path, status, body, text });
+  if (name) {
+    const schema = contractSchemas[name as keyof typeof contractSchemas];
+    const parsed = schema.safeParse(body);
+    expect(parsed.error?.issues, `${method} ${path} ${status} ${name}`).toBeUndefined();
+  }
 }
 
 function scopeOf(path: string) {
@@ -71,21 +70,16 @@ describe('integrated HTTP contract', () => {
         variant = nextVariant;
       }
       const observed = await captureCompatibilityCase(app, example, fixture);
-      if (!observed || typeof observed !== 'object' || !('response' in observed)) throw new Error('Missing response');
+      if (
+        !observed ||
+        typeof observed !== 'object' ||
+        !('response' in observed) ||
+        !('status' in observed) ||
+        typeof observed.status !== 'number'
+      )
+        throw new Error('Missing response');
       const path = example.path(fixture.ids);
-      const name =
-        example.status >= 400
-          ? 'Error'
-          : example.method === 'patch'
-            ? path.startsWith('/api/items/')
-              ? 'ItemWrite'
-              : 'ProjectWrite'
-            : path.startsWith('/api/items/')
-              ? 'ItemDetail'
-              : 'WorkflowList';
-      const parsed = contractSchemas[name].safeParse(observed.response);
-      expect(parsed.error?.issues, example.name).toBeUndefined();
-      assertResponse(name, observed.response);
+      assertResponse(example.method, path, observed.status, observed.response);
       if (example.method === 'patch' && example.status < 400) fixture = undefined;
     }
   });
@@ -128,7 +122,20 @@ describe('integrated HTTP contract', () => {
     faulty.use(app);
     const response = await request(faulty).get(`/api/items/${fixture.ids.movingItem}`).expect(200);
     expect(contractSchemas.ItemDetail.safeParse(response.body).success).toBe(false);
-    expect(() => assertResponse('ItemDetail', response.body)).toThrow(/ItemDetail response mismatch:.*title/);
+    expect(() => assertResponse('get', `/api/items/${fixture.ids.movingItem}`, response.status, response.body)).toThrow(
+      /Response mismatch:.*ItemDetail:.*title/,
+    );
+    const wrongAssociation = structuredClone(document);
+    wrongAssociation.paths['/api/items/{id}'].get.responses[200].content!['application/json'].schema.$ref =
+      '#/components/schemas/ProjectWrite';
+    expect(() =>
+      responseAssertion(wrongAssociation)({
+        method: 'get',
+        path: `/api/items/${fixture.ids.movingItem}`,
+        status: response.status,
+        body: response.body,
+      }),
+    ).toThrow(/Response mismatch:.*ProjectWrite/);
   });
 
   it('the existing authored Bruno move scenario validates and runs without edits', async () => {
@@ -148,7 +155,7 @@ describe('integrated HTTP contract', () => {
     const body = JSON.parse(resolved.match(/body:json \{\s*([\s\S]*?)\n\}/)![1]);
     expect(documentValidator(document, 'ItemMove')(body)).toBe(true);
     const response = await request(app).patch(path).send(body).expect(200);
-    assertResponse('ItemWrite', response.body);
+    assertResponse('patch', path, response.status, response.body, response.text);
   });
 });
 
@@ -173,7 +180,7 @@ describe('existing MCP item tools', () => {
               .send(JSON.parse(String(options.body)))
           : await request(app).get(`/api${path}`);
       expect(response.status).toBe(200);
-      assertResponse(options ? 'ItemWrite' : 'ItemDetail', response.body);
+      assertResponse(options?.method ?? 'get', `/api${path}`, response.status, response.body, response.text);
       return response.body;
     };
     expect(

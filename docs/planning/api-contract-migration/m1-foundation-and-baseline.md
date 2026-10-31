@@ -1,6 +1,6 @@
 # API Contract M1 — Foundation, Integration and Baseline
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** Batches 1–2 complete; Batch 3 and normal story review pending · **Depends on:** preserved planning/evidence checkpoint and current-branch baseline; Epic 3.5 completion is not a prerequisite
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** all technical batches implemented/verified; Batch 3 uncommitted; normal story audit/Reconciler review pending · **Depends on:** preserved planning/evidence checkpoint and current-branch baseline; Epic 3.5 completion is not a prerequisite
 
 **Execution update:** evidence is preserved on `api-contract-framework-spike-completed` at `5408bdb150cbb227298f53aba1cc57d3b7866d61`; tooling cleanup is committed as `575b33b`. Nathan clarified that all M1–M5 development may proceed while Epic 3.5 continues. [The progress ledger](m1-progress.md) distinguishes the current baseline from final integration evidence; completed-main verification belongs to the final merge gate.
 
@@ -49,6 +49,8 @@ Rename retained “pilot” artifacts/aliases/commands coherently, update regene
 
 ### Batch 3 — Stable checks and shared vocabulary
 
+**Technical batch complete and verified; normal story review pending.** [The progress ledger](m1-progress.md) records the tuples/import guard, actual-mount discovery with owned pending scope, per-status assembler and real-response associations, 487 bounded parse probes, fault checks and two repeated green contract-suite runs. [The corpus claim precheck](m1-corpus-coverage-review.md) reviews every original claimed ID, isolates one title/key correction and supplies the normal Reconciler handoff. No generated shape, endpoint behavior or external test changed. Final full gate: 536 server / 604 client / 235 tooling tests; unchanged Playwright: 219 passed / 18 inherited skips, both with native exit 0. Normal story audit/Reconciler approval is not claimed by this implementation account.
+
 Root-cause Windows port exhaustion with connection/server lifecycle evidence; trial persistent HTTP transport/agent or reduced redundant setup where suitable. If retiring comparison-only replays resolves the load, demonstrate that with before/after evidence; an additional agent refactor is not required for its own sake. Preserve fixture resets, database isolation, error/status assertions and existing external specs/helpers/configuration. A fixed sleep or a weakened test suite is not the fix. Prove a representative repeated HTTP-heavy run completes reliably, then stop repeating once stability is demonstrated.
 
 Extract database-free domain tuples for `Side`/`PositionScope` (or prove equally small agreement checks where sharing is inappropriate). Schemas reference those tuples; existing unmigrated client boundaries remain explicit. Guard generation against importing database/app bootstrap. Record import-direction rules in owned architecture guidance.
@@ -70,13 +72,15 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 | Contract test transport/fixtures; retained corpus/harness | Connection lifecycle stability and association checks; no discarded behavioral expectations |
 | Root `AGENTS.md` and tooling instructions | Current ownership/import boundaries and one visible regeneration/check path |
 
+**Batch 3 symbol account:** `domain/positioning.ts::{sides, positionScopes}` replaces authored enum unions in the two domain helper exports and schemas; generated client vocabulary replaces its manual union. `openapi.ts::createContractDocument` owns status/parameter metadata validation, and `responses.ts::responseAssertion` replaces the retained loop's inferred success/error schema choice. `routeDiscovery.ts::{discoverRoutes, assertRouteCoverage}` and the owned pending-operation fixture replace corpus-only completeness as the migration gate; the original characterized-scope check remains as a narrower regression assertion. `generationBoundary.test.ts`, `operationMetadata.test.ts`, `parseParity.test.ts` and `routeDiscovery.test.ts` add eleven infrastructure tests. No product test/helper or captured payload is retired.
+
 ## Acceptance
 
 - Current-base revision and preserved evidence references are recorded; retained characterization and required suites pass against that development baseline. Final completed-main integration is explicitly handed to the merge gate, not an M1 blocker.
 - A clean documented install supports the normal gate/generation; old hidden install and alternative runtime dependencies are absent.
 - Retained evidence is reproducible; only enumerated comparison-only experiments are retired. Product tests, corpus data and useful coverage remain.
 - Generation is deterministic, database-free and freshness-checked; stale failures explain regeneration. Domain vocabulary and generated/UI boundaries have explicit owners.
-- Actual operation inventory and per-status response association have independent checks; status/metadata growth alone has not been mistaken for D4's trigger.
+- Actual operation inventory and per-status response association have independent checks; status/metadata growth alone has not been mistaken for the roadmap's D6 trigger.
 - HTTP tests are stable without waiting out port exhaustion as an operating procedure; all shared gates and normal structural-refactor audit/handoffs pass.
 
 ## Open questions and handoff
@@ -87,6 +91,15 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 
 **Coder/Architect:** hand M2 the current development revision, inventory, command paths, response variants, retained tests, stable transport and import rules. Fill the makes-dead inventory and normal review/closeout handoff before sign-off. Hand M5 the final-integration refresh requirements separately.
 
+## Living-docs and review handoff
+
+- **Behavior decisions / PO:** none newly made; no Planned passage built, superseded passage, wiki renumbering or product-field change. CF1–CF7 retain their receiving dispositions; capture current outcomes rather than correcting them during migration.
+- **Implementation guidance:** root `AGENTS.md` and the tooling README now describe neutral vocabulary/import direction, actual-route/pending-scope checks and status-selected response validation. Applied with this change; no `.claude/` guide/persona edit requested.
+- **Test Planner/Reconciler:** receive the [corpus claim review](m1-corpus-coverage-review.md). Only `TC-X.6` was removed from one mislabelled corpus title and its snapshot key; the true surface test remains. All payload expectations are unchanged. No case status or catalog pointer has been edited. The normal finished-code Reconciler still checks the whole catalog for lost coverage after Batch 2's file moves/retirement and decides any proposed additional mappings.
+- **Auditor:** review the structural refactor under the normal committed scope, including retained checks, pending-operation accounting, import direction and metadata association faults. This implementation/precheck is not a cold audit or story sign-off.
+- **M2–M4:** remove pending entries as their contracts land; retain direct expected-status/database assertions alongside metadata-selected validation. All 50 pending entries still require migration and per-resource pre-replacement HTTP characterization. Existing hierarchy shape parsing inside the domain primitive is unchanged; M2 still owns compatible route/domain separation.
+- **Final integration:** refresh affected inventories/captures/consumers and combined suites after completed Epic 3.5 main is merged into the feature branch. This is the only Epic 3.5 completion dependency.
+
 ## Amendments
 
 - **2026-10-30:** Drafted under Nathan's approved reuse/integration strategy. Planning only; no evidence tag, branch, merge, cleanup or implementation has been performed.
@@ -94,3 +107,5 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 - **2026-10-30:** Completed the tooling-cleanup batch with clean root workspace install, retained drills/conversion probes, unchanged contract data/product tests, passing final full gate and unchanged Playwright. The current-base gate → E2E → final-gate sequence passed without cooldown/connection failure. Completed-main integration, later vocabulary/inventory/association work and normal story review remain pending; changes are uncommitted.
 - **2026-10-30:** Nathan committed cleanup as `575b33b` and clarified that all migration stories proceed alongside Epic 3.5. Corrected Batch 1 to use current-base evidence/inventory; moved completed-main comparison and refresh to the final merge gate. No remaining M1 batch waits for Epic 3.5 completion.
 - **2026-10-30:** Finished Batch 1's current-base source inventory, consumer/response handoff and owned exclusion record. Independently matched all 54 method/path rows, counted 26 Bruno requests and traced 18 existing skipped specs. Added source-observed CF7 to receiving work without changing behavior. Planning documents only; Batch 3 and normal story review remain pending.
+- **2026-10-30:** Nathan committed Batch 1 as `ee819ea` and directed Batch 3. Implemented shared vocabulary, independent mounted-route/pending-scope checks, ordinary status/parameter metadata, real response associations, database-free generation checks and bounded parse parity. Two focused runs and the first full gate pass. Corrected the corpus-ID counting omission and one incorrect `TC-X.6` title/key association without changing captured payloads. Final E2E/post-correction checks and normal M1 audit/Reconciler review remain pending; no commit or merge performed.
+- **2026-10-30:** Completed Batch 3 verification: final full gate 536 server / 604 client / 235 tooling; unchanged Playwright 219 passed / 18 inherited skips in 3.8 minutes, native exit 0 for both. All 77 snapshot payload strings compare identically after the single key rename (Vitest sorts that entry alphabetically). Generated artifacts and external tests/configuration remain unchanged. Corrected library-trial cross-references to roadmap D6 without changing the decision. Batch ready for review/commit; normal M1 structural audit and finished-code Reconciler remain before story sign-off.

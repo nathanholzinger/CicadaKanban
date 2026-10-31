@@ -47,7 +47,7 @@ Preserve unknown fields, reference validation order, overlap/terminal-range refu
 
 ### Batch 4 — Shared component and inventory review
 
-Account for all assigned operations, statuses, errors and query parameters. Tie query-schema keys to operation metadata. Check shared request/response component contexts; apply D4 if different input/output shapes require custom management. Confirm decorated item fields still compose from the authoritative schemas and that UI optionality has not tightened incidentally.
+Account for all assigned operations, statuses, errors and query parameters. Tie query-schema keys to operation metadata. Check shared request/response component contexts; apply roadmap D6 if different input/output shapes require custom management. Confirm decorated item fields still compose from the authoritative schemas and that UI optionality has not tightened incidentally.
 
 Resolve new regressions, route pre-existing disagreements to receiving work, complete normal audit/Reconciler handoffs, and restore any temporary conversion probes before reporting the retained gate results.
 
@@ -67,7 +67,7 @@ Resolve new regressions, route pre-existing disagreements to receiving work, com
 - Workflow inheritance, ordering, board/column ranges, broken/Unsorted behavior, cascade effects and current flag normalization are unchanged.
 - Rich error payloads and bodyless statuses are preserved. Raw query representations agree with runtime behavior and operation metadata.
 - Shared item/vocabulary schemas are referenced, generation remains database-free, and client optionality/view policy remains explicit.
-- No project-owned board, URL-routing, dual-position or depth-cap unification work is introduced. Shared gates, D4 checkpoint and normal audit/handoffs pass.
+- No project-owned board, URL-routing, dual-position or depth-cap unification work is introduced. Shared gates, roadmap D6 checkpoint and normal audit/handoffs pass.
 
 ## Open questions and handoff
 
