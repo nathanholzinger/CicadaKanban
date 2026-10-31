@@ -1,4 +1,4 @@
-// Generated from openapi.ts::createPilotDocument; do not edit.
+// Generated from openapi.ts::createContractDocument; do not edit.
 export interface paths {
   '/api/items/{id}/move': {
     parameters: {

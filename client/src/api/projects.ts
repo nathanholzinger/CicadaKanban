@@ -1,7 +1,7 @@
 import type { Project } from '../types';
 import { apiJson, apiVoid } from './shared';
-import type { ProjectWriteResponse, MoveProjectInput } from './pilotTypes';
-export type { ProjectWriteResponse, MoveProjectInput } from './pilotTypes';
+import type { ProjectWriteResponse, MoveProjectInput } from './transportTypes';
+export type { ProjectWriteResponse, MoveProjectInput } from './transportTypes';
 
 // A project write answers with the fresh row and, when a lazy reindex
 // renumbered its siblings, the `reindexed` pairs (wiki positioning §7).

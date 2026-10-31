@@ -22,7 +22,7 @@ import {
 import { projectMoveFieldsSchema, projectMoveSchema, projectSchema, projectWriteSchema } from './projects.js';
 import { workflowListSchema, workflowProjectFilterSchema, workflowQuerySchema, workflowSchema } from './workflows.js';
 
-export const pilotSchemas = {
+export const contractSchemas = {
   Id: idSchema,
   IdParams: idParamsSchema,
   Side: sideSchema,
@@ -45,7 +45,7 @@ export const pilotSchemas = {
   Workflow: workflowSchema,
   WorkflowList: workflowListSchema,
 };
-type SchemaName = keyof typeof pilotSchemas;
+type SchemaName = keyof typeof contractSchemas;
 type Parameter = {
   name: string;
   in: 'path' | 'query';
@@ -65,7 +65,7 @@ type Operation = {
 };
 const itemId: Parameter = { name: 'id', in: 'path', required: true, schema: 'Id' };
 
-export const pilotOperations: Operation[] = [
+export const contractOperations: Operation[] = [
   {
     method: 'patch',
     path: '/api/items/{id}/move',
@@ -111,19 +111,19 @@ export const pilotOperations: Operation[] = [
   },
 ];
 
-export function createPilotDocument() {
+export function createContractDocument() {
   const registry = z.registry<{ id: string }>();
-  for (const [name, schema] of Object.entries(pilotSchemas)) registry.add(schema, { id: name });
+  for (const [name, schema] of Object.entries(contractSchemas)) registry.add(schema, { id: name });
   const options = { uri: (id: string) => `#/components/schemas/${id}` };
   const input = z.toJSONSchema(registry, { ...options, io: 'input' });
   const output = z.toJSONSchema(registry, { ...options, io: 'output' });
   const inputs = new Set<string>(['ItemMoveFields', 'ProjectMoveFields', 'WorkflowQuery', 'IdParams']);
-  for (const operation of pilotOperations) {
+  for (const operation of contractOperations) {
     if (operation.body) inputs.add(operation.body);
     operation.parameters.forEach(parameter => inputs.add(parameter.schema));
   }
   const schemas = Object.fromEntries(
-    Object.keys(pilotSchemas).map(name => {
+    Object.keys(contractSchemas).map(name => {
       const { $schema, $id, ...schema } = (inputs.has(name) ? input : output).schemas[name];
       void $schema;
       void $id;
@@ -136,7 +136,7 @@ export function createPilotDocument() {
     content: { 'application/json': { schema: ref(name) } },
   });
   const paths: Record<string, Record<string, unknown>> = {};
-  for (const operation of pilotOperations) {
+  for (const operation of contractOperations) {
     paths[operation.path] ??= {};
     paths[operation.path][operation.method] = {
       operationId: operation.operationId,
@@ -157,7 +157,7 @@ export function createPilotDocument() {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'Kanban API integration pilot',
+      title: 'Kanban API contract',
       version: '0.0.0',
       description: 'Partial development contract: four endpoints only.',
     },

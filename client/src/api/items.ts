@@ -1,8 +1,8 @@
 import type { Item } from '../types';
 import { apiJson, apiVoid } from './shared';
 import type { components } from './generated';
-import type { ItemDetailResponse, ItemWriteResponse, MoveItemInput } from './pilotTypes';
-export type { ItemWriteResponse, MoveItemInput } from './pilotTypes';
+import type { ItemDetailResponse, ItemWriteResponse, MoveItemInput } from './transportTypes';
+export type { ItemWriteResponse, MoveItemInput } from './transportTypes';
 
 export function fetchItem(id: string): Promise<ItemDetailResponse> {
   return apiJson<components['schemas']['ItemDetail']>(`/items/${id}`, undefined, 'Failed to fetch item');

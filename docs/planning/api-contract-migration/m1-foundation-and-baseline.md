@@ -1,6 +1,8 @@
 # API Contract M1 — Foundation, Integration and Baseline
 
-**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** planned; not started · **Depends on:** reviewed planning/evidence checkpoint and completed Epic 3.5 for the operative integration baseline
+**Type:** tech-debt story · **Written:** 2026-10-30 by the Architect · **Status:** in progress — tooling cleanup; completed-main integration/baseline pending · **Depends on:** reviewed planning/evidence checkpoint and completed Epic 3.5 for the operative integration baseline
+
+**Execution update:** evidence is preserved on `api-contract-framework-spike-completed` at `5408bdb150cbb227298f53aba1cc57d3b7866d61`; work is on `api-contract-migration`. Nathan confirmed Epic 3.5 remains in progress and authorized cleanup now, so Batch 2 proceeds before Batch 1's completed-main gate. [The progress ledger](m1-progress.md) records file/coverage disposition and checks. No remaining endpoint migration or completed-main compatibility claim follows from this sequencing exception.
 
 ## Goal
 
@@ -34,6 +36,8 @@ Build an independent method/path inventory including health and every non-test r
 **Gate:** reviewed integration diff, reproducible completed-main versus pilot evidence, owned exclusions and an independently reviewed inventory. No remaining endpoint migration starts from an unresolved regression.
 
 ### Batch 2 — Normal tooling, names and bounded comparison cleanup
+
+**Implementation complete, uncommitted for review.** Normal root workspace install/generation, descriptive names, comparison retirement and retained native/integrated checks pass. Final gate: 525 server / 604 client / 235 tooling tests; unchanged Playwright: 219 passed / 18 skipped. Full file/coverage disposition and limits are in [the progress ledger](m1-progress.md). This closes the cleanup batch, not M1's pending baseline, later technical work or story audit/sign-off.
 
 Move reusable generation, independent validation, type probes and drills out of comparison-only scaffolding. Prove a clean documented install makes normal generation and the gate work without an undocumented nested install. Keep runtime imports limited to the chosen foundation; keep developer-only validation/generation packages outside runtime/build imports.
 
@@ -84,3 +88,5 @@ Add operation/status-driven real-response validation and deliberate missing-oper
 ## Amendments
 
 - **2026-10-30:** Drafted under Nathan's approved reuse/integration strategy. Planning only; no evidence tag, branch, merge, cleanup or implementation has been performed.
+- **2026-10-30:** Nathan created the completed-evidence and migration branches, confirmed Epic 3.5 is still in progress, and authorized proceeding with cleanup. Started Batch 2 against the current base while retaining Batch 1's completed-main baseline as pending. No main merge, role sign-off or M1 completion is claimed.
+- **2026-10-30:** Completed the tooling-cleanup batch with clean root workspace install, retained drills/conversion probes, unchanged contract data/product tests, passing final full gate and unchanged Playwright. The current-base gate → E2E → final-gate sequence passed without cooldown/connection failure. Completed-main integration, later vocabulary/inventory/association work and normal story review remain pending; changes are uncommitted.

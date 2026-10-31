@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "workspaces": [
+    "tools/api-contracts"
+  ],
   "scripts": {
+    "contracts:generate": "npm --prefix server run contracts:generate",
+    "contracts:check": "npm --prefix server run contracts:check",
+    "contracts:drill": "npm --prefix server run contracts:drill",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -15,7 +21,8 @@
     "typecheck:server": "npm --prefix server run typecheck",
     "typecheck:client": "npm --prefix client run typecheck",
     "typecheck:root": "tsc -p tsconfig.json && tsc -p scripts/tsconfig.json",
-    "typecheck": "npm run typecheck:server && npm run typecheck:client && npm run typecheck:root",
+    "typecheck:contracts": "tsc -p tools/api-contracts/tsconfig.json",
+    "typecheck": "npm run typecheck:server && npm run typecheck:client && npm run typecheck:root && npm run typecheck:contracts",
     "test:all": "npm run test:e2e && npm run test:unit && npm run typecheck",
     "lint:client": "npm --prefix client run lint",
     "lint:server": "npm --prefix server run lint",
@@ -24,7 +31,8 @@
     "format:check:client": "npm --prefix client run format:check",
     "format:check:server": "prettier --check \"server/**/*.{ts,js,mjs,json}\"",
     "format:check:root": "prettier --check \"tests/**/*.ts\" \"scripts/**/*.{mts,json}\" \"*.{ts,js,mjs,json}\"",
-    "format:check": "npm run format:check:client && npm run format:check:server && npm run format:check:root",
+    "format:check:contracts": "prettier --check \"tools/api-contracts/**/*.{ts,json}\"",
+    "format:check": "npm run format:check:client && npm run format:check:server && npm run format:check:root && npm run format:check:contracts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit",
     "check:docs": "node scripts/check-docs/main.mts",
     "audit:scope": "node scripts/audit-scope/main.mts"

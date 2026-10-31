@@ -6,20 +6,20 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { createRequire } from 'node:module';
 import prettier from 'prettier';
-import { createPilotDocument } from '../../../src/schemas/openapi.js';
-import { generateTypes } from './documents.js';
+import { createContractDocument } from '../../server/src/schemas/openapi.js';
+import { generateTypes } from './document.js';
 
-export async function renderPilotArtifacts(): Promise<Map<string, string>> {
-  const document = createPilotDocument();
+export async function renderContractArtifacts(): Promise<Map<string, string>> {
+  const document = createContractDocument();
   const sources = [
     {
-      path: new URL('../../../contracts/pilot.openapi.json', import.meta.url),
+      path: new URL('../../server/contracts/openapi.json', import.meta.url),
       content: JSON.stringify(document),
       parser: 'json',
     },
     {
-      path: new URL('../../../../client/src/api/generated.ts', import.meta.url),
-      content: '// Generated from openapi.ts::createPilotDocument; do not edit.\n' + (await generateTypes(document)),
+      path: new URL('../../client/src/api/generated.ts', import.meta.url),
+      content: '// Generated from openapi.ts::createContractDocument; do not edit.\n' + (await generateTypes(document)),
       parser: 'typescript',
     },
   ];
@@ -43,11 +43,11 @@ export async function renderPilotArtifacts(): Promise<Map<string, string>> {
 }
 
 export function assertCurrentArtifact(path: string, actual: string, expected: string): void {
-  if (actual !== expected) throw new Error(`Stale generated artifact: ${path}`);
+  if (actual !== expected) throw new Error(`Stale generated artifact: ${path}. Run npm run contracts:generate.`);
 }
 
-export async function writeOrCheckPilotArtifacts(check: boolean) {
-  for (const [path, content] of await renderPilotArtifacts()) {
+export async function writeOrCheckArtifacts(check: boolean) {
+  for (const [path, content] of await renderContractArtifacts()) {
     if (check) assertCurrentArtifact(path, await readFile(path, 'utf8'), content);
     else {
       await mkdir(dirname(path), { recursive: true });

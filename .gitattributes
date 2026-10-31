@@ -2,6 +2,5 @@
 * text=auto
 
 # Generated artifact freshness is byte-for-byte across Windows and Unix checkouts.
-server/contracts/pilot.openapi.json text eol=lf
+server/contracts/openapi.json text eol=lf
 client/src/api/generated.ts text eol=lf
-server/tests/contracts/prototypes/generated/* text eol=lf

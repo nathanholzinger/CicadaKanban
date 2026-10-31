@@ -1,5 +1,5 @@
 import type { CreatedWorkflow, WorkflowWithDetails } from '../types';
-import type { WorkflowListResponse } from './pilotTypes';
+import type { WorkflowListResponse } from './transportTypes';
 import { apiJson, apiVoid } from './shared';
 
 export function fetchWorkflows(): Promise<WorkflowListResponse> {

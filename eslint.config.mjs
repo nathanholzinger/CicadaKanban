@@ -3,8 +3,8 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
-// The root package owns the Playwright specs and their config, and the repo scripts. The
-// client and the server each lint themselves with their own config.
+// The root package owns Playwright, repo scripts and contract tooling.
+// The client and server each lint themselves with their own config.
 export default defineConfig([
   globalIgnores(['client/', 'server/', 'docs/', 'tests/output/']),
   {
@@ -16,7 +16,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['scripts/**/*.mts'],
+    files: ['scripts/**/*.mts', 'tools/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: globals.node,

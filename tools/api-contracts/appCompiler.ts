@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // The generator has its own compiler peer; consumers must be checked with the application's compiler.
-const projectRequire = createRequire(new URL('../../../package.json', import.meta.url));
+const projectRequire = createRequire(new URL('../../server/package.json', import.meta.url));
 const ts: typeof TypeScript = projectRequire('typescript');
 export const consumerCompilerVersion = ts.version;
 
@@ -62,8 +62,3 @@ import type { components } from './generated';
 declare const row: components['schemas']['ItemWrite'];
 export const note: string = row.contractNote;
 `;
-
-export function fixtureConsumer(response: unknown): string {
-  return `import type { components } from './generated';
-    export const row: components['schemas']['ItemWrite'] = ${JSON.stringify(response)};`;
-}

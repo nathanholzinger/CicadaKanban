@@ -4,13 +4,13 @@
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { compileConsumer, basicConsumer, optionalFieldConsumer, responseFieldConsumer } from './typeChecks.js';
+import { compileConsumer, basicConsumer, optionalFieldConsumer, responseFieldConsumer } from './appCompiler.js';
 
-const server = fileURLToPath(new URL('../../../', import.meta.url));
-const source = new URL('../../../src/schemas/items.ts', import.meta.url);
-const generated = new URL('../../../../client/src/api/generated.ts', import.meta.url);
-const temporary = new URL('./.pilot-field-drill.test.ts', import.meta.url);
-const files = [source, generated, new URL('../../../contracts/pilot.openapi.json', import.meta.url)];
+const server = fileURLToPath(new URL('../../server/', import.meta.url));
+const source = new URL('../../server/src/schemas/items.ts', import.meta.url);
+const generated = new URL('../../client/src/api/generated.ts', import.meta.url);
+const temporary = new URL('../../server/tests/contracts/.field-drill.test.ts', import.meta.url);
+const files = [source, generated, new URL('../../server/contracts/openapi.json', import.meta.url)];
 const saved = await Promise.all(files.map(async file => [file, await readFile(file, 'utf8')] as const));
 const original = saved[0][1];
 const baselineTypes = saved[1][1];
@@ -30,15 +30,15 @@ function run(script: string, args: string[]) {
 async function regenerate(changed: string) {
   if (changed === original) throw new Error('Field edit did not match its source');
   await writeFile(source, changed);
-  const result = run(fileURLToPath(new URL('../../../node_modules/tsx/dist/cli.mjs', import.meta.url)), [
-    fileURLToPath(new URL('./generatePilot.ts', import.meta.url)),
+  const result = run(fileURLToPath(new URL('../../server/node_modules/tsx/dist/cli.mjs', import.meta.url)), [
+    fileURLToPath(new URL('./generate.ts', import.meta.url)),
   ]);
   if (result.status !== 0) throw new Error(result.output);
   return readFile(generated, 'utf8');
 }
 
 function test(path: string, args: string[] = []) {
-  return run(fileURLToPath(new URL('../../../node_modules/vitest/vitest.mjs', import.meta.url)), [
+  return run(fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url)), [
     'run',
     path,
     ...args,
@@ -47,9 +47,9 @@ function test(path: string, args: string[] = []) {
 
 const imports = `import { expect, it } from 'vitest';
 import request from 'supertest';
-import { app } from '../../../src/index.js';
-import { itemDetailSchema } from '../../../src/schemas/items.js';
-import { createCompatibilityFixture } from '../compatibilityHarness.js';\n`;
+import { app } from '../../src/index.js';
+import { itemDetailSchema } from '../../src/schemas/items.js';
+import { createCompatibilityFixture } from './compatibilityHarness.js';\n`;
 const missingResponseConsumer = `import type { components } from './generated';
 type Row = components['schemas']['ItemWrite'];
 declare const existing: Omit<Row, 'contractNote'>;

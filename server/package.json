@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "contracts:generate": "tsx ../tools/api-contracts/generate.ts",
+    "contracts:check": "tsx ../tools/api-contracts/generate.ts --check",
+    "contracts:drill": "tsx ../tools/api-contracts/fieldDrills.ts",
     "dev": "tsx watch src/index.ts",
     "dev:deep": "tsx watch --env-file=.env.deep src/index.ts",
     "seed:deep": "tsx src/db/seedDeep.ts",
@@ -10,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "typecheck": "tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,6 +1,8 @@
 # API Contract Migration — Roadmap and Shared Decisions
 
-**Type:** tech-debt epic · **Written:** 2026-10-30 by the Architect · **Status:** foundation selected; story plans drafted at Nathan's direction; implementation not started · **Sequenced:** integrate completed Epic 3.5 before migrating the remaining endpoints
+**Type:** tech-debt epic · **Written:** 2026-10-30 by the Architect · **Status:** M1 tooling-cleanup batch complete; remaining M1 work and endpoint migration pending · **Sequenced:** integrate completed Epic 3.5 before migrating the remaining endpoints
+
+**Execution update:** Nathan preserved the evidence branch and created `api-contract-migration` at `5408bdb`. He authorized M1 tooling cleanup while Epic 3.5 remains in progress. Only the prerequisite cleanup proceeds now; the completed-main baseline and remaining endpoint migrations retain their gates. See [M1 progress](m1-progress.md).
 
 ## Goal
 
@@ -28,13 +30,13 @@ Keep external behavior tests, assertions, helpers and Playwright configuration u
 
 ## Branch and integration sequence
 
-1. Finish and review this planning checkpoint on `api-contract-framework-pilot`, including the currently untracked round-table record. Do not unwind spike commits or cherry-pick a partial dependency chain.
-2. Preserve the completed evidence revision with a named tag/branch, then create `api-contract-migration` from the reviewed planning checkpoint. These are subsequent actions, not performed by drafting this roadmap. M1's comparison retirement must wait for that reachable preservation.
+1. **Completed:** Nathan committed the planning checkpoint, including the round table, as `5408bdb`.
+2. **Completed:** Nathan preserved `api-contract-framework-spike-completed` and created `api-contract-migration` at that checkpoint. The evidence branch satisfies preservation before comparison retirement; no additional tag is required.
 3. Finish Epic 3.5 on `main`. Record its final revision and test results, then **merge `main` into the migration feature branch** and resolve conflicts. Keep intended Epic 3.5 changes; do not resolve conflicts by restoring the older pilot UI/test behavior.
 4. M1 compares the integrated pilot against completed-main behavior and establishes the migration baseline. M2–M4 then migrate remaining resources in order. If `main` advances again, repeat the integration/baseline accounting before final acceptance.
 5. Complete M5 on the integrated migration branch, then **merge the feature branch back into `main`** when Nathan authorizes it. Verify the resulting main revision. Do not merge this work before Epic 3.5 is finished.
 
-Planning can proceed now. This checkpoint authorizes neither branch/tag mutations nor implementation; the selected strategy is reuse plus forward cleanup. Post-migration behavior work starts from the accepted migration, rather than being bundled into its merge.
+The original planning checkpoint executed no branch/tag mutations or implementation. Nathan has since created the evidence/migration branches and authorized the current M1 cleanup; the completed-main and final merge gates remain pending. Post-migration behavior work starts from the accepted migration, rather than being bundled into its merge.
 
 ## Stories and initial inventory
 

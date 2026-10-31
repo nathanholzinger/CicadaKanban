@@ -2,16 +2,16 @@ import { readFile } from 'node:fs/promises';
 import express from 'express';
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
-import { app } from '../../../src/index.js';
-import { resetTestDb } from '../../../src/db/resetTestDb.js';
-import { callMcpItemTool, mcpItemInputSchema } from '../../../src/lib/mcpItemTools.js';
-import { pilotSchemas, createPilotDocument } from '../../../src/schemas/openapi.js';
-import { compatibilityCases } from '../compatibilityCases.js';
-import { captureCompatibilityCase, createCompatibilityFixture } from '../compatibilityHarness.js';
-import { documentValidator } from './documents.js';
-import { assertCurrentArtifact, renderPilotArtifacts } from './pilotArtifacts.js';
+import { app } from '../../src/index.js';
+import { resetTestDb } from '../../src/db/resetTestDb.js';
+import { callMcpItemTool, mcpItemInputSchema } from '../../src/lib/mcpItemTools.js';
+import { contractSchemas, createContractDocument } from '../../src/schemas/openapi.js';
+import { compatibilityCases } from './compatibilityCases.js';
+import { captureCompatibilityCase, createCompatibilityFixture } from './compatibilityHarness.js';
+import { documentValidator } from '../../../tools/api-contracts/document.js';
+import { assertCurrentArtifact, renderContractArtifacts } from '../../../tools/api-contracts/artifacts.js';
 
-const document = createPilotDocument();
+const document = createContractDocument();
 const validators = Object.fromEntries(
   ['ItemWrite', 'ProjectWrite', 'ItemDetail', 'WorkflowList', 'Error'].map(name => [
     name,
@@ -28,10 +28,10 @@ function scopeOf(path: string) {
   return path.split('?')[0].replace(/\/(items|projects)\/[^/]+/, '/$1/{id}');
 }
 
-function assertPilotRegistration(paths: typeof document.paths, scope: Set<string>) {
+function assertContractRegistration(paths: typeof document.paths, scope: Set<string>) {
   for (const entry of scope) {
     const [method, path] = entry.split(' ');
-    if (!paths[path]?.[method]) throw new Error(`Missing pilot registration: ${entry}`);
+    if (!paths[path]?.[method]) throw new Error(`Missing contract registration: ${entry}`);
   }
   expect(
     Object.entries(paths)
@@ -50,12 +50,12 @@ describe('integrated HTTP contract', () => {
     for (const example of compatibilityCases.filter(example => example.method === 'patch' && example.body)) {
       const name = example.path(fixture.ids).startsWith('/api/items/') ? 'ItemMove' : 'ProjectMove';
       const body = example.body!(fixture.ids);
-      expect(moves[name](body), example.name).toBe(pilotSchemas[name].safeParse(body).success);
+      expect(moves[name](body), example.name).toBe(contractSchemas[name].safeParse(body).success);
     }
     const query = documentValidator(document, 'WorkflowQuery');
     for (const projectId of [undefined, '', fixture.ids.project, [fixture.ids.project, 'missing'], null, 7, {}]) {
       const body = projectId === undefined ? {} : { projectId };
-      expect(query(body)).toBe(pilotSchemas.WorkflowQuery.safeParse(body).success);
+      expect(query(body)).toBe(contractSchemas.WorkflowQuery.safeParse(body).success);
     }
   });
 
@@ -83,7 +83,7 @@ describe('integrated HTTP contract', () => {
             : path.startsWith('/api/items/')
               ? 'ItemDetail'
               : 'WorkflowList';
-      const parsed = pilotSchemas[name].safeParse(observed.response);
+      const parsed = contractSchemas[name].safeParse(observed.response);
       expect(parsed.error?.issues, example.name).toBeUndefined();
       assertResponse(name, observed.response);
       if (example.method === 'patch' && example.status < 400) fixture = undefined;
@@ -91,10 +91,13 @@ describe('integrated HTTP contract', () => {
   });
 
   it('generated files are current and the freshness check rejects stale contents', async () => {
-    for (const [path, expected] of await renderPilotArtifacts()) {
+    for (const [path, expected] of await renderContractArtifacts()) {
       assertCurrentArtifact(path, await readFile(path, 'utf8'), expected);
       expect(() => assertCurrentArtifact(path, `${expected}\n// stale`, expected)).toThrow(
         `Stale generated artifact: ${path}`,
+      );
+      expect(() => assertCurrentArtifact(path, `${expected}\n// stale`, expected)).toThrow(
+        'npm run contracts:generate',
       );
     }
   });
@@ -103,10 +106,12 @@ describe('integrated HTTP contract', () => {
     const fixture = await createCompatibilityFixture();
     const scope = new Set(compatibilityCases.map(example => `${example.method} ${scopeOf(example.path(fixture.ids))}`));
     expect(scope.size).toBe(4);
-    assertPilotRegistration(document.paths, scope);
+    assertContractRegistration(document.paths, scope);
     const missing = structuredClone(document.paths);
     delete missing['/api/items/{id}'];
-    expect(() => assertPilotRegistration(missing, scope)).toThrow('Missing pilot registration: get /api/items/{id}');
+    expect(() => assertContractRegistration(missing, scope)).toThrow(
+      'Missing contract registration: get /api/items/{id}',
+    );
   });
 
   it('the response assertion exposes a field removed by a real response interceptor', async () => {
@@ -122,13 +127,13 @@ describe('integrated HTTP contract', () => {
     });
     faulty.use(app);
     const response = await request(faulty).get(`/api/items/${fixture.ids.movingItem}`).expect(200);
-    expect(pilotSchemas.ItemDetail.safeParse(response.body).success).toBe(false);
+    expect(contractSchemas.ItemDetail.safeParse(response.body).success).toBe(false);
     expect(() => assertResponse('ItemDetail', response.body)).toThrow(/ItemDetail response mismatch:.*title/);
   });
 
   it('the existing authored Bruno move scenario validates and runs without edits', async () => {
     const fixture = await createCompatibilityFixture();
-    const source = await readFile(new URL('../../../../bruno/items/move-item.bru', import.meta.url), 'utf8');
+    const source = await readFile(new URL('../../../bruno/items/move-item.bru', import.meta.url), 'utf8');
     const variables: Record<string, string> = {
       baseUrl: '',
       itemId: fixture.ids.movingItem,

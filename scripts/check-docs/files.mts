@@ -17,6 +17,7 @@ export const DEFAULT_SCOPE = [
   'server/tests',
   'tests',
   'scripts',
+  'tools/api-contracts',
   BRUNO_DIR,
   '.claude',
   WIKI_DIR,
