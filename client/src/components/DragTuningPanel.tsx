@@ -1,8 +1,10 @@
 // Dev/test panel: every drag threshold and overlay value, editable live, the
 // pop machine's live state, and the inversion log.
 
+import { useState } from 'react';
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
+import { stopLookOf, type ArmedStop, type StopCause } from './workflow/forcedStop';
 import type { DragSession } from './workflow/DragSessionContext';
 import { popState } from './workflow/popSession';
 import type { Inversion } from './workflow/itemWriteReconciliation';
@@ -16,6 +18,9 @@ interface DragTuningPanelProps {
   onChange: (next: DragTuning) => void;
   session: DragSession | null;
   inversions: readonly Inversion[];
+  /** The stop armed for the next item drag (`useBoardDnd.ts`), kept by `BoardView` so a reload does not lose it. */
+  armedStop: ArmedStop | null;
+  onArmStop: (stop: ArmedStop | null) => void;
   onClose: () => void;
 }
 
@@ -53,7 +58,21 @@ const OVERLAY_FIELDS: Field[] = [
   { kind: 'text', key: 'activeContextOutlineColor', label: 'Active-context outline' },
 ];
 
-export default function DragTuningPanel({ tuning, onChange, session, inversions, onClose }: DragTuningPanelProps) {
+const STOP_FIELDS: Field[] = [
+  { kind: 'number', key: 'forcedStopCueMs', label: 'Stopped-drag cue time (ms)', step: 500, min: 0 },
+];
+
+export default function DragTuningPanel({
+  tuning,
+  onChange,
+  session,
+  inversions,
+  armedStop,
+  onArmStop,
+  onClose,
+}: DragTuningPanelProps) {
+  const [stopCause, setStopCause] = useState<StopCause>('write-failed');
+  const [stopAfterSeconds, setStopAfterSeconds] = useState(2);
   const pop = session?.pop ?? null;
   const lastInversion = inversions[inversions.length - 1];
 
@@ -105,6 +124,72 @@ export default function DragTuningPanel({ tuning, onChange, session, inversions,
         {renderFields(SECTION_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
+        <h4 className={`${SECTION_LABEL} pt-2`}>Stopped-drag cue</h4>
+        <label className={FIELD_LABEL}>
+          Look
+          <select
+            value={stopLookOf(tuning.forcedStopLook)}
+            aria-label="Stopped-drag cue look"
+            onChange={e => onChange({ ...tuning, forcedStopLook: e.target.value })}
+            className={`${INPUT_BASE} w-40`}
+          >
+            <option value="banner">A: banner</option>
+            <option value="note">B: note at the pointer</option>
+          </select>
+        </label>
+        <label className={FIELD_LABEL}>
+          Flash the dragged item
+          <input
+            type="checkbox"
+            checked={tuning.forcedStopFlash}
+            aria-label="Flash the dragged item"
+            onChange={e => onChange({ ...tuning, forcedStopFlash: e.target.checked })}
+          />
+        </label>
+        {renderFields(STOP_FIELDS)}
+        <label className={FIELD_LABEL}>
+          Stop the next drag
+          <select
+            value={stopCause}
+            aria-label="Stop cause"
+            onChange={e => setStopCause(e.target.value as StopCause)}
+            className={`${INPUT_BASE} w-40`}
+          >
+            <option value="write-failed">a write failed</option>
+            <option value="refresh">a refresh</option>
+          </select>
+        </label>
+        <label className={FIELD_LABEL}>
+          …this many seconds in
+          <input
+            type="number"
+            value={stopAfterSeconds}
+            step={0.5}
+            min={0}
+            aria-label="Seconds into the drag"
+            onChange={e => Number.isFinite(Number(e.target.value)) && setStopAfterSeconds(Number(e.target.value))}
+            className={`${INPUT_BASE} w-24 text-right`}
+          />
+        </label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onArmStop({ cause: stopCause, afterMs: stopAfterSeconds * 1000 })}
+            className={BTN_CANCEL}
+          >
+            Arm
+          </button>
+          {armedStop && (
+            <>
+              <span className="text-[11px] text-amber-400/80" data-armed-stop={armedStop.cause}>
+                armed: {armedStop.cause} at {armedStop.afterMs / 1000}s
+              </span>
+              <button type="button" onClick={() => onArmStop(null)} className={BTN_CANCEL}>
+                Disarm
+              </button>
+            </>
+          )}
+        </div>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={() => onChange(DEFAULT_DRAG_TUNING)} className={BTN_CANCEL}>
             Reset to defaults

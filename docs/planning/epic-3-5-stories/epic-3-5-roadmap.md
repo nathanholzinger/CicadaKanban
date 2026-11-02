@@ -734,8 +734,8 @@ The fix starts by reproducing the defect on the folded code.
 
 ---
 
-### Story 8.3 — A hold from above draws the modal's ghost a row off (DRAG-7.15)
-**Plan:** [`story-8-3-modal-ghost-row-off.md`](story-8-3-modal-ghost-row-off.md)
+### Story 8.3 — A hold from above draws the modal's ghost a row off (DRAG-7.15) ✅ (done 2026-10-29)
+**Plan / record:** [`story-8-3-modal-ghost-row-off.md`](../../archive/story-8-3-modal-ghost-row-off.md)
 
 **Carried in from Story 7** (Nathan, 2026-10-28).
 
@@ -758,9 +758,19 @@ alone, five of its file, or a second full run. It reads the same modal
 placement as this story's defect, and Phase 7 changed when a modal reading
 reaches the session. If it fails again, trace it with this story's.
 
+**Status: done 2026-10-29.** The ghost and the projection parted in the
+section, before the modal opened. A move event carries the `over` of the
+render before it, and the hook named the ghost's neighbor from move
+events only. It now also reads the row dnd-kit announces (`onDragOver`).
+The fix covers every layer. Three drag specs that had passed on the stale
+neighbor are skipped for Story 10 (its item 10). DRAG-7.17's one failure
+isn't explained, and stays a watch item.
+
 ---
 
 ### Story 8.4 — A cue when the board stops a drag
+**Plan:** [`story-8-4-forced-stop-cue.md`](story-8-4-forced-stop-cue.md)
+
 **Carried in from A4's PO handoff** (Nathan, 2026-09-30).
 
 If an earlier drop's write fails, or a stale response resyncs the board,

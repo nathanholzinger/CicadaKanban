@@ -6,6 +6,7 @@
 
 import type { Item } from '../../types';
 import type { ItemWriteResponse, MoveItemInput } from '../../api/items';
+import type { StopCause } from './forcedStop';
 import { hasParentOpinion, type Placement } from './itemListOps';
 import type { ItemWriteTracker } from './useItemManagement';
 
@@ -140,6 +141,8 @@ function pendingPlacementFor(placement: Placement, request: MoveItemInput): Plac
 // reindex: the row itself is rightly discarded (a newer write for the same
 // item supersedes it), but the pairs are real, committed renumbering of
 // other rows that a silently-dropped response would otherwise take with it.
+// `resync` is told which of the two asked for the reload, a failed write or
+// a refresh (`forcedStop.ts::StopCause`), for the cue a drag it stops shows.
 // The write stays marked pending as `pendingPlacementFor` spells the placement.
 // Every board-gesture write path — Card, Stub, and Descendants releases
 // alike — goes through `toRequest` and then here, by way of
@@ -152,16 +155,16 @@ export async function sendItemMove(
   input: MoveItemInput,
   pending: Placement | null,
   writes: ItemWriteTracker,
-  loadBoard: () => void,
+  resync: (cause: StopCause) => void,
 ): Promise<void> {
   const seq = writes.begin(activeId, pending && pendingPlacementFor(pending, input));
   try {
     const updated = await moveItem(activeId, input);
     const { needsResync } = writes.complete(activeId, seq, updated);
-    if (needsResync) loadBoard();
+    if (needsResync) resync('refresh');
   } catch (err) {
     console.error('Failed to move item:', err);
     writes.fail(activeId, seq);
-    loadBoard();
+    resync('write-failed');
   }
 }

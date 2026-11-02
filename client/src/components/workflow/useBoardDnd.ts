@@ -76,6 +76,7 @@ import {
   type DragStructure,
 } from './dragStructure';
 import type { DragTuning } from './dragTuning';
+import type { ArmedStop, ForcedStop, StopCause } from './forcedStop';
 import {
   advanceModalHold,
   advancePopSession,
@@ -148,6 +149,12 @@ export interface BoardDndDeps {
    */
   onColumnDrop: (activeId: string, overId: string, resync: () => Promise<void>) => Promise<void>;
   loadBoard: () => Promise<void>;
+  /** Told once when a reload the hook asked for ended a live item drag (`resyncBoard`). */
+  onDragStopped: (stop: ForcedStop) => void;
+  /** The stop the dev/test panel has armed for the next item drag, if any. */
+  armedStop: ArmedStop | null;
+  /** Called as an armed stop fires, so it is spent. */
+  disarmStop: () => void;
   /** The element the regions are measured under (the DndContext's wrapper). */
   rootRef: RefObject<HTMLElement | null>;
   /** The Card whose hierarchy modal is open, if any: it is that Card's Descendants layer, drawn whole. */
@@ -425,6 +432,20 @@ export function useBoardDnd(deps: BoardDndDeps) {
       cancelSnap();
     };
   }, [machineActive, cancelSnap, evaluateRef]);
+
+  // The dev/test panel's armed stop: the next item drag asks for a reload `afterMs` after it
+  // starts, down the same path a failed write takes. A drag released first leaves it armed.
+  const resyncRef = useLatest(resyncBoard);
+  const armedCause = deps.armedStop?.cause ?? null;
+  const armedAfterMs = deps.armedStop?.afterMs ?? null;
+  useEffect(() => {
+    if (!machineActive || armedCause === null || armedAfterMs === null) return;
+    const timer = setTimeout(() => {
+      latest.current.disarmStop();
+      resyncRef.current(armedCause);
+    }, armedAfterMs);
+    return () => clearTimeout(timer);
+  }, [machineActive, armedCause, armedAfterMs, latest, resyncRef]);
 
   // dnd-kit calls this during its own render; it reads the mirrors.
   const collisionDetection = useCallback<CollisionDetection>(args => {
@@ -727,9 +748,16 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // keep running with the button released, and the reassert effect would
   // re-add its ghost into the reloaded board. So every reload this hook asks
   // for ends a live drag first, the way Escape would
-  // (wiki board-drag-interaction §10).
-  function resyncBoard() {
-    if (sessionRef.current) handleDragCancel();
+  // (wiki board-drag-interaction §10). A drag it ends is reported once, with the cause the
+  // caller gives and where the pointer last was, for the cue that says the board stopped it; a
+  // reload with no drag running reports nothing.
+  function resyncBoard(cause: StopCause) {
+    const current = sessionRef.current;
+    if (current) {
+      const point = pointerRef.current;
+      handleDragCancel();
+      latest.current.onDragStopped({ cause, point, itemId: current.activeItem.id });
+    }
     return latest.current.loadBoard();
   }
 
@@ -770,7 +798,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activeId = String(active.id);
 
     if (isColumnData(active.data.current)) {
-      if (over && activeId !== String(over.id)) await deps.onColumnDrop(activeId, String(over.id), resyncBoard);
+      if (over && activeId !== String(over.id)) {
+        await deps.onColumnDrop(activeId, String(over.id), () => resyncBoard('write-failed'));
+      }
       return;
     }
 

@@ -164,7 +164,11 @@ The hooks and contexts that run it:
 - `useBoardDnd.ts` — composes all of the above: clocks, DOM measurement, dnd-kit
   plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`,
   which is handed `resyncBoard` to call if the save fails, so that a live item drag ends
-  before the reload.
+  before the reload. A drag `resyncBoard` ends is reported once to `onDragStopped`
+  (`forcedStop.ts::ForcedStop`: the cause, the pointer's last point, the item), for the
+  cue `ForcedStopCue.tsx` draws. `BoardView.tsx` holds it (`useForcedStop.ts`), above
+  the reload, which unmounts everything below.
+- `ForcedStopContext.ts` — which item a stopped drag was on, for its row to flash.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.
 - `DragTuningContext.ts` — the live tuning values, for the components that draw a drag
@@ -256,7 +260,8 @@ active-context outline, the drop line's shape).
   and a Stub's alike, from the item as the board draws it; `useBoardDnd.ts::endSession`
   is the one end.
 - **Sending a move:** `dragRequest.ts::sendItemMove`, the one "send, fold in, or
-  resync" block, reached through `useBoardDnd.ts::commitRelease`.
+  resync" block, reached through `useBoardDnd.ts::commitRelease`. It tells `resync` why
+  the board reloads, a failed write or a refresh (`forcedStop.ts::StopCause`).
 - **Short-card sizing:** `cardMetrics.ts::SHORT_CARD_METRICS`, the one value the pop
   machine and the band guides both pass to `dragBands.ts`.
 - **Which way dependencies run:** `placement.ts` reads the pop machine's session but

@@ -255,7 +255,7 @@ describe('TC-2.11: toRequest', () => {
 });
 
 // The "server resolution is authoritative over a stale client guess, resync
-// via loadBoard() on failure" contract, tested directly — no dnd-kit
+// on failure" contract, tested directly — no dnd-kit
 // runtime or rendered component needed.
 describe('sendItemMove', () => {
   const input = { workphaseId: 'wp-2', anchorId: 'anchor-1', side: 'after' as const };
@@ -272,34 +272,34 @@ describe('sendItemMove', () => {
     isPending: vi.fn<ItemWriteTracker['isPending']>(() => false),
   });
 
-  it('TC-5a.1: begins the write with its pending placement, completes it with the response, and never calls loadBoard', async () => {
+  it('TC-5a.1: begins the write with its pending placement, completes it with the response, and never resyncs', async () => {
     const updated = fakeItem('active-1');
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();
-    const loadBoard = vi.fn();
+    const resync = vi.fn();
 
-    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, resync);
 
     expect(writes.begin).toHaveBeenCalledWith('active-1', pending);
     expect(moveItem).toHaveBeenCalledWith('active-1', input);
     expect(writes.complete).toHaveBeenCalledWith('active-1', 7, updated);
     expect(writes.fail).not.toHaveBeenCalled();
-    expect(loadBoard).not.toHaveBeenCalled();
+    expect(resync).not.toHaveBeenCalled();
   });
 
-  it('DRAG-6.6: a rejected move fails the write (the guess is dropped) and resyncs via loadBoard', async () => {
+  it('DRAG-6.6: a rejected move fails the write (the guess is dropped) and resyncs, as a failed write', async () => {
     const moveItem = vi.fn(async () => {
       throw new Error('anchorId does not reference an existing item');
     });
     const writes = tracker();
-    const loadBoard = vi.fn();
+    const resync = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, resync);
 
     expect(writes.complete).not.toHaveBeenCalled();
     expect(writes.fail).toHaveBeenCalledWith('active-1', 7);
-    expect(loadBoard).toHaveBeenCalledTimes(1);
+    expect(resync).toHaveBeenCalledExactlyOnceWith('write-failed');
     consoleError.mockRestore();
   });
 
@@ -314,13 +314,13 @@ describe('sendItemMove', () => {
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();
     writes.complete.mockReturnValue({ applied: false, needsResync: true });
-    const loadBoard = vi.fn();
+    const resync = vi.fn();
 
-    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, resync);
 
     expect(writes.complete).toHaveBeenCalledWith('active-1', 7, updated);
     expect(writes.fail).not.toHaveBeenCalled();
-    expect(loadBoard).toHaveBeenCalledTimes(1);
+    expect(resync).toHaveBeenCalledExactlyOnceWith('refresh');
   });
 
   it('DRAG-6.7: a stale response with no reindex disclosed needs no resync', async () => {
@@ -328,10 +328,10 @@ describe('sendItemMove', () => {
     const moveItem = vi.fn(async () => updated);
     const writes = tracker();
     writes.complete.mockReturnValue({ applied: false, needsResync: false });
-    const loadBoard = vi.fn();
+    const resync = vi.fn();
 
-    await sendItemMove(moveItem, 'active-1', input, pending, writes, loadBoard);
+    await sendItemMove(moveItem, 'active-1', input, pending, writes, resync);
 
-    expect(loadBoard).not.toHaveBeenCalled();
+    expect(resync).not.toHaveBeenCalled();
   });
 });

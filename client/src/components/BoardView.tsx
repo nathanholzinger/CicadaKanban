@@ -2,7 +2,7 @@
 // renders the DnD board.
 
 import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from 'react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragOverlay, type DragStartEvent } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import type { BoardWithDetails, ItemType, Column } from '../types';
 import { fetchBoard } from '../api/boards';
@@ -23,6 +23,10 @@ import { useBoardDnd } from './workflow/useBoardDnd';
 import { DragSessionContext, PlacementsContext } from './workflow/DragSessionContext';
 import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
 import { DragTuningContext } from './workflow/DragTuningContext';
+import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
+import { stopLookOf, type ArmedStop } from './workflow/forcedStop';
+import { useForcedStop } from './workflow/useForcedStop';
+import ForcedStopCue from './ForcedStopCue';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
 import { popState } from './workflow/popSession';
 import type { Point } from './workflow/dragRegions';
@@ -47,6 +51,11 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // reload.
   const [dragTuning, setDragTuningState] = useState(loadDragTuning);
   const [showDragTuning, setShowDragTuning] = useState(false);
+  // The cue for a drag the board stopped lives here, above the reload that stops it: the reload
+  // swaps the board for "Loading board…" and unmounts everything the DndContext holds. The stop the
+  // dev/test panel has armed for the next drag is kept here for the same reason.
+  const forcedStop = useForcedStop(dragTuning.forcedStopCueMs);
+  const [armedStop, setArmedStop] = useState<ArmedStop | null>(null);
   // The Card whose whole hierarchy the modal shows, when it's open, and where the cursor was if a
   // hold during a drag opened it (a click opens it centered, with no anchor).
   const [hierarchyModalOpen, setHierarchyModalOpen] = useState<{ cardId: string; anchor: Point | null } | null>(null);
@@ -231,11 +240,20 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     getAttachedChildren,
     onColumnDrop,
     loadBoard,
+    onDragStopped: forcedStop.report,
+    armedStop,
+    disarmStop: () => setArmedStop(null),
     rootRef: boardRootRef,
     hierarchyModalCardId,
     openHierarchyModalAt,
     closeHierarchyModal,
   });
+
+  // The next drag, of any kind, takes the cue away.
+  function startDrag(event: DragStartEvent) {
+    forcedStop.clear();
+    handleDragStart(event);
+  }
 
   // The classification overlays' colors and the active-context outline reach
   // the drag chrome (`dragChrome.tsx`, which every Card and Stub row draws) as
@@ -255,83 +273,103 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  // The same element in every branch below, so it stays mounted across the reload.
+  const cue = (
+    <ForcedStopCue
+      stop={forcedStop.stop}
+      look={stopLookOf(dragTuning.forcedStopLook)}
+      cueMs={dragTuning.forcedStopCueMs}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-zinc-500">Loading board…</p>
-      </div>
+      <>
+        {cue}
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-zinc-500">Loading board…</p>
+        </div>
+      </>
     );
   }
 
   if (!board) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-zinc-400">No board found for this workflow</p>
-      </div>
+      <>
+        {cue}
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-zinc-400">No board found for this workflow</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-4 shrink-0 space-y-2">
-        <BoardToolbar
-          boards={boards}
-          activeBoardId={activeBoardId}
-          setActiveBoardId={setActiveBoardId}
-          readOnly={readOnly}
-          handleCreateBoard={handleCreateBoard}
-          handleRenameBoard={handleRenameBoard}
-          handleDeleteBoard={handleDeleteBoard}
-          handleToggleShowAttachedChildren={handleToggleShowAttachedChildren}
-          onAddColumn={() => setEditingColumn('new')}
-          onToggleWorkphaseManager={() => {
-            setShowWorkphaseManager(v => !v);
-            setWorkphaseNotice('');
-          }}
-          onToggleDragTuning={() => setShowDragTuning(v => !v)}
-        />
-
-        {showDragTuning && (
-          <DragTuningPanel
-            tuning={dragTuning}
-            onChange={setDragTuning}
-            session={session}
-            inversions={inversions}
-            onClose={() => setShowDragTuning(false)}
+    <>
+      {cue}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-4 shrink-0 space-y-2">
+          <BoardToolbar
+            boards={boards}
+            activeBoardId={activeBoardId}
+            setActiveBoardId={setActiveBoardId}
+            readOnly={readOnly}
+            handleCreateBoard={handleCreateBoard}
+            handleRenameBoard={handleRenameBoard}
+            handleDeleteBoard={handleDeleteBoard}
+            handleToggleShowAttachedChildren={handleToggleShowAttachedChildren}
+            onAddColumn={() => setEditingColumn('new')}
+            onToggleWorkphaseManager={() => {
+              setShowWorkphaseManager(v => !v);
+              setWorkphaseNotice('');
+            }}
+            onToggleDragTuning={() => setShowDragTuning(v => !v)}
           />
-        )}
 
-        {showWorkphaseManager && !readOnly && (
-          <WorkphaseManagerPanel
-            workphases={workphases}
-            notice={workphaseNotice}
-            addingWorkphase={addingWorkphase}
-            setAddingWorkphase={setAddingWorkphase}
-            newWorkphaseName={newWorkphaseName}
-            setNewWorkphaseName={setNewWorkphaseName}
-            onCreate={handleCreateWorkphase}
-            onRename={handleRenameWorkphase}
-            onDelete={handleDeleteWorkphase}
-          />
-        )}
-      </div>
+          {showDragTuning && (
+            <DragTuningPanel
+              tuning={dragTuning}
+              onChange={setDragTuning}
+              session={session}
+              inversions={inversions}
+              armedStop={armedStop}
+              onArmStop={setArmedStop}
+              onClose={() => setShowDragTuning(false)}
+            />
+          )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={collisionDetection}
-        modifiers={dragModifiers}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <DragSessionContext value={session}>
-          <PlacementsContext value={placements}>
-            <DragTuningContext value={dragTuning}>
-              <HierarchyModalContext value={hierarchyModal}>
-                <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
-                  {/* data-drag-state / data-drag-context / data-drag-band: the pop
+          {showWorkphaseManager && !readOnly && (
+            <WorkphaseManagerPanel
+              workphases={workphases}
+              notice={workphaseNotice}
+              addingWorkphase={addingWorkphase}
+              setAddingWorkphase={setAddingWorkphase}
+              newWorkphaseName={newWorkphaseName}
+              setNewWorkphaseName={setNewWorkphaseName}
+              onCreate={handleCreateWorkphase}
+              onRename={handleRenameWorkphase}
+              onDelete={handleDeleteWorkphase}
+            />
+          )}
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          modifiers={dragModifiers}
+          onDragStart={startDrag}
+          onDragMove={handleDragMove}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <DragSessionContext value={session}>
+            <PlacementsContext value={placements}>
+              <DragTuningContext value={dragTuning}>
+                <ForcedStopFlashContext value={dragTuning.forcedStopFlash ? (forcedStop.stop?.itemId ?? null) : null}>
+                  <HierarchyModalContext value={hierarchyModal}>
+                    <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
+                      {/* data-drag-state / data-drag-context / data-drag-band: the pop
                     machine's state, for tests.
                     data-drag-zoom-candidate / data-drag-zoom-phase: the card
                     the blue line currently names as a zoom-in candidate,
@@ -347,118 +385,120 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                     data-drag-modal-hold: the hold that opens the hierarchy
                     modal ("<overflow row owner id>:<dwell|cue>") — a test
                     surface, undefined while none runs. */}
-                  <div
-                    ref={boardRootRef}
-                    style={overlayVars}
-                    data-drag-state={session ? popState(session.pop) : undefined}
-                    data-drag-context={session?.pop.contextKey ?? undefined}
-                    data-drag-band={session?.pop.hover?.band ?? undefined}
-                    data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
-                    data-drag-zoom-phase={session?.pop.hover?.phase}
-                    data-drag-projection={
-                      session?.projection
-                        ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
-                        : undefined
-                    }
-                    data-drag-modal-hold={
-                      session?.pop.modalHold
-                        ? `${session.pop.modalHold.ownerId}:${session.pop.modalHold.phase}`
-                        : undefined
-                    }
-                    className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
-                  >
-                    {board.columns.map(column => (
-                      <BoardColumn
-                        key={column.id}
-                        column={column}
-                        getWorkphaseItems={getWorkphaseItems}
-                        getMergedColumnItems={getMergedColumnItems}
-                        childCounts={childCounts}
-                        getAttachedChildren={getAttachedChildren}
-                        defaultExpanded={showAttachedChildrenDefault}
-                        itemTypes={itemTypes}
-                        onCreateItem={handleCreateItem}
-                        onCardClick={setSelectedItemId}
-                        onEdit={readOnly ? undefined : setEditingColumn}
-                        onDelete={readOnly ? undefined : handleDeleteColumn}
-                      />
-                    ))}
+                      <div
+                        ref={boardRootRef}
+                        style={overlayVars}
+                        data-drag-state={session ? popState(session.pop) : undefined}
+                        data-drag-context={session?.pop.contextKey ?? undefined}
+                        data-drag-band={session?.pop.hover?.band ?? undefined}
+                        data-drag-zoom-candidate={session?.pop.hover?.phase ? session.pop.hover.regionKey : undefined}
+                        data-drag-zoom-phase={session?.pop.hover?.phase}
+                        data-drag-projection={
+                          session?.projection
+                            ? `${session.projection.gap}:${session.projection.depth}:${session.projection.valid}`
+                            : undefined
+                        }
+                        data-drag-modal-hold={
+                          session?.pop.modalHold
+                            ? `${session.pop.modalHold.ownerId}:${session.pop.modalHold.phase}`
+                            : undefined
+                        }
+                        className="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto pb-4"
+                      >
+                        {board.columns.map(column => (
+                          <BoardColumn
+                            key={column.id}
+                            column={column}
+                            getWorkphaseItems={getWorkphaseItems}
+                            getMergedColumnItems={getMergedColumnItems}
+                            childCounts={childCounts}
+                            getAttachedChildren={getAttachedChildren}
+                            defaultExpanded={showAttachedChildrenDefault}
+                            itemTypes={itemTypes}
+                            onCreateItem={handleCreateItem}
+                            onCardClick={setSelectedItemId}
+                            onEdit={readOnly ? undefined : setEditingColumn}
+                            onDelete={readOnly ? undefined : handleDeleteColumn}
+                          />
+                        ))}
 
-                    <UnsortedBucket
-                      uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
-                      invalidItems={board.unsorted.invalidItems}
-                      getWorkphaseItems={getWorkphaseItems}
-                      needsAttention={board.unsorted.needsAttention}
-                      itemTypes={itemTypes}
-                      childCounts={childCounts}
-                      getAttachedChildren={getAttachedChildren}
-                      defaultExpanded={Boolean(board.showAttachedChildren)}
-                      filterProjectId={filterProjectId}
-                      onCardClick={setSelectedItemId}
-                    />
+                        <UnsortedBucket
+                          uncoveredWorkphases={board.unsorted.uncovered.map(r => r.workphase)}
+                          invalidItems={board.unsorted.invalidItems}
+                          getWorkphaseItems={getWorkphaseItems}
+                          needsAttention={board.unsorted.needsAttention}
+                          itemTypes={itemTypes}
+                          childCounts={childCounts}
+                          getAttachedChildren={getAttachedChildren}
+                          defaultExpanded={Boolean(board.showAttachedChildren)}
+                          filterProjectId={filterProjectId}
+                          onCardClick={setSelectedItemId}
+                        />
 
-                    {/* Inside the board root, so the drag's regions are read under one element and
+                        {/* Inside the board root, so the drag's regions are read under one element and
                       the overlay colors reach its rows. Its backdrop is `fixed`, so it takes no
                       part in the board's own layout. */}
-                    {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
-                      <HierarchyModal
-                        key={hierarchyModalCard.id}
-                        card={hierarchyModalCard}
-                        itemTypes={itemTypes}
-                        getAttachedChildren={getAttachedChildren}
-                        anchor={hierarchyModalOpen.anchor}
-                        onPlaced={readModalPlacement}
-                        onClose={closeHierarchyModal}
-                      />
-                    )}
-                  </div>
-                </SortableContext>
-              </HierarchyModalContext>
-            </DragTuningContext>
-          </PlacementsContext>
-        </DragSessionContext>
+                        {hierarchyModalOpen && hierarchyModalCard && hierarchyModalHasRows && (
+                          <HierarchyModal
+                            key={hierarchyModalCard.id}
+                            card={hierarchyModalCard}
+                            itemTypes={itemTypes}
+                            getAttachedChildren={getAttachedChildren}
+                            anchor={hierarchyModalOpen.anchor}
+                            onPlaced={readModalPlacement}
+                            onClose={closeHierarchyModal}
+                          />
+                        )}
+                      </div>
+                    </SortableContext>
+                  </HierarchyModalContext>
+                </ForcedStopFlashContext>
+              </DragTuningContext>
+            </PlacementsContext>
+          </DragSessionContext>
 
-        <DragOverlay modifiers={dragModifiers}>
-          {session ? (
-            // `overlayForm`/`overlayWidthPx` decide the *shape this same
-            // instance* draws, not which component renders — see
-            // KanbanCard.tsx's file header for why a component-type swap
-            // here would break dnd-kit's own measurement of the overlay.
-            <KanbanCard
-              item={session.activeItem}
-              itemTypes={itemTypes}
-              isOverlay
-              overlayForm={overlayForm}
-              overlayWidthPx={overlayWidthPx}
-              overlayProjection={session.projection}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay modifiers={dragModifiers}>
+            {session ? (
+              // `overlayForm`/`overlayWidthPx` decide the *shape this same
+              // instance* draws, not which component renders — see
+              // KanbanCard.tsx's file header for why a component-type swap
+              // here would break dnd-kit's own measurement of the overlay.
+              <KanbanCard
+                item={session.activeItem}
+                itemTypes={itemTypes}
+                isOverlay
+                overlayForm={overlayForm}
+                overlayWidthPx={overlayWidthPx}
+                overlayProjection={session.projection}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
-      {editingColumn && (
-        <ColumnEditorModal
-          workphases={workphases}
-          column={editingColumn === 'new' ? undefined : editingColumn}
-          onSubmit={submitColumn}
-          onClose={() => {
-            setEditingColumn(null);
-            setColumnError('');
-          }}
-          error={columnError}
+        {editingColumn && (
+          <ColumnEditorModal
+            workphases={workphases}
+            column={editingColumn === 'new' ? undefined : editingColumn}
+            onSubmit={submitColumn}
+            onClose={() => {
+              setEditingColumn(null);
+              setColumnError('');
+            }}
+            error={columnError}
+          />
+        )}
+
+        <ItemDetailPanel
+          itemId={selectedItemId}
+          items={items}
+          itemTypes={itemTypes}
+          onClose={() => setSelectedItemId(null)}
+          onUpdate={handleItemUpdated}
+          onDelete={handleItemDeleted}
+          onNavigate={setSelectedItemId}
+          onChildCreated={handleChildCreated}
         />
-      )}
-
-      <ItemDetailPanel
-        itemId={selectedItemId}
-        items={items}
-        itemTypes={itemTypes}
-        onClose={() => setSelectedItemId(null)}
-        onUpdate={handleItemUpdated}
-        onDelete={handleItemDeleted}
-        onNavigate={setSelectedItemId}
-        onChildCreated={handleChildCreated}
-      />
-    </div>
+      </div>
+    </>
   );
 }

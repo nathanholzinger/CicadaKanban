@@ -46,6 +46,9 @@ function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
     getAttachedChildren: () => [],
     onColumnDrop,
     loadBoard: vi.fn().mockResolvedValue(undefined),
+    onDragStopped: vi.fn(),
+    armedStop: null,
+    disarmStop: vi.fn(),
     rootRef: { current: null },
     hierarchyModalCardId: null,
     openHierarchyModalAt: vi.fn(),
@@ -270,5 +273,121 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
 
     expect(deps.loadBoard).toHaveBeenCalledOnce();
     expect(result.current.session).toBeNull();
+    expect(deps.onDragStopped).not.toHaveBeenCalled();
+  });
+});
+
+// A reload the hook asks for that ends a live item drag is reported once, so the board can say it
+// stopped the drag (wiki board-drag-interaction §10). Nothing else is: not a cancel, not a release
+// that writes nothing, not a reload with no drag running.
+describe('useBoardDnd: a drag the board stops', () => {
+  beforeEach(() => {
+    vi.mocked(moveItem).mockReset();
+  });
+
+  // A column save that fails once `failSave` is called, so an item drag can start in between.
+  function failingColumnSave() {
+    let failSave!: () => void;
+    const saveFails = new Promise<void>(resolve => {
+      failSave = resolve;
+    });
+    const deps = depsWith(async (_activeId, _overId, resync) => {
+      await saveFails;
+      await resync();
+    });
+    return { deps, failSave };
+  }
+
+  it('is reported once, with the cause and where the pointer last was, when a failed write reloads the board mid-drag', async () => {
+    const { deps, failSave } = failingColumnSave();
+    const { result } = renderHook(() => useBoardDnd(deps));
+    let reorder!: Promise<void>;
+    act(() => {
+      reorder = result.current.handleDragEnd(columnDrop);
+    });
+    act(() => result.current.handleDragStart(itemPickup));
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 60 }));
+    });
+
+    await act(async () => {
+      failSave();
+      await reorder;
+    });
+
+    expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({
+      cause: 'write-failed',
+      point: { x: 40, y: 60 },
+      itemId: 'x',
+    });
+  });
+
+  it('is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
+    vi.useFakeTimers();
+    try {
+      const deps = { ...depsWith(async () => {}), armedStop: { cause: 'refresh' as const, afterMs: 1500 } };
+      const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(itemPickup));
+
+      act(() => {
+        vi.advanceTimersByTime(1499);
+      });
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+
+      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({
+        cause: 'refresh',
+        point: { x: 5, y: 5 },
+        itemId: 'x',
+      });
+      expect(deps.disarmStop).toHaveBeenCalledOnce();
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(result.current.session).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('is not reported for Escape or any other cancel', () => {
+    const deps = depsWith(async () => {});
+    const { result } = renderHook(() => useBoardDnd(deps));
+    act(() => result.current.handleDragStart(itemPickup));
+
+    act(() => result.current.handleDragCancel());
+
+    expect(result.current.session).toBeNull();
+    expect(deps.onDragStopped).not.toHaveBeenCalled();
+  });
+
+  it('is not reported for a release that writes nothing', async () => {
+    const deps = depsWith(async () => {});
+    const { result } = renderHook(() => useBoardDnd(deps));
+    act(() => result.current.handleDragStart(itemPickup));
+
+    await act(() => result.current.handleDragEnd(itemRelease));
+
+    expect(moveItem).not.toHaveBeenCalled();
+    expect(deps.onDragStopped).not.toHaveBeenCalled();
+  });
+
+  it('is not reported when a drag is released before an armed stop fires', () => {
+    vi.useFakeTimers();
+    try {
+      const deps = { ...depsWith(async () => {}), armedStop: { cause: 'refresh' as const, afterMs: 1500 } };
+      const { result } = renderHook(() => useBoardDnd(deps));
+      act(() => result.current.handleDragStart(itemPickup));
+      act(() => result.current.handleDragCancel());
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+      expect(deps.disarmStop).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

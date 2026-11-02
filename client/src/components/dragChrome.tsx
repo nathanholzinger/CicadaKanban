@@ -11,6 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
 import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
+import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import type { OverlayForm } from './workflow/placement';
 import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 
@@ -52,6 +53,9 @@ const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
 // dropped in, and its position is the server's to confirm. Test surface:
 // `data-pending`.
 const PENDING = 'animate-pulse';
+// The item a drag was stopped on, drawn on the reloaded board so the user sees where it went
+// (`index.css::forced-stop-flash`). A candidate look, switched in the dev/test panel.
+const STOP_FLASH = 'forced-stop-flash';
 
 function dropTargetClass(view: DropTargetView | null): string {
   if (!view) return '';
@@ -111,6 +115,7 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
   const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
   const pending = useIsPending(isOverlay ? '' : itemId);
+  const flashed = useIsFlashedAfterStop(isOverlay ? '' : itemId);
   return {
     attributes,
     listeners,
@@ -128,8 +133,9 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
       'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
       'data-drop-state': dropTarget?.state,
       'data-pending': pending ? 'true' : undefined,
+      'data-stop-flash': flashed ? 'true' : undefined,
     },
-    chromeClassName: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''}`,
+    chromeClassName: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''} ${flashed ? STOP_FLASH : ''}`,
   };
 }
 

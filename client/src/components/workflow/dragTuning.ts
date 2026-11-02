@@ -68,6 +68,12 @@ export interface DragTuning {
    * genuinely popped out.
    */
   activeContextOutlineColor: string;
+  /** How long the cue for a drag the board stopped stays up (`useForcedStop.ts`), unless the next drag starts first. */
+  forcedStopCueMs: number;
+  /** Which candidate look the cue draws: `'banner'` along the top edge, or `'note'` at the pointer (`forcedStop.ts::stopLookOf`). */
+  forcedStopLook: string;
+  /** Whether the item that was being dragged flashes where the reloaded board draws it. */
+  forcedStopFlash: boolean;
 }
 
 export const DEFAULT_DRAG_TUNING: DragTuning = {
@@ -83,6 +89,9 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
+  forcedStopCueMs: 5000,
+  forcedStopLook: 'banner',
+  forcedStopFlash: true,
 };
 
 export const DRAG_TUNING_STORAGE_KEY = 'kanban_drag_tuning';
