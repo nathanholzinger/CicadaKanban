@@ -788,8 +788,8 @@ isn't explained, and stays a watch item.
 
 ---
 
-### Story 8.4 — A cue when the board stops a drag
-**Plan:** [`story-8-4-forced-stop-cue.md`](story-8-4-forced-stop-cue.md)
+### Story 8.4 — A cue when the board stops a drag ✅ (done 2026-11-02)
+**Plan / record:** [`story-8-4-forced-stop-cue.md`](../../archive/story-8-4-forced-stop-cue.md)
 
 **Carried in from A4's PO handoff** (Nathan, 2026-09-30).
 
@@ -804,11 +804,22 @@ DRAG-6.15 to the resync paths that can interrupt a held drag, and added
 DRAG-6.16, DRAG-6.17, DRAG-6.18, DRAG-6.19, DRAG-6.20, DRAG-6.21 and
 DRAG-6.22 as Open for the cue's behavior. The close-out reconciliation
 above assesses existing tests; remaining drag-surface coverage is Story
-10's item 10. This entry does not mark the story signed off.
+10's item 10.
+
+**Status: done 2026-11-02.** A reload the drag layer asks for while an
+item drag is live now shows a banner along the window's top, worded by
+cause (a failed write or a refresh), for about 5 seconds or until the
+next drag starts. The stopped item flashes where the reloaded board
+draws it. A column drag shows none, since it has no session for the
+reload to end. The banner's look is a working placeholder, and the UI
+message banners tech-debt story takes up the pattern. No test covers the
+banner staying across the loading state; that clause waits for Story 10.
 
 ---
 
 ### Story 8.5 — A dragged Stub's children read as off-limits
+**Plan:** [`story-8-5-traveling-rows-cue.md`](story-8-5-traveling-rows-cue.md)
+
 **Carried in from Story 6's hands-on** (PO, 2026-09-24).
 
 - **What's there.** The guards are right: a picked-up Stub's descendants
