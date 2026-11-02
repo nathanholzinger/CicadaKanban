@@ -636,6 +636,26 @@ tests rather than carrying its coverage verdicts forward unchanged.
   The non-reproducing failure doesn't establish either a fix or a
   reason to skip its tests.
 
+**Carried from Story 8.4 to Story 8's close-out — Test Reconciler.**
+- **DRAG-6.16, DRAG-6.17, DRAG-6.18, DRAG-6.19, DRAG-6.20,
+  DRAG-6.21 and DRAG-6.22, new, Open:** the cause-specific banner across
+  loading/reload, announcement, click/new-drag dismissal, parameterized
+  lifetime/fade, visible-item flash, no reveal of hidden items, and
+  no-cue exclusions. Assess the Coder's untagged hook/component tests
+  against the full cases, hand candidate ID stamps to the Coder, and
+  propose any internal mappings that need Nathan's approval. No mapping
+  is approved by this Planner handoff. In particular, the Coder reports
+  no test for the banner staying across the loading branch; hands-on
+  approval does not supply active automated coverage of that clause.
+- **DRAG-6.15:** its stop/no-write outcome and §10 reference remain;
+  its wording now names the failed-drop and stale-reindex resyncs that
+  can land mid-drag, rather than any board reload. Its existing status
+  and pointer are unchanged by the Planner. Assess the full existing
+  case separately from the new cue cases.
+- Remaining gesture-dependent coverage for these cases goes to Story
+  10's item 10 by ID. The final palette/style and the tuning panel are
+  not additional cases in this pass.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
@@ -777,9 +797,14 @@ If an earlier drop's write fails, or a stale response resyncs the board,
 while the user is dragging, the reload cancels the drag and nothing is
 written (wiki board-drag-interaction §10). Nathan wants a visual cue for
 that forced stop, so the drag's end doesn't read as the user's own slip.
-The wiki carries the cue as Planned, and its look under Open questions.
-This story designs the look and builds it, and the PO clears the marker
-once Nathan approves it.
+Nathan picked the banner on 2026-11-02, and the PO has written its
+behavior into §10 and cleared the Planned marker. Its final look stays
+a working placeholder under Open questions. The Planner has narrowed
+DRAG-6.15 to the resync paths that can interrupt a held drag, and added
+DRAG-6.16, DRAG-6.17, DRAG-6.18, DRAG-6.19, DRAG-6.20, DRAG-6.21 and
+DRAG-6.22 as Open for the cue's behavior. The close-out reconciliation
+above assesses existing tests; remaining drag-surface coverage is Story
+10's item 10. This entry does not mark the story signed off.
 
 ---
 
@@ -1267,6 +1292,10 @@ deferral and keep landing with their stories.
       pointers.
     - **From Story 8.3** (2026-10-29; its plan, Amendments, items 7, 8 and
       10):
+      - **DRAG-4.35:** final-row-crossing ghost/release agreement in the
+        Descendants section, including a carried subtree. Check the
+        close-out reconciliation's assessment of the existing hook test
+        before adding any missing surface assertions.
       - **Three specs its fix skipped.** The hook now names the ghost's
         neighbor from the row dnd-kit announces when the pointer stops
         (`onDragOver`), not only from the move event before it. Each spec
@@ -1290,6 +1319,16 @@ deferral and keep landing with their stories.
         seen once in Story 7 and once in Story 8.1. It hasn't failed since
         8.3's fix, in 80 runs of the modal-hold specs. If it fails again,
         trace it before item 8's call on it.
+
+    - **From Story 8.4** (2026-11-02, Test Planner): DRAG-6.16,
+      DRAG-6.17, DRAG-6.18, DRAG-6.19, DRAG-6.20, DRAG-6.21 and
+      DRAG-6.22 cover the forced-stop banner, its cause and announcement,
+      its dismissal and lifetime, the stopped item's flash, and the
+      no-reveal/no-cue boundaries. Story 8's close-out Reconciler checks
+      existing untagged tests and approval requirements first; fill only
+      the gaps that remain, including the banner across loading/reload.
+      DRAG-6.15 remains the separate stop/no-write case. No fixed tuned
+      duration or final visual design is required by these cases.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,

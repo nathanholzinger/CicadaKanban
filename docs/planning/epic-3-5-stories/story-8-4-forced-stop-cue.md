@@ -25,8 +25,16 @@ When a reload ends a drag the user is in the middle of, the board says so, so th
 
 ## Scope
 
-- **Wiki passages:** none ahead of the build, under code first. §10's Planned passage and its Open question are the PO's once Nathan approves a look (Living-docs handoff).
-- **Test-plan cases:** none ahead of the build. DRAG-6.15, the stop itself, is unchanged. The cue's cases are the Test Planner's once Nathan approves.
+- **Wiki passages:** board-drag-interaction §10. The PO has cleared the cue's Planned marker and narrowed the mid-drag reload rule to the resyncs that can land while an item drag is held. The final look remains a working placeholder under Open questions.
+- **Test-plan cases:**
+  - **DRAG-6.15:** the existing stop/no-write case, narrowed to the resync paths in §10; its section reference remains §10, since the PO reworded the rule in place.
+  - **DRAG-6.16, new, Open:** cause-specific banner across loading and reload, including a failed column save interrupting an item drag.
+  - **DRAG-6.17, new, Open:** announcement of the explanation to assistive tech.
+  - **DRAG-6.18, new, Open:** clicks do not dismiss; the next drag clears the cue.
+  - **DRAG-6.19, new, Open:** configured lifetime and last-quarter fade, with time as a parameter.
+  - **DRAG-6.20, new, Open:** the stopped item flashes at its reloaded place when drawn.
+  - **DRAG-6.21, new, Open:** a hidden stopped item stays hidden, without reveal or scrolling for the flash.
+  - **DRAG-6.22, new, Open:** no cue for cancels, no-write releases, or resyncs with no item drag running.
 
 ## Inbound deferrals
 
@@ -134,6 +142,18 @@ Filled in by the Coder while building.
 10. **`forcedStopLook` is gone from the tuning.** A stored override that still holds the key is ignored, since the merge reads only the defaults' keys.
 11. **The trigger stays** (D5), with the flash toggle and the cue-time field.
 
+**2026-11-02, the wiki (PO)**
+- **Written from the handoff,** with Nathan's pick of the banner. Board-drag-interaction §10: the Planned passage is now the cue's rule (banner, wording by cause, about 5 seconds with a fade, ends at the next drag's start, announced, the flash, and which stops show none). Open questions, "The look of the drag's cues": the cue is a working placeholder, so the "no placeholder" sentence is gone. No section was added, moved or removed.
+- **Deduced (PO), for Nathan to overrule:** the look is the placeholder, and the cue's behavior is the rule. The flash and the click not dismissing the banner are rules too, since Nathan named no change to them. The banner's text is the handoff's, verbatim.
+- **Ruled (Nathan, 2026-11-02):** narrow §10's stop rule to the two resyncs, since the other reloads (Amendment 5) can't land mid-drag. §10's "A reload that lands mid-drag stops the drag" no longer says "whatever caused it" or "any other reload", and says why none lands. The cue covers those two resyncs.
+
+**2026-11-02, Test Planner's handoff pass**
+- Reviewed this story, Story 8.3 and the recent wiki changes. Story 8.3's section row-crossing rule is already covered by DRAG-4.35, with DRAG-7.15, DRAG-7.16 and DRAG-7.17 keeping their distinct modal meanings. No further case wording is required there, and its three skipped specs and watch item remain queued in the roadmap.
+- Added DRAG-6.16 through DRAG-6.22 from the settled §10 cue rule. The cases cover behavior, with no final visual-design case derived from Open questions, no tuning-panel case, and no fixed five-second assertion. DRAG-6.19 checks lifecycle logic with the configured lifetime as a parameter.
+- Updated DRAG-6.15 to remove "whatever caused the reload" and the claim that any board reload proves the case. It still tests the same stop/no-write outcome, and still cites §10. The PO moved no section; no replacement section number is needed.
+- No tests were read, written or run in this Planner pass. Existing Automated statuses and automation pointers are unchanged. The new cases are Open with no claimed mapping; the Coder/Reconciler assess the handoff's existing hook/component tests for ID stamps, full-Then coverage and any required internal-mapping approval. The across-loading assertion is an explicit remaining gap in the Coder's handoff, not a coverage claim from the successful hands-on.
+- The new IDs are carried to Story 8's close-out reconciliation and Story 10's item 10 in the roadmap. No new Playwright drag spec is requested during Story 8; any remaining gesture-dependent coverage is Story 10's.
+
 ## Open questions
 
 - **For Nathan:** if the look you pick is good enough for now but not final, the PO records it as a working placeholder under §10's Open questions, and the cues' final-look story (roadmap, Story 8, "The cues' final look") takes it up. Otherwise it's a rule, and the Open question comes off.
@@ -151,5 +171,5 @@ Filled in by the Coder while building.
 - **Planned passages now built:** wiki board-drag-interaction §10, "a drag the board stops shows a cue that says so". The PO clears the marker, and the look comes out of Open questions (or stays as a working placeholder; Open questions, For Nathan).
 - **Passages superseded:** none expected.
 - **Implementation passages to place:** none expected.
-- **Test-plan cases affected:** a case for the cue, the Test Planner's, beside DRAG-6.15. Its surface spec, a reload landing mid-drag with the cue shown, is a drag spec, so it waits for Story 10. The hook and component tests are internal; the Reconciler proposes them.
+- **Test-plan cases affected:** DRAG-6.15 is narrowed to the resyncs now named in §10. The cue is catalogued as DRAG-6.16, DRAG-6.17, DRAG-6.18, DRAG-6.19, DRAG-6.20, DRAG-6.21 and DRAG-6.22, all Open. The Coder/Reconciler assess existing untagged tests against the separate cases and required approval rules; no mapping is implied by this handoff. The whole reload/cue surface path waits for Story 10 under the no-new-drag-spec rule, and the roadmap carries the IDs through Story 8 close-out.
 - **For the Architect, at close:** Story 8.4's roadmap heading gets its ✅ and a status line. Story 10's item 10 gains the cue's surface spec, if the Test Planner writes a case for it.

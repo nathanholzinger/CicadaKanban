@@ -1,6 +1,6 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.16
+**Next ID:** DRAG-6.23
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
@@ -19,6 +19,13 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
 | DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Automated |
+| DRAG-6.16 | A forced stop shows its cause in a banner that stays across the reload | P1 | Open |
+| DRAG-6.17 | Assistive tech announces the forced-stop explanation | P1 | Open |
+| DRAG-6.18 | A click leaves the cue up; starting the next drag clears it | P1 | Open |
+| DRAG-6.19 | The cue expires at its configured lifetime, with the last quarter a fade | P1 | Open |
+| DRAG-6.20 | The stopped item flashes wherever the reloaded board draws it | P1 | Open |
+| DRAG-6.21 | A hidden stopped item is not revealed for its flash | P1 | Open |
+| DRAG-6.22 | Cancels, no-write releases and resyncs without an item drag show no stop cue | P1 | Open |
 
 ---
 
@@ -122,6 +129,76 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 **Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
 
-*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag, whatever caused the reload, *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. The resync after another item's failed drop ([DRAG-6.6](drag-6-preview-reconciliation.md)) and the one after a stale response carrying reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)) are two such reloads; a test of any reload the board makes asserts the case.
+*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag because another item's earlier drop failed ([DRAG-6.6](drag-6-preview-reconciliation.md)), or because a stale response carries reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)), *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. These are the resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios.
 
 **Automation test:** `client/src/components/workflow/useBoardDnd.test.ts`
+
+## DRAG-6.16 — A forced stop shows its cause in a banner that stays across the reload
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* item `X` is being dragged when a resync stops it, *when* the stop occurs, *then* a banner appears along the window's top edge with the explanation for its cause:
+
+- after an earlier item move or column save failed: “Your last move didn’t save, so the board reloaded. Nothing moved.”;
+- after a stale response carrying reindex pairs triggers a refresh: “The board refreshed, which stopped your drag. Nothing moved.”
+
+The banner is visible over “Loading board…” and remains over the reloaded board, without being cleared by either transition. This holds for an item dragged in a column/sub-row, in a Card's descendants section, or in the hierarchy modal. The cause is the write or response that forced the resync, not a failure of the interrupted drag to save: that drag writes nothing ([DRAG-6.15](drag-6-preview-reconciliation.md)).
+
+**Automation test:** —
+
+## DRAG-6.17 — Assistive tech announces the forced-stop explanation
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* no forced-stop cue is showing, *when* a live item drag is stopped by either cause in [DRAG-6.16](drag-6-preview-reconciliation.md), *then* assistive tech announces that cause's full explanation without the user moving focus to the banner. The loading transition does not lose the announcement or substitute the other cause's explanation.
+
+**Automation test:** —
+
+## DRAG-6.18 — A click leaves the cue up; starting the next drag clears it
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* a forced-stop banner is showing, the board has reloaded, and the cue's lifetime has not expired, *when* the user clicks the banner or elsewhere on the board without starting a drag, *then* the banner remains, with the same explanation. *When* the user starts the next drag before that lifetime expires, *then* the explanation disappears at pickup, rather than remaining over the new gesture. This holds when the next drag starts during the fully visible part of the cue or during its fade.
+
+**Automation test:** —
+
+## DRAG-6.19 — The cue expires at its configured lifetime, with the last quarter a fade
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* a forced-stop cue with a positive configured lifetime `T`, *when* no new drag starts, *then* the banner remains fully visible for the first three quarters of `T`, fades during the last quarter, and is gone when `T` expires. Completing the board reload does not restart its lifetime. The same lifecycle holds for both cause explanations in [DRAG-6.16](drag-6-preview-reconciliation.md).
+
+This case asserts the lifecycle using `T` as a parameter, not whether today's tuned duration feels right. It pins neither a fixed millisecond duration nor the banner's final palette or styling.
+
+**Automation test:** —
+
+## DRAG-6.20 — The stopped item flashes wherever the reloaded board draws it
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* `X` is the item being dragged when a resync stops the drag, and the reloaded board draws `X`, *when* it appears at its server-saved place, *then* `X`'s row flashes with two amber pulses. This holds when `X` is drawn as a Free Card, as a Stub in an expanded descendants section, or as a row in an open hierarchy modal. If the reload moved `X` relative to the interrupted drag's pickup, the flash follows the reloaded place. It identifies `X`, not the item whose earlier failed write or stale response caused the resync, and does not change either item's saved placement.
+
+**Automation test:** —
+
+## DRAG-6.21 — A hidden stopped item is not revealed for its flash
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* `X` is stopped mid-drag, *when* the reloaded board does not draw `X` because it lies inside a collapsed descendants section, past an overflow row, or in a closed hierarchy modal, *then* there is no flash for `X` and no substitute item flashes. The section stays collapsed, the overflow row does not open the hidden subtree, the modal stays closed, and neither the board nor a list scrolls to reveal `X`. The forced-stop banner still gives the explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
+
+**Automation test:** —
+
+## DRAG-6.22 — Cancels, no-write releases and resyncs without an item drag show no stop cue
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* no forced-stop cue is showing, *when* any of the following happens, *then* no forced-stop banner or announcement appears, and no item receives the forced-stop flash:
+
+- the user ends an item drag with Escape or another cancel;
+- the user releases where the drag writes nothing, such as nowhere or a Stub's original gap and depth;
+- an earlier failed drop or stale response resyncs the board with no item drag running, including when the preceding drag has already been released or cancelled;
+- a column is being dragged, with no item drag running, when a resync lands.
+
+An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
+
+**Automation test:** —

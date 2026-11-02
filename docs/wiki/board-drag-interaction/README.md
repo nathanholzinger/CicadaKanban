@@ -968,21 +968,43 @@ resyncs the board from the server. §3.2 should make this nearly
 unreachable — an invalid target shouldn't have been poppable — so a
 rejection arriving at all means the two enforcement points have drifted.
 
-**A reload that lands mid-drag stops the drag, whatever caused it.**
-Either resync above, a failed drop's or a stale response's, can land
-while the user is dragging an item, and so can any other reload of the
-board. The drag ends at once and nothing is written. The item
-is wherever the reloaded board shows it, which is where the server has
-it and may not be where the drag picked it up. A reload is the path for
-when something has gone wrong, and picking the item up again costs
-little. Why not keep the drag going on the reloaded board: the reload can
+**A reload that lands mid-drag stops the drag.** Either resync above,
+a failed drop's or a stale response's, can land while the user is
+dragging an item. The other reloads of the board, such as the workphase
+and column editors' and a board switch, need a click, which a held drag
+can't make, so none lands mid-drag. The drag ends at once and nothing
+is written. The item is wherever the reloaded board shows it, which is
+where the server has it and may not be where the drag picked it up. A
+reload is the path for when something has gone wrong, and picking the
+item up again costs little. Why not keep the drag going on the reloaded board: the reload can
 move or remove what the drag is locked into, such as a Card the failed
 drop had put in this column, and the release would then land somewhere
 the user never saw.
 
-**Planned:** a drag the board stops shows a cue that says so, so the
-drag's end doesn't read as a slip of the user's hand. Its look isn't a
-rule yet (Open questions).
+**A drag the board stops shows a cue that says so,** so the drag's end
+doesn't read as a slip of the user's hand. Either resync above shows it.
+- **It's a banner along the window's top edge,** over the board and over
+  the "Loading board…" that replaces it, and it stays up across the
+  reload. Its look is a working placeholder (Open questions).
+- **It says why, by cause.** A failed write also undid the drop before
+  it, which the user may not have noticed, so its text says the board
+  reloaded:
+  - a failed write: "Your last move didn’t save, so the board reloaded.
+    Nothing moved.";
+  - a stale response's refresh: "The board refreshed, which stopped your
+    drag. Nothing moved."
+- **It goes after about 5 seconds** (tunable), the last quarter a fade,
+  **or at the next drag's start,** whichever comes first. A click doesn't
+  dismiss it.
+- **Assistive tech reads it out** when it appears.
+- **The item that was being dragged flashes** where the reloaded board
+  draws it: two amber pulses, about 1.4 seconds in all, so the user sees
+  where it went. An item the board doesn't draw there, such as one inside
+  a collapsed section, past an overflow row or in a closed modal, gets no
+  flash, and nothing is scrolled or opened to reveal it.
+- **No cue shows for Escape, any other cancel, a release that writes
+  nothing, or a failed drop with no drag running.** Nothing was in the
+  user's hand to stop, and that resync stays silent.
 
 **The placement a release implies is shown at the moment of release**,
 before the request is even sent, so the board never shows its pre-drop
@@ -1027,8 +1049,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   highlight of its own), the zoom-in cue (§6.1) and the invalid tab-state cue
   (§3.2, §7.2) each have a working placeholder; their final palette,
   weight and animation are best tuned against real gestures rather than
-  guessed up front. The cue for a drag a reload stops (§10) has no
-  placeholder. The cue of the hold that opens the hierarchy modal
+  guessed up front. So does the cue for a drag a reload stops (§10),
+  today an amber banner with centered text, and an amber flash on the
+  item. The cue of the hold that opens the hierarchy modal
   (§7.3) borrows the zoom-in cue's look, drawn on the overflow row.
   Today's zoom-in cue is a dashed blue outline and a thin bar along the
   card's inside bottom edge, filling left to right. The fuller
