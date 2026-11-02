@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.4 — A cue when the board stops a drag
 
-**Type:** story · **Written:** 2026-10-29 by the Architect, from Nathan's ask of 2026-09-30 (A4's PO handoff) · **Status:** Phase 1 built, for review
+**Type:** story · **Written:** 2026-10-29 by the Architect, from Nathan's ask of 2026-09-30 (A4's PO handoff) · **Status:** Phases 1–3 built, for review and commit
 
 ## Goal
 
@@ -103,15 +103,15 @@ Filled in by the Coder while building.
 
 | Symbol | Carries |
 |---|---|
-| `workflow/forcedStop.ts` | `StopCause`, `ForcedStop` (cause, pointer point, item), the wording by cause, `stopLookOf`, `ArmedStop` |
+| `workflow/forcedStop.ts` | `StopCause`, `ForcedStop` (cause, item), the wording by cause, `ArmedStop` |
 | `useBoardDnd.ts::resyncBoard(cause)` | Ends a live item drag as Escape would, reports it once to `onDragStopped`, then reloads. The column path passes `() => resyncBoard('write-failed')`, so `onColumnDrop` is unchanged |
 | `dragRequest.ts::sendItemMove` | Its last argument is now `resync(cause)`: `'write-failed'` for a rejected move, `'refresh'` for a stale response that disclosed a reindex |
 | `useBoardDnd.ts` armed-stop effect | The panel's trigger: with `armedStop` set, the next item drag calls `resyncBoard(cause)` `afterMs` after it starts, then `disarmStop`. A drag released first leaves it armed |
 | `workflow/useForcedStop.ts` | The stop held in `BoardView` until `forcedStopCueMs` passes; `clear()` at the next drag's start |
-| `ForcedStopCue.tsx` | The cue: one always-mounted `role="status"` element, a banner (A) or a note at the pointer (B), with a fade timed to the cue's time |
+| `ForcedStopCue.tsx` | The cue: one always-mounted `role="status"` element holding the banner along the window's top edge, with a fade timed to the cue's time |
 | `workflow/ForcedStopContext.ts`, `dragChrome.tsx::useItemRow` | The flash: the stopped item's row gets `forced-stop-flash` (`index.css`) |
-| `dragTuning.ts` | `forcedStopCueMs` (5000), `forcedStopLook` (`'banner'`), `forcedStopFlash` (true) |
-| `DragTuningPanel.tsx` | The look switch, the flash toggle, the cue time, and the trigger (cause, seconds, Arm/Disarm) |
+| `dragTuning.ts` | `forcedStopCueMs` (5000), `forcedStopFlash` (true) |
+| `DragTuningPanel.tsx` | The flash toggle, the cue time, and the trigger (cause, seconds, Arm/Disarm) |
 
 ## Amendments
 
@@ -119,11 +119,20 @@ Filled in by the Coder while building.
 
 1. **`onDragStopped` carries the item too.** D2 named `(cause, point)`. The flash needs the dragged item's id, so the stop is `{ cause, point, itemId }`.
 2. **The cue is `fixed`, in both looks,** and sits as the first child of every branch `BoardView` returns (loading, no board, loaded), so one element stays mounted across the reload and no layout shifts. The banner runs along the window's top edge, not the board's own. If Nathan wants it in the board's own column, that is a layout change to pick at the hands-on.
-3. **A note without a pointer shows as the banner.** The pointer is always known for a real drag; this only guards the type.
+3. **A note without a pointer shows as the banner.** The pointer is always known for a real drag; this only guards the type. Gone with the note (8).
 4. **The armed stop is `BoardView` state, not tuning,** so it is not stored and a reload does not re-arm it. The panel's own cause and seconds inputs reset when the board reloads, since the panel unmounts with it.
 5. **A column drag stopped by a reload shows no cue.** A column drag has no session (`handleDragStart` returns for it), so `resyncBoard` has nothing to end and reports nothing. Only an item drag live when a failed column save lands is stopped and reported, as D1 says. The wiki's "any other reload" (§10) is not covered either: the workphase and column editors' reloads and the board-switch load call `loadBoard` directly, and each needs a click a held drag can't make. For the PO: §10 says any reload stops the drag; in the code only the reloads the drag layer asks for do.
 6. **The flash is two amber pulses,** on whatever rows draw the item on the reloaded board (a Card, a Stub row, a modal row). An item the board does not draw (inside a collapsed section, past an overflow row, in a closed modal) gets none, and nothing is scrolled or expanded to reveal it.
 7. **Tests:** the hook's, beside DRAG-6.15's (five cases: a failed write mid-drag reports once with its cause and point; an armed stop reports `'refresh'` and spends the arm; Escape, a release that writes nothing, and a drag released before the arm fires report nothing; the existing no-drag case now also asserts nothing is reported). The three that report were shown failing with the report removed; the three that don't, with a report added to a reload with no drag and to `handleDragCancel`. `sendItemMove`'s tests now assert the cause. `ForcedStopCue` and `useForcedStop` have component and hook tests (each cause's wording, the status element empty with no stop, banner and note, the fallback, the time, the clear). None carries a test-plan case ID; they are the Test Planner's to place. **Not covered by a test:** that the cue stays mounted across the loading branch. `BoardView` has no test, and a stop can only be caused through a real drag, which a drag spec would do and none may be added; the Fragment gives it the same place in all three branches, and the hands-on is where it is seen.
+
+**Phase 2, done.** Nathan picked the banner (A), its styling fine for now, and found the hands-on good (2026-11-02). He named no change to the flash, the time or the wording, so the Phase 1 defaults stand. The banner's look and placement are the first input to the UI message banners tech-debt story (`../tech-debt-stories/ui-message-banners.md`), a stub.
+
+**Phase 3, built.**
+
+8. **The note (B) and the look switch are gone,** with their tests (the note's placement, the fallback to the banner, the look-switch case). Amendments 1 and 7 describe Phase 1 as built: the hook cases there now report `{ cause, itemId }` (9), and the cue's tests are the empty status element, each cause's wording, and the fade timed to the cue time.
+9. **The stop no longer carries the pointer's point.** Only the note used it, so `ForcedStop` is `{ cause, itemId }`, and `resyncBoard` no longer reads `pointerRef` for it. This drops the "and point" half of D2's `(cause, point)`. The two hook cases that reported a point now report the cause and the item.
+10. **`forcedStopLook` is gone from the tuning.** A stored override that still holds the key is ignored, since the merge reads only the defaults' keys.
+11. **The trigger stays** (D5), with the flash toggle and the cue-time field.
 
 ## Open questions
 
@@ -131,7 +140,14 @@ Filled in by the Coder while building.
 
 ## Living-docs handoff
 
-- **Behavior decisions made while building, for the PO to rule on:** filled in by the Coder, in Phase 3: the look, the wording by cause, the time, and what ends the cue early.
+- **Behavior decisions made while building, for the PO to rule on** (Nathan approved the look hands-on, 2026-11-02):
+  - **The look:** a banner along the window's top edge, amber, centered text, over the board and the loading state. Nathan called its styling fine for now, so it is a working placeholder (Open questions, For Nathan), and the tech-debt story `ui-message-banners.md` takes up the pattern.
+  - **The wording, by cause:** a write that failed, "Your last move didn’t save, so the board reloaded. Nothing moved."; a refresh, "The board refreshed, which stopped your drag. Nothing moved."
+  - **The time:** 5 seconds (`forcedStopCueMs`), a tuning value in the panel, with the last quarter a fade.
+  - **What ends it early:** the next drag's start. Nothing else does, including the user's click.
+  - **The flash:** the dragged item's row pulses amber twice (1.4 s) wherever the reloaded board draws it, and not at all if the board does not draw it (collapsed section, overflow, closed modal; Amendment 6). Nathan did not ask to drop it.
+  - **Which stops show it:** an item drag ended by a reload the drag layer asked for, a failed move, a failed column save landing mid-drag, or a stale response. A column drag, and the reloads from the workphase and column editors, show none (Amendment 5).
+  - **Its announcement:** the status element is always mounted and read out by assistive tech when the text lands.
 - **Planned passages now built:** wiki board-drag-interaction §10, "a drag the board stops shows a cue that says so". The PO clears the marker, and the look comes out of Open questions (or stays as a working placeholder; Open questions, For Nathan).
 - **Passages superseded:** none expected.
 - **Implementation passages to place:** none expected.

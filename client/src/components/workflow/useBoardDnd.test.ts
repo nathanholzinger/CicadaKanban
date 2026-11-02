@@ -298,7 +298,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     return { deps, failSave };
   }
 
-  it('is reported once, with the cause and where the pointer last was, when a failed write reloads the board mid-drag', async () => {
+  it('is reported once, with the cause, when a failed write reloads the board mid-drag', async () => {
     const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
     let reorder!: Promise<void>;
@@ -306,20 +306,13 @@ describe('useBoardDnd: a drag the board stops', () => {
       reorder = result.current.handleDragEnd(columnDrop);
     });
     act(() => result.current.handleDragStart(itemPickup));
-    act(() => {
-      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 40, clientY: 60 }));
-    });
 
     await act(async () => {
       failSave();
       await reorder;
     });
 
-    expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({
-      cause: 'write-failed',
-      point: { x: 40, y: 60 },
-      itemId: 'x',
-    });
+    expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'write-failed', itemId: 'x' });
   });
 
   it('is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
@@ -337,11 +330,7 @@ describe('useBoardDnd: a drag the board stops', () => {
         vi.advanceTimersByTime(1);
       });
 
-      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({
-        cause: 'refresh',
-        point: { x: 5, y: 5 },
-        itemId: 'x',
-      });
+      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'refresh', itemId: 'x' });
       expect(deps.disarmStop).toHaveBeenCalledOnce();
       expect(deps.loadBoard).toHaveBeenCalledOnce();
       expect(result.current.session).toBeNull();

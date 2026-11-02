@@ -749,14 +749,13 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // re-add its ghost into the reloaded board. So every reload this hook asks
   // for ends a live drag first, the way Escape would
   // (wiki board-drag-interaction §10). A drag it ends is reported once, with the cause the
-  // caller gives and where the pointer last was, for the cue that says the board stopped it; a
-  // reload with no drag running reports nothing.
+  // caller gives, for the cue that says the board stopped it; a reload with no drag running
+  // reports nothing.
   function resyncBoard(cause: StopCause) {
     const current = sessionRef.current;
     if (current) {
-      const point = pointerRef.current;
       handleDragCancel();
-      latest.current.onDragStopped({ cause, point, itemId: current.activeItem.id });
+      latest.current.onDragStopped({ cause, itemId: current.activeItem.id });
     }
     return latest.current.loadBoard();
   }

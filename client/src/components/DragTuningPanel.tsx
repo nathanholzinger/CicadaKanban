@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { BTN_CANCEL, INPUT_BASE, SECTION_LABEL } from './item-detail/pillUtils';
 import { DEFAULT_DRAG_TUNING, type DragTuning } from './workflow/dragTuning';
-import { stopLookOf, type ArmedStop, type StopCause } from './workflow/forcedStop';
+import type { ArmedStop, StopCause } from './workflow/forcedStop';
 import type { DragSession } from './workflow/DragSessionContext';
 import { popState } from './workflow/popSession';
 import type { Inversion } from './workflow/itemWriteReconciliation';
@@ -125,18 +125,6 @@ export default function DragTuningPanel({
         <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Stopped-drag cue</h4>
-        <label className={FIELD_LABEL}>
-          Look
-          <select
-            value={stopLookOf(tuning.forcedStopLook)}
-            aria-label="Stopped-drag cue look"
-            onChange={e => onChange({ ...tuning, forcedStopLook: e.target.value })}
-            className={`${INPUT_BASE} w-40`}
-          >
-            <option value="banner">A: banner</option>
-            <option value="note">B: note at the pointer</option>
-          </select>
-        </label>
         <label className={FIELD_LABEL}>
           Flash the dragged item
           <input

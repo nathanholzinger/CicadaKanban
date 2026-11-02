@@ -18,7 +18,7 @@
   }
 }
 
-/* Candidate looks for the cue a drag the board stopped shows
+/* The cue a drag the board stopped shows
    (ForcedStopCue.tsx, dragChrome.tsx). The flash is two amber pulses on the
    row of the item that was being dragged; the fade holds the cue at full
    strength for most of its time (animation-duration is the cue's tuning

@@ -165,7 +165,7 @@ The hooks and contexts that run it:
   plumbing. A column dropped on another goes to `useColumnManagement.ts::onColumnDrop`,
   which is handed `resyncBoard` to call if the save fails, so that a live item drag ends
   before the reload. A drag `resyncBoard` ends is reported once to `onDragStopped`
-  (`forcedStop.ts::ForcedStop`: the cause, the pointer's last point, the item), for the
+  (`forcedStop.ts::ForcedStop`: the cause and the item), for the
   cue `ForcedStopCue.tsx` draws. `BoardView.tsx` holds it (`useForcedStop.ts`), above
   the reload, which unmounts everything below.
 - `ForcedStopContext.ts` — which item a stopped drag was on, for its row to flash.

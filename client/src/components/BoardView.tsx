@@ -24,7 +24,7 @@ import { DragSessionContext, PlacementsContext } from './workflow/DragSessionCon
 import { loadDragTuning, saveDragTuning, type DragTuning } from './workflow/dragTuning';
 import { DragTuningContext } from './workflow/DragTuningContext';
 import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
-import { stopLookOf, type ArmedStop } from './workflow/forcedStop';
+import type { ArmedStop } from './workflow/forcedStop';
 import { useForcedStop } from './workflow/useForcedStop';
 import ForcedStopCue from './ForcedStopCue';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
@@ -274,13 +274,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // The same element in every branch below, so it stays mounted across the reload.
-  const cue = (
-    <ForcedStopCue
-      stop={forcedStop.stop}
-      look={stopLookOf(dragTuning.forcedStopLook)}
-      cueMs={dragTuning.forcedStopCueMs}
-    />
-  );
+  const cue = <ForcedStopCue stop={forcedStop.stop} cueMs={dragTuning.forcedStopCueMs} />;
 
   if (loading) {
     return (

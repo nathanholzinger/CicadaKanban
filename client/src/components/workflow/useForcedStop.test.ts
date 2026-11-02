@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import type { ForcedStop } from './forcedStop';
 import { useForcedStop } from './useForcedStop';
 
-const stop: ForcedStop = { cause: 'write-failed', point: { x: 1, y: 2 }, itemId: 'x' };
+const stop: ForcedStop = { cause: 'write-failed', itemId: 'x' };
 
 describe('useForcedStop', () => {
   beforeEach(() => vi.useFakeTimers());

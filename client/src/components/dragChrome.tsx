@@ -54,7 +54,7 @@ const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
 // `data-pending`.
 const PENDING = 'animate-pulse';
 // The item a drag was stopped on, drawn on the reloaded board so the user sees where it went
-// (`index.css::forced-stop-flash`). A candidate look, switched in the dev/test panel.
+// (`index.css::forced-stop-flash`). Switched in the dev/test panel.
 const STOP_FLASH = 'forced-stop-flash';
 
 function dropTargetClass(view: DropTargetView | null): string {

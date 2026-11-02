@@ -70,8 +70,6 @@ export interface DragTuning {
   activeContextOutlineColor: string;
   /** How long the cue for a drag the board stopped stays up (`useForcedStop.ts`), unless the next drag starts first. */
   forcedStopCueMs: number;
-  /** Which candidate look the cue draws: `'banner'` along the top edge, or `'note'` at the pointer (`forcedStop.ts::stopLookOf`). */
-  forcedStopLook: string;
   /** Whether the item that was being dragged flashes where the reloaded board draws it. */
   forcedStopFlash: boolean;
 }
@@ -90,7 +88,6 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   overlayDepthCappedOpacity: 0.4,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
   forcedStopCueMs: 5000,
-  forcedStopLook: 'banner',
   forcedStopFlash: true,
 };
 
