@@ -741,27 +741,31 @@ tests rather than carrying its coverage verdicts forward unchanged.
   Story 10's item 10 by ID. No new drag spec is requested during Story 8.
 
 **Carried from Story 8.9 — Planner follow-up after the PO's rulings.**
-- **For the confirming and umbrella close-out Reconciler:** review new
-  Open DRAG-6.25, DRAG-6.27, DRAG-6.28, TREE-1.14, TREE-1.15,
-  TREE-1.16 and TREE-10.13. They cover column stop/no write, the flash
-  window and late reveal, pickup subtree membership and height across
-  responses, and owned/ownerless workflow deletion without deleting
-  items. Story 8.9's Amendment 7 names the candidate tests. Check full
-  Then clauses and ID stamps, and obtain any new internal mapping
-  approvals; earlier approvals do not automatically cover new cases.
+- **For the umbrella close-out Reconciler:** review Open DRAG-6.25,
+  DRAG-6.27, DRAG-6.28, TREE-1.14, TREE-1.15 and TREE-1.16. They cover
+  column stop/no write, the flash window and late reveal, and pickup
+  subtree membership and height across responses. Story 8.9's
+  confirming reconciliation
+  ([`test-reconciliation-story-8-9-follow-up.md`](../../archive/test-reconciliation-story-8-9-follow-up.md))
+  maps their candidate tests and remaining clauses. Nathan approved
+  partial stamps for DRAG-6.20, DRAG-6.27, DRAG-6.22 and TREE-1.14/1.15
+  (2026-11-04), which Story 8.9 landed. Check full Then clauses and ID
+  stamps, and obtain any new internal mapping approvals; earlier
+  approvals do not automatically cover new cases. TREE-10.12 and
+  TREE-10.13 closed in Story 8.9.
 - DRAG-6.15, DRAG-6.16 and DRAG-6.17 now explicitly cover the third
   resync, a failed column reorder; DRAG-6.21 and DRAG-6.22 clarify hidden
   rows and resyncs with no live drag. TREE-10.12 now includes an omitted
   or null required owner. Re-check the revised text before declaring
   coverage. TREE-2.6 remains the separate tier-lifetime case.
-- DRAG-5.16's stamp does not prove its after-`Q` release; Amendment 5
-  sends that clause to Story 10's item 10. Carry the other remaining
-  drag automation there by ID after reconciliation. TREE-10.13 is
-  server coverage for the current follow-up, not Story 10.
-- **For the Architect:** route the unbuilt column-stop banner,
-  DRAG-6.26 (Planned, wiki board-drag-interaction §10). Its delivery is
-  separate from automation catch-up. When built, the Planner removes
-  DRAG-6.22's column/no-cue clause and changes DRAG-6.26 to Open.
+- DRAG-5.16's stamp does not prove its after-`Q` release. That clause
+  is in Story 10's item 10, by ID, with the other remaining drag
+  automation.
+- **The unbuilt column-stop banner,** DRAG-6.26 (Planned, wiki
+  board-drag-interaction §10), is routed to Story 10's item 11 (Nathan,
+  2026-11-04). Its delivery is separate from automation catch-up. When
+  built, the Planner removes DRAG-6.22's column/no-cue clause and
+  changes DRAG-6.26 to Open.
 - The cap-loading interval and hidden-row tier tests remain
   uncatalogued by the PO's explicit ruling.
 
@@ -1001,8 +1005,8 @@ code; its trace is Story 10's item 8.
 
 ---
 
-### Story 8.7 — The project sidebar's drag cues match the board's
-**Plan:** [`story-8-7-sidebar-drag-tiers.md`](story-8-7-sidebar-drag-tiers.md)
+### Story 8.7 — The project sidebar's drag cues match the board's ✅ (done 2026-11-04)
+**Plan / record:** [`story-8-7-sidebar-drag-tiers.md`](../../archive/story-8-7-sidebar-drag-tiers.md)
 
 **Found with Story 8.5** (Nathan, 2026-11-03). A project drag takes Story
 8.5's two strengths, on the same rule as the board's Stub rows:
@@ -1013,8 +1017,9 @@ code; its trace is Story 10's item 8.
   dragged one.
 - **The dragged row's own dim** stays a value of its own, as on the board.
 
-**Built; Planner handoff applied 2026-11-04.** Nathan approved the
-sidebar's tiers. Hierarchy-placement §7 now owns the shared tier rule;
+**Status: done 2026-11-04.** Story 8's mid-point audit and
+reconciliation covered it, and Story 8.9 landed their fixes. Nathan
+approved the sidebar's tiers. Hierarchy-placement §7 now owns the shared tier rule;
 project-tree §2 names the sidebar's values and board-drag-interaction
 §4.1 keeps the board's handling. TREE-2.1 is qualified to the shallow
 fixture and the separate dragged-row strength. New TREE-2.4, TREE-2.5,
@@ -1025,24 +1030,26 @@ existing over-cap behavior and collapsed-project rules are unchanged.
 
 ---
 
-### Story 8.9 — The mid-Story 8 audit's fixes
-**Plan:** [`story-8-9-mid-story-8-audit-fixes.md`](story-8-9-mid-story-8-audit-fixes.md)
+### Story 8.9 — The mid-Story 8 audit's fixes ✅ (done 2026-11-04)
+**Plan / record:** [`story-8-9-mid-story-8-audit-fixes.md`](../../archive/story-8-9-mid-story-8-audit-fixes.md)
 
-**Runs next, before Story 8.8.** Story 8's mid-point code quality audit
+**Ran before Story 8.8.** Story 8's mid-point code quality audit
 (Stories 8.3–8.7) and test reconciliation (Stories 8.2–8.7), both
 2026-11-04, left work for the Coder. This story lands:
 - the audit's Fix Now, #1–#11;
 - the optional findings in the files those fixes change;
 - the reconciliation's stamps and test fixes.
 
-The audit closes at this story's close. It's numbered after 8.8, which
-was written first, but it runs first.
+It's numbered after 8.8, which was written first, but it ran first.
 
-**Planner follow-up applied 2026-11-04.** The PO's new rules have cases;
-the carry-forward block above and the plan's Amendment 7 name the next
-Reconciler checks. DRAG-6.26 records the still-Planned stopped-column
-banner for the Architect to route. The current built column stop has
-no cue, and no automation work is taken as delivery of that banner.
+**Status: done 2026-11-04.** All eleven Fix Now findings are fixed,
+and the audit is closed. Two follow-up Reconciler runs closed DRAG-2.11,
+TREE-10.12 and TREE-10.13. The other stamped cases stay `Open`, routed
+to Story 10's item 10 by ID. The PO's rulings added cases, which the
+carry block above names. DRAG-6.26, the stopped column drag's banner,
+is still Planned, and is built in Story 10's item 11. Today's column
+stop has no cue, and no automation work counts as delivering that
+banner.
 
 ---
 
@@ -1634,10 +1641,9 @@ deferral and keep landing with their stories.
       response). Re-check revised DRAG-6.15, DRAG-6.16, DRAG-6.17,
       DRAG-6.21 and DRAG-6.22 against the three resyncs. DRAG-5.16's
       stamped spec does not drive the after-`Q` release, so that final
-      placement clause is explicitly carried here. TREE-10.13's server
-      coverage remains in Story 8.9's follow-up; DRAG-6.26 is Planned
-      product work for the Architect to route, not an automation-only
-      gap in this item.
+      placement clause is explicitly carried here. TREE-10.13 closed in
+      Story 8.9. DRAG-6.26 is Planned product work, built in item 11,
+      not an automation-only gap in this item.
 
     - **From Story 8's mid-point reconciliation** (2026-11-04, Stories
       8.2–8.7). Story 8.9 stamps the tests it found, and these three are
@@ -1649,12 +1655,37 @@ deferral and keep landing with their stories.
       - **DRAG-6.15:** a stale response carrying reindex pairs that
         lands mid-drag. No test drives it.
 
-      The report is archived at Story 8.9's close. Its Coverage Mapping
-      gives what each case in this item still misses.
+      **What each case in this item still misses** is in Story 8.9's
+      confirming reconciliation, its "Full-case decisions and remaining
+      clauses" table
+      ([`test-reconciliation-story-8-9-follow-up.md`](../../archive/test-reconciliation-story-8-9-follow-up.md)).
+      It supersedes the first report's Coverage Mapping. For DRAG-6.20,
+      DRAG-6.27, TREE-1.14 and TREE-1.15, the final run's table
+      ([`test-reconciliation-story-8-9-final.md`](../../archive/test-reconciliation-story-8-9-final.md))
+      is the later word.
+
+11. **Built here: the stopped column drag's banner, DRAG-6.26** (Nathan,
+    2026-11-04, from Story 8.9). It's this story's one build item, not
+    catch-up on a rule that's already built.
+    - **The rule:** wiki board-drag-interaction §10's Planned passage. A
+      column drag that a reload stops shows the forced-stop banner,
+      worded by its cause, with no flash.
+    - **Today:** the column drag ends at once and nothing is written, as
+      §10 says. No cue shows.
+    - **The order:**
+      - the code is built first: the column drag's stop reports its cause
+        with no item, so the banner shows and nothing flashes;
+      - then the PO takes the Planned marker off;
+      - then the Planner removes only DRAG-6.22's column/no-cue clause
+        and makes DRAG-6.26 `Open`;
+      - then it's automated with the rest of this story's cases.
+    - **Its plan** is written when the story is picked up, with item 10's
+      DRAG-6.22 and DRAG-6.25, which test the same stop.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,
-9 and 10) is `Automated` or `Manual`; the epic-done checklist's Tests items
+9, 10 and 11) is `Automated` or `Manual`; §10's column-stop passage is
+built and no longer Planned; the epic-done checklist's Tests items
 checkable.
 
 **Depends on:** Stories 5–7 and every Story 8.N (the gesture and its

@@ -17,8 +17,8 @@ Which workflow a project uses is read through the boards: a board of that workfl
 | TREE-10.9 | A template or a source workflow given as an empty string names no row, and is refused | P2 | Automated |
 | TREE-10.10 | A template or a source workflow given as `null` names none | P2 | Automated |
 | TREE-10.11 | A create naming both a template and a source workflow is refused, and nothing is created | P2 | Automated |
-| TREE-10.12 | A workflow create whose project names no project is refused, and nothing is created | P2 | Open |
-| TREE-10.13 | Deleting an owned or ownerless workflow removes its dependents and preserves every item | P0 | Open |
+| TREE-10.12 | A workflow create whose project names no project is refused, and nothing is created | P2 | Automated |
+| TREE-10.13 | Deleting an owned or ownerless workflow removes its dependents and preserves every item | P0 | Automated |
 
 ---
 
@@ -112,18 +112,18 @@ Which workflow a project uses is read through the boards: a board of that workfl
 
 ## TREE-10.12 — A workflow create whose project names no project is refused, and nothing is created
 
-**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §10, wiki row-references §1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §10, wiki row-references §1
 
 *Given* project `P`, with no workflow of its own, and project `Q`, which owns workflow `W`, *when* a workflow is created leaving out required `projectId`, or naming it as `null`, an id no project has, `""`, `false`, `0`, `7`, `true`, `{}`, `[]`, or an array holding `Q`'s id, *then* each is refused with a 400, and no workflow is created: `P` still has none of its own, `Q` still has `W` alone, and a create for `P` that names it by its id is then accepted. The array holding `Q`'s id is refused as a value that names no project, with a 400, and not with the 409 that a create naming `Q` itself gets ([TREE-10.4](tree-10-which-workflow.md)).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`
 
 ## TREE-10.13 — Deleting an owned or ownerless workflow removes its dependents and preserves every item
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki project-tree §10, wiki boards-columns-unsorted §8, wiki boards-columns-unsorted §10
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki project-tree §10, wiki boards-columns-unsorted §8, wiki boards-columns-unsorted §10
 
 *Given* workflow `W` with boards `B1` and `B2`, their columns, workphases `W1` and `W2`, and notifications for those workphases; another project `Q` owning workflow `V` with a board and workphase `V1`; items `X` and `Z` holding `W1` and `W2`, including `Z` in `Q`; and `Q`'s item `Y` holding `V1`, *when* `DELETE /api/workflows/:id` deletes `W`, *then* `W`, `B1`, `B2`, their columns, `W1`, `W2` and `W`'s notifications are gone. Every item survives: `X` and `Z` now have `workphaseId = null`, with their other fields unchanged; `Y` is unchanged and still holds `V1`. On `V`'s board, `Z` is in `unsorted.invalidItems`, and `Y` stays in its column. `V`, its board, columns, workphases and notifications remain unchanged.
 
 This holds both when `W` is owned by project `P` and when the starting data has `W` with no owning project. No project is deleted. A project's choice of workflow after the delete is the separate rule in [TREE-10.3](tree-10-which-workflow.md).
 
-**Automation test:** —
+**Automation test:** `server/tests/routes/workflows.test.ts`

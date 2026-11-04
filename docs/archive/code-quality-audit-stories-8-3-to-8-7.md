@@ -377,4 +377,16 @@ Filled in as the audit closes. One row per required finding (#1–#11).
 
 | #   | Disposition | Where it landed (routes) |
 | --- | ----------- | ------------------------ |
-|     |             |                          |
+| 1 | Fixed, Story 8.9 Batch 1 | `getOrNotFound.ts::referenceShapeError`, called from the workphase, board, column and workflow routes, `itemHierarchy.ts`, `projects.ts` and `testHelpers.ts` |
+| 2 | Fixed, Story 8.9 Batch 3 | `lineKinds.mts::strippedCode`, through `valueSpans` and `collapseOutside` |
+| 3 | Fixed, Story 8.9 Batch 2 | `useForcedStop.ts`'s flash lifetime, driven by `BoardView.tsx::loadBoard` (`reloadStarted`, `boardDrawn`) |
+| 4 | Fixed, Story 8.9 Batch 1 | `workphaseOrder.ts::workphasesInOrder`'s comment |
+| 5 | Fixed, Story 8.9 Batch 4 | `useBoardDnd.test.ts`'s header |
+| 6 | Fixed, Story 8.9 Batch 4 | `dragChrome.test.tsx`'s tier fixture comment |
+| 7 | Fixed, Story 8.9 Batch 4 | `useBoardDnd.test.ts`'s "DRAG-6.22: is not reported when a drag is cancelled before an armed stop fires" |
+| 8 | Fixed, Story 8.9 Batch 4 | `index.css`'s `cue-fill` comment |
+| 9 | Fixed, Story 8.9 Batch 4 | `DragSessionContext.ts::useIsLockedAtCard`'s comment |
+| 10 | Fixed, Story 8.9 Batch 4 | `workflow/AGENTS.md`'s lists, and `useBoardDnd.ts`'s header |
+| 11 | Fixed, Story 8.9 Batch 4 | `dragTuning.ts`'s header |
+
+**For other roles** went to Story 8.9's Open questions, not Story 8.7's, since the audit closed with 8.9. The PO answered in its Amendment 6, and the Test Reconciler in `test-reconciliation-story-8-9-follow-up.md`. The PO's ruling on the column drag left a Planned banner (DRAG-6.26), which the roadmap carries for the Architect to route.

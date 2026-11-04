@@ -107,6 +107,10 @@ These are the "don't reinvent this" rules that aren't obvious from reading any o
   sidebar's project writes in `App.tsx`.
 - **Routes import from `lib/`, never from each other.** Shared domain logic lives in
   `server/src/lib/`; route files stay thin.
+- **A reference in a request is checked in one order: present, a string, names a row**
+  (wiki row-references §1). The shape is `getOrNotFound.ts::referenceShapeError`'s, and
+  the row is `existsById`'s; never write the string check inline. Without it, a value
+  that isn't a string is a 500, and an array holding an id gets through.
 - **`types.ts` is manually synced with `schema.ts`** — no codegen. Update both.
 - **Never hand-write an Item or Project literal in a client test** — use
   `client/src/test/itemFixture.ts::makeItem` or `projectFixture.ts::makeProject`.

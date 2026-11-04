@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** Batches 1–5 built and committed; Batch 6, from the confirming Reconciler run, built, for review and commit; the handoff is updated
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** done 2026-11-04; the audit is closed
 
 ## Goal
 
@@ -428,6 +428,14 @@ Filled in by the Coder.
 - **`cardMetrics.test.ts`'s padding test is retitled** for what it asserts, that the shared box's classes hold the height class and no vertical padding class. It takes no ID, and its assertions are as they were.
 - **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 438, client 672, scripts 245). The plan sets no E2E run, and the batch changes no spec and no app code.
 
+**10. 2026-11-04, closed** (Architect).
+- **The narrow Reconciler run** (`docs/audits/test-reconciliation-story-8-9-final.md`) closed TREE-10.12 and TREE-10.13. The four approved mappings are stamped and stay `Open`. No coverage was lost.
+- **Every case in Scope** is `Automated`, or routed by ID to Story 10's item 10.
+- **The audit's Close-out table** is filled. All of #1–#11 are fixed, each checked against the code.
+- **Story 10's item 10** names the confirming report's Full-case decisions table for what each case still misses.
+- **The unbuilt column-stop banner (DRAG-6.26)** isn't routed to a story yet. The roadmap's Story 8.9 carry block holds it for the Architect, so it outlives this plan.
+- **Archived:** this plan, the audit and the three reconciliation reports. The scope folder is deleted.
+
 ## Open questions
 
 The audit's "For other roles" and the reconciliation's "For the PO".
@@ -448,7 +456,7 @@ The audit's "For other roles" and the reconciliation's "For the PO".
   1. **`cardMetrics.test.ts` checks that a row has no vertical padding.** Under Tailwind's border-box, padding doesn't change an `h-6` row's height, while a margin would change the list's pitch. Does the test prove its title?
   2. **`lib/dragTargets.test.ts`'s tier cases and `dragClassification.test.ts`'s tier block** may test the same walk twice, now that the board's classification hands off to `classifyTargets`.
   3. **Planner's amended/new cases:** review the Scope and Amendment 7 candidates, including TREE-10.12's required owner, TREE-10.13's full delete, the three pickup-tree cases, and the flash window/late reveal. Which exact clauses remain after existing tests and approved stamps? Propose any additional stamps and approvals; do not infer whole-case coverage from a lifetime or snapshot hook alone.
-- **For the Architect:** route the unbuilt column-stop banner (DRAG-6.26, wiki board-drag-interaction §10's Planned passage). Its build is distinct from Story 10's catch-up on already-built rules. At build close, coordinate removal of DRAG-6.22's current column/no-cue clause with the Planner.
+- **For the Architect:** route the unbuilt column-stop banner (DRAG-6.26, wiki board-drag-interaction §10's Planned passage). Its build is distinct from Story 10's catch-up on already-built rules. At build close, coordinate removal of DRAG-6.22's current column/no-cue clause with the Planner. *Carried in the roadmap's Story 8.9 carry block at close (Amendment 10).*
 
 ## Living-docs handoff
 
