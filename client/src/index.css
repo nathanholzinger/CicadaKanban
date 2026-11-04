@@ -20,7 +20,8 @@
 
 /* The cue a drag the board stopped shows
    (ForcedStopCue.tsx, dragChrome.tsx). The flash is two amber pulses on the
-   row of the item that was being dragged; the fade holds the cue at full
+   row of the item that was being dragged (its animation-duration is
+   forcedStop.ts::STOP_FLASH_MS, set inline); the fade holds the cue at full
    strength for most of its time (animation-duration is the cue's tuning
    value, set inline) and then lets it go. */
 @keyframes forced-stop-flash {
@@ -38,7 +39,9 @@
 }
 
 .forced-stop-flash {
-  animation: forced-stop-flash 1.4s ease-in-out 1;
+  animation-name: forced-stop-flash;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: 1;
 }
 
 @keyframes forced-stop-fade {

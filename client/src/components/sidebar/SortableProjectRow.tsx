@@ -8,7 +8,7 @@ import type { DropTier } from '../../lib/dragTargets';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
-import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, TIER_CLASS } from '../dragChrome';
+import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, tierClass } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
@@ -86,8 +86,7 @@ export function SortableProjectRow({
   // drop (wiki project-tree §2).
   function rowOpacityClass(): string {
     if (isActive) return GHOST_ROW;
-    const tierClass = tier ? TIER_CLASS[tier] : '';
-    return isDescendantOfActive ? `${tierClass} pointer-events-none` : tierClass;
+    return isDescendantOfActive ? `${tierClass(tier)} pointer-events-none` : tierClass(tier);
   }
 
   function rowBackgroundClass(): string {

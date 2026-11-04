@@ -5,6 +5,7 @@ import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
 import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
+import { tierVars } from '../dragChrome';
 import { flattenTree, INDENT_WIDTH } from './projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './useProjectDragReorder';
 
@@ -441,32 +442,59 @@ describe('the tier each row is drawn at', () => {
     expect(result.current.tiers.has('Late')).toBe(false);
   });
 
+  // The three strengths go in as the properties the board's classes read, by `tierVars`, which is
+  // the one place that spells their names.
+  // The carried project's subtree — which rows are its descendants, which are left out of placement,
+  // and the height the cap reads — is the one the drag began with, as the tiers are.
+  it('holds the carried subtree, and the height the cap reads, for the whole drag', () => {
+    const list = tree(['P1', null], ['P2', 'P1'], ['X', null], ['X1', 'X']);
+    const { result, rerender } = renderHook(
+      ({ current }) =>
+        useProjectDragReorder(current, flattenTree(current, new Set(current.map(p => p.id))), vi.fn(), vi.fn(), 4),
+      { initialProps: { current: list } },
+    );
+    act(() => result.current.handleDragStart({ active: { id: 'X' } } as unknown as DragStartEvent));
+    const { descendantIds } = result.current;
+    expect(descendantIds).toEqual(new Set(['X1']));
+    // X's subtree is one level tall, so as P2's child (depth 2) it fits the cap of 4.
+    act(() =>
+      result.current.handleDragMove({
+        delta: { x: 2 * INDENT_WIDTH, y: 0 },
+        over: { id: 'P2', rect: { top: OVER_TOP, height: ROW_HEIGHT } },
+        active: { id: 'X', rect: { current: { translated: { top: OVER_TOP + LEAN_PX, height: ROW_HEIGHT } } } },
+      } as unknown as DragMoveEvent),
+    );
+    expect(result.current.projectedDepth).toBe(2);
+    expect(result.current.dropInvalid).toBe(false);
+
+    // A project lands under X1: X's subtree is a level taller now, but the drag is still the one
+    // that began with a subtree of one level.
+    rerender({ current: [...list, makeProject('X1a', { parentId: 'X1' })] });
+    expect(result.current.descendantIds).toBe(descendantIds);
+    expect(result.current.descendantIds.has('X1a')).toBe(false);
+    expect(result.current.dropInvalid).toBe(false);
+  });
+
   describe('the strengths', () => {
     const OWN = {
       projectAnchorOpacity: 0.45,
       projectNeitherOpacity: 0.15,
       projectDraggedOpacity: 0.2,
     };
+    const asVars = (t: typeof OWN) =>
+      tierVars({ anchor: t.projectAnchorOpacity, neither: t.projectNeitherOpacity, ghost: t.projectDraggedOpacity });
 
     it('are the defaults the panel starts at, when nothing is stored', () => {
       const drag = sidebarDrag(projects, [], 12);
       drag.pickUp('X');
-      expect(drag.hook.tierVars).toEqual({
-        '--drag-tier-anchor': DEFAULT_DRAG_TUNING.projectAnchorOpacity,
-        '--drag-tier-neither': DEFAULT_DRAG_TUNING.projectNeitherOpacity,
-        '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity,
-      });
+      expect(drag.hook.tierVars).toEqual(asVars(DEFAULT_DRAG_TUNING));
     });
 
     it('are read from storage at pickup, so a change in the panel takes effect on the next drag', () => {
       const drag = sidebarDrag(projects, [], 12);
       saveDragTuning({ ...DEFAULT_DRAG_TUNING, ...OWN });
       drag.pickUp('X');
-      expect(drag.hook.tierVars).toEqual({
-        '--drag-tier-anchor': OWN.projectAnchorOpacity,
-        '--drag-tier-neither': OWN.projectNeitherOpacity,
-        '--drag-tier-ghost': OWN.projectDraggedOpacity,
-      });
+      expect(drag.hook.tierVars).toEqual(asVars(OWN));
     });
 
     it('are apart from the board’s three, which the sidebar never reads', () => {
@@ -478,11 +506,7 @@ describe('the tier each row is drawn at', () => {
       });
       const drag = sidebarDrag(projects, [], 12);
       drag.pickUp('X');
-      expect(drag.hook.tierVars).toEqual({
-        '--drag-tier-anchor': DEFAULT_DRAG_TUNING.projectAnchorOpacity,
-        '--drag-tier-neither': DEFAULT_DRAG_TUNING.projectNeitherOpacity,
-        '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity,
-      });
+      expect(drag.hook.tierVars).toEqual(asVars(DEFAULT_DRAG_TUNING));
     });
   });
 });

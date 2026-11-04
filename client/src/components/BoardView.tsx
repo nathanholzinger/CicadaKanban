@@ -31,6 +31,7 @@ import { HierarchyModalContext } from './workflow/HierarchyModalContext';
 import { popState } from './workflow/popSession';
 import type { Point } from './workflow/dragRegions';
 import DragTuningPanel from './DragTuningPanel';
+import { tierVars } from './dragChrome';
 
 interface BoardViewProps {
   workflowId: string;
@@ -53,8 +54,10 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   const [showDragTuning, setShowDragTuning] = useState(false);
   // The cue for a drag the board stopped lives here, above the reload that stops it: the reload
   // swaps the board for "Loading board…" and unmounts everything the DndContext holds. The stop the
-  // dev/test panel has armed for the next drag is kept here for the same reason.
+  // dev/test panel has armed for the next drag is kept here for the same reason. The cue's flash
+  // follows the board's reloads (`loadBoard` tells it when one starts and when it has drawn).
   const forcedStop = useForcedStop(dragTuning.forcedStopCueMs);
+  const { reloadStarted, boardDrawn } = forcedStop;
   const [armedStop, setArmedStop] = useState<ArmedStop | null>(null);
   // The Card whose whole hierarchy the modal shows, when it's open, and where the cursor was if a
   // hold during a drag opened it (a click opens it centered, with no anchor).
@@ -136,6 +139,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   }, [hierarchyModalCardId, hierarchyModalCard, hierarchyModalHasRows]);
 
   const loadBoard = useCallback(async () => {
+    reloadStarted();
     if (!activeBoardId) {
       setBoard(null);
       setLoading(false);
@@ -165,8 +169,9 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
       console.error('Failed to load board:', err);
     } finally {
       setLoading(false);
+      boardDrawn();
     }
-  }, [activeBoardId, setWorkphases, replaceItems]);
+  }, [activeBoardId, setWorkphases, replaceItems, reloadStarted, boardDrawn]);
 
   useEffect(() => {
     // loadBoard's synchronous setBoard(null)/setLoading(true) at the top is
@@ -259,9 +264,11 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // (`dragChrome.tsx`, which every Card and Stub row draws) as CSS custom
   // properties, so the dev/test panel can change them without a rebuild.
   const overlayVars = {
-    '--drag-tier-anchor': dragTuning.overlayAnchorOpacity,
-    '--drag-tier-neither': dragTuning.overlayNeitherOpacity,
-    '--drag-tier-ghost': dragTuning.overlayGhostOpacity,
+    ...tierVars({
+      anchor: dragTuning.overlayAnchorOpacity,
+      neither: dragTuning.overlayNeitherOpacity,
+      ghost: dragTuning.overlayGhostOpacity,
+    }),
     '--active-context-outline': dragTuning.activeContextOutlineColor,
   } as CSSProperties;
 
@@ -274,7 +281,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // The same element in every branch below, so it stays mounted across the reload.
-  const cue = <ForcedStopCue stop={forcedStop.stop} cueMs={dragTuning.forcedStopCueMs} />;
+  const cue = <ForcedStopCue stop={forcedStop.stop} stopKey={forcedStop.stopKey} cueMs={dragTuning.forcedStopCueMs} />;
 
   if (loading) {
     return (
@@ -360,7 +367,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           <DragSessionContext value={session}>
             <PlacementsContext value={placements}>
               <DragTuningContext value={dragTuning}>
-                <ForcedStopFlashContext value={dragTuning.forcedStopFlash ? (forcedStop.stop?.itemId ?? null) : null}>
+                <ForcedStopFlashContext value={dragTuning.forcedStopFlash ? forcedStop.flashItemId : null}>
                   <HierarchyModalContext value={hierarchyModal}>
                     <SortableContext items={board.columns.map(c => c.id)} strategy={horizontalListSortingStrategy}>
                       {/* data-drag-state / data-drag-context / data-drag-band: the pop

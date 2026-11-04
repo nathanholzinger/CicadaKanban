@@ -17,6 +17,11 @@ export const STOP_WORDING: Record<StopCause, string> = {
   refresh: 'The board refreshed, which stopped your drag. Nothing moved.',
 };
 
+// How long the stopped item's row flashes (wiki board-drag-interaction §10: two pulses, about 1.4
+// seconds in all). It is the row's animation length, set inline (`dragChrome.tsx::useItemRow`), and
+// how long the board keeps naming the item once the reloaded board is drawn (`useForcedStop.ts`).
+export const STOP_FLASH_MS = 1400;
+
 // One stop the dev/test panel has armed: the next item drag calls for a reload `afterMs` after it
 // starts, with `cause`, down the same path a failed write or a stale response takes.
 export interface ArmedStop {

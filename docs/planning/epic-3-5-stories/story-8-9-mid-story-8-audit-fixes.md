@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 1 built for review and commit
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 2 built for review and commit
 
 ## Goal
 
@@ -203,6 +203,11 @@ Filled in by the Coder.
 | `server/src/lib/getOrNotFound.ts::referenceShapeError` | D1: the 400's message for a reference that isn't a string, or null. `nullable` lets it be `null`, `optional` lets it be left out. |
 | `server/src/lib/getOrNotFound.ts::namesARow` | Moved from `workflows.ts`, beside the check that goes with it. |
 | `server/src/lib/workphaseOrder.ts::getOrderedWorkphases` | #22: takes the optional `client`, as `workphasesInOrder` does. |
+| `client/src/components/workflow/forcedStop.ts::STOP_FLASH_MS` | D2: the flash's one length. It is the row's inline `animation-duration` and how long the board holds the item once its reloaded board is drawn. |
+| `client/src/components/workflow/useForcedStop.ts` | D2: the flash's lifetime, apart from the banner's. `flashItemId` is named by the stop, waits for its reload to draw the board (`boardDrawn`), plays for `STOP_FLASH_MS`, and is let go when another reload starts (`reloadStarted`). #25: `stopKey`, a number for each stop. |
+| `client/src/components/BoardView.tsx::loadBoard` | D2: tells the hook when a reload starts and when it has drawn. It is the one place every reload of the board passes. |
+| `client/src/components/dragChrome.tsx::tierVars`, `tierClass` | #14, #27: the three property names spelled once for the surfaces that set them, and a row's class for its tier, or none. `TIER_CLASS` is private now. |
+| `client/src/components/sidebar/useProjectDragReorder.ts::Drawn.subtree` | #13: the carried project's descendants, excluded rows and height, from one `getSubtree` at pickup, held for the drag as the tiers are. |
 
 ## Amendments
 
@@ -218,6 +223,29 @@ Filled in by the Coder.
   - **Two assertions added, which the plan didn't list:** TREE-10.12 names two clauses no test asserted, that `Q` still has `W` alone and that a create naming `P` by its id is then accepted. The first is in the ownership-order test and the second at the end of the values test. Without them the case would stay partial at the confirming run.
   - **The optional references' values are the owner's,** with the array holding an id the field would name (a real template, a real workflow).
 - **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 660, scripts 235). `npm run test:e2e` gives 216 passed, 21 skipped, 0 failed, as at the end of Story 8.7.
+
+**2. 2026-11-04, Batch 2 built** (Coder).
+- **The flash's lifetime (D2) is a small state in `useForcedStop`,** driven by `loadBoard`:
+  - a stop names the item, and the flash waits;
+  - the reload the stop caused draws the board, and the flash plays for `STOP_FLASH_MS`;
+  - it's let go when it has played, at the next drag's start, or when another reload starts while it plays.
+  - A reload that starts while the flash still waits is the stop's own, which starts right after the report, so it leaves the flash alone. The wait has no clock of its own, so a slow reload doesn't spend the flash.
+  - The banner keeps `forcedStopCueMs`, and no reload takes it away.
+- **The flash's length is set inline,** on the row in `useItemRow`, as `ZoomCue` sets its own. `index.css`'s class now holds the animation's name, timing and count, and no duration, so there is one length to change.
+- **A check in the browser** (a throwaway spec, deleted):
+  - the armed stop's flash computes to `forced-stop-flash` for `1.4s` and goes after its time, while a 6-second banner stays;
+  - a board switch during the flash, which is a reload with no stop behind it, replays nothing;
+  - with `loadBoard`'s `reloadStarted()` call taken out, the same check sees the flash replay on the other board.
+- **#25's `key`:** `useForcedStop` numbers each stop, and `ForcedStopCue` takes it as an optional `stopKey`. The cue's other callers and tests pass none.
+- **#14 and #27:**
+  - `tierVars` is the one place that spells `--drag-tier-*`, and `BoardView.tsx` and `useProjectDragReorder.ts` call it. `TIER_CLASS` keeps its literal strings.
+  - `tierClass(tier)` replaces the ternary at both sites and `TIER_CLASS` is no longer exported. The sidebar row's tests read `tierClass` instead.
+- **#13:** the subtree is one `getSubtree` call at pickup, kept on `Drawn`. `classifyTargets` still walks its own copy for the tiers, so pickup walks the tree twice, from the same list. Returning the height from the classification would change `DragClassification`, which four test files build by hand (#19).
+  - **A consequence, for the Architect:** the descendants, the excluded rows and the cap's height now hold for the whole drag. A project write that lands mid-drag and puts a project under the carried one leaves it a drop candidate, and a drop beside it would be refused by the server (a cycle, or past the cap). Before, the live subtree excluded it. The board avoids this by ending a drag at any reload, which the sidebar doesn't do.
+- **Tests:**
+  - `useForcedStop.test.ts` holds the flash's lifetime, untagged: named by the stop; held across a slow reload; let go after `STOP_FLASH_MS`; let go by another reload; a reload with no stop behind it draws nothing; let go at the next drag; a second stop's own wait. It also holds the stop's key.
+  - `dragChrome.test.tsx` holds the row's side: it flashes the item the context names, with `STOP_FLASH_MS` set on it, and no other.
+  - `ForcedStopCue.test.tsx` holds the key, and `useProjectDragReorder.test.ts` the subtree held for the drag (it fails on the old hook). Its strength tests no longer re-spell the property names.
 
 ## Open questions
 

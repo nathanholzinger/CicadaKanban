@@ -3,7 +3,8 @@
 
 import { createContext, useContext } from 'react';
 
-// The item to flash, or null: no stop is showing, or the flash is switched off.
+// The item to flash, or null: no flash is due (none was reported, it has played, or another reload
+// has started since), or the flash is switched off. `useForcedStop.ts` holds when it is due.
 export const ForcedStopFlashContext = createContext<string | null>(null);
 
 export function useIsFlashedAfterStop(itemId: string): boolean {

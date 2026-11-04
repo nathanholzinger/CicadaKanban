@@ -7,7 +7,7 @@
 // nothing (`projectTreeUtils.ts::releaseOf`). Every row is drawn by what it can be to the
 // carried project, on the board's rule (`lib/dragTargets.ts`), at the sidebar's own strengths.
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import {
   PointerSensor,
   useSensor,
@@ -20,6 +20,7 @@ import type { Project } from '../../types';
 import { classifyTargets, type DropTier } from '../../lib/dragTargets';
 import { getSubtree, isWithinDepthCap, type Subtree } from '../../lib/hierarchy';
 import { computeProjection, toRows, type AnchorRelation, type Projection } from '../../lib/hierarchyPlacement';
+import { tierVars } from '../dragChrome';
 import { resolveDropSide } from '../workflow/dragCollision';
 import { loadDragTuning } from '../workflow/dragTuning';
 import { fullChildrenOf, releaseOf, resolveGap, INDENT_WIDTH, type FlatItem } from './projectTreeUtils';
@@ -28,14 +29,19 @@ const NO_IDS: ReadonlySet<string> = new Set();
 const NO_SUBTREE: Subtree = { descendantIds: NO_IDS, subtreeIds: NO_IDS, height: 0 };
 const NO_TIERS: ReadonlyMap<string, DropTier> = new Map();
 
-// How a drag draws its rows, fixed when the project is picked up: the board's classification
-// walk over the tree as it stood then, and the sidebar's three strengths as the dev/test panel
-// left them in storage (the panel lives on the board, so a change takes effect on the next
-// drag). A response landing mid-drag redraws nothing.
+// What a drag draws and counts by, fixed when the project is picked up: the board's classification
+// walk over the tree as it stood then, the carried project's subtree from that same tree, and the
+// sidebar's three strengths as the dev/test panel left them in storage (the panel lives on the
+// board, so a change takes effect on the next drag). A response landing mid-drag changes none of it.
 interface Drawn {
   tiers: ReadonlyMap<string, DropTier>;
-  /** The board's tier properties (`dragChrome.tsx::TIER_CLASS`), set from the sidebar's values. */
+  /** The board's tier properties (`dragChrome.tsx::tierVars`), set from the sidebar's values. */
   vars: CSSProperties;
+  /**
+   * The carried project's subtree: its descendants, which stay drawn but are no place to drop; its
+   * ids, which are never a Top/Bottom candidate; and its height, which the cap reads.
+   */
+  subtree: Subtree;
 }
 
 // Every row is placed among siblings, so naming one as the line's anchor gives the carried
@@ -46,11 +52,12 @@ function drawnAtPickup(activeId: string, projects: readonly Project[], depthCap:
   const tuning = loadDragTuning();
   return {
     tiers,
-    vars: {
-      '--drag-tier-anchor': tuning.projectAnchorOpacity,
-      '--drag-tier-neither': tuning.projectNeitherOpacity,
-      '--drag-tier-ghost': tuning.projectDraggedOpacity,
-    } as CSSProperties,
+    vars: tierVars({
+      anchor: tuning.projectAnchorOpacity,
+      neither: tuning.projectNeitherOpacity,
+      ghost: tuning.projectDraggedOpacity,
+    }),
+    subtree: getSubtree(activeId, projects),
   };
 }
 
@@ -83,11 +90,7 @@ export function useProjectDragReorder(
   const activeItem = activeId ? (flatItems.find(i => i.id === activeId) ?? null) : null;
   // The dragged project's subtree: its descendants stay drawn, none of them a place to drop,
   // and its height is what the cap reads.
-  const {
-    descendantIds,
-    subtreeIds: exclude,
-    height: subtreeHeight,
-  } = useMemo(() => (activeId ? getSubtree(activeId, projects) : NO_SUBTREE), [activeId, projects]);
+  const { descendantIds, subtreeIds: exclude, height: subtreeHeight } = drawn?.subtree ?? NO_SUBTREE;
   // The project and its whole subtree are never a Top/Bottom candidate:
   // `rows`, what a gap is computed against, is every rendered row (a collapsed
   // subtree already left `flatItems`) without them.

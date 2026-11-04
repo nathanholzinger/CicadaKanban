@@ -27,4 +27,17 @@ describe('ForcedStopCue', () => {
 
     expect(screen.getByText(STOP_WORDING.refresh)).toHaveStyle({ animationDuration: '3000ms' });
   });
+
+  // A stop that replaces a live one is a new banner, so its fade starts over; the same stop
+  // redrawn is the one banner.
+  it('draws a fresh banner for each stop, and keeps the one it has for a redraw of the same stop', () => {
+    const { rerender } = render(<ForcedStopCue stop={stopOf('refresh')} stopKey={1} cueMs={5000} />);
+    const first = screen.getByText(STOP_WORDING.refresh);
+
+    rerender(<ForcedStopCue stop={stopOf('refresh')} stopKey={1} cueMs={5000} />);
+    expect(screen.getByText(STOP_WORDING.refresh)).toBe(first);
+
+    rerender(<ForcedStopCue stop={stopOf('refresh')} stopKey={2} cueMs={5000} />);
+    expect(screen.getByText(STOP_WORDING.refresh)).not.toBe(first);
+  });
 });

@@ -7,17 +7,20 @@ import { STOP_WORDING, type ForcedStop } from './workflow/forcedStop';
 
 interface ForcedStopCueProps {
   stop: ForcedStop | null;
+  /** Changes with each stop, so one that replaces a live stop draws a fresh banner and restarts the fade. */
+  stopKey?: number;
   /** How long the cue stays, which the fade is timed to. */
   cueMs: number;
 }
 
 const BANNER = 'fixed inset-x-0 top-0 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-zinc-950 shadow-lg';
 
-export default function ForcedStopCue({ stop, cueMs }: ForcedStopCueProps) {
+export default function ForcedStopCue({ stop, stopKey, cueMs }: ForcedStopCueProps) {
   return (
     <div role="status" className="pointer-events-none fixed top-0 left-0 z-[100]">
       {stop && (
         <p
+          key={stopKey}
           data-forced-stop={stop.cause}
           className={BANNER}
           style={{

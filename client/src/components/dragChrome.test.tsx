@@ -5,6 +5,8 @@ import type { ReactNode } from 'react';
 import { useItemRow } from './dragChrome';
 import { DragGhost } from './sidebar/SortableProjectRow';
 import { DragSessionContext, PlacementsContext, type DragSession } from './workflow/DragSessionContext';
+import { ForcedStopFlashContext } from './workflow/ForcedStopContext';
+import { STOP_FLASH_MS } from './workflow/forcedStop';
 import type { Placement } from './workflow/itemListOps';
 import KanbanCard from './KanbanCard';
 import { AttachedChildRow } from './StubRows';
@@ -226,5 +228,36 @@ describe('the drag-target tiers', () => {
       expect(stubRow.querySelector('button')!.parentElement!.className).toContain(NEITHER);
       expect(stubRow.closest('[class*="drag-tier-anchor"]')).toBeNull();
     });
+  });
+});
+
+// The row the board names after a stopped drag flashes for the flash's own length, which is set on
+// the row, so the one length is `STOP_FLASH_MS` and the stylesheet holds none.
+describe("the stopped item's flash", () => {
+  const rowNamed = (flashed: string | null) =>
+    renderHook(() => useItemRow('x', 'card'), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <DndContext>
+          <ForcedStopFlashContext value={flashed}>{children}</ForcedStopFlashContext>
+        </DndContext>
+      ),
+    }).result.current;
+
+  it('flashes the row it names, for the flash’s length', () => {
+    const row = rowNamed('x');
+
+    expect(row.chromeClassName).toContain('forced-stop-flash');
+    expect(row.dataAttrs['data-stop-flash']).toBe('true');
+    expect(row.sortableStyle.animationDuration).toBe(`${STOP_FLASH_MS}ms`);
+  });
+
+  it('leaves every other row, and every row while none is named, without it', () => {
+    for (const flashed of ['y', null]) {
+      const row = rowNamed(flashed);
+
+      expect(row.chromeClassName).not.toContain('forced-stop-flash');
+      expect(row.dataAttrs['data-stop-flash']).toBeUndefined();
+      expect(row.sortableStyle.animationDuration).toBeUndefined();
+    }
   });
 });

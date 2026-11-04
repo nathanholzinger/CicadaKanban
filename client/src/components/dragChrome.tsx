@@ -5,6 +5,7 @@
 // sidebar draws too. The Card tier's own render is KanbanCard.tsx, the Stub
 // tier's StubRows.tsx.
 
+import type { CSSProperties } from 'react';
 import { useDndContext } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -13,6 +14,7 @@ import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './wor
 import { useDragSession, useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
 import type { DropTier } from '../lib/dragTargets';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
+import { STOP_FLASH_MS } from './workflow/forcedStop';
 import type { OverlayForm } from './workflow/placement';
 import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 
@@ -54,20 +56,46 @@ function useLiveDropSide(itemId: string): DropSide | null {
 // root, so what the row holds keeps its own strength: the drop line (an absolutely positioned
 // child of the root) and a Card's section of Stubs, each of which has its own tier. The ghost's
 // own value stays on the root, since nothing it holds is drawn at another strength.
-// eslint-disable-next-line react-refresh/only-export-components -- the sidebar's rows draw with these classes; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
-export const TIER_CLASS: Record<DropTier, string> = {
+//
+// A class is found by Tailwind reading its literal in the source, so the property names are spelled
+// out here, and `tierVars` spells them once for the surfaces that set them.
+const TIER_CLASS: Record<DropTier, string> = {
   parent: '',
   anchor: 'opacity-(--drag-tier-anchor) [--tier-opacity:var(--drag-tier-anchor)]',
   neither: 'opacity-(--drag-tier-neither) [--tier-opacity:var(--drag-tier-neither)]',
 };
+// The class a row's content takes for its tier, none when it has none (no drag is running, or the
+// row is the carried one's own).
+// eslint-disable-next-line react-refresh/only-export-components -- the sidebar's rows draw with it; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
+export function tierClass(tier: DropTier | null | undefined): string {
+  return tier ? TIER_CLASS[tier] : '';
+}
 export const GHOST_ROW = 'opacity-(--drag-tier-ghost)';
+// The three strengths as the custom properties those classes read, to set on whatever holds the rows:
+// the board's root and the sidebar's list each set them from their own values.
+// eslint-disable-next-line react-refresh/only-export-components -- the sidebar sets them too; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
+export function tierVars({
+  anchor,
+  neither,
+  ghost,
+}: {
+  anchor: number;
+  neither: number;
+  ghost: number;
+}): CSSProperties {
+  return {
+    '--drag-tier-anchor': anchor,
+    '--drag-tier-neither': neither,
+    '--drag-tier-ghost': ghost,
+  } as CSSProperties;
+}
 // A write is in flight for this item — it's drawn at the slot it was
 // dropped in, and its position is the server's to confirm. It pulses between the content's own
 // opacity and half of it (`index.css::drag-tier-pulse`), so a dim row dims further instead of
 // brightening. Test surface: `data-pending`.
 const PENDING = 'drag-tier-pending';
 // The item a drag was stopped on, drawn on the reloaded board so the user sees where it went
-// (`index.css::forced-stop-flash`). Switched in the dev/test panel.
+// (`index.css::forced-stop-flash`, for `forcedStop.ts::STOP_FLASH_MS`). Switched in the dev/test panel.
 const STOP_FLASH = 'forced-stop-flash';
 
 // The drop line, less its color and its vertical offset: the board's rows
@@ -130,7 +158,13 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
     setNodeRef,
     isDragging,
     dropSide,
-    sortableStyle: { transform: CSS.Transform.toString(transform), transition },
+    sortableStyle: {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      // The flash's length is set here, where its class is chosen: `index.css` gives the class no
+      // duration, so the one length is `STOP_FLASH_MS`.
+      ...(flashed && { animationDuration: `${STOP_FLASH_MS}ms` }),
+    },
     dataAttrs: {
       'data-item-id': isOverlay ? undefined : itemId,
       // The carried copy, for the E2E helper's "drag finished" wait — it
@@ -147,7 +181,7 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
     // The root's: the ghost's own opacity, and the flash.
     chromeClassName: `${isDragging && !isOverlay ? GHOST_ROW : ''} ${flashed ? STOP_FLASH : ''}`,
     // The wrapper around the row's own content: its tier, and the pending pulse on that.
-    contentClassName: `${tier ? TIER_CLASS[tier] : ''} ${pending ? PENDING : ''}`,
+    contentClassName: `${tierClass(tier)} ${pending ? PENDING : ''}`,
   };
 }
 

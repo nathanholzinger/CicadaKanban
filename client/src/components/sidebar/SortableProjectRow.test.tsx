@@ -4,7 +4,7 @@ import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 import type { ComponentProps } from 'react';
 import { makeProject } from '../../test/projectFixture';
-import { GHOST_ROW, TIER_CLASS } from '../dragChrome';
+import { GHOST_ROW, tierClass } from '../dragChrome';
 import { SortableProjectRow } from './SortableProjectRow';
 
 function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {}) {
@@ -55,7 +55,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
     tier => {
       const box = renderRow({ tier });
       expect(box).toHaveAttribute('data-drop-tier', tier);
-      for (const cls of classesOf(TIER_CLASS[tier])) expect(box.classList).toContain(cls);
+      for (const cls of classesOf(tierClass(tier))) expect(box.classList).toContain(cls);
     },
   );
 
@@ -74,7 +74,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
   it('keeps a descendant of the dragged project from taking a drop, at its tier', () => {
     const box = renderRow({ isDescendantOfActive: true, tier: 'neither' });
     expect(box.classList).toContain('pointer-events-none');
-    for (const cls of classesOf(TIER_CLASS.neither)) expect(box.classList).toContain(cls);
+    for (const cls of classesOf(tierClass('neither'))) expect(box.classList).toContain(cls);
   });
 
   it('lets a row that is not a descendant take a drop, whatever its tier', () => {
