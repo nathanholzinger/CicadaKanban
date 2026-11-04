@@ -656,6 +656,36 @@ tests rather than carrying its coverage verdicts forward unchanged.
   10's item 10 by ID. The final palette/style and the tuning panel are
   not additional cases in this pass.
 
+**Carried from Story 8.5 to Story 8's close-out — Coder and Test Reconciler.**
+- **Retired overlay cases:** DRAG-2.5, DRAG-2.6 and DRAG-2.13.
+  DRAG-2.15 now covers the Free descendant's Mid tier; DRAG-2.15,
+  DRAG-2.16 and DRAG-2.18 split the depth-capped tiers by target kind
+  and parent; DRAG-2.23 covers pending-tree assignment. These are rule
+  replacements, not automatic test-title substitutions. The Coder must
+  remove the obsolete DRAG-2.5 claim that `check:docs` reports in
+  `tests/ui/drag-target-classification.spec.ts` before closing the story,
+  and handle its old overlay assertion under Story 8's skip policy.
+- **New, Open:** DRAG-2.14, DRAG-2.15, DRAG-2.16, DRAG-2.17,
+  DRAG-2.18, DRAG-2.19, DRAG-2.20, DRAG-2.21, DRAG-2.22 and
+  DRAG-2.23 for the tiers, their lifetime and boundaries; DRAG-6.23 and
+  DRAG-6.24 for relative pending pulses and isolation from lines/nested
+  rows. Assess the handoff's classification, pickup and chrome tests
+  for full-case assertions, candidate ID stamps and any needed internal
+  mapping approval. No new mapping is approved by the Planner pass.
+- **Revised DRAG-7.12 and DRAG-7.27:** the modal now shows the tiers,
+  and an overflow row stays drawn at Low while excluded from neighbors.
+  Their current statuses and pointers are left for the Reconciler to
+  assess against the revised full cases. DRAG-7.12's old-opacity spec
+  is skipped for Story 10; DRAG-7.27's earlier skip remains tracked.
+- **Explicit verification gaps:** the Coder did not verify the Low
+  overflow-row hold, now DRAG-2.22. Check actual section/modal rendering,
+  row/line/nested-content isolation, relative pulses and pending-tree
+  tiers rather than inferring them from classification or hook tests.
+  DRAG-7.17 failed again in 8.5's full run, with a concurrent check
+  running, then passed alone; retain the existing trace/watch task
+  without claiming a cause or fix. Remaining drag-surface coverage goes
+  to Story 10's item 10 by ID.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
@@ -830,6 +860,16 @@ two strengths, each a tuning value:
 - **No color.** The green ring goes. Cards will get coloring of their own
   after the Tags & Type System epic.
 
+**Planner handoff, 2026-11-03:** the PO has written the tiers into wiki
+board-drag-interaction §4.1 and the relative pulse into §10. DRAG-2.5,
+DRAG-2.6 and DRAG-2.13 are retired; new DRAG-2.14, DRAG-2.15,
+DRAG-2.16, DRAG-2.17, DRAG-2.18, DRAG-2.19, DRAG-2.20, DRAG-2.21,
+DRAG-2.22, DRAG-2.23, DRAG-6.23 and DRAG-6.24 are Open. DRAG-7.12
+and DRAG-7.27 are reworded for the settled rules. The close-out block
+above carries the Coder's retired-ID cleanup and reconciliation tasks;
+Story 10's item 10 carries remaining surface work. Story 8.7's sidebar
+tiers and Story 8.8's branch-carry trial remain separate.
+
 **Carried in from Story 6's hands-on** (PO, 2026-09-24).
 
 - **What's there.** The guards are right: a picked-up Stub's descendants
@@ -879,6 +919,39 @@ one height, pill or not, would make both exact. It's a look decision.
 project too deep to take the dragged one isn't dimmed. The rule is
 table-generic, so the board and the sidebar should share one derivation
 (root `AGENTS.md`, "One position math layer").
+
+---
+
+### Story 8.8 — A pickup takes its descendants with it
+**Found with Story 8.5** (Nathan, 2026-11-03). Story 8.5 marks a dragged
+Stub's descendant rows at low opacity, and leaves them drawn in the section
+while the ghost moves away. Nathan wants to try the other option 8.5 put out
+of scope: **carry them visibly.** The descendants leave their place and ride
+with the carried copy, so the pickup reads as taking the whole branch.
+
+**It's a trial,** run code first like the rest of Story 8. The Coder builds
+it, Nathan tries it hands-on, and he decides whether it replaces 8.5's
+low-opacity rows or sits beside them. Its plan is written when the story is
+picked up.
+
+**What the plan has to answer:**
+- **The jump.** Removing the rows at pickup shifts the layout under the
+  cursor, the problem the zoom-in morph's story is about. Whether the rows
+  leave at pickup, fade, or stay drawn and dimmed under the copy is the first
+  decision.
+- **The measured box.** A taller carried copy changes the box dnd-kit
+  measures for collisions, and the drag math reads fixed heights for the
+  copy (`cardMetrics.ts::CARRIED_STUB_HEIGHT_PX`). The copy's collision box
+  may need to stay the dragged row's, with the stack drawn over it.
+- **How the branch shows.** The whole subtree or a few levels of it, and what
+  stands in for the rest (the section's overflow row does this for a
+  section's cut-off today).
+- **Which pickups.** A Stub's branch is drawn in its section. A dragged
+  Card shows no children (wiki board-drag-interaction §5a), so a Card taking
+  its descendants with it would be new.
+- **What 8.5 keeps.** If the rows ride with the copy, the dragged Stub's own
+  descendants no longer need their low-opacity mark in the section. The
+  tiers for every other target stay.
 
 ---
 
@@ -1377,6 +1450,19 @@ deferral and keep landing with their stories.
       the gaps that remain, including the banner across loading/reload.
       DRAG-6.15 remains the separate stop/no-write case. No fixed tuned
       duration or final visual design is required by these cases.
+
+    - **From Story 8.5** (2026-11-03, Test Planner): new DRAG-2.14,
+      DRAG-2.15, DRAG-2.16, DRAG-2.17, DRAG-2.18, DRAG-2.19,
+      DRAG-2.20, DRAG-2.21, DRAG-2.22, DRAG-2.23, DRAG-6.23 and
+      DRAG-6.24 cover the target tiers and relative pending pulse. Use
+      Story 8's close-out reconciliation to identify missing assertions
+      before adding gesture tests. DRAG-7.12's skipped old-opacity spec
+      needs the revised modal-tier expectations; DRAG-7.27's existing
+      skip now also needs the rows-stay-drawn wording. The Low overflow
+      hold is explicitly unverified in the Coder's handoff. Do not retain
+      tests of the removed overlay behavior under retired DRAG-2.5,
+      DRAG-2.6 or DRAG-2.13, or assume a new ID makes their assertions
+      current. DRAG-7.17 remains the recurring-failure trace/watch item.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,

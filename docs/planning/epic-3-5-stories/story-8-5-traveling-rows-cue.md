@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.5 — The drag-target cues say what a target can be
 
-**Type:** story · **Written:** 2026-11-02 by the Architect, from the PO's Story 6 hands-on finding (2026-09-24). Widened 2026-11-03 by Nathan · **Status:** in progress: Phase 2 built, for review; Phase 3 next (hands-on)
+**Type:** story · **Written:** 2026-11-02 by the Architect, from the PO's Story 6 hands-on finding (2026-09-24). Widened 2026-11-03 by Nathan · **Status:** built, for review and commit; the handoff is written
 
 ## Goal
 
@@ -40,8 +40,12 @@ MO and LO name tuning values, not fixed numbers: 0.6 and 0.3 to start.
 
 ## Scope
 
-- **Wiki passages:** none ahead of the build, under code first. Once Nathan approves the tiers, they replace §4's settled overlay assignments (Living-docs handoff).
-- **Test-plan cases:** none ahead of the build. DRAG-2.2, the classification itself, is unchanged. The tiers supersede DRAG-2.5 (the green ring) and DRAG-2.6 (the Depth-capped dim), and change what DRAG-7.12 asserts. Their replacements are the Test Planner's once Nathan approves.
+- **Wiki passages:** board-drag-interaction §4.1 now holds the tiers in place of §4's overlay assignments; §7.2, §7.3 and §9 clarify the drawn rows and modal tiers, and §10 holds the relative pending pulse. Project-tree §1's incidental board comparison is reworded without changing the sidebar's behavior.
+- **Test-plan cases:**
+  - **Retired:** DRAG-2.5 and DRAG-2.6, the removed overlay rules; DRAG-2.13, which asserted the removed relationship overlay during pending attachment changes. No ID is reused.
+  - **New, Open:** DRAG-2.14 (Valid/Full), DRAG-2.15 (Free Card/Mid), DRAG-2.16 (Stub Mid/Low boundary), DRAG-2.17 (descendant rows remain Low and excluded), DRAG-2.18 (overflow tiers), DRAG-2.19 (tier lifetime), DRAG-2.20 (exempt representations and ghost opacity), DRAG-2.21 (content/line/nested-row isolation), DRAG-2.22 (no cue on dimmed targets) and DRAG-2.23 (pending-tree tiers).
+  - **New, Open:** DRAG-6.23 (relative pulse endpoints) and DRAG-6.24 (pulse isolation from lines and nested rows).
+  - **Revised:** DRAG-7.12 (modal classifications and tiers), DRAG-7.27 (overflow rows remain drawn at Low), and the non-visual subtree wording in DRAG-4.8, DRAG-4.18 and DRAG-4.35. Existing statuses and automation pointers await Reconciler review and are unchanged in this Planner pass.
 
 ## Inbound deferrals
 
@@ -177,22 +181,75 @@ Phase 2's. Phase 1's rows (the traveling set, `useOverflowTravels`, `data-travel
 8. **Tests:** the classification's, in one fixture: a legal parent, a Free Card and a Stub (`parent`); a Free descendant, a Depth-capped Free Card and a Depth-capped Stub under a legal parent (`anchor`); the carried item's Stubs at two depths, a Stub inside a Free descendant, and a Stub under an anchor-only Stub (`neither`); a dragged Stub; and the Stub test it is handed. `useBoardDnd.test.ts`'s two pending pickups read the new tier. The chrome's: both anchor and neither, the tier not on the root, full strength for a legal parent, the carried copy and no drag, the ghost's value on the root with no tier, an overflow row by its owner, a pending row, and, rendered, a Stub row and a Card with a section. All were shown failing: a Free Card made `neither` (6 failed), a Stub that ignores its parent (8), no `parent` tier (3), an overflow row always `parent` (1), the tier on the root (3), the pulse dropped (1), no ghost value (1), and the carried copy given a tier (1). Not covered: that the drop line is not dimmed on screen (the line is drawn only for a named neighbor, and the tests show it outside the wrapper by structure), and that the hierarchy modal inherits the custom properties.
 9. **E2E:** `DRAG-7.12` is skipped, as the plan says, with its key renamed so it still compiles. No other spec failed: 218 passed and 19 skipped.
 
+**Phase 3, done** (Nathan, 2026-11-03).
+
+10. **The values stand as built:** MO 0.6, LO 0.3, and the dragged row's 0.3. Nathan approved them hands-on and locked them in. They stay tuning values in the panel (Phase 4), not constants, so the dragged row's can be revisited with the Card's look.
+11. **The ghost doesn't part from LO,** for now.
+12. **Opacity alone, or the children riding with the carried copy:** Nathan wants to try the second, as its own story (Story 8.8 in the roadmap). The tiers stand meanwhile.
+
+**Phase 4, settled.**
+
+13. **No code changed.** The handoff is written (Living-docs handoff). The gate ran on the Phase 2 code: `npm run check` passed, and `npm run test:e2e` gave 217 passed, 19 skipped and one failure, DRAG-7.17's "from the gap above R's overflow row" (a predicate timed out). It is the roadmap's watch item, whose failure is unexplained; it passed 6 of 6 when rerun alone, and the full run had `npm run check` running beside it. The run before it, with the same code, passed all 218.
+
+**2026-11-03, the wiki (PO)**
+- **Written from the handoff,** with Nathan's approval of the tiers hands-on. Board-drag-interaction:
+  - **§4:** the "Settled overlay assignments" (the green ring, the Depth-capped dim) and the closing "look" line are gone. The pending-writes paragraph's "green overlay" now reads "its tier (§4.1)".
+  - **§4.1, new:** the tiers, by what a target can be; which rows take which, and why (a Free Card is never Low, a Stub takes its parent's, the tier passes down, an overflow row takes its owner's); no tier; one tier for the whole drag at every layer; opacity alone, at `overlayAnchorOpacity`, `overlayNeitherOpacity` and `overlayGhostOpacity`; what the dim covers; and no pop or hold cue on a dimmed target.
+  - **§7.2 and §9:** a dragged Stub's subtree, and `R`'s overflow row, "go with it": their rows stay drawn, at Low, and are never named. They no longer "travel with the carried copy".
+  - **§7.3:** the modal's rows are drawn by their tiers, as the section's are.
+  - **§10:** the pending row's pulse, relative to its own strength.
+  - **Open questions, "The look of the drag's cues":** names the tiers in place of the overlays, and gives today's Card box, plus whether the cues drawn on an item keep their color.
+- **Project-tree §1** (a section of its own, touched in passing): "a Stub's subtree travels with the carried copy" now reads "a dragged Stub's subtree rows are passed over too". Story 8.7 owns the sidebar's own tiers.
+- **Deduced (PO), for Nathan to overrule:**
+  - **The plan's Open question: the tiers' look is a working placeholder.** It follows the plan's Out of scope ("The tiers' look is a working placeholder for 'The cues' final look'"). Which target takes which tier, opacity alone, and the three values (tunable) are rules. The Card's box staying at full strength is today's look, under Open questions.
+  - **No hold on a Low overflow row** (the Coder didn't verify it, Amendment 6): it follows from existing rules. A Cycle-forming owner's rows are never named (§7.2), and every placement beside a Depth-capped owner's overflow row is over the cap, where the hold doesn't run (§7.3). §4.1 states it with that reason.
+  - **An anchor** is defined in §4.1 as a target a release can place the item beside, as the ghost's named neighbor (§2).
+- **For the Test Planner:** DRAG-2.5 and DRAG-2.6's rules are gone from §4. Their replacements derive from §4.1, DRAG-7.12's from §4.1 and §7.3, and a pulse case, if wanted, from §10. The Low overflow row's hold is a candidate case the Coder flagged as unverified.
+- **Checks:** `check:docs` 392 files, 0 hits. A search of the wiki for "green overlay", `overlayFreeDescendantColor` and `overlayDepthCappedOpacity` finds nothing.
+
+**2026-11-03, Test Planner's handoff pass**
+- Applied the PO's uncommitted wiki changes. Retired the three obsolete overlay cases and added the twelve Open cases in Scope. Each traces to the settled rules; no case fixes the current tuning numbers, final Card box treatment, tuning panel, proposed sidebar tiers (Story 8.7) or branch-carry trial (Story 8.8).
+- The pending-attachment expectation from DRAG-2.13 now belongs to DRAG-2.23's tier scenarios. DRAG-2.11 and DRAG-2.12 retain the independent depth/cycle rules. DRAG-2.2's classification behavior is unchanged.
+- Reworded DRAG-7.12 for Full/Mid/Low in the modal, and DRAG-7.27 for an overflow row that stays drawn at Low while excluded from neighbors. The other hierarchy cases no longer suggest that descendant rows physically ride with the carried copy. Project-tree §1's wording correction needs no sidebar case change.
+- **Coder action before closing:** `check:docs` finds a retired DRAG-2.5 title reference in `tests/ui/drag-target-classification.spec.ts` (reported at line 45). Remove the retired-ID claim and dispose of its obsolete overlay assertion under Story 8's skip policy. Do not blindly stamp a new tier ID on the old green-overlay assertion. The Planner has not read or edited that test. Retired DRAG-2.6 and DRAG-2.13 produce no other checker findings at this pass.
+- **Reconciler, at Story 8 close-out:** assess the handoff's classification, pickup and chrome tests against the new cases; propose applicable ID stamps and any required internal-mapping approvals. Check the full revised DRAG-7.12 and DRAG-7.27, including the skipped specs, rather than carrying their Automated status forward as a new coverage verdict. No tests or automation mappings were inspected in this Planner pass.
+- **Keep the gaps explicit:** DRAG-2.22 includes the Low overflow-row hold that the Coder reports unverified. The relative pulse, line/content isolation, actual section/modal rendering and pending-tree tier behavior need their full assertions checked; a hook or classification test alone does not prove the rendered result. Remaining gesture-dependent coverage is routed by ID in Story 10's item 10. DRAG-7.17's recurring failure remains the existing trace/watch item; this pass establishes no cause or fix.
+
 ## Open questions
 
 - **For Nathan:** if the tiers' look is good enough for now but not final, the PO records it as a working placeholder under board-drag-interaction's Open questions, and "The cues' final look" takes it up. Otherwise it's a rule. Which target takes which tier (D1) doesn't wait on the look.
 
 ## Living-docs handoff
 
-- **Behavior decisions made while building, for the PO to rule on:** filled in by the Coder, in Phase 4: the tiers, their values, which rows take which, and the pending pulse. The wiki doesn't describe the pending marker's look today (§10).
+- **Behavior decisions made while building, for the PO to rule on** (Nathan approved the tiers hands-on, 2026-11-03):
+  - **The tiers, and which rows take which.** The rule reads the drag-start classification (§4), once per drag, at every layer, from pickup to the drag's end:
+
+    | Tier | What the target can be | Rows |
+    |---|---|---|
+    | Full | A legal parent, so also an anchor | Any Card or Stub that is Valid; an overflow row whose owner is Valid |
+    | MO | An anchor, but not a parent | A Free Card that isn't Valid (too deep, or a Free descendant of the carried item); a Stub that isn't Valid whose parent is |
+    | LO | Not even an anchor | A Stub whose parent isn't Valid: the carried item's own descendants at every depth, every Stub inside an MO Card, and a Stub too deep to sit beside; an overflow row whose owner isn't Valid |
+    | None | | The dragged row, the carried copy, the static rows a section draws under the modal's backdrop, and a place that isn't a target |
+
+    A Free Card is never LO, since a Card in a column can be named for a reposition whatever its state. After a drop the rows draw where the preview puts them, at full strength.
+  - **How they draw:** by opacity only, no color. MO is 0.6, LO 0.3, and the dragged row's own 0.3, kept as a value apart from LO so the two can part. All three are tuning values in the drag tuning panel. Nathan approved these three and locked them in; he expects to revisit the dragged row's once the Card's look is final.
+  - **What the dim covers:** a row's own content, and nothing it holds. The drop line keeps full strength on an MO row, which is a real anchor. A Card's Stubs show their own tier, not the Card's on top of theirs. A Card dims its text but not its box (border and background), where a Stub row's box dims with its text. Nathan raised no change to that.
+  - **The pending marker's look** (the wiki doesn't describe it today, §10): a row with a write in flight pulses between its own opacity and half of it, so an LO row dims further and an MO row doesn't brighten. The drop line doesn't pulse. A pending Card pulses its own content, not its Stubs, which pulse on their own if pending.
+  - **The cues that start a hold:** the zoom-in cue and the overflow row's hold cue never land on a dimmed target. The zoom-in's rule is existing (§6.1). The Coder did not verify the hold's, that none starts beside an LO overflow row.
+  - **Gone:** the green ring on a Free descendant, and the Depth-capped dim as its own look. A Depth-capped Card is MO, and a Depth-capped Stub is MO or LO by its parent.
 - **Planned passages now built:** none. §4 holds no Planned passage for this.
 - **Passages superseded:**
   - **§4's settled overlay assignments:** the green ring for Free descendants, and the Depth-capped dim. The tiers replace both, and the tuning values they name (`overlayFreeDescendantColor`, `overlayDepthCappedOpacity`) go.
   - **§7.2** says a dragged Stub's subtree "travels with the carried copy", while its rows stay drawn in place, at LO. The PO decides whether that wording needs a change.
   - **Open questions, "The look of the drag's cues,"** names the classification overlays, which become the tiers.
-- **Implementation passages to place:** the drag directory's line that Phase 1 extended for the mark (`client/src/components/workflow/AGENTS.md`, "The rows that travel with the dragged item"). The Coder updates it with Phase 2's code.
+- **Implementation passages to place:** none left. The drag directory's AGENTS.md (`client/src/components/workflow/AGENTS.md`, "The rows that travel with the dragged item") now describes the tiers and where the opacity sits, and lists `data-drop-tier`.
 - **Test-plan cases affected:**
   - **DRAG-2.5 and DRAG-2.6 are superseded.** The Test Planner writes the tiers' cases in their place. Their surface specs are drag specs, so they wait for Story 10.
   - **DRAG-2.5 loses its unit test,** which goes with `freeDescendantIds`.
   - **DRAG-7.12** asserts the Depth-capped dim in the modal, by its old tuning value. Its spec is skipped in Phase 2, and the case needs rewording for MO.
   - The classification and chrome tests are internal; the Reconciler proposes them.
-- **For the Architect, at close:** Story 8.5's roadmap heading gets its ✅ and a status line. Story 10's item 10 gains DRAG-7.12's skipped spec, and the tiers' surface specs if the Test Planner writes cases for them.
+  - **Planner applied:** Scope now lists the replacements and pulse cases. DRAG-2.13 is also retired; DRAG-2.23 replaces its pending-overlay scenario with pending-tier expectations. DRAG-7.12 and DRAG-7.27 are reworded, with their existing status/mapping left for reconciliation. The stale DRAG-2.5 test title needs the Coder action recorded in Amendments before the documentation gate can pass.
+- **For the Architect, at close:**
+  - Story 8.5's roadmap heading gets its ✅ and a status line. Story 10's item 10 gains DRAG-7.12's skipped spec, and the tiers' surface specs if the Test Planner writes cases for them.
+  - **Whether opacity alone is enough** was Phase 3's open decision. Nathan wants to try carrying the branch with the pickup instead, which is Story 8.8 (roadmap). The tiers stand meanwhile.
+  - **The dragged row's opacity** is a value of its own at 0.3. Nathan expects to revisit it when the Card's look is finalized. "The cues' final look" is a natural home; the Architect decides.

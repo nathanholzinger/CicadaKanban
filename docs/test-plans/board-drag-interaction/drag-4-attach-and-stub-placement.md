@@ -77,7 +77,7 @@ Moving the cursor after the zoom chooses another placement at the same Descendan
 
 *Given* `X` at `P`'s Descendants layer over the tree, *when* the ghost is in the gap between `S1a1` (Top, depth 2) and `S2` (Bottom, depth 0), *then* exactly four tab states are offered, at depths **0, 1, 2 and 3**, and each commits a different placement ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). None is shallower than `S2`'s depth: that would make `X` an ancestor of `S2`, and an item chooses its parent, never its children. *When* the ghost is in the gap between `S1` and `S1a` (Bottom is Top's child), *then* exactly one state is offered: depth 1, `S1`'s first child, before `S1a`.
 
-The gap is where the rows slide aside to make room, in the same list shuffle as a column's ([DRAG-1.2](drag-1-contexts-and-popping.md)). `X` and its own subtree travel with it, are passed over, and are never Top or Bottom.
+The gap is where the rows slide aside to make room, in the same list shuffle as a column's ([DRAG-1.2](drag-1-contexts-and-popping.md)). `X` and its own subtree are passed over, and are never Top or Bottom.
 
 **Automation test:** `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/workflow/descendantsProjection.test.ts`, `client/src/components/workflow/dragCollision.test.ts`
 
@@ -152,7 +152,7 @@ A `P` with no attached children offers the empty hierarchy's one state ([DRAG-4.
 
 *Given* `X` with subtree height `H` at `P`'s Descendants layer, where `P` is at absolute depth `d` in the workflow, *when* the user tabs to a state whose resulting depth, `d` plus the state's depth below `P` plus `H`, exceeds `CAP` (typically the deepest state, a child of Top; [ATT-4.4](../item-attachment/att-4-legal-parent-depth-cap.md)), *then* the state can still be reached, the ghost shows there marked invalid, and a release in it **commits nothing**: no request is made, and `X` goes back to where it was picked up. *When* the user tabs to a shallower state in the same gap that fits, *then* that state commits normally ([DRAG-4.9](drag-4-attach-and-stub-placement.md), [DRAG-4.10](drag-4-attach-and-stub-placement.md)). Validity is per state, not per gap, and the cap is checked against `X`'s deepest descendant, not `X` alone. The visible cue is [DRAG-4.32](drag-4-attach-and-stub-placement.md)'s.
 
-*And given* `X` has descendants, *then* no tab state in any gap makes `X` its own descendant: its subtree travels with it and is never Top or Bottom ([DRAG-4.8](drag-4-attach-and-stub-placement.md)). A cycle simply has no state, and needs no cue.
+*And given* `X` has descendants, *then* no tab state in any gap makes `X` its own descendant: its subtree is passed over and is never Top or Bottom ([DRAG-4.8](drag-4-attach-and-stub-placement.md)). A cycle simply has no state, and needs no cue.
 
 **Automation test:** `client/src/lib/hierarchyPlacement.test.ts`, `client/src/components/workflow/descendantsProjection.test.ts`
 
@@ -288,6 +288,6 @@ Each release lands exactly where the ghost showed. The ghost neither stays in th
 - with the ghost between `B` and `C`, at depth 0, `X.parentId = P`, still attached, and `P`'s children are `A, B, X, C`. The request names the neighbor the highlight shows: `B/after` or `C/before`;
 - with the ghost in that same gap, at depth 1, `X.parentId = B`, attached as `B`'s first child, and `P`'s children are `A, B, C`.
 
-In both, `X` keeps `P`'s workphase, and the write places it where the ghost was shown at release, rather than in the gap named before the final row crossing. The same holds when `X` carries an attached child `XC`: `XC` stays attached beneath `X`, and neither travelling row is a gap neighbor. Each outcome holds when the final move approaches from above or below. Different approaches need not select the same gap at the same cursor point; each release must match its own shown placement.
+In both, `X` keeps `P`'s workphase, and the write places it where the ghost was shown at release, rather than in the gap named before the final row crossing. The same holds when `X` carries an attached child `XC`: `XC` stays attached beneath `X`, and neither `X` nor `XC` is a gap neighbor. Each outcome holds when the final move approaches from above or below. Different approaches need not select the same gap at the same cursor point; each release must match its own shown placement.
 
 **Automation test:** —

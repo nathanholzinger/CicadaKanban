@@ -1,6 +1,6 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.23
+**Next ID:** DRAG-6.25
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
@@ -26,6 +26,8 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.20 | The stopped item flashes wherever the reloaded board draws it | P1 | Open |
 | DRAG-6.21 | A hidden stopped item is not revealed for its flash | P1 | Open |
 | DRAG-6.22 | Cancels, no-write releases and resyncs without an item drag show no stop cue | P1 | Open |
+| DRAG-6.23 | A pending row pulses from its own strength to half of it | P1 | Open |
+| DRAG-6.24 | A pending pulse leaves the drop line and nested rows independent | P1 | Open |
 
 ---
 
@@ -200,5 +202,23 @@ This case asserts the lifecycle using `T` as a parameter, not whether today's tu
 - a column is being dragged, with no item drag running, when a resync lands.
 
 An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
+
+**Automation test:** —
+
+## DRAG-6.23 — A pending row pulses from its own strength to half of it
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1
+
+*Given* a row with a write still in flight, *when* it is drawn at Full strength, *then* its pending pulse runs between 1 and 0.5. *When* another item is dragged and the pending row is Mid or Low for that drag, *then* it pulses between `overlayAnchorOpacity` and half that value, or between `overlayNeitherOpacity` and half that value, respectively. A re-dragged pending item's ghost pulses between `overlayGhostOpacity` and half that value. None pulses toward a fixed opacity that would brighten a dim row. When the pending row's response is applied and its marker clears, the pending pulse ends; any tier belonging to the current drag still applies.
+
+The case asserts the relative endpoints, without pinning tuned opacity values or an animation duration.
+
+**Automation test:** —
+
+## DRAG-6.24 — A pending pulse leaves the drop line and nested rows independent
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1
+
+*Given* pending Card `P` with attached Stub `S` that has no write in flight, *when* `P` pulses, *then* only `P`'s own content pulses. `S` keeps its own strength, Full with no drag or its assigned tier during a drag, without inheriting `P`'s pulse. *Given* instead `S` alone is pending, *then* it pulses on its own and `P` does not. If both are pending, each pulses relative to its own strength, without multiplying the parent's pulse into the child's. A drop line naming a pending row remains Full and does not pulse, including on a Mid Card or Stub.
 
 **Automation test:** —

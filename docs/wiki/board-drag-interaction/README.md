@@ -370,8 +370,8 @@ This is a per-drag property, not a per-hover one.
 the write puts it, and its subtree moves with it. An item whose detach
 is in flight counts as Free and keeps its parent, as a detach does
 ([`../item-attachment/`](../item-attachment/) §11). So it's still a
-descendant of the Card it's leaving, for depth, for cycles and for the
-green overlay below. Why not the stored tree: the board draws a pending
+descendant of the Card it's leaving, for depth, for cycles and for
+its tier (§4.1). Why not the stored tree: the board draws a pending
 write as landed (§10), so a target at the cap's edge could read Valid
 where the board draws it a level too deep, and the server would refuse
 the drop.
@@ -392,18 +392,67 @@ carries `itemDepthCap`, the cap the API itself enforces, so the board and
 the API always judge depth against the same value
 ([`../item-attachment/`](../item-attachment/) §8).
 
-Settled overlay assignments:
-
-- **Free descendants of the carried item** get the **green** relationship
-  overlay — "these are yours," visible on the board while you hold their
-  ancestor. Its shade is tunable, `overlayFreeDescendantColor`.
-- **Depth-capped targets** are **de-emphasized**, not hidden — "real
-  target, not for this item." They're dimmed by a tunable opacity,
-  `overlayDepthCappedOpacity`.
-
 **Every Stub is classified individually**, like any other target.
 
-The *classification* is settled. The overlays' final **look** isn't a
+### 4.1 Each target is drawn by what it can be
+
+**While an item is dragged, every target is drawn at one of three
+strengths, by what it can be to the carried item.** An *anchor* is a
+target a release can place the item beside, as the ghost's named
+neighbor (§2).
+
+| Tier | What the target can be | Which targets |
+|---|---|---|
+| **Full** | A parent, so an anchor too | A Valid Card or Stub; an overflow row whose owner is Valid |
+| **Mid** | An anchor, but not a parent | A Free Card that isn't Valid; a Stub that isn't Valid, whose parent is |
+| **Low** | Not even an anchor | A Stub whose parent isn't Valid; an overflow row whose owner isn't Valid |
+
+- **A Free Card is never Low.** A Card in a column can be named for a
+  reposition whatever its state (§6.1), and a reposition sets no parent.
+  So a Card that isn't Valid is Mid, whether it's a Free descendant of
+  the carried item or too deep to take it.
+- **A Stub takes its tier from its parent.** Named as the ghost's
+  neighbor, a Stub gives the carried item its own parent. If that parent
+  can't take the item, by a cycle or the cap, the Stub is no anchor, and
+  it's Low. That covers the carried item's own descendants at every
+  depth, every Stub inside a Mid Card, and a Stub too deep to sit
+  beside. A Stub that isn't Valid, whose parent is, is Mid: the item can
+  sit beside it, but not under it.
+- **The tier passes down.** Every Stub under a Mid or Low target is Low.
+  Neither is Valid, so its children are Low. A Low row isn't Valid
+  either: its parent fails by a cycle or the cap, and the row is a level
+  deeper in that parent's branch. So a row's tier needs only its own
+  state and its parent's.
+- **An overflow row takes its owner's tier,** Full or Low. It stands for
+  the owner's hidden children (§9), which are all Low when the owner
+  isn't Valid. It's never Mid: it isn't an item, so it's never a parent.
+- **No tier** for the ghost, which is drawn at its own strength (below),
+  for the carried copy, for the rows a section draws under the hierarchy
+  modal's backdrop (§7.3), or for a place that's no target (§4).
+- **One tier for the whole drag, at every layer,** from pickup to the
+  drag's end, by a drop, a cancel or a stop (§10). At the column layer no
+  Stub is an anchor, and inside a Card no column Card is, but neither is
+  dimmed for it. Why not a tier per layer: most of the board would dim
+  and brighten again at every zoom in or out. After a drop the rows are
+  drawn where the preview puts them (§10), at full strength.
+
+**The tiers are drawn by opacity alone,** with no color. Mid is drawn at
+`overlayAnchorOpacity`, about 0.6, and Low at `overlayNeitherOpacity`,
+about 0.3. The ghost is drawn at `overlayGhostOpacity`, about 0.3, a
+value of its own so that it can part from Low's. All three are tunable.
+
+**A row's tier dims its own content, and nothing it holds.** The drop
+line keeps full strength on a Mid row, which is a real anchor. A Card's
+Stubs are drawn at their own tier, not the Card's on top of theirs, so
+a Stub in a Mid Card is drawn at Low, no darker.
+
+**A dimmed target never shows a cue that starts a pop or a hold.** A
+Card that isn't Valid never starts the zoom-in's dwell (§6.1). A Low
+overflow row's hold never runs: a Cycle-forming owner's rows are never
+named (§7.2), and every placement beside a Depth-capped owner's overflow
+row is over the cap (§7.3).
+
+The classification and the tiers are settled. Their final look isn't a
 rule yet (Open questions).
 
 ## 5. Card → column region: drop bands
@@ -745,8 +794,8 @@ names:
 
 **The dragged item carries its whole subtree**
 ([`../hierarchy-placement/`](../hierarchy-placement/) §4). On the board,
-a dragged Stub's subtree travels with the carried copy, and its rows are
-passed over, never named (§2).
+a dragged Stub's subtree goes with it. Its rows stay where they're
+drawn, at Low (§4.1), and are passed over, never named (§2).
 
 **The depth cap is checked per tab state, against the deepest descendant,
 at absolute depth.** A state's resulting depth is `P`'s absolute depth in
@@ -793,7 +842,8 @@ layer,** drawn whole, not a layer of its own:
   the pop-out clock measures against, so a cursor over the header is
   still inside it. The Card and its section, under the backdrop, take
   no part.
-- **Its rows are classified as the section's are** (§4).
+- **Its rows are classified, and drawn by their tiers, as the section's
+  are** (§4, §4.1).
 - **A release places by gap and depth** among the Card's descendants,
   as in the section (§7.1, §7.2). The modal shows every level, so it
   has no overflow rows. An over-cap tab state is reachable there too,
@@ -881,8 +931,9 @@ stands for them. A Free child shows as a Card of its own, so it isn't
 counted, and a row whose children are all Free has no overflow row. An
 item dropped beside the overflow row (§7.1) joins the count. One of
 `R`'s children being dragged is left out of it, since the ghost shows
-it. When `R` itself is dragged, its overflow row travels with it, as
-the rest of its subtree does, and is never named as a neighbor (§7.2).
+it. When `R` itself is dragged, its overflow row goes with it, as the
+rest of its subtree does: it stays drawn, at Low, and is never named as
+a neighbor (§4.1, §7.2).
 
 **The overflow row is a control, not an item.** A press on its count
 starts no drag, of the Card or anything else, and a click on it opens
@@ -937,6 +988,13 @@ own value is still in flight.
 specifically *not* set to `null` — null already means "not ordered by
 position" (a done item), and would sort the pending item to the top of the
 list ([`../item-positioning/`](../item-positioning/) §2).
+
+**A pending row pulses between its own strength and half of it,** so a
+row drawn at Mid or Low (§4.1) dims further on each beat, and a ghost
+pulses down from its own value. The drop line doesn't pulse. A pending
+Card pulses its own content, not its Stubs, and a Stub pulses on its
+own when it's pending. Why not a pulse toward one fixed strength: a Low
+row would brighten on each beat, and a Mid row would barely move.
 
 **On the response**, in this order: apply any reindex pairs, assign the
 authoritative position, clear the pending marker, and only then compare
@@ -1044,15 +1102,19 @@ stamp on the write.
 
 Not settled. Don't derive test cases from anything in this section. Everything outside it is settled.
 
-- **The look of the drag's cues.** The classification overlays (§4), the
+- **The look of the drag's cues.** The tiers (§4.1), the
   band guides (§5, including whether the band under the cursor gets a
   highlight of its own), the zoom-in cue (§6.1) and the invalid tab-state cue
   (§3.2, §7.2) each have a working placeholder; their final palette,
   weight and animation are best tuned against real gestures rather than
   guessed up front. So does the cue for a drag a reload stops (§10),
   today an amber banner with centered text, and an amber flash on the
-  item. The cue of the hold that opens the hierarchy modal
-  (§7.3) borrows the zoom-in cue's look, drawn on the overflow row.
+  item. Today a Card at Mid or Low dims its content but not its box,
+  its border and background, where a Stub row's box dims with its
+  content. Whether the drag's cues drawn on an item keep their color is
+  part of the final look. The cue of the hold that opens the hierarchy
+  modal (§7.3) borrows the zoom-in cue's look, drawn on the overflow
+  row.
   Today's zoom-in cue is a dashed blue outline and a thin bar along the
   card's inside bottom edge, filling left to right. The fuller
   transition (the card opening, its ghost row growing, the carried copy
