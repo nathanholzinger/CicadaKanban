@@ -2,7 +2,7 @@
 
 **Next ID:** DRAG-2.24
 
-The classification states and the Full, Mid and Low tiers are separate assertions. Cases use the named opacity values; they do not pin tuned numbers or the cues' final look. Tiers change opacity alone, without adding a relationship color, and leave targets drawn in place.
+The classification states and the Full, Mid and Low tiers are separate assertions. Cases use the named opacity values; they do not pin tuned numbers or the cues' final look. Tiers change opacity alone, without adding a relationship color. The carried item's attached branch is absent from the lists, as covered by [DRAG-8.1](drag-8-carried-branch.md).
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
@@ -19,7 +19,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 | DRAG-2.14 | Valid Cards and Stubs are Full | P1 | Open |
 | DRAG-2.15 | A Free Card that is not Valid is Mid, never Low | P1 | Open |
 | DRAG-2.16 | A Depth-capped Stub is Mid with a Valid parent, and its children are Low | P1 | Open |
-| DRAG-2.17 | A dragged Stub's descendants stay drawn at Low and are never placement neighbors | P1 | Open |
+| DRAG-2.17 | The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low | P1 | Open |
 | DRAG-2.18 | An overflow row is Full with a Valid owner and Low otherwise, never Mid | P1 | Open |
 | DRAG-2.19 | Tiers stay fixed across layers and clear when the drag ends | P1 | Open |
 | DRAG-2.20 | The ghost, carried copy, backdrop rows and non-targets take no target tier | P1 | Open |
@@ -141,13 +141,13 @@ Low is a drawing rule, not removal of a gap's depth range: valid shallower state
 
 **Automation test:** —
 
-## DRAG-2.17 — A dragged Stub's descendants stay drawn at Low and are never placement neighbors
+## DRAG-2.17 — The attached branch is absent, while a Free descendant stays Mid and its Stubs stay Low
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2
 
-*Given* Stub `X` in Card `P`'s section has an attached child `C` with attached child `G`, both shown, *when* `X` is dragged to a different gap, *then* `C` and `G` stay drawn in the section at Low, at `overlayNeitherOpacity`. They do not ride with the carried copy, and neither is ever Top, Bottom or the named neighbor. Their Low strength stays the same after `X` pops out to the column or zooms into a different Card. The branch still moves with `X` in the hierarchy on release.
+*Given* Stub `X` in Card `P`'s section has an attached child `C` with attached child `G`, both shown, *when* `X` is picked up and dragged to a different gap, *then* `C` and `G` are absent from the section, not drawn at Low. Neither is ever Top, Bottom or the named neighbor. They remain absent after `X` pops out to the column or zooms into a different Card. The same absence holds for the attached branch of a Card picked up Free and zoomed into a section.
 
-*And given* `X` also has a Free descendant Card `D` with attached Stub `D1`, *then* `D` is Mid by the Free Card rule, while `D1` is Low. A detached link does not make `D1` a legal neighbor for its ancestor.
+*And given* `X` also has a Free descendant Card `D` with attached Stub `D1`, *then* `D` stays drawn in its column at Mid, at `overlayAnchorOpacity`, while `D1` stays drawn in `D`'s section at Low, at `overlayNeitherOpacity`. Neither collapses with the branch. A detached link does not make `D1` a legal neighbor for its ancestor.
 
 **Automation test:** —
 
@@ -155,7 +155,7 @@ Low is a drawing rule, not removal of a gap's depth range: valid shallower state
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §9
 
-*Given* visible overflow rows owned by Valid `V`, Depth-capped `T` and Cycle-forming `C` for the carried item, *when* the drag begins, *then* `V`'s overflow row is Full, and `T`'s and `C`'s are Low at `overlayNeitherOpacity`. None is Mid, even when its owner's own row is Mid. Each overflow row remains drawn in place and keeps its count meaning; it never becomes an item or a possible parent itself.
+*Given* visible overflow rows owned by Valid `V`, Depth-capped `T` and Cycle-forming `C` for the carried item `X`, with `C` in the section of a Free descendant of `X`, outside the carried branch, *when* the drag begins, *then* `V`'s overflow row is Full, and `T`'s and `C`'s are Low at `overlayNeitherOpacity`. None is Mid, even when its owner's own row is Mid. Each of these overflow rows remains drawn in place and keeps its count meaning; it never becomes an item or a possible parent itself. Overflow rows belonging to the carried item or its attached branch are absent ([DRAG-7.27](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** —
 
@@ -187,7 +187,7 @@ Low is a drawing rule, not removal of a gap's depth range: valid shallower state
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1, wiki board-drag-interaction §7.3
 
-*Given* a Mid Card is the named neighbor, *when* the cursor remains on its zoom-in aim, *then* no zoom-in dwell or progress cue starts and the drag never enters it. *Given* an overflow row whose owner is Depth-capped, *when* the ghost sits beside it at its hidden children's level with the cursor inside the Card, *then* the over-cap state starts no modal dwell, shows no hold-progress cue, and opens no modal. *Given* instead a Cycle-forming owner, *then* its overflow row is passed over, never named, and cannot start the hold. A Full overflow row with a Valid owner retains the ordinary valid hold behavior ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
+*Given* a Mid Card is the named neighbor, *when* the cursor remains on its zoom-in aim, *then* no zoom-in dwell or progress cue starts and the drag never enters it. *Given* an overflow row whose owner is Depth-capped, *when* the ghost sits beside it at its hidden children's level with the cursor inside the Card, *then* the over-cap state starts no modal dwell, shows no hold-progress cue, and opens no modal. *Given* instead a Cycle-forming owner outside the carried branch, in a Free descendant Card's section, *then* that Card cannot be zoomed into, so its overflow row cannot start the modal hold. An overflow row belonging to the carried branch is absent. A Full overflow row with a Valid owner retains the ordinary valid hold behavior ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
 
 **Automation test:** —
 

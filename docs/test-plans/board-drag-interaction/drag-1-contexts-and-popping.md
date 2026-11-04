@@ -347,7 +347,7 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 
 The exceptions:
 
-- `X`'s own Stubs aren't shown while it's dragged ([DRAG-3.19](drag-3-card-column-bands.md)). After the release, `X`'s list is back as the user set it, collapsed or expanded.
+- The carried item's attached branch isn't drawn while it's dragged, a Card's Stubs or a Stub's branch ([DRAG-8.1](drag-8-carried-branch.md)). After the drag ends, the branch is drawn again, and a Card's list is back as the user set it, collapsed or expanded.
 - *When* the drag zooms into collapsed `C` ([DRAG-4.19](drag-4-attach-and-stub-placement.md)), *then* `C` opens. *When* the drag then pops out of `C` and is released elsewhere, *then* `C` is collapsed again. *When* `X` is instead attached into `C`, *then* `C` stays open after the release, so `X`'s new place is in view.
 
 **Automation test:** —

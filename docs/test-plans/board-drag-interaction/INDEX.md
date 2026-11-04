@@ -2,7 +2,7 @@
 
 **Wiki page:** board-drag-interaction
 
-**Suite IDs:** `DRAG-1` … `DRAG-7`. A case is written by its full ID, `<suite>.<n>` (e.g. `DRAG-3.9`), in its own suite file as everywhere else.
+**Suite IDs:** `DRAG-1` … `DRAG-8`. A case is written by its full ID, `<suite>.<n>` (e.g. `DRAG-3.9`), in its own suite file as everywhere else.
 
 | Suite | What it covers |
 |---|---|
@@ -13,3 +13,4 @@
 | [DRAG-5 — Stub → out: detach](drag-5-detach-and-overflow.md) | Moving a Stub within its Card, detaching it, picking it up again, and reparenting it into another Card |
 | [DRAG-6 — Optimistic preview, reconciliation, and failure](drag-6-preview-reconciliation.md) | What the board shows on release, reconciling responses, re-drags, failures, item and column drags stopped by a resync, the banner, and the stopped item's flash window |
 | [DRAG-7 — Depth overflow and the hierarchy modal](drag-7-overflow-and-hierarchy-modal.md) | How many levels a Card's section shows, the overflow row and its gaps, and the hierarchy modal: opened by a click or by a hold during a drag, how it closes, and a board reload |
+| [DRAG-8 — The carried branch](drag-8-carried-branch.md) | Attached-branch pickup and lifetime, Free descendants, pending writes, layout and restoration, and the carried copy's count line |

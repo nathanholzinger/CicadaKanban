@@ -179,9 +179,9 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
 
-*Given* Card `X` with a long description, an assignee and attached children `S1, S2`, *when* `X` is dragged at Board or Column layer, *then* both its carried copy and its in-list ghost render as shortCard: one pills row, the title on one line, the description clamped to exactly one line (with the line kept even when `X` has no description), no assignee footer, and no attached-children indicator or count. Both copies are the same fixed height whatever `X` contains.
+*Given* Card `X` with a long description, an assignee and attached leaf children `S1, S2`, *when* `X` is dragged at Board or Column layer, *then* both its carried copy and its in-list ghost render as shortCard: one pills row, the title on one line, the description clamped to exactly one line (with the line kept even when `X` has no description), no assignee footer, and no ordinary attached-children indicator or count inside the box. Both copies' boxes are the same fixed height whatever `X` contains. The carried copy alone has a separate line below its box, reading "+ 2 children"; the ghost has none ([DRAG-8.8](drag-8-carried-branch.md)).
 
-`S1` and `S2` aren't rendered anywhere for as long as `X` is being dragged: not inside `X`'s copies, not dimmed, simply absent. *When* `X` is dropped, *then* it returns to full height, and `S1` and `S2` render inside it again.
+`S1` and `S2` aren't rendered anywhere for as long as `X` is being dragged: not inside `X`'s copies, not dimmed, simply absent. *When* `X` is dropped, *then* it returns to full height, and its list is restored collapsed or expanded as the user set it. An expanded list draws `S1` and `S2` inside it again; a collapsed one keeps them hidden.
 
 **Automation test:** —
 
@@ -205,7 +205,7 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
 
-*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. Both Stub copies share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
+*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. Both Stub copies' boxes share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. If `X` has an attached branch, its carried copy keeps the count line outside that box, and the ghost has none. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer, with the line on the carried copy alone. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup, with the same carried-copy-only line when it has a branch ([DRAG-8.9](drag-8-carried-branch.md)).
 
 **Automation test:** —
 
@@ -231,7 +231,7 @@ The labels are asserted as text; their look is open.
 
 *Given* a Card's expanded descendants section with typed and untyped Stubs, and an overflow row for hidden children, let `s` be the fixed Stub-row height. *When* those rows are drawn, *then* each typed row, each untyped row and the overflow row has total height `s`. A type pill fits within the title's line, so it is no taller than that line and does not grow its row. Longer titles and other row content do not change the fixed height.
 
-*When* the hierarchy modal opens, *then* its typed and untyped rows also have height `s`, as do the static section rows still drawn under its backdrop. *When* a typed Stub is picked up from its section or the modal, *then* its in-list ghost and its carried copy each have total height `s`; the carried copy's border is inside that height. The same holds for an untyped Stub. No representation gains extra height from its pill, padding, content or carried border.
+*When* the hierarchy modal opens, *then* its typed and untyped rows also have height `s`, as do the static section rows still drawn under its backdrop. *When* a typed Stub is picked up from its section or the modal, *then* its in-list ghost and its carried copy each have a box of height `s`; the carried copy's border is inside that height. If the Stub has a branch, the carried copy's second line hangs outside that box and adds nothing to its height; the ghost has none. The same holds for an untyped Stub. No representation's box gains extra height from its pill, padding, content, carried border or branch line ([DRAG-8.10](drag-8-carried-branch.md)).
 
 The case asserts one shared fixed height, without fixing its pixel value. The representation switch and pointer position when a Card zooms into Descendants remain [DRAG-3.22](drag-3-card-column-bands.md)'s assertions.
 

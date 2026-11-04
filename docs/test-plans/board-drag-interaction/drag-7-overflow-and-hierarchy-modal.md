@@ -39,7 +39,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.24 | A press on an overflow row's indent is the Card's | P2 | Automated |
 | DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Automated |
 | DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Automated |
-| DRAG-7.27 | A dragged row's overflow stays drawn at Low and is never a neighbor | P2 | Open |
+| DRAG-7.27 | The carried item's overflow and its branch's overflow rows are absent during the drag | P2 | Open |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
@@ -192,7 +192,7 @@ This case asserts the clock's logic, with its thresholds as parameters; its pass
 
 *Given* the modal hold beside `R`'s overflow row completes with the cursor still, where a modal placed under the cursor fits inside the window, *then* the modal opens with the ghost's spot under the cursor: from the gap above the overflow row, the gap before `R1`, at `R1`'s level; from the gap below it, the gap after `R2`, at `R2`'s level. The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened: `X` first among `R`'s attached children, before `R1`, or last, after `R2` ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)). No pop happened: the drag is still at `P`'s Descendants layer.
 
-The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor, and a release right after commits the item there, its child still under it.
+The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor. Its attached child is absent while it is carried (wiki board-drag-interaction §7.2), and a release right after commits the item there, with its child still attached and drawn under it again.
 
 **Automation test:** —
 
@@ -284,11 +284,13 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 **Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`
 
-## DRAG-7.27 — A dragged row's overflow stays drawn at Low and is never a neighbor
+## DRAG-7.27 — The carried item's overflow and its branch's overflow rows are absent during the drag
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2, wiki board-drag-interaction §4.1
 
-*Given* the tree, *when* `R` is picked up in the section, *then* its overflow row stays drawn in the section at Low ([DRAG-2.18](drag-2-target-classification.md)), rather than riding with the carried copy. It isn't one of the placement neighbors, and while `R` is dragged the side highlight never names it. Every gap reads as though `R`'s overflow row weren't a candidate: the gap after `Q` runs to `T`. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
+*Given* the tree, *when* `R` is picked up in the section, *then* its overflow row is absent for the whole drag, not drawn at Low. The gap after `Q` runs to `T`, with neither `R`'s hidden branch nor its overflow row offered as Top, Bottom or the named neighbor. Unrelated overflow rows remain drawn and keep their ordinary counts. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
+
+*Given* instead `Q` is picked up, *then* `R` is in its attached branch: both `R`'s row and `R`'s overflow row are absent. The same holds when Card `P` is picked up and zoomed into another section: no overflow row belonging to `P` or its attached branch is drawn there. On a cancel, the original section and its overflow rows return, with `R`'s overflow reading "2 children".
 
 **Automation test:** —
 

@@ -51,8 +51,9 @@ move (§6). What the sidebar adds:
   gap, with its depth range. Those rows stay in place, the subtree's
   dimmed (§2), but none of them is ever Top or Bottom
   ([`../hierarchy-placement/`](../hierarchy-placement/) §4), so the line
-  goes where the subtree was. On the board the same space is the ghost's
-  own slot, since a dragged Stub's subtree rows are passed over too.
+  goes where the subtree was. On the board a dragged item's attached
+  descendants aren't drawn, so there are no such rows to rest on
+  ([`../board-drag-interaction/`](../board-drag-interaction/) §7.2).
 - **An empty hierarchy arises when the dragged project's subtree holds
   every project**, since that subtree is never a candidate: for example, a
   sidebar with one top-level project. It offers one state, at the top

@@ -173,9 +173,10 @@ whether its parent is.
 - **An entry at the root's own level takes the root's answer:** whether
   the root can take the dragged entry. Each surface's page says when it
   can (§3).
-- **The dragged entry's descendants are Low,** at every depth. Each
-  one's parent is the dragged entry or one of its descendants, never a
-  legal parent (§4).
+- **The dragged entry's descendants are Low,** at every depth, wherever
+  a surface draws them. Each one's parent is the dragged entry or one of
+  its descendants, never a legal parent (§4). Each surface's page says
+  which of them it draws.
 - **The tier passes down.** Every entry under a Mid or a Low one is Low,
   since neither is a legal parent. So an entry's tier needs only its own
   answer and its parent's.

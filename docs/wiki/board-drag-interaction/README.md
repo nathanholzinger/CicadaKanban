@@ -142,8 +142,9 @@ is legible on the board itself. Its color is tunable,
 collapsed or expanded, through every layer change and after the release.
 The exceptions:
 
-- **The carried Card's own Stubs aren't shown while it's dragged** (§5a).
-  After the release, its list is back as the user set it.
+- **The carried item's attached descendants aren't drawn while it's
+  dragged** (§7.2), a Card's Stubs or a Stub's branch. After the drag,
+  they're drawn again, and a Card's list is back as the user set it.
 - **A Card the drag zooms into opens** (§6.1). If the drag leaves it
   again, it goes back to how the user set it. If the item is attached into
   it, it stays open, so the item's new place is in view.
@@ -226,9 +227,9 @@ While the item is in-context:
   **Why not the half of the hovered card:** the gap is drawn from list
   order, so choosing the side by which half of a card the carried card's
   center is in can land a drop one slot away from the ghost. **The same
-  rule holds in a Card's descendants section (§7.1)**, where the rows of
-  a dragged Stub's own subtree stay drawn and are passed over, never
-  named (§7.2).
+  rule holds in a Card's descendants section (§7.1).** The carried
+  item's attached descendants aren't drawn there (§7.2), so a neighbor
+  is always the row beside the ghost.
 
 **A release always commits the in-context meaning above, no matter where
 the bare cursor is resting** (§1.1 rule 1). The card never visually leaves
@@ -416,8 +417,10 @@ neighbor (§2).
 - **A Stub is an entry,** so it takes its tier from its own state and
   its parent's, a Card's or another Stub's. Named as the ghost's
   neighbor, a Stub gives the carried item its own parent. That makes Low
-  the carried item's own descendants at every depth, every Stub inside a
-  Mid Card, and a Stub too deep to sit beside.
+  every Stub inside a Mid Card, a Free descendant of the carried item
+  included, and a Stub too deep to sit beside. The carried item's
+  attached descendants would be Low too, but they aren't drawn while
+  it's dragged (§7.2).
 - **An overflow row takes its owner's tier,** Full or Low. It stands for
   the owner's hidden children (§9), which are all Low when the owner
   isn't Valid. It's never Mid: it isn't an item, so it's never a parent.
@@ -444,9 +447,10 @@ a Stub in a Mid Card is drawn at Low, no darker.
 
 **A dimmed target never shows a cue that starts a pop or a hold.** A
 Card that isn't Valid never starts the zoom-in's dwell (§6.1). A Low
-overflow row's hold never runs: a Cycle-forming owner's rows are never
-named (§7.2), and every placement beside a Depth-capped owner's overflow
-row is over the cap (§7.3).
+overflow row's hold never runs. A Cycle-forming owner's row is drawn
+only in the section of a Card the drag can't zoom into, a Free
+descendant of the carried item (§6.1, §7.2). Every placement beside a
+Depth-capped owner's overflow row is over the cap (§7.3).
 
 The classification and the tiers are settled. Their final look isn't a
 rule yet (Open questions).
@@ -607,8 +611,9 @@ where a depth is chosen.
 without.** That's a section's rows, the ghost among them, an overflow
 row (§9), the hierarchy modal's rows and the rows a section draws under
 its backdrop (§7.3), and the carried copy, its border drawn inside that
-height. A row's type pill fits the title's line, so a typed row is no
-taller than an untyped one, and nothing a row holds changes its height.
+height and its branch's line (below) outside it. A row's type pill fits
+the title's line, so a typed row is no taller than an untyped one, and
+nothing a row holds changes its height.
 **Why:** the side highlight is chosen by where the carried copy sits
 against the ghost's middle (§2, rule 3), and the copy stays under the
 pointer through the switch (above). Both are exact only when a row's
@@ -627,16 +632,43 @@ board's draggable unit:
   doesn't vary on whether a description happens to be set.
 - **No assignee footer** — never rendered while dragging, not even
   collapsed.
-- **The attached-children indicator and count are fully suppressed** — not
-  shown collapsed, not shown dimmed, simply gone from both copies. This
-  means **an item's own attached children go completely unrendered, not
-  merely visually hidden, for as long as that item is being dragged** — a
-  deliberate side effect, not an oversight.
+- **The attached-children indicator and count are fully suppressed** —
+  not shown collapsed, not shown dimmed, simply gone from both copies.
+  The item's attached descendants go unrendered for as long as it's
+  dragged (§7.2), and the carried copy says how many there are on a line
+  of its own (below).
 
 **Why:** a full Card's real height is otherwise unbounded (a long
 description, many attached children, an assignee footer). shortCard fixes
 both drag copies to one exact height, which is what makes §5's carve-out
 reservation *exact* rather than an approximation.
+
+**The carried copy of an item with attached descendants shows their
+count on a second line,** in either form, hung under the box the drag
+measures: "+ X children, Y total descendants". X is the item's attached
+children, and Y its whole branch (§7.2), rows past a section's shown
+levels included (§9). When every descendant is a child it reads
+"+ X children" alone, and one child reads "+ 1 child". An item with no
+attached descendants, or with only Free children, has no line.
+- **The line goes with the copy through every switch** (above): a Card
+  zoomed into a section keeps it as a Stub, and a Stub popped out to a
+  column keeps it as a shortCard. A shortCard copy's tilt (§2) turns it
+  too.
+- **Only the carried copy has it.** The ghost has none, in either form.
+- **It adds nothing to the copy's box,** a Stub row or a shortCard. So
+  the bands' reservation (§5), the side highlight (§2, rule 3) and the
+  copy's bound (§2) read the box as they would with no line.
+- **It covers what's below the copy:** in a section, the row just below
+  the ghost; in a column or a sub-row, the top of the Card below the
+  ghost and the gap above that Card. The bound holds the box alone, so
+  at a section's or a sub-row's last row the line can hang past the
+  Card's or the sub-row's bottom edge.
+
+**Why:** the branch isn't drawn while the item is carried (§7.2), so the
+line says what goes with it. Why not grow the copy to hold it: the box
+is one known height at every layer, which the bands and the side
+highlight are exact by (above). The line's look isn't a rule yet (Open
+questions).
 
 **On drop, the ghost returns to full height.** How it gets there isn't a
 rule yet (Open questions).
@@ -803,8 +835,33 @@ names:
 
 **The dragged item carries its whole subtree**
 ([`../hierarchy-placement/`](../hierarchy-placement/) §4). On the board,
-a dragged Stub's subtree goes with it. Its rows stay where they're
-drawn, at Low (§4.1), and are passed over, never named (§2).
+its *branch*, its attached descendants at every depth, leaves every list
+that draws it, for the whole drag, a Card's as well as a Stub's: the
+section, the hierarchy modal and the rows a section draws under the
+modal's backdrop (§7.3). The overflow rows the branch's rows own go
+with them (§9). The carried copy shows the branch's count (§5a).
+**Why:** so the pickup reads as taking the whole branch.
+
+- **A Free descendant isn't part of the branch,** nor is anything under
+  one. It's a Card in its column, drawn at its tier, and its Stubs stay
+  in its section (§4.1).
+- **The placement doesn't change.** The branch is never a placement
+  candidate (§3.2), so the gaps and depths are the ones a drawn branch
+  would offer, and a neighbor is always the row beside the ghost (§2).
+- **The branch is read once, at pickup,** from the tree as the board
+  draws it, its pending writes included (§4, §10), and held for the
+  whole drag. A write that lands mid-drag doesn't change what's left
+  out.
+- **The rows below a Stub's branch move up at its pickup,** by the
+  branch's height. A Card's pickup draws its copies as shortCards
+  (§5a), which leave its Stubs out already, so the branch moves nothing
+  more there. Its zoom into a section adds one row, the ghost, and not
+  its branch's rows. How either should move isn't a rule yet (Open
+  questions).
+- **When the drag ends, the branch is drawn again at once,** under the
+  item: on a drop, where the preview puts it (§10); on a cancel, a
+  release that writes nothing or one past the cap, where it was; on a
+  stop, where the reloaded board has it (§10).
 
 **The depth cap is checked per tab state, against the deepest descendant,
 at absolute depth.** A state's resulting depth is `P`'s absolute depth in
@@ -852,7 +909,7 @@ layer,** drawn whole, not a layer of its own:
   still inside it. The Card and its section, under the backdrop, take
   no part.
 - **Its rows are classified, and drawn by their tiers, as the section's
-  are** (§4, §4.1).
+  are** (§4, §4.1), and the carried item's branch is left out (§7.2).
 - **A release places by gap and depth** among the Card's descendants,
   as in the section (§7.1, §7.2). The modal shows every level, so it
   has no overflow rows. An over-cap tab state is reachable there too,
@@ -944,9 +1001,9 @@ stands for them. A Free child shows as a Card of its own, so it isn't
 counted, and a row whose children are all Free has no overflow row. An
 item dropped beside the overflow row (§7.1) joins the count. One of
 `R`'s children being dragged is left out of it, since the ghost shows
-it. When `R` itself is dragged, its overflow row goes with it, as the
-rest of its subtree does: it stays drawn, at Low, and is never named as
-a neighbor (§4.1, §7.2).
+it. When `R` is the dragged item, or in its branch, `R`'s overflow row
+leaves with the branch (§7.2). Every other overflow row counts as
+before.
 
 **The overflow row is a control, not an item.** A press on its count
 starts no drag, of the Card or anything else, and a click on it opens
@@ -1137,8 +1194,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   weight and animation are best tuned against real gestures rather than
   guessed up front. So does the cue for a drag a reload stops (§10),
   today an amber banner with centered text, and an amber flash on the
-  item. Today a Card at Mid or Low dims its content but not its box,
-  its border and background, where a Stub row's box dims with its
+  item. So does the carried copy's line (§5a), today the overflow row's
+  muted text over a fill. Today a Card at Mid or Low dims its content
+  but not its box, its border and background, where a Stub row's box dims with its
   content. Whether the drag's cues drawn on an item keep their color is
   part of the final look. The cue of the hold that opens the hierarchy
   modal (§7.3) borrows the zoom-in cue's look, drawn on the overflow
@@ -1147,8 +1205,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   card's inside bottom edge, filling left to right. The fuller
   transition (the card opening, its ghost row growing, the carried copy
   shrinking toward it) is undesigned.
-- **Whether the ghost's expansion on drop animates (§5a).** Today it's
-  instant.
+- **Whether the ghost's expansion on drop animates (§5a),** and the
+  branch's leaving at pickup and its return when the drag ends (§7.2).
+  Today all three are instant.
 - **How the overflow row and the hierarchy modal look (§9).** The
   overflow row's style, the modal's size, and how the modal shows the
   Card at its root. Today's overflow row is a muted count in a row the

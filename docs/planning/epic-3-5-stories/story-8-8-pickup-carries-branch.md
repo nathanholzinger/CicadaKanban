@@ -35,7 +35,9 @@ A trial of carrying a dragged Stub's branch with it, in place of Story 8.5's dim
 ## Scope
 
 - **Wiki passages:** none ahead of the build. The PO writes the rules once Nathan approves a solution (code first).
-- **Test-plan cases:** none until then. The Planner derives them after the PO's pass.
+- **Test-plan cases (Test Planner, after the PO's pass):**
+  - Revised: **DRAG-1.33; DRAG-2.17, DRAG-2.18, DRAG-2.22; DRAG-3.19, DRAG-3.22, DRAG-3.25; DRAG-4.8; DRAG-7.15, DRAG-7.27.** All are Open except DRAG-4.8, whose placement rule and Automated status are retained; its stale Automation pointer is for the Reconciler below.
+  - Added, all **Open**: **DRAG-8.1–DRAG-8.12**, in the new carried-branch suite. Pickup and all lists; Free-descendant exclusion; pending writes and snapshot lifetime; layout and unchanged placement; restoration on a drop, cancel, forced stop, no-write release and over-cap release; wording and hidden-level counts; both forms and every switch, ghost excluded; measured boxes, bounds and overlap.
 
 ## Inbound deferrals
 
@@ -321,6 +323,37 @@ Filled in by the Coder, phase by phase.
 - **One expectation in Phase 5's own text is corrected there.** It said hierarchy-placement §7's "the dragged entry's descendants are Low" would hold for the sidebar alone after Phase 4. On the board it also holds for the Stubs under a Free descendant of the dragged item, which stay drawn at Low: their parent is Cycle-forming, and the Free Card rule gives the Free descendant itself Mid.
 - **DRAG-4.8's Automation line is stale,** since the only test of `dragCollision.test.ts` that carried it went with `travelingRowsFor`. The handoff says so for the Planner.
 
+**6. 2026-11-04, the wiki (PO).** The handoff's decisions and superseded passages, written into the wiki.
+- **Board §7.2 holds the rule.** Its first paragraph is rewritten: the carried item's *branch*, its attached descendants at every depth, leaves the section, the hierarchy modal and the static rows under its backdrop, for the whole drag, a Card's pickup as well as a Stub's, with the overflow rows its rows own. Bullets follow:
+  - a Free descendant and what's under it aren't part of it;
+  - the placement doesn't change;
+  - the branch is read once at pickup, pending writes included, and held;
+  - the rows below a Stub's branch move up at pickup, and a Card's zoom adds one row;
+  - the branch is drawn again at once on every end of the drag, where D5 says.
+- **Board §5a** gains the second line, as a paragraph of its own: the wording, Y counting rows past the shown levels, no line for an item with no attached descendants or only Free children, through every switch, the carried copy only, nothing added to the box, and what it covers. Its Why, and why not grow the box. The shortCard's indicator bullet now points to §7.2 and the line. "Every Stub-sized row is one fixed height" says the line hangs outside the copy's height.
+- **The other passages the handoff names:**
+  - board §2's closing sentence and §1.1's exception: the branch isn't drawn, so a neighbor is the row beside the ghost;
+  - §4.1's Stub bullet: Low is every Stub in a Mid Card, a Free descendant's included, and the attached descendants would be Low but aren't drawn. Its "dimmed target" paragraph gives the Cycle-forming overflow row's new reason: it's drawn only in a Card the drag can't zoom into;
+  - §7.3: the modal's rows leave out the branch;
+  - §9: the carried row's overflow row leaves with the branch;
+  - §10 is unchanged: §7.2 says where the branch is drawn on each end, and cites §10.
+- **Hierarchy-placement §7** keeps "the dragged entry's descendants are Low", wherever a surface draws them, and says each surface's page says which it draws. The board's page now says it draws only those under a Free descendant. The sidebar draws them all until Story 8.11.
+- **Project-tree §1's** comparison with the board ("a dragged Stub's subtree rows are passed over too") now says the board doesn't draw them.
+- **Open questions:** the line's look joins "The look of the drag's cues", and the branch's leaving and return join the ghost's expansion on drop as instant today.
+- **Deductions, for Nathan to overrule:**
+  - **The Why,** "so the pickup reads as taking the whole branch", is the roadmap entry's.
+  - **The over-cap outline on the box alone is left out.** The invalid cue's look is an Open question, and the wiki doesn't say which copy draws it.
+  - **The line's covering the row or Card below is written as a rule,** as the handoff states it, not as a defect. Nathan approved it hands-on.
+- **For the Test Planner:** the handoff's list stands. The new cases' ground is §7.2 (the collapse, the Free descendant, the end of the drag) and §5a (the line's wording, forms, switches and the ghost's none). DRAG-2.17's second paragraph is §4.1's Stub bullet. DRAG-7.27's ground is §9.
+- **Checks:** `check:docs` passes.
+
+**7. 2026-11-04, test-plan follow-up (Test Planner).** Read the story's handoff and the PO's wiki edits, and derived the catalog changes from the settled wiki without reading code or test code.
+- **Revised the cases in Scope.** DRAG-2.17 keeps the Free descendant at Mid and its Stubs at Low, but removes the claim that the attached branch stays drawn. DRAG-2.18 makes its visible Cycle-forming overflow fixture explicitly outside the branch; DRAG-2.22 follows the wiki's new reason its hold cannot run. DRAG-7.27 removes the carried item's and branch's overflow rows. The copy cases distinguish the fixed box from the line outside it; DRAG-7.15 makes the child's absence during the drag and return on release explicit. DRAG-1.33 follows the expanded branch exception; DRAG-4.8 names the actual row beside the ghost.
+- **Added DRAG-8.1–DRAG-8.12** and indexed the carried-branch suite. All are Open with no Automation mapping. No case pins the line's final look, a collapse animation or the over-cap outline's extent, which the wiki does not settle.
+- **No project-tree case changes.** Its §1 edit corrects only the comparison with the board. The sidebar's descendants remain drawn at Low, so its existing cases still apply. Hierarchy-placement §7's surface qualification is reflected in the board cases.
+- **For the Reconciler:** the Coder reports that DRAG-4.8 lost its `dragCollision.test.ts` test while its other two mapped files stand. The Planner leaves its status and Automation line to the Reconciler, who should remove that stale pointer and confirm the remaining coverage. The new and revised Open cases need case-ID assignment and coverage reconciliation; this pass makes no automation claim. DRAG-7.12's tier assertions remain unchanged.
+- **Checks:** `npm run check:docs` passes (398 files, zero hits); `git diff --check` passes. This is a documentation pass; no runtime tests were run.
+
 ## Open questions
 
 None yet.
@@ -368,4 +401,5 @@ Written by the Coder at the end of Phase 5, after Nathan's hands-on approved the
     - the branch is drawn again on a drop, a cancel, a release that writes nothing, a release past the cap and a forced stop.
   - **Tests the new cases can cite,** all without a case ID today: `itemListOps.test.ts` (the walk, the wording, `sectionEntries` with a branch), `useBoardDnd.test.ts` (the pickup), `KanbanCard.test.tsx` (the section, the static rows, the copy in both forms) and `HierarchyModal.test.tsx`.
 - **Skipped specs:** none. No drag spec pinned the branch's rows at Low, a carried Card's children drawn under its row, or a copy with no line.
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+- **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §1.1, §2, §4.1, §5a, §7.2, §7.3, §9 and the Open questions; hierarchy-placement §7; project-tree §1. Amendment 6.
+- **Test-plan handoff applied** (Test Planner): Amendment 7 and the Scope above record the revised IDs, new DRAG-8.1–DRAG-8.12 and the remaining Reconciler action on DRAG-4.8. No Pending PO question arose from the settled passages.
