@@ -8,7 +8,7 @@ Shared rules have no catalog of their own, so the cases here test them as projec
 
 | Suite | What it covers |
 |---|---|
-| [TREE-1 — Dragging a project places it by gap and depth](tree-1-gap-and-depth.md) | The indicator line, each gap's depths and their placements, the boundaries and the top level, a collapsed project, the dragged subtree, a tab state past the project cap, a set-down in its own gap, and the move a release sends |
+| [TREE-1 — Dragging a project places it by gap and depth](tree-1-gap-and-depth.md) | The indicator line, each gap's depths and their placements, the boundaries and the top level, a collapsed project, the dragged subtree and its pickup snapshot across responses, cap states, a set-down in its own gap, and the move a release sends |
 | [TREE-2 — What the drag shows](tree-2-what-the-drag-shows.md) | Full/Mid/Low tiers, cap and root boundaries, tier lifetime, drop-line isolation, independent sidebar values, and opening a collapsed project on a drop |
 | [TREE-3 — What makes a project a legal parent](tree-3-legal-parent-and-cap.md) | A parent that exists, isn't the project and isn't in its subtree, a create's parent, the project cap, and a deep name in a narrow sidebar |
 | [TREE-4 — A project's position compares among its siblings](tree-4-sibling-order.md) | Siblings as the comparison and reindex scope, their order in the list and the sidebar, a missing position, disclosing a reindex and applying it, and the sidebar after a failed write |
@@ -17,4 +17,4 @@ Shared rules have no catalog of their own, so the cases here test them as projec
 | [TREE-7 — An edit can change a project's parent](tree-7-editing-the-parent.md) | An edit that keeps the parent, and one that changes it |
 | [TREE-8 — A project always has a name](tree-8-a-projects-name.md) | A create's name, an edit that leaves the name out, and an empty, `null` or blank name |
 | [TREE-9 — Deleting a project deletes its subtree](tree-9-deleting-a-project.md) | What a delete removes, an item of another project left in a deleted workphase, and what a delete leaves alone |
-| [TREE-10 — Which workflow a project uses](tree-10-which-workflow.md) | A workflow given to a project, a move, a deleted workflow, at most one workflow per project, where a new workflow's workphases come from, and the project a create names |
+| [TREE-10 — Which workflow a project uses](tree-10-which-workflow.md) | A workflow given to a project, a move, a deleted workflow, at most one workflow per project, where a new workflow's workphases come from, the required project a create names, and deleting owned or ownerless workflows without deleting items |

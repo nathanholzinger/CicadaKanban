@@ -740,6 +740,31 @@ tests rather than carrying its coverage verdicts forward unchanged.
 - Route remaining gesture-dependent coverage and TREE-2.1's skip to
   Story 10's item 10 by ID. No new drag spec is requested during Story 8.
 
+**Carried from Story 8.9 — Planner follow-up after the PO's rulings.**
+- **For the confirming and umbrella close-out Reconciler:** review new
+  Open DRAG-6.25, DRAG-6.27, DRAG-6.28, TREE-1.14, TREE-1.15,
+  TREE-1.16 and TREE-10.13. They cover column stop/no write, the flash
+  window and late reveal, pickup subtree membership and height across
+  responses, and owned/ownerless workflow deletion without deleting
+  items. Story 8.9's Amendment 7 names the candidate tests. Check full
+  Then clauses and ID stamps, and obtain any new internal mapping
+  approvals; earlier approvals do not automatically cover new cases.
+- DRAG-6.15, DRAG-6.16 and DRAG-6.17 now explicitly cover the third
+  resync, a failed column reorder; DRAG-6.21 and DRAG-6.22 clarify hidden
+  rows and resyncs with no live drag. TREE-10.12 now includes an omitted
+  or null required owner. Re-check the revised text before declaring
+  coverage. TREE-2.6 remains the separate tier-lifetime case.
+- DRAG-5.16's stamp does not prove its after-`Q` release; Amendment 5
+  sends that clause to Story 10's item 10. Carry the other remaining
+  drag automation there by ID after reconciliation. TREE-10.13 is
+  server coverage for the current follow-up, not Story 10.
+- **For the Architect:** route the unbuilt column-stop banner,
+  DRAG-6.26 (Planned, wiki board-drag-interaction §10). Its delivery is
+  separate from automation catch-up. When built, the Planner removes
+  DRAG-6.22's column/no-cue clause and changes DRAG-6.26 to Open.
+- The cap-loading interval and hidden-row tier tests remain
+  uncatalogued by the PO's explicit ruling.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
@@ -1012,6 +1037,12 @@ existing over-cap behavior and collapsed-project rules are unchanged.
 
 The audit closes at this story's close. It's numbered after 8.8, which
 was written first, but it runs first.
+
+**Planner follow-up applied 2026-11-04.** The PO's new rules have cases;
+the carry-forward block above and the plan's Amendment 7 name the next
+Reconciler checks. DRAG-6.26 records the still-Planned stopped-column
+banner for the Architect to route. The current built column stop has
+no cue, and no automation work is taken as delivery of that banner.
 
 ---
 
@@ -1594,6 +1625,19 @@ deferral and keep landing with their stories.
       assertions before adding gesture specs. DRAG-2.16 and DRAG-2.19
       also make the shared Low-gap and response-landing rules explicit;
       their remaining coverage stays in the same reconciliation scope.
+
+    - **From Story 8.9's Planner follow-up:** after the confirming and
+      close-out reconciliations, fill remaining drag coverage for
+      DRAG-6.25 (column stop/no write), DRAG-6.27 and DRAG-6.28 (flash
+      window and late reveal), and TREE-1.14, TREE-1.15 and TREE-1.16
+      (pickup subtree membership/height, cycle and cap refusals after a
+      response). Re-check revised DRAG-6.15, DRAG-6.16, DRAG-6.17,
+      DRAG-6.21 and DRAG-6.22 against the three resyncs. DRAG-5.16's
+      stamped spec does not drive the after-`Q` release, so that final
+      placement clause is explicitly carried here. TREE-10.13's server
+      coverage remains in Story 8.9's follow-up; DRAG-6.26 is Planned
+      product work for the Architect to route, not an automation-only
+      gap in this item.
 
     - **From Story 8's mid-point reconciliation** (2026-11-04, Stories
       8.2–8.7). Story 8.9 stamps the tests it found, and these three are

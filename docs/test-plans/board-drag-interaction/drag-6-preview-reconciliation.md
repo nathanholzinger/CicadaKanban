@@ -1,6 +1,6 @@
 # DRAG-6 — Optimistic preview, reconciliation, and failure
 
-**Next ID:** DRAG-6.25
+**Next ID:** DRAG-6.29
 
 The generic client rules (the ordinal preview, pending isn't `null`, the reconciliation order, the tie-break) are in [`../item-positioning/part-2-anchor-resolution.md`](../item-positioning/part-2-anchor-resolution.md) and [`../item-positioning/part-5a-client-reconciliation.md`](../item-positioning/part-5a-client-reconciliation.md). This suite holds what the board adds: applying the placement on release, the pending marker, showing a response that disagrees with the preview as the server saved it, sequencing responses per item, and resyncing on failure. A placement can carry a `parentId` (an attach), and every rule here applies to it unchanged.
 
@@ -28,6 +28,10 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.22 | Cancels, no-write releases and resyncs without an item drag show no stop cue | P1 | Open |
 | DRAG-6.23 | A pending row pulses from its own strength to half of it | P1 | Open |
 | DRAG-6.24 | A pending pulse leaves the drop line and nested rows independent | P1 | Open |
+| DRAG-6.25 | A reload stops a column drag without saving its interrupted reorder | P1 | Open |
+| DRAG-6.26 | A stopped column drag shows a cause-specific banner and no flash | P1 | Planned |
+| DRAG-6.27 | The flash window starts with the reloaded board and ends independently of the banner | P1 | Open |
+| DRAG-6.28 | A stopped item brought into view flashes only for the window's remaining time | P1 | Open |
 
 ---
 
@@ -129,9 +133,9 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.15 — A reload that lands mid-drag stops the drag, and nothing is written
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki boards-columns-unsorted §7
 
-*Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag because another item's earlier drop failed ([DRAG-6.6](drag-6-preview-reconciliation.md)), or because a stale response carries reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)), *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. These are the resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios.
+*Given* the user is dragging item `X`, *when* the board reloads from the server mid-drag because another item's earlier drop failed ([DRAG-6.6](drag-6-preview-reconciliation.md)), because a stale response carries reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)), or because a column reorder released just before this pickup failed, *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. This holds in a column/sub-row, a Card's descendants section, and the hierarchy modal. These are the three resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios. A column drag stopped by the same resyncs is [DRAG-6.25](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
@@ -139,7 +143,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* item `X` is being dragged when a resync stops it, *when* the stop occurs, *then* a banner appears along the window's top edge with the explanation for its cause:
+*Given* item `X` is being dragged when any of the three resyncs in [DRAG-6.15](drag-6-preview-reconciliation.md) stops it, *when* the stop occurs, *then* a banner appears along the window's top edge with the explanation for its cause:
 
 - after an earlier item move or column save failed: “Your last move didn’t save, so the board reloaded. Nothing moved.”;
 - after a stale response carrying reindex pairs triggers a refresh: “The board refreshed, which stopped your drag. Nothing moved.”
@@ -152,7 +156,7 @@ The banner is visible over “Loading board…” and remains over the reloaded 
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* no forced-stop cue is showing, *when* a live item drag is stopped by either cause in [DRAG-6.16](drag-6-preview-reconciliation.md), *then* assistive tech announces that cause's full explanation without the user moving focus to the banner. The loading transition does not lose the announcement or substitute the other cause's explanation.
+*Given* no forced-stop cue is showing, *when* a live item drag is stopped by any of the three resyncs in [DRAG-6.15](drag-6-preview-reconciliation.md), *then* assistive tech announces that cause's full explanation from [DRAG-6.16](drag-6-preview-reconciliation.md) without the user moving focus to the banner. The loading transition does not lose the announcement or substitute the other cause's explanation.
 
 **Automation test:** —
 
@@ -186,7 +190,7 @@ This case asserts the lifecycle using `T` as a parameter, not whether today's tu
 
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
-*Given* `X` is stopped mid-drag, *when* the reloaded board does not draw `X` because it lies inside a collapsed descendants section, past an overflow row, or in a closed hierarchy modal, *then* there is no flash for `X` and no substitute item flashes. The section stays collapsed, the overflow row does not open the hidden subtree, the modal stays closed, and neither the board nor a list scrolls to reveal `X`. The forced-stop banner still gives the explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
+*Given* `X` is stopped mid-drag, *when* the reloaded board does not draw `X` because it lies inside a collapsed descendants section, past an overflow row, or in a closed hierarchy modal, *then* while `X` remains hidden there is no flash for it and no substitute item flashes. The section stays collapsed, the overflow row does not open the hidden subtree, the modal stays closed, and neither the board nor a list scrolls to reveal `X`. The forced-stop banner still gives the explanation in [DRAG-6.16](drag-6-preview-reconciliation.md). A user bringing `X` into view is [DRAG-6.28](drag-6-preview-reconciliation.md)'s.
 
 **Automation test:** —
 
@@ -198,7 +202,7 @@ This case asserts the lifecycle using `T` as a parameter, not whether today's tu
 
 - the user ends an item drag with Escape or another cancel;
 - the user releases where the drag writes nothing, such as nowhere or a Stub's original gap and depth;
-- an earlier failed drop or stale response resyncs the board with no item drag running, including when the preceding drag has already been released or cancelled;
+- an earlier failed item drop, failed column reorder or stale response resyncs the board with no drag running, including when the preceding drag has already been released or cancelled;
 - a column is being dragged, with no item drag running, when a resync lands.
 
 An item drag interrupted by an earlier failed column save is different: it shows the failed-write explanation in [DRAG-6.16](drag-6-preview-reconciliation.md).
@@ -220,5 +224,39 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
 *Given* pending Card `P` with attached Stub `S` that has no write in flight, *when* `P` pulses, *then* only `P`'s own content pulses. `S` keeps its own strength, Full with no drag or its assigned tier during a drag, without inheriting `P`'s pulse. *Given* instead `S` alone is pending, *then* it pulses on its own and `P` does not. If both are pending, each pulses relative to its own strength, without multiplying the parent's pulse into the child's. A drop line naming a pending row remains Full and does not pulse, including on a Mid Card or Stub.
+
+**Automation test:** —
+
+## DRAG-6.25 — A reload stops a column drag without saving its interrupted reorder
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki boards-columns-unsorted §7
+
+*Given* a board whose server-saved column order is `A, C, E`, with `E` currently being dragged toward the first slot, *when* a reload lands because an earlier item drop failed, a stale response carries reindex pairs, or a column reorder released just before this drag failed, *then* the column drag ends at once and the board shows the server-saved order `A, C, E`. The interrupted drag sends no reorder request, including when the pointer is subsequently released. No item is moved by ending this drag. The current cue boundary is [DRAG-6.22](drag-6-preview-reconciliation.md)'s; the column banner is [DRAG-6.26](drag-6-preview-reconciliation.md)'s.
+
+**Automation test:** —
+
+## DRAG-6.26 — A stopped column drag shows a cause-specific banner and no flash
+
+**Priority:** P1 · **Status:** Planned · **Rule:** wiki board-drag-interaction §10
+
+*Given* a column is being dragged when any of the three resyncs in [DRAG-6.25](drag-6-preview-reconciliation.md) stops it, *when* the stop occurs, *then* the banner appears over loading and the reloaded board. An earlier failed item drop or column reorder says “Your last move didn’t save, so the board reloaded. Nothing moved.”; a stale response's refresh says “The board refreshed, which stopped your drag. Nothing moved.” The explanation is announced without a focus change. A click leaves it up; the next drag clears it. Otherwise it lasts for configured lifetime `T`, fully visible for its first three quarters and fading for the last quarter, without restarting when the reload finishes. Neither the stopped column nor any item receives a forced-stop flash.
+
+**Automation test:** —
+
+## DRAG-6.27 — The flash window starts with the reloaded board and ends independently of the banner
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* a live item drag stopped by any of the three resyncs in [DRAG-6.15](drag-6-preview-reconciliation.md), with flash-window length `F`, *when* its reload takes longer than `F`, *then* loading spends none of the window. When the reloaded board first draws the stopped item at time `t0`, the item has the full window until `t0 + F`, with the two pulses of [DRAG-6.20](drag-6-preview-reconciliation.md). At `t0 + F` the flash ends even if the banner remains.
+
+*Starting again, when* a new drag starts or another reload starts before `t0 + F`, *then* the flash ends at that start. The other reload, with no new stop behind it, draws no flash, even if it draws the same item or finishes before `t0 + F`. Ending the new drag, redrawing the row or keeping the banner visible does not replay the old flash. The window is measured from the board drawing, even when the stopped item is hidden ([DRAG-6.28](drag-6-preview-reconciliation.md)), and is not the banner's lifetime.
+
+**Automation test:** —
+
+## DRAG-6.28 — A stopped item brought into view flashes only for the window's remaining time
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
+
+*Given* the reloaded board is drawn at time `t0` with stopped item `X` inside a collapsed descendants section and flash-window length `F`, *when* the user opens the section at `t0 + d`, where `0 < d < F`, *then* `X` flashes at its saved place only until `t0 + F`, for the remaining `F - d`; mounting it does not start a fresh window. No other item flashes and opening the section changes no saved placement. *Starting again, when* the section is first opened at or after `t0 + F`, *then* `X` is drawn without the flash, even if the stop banner is still visible. The same boundary holds for a stopped item brought into view from behind overflow or in a previously closed hierarchy modal. No section, overflow or modal is opened automatically ([DRAG-6.21](drag-6-preview-reconciliation.md)).
 
 **Automation test:** —

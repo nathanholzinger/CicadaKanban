@@ -67,6 +67,17 @@ move (§6). What the sidebar adds:
   rule yet (Open questions).
 - **A project set back down in its own gap, at its own depth, writes
   nothing** ([`../hierarchy-placement/`](../hierarchy-placement/) §5).
+- **The drag counts the tree as it was at pickup,** for the whole drag:
+  the dragged project's subtree, whose rows are left out of placement,
+  and the subtree's height, which the cap reads. A move is shown when
+  its response arrives (§4), so the user's own last move can land
+  mid-drag. If it puts a project under the dragged one, that project's
+  row stays a place to drop, and a release that would make a cycle, or
+  put the grown subtree past the cap, is refused by the server (§3), and
+  nothing changes. It's the one place a cycle is reachable by a drag
+  ([`../hierarchy-placement/`](../hierarchy-placement/) §4). Why not
+  stop the drag, as the board does at a reload: the window is one
+  response's time, and a refused drop costs one retry.
 
 ## 2. What the drag shows
 
@@ -271,7 +282,9 @@ subtree, except below a descendant that has one of its own.
 **Any project can be given a workflow of its own** by
 `POST /api/workflows`, whether or not it uses an ancestor's. It then
 uses its own, and so does each descendant that used the ancestor's
-through it.
+through it. The create names the project by `projectId`, a required
+reference ([`../row-references/`](../row-references/) §1): one left out,
+or naming no project, is refused with a 400, and nothing is created.
 
 **A project has at most one workflow of its own.** A workflow create for
 a project that already has one is refused with a 409 whose message
@@ -308,9 +321,15 @@ would ([`../row-references/`](../row-references/) §1).
 **The project's items come along,** still holding the old workflow's
 workphases, so they show in Unsorted on the new workflow's boards
 ([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §3). How
-they're re-filed isn't a rule yet (Open questions). After a workflow is
-deleted, its items hold no workphase at all
-([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §8).
+they're re-filed isn't a rule yet (Open questions).
+
+**`DELETE /api/workflows/:id` deletes the workflow with its boards and
+their columns, its workphases and its notifications, and never an
+item.** An item holding one of its workphases survives with none, and
+shows in Unsorted
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §8, §10).
+No other item changes. That holds whether or not a project owns the
+workflow: one with no owner deletes the same way.
 
 ---
 

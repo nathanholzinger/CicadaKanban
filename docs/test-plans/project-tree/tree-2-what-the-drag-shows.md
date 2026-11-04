@@ -70,7 +70,7 @@ Each tier changes only opacity, adding no relationship color and removing no row
 
 *Given* `X` has subtree height 1, unrelated leaf `P` is top-level and Full for `X`, unrelated `Q` is at depth `CAP - 2`, and an earlier move reparenting `P` under `Q` is still awaiting its response, *when* `X` is picked up and that response then lands, *then* the sidebar applies `P`'s saved parent, but `P` stays drawn at its pickup tier, Full, through the rest of this drag. Its new depth would not be a legal parent for `X`, but the response does not redraw the tiers. Existing Mid and Low rows retain their pickup tiers too.
 
-*When* the drag is cancelled, *then* the tiers clear. *When* `X` is picked up again against the now-saved tree, *then* `P`, at depth `CAP - 1`, is Mid: its parent `Q` can take `X`. This case asserts tier lifetime, not a snapshot of which rows the placement logic may name after a response.
+*When* the drag is cancelled, *then* the tiers clear. *When* `X` is picked up again against the now-saved tree, *then* `P`, at depth `CAP - 1`, is Mid: its parent `Q` can take `X`. This case asserts tier lifetime. The separate pickup subtree and height rules are [TREE-1.14](tree-1-gap-and-depth.md), [TREE-1.15](tree-1-gap-and-depth.md) and [TREE-1.16](tree-1-gap-and-depth.md).
 
 **Automation test:** —
 

@@ -133,6 +133,10 @@ follow the workflow's order (§4), or the items in them, which never
 reference a column (§2). Whether a board should be allowed an order
 other than its workflow's is open (Open questions).
 
+**A reorder that fails reloads the board,** and a reload that lands
+mid-drag stops the drag, a column's or an item's
+([`../board-drag-interaction/`](../board-drag-interaction/) §10).
+
 ## 8. What a workphase write does to columns
 
 **A new workphase goes after every other one in its workflow, so no

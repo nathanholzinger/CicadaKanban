@@ -10,7 +10,8 @@ tests these rules in its own catalog:
 **Related:** [`../item-attachment/`](../item-attachment/) §2a, §7, §14
 (an item's workphase, and what leaving it out or naming `null` means; an
 item's parent; a create's project) ·
-[`../project-tree/`](../project-tree/) §3 (a project's parent) ·
+[`../project-tree/`](../project-tree/) §3, §10 (a project's parent;
+a workflow's project and source) ·
 [`../positioning/`](../positioning/) §2 (a neighbor) ·
 [`../boards-columns-unsorted/`](../boards-columns-unsorted/) §5 (a
 column's start and end)

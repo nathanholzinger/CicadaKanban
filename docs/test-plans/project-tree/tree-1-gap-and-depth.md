@@ -1,6 +1,6 @@
 # TREE-1 — Dragging a project places it by gap and depth
 
-**Next ID:** TREE-1.14
+**Next ID:** TREE-1.17
 
 **The tree,** for the cases that name it: top-level projects `A`, `B` and `X`, in that order, where `A` has a child `A1`, and `A1` has a child `A1a`. `X` is the project being dragged. Depths count from the top level, at 0:
 
@@ -26,6 +26,9 @@ X        (0)
 | TREE-1.11 | A tab state that would put the dragged subtree past the project cap is offered, marked invalid, and writes nothing | P1 | Automated |
 | TREE-1.12 | A release saves the placement as a move naming a neighbor, never a position | P1 | Automated |
 | TREE-1.13 | A subtree already taller than the cap is marked invalid even at the top level | P2 | Open |
+| TREE-1.14 | A project added to the dragged subtree after pickup stays a candidate, and a cyclic release is refused | P0 | Open |
+| TREE-1.15 | Cap states keep the pickup subtree height when a response grows or shrinks it | P1 | Open |
+| TREE-1.16 | A descendant moved out after pickup stays excluded until the next drag | P1 | Open |
 
 ---
 
@@ -142,5 +145,31 @@ How the invalid line looks isn't asserted.
 **Priority:** P2 · **Status:** Open · **Rule:** wiki hierarchy-placement §6, wiki project-tree §3
 
 *Given* a tree already deeper than the project cap `PCAP`, made outside the API's writes, since the cap gates only writes ([TREE-3.7](tree-3-legal-parent-and-cap.md)): a chain from top-level project `R` down to `M`, at depth 3, where `M`'s subtree height `H` is `PCAP` or more, and top-level project `B` after `R`, the last row, where depths count top-level projects as 1 (wiki project-tree §3), *when* `M` is dragged into the gap below `B`, aligned with `B` at the top level, which would put its deepest descendant at depth `1 + H`, still past `PCAP`, *then* that state is offered, and its line is marked invalid. A release there sends no request, and `M` stays where it was. *Given* instead `H` is `PCAP − 1`, *when* `M` is dragged to the same state, *then* its deepest descendant would land at exactly `PCAP`: the line isn't marked invalid, and a release saves `M` at the top level, after `B`. The API's side of the same move is [TREE-3.8](tree-3-legal-parent-and-cap.md)'s.
+
+**Automation test:** —
+
+## TREE-1.14 — A project added to the dragged subtree after pickup stays a candidate, and a cyclic release is refused
+
+**Priority:** P0 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §3, wiki project-tree §4
+
+*Given* top-level projects `X`, `Y` and `B`, with enough cap room, and the user's earlier move of `Y` under `X` saved but its response still pending in the sidebar, *when* `X` is picked up before that response arrives and the response then lands, *then* the sidebar shows `Y` under `X` and the drag continues. `Y` remains a placement candidate because it was outside `X`'s subtree at pickup. *When* the user chooses the gap after `Y`, tabbed one level deeper to make `X` its child, *then* the line offers that state. A release sends the move, which the server refuses with a 400 because `Y` is now in `X`'s subtree. `X` remains top-level, `Y` remains its child, and both retain the positions saved before the refused release; the earlier successful move is not undone. *When* `X` is picked up again, *then* `Y` is excluded from placement as its descendant, and resting on it means `X`'s own gap.
+
+**Automation test:** —
+
+## TREE-1.15 — Cap states keep the pickup subtree height when a response grows or shrinks it
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §3, wiki project-tree §4, wiki hierarchy-placement §6
+
+*Given* project cap `PCAP`, unrelated `T` at absolute depth `PCAP - 1`, top-level leaf `X`, and an earlier saved move of leaf `Y` under `X` whose response is still pending, *when* `X` is picked up with height 0 and that response then lands, *then* the drag continues and the sidebar shows `Y` under `X`. The state making `X` `T`'s child is still offered as valid by the pickup height: `PCAP - 1 + 1 + 0 = PCAP`. *When* released there, *then* the move is sent and refused with a 400, since the saved subtree now has height 1 and would reach `PCAP + 1`. The sidebar returns `X` to its top-level place with `Y` still its child, and neither saved position changes. On a new pickup that state is marked invalid and sends no request on release.
+
+*Given instead* top-level `X` with sole child `Y` and an earlier saved move of `Y` to the top level whose response is pending, *when* `X` is picked up with height 1 and that response lands, *then* `Y` is shown top-level but the state under `T` stays marked invalid by the pickup height. Releasing there sends no request and leaves both projects at their saved places. On the next pickup `X` has height 0: the same state is valid, and a release saves `X` as `T`'s child at depth `PCAP`.
+
+**Automation test:** —
+
+## TREE-1.16 — A descendant moved out after pickup stays excluded until the next drag
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki project-tree §1, wiki project-tree §4, wiki hierarchy-placement §4
+
+*Given* top-level `X` with child `Y`, unrelated top-level `B`, and the user's earlier saved move of `Y` under `B` whose response is still pending, *when* `X` is picked up and that response then lands, *then* the sidebar shows `Y` under `B` and the drag continues, but `Y` remains excluded from placement for this drag because it belonged to `X`'s pickup subtree. Resting on `Y` means `X`'s own gap, not a gap naming `Y` as Top or Bottom. A release there at `X`'s own depth sends no request. On the next pickup `Y` is outside the excluded subtree: a gap after `Y`, aligned with it, can place `X` under `B`, after `Y`, and a release saves that placement.
 
 **Automation test:** —

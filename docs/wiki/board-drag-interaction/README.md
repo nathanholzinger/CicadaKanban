@@ -913,6 +913,10 @@ different Card, which is a reparent: the item arrives from outside, and
 a release places it among that Card's Stubs (§6, §7). See
 [`../item-attachment/`](../item-attachment/) §11.
 
+**A detached item is a Free Card like any other.** Keeping its parent
+doesn't make it a Stub: it's drawn in its column, and its next drag
+starts there (§1), from the moment the detach is released.
+
 **Detaching in place keeps the inherited workphase.** A Stub's workphase is
 already its parent's, so it is already a member of the covered set of the
 column the parent sits in — which makes a drop there a position-only
@@ -1035,13 +1039,17 @@ resyncs the board from the server. §3.2 should make this nearly
 unreachable — an invalid target shouldn't have been poppable — so a
 rejection arriving at all means the two enforcement points have drifted.
 
-**A reload that lands mid-drag stops the drag.** Either resync above,
-a failed drop's or a stale response's, can land while the user is
-dragging an item. The other reloads of the board, such as the workphase
-and column editors' and a board switch, need a click, which a held drag
-can't make, so none lands mid-drag. The drag ends at once and nothing
-is written. The item is wherever the reloaded board shows it, which is
-where the server has it and may not be where the drag picked it up. A
+**A reload that lands mid-drag stops the drag,** an item's or a
+column's. Three resyncs can land while the user is dragging: the two
+above, a failed drop's and a stale response's, and a failed column
+reorder's, from a column drag released just before, which reloads the
+board as a failed drop does
+([`../boards-columns-unsorted/`](../boards-columns-unsorted/) §7). The
+other reloads of the board, such as the workphase and column editors'
+and a board switch, need a click, which a held drag can't make, so none
+lands mid-drag. The drag ends at once and nothing is written. The item
+or the column is wherever the reloaded board shows it, which is where
+the server has it and may not be where the drag picked it up. A
 reload is the path for when something has gone wrong, and picking the
 item up again costs little. Why not keep the drag going on the reloaded board: the reload can
 move or remove what the drag is locked into, such as a Card the failed
@@ -1049,7 +1057,8 @@ drop had put in this column, and the release would then land somewhere
 the user never saw.
 
 **A drag the board stops shows a cue that says so,** so the drag's end
-doesn't read as a slip of the user's hand. Either resync above shows it.
+doesn't read as a slip of the user's hand. Each of the three resyncs
+shows it on an item's drag.
 - **It's a banner along the window's top edge,** over the board and over
   the "Loading board…" that replaces it, and it stays up across the
   reload. Its look is a working placeholder (Open questions).
@@ -1066,12 +1075,22 @@ doesn't read as a slip of the user's hand. Either resync above shows it.
 - **Assistive tech reads it out** when it appears.
 - **The item that was being dragged flashes** where the reloaded board
   draws it: two amber pulses, about 1.4 seconds in all, so the user sees
-  where it went. An item the board doesn't draw there, such as one inside
-  a collapsed section, past an overflow row or in a closed modal, gets no
-  flash, and nothing is scrolled or opened to reveal it.
+  where it went. The flash's window opens once the reloaded board is
+  drawn, so a slow reload doesn't use it up. It closes early at the next
+  drag's start, or when another reload starts, so a reload with no stop
+  behind it flashes nothing.
+- **An item the board doesn't draw there gets no flash,** such as one
+  inside a collapsed section, past an overflow row or in a closed modal,
+  and nothing is scrolled or opened to reveal it. One the user brings
+  into view inside the window, by opening its section, flashes for what
+  is left of it. One brought into view after it doesn't.
 - **No cue shows for Escape, any other cancel, a release that writes
   nothing, or a failed drop with no drag running.** Nothing was in the
   user's hand to stop, and that resync stays silent.
+
+**Planned:** a column drag the board stops shows the banner too, worded
+by its cause, as an item's does, and has no flash. Today a stopped
+column drag ends with no cue.
 
 **The placement a release implies is shown at the moment of release**,
 before the request is even sent, so the board never shows its pre-drop

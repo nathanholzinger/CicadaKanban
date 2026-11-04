@@ -32,17 +32,25 @@ Land what Story 8's two mid-point reports leave for the Coder, so the audit can 
 
 ## Scope
 
-- **Wiki passages:** none. #1 brings three routes to wiki row-references §1, and #3 brings the flash to board-drag-interaction §10, as both already read.
+- **Wiki passages:** the fixes began against existing rules; Amendment 6 now also records the PO's updates to board-drag-interaction §8 and §10, boards-columns-unsorted §7, project-tree §1 and §10, and row-references' Related line. The column-stop banner in board-drag-interaction §10 is still Planned and not built by these batches.
 - **Test-plan cases:**
   - **Expected to close:**
     - DRAG-2.11: its two approved hook tests together assert the whole case.
-    - TREE-10.12 and DRAG-5.16: new, and they close if their tests assert every clause.
+    - TREE-10.12: new, and it closes if its tests assert every clause, including the required-owner clarification below.
   - **Stamped, but staying `Open`,** since each stamped test asserts only part of its case:
-    - DRAG-1.36, DRAG-2.12, DRAG-2.14–2.18, DRAG-2.20–2.23, DRAG-4.35;
+    - DRAG-1.36, DRAG-2.12, DRAG-2.14–2.18, DRAG-2.20–2.23, DRAG-4.35, DRAG-5.16;
     - DRAG-6.15–6.19, DRAG-6.22–6.24;
     - TREE-2.1 and TREE-2.4–2.8.
 
     Their remaining clauses are Story 10's (its item 10).
+
+  - **Planner follow-up after Amendment 6:**
+    - Revised DRAG-6.15, DRAG-6.16 and DRAG-6.17 for all three resyncs, DRAG-6.21 for the hidden-item boundary, and DRAG-6.22 for the failed-column-reorder/no-live-drag boundary. Existing statuses and Automation lines are unchanged.
+    - **New Open:** DRAG-6.25 (column stop/no write), DRAG-6.27 (flash window), DRAG-6.28 (late reveal); TREE-1.14, TREE-1.15 and TREE-1.16 (pickup subtree membership and height across responses); TREE-10.13 (owned and ownerless workflow deletion, preserving items).
+    - **New Planned:** DRAG-6.26, the column-stop banner with cause, announcement, lifetime and no flash. The Architect must route its build; it is not a missing automation assertion on built behavior. When its wiki marker comes off, remove only the column-drag/no-cue clause from DRAG-6.22 and make DRAG-6.26 Open.
+    - TREE-10.12 now explicitly includes an omitted or null required owner; its Rule already names project-tree §10 and row-references §1. Re-check its full revised Then before marking it Automated.
+    - DRAG-5.16 already matches §8's explicit next-pickup rule, so its case text is unchanged. Its after-`Q` release remains uncovered according to Amendment 5 and is carried to Story 10 by ID; Scope now records it among the partial stamps.
+    - TREE-2.6 stays the tier-lifetime case, with cross-references to the new placement cases; it does not absorb them.
 
 ## Inbound deferrals
 
@@ -297,11 +305,44 @@ Filled in by the Coder.
   - The spec still shows the drag starting in the column, `X` staying Free, and `parentId` staying `P`.
 - **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245). `npm run test:e2e` gives 216 passed, 21 skipped, 0 failed, with the three retitled specs among those that ran.
 
+**6. 2026-11-04, the wiki (PO).** The Open questions for the PO, and the handoff's two decisions.
+- **Q1, the third resync:** named. Board §10's stop paragraph names three resyncs: a failed drop's, a stale response's, and a failed column reorder's from a column drag released just before. Each shows the cue on an item's drag, with the failed-write wording. Boards-columns-unsorted §7 gains a line that a failed reorder reloads the board, and points to §10. A deduction: the code does it, and the failed-write wording ("Your last move didn’t save") fits.
+- **Q2, a column drag a reload stops** (Nathan, 2026-11-04: the banner, no flash):
+  - §10's stop now covers a column's drag: it ends at once, nothing is written, and the column is wherever the reloaded board has it. That much is built.
+  - **A Planned passage:** the stopped column drag shows the banner, worded by its cause, with no flash.
+  - **For the Architect:** the Planned passage is code work to route.
+- **Q3, deleting a workflow with no owner:** a rule, in project-tree §10. `DELETE /api/workflows/:id` deletes the workflow with its boards and their columns, its workphases and its notifications, and never an item. An item holding one of its workphases survives with none. No other item changes, owned or not. The wiki had no rule for the delete itself, only the items' side. That side is folded in, and the old sentence goes. Read from `workflowCascade.ts::deleteWorkflowsById` and the route.
+- **Q4, the workflow create's owner:** named in project-tree §10 as a required reference. One left out, or naming no project, is refused with a 400, and nothing is created. Row-references' Related line now cites project-tree §10.
+- **Q5, the sidebar's unwritten states:** deliberately not rules, as Story 8.7's Amendment 6 deduced. The cap is unknown only until it loads, and a collapsed project's hidden rows are seen by no one. Their tests stay uncatalogued.
+- **Q6, a detached item's pickup:** board §8 says it outright. A detached item is a Free Card like any other: keeping its parent doesn't make it a Stub, and its next drag starts in its column, from the moment the detach is released.
+- **The handoff's flash window:** named in §10. The window opens once the reloaded board is drawn, and closes early at the next drag's start or when another reload starts. An item brought into view inside the window flashes for what's left of it, and one brought in after it doesn't. A deduction: D2 designed it this way, and §10 said nothing of a late mount.
+- **The handoff's sidebar tree at pickup** (Nathan, 2026-11-04: accept it, and write it down): project-tree §1 says so.
+  - The drag counts the tree as it was at pickup: the subtree left out of placement, and its height for the cap.
+  - The user's own last move can land mid-drag. If it puts a project under the dragged one, that row stays a place to drop, and a release that would make a cycle, or pass the cap, is refused by the server. Nothing changes.
+  - It's named as the one place hierarchy-placement §4's cycle is reachable. The Why: one response's window, and a refused drop costs one retry.
+- **For the Test Planner:**
+  - **§10, a column drag stopped by a reload** (built): it ends at once, nothing is written, and no cue shows until the Planned passage is built.
+  - **§10's flash window:** `useForcedStop.test.ts`'s lifetime tests are its unit half, beside DRAG-6.20 and DRAG-6.21.
+  - **§8's detached item as a Free Card** is DRAG-5.16's ground.
+  - **Project-tree §10:**
+    - the owner as a required reference is TREE-10.12's;
+    - the workflow delete is a new rule, and `workflows.test.ts`'s orphan delete test can map to a case derived from it.
+  - **Project-tree §1's tree at pickup:** `useProjectDragReorder.test.ts`'s "subtree held for the drag" test is its unit half.
+- **Checks:** `check:docs` passes (397 files, 0 hits).
+
+**7. 2026-11-04, Test Planner's follow-up after the PO's pass.**
+- Applied the catalog changes listed in Scope: seven new Open cases and one Planned case, plus the existing-case clarifications. The INDEX lines and Next IDs follow them.
+- No production or test code read, no test code written, no coverage status or existing mapping changed. The wiki and agent definitions are unchanged by this pass.
+- The cap-loading interval and hidden-row tier tests remain deliberately uncatalogued, per Amendment 6 Q5. No case pins today's flash milliseconds or opacity values.
+- **For the confirming Reconciler:** read the revised case text, not only the earlier report's expectations. `useForcedStop.test.ts` and `dragChrome.test.tsx` are candidates for DRAG-6.20, DRAG-6.21, DRAG-6.27 and DRAG-6.28; the hook's lifetime alone does not establish rendered late-reveal timing, two pulses, or hidden-row behavior. A deleted probe is not a running test. `useProjectDragReorder.test.ts`'s "subtree held for the drag" is a candidate for TREE-1.14, TREE-1.15 and TREE-1.16, distinct from TREE-2.6's tier lifetime. `workflows.test.ts`'s orphan delete is a candidate for TREE-10.13; check the owned variant, dependent cleanup and unaffected items too. New mappings still require the normal ID stamps and any applicable internal approval; the earlier approval covers its named mappings, not these new cases automatically.
+- Added durable carry-forward in the roadmap for umbrella close-out and Story 10's remaining drag automation. TREE-10.13's server coverage belongs to the current follow-up, not Story 10. The Planned column-banner build remains with the Architect to route.
+- **Checks:** `npm run check:docs` passes (397 files, 0 hits); `git diff --check` passes. No app tests run for this documentation-only Planner pass.
+
 ## Open questions
 
 The audit's "For other roles" and the reconciliation's "For the PO".
 
-- **For the PO:**
+- **For the PO:** answered in Amendment 6.
   1. **Wiki board-drag-interaction §10 names two resyncs that can land mid-drag:** a failed drop's and a stale response's. The code has a third. A failed column reorder from an earlier drag (`useBoardDnd.ts`, through `onColumnDrop`) stops a live item drag and shows the failed-write wording. Does §10 name it? (audit)
   2. **A column drag that a reload lands on** is stopped with no cue. §10 scopes its rule to an item drag. Should a column drag show the cue? (audit, #25)
   3. **Orphan-workflow deletion** (`workflows.test.ts`'s null-projectId delete). The wiki has no rule on what deleting a workflow with no owning project does to other projects' items. Is there one to write? If yes, the Test Planner derives a case. If no, the test stays uncatalogued. (reconciliation)
@@ -311,6 +352,8 @@ The audit's "For other roles" and the reconciliation's "For the PO".
 - **For the Test Reconciler,** at the confirming run (audit):
   1. **`cardMetrics.test.ts` checks that a row has no vertical padding.** Under Tailwind's border-box, padding doesn't change an `h-6` row's height, while a margin would change the list's pitch. Does the test prove its title?
   2. **`lib/dragTargets.test.ts`'s tier cases and `dragClassification.test.ts`'s tier block** may test the same walk twice, now that the board's classification hands off to `classifyTargets`.
+  3. **Planner's amended/new cases:** review the Scope and Amendment 7 candidates, including TREE-10.12's required owner, TREE-10.13's full delete, the three pickup-tree cases, and the flash window/late reveal. Which exact clauses remain after existing tests and approved stamps? Propose any additional stamps and approvals; do not infer whole-case coverage from a lifetime or snapshot hook alone.
+- **For the Architect:** route the unbuilt column-stop banner (DRAG-6.26, wiki board-drag-interaction §10's Planned passage). Its build is distinct from Story 10's catch-up on already-built rules. At build close, coordinate removal of DRAG-6.22's current column/no-cue clause with the Planner.
 
 ## Living-docs handoff
 
@@ -347,5 +390,6 @@ Written by the Coder at the end of Batch 5.
     - #3: `useForcedStop.ts` and `BoardView.tsx::loadBoard`;
     - #4: `workphaseOrder.ts::workphasesInOrder`'s comment;
     - #5 to #11: `useBoardDnd.test.ts`'s header, `dragChrome.test.tsx`'s fixture comment, the retitled armed-stop test, `index.css`'s `cue-fill` comment, `DragSessionContext.ts::useIsLockedAtCard`, `workflow/AGENTS.md` with `useBoardDnd.ts`'s header, and `dragTuning.ts`'s header.
-  - **The confirming Reconciler run** is Nathan's to start, and answers this plan's two questions for the Test Reconciler.
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **The confirming Reconciler run** is Nathan's to start, and answers this plan's questions for the Test Reconciler, including Amendment 7's case follow-up.
+- **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §8 and §10, boards-columns-unsorted §7, project-tree §1 and §10, and row-references' Related line. Amendment 6.
+- **Test Planner applied:** Amendment 7 and Scope list the revised cases and eight new IDs. Reconciliation is the next requested step, not run as part of this Planner pass. Existing mapping approvals remain as recorded; the new cases are not stamped or declared covered by the Planner.
