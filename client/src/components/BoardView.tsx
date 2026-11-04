@@ -471,6 +471,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
                 overlayForm={overlayForm}
                 overlayWidthPx={overlayWidthPx}
                 overlayProjection={session.projection}
+                overlayBranch={session.branch}
               />
             ) : null}
           </DragOverlay>

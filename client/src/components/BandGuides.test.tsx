@@ -3,10 +3,8 @@ import { render } from '@testing-library/react';
 import { useEffect } from 'react';
 import { DragCarveFrame } from './BandGuides';
 import { DragSessionContext, type DragSession } from './workflow/DragSessionContext';
-import { classifyDragTargets } from './workflow/dragClassification';
 import { startPopSession } from './workflow/popSession';
-import { freeOrigin } from '../test/dragFixtures';
-import { makeItem } from '../test/itemFixture';
+import { makeDragSession } from '../test/dragFixtures';
 
 // Counts its own mounts: a remount (not a re-render) is what resets a Card's
 // own state, such as its hand-set expand/collapse.
@@ -16,16 +14,7 @@ function MountCounter({ onMount }: { onMount: () => void }) {
 }
 
 function sessionAt(contextKey: string | null): DragSession {
-  const activeItem = makeItem('carried');
-  return {
-    activeItem,
-    classification: classifyDragTargets(activeItem.id, [activeItem], 5),
-    pop: startPopSession(contextKey),
-    priorPlacement: null,
-    origin: freeOrigin('todo'),
-    containingCardId: null,
-    projection: null,
-  };
+  return makeDragSession({ pop: startPopSession(contextKey) });
 }
 
 describe('DragCarveFrame', () => {

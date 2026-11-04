@@ -13,7 +13,7 @@ import { AttachedChildRow } from './StubRows';
 import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_OVERLAY_ATTR, descendantsRegionKey } from './workflow/dragRegions';
 import { startPopSession } from './workflow/popSession';
-import { freeOrigin } from '../test/dragFixtures';
+import { makeDragSession } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 import type { Item } from '../types';
 
@@ -79,15 +79,11 @@ describe('the drag-target tiers', () => {
   ];
 
   function sessionOf(activeId: string): DragSession {
-    return {
+    return makeDragSession({
       activeItem: ITEMS.find(i => i.id === activeId)!,
       classification: classifyDragTargets(activeId, ITEMS, CAP),
       pop: startPopSession(descendantsRegionKey('P')),
-      priorPlacement: null,
-      origin: freeOrigin('todo'),
-      containingCardId: null,
-      projection: null,
-    };
+    });
   }
 
   // What a row reads its drag from: dnd-kit's context, the writes still pending, and the session.

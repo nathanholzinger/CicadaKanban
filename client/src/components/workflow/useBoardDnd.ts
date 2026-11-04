@@ -94,6 +94,7 @@ import type { ModalReading } from './modalPlacement';
 import { placementFor, placementRegion, resolvePlacementOver, type OverlayForm } from './placement';
 import {
   EVERY_LEVEL,
+  carriedBranchOf,
   renderedIsStub,
   renderedParentId,
   renderedWorkphaseId,
@@ -671,6 +672,9 @@ export function useBoardDnd(deps: BoardDndDeps) {
         // branch and `isIdentity` compare a release against.
         origin: { parentId, slot: 'existing' },
         containingCardId,
+        // Read from the board's own placement-aware children, as the lists draw them, and only
+        // for a Stub's pickup.
+        branch: deps.tuning.collapseCarriedBranch ? carriedBranchOf(activeId, deps.getAttachedChildren) : null,
       });
       return;
     }
@@ -684,6 +688,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // at every layer.
       origin: { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' },
       containingCardId: null,
+      branch: null,
     });
   }
 

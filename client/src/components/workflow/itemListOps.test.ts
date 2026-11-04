@@ -6,6 +6,8 @@ import {
   getAttachedChildrenFrom,
   hierarchyRows,
   descendantsChildrenOf,
+  carriedBranchOf,
+  carriedBranchLabel,
   sectionEntries,
   shownLevels,
   EVERY_LEVEL,
@@ -351,6 +353,127 @@ describe('sectionEntries', () => {
 
   it('draws a section with no rows as none', () => {
     expect(sectionEntries([], 3)).toEqual([]);
+  });
+
+  describe('with the branch a carried Stub takes with it', () => {
+    const branchShape = (levels: number, activeId: string, branchIds: string[], list = items) =>
+      sectionEntries(rowsOf(list), levels, activeId, new Set(branchIds)).map(e =>
+        e.kind === 'item' ? `${e.row.item.id}@${e.row.depth}` : `${e.row.id}@${e.row.depth}×${e.row.count}`,
+      );
+
+    it('draws none of its rows, and none of the overflow rows they owned', () => {
+      // Q carries R and T (R1, R2 and R1a under R). R's overflow row went with R.
+      expect(branchShape(3, 'Q', ['R', 'T', 'R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'B@0']);
+      expect(branchShape(4, 'Q', ['R', 'T', 'R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'B@0']);
+    });
+
+    it('draws no overflow row for the carried Stub itself when all its children travel', () => {
+      // R is at the last shown level: without the branch it has an overflow row of 2.
+      expect(shape(3, 'R')).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×2', 'T@2', 'B@0']);
+      expect(branchShape(3, 'R', ['R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'R@2', 'T@2', 'B@0']);
+    });
+
+    it('keeps every other row, and every other overflow row with its count', () => {
+      // A and B each hold a child with a child; the section shows two levels, so each child's
+      // overflow row counts one.
+      const two = [
+        item('P'),
+        item('A', { parentId: 'P', position: 1 }),
+        item('B', { parentId: 'P', position: 2 }),
+        item('A1', { parentId: 'A' }),
+        item('B1', { parentId: 'B' }),
+        item('A1a', { parentId: 'A1' }),
+        item('B1a', { parentId: 'B1' }),
+      ];
+      expect(shape(2, undefined, two)).toEqual(['A@0', 'A1@1', 'overflow:A1@2×1', 'B@0', 'B1@1', 'overflow:B1@2×1']);
+      expect(branchShape(2, 'A', ['A1', 'A1a'], two)).toEqual(['A@0', 'B@0', 'B1@1', 'overflow:B1@2×1']);
+    });
+
+    it('draws a carried row that sits past the shown levels as it does without one', () => {
+      // R1 is at depth 3, so it is not drawn; it takes R1a, and R's overflow row counts R2 alone.
+      expect(branchShape(3, 'R1', ['R1a'])).toEqual(shape(3, 'R1'));
+      expect(branchShape(3, 'R1', ['R1a'])).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×1', 'T@2', 'B@0']);
+    });
+
+    it('is the same as no branch for an empty set', () => {
+      expect(branchShape(3, 'R1', [])).toEqual(shape(3, 'R1'));
+    });
+  });
+});
+
+// The branch a carried Stub takes with it, as the board draws the tree. The tree: Card P holds the
+// carried Stub S, and T. S holds S1 (then S1a, then S1a1) and S2, and has a Free child F, which holds a
+// Stub FS. T holds only a Free child G.
+describe('carriedBranchOf', () => {
+  const items = [
+    item('P'),
+    item('S', { parentId: 'P', position: 1 }),
+    item('T', { parentId: 'P', position: 2 }),
+    item('S1', { parentId: 'S', position: 1 }),
+    item('S2', { parentId: 'S', position: 2 }),
+    item('S1a', { parentId: 'S1' }),
+    item('S1a1', { parentId: 'S1a' }),
+    item('F', { parentId: 'S', isAttached: 0 }),
+    item('FS', { parentId: 'F' }),
+    item('G', { parentId: 'T', isAttached: 0 }),
+  ];
+  const branchOf = (id: string, pending = placements([])) =>
+    carriedBranchOf(id, parentId => getAttachedChildrenFrom(items, parentId, pending));
+
+  it('holds the Stub’s children and the whole branch below them, at every depth', () => {
+    const branch = branchOf('S');
+
+    expect(branch?.children).toBe(2);
+    expect(branch?.descendants).toBe(4);
+    expect([...branch!.ids].sort()).toEqual(['S1', 'S1a', 'S1a1', 'S2']);
+  });
+
+  it('counts the rows past the levels a section shows, as the walk is not cut there', () => {
+    // From P, S1a1 is at depth 3: the fourth level, which a section of three levels hides.
+    const rows = hierarchyRows('P', parentId => getAttachedChildrenFrom(items, parentId));
+    expect(rows.find(r => r.id === 'S1a1')?.depth).toBe(3);
+    expect(branchOf('S')?.ids.has('S1a1')).toBe(true);
+  });
+
+  it('leaves a Free child out, with everything under it', () => {
+    const { ids } = branchOf('S')!;
+
+    expect(ids.has('F')).toBe(false);
+    expect(ids.has('FS')).toBe(false);
+  });
+
+  it('is null for a Stub with no attached descendants, a Free child apart', () => {
+    expect(branchOf('T')).toBeNull();
+    expect(branchOf('S2')).toBeNull();
+  });
+
+  it('holds a row where the board draws it: a pending attach joins the branch, and a pending detach leaves it', () => {
+    const branch = branchOf(
+      'S',
+      placements([
+        ['T', { parentId: 'S2', slot: 'last' }],
+        ['S1a', { parentId: null, slot: 'last' }],
+      ]),
+    )!;
+
+    // T is drawn under S2, and S1a is drawn Free, with S1a1 under it.
+    expect([...branch.ids].sort()).toEqual(['S1', 'S2', 'T']);
+    expect([branch.children, branch.descendants]).toEqual([2, 3]);
+  });
+});
+
+describe('carriedBranchLabel', () => {
+  it('says one child as “+ 1 child”, with no total when it is the whole branch', () => {
+    expect(carriedBranchLabel({ children: 1, descendants: 1 })).toBe('+ 1 child');
+  });
+
+  it('says the children alone when every descendant is a child', () => {
+    expect(carriedBranchLabel({ children: 3, descendants: 3 })).toBe('+ 3 children');
+  });
+
+  it('says both counts when the branch is deeper than its children', () => {
+    expect(carriedBranchLabel({ children: 2, descendants: 5 })).toBe('+ 2 children, 5 total descendants');
+    expect(carriedBranchLabel({ children: 1, descendants: 3 })).toBe('+ 1 child, 3 total descendants');
   });
 });
 

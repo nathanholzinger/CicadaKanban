@@ -1054,6 +1054,8 @@ banner.
 ---
 
 ### Story 8.8 — A pickup takes its descendants with it
+**Plan:** [`story-8-8-pickup-carries-branch.md`](story-8-8-pickup-carries-branch.md)
+
 **Found with Story 8.5** (Nathan, 2026-11-03). Story 8.5 marks a dragged
 Stub's descendant rows at low opacity, and leaves them drawn in the section
 while the ghost moves away. Nathan wants to try the other option 8.5 put out
@@ -1062,8 +1064,14 @@ with the carried copy, so the pickup reads as taking the whole branch.
 
 **It's a trial,** run code first like the rest of Story 8. The Coder builds
 it, Nathan tries it hands-on, and he decides whether it replaces 8.5's
-low-opacity rows or sits beside them. Its plan is written when the story is
-picked up.
+low-opacity rows or sits beside them.
+
+**Planned 2026-11-04** (Nathan's design). At a Stub's pickup, its
+attached branch collapses into the carried copy, which gains a second
+line: "+ X children, Y total descendants". The ghost stays one row, and
+the branch is drawn as a tree again when the drag ends. The plan's
+decisions answer the questions below. It's built behind a tuning-panel
+switch, beside 8.5's rows.
 
 **What the plan has to answer:**
 - **The jump.** Removing the rows at pickup shifts the layout under the

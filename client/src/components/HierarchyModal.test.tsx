@@ -7,7 +7,7 @@ import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_REGION_ATTR, descendantsRegionKey, type Point } from './workflow/dragRegions';
 import { cursorXInList } from './workflow/modalPlacement';
 import { startPopSession } from './workflow/popSession';
-import { rect, stubOrigin } from '../test/dragFixtures';
+import { makeDragSession, rect, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 
 // P's rows in the modal: B, D (the one carried), D1 (D's child, which travels with it), C.
@@ -30,16 +30,20 @@ const PROJECTION: DescendantsProjection = {
   overflowBeside: null,
 };
 
-function sessionOf(activeItem = D, projection: DescendantsProjection | null = PROJECTION): DragSession {
-  return {
+function sessionOf(
+  activeItem = D,
+  projection: DescendantsProjection | null = PROJECTION,
+  branch: DragSession['branch'] = null,
+): DragSession {
+  return makeDragSession({
     activeItem,
     classification: classifyDragTargets(activeItem.id, ALL, 12),
     pop: startPopSession(descendantsRegionKey('p')),
-    priorPlacement: null,
     origin: stubOrigin('p'),
     containingCardId: 'p',
     projection,
-  };
+    branch,
+  });
 }
 
 const CURSOR: Point = { x: 400, y: 300 };
@@ -143,6 +147,24 @@ describe('the hierarchy modal opened by a hold during a drag', () => {
     expect(dialog.style.left).toBe(`${CURSOR.x - (LIST.x + cursorXInList(0))}px`);
     expect(onPlaced).toHaveBeenCalledTimes(1);
     // With the Card it is for, and the point it was read at, which is where the hold opened it.
+    expect(onPlaced).toHaveBeenCalledWith(CARD.id, { gap: 2, depth: 0, pointerX: CURSOR.x, pointerY: CURSOR.y });
+  });
+
+  // The carried Stub's branch is out of the modal's rows, so the count of rows before the ghost's
+  // gap has none to step past, and the cursor rests on the same row of the rows that stay.
+  it('leaves the carried Stub’s branch out of its rows, and still rests the cursor on the row of the ghost’s gap', () => {
+    stubLayout();
+    const onPlaced = vi.fn();
+    render(modal(sessionOf(D, PROJECTION, { ids: new Set([D1.id]), children: 1, descendants: 1 }), CURSOR, onPlaced));
+
+    const dialog = screen.getByRole('dialog');
+    expect([...dialog.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'))).toEqual([
+      'b',
+      'd',
+      'c',
+    ]);
+    // C is the third row now.
+    expect(dialog.style.top).toBe(`${CURSOR.y - (LIST.y + 2 * ROW.step + ROW.height / 2)}px`);
     expect(onPlaced).toHaveBeenCalledWith(CARD.id, { gap: 2, depth: 0, pointerX: CURSOR.x, pointerY: CURSOR.y });
   });
 

@@ -22,7 +22,7 @@ import type { Item, ItemType } from '../types';
 import { PILL_DEPTH, depthLabel } from './item-detail/pillUtils';
 import TypePill from './item-detail/TypePill';
 import { DRAG_CARD_ATTR, descendantsRegionKey, dragRegionProps } from './workflow/dragRegions';
-import { hierarchyRows, sectionEntries } from './workflow/itemListOps';
+import { hierarchyRows, sectionEntries, type CarriedBranch } from './workflow/itemListOps';
 import { useHierarchyModal } from './workflow/HierarchyModalContext';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import type { OverlayForm } from './workflow/placement';
@@ -34,7 +34,7 @@ import {
 } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
 import { ACTIVE_CONTEXT_OUTLINE, DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
-import { SectionRows, StubBody } from './StubRows';
+import { CarriedBranchLine, SectionRows, StubBody } from './StubRows';
 
 const CARD_BASE =
   'hover:bg-zinc-750 relative cursor-grab rounded-lg border border-zinc-700/50 bg-zinc-800 p-3 transition-colors duration-150 hover:border-zinc-600 active:cursor-grabbing';
@@ -43,15 +43,17 @@ const CARD_BASE =
 // a shadow in place of a row's hover/press states, since this copy isn't
 // interactive. No CARD_BASE (that's the shortCard/full-card box) — a Stub
 // is a small pill-shaped row, not a padded card, on the Stub rows' own box.
-const OVERLAY_STUB_CLASS = `${STUB_ROW_BOX_CLASS} border border-zinc-600 bg-zinc-800 shadow-2xl shadow-black/50 transition-[margin-left] duration-75`;
+const OVERLAY_STUB_CLASS = `${STUB_ROW_BOX_CLASS} relative border border-zinc-600 bg-zinc-800 shadow-2xl shadow-black/50 transition-[margin-left] duration-75`;
 
 // The depth cue: at the Descendants layer the carried Stub's visible box
 // indents to the projected depth, through the same `descendantsIndentPx`
 // as a section row (`StubRows.tsx::AttachedChildRow`), so its pill lines up
 // with its would-be siblings. Only this inner box moves — the overlay's own
 // root keeps its width and position, so nothing dnd-kit measures changes.
+// The branch's second line hangs from this box, so it steps with it.
 // The ghost row that also shows the depth sits under this copy, hidden.
-// Over the cap, the copy carries the invalid outline for the same reason.
+// Over the cap, the copy carries the invalid outline for the same reason,
+// on the box alone.
 // A placeholder look, not yet tuned.
 function overlayStubIndent(projection: DescendantsProjection | null): {
   style: { marginLeft: number };
@@ -111,6 +113,8 @@ interface KanbanCardProps {
   overlayWidthPx?: number | null;
   /** isOverlay + overlayForm 'stub' only — the Descendants layer's live projection (null elsewhere), which indents the carried Stub to the depth it would land at. */
   overlayProjection?: DescendantsProjection | null;
+  /** isOverlay + overlayForm 'stub' only — what the carried Stub's branch counts, for the second line (null: none to say). */
+  overlayBranch?: Pick<CarriedBranch, 'children' | 'descendants'> | null;
   onCardClick?: (id: string) => void;
 }
 
@@ -124,6 +128,7 @@ export default function KanbanCard({
   overlayForm = 'short-card',
   overlayWidthPx = null,
   overlayProjection = null,
+  overlayBranch = null,
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
@@ -213,8 +218,14 @@ export default function KanbanCard({
       ? hierarchyRows(item.id, getAttachedChildren)
       : [];
   // What the section draws: `rows` cut at the last shown level, with an overflow row for the
-  // children it hides. The board still places against all of `rows`.
-  const entries = sectionEntries(rows, dragTuning.sectionLevels, cardDragSession?.activeItem.id);
+  // children it hides, and without the branch a carried Stub takes with it. The board still places
+  // against all of `rows`.
+  const entries = sectionEntries(
+    rows,
+    dragTuning.sectionLevels,
+    cardDragSession?.activeItem.id,
+    cardDragSession?.branch?.ids,
+  );
 
   return (
     <div
@@ -255,6 +266,7 @@ export default function KanbanCard({
           style={overlayIndent.style}
         >
           <StubBody item={item} itemTypes={itemTypes} />
+          {overlayBranch && <CarriedBranchLine branch={overlayBranch} />}
         </div>
       ) : (
         <>

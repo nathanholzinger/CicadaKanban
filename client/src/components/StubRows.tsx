@@ -1,8 +1,9 @@
 // The Stub tier's own rows — StubBody (the shared type-pill + title),
 // AttachedChildRow (a real, draggable Stub, the carried item's ghost included),
 // OverflowRow (the count standing in for a row's hidden children, which opens the
-// hierarchy modal), their static drawings, and SectionRows, the one list of them that
-// a Card's section and the hierarchy modal both draw.
+// hierarchy modal), their static drawings, SectionRows, the one list of them that
+// a Card's section and the hierarchy modal both draw, and CarriedBranchLine, the second
+// line a carried Stub's copy hangs under itself.
 // The Card tier's own render is KanbanCard.tsx; this is everything a
 // Descendants-section row renders as.
 
@@ -12,7 +13,12 @@ import { STUB_ROW_BOX_CLASS, descendantsIndentPx } from './cardMetrics';
 import { DropSideIndicator, INVALID_PLACEMENT_CLASS, ZoomCue, useItemRow } from './dragChrome';
 import { useModalHoldPhase, type DescendantsProjection } from './workflow/DragSessionContext';
 import { useDragTuning } from './workflow/DragTuningContext';
-import type { OverflowRowData, SectionEntry } from './workflow/itemListOps';
+import {
+  carriedBranchLabel,
+  type CarriedBranch,
+  type OverflowRowData,
+  type SectionEntry,
+} from './workflow/itemListOps';
 
 // The type pill + one-line title every Stub-tier render
 // shares — AttachedChildRow and StaticStubRow below, and
@@ -167,6 +173,21 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
           {overflowLabel(row.count)}
         </button>
       </div>
+    </div>
+  );
+}
+
+// The carried Stub's second line, its branch's counts: one row tall, hung under the box it is
+// positioned against, so what dnd-kit measures of the copy stays one row. It covers the row below the
+// copy and takes no pointer. Its look is a placeholder, the overflow row's text over the copy's own
+// fill, not yet tuned.
+export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'children' | 'descendants'> }) {
+  return (
+    <div
+      data-carried-branch
+      className={`${OVERFLOW_TEXT_CLASS} pointer-events-none absolute top-[calc(100%+1px)] -right-px -left-px bg-zinc-800/90`}
+    >
+      <span className="truncate">{carriedBranchLabel(branch)}</span>
     </div>
   );
 }

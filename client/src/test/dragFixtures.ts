@@ -1,12 +1,17 @@
 // Test fixtures for drag geometry, shared by the drag tests (regions, the pop machine,
 // band resolution, placement): the `Rect`, the two region shapes, the two `origin`
-// shapes, a board's columns, and the DOM elements a region is read from. One place for
-// each shape, so a new field lands in one fixture rather than in every test.
+// shapes, a board's columns, the DOM elements a region is read from, and a whole drag
+// session. One place for each shape, so a new field lands in one fixture rather than in
+// every test.
 
 import type { CardListRegion, DescendantsRegion, Rect } from '../components/workflow/dragRegions';
 import type { DropColumn } from '../components/workflow/dragStructure';
 import { descendantsRegionKey, dragRegionProps, parseRegionKey } from '../components/workflow/dragRegions';
 import type { Placement } from '../components/workflow/itemListOps';
+import type { DragSession } from '../components/workflow/DragSessionContext';
+import { classifyDragTargets } from '../components/workflow/dragClassification';
+import { startPopSession } from '../components/workflow/popSession';
+import { makeItem } from './itemFixture';
 
 export function rect(left: number, top: number, width: number, height: number): Rect {
   return { left, top, width, height, right: left + width, bottom: top + height };
@@ -67,6 +72,24 @@ export function freeOrigin(workphaseId: string): Placement {
 
 export function stubOrigin(parentId: string): Placement {
   return { parentId, slot: 'existing' };
+}
+
+// A drag session as the board holds it: a Free Card carried in no context, classified over a tree of
+// itself alone, with nothing in flight and no branch. `overrides` replace any field; a test that
+// reads the tree classifies its own (`classifyDragTargets`).
+export function makeDragSession(overrides: Partial<DragSession> = {}): DragSession {
+  const activeItem = overrides.activeItem ?? makeItem('carried');
+  return {
+    activeItem,
+    classification: classifyDragTargets(activeItem.id, [activeItem], 5),
+    pop: startPopSession(null),
+    priorPlacement: null,
+    origin: freeOrigin('todo'),
+    containingCardId: null,
+    projection: null,
+    branch: null,
+    ...overrides,
+  };
 }
 
 // A merged column covering the given workphases — override any field,

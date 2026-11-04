@@ -1,5 +1,5 @@
 // The whole drag's context: activeItem, classification, pop, priorPlacement, origin,
-// containingCardId, projection, plus PlacementsContext. useDropTargetState/
+// containingCardId, projection, branch, plus PlacementsContext. useDropTargetState/
 // useIsPending read it without prop drilling.
 
 import { createContext, useContext } from 'react';
@@ -8,7 +8,7 @@ import { isValidParent } from './dragClassification';
 import type { DragClassification, DropTargetState, DropTier } from '../../lib/dragTargets';
 import { descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
-import type { Placement, Placements } from './itemListOps';
+import type { CarriedBranch, Placement, Placements } from './itemListOps';
 import type { DropSide, ResolvedPlacement } from '../../lib/hierarchyPlacement';
 
 // The Descendants layer's own tab state: which gap the ghost sits in, which
@@ -102,6 +102,13 @@ export interface DragSession {
    * (`useBoardDnd.ts`).
    */
   projection: DescendantsProjection | null;
+  /**
+   * What a Stub's pickup takes with it, read once at pickup and held for the whole drag:
+   * its attached descendants, which no list draws while it is carried, and the counts its copy
+   * says. Null for a Free Card's drag, for a Stub with no attached descendants, and while
+   * `DragTuning.collapseCarriedBranch` is off.
+   */
+  branch: CarriedBranch | null;
 }
 
 export const DragSessionContext = createContext<DragSession | null>(null);

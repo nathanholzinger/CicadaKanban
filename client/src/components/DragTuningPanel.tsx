@@ -150,6 +150,15 @@ export default function DragTuningPanel({
       <div className="space-y-1.5">
         <h4 className={SECTION_LABEL}>Section</h4>
         {renderFields(SECTION_FIELDS)}
+        <label className={FIELD_LABEL}>
+          Collapse a carried Stub’s branch
+          <input
+            type="checkbox"
+            checked={tuning.collapseCarriedBranch}
+            aria-label="Collapse a carried Stub’s branch"
+            onChange={e => onChange({ ...tuning, collapseCarriedBranch: e.target.checked })}
+          />
+        </label>
         <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Project sidebar</h4>

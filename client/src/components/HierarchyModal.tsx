@@ -139,8 +139,14 @@ export default function HierarchyModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Computed once per render: `getAttachedChildren` returns a fresh array every call, and the
-  // list and its `SortableContext` must read one.
-  const entries = sectionEntries(hierarchyRows(card.id, getAttachedChildren), EVERY_LEVEL);
+  // list and its `SortableContext` must read one. A carried Stub's branch is left out, as in the
+  // Card's own section.
+  const entries = sectionEntries(
+    hierarchyRows(card.id, getAttachedChildren),
+    EVERY_LEVEL,
+    session?.activeItem.id,
+    session?.branch?.ids,
+  );
 
   // Where the cursor places the modal, decided once, as it mounts: only a modal that mounts during
   // a drag with an anchor has a cursor to sit under. A parent that keeps the anchor in its state

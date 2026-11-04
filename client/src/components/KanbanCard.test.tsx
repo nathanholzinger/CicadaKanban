@@ -3,12 +3,13 @@ import { render } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import KanbanCard from './KanbanCard';
 import { HierarchyModalContext } from './workflow/HierarchyModalContext';
-import { DragSessionContext, type DragSession } from './workflow/DragSessionContext';
+import { DragSessionContext, type DescendantsProjection, type DragSession } from './workflow/DragSessionContext';
 import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_CARD_ATTR, DRAG_REGION_ATTR, descendantsRegionKey } from './workflow/dragRegions';
 import { startPopSession } from './workflow/popSession';
-import { freeOrigin } from '../test/dragFixtures';
+import { makeDragSession, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
+import { descendantsIndentPx } from './cardMetrics';
 
 const CARD = makeItem('p');
 const CHILD = makeItem('c', { parentId: 'p', position: 1 });
@@ -17,30 +18,30 @@ const attachedChildren = (parentId: string) => (parentId === 'p' ? [CHILD] : [])
 
 // The drag of the Free Card X, locked at P's Descendants layer.
 function lockedAtP(): DragSession {
-  return {
+  return makeDragSession({
     activeItem: CARRIED,
     classification: classifyDragTargets('x', [CARD, CHILD, CARRIED], 12),
     pop: startPopSession(descendantsRegionKey('p')),
-    priorPlacement: null,
-    origin: freeOrigin('todo'),
-    containingCardId: null,
-    projection: null,
-  };
+  });
 }
 
-function renderCard(
-  props: Partial<Parameters<typeof KanbanCard>[0]> = {},
-  { session = null, modalCardId = null }: { session?: DragSession | null; modalCardId?: string | null } = {},
-) {
-  return render(
+type CardProps = Partial<Parameters<typeof KanbanCard>[0]>;
+type CardContext = { session?: DragSession | null; modalCardId?: string | null };
+
+function cardFrame(props: CardProps, { session = null, modalCardId = null }: CardContext = {}) {
+  return (
     <DndContext>
       <DragSessionContext value={session}>
         <HierarchyModalContext value={{ openCardId: modalCardId, open: () => {}, close: () => {} }}>
           <KanbanCard item={CARD} {...props} />
         </HierarchyModalContext>
       </DragSessionContext>
-    </DndContext>,
+    </DndContext>
   );
+}
+
+function renderCard(props: CardProps = {}, context: CardContext = {}) {
+  return render(cardFrame(props, context));
 }
 
 const regionElements = (container: HTMLElement) => [...container.querySelectorAll(`[${DRAG_REGION_ATTR}]`)];
@@ -125,5 +126,110 @@ describe('a Card the drag is locked at', () => {
 
     const locked = renderCard({}, { session: lockedAtP() });
     expect(locked.getByRole('article', { name: CARD.title })).toHaveStyle({ transition: 'none' });
+  });
+});
+
+// A Stub's pickup takes its branch with it: P's section holds A, D (the one carried, with D1 under it
+// and D1a under that) and C. D1 and D1a leave the section while the session holds them.
+describe('a Card whose section holds the branch of a carried Stub', () => {
+  const D = makeItem('d', { parentId: 'p', position: 2 });
+  const ROWS = [
+    makeItem('a', { parentId: 'p', position: 1 }),
+    D,
+    makeItem('d1', { parentId: 'd' }),
+    makeItem('d1a', { parentId: 'd1' }),
+    makeItem('c', { parentId: 'p', position: 3 }),
+  ];
+  const childrenOf = (parentId: string) => ROWS.filter(i => i.parentId === parentId);
+  const carrying = (branch: DragSession['branch']) =>
+    makeDragSession({
+      activeItem: D,
+      classification: classifyDragTargets('d', [CARD, ...ROWS], 12),
+      pop: startPopSession(descendantsRegionKey('p')),
+      origin: stubOrigin('p'),
+      containingCardId: 'p',
+      branch,
+    });
+  const rowIds = (container: HTMLElement) =>
+    [...container.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'));
+
+  it('draws every row of it while the session holds no branch', () => {
+    const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(null) });
+
+    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'd1', 'd1a', 'c']);
+  });
+
+  it('draws none of the branch, and every other row where it was, while the session holds it', () => {
+    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
+    const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(branch) });
+
+    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
+  });
+
+  it('draws none of it in the static rows under the hierarchy modal’s backdrop either', () => {
+    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
+    const { queryByText } = renderCard(
+      { childCount: 3, getAttachedChildren: childrenOf },
+      { session: carrying(branch), modalCardId: 'p' },
+    );
+
+    expect(queryByText('Item c')).toBeInTheDocument();
+    expect(queryByText('Item d1')).toBeNull();
+    expect(queryByText('Item d1a')).toBeNull();
+  });
+
+  it('draws it again once the drag is over', () => {
+    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
+    const props = { childCount: 3, getAttachedChildren: childrenOf };
+    const { container, rerender } = renderCard(props, { session: carrying(branch) });
+    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
+
+    rerender(cardFrame(props));
+
+    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'd1', 'd1a', 'c']);
+  });
+});
+
+// The carried Stub's copy says what its branch holds on a second line, hung from its box so the box
+// the drag measures stays one row, and stepping with the box to the depth the ghost would land at.
+describe('the carried copy of a Stub with a branch', () => {
+  const BRANCH = { children: 2, descendants: 5 };
+  const LINE = '+ 2 children, 5 total descendants';
+  const overlay = (props: CardProps) => renderCard({ item: CARRIED, isOverlay: true, overlayBranch: BRANCH, ...props });
+
+  it('says the branch’s counts in its Stub form', () => {
+    const { getByText } = overlay({ overlayForm: 'stub' });
+
+    expect(getByText(LINE)).toBeInTheDocument();
+  });
+
+  it('says nothing in its shortCard form, which keeps its one height', () => {
+    const { queryByText } = overlay({ overlayForm: 'short-card' });
+
+    expect(queryByText(LINE)).toBeNull();
+  });
+
+  it('says nothing without a branch', () => {
+    const { container } = overlay({ overlayForm: 'stub', overlayBranch: null });
+
+    expect(container.querySelector('[data-carried-branch]')).toBeNull();
+  });
+
+  it('hangs outside the flow of the copy’s box, and moves with the box through the depths', () => {
+    const projection: DescendantsProjection = {
+      gap: 1,
+      depth: 2,
+      valid: true,
+      resolved: { parentId: 'p', anchor: null },
+      atOwnSlot: false,
+      slotHidden: false,
+      overflowBeside: null,
+    };
+    const { getByText } = overlay({ overlayForm: 'stub', overlayProjection: projection });
+
+    const line = getByText(LINE).parentElement!;
+    expect(line).toHaveClass('absolute', 'pointer-events-none');
+    // It is a child of the box that indents to the depth, so the two step together.
+    expect(line.parentElement).toHaveStyle({ marginLeft: `${descendantsIndentPx(2)}px` });
   });
 });
