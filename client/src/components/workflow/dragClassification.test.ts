@@ -78,17 +78,17 @@ describe('classifyDragTargets — Card drag', () => {
     ];
     const { tiers } = classifyDragTargets('X', items, CAP);
 
-    it('is "parent" for a legal parent, a Free Card or a Stub', () => {
+    it('DRAG-2.14: is "parent" for a legal parent, a Free Card or a Stub', () => {
       for (const id of ['V', 'VS', T(CAP - 3)]) expect(tiers.get(id), id).toBe('parent');
     });
 
-    it('is "anchor" for a Free Card that is no legal parent, whatever its parent, and for a Stub too deep under a legal parent', () => {
+    it('DRAG-2.15, DRAG-2.16: is "anchor" for a Free Card that is no legal parent, whatever its parent, and for a Stub too deep under a legal parent', () => {
       expect(tiers.get('D')).toBe('anchor'); // a Free descendant: cycle-forming
       expect(tiers.get('FC')).toBe('anchor'); // depth-capped, and a Stub's parent is not what makes a Card an anchor
       expect(tiers.get(T(CAP - 2))).toBe('anchor'); // depth-capped Stub, its parent a legal one
     });
 
-    it('is "neither" for a Stub whose parent is no legal parent, at any depth below it', () => {
+    it('DRAG-2.15, DRAG-2.16, DRAG-2.17: is "neither" for a Stub whose parent is no legal parent, at any depth below it', () => {
       expect(tiers.get('S')).toBe('neither'); // X's own descendants: under the carried item
       expect(tiers.get('S1')).toBe('neither');
       expect(tiers.get('DS')).toBe('neither'); // a Stub inside a Free descendant's Card
@@ -110,7 +110,7 @@ describe('classifyDragTargets — Card drag', () => {
       );
     });
 
-    it('is one tier per item for a dragged Stub: its descendants "neither", its sibling and parent "parent"', () => {
+    it('DRAG-2.17: is one tier per item for a dragged Stub: its descendants "neither", its sibling and parent "parent"', () => {
       const stubs = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S1a1', 'S1a'), item('S2', 'P')];
       const stubTiers = classifyDragTargets('S1', stubs, CAP).tiers;
       expect(stubTiers.get('S1a')).toBe('neither');
@@ -120,7 +120,7 @@ describe('classifyDragTargets — Card drag', () => {
       expect(stubTiers.has('S1')).toBe(false);
     });
 
-    it('reads a descendant by the Stub test it is handed, not its stored attachment', () => {
+    it('DRAG-2.23: reads a descendant by the Stub test it is handed, not its stored attachment', () => {
       // C is stored detached but its attach is in flight, so the board draws it as a Stub of X's, which
       // a Stub of the carried item can't be named for. A is stored attached but its detach is in
       // flight, so it is a Card of its own.
@@ -195,7 +195,7 @@ describe('DRAG-2.8: classifyDragTargets — Stub drag (full classification)', ()
     expect(states.get('V')).toBe('valid');
   });
 
-  it("a Stub's own descendants are still Cycle-forming, the Free ones an anchor and the Stubs neither", () => {
+  it("DRAG-2.17: a Stub's own descendants are still Cycle-forming, the Free ones an anchor and the Stubs neither", () => {
     const items = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S1b', 'S1', false)];
     const { states, tiers } = classifyDragTargets('S1', items, CAP);
     expect(states.get('S1a')).toBe('cycle-forming');

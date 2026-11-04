@@ -757,7 +757,7 @@ test.skip('DRAG-7.10, DRAG-7.18: after leaving a modal a hold opened, a hold bes
   expect((await fetchItem(request, x.id)).position).toBeLessThan((await fetchItem(request, r1.id)).position);
 });
 
-test('DRAG-7.21: a ghost in an over-cap state beside an overflow row starts no hold, from either gap, and none runs a level up where it fits', async ({
+test('DRAG-7.21, DRAG-2.22: a ghost in an over-cap state beside an overflow row starts no hold, from either gap, and none runs a level up where it fits', async ({
   page,
   request,
   projectSidebar,

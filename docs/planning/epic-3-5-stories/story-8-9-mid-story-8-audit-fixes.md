@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 4 built for review and commit
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** built, for review and commit; the handoff is written
 
 ## Goal
 
@@ -286,6 +286,17 @@ Filled in by the Coder.
 - **No test added or removed,** so the counts hold. The batch changes no app code.
 - **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245).
 
+**5. 2026-11-04, Batch 5 built** (Coder).
+- **The surface stamps,** with the report's titles: DRAG-2.22 on the DRAG-7.21 spec, and DRAG-6.15 on the DRAG-7.23 spec that stops a drag by a reload. The optional `data-drop-tier` line stays for Story 10, as D4 says.
+- **The internal stamps,** with the report's titles, in nine files: `useBoardDnd.test.ts` (13 tests), `useForcedStop.test.ts`, `ForcedStopCue.test.tsx`, `dragClassification.test.ts`, `dragChrome.test.tsx`, `useProjectDragReorder.test.ts`, `lib/dragTargets.test.ts` and `SortableProjectRow.test.tsx`. The armed-stop test that cancels takes D3's title.
+- **`ForcedStopCue.test.tsx` was fixed first.** It reads DRAG-6.16's two sentences as the case writes them, and no longer the component's constant. Its "says why" test also checks the other cause's sentence is absent, which DRAG-6.17 asks. "Words the two causes differently" now renders both and compares them with the two sentences, so its title ends "each in its own sentence". It carries no ID, as the report proposed none.
+- **The six skips each have their reason line,** in the form the drag specs already use. The reason is the skipping commit's: the tests were failing, to be fine-tuned with the drag work. Each line adds what its test's own comments say about its aim.
+- **DRAG-5.16 is stamped, and gets no added assertion.** D4 expected the stored item could also be checked against `Q`'s, but the spec's second drag is released on `P`, not after `Q`, so no assertion on its stored data can show the case's last clause.
+  - A throwaway copy measured it. After the detach, `X` already sits after `Q` (positions `P` 1, `Q` 2, `X` 3). Released on `Q`'s lower half, `X` lands at 1.5, between them, in 6 of 6 runs.
+  - A release "after `Q`" needs another aim: past the column's end, or `X` set back down leaning up. That's a new drag, so the clause goes to Story 10 by ID, as D4's fallback says.
+  - The spec still shows the drag starting in the column, `X` staying Free, and `parentId` staying `P`.
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245). `npm run test:e2e` gives 216 passed, 21 skipped, 0 failed, with the three retitled specs among those that ran.
+
 ## Open questions
 
 The audit's "For other roles" and the reconciliation's "For the PO".
@@ -303,12 +314,38 @@ The audit's "For other roles" and the reconciliation's "For the PO".
 
 ## Living-docs handoff
 
-Written by the Coder before close. What it's expected to hold:
+Written by the Coder at the end of Batch 5.
 
 - **Behavior decisions made while building, for the PO to rule on:**
-  - the flash's window (D2);
-  - the sidebar's descendants, excluded rows and cap height held from pickup (#13), as its tiers are.
+  - **The flash's window (D2).** Wiki board-drag-interaction §10 gives the flash as two pulses, about 1.4 seconds, "where the reloaded board draws it". It is built as follows:
+    - it plays for 1.4 seconds from the moment the stop's reload has drawn the board, so a slow reload doesn't spend it;
+    - it's let go sooner by the next drag's start, or by another reload starting while it plays, so a reload with no stop behind it flashes nothing;
+    - an item that mounts inside the window, such as a collapsed Card opened within 1.4 seconds, flashes, and one that mounts after it doesn't.
+    - §10 doesn't say what a late mount does. Should the window be named there?
+  - **The sidebar counts its drag by the tree at pickup (#13).** The carried project's descendants, the rows left out of placement and the height the cap reads are fixed for the drag, as its tiers are. A project write that lands mid-drag and puts a project under the carried one leaves it a drop candidate, and a drop beside it is refused by the server (a cycle, or past the cap). The board avoids this by ending a drag at any reload (§10), which the sidebar doesn't. Is the sidebar's behavior a rule, or an edge to accept?
+  - **No decision, a change to match the wiki as written:** a workphase, board or column create whose reference isn't a string is a 400 now (it was a 500, and an array holding a real id created the row). Wiki row-references §1 already says it.
 - **Planned passages now built:** none.
-- **Implementation passages to place:** the new check's comment in `getOrNotFound.ts`, and the comments Batch 4 corrects. All of them are the Coder's own.
-- **Test-plan cases affected:** the stamps of Batches 1 and 5, any title retitled on the way, and the confirming run's result.
+- **Implementation passages to place:** the comments on `getOrNotFound.ts::referenceShapeError` and `namesARow`, the comments Batch 4 corrected, and `workflow/AGENTS.md`'s two new entries (`forcedStop.ts`, `useForcedStop.ts`). All of them are the Coder's own.
+- **Test-plan cases affected:**
+  - **Stamped on surface tests:** DRAG-2.22 and DRAG-6.15 (the DRAG-7.21 and DRAG-7.23 specs), and DRAG-5.16 (see below).
+  - **Stamped on internal tests,** the mappings Nathan approved:
+    - DRAG-1.36, DRAG-2.11, DRAG-2.12, DRAG-4.35;
+    - DRAG-2.14 to DRAG-2.18, DRAG-2.20 to DRAG-2.23;
+    - DRAG-6.16 to DRAG-6.19, DRAG-6.22 to DRAG-6.24;
+    - TREE-2.1 and TREE-2.4 to TREE-2.8.
+  - **Stamped on server tests:** TREE-10.12, on its three tests in `workflows.test.ts`. They assert every clause, with two assertions the plan didn't list (Amendment 1).
+  - **Expected to close at the confirming run:** DRAG-2.11 and TREE-10.12. The others above stay `Open`, each stamped test asserting part of its case.
+  - **DRAG-5.16 is stamped, and its last clause isn't asserted** (Amendment 5): the spec's second drag is released on `P`, not after `Q`. It stays `Open`, and the clause is Story 10's by ID.
+  - **Retitled on the way:** TREE-10.12's value test ("empty or not a string") and DRAG-6.22's armed-stop test ("cancelled").
+  - **Untagged tests added, for the Reconciler to map:** the flash's lifetime in `useForcedStop.test.ts` and its row's in `dragChrome.test.tsx` (DRAG-6.20 and DRAG-6.21 are the candidates), the banner's key in `ForcedStopCue.test.tsx`, and the subtree held for the drag in `useProjectDragReorder.test.ts` (TREE-2.6's neighbor).
+  - **The six old skips** carry their reasons now.
+- **For the Architect, at close:**
+  - **Story 10's item 10** takes DRAG-5.16's after-`Q` release by ID.
+  - **The audit's Close-out table,** each Fix Now against the code:
+    - #1: `getOrNotFound.ts::referenceShapeError`, called from the three create routes, `POST /workflows` and the five inline sites;
+    - #2: `lineKinds.mts::strippedCode`;
+    - #3: `useForcedStop.ts` and `BoardView.tsx::loadBoard`;
+    - #4: `workphaseOrder.ts::workphasesInOrder`'s comment;
+    - #5 to #11: `useBoardDnd.test.ts`'s header, `dragChrome.test.tsx`'s fixture comment, the retitled armed-stop test, `index.css`'s `cue-fill` comment, `DragSessionContext.ts::useIsLockedAtCard`, `workflow/AGENTS.md` with `useBoardDnd.ts`'s header, and `dragTuning.ts`'s header.
+  - **The confirming Reconciler run** is Nathan's to start, and answers this plan's two questions for the Test Reconciler.
 - **Wiki sections added, changed, moved or removed** (PO, at close):

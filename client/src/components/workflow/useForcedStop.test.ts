@@ -9,7 +9,7 @@ describe('useForcedStop', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('holds a reported stop for the cue’s time, and then lets it go', () => {
+  it('DRAG-6.19: holds a reported stop for the cue’s time, and then lets it go', () => {
     const { result } = renderHook(() => useForcedStop(5000));
     expect(result.current.stop).toBeNull();
 
@@ -25,7 +25,7 @@ describe('useForcedStop', () => {
     expect(result.current.stop).toBeNull();
   });
 
-  it('lets it go at the next drag’s start, without waiting out the time', () => {
+  it('DRAG-6.18: lets it go at the next drag’s start, without waiting out the time', () => {
     const { result } = renderHook(() => useForcedStop(5000));
     act(() => result.current.report(stop));
 

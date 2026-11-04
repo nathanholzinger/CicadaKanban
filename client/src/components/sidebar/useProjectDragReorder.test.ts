@@ -371,7 +371,7 @@ describe('the tier each row is drawn at', () => {
     ['X1a', 'X1'],
   );
 
-  it('has none before a pickup, and none once the drag is released or cancelled', () => {
+  it('TREE-2.1: has none before a pickup, and none once the drag is released or cancelled', () => {
     const drag = sidebarDrag(projects, [], 12);
     expect(drag.hook.tiers.size).toBe(0);
     expect(drag.hook.tierVars).toBeUndefined();
@@ -387,7 +387,7 @@ describe('the tier each row is drawn at', () => {
     expect(drag.hook.tierVars).toBeUndefined();
   });
 
-  it('is "neither" for the dragged project’s descendants at every depth, and none for its own row, on a shallow tree', () => {
+  it('TREE-2.1: is "neither" for the dragged project’s descendants at every depth, and none for its own row, on a shallow tree', () => {
     const drag = sidebarDrag(projects, [], 12);
     drag.pickUp('X');
     const { tiers } = drag.hook;
@@ -397,7 +397,7 @@ describe('the tier each row is drawn at', () => {
     for (const id of ['P1', 'P2', 'P3', 'P4']) expect(tiers.get(id), id).toBe('parent');
   });
 
-  it('is "anchor" for a row past the cap whose own parent can take the project, and "neither" below it', () => {
+  it('TREE-2.4: is "anchor" for a row past the cap whose own parent can take the project, and "neither" below it', () => {
     const drag = sidebarDrag(projects, [], 5);
     drag.pickUp('X');
     const { tiers } = drag.hook;
@@ -425,7 +425,7 @@ describe('the tier each row is drawn at', () => {
     expect(drag.hook.tiers.get('P4')).toBe('neither');
   });
 
-  it('holds for the whole drag: a response that lands mid-drag redraws nothing', () => {
+  it('TREE-2.6: holds for the whole drag: a response that lands mid-drag redraws nothing', () => {
     const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
     const { result, rerender } = renderHook(
       ({ list }) =>
@@ -475,7 +475,7 @@ describe('the tier each row is drawn at', () => {
     expect(result.current.dropInvalid).toBe(false);
   });
 
-  describe('the strengths', () => {
+  describe('TREE-2.8: the strengths', () => {
     const OWN = {
       projectAnchorOpacity: 0.45,
       projectNeitherOpacity: 0.15,

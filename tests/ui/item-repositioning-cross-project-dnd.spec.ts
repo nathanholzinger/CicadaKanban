@@ -62,6 +62,7 @@ async function goToBoard(page: Page, projectSidebar: ProjectSidebarPage, project
 // Drag gesture recipe: tests/helpers/dragGesture.ts.
 
 test.describe('1: extreme boundary moves within project 1a', () => {
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; dragging onto the topmost card lands the drop on a different anchor than the one aimed at, every run.
   test.skip('1.a — drag C onto card A', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.project1a.name);
     const sharedColumn = column(page, 'Shared Phase');
@@ -94,6 +95,7 @@ test.describe('1: extreme boundary moves within project 1a', () => {
 });
 
 test.describe('2: extreme boundary moves anchored against project 1b', () => {
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, here onto the topmost of project 1b's cards in the root's list.
   test.skip('2.a — from the root board, drag C onto card B', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.rootProject.name);
     await dragTo(page, article(page, 'Item C'), () => center(article(page, 'Item B')));
@@ -109,6 +111,7 @@ test.describe('2: extreme boundary moves anchored against project 1b', () => {
     expect(await fullOrder(request, scenario.workflow.id)).toBe('ACBDE');
   });
 
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, worse over the longer drag, past B and D to E.
   test.skip('2.b — from the root board, drag C onto card E (same gap as "after D")', async ({
     page,
     request,
@@ -182,6 +185,7 @@ test.describe('4: reverse direction — moving a project 1b item against a proje
     expect(await projectOrder(request, scenario.workflow.id, scenario.project1b.id)).toBe('DB');
   });
 
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, over the longest drag in the suite, from the fourth card up to the topmost.
   test.skip('4.b — from the root board, drag D onto card A (before A)', async ({ page, request, projectSidebar }) => {
     await goToBoard(page, projectSidebar, scenario.rootProject.name);
     await dragTo(page, article(page, 'Item D'), () => center(article(page, 'Item A')));

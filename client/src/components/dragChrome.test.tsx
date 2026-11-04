@@ -117,7 +117,7 @@ describe('the drag-target tiers', () => {
     }
   }
 
-  it('draws an anchor-only target and a target that is not even an anchor at their own strengths', () => {
+  it('DRAG-2.15, DRAG-2.16: draws an anchor-only target and a target that is not even an anchor at their own strengths', () => {
     const session = sessionOf('X');
 
     const anchor = rowIn(session, 'T2', 'stub', { parentId: 'T1' });
@@ -131,14 +131,14 @@ describe('the drag-target tiers', () => {
     expect(rowIn(session, 'DS', 'stub', { parentId: 'D' }).contentClassName).toContain(NEITHER);
   });
 
-  it('draws the tier on the content and never on the root', () => {
+  it('DRAG-2.21: draws the tier on the content and never on the root', () => {
     const row = rowIn(sessionOf('X'), 'T3', 'stub', { parentId: 'T2' });
 
     expect(row.chromeClassName).not.toContain(NEITHER);
     expect(row.chromeClassName).not.toContain(ANCHOR);
   });
 
-  it('draws a legal parent, the carried copy and a row with no drag at full strength', () => {
+  it('DRAG-2.14, DRAG-2.20: draws a legal parent, the carried copy and a row with no drag at full strength', () => {
     const session = sessionOf('X');
 
     for (const id of ['V', 'T1']) {
@@ -156,7 +156,7 @@ describe('the drag-target tiers', () => {
     expect(idle.dataAttrs['data-drop-tier']).toBeUndefined();
   });
 
-  it("draws the dragged row at the ghost's own strength on its root, and at no tier", () => {
+  it("DRAG-2.20: draws the dragged row at the ghost's own strength on its root, and at no tier", () => {
     const row = rowIn(sessionOf('S'), 'S', 'stub', { parentId: 'X', dragging: true });
 
     expect(row.chromeClassName).toContain(GHOST);
@@ -164,7 +164,7 @@ describe('the drag-target tiers', () => {
     expect(row.dataAttrs['data-drop-tier']).toBeUndefined();
   });
 
-  it('draws an overflow row by its owner: a legal parent in full, anything else as neither', () => {
+  it('DRAG-2.18: draws an overflow row by its owner: a legal parent in full, anything else as neither', () => {
     const session = sessionOf('X');
 
     const fits = rowIn(session, 'overflow:V', 'overflow', { parentId: 'V' });
@@ -178,7 +178,7 @@ describe('the drag-target tiers', () => {
     expect(rowIn(null, 'overflow:S', 'overflow', { parentId: 'S' }).contentClassName.trim()).toBe('');
   });
 
-  it("pulses a pending row's content, which keeps its tier, and not its root", () => {
+  it("DRAG-6.23, DRAG-6.24: pulses a pending row's content, which keeps its tier, and not its root", () => {
     const row = rowIn(sessionOf('X'), 'T3', 'stub', { parentId: 'T2', pending: true });
 
     expect(row.contentClassName).toContain(NEITHER);
@@ -194,7 +194,7 @@ describe('the drag-target tiers', () => {
   describe('on the screen', () => {
     const inSession = (ui: ReactNode, session: DragSession) => render(ui, { wrapper: providers(session) });
 
-    it("a Stub row's tier is on a wrapper around its button, and not on the row, which holds the drop line", () => {
+    it("DRAG-2.21: a Stub row's tier is on a wrapper around its button, and not on the row, which holds the drop line", () => {
       const { container } = inSession(
         <AttachedChildRow item={ITEMS.find(i => i.id === 'T2')!} itemTypes={[]} depth={1} cardId="T1" />,
         sessionOf('X'),
@@ -207,7 +207,7 @@ describe('the drag-target tiers', () => {
       expect(root.className).not.toContain(ANCHOR);
     });
 
-    it("a Card's tier is on its own content, and its Stubs are outside it, each at its own tier", () => {
+    it("DRAG-2.21, DRAG-6.24: a Card's tier is on its own content, and its Stubs are outside it, each at its own tier", () => {
       const children = (parentId: string) => ITEMS.filter(i => i.parentId === parentId && parentId === 'D');
       const { container } = inSession(
         <KanbanCard item={ITEMS.find(i => i.id === 'D')!} childCount={1} getAttachedChildren={children} />,

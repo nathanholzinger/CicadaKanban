@@ -110,7 +110,7 @@ describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
 // A Stub's drag starts at its containing Card's layer, the nearest Free ancestor as the board draws
 // it: another item's attachment that has not landed yet moves the Stub's whole ancestry.
 describe('useBoardDnd: where a Stub’s drag starts', () => {
-  it('is the Card it is drawn under, when an ancestor’s attachment is still pending', () => {
+  it('DRAG-1.36: is the Card it is drawn under, when an ancestor’s attachment is still pending', () => {
     // A is Free and holds X. A has been dropped on B and the write is in flight, so the board draws
     // B → A → X: A is a Stub now and has no Descendants region to start in.
     const items = [makeItem('b'), makeItem('a'), makeItem('x', { parentId: 'a' })];
@@ -129,7 +129,7 @@ describe('useBoardDnd: where a Stub’s drag starts', () => {
     expect(pickupSession('x', items, NO_PLACEMENTS)?.containingCardId).toBe('b');
   });
 
-  it('is a Card whose own detach is still pending, which is drawn Free', () => {
+  it('DRAG-1.36: is a Card whose own detach is still pending, which is drawn Free', () => {
     // P holds C, which holds X. C has been pulled out and the write is in flight, so the board draws C
     // as a Card of its own, with X in it. P is behind C, which the detach keeps as C's parent.
     const items = [makeItem('p'), makeItem('c', { parentId: 'p' }), makeItem('x', { parentId: 'c' })];
@@ -144,7 +144,7 @@ describe('useBoardDnd: where a Stub’s drag starts', () => {
 describe('useBoardDnd: what a drag’s targets are classified against', () => {
   const pendingAttach = new Map<string, Placement>([['a', { parentId: 'b', slot: 'last' }]]);
 
-  it('counts depth through an ancestor whose attachment is still pending', () => {
+  it('DRAG-2.11: counts depth through an ancestor whose attachment is still pending', () => {
     // A is Free and holds X and Y. A has been dropped on B and the write is in flight, so the board
     // draws B → A → Y. With a cap of 3, Y is one level too deep for X to go under, and A is not.
     const items = [makeItem('b'), makeItem('a'), makeItem('x', { parentId: 'a' }), makeItem('y', { parentId: 'a' })];
@@ -154,7 +154,7 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
     expect(states.get('a')).toBe('valid');
   });
 
-  it('classifies an item a pending attachment puts in the dragged Card as its descendant', () => {
+  it('DRAG-2.12, DRAG-2.23: classifies an item a pending attachment puts in the dragged Card as its descendant', () => {
     // F is Free and has been dropped on P, the write in flight: F is drawn as one of P's Stubs, so it
     // can't take P, and as a Stub under the carried item it can't be named either.
     const items = [makeItem('p'), makeItem('f')];
@@ -170,7 +170,7 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
     // parent, but a detach leaves C under P (wiki item-attachment §11), so the tree has it there.
     const detaching = new Map<string, Placement>([['c', { parentId: null, slot: 'last' }]]);
 
-    it('is still a descendant of its parent, and now a Card of its own, so an anchor', () => {
+    it('DRAG-2.12, DRAG-2.23: is still a descendant of its parent, and now a Card of its own, so an anchor', () => {
       const items = [makeItem('p'), makeItem('c', { parentId: 'p' })];
       const { states, tiers } = pickupSession('p', items, detaching)!.classification;
 
@@ -178,7 +178,7 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
       expect(tiers.get('c')).toBe('anchor');
     });
 
-    it('still sits one level down, for the depth of what is put under it', () => {
+    it('DRAG-2.11: still sits one level down, for the depth of what is put under it', () => {
       // Z carries a Stub, so it needs two levels under a target: C at depth 2 leaves it one past the
       // cap of 3, where C as a root would leave it exactly at the cap.
       const items = [makeItem('p'), makeItem('c', { parentId: 'p' }), makeItem('z'), makeItem('zc', { parentId: 'z' })];
@@ -219,7 +219,7 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
     },
   });
 
-  it('is the row dnd-kit announces over a move event that names the row before it', () => {
+  it('DRAG-4.35: is the row dnd-kit announces over a move event that names the row before it', () => {
     const { result } = startDrag({ items, getAttachedChildren: sectionRows });
 
     act(() => result.current.handleDragMove(eventOver('a') as unknown as DragMoveEvent));
@@ -260,7 +260,7 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
     expect(moveItem).not.toHaveBeenCalled();
   });
 
-  it('reloads the board when no drag is live', async () => {
+  it('DRAG-6.22: reloads the board when no drag is live', async () => {
     const deps = depsWith(async (_activeId, _overId, resync) => {
       await resync();
     });
@@ -282,7 +282,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     vi.mocked(moveItem).mockReset();
   });
 
-  it('is reported once, with the cause, when a failed write reloads the board mid-drag', async () => {
+  it('DRAG-6.16: is reported once, with the cause, when a failed write reloads the board mid-drag', async () => {
     const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
     let reorder!: Promise<void>;
@@ -299,7 +299,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'write-failed', itemId: 'x' });
   });
 
-  it('is not reported for Escape or any other cancel', () => {
+  it('DRAG-6.22: is not reported for Escape or any other cancel', () => {
     const { deps, result } = startDrag();
 
     act(() => result.current.handleDragCancel());
@@ -308,7 +308,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     expect(deps.onDragStopped).not.toHaveBeenCalled();
   });
 
-  it('is not reported for a release that writes nothing', async () => {
+  it('DRAG-6.22: is not reported for a release that writes nothing', async () => {
     const { deps, result } = startDrag();
 
     await act(() => result.current.handleDragEnd(itemRelease));
@@ -327,7 +327,7 @@ describe('useBoardDnd: a drag the board stops', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
-    it('is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
+    it('DRAG-6.16: is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
       const { deps, result } = startDrag({ armedStop });
 
       advance(1499);
@@ -340,7 +340,7 @@ describe('useBoardDnd: a drag the board stops', () => {
       expect(result.current.session).toBeNull();
     });
 
-    it('is not reported when a drag is cancelled before an armed stop fires', () => {
+    it('DRAG-6.22: is not reported when a drag is cancelled before an armed stop fires', () => {
       const { deps, result } = startDrag({ armedStop });
       act(() => result.current.handleDragCancel());
 

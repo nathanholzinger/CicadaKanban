@@ -95,6 +95,7 @@ async function getC(request: APIRequestContext) {
 }
 
 test.describe('1: extreme boundary moves within column 1', () => {
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; dragging onto the topmost card shifts it away in dnd-kit's swap preview, and the drop lands on a different anchor than the one aimed at, the same wrong value every run.
   test.skip('1.a — drag C onto card A', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const cardA = page.getByRole('article', { name: 'Item A', exact: true });
@@ -136,6 +137,7 @@ test.describe('1: extreme boundary moves within column 1', () => {
 });
 
 test.describe('2: extreme boundary moves into column 2', () => {
+  // Skipped until the drag specs are reworked: it was failing when the suite was added, to be fine-tuned with the drag work; the same limit as 1.a, here onto the topmost card of the other column.
   test.skip('2.a — drag C onto card B', async ({ page, request }) => {
     const cardC = page.getByRole('article', { name: 'Item C', exact: true });
     const cardB = page.getByRole('article', { name: 'Item B', exact: true });

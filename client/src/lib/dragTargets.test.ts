@@ -23,7 +23,7 @@ function chain(prefix: string, length: number): Project[] {
 const everyRowSetsParent = () => true;
 
 describe('classifyTargets over projects', () => {
-  describe('a top-level row', () => {
+  describe('TREE-2.5: a top-level row', () => {
     it('is a "parent" when it can take the carried project', () => {
       const { states, tiers } = classifyTargets('X', [project('X'), project('A')], CAP, everyRowSetsParent);
       expect(states.get('A')).toBe('valid');
@@ -59,13 +59,13 @@ describe('classifyTargets over projects', () => {
     const T = (depth: number) => `T${depth}`;
     const projects = [project('X'), ...chain('T', CAP + 1)];
 
-    it('is an "anchor" when its own parent can take the carried project', () => {
+    it('TREE-2.4: is an "anchor" when its own parent can take the carried project', () => {
       const { tiers } = classifyTargets('X', projects, CAP, everyRowSetsParent);
       expect(tiers.get(T(CAP - 1))).toBe('parent');
       expect(tiers.get(T(CAP))).toBe('anchor');
     });
 
-    it('is "neither" when its own parent can not, at any depth below it', () => {
+    it('TREE-2.4: is "neither" when its own parent can not, at any depth below it', () => {
       const { tiers } = classifyTargets('X', projects, CAP, everyRowSetsParent);
       expect(tiers.get(T(CAP + 1))).toBe('neither');
     });
@@ -89,7 +89,7 @@ describe('classifyTargets over projects', () => {
     ];
     const { states, tiers, subtreeIds } = classifyTargets('X', projects, CAP, everyRowSetsParent);
 
-    it('has no tier, and its descendants are "neither" at every depth', () => {
+    it('TREE-2.1, TREE-2.4: has no tier, and its descendants are "neither" at every depth', () => {
       expect(tiers.has('X')).toBe(false);
       for (const id of ['X1', 'X2', 'X3', 'X1b']) {
         expect(states.get(id), id).toBe('cycle-forming');

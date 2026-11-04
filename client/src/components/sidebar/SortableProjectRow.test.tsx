@@ -65,7 +65,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
     expect(box.className).not.toContain('drag-tier');
   });
 
-  it('draws the dragged row at the ghost’s strength, and it has no tier', () => {
+  it('TREE-2.1, TREE-2.8: draws the dragged row at the ghost’s strength, and it has no tier', () => {
     const box = renderRow({ isActive: true });
     expect(box).not.toHaveAttribute('data-drop-tier');
     for (const cls of classesOf(GHOST_ROW)) expect(box.classList).toContain(cls);
@@ -82,7 +82,7 @@ describe('SortableProjectRow, drawn by its tier', () => {
     expect(box.classList).not.toContain('pointer-events-none');
   });
 
-  it('draws the drop line outside the box the tier dims, so the line keeps its own strength', () => {
+  it('TREE-2.7: draws the drop line outside the box the tier dims, so the line keeps its own strength', () => {
     const box = renderRow({ tier: 'neither', indicatorSide: 'before' });
     const line = document.querySelector('[data-drop-line]')!;
     expect(line).not.toBeNull();

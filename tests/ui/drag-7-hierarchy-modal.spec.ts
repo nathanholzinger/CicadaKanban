@@ -686,7 +686,7 @@ test('DRAG-7.23, DRAG-7.25: after a release in the modal whose write failed, the
   await expectCentered(page, modal);
 });
 
-test('DRAG-7.23: a reload that lands mid-drag in the modal stops the drag, writes nothing for it, and leaves the modal open', async ({
+test('DRAG-7.23, DRAG-6.15: a reload that lands mid-drag in the modal stops the drag, writes nothing for it, and leaves the modal open', async ({
   page,
   request,
   projectSidebar,

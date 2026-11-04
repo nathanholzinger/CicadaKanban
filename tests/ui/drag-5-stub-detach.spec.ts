@@ -295,7 +295,7 @@ test.describe('Stub detach — a Stub drags through the Descendants and Column l
   // (or a type/role mismatch) ever left that id
   // confused about what kind of row it now is, the *very next* drag of the
   // same item — an ordinary reorder — would be the first thing to break.
-  test('immediately after a detach, the same item drags and reorders normally as a Card', async ({
+  test('DRAG-5.16: immediately after a detach, the same item drags and reorders normally as a Card', async ({
     page,
     request,
     projectSidebar,
