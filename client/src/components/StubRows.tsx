@@ -115,9 +115,10 @@ const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 // drag nor opens the Sheet; a press on its indent is the Card's, as beside a Stub row
 // (wiki board-drag-interaction §9). A click on the count opens the hierarchy modal, and so does
 // a hold during a drag: the cue of that hold shows on the row (`ZoomCue`, as a Card's zoom-in
-// cue does).
+// cue does). Its own drag chrome is only the traveling mark: while its owner's children travel
+// with the carried copy it reads as off-limits, as their rows do.
 export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; cardId: string; onOpen: () => void }) {
-  const { setNodeRef, dropSide, sortableStyle, dataAttrs } = useItemRow(row.id, 'overflow', {
+  const { setNodeRef, dropSide, sortableStyle, dataAttrs, chromeClassName } = useItemRow(row.id, 'overflow', {
     parentId: row.ownerId,
     sectionCardId: cardId,
   });
@@ -131,7 +132,7 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
       {...dataAttrs}
       data-item-id={undefined}
       data-overflow-row={row.ownerId}
-      className="relative rounded"
+      className={`relative rounded ${chromeClassName}`}
     >
       <DropSideIndicator side={dropSide} />
       <div className="relative">

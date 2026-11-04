@@ -57,6 +57,11 @@ const OVERLAY_FIELDS: Field[] = [
   { kind: 'number', key: 'overlayDepthCappedOpacity', label: 'Depth-capped opacity', step: 0.05, min: 0, max: 1 },
   { kind: 'text', key: 'activeContextOutlineColor', label: 'Active-context outline' },
 ];
+const TRAVELING_FIELDS: Field[] = [
+  { kind: 'number', key: 'overlayTravelingDimOpacity', label: 'A: dim opacity', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'overlayTravelingGreyOpacity', label: 'B: grey opacity', step: 0.05, min: 0, max: 1 },
+  { kind: 'number', key: 'overlayTravelingGreyAmount', label: 'B: grey amount', step: 0.1, min: 0, max: 1 },
+];
 
 const STOP_FIELDS: Field[] = [
   { kind: 'number', key: 'forcedStopCueMs', label: 'Stopped-drag cue time (ms)', step: 500, min: 0 },
@@ -124,6 +129,20 @@ export default function DragTuningPanel({
         {renderFields(SECTION_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
+        <h4 className={`${SECTION_LABEL} pt-2`}>Carried branch's rows</h4>
+        <label className={FIELD_LABEL}>
+          Look
+          <select
+            value={tuning.overlayTravelingLook === 'grey' ? 'grey' : 'dim'}
+            aria-label="Carried branch look"
+            onChange={e => onChange({ ...tuning, overlayTravelingLook: e.target.value })}
+            className={`${INPUT_BASE} w-40`}
+          >
+            <option value="dim">A: the ghost's dim</option>
+            <option value="grey">B: greyed</option>
+          </select>
+        </label>
+        {renderFields(TRAVELING_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Stopped-drag cue</h4>
         <label className={FIELD_LABEL}>
           Flash the dragged item

@@ -263,6 +263,15 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
     '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,
     '--active-context-outline': dragTuning.activeContextOutlineColor,
+    ...(dragTuning.overlayTravelingLook === 'grey'
+      ? {
+          '--drag-overlay-traveling-opacity': dragTuning.overlayTravelingGreyOpacity,
+          '--drag-overlay-traveling-filter': `grayscale(${dragTuning.overlayTravelingGreyAmount})`,
+        }
+      : {
+          '--drag-overlay-traveling-opacity': dragTuning.overlayTravelingDimOpacity,
+          '--drag-overlay-traveling-filter': 'none',
+        }),
   } as CSSProperties;
 
   async function submitColumn(data: Parameters<typeof handleCreateColumn>[0]) {

@@ -68,6 +68,17 @@ export interface DragTuning {
    * genuinely popped out.
    */
   activeContextOutlineColor: string;
+  /**
+   * Which candidate look marks the rows of the carried item's own branch: `'dim'` takes the
+   * dragged row's own opacity, `'grey'` desaturates and dims (`BoardView.tsx::overlayVars`).
+   */
+  overlayTravelingLook: string;
+  /** Look `'dim'`: the rows' opacity. The dragged row's own is 0.3 (`dragChrome.tsx`). */
+  overlayTravelingDimOpacity: number;
+  /** Look `'grey'`: the rows' opacity, apart from the Depth-capped dim's. */
+  overlayTravelingGreyOpacity: number;
+  /** Look `'grey'`: how far the rows desaturate, 0 to 1. */
+  overlayTravelingGreyAmount: number;
   /** How long the cue for a drag the board stopped stays up (`useForcedStop.ts`), unless the next drag starts first. */
   forcedStopCueMs: number;
   /** Whether the item that was being dragged flashes where the reloaded board draws it. */
@@ -87,6 +98,10 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
   overlayDepthCappedOpacity: 0.4,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
+  overlayTravelingLook: 'dim',
+  overlayTravelingDimOpacity: 0.3,
+  overlayTravelingGreyOpacity: 0.6,
+  overlayTravelingGreyAmount: 1,
   forcedStopCueMs: 5000,
   forcedStopFlash: true,
 };

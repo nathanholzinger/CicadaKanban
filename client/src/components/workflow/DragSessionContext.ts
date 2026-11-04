@@ -119,6 +119,8 @@ export interface DropTargetView {
   state: DropTargetState;
   /** A Free descendant of the carried item — the green relationship overlay. */
   isFreeDescendant: boolean;
+  /** An attached descendant of the carried item: its row travels with the carried copy, so it reads as off-limits. */
+  isTraveling: boolean;
 }
 
 // What this item is to the item currently being dragged, or null when no
@@ -127,7 +129,21 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
   const session = useContext(DragSessionContext);
   const state = session?.classification.states.get(itemId);
   if (!session || !state) return null;
-  return { state, isFreeDescendant: session.classification.freeDescendantIds.has(itemId) };
+  const { freeDescendantIds, attachedDescendantIds } = session.classification;
+  return {
+    state,
+    isFreeDescendant: freeDescendantIds.has(itemId),
+    isTraveling: attachedDescendantIds.has(itemId),
+  };
+}
+
+// Whether the children an overflow row stands for travel with the carried copy: their owner is
+// the dragged item or one of its descendants. The overflow row is no item, so it has no state of
+// its own; `dragCollision.ts::travelingRowsFor` asks the same of `subtreeIds`, but only at the
+// Descendants layer, where this reads the whole drag.
+export function useOverflowTravels(ownerId: string | null | undefined): boolean {
+  const session = useContext(DragSessionContext);
+  return !!session && !!ownerId && session.classification.subtreeIds.has(ownerId);
 }
 
 // Whether the drag is locked at this Card's Descendants layer. Merely being

@@ -817,8 +817,18 @@ banner staying across the loading state; that clause waits for Story 10.
 
 ---
 
-### Story 8.5 — A dragged Stub's children read as off-limits
+### Story 8.5 — The drag-target cues say what a target can be
 **Plan:** [`story-8-5-traveling-rows-cue.md`](story-8-5-traveling-rows-cue.md)
+
+**Widened 2026-11-03** (Nathan), from a dragged Stub's children to every
+drag-target cue on the board. Working through Phase 1 showed that the
+Depth-capped dim reads as "not a neighbor either", when it means only "not
+a parent". The cues now say what a target can be to the carried item, in
+two strengths, each a tuning value:
+- **Mid opacity (MO):** it can be an anchor, but not the item's parent.
+- **Low opacity (LO):** it can't be an anchor either.
+- **No color.** The green ring goes. Cards will get coloring of their own
+  after the Tags & Type System epic.
 
 **Carried in from Story 6's hands-on** (PO, 2026-09-24).
 
@@ -854,6 +864,24 @@ one height, pill or not, would make both exact. It's a look decision.
 
 ---
 
+### Story 8.7 — The project sidebar's drag cues match the board's
+**Found with Story 8.5** (Nathan, 2026-11-03). A project drag takes Story
+8.5's two strengths, on the same rule as the board's Stub rows:
+- **MO:** a project that can't be the dragged project's parent, because
+  it's past the project cap, while its own parent can.
+- **LO:** a project that can't even be an anchor. That's the dragged
+  project's descendants, and any project whose parent can't take the
+  dragged one.
+- **The dragged row's own dim** stays a value of its own, as on the board.
+
+**Today** the sidebar dims the dragged project and its descendants to 0.4
+(`SortableProjectRow.tsx`) and turns the drop line red past the cap. A
+project too deep to take the dragged one isn't dimmed. The rule is
+table-generic, so the board and the sidebar should share one derivation
+(root `AGENTS.md`, "One position math layer").
+
+---
+
 ### Story 8.? — The cues' final look
 **Goal:** settle the final look of the drag's cues, against working
 gestures. A story of its own, just before the morph, and numbered when
@@ -867,6 +895,15 @@ board-drag-interaction's Open questions.
   looks of the overflow row and the hierarchy modal (§9). The hold's cue
   borrows the zoom-in cue's look, so it may wait for the morph, which
   redesigns that cue.
+- **Whether the cues drawn on an item keep their color** (Nathan,
+  2026-11-03). After the Tags & Type System epic, the user will be able to
+  color Cards, for example by assignee or when an item is overdue, and a
+  colored drag cue could clash with that. Story 8.5 dropped the green ring
+  for this reason and kept the rest for now:
+  - the violet outline on the Card the drag is locked inside;
+  - the zoom-in cue, and the overflow row's hold cue that borrows it;
+  - the ghost's red over-cap outline;
+  - the amber flash on an item a reload stopped (Story 8.4).
 - **Whether the ghost's expansion on drop animates (§5a).** Today it's
   instant.
 - **The depth cue at the Descendants layer deserves a tuning pass**

@@ -34,6 +34,13 @@ export interface DragClassification {
    */
   freeDescendantIds: ReadonlySet<string>;
   /**
+   * The other half of the cycle-forming descendants: the ones the board draws as Stub rows,
+   * which travel with the carried copy while their rows stay where they were. Their rows read
+   * as off-limits (`dragChrome.tsx::TRAVELING_ROW`). Disjoint from `freeDescendantIds`, and
+   * never the dragged item.
+   */
+  attachedDescendantIds: ReadonlySet<string>;
+  /**
    * The dragged item and its whole subtree — never a Top/Bottom candidate
    * at any Card's Descendants layer. One derivation, also read by the
    * projection's exclusion and `dragCollision.ts::travelingRowsFor`, so
@@ -60,7 +67,7 @@ export function isValidParent(classification: Pick<DragClassification, 'states'>
 // have once the writes in flight land (`itemListOps.ts::withPendingParents`),
 // since a pending attach shifts the depth of everything under it, and one that
 // puts an item in the dragged subtree makes it a cycle. `isStubOf` is whether an
-// item is drawn as a Stub, which only the marker for Free descendants reads; it
+// item is drawn as a Stub, which splits the descendants into Free and attached; it
 // defaults to the stored attachment, for a tree with nothing pending.
 export function classifyDragTargets(
   activeId: string,
@@ -71,7 +78,10 @@ export function classifyDragTargets(
   const active = items.find(i => i.id === activeId);
   const states = new Map<string, DropTargetState>();
   const freeDescendantIds = new Set<string>();
-  if (!active) return { activeId, states, freeDescendantIds, subtreeIds: new Set([activeId]) };
+  const attachedDescendantIds = new Set<string>();
+  if (!active) {
+    return { activeId, states, freeDescendantIds, attachedDescendantIds, subtreeIds: new Set([activeId]) };
+  }
 
   // Computed once per drag, not per target — one walk yields both the
   // subtree (for cycle-forming) and its height (for the depth rule).
@@ -83,7 +93,7 @@ export function classifyDragTargets(
       // descendant is never a "real target" for its ancestor — this wins
       // over depth-capped.
       states.set(item.id, 'cycle-forming');
-      if (item.id !== activeId && !isStubOf(item)) freeDescendantIds.add(item.id);
+      if (item.id !== activeId) (isStubOf(item) ? attachedDescendantIds : freeDescendantIds).add(item.id);
       continue;
     }
     // A Stub is classified on exactly the same terms as a Card — full
@@ -91,5 +101,5 @@ export function classifyDragTargets(
     states.set(item.id, isWithinDepthCap(getDepth(item.id, items), height, cap) ? 'valid' : 'depth-capped');
   }
 
-  return { activeId, states, freeDescendantIds, subtreeIds };
+  return { activeId, states, freeDescendantIds, attachedDescendantIds, subtreeIds };
 }

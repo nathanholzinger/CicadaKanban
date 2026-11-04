@@ -232,7 +232,10 @@ active-context outline, the drop line's shape).
 - **The rows that travel with the dragged item:** `dragClassification.ts`'s
   `subtreeIds`, read by both the projection's exclusion and
   `dragCollision.ts::travelingRowsFor` (which the hierarchy modal's placement reads too).
-  Never re-derive it by filtering for cycle-forming states.
+  Never re-derive it by filtering for cycle-forming states. The mark that those rows draw
+  as off-limits reads `attachedDescendantIds` (the descendants drawn as Stubs; an overflow
+  row asks `subtreeIds` for its owner, in `DragSessionContext.ts::useOverflowTravels`),
+  from the same classification, at every layer.
 - **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
   gate and the over-cap cue both read it, so they can't disagree.
 - **The tree a pickup counts over:** `itemListOps.ts::withPendingParents`, each item's

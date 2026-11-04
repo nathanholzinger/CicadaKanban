@@ -65,6 +65,38 @@ describe('classifyDragTargets — Card drag', () => {
     expect(freeDescendantIds).toEqual(new Set(['D', 'D2']));
   });
 
+  it('holds the attached descendants at every depth, and neither the carried item nor a Free descendant', () => {
+    const items = [
+      item('X'),
+      item('S', 'X'),
+      item('S1', 'S'),
+      item('S2', 'S1'), // three levels down, still carried
+      item('D', 'X', false), // Free: its own Card, with the green ring
+      item('DS', 'D'), // a Stub inside the Free descendant's Card: still the carried branch's
+      item('V'),
+      item('VS', 'V'),
+    ];
+    const { attachedDescendantIds, freeDescendantIds } = classifyDragTargets('X', items, CAP);
+    expect(attachedDescendantIds).toEqual(new Set(['S', 'S1', 'S2', 'DS']));
+    expect(freeDescendantIds).toEqual(new Set(['D']));
+  });
+
+  it('holds the attached descendants of a dragged Stub, and is empty for a leaf', () => {
+    const items = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S2', 'P')];
+    expect(classifyDragTargets('S1', items, CAP).attachedDescendantIds).toEqual(new Set(['S1a']));
+    expect(classifyDragTargets('S2', items, CAP).attachedDescendantIds.size).toBe(0);
+  });
+
+  it('holds the descendants drawn as Stubs by the test it is handed, as the tree stands with its writes pending', () => {
+    // C is stored detached but its attach is in flight, so it draws as a Stub; A is stored
+    // attached but its detach is in flight, so it draws as a Card of its own.
+    const items = [item('X'), item('A', 'X'), item('C', 'X', false)];
+    const drawnAsStub = (i: Item) => i.id === 'C';
+    const { attachedDescendantIds, freeDescendantIds } = classifyDragTargets('X', items, CAP, drawnAsStub);
+    expect(attachedDescendantIds).toEqual(new Set(['C']));
+    expect(freeDescendantIds).toEqual(new Set(['A']));
+  });
+
   it('marks the descendants that are Free by the Stub test it is handed, not by their stored attachment', () => {
     // S is stored attached and D stored detached, but the board draws S as a Card and D as a Stub.
     const items = [item('X'), item('S', 'X'), item('D', 'X', false)];
@@ -114,9 +146,10 @@ describe('classifyDragTargets — Card drag', () => {
   });
 
   it('returns an empty classification for an unknown active id', () => {
-    const { states, freeDescendantIds } = classifyDragTargets('ghost', [item('A')], CAP);
+    const { states, freeDescendantIds, attachedDescendantIds } = classifyDragTargets('ghost', [item('A')], CAP);
     expect(states.size).toBe(0);
     expect(freeDescendantIds.size).toBe(0);
+    expect(attachedDescendantIds.size).toBe(0);
   });
 });
 

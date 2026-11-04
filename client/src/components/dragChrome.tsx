@@ -10,7 +10,13 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
-import { useDragSession, useDropTargetState, useIsPending, type DropTargetView } from './workflow/DragSessionContext';
+import {
+  useDragSession,
+  useDropTargetState,
+  useIsPending,
+  useOverflowTravels,
+  type DropTargetView,
+} from './workflow/DragSessionContext';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import type { OverlayForm } from './workflow/placement';
 import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
@@ -49,6 +55,10 @@ function useLiveDropSide(itemId: string): DropSide | null {
 // custom properties BoardView sets from the dev/test panel.
 const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';
 const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
+// A row of the carried item's own branch: drawn where it was while the ghost moves away, so it
+// reads as part of what is carried, not a place to set it down. Two candidate looks, switched in
+// the dev/test panel; `BoardView.tsx` sets the one chosen as these two properties.
+const TRAVELING_ROW = 'opacity-(--drag-overlay-traveling-opacity) [filter:var(--drag-overlay-traveling-filter)]';
 // A write is in flight for this item — it's drawn at the slot it was
 // dropped in, and its position is the server's to confirm. Test surface:
 // `data-pending`.
@@ -57,7 +67,11 @@ const PENDING = 'animate-pulse';
 // (`index.css::forced-stop-flash`). Switched in the dev/test panel.
 const STOP_FLASH = 'forced-stop-flash';
 
-function dropTargetClass(view: DropTargetView | null): string {
+// `traveling` is whether this row draws part of the carried branch: an attached descendant's
+// Stub row, or the overflow row of an owner that travels. A Free descendant keeps its ring and a
+// depth-capped row its dim; none of the three overlaps another.
+function dropTargetClass(view: DropTargetView | null, traveling: boolean): string {
+  if (traveling) return TRAVELING_ROW;
   if (!view) return '';
   if (view.isFreeDescendant) return OVERLAY_FREE_DESCENDANT;
   if (view.state === 'depth-capped') return OVERLAY_DEPTH_CAPPED;
@@ -114,6 +128,8 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
   });
   const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
+  const overflowTravels = useOverflowTravels(role === 'overflow' && !isOverlay ? parentId : null);
+  const traveling = (dropTarget?.isTraveling ?? false) || overflowTravels;
   const pending = useIsPending(isOverlay ? '' : itemId);
   const flashed = useIsFlashedAfterStop(isOverlay ? '' : itemId);
   return {
@@ -132,10 +148,11 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
       // right now (placement.ts::overlayFormFor).
       'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
       'data-drop-state': dropTarget?.state,
+      'data-traveling': traveling ? 'true' : undefined,
       'data-pending': pending ? 'true' : undefined,
       'data-stop-flash': flashed ? 'true' : undefined,
     },
-    chromeClassName: `${dropTargetClass(dropTarget)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''} ${flashed ? STOP_FLASH : ''}`,
+    chromeClassName: `${dropTargetClass(dropTarget, traveling)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''} ${flashed ? STOP_FLASH : ''}`,
   };
 }
 
