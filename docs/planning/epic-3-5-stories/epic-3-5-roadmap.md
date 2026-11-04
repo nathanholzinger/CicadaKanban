@@ -1053,7 +1053,7 @@ banner.
 
 ---
 
-### Story 8.8 — A pickup takes its descendants with it
+### Story 8.8 — A pickup takes its descendants with it ✅ (done 2026-11-04)
 **Plan:** [`story-8-8-pickup-carries-branch.md`](story-8-8-pickup-carries-branch.md)
 
 **Found with Story 8.5** (Nathan, 2026-11-03). Story 8.5 marks a dragged
