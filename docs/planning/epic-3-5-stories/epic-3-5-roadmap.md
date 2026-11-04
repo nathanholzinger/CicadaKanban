@@ -931,12 +931,12 @@ it goes. Story 8.6's plan takes it as its first step.
 
 ---
 
-### Story 8.6 — One height for every Stub row
-**Plan:** [`story-8-6-one-stub-row-height.md`](story-8-6-one-stub-row-height.md)
+### Story 8.6 — One height for every Stub row ✅ (done 2026-11-03)
+**Plan / record:** [`story-8-6-one-stub-row-height.md`](../../archive/story-8-6-one-stub-row-height.md)
 
 **Carried in from the Story 6 + 6.1 audit fixes** (audit #8, 2026-09-25).
 
-**Built; Planner handoff applied.** Nathan picked the pill fitting the
+**Status: done 2026-11-03.** Nathan picked the pill fitting the
 title's line, and the carried copy matching the row's height with its
 border inside it. All Stub-sized rows now share the height named by
 `cardMetrics.ts::STUB_ROW_HEIGHT_PX`, typed or untyped. Wiki
@@ -950,6 +950,8 @@ code; its trace is Story 10's item 8.
 ---
 
 ### Story 8.7 — The project sidebar's drag cues match the board's
+**Plan:** [`story-8-7-sidebar-drag-tiers.md`](story-8-7-sidebar-drag-tiers.md)
+
 **Found with Story 8.5** (Nathan, 2026-11-03). A project drag takes Story
 8.5's two strengths, on the same rule as the board's Stub rows:
 - **MO:** a project that can't be the dragged project's parent, because
