@@ -54,7 +54,7 @@ describe('useForcedStop', () => {
         vi.advanceTimersByTime(ms);
       });
 
-    it('names the stopped item from the stop on, and has none before it', () => {
+    it('DRAG-6.20: names the stopped item from the stop on, and has none before it', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       expect(result.current.flashItemId).toBeNull();
 
@@ -62,7 +62,7 @@ describe('useForcedStop', () => {
       expect(result.current.flashItemId).toBe('x');
     });
 
-    it('is held across the stop’s own reload, however long it takes: the clock starts when the board is drawn', () => {
+    it('DRAG-6.27: is held across the stop’s own reload, however long it takes: the clock starts when the board is drawn', () => {
       const { result } = renderHook(() => useForcedStop(10_000));
       act(() => result.current.report(stop));
       // The stop's reload starts right after it is reported.
@@ -78,7 +78,7 @@ describe('useForcedStop', () => {
       expect(result.current.flashItemId).toBeNull();
     });
 
-    it('is let go once it has played, while the banner stays for its own time', () => {
+    it('DRAG-6.27: is let go once it has played, while the banner stays for its own time', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       act(() => result.current.report(stop));
       act(() => result.current.reloadStarted());
@@ -92,7 +92,7 @@ describe('useForcedStop', () => {
       expect(result.current.stop).toBeNull();
     });
 
-    it('is let go when another reload starts after it has been drawn, so its rows don’t flash again', () => {
+    it('DRAG-6.27: is let go when another reload starts after it has been drawn, so its rows don’t flash again', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       act(() => result.current.report(stop));
       act(() => result.current.reloadStarted());
@@ -109,14 +109,14 @@ describe('useForcedStop', () => {
       expect(result.current.stop).toBe(stop);
     });
 
-    it('is not drawn at all by a reload that finishes with no stop behind it', () => {
+    it('DRAG-6.22, DRAG-6.27: is not drawn at all by a reload that finishes with no stop behind it', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       act(() => result.current.reloadStarted());
       act(() => result.current.boardDrawn());
       expect(result.current.flashItemId).toBeNull();
     });
 
-    it('is let go at the next drag’s start, with the banner', () => {
+    it('DRAG-6.27: is let go at the next drag’s start, with the banner', () => {
       const { result } = renderHook(() => useForcedStop(5000));
       act(() => result.current.report(stop));
 

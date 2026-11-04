@@ -240,7 +240,7 @@ describe("the stopped item's flash", () => {
       ),
     }).result.current;
 
-  it('flashes the row it names, for the flash’s length', () => {
+  it('DRAG-6.20: flashes the row it names, for the flash’s length', () => {
     const row = rowNamed('x');
 
     expect(row.chromeClassName).toContain('forced-stop-flash');
@@ -248,7 +248,7 @@ describe("the stopped item's flash", () => {
     expect(row.sortableStyle.animationDuration).toBe(`${STOP_FLASH_MS}ms`);
   });
 
-  it('leaves every other row, and every row while none is named, without it', () => {
+  it('DRAG-6.20: leaves every other row, and every row while none is named, without it', () => {
     for (const flashed of ['y', null]) {
       const row = rowNamed(flashed);
 

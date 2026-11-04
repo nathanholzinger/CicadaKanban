@@ -15,7 +15,7 @@ describe('cardMetrics', () => {
     expect(STUB_ROW_HEIGHT_CLASS).toBe(`h-${stepOf(STUB_ROW_HEIGHT_PX)}`);
   });
 
-  it('puts that height on the box every Stub-sized row shares, with no vertical padding to add to it', () => {
+  it('has the height class, and no vertical padding class, in the classes of the box every Stub-sized row shares', () => {
     const classes = STUB_ROW_BOX_CLASS.split(' ');
     expect(classes).toContain(STUB_ROW_HEIGHT_CLASS);
     expect(classes.filter(c => /^(py|pt|pb|p)-/.test(c))).toEqual([]);

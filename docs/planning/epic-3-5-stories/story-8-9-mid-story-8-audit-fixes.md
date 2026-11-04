@@ -1,12 +1,13 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** built, for review and commit; the handoff is written
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** Batches 1–5 built and committed; Batch 6, from the confirming Reconciler run, built, for review and commit; the handoff is updated
 
 ## Goal
 
 Land what Story 8's two mid-point reports leave for the Coder, so the audit can close before Story 8.8 starts:
 - **The code quality audit:** `docs/audits/code-quality-audit-stories-8-3-to-8-7.md`. Its Fix Now is #1–#11.
 - **The test reconciliation:** `docs/audits/test-reconciliation-stories-8-2-to-8-7.md`, its "For the Coder" tasks.
+- **The confirming reconciliation:** `docs/audits/test-reconciliation-story-8-9-follow-up.md`, the server coverage and stamps it leaves for this story (Batch 6).
 
 **What this story includes:**
 - **Every Fix Now finding,** #1–#11.
@@ -34,13 +35,14 @@ Land what Story 8's two mid-point reports leave for the Coder, so the audit can 
 
 - **Wiki passages:** the fixes began against existing rules; Amendment 6 now also records the PO's updates to board-drag-interaction §8 and §10, boards-columns-unsorted §7, project-tree §1 and §10, and row-references' Related line. The column-stop banner in board-drag-interaction §10 is still Planned and not built by these batches.
 - **Test-plan cases:**
-  - **Expected to close:**
-    - DRAG-2.11: its two approved hook tests together assert the whole case.
-    - TREE-10.12: new, and it closes if its tests assert every clause, including the required-owner clarification below.
+  - **Closed at the confirming run:** DRAG-2.11, by its two approved hook tests together.
+  - **Expected to close after Batch 6,** if their tests assert every clause:
+    - TREE-10.12, including the required-owner clarification below. The confirming run left it `Open` on the left-out and `null` owner.
+    - TREE-10.13, new: the owned and ownerless workflow delete.
   - **Stamped, but staying `Open`,** since each stamped test asserts only part of its case:
     - DRAG-1.36, DRAG-2.12, DRAG-2.14–2.18, DRAG-2.20–2.23, DRAG-4.35, DRAG-5.16;
-    - DRAG-6.15–6.19, DRAG-6.22–6.24;
-    - TREE-2.1 and TREE-2.4–2.8.
+    - DRAG-6.15–6.19, DRAG-6.22–6.24; DRAG-6.20 and DRAG-6.27 in Batch 6;
+    - TREE-2.1 and TREE-2.4–2.8; TREE-1.14 and TREE-1.15 in Batch 6.
 
     Their remaining clauses are Story 10's (its item 10).
 
@@ -70,6 +72,10 @@ Land what Story 8's two mid-point reports leave for the Coder, so the audit can 
     - reasons for the six old skips.
   - **For the Architect, item 5:** the two workflow-test fixes (Test Quality Concerns, 9).
   - **For the PO, items 1–4:** in Open questions.
+- **From the confirming reconciliation** (`docs/audits/test-reconciliation-story-8-9-follow-up.md`, 2026-11-04), into Batch 6:
+  - **Gaps, "Current Story 8.9 follow-up":** TREE-10.12's left-out and `null` owner, and TREE-10.13's whole delete.
+  - **Proposed Stamps 1–5:** the surface stamps for TREE-10.12 and TREE-10.13, and the internal stamps for DRAG-6.20, DRAG-6.27, DRAG-6.22 and TREE-1.14/1.15, which Nathan approved on 2026-11-04.
+  - **Test Quality Concerns, 1:** the answer to the audit's question on `cardMetrics.test.ts`'s padding test.
 
 ## Approach and phases
 
@@ -191,16 +197,61 @@ Each batch ends with `npm run check`, plus `npm run test:e2e` where it touches b
 - **Size and risk:** titles in about ten test files, one test fix, one assertion and six comments.
 - **Gate:** `npm run check` and `npm run test:e2e`.
 
-**Then: the confirming Reconciler run.** Nathan starts it once Batch 5 is committed.
+**Then: the confirming Reconciler run.** Ran 2026-11-04 on Batch 5's commit: `docs/audits/test-reconciliation-story-8-9-follow-up.md`.
+- **DRAG-2.11 is `Automated`.** Nothing else in the catalog changed.
+- **TREE-10.12 stays `Open`:** no test refuses a left-out or `null` owner with nothing created. **DRAG-5.16 stays `Open`,** as Amendment 5 expected.
+- **It answers** this plan's questions for the Test Reconciler (Open questions).
+
+**Batch 6: the confirming run's follow-up** (its Gaps' "Current Story 8.9 follow-up", Proposed Stamps 1–5, and Test Quality Concerns 1). Tests and titles only. Find each test by the title the report gives.
+- **TREE-10.12, the required owner** (Proposed Stamps 1; Test Quality Concerns 3):
+  - **The route already refuses every value.** `workflows.ts`'s `!projectId` takes a left-out, `null`, `""`, `false` or `0` owner as missing, and `existsById` takes an id no project has. What's missing is one test that asserts the case's whole *Then* on its *Given*.
+  - **Widen "TREE-10.12: returns 400, and creates nothing, when projectId is empty or not a string"** to the case:
+    - Its fixture gains the case's `Q`, which owns `W`, beside `P`, which has no workflow.
+    - Its values become the case's list: left out, `null`, an id no project has, `""`, `false`, `0`, `7`, `true`, `{}`, `[]`, and an array holding `Q`'s id. Keep the array holding `P`'s id, the value that got through before Batch 1.
+    - After the refusals: `P` has no workflow, `Q` has `W` alone, and a create naming `P` by its id is accepted.
+    - Retitle it for its wider values, keeping the `TREE-10.12: ` prefix.
+  - **"returns 400 when projectId is missing" goes.** It's the widened test's first value now, which also checks that nothing was created.
+  - The other two TREE-10.12 tests stay as they are: the unknown id's message, and the array refused ahead of the ownership check.
+- **TREE-10.13, the workflow delete** (Proposed Stamps 2; Test Quality Concerns 4):
+  - **One new route test** in `workflows.test.ts`'s delete block, run for both variants as the notifications test runs its two: `W` owned by `P`, and `W` with no owner, seeded directly as the orphan test does.
+  - **Its *Given* is the case's:**
+    - `W` with boards `B1` and `B2` and their columns, workphases `W1` and `W2`, and notifications naming `W`, one of them on item `X`. A notification carries a `workflowId` and no workphase, so `W`'s notifications are the rows that name `W`.
+    - `Q` owning `V`, with its board and columns, workphase `V1`, and a notification naming `V`.
+    - Items: `X` holding `W1`; `Z`, in `Q`, holding `W2`; `Y`, in `Q`, holding `V1`. If the API refuses to create `Z` in a workphase of a workflow its project doesn't use, seed it directly.
+  - **Assert every clause after the delete:**
+    - gone: `W`, `B1`, `B2`, their columns, `W1`, `W2` and `W`'s notifications;
+    - `X` and `Z` survive with a null `workphaseId`, and every other field as it was; `Y` is as it was;
+    - on `V`'s board, `Z` is in `unsorted.invalidItems`, and `Y` is in its column;
+    - `V`, its board, columns, workphases and notification are as they were, and `P` and `Q` both exist.
+  - **If a clause fails, stop and report it.** The PO wrote the rule from `workflowCascade.ts::deleteWorkflowsById`, so it should hold, but no test has asserted it whole. Change neither the expectation nor the code.
+  - **The four existing delete tests are stamped** with the report's titles: the owned delete, the workflow's own notifications, the cross-project items, and the orphan. They're otherwise unchanged. "TREE-10.3: after the workflow a project uses is deleted, …" keeps its own ID.
+- **The internal stamps** (Proposed Stamps 3–5; approved by Nathan, 2026-11-04). The report gives each exact title:
+  - **DRAG-6.20:** `useForcedStop.test.ts`'s "names the stopped item from the stop on, and has none before it"; `dragChrome.test.tsx`'s "flashes the row it names, for the flash’s length" and "leaves every other row, and every row while none is named, without it".
+  - **DRAG-6.27:** `useForcedStop.test.ts`'s "is held across the stop’s own reload, …", "is let go once it has played, …", "is let go when another reload starts after it has been drawn, …" and "is let go at the next drag’s start, with the banner".
+  - **DRAG-6.22 and DRAG-6.27:** `useForcedStop.test.ts`'s "is not drawn at all by a reload that finishes with no stop behind it".
+  - **TREE-1.14 and TREE-1.15:** `useProjectDragReorder.test.ts`'s "holds the carried subtree, and the height the cap reads, for the whole drag". Not TREE-1.16: the test never moves a descendant out.
+  - **The rest stay untagged,** as the report says: the second stop's wait, the stop's key and the banner's key.
+- **`cardMetrics.test.ts`'s padding test is retitled** (Test Quality Concerns 1, the audit's question).
+  - "puts that height on the box every Stub-sized row shares, with no vertical padding to add to it" claims an outer height it can't show: under border-box, padding sits inside the height.
+  - Retitle it for what it asserts, that the shared box's classes hold the height class and no vertical padding class. Its assertions stay.
+  - It takes no ID. DRAG-3.25 stays `Open`, and Story 10's.
+- **The handoff's test-plan list** gains Batch 6's stamps, the removed test and the retitles.
+- **Size and risk:** five test files and no app code.
+  - `workflows.test.ts`: one test widened, one added, one removed and four stamped.
+  - The rest are titles: `useForcedStop.test.ts`, `dragChrome.test.tsx`, `useProjectDragReorder.test.ts` and `cardMetrics.test.ts`.
+- **Gate:** `npm run check`. No spec changes, and no app code.
+
+**Then: a narrow Reconciler run.** Nathan starts it once Batch 6 is committed.
+- **Its scope:** TREE-10.12, TREE-10.13 and Batch 6's stamps.
 - **Expected:**
-  - DRAG-2.11 `Automated`;
-  - TREE-10.12 and DRAG-5.16 `Automated` if their tests assert every clause.
-- **It also answers** this plan's questions for the Test Reconciler.
+  - TREE-10.12 and TREE-10.13 `Automated` if their tests assert every clause;
+  - DRAG-6.20, DRAG-6.27, TREE-1.14 and TREE-1.15 mapped, and still `Open`.
 
 **Close** (the Architect):
 - **The audit's Close-out table:** a row for each of #1–#11, each checked against the code.
-- **Archive:** both reports go to `docs/archive/`, and the scope folder is deleted.
-- **No audit for this story alone.** Its commits fall in the next audit's range, from the tag on this audit's end commit (`epic-3-5-stories-8-3-to-8-7-audited`, on `f920eb7`).
+- **Story 10's item 10** names the confirming report's "Full-case decisions and remaining clauses" table for what each case still misses, in place of the first report's Coverage Mapping.
+- **Archive:** the audit, the three reconciliation reports and this plan go to `docs/archive/`, and the scope folder is deleted.
+- **No audit for this story alone.** Its commits fall in the next audit's range, from the tag on this audit's end: `epic-3-5-story-8-7-audited`, on `f18f530`. The report named another tag, on `f920eb7`. Only docs changed between the two commits, so the range is the same.
 
 ## Code map
 
@@ -338,6 +389,45 @@ Filled in by the Coder.
 - Added durable carry-forward in the roadmap for umbrella close-out and Story 10's remaining drag automation. TREE-10.13's server coverage belongs to the current follow-up, not Story 10. The Planned column-banner build remains with the Architect to route.
 - **Checks:** `npm run check:docs` passes (397 files, 0 hits); `git diff --check` passes. No app tests run for this documentation-only Planner pass.
 
+**8. 2026-11-04, Batch 6 added after the confirming Reconciler run** (Architect).
+- **The run** (`docs/audits/test-reconciliation-story-8-9-follow-up.md`) closed DRAG-2.11 only.
+  - TREE-10.12 stays `Open` on the left-out and `null` owner, which Amendment 7 added after Batch 1's tests.
+  - TREE-10.13 has no test of its whole delete, and the Planner routed it to this story, not Story 10.
+- **Nathan approved the run's four new internal mappings** (Proposed Stamps 3–5): DRAG-6.20, DRAG-6.27, DRAG-6.22 with DRAG-6.27, and TREE-1.14 with TREE-1.15. None of them closes a case.
+- **Changed:**
+  - the Status line;
+  - Goal and Inbound deferrals, which add the confirming report;
+  - Scope's cases;
+  - Batches, with the run's outcome, Batch 6 and a narrow Reconciler run;
+  - Close: Story 10's pointer, the third report, and the tag as Nathan set it;
+  - the Test Reconciler's Open questions, now answered.
+
+**9. 2026-11-04, Batch 6 built** (Coder).
+- **TREE-10.12's value test is widened to the case,** and "returns 400 when projectId is missing" is gone, as the plan says.
+  - Its fixture is the case's: `P`, with no workflow, and `Q`, which owns `W`.
+  - Its bodies are the case's list, left out first, then `null`, an id no project has, `""`, `false`, `0`, `7`, `true`, `{}`, `[]`, an array holding `P`'s id and one holding `Q`'s.
+  - After the refusals, the workflows of the whole app are as they were (so a create that dropped its owner shows too), `P` has none, `Q` has `W` alone, and a create naming `P` by its id is accepted.
+  - It is retitled "refuses a projectId that is left out, null, unknown, empty or not a string, and creates nothing".
+  - **The route already refused every value,** as the plan says, so the test passes on the unchanged source.
+- **TREE-10.13 has one new route test,** run for both variants, and the four delete tests are stamped with the report's titles.
+  - **Every clause of the case held,** on the first run, for the owned and the ownerless `W`. No code or expectation changed.
+  - **The fixture is the case's:**
+    - `W` has two boards and two workphases, `W1` and `W2`; `B1` is `W`'s default board, with a column added over each workphase, and `B2` is made after the workphases, so it starts with one over each. Four columns, two notifications naming `W`, one of them on `X`.
+    - `Q` owns `V`, with a board, a column over `V1` and a notification.
+    - `X` holds `W1`. `Z`, in `Q`, holds `W2`: a request refuses to file it so, as the plan expected (`itemHierarchy.ts::foreignWorkphaseError`), so its workphase is written directly. `Y`, in `Q`, holds `V1`.
+  - **After the delete it asserts:**
+    - every table's rows for `W`: none of its workflow, boards, columns, workphases and notifications are left, from a before-count of 1, 2, 4, 2 and 2;
+    - `X` and `Z` as their stored rows were, with a null `workphaseId`, and `Y` unchanged;
+    - on `V`'s board, `Z` alone in `unsorted.invalidItems` and `Y` alone in its column;
+    - `V`'s rows in all five tables as they were, and both projects present.
+  - **The ownerless variant builds `W` the same way, and then writes its owner to null.** The plan said to seed it directly, as the orphan test does; this keeps the two variants' boards, columns and workphases from one build, and the starting data is the same: a workflow with no owner.
+  - **It is an `it.each` of the two variants,** not a loop in one test, so each reports on its own. It matches the plan's "run for both variants", and the title's `%s` is the variant.
+  - **A check that it can fail:** with `deleteWorkflowsById` deleting every notification, not only `W`'s, both variants fail on `V`'s; the source is restored.
+  - **The TREE-10.12 check:** with the route's shape check taken out, the widened test fails on `true` (a 500), and the ownership-order test on a 409; the source is restored.
+- **The internal stamps,** with the report's titles: DRAG-6.20 on the hook's and the row's three tests, DRAG-6.27 on the hook's four lifetime tests, `DRAG-6.22, DRAG-6.27` on the one for a reload with no stop behind it, and `TREE-1.14, TREE-1.15` on the sidebar's held-subtree test. The second stop's wait, the stop's key and the banner's key stay untagged.
+- **`cardMetrics.test.ts`'s padding test is retitled** for what it asserts, that the shared box's classes hold the height class and no vertical padding class. It takes no ID, and its assertions are as they were.
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 438, client 672, scripts 245). The plan sets no E2E run, and the batch changes no spec and no app code.
+
 ## Open questions
 
 The audit's "For other roles" and the reconciliation's "For the PO".
@@ -349,7 +439,12 @@ The audit's "For other roles" and the reconciliation's "For the PO".
   4. **The workflow create's owner field** (wiki project-tree §10). §10 calls `templateId` and `sourceWorkflowId` references (row-references §1), and doesn't say so of the owning project. TREE-10.12 rests on §1's general statement. Should §10 name the owner as a reference too? (reconciliation)
   5. **Three sidebar states have tests and no rule:** the tiers while the project cap is unknown, and the rows a collapsed project hides (`useProjectDragReorder.test.ts`). Rules, or deliberately not? (reconciliation)
   6. **A detached item's pickup** (DRAG-5.16) rests on §8's "once Free, the item's relationship to its former parent is preserved", with §1's layer rule. Should §8 say outright that a detached item picks up as a Free Card? (reconciliation)
-- **For the Test Reconciler,** at the confirming run (audit):
+- **For the Test Reconciler,** at the confirming run (audit): answered in its report.
+  - Q1: the test doesn't prove its title. Batch 6 retitles it.
+  - Q2: the two blocks overlap on the cap walk, and each also asserts what the other doesn't. Nothing is deleted.
+  - Q3: its Full-case decisions table gives each case's remaining clauses. Batch 6 takes this story's part, and Story 10 the rest.
+
+  The questions as asked:
   1. **`cardMetrics.test.ts` checks that a row has no vertical padding.** Under Tailwind's border-box, padding doesn't change an `h-6` row's height, while a margin would change the list's pitch. Does the test prove its title?
   2. **`lib/dragTargets.test.ts`'s tier cases and `dragClassification.test.ts`'s tier block** may test the same walk twice, now that the board's classification hands off to `classifyTargets`.
   3. **Planner's amended/new cases:** review the Scope and Amendment 7 candidates, including TREE-10.12's required owner, TREE-10.13's full delete, the three pickup-tree cases, and the flash window/late reveal. Which exact clauses remain after existing tests and approved stamps? Propose any additional stamps and approvals; do not infer whole-case coverage from a lifetime or snapshot hook alone.
@@ -357,7 +452,7 @@ The audit's "For other roles" and the reconciliation's "For the PO".
 
 ## Living-docs handoff
 
-Written by the Coder at the end of Batch 5.
+Written by the Coder at the end of Batch 5, and updated at the end of Batch 6.
 
 - **Behavior decisions made while building, for the PO to rule on:**
   - **The flash's window (D2).** Wiki board-drag-interaction §10 gives the flash as two pulses, about 1.4 seconds, "where the reloaded board draws it". It is built as follows:
@@ -376,11 +471,17 @@ Written by the Coder at the end of Batch 5.
     - DRAG-2.14 to DRAG-2.18, DRAG-2.20 to DRAG-2.23;
     - DRAG-6.16 to DRAG-6.19, DRAG-6.22 to DRAG-6.24;
     - TREE-2.1 and TREE-2.4 to TREE-2.8.
-  - **Stamped on server tests:** TREE-10.12, on its three tests in `workflows.test.ts`. They assert every clause, with two assertions the plan didn't list (Amendment 1).
-  - **Expected to close at the confirming run:** DRAG-2.11 and TREE-10.12. The others above stay `Open`, each stamped test asserting part of its case.
+  - **Stamped on internal tests at Batch 6,** the mappings Nathan approved after the confirming run, each partial:
+    - DRAG-6.20, on `useForcedStop.test.ts`'s test that names the stopped item and `dragChrome.test.tsx`'s two row tests;
+    - DRAG-6.27, on the hook's four lifetime tests, and DRAG-6.22 with it on the one for a reload with no stop behind it;
+    - TREE-1.14 and TREE-1.15, on `useProjectDragReorder.test.ts`'s held-subtree test. Not TREE-1.16: the test never moves a descendant out.
+  - **Stamped on server tests:**
+    - TREE-10.12, on its three tests in `workflows.test.ts`. The value test is widened at Batch 6 to the case's whole list and its *Given* (Amendment 9), and "returns 400 when projectId is missing" is removed, as it is that test's first body. Together they assert every clause, with two assertions the plan didn't list (Amendment 1).
+    - TREE-10.13, on a new test of the whole delete, run for the owned and the ownerless workflow, and on the four existing delete tests, which assert a part each. Every clause held.
+  - **Closed at the confirming run:** DRAG-2.11. **Expected to close at the narrow run:** TREE-10.12 and TREE-10.13. The others above stay `Open`, each stamped test asserting part of its case.
   - **DRAG-5.16 is stamped, and its last clause isn't asserted** (Amendment 5): the spec's second drag is released on `P`, not after `Q`. It stays `Open`, and the clause is Story 10's by ID.
-  - **Retitled on the way:** TREE-10.12's value test ("empty or not a string") and DRAG-6.22's armed-stop test ("cancelled").
-  - **Untagged tests added, for the Reconciler to map:** the flash's lifetime in `useForcedStop.test.ts` and its row's in `dragChrome.test.tsx` (DRAG-6.20 and DRAG-6.21 are the candidates), the banner's key in `ForcedStopCue.test.tsx`, and the subtree held for the drag in `useProjectDragReorder.test.ts` (TREE-2.6's neighbor).
+  - **Retitled on the way:** TREE-10.12's value test ("left out, null, unknown, empty or not a string"), DRAG-6.22's armed-stop test ("cancelled"), and `cardMetrics.test.ts`'s padding test, which takes no ID. DRAG-3.25 stays `Open`, and Story 10's.
+  - **Untagged tests added, for the Reconciler to map:** the hook's wait for a second stop and the stop's key in `useForcedStop.test.ts`, and the banner's key in `ForcedStopCue.test.tsx`. The report proposed no ID for them.
   - **The six old skips** carry their reasons now.
 - **For the Architect, at close:**
   - **Story 10's item 10** takes DRAG-5.16's after-`Q` release by ID.
@@ -390,6 +491,6 @@ Written by the Coder at the end of Batch 5.
     - #3: `useForcedStop.ts` and `BoardView.tsx::loadBoard`;
     - #4: `workphaseOrder.ts::workphasesInOrder`'s comment;
     - #5 to #11: `useBoardDnd.test.ts`'s header, `dragChrome.test.tsx`'s fixture comment, the retitled armed-stop test, `index.css`'s `cue-fill` comment, `DragSessionContext.ts::useIsLockedAtCard`, `workflow/AGENTS.md` with `useBoardDnd.ts`'s header, and `dragTuning.ts`'s header.
-  - **The confirming Reconciler run** is Nathan's to start, and answers this plan's questions for the Test Reconciler, including Amendment 7's case follow-up.
+  - **The narrow Reconciler run** is Nathan's to start once Batch 6 is committed: TREE-10.12, TREE-10.13 and Batch 6's stamps.
 - **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §8 and §10, boards-columns-unsorted §7, project-tree §1 and §10, and row-references' Related line. Amendment 6.
 - **Test Planner applied:** Amendment 7 and Scope list the revised cases and eight new IDs. Reconciliation is the next requested step, not run as part of this Planner pass. Existing mapping approvals remain as recorded; the new cases are not stamped or declared covered by the Planner.

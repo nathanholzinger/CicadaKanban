@@ -446,7 +446,7 @@ describe('the tier each row is drawn at', () => {
   // the one place that spells their names.
   // The carried project's subtree — which rows are its descendants, which are left out of placement,
   // and the height the cap reads — is the one the drag began with, as the tiers are.
-  it('holds the carried subtree, and the height the cap reads, for the whole drag', () => {
+  it('TREE-1.14, TREE-1.15: holds the carried subtree, and the height the cap reads, for the whole drag', () => {
     const list = tree(['P1', null], ['P2', 'P1'], ['X', null], ['X1', 'X']);
     const { result, rerender } = renderHook(
       ({ current }) =>

@@ -4,16 +4,19 @@ import { randomUUID } from 'crypto';
 import { app } from '../../src/index.js';
 import { eq } from 'drizzle-orm';
 import { db } from '../../src/db/index.js';
-import { notifications, workflows } from '../../src/db/schema.js';
+import { boards, columns, notifications, workflows, workphases } from '../../src/db/schema.js';
 import {
   createProject,
   createWorkflow,
   createWorkphase,
+  createBoard,
+  createColumn,
   createItem,
   findTemplateByName,
   boardsOf,
   readBoard,
   itemIdsOn,
+  getRow,
   setItemParent,
   setItemWorkphase,
   templatedWorkflow,
@@ -152,11 +155,6 @@ describe('POST /api/workflows', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 when projectId is missing', async () => {
-    const res = await request(app).post('/api/workflows').send({ name: 'W' });
-    expect(res.status).toBe(400);
-  });
-
   // Unchecked, a bad projectId hits the FK constraint (an opaque 500), and a
   // bad templateId or sourceWorkflowId (neither is an FK) silently creates a
   // zero-workphase workflow.
@@ -166,20 +164,32 @@ describe('POST /api/workflows', () => {
     expect(res.body.error).toMatch(/projectId/);
   });
 
-  // A projectId that isn't a string can't name a project. better-sqlite3 throws on binding most of
-  // them (a 500), and flattens an array to the one id it holds, so that creates the workflow
-  // (wiki row-references §1). An empty string, `false` and `0` are refused as missing, ahead of
-  // the shape check, with a message that names the field all the same.
-  it('TREE-10.12: returns 400, and creates nothing, when projectId is empty or not a string', async () => {
-    const project = await createProject();
-    for (const value of ['', true, false, 7, 0, {}, [], [project.id]]) {
-      const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: value });
-      expect(res.status, JSON.stringify(value)).toBe(400);
-      expect(res.body.error, JSON.stringify(value)).toContain('projectId');
+  // A projectId that is left out, null or empty is refused as missing, and one that isn't a string, as
+  // a value that can't name a project. better-sqlite3 throws on binding most of those (a 500), and
+  // flattens an array to the one id it holds, so that created the workflow (wiki row-references §1).
+  // Each message names the field all the same.
+  it('TREE-10.12: refuses a projectId that is left out, null, unknown, empty or not a string, and creates nothing', async () => {
+    const p = await createProject({ name: 'P' });
+    const q = await createProject({ name: 'Q' });
+    const w = await createWorkflow(q.id);
+    const workflowIds = async () =>
+      (await request(app).get('/api/workflows')).body.map((workflow: { id: string }) => workflow.id).sort();
+    const before = await workflowIds();
+
+    const values = [null, 'does-not-exist', '', false, 0, 7, true, {}, [], [p.id], [q.id]];
+    for (const body of [{}, ...values.map(projectId => ({ projectId }))]) {
+      const res = await request(app)
+        .post('/api/workflows')
+        .send({ name: 'W', ...body });
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(res.body.error, JSON.stringify(body)).toContain('projectId');
     }
-    expect(await workflowsOf(project.id)).toEqual([]);
+
+    expect(await workflowIds()).toEqual(before);
+    expect(await workflowsOf(p.id)).toEqual([]);
+    expect((await workflowsOf(q.id)).map((workflow: { id: string }) => workflow.id)).toEqual([w.id]);
     // Nothing the refusals did stands in the way of a create that names the project by its id.
-    const created = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id });
+    const created = await request(app).post('/api/workflows').send({ name: 'W', projectId: p.id });
     expect(created.status).toBe(201);
   });
 
@@ -472,7 +482,95 @@ describe('DELETE /api/workflows/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('deletes the workflow, its workphases, and boards/columns, but items survive with a null workphase', async () => {
+  // W has two boards, with a column over each of its two workphases, and notifications, one of them
+  // on item X. Q, another project, owns V, with a board, a column, a workphase and a notification of
+  // its own. X holds W's first workphase and Z, in Q, its second; a request can't file Z in a
+  // workflow Q doesn't use (wiki item-attachment §2a), so its workphase is written directly, as is
+  // W's having no owner. Y, in Q, holds V's.
+  it.each(['owned', 'ownerless'] as const)(
+    'TREE-10.13: deletes an %s workflow with its boards, columns, workphases and notifications, and keeps every item',
+    async variant => {
+      const w = await workflowWithPhases(['W1', 'W2'], { name: 'P' });
+      const [w1, w2] = w.phases;
+      const b1 = w.board;
+      await createColumn(b1.id, w1.id, w1.id);
+      await createColumn(b1.id, w2.id, w2.id);
+      const b2 = await createBoard(w.workflow.id, { name: 'B2' });
+      const v = await workflowWithPhases(['V1'], { name: 'Q' });
+      const [v1] = v.phases;
+      await createColumn(v.board.id, v1.id, v1.id);
+
+      const x = await createItem({ title: 'X', projectId: w.project.id, workphaseId: w1.id });
+      const z = await createItem({ title: 'Z', projectId: v.project.id });
+      setItemWorkphase(z.id, w2.id);
+      const y = await createItem({ title: 'Y', projectId: v.project.id, workphaseId: v1.id });
+
+      const notify = (workflowId: string, itemId: string | null = null) =>
+        db
+          .insert(notifications)
+          .values({ id: randomUUID(), itemId, workflowId, message: 'hi', type: 'workflow', createdAt: Date.now() })
+          .run();
+      notify(w.workflow.id);
+      notify(w.workflow.id, x.id);
+      notify(v.workflow.id);
+
+      if (variant === 'ownerless') {
+        db.update(workflows).set({ projectId: null }).where(eq(workflows.id, w.workflow.id)).run();
+      }
+
+      // What a workflow has, in each table: the rows of its own, and the columns of its boards.
+      const dependentsOf = (workflowId: string, boardIds: string[]) => ({
+        workflow: db.select().from(workflows).where(eq(workflows.id, workflowId)).all(),
+        boards: db.select().from(boards).where(eq(boards.workflowId, workflowId)).all(),
+        columns: db
+          .select()
+          .from(columns)
+          .all()
+          .filter(column => boardIds.includes(column.boardId)),
+        workphases: db.select().from(workphases).where(eq(workphases.workflowId, workflowId)).all(),
+        notifications: db.select().from(notifications).where(eq(notifications.workflowId, workflowId)).all(),
+      });
+      const sizes = (rows: Record<string, unknown[]>) =>
+        Object.fromEntries(Object.entries(rows).map(([table, list]) => [table, list.length]));
+      const wBoards = [b1.id, b2.id];
+      const vBefore = dependentsOf(v.workflow.id, [v.board.id]);
+      const [xBefore, yBefore, zBefore] = [getRow(x.id), getRow(y.id), getRow(z.id)];
+      expect(sizes(dependentsOf(w.workflow.id, wBoards))).toEqual({
+        workflow: 1,
+        boards: 2,
+        columns: 4,
+        workphases: 2,
+        notifications: 2,
+      });
+      expect(sizes(vBefore)).toEqual({ workflow: 1, boards: 1, columns: 1, workphases: 1, notifications: 1 });
+
+      const res = await request(app).delete(`/api/workflows/${w.workflow.id}`);
+      expect(res.status).toBe(204);
+
+      expect(sizes(dependentsOf(w.workflow.id, wBoards))).toEqual({
+        workflow: 0,
+        boards: 0,
+        columns: 0,
+        workphases: 0,
+        notifications: 0,
+      });
+      expect(getRow(x.id)).toEqual({ ...xBefore, workphaseId: null });
+      expect(getRow(z.id)).toEqual({ ...zBefore, workphaseId: null });
+      expect(getRow(y.id)).toEqual(yBefore);
+
+      const vBoard = await readBoard(v.board.id);
+      expect(vBoard.unsorted.invalidItems.map(item => item.id)).toEqual([z.id]);
+      expect(vBoard.columns.flatMap(column => column.subRows.flatMap(row => row.items.map(item => item.id)))).toEqual([
+        y.id,
+      ]);
+      expect(dependentsOf(v.workflow.id, [v.board.id])).toEqual(vBefore);
+      for (const project of [w.project, v.project]) {
+        expect((await request(app).get(`/api/projects/${project.id}`)).status).toBe(200);
+      }
+    },
+  );
+
+  it('TREE-10.13: deletes the workflow, its workphases, and boards/columns, but items survive with a null workphase', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
     const workphase = await createWorkphase(workflow.id);
@@ -492,7 +590,7 @@ describe('DELETE /api/workflows/:id', () => {
     expect(itemRes.body.workphaseId).toBeNull();
   });
 
-  it("removes the workflow's own notifications, which belong to no item, with a workflow delete and with a project delete", async () => {
+  it("TREE-10.13: removes the workflow's own notifications, which belong to no item, with a workflow delete and with a project delete", async () => {
     for (const via of ['workflow', 'project'] as const) {
       const project = await createProject();
       const workflow = await createWorkflow(project.id);
@@ -513,7 +611,7 @@ describe('DELETE /api/workflows/:id', () => {
     }
   });
 
-  it('does not fail on cross-project items inheriting the workflow', async () => {
+  it('TREE-10.13: does not fail on cross-project items inheriting the workflow', async () => {
     // A child project with no workflow of its own inherits the parent's; an item
     // in the child sits in one of the (parent) workflow's workphases.
     const parent = await createProject();
@@ -561,7 +659,7 @@ describe('DELETE /api/workflows/:id', () => {
     expect(itemIdsOn(await readBoard(boardOfZ.id))).toEqual(new Set([iz.id]));
   });
 
-  it("deletes a workflow with a null projectId without touching any project's items", async () => {
+  it("TREE-10.13: deletes a workflow with a null projectId without touching any project's items", async () => {
     // workflow.projectId is only reachable as null by seeding directly — the
     // POST route requires projectId, so the API can never produce this state.
     const orphanId = randomUUID();
