@@ -104,32 +104,22 @@ export function centerModal(
 }
 
 // The gap the ghost lands in when the cursor is over the row at `overIndex` of the list's
-// sortable `items`, as the count of rows before it that don't travel with it. dnd-kit's shuffle
+// sortable `items`, as the count of rows before it. The carried item's own descendants aren't among
+// them (`itemListOps.ts::carriedBranchOf`), so every row counts. dnd-kit's shuffle
 // puts the ghost in the slot of the row `over` names, so this is the gap the projection reads off
 // the named neighbor (`dragCollision.ts::dropAnchorFor`, `descendantsProjection.ts`), without
 // asking dnd-kit. Null when the ghost isn't in the list.
-export function gapAtSlot(
-  items: readonly string[],
-  activeId: string,
-  overIndex: number,
-  travels: (id: string) => boolean,
-): number | null {
+export function gapAtSlot(items: readonly string[], activeId: string, overIndex: number): number | null {
   const activeIndex = items.indexOf(activeId);
   if (activeIndex === -1) return null;
-  const order = arrayMove([...items], activeIndex, overIndex);
-  return order.slice(0, order.indexOf(activeId)).filter(id => !travels(id)).length;
+  return arrayMove([...items], activeIndex, overIndex).indexOf(activeId);
 }
 
 // The row to rest the cursor on for the ghost to take `gap`: the first slot whose `gapAtSlot` is
 // it. Null when no row's slot gives it.
-export function slotForGap(
-  items: readonly string[],
-  activeId: string,
-  gap: number,
-  travels: (id: string) => boolean,
-): number | null {
+export function slotForGap(items: readonly string[], activeId: string, gap: number): number | null {
   for (let i = 0; i < items.length; i++) {
-    if (gapAtSlot(items, activeId, i, travels) === gap) return i;
+    if (gapAtSlot(items, activeId, i) === gap) return i;
   }
   return null;
 }

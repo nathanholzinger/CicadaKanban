@@ -49,12 +49,12 @@ its own header.
   into a section takes `region.cardId` as its parent, never `origin`'s own (that's the
   same-section case — a Stub already home there). An over-cap tab state is reachable
   but commits nothing on release, the one exception to "a release always commits"
-  (wiki board-drag-interaction §3.2, §7.2). A dragged Stub takes its attached
-  descendants, its **branch**, with it: no list draws them while it is carried, and its
-  copy says how many (`itemListOps.ts::carriedBranchOf`, held on the session as `branch`).
-  The rows that travel with a carried Free Card are its children, which its previewed row
-  in a section draws below it, so `dropAnchorFor` steps past them (`travelingRowsFor` —
-  Descendants only; at a column a Free descendant is a real anchor). A section can draw fewer levels than it holds: below a row at the last
+  (wiki board-drag-interaction §3.2, §7.2). A dragged item, a Card or a Stub,
+  takes its attached descendants, its **branch**, with it: no list draws them while it is
+  carried, and its copy says how many (`itemListOps.ts::carriedBranchOf`, held on the session
+  as `branch`). So no row of a section is the carried item's descendant, and no neighbor is
+  stepped past (`dropAnchorFor`, `modalPlacement.ts::gapAtSlot`); a Free descendant is a Card
+  in a column, a real anchor there. A section can draw fewer levels than it holds: below a row at the last
   shown level, an **overflow row** stands for its hidden children. It is a row of the
   section's shuffle, so it can be the named neighbor, and the projection turns that
   into a gap among *all* the rows (`descendantsProjection.ts::gapForAnchor`) and
@@ -106,9 +106,10 @@ its own header.
   cursor moves, along either axis, is taken. The carried Stub
   shows the projected depth by indenting an inner box
   (`KanbanCard.tsx::overlayStubIndent`; the look is a placeholder) — never its root, so
-  nothing dnd-kit measures changes. The second line of its branch's counts hangs from that
-  box, out of the flow (`StubRows.tsx::CarriedBranchLine`), so it steps with the depth and
-  the copy stays one row. **Only at Board layer** does the hover **band**
+  nothing dnd-kit measures changes. The second line of its branch's counts hangs from the
+  copy's box in either form, out of the flow (`StubRows.tsx::CarriedBranchLine`), so the copy
+  stays the box the drag measures, a Stub's line steps with the depth, and a shortCard's
+  root doesn't clip it (`KanbanCard.tsx` clips the content instead). **Only at Board layer** does the hover **band**
   (top/middle/bottom) decide.
 - **Every item row shares one dnd-kit registration:**
   `data: {type: 'item', role: 'card' | 'stub' | 'overflow', parentId?, sectionCardId?}`, never a `type` that
@@ -159,7 +160,7 @@ The drag gesture's pure, unit-tested modules:
 - `dragOverlayGeometry.ts` — the DragOverlay's own geometry: its width, its re-anchor
   across a form switch, and its clamp to the current context.
 - `itemListOps.ts` — list selectors and ordinal placements over the board's items, the
-  rows a Card's section draws (`sectionEntries`), and the branch a carried Stub takes with
+  rows a Card's section draws (`sectionEntries`), and the branch a carried item takes with
   it (`carriedBranchOf`).
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
 - `forcedStop.ts` — a stopped drag's signal, its wording and the armed stop, and the
@@ -240,14 +241,14 @@ active-context outline, the drop line's shape, the tier classes the sidebar draw
     copy is measured from `useBoardDnd.ts::pickupRectRef`, which `reanchorOverlayTransform`
     takes as its `pickupRect`. Never from `activeNodeRect`, the source's live rect: it moves
     once a Free Card's row becomes the ghost row in a section.
-- **The rows that travel with the dragged item:** `dragClassification.ts`'s
-  `subtreeIds`, read by both the projection's exclusion and
-  `dragCollision.ts::travelingRowsFor` (which the hierarchy modal's placement reads too).
-  Never re-derive it by filtering for cycle-forming states.
-- **What a carried Stub takes with it:** `itemListOps.ts::carriedBranchOf`, read once at
+- **The dragged subtree, out of the placement math:** `dragClassification.ts`'s
+  `subtreeIds`, read by the projection's exclusion (`descendantsProjection.ts`). Never
+  re-derive it by filtering for cycle-forming states.
+- **What a carried item takes with it:** `itemListOps.ts::carriedBranchOf`, read once at
   pickup (`useBoardDnd.ts::handleDragStart`) from the board's placement-aware children and
-  held on the session as `branch`. Attached links only, so it is not `subtreeIds`, which also
-  holds the Free descendants: those stay drawn where they are, at their tier.
+  held on the session as `branch`, for a Card's pickup and a Stub's alike. Attached links
+  only, so it is not `subtreeIds`, which also holds the Free descendants: those stay drawn
+  where they are, at their tier.
   `sectionEntries` leaves its rows out, and any overflow row that stood only for them, so a
   Card's section, the hierarchy modal and the static rows under its backdrop all read the one
   set. The placement math still reads every row (`hierarchyRows`): the branch leaves the
@@ -338,8 +339,8 @@ active-context outline, the drop line's shape, the tier classes the sidebar draw
   `role=dialog` named `Hierarchy of <title>`, whose rows carry `data-item-id` (the section's
   rows under it draw with none). The carried copy carries
   `data-drag-overlay` (`dragRegions.ts::DRAG_OVERLAY_ATTR`, which the E2E helper's
-  "drag finished" wait counts down) and `data-drag-overlay-form`, its second line
-  `data-carried-branch`, and a Card that is
+  "drag finished" wait counts down) and `data-drag-overlay-form`, its second line, in
+  either form, `data-carried-branch`, and a Card that is
   the locked context `data-active-context`. `data-drag-context` is a `column:`, `subrow:`
   or `descendants:` key, never a Card's own. A region's element carries
   `data-drag-region` (its key), a card list's also `data-drag-card-count`, and the

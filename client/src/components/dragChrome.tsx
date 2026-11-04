@@ -11,7 +11,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
-import { useDragSession, useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
+import { useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
 import type { DropTier } from '../lib/dragTargets';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import { STOP_FLASH_MS } from './workflow/forcedStop';
@@ -37,9 +37,8 @@ import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
 // `DROP_INDICATOR_LINE`) is shared.
 function useLiveDropSide(itemId: string): DropSide | null {
   const { active, over } = useDndContext();
-  const session = useDragSession();
   if (!active || active.id === itemId || !isItemData(active.data.current)) return null;
-  const anchor = namedAnchorFor(active, over, session);
+  const anchor = namedAnchorFor(active, over);
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 

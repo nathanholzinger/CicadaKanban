@@ -7,10 +7,7 @@
 import { closestCorners, type Active, type CollisionDetection, type Over } from '@dnd-kit/core';
 import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
 import type { AnchorRelation, DropSide } from '../../lib/hierarchyPlacement';
-import { containsPoint, descendantsCardIdOf, type Rect } from './dragRegions';
-import { overflowOwnerOf } from './itemListOps';
-import type { DragClassification } from '../../lib/dragTargets';
-import type { PopSession } from './popSession';
+import { containsPoint, type Rect } from './dragRegions';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 
 // Every item row's dnd-kit registration, typed so its invariant — every
@@ -245,20 +242,17 @@ export function resolveDropSide(
 // which-half-of-`over` side — `over` naming anything else (no row) is its
 // own case below.
 //
-// `travels`: rows that move with the dragged item, never a neighbor to
-// name — see `travelingRowsFor`. The search steps past them to the next
-// row that stays.
+// The dragged item's own descendants are never rows of the list the ghost
+// slides through (`itemListOps.ts::carriedBranchOf`), so a neighbor is always
+// the row beside the ghost: nothing that travels with the item can be named
+// (wiki board-drag-interaction §7.2).
 //
 // `over` naming anything but a card/Stub row — the bare column/sub-row
 // container itself, at rest or between shuffles — is no anchor at all:
 // there's no row there to draw the blue line on or anchor a release beside,
 // so a caller reads `null` as "no row named". A real row with no sortable
 // data yet is still named via `resolveDropSide`'s which-half fallback.
-export function dropAnchorFor(
-  active: Pick<Active, 'id' | 'rect'>,
-  over: Over,
-  travels?: (id: string) => boolean,
-): AnchorRelation | null {
+export function dropAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over): AnchorRelation | null {
   const translated = active.rect.current.translated;
   const overData = over.data.current;
   if (!isItemData(overData)) return null;
@@ -277,58 +271,24 @@ export function dropAnchorFor(
         ? top + ghostHeightPx / 2
         : top + height / 2;
   const order = arrayMove(items, activeIndex, overIndex);
-  const neighbor = (from: number, step: 1 | -1) => {
-    for (let i = from; i >= 0 && i < order.length; i += step) if (!travels?.(String(order[i]))) return order[i];
-    return undefined;
-  };
-  const above = neighbor(overIndex - 1, -1);
-  const below = neighbor(overIndex + 1, 1);
+  const above = order[overIndex - 1];
+  const below = order[overIndex + 1];
   const leansUp = translated ? translated.top + translated.height / 2 < ghostCenterY : true;
   if (above !== undefined && (leansUp || below === undefined)) return { anchorId: String(above), side: 'after' };
   if (below !== undefined) return { anchorId: String(below), side: 'before' };
   return null;
 }
 
-// The rows `dropAnchorFor` steps past, or none. Only at a Descendants
-// layer: the dragged item's own descendants that the section draws below its
-// row travel with it, so they're never Top or Bottom
-// (wiki board-drag-interaction §7.2) — they're out of the projection's rows
-// too (`classification.subtreeIds`). A carried Stub's branch isn't drawn at
-// all (`itemListOps.ts::carriedBranchOf`), so the rows here are a carried Free
-// Card's children, which its previewed row draws below it. So is the overflow
-// row of a traveling row: it stands for the children that travel. Named, the
-// gap would jump to the section's end. Never at a column: there a Free
-// descendant of the dragged Card is a real anchor. One predicate for the blue
-// line and the gap (through `namedAnchorFor`), so they can't disagree.
+// The row a drop names right now, in the one call shape its readers share —
+// the blue line (`dragChrome.tsx`), the pop machine's zoom-in candidate and
+// the Descendants gap (`useBoardDnd.ts::nameAnchorFrom`), and the release —
+// so they all name the same row. No `over`, no anchor.
 //
 // Deliberately separate from `projectTreeUtils.ts::resolveGap`: the sidebar
 // draws no ghost, so it maps an `over` inside the dragged block to the gap
 // the block collapses to; the board names the ghost's neighbor in dnd-kit's
-// shuffled order, stepping past traveling rows. Same outcome — a traveling
-// row is never Top or Bottom — from different inputs.
-export function travelingRowsFor(session: AnchorSession | null): ((id: string) => boolean) | undefined {
-  if (!session || !descendantsCardIdOf(session.pop.contextKey)) return undefined;
-  const { subtreeIds } = session.classification;
-  return id => {
-    const ownerId = overflowOwnerOf(id);
-    return subtreeIds.has(ownerId ?? id);
-  };
-}
-
-// The slice of a drag session the anchor reads.
-export type AnchorSession = {
-  pop: Pick<PopSession, 'contextKey'>;
-  classification: Pick<DragClassification, 'subtreeIds'>;
-};
-
-// The row a drop names right now, in the one call shape its readers share —
-// the blue line (`dragChrome.tsx`), the pop machine's zoom-in candidate and
-// the Descendants gap (`useBoardDnd.ts::nameAnchorFrom`), and the release —
-// so they all step past the same traveling rows. No `over`, no anchor.
-export function namedAnchorFor(
-  active: Pick<Active, 'id' | 'rect'>,
-  over: Over | null,
-  session: AnchorSession | null,
-): AnchorRelation | null {
-  return over ? dropAnchorFor(active, over, travelingRowsFor(session)) : null;
+// shuffled order. Same outcome — a row of the dragged subtree is never Top
+// or Bottom — from different inputs.
+export function namedAnchorFor(active: Pick<Active, 'id' | 'rect'>, over: Over | null): AnchorRelation | null {
+  return over ? dropAnchorFor(active, over) : null;
 }

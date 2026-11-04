@@ -640,6 +640,10 @@ export function useBoardDnd(deps: BoardDndDeps) {
     const activator = event.activatorEvent as Partial<PointerEvent>;
     pointerRef.current = { x: activator.clientX ?? 0, y: activator.clientY ?? 0 };
 
+    // What the carried item takes with it, a Card's children as well as a Stub's branch: read
+    // from the board's own placement-aware children, as the lists draw them.
+    const branch = carriedBranchOf(activeId, deps.getAttachedChildren);
+
     // `renderedIsStub` reads the item as drawn (above) — never dnd-kit's own
     // `data.role` off the active row, which can lag a mid-drag remount. The role
     // is registered by `dragChrome.tsx::useItemRow` and read only off droppable
@@ -672,8 +676,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
         // branch and `isIdentity` compare a release against.
         origin: { parentId, slot: 'existing' },
         containingCardId,
-        // Read from the board's own placement-aware children, as the lists draw them.
-        branch: carriedBranchOf(activeId, deps.getAttachedChildren),
+        branch,
       });
       return;
     }
@@ -687,7 +690,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
       // at every layer.
       origin: { workphaseId: activeItem.workphaseId ?? undefined, slot: 'existing' },
       containingCardId: null,
-      branch: null,
+      branch,
     });
   }
 
@@ -700,7 +703,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // could show the cue a frame late, but never leaves it stale.
   function nameAnchorFrom(event: DragMoveEvent | DragOverEvent) {
     if (isColumnData(event.active.data.current)) return;
-    namedAnchorRef.current = namedAnchorFor(event.active, event.over, sessionRef.current);
+    namedAnchorRef.current = namedAnchorFor(event.active, event.over);
     evaluateRef.current();
   }
 
@@ -861,7 +864,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
     // the line. A ghost
     // with no neighbor at all has nothing to anchor to: the bare
     // container's slot (`resolvePlacementOver`).
-    const anchor = namedAnchorFor(active, over, current);
+    const anchor = namedAnchorFor(active, over);
     const placementOver = resolvePlacementOver(region.containerId, over ? String(over.id) : null, anchor);
     await commitRelease(current, placementFor(current, regions, placementOver), regionItems(region));
   }

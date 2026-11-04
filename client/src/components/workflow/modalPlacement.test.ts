@@ -119,46 +119,35 @@ describe('depth in the modal’s indents', () => {
 describe('the ghost’s slot', () => {
   // The list as the modal draws it, the ghost X last, as a Card's last child previews.
   const items = ['A', 'Q', 'R', 'R1', 'R2', 'T', 'B', 'X'];
-  const none = () => false;
 
   it('DRAG-7.15: the gap is the count of rows before the slot the ghost takes', () => {
     // dnd-kit puts the ghost in the slot of the row `over` names: over R1, it sits before R1.
-    expect(gapAtSlot(items, 'X', items.indexOf('R1'), none)).toBe(3);
-    expect(gapAtSlot(items, 'X', 0, none)).toBe(0);
+    expect(gapAtSlot(items, 'X', items.indexOf('R1'))).toBe(3);
+    expect(gapAtSlot(items, 'X', 0)).toBe(0);
     // Over its own slot, nothing moves: the last gap.
-    expect(gapAtSlot(items, 'X', items.indexOf('X'), none)).toBe(7);
+    expect(gapAtSlot(items, 'X', items.indexOf('X'))).toBe(7);
   });
 
   it('a ghost above the slot lands after the row it is moved to', () => {
     const fromAbove = ['X', 'A', 'Q', 'R'];
-    expect(gapAtSlot(fromAbove, 'X', 2, none)).toBe(2);
-  });
-
-  it('rows that travel with the ghost are not counted', () => {
-    // X carries X1: it is never a neighbor, so the gap counts A and B and not it. Over X1's own
-    // slot the ghost sits right after A once X1 has moved up past it, with only A before it.
-    const carried = ['A', 'X', 'X1', 'B'];
-    const travels = (id: string) => id === 'X1';
-    expect(gapAtSlot(carried, 'X', 2, travels)).toBe(1);
-    expect(gapAtSlot(carried, 'X', 3, travels)).toBe(2);
-    expect(gapAtSlot(carried, 'X', 0, travels)).toBe(0);
+    expect(gapAtSlot(fromAbove, 'X', 2)).toBe(2);
   });
 
   it('DRAG-7.15: slotForGap is the inverse, the row to rest the cursor on for a gap', () => {
     for (let gap = 0; gap <= 7; gap++) {
-      const slot = slotForGap(items, 'X', gap, none);
+      const slot = slotForGap(items, 'X', gap);
       expect(slot, `gap ${gap}`).not.toBeNull();
-      expect(gapAtSlot(items, 'X', slot!, none)).toBe(gap);
+      expect(gapAtSlot(items, 'X', slot!)).toBe(gap);
     }
     const fromAbove = ['X', 'A', 'Q', 'R'];
     for (let gap = 0; gap <= 3; gap++) {
-      expect(gapAtSlot(fromAbove, 'X', slotForGap(fromAbove, 'X', gap, none)!, none)).toBe(gap);
+      expect(gapAtSlot(fromAbove, 'X', slotForGap(fromAbove, 'X', gap)!)).toBe(gap);
     }
   });
 
   it('is null when the ghost is not in the list, or no row gives the gap', () => {
-    expect(gapAtSlot(items, 'Z', 2, none)).toBeNull();
-    expect(slotForGap(items, 'X', 99, none)).toBeNull();
+    expect(gapAtSlot(items, 'Z', 2)).toBeNull();
+    expect(slotForGap(items, 'X', 99)).toBeNull();
   });
 });
 

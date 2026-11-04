@@ -9,7 +9,7 @@ import { DRAG_CARD_ATTR, DRAG_REGION_ATTR, descendantsRegionKey } from './workfl
 import { startPopSession } from './workflow/popSession';
 import { freeOrigin, makeDragSession, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
-import { descendantsIndentPx } from './cardMetrics';
+import { SHORT_CARD_HEIGHT_PX, descendantsIndentPx } from './cardMetrics';
 
 const CARD = makeItem('p');
 const CHILD = makeItem('c', { parentId: 'p', position: 1 });
@@ -129,10 +129,11 @@ describe('a Card the drag is locked at', () => {
   });
 });
 
-// A Stub's pickup takes its branch with it: P's section holds A, D (the one carried, with D1 under it
-// and D1a under that) and C. D1 and D1a leave the section while the session holds them. A session
-// with no branch is a Free Card's drag, whose previewed row in the section has its children under it.
-describe('a Card whose section holds the branch of a carried Stub', () => {
+// A pickup takes its branch with it, whether the item is a Stub or a Free Card: P's section holds A, D
+// (the one carried, with D1 under it and D1a under that) and C. D1 and D1a leave the section while the
+// session holds them. A Free Card's drag has D previewed in the section as a Stub, so its row is drawn
+// and its children are not.
+describe('a Card whose section holds the branch of a carried item', () => {
   const D = makeItem('d', { parentId: 'p', position: 2 });
   const ROWS = [
     makeItem('a', { parentId: 'p', position: 1 }),
@@ -141,37 +142,33 @@ describe('a Card whose section holds the branch of a carried Stub', () => {
     makeItem('d1a', { parentId: 'd1' }),
     makeItem('c', { parentId: 'p', position: 3 }),
   ];
+  const BRANCH = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
   const childrenOf = (parentId: string) => ROWS.filter(i => i.parentId === parentId);
-  const carrying = (branch: DragSession['branch']) =>
+  const carrying = (kind: 'stub' | 'free') =>
     makeDragSession({
       activeItem: D,
       classification: classifyDragTargets('d', [CARD, ...ROWS], 12),
       pop: startPopSession(descendantsRegionKey('p')),
-      origin: branch ? stubOrigin('p') : freeOrigin('todo'),
-      containingCardId: branch ? 'p' : null,
-      branch,
+      origin: kind === 'stub' ? stubOrigin('p') : freeOrigin('todo'),
+      containingCardId: kind === 'stub' ? 'p' : null,
+      branch: BRANCH,
     });
   const rowIds = (container: HTMLElement) =>
     [...container.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'));
 
-  it('draws every row of it, a carried Free Card’s children included, while the session holds no branch', () => {
-    const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(null) });
+  it.each(['stub', 'free'] as const)(
+    'draws none of the branch of a carried %s, and every other row where it was',
+    kind => {
+      const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(kind) });
 
-    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'd1', 'd1a', 'c']);
-  });
-
-  it('draws none of the branch, and every other row where it was, while the session holds it', () => {
-    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
-    const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(branch) });
-
-    expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
-  });
+      expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
+    },
+  );
 
   it('draws none of it in the static rows under the hierarchy modal’s backdrop either', () => {
-    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
     const { queryByText } = renderCard(
       { childCount: 3, getAttachedChildren: childrenOf },
-      { session: carrying(branch), modalCardId: 'p' },
+      { session: carrying('free'), modalCardId: 'p' },
     );
 
     expect(queryByText('Item c')).toBeInTheDocument();
@@ -180,9 +177,8 @@ describe('a Card whose section holds the branch of a carried Stub', () => {
   });
 
   it('draws it again once the drag is over', () => {
-    const branch = { ids: new Set(['d1', 'd1a']), children: 1, descendants: 2 };
     const props = { childCount: 3, getAttachedChildren: childrenOf };
-    const { container, rerender } = renderCard(props, { session: carrying(branch) });
+    const { container, rerender } = renderCard(props, { session: carrying('free') });
     expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
 
     rerender(cardFrame(props));
@@ -191,32 +187,47 @@ describe('a Card whose section holds the branch of a carried Stub', () => {
   });
 });
 
-// The carried Stub's copy says what its branch holds on a second line, hung from its box so the box
-// the drag measures stays one row, and stepping with the box to the depth the ghost would land at.
-describe('the carried copy of a Stub with a branch', () => {
+// The carried copy says what its branch holds on a second line, in either form: hung from its box so the
+// box the drag measures stays what it is, and, as a Stub, stepping with the box to the depth the ghost
+// would land at.
+describe('the carried copy of an item with a branch', () => {
   const BRANCH = { children: 2, descendants: 5 };
   const LINE = '+ 2 children, 5 total descendants';
   const overlay = (props: CardProps) => renderCard({ item: CARRIED, isOverlay: true, overlayBranch: BRANCH, ...props });
 
-  it('says the branch’s counts in its Stub form', () => {
-    const { getByText } = overlay({ overlayForm: 'stub' });
+  it.each(['stub', 'short-card'] as const)('says the branch’s counts in its %s form', form => {
+    const { getByText } = overlay({ overlayForm: form });
 
     expect(getByText(LINE)).toBeInTheDocument();
   });
 
-  it('says nothing in its shortCard form, which keeps its one height', () => {
-    const { queryByText } = overlay({ overlayForm: 'short-card' });
-
-    expect(queryByText(LINE)).toBeNull();
-  });
-
-  it('says nothing without a branch', () => {
-    const { container } = overlay({ overlayForm: 'stub', overlayBranch: null });
+  it.each(['stub', 'short-card'] as const)('says nothing in its %s form without a branch', form => {
+    const { container } = overlay({ overlayForm: form, overlayBranch: null });
 
     expect(container.querySelector('[data-carried-branch]')).toBeNull();
   });
 
-  it('hangs outside the flow of the copy’s box, and moves with the box through the depths', () => {
+  it('says nothing on the in-list row, which is no copy', () => {
+    const { container } = renderCard({ item: CARRIED, overlayBranch: BRANCH });
+
+    expect(container.querySelector('[data-carried-branch]')).toBeNull();
+  });
+
+  it('keeps its shortCard form’s one height, with the line hung outside its flow and its root unclipped', () => {
+    const { getByText, getByRole } = overlay({ overlayForm: 'short-card' });
+
+    const root = getByRole('article', { name: CARRIED.title });
+    const line = getByText(LINE).parentElement!;
+    expect(root).toHaveStyle({ height: `${SHORT_CARD_HEIGHT_PX}px` });
+    // The root is the box the drag measures and the one that turns, and clips nothing: the line is
+    // its child, out of the flow, so it turns with the copy.
+    expect(line.parentElement).toBe(root);
+    expect(line).toHaveClass('absolute', 'pointer-events-none');
+    expect(root).toHaveClass('rotate-2');
+    expect(root).not.toHaveClass('overflow-hidden');
+  });
+
+  it('hangs outside the flow of its Stub form’s box, and moves with the box through the depths', () => {
     const projection: DescendantsProjection = {
       gap: 1,
       depth: 2,

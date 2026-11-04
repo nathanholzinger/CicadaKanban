@@ -189,9 +189,10 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
   });
 });
 
-// A Stub's pickup reads its branch once, from the tree the board draws.
-describe('useBoardDnd: the branch a Stub’s pickup takes with it', () => {
-  // P holds X, which holds Y (then Z) and a Free child F. A Free Card W holds the Stub V.
+// A pickup reads its branch once, from the tree the board draws, whether the item is a Card or a Stub.
+describe('useBoardDnd: the branch a pickup takes with it', () => {
+  // P holds X, which holds Y (then Z) and a Free child F. A Free Card W holds the Stub V. A Free Card U
+  // has only a Free child G.
   const items = [
     makeItem('p'),
     makeItem('x', { parentId: 'p' }),
@@ -200,26 +201,32 @@ describe('useBoardDnd: the branch a Stub’s pickup takes with it', () => {
     makeItem('f', { parentId: 'x', isAttached: 0 }),
     makeItem('w'),
     makeItem('v', { parentId: 'w' }),
+    makeItem('u'),
+    makeItem('g', { parentId: 'u', isAttached: 0 }),
   ];
   const pickup = (id: string) =>
     startDrag({ items, getAttachedChildren: parentId => getAttachedChildrenFrom(items, parentId) }, id).result.current
       .session;
 
-  it('holds its attached descendants and the two counts, a Free child left out', () => {
+  it('holds a Stub’s attached descendants and the two counts, a Free child left out', () => {
     const { branch } = pickup('x')!;
 
     expect([...branch!.ids].sort()).toEqual(['y', 'z']);
     expect([branch!.children, branch!.descendants]).toEqual([1, 2]);
   });
 
-  it('holds none for a Stub with no attached descendants', () => {
-    expect(pickup('v')!.branch).toBeNull();
-    expect(pickup('z')!.branch).toBeNull();
+  it('holds a Free Card’s attached descendants the same way, a Free child and what is under it left out', () => {
+    const { branch } = pickup('p')!;
+
+    expect([...branch!.ids].sort()).toEqual(['x', 'y', 'z']);
+    expect([branch!.children, branch!.descendants]).toEqual([1, 3]);
+    expect(pickup('w')!.branch).toMatchObject({ children: 1, descendants: 1 });
   });
 
-  it('holds none for a Free Card’s pickup, whatever it holds: its children are drawn where its row is', () => {
-    expect(pickup('w')!.branch).toBeNull();
-    expect(pickup('p')!.branch).toBeNull();
+  it('holds none for an item with no attached descendants, a Free child apart', () => {
+    expect(pickup('v')!.branch).toBeNull();
+    expect(pickup('z')!.branch).toBeNull();
+    expect(pickup('u')!.branch).toBeNull();
   });
 });
 

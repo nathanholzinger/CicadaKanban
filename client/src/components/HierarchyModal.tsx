@@ -20,7 +20,6 @@ import type { Item, ItemType } from '../types';
 import ModalShell from './ModalShell';
 import { SectionRows } from './StubRows';
 import { useDragSession, useIsLockedAtCard, type DragSession } from './workflow/DragSessionContext';
-import { travelingRowsFor } from './workflow/dragCollision';
 import { DRAG_BOUNDS_ATTR, descendantsRegionKey, dragRegionProps, type Point } from './workflow/dragRegions';
 import { EVERY_LEVEL, hierarchyRows, sectionEntries, type SectionEntry } from './workflow/itemListOps';
 import {
@@ -73,12 +72,11 @@ function placeAtCursor(
   const { projection } = session;
   const items = entries.map(e => e.row.id);
   const activeId = session.activeItem.id;
-  const travels = travelingRowsFor(session) ?? (() => false);
   const rowEl = (id: string) => list.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
 
   // The row to rest the cursor on for the ghost to be in the gap it held in the section, and the
   // depth's column in the row.
-  const slot = projection ? (slotForGap(items, activeId, projection.gap, travels) ?? items.indexOf(activeId)) : -1;
+  const slot = projection ? (slotForGap(items, activeId, projection.gap) ?? items.indexOf(activeId)) : -1;
   const spotRow = slot === -1 ? null : rowEl(items[slot]);
   const dialogBox = dialog.getBoundingClientRect();
   const listBox = list.getBoundingClientRect();
@@ -120,7 +118,7 @@ function placeAtCursor(
     );
   const nearest = nearestRowIndex(inView, cursor.y);
   if (nearest === null) return null;
-  const gap = gapAtSlot(items, activeId, inView[nearest].index, travels);
+  const gap = gapAtSlot(items, activeId, inView[nearest].index);
   return gap === null
     ? null
     : { gap, depth: depthAtCursor(cursor.x, placedList.left), pointerX: cursor.x, pointerY: cursor.y };
@@ -139,7 +137,7 @@ export default function HierarchyModal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Computed once per render: `getAttachedChildren` returns a fresh array every call, and the
-  // list and its `SortableContext` must read one. A carried Stub's branch is left out, as in the
+  // list and its `SortableContext` must read one. The carried item's branch is left out, as in the
   // Card's own section.
   const entries = sectionEntries(
     hierarchyRows(card.id, getAttachedChildren),

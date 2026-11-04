@@ -14,7 +14,6 @@ import {
   isSectionRow,
   itemRowData,
   namedAnchorFor,
-  travelingRowsFor,
   type CollisionSession,
 } from './dragCollision';
 
@@ -455,54 +454,25 @@ describe('dropAnchorFor', () => {
     });
   });
 
-  // The dragged Stub's own child `xa` is still rendered right below it, but
-  // travels with it: naming it would put the gap at the section's end, so
-  // the search steps past it.
-  it('DRAG-4.8: steps past rows that travel with the dragged item', () => {
-    const items = ['s1', 'x', 'xa', 's3'];
-    const travels = (id: string) => id === 'x' || id === 'xa';
-    // Over its own slot (top 110, middle 160).
-    expect(dropAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'), travels)).toEqual({
-      anchorId: 's3',
-      side: 'before',
-    });
-    expect(dropAnchorFor(dragged('x', 150), overRow('x', 110, items, 'stub'), travels)).toEqual({
-      anchorId: 's1',
-      side: 'after',
-    });
-    // Without it, leaning down names the child.
-    expect(dropAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'))).toEqual({
-      anchorId: 'xa',
-      side: 'before',
-    });
-  });
-
   // The one call shape every reader uses: the blue line, the pop machine and
   // the release.
   describe('namedAnchorFor', () => {
-    const items = ['s1', 'x', 'xa', 's3'];
-    const session = (contextKey: string) => ({
-      pop: { contextKey },
-      classification: { subtreeIds: new Set(['x', 'xa']) },
-    });
+    const items = ['s1', 'x', 's3'];
 
-    it("at a Descendants context, steps past the dragged item's subtree", () => {
-      const over = overRow('x', 110, items, 'stub');
-      expect(namedAnchorFor(dragged('x', 170), over, session('descendants:p'))).toEqual({
+    it('names the row beside the ghost, leaning with the carried copy', () => {
+      // Over its own slot (top 110, middle 160).
+      expect(namedAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'))).toEqual({
         anchorId: 's3',
         side: 'before',
       });
-    });
-
-    it('at a column, a Free descendant is a real anchor', () => {
-      expect(namedAnchorFor(dragged('x', 170), overRow('x', 110, items), session('column:c1'))).toEqual({
-        anchorId: 'xa',
-        side: 'before',
+      expect(namedAnchorFor(dragged('x', 150), overRow('x', 110, items, 'stub'))).toEqual({
+        anchorId: 's1',
+        side: 'after',
       });
     });
 
     it('with nothing under the drag, no anchor', () => {
-      expect(namedAnchorFor(dragged('x', 170), null, session('column:c1'))).toBeNull();
+      expect(namedAnchorFor(dragged('x', 170), null)).toBeNull();
     });
   });
 });
@@ -531,30 +501,5 @@ describe('isOverflowRow / isSectionRow', () => {
         isSectionRow,
       ),
     ).toEqual([false, true, true, false, false]);
-  });
-});
-
-describe('travelingRowsFor', () => {
-  const classification = { subtreeIds: new Set(['x', 'xa']) };
-
-  it("at a Descendants context: the dragged subtree (classification's own subtreeIds)", () => {
-    const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
-    expect(['x', 'xa', 's1'].map(id => travels?.(id))).toEqual([true, true, false]);
-  });
-
-  // The overflow row of a row that travels stands for children that travel with it.
-  it('at a Descendants context: the overflow row of a traveling row, and no other', () => {
-    const travels = travelingRowsFor({ pop: { contextKey: 'descendants:p' }, classification });
-    expect([overflowRowId('x'), overflowRowId('xa'), overflowRowId('s1')].map(id => travels?.(id))).toEqual([
-      true,
-      true,
-      false,
-    ]);
-  });
-
-  it('anywhere else: none — at a column a Free descendant is a real anchor', () => {
-    expect(travelingRowsFor({ pop: { contextKey: 'column:c1' }, classification })).toBeUndefined();
-    expect(travelingRowsFor({ pop: { contextKey: null }, classification })).toBeUndefined();
-    expect(travelingRowsFor(null)).toBeUndefined();
   });
 });

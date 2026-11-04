@@ -14,7 +14,8 @@
 // StubRows.tsx, and the drag-time chrome this and they share (useItemRow,
 // DropSideIndicator, ZoomCue) in dragChrome.tsx. The Card's root element is
 // its Descendants region (`dragRegions.ts`): every Card is one, a childless
-// Card included.
+// Card included. The carried copy says what its branch holds on a second line
+// under its box, in either form (`StubRows.tsx::CarriedBranchLine`).
 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useState } from 'react';
@@ -113,7 +114,7 @@ interface KanbanCardProps {
   overlayWidthPx?: number | null;
   /** isOverlay + overlayForm 'stub' only — the Descendants layer's live projection (null elsewhere), which indents the carried Stub to the depth it would land at. */
   overlayProjection?: DescendantsProjection | null;
-  /** isOverlay + overlayForm 'stub' only — what the carried Stub's branch counts, for the second line (null: none to say). */
+  /** isOverlay only, in either form — what the carried item's branch counts, for the second line (null: none to say). The in-list ghost shows none. */
   overlayBranch?: Pick<CarriedBranch, 'children' | 'descendants'> | null;
   onCardClick?: (id: string) => void;
 }
@@ -183,6 +184,9 @@ export default function KanbanCard({
   // component, `isOverlay` alone means "the shortCard drag copy."
   const overlayIsStub = isOverlay && overlayForm === 'stub';
   const overlayIndent = overlayStubIndent(overlayIsStub ? overlayProjection : null);
+  // The carried copy's second line, in either form: it hangs from the copy's box, outside what
+  // dnd-kit measures. Only the DragOverlay's copy has one, never the in-list ghost.
+  const branchLine = isOverlay && overlayBranch ? <CarriedBranchLine branch={overlayBranch} /> : null;
 
   const style = {
     ...sortableStyle,
@@ -206,7 +210,7 @@ export default function KanbanCard({
   // codebase's known "inline function call in JSX" gotcha). Placement-aware,
   // so a Card being previewed as attaching here is already included at its
   // slot (itemListOps.ts). None while ghost-like: a shortCard shows no
-  // children at all, not even collapsed.
+  // children at all, not even collapsed. A carried Card's count is its copy's second line.
   //
   // The whole section, every depth, as one flat DFS list (what the board places
   // against; `entries` below is the part of it drawn) —
@@ -218,7 +222,7 @@ export default function KanbanCard({
       ? hierarchyRows(item.id, getAttachedChildren)
       : [];
   // What the section draws: `rows` cut at the last shown level, with an overflow row for the
-  // children it hides, and without the branch a carried Stub takes with it. The board still places
+  // children it hides, and without the branch the carried item takes with it. The board still places
   // against all of `rows`.
   const entries = sectionEntries(
     rows,
@@ -253,7 +257,7 @@ export default function KanbanCard({
       className={
         overlayIsStub
           ? 'relative'
-          : `${CARD_BASE} ${isGhostLike ? 'overflow-hidden' : ''} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${chromeClassName} ${lockedHere ? ACTIVE_CONTEXT_OUTLINE : ''}`
+          : `${CARD_BASE} ${isOverlay ? 'rotate-2 shadow-2xl shadow-black/50' : ''} ${chromeClassName} ${lockedHere ? ACTIVE_CONTEXT_OUTLINE : ''}`
       }
     >
       {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
@@ -266,14 +270,15 @@ export default function KanbanCard({
           style={overlayIndent.style}
         >
           <StubBody item={item} itemTypes={itemTypes} />
-          {overlayBranch && <CarriedBranchLine branch={overlayBranch} />}
+          {branchLine}
         </div>
       ) : (
         <>
           {/* The Card's own content takes its tier and its pending pulse. Its section of Stubs
               and the line above stay outside it: each row of the section has a tier of its own,
-              which a dim here would multiply, and the line is a real anchor's. */}
-          <div className={contentClassName}>
+              which a dim here would multiply, and the line is a real anchor's. A shortCard clips its own
+              content to its fixed height, and not the root, so the second line can hang outside the root. */}
+          <div className={`${contentClassName} ${isGhostLike ? 'h-full overflow-hidden' : ''}`}>
             {isGhostLike ? (
               <ShortCard item={item} itemTypes={itemTypes} />
             ) : (
@@ -320,6 +325,7 @@ export default function KanbanCard({
               </>
             )}
           </div>
+          {branchLine}
 
           {/* The descendants section, one flat sortable list down to its last
               shown level, with an overflow row for what that hides — Stubs

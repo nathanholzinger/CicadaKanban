@@ -7,10 +7,11 @@ import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_REGION_ATTR, descendantsRegionKey, type Point } from './workflow/dragRegions';
 import { cursorXInList } from './workflow/modalPlacement';
 import { startPopSession } from './workflow/popSession';
-import { freeOrigin, makeDragSession, rect, stubOrigin } from '../test/dragFixtures';
+import { makeDragSession, rect, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 
-// P's rows in the modal: B, D (the one carried), D1 (D's child, which travels with it), C.
+// P's rows in the modal: B, D (the one carried) and C. D1, D's child, travels with it: the pickup
+// took it out of the rows.
 const CARD = makeItem('p');
 const B = makeItem('b', { parentId: 'p' });
 const D = makeItem('d', { parentId: 'p' });
@@ -19,7 +20,7 @@ const C = makeItem('c', { parentId: 'p' });
 const ALL = [CARD, B, D, D1, C];
 const attachedChildren = (parentId: string) => ALL.filter(i => i.parentId === parentId);
 
-// The ghost sits in the last gap, after C: two rows of P's that don't travel are before it.
+// The ghost sits in the last gap, after C: two rows of P's are before it.
 const PROJECTION: DescendantsProjection = {
   gap: 2,
   depth: 0,
@@ -30,21 +31,18 @@ const PROJECTION: DescendantsProjection = {
   overflowBeside: null,
 };
 
-// D is carried in P's modal. With no `branch` it is a Free Card previewed in P's section, which draws
-// D1 under it, so D1 travels with it. With one it is a Stub, whose pickup took D1 out of the rows.
-function sessionOf(
-  activeItem = D,
-  projection: DescendantsProjection | null = PROJECTION,
-  branch: DragSession['branch'] = null,
-): DragSession {
+// D is carried in P's modal, and its pickup took D1 with it.
+const BRANCH = { ids: new Set([D1.id]), children: 1, descendants: 1 };
+
+function sessionOf(activeItem = D, projection: DescendantsProjection | null = PROJECTION): DragSession {
   return makeDragSession({
     activeItem,
     classification: classifyDragTargets(activeItem.id, ALL, 12),
     pop: startPopSession(descendantsRegionKey('p')),
-    origin: branch ? stubOrigin('p') : freeOrigin('todo'),
-    containingCardId: branch ? 'p' : null,
+    origin: stubOrigin('p'),
+    containingCardId: 'p',
     projection,
-    branch,
+    branch: BRANCH,
   });
 }
 
@@ -137,36 +135,24 @@ describe('the hierarchy modal opened without a drag to place it', () => {
 });
 
 describe('the hierarchy modal opened by a hold during a drag', () => {
-  it('DRAG-7.15: rests the cursor on the row of the ghost’s gap, past the rows that travel with it, and reports the gap and depth there', () => {
+  it('DRAG-7.15: rests the cursor on the row of the ghost’s gap, with the carried item’s branch out of the rows, and reports the gap and depth there', () => {
     stubLayout();
     const onPlaced = vi.fn();
     render(modal(sessionOf(), CURSOR, onPlaced));
 
-    // Gap 2 is after C. D1 travels with D, so it doesn't count toward the gap: C's row, the fourth
-    // (offset 80 + 3 × 32, its middle 14 below), is the one the cursor rests on.
-    const dialog = screen.getByRole('dialog');
-    expect(dialog.style.top).toBe(`${CURSOR.y - (LIST.y + 3 * ROW.step + ROW.height / 2)}px`);
-    expect(dialog.style.left).toBe(`${CURSOR.x - (LIST.x + cursorXInList(0))}px`);
-    expect(onPlaced).toHaveBeenCalledTimes(1);
-    // With the Card it is for, and the point it was read at, which is where the hold opened it.
-    expect(onPlaced).toHaveBeenCalledWith(CARD.id, { gap: 2, depth: 0, pointerX: CURSOR.x, pointerY: CURSOR.y });
-  });
-
-  // The carried Stub's branch is out of the modal's rows, so the count of rows before the ghost's
-  // gap has none to step past, and the cursor rests on the same row of the rows that stay.
-  it('leaves the carried Stub’s branch out of its rows, and still rests the cursor on the row of the ghost’s gap', () => {
-    stubLayout();
-    const onPlaced = vi.fn();
-    render(modal(sessionOf(D, PROJECTION, { ids: new Set([D1.id]), children: 1, descendants: 1 }), CURSOR, onPlaced));
-
+    // D1 is not a row, so the rows are B, D and C.
     const dialog = screen.getByRole('dialog');
     expect([...dialog.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'))).toEqual([
       'b',
       'd',
       'c',
     ]);
-    // C is the third row now.
+    // Gap 2 is after C: C's row, the third (offset 80 + 2 × 32, its middle 14 below), is the one the
+    // cursor rests on.
     expect(dialog.style.top).toBe(`${CURSOR.y - (LIST.y + 2 * ROW.step + ROW.height / 2)}px`);
+    expect(dialog.style.left).toBe(`${CURSOR.x - (LIST.x + cursorXInList(0))}px`);
+    expect(onPlaced).toHaveBeenCalledTimes(1);
+    // With the Card it is for, and the point it was read at, which is where the hold opened it.
     expect(onPlaced).toHaveBeenCalledWith(CARD.id, { gap: 2, depth: 0, pointerX: CURSOR.x, pointerY: CURSOR.y });
   });
 

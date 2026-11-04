@@ -3,7 +3,7 @@
 // OverflowRow (the count standing in for a row's hidden children, which opens the
 // hierarchy modal), their static drawings, SectionRows, the one list of them that
 // a Card's section and the hierarchy modal both draw, and CarriedBranchLine, the second
-// line a carried Stub's copy hangs under itself.
+// line a carried copy hangs under itself, in either form.
 // The Card tier's own render is KanbanCard.tsx; this is everything a
 // Descendants-section row renders as.
 
@@ -177,10 +177,10 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
   );
 }
 
-// The carried Stub's second line, its branch's counts: one row tall, hung under the box it is
-// positioned against, so what dnd-kit measures of the copy stays one row. It covers the row below the
-// copy and takes no pointer. Its look is a placeholder, the overflow row's text over the copy's own
-// fill, not yet tuned.
+// The carried copy's second line, its branch's counts: one row tall, hung under the box it is
+// positioned against, so what dnd-kit measures of the copy stays one box. It covers what is below the
+// copy and takes no pointer. Its look is a placeholder, the overflow row's text over a fill,
+// not yet tuned.
 export function CarriedBranchLine({ branch }: { branch: Pick<CarriedBranch, 'children' | 'descendants'> }) {
   return (
     <div
