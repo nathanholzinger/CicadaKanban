@@ -847,8 +847,8 @@ banner staying across the loading state; that clause waits for Story 10.
 
 ---
 
-### Story 8.5 — The drag-target cues say what a target can be
-**Plan:** [`story-8-5-traveling-rows-cue.md`](story-8-5-traveling-rows-cue.md)
+### Story 8.5 — The drag-target cues say what a target can be ✅ (done 2026-11-03)
+**Plan / record:** [`story-8-5-traveling-rows-cue.md`](../../archive/story-8-5-traveling-rows-cue.md)
 
 **Widened 2026-11-03** (Nathan), from a dragged Stub's children to every
 drag-target cue on the board. Working through Phase 1 showed that the
@@ -890,17 +890,32 @@ tiers and Story 8.8's branch-carry trial remain separate.
     problem in the morph's story), and a taller, multi-row copy changes
     the box dnd-kit measures for collisions.
 
+**Status: done 2026-11-03.** Every target on the board is drawn by what
+it can be to the carried item: full strength for a legal parent, MO
+(0.6) for an anchor that isn't a parent, LO (0.3) for neither, and the
+dragged row at 0.3, a value of its own. A pending row pulses to half its
+own opacity. The green ring and the Depth-capped dim are gone. Nathan
+approved the values hands-on; they stay tuning values. The tiers' look
+is a working placeholder (the PO's reading, for Nathan to overrule).
+DRAG-7.12's spec is skipped for Story 10. One Coder task was left open:
+`check:docs` still finds the retired DRAG-2.5 in a fixture comment
+(`tests/ui/drag-target-classification.spec.ts`), so the gate fails until
+it goes. Story 8.6's plan takes it as its first step.
+
 ---
 
 ### Story 8.6 — One height for every Stub row
+**Plan:** [`story-8-6-one-stub-row-height.md`](story-8-6-one-stub-row-height.md)
+
 **Carried in from the Story 6 + 6.1 audit fixes** (audit #8, 2026-09-25).
 
-A type pill makes a Stub row 5 px taller: a sortable row is 24 px, or 29
-with a pill; the ghost row and the carried copy are 26 px, or 31. The drag
-math reads the pill-less heights (`cardMetrics.ts::STUB_ROW_HEIGHT_PX`,
-`CARRIED_STUB_HEIGHT_PX`), so on a typed row the lean's ghost middle and
-the carried copy's re-anchor sit up to 2.5 px off. Giving every Stub row
-one height, pill or not, would make both exact. It's a look decision.
+A type pill makes a Stub row 5 px taller: a sortable row, the ghost's
+included, is 24 px, or 29 with a pill; the carried copy is 26 px, or 31.
+The drag math reads the pill-less heights
+(`cardMetrics.ts::STUB_ROW_HEIGHT_PX`, `CARRIED_STUB_HEIGHT_PX`), so on a
+typed row the lean's ghost middle and the carried copy's re-anchor sit up
+to 2.5 px off. Giving every Stub row one height, pill or not, would make
+both exact. It's a look decision.
 
 ---
 
@@ -977,6 +992,9 @@ board-drag-interaction's Open questions.
   - the zoom-in cue, and the overflow row's hold cue that borrows it;
   - the ghost's red over-cap outline;
   - the amber flash on an item a reload stopped (Story 8.4).
+- **The dragged row's own opacity** (Story 8.5, 2026-11-03). It's a
+  tuning value of its own at 0.3, the same as LO for now. Nathan expects
+  to revisit it once the Card's look is final.
 - **Whether the ghost's expansion on drop animates (§5a).** Today it's
   instant.
 - **The depth cue at the Descendants layer deserves a tuning pass**
