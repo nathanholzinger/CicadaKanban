@@ -14,7 +14,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 | DRAG-2.8 | A Stub drag is classified exactly like a Card drag, and a place that's no target isn't classified | P1 | Open |
 | DRAG-2.9 | Cycle-forming wins over Depth-capped | P1 | Automated |
 | DRAG-2.10 | The board's depth cap is the one the API enforces, carried by `GET /boards/:id` | P1 | Automated |
-| DRAG-2.11 | Depth classification includes pending parent changes and a detaching item's kept parent | P0 | Open |
+| DRAG-2.11 | Depth classification includes pending parent changes and a detaching item's kept parent | P0 | Automated |
 | DRAG-2.12 | Cycle classification includes pending parent changes and a detaching item's kept parent | P0 | Open |
 | DRAG-2.14 | Valid Cards and Stubs are Full | P1 | Open |
 | DRAG-2.15 | A Free Card that is not Valid is Mid, never Low | P1 | Open |
@@ -97,13 +97,13 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.11 — Depth classification includes pending parent changes and a detaching item's kept parent
 
-**Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki hierarchy-placement §6, wiki item-attachment §11
+**Priority:** P0 · **Status:** Automated · **Rule:** wiki board-drag-interaction §4, wiki hierarchy-placement §6, wiki item-attachment §11
 
 *Given* `CAP >= 3`, Free Card `A` with attached leaf `Y`, a legal target `B` at depth `CAP - 2`, and a pending write attaching or reparenting `A` under `B`, *when* unrelated leaf Card `X` is picked up before that write's response arrives, *then* classification counts `A` at depth `CAP - 1` and `Y` at depth `CAP`: `A` is **Valid** for `X`, and `Y` is **Depth-capped**. The shallower parent chain awaiting the response doesn't make `Y` Valid.
 
 *And given* instead `D` at depth `CAP`, attached to `P` at depth `CAP - 1`, with a pending detach that previews `D` as a Free Card but keeps `D.parentId = P`, *when* unrelated leaf `X` is picked up, *then* `D` is **Depth-capped**. Its depth still counts the link to `P`; appearing as a Free Card doesn't make it a root item. In both setups classification uses the parent links the pending writes leave, without waiting for their responses.
 
-**Automation test:** —
+**Automation test:** `client/src/components/workflow/useBoardDnd.test.ts`
 
 ## DRAG-2.12 — Cycle classification includes pending parent changes and a detaching item's kept parent
 
