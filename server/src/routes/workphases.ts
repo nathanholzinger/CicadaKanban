@@ -4,7 +4,7 @@ import { items, workflows, workphases } from '../db/schema.js';
 import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { findColumnsMixingTerminalAfterFlip, shrinkColumnsForDeletedWorkphase } from '../lib/columnRanges.js';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { existsById, getByIdOrNotFound, referenceShapeError } from '../lib/getOrNotFound.js';
 import { workphasesInOrder } from '../lib/workphaseOrder.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { nextPosition, resolveAppendPosition } from '../lib/positionResolver.js';
@@ -20,8 +20,13 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'workflowId and name are required' });
     return;
   }
+  const shapeError = referenceShapeError('workflowId', workflowId);
+  if (shapeError) {
+    res.status(400).json({ error: shapeError });
+    return;
+  }
   // A bogus workflowId would otherwise surface as an opaque FK-violation 500.
-  if (!db.select({ id: workflows.id }).from(workflows).where(eq(workflows.id, workflowId)).get()) {
+  if (!existsById(workflows, workflowId)) {
     res.status(400).json({ error: 'workflowId does not reference an existing workflow' });
     return;
   }

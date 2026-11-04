@@ -17,6 +17,8 @@ import {
   setItemParent,
   setItemWorkphase,
   templatedWorkflow,
+  reorderWorkphases,
+  workflowWithPhases,
 } from '../fixtures.js';
 
 describe('GET /api/workflows', () => {
@@ -51,18 +53,25 @@ describe('GET /api/workflows/:id', () => {
   it('returns workphases ordered by position and items with computed depth', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);
-    const workphase = await createWorkphase(workflow.id);
-    const root = await createItem({ projectId: project.id, workphaseId: workphase.id, title: 'Root' });
+    // Created in one order and reordered to another, so the order read back is the position's, not
+    // the order the rows were written in.
+    const [first, second, third] = [
+      await createWorkphase(workflow.id, { name: 'First' }),
+      await createWorkphase(workflow.id, { name: 'Second' }),
+      await createWorkphase(workflow.id, { name: 'Third' }),
+    ];
+    expect((await reorderWorkphases([third, first, second])).status).toBe(200);
+    const root = await createItem({ projectId: project.id, workphaseId: first.id, title: 'Root' });
     const child = await createItem({
       projectId: project.id,
-      workphaseId: workphase.id,
+      workphaseId: first.id,
       parentId: root.id,
       title: 'Child',
     });
 
     const res = await request(app).get(`/api/workflows/${workflow.id}`);
     expect(res.status).toBe(200);
-    expect(res.body.workphases).toHaveLength(1);
+    expect(res.body.workphases.map((w: { id: string }) => w.id)).toEqual([third.id, first.id, second.id]);
 
     const items = res.body.items as Array<{ id: string; depth: number }>;
     expect(items.find(i => i.id === root.id)?.depth).toBe(0);
@@ -151,7 +160,7 @@ describe('POST /api/workflows', () => {
   // Unchecked, a bad projectId hits the FK constraint (an opaque 500), and a
   // bad templateId or sourceWorkflowId (neither is an FK) silently creates a
   // zero-workphase workflow.
-  it('returns 400 with a specific message when projectId does not reference an existing project', async () => {
+  it('TREE-10.12: returns 400 with a specific message when projectId does not reference an existing project', async () => {
     const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: 'does-not-exist' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/projectId/);
@@ -159,28 +168,33 @@ describe('POST /api/workflows', () => {
 
   // A projectId that isn't a string can't name a project. better-sqlite3 throws on binding most of
   // them (a 500), and flattens an array to the one id it holds, so that creates the workflow
-  // (wiki row-references §1).
-  it('returns 400, and creates nothing, when projectId is not a string', async () => {
+  // (wiki row-references §1). An empty string, `false` and `0` are refused as missing, ahead of
+  // the shape check, with a message that names the field all the same.
+  it('TREE-10.12: returns 400, and creates nothing, when projectId is empty or not a string', async () => {
     const project = await createProject();
-    for (const value of [true, false, 7, 0, {}, [], [project.id]]) {
+    for (const value of ['', true, false, 7, 0, {}, [], [project.id]]) {
       const res = await request(app).post('/api/workflows').send({ name: 'W', projectId: value });
       expect(res.status, JSON.stringify(value)).toBe(400);
       expect(res.body.error, JSON.stringify(value)).toContain('projectId');
     }
     expect(await workflowsOf(project.id)).toEqual([]);
+    // Nothing the refusals did stands in the way of a create that names the project by its id.
+    const created = await request(app).post('/api/workflows').send({ name: 'W', projectId: project.id });
+    expect(created.status).toBe(201);
   });
 
   // The checks run in order: a value that isn't a string is refused as one, ahead of whether it
   // names a project or whether that project already has a workflow of its own.
-  it('refuses a projectId that is not a string ahead of the ownership check', async () => {
+  it('TREE-10.12: refuses a projectId that is not a string ahead of the ownership check', async () => {
     const owner = await createProject();
-    await createWorkflow(owner.id);
+    const ownerWorkflow = await createWorkflow(owner.id);
     const res = await request(app)
       .post('/api/workflows')
       .send({ name: 'W', projectId: [owner.id] });
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('projectId');
     expect(res.body.error).not.toMatch(/already has a workflow/);
+    expect((await workflowsOf(owner.id)).map((w: { id: string }) => w.id)).toEqual([ownerWorkflow.id]);
   });
 
   it('TREE-10.8: returns 400 with a specific message, and creates nothing, when templateId does not reference an existing template', async () => {
@@ -224,7 +238,12 @@ describe('POST /api/workflows', () => {
     'returns 400, and creates nothing, when %s is not a string',
     async field => {
       const project = await createProject();
-      for (const value of [false, 0, {}, []]) {
+      // The array holds an id the field would name, which is the value that would pass the lookup.
+      const named =
+        field === 'templateId'
+          ? (await findTemplateByName('flow')).id
+          : (await createWorkflow((await createProject()).id)).id;
+      for (const value of [true, false, 7, 0, {}, [], [named]]) {
         const res = await request(app)
           .post('/api/workflows')
           .send({ name: 'W', projectId: project.id, [field]: value });
@@ -557,8 +576,18 @@ describe('DELETE /api/workflows/:id', () => {
       })
       .run();
 
+    // Another project, with its own workflow and items.
+    const other = await workflowWithPhases(['Todo', 'Done']);
+    const [todo, done] = other.phases;
+    const inTodo = await createItem({ projectId: other.project.id, workphaseId: todo.id, title: 'In Todo' });
+    const inDone = await createItem({ projectId: other.project.id, workphaseId: done.id, title: 'In Done' });
+
     const res = await request(app).delete(`/api/workflows/${orphanId}`);
     expect(res.status).toBe(204);
     expect((await request(app).get(`/api/workflows/${orphanId}`)).status).toBe(404);
+
+    const workphaseOf = async (id: string) => (await request(app).get(`/api/items/${id}`)).body.workphaseId;
+    expect([await workphaseOf(inTodo.id), await workphaseOf(inDone.id)]).toEqual([todo.id, done.id]);
+    expect((await request(app).get(`/api/workflows/${other.workflow.id}`)).status).toBe(200);
   });
 });

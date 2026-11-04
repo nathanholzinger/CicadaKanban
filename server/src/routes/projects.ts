@@ -3,7 +3,7 @@ import { db, type Tx } from '../db/index.js';
 import { projects, workflows } from '../db/schema.js';
 import { eq, asc, isNull, and, not, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound, referenceShapeError } from '../lib/getOrNotFound.js';
 import { parentRefusal, PROJECT_DEPTH_CAP } from '../lib/itemTree.js';
 import { deleteProjectById } from '../lib/projectCascade.js';
 import {
@@ -36,7 +36,8 @@ function isValidName(name: unknown): name is string {
 // shape, then the rules items follow too, over the project cap (wiki project-tree §3).
 // `moving` is the project being given the parent, or null for a create.
 function parentError(moving: { id: string; parentId: string | null } | null, parentId: string | null): string | null {
-  if (parentId !== null && typeof parentId !== 'string') return 'parentId must be a string or null';
+  const shapeError = referenceShapeError('parentId', parentId, { nullable: true });
+  if (shapeError) return shapeError;
   return parentRefusal('project', moving, parentId);
 }
 
@@ -214,13 +215,15 @@ router.patch('/:id/move', (req, res) => {
     res.status(400).json({ error: 'position is not accepted: name a prevId or nextId to place the project instead' });
     return;
   }
-  if (prevId !== undefined && prevId !== null && typeof prevId !== 'string') {
-    res.status(400).json({ error: 'prevId must be a string or null' });
-    return;
-  }
-  if (nextId !== undefined && nextId !== null && typeof nextId !== 'string') {
-    res.status(400).json({ error: 'nextId must be a string or null' });
-    return;
+  for (const [field, value] of [
+    ['prevId', prevId],
+    ['nextId', nextId],
+  ]) {
+    const shapeError = referenceShapeError(field, value, { nullable: true, optional: true });
+    if (shapeError) {
+      res.status(400).json({ error: shapeError });
+      return;
+    }
   }
 
   const targetParentId: string | null = 'parentId' in req.body ? (parentId ?? null) : project.parentId;

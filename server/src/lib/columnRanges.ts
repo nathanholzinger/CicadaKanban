@@ -5,7 +5,7 @@
 import { db, type Tx } from '../db/index.js';
 import { boards, columns, workphases } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
-import { buildRankMap, workphasesInOrder } from './workphaseOrder.js';
+import { buildRankMap, getOrderedWorkphases, workphasesInOrder } from './workphaseOrder.js';
 
 type Workphase = typeof workphases.$inferSelect;
 type ColumnRow = typeof columns.$inferSelect;
@@ -158,8 +158,7 @@ export function shrinkColumnsForDeletedWorkphase(
 
   // Includes the doomed workphase so each column's original coverage can be
   // computed before it's gone.
-  const originalWorkphases = workphasesInOrder(workflowId, client);
-  const originalRankMap = buildRankMap(originalWorkphases);
+  const { workphases: originalWorkphases, rankMap: originalRankMap } = getOrderedWorkphases(workflowId, client);
 
   const shrunkColumns: ColumnRow[] = [];
   const deletedColumns: ColumnRow[] = [];

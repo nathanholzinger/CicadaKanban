@@ -62,6 +62,25 @@ describe('POST /api/columns', () => {
     expect(res.status).toBe(404);
   });
 
+  // A reference that isn't a string can't name a row. better-sqlite3 throws on binding most of them
+  // (a 500), and flattens an array to the one id it holds, so that creates the column
+  // (wiki row-references §1).
+  it.each(['boardId', 'startWorkphaseId', 'endWorkphaseId'])(
+    'returns 400, and creates nothing, when %s is not a string',
+    async field => {
+      const { board, todo, done } = await setupCleanBoard();
+      const named = { boardId: board.id, startWorkphaseId: todo.id, endWorkphaseId: done.id };
+      for (const value of [true, false, 7, 0, {}, [], [named[field as keyof typeof named]]]) {
+        const res = await request(app)
+          .post('/api/columns')
+          .send({ ...named, [field]: value });
+        expect(res.status, JSON.stringify(value)).toBe(400);
+        expect(res.body.error, JSON.stringify(value)).toContain(field);
+      }
+      expect((await readBoard(board.id)).columns).toEqual([]);
+    },
+  );
+
   it('BCU-2.1: a column covers the workphases from its start to its end, in the workflow’s order', async () => {
     const { board, w } = await setupFour();
     const a = await createColumn(board.id, w[0].id, w[2].id);

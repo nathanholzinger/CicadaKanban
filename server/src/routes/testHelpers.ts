@@ -7,6 +7,7 @@ import type { SQLiteColumn, SQLiteTable, SQLiteUpdateSetSource } from 'drizzle-o
 import { db } from '../db/index.js';
 import { items, projects } from '../db/schema.js';
 import { resetTestDb } from '../db/resetTestDb.js';
+import { referenceShapeError } from '../lib/getOrNotFound.js';
 
 const router = Router();
 
@@ -73,8 +74,9 @@ router.patch('/projects/:id/created-at', (req, res) => {
 // which no project write produces.
 router.patch('/projects/:id/parent', (req, res) => {
   const { parentId } = req.body;
-  if (parentId !== null && typeof parentId !== 'string') {
-    res.status(400).json({ error: 'parentId must be a string or null' });
+  const shapeError = referenceShapeError('parentId', parentId, { nullable: true });
+  if (shapeError) {
+    res.status(400).json({ error: shapeError });
     return;
   }
   writeOrNotFound(res, projects, req.params.id, { parentId }, 'Project not found');

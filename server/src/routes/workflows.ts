@@ -4,11 +4,11 @@ import { workflows, items, workflowTemplates, workflowTemplatePhases, projects }
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { createDefaultBoard } from '../lib/defaultBoard.js';
-import { getOrderedWorkphases, workphasesInOrder } from '../lib/workphaseOrder.js';
+import { workphasesInOrder } from '../lib/workphaseOrder.js';
 import { copyWorkphases } from '../lib/workflowWorkphases.js';
 import { getProjectsUsingWorkflow, getWorkflowItems } from '../lib/workflowItems.js';
 import { deleteWorkflowsById } from '../lib/workflowCascade.js';
-import { existsById, getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { existsById, getByIdOrNotFound, namesARow, referenceShapeError } from '../lib/getOrNotFound.js';
 import { isTerminalLookup, withPositionScope } from '../lib/itemPositionScope.js';
 
 type ItemRow = typeof items.$inferSelect;
@@ -38,9 +38,6 @@ function addDepths(itemRows: ItemRow[]): (ItemRow & { depth: number })[] {
 
   return itemRows.map(item => ({ ...item, depth: getDepth(item.id) }));
 }
-
-// A reference field names a row unless it was left out or is `null` (wiki row-references §2).
-const namesARow = <T>(value: T | null | undefined): value is T => value !== undefined && value !== null;
 
 // The workphases a new workflow starts with: the named template's, else the named workflow's,
 // else none. The route has refused a reference that isn't a string, and a create that names both,
@@ -82,7 +79,7 @@ router.get('/:id', (req, res) => {
   const workflow = getByIdOrNotFound(workflows, req.params.id, res, 'Workflow not found');
   if (!workflow) return;
 
-  const { workphases: workflowWorkphases } = getOrderedWorkphases(workflow.id);
+  const workflowWorkphases = workphasesInOrder(workflow.id);
 
   // All items in any workphase of this workflow (across all projects that inherit it)
   const workflowItems = getWorkflowItems(workflowWorkphases);
@@ -114,10 +111,9 @@ router.post('/', (req, res) => {
     res.status(400).json({ error: 'projectId is required' });
     return;
   }
-  // An id is a string: better-sqlite3 throws on binding most other values (a 500), and flattens an
-  // array to the id it holds, so that would pass the checks below (wiki row-references §1).
-  if (typeof projectId !== 'string') {
-    res.status(400).json({ error: 'projectId must be a string' });
+  const projectShapeError = referenceShapeError('projectId', projectId);
+  if (projectShapeError) {
+    res.status(400).json({ error: projectShapeError });
     return;
   }
   // A bogus projectId would otherwise surface as an opaque FK-violation 500.
@@ -131,14 +127,14 @@ router.post('/', (req, res) => {
     res.status(409).json({ error: `Project already has a workflow: "${owned.name}"` });
     return;
   }
-  // A reference is a string, or `null` for none: no other value can name a row, and better-sqlite3
-  // throws on binding most of them, a 500 where the wiki promises a 400 (wiki row-references §1).
+  // A reference is a string, or `null` for none (wiki row-references §1).
   for (const [field, value] of [
     ['templateId', templateId],
     ['sourceWorkflowId', sourceWorkflowId],
   ]) {
-    if (namesARow(value) && typeof value !== 'string') {
-      res.status(400).json({ error: `${field} must be a string or null` });
+    const shapeError = referenceShapeError(field, value, { nullable: true, optional: true });
+    if (shapeError) {
+      res.status(400).json({ error: shapeError });
       return;
     }
   }

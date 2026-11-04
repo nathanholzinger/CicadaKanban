@@ -46,6 +46,20 @@ describe('POST /api/workphases', () => {
     expect(res.body.error).toMatch(/workflowId/);
   });
 
+  // A workflowId that isn't a string can't name a workflow. better-sqlite3 throws on binding most of
+  // them (a 500), and flattens an array to the one id it holds, so that creates the workphase
+  // (wiki row-references §1).
+  it('returns 400, and creates nothing, when workflowId is not a string', async () => {
+    const project = await createProject();
+    const workflow = await createWorkflow(project.id);
+    for (const value of [true, false, 7, 0, {}, [], [workflow.id]]) {
+      const res = await request(app).post('/api/workphases').send({ workflowId: value, name: 'Todo' });
+      expect(res.status, JSON.stringify(value)).toBe(400);
+      expect(res.body.error, JSON.stringify(value)).toContain('workflowId');
+    }
+    expect((await request(app).get(`/api/workflows/${workflow.id}`)).body.workphases).toEqual([]);
+  });
+
   it('places the first workphase at position 1.0 and appends the next at max + 1.0', async () => {
     const project = await createProject();
     const workflow = await createWorkflow(project.id);

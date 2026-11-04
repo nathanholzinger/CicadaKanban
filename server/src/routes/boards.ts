@@ -4,10 +4,10 @@ import { boards, columns, workflows, workphases, items } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { createDefaultBoard } from '../lib/defaultBoard.js';
 import { isColumnBroken, getCoveredWorkphases, computeUnsorted } from '../lib/columnRanges.js';
-import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
+import { getOrderedWorkphases, workphasesInOrder } from '../lib/workphaseOrder.js';
 import { getBoardScopeItems } from '../lib/workflowItems.js';
 import { deleteBoardsById } from '../lib/boardCascade.js';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound, referenceShapeError } from '../lib/getOrNotFound.js';
 import { ITEM_DEPTH_CAP } from '../lib/itemTree.js';
 import { isTerminalLookup, type PositionScope, withPositionScope } from '../lib/itemPositionScope.js';
 
@@ -112,10 +112,16 @@ router.post('/', (req, res) => {
     return;
   }
 
+  const shapeError = referenceShapeError('workflowId', workflowId);
+  if (shapeError) {
+    res.status(400).json({ error: shapeError });
+    return;
+  }
+
   const workflow = getByIdOrNotFound(workflows, workflowId, res, 'Workflow not found');
   if (!workflow) return;
 
-  const { workphases: workflowWorkphases } = getOrderedWorkphases(workflowId);
+  const workflowWorkphases = workphasesInOrder(workflowId);
   const board = createDefaultBoard(workflowId, name, workflowWorkphases, Date.now());
   res.status(201).json(board);
 });

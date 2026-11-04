@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { validateColumnRange } from '../lib/columnRanges.js';
 import { getOrderedWorkphases } from '../lib/workphaseOrder.js';
-import { getByIdOrNotFound } from '../lib/getOrNotFound.js';
+import { getByIdOrNotFound, referenceShapeError } from '../lib/getOrNotFound.js';
 import { applyReorderEntries, validateReorder } from '../lib/reorder.js';
 import { nextPosition } from '../lib/positionResolver.js';
 
@@ -18,6 +18,17 @@ router.post('/', (req, res) => {
   if (!boardId || !startWorkphaseId || !endWorkphaseId) {
     res.status(400).json({ error: 'boardId, startWorkphaseId and endWorkphaseId are required' });
     return;
+  }
+  for (const [field, value] of [
+    ['boardId', boardId],
+    ['startWorkphaseId', startWorkphaseId],
+    ['endWorkphaseId', endWorkphaseId],
+  ]) {
+    const shapeError = referenceShapeError(field, value);
+    if (shapeError) {
+      res.status(400).json({ error: shapeError });
+      return;
+    }
   }
 
   const board = getByIdOrNotFound(boards, boardId, res, 'Board not found');

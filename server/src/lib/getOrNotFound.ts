@@ -1,4 +1,5 @@
-// getByIdOrNotFound: fetch-by-id-or-404 helper used across the route files; existsById.
+// getByIdOrNotFound: fetch-by-id-or-404 helper used across the route files; existsById;
+// referenceShapeError and namesARow, the checks a reference field takes before a lookup.
 
 import type { Response } from 'express';
 import { eq } from 'drizzle-orm';
@@ -32,4 +33,22 @@ export function getByIdOrNotFound<T extends IdTable>(table: T, id: string, res: 
 export function existsById<T extends IdTable>(table: T, id: string, tx?: Tx): boolean {
   const e = tx ?? db;
   return !!e.select({ id: table.id }).from(table).where(eq(table.id, id)).get();
+}
+
+// A reference field names a row unless it was left out or is `null` (wiki row-references §2).
+export const namesARow = <T>(value: T | null | undefined): value is T => value !== undefined && value !== null;
+
+// The 400's message for a reference field that is not a string, or null when it is one
+// (wiki row-references §1). An id is a string: better-sqlite3 throws on binding most other
+// values (a 500), and flattens an array to the id it holds, so that would pass `existsById` and
+// name a row the request never meant to. `nullable` lets it be `null`, and `optional` lets it be
+// left out. A route checks that a required field is present first, with its own message, and
+// looks the row up after this.
+export function referenceShapeError(
+  field: string,
+  value: unknown,
+  { nullable = false, optional = false }: { nullable?: boolean; optional?: boolean } = {},
+): string | null {
+  if (typeof value === 'string' || (nullable && value === null) || (optional && value === undefined)) return null;
+  return `${field} must be a string${nullable ? ' or null' : ''}`;
 }

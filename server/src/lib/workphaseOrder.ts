@@ -25,7 +25,9 @@ export function buildRankMap(orderedWorkphases: Workphase[]): Map<string, number
 
 // A workflow's workphases ordered by position: the one query every read of that
 // order runs. Pass `client` (a transaction's `tx`, or `db`) to read inside a
-// caller's transaction; omit it to read standalone, as `existsById` does.
+// caller's transaction; omit it to read standalone, as `getOrderedWorkphases` does
+// without a client, and as the routes that don't need the rank map do
+// (`workphases.ts` POST, `workflows.ts` GET /:id, `boards.ts` POST).
 export function workphasesInOrder(workflowId: string, client: Tx | typeof db = db): Workphase[] {
   return client
     .select()
@@ -36,10 +38,13 @@ export function workphasesInOrder(workflowId: string, client: Tx | typeof db = d
 }
 
 // Fetches a workflow's workphases ordered by position plus the rank map
-// derived from them — the query + buildRankMap pairing every route needing
-// column-range math repeats (though not every caller needs the rank map;
-// workflows.ts GET /:id, for one, only uses `workphases`).
-export function getOrderedWorkphases(workflowId: string): { workphases: Workphase[]; rankMap: Map<string, number> } {
-  const ordered = workphasesInOrder(workflowId);
+// derived from them — the query + buildRankMap pairing every caller needing
+// column-range math wants. A caller that wants only the workphases calls
+// `workphasesInOrder`. Pass `client` to read inside a caller's transaction.
+export function getOrderedWorkphases(
+  workflowId: string,
+  client: Tx | typeof db = db,
+): { workphases: Workphase[]; rankMap: Map<string, number> } {
+  const ordered = workphasesInOrder(workflowId, client);
   return { workphases: ordered, rankMap: buildRankMap(ordered) };
 }

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** planning
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 1 built for review and commit
 
 ## Goal
 
@@ -200,8 +200,24 @@ Filled in by the Coder.
 
 | Symbol | Carries |
 |---|---|
+| `server/src/lib/getOrNotFound.ts::referenceShapeError` | D1: the 400's message for a reference that isn't a string, or null. `nullable` lets it be `null`, `optional` lets it be left out. |
+| `server/src/lib/getOrNotFound.ts::namesARow` | Moved from `workflows.ts`, beside the check that goes with it. |
+| `server/src/lib/workphaseOrder.ts::getOrderedWorkphases` | #22: takes the optional `client`, as `workphasesInOrder` does. |
 
 ## Amendments
+
+**1. 2026-11-04, Batch 1 built** (Coder).
+- **The check's options are `{ nullable, optional }`, not `{ required }`.** The test route's project parent must be given but may be `null`, and a request that leaves it out is refused today. `{ required }` has no word for that. Two flags cover all three cases, and every message and order is as D1 says.
+- **Sites that call it:**
+  - the three create routes and `POST /workflows`' `projectId`;
+  - `POST /workflows`' two optional references, `itemHierarchy.ts::validateHierarchyRequest`'s `parentId` and `workphaseId`, `projects.ts`'s `parentError` and its `prevId`/`nextId`, and the test route's project parent.
+- **A column's start and end** were already refused when they aren't strings, one step later: the rank map is keyed by id, so a lookup by an array finds nothing. They now get the shape message first. Only the board's id changed behavior. `PUT /columns/:id` is the same lookup and stays as it is.
+- **Tests:**
+  - **The three new refusal tests** fail on the old source for `workflowId` on a workphase and on a board, and for `boardId` on a column. The start and end cases pass on the old source too, and stay as the pin for the new message.
+  - **TREE-10.12's three tests are stamped.** The owner's values table gained `""`, and the test is retitled "empty or not a string", since `""`, `false` and `0` are refused as missing, ahead of the shape check.
+  - **Two assertions added, which the plan didn't list:** TREE-10.12 names two clauses no test asserted, that `Q` still has `W` alone and that a create naming `P` by its id is then accepted. The first is in the ownership-order test and the second at the end of the values test. Without them the case would stay partial at the confirming run.
+  - **The optional references' values are the owner's,** with the array holding an id the field would name (a real template, a real workflow).
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 660, scripts 235). `npm run test:e2e` gives 216 passed, 21 skipped, 0 failed, as at the end of Story 8.7.
 
 ## Open questions
 

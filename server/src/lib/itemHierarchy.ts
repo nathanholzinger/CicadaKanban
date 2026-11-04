@@ -8,7 +8,7 @@ import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db, type Tx } from '../db/index.js';
 import { items, workphases, notifications } from '../db/schema.js';
-import { existsById } from './getOrNotFound.js';
+import { existsById, referenceShapeError } from './getOrNotFound.js';
 import { ancestorsOf, parentRefusal, walkItemDescendants } from './itemTree.js';
 import { cascadeWorkphaseToAttachedDescendants } from './attachedCascade.js';
 import { positionScopeFor, workflowIdForWorkphase } from './itemPositionScope.js';
@@ -251,15 +251,13 @@ export function resolveCreate(
 // when the request is legal. Order: shape → parent legality → resulting-state
 // invariants → anchor.
 export function validateHierarchyRequest(item: ItemRow, req: HierarchyRequest): string | null {
-  if (req.parentId !== undefined && req.parentId !== null && typeof req.parentId !== 'string') {
-    return 'parentId must be a string or null';
-  }
+  const parentShapeError = referenceShapeError('parentId', req.parentId, { nullable: true, optional: true });
+  if (parentShapeError) return parentShapeError;
   if (req.isAttached !== undefined && typeof req.isAttached !== 'boolean') {
     return 'isAttached must be a boolean';
   }
-  if (req.workphaseId !== undefined && req.workphaseId !== null && typeof req.workphaseId !== 'string') {
-    return 'workphaseId must be a string or null';
-  }
+  const workphaseShapeError = referenceShapeError('workphaseId', req.workphaseId, { nullable: true, optional: true });
+  if (workphaseShapeError) return workphaseShapeError;
   if (req.anchorId !== undefined && req.side !== 'before' && req.side !== 'after') {
     return "side must be 'before' or 'after' when anchorId is given";
   }

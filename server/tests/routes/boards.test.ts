@@ -183,6 +183,19 @@ describe('POST /api/boards', () => {
     expect(res.status).toBe(404);
   });
 
+  // A workflowId that isn't a string can't name a workflow. better-sqlite3 throws on binding most of
+  // them (a 500), and flattens an array to the one id it holds, so that creates the board
+  // (wiki row-references §1).
+  it('returns 400, and creates nothing, when workflowId is not a string', async () => {
+    const { workflow } = await workflowWithPhases([]);
+    for (const value of [true, false, 7, 0, {}, [], [workflow.id]]) {
+      const res = await request(app).post('/api/boards').send({ workflowId: value, name: 'X' });
+      expect(res.status, JSON.stringify(value)).toBe(400);
+      expect(res.body.error, JSON.stringify(value)).toContain('workflowId');
+    }
+    expect(await boardsOf(workflow.id)).toHaveLength(1);
+  });
+
   it("bootstraps a new board with 1:1 columns matching the workflow's current workphases", async () => {
     const { workflow } = await workflowWithPhases(['Todo', 'Done']);
 
