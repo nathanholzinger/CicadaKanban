@@ -1054,7 +1054,7 @@ banner.
 ---
 
 ### Story 8.8 — A pickup takes its descendants with it ✅ (done 2026-11-04)
-**Plan:** [`story-8-8-pickup-carries-branch.md`](story-8-8-pickup-carries-branch.md)
+**Plan / record:** [`story-8-8-pickup-carries-branch.md`](../../archive/story-8-8-pickup-carries-branch.md)
 
 **Found with Story 8.5** (Nathan, 2026-11-03). Story 8.5 marks a dragged
 Stub's descendant rows at low opacity, and leaves them drawn in the section
@@ -1118,61 +1118,9 @@ suppressed".
 
 ---
 
-### Story 8.10 — The carried copy sometimes leaves the cursor at a context switch
-**Found testing Story 8.8** (Nathan, 2026-11-04). Moving in and out of
-contexts, the carried copy sometimes ends up away from the cursor. There
-are no reliable steps yet, and it may be older than 8.8. A defect is fixed
-in Story 8, whichever story finds it (How Story 8 runs).
-
-**First, tell it apart from the offsets the drag has by design:**
-- **The clamp.** While the cursor is outside the context and the pop-out
-  clock runs, the copy is held at the context's edge (wiki
-  board-drag-interaction §2), and it catches up at the pop. Since 8.8, a
-  section is shorter by the carried branch, so the copy meets the Card's
-  bottom sooner.
-- **The jump at a layer change.** Rows move under a cursor that hasn't,
-  and the copy re-anchors. It's momentary, and it's the zoom-in morph's
-  (below).
-- **A defect is an offset that stays:** the copy stays off the cursor
-  while the cursor moves around inside one context, after any pop has
-  settled.
-
-**What to note when it happens:**
-- what was picked up, a Card or a Stub;
-- the switches on the way: a zoom into a Card, a pop out to a column, a
-  move from one Card's section to another's, the hierarchy modal;
-- whether the board or the window scrolled during the drag;
-- whether the offset stays as the cursor moves inside one context;
-- a screen recording, if one can be had.
-
-**Is it 8.8's?** Commit `b065b24` holds 8.8's trial behind its switch, so
-one build runs with the collapse and without it. `c59a268` is the board
-before 8.8.
-
-**Leads, from reading the code** (unconfirmed):
-- **The re-anchor works one way.**
-  `dragOverlayGeometry.ts::reanchorOverlayTransform` puts the copy under
-  the cursor only when a Card's pickup turns into a Stub. Every other
-  switch keeps dnd-kit's pickup offset. So a Stub's pickup drawn as a
-  shortCard hangs from the point where the Stub was picked up.
-- **The clamp reads `draggingNodeRect`.** Its size catches up with a form
-  switch a few frames late (dnd-kit's ResizeObserver). The re-anchor
-  reads `pickupRectRef` for that reason, and the clamp doesn't.
-- **The snap tween is applied twice** after a pop, once for the collision
-  rect and once for the copy (`useBoardDnd.ts`, the comment on
-  `clampToContext`). The comment counts it as cosmetic, for at most
-  `popSnapMs`.
-
-**Without reliable steps,** a throwaway spec can look for it: run against
-the test servers, it drives many switches through
-`tests/helpers/dragGesture.ts` and checks the copy's box against the
-cursor after each one settles. It's deleted afterward, as 8.8's Phase 1
-did with its spec, so it isn't a new drag test. The fix follows the
-cause. Its plan is written when the story is picked up.
-
----
-
 ### Story 8.11 — A project's pickup takes its descendants with it
+**Plan:** [`story-8-11-project-pickup-carries-branch.md`](story-8-11-project-pickup-carries-branch.md)
+
 **Found with Story 8.8** (Nathan, 2026-11-04). Nathan wants the sidebar's
 drag to carry a project's branch the way 8.8 carries a Stub's:
 - at pickup, the dragged project's descendants leave the sidebar's rows;
@@ -1218,8 +1166,7 @@ them:
 - **The Planner:** TREE-2.1, "The dragged project's descendants are
   dimmed for the whole drag", among others.
 
-**It runs after Story 8.8 closes,** on 8.8's settled pieces. Its plan is
-written when the story is picked up.
+**It runs after Story 8.8 closes,** on 8.8's settled pieces.
 
 ---
 
