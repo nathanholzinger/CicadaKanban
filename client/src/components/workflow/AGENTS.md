@@ -232,10 +232,14 @@ active-context outline, the drop line's shape).
 - **The rows that travel with the dragged item:** `dragClassification.ts`'s
   `subtreeIds`, read by both the projection's exclusion and
   `dragCollision.ts::travelingRowsFor` (which the hierarchy modal's placement reads too).
-  Never re-derive it by filtering for cycle-forming states. The mark that those rows draw
-  as off-limits reads `attachedDescendantIds` (the descendants drawn as Stubs; an overflow
-  row asks `subtreeIds` for its owner, in `DragSessionContext.ts::useOverflowTravels`),
-  from the same classification, at every layer.
+  Never re-derive it by filtering for cycle-forming states.
+- **What a target can be to the carried item, and how strongly its row is drawn:**
+  `dragClassification.ts`'s `tiers` (`parent`, `anchor`, `neither`), one per item, from
+  the same walk as `states` and at every layer. `DragSessionContext.ts::useDropTargetState`
+  exposes it; an overflow row, which is no item, asks `useOverflowTier` for its owner. A row
+  draws its tier by opacity on a wrapper around its own content (`dragChrome.tsx`,
+  `contentClassName`), never on its root, so the drop line and a Card's section of Stubs keep
+  their own strength. The pending pulse sits on the same wrapper, halving its opacity.
 - **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
   gate and the over-cap cue both read it, so they can't disagree.
 - **The tree a pickup counts over:** `itemListOps.ts::withPendingParents`, each item's
@@ -301,7 +305,7 @@ active-context outline, the drop line's shape).
   that opens the hierarchy modal, absent while none runs), and `data-drag-projection` (`"<gap>:<depth>:<valid>"`, the gap
   counted among all the section's rows, present only while locked at a `descendants:`
   context). Cards/Stubs carry `data-item-id` and
-  `data-drop-state`, `data-pending` while their write is in flight, and
+  `data-drop-state`, `data-drop-tier`, `data-pending` while their write is in flight, and
   `data-placement-valid` on the active row while over cap. The live drop line is drawn on
   the row the side highlight names, an overflow row included, and carries `data-drop-side`
   (`before`/`after`). An overflow row carries

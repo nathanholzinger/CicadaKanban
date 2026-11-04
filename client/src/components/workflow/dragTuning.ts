@@ -57,9 +57,16 @@ export interface DragTuning {
   modalHoldDwellMs: number;
   /** The modal hold's cue: once the dwell has passed, how much longer the ghost must stay before the modal opens. */
   modalHoldCueMs: number;
-  /** Classification overlays: the green "these are yours" ring, and how far a depth-capped target is dimmed. */
-  overlayFreeDescendantColor: string;
-  overlayDepthCappedOpacity: number;
+  /**
+   * How strongly a row is drawn says what its target can be to the carried item
+   * (`dragClassification.ts::DropTier`; a legal parent is full strength). This one is a target
+   * that is an anchor but not a parent.
+   */
+  overlayAnchorOpacity: number;
+  /** A target that is not even an anchor (`dragClassification.ts::DropTier`). */
+  overlayNeitherOpacity: number;
+  /** The carried item's own row, left in the list while it is dragged. Apart from the tier above so the two can part. */
+  overlayGhostOpacity: number;
   /**
    * An outline drawn around whichever region — column, sub-row, or a Card's
    * Descendants layer — is the pop machine's current `contextKey`, so the locked layer is
@@ -68,17 +75,6 @@ export interface DragTuning {
    * genuinely popped out.
    */
   activeContextOutlineColor: string;
-  /**
-   * Which candidate look marks the rows of the carried item's own branch: `'dim'` takes the
-   * dragged row's own opacity, `'grey'` desaturates and dims (`BoardView.tsx::overlayVars`).
-   */
-  overlayTravelingLook: string;
-  /** Look `'dim'`: the rows' opacity. The dragged row's own is 0.3 (`dragChrome.tsx`). */
-  overlayTravelingDimOpacity: number;
-  /** Look `'grey'`: the rows' opacity, apart from the Depth-capped dim's. */
-  overlayTravelingGreyOpacity: number;
-  /** Look `'grey'`: how far the rows desaturate, 0 to 1. */
-  overlayTravelingGreyAmount: number;
   /** How long the cue for a drag the board stopped stays up (`useForcedStop.ts`), unless the next drag starts first. */
   forcedStopCueMs: number;
   /** Whether the item that was being dragged flashes where the reloaded board draws it. */
@@ -95,13 +91,10 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   sectionLevels: 3,
   modalHoldDwellMs: 500,
   modalHoldCueMs: 800,
-  overlayFreeDescendantColor: 'rgba(16, 185, 129, 0.6)',
-  overlayDepthCappedOpacity: 0.4,
+  overlayAnchorOpacity: 0.6,
+  overlayNeitherOpacity: 0.3,
+  overlayGhostOpacity: 0.3,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
-  overlayTravelingLook: 'dim',
-  overlayTravelingDimOpacity: 0.3,
-  overlayTravelingGreyOpacity: 0.6,
-  overlayTravelingGreyAmount: 1,
   forcedStopCueMs: 5000,
   forcedStopFlash: true,
 };

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.5 — The drag-target cues say what a target can be
 
-**Type:** story · **Written:** 2026-11-02 by the Architect, from the PO's Story 6 hands-on finding (2026-09-24). Widened 2026-11-03 by Nathan · **Status:** in progress: Phase 1 built, Phase 2 next
+**Type:** story · **Written:** 2026-11-02 by the Architect, from the PO's Story 6 hands-on finding (2026-09-24). Widened 2026-11-03 by Nathan · **Status:** in progress: Phase 2 built, for review; Phase 3 next (hands-on)
 
 ## Goal
 
@@ -135,17 +135,17 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Code map
 
-Filled in by the Coder while building. The rows below are Phase 1's. Phase 2 replaces the ones its removals reach.
+Phase 2's. Phase 1's rows (the traveling set, `useOverflowTravels`, `data-traveling`, the look switch) are gone.
 
 | Symbol | Carries |
 |---|---|
-| `dragClassification.ts::DragClassification.attachedDescendantIds` | The descendants drawn as Stubs, from the same walk as `freeDescendantIds`. Disjoint from it, and never the carried item |
-| `DragSessionContext.ts::DropTargetView.isTraveling`, `useOverflowTravels(ownerId)` | A row's view of the set; an overflow row, which is no item, asks whether its owner is in `subtreeIds` |
-| `dragChrome.tsx::TRAVELING_ROW`, `dropTargetClass`, `data-traveling` | The mark: the row's opacity and filter from two CSS custom properties. It wins over nothing else, since the three overlays never share a row. `data-traveling` is the test surface |
-| `StubRows.tsx::OverflowRow` | Now draws `chromeClassName`, which is the mark only: an overflow row has no other drag chrome |
-| `dragTuning.ts` | `overlayTravelingLook` (`'dim'`), `overlayTravelingDimOpacity` (0.3), `overlayTravelingGreyOpacity` (0.6), `overlayTravelingGreyAmount` (1) |
-| `BoardView.tsx::overlayVars` | Turns the chosen look into `--drag-overlay-traveling-opacity` and `--drag-overlay-traveling-filter` |
-| `DragTuningPanel.tsx` | The "Carried branch's rows" look switch and the three strengths |
+| `dragClassification.ts::DropTier`, `DragClassification.tiers` | `'parent'` (a legal parent), `'anchor'` (an anchor, not a parent), `'neither'`, one per item but the carried one. A Free Card is never `'neither'`; a Stub takes its parent's say. Replaces `freeDescendantIds` and `attachedDescendantIds` |
+| `DragSessionContext.ts::DropTargetView.tier`, `useOverflowTier(ownerId)` | A row's tier. An overflow row, which is no item, takes `'parent'` from an owner that is a legal parent and `'neither'` otherwise |
+| `dragChrome.tsx::TIER_CLASS`, `useItemRow`'s `contentClassName` and `data-drop-tier` | The tier as opacity, and the pending pulse, for a wrapper around the row's own content. `chromeClassName` is now the root's: the ghost's value and the flash |
+| `StubRows.tsx::AttachedChildRow`, `OverflowRow`, `KanbanCard.tsx` | Each wraps its own content in `contentClassName`. The drop line, and a Card's section of Stubs, stay outside |
+| `index.css::drag-tier-pulse`, `.drag-tier-pending` | The pending pulse, between the content's own opacity (`--tier-opacity`) and half of it |
+| `dragTuning.ts` | `overlayAnchorOpacity` (0.6), `overlayNeitherOpacity` (0.3), `overlayGhostOpacity` (0.3). Gone: `overlayFreeDescendantColor`, `overlayDepthCappedOpacity`, `overlayTraveling*` |
+| `BoardView.tsx::overlayVars`, `DragTuningPanel.tsx` | The three values as `--drag-tier-anchor`, `--drag-tier-neither` and `--drag-tier-ghost`, and their fields |
 
 ## Amendments
 
@@ -164,6 +164,18 @@ Filled in by the Coder while building. The rows below are Phase 1's. Phase 2 rep
 3. **Superseded in Phase 1's record:** the two candidate looks (amendments 1 and 2), and the old D3's reason for keeping the mark apart from the Depth-capped dim, which sorted rows by cause. Amendment 3's "D4" is the old D4, now D1's last bullet. Its overflow-row rule widens from an owner that travels to any owner that isn't Valid.
 
 **2026-11-03: the pending pulse** (Nathan). It pulses to half the row's own opacity (D3), which closes its Open question. Phase 2 builds it, and Phase 3 tries it.
+
+**Phase 2, built.**
+
+1. **Names:** the tiers are `parent` (Full), `anchor` (MO) and `neither` (LO), the test attribute is `data-drop-tier`, and the tuning values are `overlayAnchorOpacity` (0.6), `overlayNeitherOpacity` (0.3) and `overlayGhostOpacity` (0.3).
+2. **The way the line and the Stubs stay out of the dim:** every row type wraps its own content in one element that carries the tier, and the drop line and a Card's section stay outside it. A Stub row wraps its button, an overflow row uses the inner element it already had, and a Card wraps its pills, title, description and footer. So an MO Card's Stubs draw at their own tier (LO, no darker), and no opacity is scaled.
+3. **A Card dims its content, and its box stays.** The Card's border and background are on its root, which cannot take the opacity without dimming the line and the section. So an MO Card draws its text at MO on a full-strength box, where a Stub row's box is inside its content and dims with it. If the hands-on finds the Card reads as less dimmed than a Stub row, the fix is a background layer that takes the opacity in the content's place. It is not built.
+4. **The ghost's value stays on the row's root,** as the fixed `opacity-30` was. That keeps the ghost's over-cap outline dimmed as it was, and nothing in a dragged row needs protecting from it.
+5. **The pending pulse** is one keyframe on the same wrapper (`index.css::drag-tier-pulse`) that halves the wrapper's own opacity, from a custom property the tier sets (1 with none). It replaces `animate-pulse` on the root. Two things change with it: the drop line no longer pulses, and a pending Card pulses its own content, where it used to pulse its Stubs too. Each pending Stub pulses on its own. A pending ghost pulses on its content inside its root's value, so it halves from 0.3.
+6. **The overflow row's tier is from its owner's state alone.** A legal-parent owner makes it `parent`, anything else `neither`, with no check of the layer. I did not verify that a hold can never start beside a `neither` overflow row (D1 takes it from `modalHoldTarget` refusing a state over the cap), only that the cue is inside the dimmed element. That is a hands-on item.
+7. **`data-drop-state` and `isValidParent` are untouched,** and so is `subtreeIds`.
+8. **Tests:** the classification's, in one fixture: a legal parent, a Free Card and a Stub (`parent`); a Free descendant, a Depth-capped Free Card and a Depth-capped Stub under a legal parent (`anchor`); the carried item's Stubs at two depths, a Stub inside a Free descendant, and a Stub under an anchor-only Stub (`neither`); a dragged Stub; and the Stub test it is handed. `useBoardDnd.test.ts`'s two pending pickups read the new tier. The chrome's: both anchor and neither, the tier not on the root, full strength for a legal parent, the carried copy and no drag, the ghost's value on the root with no tier, an overflow row by its owner, a pending row, and, rendered, a Stub row and a Card with a section. All were shown failing: a Free Card made `neither` (6 failed), a Stub that ignores its parent (8), no `parent` tier (3), an overflow row always `parent` (1), the tier on the root (3), the pulse dropped (1), no ghost value (1), and the carried copy given a tier (1). Not covered: that the drop line is not dimmed on screen (the line is drawn only for a named neighbor, and the tests show it outside the wrapper by structure), and that the hierarchy modal inherits the custom properties.
+9. **E2E:** `DRAG-7.12` is skipped, as the plan says, with its key renamed so it still compiles. No other spec failed: 218 passed and 19 skipped.
 
 ## Open questions
 

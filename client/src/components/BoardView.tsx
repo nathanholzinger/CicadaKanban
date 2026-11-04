@@ -255,23 +255,14 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
     handleDragStart(event);
   }
 
-  // The classification overlays' colors and the active-context outline reach
-  // the drag chrome (`dragChrome.tsx`, which every Card and Stub row draws) as
-  // CSS custom properties, so the dev/test panel can change them without a
-  // rebuild.
+  // The tiers' opacities and the active-context outline reach the drag chrome
+  // (`dragChrome.tsx`, which every Card and Stub row draws) as CSS custom
+  // properties, so the dev/test panel can change them without a rebuild.
   const overlayVars = {
-    '--drag-overlay-free': dragTuning.overlayFreeDescendantColor,
-    '--drag-overlay-capped-opacity': dragTuning.overlayDepthCappedOpacity,
+    '--drag-tier-anchor': dragTuning.overlayAnchorOpacity,
+    '--drag-tier-neither': dragTuning.overlayNeitherOpacity,
+    '--drag-tier-ghost': dragTuning.overlayGhostOpacity,
     '--active-context-outline': dragTuning.activeContextOutlineColor,
-    ...(dragTuning.overlayTravelingLook === 'grey'
-      ? {
-          '--drag-overlay-traveling-opacity': dragTuning.overlayTravelingGreyOpacity,
-          '--drag-overlay-traveling-filter': `grayscale(${dragTuning.overlayTravelingGreyAmount})`,
-        }
-      : {
-          '--drag-overlay-traveling-opacity': dragTuning.overlayTravelingDimOpacity,
-          '--drag-overlay-traveling-filter': 'none',
-        }),
   } as CSSProperties;
 
   async function submitColumn(data: Parameters<typeof handleCreateColumn>[0]) {

@@ -10,13 +10,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
-import {
-  useDragSession,
-  useDropTargetState,
-  useIsPending,
-  useOverflowTravels,
-  type DropTargetView,
-} from './workflow/DragSessionContext';
+import { useDragSession, useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
+import type { DropTier } from './workflow/dragClassification';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import type { OverlayForm } from './workflow/placement';
 import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
@@ -46,37 +41,31 @@ function useLiveDropSide(itemId: string): DropSide | null {
   return anchor?.anchorId === itemId ? anchor.side : null;
 }
 
-// The drag-target overlays (wiki board-drag-interaction §4). The
-// *classification* is settled and exposed as `data-drop-state` for tests;
-// the look — palette, weight, animation — is a placeholder, not yet tuned
-// against real gestures. Green: a Free descendant of the carried item
-// ("these are yours"). Dimmed: a real target this item can't use
-// (depth-capped). Valid draws nothing. The color and the dim level are CSS
-// custom properties BoardView sets from the dev/test panel.
-const OVERLAY_FREE_DESCENDANT = 'ring-2 ring-(--drag-overlay-free)';
-const OVERLAY_DEPTH_CAPPED = 'opacity-(--drag-overlay-capped-opacity)';
-// A row of the carried item's own branch: drawn where it was while the ghost moves away, so it
-// reads as part of what is carried, not a place to set it down. Two candidate looks, switched in
-// the dev/test panel; `BoardView.tsx` sets the one chosen as these two properties.
-const TRAVELING_ROW = 'opacity-(--drag-overlay-traveling-opacity) [filter:var(--drag-overlay-traveling-filter)]';
+// How strongly a row is drawn says what its target can be to the carried item
+// (`dragClassification.ts::DropTier`): a legal parent at full strength, an anchor that is
+// not a parent at mid opacity, a target that is not even an anchor at low. By opacity only, no
+// color. The two levels and the carried item's own row (the ghost's) are CSS custom properties
+// BoardView sets from the dev/test panel. The classification itself is settled and exposed as
+// `data-drop-state` and `data-drop-tier` for tests; the look is a working placeholder.
+//
+// The opacity sits on a wrapper around the row's own content (`contentClassName`), not on its
+// root, so what the row holds keeps its own strength: the drop line (an absolutely positioned
+// child of the root) and a Card's section of Stubs, each of which has its own tier. The ghost's
+// own value stays on the root, since nothing it holds is drawn at another strength.
+const TIER_CLASS: Record<DropTier, string> = {
+  parent: '',
+  anchor: 'opacity-(--drag-tier-anchor) [--tier-opacity:var(--drag-tier-anchor)]',
+  neither: 'opacity-(--drag-tier-neither) [--tier-opacity:var(--drag-tier-neither)]',
+};
+const GHOST_ROW = 'opacity-(--drag-tier-ghost)';
 // A write is in flight for this item — it's drawn at the slot it was
-// dropped in, and its position is the server's to confirm. Test surface:
-// `data-pending`.
-const PENDING = 'animate-pulse';
+// dropped in, and its position is the server's to confirm. It pulses between the content's own
+// opacity and half of it (`index.css::drag-tier-pulse`), so a dim row dims further instead of
+// brightening. Test surface: `data-pending`.
+const PENDING = 'drag-tier-pending';
 // The item a drag was stopped on, drawn on the reloaded board so the user sees where it went
 // (`index.css::forced-stop-flash`). Switched in the dev/test panel.
 const STOP_FLASH = 'forced-stop-flash';
-
-// `traveling` is whether this row draws part of the carried branch: an attached descendant's
-// Stub row, or the overflow row of an owner that travels. A Free descendant keeps its ring and a
-// depth-capped row its dim; none of the three overlaps another.
-function dropTargetClass(view: DropTargetView | null, traveling: boolean): string {
-  if (traveling) return TRAVELING_ROW;
-  if (!view) return '';
-  if (view.isFreeDescendant) return OVERLAY_FREE_DESCENDANT;
-  if (view.state === 'depth-capped') return OVERLAY_DEPTH_CAPPED;
-  return '';
-}
 
 // The drop line, less its color and its vertical offset: the board's rows
 // draw it in blue, and the project sidebar's (`SortableProjectRow.tsx`) draw it
@@ -128,8 +117,8 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
   });
   const dropSide = useLiveDropSide(itemId);
   const dropTarget = useDropTargetState(isOverlay ? '' : itemId);
-  const overflowTravels = useOverflowTravels(role === 'overflow' && !isOverlay ? parentId : null);
-  const traveling = (dropTarget?.isTraveling ?? false) || overflowTravels;
+  const overflowTier = useOverflowTier(role === 'overflow' && !isOverlay ? parentId : null);
+  const tier = dropTarget?.tier ?? overflowTier;
   const pending = useIsPending(isOverlay ? '' : itemId);
   const flashed = useIsFlashedAfterStop(isOverlay ? '' : itemId);
   return {
@@ -148,11 +137,14 @@ export function useItemRow(itemId: string, role: ItemRowRole, options: ItemRowOp
       // right now (placement.ts::overlayFormFor).
       'data-drag-overlay-form': isOverlay ? overlayForm : undefined,
       'data-drop-state': dropTarget?.state,
-      'data-traveling': traveling ? 'true' : undefined,
+      'data-drop-tier': tier ?? undefined,
       'data-pending': pending ? 'true' : undefined,
       'data-stop-flash': flashed ? 'true' : undefined,
     },
-    chromeClassName: `${dropTargetClass(dropTarget, traveling)} ${pending ? PENDING : ''} ${isDragging ? 'opacity-30' : ''} ${flashed ? STOP_FLASH : ''}`,
+    // The root's: the ghost's own opacity, and the flash.
+    chromeClassName: `${isDragging && !isOverlay ? GHOST_ROW : ''} ${flashed ? STOP_FLASH : ''}`,
+    // The wrapper around the row's own content: its tier, and the pending pulse on that.
+    contentClassName: `${tier ? TIER_CLASS[tier] : ''} ${pending ? PENDING : ''}`,
   };
 }
 

@@ -145,13 +145,13 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
 
   it('classifies an item a pending attachment puts in the dragged Card as its descendant', () => {
     // F is Free and has been dropped on P, the write in flight: F is drawn as one of P's Stubs, so it
-    // can't take P, and it is no Card of its own to mark.
+    // can't take P, and as a Stub under the carried item it can't be named either.
     const items = [makeItem('p'), makeItem('f')];
     const placements = new Map<string, Placement>([['f', { parentId: 'p', slot: 'last' }]]);
-    const { states, freeDescendantIds } = pickupSession('p', items, placements)!.classification;
+    const { states, tiers } = pickupSession('p', items, placements)!.classification;
 
     expect(states.get('f')).toBe('cycle-forming');
-    expect(freeDescendantIds.has('f')).toBe(false);
+    expect(tiers.get('f')).toBe('neither');
   });
 
   describe('a detach that is still pending, which keeps its parent', () => {
@@ -159,12 +159,12 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
     // parent, but a detach leaves C under P (wiki item-attachment §11), so the tree has it there.
     const detaching = new Map<string, Placement>([['c', { parentId: null, slot: 'last' }]]);
 
-    it('is still a descendant of its parent, and now a Card of its own to mark', () => {
+    it('is still a descendant of its parent, and now a Card of its own, so an anchor', () => {
       const items = [makeItem('p'), makeItem('c', { parentId: 'p' })];
-      const { states, freeDescendantIds } = pickupSession('p', items, detaching)!.classification;
+      const { states, tiers } = pickupSession('p', items, detaching)!.classification;
 
       expect(states.get('c')).toBe('cycle-forming');
-      expect(freeDescendantIds.has('c')).toBe(true);
+      expect(tiers.get('c')).toBe('anchor');
     });
 
     it('still sits one level down, for the depth of what is put under it', () => {

@@ -59,49 +59,76 @@ describe('classifyDragTargets — Card drag', () => {
     expect(subtreeIds).toEqual(new Set(['X', 'S', 'D', 'D1']));
   });
 
-  it('DRAG-2.5: only the Free descendants carry the relationship marker', () => {
-    const items = [item('X'), item('S', 'X'), item('D', 'X', false), item('D1', 'D'), item('D2', 'D', false)];
-    const { freeDescendantIds } = classifyDragTargets('X', items, CAP);
-    expect(freeDescendantIds).toEqual(new Set(['D', 'D2']));
-  });
-
-  it('holds the attached descendants at every depth, and neither the carried item nor a Free descendant', () => {
+  describe('the tier of each target: what it can be to the carried item', () => {
+    // X is a Free Card carrying two levels: a Stub S with a Stub S1 of its own, and a Free
+    // descendant D with a Stub DS. A chain T1..T{CAP} is the target the cap cuts: with X two
+    // levels deep, T{CAP - 3} is the last legal parent, and T{CAP - 2} on down are too deep.
+    const T = (depth: number) => `T${depth}`;
     const items = [
       item('X'),
       item('S', 'X'),
       item('S1', 'S'),
-      item('S2', 'S1'), // three levels down, still carried
-      item('D', 'X', false), // Free: its own Card, with the green ring
-      item('DS', 'D'), // a Stub inside the Free descendant's Card: still the carried branch's
-      item('V'),
-      item('VS', 'V'),
+      item('D', 'X', false),
+      item('DS', 'D'),
+      ...chain('T', CAP),
+      item('FC', T(CAP - 3), false), // a Free Card too deep to take X, under the last legal parent
+      item('V'), // a Free Card that fits
+      item('VS', 'V'), // and its Stub
     ];
-    const { attachedDescendantIds, freeDescendantIds } = classifyDragTargets('X', items, CAP);
-    expect(attachedDescendantIds).toEqual(new Set(['S', 'S1', 'S2', 'DS']));
-    expect(freeDescendantIds).toEqual(new Set(['D']));
-  });
+    const { tiers } = classifyDragTargets('X', items, CAP);
 
-  it('holds the attached descendants of a dragged Stub, and is empty for a leaf', () => {
-    const items = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S2', 'P')];
-    expect(classifyDragTargets('S1', items, CAP).attachedDescendantIds).toEqual(new Set(['S1a']));
-    expect(classifyDragTargets('S2', items, CAP).attachedDescendantIds.size).toBe(0);
-  });
+    it('is "parent" for a legal parent, a Free Card or a Stub', () => {
+      for (const id of ['V', 'VS', T(CAP - 3)]) expect(tiers.get(id), id).toBe('parent');
+    });
 
-  it('holds the descendants drawn as Stubs by the test it is handed, as the tree stands with its writes pending', () => {
-    // C is stored detached but its attach is in flight, so it draws as a Stub; A is stored
-    // attached but its detach is in flight, so it draws as a Card of its own.
-    const items = [item('X'), item('A', 'X'), item('C', 'X', false)];
-    const drawnAsStub = (i: Item) => i.id === 'C';
-    const { attachedDescendantIds, freeDescendantIds } = classifyDragTargets('X', items, CAP, drawnAsStub);
-    expect(attachedDescendantIds).toEqual(new Set(['C']));
-    expect(freeDescendantIds).toEqual(new Set(['A']));
-  });
+    it('is "anchor" for a Free Card that is no legal parent, whatever its parent, and for a Stub too deep under a legal parent', () => {
+      expect(tiers.get('D')).toBe('anchor'); // a Free descendant: cycle-forming
+      expect(tiers.get('FC')).toBe('anchor'); // depth-capped, and a Stub's parent is not what makes a Card an anchor
+      expect(tiers.get(T(CAP - 2))).toBe('anchor'); // depth-capped Stub, its parent a legal one
+    });
 
-  it('marks the descendants that are Free by the Stub test it is handed, not by their stored attachment', () => {
-    // S is stored attached and D stored detached, but the board draws S as a Card and D as a Stub.
-    const items = [item('X'), item('S', 'X'), item('D', 'X', false)];
-    const drawnAsStub = (i: Item) => i.id === 'D';
-    expect(classifyDragTargets('X', items, CAP, drawnAsStub).freeDescendantIds).toEqual(new Set(['S']));
+    it('is "neither" for a Stub whose parent is no legal parent, at any depth below it', () => {
+      expect(tiers.get('S')).toBe('neither'); // X's own descendants: under the carried item
+      expect(tiers.get('S1')).toBe('neither');
+      expect(tiers.get('DS')).toBe('neither'); // a Stub inside a Free descendant's Card
+      expect(tiers.get(T(CAP - 1))).toBe('neither'); // under an anchor-only Stub
+      expect(tiers.get(T(CAP))).toBe('neither');
+    });
+
+    it('is none for the carried item', () => {
+      expect(tiers.has('X')).toBe(false);
+    });
+
+    it('is none for an id that is not on the board, and a tier for every other item', () => {
+      expect(tiers.has('ghost')).toBe(false);
+      expect([...tiers.keys()].sort()).toEqual(
+        items
+          .filter(i => i.id !== 'X')
+          .map(i => i.id)
+          .sort(),
+      );
+    });
+
+    it('is one tier per item for a dragged Stub: its descendants "neither", its sibling and parent "parent"', () => {
+      const stubs = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S1a1', 'S1a'), item('S2', 'P')];
+      const stubTiers = classifyDragTargets('S1', stubs, CAP).tiers;
+      expect(stubTiers.get('S1a')).toBe('neither');
+      expect(stubTiers.get('S1a1')).toBe('neither');
+      expect(stubTiers.get('S2')).toBe('parent');
+      expect(stubTiers.get('P')).toBe('parent');
+      expect(stubTiers.has('S1')).toBe(false);
+    });
+
+    it('reads a descendant by the Stub test it is handed, not its stored attachment', () => {
+      // C is stored detached but its attach is in flight, so the board draws it as a Stub of X's, which
+      // a Stub of the carried item can't be named for. A is stored attached but its detach is in
+      // flight, so it is a Card of its own.
+      const pending = [item('X'), item('A', 'X'), item('C', 'X', false)];
+      const drawnAsStub = (i: Item) => i.id === 'C';
+      const handed = classifyDragTargets('X', pending, CAP, drawnAsStub).tiers;
+      expect(handed.get('C')).toBe('neither');
+      expect(handed.get('A')).toBe('anchor');
+    });
   });
 
   it.each([4, 6, 8])('DRAG-2.3: depth-caps a target one level too deep, parameterized on cap = %i', cap => {
@@ -146,10 +173,9 @@ describe('classifyDragTargets — Card drag', () => {
   });
 
   it('returns an empty classification for an unknown active id', () => {
-    const { states, freeDescendantIds, attachedDescendantIds } = classifyDragTargets('ghost', [item('A')], CAP);
+    const { states, tiers } = classifyDragTargets('ghost', [item('A')], CAP);
     expect(states.size).toBe(0);
-    expect(freeDescendantIds.size).toBe(0);
-    expect(attachedDescendantIds.size).toBe(0);
+    expect(tiers.size).toBe(0);
   });
 });
 
@@ -168,12 +194,13 @@ describe('DRAG-2.8: classifyDragTargets — Stub drag (full classification)', ()
     expect(states.get('V')).toBe('valid');
   });
 
-  it("a Stub's own descendants are still Cycle-forming, and its Free ones still marked", () => {
+  it("a Stub's own descendants are still Cycle-forming, the Free ones an anchor and the Stubs neither", () => {
     const items = [item('P'), item('S1', 'P'), item('S1a', 'S1'), item('S1b', 'S1', false)];
-    const { states, freeDescendantIds } = classifyDragTargets('S1', items, CAP);
+    const { states, tiers } = classifyDragTargets('S1', items, CAP);
     expect(states.get('S1a')).toBe('cycle-forming');
     expect(states.get('S1b')).toBe('cycle-forming');
-    expect(freeDescendantIds).toEqual(new Set(['S1b']));
+    expect(tiers.get('S1a')).toBe('neither');
+    expect(tiers.get('S1b')).toBe('anchor');
   });
 
   it.each([4, 6, 8])('depth-caps a target one level too deep for a Stub drag exactly like a Card, cap = %i', cap => {

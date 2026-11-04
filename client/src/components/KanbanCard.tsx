@@ -127,8 +127,17 @@ export default function KanbanCard({
   onCardClick,
 }: KanbanCardProps) {
   const [manualExpanded, setExpanded] = useState(defaultExpanded);
-  const { setNodeRef, attributes, listeners, isDragging, dropSide, sortableStyle, dataAttrs, chromeClassName } =
-    useItemRow(item.id, 'card', { isOverlay, overlayForm });
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    isDragging,
+    dropSide,
+    sortableStyle,
+    dataAttrs,
+    chromeClassName,
+    contentClassName,
+  } = useItemRow(item.id, 'card', { isOverlay, overlayForm });
   // Whether the drag is locked at this Card's Descendants layer.
   const lockedHere = useIsLockedAtCard(item.id);
   // Forced open — independent of the user's own collapse choice — for as
@@ -247,47 +256,58 @@ export default function KanbanCard({
         >
           <StubBody item={item} itemTypes={itemTypes} />
         </div>
-      ) : isGhostLike ? (
-        <ShortCard item={item} itemTypes={itemTypes} />
       ) : (
         <>
-          <CardPillsRow item={item} itemTypes={itemTypes} />
+          {/* The Card's own content takes its tier and its pending pulse. Its section of Stubs
+              and the line above stay outside it: each row of the section has a tier of its own,
+              which a dim here would multiply, and the line is a real anchor's. */}
+          <div className={contentClassName}>
+            {isGhostLike ? (
+              <ShortCard item={item} itemTypes={itemTypes} />
+            ) : (
+              <>
+                <CardPillsRow item={item} itemTypes={itemTypes} />
 
-          <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
+                <p className="text-sm leading-snug font-medium text-zinc-100">{item.title}</p>
 
-          {item.description && (
-            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
-          )}
+                {item.description && (
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-zinc-400">{item.description}</p>
+                )}
 
-          {/* Footer */}
-          {(item.assigneeType || childCount > 0) && (
-            <div className="mt-2 flex items-center gap-2">
-              {childCount > 0 && (
-                <button
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    setExpanded(v => !v);
-                  }}
-                  onPointerDown={e => e.stopPropagation()}
-                  className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
-                  title={expanded ? 'Hide attached children' : 'Show attached children'}
-                >
-                  {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
-                </button>
-              )}
-              {item.assigneeType && (
-                <div className="flex items-center gap-1">
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${avatarBadgeClass}`}
-                  >
-                    {item.assigneeType === 'agent' ? 'A' : 'H'}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">{item.assigneeType === 'agent' ? 'Agent' : 'Human'}</span>
-                </div>
-              )}
-            </div>
-          )}
+                {/* Footer */}
+                {(item.assigneeType || childCount > 0) && (
+                  <div className="mt-2 flex items-center gap-2">
+                    {childCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setExpanded(v => !v);
+                        }}
+                        onPointerDown={e => e.stopPropagation()}
+                        className="flex items-center gap-0.5 text-[11px] text-zinc-500 hover:text-zinc-300"
+                        title={expanded ? 'Hide attached children' : 'Show attached children'}
+                      >
+                        {childCount} child{childCount === 1 ? '' : 'ren'} {expanded ? '▾' : '▸'}
+                      </button>
+                    )}
+                    {item.assigneeType && (
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${avatarBadgeClass}`}
+                        >
+                          {item.assigneeType === 'agent' ? 'A' : 'H'}
+                        </span>
+                        <span className="text-[11px] text-zinc-500">
+                          {item.assigneeType === 'agent' ? 'Agent' : 'Human'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* The descendants section, one flat sortable list down to its last
               shown level, with an overflow row for what that hides — Stubs

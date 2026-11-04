@@ -50,3 +50,16 @@
     opacity: 0;
   }
 }
+
+/* The pending marker on a row's content (dragChrome.tsx): it pulses between
+   the content's own opacity (--tier-opacity, set by its tier, 1 with none)
+   and half of it, as Tailwind's animate-pulse does between 1 and 0.5. */
+@keyframes drag-tier-pulse {
+  50% {
+    opacity: calc(var(--tier-opacity, 1) / 2);
+  }
+}
+
+.drag-tier-pending {
+  animation: drag-tier-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

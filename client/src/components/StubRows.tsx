@@ -73,8 +73,17 @@ export function AttachedChildRow({
   // The live drop side shows for either kind of active drag: a sibling
   // Stub reorder, or a foreign Card popped into this row's own parent,
   // anchoring beside it.
-  const { setNodeRef, attributes, listeners, isDragging, dropSide, sortableStyle, dataAttrs, chromeClassName } =
-    useItemRow(item.id, 'stub', { parentId: item.parentId, sectionCardId: cardId });
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    isDragging,
+    dropSide,
+    sortableStyle,
+    dataAttrs,
+    chromeClassName,
+    contentClassName,
+  } = useItemRow(item.id, 'stub', { parentId: item.parentId, sectionCardId: cardId });
   const style = { ...sortableStyle, paddingLeft: descendantsIndentPx(depth) };
 
   return (
@@ -88,18 +97,21 @@ export function AttachedChildRow({
       {/* Live drop-side indicator — see dragChrome.tsx::useLiveDropSide */}
       <DropSideIndicator side={dropSide} />
 
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        onClick={e => {
-          e.stopPropagation();
-          if (!isDragging) onCardClick?.(item.id);
-        }}
-        className={`${STUB_ROW_BOX_CLASS} w-full cursor-grab text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing`}
-      >
-        <StubBody item={item} itemTypes={itemTypes} />
-      </button>
+      {/* The row's own content takes its tier and its pending pulse; the line above stays at full strength. */}
+      <div className={contentClassName}>
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          onClick={e => {
+            e.stopPropagation();
+            if (!isDragging) onCardClick?.(item.id);
+          }}
+          className={`${STUB_ROW_BOX_CLASS} w-full cursor-grab text-left transition-colors hover:bg-zinc-700/40 active:cursor-grabbing`}
+        >
+          <StubBody item={item} itemTypes={itemTypes} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -115,13 +127,17 @@ const OVERFLOW_TEXT_CLASS = `${STUB_ROW_BOX_CLASS} text-xs text-zinc-500`;
 // drag nor opens the Sheet; a press on its indent is the Card's, as beside a Stub row
 // (wiki board-drag-interaction §9). A click on the count opens the hierarchy modal, and so does
 // a hold during a drag: the cue of that hold shows on the row (`ZoomCue`, as a Card's zoom-in
-// cue does). Its own drag chrome is only the traveling mark: while its owner's children travel
-// with the carried copy it reads as off-limits, as their rows do.
+// cue does). Its own drag chrome is its tier: the place its owner's children would go, so it
+// reads as off-limits when none of them can be named.
 export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; cardId: string; onOpen: () => void }) {
-  const { setNodeRef, dropSide, sortableStyle, dataAttrs, chromeClassName } = useItemRow(row.id, 'overflow', {
-    parentId: row.ownerId,
-    sectionCardId: cardId,
-  });
+  const { setNodeRef, dropSide, sortableStyle, dataAttrs, chromeClassName, contentClassName } = useItemRow(
+    row.id,
+    'overflow',
+    {
+      parentId: row.ownerId,
+      sectionCardId: cardId,
+    },
+  );
   // While the hold that opens the modal is on this row, its cue shows once the dwell is over.
   const holdPhase = useModalHoldPhase(row.ownerId);
   const { modalHoldCueMs } = useDragTuning();
@@ -135,7 +151,7 @@ export function OverflowRow({ row, cardId, onOpen }: { row: OverflowRowData; car
       className={`relative rounded ${chromeClassName}`}
     >
       <DropSideIndicator side={dropSide} />
-      <div className="relative">
+      <div className={`relative ${contentClassName}`}>
         {holdPhase === 'cue' && <ZoomCue cueMs={modalHoldCueMs} />}
         <button
           type="button"

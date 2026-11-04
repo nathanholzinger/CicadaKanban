@@ -4,7 +4,7 @@
 
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
-import type { DragClassification, DropTargetState } from './dragClassification';
+import { isValidParent, type DragClassification, type DropTargetState, type DropTier } from './dragClassification';
 import { descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';
@@ -117,10 +117,8 @@ export function useIsCardBeingDragged(): boolean {
 
 export interface DropTargetView {
   state: DropTargetState;
-  /** A Free descendant of the carried item — the green relationship overlay. */
-  isFreeDescendant: boolean;
-  /** An attached descendant of the carried item: its row travels with the carried copy, so it reads as off-limits. */
-  isTraveling: boolean;
+  /** What the target can be to the carried item, which sets how strongly its row is drawn. Null for the carried item itself. */
+  tier: DropTier | null;
 }
 
 // What this item is to the item currently being dragged, or null when no
@@ -129,21 +127,18 @@ export function useDropTargetState(itemId: string): DropTargetView | null {
   const session = useContext(DragSessionContext);
   const state = session?.classification.states.get(itemId);
   if (!session || !state) return null;
-  const { freeDescendantIds, attachedDescendantIds } = session.classification;
-  return {
-    state,
-    isFreeDescendant: freeDescendantIds.has(itemId),
-    isTraveling: attachedDescendantIds.has(itemId),
-  };
+  return { state, tier: session.classification.tiers.get(itemId) ?? null };
 }
 
-// Whether the children an overflow row stands for travel with the carried copy: their owner is
-// the dragged item or one of its descendants. The overflow row is no item, so it has no state of
-// its own; `dragCollision.ts::travelingRowsFor` asks the same of `subtreeIds`, but only at the
-// Descendants layer, where this reads the whole drag.
-export function useOverflowTravels(ownerId: string | null | undefined): boolean {
+// The tier of an overflow row. It is no item, so it has no state of its own: it stands for its
+// owner's hidden children, and takes the tier of the place they would go. With an owner that is
+// a legal parent the hierarchy modal has places to offer, so the row is 'parent'. With one that
+// isn't, none of the children can be named, so it is 'neither'. A hold starts in no state over the
+// cap (`descendantsProjection.ts::modalHoldTarget`), so a 'neither' row has no hold cue to dim.
+export function useOverflowTier(ownerId: string | null | undefined): DropTier | null {
   const session = useContext(DragSessionContext);
-  return !!session && !!ownerId && session.classification.subtreeIds.has(ownerId);
+  if (!session || !ownerId) return null;
+  return isValidParent(session.classification, ownerId) ? 'parent' : 'neither';
 }
 
 // Whether the drag is locked at this Card's Descendants layer. Merely being
