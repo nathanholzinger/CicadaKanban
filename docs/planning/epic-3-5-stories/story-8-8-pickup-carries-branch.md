@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.8 — A pickup takes its descendants with it
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.8 entry and Nathan's design (2026-11-04) · **Status:** built and settled, for review and commit: the collapse replaces 8.5's rows, and the handoff is written
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.8 entry and Nathan's design (2026-11-04) · **Status:** Phases 1–3 done: the collapse replaces 8.5's rows. Phase 4 planned (Amendment 3): a Card's pickup carries its branch too, and the line shows in both forms
 
 ## Goal
 
@@ -10,6 +10,8 @@ A trial of carrying a dragged Stub's branch with it, in place of Story 8.5's dim
 - When a Stub with descendants is picked up, the descendant rows collapse into it.
 - The carried Stub becomes two lines tall. The second line reads "+ X children, Y total descendants".
 - When the drag ends, the branch is drawn as a tree again.
+
+**Extended after the hands-on** (Nathan, 2026-11-04; Amendment 3): every pickup carries its branch, a Card's as well as a Stub's, and the second line shows under the copy in both its forms.
 
 **What happens today** (Story 8.5, wiki board-drag-interaction §4.1 and §7.2):
 - The dragged Stub's descendants stay drawn where they are, at Low.
@@ -23,12 +25,12 @@ A trial of carrying a dragged Stub's branch with it, in place of Story 8.5's dim
 - No new drag specs. A drag spec that fails because it pins today's look is skipped with a one-line reason, for Story 10.
 
 **Out of scope:**
-- **A Card's drag.** A dragged Card is a shortCard, and its attached children aren't drawn (§5a). That stays.
+- **A Card's attached children drawn on its copy.** A dragged Card is a shortCard, and its attached children aren't drawn (§5a). That stays. From Phase 4 the copy shows their count, not their rows (D7, D8).
 - **A two-line ghost.** Nathan chose the copy alone to start. If a one-row ghost reads wrong hands-on, growing it is a follow-up.
 - **Free descendants.** They're Cards in their columns, and they stay where they're drawn, at their tier.
 - **An animation** for the collapse or the expansion. Like the ghost's expansion on drop (§5a), it's instant. How either should move is "The cues' final look"'s.
 - **The second line's final look.** It's a working placeholder for "The cues' final look".
-- **The project sidebar.** It keeps its descendants drawn in place (Story 8.7).
+- **The project sidebar.** It keeps its descendants drawn in place (Story 8.7). Its collapse is Story 8.11's.
 
 ## Scope
 
@@ -60,7 +62,7 @@ These all draw `itemListOps.ts::sectionEntries`, which already leaves the dragge
 - **The rows below the branch move up at pickup,** by its height. That's the jump 8.5 avoided and the zoom-in morph's story is about. The trial is how Nathan finds out whether it reads badly.
 - **What the drag measures after pickup has to see the collapsed layout.** That covers dnd-kit's droppable rects, the Card's box the copy is clamped to (`dragOverlayGeometry.ts::clampToCurrentContext`), and the pop regions. Rendering the collapse from the same state that starts the drag should do it. The Coder checks each.
 
-**D3. The copy's second line** (Nathan's wording).
+**D3. The copy's second line** (Nathan's wording). Phase 4 lifts its two limits below, "Only while the copy is a Stub" and "Only on a Stub's pickup" (D7, D8).
 - **"+ X children, Y total descendants".**
   - X is the Stub's attached children.
   - Y is the whole branch.
@@ -96,6 +98,28 @@ These all draw `itemListOps.ts::sectionEntries`, which already leaves the dragge
 - **Off by default,** so the drag specs stay as they are until Nathan decides. A spec that seeds the tuning gets the default, if `loadDragTuning` fills in a missing key. The Coder checks.
 - **Everything else 8.5 draws stays,** with the switch on or off: the tier of every other target, including a Free descendant and the Stubs in its section.
   - With the switch on, the branch's rows aren't drawn, so their Low isn't seen. The walk still classifies them, and `travelingRowsFor` still guards the drag with the switch off.
+
+**D7. Every pickup carries its branch** (Nathan, 2026-11-04; Phase 4).
+- **A Card's pickup reads its branch as a Stub's does:** `carriedBranchOf`, once, at pickup, over the board's placement-aware accessor. For a Free Card, that's its attached descendants, the rows of its own section at every depth. A Free child of the Card isn't part of it, nor is anything under one (D1).
+- **What it changes besides the line:**
+  - **Today a carried Free Card's children are drawn under its previewed row** when it zooms into a section, at Low (Amendment 2). They leave every list that draws them, as a Stub's branch does (D2): the section, the hierarchy modal and the static rows under its backdrop. `sectionEntries` already takes the branch's ids, so the lists need nothing new.
+  - **So the zoom adds one row to the section, not the branch's rows,** and the rows below the ghost move down less at the zoom-in.
+- **`travelingRowsFor` likely goes.** A carried Free Card's children were the last rows it stepped past (Amendment 2). Once they're out of the lists, no drawn row is a descendant of the carried item.
+  - The Coder checks that no such row is left before removing it, `HierarchyModal.tsx`'s use included.
+  - If it goes, its tests go with it, and the handoff says so.
+- **Phase 3 realigned two tests** to model a Free Card's drag with its children drawn (Amendment 2). No drag does that now, so they're realigned again or retired.
+
+**D8. The line shows under the copy in both forms** (Nathan, 2026-11-04: under the shortCard, as under the Stub; Phase 4).
+- **Stub form:** as D3 and D4 have it.
+- **shortCard form:** the same `StubRows.tsx::CarriedBranchLine`, hung under the shortCard's box, outside the box dnd-kit measures.
+  - The copy's box stays `SHORT_CARD_HEIGHT_PX`. So the drop bands' reservation (§5), the lean, the clamp and the re-anchor all read what they read today.
+  - **The shortCard copy's root is `overflow-hidden`** while it's ghost-like, which would clip a line hung outside it. Either the clip moves to the copy's content, or the line hangs from a wrapper. The Coder's call.
+  - The line turns with the copy's `rotate-2`, so it reads as part of it.
+- **Through every switch,** both ways: a Card zoomed into a section keeps its line as a Stub, and a Stub popped out to a column keeps its line as a shortCard. The branch is held on the session (D1), so only the drawing changes with the form.
+- **The ghost shows none,** in either form (D4).
+- **What follows:**
+  - **At a column, the line covers the top of the Card below the ghost,** and the gap above that Card. It's D4's covered row, at a column.
+  - **At a sub-row, the clamp bounds the shortCard alone,** so the line can hang past the sub-row's bottom, as D4's can hang past a Card's.
 
 ### Phases
 
@@ -148,6 +172,48 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 - **The Coder writes the handoff.**
 - **Gate:** `npm run check` and `npm run test:e2e`.
 - **No audit runs for this story alone.** Story 8 closes with one over all its stories. Nathan may call one sooner.
+
+**Phase 4: every pickup carries its branch, and the line shows in both forms** (D7, D8).
+- **The pickup:** `useBoardDnd.ts::handleDragStart` reads the branch for a Card's pickup too.
+- **The copy:** `KanbanCard.tsx` draws the line in the shortCard form as well, by D8. `overlayBranch` and its doc, which say Stub form only today, cover both forms.
+- **`travelingRowsFor`,** by D7.
+- **Names and comments that say "a Stub's pickup"** and now mean every pickup:
+  - `carriedBranchOf`'s `stubId`;
+  - `DragSession.branch`'s comment, "Null for a Free Card's drag";
+  - `workflow/AGENTS.md`'s map, which says a carried Stub takes its branch with it.
+- **Tests:**
+  - **the pickup:** a Free Card with attached descendants holds its branch. One with none, or with only Free children, holds none;
+  - **the section and the modal:** a carried Free Card zoomed in draws its previewed row, and not its branch;
+  - **the copy:**
+    - the line in both forms with a branch, and in neither without one;
+    - the shortCard copy's box stays shortCard's height, with the line outside its flow;
+    - the in-list ghost shows none, in either form.
+- **Gate:** `npm run check` and `npm run test:e2e`. Some drag specs may fail because they pin a carried Card's children drawn under its row, or a copy with no line. Each is skipped with a one-line reason, for Story 10.
+
+**Phase 5: Nathan's hands-on, and the handoff**
+- **Where:**
+  - the dev stack;
+  - the deep stack, for a branch past the section's shown levels and for the hierarchy modal.
+- **Try:**
+  - **Pick up a Card with attached descendants.** The shortCard copy has the line under it.
+  - **Zoom it into another Card's section.** The Stub copy keeps the line, and the Card's children don't appear under the ghost.
+  - **Pop it back out.** The shortCard keeps the line.
+  - **Pick up a Stub with a branch, pop it out to a column, and zoom back in.** The line stays through both switches.
+  - **At a column, aim at the Card just below the ghost.** The line covers its top. Do the bands and the side line still read?
+  - **At a sub-row's bottom,** the line hangs past it.
+  - **A Card with only Free children:** no line.
+  - **In the hierarchy modal,** with a Card carried in: its children aren't among the rows.
+  - **End the drag every way** (D5).
+- **Nathan decides:** it stays as built, or the plan is amended.
+- **The Coder extends the handoff.** What Phase 4 adds:
+  - **For the PO:**
+    - §5a's shortCard bullet: a dragged Card's attached children stay unrendered, and its carried copy now shows their count;
+    - the handoff's decision "The second line shows only while the copy is a Stub", which D7 and D8 replace;
+    - hierarchy-placement §7's "the dragged entry's descendants are Low": the handoff keeps it for the sidebar and a Free Card's rows. After Phase 4 it holds for the sidebar alone, until Story 8.11;
+    - §7.2's rows that are "passed over, never named", if `travelingRowsFor` goes.
+  - **For the Test Planner:** DRAG-3.19 ("both copies of a dragged Card are shortCard, and its attached children are unrendered"), and the new case the handoff asks for, which now covers both forms.
+  - **Skipped specs,** each with its reason.
+- **Gate,** if the hands-on changed code: `npm run check` and `npm run test:e2e`.
 
 ## Code map
 
@@ -208,6 +274,17 @@ Filled in by the Coder, phase by phase.
 - **The gate.**
   - **`npm run check`:** passes. `check:docs` is 397 files with 0 hits, the client has 697 tests, the server 438 and the scripts 245.
   - **`npm run test:e2e`:** 216 passed, 21 skipped and 0 failed, run with nothing else running. An earlier run with the same code had one failure, `boards-layer.spec.ts`'s workphase delete notice, which is no drag spec. It passed alone (13 of 13) and in this run.
+
+**3. 2026-11-04, Phase 4 planned** (Architect, from Nathan's hands-on).
+- **Nathan asked for two more changes after Phase 3:**
+  - a dragged Card carries the line too;
+  - the line stays through a switch between the Card and Stub forms. He found it hands-on: a Card picked up and zoomed into a section drew its Stub copy with no line.
+- **That was the plan's D3, not a defect in the build.** D3 gave the line to a Stub's pickup only, and to the Stub form only. D7 and D8 lift both limits.
+- **Nathan chose the line under the shortCard,** as under the Stub. The other option was the count in the shortCard's reserved description line: it keeps the height exact and covers nothing, but the line moves at every switch.
+- **Routed elsewhere from the same hands-on** (roadmap):
+  - the copy that sometimes leaves the cursor at a context switch is Story 8.10;
+  - the sidebar's collapse is Story 8.11.
+- **The PO's and the Planner's passes wait for Phase 5,** so the wiki is written once.
 
 ## Open questions
 

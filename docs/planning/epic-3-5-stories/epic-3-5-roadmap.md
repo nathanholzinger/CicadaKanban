@@ -1083,7 +1083,9 @@ Phase 3:
 - **A dragged Card carries the line too.** Today only a Stub's pickup
   reads a branch (the plan's D3), so a Card's drag carries none. A Card's
   attached descendants are its branch, read the same way. Its copy, a
-  shortCard at a column, shows the line.
+  shortCard at a column, shows the line under it, as the Stub's does
+  (Nathan, 2026-11-04). Zoomed into a section, its children then leave
+  the lists, as a Stub's do.
 - **The line stays through every form switch.** Found hands-on: a Card
   picked up and zoomed into a section draws its Stub copy without the
   line. A Stub popped out to a column is the same switch the other way.
