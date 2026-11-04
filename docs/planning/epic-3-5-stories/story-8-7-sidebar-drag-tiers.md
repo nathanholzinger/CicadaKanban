@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.7 — The project sidebar's drag cues match the board's
 
-**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** planning
+**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** Phase 1 built, for review and commit
 
 ## Goal
 
@@ -132,10 +132,15 @@ Each phase ends with the gate and a stop for review and commit. The gate is `npm
 
 ## Code map
 
-Filled in by the Coder.
+Filled in by the Coder, phase by phase.
 
 | Symbol | Carries |
 |---|---|
+| `lib/dragTargets.ts::classifyTargets` | The walk, over `hierarchy.ts::TreeNode`s: each node's state against the carried one and the tier it is drawn at, from one `getSubtree`. Its one surface-specific input is `anchorSetsParent`; the top level answers for a node with no parent node (D1). |
+| `lib/dragTargets.ts::DropTargetState`, `DropTier`, `DragClassification` | The types, moved with the walk. Their importers read them from here; the board's adapter does not re-export them. |
+| `workflow/dragClassification.ts::classifyDragTargets` | The board's adapter: hands `classifyTargets` the pending tree and `isStubOf` as `anchorSetsParent`. Its signature and result are as they were. |
+| `workflow/dragClassification.ts::isValidParent` | Stays with the board: the region gate's and the over-cap cue's one answer. |
+| `lib/dragTargets.test.ts` | The walk over projects: a top-level row, a row past the cap and its child, the carried project's descendants, and a subtree only the top level can take. |
 
 ## Amendments
 
@@ -144,6 +149,14 @@ Filled in by the Coder.
 - It holds them in tuning values of its own, so either surface can be tuned without moving the other.
 - The dragged project is drawn at 0.3, as the board's ghost is, also in a value of its own.
 - D3, the Goal's table, Phases 2 and 3 and the handoff's expectations changed to match. Phase 3 no longer decides the values.
+
+**2. 2026-11-04, Phase 1 built** (Coder).
+- **The file is its own, `lib/dragTargets.ts`,** not `hierarchy.ts`. `hierarchy.ts` is the tree math (subtree, depth, the cap rule). The walk reads states and tiers off it, and a surface's say on what naming a node does, so it sits beside it.
+- **The types moved with the walk,** and the five modules that read them now import them from `lib/dragTargets.ts`. `dragClassification.ts` doesn't re-export them: one path for each type. `DragClassification` keeps its name and its three fields.
+- **The parameter is `anchorSetsParent`.** The board hands it `isStubOf`, as before; the sidebar will hand it `() => true`.
+- **The top level is answered by `parentId === null` only.** A node whose `parentId` names a node that isn't in the tree still reads as "not a legal parent", as it did on the board. `getDepth` reads the same node as a root. It matters only for data with a dangling parent, which the sidebar's tree already treats as a root (`sortedChildrenByParent`). Phase 2 decides whether the hook needs to answer it.
+- **The board is unchanged:** `dragClassification.test.ts` and every test that reads the tiers pass without an edit. No Stub on the board is top-level, so the new answer never reaches it.
+- **The new tests were checked against the old answer.** With the top level made to read as "not a legal parent", as a plain reuse would, the top-level test of an anchor fails.
 
 ## Open questions
 

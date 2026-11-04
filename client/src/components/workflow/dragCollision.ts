@@ -9,7 +9,7 @@ import { arrayMove, hasSortableData } from '@dnd-kit/sortable';
 import type { AnchorRelation, DropSide } from '../../lib/hierarchyPlacement';
 import { containsPoint, descendantsCardIdOf, type Rect } from './dragRegions';
 import { overflowOwnerOf } from './itemListOps';
-import type { DragClassification } from './dragClassification';
+import type { DragClassification } from '../../lib/dragTargets';
 import type { PopSession } from './popSession';
 import { SHORT_CARD_HEIGHT_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 

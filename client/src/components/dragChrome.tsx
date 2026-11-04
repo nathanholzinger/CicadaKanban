@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { DropSide } from '../lib/hierarchyPlacement';
 import { isItemData, itemRowData, namedAnchorFor, type ItemRowRole } from './workflow/dragCollision';
 import { useDragSession, useDropTargetState, useIsPending, useOverflowTier } from './workflow/DragSessionContext';
-import type { DropTier } from './workflow/dragClassification';
+import type { DropTier } from '../lib/dragTargets';
 import { useIsFlashedAfterStop } from './workflow/ForcedStopContext';
 import type { OverlayForm } from './workflow/placement';
 import { DRAG_OVERLAY_ATTR } from './workflow/dragRegions';
@@ -42,7 +42,7 @@ function useLiveDropSide(itemId: string): DropSide | null {
 }
 
 // How strongly a row is drawn says what its target can be to the carried item
-// (`dragClassification.ts::DropTier`): a legal parent at full strength, an anchor that is
+// (`lib/dragTargets.ts::DropTier`): a legal parent at full strength, an anchor that is
 // not a parent at mid opacity, a target that is not even an anchor at low. By opacity only, no
 // color. The two levels and the carried item's own row (the ghost's) are CSS custom properties
 // BoardView sets from the dev/test panel. The classification itself is settled and exposed as

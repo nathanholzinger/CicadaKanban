@@ -4,7 +4,8 @@
 
 import { createContext, useContext } from 'react';
 import type { Item } from '../../types';
-import { isValidParent, type DragClassification, type DropTargetState, type DropTier } from './dragClassification';
+import { isValidParent } from './dragClassification';
+import type { DragClassification, DropTargetState, DropTier } from '../../lib/dragTargets';
 import { descendantsRegionKey } from './dragRegions';
 import type { PopSession } from './popSession';
 import type { Placement, Placements } from './itemListOps';

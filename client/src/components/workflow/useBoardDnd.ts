@@ -56,7 +56,8 @@ import {
   reanchorOverlayTransform,
   type OverlayRect,
 } from './dragOverlayGeometry';
-import { classifyDragTargets, isValidParent, type DragClassification } from './dragClassification';
+import { classifyDragTargets, isValidParent } from './dragClassification';
+import type { DragClassification } from '../../lib/dragTargets';
 import {
   cardListAt,
   descendantsCardIdOf,

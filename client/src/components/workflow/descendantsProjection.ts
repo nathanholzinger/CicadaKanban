@@ -21,7 +21,8 @@ import {
   type Row,
 } from '../../lib/hierarchyPlacement';
 import { DESCENDANTS_INDENT_PX } from '../cardMetrics';
-import { isValidParent, type DragClassification } from './dragClassification';
+import type { DragClassification } from '../../lib/dragTargets';
+import { isValidParent } from './dragClassification';
 import { descendantsCardIdOf } from './dragRegions';
 import { descendantsChildrenOf, hierarchyRows, overflowOwnerOf, shownLevels, type PlacementSlot } from './itemListOps';
 import type { DescendantsProjection } from './DragSessionContext';

@@ -59,11 +59,11 @@ export interface DragTuning {
   modalHoldCueMs: number;
   /**
    * How strongly a row is drawn says what its target can be to the carried item
-   * (`dragClassification.ts::DropTier`; a legal parent is full strength). This one is a target
+   * (`lib/dragTargets.ts::DropTier`; a legal parent is full strength). This one is a target
    * that is an anchor but not a parent.
    */
   overlayAnchorOpacity: number;
-  /** A target that is not even an anchor (`dragClassification.ts::DropTier`). */
+  /** A target that is not even an anchor (`lib/dragTargets.ts::DropTier`). */
   overlayNeitherOpacity: number;
   /** The carried item's own row, left in the list while it is dragged. Apart from the tier above so the two can part. */
   overlayGhostOpacity: number;
