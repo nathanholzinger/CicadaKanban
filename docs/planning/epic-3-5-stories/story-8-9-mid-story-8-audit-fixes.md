@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 2 built for review and commit
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 3 built for review and commit
 
 ## Goal
 
@@ -208,6 +208,9 @@ Filled in by the Coder.
 | `client/src/components/BoardView.tsx::loadBoard` | D2: tells the hook when a reload starts and when it has drawn. It is the one place every reload of the board passes. |
 | `client/src/components/dragChrome.tsx::tierVars`, `tierClass` | #14, #27: the three property names spelled once for the surfaces that set them, and a row's class for its tier, or none. `TIER_CLASS` is private now. |
 | `client/src/components/sidebar/useProjectDragReorder.ts::Drawn.subtree` | #13: the carried project's descendants, excluded rows and height, from one `getSubtree` at pickup, held for the drag as the tiers are. |
+| `scripts/audit-scope/lineKinds.mts::strippedCode`, `collapseOutside`, `valueSpans` | #2: whitespace collapses only between tokens. A string, a regular expression and the text of a template keep it exactly, on a line of their own or in the middle of one. |
+| `scripts/audit-scope/lineKinds.mts` (one parse) | #23: the comment cover, the imports, the template lines and the value spans all read one parse, and every line number counts from 1. |
+| `scripts/check-docs/extract.mts::parseScript`, `extractFromSource` | The parse and `extractCode`'s body, split so a caller that needs the same parse for more doesn't make a second. `extractCode` is unchanged for its other callers. |
 
 ## Amendments
 
@@ -246,6 +249,25 @@ Filled in by the Coder.
   - `useForcedStop.test.ts` holds the flash's lifetime, untagged: named by the stop; held across a slow reload; let go after `STOP_FLASH_MS`; let go by another reload; a reload with no stop behind it draws nothing; let go at the next drag; a second stop's own wait. It also holds the stop's key.
   - `dragChrome.test.tsx` holds the row's side: it flashes the item the context names, with `STOP_FLASH_MS` set on it, and no other.
   - `ForcedStopCue.test.tsx` holds the key, and `useProjectDragReorder.test.ts` the subtree held for the drag (it fails on the old hook). Its strength tests no longer re-spell the property names.
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 235). `npm run test:e2e` gives 216 passed, 21 skipped, 0 failed.
+
+**3. 2026-11-04, Batch 3 built** (Coder).
+- **#2:** `strippedCode` now reads each line's value spans from the parse (strings, regular expressions, and template text from the backtick, or the `}` that resumes it, to the end of each line it reaches) and collapses whitespace outside them only.
+  - A comment or a test title that sits on a value span still blanks, and wins over it: a test title is a string and isn't code.
+  - A template's later lines are the same spans, so the special case that quoted a whole line is now the spans' own: the line is quoted only so a blank one of a template stays a line.
+- **#26's note is covered:** the comment after a multiline template's closing backtick no longer reads as code, since that line's code is now stripped like any other.
+- **#23's parsing:** `cover`, `importLines`, the template lines and the value spans read one parse, the one `lineKinds` and `strippedCode` make. That took one split in `check-docs/extract.mts` (`parseScript`, `extractFromSource`), which `extractCode` now calls, so the checker is unchanged.
+  - `importLines` counted from 0 and the template lines from 1; both count from 1 now, as `skip` and the diff do.
+  - `templateLines(fileName, text)`, which `diff.mts` calls, keeps its signature.
+- **Tests:**
+  - **`classify.test.mts`:** a string `', '` that becomes `',  '` on one line, and a regular expression's one space made two, each read `'all'`. Both fail on the old source.
+  - **`lineKinds.test.mts`:**
+    - a string, a regular expression and a one-line template, each differing when a space inside changes;
+    - a multiline template's first line differing from its backtick on;
+    - the whitespace between tokens still collapsing, a title still blanking, and the comment after a closing backtick.
+    - Seven of the new tests fail on the old source. The other three pin what stays.
+- **A check on real history:** the scope script ran over Batches 1 and 2 (`f18f530` to `HEAD`) and wrote its scope files.
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245). The plan sets no E2E run for this batch, and none of its files is loaded by the app.
 
 ## Open questions
 

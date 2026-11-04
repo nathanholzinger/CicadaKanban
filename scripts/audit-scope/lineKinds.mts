@@ -1,12 +1,13 @@
 // Sorts a file's lines into blank, comment, test title, import and code, and strips a file
-// down to its code. The checker's parse finds the comments and test titles
-// (`extractCode`), and the same TypeScript parse gives the import declarations, multi-line
-// ones included, which a regex can't tell from the code around them. `splitLines` is the one
-// split of a text into lines, so a line's number means the same to the kinds and to the scan
-// that pairs them with blame's.
+// down to its code. One TypeScript parse of the text gives all of it: the checker's reading of the
+// comments and test titles (`extractFromSource`), the import declarations, multi-line ones
+// included, which a regex can't tell from the code around them, and the text of the strings,
+// regular expressions and templates, whose spaces are a value. `splitLines` is the one split of a
+// text into lines, and every line number here counts from 1, so a line's number means the same to
+// the kinds, to the scan that pairs them with blame's, and to the diff.
 
 import ts from 'typescript';
-import { extractCode, scriptKindOf } from '../check-docs/extract.mts';
+import { extractFromSource, parseScript } from '../check-docs/extract.mts';
 
 export type LineKind = 'blank' | 'comment' | 'title' | 'import' | 'code';
 
@@ -30,11 +31,11 @@ interface Covered {
   titles: Span[][];
 }
 
-function cover(fileName: string, text: string): Covered {
-  const lines = splitLines(text);
+function cover(sourceFile: ts.SourceFile): Covered {
+  const lines = splitLines(sourceFile.text);
   const comments = lines.map((): Span[] => []);
   const titles = lines.map((): Span[] => []);
-  const { segments, markers } = extractCode(fileName, text);
+  const { segments, markers } = extractFromSource(sourceFile);
 
   for (const segment of segments) {
     if (segment.source === 'markdown') continue;
@@ -62,28 +63,30 @@ function blankOut(line: string, spans: readonly Span[]): string {
   return chars.join('');
 }
 
-/** Zero-based numbers of the lines that hold an import declaration, from its first line to its last. */
-function importLines(fileName: string, text: string): Set<number> {
-  const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+/** The numbers of the lines that hold an import declaration, from its first line to its last. */
+function importLines(sourceFile: ts.SourceFile): Set<number> {
   const found = new Set<number>();
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) && !ts.isImportEqualsDeclaration(statement)) continue;
     const first = sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line;
     const last = sourceFile.getLineAndCharacterOfPosition(statement.getEnd()).line;
-    for (let line = first; line <= last; line++) found.add(line);
+    addLines(found, first, last);
   }
   return found;
 }
 
 /**
- * The lines (numbered from 1) of a script that are the text of a template literal: each line a
- * piece of one reaches after the line it starts on, and the line a piece that continues a
- * substitution starts on, when the template opened on an earlier line. Read from the whole file,
- * since a line of it alone can't say: it carries no backtick, and its words read as code. Such a
- * line is the literal's value, down to its spaces.
+ * The lines of a script that are the text of a template literal: each line a piece of one
+ * reaches after the line it starts on, and the line a piece that continues a substitution starts
+ * on, when the template opened on an earlier line. Read from the whole file, since a line of it
+ * alone can't say: it carries no backtick, and its words read as code. Such a line is the
+ * literal's value, down to its spaces.
  */
 export function templateLines(fileName: string, text: string): Set<number> {
-  const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+  return templateBodyLines(parseScript(fileName, text));
+}
+
+function templateBodyLines(sourceFile: ts.SourceFile): Set<number> {
   const lineOf = (pos: number): number => sourceFile.getLineAndCharacterOfPosition(pos).line;
   const found = new Set<number>();
   const visit = (node: ts.Node): void => {
@@ -107,6 +110,54 @@ function addLines(into: Set<number>, from: number, to: number): void {
 }
 
 /**
+ * Per line, the character spans that are a value rather than code: a string, a regular
+ * expression, and the text of a template from its backtick (or the `}` that resumes it) to its end,
+ * on every line it reaches. A space inside one is part of what the code means, where a space
+ * between tokens is formatting.
+ */
+function valueSpans(sourceFile: ts.SourceFile, lineCount: number): Span[][] {
+  const spans = Array.from({ length: lineCount }, (): Span[] => []);
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isStringLiteral(node) ||
+      ts.isRegularExpressionLiteral(node) ||
+      ts.isNoSubstitutionTemplateLiteral(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node)
+    ) {
+      const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+      const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
+      for (let line = start.line; line <= end.line; line++) {
+        spans[line]?.push([line === start.line ? start.character : 0, line === end.line ? end.character : Infinity]);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return spans;
+}
+
+/**
+ * A line with its `blanked` spans (comments, test titles) taken out and its whitespace collapsed
+ * to one space and trimmed, except inside the `values` spans, which keep it exactly. A blanked
+ * span wins over a value one: a test title is a string, and is not code.
+ */
+function collapseOutside(line: string, blanked: readonly Span[], values: readonly Span[]): string {
+  const within = (spans: readonly Span[], at: number): boolean => spans.some(([start, end]) => at >= start && at < end);
+  const kept: Array<{ char: string; soft: boolean }> = [];
+  for (let at = 0; at < line.length; at++) {
+    const soft = within(blanked, at) || (!within(values, at) && /\s/.test(line[at]));
+    if (!soft) kept.push({ char: line[at], soft: false });
+    else if (kept.at(-1)?.soft !== true) kept.push({ char: ' ', soft: true });
+  }
+  // Runs of soft whitespace are one entry, so at most one is at either end.
+  if (kept.at(-1)?.soft) kept.pop();
+  if (kept[0]?.soft) kept.shift();
+  return kept.map(({ char }) => char).join('');
+}
+
+/**
  * The kind of each line, the first line at index 0. A line that holds a test title is a title
  * line, whatever else is on it. A Markdown file is prose throughout, and any other file that
  * isn't script is code.
@@ -116,35 +167,39 @@ export function lineKinds(fileName: string, text: string): LineKind[] {
     const kind = fileName.endsWith('.md') ? 'comment' : 'code';
     return splitLines(text).map(line => (line.trim() === '' ? 'blank' : kind));
   }
-  const { lines, comments, titles } = cover(fileName, text);
-  const imports = importLines(fileName, text);
+  const sourceFile = parseScript(fileName, text);
+  const { lines, comments, titles } = cover(sourceFile);
+  const imports = importLines(sourceFile);
   return lines.map((line, i) => {
     if (titles[i].length > 0) return 'title';
     if (line.trim() === '') return 'blank';
     if (comments[i].length > 0 && blankOut(line, comments[i]).trim() === '') return 'comment';
-    return imports.has(i) ? 'import' : 'code';
+    return imports.has(i + 1) ? 'import' : 'code';
   });
 }
 
 /**
- * The file's code: its lines with comments and test titles blanked, whitespace collapsed, and
- * import declarations, empty lines and the lines numbered in `skip` dropped. Two versions of a
- * file that differ only in their comments, test titles and imports strip to the same lines. The
- * text of a template literal that spans lines is its value, so those lines stay as they are,
- * spaces and blank lines included (a test title is still a title).
+ * The file's code: its lines with comments and test titles blanked, whitespace between tokens
+ * collapsed, and import declarations, empty lines and the lines numbered in `skip` dropped. Two
+ * versions of a file that differ only in their comments, test titles and imports strip to the
+ * same lines. A string, a regular expression and the text of a template are values, so their
+ * spaces stay as they are, on a line of their own or in the middle of one. A template that spans
+ * lines is kept line by line, blank lines included, from its backtick on (a test title is still a
+ * title).
  */
 export function strippedCode(fileName: string, text: string, skip: ReadonlySet<number> = new Set()): string[] {
-  const { lines, comments, titles } = cover(fileName, text);
-  const imports = importLines(fileName, text);
-  const templates = isScriptFile(fileName) ? templateLines(fileName, text) : new Set<number>();
+  const sourceFile = parseScript(fileName, text);
+  const { lines, comments, titles } = cover(sourceFile);
+  const imports = importLines(sourceFile);
+  const isScript = isScriptFile(fileName);
+  const templates = isScript ? templateBodyLines(sourceFile) : new Set<number>();
+  const values = isScript ? valueSpans(sourceFile, lines.length) : lines.map((): Span[] => []);
   return lines
     .map((line, i) => {
-      if (imports.has(i) || skip.has(i + 1)) return '';
+      if (imports.has(i + 1) || skip.has(i + 1)) return '';
+      const code = collapseOutside(line, [...comments[i], ...titles[i]], values[i]);
       // Quoted, so a blank line of a template is a line of its own, not one the filter below drops.
-      if (templates.has(i + 1) && titles[i].length === 0) return JSON.stringify(line);
-      return blankOut(line, [...comments[i], ...titles[i]])
-        .replace(/\s+/g, ' ')
-        .trim();
+      return templates.has(i + 1) && titles[i].length === 0 ? JSON.stringify(code) : code;
     })
     .filter(line => line !== '');
 }

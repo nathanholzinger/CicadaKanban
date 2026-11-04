@@ -49,8 +49,17 @@ export function parseMarker(commentBody: string): { rules: string[]; reason: str
   return { rules, reason };
 }
 
+export function parseScript(fileName: string, text: string): ts.SourceFile {
+  return ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+}
+
 export function extractCode(fileName: string, text: string): Extracted {
-  const sourceFile = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, scriptKindOf(fileName));
+  return extractFromSource(parseScript(fileName, text));
+}
+
+/** `extractCode` over a parse the caller made, for one that reads the same parse for more. */
+export function extractFromSource(sourceFile: ts.SourceFile): Extracted {
+  const text = sourceFile.text;
   const segments: Segment[] = [];
   const markers: IgnoreMarker[] = [];
 

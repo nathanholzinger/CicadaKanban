@@ -105,10 +105,68 @@ describe('strippedCode', () => {
     ]);
   });
 
+  // A space inside a string, a regular expression or a template is part of its value, on a line of
+  // code as much as on a line of its own: collapsed, two versions that differ in one would strip alike.
+  describe('a literal on a line of code', () => {
+    it('differs when a space inside a string gains or loses a space', () => {
+      assert.notDeepEqual(stripped(lines("export const SEP = ', ';")), stripped(lines("export const SEP = ',  ';")));
+      assert.notDeepEqual(stripped(lines("run(s.split('  '));")), stripped(lines("run(s.split(' '));")));
+      assert.notDeepEqual(stripped(lines('run(s.split("a b"));')), stripped(lines('run(s.split("a  b"));')));
+    });
+
+    it('differs when a space inside a regular expression changes', () => {
+      assert.notDeepEqual(stripped(lines('run(s.split(/a b/));')), stripped(lines('run(s.split(/a  b/));')));
+      assert.notDeepEqual(stripped(lines('const re = /a b/g;')), stripped(lines('const re = /ab/g;')));
+    });
+
+    it('differs when a space inside a template on one line changes, around a substitution too', () => {
+      assert.notDeepEqual(stripped(lines('run(`a b`);')), stripped(lines('run(`a  b`);')));
+      assert.notDeepEqual(stripped(lines('run(`a ${x} b`);')), stripped(lines('run(`a ${x}  b`);')));
+    });
+
+    it('still collapses the whitespace between tokens, a literal beside it kept as it is', () => {
+      assert.deepEqual(stripped(lines("const  a   =  'x  y' ;")), stripped(lines("const a = 'x  y' ;")));
+      assert.deepEqual(stripped(lines('  run( `a  b` , /c  d/ );')), stripped(lines('run( `a  b` , /c  d/ );')));
+    });
+
+    it('reads a test title as a title, not as a string whose spaces count', () => {
+      assert.deepEqual(stripped(lines("it('one  two', () => {")), stripped(lines("it('one two three', () => {")));
+    });
+  });
+
   // A line inside a multiline template is its value: collapsed or dropped, two versions that differ
   // in a space or a blank line would strip to the same code.
   describe('a template literal that spans lines', () => {
     const template = (...body: string[]): string => lines('export const text = `', ...body, '`;');
+
+    it('differs when the line it opens on gains a space after its backtick, or a piece of it after a substitution', () => {
+      assert.notDeepEqual(
+        stripped(lines('export const text = `a b', 'c`;')),
+        stripped(lines('export const text = `a  b', 'c`;')),
+      );
+      assert.notDeepEqual(
+        stripped(lines('export const text = `', 'c`;')),
+        stripped(lines('export const text = ` ', 'c`;')),
+      );
+      assert.notDeepEqual(
+        stripped(lines('const s = `a ${x} b', 'c`;')),
+        stripped(lines('const s = `a ${x}  b', 'c`;')),
+      );
+    });
+
+    it('is the same when the code before its backtick is spaced another way', () => {
+      assert.deepEqual(
+        stripped(lines('export const  text  = `a', 'b`;')),
+        stripped(lines('export const text = `a', 'b`;')),
+      );
+    });
+
+    it('is the same when a comment follows its closing backtick', () => {
+      assert.deepEqual(
+        stripped(lines('const s = `', 'a', '`; // the text')),
+        stripped(lines('const s = `', 'a', '`;')),
+      );
+    });
 
     it('differs when a line inside it gains a space, or loses a blank line', () => {
       assert.notDeepEqual(stripped(template('a b')), stripped(template('a  b')));
