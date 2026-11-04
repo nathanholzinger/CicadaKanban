@@ -260,6 +260,47 @@ I checked every `Automated` case in the catalog (309 before this run) for an ID-
   - Story 10's item 1 still lists DRAG-2.5 and DRAG-2.6, and item 4 still describes DRAG-1.21's spec work, though it notes the retirement.
 - **No Planner-set `Manual` case** (DRAG-1.29, 1.32, 4.24, 4.25, 7.20) has its ID on a test title.
 
+## Rulings and handoffs
+
+**Ruled by Nathan, 2026-11-04.**
+- **The internal mappings are approved:** items 1–8 of "Proposed Internal Mappings", with DRAG-7.31's reading that its no-request assertion falls in the standing client-rule category. Item 9 (DRAG-1.28, DRAG-3.22, DRAG-4.12) was not part of the approval, and stays unapproved until Story 10.
+- **No stamped test is written into the catalog yet.** A case's Automation test line follows the ID in a test's title, and no title carries these IDs until the Coder stamps them. The approval takes effect at the next Reconciler run. Of the approved mappings, only DRAG-2.11's two tests complete a case; every other one is partial, so its case stays `Open` with `—`, as `docs/test-plans/README.md` says.
+
+**Done by the Test Planner** (no test code read or written):
+- **TREE-10.12, new, `Open`** (`project-tree/tree-10-which-workflow.md`): a workflow create whose project names no project is refused with a 400. This is Candidate New Cases, item 1.
+- **DRAG-5.16, new, `Open`** (`board-drag-interaction/drag-5-detach-and-overflow.md`): a detached item picked up again drags as a Free Card from its column. This is Candidate New Cases, item 2. It's its own case, not an extension of DRAG-5.10: DRAG-5.10 is about how the item is drawn during the same drag, and this is a later pickup.
+- **Orphan-workflow deletion:** no case. It waits on the PO (below).
+- Both INDEX lines now name them.
+
+### For the Coder
+
+1. **Surface stamps** (Proposed Stamps, items 1 and 2): DRAG-2.22 on `drag-7-modal-hold.spec.ts:760`, and DRAG-6.15 on `drag-7-hierarchy-modal.spec.ts:689`.
+2. **Internal stamps, now approved** (Proposed Stamps, items 3–10), with the exact titles listed there. Stamp `ForcedStopCue.test.tsx:15` only after fixing it as in 4 below.
+3. **Stamps for the two new cases:**
+   - **TREE-10.12** on `server/tests/routes/workflows.test.ts:154`, `:163` and `:175`. The case names `""` among its values, and the `:163` table doesn't list it. Add it to the table, or the case stays partial.
+   - **DRAG-5.16** on `tests/ui/drag-5-stub-detach.spec.ts:298`: `'DRAG-5.16: immediately after a detach, the same item drags and reorders normally as a Card'`. The case's last *Then* is the placement `{anchorId: Q, side: after}` with the item still Free and `parentId` still `P`. The spec reads the stored position (`:298` asserts `parentId`, `isAttached` and a position below `P`'s). If it can't read the request, an assertion on the stored placement against `Q` is enough.
+4. **Test fixes** (Test Quality Concerns):
+   - **Item 1:** `ForcedStopCue.test.tsx:15` and `:21` should assert DRAG-6.16's two literal sentences, not the component's own constant.
+   - **Item 9:** `workflows.test.ts:51` seeds one workphase, so it proves no order (seed two or more out of position order and assert the order). `:545` seeds no project or item (seed another project with its own workflow and items, delete the orphan, and assert that project's items keep their workphase). Neither is a catalog case.
+   - **Items 2–8 and 10** are lesser notes on tests that already count or are proposed. Read them when touching those files.
+5. **Ask for a confirming Reconciler run** once the stamps land. Expected: DRAG-2.11 `Automated`; TREE-10.12 and DRAG-5.16 `Automated` only if their tests assert every clause.
+6. **Six Epic 3.2-era skips** in the `item-repositioning-*` specs carry no reason line (Test Quality Concerns, item 11). Story 8's convention is a one-line reason beside each skip. Story 10 takes those specs up either way.
+
+### For the PO
+
+1. **Orphan-workflow deletion** (`workflows.test.ts:545`). The wiki has no rule on what deleting a workflow with no owning project does to other projects' items. Is there one to write? If yes, the Test Planner derives a case. If no, the test stays uncatalogued.
+2. **The workflow create's owner field** (project-tree §10). §10 says `templateId` and `sourceWorkflowId` are references (row-references §1). It doesn't say so of the project the workflow is created for. TREE-10.12 cites row-references §1's general statement ("every write that takes such a field"). If §10 should name the owner as a reference, add it, and the case's Rule line follows. If an owner id isn't meant to be refused that way, tell the Test Planner and the case goes.
+3. **Three sidebar states with tests and no rule** (8.7 plan, Amendment 6 left them out of the wiki): the tiers while the project cap is unknown (`useProjectDragReorder.test.ts:410`, `:493`), and the rows a collapsed project hides (`:419`). Rule, or deliberately not?
+4. **A detached item's pickup** (DRAG-5.16). It rests on §8's "once Free, the item's relationship to its former parent is preserved" together with §1's layer rule. If the page should say in so many words that a detached item picks up as a Free Card, that's a one-line addition to §8.
+
+### For the Architect
+
+1. **Story 10's entry doesn't name** DRAG-1.36, DRAG-2.11 and DRAG-2.12. With the stamps, DRAG-2.11 is whole, and DRAG-1.36 and DRAG-2.12 are partial, so route them by ID.
+2. **Item 1 still lists the retired DRAG-2.5 and DRAG-2.6,** and records DRAG-6.15 as closed in A6. DRAG-6.15 is `Open` again: no test drives a stale reindex response landing mid-drag.
+3. **The roadmap's carried 8.1 block still lists DRAG-2.13 as `Open`.** Story 8.5 retired it.
+4. **TREE-10.12 and DRAG-5.16** are new and `Open` at this close-out. They need no Story 10 routing if the stamps land before sign-off; otherwise route them by ID to wherever the Coder's test work for them is named.
+5. **The two workflow-test fixes** (For the Coder, 4) aren't DnD work. They don't belong in Story 10.
+
 ---
 
 ## Proposed Stamps
@@ -324,11 +365,11 @@ Exact titles for the Coder. "Surface" means the test counts without approval onc
     - `:68` → `'TREE-2.1, TREE-2.8: draws the dragged row at the ghost’s strength, and it has no tier'`
     - `:85` → `'TREE-2.7: draws the drop line outside the box the tier dims, so the line keeps its own strength'`
 
-**Waiting on the Test Planner** (no stamp until a case exists): the two non-string `projectId` tests and the pickup-after-detach spec (Candidate New Cases).
+**The two untagged tests that waited on a case** now have one: TREE-10.12 (`workflows.test.ts:154`, `:163`, `:175`) and DRAG-5.16 (`drag-5-stub-detach.spec.ts:298`). Their stamps are in "Rulings and handoffs".
 
 ## Proposed Internal Mappings (need approval)
 
-Nathan has approved no mapping in this section. For each, the full assertion and whether a standing category covers it:
+Items 1–8 were approved by Nathan on 2026-11-04 ("Rulings and handoffs"); item 9 was not. For each, the full assertion and whether a standing category covers it:
 
 1. **DRAG-2.11 ← `client/src/components/workflow/useBoardDnd.test.ts`** (`:136`, `:170`).
    - What it asserts: classification counts pending parents. With `A` pending under `B` and cap 3, `Y` is `depth-capped` and `A` is `valid`. A pending detach keeps its kept parent's depth, so `C` is `depth-capped` for a two-level `Z`.
@@ -463,7 +504,7 @@ Reported, not judged.
 
 ## Candidate New Cases
 
-1. **A malformed workflow owner reference** (open for the Test Planner).
+1. **A malformed workflow owner reference** (now TREE-10.12).
    - The tests:
      - `workflows.test.ts:163`, "returns 400, and creates nothing, when projectId is not a string". For `true`, `false`, `7`, `0`, `{}`, `[]` and `[project.id]`: 400, an error naming `projectId`, and no workflow created for that project.
      - `:175`, "refuses a projectId that is not a string ahead of the ownership check". `[owner.id]`, for a project that already owns a workflow, gets a 400 naming `projectId`, not the "already has a workflow" message.
@@ -472,7 +513,7 @@ Reported, not judged.
      - **The precedence is mostly derivable.** A value that names no row can't name "a project that already has one", so §1's 400 applies rather than §10's 409. If the Planner doesn't read it that way, it's a question for the PO.
      - **A third test needs the same case:** `workflows.test.ts:154`, "returns 400 with a specific message when projectId does not reference an existing project", which is also untagged. TREE-10.8 and TREE-10.9 cover only `templateId` and `sourceWorkflowId`.
    - Mapping: these are server route tests, so they count as they are. Once a TREE-10 case exists (or TREE-10.8 is widened to the owner), stamping `:154`, `:163` and `:175` with its ID makes it `Automated`.
-2. **Pickup immediately after detaching** (open for the Test Planner).
+2. **Pickup immediately after detaching** (now DRAG-5.16).
    - The test: `drag-5-stub-detach.spec.ts:298`, "immediately after a detach, the same item drags and reorders normally as a Card". It detaches Stub `X` by a pop to the column (released there, then drawn as an `article`). Then it picks `X` up again as a Card, which starts in the column context (`awaitDragContext(… columnRegionKey …)`), and releases it on `P`'s slot. It asserts `parentId` is still `P`, `isAttached` is 0, and `X`'s position is below `P`'s.
    - Wiki: board-drag-interaction §8 ("`X` now renders as a Card") and §1 (a Free Card's drag starts in its column). The rule is in the wiki, so this is a **Test Planner gap**.
    - Mapping: it most naturally extends DRAG-5.10 ("now renders as a Card", plus "and drags as one"). I didn't open DRAG-5.10's full text in this run. If it's folded in there, the stamp is `'DRAG-5.10: immediately after a detach, the same item drags and reorders normally as a Card'`. As a new case, it takes that case's ID in the same place. Either way it's a surface test and counts without approval.
@@ -480,12 +521,12 @@ Reported, not judged.
 
 ## Totals
 
-After this run's writes, across the whole catalog (418 cases):
+After this run's writes and the two cases the Test Planner added (TREE-10.12, DRAG-5.16), across the whole catalog (421 cases, counted from the status tables; the run's own count of 418 missed one `Open` P0 case):
 
 | Status | P0 | P1 | P2 | Total |
 |---|---|---|---|---|
 | Automated | 111 | 134 | 60 | 305 |
-| Open | 29 | 60 | 16 | 105 |
+| Open | 30 | 61 | 17 | 108 |
 | Manual | 0 | 2 | 3 | 5 |
 | Planned | 0 | 0 | 1 | 1 |
 | Pending PO | 0 | 0 | 2 | 2 |
