@@ -36,8 +36,11 @@ Every Stub-sized row is one height, whether its item has a type pill or not, so 
 
 ## Scope
 
-- **Wiki passages:** none. The wiki doesn't give a Stub row's height (§5a gives the carried copy's width and its held look). The PO decides at close whether one height is a rule.
-- **Test-plan cases:** none yet. The Test Planner decides after Nathan's approval. The handoff names a candidate.
+- **Wiki passages:** board-drag-interaction §5a now states one fixed height for every Stub-sized row, typed or untyped, including the carried copy's border inside that height. §2's subtree wording is corrected to match §7.2; no section is moved or renumbered.
+- **Test-plan cases:**
+  - **DRAG-3.25, new, Open:** fixed-height equality across typed/untyped section, ghost, overflow, modal, static-backdrop and carried rows; the pill fits the title's line and content does not grow the row.
+  - **DRAG-3.22, Open:** retains the representation-switch/pointer rule, with a cross-reference to DRAG-3.25 for the shared height. The height measurements in this handoff do not establish the complete zoom-in gesture.
+  - **DRAG-7.17:** its second spec is now skipped by Nathan; the Reconciler assesses the remaining full-case coverage at Story 8 close-out. The Planner leaves its existing status and mapping unchanged.
 
 ## Inbound deferrals
 
@@ -162,6 +165,25 @@ The off column is the audit's numbers (24 and 29, 26 and 31), so the switch comp
   - **Not traced.** The roadmap says to trace it if it recurs. That's a task of its own, and this story's changes aren't in its way.
   - **Skipped, for Story 10.** Nathan skipped the case (`test.skip`, with the reason in a comment above it) after seeing it flake. The rate over those runs, this story's code and the committed code together, is 18 in 138, about one in eight. DRAG-7.17's first case ("when R's children run longer than the modal") still runs, and didn't fail in any run here.
 
+**8. 2026-11-03, the wiki (PO).**
+- **§5a: one height is a rule.** A new paragraph after the Descendants layer's: every Stub-sized row is one fixed height, with a type pill or without. That covers a section's rows, the ghost, the overflow row, the modal's rows, the rows under its backdrop, and the carried copy with its border inside. A row's pill fits the title's line, and nothing a row holds changes its height. The Why names rule 3's ghost middle and the copy staying under the pointer, by analogy with shortCard's one height at the column layers.
+- **Deductions, for Nathan to overrule:**
+  - **A rule, not a look.** Nathan's pick between A and B is look, but either way the rows are one height, and §2 rule 3 and §5a's "stays under the pointer" lean on it. It's testable without a drag.
+  - **No pixel value.** The wiki names the height as one fact, not a number. The number is `cardMetrics.ts`'s. Why: it's not tunable, and B would have kept the rule with another number.
+  - **The pill fitting the title's line is in the rule,** since it's what Nathan picked (A). Its color and text stay with "The cues' final look", as does the copy's text sitting 1 px right.
+- **§2's "Why not the half" paragraph** said a dragged Stub's subtree rows "travel with it", which 8.5's pass missed. It now says they stay drawn and are passed over (§7.2).
+- **For the Test Planner:** the handoff's candidate fits §5a as written: typed and untyped rows, the overflow row and the modal's rows at one height, and the carried copy at the same height after a drag starts at the Descendants layer.
+- **Checks:** `check:docs` passes (394 files, 0 hits).
+
+**9. Test Planner's handoff pass.**
+- Applied the PO's §5a addition as DRAG-3.25, P1/Open, with no fixed pixel value. Its assertions include typed fixtures, the overflow row without a pill, the rows under the modal's backdrop, and both ghost and carried copy from a Stub pickup. DRAG-3.22 remains the separate representation-switch/pointer case and now points to the common-height case.
+- The §2 correction adds no new placement rule: the existing subtree-exclusion cases and DRAG-2.17 already state that descendant rows stay drawn and are passed over. No additional case is needed for that wording correction.
+- The handoff's class-list and class/number consistency tests are implementation checks, not proof of the full rendered-height case. The throwaway measurements and screenshots are useful build evidence, not a running automation mapping. No test code was read or changed in this Planner pass, and no new mapping is proposed merely because those unit tests exist.
+- **Coder/Reconciler:** assess DRAG-3.25's eventual full-case coverage and DRAG-3.22's existing geometry candidate separately, including any required internal-mapping approval. Typed row rendering and the carried copy need actual height assertions; a class list alone cannot establish them. Remaining gesture-driven work is Story 10's under the existing no-new-drag-spec rule.
+- **DRAG-7.17:** Amendment 7 supersedes the old "doesn't reproduce alone" watch notes. Its second spec failed on both this story's code and the committed baseline, and Nathan skipped it with a reason. The first spec still runs. Reconciliation must assess the missing above-overflow/scrolling clause, and Story 10 must trace the failure before restoring the skipped spec. No cause or fix is established here.
+- **8.5's retired-ID follow-up:** the Coder removed DRAG-2.5 from a fixture comment while retaining DRAG-2.2. This corrects the earlier Planner description of the checker location as a title claim; the handoff says no overlay assertion was present to skip. The roadmap records that cleanup as resolved.
+- The new case and revised coverage/watch tasks are carried into Story 8's close-out and Story 10 in the roadmap so they survive this plan's archival.
+
 ## Open questions
 
 None.
@@ -183,7 +205,8 @@ Written by the Coder in Phase 3.
   - **`dragOverlayGeometry.test.ts`'s DRAG-3.22** reads `STUB_ROW_HEIGHT_PX` where it read `CARRIED_STUB_HEIGHT_PX`. Its claim, the pointer on the copy's vertical middle, is the same.
   - **Two new unit tests with no case ID:** `TypePill.test.tsx` and `cardMetrics.test.ts`. Both pin an implementation fact (a class list; a class and the number it spells), not a rule from a plan. The Test Reconciler may leave them unmapped.
   - **A candidate for the Test Planner: every Stub row is one height, with a pill or without.** Its test reads the rows' boxes against `cardMetrics.ts::STUB_ROW_HEIGHT_PX` (`tests/helpers/dragGesture.ts::boxOf`), with no drag, and one more with a drag for the carried copy at the Descendants layer. The specs seed no types, so the case needs typed rows (`seedItem` takes `type`; the ids are `GET /api/item-types`'s).
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **Planner applied:** the candidate is DRAG-3.25, Open, from wiki board-drag-interaction §5a. DRAG-3.22 references its shared-height rule while keeping the zoom/pointer assertions distinct. Story 8 close-out reconciliation assesses coverage; Story 10 carries remaining surface work by ID.
+- **Wiki sections added, changed, moved or removed** (PO, at close): board-drag-interaction §5a (a paragraph added) and §2 (a leftover from 8.5). Amendment 8.
 - **For the Architect:**
   - **The roadmap's 8.6 entry** still describes the 24 and 29, 26 and 31 that this story removed, and names `CARRIED_STUB_HEIGHT_PX`, which is gone. That is right as the problem's statement and wrong as live. The 8.8 entry's pointer to the constant now names `STUB_ROW_HEIGHT_PX`.
   - **Story 10's drag specs: one skipped.** DRAG-7.17's second case ("from the gap above R's overflow row…", `tests/ui/drag-7-modal-hold.spec.ts`), skipped by Nathan for its flake, with the reason in a comment above it. It joins the specs Story 10's item 10 reworks, and the roadmap's item 8 (the call on DRAG-7.17) is where it is traced. Nothing was skipped for the row heights: the specs seed no types, so none of their rows changed.

@@ -661,10 +661,12 @@ tests rather than carrying its coverage verdicts forward unchanged.
   DRAG-2.15 now covers the Free descendant's Mid tier; DRAG-2.15,
   DRAG-2.16 and DRAG-2.18 split the depth-capped tiers by target kind
   and parent; DRAG-2.23 covers pending-tree assignment. These are rule
-  replacements, not automatic test-title substitutions. The Coder must
-  remove the obsolete DRAG-2.5 claim that `check:docs` reports in
-  `tests/ui/drag-target-classification.spec.ts` before closing the story,
-  and handle its old overlay assertion under Story 8's skip policy.
+  replacements, not automatic test-title substitutions. **Resolved in
+  Story 8.6:** the Coder removed DRAG-2.5 from a fixture comment in
+  `tests/ui/drag-target-classification.spec.ts`, retaining DRAG-2.2.
+  The handoff clarifies that this was no test-title claim and the spec
+  contained no overlay assertion to skip. The documentation gate is
+  reported clean again.
 - **New, Open:** DRAG-2.14, DRAG-2.15, DRAG-2.16, DRAG-2.17,
   DRAG-2.18, DRAG-2.19, DRAG-2.20, DRAG-2.21, DRAG-2.22 and
   DRAG-2.23 for the tiers, their lifetime and boundaries; DRAG-6.23 and
@@ -685,6 +687,31 @@ tests rather than carrying its coverage verdicts forward unchanged.
   running, then passed alone; retain the existing trace/watch task
   without claiming a cause or fix. Remaining drag-surface coverage goes
   to Story 10's item 10 by ID.
+
+**Carried from Story 8.6 to Story 8's close-out — Test Reconciler.**
+- **DRAG-3.25, new, Open:** one fixed height across typed/untyped
+  section rows, ghosts, overflow rows, modal rows, static rows under
+  the backdrop and carried Stub copies, with the border inside the
+  common height. The type pill fits the title's line and no content
+  grows the box. Assess actual rendered-height coverage; class-list
+  and class/number checks alone do not prove the case. The deleted
+  measurement probe and screenshots are build evidence, not an active
+  automation mapping.
+- **DRAG-3.22:** its representation-switch and pointer assertions
+  remain distinct. The handoff's measured carried copy came from a
+  Stub pickup; it did not drive the Free Card's zoom into Descendants.
+  Assess the existing geometry candidate and any required internal
+  mapping approval separately from DRAG-3.25. Remaining gesture-driven
+  coverage is Story 10's item 10.
+- **DRAG-7.17:** the above-overflow/scrolling spec now reproduces
+  alone on both the committed baseline and 8.6's code (8 failures in
+  48 runs on each). Nathan skipped that spec with a reason for Story
+  10; the other spec still runs. This supersedes earlier notes that it
+  did not reproduce alone. Check full-case coverage under the skipped
+  test rule; its catalog status and mapping are unchanged by this
+  Planner pass. The two reported symptoms are the ghost missing the
+  cursor and a projection settling above the expected gap after scroll.
+  Story 10's item 8 carries the trace; no cause or fix is established.
 
 ---
 
@@ -909,13 +936,16 @@ it goes. Story 8.6's plan takes it as its first step.
 
 **Carried in from the Story 6 + 6.1 audit fixes** (audit #8, 2026-09-25).
 
-A type pill makes a Stub row 5 px taller: a sortable row, the ghost's
-included, is 24 px, or 29 with a pill; the carried copy is 26 px, or 31.
-The drag math reads the pill-less heights
-(`cardMetrics.ts::STUB_ROW_HEIGHT_PX`, `CARRIED_STUB_HEIGHT_PX`), so on a
-typed row the lean's ghost middle and the carried copy's re-anchor sit up
-to 2.5 px off. Giving every Stub row one height, pill or not, would make
-both exact. It's a look decision.
+**Built; Planner handoff applied.** Nathan picked the pill fitting the
+title's line, and the carried copy matching the row's height with its
+border inside it. All Stub-sized rows now share the height named by
+`cardMetrics.ts::STUB_ROW_HEIGHT_PX`, typed or untyped. Wiki
+board-drag-interaction §5a states the equality rule without a pixel value.
+DRAG-3.25 is Open for actual rendered-height coverage; DRAG-3.22 retains
+the zoom/pointer rule. The close-out block above and Story 10's item 10
+carry the remaining checks. DRAG-7.17's second spec was skipped by
+Nathan after reproducing alone on both the baseline and this story's
+code; its trace is Story 10's item 8.
 
 ---
 
@@ -1385,6 +1415,13 @@ deferral and keep landing with their stories.
    the suite, or whether the case is better served by a `dragGesture.ts`
    improvement, a state-machine unit test, or a manual note. Record the
    decision per case; "flaky, kept anyway" is not an allowed end state.
+   - **DRAG-7.17, updated by Story 8.6:** Nathan skipped its second
+     spec, from the gap above `R`'s overflow row with a scrolling list,
+     after it reproduced alone on both baseline and story code. Trace
+     both reported symptoms (ghost missing the cursor; projection above
+     the expected gap after scrolling), then decide the repair and
+     restore its case coverage. The first spec still runs. No cause is
+     established by its equal failure rate on both revisions.
 
 9. **Deferred from Story 7** (Nathan, 2026-10-28): the specs two Story 7
    cases still lack. The defect that blocks some of them, a Free Card
@@ -1481,6 +1518,16 @@ deferral and keep landing with their stories.
       tests of the removed overlay behavior under retired DRAG-2.5,
       DRAG-2.6 or DRAG-2.13, or assume a new ID makes their assertions
       current. DRAG-7.17 remains the recurring-failure trace/watch item.
+
+    - **From Story 8.6:** DRAG-3.25 needs typed and untyped rendered
+      rows at one height across section, overflow, ghost, modal,
+      backdrop and carried Stub representations. The copy's border is
+      inside that height. Check the close-out reconciliation before
+      adding assertions; the handoff's new implementation unit tests
+      do not establish the full height case. DRAG-3.22 remains the
+      separate zoom/pointer case. DRAG-7.17's second spec joins the
+      skips to restore after item 8's trace and decision; its first
+      spec still runs. No spec was skipped for the height change.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,

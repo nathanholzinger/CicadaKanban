@@ -1,6 +1,6 @@
 # DRAG-3 — Board-layer drop bands, and the dragged card's shape
 
-**Next ID:** DRAG-3.25
+**Next ID:** DRAG-3.26
 
 **Terms.** Cases are at Board layer unless they say otherwise. `h` is shortCard's height, and `gap` is the card lists' shared gap: fixed facts about the card component, not tunable values. *Released without popping in* means a release at Board layer before the region's pop in has fired. Each band produces a request shape catalogued in [`../item-positioning/part-7-board-placement-intents.md`](../item-positioning/part-7-board-placement-intents.md); cases here assert which request a release produces.
 
@@ -28,6 +28,7 @@
 | DRAG-3.22 | At the Descendants layer, both copies of the dragged item are Stub rows | P2 | Open |
 | DRAG-3.23 | A Card popped into a done column is released as a workphase change with no anchor | P0 | Open |
 | DRAG-3.24 | A card set back down inside its own done column: the ghost stays in its slot, and nothing is written | P1 | Open |
+| DRAG-3.25 | Every Stub-sized row has one fixed height, with a type pill or without | P1 | Open |
 
 ---
 
@@ -204,7 +205,7 @@ The labels are asserted as text; their look is open.
 
 **Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
 
-*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
+*Given* Card `X` locked in a column, as shortCard, *when* `X` zooms into Card `P`'s Descendants layer, *then* both its carried copy and its ghost become Stub rows like `P`'s own rows. The carried copy is as wide as a row in `P`'s section, keeps a "held" shadow so it reads as carried, and stays under the pointer through the switch. Both Stub copies share the fixed row height ([DRAG-3.25](drag-3-card-column-bands.md)), with a type pill or without. *When* one pop takes `X` back out to the column, *then* both copies are shortCard again, still under the pointer. *And given* a Stub's own drag, *then* its copies are Stub rows from pickup.
 
 **Automation test:** —
 
@@ -221,5 +222,17 @@ The labels are asserted as text; their look is open.
 **Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §2
 
 *Given* a done column rendering `D1, X, D2` by `completedAt`, where `X` is a Free item with no position, *when* `X` is picked up and the cursor moves up and down the column's list, *then* the ghost stays in `X`'s own slot, between `D1` and `D2`, and no card shuffles: a done list has no slot to choose. *When* the user releases anywhere in the column, *then* `X` is being set back down, and no request is sent: its workphase, `completedAt` and place in the list are unchanged.
+
+**Automation test:** —
+
+## DRAG-3.25 — Every Stub-sized row has one fixed height, with a type pill or without
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §5a
+
+*Given* a Card's expanded descendants section with typed and untyped Stubs, and an overflow row for hidden children, let `s` be the fixed Stub-row height. *When* those rows are drawn, *then* each typed row, each untyped row and the overflow row has total height `s`. A type pill fits within the title's line, so it is no taller than that line and does not grow its row. Longer titles and other row content do not change the fixed height.
+
+*When* the hierarchy modal opens, *then* its typed and untyped rows also have height `s`, as do the static section rows still drawn under its backdrop. *When* a typed Stub is picked up from its section or the modal, *then* its in-list ghost and its carried copy each have total height `s`; the carried copy's border is inside that height. The same holds for an untyped Stub. No representation gains extra height from its pill, padding, content or carried border.
+
+The case asserts one shared fixed height, without fixing its pixel value. The representation switch and pointer position when a Card zooms into Descendants remain [DRAG-3.22](drag-3-card-column-bands.md)'s assertions.
 
 **Automation test:** —

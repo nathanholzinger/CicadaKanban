@@ -227,8 +227,8 @@ While the item is in-context:
   order, so choosing the side by which half of a card the carried card's
   center is in can land a drop one slot away from the ghost. **The same
   rule holds in a Card's descendants section (§7.1)**, where the rows of
-  a dragged Stub's own subtree travel with it and are passed over, never
-  named.
+  a dragged Stub's own subtree stay drawn and are passed over, never
+  named (§7.2).
 
 **A release always commits the in-context meaning above, no matter where
 the bare cursor is resting** (§1.1 rule 1). The card never visually leaves
@@ -606,6 +606,19 @@ through the switch in both directions. **Why:** a shortCard held inside a
 Card's box covers most of the descendants section, hiding exactly the rows
 the user is placing among — and at Descendants layer (§7) the rows are
 where a depth is chosen.
+
+**Every Stub-sized row is one fixed height, with a type pill or
+without.** That's a section's rows, the ghost among them, an overflow
+row (§9), the hierarchy modal's rows and the rows a section draws under
+its backdrop (§7.3), and the carried copy, its border drawn inside that
+height. A row's type pill fits the title's line, so a typed row is no
+taller than an untyped one, and nothing a row holds changes its height.
+**Why:** the side highlight is chosen by where the carried copy sits
+against the ghost's middle (§2, rule 3), and the copy stays under the
+pointer through the switch (above). Both are exact only when a row's
+height is one known fact, as shortCard's is at the column layers. Why
+not let a pill grow its row: both would be off for every typed item,
+and most are, since the board's add form always sets a type.
 
 shortCard is a Card *mode*, not a fifth representation tier alongside
 Stub/Card/Sheet/Headline — a compact Card on the board is still the
