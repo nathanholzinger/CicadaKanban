@@ -1,6 +1,6 @@
 # DRAG-5 — Stub → out: detach
 
-**Next ID:** DRAG-5.16
+**Next ID:** DRAG-5.17
 
 **Terms.** *The full zoom-in hold* is as in [DRAG-1](drag-1-contexts-and-popping.md). A column is merged unless a case says expanded. The attachment side of a detach is [ATT-7](../item-attachment/att-7-detach-preserves-parent.md)'s.
 
@@ -16,6 +16,7 @@
 | DRAG-5.13 | A nested Stub starts in its containing Card's Descendants and pops to that Card's column | P1 | Open |
 | DRAG-5.14 | A Stub detached in place inside a done column becomes a done Free item | P1 | Open |
 | DRAG-5.15 | Title and padding stay inside Descendants, and a release there commits gap and depth | P0 | Open |
+| DRAG-5.16 | A detached item picked up again drags as a Free Card from its column, not as a Stub of its former parent | P1 | Open |
 
 ---
 
@@ -105,5 +106,13 @@ This case asserts the clock's logic, with its threshold as a parameter; its pass
 **Priority:** P0 · **Status:** Open · **Rule:** wiki board-drag-interaction §7, wiki board-drag-interaction §8
 
 *Given* Stub `X` picked up from between siblings `S1` and `S2` inside Card `P`, *when* the cursor moves outside the section's rows but remains over `P`'s title or padding for longer than `popDelayMs`, *then* the drag stays at `P`'s Descendants layer, both copies remain Stub rows, and no pop-out clock runs. Distance from the section's smaller box doesn't satisfy `popDistancePx` either: only the whole Card bounds the layer. *When* the user releases there with the ghost above `S1`, at depth 0, *then* the request places `X` as `P`'s first child, before `S1`, still attached and in `P`'s workphase. It doesn't restore the pickup slot between `S1` and `S2`. A release in its own gap and depth is the separate no-write case ([DRAG-4.29](drag-4-attach-and-stub-placement.md)).
+
+**Automation test:** —
+
+## DRAG-5.16 — A detached item picked up again drags as a Free Card from its column, not as a Stub of its former parent
+
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §1, wiki board-drag-interaction §8
+
+*Given* Stub `X` of Card `P`, in a column rendering `P, Q`, detached by a release in the column ([DRAG-5.1](drag-5-detach-and-overflow.md)), so `X.isAttached` is false and `X.parentId` is still `P`, *when* `X` is picked up again at once, *then* it drags as a Free Card: the drag starts in the Column layer, with the column's list box as its context ([DRAG-1.1](drag-1-contexts-and-popping.md)), and not in `P`'s Descendants layer. Its former parent doesn't make it a Stub. *When* it is released with the ghost after `Q`, *then* `X` is placed by `{anchorId: Q, side: after}` in the column's within-action, and is still Free, with `X.parentId` still `P`.
 
 **Automation test:** —

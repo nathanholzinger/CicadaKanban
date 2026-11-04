@@ -14,7 +14,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | ID | Case | Priority | Status |
 |---|---|---|---|
 | DRAG-7.1 | A Card's section shows `L` levels below the Card, and an overflow row stands for a row's hidden children | P1 | Automated |
-| DRAG-7.2 | An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged | P1 | Open |
+| DRAG-7.2 | An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged | P1 | Automated |
 | DRAG-7.3 | Between a row and its overflow row, the one state is the row's first child | P0 | Automated |
 | DRAG-7.4 | Below an overflow row, the states run from Bottom's depth to the hidden children's level, and none lies right of it | P0 | Automated |
 | DRAG-7.5 | Below a last-level row with no attached children, one tab right makes the item its only attached child | P1 | Automated |
@@ -23,13 +23,13 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.8 | With no drag running, the modal closes by its X, a click outside it, or Escape, and nothing is written | P1 | Automated |
 | DRAG-7.9 | A drag in the modal starts at the Card's Descendants layer and places by gap and depth at any level | P0 | Automated |
 | DRAG-7.10 | Leaving the modal closes it and pops directly to the Card's column or sub-row | P1 | Open |
-| DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Open |
-| DRAG-7.12 | The modal's rows keep the drag's classification and Full, Mid or Low tier | P2 | Automated |
+| DRAG-7.11 | While the modal is open, the Card and its section under the backdrop take no part in the drag | P1 | Automated |
+| DRAG-7.12 | The modal's rows keep the drag's classification and Full, Mid or Low tier | P2 | Open |
 | DRAG-7.13 | A hold beside an overflow row is a silent dwell, then a cue on the row, ending in the modal opening | P1 | Open |
 | DRAG-7.14 | The modal hold resets on a gap or level change or leaving the Card, and runs on in its padding | P1 | Open |
-| DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Automated |
+| DRAG-7.15 | A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement | P1 | Open |
 | DRAG-7.16 | A modal kept inside the window at an edge reads the ghost afresh from the cursor | P1 | Automated |
-| DRAG-7.17 | When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor | P2 | Automated |
+| DRAG-7.17 | When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor | P2 | Open |
 | DRAG-7.18 | After leaving the modal, a hold beside an overflow row opens it again in the same drag | P2 | Open |
 | DRAG-7.19 | After a drag ends in the modal, by a release or a cancel, the modal stays open where it is | P1 | Automated |
 | DRAG-7.20 | The modal hold feels deliberate, and the ghost doesn't jump as the modal opens | P2 | Manual |
@@ -39,7 +39,7 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 | DRAG-7.24 | A press on an overflow row's indent is the Card's | P2 | Automated |
 | DRAG-7.25 | After a reload, a modal a hold opened is centered | P2 | Automated |
 | DRAG-7.26 | The modal closes when its Card is gone or has no attached descendants left | P2 | Automated |
-| DRAG-7.27 | A dragged row's overflow stays drawn at Low and is never a neighbor | P2 | Automated |
+| DRAG-7.27 | A dragged row's overflow stays drawn at Low and is never a neighbor | P2 | Open |
 | DRAG-7.28 | A click on a row in the modal opens nothing | P2 | Automated |
 | DRAG-7.29 | The side highlight can name an overflow row, and a release still places by gap and depth | P2 | Automated |
 | DRAG-7.31 | A hidden Stub returned to its pickup slot after reopening the modal writes nothing | P1 | Open |
@@ -56,13 +56,13 @@ So the section's rows are `A` … `Q`, `R`, `R`'s overflow row, `T` and `B`, and
 
 ## DRAG-7.2 — An overflow row counts its row's attached children, not their descendants or Free children, and leaves out one being dragged
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9
 
 *Given* the tree, *then* `R`'s overflow row reads "2 children", for `R1` and `R2`. It doesn't count `R1a`, a grandchild: the overflow row sits at `R`'s children's level and stands for them. Nor does it count `F`, `R`'s Free child, which shows on the board as a Card of its own. `T`, whose only child `G` is Free, has no overflow row. *Given* instead `R`'s only attached child is `R1`, *then* it reads "1 child".
 
 *When* an item is dropped beside `R`'s overflow row, as `R`'s first or last child ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)), *then* from the release on it reads "3 children". *When* `R1` is picked up in the modal, pulled out to the column and zoomed back into `P` ([DRAG-7.6](drag-7-overflow-and-hierarchy-modal.md)), *then* while it's dragged in the section the overflow row reads "1 child", leaving `R1` out, since the ghost shows it. *And given* `R1` is `R`'s only attached child, *then* `R` has no overflow row while `R1` is dragged.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`, `client/src/components/workflow/itemListOps.test.ts`
 
 ## DRAG-7.3 — Between a row and its overflow row, the one state is the row's first child
 
@@ -144,19 +144,19 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 ## DRAG-7.11 — While the modal is open, the Card and its section under the backdrop take no part in the drag
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* a drag in the modal, *when* the cursor rests over `P`'s Card or its section, outside the modal's box, behind the backdrop, *then* none of the section's rows is Top or Bottom: the ghost doesn't move to a gap in the section, the carried copy stays inside the modal's list, and the pop-out clock runs as it does anywhere outside the modal's box ([DRAG-7.10](drag-7-overflow-and-hierarchy-modal.md)). While the modal is open, only its rows place the item.
 
-**Automation test:** —
+**Automation test:** `tests/ui/drag-7-hierarchy-modal.spec.ts`, `client/src/components/workflow/popSession.test.ts`
 
 ## DRAG-7.12 — The modal's rows keep the drag's classification and Full, Mid or Low tier
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
 *Given* a drag of `X`, with subtree height `H`, where `R` and `R1` are Valid for `X`, `R1a` is Depth-capped, and `R1a` has an attached child `Y`, all existing rows within `CAP`, *when* the modal opens during the drag, *then* `R` and `R1` are Full. `R1a` is Mid at `overlayAnchorOpacity`, since its parent `R1` is Valid, while `Y` is Low at `overlayNeitherOpacity`, since its parent `R1a` is not. The rows keep the drag-start classification and tiers, as in the section; opening the modal does not recompute them. Their content dims independently, with no compounded dim from ancestor rows. The static section rows under the backdrop take no target tier ([DRAG-2.20](drag-2-target-classification.md)).
 
-**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`, `tests/ui/drag-7-hierarchy-modal.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.13 — A hold beside an overflow row is a silent dwell, then a cue on the row, ending in the modal opening
 
@@ -188,13 +188,13 @@ This case asserts the clock's logic, with its thresholds as parameters; its pass
 
 ## DRAG-7.15 — A hold opens the modal with the ghost's spot under the cursor, so a release right after commits the same placement
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* the modal hold beside `R`'s overflow row completes with the cursor still, where a modal placed under the cursor fits inside the window, *then* the modal opens with the ghost's spot under the cursor: from the gap above the overflow row, the gap before `R1`, at `R1`'s level; from the gap below it, the gap after `R2`, at `R2`'s level. The ghost is there, and it's the gap and the depth the cursor reads over the modal's rows. A release without moving the cursor commits what it would have before the modal opened: `X` first among `R`'s attached children, before `R1`, or last, after `R2` ([DRAG-7.3](drag-7-overflow-and-hierarchy-modal.md), [DRAG-7.4](drag-7-overflow-and-hierarchy-modal.md)). No pop happened: the drag is still at `P`'s Descendants layer.
 
 The same holds whichever way the cursor came to the gap: moving down to it, from the rows above, or moving up to it, from those below. *And given* the item held carries a subtree, such as a Stub of `P`'s with an attached child of its own, *then* the same holds: the modal opens with the item's spot under the cursor, and a release right after commits the item there, its child still under it.
 
-**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.16 — A modal kept inside the window at an edge reads the ghost afresh from the cursor
 
@@ -206,11 +206,11 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.17 — When the rows before the ghost's spot run longer than the modal, its list scrolls to put the spot under the cursor
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §7.3
 
 *Given* a tree whose modal rows before the ghost's spot ([DRAG-7.15](drag-7-overflow-and-hierarchy-modal.md)) run longer than the modal can show at once, *when* the modal hold completes beside `R`'s overflow row, *then* the modal's list is scrolled so that the spot sits under the cursor, and a release without moving the cursor commits it. From the gap below the overflow row, that's `R` with many attached children, and the release commits `X` last among them. From the gap above it, the spot is just under `R`, so it's many rows before `R`, such as a sibling of `R`'s before it with many attached children of its own, and the release commits `X` first among `R`'s attached children.
 
-**Automation test:** `tests/ui/drag-7-modal-hold.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.18 — After leaving the modal, a hold beside an overflow row opens it again in the same drag
 
@@ -286,11 +286,11 @@ The same holds whichever way the cursor came to the gap: moving down to it, from
 
 ## DRAG-7.27 — A dragged row's overflow stays drawn at Low and is never a neighbor
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2, wiki board-drag-interaction §4.1
+**Priority:** P2 · **Status:** Open · **Rule:** wiki board-drag-interaction §9, wiki board-drag-interaction §7.2, wiki board-drag-interaction §4.1
 
 *Given* the tree, *when* `R` is picked up in the section, *then* its overflow row stays drawn in the section at Low ([DRAG-2.18](drag-2-target-classification.md)), rather than riding with the carried copy. It isn't one of the placement neighbors, and while `R` is dragged the side highlight never names it. Every gap reads as though `R`'s overflow row weren't a candidate: the gap after `Q` runs to `T`. *When* `R` is released as `B`'s next sibling, at level 1 ([DRAG-4.10](drag-4-attach-and-stub-placement.md)), *then* `R.parentId = P`, after `B`, with `R1` and `R2` still its attached children. At level 1, `R` is no longer at the last shown level, so it has no overflow row, and `R1` and `R2` show in the section below it, at level 2.
 
-**Automation test:** `tests/ui/drag-7-overflow-row.spec.ts`
+**Automation test:** —
 
 ## DRAG-7.28 — A click on a row in the modal opens nothing
 

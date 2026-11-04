@@ -4,7 +4,7 @@
 
 | ID | Case | Priority | Status |
 |---|---|---|---|
-| TREE-2.1 | The dragged project's descendants are dimmed for the whole drag | P2 | Automated |
+| TREE-2.1 | The dragged project's descendants are dimmed for the whole drag | P2 | Open |
 | TREE-2.2 | A collapsed project opens when a project is dropped into it as its child | P2 | Automated |
 | TREE-2.3 | A collapsed project opened by a drop stays open if the move fails | P2 | Automated |
 | TREE-2.4 | Legal parents are Full, the cap boundary is Mid, and deeper rows are Low | P1 | Open |
@@ -17,11 +17,11 @@
 
 ## TREE-2.1 — The dragged project's descendants are dimmed for the whole drag
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
+**Priority:** P2 · **Status:** Open · **Rule:** wiki project-tree §2, wiki hierarchy-placement §7
 
 *Given* top-level projects `A` and `X`, where `X` has a child `X1`, and `X1` a child `X1a`, with enough room under the project cap for `A` to take `X`'s whole subtree, *when* `X` is dragged, *then* `X1` and `X1a` stay drawn in place at Low, using `projectNeitherOpacity`, wherever the cursor goes. Neither is a placement neighbor. `A` is Full on this shallow fixture; unrelated rows nearer the cap may instead be Mid or Low ([TREE-2.4](tree-2-what-the-drag-shows.md)). `X`'s own row is drawn separately at `projectDraggedOpacity`, without a target tier. *When* the drag ends, by a release or a cancel, *then* the tiers and dragged-row dim clear, and every row is drawn at full strength at its resulting place.
 
-**Automation test:** `tests/ui/project-tree-drag.spec.ts`
+**Automation test:** —
 
 ## TREE-2.2 — A collapsed project opens when a project is dropped into it as its child
 
