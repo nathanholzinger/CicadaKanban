@@ -1,5 +1,5 @@
 // Card sizing facts: the shortCard's fixed height and the card lists' gap, the
-// Stub tier's row heights and box class, and the Descendants section's indent
+// Stub tier's row height and box class, and the Descendants section's indent
 // step. A leaf module with no imports of its own, so the render components
 // (KanbanCard.tsx, BandGuides.tsx, CardList.tsx) and the drag layer's pure
 // modules can each depend on these facts without depending on *each other* for
@@ -30,24 +30,23 @@ export const SHORT_CARD_METRICS = { heightPx: SHORT_CARD_HEIGHT_PX, gapPx: CARD_
 // its Descendants region on the board, into a row's width (the carried Stub,
 // locked at a childless Card, has no section to measure).
 export const CARD_CONTENT_INSET_PX = 13;
-// The Stub tier's two row heights, measured rather than derived from the
-// classes. A sortable row in a Descendants
-// section (`StubRows.tsx::AttachedChildRow`, the dragged item's own row there
-// included) is 24px; the bordered one (`KanbanCard.tsx`'s carried Stub) is
-// 26px — the title line (`text-xs`, 16px) plus `py-1`,
-// plus the border. A type pill adds 5px to either: it's 21px tall (10px text
-// at the inherited 1.5 line height, `py-0.5`, a 1px border), taller than the
-// title. The readers use the pill-less heights, so on a typed row they sit
-// 2.5px off its true middle: `dragCollision.ts::dropAnchorFor`'s ghost
-// middle (`STUB_ROW_HEIGHT_PX`, the Descendants-layer counterpart to
-// SHORT_CARD_HEIGHT_PX above) and `dragOverlayGeometry.ts`'s re-anchor
-// (`CARRIED_STUB_HEIGHT_PX`). Evening the rows out is a look change, not
-// yet decided.
+// The Stub tier's row height, set rather than measured: every Stub-sized row (a
+// section's row, the dragged item's own row there, the overflow row, the static
+// row under the hierarchy modal's backdrop, and `KanbanCard.tsx`'s carried
+// Stub, its border included) is this tall, with a type pill or without. It is
+// the Descendants-layer counterpart to SHORT_CARD_HEIGHT_PX above, and the
+// drag math reads it as the height drawn: `dragCollision.ts::dropAnchorFor`'s
+// ghost middle and `dragOverlayGeometry.ts`'s re-anchor. Content taller than
+// the row (a type pill past the title's 16px line, `TypePill.tsx`'s `fitsLine`)
+// spills out of it, where it shows, instead of moving the math off unseen.
+// The class and the number are one height spelled twice, as CARD_LIST_GAP_CLASS
+// and CARD_LIST_GAP_PX are above.
 export const STUB_ROW_HEIGHT_PX = 24;
-export const CARRIED_STUB_HEIGHT_PX = 26;
+export const STUB_ROW_HEIGHT_CLASS = 'h-6';
 // The box every Stub-sized row shares — the Stub rows, the carried copy and the overflow row —
-// so the heights above stay true of each; each adds only its own border, fill and states.
-export const STUB_ROW_BOX_CLASS = 'flex items-center gap-1.5 rounded px-1.5 py-1';
+// so the height above is true of each; each adds only its own border, fill and states. The
+// height has no padding of its own to add up to: the border is inside it.
+export const STUB_ROW_BOX_CLASS = `flex ${STUB_ROW_HEIGHT_CLASS} items-center gap-1.5 rounded px-1.5`;
 // The flat descendants section's own per-row indent step: depth 0 (a Card's
 // direct Stub) lands 12px in, and each level deeper adds another 12px. One
 // number, read by the render side (`descendantsIndentPx`) and the gesture

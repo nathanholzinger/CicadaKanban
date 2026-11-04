@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.6 — One height for every Stub row
 
-**Type:** story · **Written:** 2026-11-03 by the Architect, from the Story 6 + 6.1 audit's finding #8 (2026-09-25) · **Status:** planning
+**Type:** story · **Written:** 2026-11-03 by the Architect, from the Story 6 + 6.1 audit's finding #8 (2026-09-25) · **Status:** built, for review and commit; the handoff is written
 
 ## Goal
 
@@ -111,19 +111,80 @@ Filled in by the Coder.
 
 | Symbol | Carries |
 |---|---|
+| `cardMetrics.ts::STUB_ROW_HEIGHT_PX`, `STUB_ROW_HEIGHT_CLASS` | The one height of a Stub-sized row, as the number the drag math reads (24) and the class that draws it (`h-6`), paired as `CARD_LIST_GAP_PX` and `CARD_LIST_GAP_CLASS` are. `CARRIED_STUB_HEIGHT_PX` is gone: the carried copy is this height too. |
+| `cardMetrics.ts::STUB_ROW_BOX_CLASS` | The box every Stub-sized row shares, now with `STUB_ROW_HEIGHT_CLASS` and no vertical padding, so the height is set and not the sum of a title line and its padding. Its users are unchanged: `StubRows.tsx::AttachedChildRow`, `OverflowRow`, `StaticStubRow`, and `KanbanCard.tsx::OVERLAY_STUB_CLASS`. |
+| `KanbanCard.tsx::OVERLAY_STUB_CLASS` | The carried copy: the shared box plus its border, fill and shadow. Its border is inside the 24 px, so the copy is as tall as a row. |
+| `dragOverlayGeometry.ts::reanchorOverlayTransform` | Centers the copy on the pointer at the zoom into a Card, by `STUB_ROW_HEIGHT_PX`. Its comment and `useBoardDnd.ts`'s read the one constant. |
+| `dragCollision.ts::dropAnchorFor` | Reads `STUB_ROW_HEIGHT_PX` for the ghost's middle over a Stub row or an overflow row, as before. |
+| `TypePill.tsx::TypePill`'s `fitsLine` | A Stub row's pill: it drops the line height it inherits (`leading-none`), so it is 16 px (10 px text, `py-0.5`, a 1 px border), the height of the title's line. The Card tier never passes it. |
+| `StubRows.tsx::StubBody` | Passes `fitsLine` to the pill. Every Stub-sized row that has a pill draws it here: a section's row, the ghost, the static row under the modal's backdrop, and the carried copy. The overflow row has no pill. |
 
 ## Amendments
 
+**1. Phase 1's gate item.** The retired DRAG-2.5 is out of the fixture comment in `tests/ui/drag-target-classification.spec.ts`, which keeps DRAG-2.2's ID. `check:docs` is clean again.
+
+**2. A test for the pill's class, where the story planned none.** `TypePill.test.tsx` reads the pill's classes: `leading-none` is there with `fitsLine` and absent without, and nothing else in the class list changes.
+- **Why:** the first form of the class (`${pillClass}${fitsLine ? ' leading-none' : ''}`) passed type-check, lint and the measurement, then lost its leading space to the Tailwind Prettier plugin, which trims a class string inside a `className` expression. The class glued onto `border` (`borderleading-none`), which drops the pill's border and the line height both. Nothing else in the suite sees it.
+- **The test fails against that glued form** and passes on the form built (`` `${pillClass} leading-none` ``).
+
+**3. Phase 1's rows, measured in the browser** (Playwright's Chromium, a section of six rows, typed and untyped, read with `tests/helpers/dragGesture.ts::boxOf`; a throwaway spec, deleted). Heights in px, with the switch on (A) and off (today's pill):
+
+| Row | A | Today's pill |
+|---|---|---|
+| A section's Stub row, typed / untyped | 24 / 24 | 29 / 24 |
+| The overflow row | 24 | 24 |
+| The hierarchy modal's row, typed / untyped | 24 / 24 | 29 / 24 |
+| The static row under the modal's backdrop, typed / untyped | 24 / 24 | 29 / 24 |
+| The ghost, typed / untyped | 24 / 24 | 29 / 24 |
+| The carried copy, typed / untyped | 26 / 26 | 31 / 26 |
+
+The off column is the audit's numbers (24 and 29, 26 and 31), so the switch compared today's board with A on the same rows.
+
+**4. Phase 2: Nathan's picks.** A, so every row is 24 px, and the carried copy matches the row's height.
+
+**5. Phase 3: what was built.**
+- **The switch is gone:** the tuning field, the panel's checkbox, and the `DragTuningContext` that Phase 1 put around `DragOverlay` so the carried copy could read it. `StubBody` reads no tuning, and `BoardView.tsx` is as it was.
+- **The height is set on the box** (D3). `STUB_ROW_BOX_CLASS` holds `STUB_ROW_HEIGHT_CLASS` (`h-6`) and has no `py-1`, so a row's height is the class's and a pill that grows later spills out of its row, where it shows, instead of growing the row and moving the math off unseen.
+- **The carried copy's border is inside its 24 px.** Tailwind boxes are border-box, so the copy is the shared box with a border drawn in it, and the 2 px it added is gone with `py-1`. `CARRIED_STUB_HEIGHT_PX` folded into `STUB_ROW_HEIGHT_PX`, and `dragOverlayGeometry.test.ts`'s DRAG-3.22 reads the one.
+- **`cardMetrics.ts`'s comment** says the height is set. "Measured rather than derived from the classes" and the 2.5 px caveat are out.
+- **A test for the class and the number** (`cardMetrics.test.ts`): `h-6` is 24 px at a quarter of a rem a step, the shared box holds it and has no vertical padding, and the card lists' gap class and number agree the same way. It catches one of the pair edited alone.
+
+**6. Phase 3: the rows measured again** (the same throwaway spec, deleted). Every row is 24 px: a section's rows typed and untyped, the overflow row, the modal's rows, the static rows under its backdrop, and the ghost. The carried copy is 24 px typed and untyped (it was 26 and 31).
+- **A screenshot of each shape** shows the pill whole inside its row and the copy's border drawn, with nothing clipped.
+- **The carried copy was read from a Stub picked up in its own section,** which starts at the Descendants layer. That is the render branch (`overlayIsStub`) a Free Card takes when it zooms into a Card, but the zoom itself was not driven here: its specs are skipped, since Playwright's frozen pointer undoes the hold.
+
+**7. Phase 3: the gate.**
+- **`npm run check`:** passes. `check:docs` is clean, the client has 635 tests (6 new, in `TypePill.test.tsx` and `cardMetrics.test.ts`), the server 432 and the scripts 235.
+- **`npm run test:e2e`:** 217 passed, 19 skipped and 1 failed, run with nothing else running. The one failure is DRAG-7.17's second case ("from the gap above R's overflow row, a list that scrolls puts the ghost's spot under the cursor too"), the roadmap's watch item, which also failed in 8.5's full run.
+- **It isn't this story's.** The case, run alone 48 times in a row, failed 8 times on this story's code and 8 times on the committed code (this story's work stashed for the run).
+  - **It fails two ways, on both.** The ghost's painted box misses the cursor (the poll in `expectGhostUnder`), or the projection settles above where the case expects it: `23:3:true` or `22:3:true` for `24:3:true`, after the modal's list scrolls. On the committed code that was 5 misses and 3 projections.
+  - **The rate varies by batch:** on this story's code, 1 in 6, 0 in 24, 8 in 48 and 1 in 12; on the committed code, 8 in 48. So it reproduces alone, at around one run in six at its worst, where the roadmap's earlier notes had it not reproducing alone.
+  - **Not traced.** The roadmap says to trace it if it recurs. That's a task of its own, and this story's changes aren't in its way.
+  - **Skipped, for Story 10.** Nathan skipped the case (`test.skip`, with the reason in a comment above it) after seeing it flake. The rate over those runs, this story's code and the committed code together, is 18 in 138, about one in eight. DRAG-7.17's first case ("when R's children run longer than the modal") still runs, and didn't fail in any run here.
+
 ## Open questions
 
-None yet.
+None.
 
 ## Living-docs handoff
 
-Written by the Coder in Phase 3. What's expected:
-- **Behavior decisions made while building, for the PO to rule on:** the chosen height, and the pill's look in a Stub row. Whether "every Stub row is one height, typed or not" is a rule; §5a holds the carried copy's other facts.
+Written by the Coder in Phase 3.
+
+- **Behavior decisions made while building, for the PO to rule on:**
+  - **Every Stub-sized row is one height, typed or not: 24 px.** A section's row, the ghost, the overflow row, the hierarchy modal's row, and the row a section keeps under the modal's backdrop. Whether that is a rule is the PO's to say.
+  - **The carried copy as a Stub is that height too,** its border inside it. §5a gives the copy's width and its "held" look and no height. If the one height is a rule, §5a is a home for the copy's half of it.
+  - **A Stub row's type pill is 16 px tall,** with the same text, width and color as the Card's. Only its height tightens, to the title's line. The Card tier's pill is unchanged. On a board of typed rows, each row got 5 px shorter.
+  - **A row doesn't grow with its content.** Its height is set, so content taller than the row spills out of it. Nothing spills today (the pill and the title are both 16 px), and it's what keeps the drag math's height the one drawn.
+  - **Unchanged, and in "The cues' final look":** the copy's text sits 1 px further right than a row's, since its border takes that from inside the box, as it did before.
 - **Planned passages now built:** none.
 - **Passages superseded:** none known.
-- **Implementation passages to place:** `cardMetrics.ts`'s comment (D3), and `TypePill.tsx`'s header if the pill gains a Stub-tier variant.
-- **Test-plan cases affected:** none known. A candidate for the Test Planner: every Stub row is one height, with a pill or without. Its test would read the rows' boxes against `cardMetrics.ts`'s constant (`tests/helpers/dragGesture.ts::boxOf`), with no drag.
+- **Implementation passages placed,** all in comments the Coder owns: `cardMetrics.ts`'s comment on the Stub row's height (set, with the class and the number paired), `TypePill.tsx`'s header (`fitsLine`), `StubRows.tsx::StubBody`'s comment, and the comments in `dragOverlayGeometry.ts` and `useBoardDnd.ts`, which now name `STUB_ROW_HEIGHT_PX`. Nothing for the PO to place.
+- **Test-plan cases affected:**
+  - **`dragOverlayGeometry.test.ts`'s DRAG-3.22** reads `STUB_ROW_HEIGHT_PX` where it read `CARRIED_STUB_HEIGHT_PX`. Its claim, the pointer on the copy's vertical middle, is the same.
+  - **Two new unit tests with no case ID:** `TypePill.test.tsx` and `cardMetrics.test.ts`. Both pin an implementation fact (a class list; a class and the number it spells), not a rule from a plan. The Test Reconciler may leave them unmapped.
+  - **A candidate for the Test Planner: every Stub row is one height, with a pill or without.** Its test reads the rows' boxes against `cardMetrics.ts::STUB_ROW_HEIGHT_PX` (`tests/helpers/dragGesture.ts::boxOf`), with no drag, and one more with a drag for the carried copy at the Descendants layer. The specs seed no types, so the case needs typed rows (`seedItem` takes `type`; the ids are `GET /api/item-types`'s).
 - **Wiki sections added, changed, moved or removed** (PO, at close):
+- **For the Architect:**
+  - **The roadmap's 8.6 entry** still describes the 24 and 29, 26 and 31 that this story removed, and names `CARRIED_STUB_HEIGHT_PX`, which is gone. That is right as the problem's statement and wrong as live. The 8.8 entry's pointer to the constant now names `STUB_ROW_HEIGHT_PX`.
+  - **Story 10's drag specs: one skipped.** DRAG-7.17's second case ("from the gap above R's overflow row…", `tests/ui/drag-7-modal-hold.spec.ts`), skipped by Nathan for its flake, with the reason in a comment above it. It joins the specs Story 10's item 10 reworks, and the roadmap's item 8 (the call on DRAG-7.17) is where it is traced. Nothing was skipped for the row heights: the specs seed no types, so none of their rows changed.
+  - **DRAG-7.17 reproduces alone now** (Amendment 7): its second case failed 8 of 48 runs on the committed code, and the same on this story's. The roadmap says to trace it if it recurs, and it has now failed in a full run in Story 7, 8.1, 8.5 and here. Two shapes of failure are in Amendment 7 for whoever traces it. The first case didn't fail in any run, and still runs.

@@ -14,7 +14,7 @@
 // the dragged node's initial position, never an absolute screen coordinate.
 
 import type { Modifier } from '@dnd-kit/core';
-import { CARD_CONTENT_INSET_PX, CARRIED_STUB_HEIGHT_PX } from '../cardMetrics';
+import { CARD_CONTENT_INSET_PX, STUB_ROW_HEIGHT_PX } from '../cardMetrics';
 import { isModalList, type DragRegion, type Point } from './dragRegions';
 import type { PopSession } from './popSession';
 import { overlayFormFor, placementRegion, type OverlayForm } from './placement';
@@ -58,7 +58,7 @@ export function overlayShapeFor(pop: PopSession | null, regions: readonly DragRe
 // up beside the pointer, not under it.
 //
 // Targets `stubWidthPx` (the render side's own `overlayWidthFor`) and the
-// fixed `CARRIED_STUB_HEIGHT_PX` rather than dnd-kit's live
+// fixed `STUB_ROW_HEIGHT_PX` rather than dnd-kit's live
 // `draggingNodeRect`, which doesn't follow the form switch at once: the
 // DragOverlay's ResizeObserver stays bound to the pickup form's content, and
 // its top and left stay where the overlay was first measured.
@@ -107,7 +107,7 @@ export function reanchorOverlayTransform(
   return {
     ...transform,
     x: pointerNow.x - pickupRect.left - fractionX * stubWidthPx,
-    y: pointerNow.y - pickupRect.top - CARRIED_STUB_HEIGHT_PX / 2,
+    y: pointerNow.y - pickupRect.top - STUB_ROW_HEIGHT_PX / 2,
   };
 }
 

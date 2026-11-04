@@ -509,7 +509,7 @@ export function useBoardDnd(deps: BoardDndDeps) {
   // shrinks the box out from under dnd-kit's own pointer-glued transform
   // (dnd-kit tracks the *pickup* point, not a fraction of the box, so a box
   // that shrinks leaves the pointer beside it, not on it). Targets the
-  // overlay shape's width and `CARRIED_STUB_HEIGHT_PX` — the same numbers
+  // overlay shape's width and `STUB_ROW_HEIGHT_PX` — the same numbers
   // the render side already uses to size the Stub — rather than dnd-kit's
   // own `draggingNodeRect`: that measurement's width and height catch up with
   // the switch a few frames late (its ResizeObserver, bound at the

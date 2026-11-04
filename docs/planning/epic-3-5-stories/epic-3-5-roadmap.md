@@ -956,7 +956,7 @@ picked up.
   decision.
 - **The measured box.** A taller carried copy changes the box dnd-kit
   measures for collisions, and the drag math reads fixed heights for the
-  copy (`cardMetrics.ts::CARRIED_STUB_HEIGHT_PX`). The copy's collision box
+  copy (`cardMetrics.ts::STUB_ROW_HEIGHT_PX`, the Stub row's own). The copy's collision box
   may need to stay the dragged row's, with the stack drawn over it.
 - **How the branch shows.** The whole subtree or a few levels of it, and what
   stands in for the rest (the section's overflow row does this for a

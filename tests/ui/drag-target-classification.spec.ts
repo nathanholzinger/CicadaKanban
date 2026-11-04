@@ -42,7 +42,7 @@ test.describe('drag-target classification', () => {
     expect(typeof cap).toBe('number');
 
     // X: the carried Card, with an attached Stub S, a detached child D (its
-    // own Card) and D's own child D1 — DRAG-2.2's and DRAG-2.5's fixture.
+    // own Card) and D's own child D1 — DRAG-2.2's fixture.
     const x = await seedItem(request, { title: 'X', projectId: project.id, workphaseId: todo.id });
     const s = await seedItem(request, { title: 'S', parentId: x.id });
     const d = await seedItem(request, { title: 'D', parentId: x.id, isAttached: false, workphaseId: todo.id });
