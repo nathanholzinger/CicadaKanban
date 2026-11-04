@@ -713,6 +713,33 @@ tests rather than carrying its coverage verdicts forward unchanged.
   cursor and a projection settling above the expected gap after scroll.
   Story 10's item 8 carries the trace; no cause or fix is established.
 
+**Carried from Story 8.7 to Story 8's close-out — Test Reconciler.**
+- **TREE-2.4, TREE-2.5, TREE-2.6, TREE-2.7 and TREE-2.8, new,
+  Open:** the sidebar's Full/Mid/Low cap boundary, the root's answer for
+  top-level rows and an over-cap subtree, pickup tiers across responses,
+  the line staying full strength and valid shallower states beside Low
+  rows, and sidebar opacity values independent of the board's. Assess
+  the handoff's shared-walk, sidebar-hook and row tests against the full
+  cases, propose candidate Coder ID stamps and any needed internal
+  mapping approvals. Deleted probes are build evidence, not running
+  automation mappings.
+- **TREE-2.1:** the case now states Low descendants and the dragged
+  row's separate strength, with `A` Full only on its shallow fixture.
+  Its old-value spec in `tests/ui/project-tree-drag.spec.ts` is skipped
+  for Story 10 with a reason. Assess current full-case coverage under
+  the skipped-test rule; the Planner has left its Automated status and
+  pointer unchanged for this review. TREE-2.2 and TREE-2.3 are unchanged.
+- **Shared rule moved:** hierarchy-placement §7 now owns the general
+  tiers; board-drag-interaction §4.1 keeps board-specific handling.
+  DRAG-2.14, DRAG-2.15, DRAG-2.16, DRAG-2.17, DRAG-2.18,
+  DRAG-2.19, DRAG-2.20, DRAG-2.21, DRAG-2.22, DRAG-2.23,
+  DRAG-6.24 and DRAG-7.12 have updated references. Re-check DRAG-2.16's
+  valid shallower states beside Low rows and DRAG-2.19's response-landing
+  clause along with the existing coverage tasks. Shared implementation
+  alone does not prove each surface's rendering or approve new mappings.
+- Route remaining gesture-dependent coverage and TREE-2.1's skip to
+  Story 10's item 10 by ID. No new drag spec is requested during Story 8.
+
 ---
 
 ### Story 8.1 — Fold the Card layer into the Descendants layer ✅ (done 2026-10-29)
@@ -961,11 +988,15 @@ code; its trace is Story 10's item 8.
   dragged one.
 - **The dragged row's own dim** stays a value of its own, as on the board.
 
-**Today** the sidebar dims the dragged project and its descendants to 0.4
-(`SortableProjectRow.tsx`) and turns the drop line red past the cap. A
-project too deep to take the dragged one isn't dimmed. The rule is
-table-generic, so the board and the sidebar should share one derivation
-(root `AGENTS.md`, "One position math layer").
+**Built; Planner handoff applied 2026-11-04.** Nathan approved the
+sidebar's tiers. Hierarchy-placement §7 now owns the shared tier rule;
+project-tree §2 names the sidebar's values and board-drag-interaction
+§4.1 keeps the board's handling. TREE-2.1 is qualified to the shallow
+fixture and the separate dragged-row strength. New TREE-2.4, TREE-2.5,
+TREE-2.6, TREE-2.7 and TREE-2.8 are Open. The close-out block above
+carries coverage and internal-mapping checks; Story 10's item 10 carries
+remaining surface work and the skipped TREE-2.1 spec. The drop line's
+existing over-cap behavior and collapsed-project rules are unchanged.
 
 ---
 
@@ -1530,6 +1561,17 @@ deferral and keep landing with their stories.
       separate zoom/pointer case. DRAG-7.17's second spec joins the
       skips to restore after item 8's trace and decision; its first
       spec still runs. No spec was skipped for the height change.
+
+    - **From Story 8.7:** TREE-2.1's old-value spec in
+      `project-tree-drag.spec.ts` is skipped with a reason. Restore its
+      qualified shallow-tree/Low-descendant and dragged-row assertions
+      using the current named values. New TREE-2.4, TREE-2.5, TREE-2.6,
+      TREE-2.7 and TREE-2.8 cover sidebar tiers, root/cap boundaries,
+      response-time stability, line/gap independence and separate
+      sidebar values. Use close-out reconciliation to identify missing
+      assertions before adding gesture specs. DRAG-2.16 and DRAG-2.19
+      also make the shared Low-gap and response-landing rules explicit;
+      their remaining coverage stays in the same reconciliation scope.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,

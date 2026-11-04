@@ -217,7 +217,7 @@ The case asserts the relative endpoints, without pinning tuned opacity values or
 
 ## DRAG-6.24 — A pending pulse leaves the drop line and nested rows independent
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
 *Given* pending Card `P` with attached Stub `S` that has no write in flight, *when* `P` pulses, *then* only `P`'s own content pulses. `S` keeps its own strength, Full with no drag or its assigned tier during a drag, without inheriting `P`'s pulse. *Given* instead `S` alone is pending, *then* it pulses on its own and `P` does not. If both are pending, each pulses relative to its own strength, without multiplying the parent's pulse into the child's. A drop line naming a pending row remains Full and does not pulse, including on a Mid Card or Stub.
 

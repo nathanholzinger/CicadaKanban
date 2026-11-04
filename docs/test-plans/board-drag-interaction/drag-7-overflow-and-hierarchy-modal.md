@@ -152,7 +152,7 @@ No state lies right of the overflow row: an offset past level `L + 1` clamps to 
 
 ## DRAG-7.12 — The modal's rows keep the drag's classification and Full, Mid or Low tier
 
-**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1
+**Priority:** P2 · **Status:** Automated · **Rule:** wiki board-drag-interaction §7.3, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki hierarchy-placement §7
 
 *Given* a drag of `X`, with subtree height `H`, where `R` and `R1` are Valid for `X`, `R1a` is Depth-capped, and `R1a` has an attached child `Y`, all existing rows within `CAP`, *when* the modal opens during the drag, *then* `R` and `R1` are Full. `R1a` is Mid at `overlayAnchorOpacity`, since its parent `R1` is Valid, while `Y` is Low at `overlayNeitherOpacity`, since its parent `R1a` is not. The rows keep the drag-start classification and tiers, as in the section; opening the modal does not recompute them. Their content dims independently, with no compounded dim from ancestor rows. The static section rows under the backdrop take no target tier ([DRAG-2.20](drag-2-target-classification.md)).
 

@@ -142,8 +142,9 @@ The drag gesture's pure, unit-tested modules:
 - `dragCollision.ts` — row-data typing, collision detection, and naming the anchor a
   drop lands beside.
 - `dragRequest.ts` — turning a placement into the API request, and sending it.
-- `dragClassification.ts` — classifying every item against the carried one, once per
-  drag start, over the tree its pending writes leave.
+- `dragClassification.ts` — the board's adapter over `lib/dragTargets.ts::classifyTargets`:
+  classifying every item against the carried one, once per drag start, over the tree its
+  pending writes leave, with a Stub as the one row that names its parent.
 - `descendantsProjection.ts` — the Descendants layer's live gap and depth, placed
   against the whole section whatever levels it draws, and the overflow row the ghost is
   beside.
@@ -156,8 +157,8 @@ The drag gesture's pure, unit-tested modules:
 - `itemListOps.ts` — list selectors and ordinal placements over the board's items, and
   the rows a Card's section draws (`sectionEntries`).
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
-- `dragTuning.ts` — every tunable threshold, band and overlay value, and where they
-  persist.
+- `dragTuning.ts` — every tunable threshold, band and overlay value, the project
+  sidebar's three tier strengths among them, and where they persist.
 
 The hooks and contexts that run it:
 
@@ -189,9 +190,10 @@ The board's own state, outside the gesture:
   holds the column-reorder drop.
 
 Outside this directory: `lib/hierarchyPlacement.ts` holds the Descendants layer's gap +
-depth rule, shared with the project sidebar; `components/dragChrome.tsx` holds a row's
+depth rule, and `lib/dragTargets.ts` the classification walk (a target's state and tier),
+both shared with the project sidebar; `components/dragChrome.tsx` holds a row's
 drag registration, its live drop-side line, and the looks the drag shares (the
-active-context outline, the drop line's shape).
+active-context outline, the drop line's shape, the tier classes the sidebar draws with).
 
 ## One way to do each of these
 
@@ -240,6 +242,11 @@ active-context outline, the drop line's shape).
   draws its tier by opacity on a wrapper around its own content (`dragChrome.tsx`,
   `contentClassName`), never on its root, so the drop line and a Card's section of Stubs keep
   their own strength. The pending pulse sits on the same wrapper, halving its opacity.
+  The walk is `lib/dragTargets.ts::classifyTargets`, which the project sidebar's drag
+  uses too: what naming a row as the ghost's neighbor does is its `anchorSetsParent`
+  (a Stub on the board, every row in the sidebar). A surface passes that, never a copy
+  of the walk. The sidebar draws with `dragChrome.tsx`'s tier classes and sets the same
+  custom properties from its own tuning values.
 - **"Is this a legal parent?":** `dragClassification.ts::isValidParent`. The region
   gate and the over-cap cue both read it, so they can't disagree.
 - **The tree a pickup counts over:** `itemListOps.ts::withPendingParents`, each item's

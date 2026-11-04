@@ -3,7 +3,8 @@
 **Test suite:** [`../../test-plans/project-tree/`](../../test-plans/project-tree/)
 
 **Related:** [`../hierarchy-placement/`](../hierarchy-placement/) (the
-gap-and-depth rule the sidebar places by, and the depth cap) ·
+gap-and-depth rule the sidebar places by, the depth cap, and the drag's
+tiers) ·
 [`../positioning/`](../positioning/) (how a project's position
 resolves) · [`../boards-columns-unsorted/`](../boards-columns-unsorted/)
 (which projects' items a board shows) ·
@@ -69,12 +70,38 @@ move (§6). What the sidebar adds:
 
 ## 2. What the drag shows
 
-- **The dragged project's descendants are dimmed for the whole drag**, so
-  the branch reads as going with it, and none of its rows is a place to
-  drop (§1).
-- **A collapsed project opens when a project is dropped into it** as its
-  child, so the moved project is in view. It opens on the drop, so it
-  stays open if the move fails and the project goes back (§4).
+**Every row is drawn by what it can be to the dragged project,** by
+[`../hierarchy-placement/`](../hierarchy-placement/) §7's tiers: Full,
+a project that can be its parent; Mid, one that can't, whose parent
+can; and Low, one whose parent can't. Every row is an entry, since
+placing a project beside a row always gives it that row's parent.
+
+- **The top of the tree takes the dragged project** when its whole
+  subtree fits from the top level (§3). So a top-level row is Full or
+  Mid. Only a subtree already past the cap leaves every row Low.
+- **Mid shows only near the cap.** A row is past the cap when its depth
+  plus 1 plus the dragged subtree's height is over it (§3), so Mid is
+  the one depth of rows just past the cap, and the rows under them are
+  Low. On a tree well within the cap, only the dragged project's
+  descendants dim.
+- **The dragged project's descendants are Low,** so the branch reads as
+  going with it, and none of its rows is a place to drop (§1).
+- **The dragged project's own row** is drawn at a strength of its own.
+- **The sidebar's values:** Mid is drawn at `projectAnchorOpacity`,
+  about 0.6, Low at `projectNeitherOpacity`, about 0.3, and the dragged
+  row at `projectDraggedOpacity`, about 0.3. All three are tunable, and
+  apart from the board's.
+
+Example, with the cap at 12: a chain of projects runs from `P1`, at the
+top level, down to `P12`, and `X`, with one child, is dragged. `P1` to
+`P10` are Full, `P11` is Mid, and `P12` and `X`'s child are Low.
+
+The tiers are settled. Their final look isn't a rule yet (Open
+questions).
+
+**A collapsed project opens when a project is dropped into it** as its
+child, so the moved project is in view. It opens on the drop, so it
+stays open if the move fails and the project goes back (§4).
 
 ## 3. What makes a project a legal parent
 
@@ -310,7 +337,9 @@ Not settled. Don't derive test cases from anything in this section. Everything o
   create's dialog shows an error. A failed parent change puts the
   dropdown back on the stored parent, and reaches the user only as a
   console error.
-- **How an over-cap tab state looks (§1).**
+- **The look of the drag's cues (§1, §2).** How an over-cap tab state
+  looks, and the tiers' final look. Today the tiers are drawn as the
+  board's are, by opacity alone, and the line past the cap is red.
 - **A project that uses no workflow (§10).** It shows "Set up a
   Workflow", and has no board
   ([`../boards-columns-unsorted/`](../boards-columns-unsorted/), Open

@@ -117,7 +117,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.14 — Valid Cards and Stubs are Full
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
 
 *Given* unrelated Card `P` and its attached Stub `S`, both Valid parents for the carried item `X`, *when* `X` is picked up, *then* each target's own content is drawn at Full strength. The tier does not dim either row or add a relationship color. Both retain their Valid classification: the tier does not replace the legal-parent rule.
 
@@ -125,7 +125,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.15 — A Free Card that is not Valid is Mid, never Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1
 
 *Given* `X` has a Free descendant Card `D`, and an unrelated Free Card `T` is Depth-capped for `X`, *when* `X` is picked up, *then* `D` remains Cycle-forming and `T` remains Depth-capped, but both are Mid, drawn at `overlayAnchorOpacity`. Neither becomes Low or gains a relationship color. Each can still be the named neighbor for a reposition in its column/sub-row, which assigns no parent; neither can receive `X` as a child. Any attached Stub inside `D` or `T` is Low, at `overlayNeitherOpacity`.
 
@@ -133,15 +133,17 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.16 — A Depth-capped Stub is Mid with a Valid parent, and its children are Low
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki hierarchy-placement §6
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki hierarchy-placement §6
 
 *Given* carried item `X` of subtree height `H >= 1`, unrelated parent `P` at absolute depth `CAP - H - 1`, its attached child `S` at `CAP - H`, and an attached child `C` of `S`, with all existing rows within `CAP`, *when* `X` is picked up, *then* `P` is Valid and Full. `S` is Depth-capped as a parent for `X`, but is Mid at `overlayAnchorOpacity`: placing `X` beside `S` gives it parent `P`, and its deepest descendant fits exactly at `CAP`. `C` is Low at `overlayNeitherOpacity`, since placing `X` beside it would give it invalid parent `S`. Every further attached descendant below `C` is Low too. No row is removed or collapsed to express the tier.
+
+Low is a drawing rule, not removal of a gap's depth range: valid shallower states beside a Low row remain available, as in [DRAG-4.18](drag-4-attach-and-stub-placement.md).
 
 **Automation test:** —
 
 ## DRAG-2.17 — A dragged Stub's descendants stay drawn at Low and are never placement neighbors
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.2
 
 *Given* Stub `X` in Card `P`'s section has an attached child `C` with attached child `G`, both shown, *when* `X` is dragged to a different gap, *then* `C` and `G` stay drawn in the section at Low, at `overlayNeitherOpacity`. They do not ride with the carried copy, and neither is ever Top, Bottom or the named neighbor. Their Low strength stays the same after `X` pops out to the column or zooms into a different Card. The branch still moves with `X` in the hierarchy on release.
 
@@ -151,7 +153,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.18 — An overflow row is Full with a Valid owner and Low otherwise, never Mid
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §9
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §9
 
 *Given* visible overflow rows owned by Valid `V`, Depth-capped `T` and Cycle-forming `C` for the carried item, *when* the drag begins, *then* `V`'s overflow row is Full, and `T`'s and `C`'s are Low at `overlayNeitherOpacity`. None is Mid, even when its owner's own row is Mid. Each overflow row remains drawn in place and keeps its count meaning; it never becomes an item or a possible parent itself.
 
@@ -159,15 +161,15 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.19 — Tiers stay fixed across layers and clear when the drag ends
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10
 
-*Given* `X` is picked up with targets at Full, Mid and Low, *when* the drag moves through Board, column/sub-row and Descendants layers, and into a hierarchy modal, *then* each active target representation retains its pickup tier. A Stub does not dim further just because the drag is in a column, nor a column Card because the drag is in Descendants. *When* the drag ends by a drop, cancel or forced stop, *then* target tiers clear. After a drop, rows at the previewed placement have Full base strength, with a still-pending row's pulse applied independently ([DRAG-6.23](drag-6-preview-reconciliation.md)).
+*Given* `X` is picked up with targets at Full, Mid and Low, *when* the drag moves through Board, column/sub-row and Descendants layers, and into a hierarchy modal, *then* each active target representation retains its pickup tier. A Stub does not dim further just because the drag is in a column, nor a column Card because the drag is in Descendants. A write's response landing mid-drag does not recompute those tiers. *When* the drag ends by a drop, cancel or forced stop, *then* target tiers clear. After a drop, rows at the previewed placement have Full base strength, with a still-pending row's pulse applied independently ([DRAG-6.23](drag-6-preview-reconciliation.md)).
 
 **Automation test:** —
 
 ## DRAG-2.20 — The ghost, carried copy, backdrop rows and non-targets take no target tier
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §7.3
 
 *Given* Full, Mid and Low targets, *when* the drag begins, *then* the in-list ghost uses `overlayGhostOpacity`, independently of `overlayNeitherOpacity`, and the carried copy takes none of the target-tier dim. The two named values remain independent even when configured differently. *When* the hierarchy modal opens, *then* its active rows have their own tiers, while static section rows under its backdrop take no target tier. Places that are no target, such as Unsorted, a broken column or the outer wrapper of an expanded column, take none either. Modal-backdrop shading is separate from target-tier opacity.
 
@@ -175,7 +177,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.21 — A tier dims only the row's own content, leaving its drop line and nested rows independent
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1
 
 *Given* a Mid Free Card `P` with attached Stub `S`, *when* the drag begins, *then* `P`'s own content is drawn at `overlayAnchorOpacity`, and `S`'s at `overlayNeitherOpacity`, rather than their product. A deeper Stub beneath `S` is also Low, no darker from the ancestor tiers. *When* a Mid row is the ghost's named neighbor, *then* its drop line remains at Full strength while the row's own content stays Mid. The same isolation holds for a Mid Stub row's drop line. This case does not prescribe the Card's border or background treatment.
 
@@ -183,7 +185,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.22 — Dimmed targets never start a zoom-in or modal-hold cue
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1, wiki board-drag-interaction §7.3
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4.1, wiki board-drag-interaction §6.1, wiki board-drag-interaction §7.3
 
 *Given* a Mid Card is the named neighbor, *when* the cursor remains on its zoom-in aim, *then* no zoom-in dwell or progress cue starts and the drag never enters it. *Given* an overflow row whose owner is Depth-capped, *when* the ghost sits beside it at its hidden children's level with the cursor inside the Card, *then* the over-cap state starts no modal dwell, shows no hold-progress cue, and opens no modal. *Given* instead a Cycle-forming owner, *then* its overflow row is passed over, never named, and cannot start the hold. A Full overflow row with a Valid owner retains the ordinary valid hold behavior ([DRAG-7.13](drag-7-overflow-and-hierarchy-modal.md)).
 
@@ -191,7 +193,7 @@ The classification states and the Full, Mid and Low tiers are separate assertion
 
 ## DRAG-2.23 — Tier assignment uses pending attachment and parent changes at pickup
 
-**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10, wiki item-attachment §11
+**Priority:** P1 · **Status:** Open · **Rule:** wiki hierarchy-placement §7, wiki board-drag-interaction §4, wiki board-drag-interaction §4.1, wiki board-drag-interaction §10, wiki item-attachment §11
 
 *Given* carried item `X` has subtree height 1, unrelated `P` is at depth `CAP - 2`, unrelated `Q` at `CAP - 1`, and leaf `D` has a pending attach or reparent, *when* `X` is picked up before that write responds, *then*:
 

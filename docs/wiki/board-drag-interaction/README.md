@@ -397,7 +397,9 @@ the API always judge depth against the same value
 ### 4.1 Each target is drawn by what it can be
 
 **While an item is dragged, every target is drawn at one of three
-strengths, by what it can be to the carried item.** An *anchor* is a
+strengths, by what it can be to the carried item,** by
+[`../hierarchy-placement/`](../hierarchy-placement/) §7's tiers. A
+Valid target is what that page calls a legal parent. An *anchor* is a
 target a release can place the item beside, as the ghost's named
 neighbor (§2).
 
@@ -411,18 +413,11 @@ neighbor (§2).
   reposition whatever its state (§6.1), and a reposition sets no parent.
   So a Card that isn't Valid is Mid, whether it's a Free descendant of
   the carried item or too deep to take it.
-- **A Stub takes its tier from its parent.** Named as the ghost's
-  neighbor, a Stub gives the carried item its own parent. If that parent
-  can't take the item, by a cycle or the cap, the Stub is no anchor, and
-  it's Low. That covers the carried item's own descendants at every
-  depth, every Stub inside a Mid Card, and a Stub too deep to sit
-  beside. A Stub that isn't Valid, whose parent is, is Mid: the item can
-  sit beside it, but not under it.
-- **The tier passes down.** Every Stub under a Mid or Low target is Low.
-  Neither is Valid, so its children are Low. A Low row isn't Valid
-  either: its parent fails by a cycle or the cap, and the row is a level
-  deeper in that parent's branch. So a row's tier needs only its own
-  state and its parent's.
+- **A Stub is an entry,** so it takes its tier from its own state and
+  its parent's, a Card's or another Stub's. Named as the ghost's
+  neighbor, a Stub gives the carried item its own parent. That makes Low
+  the carried item's own descendants at every depth, every Stub inside a
+  Mid Card, and a Stub too deep to sit beside.
 - **An overflow row takes its owner's tier,** Full or Low. It stands for
   the owner's hidden children (§9), which are all Low when the owner
   isn't Valid. It's never Mid: it isn't an item, so it's never a parent.
@@ -436,13 +431,14 @@ neighbor (§2).
   and brighten again at every zoom in or out. After a drop the rows are
   drawn where the preview puts them (§10), at full strength.
 
-**The tiers are drawn by opacity alone,** with no color. Mid is drawn at
-`overlayAnchorOpacity`, about 0.6, and Low at `overlayNeitherOpacity`,
-about 0.3. The ghost is drawn at `overlayGhostOpacity`, about 0.3, a
-value of its own so that it can part from Low's. All three are tunable.
+**The board's values:** Mid is drawn at `overlayAnchorOpacity`, about
+0.6, and Low at `overlayNeitherOpacity`, about 0.3. The ghost is drawn
+at `overlayGhostOpacity`, about 0.3, a value of its own so that it can
+part from Low's. All three are tunable.
 
 **A row's tier dims its own content, and nothing it holds.** The drop
-line keeps full strength on a Mid row, which is a real anchor. A Card's
+line keeps full strength on a Mid row
+([`../hierarchy-placement/`](../hierarchy-placement/) §7). A Card's
 Stubs are drawn at their own tier, not the Card's on top of theirs, so
 a Stub in a Mid Card is drawn at Low, no darker.
 

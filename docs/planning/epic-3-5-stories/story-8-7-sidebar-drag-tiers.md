@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.7 — The project sidebar's drag cues match the board's
 
-**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** Phase 2 built, for review and commit; Phase 3 (Nathan's hands-on) next
+**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** built, for review and commit; the handoff is written
 
 ## Goal
 
@@ -38,13 +38,11 @@ A project drag draws every row in the sidebar by what it can be to the dragged p
 
 ## Scope
 
-- **Wiki passages:** none planned, since the story runs code first.
-  - **At close, the PO decides:**
-    - what wiki project-tree §2 says, since it says only that the descendants dim;
-    - whether the tier rule, now on both surfaces, moves to a page of shared rules that both cite.
+- **Wiki passages:** project-tree §2 now states the sidebar's tiers and tuning values. New hierarchy-placement §7 owns the shared tier rule; board-drag-interaction §4.1 retains the board's own handling and points to it. No existing section is renumbered.
 - **Test-plan cases:**
-  - **TREE-2.1** ("the dragged project's descendants are dimmed for the whole drag"). Its spec pins today's 0.4 (`tests/ui/project-tree-drag.spec.ts`), so it fails once LO is 0.3 (Phase 2).
-  - **The rest are the Test Planner's,** after the build.
+  - **TREE-2.1:** qualified to a shallow tree where `A` is a legal parent; descendants are Low, the dragged row has its own strength, and dim clears on drop/cancel. Its old-value spec is skipped for Story 10, so the Reconciler reviews its full-case coverage. Existing status and pointer are unchanged by the Planner.
+  - **New, Open:** TREE-2.4 (Full/Mid/Low cap boundary), TREE-2.5 (root/top-level boundary, including an already over-cap subtree), TREE-2.6 (tier lifetime across a response and next pickup), TREE-2.7 (drop-line isolation and valid gaps beside Low rows), TREE-2.8 (sidebar/board values independent).
+  - **Shared-rule references updated:** DRAG-2.14, DRAG-2.15, DRAG-2.16, DRAG-2.17, DRAG-2.18, DRAG-2.19, DRAG-2.20, DRAG-2.21, DRAG-2.22, DRAG-2.23, DRAG-6.24 and DRAG-7.12 now also cite hierarchy-placement §7. DRAG-2.16 explicitly retains valid shallower states beside Low rows, and DRAG-2.19 states that a response landing mid-drag does not recompute tiers. Board-specific §4.1 references remain.
 
 ## Inbound deferrals
 
@@ -178,26 +176,84 @@ Filled in by the Coder, phase by phase.
 - **TREE-2.1's spec is skipped,** with the one-line reason in the spec. Run alone first, `project-tree-drag.spec.ts` failed only there, on the number (0.3 received, 0.4 pinned), and the other nine passed. They still pass, with that one skipped.
 - **Checked in the browser, with a throwaway spec (deleted).** On the test stack's cap of 12, with a chain of 12 projects and X carrying one child: rows 1 to 10 are "parent" at 1, row 11 is "anchor" at the sidebar's anchor value, row 12 and X1 are "neither" at its neither value, and X is at its dragged value with no tier. All of it is gone after a cancel. The three board values, seeded apart, moved nothing.
 
+**4. 2026-11-04, Phase 3: Nathan's hands-on.** Nathan tried the sidebar's tiers and approved them as built. Nothing changed: the values stay the settled 0.6, 0.3 and 0.3 (D3).
+
+**5. 2026-11-04, Phase 4: settled.**
+- **Phase 3 changed nothing,** so the code is as Phase 2 left it.
+- **The workflow `AGENTS.md` is placed,** since a directory's `AGENTS.md` is the Coder's to fix in the change that made it stale. It now says four things:
+  - `dragClassification.ts` is the board's adapter over `lib/dragTargets.ts::classifyTargets`, with a Stub as the one row that names its parent;
+  - `dragTuning.ts` holds the sidebar's three strengths;
+  - the classification walk and the tier classes sit outside the directory and are shared with the sidebar;
+  - the tiers rule: a surface passes `anchorSetsParent`, never a copy of the walk, and the sidebar draws with the board's classes at its own values.
+- **The gate.**
+  - **`npm run check`:** passes. `check:docs` is 397 files with 0 hits, the client has 660 tests, the server 432 and the scripts 235.
+  - **`npm run test:e2e`:** 216 passed, 21 skipped and 0 failed, run with nothing else running. The skips are the 20 that stood after 8.6 (DRAG-7.17's second case among them) and TREE-2.1. Against 8.6's 217 passed, the one fewer pass is TREE-2.1, which moved to skipped.
+  - **DRAG-7.17's second case is skipped,** so its flake (Amendment 7 of 8.6's plan) couldn't show in this run. It is Story 10's.
+
+**6. 2026-11-04, the wiki (PO).**
+- **The tier rule moved to a page of shared rules,** as new hierarchy-placement §7, "Each entry is drawn by what it can be". The wiki README's convention decides it: a rule more than one feature applies goes on a shared page, and each feature's page states only its own handling.
+  - **§7 holds:** the three tiers by two answers (whether an entry is a legal parent, and whether its parent is); a legal parent's parent is legal too; an entry at the root's level takes the root's answer, each surface's page saying when the root can; the dragged entry's descendants are Low; the tier passes down; the dragged entry at a strength of its own; one tier per drag; a tier is only drawn, so a gap beside a Low entry can still hold a valid state; opacity alone, at values of each surface's own; the dim spares the drop line.
+  - **The header and intro** now name the tiers and §7, and the Related line points to board §4.1 and project-tree §2.
+- **Board §4.1 keeps the board's own handling** and cites §7: the table of targets, a Valid target as §7's legal parent, the Free Card, the Stub as an entry (its "tier passes down" bullet folded into §7), the overflow row, the rows with no tier, the layers, the board's values, a Card's Stubs at their own tier, and no pop or hold on a dimmed target. Its section number and title are unchanged, so the DRAG cases' citations hold.
+- **Project-tree §2 is rewritten.** Every row is drawn by §7's tiers, and every row is an entry. Then the top of the tree's answer (Full or Mid, Low only for a subtree already past the cap), Mid only near the cap, the descendants Low and still no drop, the dragged row, the sidebar's three tunable values apart from the board's, and Amendment 3's numbers as an example. The collapsed-project rule is unchanged, now a paragraph.
+- **Project-tree's Open question** "How an over-cap tab state looks" became "The look of the drag's cues (§1, §2)", with the tiers' final look and today's (opacity alone, and a red line past the cap).
+- **Deductions, for Nathan to overrule:**
+  - **The move to a shared page,** which the plan left to the PO.
+  - **Before the cap is known is left out.** It lasts until the cap loads, which a user can't notice. Nothing past the cap is consistent with the line's behavior then.
+  - **A row's behavior following the live tree while its tier holds** is left out too. They part only if a response changes the dragged subtree mid-drag, and §7's "one tier per drag" is the rule.
+  - **A collapsed project's hidden rows** have tiers no one sees, so the wiki says nothing of them.
+- **For the Test Planner:**
+  - TREE-2.1's wording fits §2, with the two qualifications the handoff names: a row that isn't a descendant can be Mid or Low near the cap, and the dragged row is dimmed too.
+  - The handoff's `data-drop-tier` candidate is §2's example.
+  - Hierarchy-placement §7 has no catalog of its own, so the shared rules are tested through each surface's catalog. Board §4.1's cases now cite generic rules that live in §7, which the Test Planner may want to note.
+- **Checks:** `check:docs` passes (397 files, 0 hits).
+
+**7. 2026-11-04, Test Planner's handoff pass.**
+- Applied the PO's wiki update as the five new Open sidebar cases in Scope and the TREE-2.1 qualification. The cases use the cap and the named sidebar opacity values, without pinning 12 or the current 0.6/0.3 settings. Top-level depths in the tier/cap cases are absolute, starting at 1, as project-tree §3 states.
+- Added hierarchy-placement §7 references to affected board cases, keeping their board-specific rules. The shared page gets no catalog of its own. The existing collapsed-project cases, TREE-2.2 and TREE-2.3, are unchanged.
+- No cases are derived from the omitted cap-loading interval, hidden rows' internal tier assignments or the internal distinction between the pickup tier and live placement walk. TREE-2.6 tests only the settled visible tier lifetime and recomputation at the next pickup. The tuning panel, final colors/weights and branch-carry trial remain outside these cases.
+- **Coder/Reconciler:** assess the handoff's shared-walk, sidebar-hook and row tests against the full cases, hand candidate ID stamps to the Coder and propose any needed internal mappings. No tests were read or edited by the Planner, and no automation mapping is approved by this handoff. The deleted browser probe and successful hands-on do not establish running catalog coverage.
+- **TREE-2.1:** its spec is skipped with a reason, not a current failure. Reconciliation must apply the skipped-test and full-Then rules, including the qualified fixture and dragged-row strength, before retaining its Automated status. The Planner leaves status/mapping changes to the Reconciler. The board's existing approval categories do not automatically approve the new shared/project mappings.
+- All five new IDs, the skipped TREE-2.1 spec and the updated board assertions are carried to the roadmap's Story 8 close-out and Story 10 item 10. No new drag spec is requested during Story 8.
+
 ## Open questions
 
-None yet.
+None.
 
 ## Living-docs handoff
 
-Written by the Coder in Phase 4. What it's expected to hold:
+Written by the Coder in Phase 4.
 
 - **Behavior decisions made while building, for the PO to rule on:**
-  - the sidebar's tiers, which wiki project-tree §2 doesn't state;
-  - the top level's answer (D1);
-  - the tiers before the cap is known (D2);
-  - the sidebar's values, the board's at names of their own (D3).
-- **Planned passages now built:** none, since none are planned.
-- **Implementation passages to place:**
-  - the lifted walk's module header;
+  - **The sidebar draws every project row by what it can be to the dragged project, on the board's rule.** Wiki project-tree §2 says only that the descendants are dimmed, and says nothing of any other row.
+    - **Full:** a project that can be the dragged project's parent.
+    - **Mid:** a project past the cap whose own parent can take the dragged project.
+    - **Low:** the dragged project's descendants, and a project whose own parent can't take it.
+    - **The dragged row** is drawn apart from all three.
+    - **The tier rule is now on both surfaces.** The plan left it to the PO whether it moves to a page of shared rules that both cite.
+  - **Mid shows only near the cap.** A project is past the cap when its depth plus 1 plus the dragged subtree's height is over the cap (wiki project-tree §3), so Mid is one band of rows at one depth, with Low under it. On a shallow tree only the descendants dim, as before, and every other row is at full strength.
+  - **The descendants went from 0.4 to 0.3, and the dragged row from 0.4 to 0.3.** Each is a tuning value of the sidebar's own: `projectNeitherOpacity` (the descendants are Low), `projectDraggedOpacity`, and `projectAnchorOpacity` (Mid, 0.6). They start at the board's values and are apart from the board's three, so either surface can be tuned without moving the other. Wiki board-drag-interaction §4.1 names the board's three, so the PO decides whether the sidebar's are named in project-tree.
+  - **The top level has an answer of its own.** A top-level project has no parent project to ask, so the top level takes the dragged project when its whole subtree fits from depth 1. A top-level row past the cap is then Mid, never Low. It shows only when the dragged subtree reaches the cap, and then every top-level row is Mid. For a subtree already past the cap at the top level, every row is Low.
+  - **Before the cap is known, nothing is past it:** the descendants are Low and every other row Full. The drop line marks nothing invalid then, in the same state.
+  - **The tiers hold for the whole drag,** computed at pickup, as the board's are. A response landing mid-drag redraws nothing, though what a row does (the descendants take no drop, which rows the line can name) still follows the live tree.
+  - **Unchanged, as the plan stated:** the tier dims a row's content and not its drop line; the descendants still take no drop; a Low row that isn't a descendant still names the gap above or below it, since a gap beside it can be valid at another depth; the red line past the cap stays.
+- **Planned passages now built:** none, since none were planned.
+- **Passages superseded:** none known. Wiki project-tree §2 stays true for the descendants and is incomplete otherwise.
+- **Implementation passages placed,** all in docs the Coder owns:
+  - `lib/dragTargets.ts`'s module header and the comments on its two inputs;
   - `dragClassification.ts`'s header, now the board's adapter;
-  - `client/src/components/workflow/AGENTS.md`'s lines on `dragClassification.ts` and the tiers.
+  - `useProjectDragReorder.ts`'s header and `drawnAtPickup`;
+  - the comments in `dragChrome.tsx` and `dragTuning.ts` that point at the tiers' new home;
+  - four places in `client/src/components/workflow/AGENTS.md` (Amendment 5).
+
+  Nothing for the PO to place.
 - **Test-plan cases affected:**
-  - TREE-2.1's skipped spec, for Story 10.
-  - A candidate for the Test Planner: the sidebar's tiers, read through `data-drop-tier`. Its specs need a chain of projects to the cap, as TREE-1.11's spec builds (`fetchProjectDepthCap`).
-- **For the Architect:** root `AGENTS.md`'s "One position math layer" names the lifted walk, if it lands in `client/src/lib/`.
-- **Wiki sections added, changed, moved or removed** (PO, at close):
+  - **TREE-2.1's spec is skipped, for Story 10.** It pins the descendants' old 0.4, and they are now drawn at 0.3. The case's text still holds on its shallow fixture. The Test Planner may qualify two things in it: "`A` isn't dimmed" holds only away from the cap, since near it a row that isn't a descendant can be Mid or Low, and the dragged project's own row is drawn dimmed too.
+  - **New unit tests with no case ID:** `lib/dragTargets.test.ts` (the walk over projects), the "tier each row is drawn at" block in `useProjectDragReorder.test.ts`, and `SortableProjectRow.test.tsx`. They pin the rule's implementation, and they are the unit half of the candidate below. The Test Reconciler may leave them unmapped until a case exists.
+  - **A candidate for the Test Planner: the sidebar's tiers, read through `data-drop-tier`.** The spec needs a chain of projects to the cap, as TREE-1.11's builds (`fetchProjectDepthCap`), and the sidebar's three strengths seeded through `seedDragTuning` apart from the board's three. The throwaway check in Amendment 3 is the case's numbers: at a cap of 12, with a dragged project carrying one child, rows 1 to 10 are Full, row 11 is Mid, row 12 and the child are Low, the dragged row has no tier, and every row is clear after a cancel.
+  - **Planner applied:** TREE-2.4 through TREE-2.8 now hold the separate tier, root, lifetime, line/gap and independent-value expectations; TREE-2.1 is qualified for the shallow fixture and own-row dim. They trace to project-tree §2 and shared hierarchy-placement §7. The board references and two explicit shared-rule assertions are updated as listed in Scope. Coverage assessment and any required internal approval remain with the Reconciler.
+- **For the Architect:**
+  - **Root `AGENTS.md`'s "One position math layer"** can name `lib/dragTargets.ts` beside `lib/hierarchyPlacement.ts`: the drag's classification walk, table-generic over `{id, parentId}` nodes, shared by the board and the project sidebar, with `anchorSetsParent` the one thing a surface supplies.
+  - **Story 10's item 10 gains one skipped spec:** TREE-2.1's, in `tests/ui/project-tree-drag.spec.ts`, with the reason in a comment above it.
+  - **The roadmap's 8.7 entry** has a "Today" paragraph that still says the sidebar dims the dragged project and its descendants to 0.4 and doesn't dim a project too deep to take the dragged one. That is right as the problem's statement and wrong as live.
+- **Wiki sections added, changed, moved or removed** (PO, at close): hierarchy-placement §7 (new), its header and intro; board-drag-interaction §4.1 (the shared half moved out); project-tree §2, its Related line and an Open question. Amendment 6.

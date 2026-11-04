@@ -7,20 +7,22 @@ rules tests them in its own catalog:
 and [`../../test-plans/project-tree/`](../../test-plans/project-tree/).
 
 **Related:** [`../board-drag-interaction/`](../board-drag-interaction/)
-§7 (a Card's descendants section on the board) ·
-[`../project-tree/`](../project-tree/) §1, §3 (the project sidebar, and
-the project cap) · [`../item-attachment/`](../item-attachment/) §8 (the
-item cap)
+§4.1, §7 (a Card's descendants section on the board, and its tiers) ·
+[`../project-tree/`](../project-tree/) §1–§3 (the project sidebar, its
+tiers, and the project cap) ·
+[`../item-attachment/`](../item-attachment/) §8 (the item cap)
 
 This page answers "given where a dragged entry is released in a
-hierarchy, where does it land, and how deep may a hierarchy go." Its
-rules are shared: a Card's descendants section on the board and the
-project sidebar both place by them, and §6's depth cap holds for every
-write that gives an item or a project a parent, whatever the surface. An
-*entry* is one row of the hierarchy: an item, shown as a Stub in a
-Card's section, or a project in the sidebar. Each feature's own page
-says how it shows the gap, what its root is, and any rule of its own,
-and marks as Planned any rule here that it's still to be built to.
+hierarchy, where does it land, how deep may a hierarchy go, and how is
+each entry drawn while one is dragged." Its rules are shared: a Card's
+descendants section on the board and the project sidebar both place by
+them and draw their entries by §7's tiers, and §6's depth cap holds for
+every write that gives an item or a project a parent, whatever the
+surface. An *entry* is one row of the hierarchy: an item, shown as a
+Stub in a Card's section, or a project in the sidebar. Each feature's
+own page says how it shows the gap, what its root is, and any rule of
+its own, and marks as Planned any rule here that it's still to be built
+to.
 
 ---
 
@@ -149,6 +151,50 @@ doesn't depend on the cap (§1, §2), so a state that would put the
 subtree past the cap is still offered. It's marked invalid, and a
 release in it writes nothing. Sibling states in the same gap that fit
 stay valid. How a surface marks the state is its own.
+
+## 7. Each entry is drawn by what it can be
+
+**While an entry is dragged, every other entry is drawn at one of three
+strengths, by what it can be to the dragged one.** An entry the dragged
+one is placed beside, as its sibling, gives it that entry's parent. So
+what an entry can be rests on two answers: whether it's a *legal
+parent*, outside the dragged subtree (§4) and within the cap (§6), and
+whether its parent is.
+
+| Tier | What the entry can be | Which entries |
+|---|---|---|
+| **Full** | A parent, and a neighbor too | A legal parent |
+| **Mid** | A neighbor, but not a parent | One that isn't a legal parent, whose parent is |
+| **Low** | Neither | One whose parent isn't a legal parent |
+
+- **A legal parent's own parent is legal too.** It's a level shallower,
+  and outside the dragged subtree. So a Full entry is always a neighbor
+  as well.
+- **An entry at the root's own level takes the root's answer:** whether
+  the root can take the dragged entry. Each surface's page says when it
+  can (§3).
+- **The dragged entry's descendants are Low,** at every depth. Each
+  one's parent is the dragged entry or one of its descendants, never a
+  legal parent (§4).
+- **The tier passes down.** Every entry under a Mid or a Low one is Low,
+  since neither is a legal parent. So an entry's tier needs only its own
+  answer and its parent's.
+- **The dragged entry is drawn at a strength of its own,** apart from the
+  three, wherever the surface draws it.
+- **One tier for the whole drag,** from pickup to the drag's end. What an
+  entry can be is computed once, at pickup, so a write that lands
+  mid-drag redraws no tier.
+- **A tier is only drawn.** Which gaps and states a drag offers is §1's
+  to §6's, whatever the entries beside them are drawn at. A gap beside a
+  Low entry can still hold a valid state, at another depth.
+
+**The tiers are drawn by opacity alone,** with no color. Each surface
+draws Mid, Low and the dragged entry at tunable values of its own, so
+one surface can be tuned without moving the other. Its page names them.
+
+**A tier dims the entry's own content, never the drop cue beside it.**
+The drop line keeps full strength beside a Mid entry, which a release
+can name.
 
 ---
 
