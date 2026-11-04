@@ -18,7 +18,7 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 | DRAG-6.11 | A done list previews an incoming item as the newest completion, not the oldest | P1 | Automated |
 | DRAG-6.12 | An item whose kept position isn't comparable in the list it enters previews last | P1 | Automated |
 | DRAG-6.13 | Re-dragging a pending item starts its ghost where the board shows it, not at its stored position | P1 | Automated |
-| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Automated |
+| DRAG-6.15 | A reload that lands mid-drag stops the drag, and nothing is written | P1 | Open |
 | DRAG-6.16 | A forced stop shows its cause in a banner that stays across the reload | P1 | Open |
 | DRAG-6.17 | Assistive tech announces the forced-stop explanation | P1 | Open |
 | DRAG-6.18 | A click leaves the cue up; starting the next drag clears it | P1 | Open |
@@ -129,11 +129,11 @@ The generic client rules (the ordinal preview, pending isn't `null`, the reconci
 
 ## DRAG-6.15 — A reload that lands mid-drag stops the drag, and nothing is written
 
-**Priority:** P1 · **Status:** Automated · **Rule:** wiki board-drag-interaction §10
+**Priority:** P1 · **Status:** Open · **Rule:** wiki board-drag-interaction §10
 
 *Given* the user is dragging Card `X`, *when* the board reloads from the server mid-drag because another item's earlier drop failed ([DRAG-6.6](drag-6-preview-reconciliation.md)), or because a stale response carries reindex pairs ([DRAG-6.7](drag-6-preview-reconciliation.md)), *then* the drag ends at once: no carried copy or ghost is left, and `X` renders wherever the reloaded board has it, which is where the server has it. Nothing is written for `X`, and releasing the pointer afterwards sends no request. These are the resyncs that can land while an item drag is held; reloads requiring a click, such as a board switch or a workphase or column edit, are not additional mid-drag scenarios.
 
-**Automation test:** `client/src/components/workflow/useBoardDnd.test.ts`
+**Automation test:** —
 
 ## DRAG-6.16 — A forced stop shows its cause in a banner that stays across the reload
 
