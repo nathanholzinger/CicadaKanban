@@ -290,14 +290,16 @@ export function dropAnchorFor(
 }
 
 // The rows `dropAnchorFor` steps past, or none. Only at a Descendants
-// layer: a dragged Stub's own descendants stay rendered in the flat section
-// below it, but they travel with it, so they're never Top or Bottom
+// layer: the dragged item's own descendants that the section draws below its
+// row travel with it, so they're never Top or Bottom
 // (wiki board-drag-interaction §7.2) — they're out of the projection's rows
-// too (`classification.subtreeIds`). So is the overflow row of a traveling
-// row: it stands for the children that travel. Named, the gap would jump to the
-// section's end. Never at a column: there a Free descendant of the dragged
-// Card is a real anchor. One predicate for the blue line and the gap
-// (through `namedAnchorFor`), so they can't disagree.
+// too (`classification.subtreeIds`). A carried Stub's branch isn't drawn at
+// all (`itemListOps.ts::carriedBranchOf`), so the rows here are a carried Free
+// Card's children, which its previewed row draws below it. So is the overflow
+// row of a traveling row: it stands for the children that travel. Named, the
+// gap would jump to the section's end. Never at a column: there a Free
+// descendant of the dragged Card is a real anchor. One predicate for the blue
+// line and the gap (through `namedAnchorFor`), so they can't disagree.
 //
 // Deliberately separate from `projectTreeUtils.ts::resolveGap`: the sidebar
 // draws no ghost, so it maps an `over` inside the dragged block to the gap

@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.8 — A pickup takes its descendants with it
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.8 entry and Nathan's design (2026-11-04) · **Status:** Phase 1 built, for review and commit; Phase 2 is Nathan's hands-on
+**Type:** story · **Written:** 2026-11-04 by the Architect, from the roadmap's 8.8 entry and Nathan's design (2026-11-04) · **Status:** built and settled, for review and commit: the collapse replaces 8.5's rows, and the handoff is written
 
 ## Goal
 
@@ -89,7 +89,7 @@ These all draw `itemListOps.ts::sectionEntries`, which already leaves the dragge
 - **On a cancel, a release that writes nothing, or a release past the cap:** where it was.
 - **On a forced stop:** where the reloaded board draws it.
 
-**D6. Behind a switch in the tuning panel, off by default.**
+**D6. Behind a switch in the tuning panel, off by default, for the trial.** Settled at the hands-on: the collapse replaces 8.5's rows, and the switch is gone (Amendment 2).
 - **A boolean in `dragTuning.ts`, with a checkbox in `DragTuningPanel.tsx`,** beside the forced-stop flash's.
   - The name is the Coder's: `collapseCarriedBranch`, for example.
   - **Off is today's drag:** 8.5's dimmed rows, unchanged.
@@ -155,23 +155,22 @@ Filled in by the Coder, phase by phase.
 
 | Symbol | Carries |
 |---|---|
-| `workflow/dragTuning.ts::collapseCarriedBranch` | The switch (D6), off by default. `loadDragTuning` fills a missing key from the default, so a tuning stored before it and a drag spec that seeds the tuning (`seedDragTuning` merges over `DEFAULT_DRAG_TUNING`) both get 8.5's drag. |
-| `DragTuningPanel.tsx` | The checkbox "Collapse a carried Stub’s branch", under "Section". |
 | `workflow/itemListOps.ts::carriedBranchOf`, `CarriedBranch` | The branch (D1): `hierarchyRows` from the Stub over the board's placement-aware accessor, so attached links only, as the board draws the tree, at every depth. Its ids, its children (the depth-0 rows) and its whole count. Null when it has no rows. |
 | `workflow/itemListOps.ts::carriedBranchLabel` | The second line's wording (D3): "+ 1 child", "+ X children" when every descendant is a child, else "+ X children, Y total descendants". |
 | `workflow/itemListOps.ts::sectionEntries` (`branchIds`) | D2: the branch's rows are not drawn, and are not counted by any overflow row. So the overflow row of a row that left goes with it, and so does the carried Stub's own, whose children are the branch. Every other row and count stays. |
-| `workflow/DragSessionContext.ts::DragSession.branch` | Held from pickup for the whole drag. Null for a Free Card's drag, a Stub with no attached descendants, and with the switch off. |
-| `workflow/useBoardDnd.ts::handleDragStart` | Reads the branch once, for a Stub's pickup only and with the switch on, from `deps.getAttachedChildren`, the reads the lists draw with. `endSession` clears the session, so the branch is drawn again at once on a drop, a cancel and a forced stop (D5). |
+| `workflow/DragSessionContext.ts::DragSession.branch` | Held from pickup for the whole drag. Null for a Free Card's drag, and for a Stub with no attached descendants. |
+| `workflow/useBoardDnd.ts::handleDragStart` | Reads the branch once, for a Stub's pickup only, from `deps.getAttachedChildren`, the reads the lists draw with. `endSession` clears the session, so the branch is drawn again at once on a drop, a cancel and a forced stop (D5). |
+| `workflow/dragCollision.ts::travelingRowsFor` | Kept, with its comment corrected. A carried Stub's branch is not drawn, so the rows it steps past in a section and in the modal are a carried Free Card's children, which its previewed row draws below it. |
+| `workflow/AGENTS.md` | The mental model, the concern list, the "one way" list and the test attributes say a carried Stub takes its branch with it, and that the second line is `data-carried-branch`. |
 | `KanbanCard.tsx` (`entries`, `overlayBranch`) | The section leaves the branch out, which also covers the static rows under the modal's backdrop. The carried copy's box is `relative` and holds the second line, so the line steps with the depth cue. |
 | `StubRows.tsx::CarriedBranchLine` | The second line (D3, D4): absolute under the copy's box, one row tall, `pointer-events-none`, the overflow row's text style over the copy's fill. It adds nothing to the box dnd-kit measures. Carries `data-carried-branch`. |
 | `HierarchyModal.tsx` | The modal's rows leave the branch out. |
 | `BoardView.tsx` | Hands the overlay `session.branch` beside `overlayProjection`. |
 | `client/src/test/dragFixtures.ts::makeDragSession` | A whole drag session with every field defaulted. The four tests that wrote one by hand (`BandGuides`, `dragChrome`, `HierarchyModal`, `KanbanCard`) build it here. |
 | `itemListOps.test.ts` | The walk (children and the whole branch; a Free child left out with everything under it; rows past the shown levels; a pending attach and a pending detach read where the board draws them; none), the wording, and `sectionEntries` with a branch. |
-| `useBoardDnd.test.ts` | The pickup: the branch for a Stub with the switch on, none with it off, for a Stub with none, or for a Free Card. |
-| `KanbanCard.test.tsx` | The section with and without the branch, the static rows under the backdrop, the branch drawn again after the drag; the copy's second line in the Stub form only, with a branch, outside the box's flow and inside the indented box. |
-| `HierarchyModal.test.tsx` | The modal's rows without the branch, and the cursor resting on the same row of the ghost's gap. |
-| `dragTuning.test.ts` | The switch is off by default and read from storage as a boolean only. |
+| `useBoardDnd.test.ts` | The pickup: the branch for a Stub, none for a Stub with none, none for a Free Card. |
+| `KanbanCard.test.tsx` | The section with and without the branch (no branch is a Free Card's drag, whose children are drawn), the static rows under the backdrop, the branch drawn again after the drag; the copy's second line in the Stub form only, with a branch, outside the box's flow and inside the indented box. |
+| `HierarchyModal.test.tsx` | The modal's rows without the branch, and the cursor resting on the same row of the ghost's gap. The session with no branch is a Free Card's, so DRAG-7.15's test still reads rows that travel. |
 
 ## Amendments
 
@@ -196,24 +195,49 @@ Filled in by the Coder, phase by phase.
   - **`npm run test:e2e`:** 216 passed, 21 skipped and 0 failed, as at the close of 8.7. With the switch off, nothing changed there.
 - **Not built, as the plan has it:** no new drag spec, and no wiki or test-plan change.
 
+**2. 2026-11-04, Phase 2: Nathan's hands-on, and Phase 3 settled** (Nathan, Coder).
+- **Nathan's decision:** the collapse replaces 8.5's rows. The "+ X children, Y total descendants" line is locked in as built, for now, and needs no switch.
+- **The switch is gone:** the tuning value and its default, the panel's checkbox, and the pickup's condition. The branch is read for every Stub's pickup. A `collapseCarriedBranch` key stored in a browser's tuning, as Nathan's holds from the hands-on, is ignored: `loadDragTuning` reads only the keys it has.
+- **Two tests went with it:** the switch's default, and "none with the switch off".
+- **What stayed, and why:**
+  - **8.5's tiers.** They still draw a Free descendant, the Stubs in its section, a Free Card's drag and the project sidebar. The walk still classifies a Stub's branch, which is no longer drawn.
+  - **`travelingRowsFor`.** A carried Free Card's children are drawn below its previewed row in a section and in the modal, and that drag holds no branch, so the rows are still there to step past. If a carried Free Card took its children out of the lists as a Stub's pickup does, it would have nothing left to step past in either, and could go. Its comment now says whose rows they are.
+- **Two tests were realigned.** The session of the modal's DRAG-7.15 test and the section's "no branch" case both modeled a Stub with its children drawn, which a Stub's pickup no longer gives. They model a carried Free Card's drag, which does.
+- **No spec is skipped.** No drag spec pinned the branch's rows at Low, and the cases that describe them (DRAG-2.17, DRAG-7.27) have no automation.
+- **`workflow/AGENTS.md` is placed,** as the directory's map: what a carried Stub takes with it, `carriedBranchOf` as the one source, the rows `travelingRowsFor` steps past, and `data-carried-branch`.
+- **The gate.**
+  - **`npm run check`:** passes. `check:docs` is 397 files with 0 hits, the client has 697 tests, the server 438 and the scripts 245.
+  - **`npm run test:e2e`:** 216 passed, 21 skipped and 0 failed, run with nothing else running. An earlier run with the same code had one failure, `boards-layer.spec.ts`'s workphase delete notice, which is no drag spec. It passed alone (13 of 13) and in this run.
+
 ## Open questions
 
 None yet.
 
 ## Living-docs handoff
 
-Written by the Coder at the end of Phase 3. **What it's expected to cover,** if the collapse replaces 8.5's rows:
-- **For the PO:**
-  - wiki board-drag-interaction §7.2: today a dragged Stub's rows "stay where they're drawn, at Low";
-  - §4.1: the carried item's own descendants at Low;
-  - §5a: the carried copy's second line, against "Every Stub-sized row is one fixed height";
-  - §7.3: the hierarchy modal.
-- **For the Test Planner,** after the PO's pass: the cases on the dragged Stub's descendants' tier and on the carried copy's one height. DRAG-2.17, DRAG-3.25, DRAG-7.12 and DRAG-7.27 are among them.
-- **Skipped specs,** each with its reason.
+Written by the Coder at the end of Phase 3. The collapse replaces 8.5's rows.
 
 - **Behavior decisions made while building, for the PO to rule on:**
-- **Planned passages now built:**
+  - **The branch is the attached descendants only** (D1, Nathan: count only the rows that collapse). A Free child of the Stub, and everything under it, is not counted and does not collapse: it stays where it is drawn, at its tier.
+  - **The count reads "+ X children, Y total descendants".** X is the Stub's attached children and Y the whole branch, rows past the section's shown levels included. When every descendant is a child it reads "+ X children", and one child "+ 1 child".
+  - **The carried Stub's own overflow row goes with the branch.** A Stub at a section's last shown level used to draw an overflow row for its children. They are the branch, so none is drawn. Every other overflow row counts as before, the dragged item left out.
+  - **The second line shows only while the copy is a Stub,** at the Descendants layer and in the hierarchy modal. Popped out, the copy is a shortCard with none. A Free Card's drag holds no branch (out of scope in D3), so a Free Card with children zoomed into a section still draws them below its row, at Low, as 8.5 did.
+  - **The rows below the branch move up at pickup, by its height,** and back down when the drag ends.
+  - **The branch is read once at pickup and held,** so a response that lands mid-drag does not change what is hidden. Any end of the drag draws it again, where the board then has it.
+  - **The second line hangs from the copy's box** and covers the row below the ghost. At a section's last row it can hang past the Card's bottom edge. The look is a placeholder.
+  - **The over-cap outline wraps the copy's box alone,** not the second line.
+- **Planned passages now built:** D1 to D5 as the plan has them. D6's switch was built for the trial and is gone.
 - **Passages superseded:**
-- **Implementation passages to place:**
-- **Test-plan cases affected:**
+  - wiki board-drag-interaction §7.2: a dragged Stub's rows "stay where they're drawn, at Low", and the rule that a dragged row's overflow row stays drawn at Low;
+  - §4.1: the carried item's own descendants at Low, for a Stub's attached branch, which is not drawn now. Hierarchy-placement §7's "the dragged entry's descendants are Low" still holds for the sidebar and for a Free Card's rows;
+  - §5a: "Every Stub-sized row is one fixed height", for the carried copy. Its box is one row and its second line hangs outside the box the drag measures, so it is drawn two rows tall;
+  - §7.3 and §9: the hierarchy modal, and a Card's section, draw without the branch.
+- **Implementation passages to place:** placed by the Coder, in `workflow/AGENTS.md` (the Code map).
+- **Test-plan cases affected,** for the Test Planner after the PO's pass. None has automation.
+  - **DRAG-2.17 and DRAG-7.27** say a dragged Stub's descendants, and a dragged row's overflow row, stay drawn at Low. That is 8.5's drawing, which is gone.
+  - **DRAG-3.25's** carried copy gains a second line outside its one height.
+  - **DRAG-7.12** (the modal's rows keep the drag's classification and tier) holds for the rows that are drawn.
+  - **DRAG-7.15's** clause on an item that carries a subtree holds, with the subtree not drawn under it.
+  - **A new case** is due for the second line and the collapse.
+- **Skipped specs:** none. No drag spec pinned a branch's rows at Low.
 - **Wiki sections added, changed, moved or removed** (PO, at close):

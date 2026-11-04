@@ -189,7 +189,7 @@ describe('useBoardDnd: what a drag’s targets are classified against', () => {
   });
 });
 
-// A Stub's pickup reads its branch once, from the tree the board draws, when the tuning's switch is on.
+// A Stub's pickup reads its branch once, from the tree the board draws.
 describe('useBoardDnd: the branch a Stub’s pickup takes with it', () => {
   // P holds X, which holds Y (then Z) and a Free child F. A Free Card W holds the Stub V.
   const items = [
@@ -201,10 +201,9 @@ describe('useBoardDnd: the branch a Stub’s pickup takes with it', () => {
     makeItem('w'),
     makeItem('v', { parentId: 'w' }),
   ];
-  const collapsing = { ...DEFAULT_DRAG_TUNING, collapseCarriedBranch: true };
-  const pickup = (id: string, tuning = collapsing) =>
-    startDrag({ items, tuning, getAttachedChildren: parentId => getAttachedChildrenFrom(items, parentId) }, id).result
-      .current.session;
+  const pickup = (id: string) =>
+    startDrag({ items, getAttachedChildren: parentId => getAttachedChildrenFrom(items, parentId) }, id).result.current
+      .session;
 
   it('holds its attached descendants and the two counts, a Free child left out', () => {
     const { branch } = pickup('x')!;
@@ -213,16 +212,12 @@ describe('useBoardDnd: the branch a Stub’s pickup takes with it', () => {
     expect([branch!.children, branch!.descendants]).toEqual([1, 2]);
   });
 
-  it('holds none with the switch off, which draws the descendants where they are', () => {
-    expect(pickup('x', DEFAULT_DRAG_TUNING)!.branch).toBeNull();
-  });
-
   it('holds none for a Stub with no attached descendants', () => {
     expect(pickup('v')!.branch).toBeNull();
     expect(pickup('z')!.branch).toBeNull();
   });
 
-  it('holds none for a Free Card’s pickup, whatever it holds', () => {
+  it('holds none for a Free Card’s pickup, whatever it holds: its children are drawn where its row is', () => {
     expect(pickup('w')!.branch).toBeNull();
     expect(pickup('p')!.branch).toBeNull();
   });

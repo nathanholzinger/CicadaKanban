@@ -7,7 +7,7 @@ import { DragSessionContext, type DescendantsProjection, type DragSession } from
 import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_CARD_ATTR, DRAG_REGION_ATTR, descendantsRegionKey } from './workflow/dragRegions';
 import { startPopSession } from './workflow/popSession';
-import { makeDragSession, stubOrigin } from '../test/dragFixtures';
+import { freeOrigin, makeDragSession, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 import { descendantsIndentPx } from './cardMetrics';
 
@@ -130,7 +130,8 @@ describe('a Card the drag is locked at', () => {
 });
 
 // A Stub's pickup takes its branch with it: P's section holds A, D (the one carried, with D1 under it
-// and D1a under that) and C. D1 and D1a leave the section while the session holds them.
+// and D1a under that) and C. D1 and D1a leave the section while the session holds them. A session
+// with no branch is a Free Card's drag, whose previewed row in the section has its children under it.
 describe('a Card whose section holds the branch of a carried Stub', () => {
   const D = makeItem('d', { parentId: 'p', position: 2 });
   const ROWS = [
@@ -146,14 +147,14 @@ describe('a Card whose section holds the branch of a carried Stub', () => {
       activeItem: D,
       classification: classifyDragTargets('d', [CARD, ...ROWS], 12),
       pop: startPopSession(descendantsRegionKey('p')),
-      origin: stubOrigin('p'),
-      containingCardId: 'p',
+      origin: branch ? stubOrigin('p') : freeOrigin('todo'),
+      containingCardId: branch ? 'p' : null,
       branch,
     });
   const rowIds = (container: HTMLElement) =>
     [...container.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'));
 
-  it('draws every row of it while the session holds no branch', () => {
+  it('draws every row of it, a carried Free Card’s children included, while the session holds no branch', () => {
     const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(null) });
 
     expect(rowIds(container)).toEqual(['p', 'a', 'd', 'd1', 'd1a', 'c']);

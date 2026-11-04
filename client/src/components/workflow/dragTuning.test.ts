@@ -18,13 +18,4 @@ describe('loadDragTuning', () => {
     // `1e999` reads back as Infinity, which JSON.stringify could not have written.
     expect(load('{"popDelayMs":"soon","popInDelayMs":null,"cardPopInDelayMs":1e999}')).toEqual(DEFAULT_DRAG_TUNING);
   });
-
-  // The carried branch's switch is off until it is turned on, so a tuning stored before it existed, and
-  // a drag spec that seeds the tuning, both get today's drag.
-  it('keeps a carried Stub’s branch drawn where it is, unless the stored tuning turns the switch on', () => {
-    expect(DEFAULT_DRAG_TUNING.collapseCarriedBranch).toBe(false);
-    expect(load(JSON.stringify({ popDelayMs: 777 })).collapseCarriedBranch).toBe(false);
-    expect(load('{"collapseCarriedBranch":"yes"}').collapseCarriedBranch).toBe(false);
-    expect(load('{"collapseCarriedBranch":true}').collapseCarriedBranch).toBe(true);
-  });
 });

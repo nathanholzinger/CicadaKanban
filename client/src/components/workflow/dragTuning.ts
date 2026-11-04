@@ -50,12 +50,6 @@ export interface DragTuning {
    */
   sectionLevels: number;
   /**
-   * Whether a Stub's pickup takes its attached descendants out of every list that draws them, for
-   * the whole drag, and the carried copy says how many (`itemListOps.ts::carriedBranchOf`). Off, the
-   * descendants stay drawn where they are, at the lowest tier.
-   */
-  collapseCarriedBranch: boolean;
-  /**
    * How long the ghost must sit directly above or below an overflow row, at its level, before the
    * hold that opens the hierarchy modal shows its cue (`popSession.ts::advanceModalHold`). A pause
    * there is also a drop as the row's first or last child, so an ordinary one must show nothing.
@@ -107,7 +101,6 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   cardZoomDwellMs: 500,
   popSnapMs: 150,
   sectionLevels: 3,
-  collapseCarriedBranch: false,
   modalHoldDwellMs: 500,
   modalHoldCueMs: 800,
   overlayAnchorOpacity: 0.6,

@@ -672,9 +672,8 @@ export function useBoardDnd(deps: BoardDndDeps) {
         // branch and `isIdentity` compare a release against.
         origin: { parentId, slot: 'existing' },
         containingCardId,
-        // Read from the board's own placement-aware children, as the lists draw them, and only
-        // for a Stub's pickup.
-        branch: deps.tuning.collapseCarriedBranch ? carriedBranchOf(activeId, deps.getAttachedChildren) : null,
+        // Read from the board's own placement-aware children, as the lists draw them.
+        branch: carriedBranchOf(activeId, deps.getAttachedChildren),
       });
       return;
     }

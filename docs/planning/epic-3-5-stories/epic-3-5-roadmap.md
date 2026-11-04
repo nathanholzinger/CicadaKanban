@@ -1073,6 +1073,28 @@ the branch is drawn as a tree again when the drag ends. The plan's
 decisions answer the questions below. It's built behind a tuning-panel
 switch, beside 8.5's rows.
 
+**Approved 2026-11-04** (Nathan's hands-on). The collapse replaces 8.5's
+rows. The switch goes, and so does the code that drew the branch at Low
+(the plan's Phase 3).
+
+**Expanded 2026-11-04** (Nathan). The second line goes with the branch,
+whatever form the copy takes. That's two more changes, in a Phase 4 after
+Phase 3:
+- **A dragged Card carries the line too.** Today only a Stub's pickup
+  reads a branch (the plan's D3), so a Card's drag carries none. A Card's
+  attached descendants are its branch, read the same way. Its copy, a
+  shortCard at a column, shows the line.
+- **The line stays through every form switch.** Found hands-on: a Card
+  picked up and zoomed into a section draws its Stub copy without the
+  line. A Stub popped out to a column is the same switch the other way.
+  Both come from D3's two limits, only a Stub's pickup and only the Stub
+  form, which this lifts.
+
+The PO's and the Planner's passes wait for Phase 4, so the wiki is
+written once. Wiki board-drag-interaction §5a changes with it: today a
+dragged Card's "attached-children indicator and count are fully
+suppressed".
+
 **What the plan has to answer:**
 - **The jump.** Removing the rows at pickup shifts the layout under the
   cursor, the problem the zoom-in morph's story is about. Whether the rows
@@ -1091,6 +1113,111 @@ switch, beside 8.5's rows.
 - **What 8.5 keeps.** If the rows ride with the copy, the dragged Stub's own
   descendants no longer need their low-opacity mark in the section. The
   tiers for every other target stay.
+
+---
+
+### Story 8.10 — The carried copy sometimes leaves the cursor at a context switch
+**Found testing Story 8.8** (Nathan, 2026-11-04). Moving in and out of
+contexts, the carried copy sometimes ends up away from the cursor. There
+are no reliable steps yet, and it may be older than 8.8. A defect is fixed
+in Story 8, whichever story finds it (How Story 8 runs).
+
+**First, tell it apart from the offsets the drag has by design:**
+- **The clamp.** While the cursor is outside the context and the pop-out
+  clock runs, the copy is held at the context's edge (wiki
+  board-drag-interaction §2), and it catches up at the pop. Since 8.8, a
+  section is shorter by the carried branch, so the copy meets the Card's
+  bottom sooner.
+- **The jump at a layer change.** Rows move under a cursor that hasn't,
+  and the copy re-anchors. It's momentary, and it's the zoom-in morph's
+  (below).
+- **A defect is an offset that stays:** the copy stays off the cursor
+  while the cursor moves around inside one context, after any pop has
+  settled.
+
+**What to note when it happens:**
+- what was picked up, a Card or a Stub;
+- the switches on the way: a zoom into a Card, a pop out to a column, a
+  move from one Card's section to another's, the hierarchy modal;
+- whether the board or the window scrolled during the drag;
+- whether the offset stays as the cursor moves inside one context;
+- a screen recording, if one can be had.
+
+**Is it 8.8's?** Commit `b065b24` holds 8.8's trial behind its switch, so
+one build runs with the collapse and without it. `c59a268` is the board
+before 8.8.
+
+**Leads, from reading the code** (unconfirmed):
+- **The re-anchor works one way.**
+  `dragOverlayGeometry.ts::reanchorOverlayTransform` puts the copy under
+  the cursor only when a Card's pickup turns into a Stub. Every other
+  switch keeps dnd-kit's pickup offset. So a Stub's pickup drawn as a
+  shortCard hangs from the point where the Stub was picked up.
+- **The clamp reads `draggingNodeRect`.** Its size catches up with a form
+  switch a few frames late (dnd-kit's ResizeObserver). The re-anchor
+  reads `pickupRectRef` for that reason, and the clamp doesn't.
+- **The snap tween is applied twice** after a pop, once for the collision
+  rect and once for the copy (`useBoardDnd.ts`, the comment on
+  `clampToContext`). The comment counts it as cosmetic, for at most
+  `popSnapMs`.
+
+**Without reliable steps,** a throwaway spec can look for it: run against
+the test servers, it drives many switches through
+`tests/helpers/dragGesture.ts` and checks the copy's box against the
+cursor after each one settles. It's deleted afterward, as 8.8's Phase 1
+did with its spec, so it isn't a new drag test. The fix follows the
+cause. Its plan is written when the story is picked up.
+
+---
+
+### Story 8.11 — A project's pickup takes its descendants with it
+**Found with Story 8.8** (Nathan, 2026-11-04). Nathan wants the sidebar's
+drag to carry a project's branch the way 8.8 carries a Stub's:
+- at pickup, the dragged project's descendants leave the sidebar's rows;
+- the drag copy gains the second line, "+ X children, Y total
+  descendants";
+- the descendants are drawn again when the drag ends.
+
+**Today** (wiki project-tree §2, Story 8.7), the dragged project's
+descendants stay drawn in place at Low. The copy,
+`SortableProjectRow.tsx::DragGhost`, shows the project's name alone.
+
+**Where it differs from the board:**
+- **Every descendant goes with its parent.** Projects have no Free links,
+  so the branch is the whole subtree, the `descendantIds` of
+  `hierarchy.ts::getSubtree`.
+- **A row under a collapsed project isn't drawn, but it moves.** So it
+  counts, as 8.8 counts the rows behind an overflow row. The count reads
+  the real tree, not the drawn rows. The sidebar keeps both
+  (`fullChildrenOf`).
+- **The copy has one form.** The sidebar's copy never switches between a
+  shortCard and a Stub, so the line has one place to go and nothing to
+  re-anchor.
+
+**One walk and one line for both surfaces** (root AGENTS.md, "One position
+math layer"). Today the walk and its counts are the board's
+(`itemListOps.ts::carriedBranchOf`), and so are the wording
+(`carriedBranchLabel`) and the line (`StubRows.tsx::CarriedBranchLine`).
+This story moves them where the sidebar can use them too, without copying
+them:
+- the walk goes beside `hierarchyPlacement.ts::flattenHierarchyOf`;
+- each surface passes in how it reads a row's children.
+
+**What to check, as 8.8 did:**
+- that what the sidebar's drag measures after pickup sees the shorter
+  list;
+- that its projection already leaves the dragged subtree out
+  (`useProjectDragReorder.ts`).
+
+**The docs follow Nathan's hands-on.**
+- **The PO:** project-tree §2, "The dragged project's descendants are
+  Low". If both surfaces now share the rule for a carried branch, it also
+  goes in hierarchy-placement §7.
+- **The Planner:** TREE-2.1, "The dragged project's descendants are
+  dimmed for the whole drag", among others.
+
+**It runs after Story 8.8 closes,** on 8.8's settled pieces. Its plan is
+written when the story is picked up.
 
 ---
 

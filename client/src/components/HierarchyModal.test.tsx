@@ -7,7 +7,7 @@ import { classifyDragTargets } from './workflow/dragClassification';
 import { DRAG_REGION_ATTR, descendantsRegionKey, type Point } from './workflow/dragRegions';
 import { cursorXInList } from './workflow/modalPlacement';
 import { startPopSession } from './workflow/popSession';
-import { makeDragSession, rect, stubOrigin } from '../test/dragFixtures';
+import { freeOrigin, makeDragSession, rect, stubOrigin } from '../test/dragFixtures';
 import { makeItem } from '../test/itemFixture';
 
 // P's rows in the modal: B, D (the one carried), D1 (D's child, which travels with it), C.
@@ -30,6 +30,8 @@ const PROJECTION: DescendantsProjection = {
   overflowBeside: null,
 };
 
+// D is carried in P's modal. With no `branch` it is a Free Card previewed in P's section, which draws
+// D1 under it, so D1 travels with it. With one it is a Stub, whose pickup took D1 out of the rows.
 function sessionOf(
   activeItem = D,
   projection: DescendantsProjection | null = PROJECTION,
@@ -39,8 +41,8 @@ function sessionOf(
     activeItem,
     classification: classifyDragTargets(activeItem.id, ALL, 12),
     pop: startPopSession(descendantsRegionKey('p')),
-    origin: stubOrigin('p'),
-    containingCardId: 'p',
+    origin: branch ? stubOrigin('p') : freeOrigin('todo'),
+    containingCardId: branch ? 'p' : null,
     projection,
     branch,
   });

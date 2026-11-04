@@ -105,8 +105,8 @@ export interface DragSession {
   /**
    * What a Stub's pickup takes with it, read once at pickup and held for the whole drag:
    * its attached descendants, which no list draws while it is carried, and the counts its copy
-   * says. Null for a Free Card's drag, for a Stub with no attached descendants, and while
-   * `DragTuning.collapseCarriedBranch` is off.
+   * says. Null for a Free Card's drag, whose children are drawn where its row is, and for a Stub
+   * with no attached descendants.
    */
   branch: CarriedBranch | null;
 }
