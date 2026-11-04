@@ -5,10 +5,10 @@
   --text-micro: 0.625rem; /* 10px — replaces text-[10px] */
 }
 
-/* Story 6, hands-on finding 3 (2026-09-24): the zoom-in cue's fill bar
-   (KanbanCard.tsx) — a static keyframe so the runtime-tunable cue length
-   (dragTuning.ts::cardPopInDelayMs) can drive `animation-duration` via
-   inline style, which a Tailwind utility class can't parameterize. */
+/* The cue's fill bar (dragChrome.tsx::ZoomCue) — a static keyframe so the
+   runtime-tunable cue length (dragTuning.ts::cardPopInDelayMs for a Card's
+   zoom-in, modalHoldCueMs for the modal hold) can drive `animation-duration`
+   via inline style, which a Tailwind utility class can't parameterize. */
 @keyframes cue-fill {
   from {
     width: 0%;

@@ -1,8 +1,9 @@
-// The drag hook's handling of a column drop whose save fails. The gesture itself is tested through
-// the pure modules it runs and the E2E drag specs; this file holds only what needs the hook's live
-// session.
+// The drag hook's cases that need its live session: the hierarchy modal reporting its placement,
+// where a Stub's drag starts, what a drag's targets are classified against, the row a Stub's drag
+// names as the ghost's neighbor, a column reorder whose save fails, and a drag the board stops. The
+// gesture itself is tested through the pure modules it runs and the E2E drag specs.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragMoveEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import type { BoardWithDetails, Item } from '../../types';
@@ -56,13 +57,38 @@ function depsWith(onColumnDrop: BoardDndDeps['onColumnDrop']): BoardDndDeps {
   };
 }
 
+// The hook on `depsWith`'s board, with `overrides` over its deps, and the drag of `id` begun.
+function startDrag(overrides: Partial<BoardDndDeps> = {}, id = 'x') {
+  const deps = { ...depsWith(async () => {}), ...overrides };
+  const { result } = renderHook(() => useBoardDnd(deps));
+  act(() => result.current.handleDragStart(pickupOf(id)));
+  return { deps, result };
+}
+
+// Picks `id` up on a board of `items` with `placements` still pending, and returns the session the
+// pickup began.
+function pickupSession(id: string, items: Item[], placements: Placements, cap = 4) {
+  return startDrag({ board: boardWithCap(cap), items, placements }, id).result.current.session;
+}
+
+// A column save that fails once `failSave` is called, so an item drag can start in between.
+function failingColumnSave() {
+  let failSave!: () => void;
+  const saveFails = new Promise<void>(resolve => {
+    failSave = resolve;
+  });
+  const deps = depsWith(async (_activeId, _overId, resync) => {
+    await saveFails;
+    await resync();
+  });
+  return { deps, failSave };
+}
+
 describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
   it('closes the modal, and reads nothing from it, when the drag is no longer in the modal’s layer', () => {
-    const deps = depsWith(async () => {});
-    const { result } = renderHook(() => useBoardDnd(deps));
     // The drag began in no context, as one that popped out of the modal's Card before the modal
     // mounted would be.
-    act(() => result.current.handleDragStart(itemPickup));
+    const { deps, result } = startDrag();
     const before = result.current.session;
 
     act(() => result.current.readModalPlacement('p', { gap: 1, depth: 0, pointerX: 5, pointerY: 5 }));
@@ -81,15 +107,6 @@ describe('useBoardDnd: the hierarchy modal reporting its placement', () => {
   });
 });
 
-// Picks `id` up on a board of `items` with `placements` still pending, and returns the session the
-// pickup began.
-function pickupSession(id: string, items: Item[], placements: Placements, cap = 4) {
-  const deps = { ...depsWith(async () => {}), board: boardWithCap(cap), items, placements };
-  const { result } = renderHook(() => useBoardDnd(deps));
-  act(() => result.current.handleDragStart(pickupOf(id)));
-  return result.current.session;
-}
-
 // A Stub's drag starts at its containing Card's layer, the nearest Free ancestor as the board draws
 // it: another item's attachment that has not landed yet moves the Stub's whole ancestry.
 describe('useBoardDnd: where a Stub’s drag starts', () => {
@@ -98,24 +115,18 @@ describe('useBoardDnd: where a Stub’s drag starts', () => {
     // B → A → X: A is a Stub now and has no Descendants region to start in.
     const items = [makeItem('b'), makeItem('a'), makeItem('x', { parentId: 'a' })];
     const placements = new Map([['a', { parentId: 'b', slot: 'last' as const }]]);
-    const deps = { ...depsWith(async () => {}), items, placements };
-    const { result } = renderHook(() => useBoardDnd(deps));
 
-    act(() => result.current.handleDragStart(itemPickup));
+    const session = pickupSession('x', items, placements);
 
-    expect(result.current.session?.containingCardId).toBe('b');
+    expect(session?.containingCardId).toBe('b');
     // The origin is still the Stub's own direct parent, which is not the Card it starts in.
-    expect(result.current.session?.origin).toEqual({ parentId: 'a', slot: 'existing' });
+    expect(session?.origin).toEqual({ parentId: 'a', slot: 'existing' });
   });
 
   it('is the nearest Free ancestor when nothing is pending', () => {
     const items = [makeItem('b'), makeItem('a', { parentId: 'b' }), makeItem('x', { parentId: 'a' })];
-    const deps = { ...depsWith(async () => {}), items };
-    const { result } = renderHook(() => useBoardDnd(deps));
 
-    act(() => result.current.handleDragStart(itemPickup));
-
-    expect(result.current.session?.containingCardId).toBe('b');
+    expect(pickupSession('x', items, NO_PLACEMENTS)?.containingCardId).toBe('b');
   });
 
   it('is a Card whose own detach is still pending, which is drawn Free', () => {
@@ -208,15 +219,8 @@ describe('useBoardDnd: the row a Stub’s drag names as the ghost’s neighbor',
     },
   });
 
-  function startDragOfX() {
-    const deps = { ...depsWith(async () => {}), items, getAttachedChildren: sectionRows };
-    const hook = renderHook(() => useBoardDnd(deps));
-    act(() => hook.result.current.handleDragStart(itemPickup));
-    return hook.result;
-  }
-
   it('is the row dnd-kit announces over a move event that names the row before it', () => {
-    const result = startDragOfX();
+    const { result } = startDrag({ items, getAttachedChildren: sectionRows });
 
     act(() => result.current.handleDragMove(eventOver('a') as unknown as DragMoveEvent));
     expect(result.current.session?.projection?.gap).toBe(0);
@@ -234,14 +238,7 @@ describe('useBoardDnd: a column reorder whose save fails', () => {
   });
 
   it('DRAG-6.15: ends an item drag that began while the save was in flight, and the release writes nothing', async () => {
-    let failSave!: () => void;
-    const saveFails = new Promise<void>(resolve => {
-      failSave = resolve;
-    });
-    const deps = depsWith(async (_activeId, _overId, resync) => {
-      await saveFails;
-      await resync();
-    });
+    const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
 
     let reorder!: Promise<void>;
@@ -285,19 +282,6 @@ describe('useBoardDnd: a drag the board stops', () => {
     vi.mocked(moveItem).mockReset();
   });
 
-  // A column save that fails once `failSave` is called, so an item drag can start in between.
-  function failingColumnSave() {
-    let failSave!: () => void;
-    const saveFails = new Promise<void>(resolve => {
-      failSave = resolve;
-    });
-    const deps = depsWith(async (_activeId, _overId, resync) => {
-      await saveFails;
-      await resync();
-    });
-    return { deps, failSave };
-  }
-
   it('is reported once, with the cause, when a failed write reloads the board mid-drag', async () => {
     const { deps, failSave } = failingColumnSave();
     const { result } = renderHook(() => useBoardDnd(deps));
@@ -315,34 +299,8 @@ describe('useBoardDnd: a drag the board stops', () => {
     expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'write-failed', itemId: 'x' });
   });
 
-  it('is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
-    vi.useFakeTimers();
-    try {
-      const deps = { ...depsWith(async () => {}), armedStop: { cause: 'refresh' as const, afterMs: 1500 } };
-      const { result } = renderHook(() => useBoardDnd(deps));
-      act(() => result.current.handleDragStart(itemPickup));
-
-      act(() => {
-        vi.advanceTimersByTime(1499);
-      });
-      expect(deps.onDragStopped).not.toHaveBeenCalled();
-      act(() => {
-        vi.advanceTimersByTime(1);
-      });
-
-      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'refresh', itemId: 'x' });
-      expect(deps.disarmStop).toHaveBeenCalledOnce();
-      expect(deps.loadBoard).toHaveBeenCalledOnce();
-      expect(result.current.session).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   it('is not reported for Escape or any other cancel', () => {
-    const deps = depsWith(async () => {});
-    const { result } = renderHook(() => useBoardDnd(deps));
-    act(() => result.current.handleDragStart(itemPickup));
+    const { deps, result } = startDrag();
 
     act(() => result.current.handleDragCancel());
 
@@ -351,9 +309,7 @@ describe('useBoardDnd: a drag the board stops', () => {
   });
 
   it('is not reported for a release that writes nothing', async () => {
-    const deps = depsWith(async () => {});
-    const { result } = renderHook(() => useBoardDnd(deps));
-    act(() => result.current.handleDragStart(itemPickup));
+    const { deps, result } = startDrag();
 
     await act(() => result.current.handleDragEnd(itemRelease));
 
@@ -361,22 +317,37 @@ describe('useBoardDnd: a drag the board stops', () => {
     expect(deps.onDragStopped).not.toHaveBeenCalled();
   });
 
-  it('is not reported when a drag is released before an armed stop fires', () => {
-    vi.useFakeTimers();
-    try {
-      const deps = { ...depsWith(async () => {}), armedStop: { cause: 'refresh' as const, afterMs: 1500 } };
-      const { result } = renderHook(() => useBoardDnd(deps));
-      act(() => result.current.handleDragStart(itemPickup));
+  describe('with a stop armed for the next drag', () => {
+    const armedStop = { cause: 'refresh' as const, afterMs: 1500 };
+    const advance = (ms: number) =>
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('is reported with the cause "refresh" when an armed stop fires, once, and spends the arm', () => {
+      const { deps, result } = startDrag({ armedStop });
+
+      advance(1499);
+      expect(deps.onDragStopped).not.toHaveBeenCalled();
+      advance(1);
+
+      expect(deps.onDragStopped).toHaveBeenCalledExactlyOnceWith({ cause: 'refresh', itemId: 'x' });
+      expect(deps.disarmStop).toHaveBeenCalledOnce();
+      expect(deps.loadBoard).toHaveBeenCalledOnce();
+      expect(result.current.session).toBeNull();
+    });
+
+    it('is not reported when a drag is cancelled before an armed stop fires', () => {
+      const { deps, result } = startDrag({ armedStop });
       act(() => result.current.handleDragCancel());
 
-      act(() => {
-        vi.advanceTimersByTime(5000);
-      });
+      advance(5000);
 
       expect(deps.onDragStopped).not.toHaveBeenCalled();
       expect(deps.disarmStop).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 });

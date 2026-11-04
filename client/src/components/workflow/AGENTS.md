@@ -157,6 +157,8 @@ The drag gesture's pure, unit-tested modules:
 - `itemListOps.ts` — list selectors and ordinal placements over the board's items, and
   the rows a Card's section draws (`sectionEntries`).
 - `itemWriteReconciliation.ts` — folding an item write's response into the item state.
+- `forcedStop.ts` — a stopped drag's signal, its wording and the armed stop, and the
+  flash's length.
 - `dragTuning.ts` — every tunable threshold, band and overlay value, the project
   sidebar's three tier strengths among them, and where they persist.
 
@@ -169,6 +171,8 @@ The hooks and contexts that run it:
   (`forcedStop.ts::ForcedStop`: the cause and the item), for the
   cue `ForcedStopCue.tsx` draws. `BoardView.tsx` holds it (`useForcedStop.ts`), above
   the reload, which unmounts everything below.
+- `useForcedStop.ts` — the cue's lifetime, held by `BoardView.tsx`: the banner's, and the
+  flash's, which waits for the stop's reload to draw the board and is let go by the next.
 - `ForcedStopContext.ts` — which item a stopped drag was on, for its row to flash.
 - `DragSessionContext.ts` — the whole drag's state, read through hooks instead of
   props.

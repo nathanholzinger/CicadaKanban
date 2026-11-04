@@ -57,22 +57,23 @@ describe('the drag-target tiers', () => {
   const GHOST = 'drag-tier-ghost';
   const PULSE = 'drag-tier-pending';
 
-  const stub = (id: string, parentId: string | null): Item => makeItem(id, { parentId, isAttached: 1, position: 1 });
-  const freeCard = (id: string, parentId: string | null): Item =>
+  // A Stub has a parent; a root, and a Card pulled out of its parent, is Free.
+  const stub = (id: string, parentId: string): Item => makeItem(id, { parentId, isAttached: 1, position: 1 });
+  const freeCard = (id: string, parentId: string | null = null): Item =>
     makeItem(id, { parentId, isAttached: 0, position: 1 });
 
-  // X carries a Stub S with a Stub S1, and a Free descendant D with a Stub DS. V is a Free Card that
-  // fits under X. With a cap of 4, X (two levels deep) fits under T1 only: T2, a Stub
-  // of T1's, is too deep to take it but is an anchor, and T3 under it is not even that.
+  // X carries a Stub S with a Stub S1, and a Free descendant D with a Stub DS. V is a Free Card X
+  // fits under; of the T chain, X fits under T1 only. With a cap of 4, X (two levels deep) is too
+  // deep for T2, a Stub of T1's, which is an anchor, and T3 under it is not even that.
   const CAP = 4;
   const ITEMS = [
-    stub('X', null),
+    freeCard('X'),
     stub('S', 'X'),
     stub('S1', 'S'),
     freeCard('D', 'X'),
     stub('DS', 'D'),
-    stub('V', null),
-    stub('T1', null),
+    freeCard('V'),
+    freeCard('T1'),
     stub('T2', 'T1'),
     stub('T3', 'T2'),
   ];
@@ -89,6 +90,17 @@ describe('the drag-target tiers', () => {
     };
   }
 
+  // What a row reads its drag from: dnd-kit's context, the writes still pending, and the session.
+  function providers(session: DragSession | null, placements = new Map<string, Placement>()) {
+    return ({ children }: { children: ReactNode }) => (
+      <DndContext>
+        <PlacementsContext value={placements}>
+          <DragSessionContext value={session}>{children}</DragSessionContext>
+        </PlacementsContext>
+      </DndContext>
+    );
+  }
+
   function rowIn(
     session: DragSession | null,
     id: string,
@@ -96,16 +108,10 @@ describe('the drag-target tiers', () => {
     { parentId, pending = false, dragging = false }: { parentId?: string; pending?: boolean; dragging?: boolean } = {},
   ) {
     const placements = new Map<string, Placement>(pending ? [[id, { parentId: null, slot: 'last' }]] : []);
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <DndContext>
-        <PlacementsContext value={placements}>
-          <DragSessionContext value={session}>{children}</DragSessionContext>
-        </PlacementsContext>
-      </DndContext>
-    );
     sortable.dragging = dragging;
     try {
-      return renderHook(() => useItemRow(id, role, { parentId }), { wrapper }).result.current;
+      return renderHook(() => useItemRow(id, role, { parentId }), { wrapper: providers(session, placements) }).result
+        .current;
     } finally {
       sortable.dragging = false;
     }
@@ -141,11 +147,7 @@ describe('the drag-target tiers', () => {
       expect(row.dataAttrs['data-drop-tier']).toBe('parent');
     }
     const overlay = renderHook(() => useItemRow('S', 'stub', { parentId: 'X', isOverlay: true }), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <DndContext>
-          <DragSessionContext value={session}>{children}</DragSessionContext>
-        </DndContext>
-      ),
+      wrapper: providers(session),
     }).result.current;
     expect(overlay.contentClassName.trim()).toBe('');
     expect(overlay.dataAttrs['data-drop-tier']).toBeUndefined();
@@ -190,12 +192,7 @@ describe('the drag-target tiers', () => {
   });
 
   describe('on the screen', () => {
-    const inSession = (ui: ReactNode, session: DragSession) =>
-      render(
-        <DndContext>
-          <DragSessionContext value={session}>{ui}</DragSessionContext>
-        </DndContext>,
-      );
+    const inSession = (ui: ReactNode, session: DragSession) => render(ui, { wrapper: providers(session) });
 
     it("a Stub row's tier is on a wrapper around its button, and not on the row, which holds the drop line", () => {
       const { container } = inSession(

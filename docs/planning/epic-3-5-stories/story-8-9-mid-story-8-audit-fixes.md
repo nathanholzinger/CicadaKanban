@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.9 — The mid-Story 8 audit's fixes
 
-**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 3 built for review and commit
+**Type:** story · **Written:** 2026-11-04 by the Architect, from Story 8's mid-point audit and test reconciliation · **Status:** in progress, Batch 4 built for review and commit
 
 ## Goal
 
@@ -268,6 +268,23 @@ Filled in by the Coder.
     - Seven of the new tests fail on the old source. The other three pin what stays.
 - **A check on real history:** the scope script ran over Batches 1 and 2 (`f18f530` to `HEAD`) and wrote its scope files.
 - **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245). The plan sets no E2E run for this batch, and none of its files is loaded by the app.
+
+**4. 2026-11-04, Batch 4 built** (Coder).
+- **Comments, as the audit words them:**
+  - #5: `useBoardDnd.test.ts`'s header names the six cases that need the hook's live session, and keeps the note about the pure modules and the E2E specs.
+  - #6: `dragChrome.test.tsx`'s fixture comment, "V is a Free Card X fits under; of the T chain, X fits under T1 only".
+  - #8: `index.css`'s `cue-fill` comment points at `dragChrome.tsx::ZoomCue`, and names both lengths that drive it (`cardPopInDelayMs` and `modalHoldCueMs`). The same comment began with a story and a date, which the documentation standards leave out, so that prefix went with the rewrite.
+  - #9: `useIsLockedAtCard` lists `KanbanCard`'s four reads: forced open, the projected depth, no transition on the root, and the active-context outline.
+  - #10: `workflow/AGENTS.md` lists `forcedStop.ts` and `useForcedStop.ts`. Since Batch 2, `forcedStop.ts` also holds the flash's length and `useForcedStop.ts` the flash's lifetime, so the entries say so. `useBoardDnd.ts`'s header names `forcedStop.ts` and the stop the hook reports.
+  - #11: `dragTuning.ts`'s header says it holds the drag surfaces' values: the board's gesture, its cues and the sidebar's tiers.
+- **#7, by D3:** the armed-stop test that cancels is retitled "cancelled". Batch 5's DRAG-6.22 stamp takes that title.
+- **#12:** `dragChrome.test.tsx` builds its roots Free (`stub` now takes a string parent, so a root can't be built attached), and `dragClassification.test.ts`'s `item()` defaults a root to Free and a child to attached, as stored rows are. Every expectation held unchanged.
+- **#18:**
+  - `useBoardDnd.test.ts` has `startDrag(overrides, id)`, `pickupSession` and `failingColumnSave` at module scope. The hand-written pickups in the modal, Stub-start, neighbor, cancel, release and armed-stop tests call them, and so does DRAG-6.15 for the failing save.
+  - The two armed-stop tests sit in a nested describe, "with a stop armed for the next drag", with the fake timers in `beforeEach` and `afterEach` where each had a `try` and `finally`. A test's own title, which the stamps read, is unchanged apart from #7.
+- **#20's `dragChrome.test.tsx` half:** `providers(session, placements)` is the one wrapper, which `rowIn`, the overlay case and `inSession` use. The overlay case and `inSession` now also supply an empty `PlacementsContext`, which is what they read by default. The sidebar half stays out, as the plan says.
+- **No test added or removed,** so the counts hold. The batch changes no app code.
+- **Gate:** `npm run check` passes (`check:docs` 397 files, 0 hits; server 437, client 672, scripts 245).
 
 ## Open questions
 

@@ -1,8 +1,8 @@
-// The tunable parameters of the board drag gesture, and where they persist
-// (wiki board-drag-interaction §3.1). The wiki settles these *as
-// parameters* with provisional values; the correct values are found by
-// feel, so every one of them is exposed by the dev/test panel and persisted
-// in localStorage — a change takes effect on the next drag, no rebuild.
+// The tunable values of the drag surfaces — the board's gesture, its cues, and the
+// project sidebar's tiers — and where they persist (wiki board-drag-interaction §3.1).
+// The wiki settles the gesture's *as parameters* with provisional values; the correct
+// values are found by feel, so every one of them is exposed by the dev/test panel and
+// persisted in localStorage — a change takes effect on the next drag, no rebuild.
 // Tests are written against the configured value (seeded through the same
 // storage key), never the literal.
 //

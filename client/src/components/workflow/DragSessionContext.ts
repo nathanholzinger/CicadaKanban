@@ -145,9 +145,13 @@ export function useOverflowTier(ownerId: string | null | undefined): DropTier | 
 // Whether the drag is locked at this Card's Descendants layer. Merely being
 // hovered toward a zoom-in (before the threshold fires) doesn't count: a
 // release right now would still commit the column's within-action. KanbanCard
-// reads it two ways — forced open while the layer is locked (a collapsed Card
-// can't show the ghost landing inside it, nor keep a Stub's own section
-// drawn), and the projected depth in the section.
+// reads it four ways:
+//   - forced open while the layer is locked (a collapsed Card can't show the
+//     ghost landing inside it, nor keep a Stub's own section drawn);
+//   - the projected depth in the section;
+//   - no transition on the Card's root, so it doesn't slide while the drag
+//     measures the rows it mounts;
+//   - the active-context outline and `data-active-context`.
 export function useIsLockedAtCard(itemId: string): boolean {
   return useContext(DragSessionContext)?.pop.contextKey === descendantsRegionKey(itemId);
 }

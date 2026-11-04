@@ -1,7 +1,7 @@
 // The board drag's gesture layer, for the board's DndContext. The rules live in
 // pure modules (popSession.ts, placement.ts, dragStructure.ts, dragBands.ts,
 // dragCollision.ts, dragRequest.ts, dragClassification.ts, dragOverlayGeometry.ts,
-// descendantsProjection.ts, itemListOps.ts, lib/hierarchyPlacement.ts); this hook
+// descendantsProjection.ts, itemListOps.ts, forcedStop.ts, lib/hierarchyPlacement.ts); this hook
 // owns the clocks, the DOM measurements, and the dnd-kit plumbing, with the hooks
 // usePendingGhostGuard.ts, useSnapTween.ts and useLatest.ts:
 //
@@ -31,6 +31,9 @@
 // Position values are never computed here: the request carries relative
 // intent and the server's number lands through the write tracker. A column
 // dropped on another goes to `onColumnDrop`, which owns the reorder.
+//
+// A reload the hook asks for (`resyncBoard`) ends a live item drag, and reports it once to
+// `onDragStopped` as a `forcedStop.ts::ForcedStop`, for the cue `BoardView.tsx` holds.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {

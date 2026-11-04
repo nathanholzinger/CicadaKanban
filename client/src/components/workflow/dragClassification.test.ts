@@ -7,8 +7,9 @@ import { classifyDragTargets, isValidParent } from './dragClassification';
 // cap's value touches none of them.
 
 // Positional alias over the shared fixture — these cases only ever vary
-// parent and attachment (positionScope follows from those, per makeItem).
-function item(id: string, parentId: string | null = null, attached = true): Item {
+// parent and attachment (positionScope follows from those, per makeItem). An item with a
+// parent is attached unless a case says otherwise, and a root is Free, as stored rows are.
+function item(id: string, parentId: string | null = null, attached = parentId !== null): Item {
   return makeItem(id, { parentId, isAttached: attached ? 1 : 0, position: 1 });
 }
 
