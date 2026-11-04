@@ -68,6 +68,18 @@ export interface DragTuning {
   /** The carried item's own row, left in the list while it is dragged. Apart from the tier above so the two can part. */
   overlayGhostOpacity: number;
   /**
+   * The project sidebar's own three, drawn by the same tiers as the board's three above and
+   * started at the same values, so either surface can be tuned without moving the other. The
+   * sidebar reads them from storage at pickup (`useProjectDragReorder.ts`), since the panel
+   * that changes them lives on the board. A project that is no legal parent but whose own
+   * parent could take the carried project.
+   */
+  projectAnchorOpacity: number;
+  /** A project whose own parent can't take the carried project either, and the carried project's descendants. */
+  projectNeitherOpacity: number;
+  /** The carried project's own row, left in the tree while it is dragged. */
+  projectDraggedOpacity: number;
+  /**
    * An outline drawn around whichever region — column, sub-row, or a Card's
    * Descendants layer — is the pop machine's current `contextKey`, so the locked layer is
    * legible without reading the dev panel's text readout. Never
@@ -94,6 +106,9 @@ export const DEFAULT_DRAG_TUNING: DragTuning = {
   overlayAnchorOpacity: 0.6,
   overlayNeitherOpacity: 0.3,
   overlayGhostOpacity: 0.3,
+  projectAnchorOpacity: 0.6,
+  projectNeitherOpacity: 0.3,
+  projectDraggedOpacity: 0.3,
   activeContextOutlineColor: 'rgba(139, 92, 246, 0.8)',
   forcedStopCueMs: 5000,
   forcedStopFlash: true,

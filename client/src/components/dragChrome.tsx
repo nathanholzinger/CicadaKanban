@@ -45,19 +45,22 @@ function useLiveDropSide(itemId: string): DropSide | null {
 // (`lib/dragTargets.ts::DropTier`): a legal parent at full strength, an anchor that is
 // not a parent at mid opacity, a target that is not even an anchor at low. By opacity only, no
 // color. The two levels and the carried item's own row (the ghost's) are CSS custom properties
-// BoardView sets from the dev/test panel. The classification itself is settled and exposed as
-// `data-drop-state` and `data-drop-tier` for tests; the look is a working placeholder.
+// BoardView sets from the dev/test panel. The project sidebar draws with the same classes and sets
+// the same properties on its own list, from its own values (`useProjectDragReorder.ts`). The
+// classification itself is settled and exposed as `data-drop-state` and `data-drop-tier` for
+// tests; the look is a working placeholder.
 //
 // The opacity sits on a wrapper around the row's own content (`contentClassName`), not on its
 // root, so what the row holds keeps its own strength: the drop line (an absolutely positioned
 // child of the root) and a Card's section of Stubs, each of which has its own tier. The ghost's
 // own value stays on the root, since nothing it holds is drawn at another strength.
-const TIER_CLASS: Record<DropTier, string> = {
+// eslint-disable-next-line react-refresh/only-export-components -- the sidebar's rows draw with these classes; Fast Refresh reloads this file in full instead of hot-swapping it, a dev convenience only
+export const TIER_CLASS: Record<DropTier, string> = {
   parent: '',
   anchor: 'opacity-(--drag-tier-anchor) [--tier-opacity:var(--drag-tier-anchor)]',
   neither: 'opacity-(--drag-tier-neither) [--tier-opacity:var(--drag-tier-neither)]',
 };
-const GHOST_ROW = 'opacity-(--drag-tier-ghost)';
+export const GHOST_ROW = 'opacity-(--drag-tier-ghost)';
 // A write is in flight for this item — it's drawn at the slot it was
 // dropped in, and its position is the server's to confirm. It pulses between the content's own
 // opacity and half of it (`index.css::drag-tier-pulse`), so a dim row dims further instead of

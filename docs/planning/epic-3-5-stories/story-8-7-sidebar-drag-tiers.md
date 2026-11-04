@@ -1,6 +1,6 @@
 # Epic 3.5 Story 8.7 — The project sidebar's drag cues match the board's
 
-**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** Phase 1 built, for review and commit
+**Type:** story · **Written:** 2026-11-03 by the Architect, from the roadmap's 8.7 entry (Nathan, found with Story 8.5) · **Status:** Phase 2 built, for review and commit; Phase 3 (Nathan's hands-on) next
 
 ## Goal
 
@@ -141,6 +141,14 @@ Filled in by the Coder, phase by phase.
 | `workflow/dragClassification.ts::classifyDragTargets` | The board's adapter: hands `classifyTargets` the pending tree and `isStubOf` as `anchorSetsParent`. Its signature and result are as they were. |
 | `workflow/dragClassification.ts::isValidParent` | Stays with the board: the region gate's and the over-cap cue's one answer. |
 | `lib/dragTargets.test.ts` | The walk over projects: a top-level row, a row past the cap and its child, the carried project's descendants, and a subtree only the top level can take. |
+| `sidebar/useProjectDragReorder.ts::drawnAtPickup` | Computes the tiers once, in `handleDragStart`: `classifyTargets` with `() => true` as `anchorSetsParent`, over `projects` and the cap (`Infinity` while it is null), and reads the sidebar's three strengths from storage (`loadDragTuning`). Held in state until the drag ends. |
+| `sidebar/useProjectDragReorder.ts` (`tiers`, `tierVars`) | What the hook hands out: each row's tier by id, and the three custom properties the tier classes read. Empty and undefined outside a drag. |
+| `ProjectSidebar.tsx` | Sets `tierVars` on the list that holds the rows, and hands each row its tier. |
+| `sidebar/SortableProjectRow.tsx` (`tier`, `rowOpacityClass`) | Draws the row's content by its tier (the dragged row by the ghost's class), carries `data-drop-tier`, and keeps the descendants' `pointer-events-none`. The drop line stays outside the dimmed box. |
+| `dragChrome.tsx::TIER_CLASS`, `GHOST_ROW` | The board's tier classes, now exported for the sidebar to draw with. The board's use is unchanged. |
+| `workflow/dragTuning.ts::projectAnchorOpacity`, `projectNeitherOpacity`, `projectDraggedOpacity` | The sidebar's three strengths, 0.6, 0.3 and 0.3. The old 0.4 is gone. |
+| `DragTuningPanel.tsx::PROJECT_FIELDS` | The three values in the panel, under "Project sidebar", beside the board's. |
+| `sidebar/SortableProjectRow.test.tsx` | The row: the board's classes per tier, the ghost's class for the dragged row, `pointer-events-none` on a descendant only, and the line outside the dimmed box. |
 
 ## Amendments
 
@@ -157,6 +165,18 @@ Filled in by the Coder, phase by phase.
 - **The top level is answered by `parentId === null` only.** A node whose `parentId` names a node that isn't in the tree still reads as "not a legal parent", as it did on the board. `getDepth` reads the same node as a root. It matters only for data with a dangling parent, which the sidebar's tree already treats as a root (`sortedChildrenByParent`). Phase 2 decides whether the hook needs to answer it.
 - **The board is unchanged:** `dragClassification.test.ts` and every test that reads the tiers pass without an edit. No Stub on the board is top-level, so the new answer never reaches it.
 - **The new tests were checked against the old answer.** With the top level made to read as "not a legal parent", as a plain reuse would, the top-level test of an anchor fails.
+
+**3. 2026-11-04, Phase 2 built** (Coder).
+- **The hook holds the tiers and the strengths together, from pickup to the end of the drag.** It hands out `tiers` (by id) and `tierVars` (the three custom properties). `ProjectSidebar.tsx` sets the properties on the list, so they reach only the sidebar's rows; the board sets the same names on its own root.
+- **The strengths are read from storage at pickup,** so a change in the panel takes effect on the next sidebar drag. The tuning's state was not lifted: the panel is temporary.
+- **The cap's absence is `Infinity`.** Before `projectDepthCap` is known nothing is past it, so the walk hands the descendants "neither" and every other row "parent", with no branch of its own.
+- **The dangling-parent question from Amendment 2 needs no answer.** `projects.parent_id` is a foreign key, so no project in the sidebar's data has a parent the tree lacks.
+- **A row's behavior and its look read two walks of one subtree.** The descendants' `pointer-events-none` and the line's rows still read the hook's live `getSubtree`, which follows `projects`; the look reads the walk from pickup. They agree unless a response changes the subtree mid-drag, in which case the look stays as the drag began and the behavior follows the tree.
+- **A project a collapsed project hides has a tier,** though no row draws it, since the walk covers every project and not the rendered rows.
+- **The panel's labels are apart from the board's** ("Project anchor, not a parent: opacity"), since they are each field's accessible name.
+- **`dragChrome.tsx` exports `TIER_CLASS` and `GHOST_ROW`.** `TIER_CLASS` is an object, so the Fast Refresh lint rule takes a disable on it, with the reason, as `useItemRow` does.
+- **TREE-2.1's spec is skipped,** with the one-line reason in the spec. Run alone first, `project-tree-drag.spec.ts` failed only there, on the number (0.3 received, 0.4 pinned), and the other nine passed. They still pass, with that one skipped.
+- **Checked in the browser, with a throwaway spec (deleted).** On the test stack's cap of 12, with a chain of 12 projects and X carrying one child: rows 1 to 10 are "parent" at 1, row 11 is "anchor" at the sidebar's anchor value, row 12 and X1 are "neither" at its neither value, and X is at its dragged value with no tier. All of it is gone after a cancel. The three board values, seeded apart, moved nothing.
 
 ## Open questions
 

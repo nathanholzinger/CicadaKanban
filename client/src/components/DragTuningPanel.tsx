@@ -58,6 +58,33 @@ const OVERLAY_FIELDS: Field[] = [
   { kind: 'number', key: 'overlayGhostOpacity', label: 'The dragged item’s row: opacity', step: 0.05, min: 0, max: 1 },
   { kind: 'text', key: 'activeContextOutlineColor', label: 'Active-context outline' },
 ];
+// The project sidebar's rows, drawn by the same tiers; each takes effect on the next sidebar drag.
+const PROJECT_FIELDS: Field[] = [
+  {
+    kind: 'number',
+    key: 'projectAnchorOpacity',
+    label: 'Project anchor, not a parent: opacity',
+    step: 0.05,
+    min: 0,
+    max: 1,
+  },
+  {
+    kind: 'number',
+    key: 'projectNeitherOpacity',
+    label: 'Project, not even an anchor: opacity',
+    step: 0.05,
+    min: 0,
+    max: 1,
+  },
+  {
+    kind: 'number',
+    key: 'projectDraggedOpacity',
+    label: 'The dragged project’s row: opacity',
+    step: 0.05,
+    min: 0,
+    max: 1,
+  },
+];
 
 const STOP_FIELDS: Field[] = [
   { kind: 'number', key: 'forcedStopCueMs', label: 'Stopped-drag cue time (ms)', step: 500, min: 0 },
@@ -125,6 +152,8 @@ export default function DragTuningPanel({
         {renderFields(SECTION_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Overlays</h4>
         {renderFields(OVERLAY_FIELDS)}
+        <h4 className={`${SECTION_LABEL} pt-2`}>Project sidebar</h4>
+        {renderFields(PROJECT_FIELDS)}
         <h4 className={`${SECTION_LABEL} pt-2`}>Stopped-drag cue</h4>
         <label className={FIELD_LABEL}>
           Flash the dragged item

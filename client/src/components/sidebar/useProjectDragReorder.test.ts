@@ -1,9 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
+import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
 import { flattenTree, INDENT_WIDTH } from './projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './useProjectDragReorder';
 
@@ -349,6 +350,140 @@ describe('TREE-1.11: a tab state that would put the dragged subtree past the pro
     expect(drag.hook.dropInvalid).toBe(false);
     drag.release();
     expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'P2', 'P3', null);
+  });
+});
+
+// Every row is drawn by what it can be to the dragged project, on the board's rule
+// (`lib/dragTargets.ts`), at strengths of the sidebar's own.
+describe('the tier each row is drawn at', () => {
+  afterEach(() => localStorage.clear());
+
+  // X carries X1, which carries X1a. The chain P1 to P4 is the target the cap cuts: at cap 5,
+  // with X's subtree two levels tall, P2 is the last legal parent.
+  const projects = tree(
+    ['P1', null],
+    ['P2', 'P1'],
+    ['P3', 'P2'],
+    ['P4', 'P3'],
+    ['X', null],
+    ['X1', 'X'],
+    ['X1a', 'X1'],
+  );
+
+  it('has none before a pickup, and none once the drag is released or cancelled', () => {
+    const drag = sidebarDrag(projects, [], 12);
+    expect(drag.hook.tiers.size).toBe(0);
+    expect(drag.hook.tierVars).toBeUndefined();
+    drag.pickUp('X');
+    expect(drag.hook.tiers.size).toBeGreaterThan(0);
+    drag.release();
+    expect(drag.hook.tiers.size).toBe(0);
+    expect(drag.hook.tierVars).toBeUndefined();
+
+    drag.pickUp('X');
+    act(() => drag.hook.handleDragCancel());
+    expect(drag.hook.tiers.size).toBe(0);
+    expect(drag.hook.tierVars).toBeUndefined();
+  });
+
+  it('is "neither" for the dragged project’s descendants at every depth, and none for its own row, on a shallow tree', () => {
+    const drag = sidebarDrag(projects, [], 12);
+    drag.pickUp('X');
+    const { tiers } = drag.hook;
+    expect(tiers.has('X')).toBe(false);
+    expect(tiers.get('X1')).toBe('neither');
+    expect(tiers.get('X1a')).toBe('neither');
+    for (const id of ['P1', 'P2', 'P3', 'P4']) expect(tiers.get(id), id).toBe('parent');
+  });
+
+  it('is "anchor" for a row past the cap whose own parent can take the project, and "neither" below it', () => {
+    const drag = sidebarDrag(projects, [], 5);
+    drag.pickUp('X');
+    const { tiers } = drag.hook;
+    expect(tiers.get('P1')).toBe('parent');
+    expect(tiers.get('P2')).toBe('parent');
+    expect(tiers.get('P3')).toBe('anchor');
+    expect(tiers.get('P4')).toBe('neither');
+    expect(tiers.get('X1')).toBe('neither');
+  });
+
+  it('marks nothing past the cap while the cap is unknown: the descendants "neither", every other row a "parent"', () => {
+    const drag = sidebarDrag(projects, [], null);
+    drag.pickUp('X');
+    const { tiers } = drag.hook;
+    expect(tiers.get('X1')).toBe('neither');
+    expect(tiers.get('X1a')).toBe('neither');
+    for (const id of ['P1', 'P2', 'P3', 'P4']) expect(tiers.get(id), id).toBe('parent');
+  });
+
+  it('counts a row a collapsed project hides, as the board counts a row the section does not draw', () => {
+    // P2 is collapsed, so P3 and P4 aren't drawn, but they are projects and have a tier.
+    const drag = sidebarDrag(projects, ['P2'], 5);
+    drag.pickUp('X');
+    expect(drag.hook.tiers.get('P3')).toBe('anchor');
+    expect(drag.hook.tiers.get('P4')).toBe('neither');
+  });
+
+  it('holds for the whole drag: a response that lands mid-drag redraws nothing', () => {
+    const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
+    const { result, rerender } = renderHook(
+      ({ list }) =>
+        useProjectDragReorder(list, flattenTree(list, new Set(list.map(p => p.id))), onReorderProject, vi.fn(), 5),
+      { initialProps: { list: projects } },
+    );
+    act(() => result.current.handleDragStart({ active: { id: 'X' } } as unknown as DragStartEvent));
+    const { tiers, tierVars } = result.current;
+
+    // A project lands under X: it joins X's subtree, and is under no tier the drag began with.
+    rerender({ list: [...projects, makeProject('Late', { parentId: 'X' })] });
+    expect(result.current.tiers).toBe(tiers);
+    expect(result.current.tierVars).toBe(tierVars);
+    expect(result.current.tiers.has('Late')).toBe(false);
+  });
+
+  describe('the strengths', () => {
+    const OWN = {
+      projectAnchorOpacity: 0.45,
+      projectNeitherOpacity: 0.15,
+      projectDraggedOpacity: 0.2,
+    };
+
+    it('are the defaults the panel starts at, when nothing is stored', () => {
+      const drag = sidebarDrag(projects, [], 12);
+      drag.pickUp('X');
+      expect(drag.hook.tierVars).toEqual({
+        '--drag-tier-anchor': DEFAULT_DRAG_TUNING.projectAnchorOpacity,
+        '--drag-tier-neither': DEFAULT_DRAG_TUNING.projectNeitherOpacity,
+        '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity,
+      });
+    });
+
+    it('are read from storage at pickup, so a change in the panel takes effect on the next drag', () => {
+      const drag = sidebarDrag(projects, [], 12);
+      saveDragTuning({ ...DEFAULT_DRAG_TUNING, ...OWN });
+      drag.pickUp('X');
+      expect(drag.hook.tierVars).toEqual({
+        '--drag-tier-anchor': OWN.projectAnchorOpacity,
+        '--drag-tier-neither': OWN.projectNeitherOpacity,
+        '--drag-tier-ghost': OWN.projectDraggedOpacity,
+      });
+    });
+
+    it('are apart from the board’s three, which the sidebar never reads', () => {
+      saveDragTuning({
+        ...DEFAULT_DRAG_TUNING,
+        overlayAnchorOpacity: 0.9,
+        overlayNeitherOpacity: 0.8,
+        overlayGhostOpacity: 0.7,
+      });
+      const drag = sidebarDrag(projects, [], 12);
+      drag.pickUp('X');
+      expect(drag.hook.tierVars).toEqual({
+        '--drag-tier-anchor': DEFAULT_DRAG_TUNING.projectAnchorOpacity,
+        '--drag-tier-neither': DEFAULT_DRAG_TUNING.projectNeitherOpacity,
+        '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity,
+      });
+    });
   });
 });
 

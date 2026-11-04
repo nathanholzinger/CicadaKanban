@@ -4,10 +4,11 @@
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { DropTier } from '../../lib/dragTargets';
 import type { DropSide } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import { projectRowIndentPx } from './projectTreeUtils';
-import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE } from '../dragChrome';
+import { DROP_INDICATOR_LINE, DROP_LINE_SHAPE, GHOST_ROW, TIER_CLASS } from '../dragChrome';
 import { DRAG_OVERLAY_ATTR } from '../workflow/dragRegions';
 import { PlusIcon, TrashIcon, DragHandleIcon } from '../icons';
 
@@ -25,6 +26,8 @@ interface RowProps {
   selectedProjectId: string | null;
   isActive: boolean;
   isDescendantOfActive: boolean;
+  /** What this row can be to the dragged project, which is how strongly it is drawn; none while nothing is dragged, and none for the dragged row. */
+  tier: DropTier | null;
   /** 'before' draws the line above this row, 'after' below it (the gap past the last row), null draws nothing. */
   indicatorSide: DropSide | null;
   indicatorDepth: number;
@@ -42,6 +45,7 @@ export function SortableProjectRow({
   selectedProjectId,
   isActive,
   isDescendantOfActive,
+  tier,
   indicatorSide,
   indicatorDepth,
   indicatorInvalid,
@@ -76,12 +80,14 @@ export function SortableProjectRow({
     return 'cursor-pointer text-zinc-300 hover:text-zinc-100';
   }
 
-  // The dragged project's descendants stay drawn, dimmed, and none of them is
-  // a place to drop (wiki project-tree §2).
+  // The row's content is drawn by its tier (the board's classes, at the sidebar's own strengths),
+  // the dragged project's row at the ghost's. The drop line sits outside this box, so it keeps its
+  // own strength. The dragged project's descendants stay drawn, and none of them is a place to
+  // drop (wiki project-tree §2).
   function rowOpacityClass(): string {
-    if (isActive) return 'opacity-40';
-    if (isDescendantOfActive) return 'opacity-40 pointer-events-none';
-    return '';
+    if (isActive) return GHOST_ROW;
+    const tierClass = tier ? TIER_CLASS[tier] : '';
+    return isDescendantOfActive ? `${tierClass} pointer-events-none` : tierClass;
   }
 
   function rowBackgroundClass(): string {
@@ -115,6 +121,7 @@ export function SortableProjectRow({
       )}
 
       <div
+        data-drop-tier={tier ?? undefined}
         className={`group flex items-center gap-1 rounded-lg transition-colors select-none ${rowOpacityClass()} ${rowBackgroundClass()}`}
         style={{ padding: `6px 12px 6px ${projectRowIndentPx(item.depth)}px` }}
       >

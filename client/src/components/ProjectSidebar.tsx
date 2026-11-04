@@ -81,7 +81,7 @@ export default function ProjectSidebar({
             onDragCancel={drag.handleDragCancel}
           >
             <SortableContext items={drag.rowIds} strategy={verticalListSortingStrategy}>
-              <div className="pb-4">
+              <div className="pb-4" style={drag.tierVars}>
                 {flatItems.map(item => (
                   <SortableProjectRow
                     key={item.id}
@@ -89,6 +89,7 @@ export default function ProjectSidebar({
                     selectedProjectId={selectedProjectId}
                     isActive={item.id === drag.activeItem?.id}
                     isDescendantOfActive={drag.descendantIds.has(item.id)}
+                    tier={drag.tiers.get(item.id) ?? null}
                     indicatorSide={drag.dropLine?.anchorId === item.id ? drag.dropLine.side : null}
                     indicatorDepth={drag.projectedDepth ?? item.depth}
                     indicatorInvalid={drag.dropInvalid}
