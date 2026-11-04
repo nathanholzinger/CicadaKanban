@@ -536,9 +536,9 @@ tests rather than carrying its coverage verdicts forward unchanged.
 
 **Test Planner:**
 - **Phase 9's pending-write hierarchy — cases drafted:** DRAG-2.11
-  (depth), DRAG-2.12 (cycles), DRAG-2.13 (Free-descendant cue) and
-  DRAG-1.36 (starting context) are `Open`, scoped here for Story 8's
-  close-out. They isolate the pending-write scenarios rather than broaden
+  (depth), DRAG-2.12 (cycles) and DRAG-1.36 (starting context) are
+  `Open`, scoped here for Story 8's close-out. DRAG-2.13 (the
+  Free-descendant cue) was drafted with them, and Story 8.5 retired it. They isolate the pending-write scenarios rather than broaden
   DRAG-2.3's settled-tree
   cap boundary or DRAG-2.4's mid-gesture stability case. No tests or
   automation mappings were inspected or changed in this Planner pass.
@@ -571,8 +571,8 @@ tests rather than carrying its coverage verdicts forward unchanged.
 - **Phase 9's unstamped tests:** assess the hook tests in
   `useBoardDnd.test.ts`, the helper tests in
   `itemListOps.test.ts`, and the attachment-predicate test in
-  `dragClassification.test.ts` against DRAG-2.11, DRAG-2.12, DRAG-2.13
-  and DRAG-1.36. The archived handoff names these as the changed test
+  `dragClassification.test.ts` against DRAG-2.11, DRAG-2.12 and
+  DRAG-1.36. The archived handoff names these as the changed test
   groups; no mapping is claimed here. Separate tests of product rules
   from helper-only safeguards, propose exact title stamps for the Coder,
   and check any internal-mapping approval required. DRAG-2.4 remains the
@@ -1000,6 +1000,21 @@ existing over-cap behavior and collapsed-project rules are unchanged.
 
 ---
 
+### Story 8.9 — The mid-Story 8 audit's fixes
+**Plan:** [`story-8-9-mid-story-8-audit-fixes.md`](story-8-9-mid-story-8-audit-fixes.md)
+
+**Runs next, before Story 8.8.** Story 8's mid-point code quality audit
+(Stories 8.3–8.7) and test reconciliation (Stories 8.2–8.7), both
+2026-11-04, left work for the Coder. This story lands:
+- the audit's Fix Now, #1–#11;
+- the optional findings in the files those fixes change;
+- the reconciliation's stamps and test fixes.
+
+The audit closes at this story's close. It's numbered after 8.8, which
+was written first, but it runs first.
+
+---
+
 ### Story 8.8 — A pickup takes its descendants with it
 **Found with Story 8.5** (Nathan, 2026-11-03). Story 8.5 marks a dragged
 Stub's descendant rows at low opacity, and leaves them drawn in the section
@@ -1273,13 +1288,20 @@ deferral and keep landing with their stories.
      test in `tests/ui/project-tree-drag.spec.ts`. DRAG-6.15, a reload
      that lands mid-drag stops the drag, was routed here too, and closed
      in A6 on a hook-level test Nathan approved (2026-10-26).
+     *Reopened by Story 8's mid-point reconciliation* (2026-11-04).
+     Story 8.4 narrowed the case to two triggers: another item's failed
+     drop, and a stale response. The approved test drives neither.
+     Story 8.9 stamps a surface test of the failed drop, and the stale
+     response is item 10's.
    - **Closed in A6, 7 cases** (Nathan, 2026-10-23; `Automated` at A6's
      re-check the same day), so they leave the list above: DRAG-1.14, 2.9,
      3.5 and 6.6, whose internal tests he approved, and DRAG-4.12, 6.2 and
      6.11, whose passing client tests needed only their IDs. That leaves
      59 of the 66 board-drag-interaction cases here. *Since Story 8.1*
      (its test-plan pass, 2026-10-29): DRAG-1.21, 4.14, 4.16 and 5.11 are
-     retired with the Card layer, which leaves 55. The cases the fold
+     retired with the Card layer, which leaves 55. *Since Story 8.5,*
+     DRAG-2.5 and 2.6 are retired with the relationship overlays, which
+     leaves 53. The cases the fold
      revised are item 10's too. A6 also
      puts IDs on the request-level tests of DRAG-1.24, 3.11, 3.23, 3.24,
      6.7 and 6.9, which stay here for their on-screen halves.
@@ -1572,6 +1594,19 @@ deferral and keep landing with their stories.
       assertions before adding gesture specs. DRAG-2.16 and DRAG-2.19
       also make the shared Low-gap and response-landing rules explicit;
       their remaining coverage stays in the same reconciliation scope.
+
+    - **From Story 8's mid-point reconciliation** (2026-11-04, Stories
+      8.2–8.7). Story 8.9 stamps the tests it found, and these three are
+      still short after the stamps, so they're routed here by ID:
+      - **DRAG-1.36:** the drag bounded by the whole box of the Card the
+        pending tree draws it under.
+      - **DRAG-2.12:** the first setup's chain, where `A`'s Free child
+        `D` is Cycle-forming through `A`'s pending attach.
+      - **DRAG-6.15:** a stale response carrying reindex pairs that
+        lands mid-drag. No test drives it.
+
+      The report is archived at Story 8.9's close. Its Coverage Mapping
+      gives what each case in this item still misses.
 
 **Exit criteria:** no `test.skip` / `test.fixme` in `tests/`; `npm run
 test:e2e` and `npm run test:unit` green; every case routed here (items 1,
