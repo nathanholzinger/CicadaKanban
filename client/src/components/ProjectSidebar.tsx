@@ -103,6 +103,7 @@ export default function ProjectSidebar({
                     selectedProjectId={selectedProjectId}
                     ghost={item.id === drag.activeItem?.id ? drag.ghost : null}
                     tier={drag.tiers.get(item.id) ?? null}
+                    projectDepthCap={projectDepthCap}
                     expandedIds={expandedIds}
                     onToggleExpand={onToggleCollapse}
                     onSelectProject={onSelectProject}

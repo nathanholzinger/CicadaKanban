@@ -23,6 +23,8 @@ interface ProjectPageProps {
   allProjects: Project[];
   allWorkflows: Workflow[];
   effectiveWorkflow: EffectiveWorkflow | null;
+  /** The project depth cap; null until it's read. */
+  projectDepthCap: number | null;
   onSelectProject: (id: string) => void;
   onUpdate: (id: string, data: UpdateProjectInput) => Promise<void>;
   onCreateSubproject: (parentId: string) => void;
@@ -46,6 +48,7 @@ export default function ProjectPage({
   allProjects,
   allWorkflows,
   effectiveWorkflow,
+  projectDepthCap,
   onSelectProject,
   onUpdate,
   onCreateSubproject,
@@ -240,6 +243,7 @@ export default function ProjectPage({
           project={project}
           allProjects={allProjects}
           subprojects={subprojects}
+          projectDepthCap={projectDepthCap}
           onSelectProject={onSelectProject}
           onUpdate={onUpdate}
           onCreateSubproject={onCreateSubproject}

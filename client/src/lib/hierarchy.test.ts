@@ -6,6 +6,7 @@ import {
   getDepth,
   getSubtree,
   isWithinDepthCap,
+  noChildReason,
   buildParentOptions,
   sortedChildrenByParent,
   withMoveApplied,
@@ -303,6 +304,24 @@ describe('isWithinDepthCap', () => {
   it('a target depth of 0, the sidebar’s virtual top, fits a mover up to cap - 1 levels tall', () => {
     expect(isWithinDepthCap(0, CAP - 1, CAP)).toBe(true);
     expect(isWithinDepthCap(0, CAP, CAP)).toBe(false);
+  });
+});
+
+// The create controls' one rule: a new child is a leaf, so a parent takes it iff its depth is
+// below the cap. It reads the cap it's given, never a number of its own.
+describe('noChildReason', () => {
+  it.each([4, 12])('with a cap of %i: a parent one level short of it takes a child, one at it does not', cap => {
+    expect(noChildReason(1, cap)).toBeNull();
+    expect(noChildReason(cap - 1, cap)).toBeNull();
+    expect(noChildReason(cap, cap)).toBe(`At the depth cap (${cap} levels)`);
+  });
+
+  it('refuses a parent already past the cap, from data that predates it', () => {
+    expect(noChildReason(9, 6)).not.toBeNull();
+  });
+
+  it('offers the control while the cap is not yet read', () => {
+    expect(noChildReason(99, null)).toBeNull();
   });
 });
 

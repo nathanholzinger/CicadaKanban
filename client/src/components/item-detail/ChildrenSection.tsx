@@ -3,11 +3,14 @@ import type { Item, ItemDetail, ItemType } from '../../types';
 import { createItem, updateItem, type ItemWriteResponse } from '../../api/items';
 import { MINI_DEPTH, depthLabel, typePillClass, typePillStyle, EMPTY_STATE } from './pillUtils';
 import { DetailSection } from './DetailSection';
+import { noChildReason } from '../../lib/hierarchy';
 import InlineItemForm from '../InlineItemForm';
 
 interface ChildrenSectionProps {
   item: ItemDetail;
   itemTypes: ItemType[];
+  /** The item depth cap (`GET /boards/:id`), which a new child can't go past. */
+  itemDepthCap: number;
   onNavigate: (id: string) => void;
   onChildCreated: (child: ItemWriteResponse) => void;
   onChildUpdated: (updated: ItemWriteResponse) => void;
@@ -23,7 +26,14 @@ function attachToggleClass(isAttached: boolean): string {
 // each child's attach state. Editing the current item's *own* parent link
 // lives in the sibling ParentSection — a different concern with no shared
 // state.
-export function ChildrenSection({ item, itemTypes, onNavigate, onChildCreated, onChildUpdated }: ChildrenSectionProps) {
+export function ChildrenSection({
+  item,
+  itemTypes,
+  itemDepthCap,
+  onNavigate,
+  onChildCreated,
+  onChildUpdated,
+}: ChildrenSectionProps) {
   const [adding, setAdding] = useState(false);
   const [childError, setChildError] = useState('');
 
@@ -54,6 +64,8 @@ export function ChildrenSection({ item, itemTypes, onNavigate, onChildCreated, o
     <DetailSection
       label={<>Children {item.children.length > 0 && `(${item.children.length})`}</>}
       onAdd={adding ? undefined : () => setAdding(true)}
+      // The API's depth counts from 0, the rule's from 1.
+      addDisabledReason={noChildReason((item.depth ?? 0) + 1, itemDepthCap)}
     >
       {item.children.length > 0 && (
         <div className="mb-2 space-y-1">

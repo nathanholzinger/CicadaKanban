@@ -31,6 +31,8 @@ interface ItemDetailPanelProps {
   itemId: string | null;
   items: Item[];
   itemTypes: ItemType[];
+  /** The item depth cap, for the add-child control. */
+  itemDepthCap: number;
   onClose: () => void;
   // Receive the raw write response so a disclosed reindex reaches the board
   // (`itemWriteReconciliation.ts::completeItemWrite` folds it in).
@@ -90,6 +92,7 @@ interface ItemDetailPanelContentProps {
   itemId: string;
   items: Item[];
   itemTypes: ItemType[];
+  itemDepthCap: number;
   onClose: () => void;
   onUpdate: (item: ItemWriteResponse) => void;
   onDelete: (id: string) => void;
@@ -101,6 +104,7 @@ function ItemDetailPanelContent({
   itemId,
   items,
   itemTypes,
+  itemDepthCap,
   onClose,
   onUpdate,
   onDelete,
@@ -354,6 +358,7 @@ function ItemDetailPanelContent({
         <ChildrenSection
           item={detail}
           itemTypes={itemTypes}
+          itemDepthCap={itemDepthCap}
           onNavigate={onNavigate}
           onChildCreated={handleChildCreated}
           onChildUpdated={handleChildUpdated}

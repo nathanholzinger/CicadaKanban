@@ -15,6 +15,9 @@ interface DetailSectionProps {
   onAdd?: () => void;
   /** Trigger text — default '+ Add'. */
   addLabel?: string;
+  /** Why the trigger can't be used, when it can't: it shows disabled, saying so on hover. Unlike
+   *  leaving `onAdd` out, which hides it. */
+  addDisabledReason?: string | null;
   children: ReactNode;
 }
 
@@ -22,13 +25,24 @@ interface DetailSectionProps {
 // section's body. `children` is that body — item list, empty state, error
 // message, add-form — none of which follows a common enough shape to pull
 // in here too.
-export function DetailSection({ label, onAdd, addLabel = '+ Add', children }: DetailSectionProps) {
+export function DetailSection({
+  label,
+  onAdd,
+  addLabel = '+ Add',
+  addDisabledReason = null,
+  children,
+}: DetailSectionProps) {
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
         <p className={SECTION_LABEL}>{label}</p>
         {onAdd && (
-          <button onClick={onAdd} className={BTN_ADD_TRIGGER}>
+          <button
+            onClick={onAdd}
+            disabled={addDisabledReason !== null}
+            title={addDisabledReason ?? undefined}
+            className={`${BTN_ADD_TRIGGER} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-zinc-500`}
+          >
             {addLabel}
           </button>
         )}

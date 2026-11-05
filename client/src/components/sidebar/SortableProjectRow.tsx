@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DropTier } from '../../lib/dragTargets';
+import { noChildReason } from '../../lib/hierarchy';
 import type { CarriedBranch } from '../../lib/hierarchyPlacement';
 import type { FlatItem } from './projectTreeUtils';
 import {
@@ -43,6 +44,8 @@ interface RowProps {
   ghost: GhostState | null;
   /** What this row can be to the dragged project, which is how strongly it is drawn; none while nothing is dragged, and none for the dragged row. */
   tier: DropTier | null;
+  /** The project depth cap, which "Add subproject" can't go past; null until it's read. */
+  projectDepthCap: number | null;
   expandedIds: Set<string>;
   onToggleExpand: (id: string) => void;
   onSelectProject: (id: string) => void;
@@ -55,6 +58,7 @@ export function SortableProjectRow({
   selectedProjectId,
   ghost,
   tier,
+  projectDepthCap,
   expandedIds,
   onToggleExpand,
   onSelectProject,
@@ -76,6 +80,8 @@ export function SortableProjectRow({
     transition,
   };
 
+  // The row's depth counts a top-level project as 0, the rule's as 1.
+  const noSubprojectReason = noChildReason(item.depth + 1, projectDepthCap);
   const isExpanded = expandedIds.has(item.id);
   const isSelected = selectedProjectId === item.id;
 
@@ -200,9 +206,10 @@ export function SortableProjectRow({
           <div className="ml-1 hidden shrink-0 items-center gap-0.5 group-hover:flex">
             <button
               onClick={() => onCreateSubproject(item.id)}
-              className={`${ROW_ACTION_BTN} hover:text-zinc-200`}
+              disabled={noSubprojectReason !== null}
+              className={`${ROW_ACTION_BTN} hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-500`}
               aria-label="Add subproject"
-              title="Add subproject"
+              title={noSubprojectReason ?? 'Add subproject'}
             >
               <PlusIcon />
             </button>

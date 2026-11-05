@@ -44,15 +44,16 @@ const reindexed = [
   { id: 'Y', position: 2 },
 ];
 
-function openPanel() {
+function openPanel(shown: ItemDetail = detail, itemDepthCap = 12) {
   const onUpdate = vi.fn();
   const onChildCreated = vi.fn();
-  vi.mocked(fetchItem).mockResolvedValue(detail);
+  vi.mocked(fetchItem).mockResolvedValue(shown);
   render(
     <ItemDetailPanel
       itemId="X"
       items={boardItems}
       itemTypes={[]}
+      itemDepthCap={itemDepthCap}
       onClose={() => {}}
       onUpdate={onUpdate}
       onDelete={() => {}}
@@ -113,5 +114,33 @@ describe("TC-5a.1: the Sheet hands a write's whole response to the board", () =>
     await userEvent.click(screen.getByRole('button', { name: 'Add' }));
 
     await waitFor(() => expect(onChildCreated).toHaveBeenCalledWith(response));
+  });
+});
+
+// The Sheet's add-child control stops at the item depth cap: the API's depth counts a root as 0,
+// so an item at depth CAP - 1 is at the cap and takes no child.
+describe('the Sheet’s add-child control at the depth cap', () => {
+  const CAP = 5;
+  const addChild = async () => {
+    const children = (await screen.findByText(/^Children/)).parentElement!;
+    return within(children).getByRole('button', { name: '+ Add' });
+  };
+
+  it('is offered for an item one level short of the cap', async () => {
+    openPanel({ ...detail, depth: CAP - 2 }, CAP);
+
+    const add = await addChild();
+    expect(add).toBeEnabled();
+    expect(add).not.toHaveAttribute('title');
+  });
+
+  it('shows disabled, saying why, for an item at the cap, and opens no form', async () => {
+    openPanel({ ...detail, depth: CAP - 1 }, CAP);
+
+    const add = await addChild();
+    expect(add).toBeDisabled();
+    expect(add).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    await userEvent.click(add);
+    expect(screen.queryByPlaceholderText('Child title...')).not.toBeInTheDocument();
   });
 });

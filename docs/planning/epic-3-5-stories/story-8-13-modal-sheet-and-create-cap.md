@@ -147,6 +147,14 @@ Expected, from the Architect's reading. The Coder corrects it while building.
 - **The hold is a prop.** `HierarchyModal` takes `sheetOpen`, from `BoardView`'s `selectedItemId !== null`, and ignores every close request while it's true: Escape, its X and a click on its backdrop. The Sheet's own Escape listener closes the Sheet in the same keypress.
 - **The new specs:** DRAG-7.28's title now reads "a click on a row in the modal opens that item's Sheet above it". A second spec, with no case ID, closes the Sheet by Escape, its X and its backdrop and checks the modal is as it was each time, then that a last Escape closes the modal.
 
+**2. Phase 2 as built (Coder).**
+- **The helper is `hierarchy.ts::noChildReason(parentDepth, cap)`,** not a bare boolean. It returns the reason, or null when the parent takes a child, so the three controls take their disabled state and their wording from one place. It is `isWithinDepthCap(parentDepth, 0, cap)` behind a `null` for an unread cap. The wording is a draft: "At the depth cap (N levels)", with N the cap passed in.
+- **The bases, as D4 lists them:** `SortableProjectRow` passes `item.depth + 1`, `ProjectOverviewTab` passes `getDepth(project.id, allProjects)`, and `ChildrenSection` passes `(item.depth ?? 0) + 1`.
+- **`DetailSection` takes `addDisabledReason`,** beside `onAdd`: set, the "+ Add" shows disabled with the reason as its title. Leaving `onAdd` out still hides it.
+- **The caps reach each control by the route D5 names.** `ChildrenSection` takes `itemDepthCap` from `ItemDetailPanel`, from `BoardView`'s `board.itemDepthCap`. `ProjectOverviewTab` takes `projectDepthCap` from `ProjectPage`, from `App.tsx`. `ProjectSidebar` passes it to each row.
+- **The disabled controls use `disabled`, not `aria-disabled`.** A disabled button takes no click and no focus, so the reason is for a hover.
+- **The overview tab's button gains `aria-label="Add subproject"`,** so its accessible name stays what its title gave it.
+
 ## Open questions
 
 - **For the PO, after Nathan's hands-on: where the create-at-cap rule lives.** It holds for items and projects alike, so hierarchy-placement §6 is a candidate. It would sit beside "A feature's UI and its API always enforce the same `CAP`". The alternatives are each feature's page:

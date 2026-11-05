@@ -503,6 +503,7 @@ export default function BoardView({ workflowId, projectId, filterProjectId, read
           itemId={selectedItemId}
           items={items}
           itemTypes={itemTypes}
+          itemDepthCap={board.itemDepthCap}
           onClose={() => setSelectedItemId(null)}
           onUpdate={handleItemUpdated}
           onDelete={handleItemDeleted}

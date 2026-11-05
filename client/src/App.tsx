@@ -162,6 +162,7 @@ export default function App() {
               allProjects={projects}
               allWorkflows={workflows}
               effectiveWorkflow={effectiveWorkflow}
+              projectDepthCap={projectDepthCap}
               onSelectProject={handleSelectProject}
               onUpdate={projectCollection.update}
               onCreateSubproject={handleOpenCreateProject}

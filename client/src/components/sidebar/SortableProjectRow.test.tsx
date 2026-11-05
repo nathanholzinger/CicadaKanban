@@ -53,6 +53,7 @@ function renderRow(props: Partial<ComponentProps<typeof SortableProjectRow>> = {
           selectedProjectId={null}
           ghost={null}
           tier={null}
+          projectDepthCap={null}
           expandedIds={new Set()}
           onToggleExpand={vi.fn()}
           onSelectProject={vi.fn()}
@@ -350,5 +351,40 @@ describe('TREE-2.9: the count line includes the real subtree, including descenda
 
     expect(screen.getByText(text).parentElement).toHaveAttribute('data-carried-branch');
     expect(document.querySelectorAll('[data-carried-branch]')).toHaveLength(1);
+  });
+});
+
+// "Add subproject" stops at the project cap. A row's depth counts a top-level project as 0, so a
+// row at depth CAP - 1 is at the cap and takes no child.
+describe('SortableProjectRow’s Add subproject at the depth cap', () => {
+  const CAP = 4;
+  const rowAt = (depth: number) => ({
+    id: 'P',
+    depth,
+    parentId: null,
+    project: makeProject('P'),
+    hasChildren: false,
+    collapsed: false,
+  });
+  const addButton = () => screen.getByRole('button', { name: 'Add subproject' });
+
+  it('is offered one level short of the cap, and while the cap is not yet read', () => {
+    renderRow({ item: rowAt(CAP - 2), projectDepthCap: CAP });
+    expect(addButton()).toBeEnabled();
+    expect(addButton()).toHaveAttribute('title', 'Add subproject');
+    cleanup();
+
+    renderRow({ item: rowAt(CAP - 1), projectDepthCap: null });
+    expect(addButton()).toBeEnabled();
+  });
+
+  it('shows disabled, saying why, at the cap, and creates nothing', async () => {
+    const onCreateSubproject = vi.fn();
+    renderRow({ item: rowAt(CAP - 1), projectDepthCap: CAP, onCreateSubproject });
+
+    expect(addButton()).toBeDisabled();
+    expect(addButton()).toHaveAttribute('title', `At the depth cap (${CAP} levels)`);
+    addButton().click();
+    expect(onCreateSubproject).not.toHaveBeenCalled();
   });
 });

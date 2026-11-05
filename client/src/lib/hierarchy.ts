@@ -215,6 +215,18 @@ export function isWithinDepthCap(targetDepth: number, subtreeHeight: number, cap
   return targetDepth + 1 + subtreeHeight <= cap;
 }
 
+// Why a parent at 1-based `parentDepth` takes no new child, or null when it does: a create has no
+// subtree, so it is the rule above with a height of 0 (wiki project-tree §3). A parent already past
+// the cap, from data that predates it, takes none either. Null while `cap` is (the project cap, until
+// it's read): the API refuses the create past it all the same. The one rule behind the three controls
+// that create a child — a sidebar row's and the Overview tab's "Add subproject", and the Sheet's
+// "+ Add" — so their wording can't differ. Each passes its depth in this module's base: a sidebar
+// row's `FlatItem.depth` and the API's `ItemDetail.depth` count from 0, so they add 1.
+export function noChildReason(parentDepth: number, cap: number | null): string | null {
+  if (cap === null || isWithinDepthCap(parentDepth, 0, cap)) return null;
+  return `At the depth cap (${cap} levels)`;
+}
+
 // Reparent dropdown options: every node except the current one and its
 // descendants (either would create a cycle), preceded by a "none" entry.
 //

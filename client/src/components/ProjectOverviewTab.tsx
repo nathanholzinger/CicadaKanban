@@ -4,13 +4,15 @@ import { useRef, useState } from 'react';
 import type { Project } from '../types';
 import type { UpdateProjectInput } from '../api/projects';
 import ConfirmDeleteInline from './ConfirmDeleteInline';
-import { buildParentOptions } from '../lib/hierarchy';
+import { buildParentOptions, getDepth, noChildReason } from '../lib/hierarchy';
 import { TrashIcon, PlusIcon, ICON_BUTTON_SM } from './icons';
 
 interface ProjectOverviewTabProps {
   project: Project;
   allProjects: Project[];
   subprojects: Project[];
+  /** The project depth cap; null until it's read. */
+  projectDepthCap: number | null;
   onSelectProject: (id: string) => void;
   onUpdate: (id: string, data: UpdateProjectInput) => Promise<void>;
   onCreateSubproject: (parentId: string) => void;
@@ -26,11 +28,14 @@ export function ProjectOverviewTab({
   project,
   allProjects,
   subprojects,
+  projectDepthCap,
   onSelectProject,
   onUpdate,
   onCreateSubproject,
   onDeleteSubproject,
 }: ProjectOverviewTabProps) {
+  // `getDepth` counts a top-level project as 1, as the rule does.
+  const noSubprojectReason = noChildReason(getDepth(project.id, allProjects), projectDepthCap);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descValue, setDescValue] = useState(project.description ?? '');
   const cancelRef = useRef(false);
@@ -122,7 +127,13 @@ export function ProjectOverviewTab({
       <section className="mt-6">
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">Subprojects</h2>
-          <button onClick={() => onCreateSubproject(project.id)} className={ICON_BUTTON_SM} title="Add subproject">
+          <button
+            onClick={() => onCreateSubproject(project.id)}
+            disabled={noSubprojectReason !== null}
+            aria-label="Add subproject"
+            title={noSubprojectReason ?? 'Add subproject'}
+            className={`${ICON_BUTTON_SM} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-zinc-500`}
+          >
             <PlusIcon />
           </button>
         </div>
