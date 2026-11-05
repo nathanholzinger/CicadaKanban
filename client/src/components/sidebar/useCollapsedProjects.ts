@@ -1,8 +1,8 @@
 // The projects the user has collapsed in the sidebar's tree. Every other project is open, one created
 // after the sidebar loaded included, and a reload opens every project: nothing is stored. A collapsed
 // project opens by `expand` alone, whichever write puts a project under it: a drop
-// (`useProjectDragReorder.ts`), a create or a parent change (`App.tsx`). The state lives in `App.tsx`, since
-// two of those writes are its own.
+// (`useProjectDragReorder.ts`), a create or a parent change (`useProjectCollection.ts`). The state lives in
+// `App.tsx`, which hands `expand` to the writes that need it.
 
 import { useState } from 'react';
 

@@ -257,9 +257,10 @@ Filled in by the Coder.
 
 | Symbol | Carries |
 |---|---|
-| `App.tsx::writeInTurn` | D1: a project's write is sent when its earlier one is answered, whether that succeeded or failed. A write with none out is sent at once, so a release still sends in the same tick. Kept in `writeTails`, a map of each project's last write still out |
-| `App.tsx::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
-| `App.tsx::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
+| `useProjectCollection.ts::useProjectCollection` | D3: the project collection and its four writes (`create`, `update`, `remove`, `reorder`), the pending moves, `sidebarProjects`, and the first load (`loaded`). It takes `onParentOpened`, the collapse's `expand` |
+| `useProjectCollection.ts::writeInTurn` | D1: a project's write is sent when its earlier one is answered, whether that succeeded or failed. A write with none out is sent at once, so a release still sends in the same tick. Kept in `writeTails`, a map of each project's last write still out |
+| `useProjectCollection.ts::refreshProjects` | D2: the one read of the whole tree after a write, for a failed move and for a delete. It is dropped and made again if `writesApplied` moved since it started, and dropped if a later read superseded it (`latestRead`) |
+| `useProjectCollection.ts::writesApplied` | D2's count: one for every applied project write answer: a create, an edit, a move and a delete |
 
 ## Amendments
 
@@ -270,7 +271,17 @@ Filled in by the Coder.
   - **#2:** a refused move's read held while another project's move lands, and the same for a delete's refresh: the older tree is dropped and a second read is made. A read that no write overtook is applied as before.
   - **Against the old `App.tsx`,** five of the seven fail: the second move sent early, the other project's move (its call count is the old code's), the edit sent early, and the two stale reads applied. The other two, the refused-first move and the plain read, pass either way, as they should: they pin what must not change.
 - **The test file's mocks are reset between tests,** not only cleared. A held answer queued for a request that was never sent (the second move, behind the first) would otherwise reach the next test's.
-- **The gate:** `npm run check` passes.
+- **The gate:** `npm run check` passes. The full `npm run test:e2e` ran on the committed batch: 215 passed, 22 skipped. (A first attempt overlapped a second run on the same ports and counted wrong, so it was run again alone.)
+
+**Amendment 2: Batch 2 built (Coder, 2026-11-05).** #13, by D3: the project collection moved out of `App.tsx` into `components/sidebar/useProjectCollection.ts`, beside `useCollapsedProjects`. A move, no behavior change.
+- **What moved:** `projects`, `pendingMoves`, `writeInTurn`, `refreshProjects`, the two counters, the four writes and the `sidebarProjects` overlay. **What stayed:** selection, workflow inheritance, the create dialog's state and the composition.
+- **Three places where the seam is not a straight cut:**
+  - **The first load** moved with the collection. The hook reads the tree and reports `loaded`, and `App` waits on that and on the workflows (`loading = !workflowsLoaded || !loaded`). Both still end the loading screen whether they succeed or fail, as the `Promise.all(...).finally` did.
+  - **`create` takes the parent in its input.** `App`'s `handleCreateProject` builds it from the dialog's parent and passes it on.
+  - **`handleDeleteProject` stays in `App`,** since it clears the selection: it awaits the hook's `remove`, then clears. A refused delete still leaves the selection, as before.
+- **The hook has no tests of its own.** `App.pendingMove.test.tsx` and `App.test.tsx` ran unchanged and are the gate, as D3 says.
+- **A comment moved with it:** `useCollapsedProjects.ts`'s header named `App.tsx` as the place a create and a parent change are written. It now names the hook.
+- **The gate:** `npm run check` passes (438 server, 838 client, 245 script tests). `npm run test:e2e`: 215 passed, 22 skipped.
 
 ## Open questions
 
