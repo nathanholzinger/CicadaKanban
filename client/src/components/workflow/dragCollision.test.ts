@@ -412,7 +412,7 @@ describe('dropAnchorFor', () => {
 
   // A Descendants section's flat list follows the same ghost-slot rule
   // (DRAG-4.8's gap), with the Stub row's own (shorter) ghost height.
-  it("over a Stub row: the same shuffle-slot rule, with a Stub row's own ghost height", () => {
+  it("DRAG-4.8: over a Stub row: the same shuffle-slot rule, with a Stub row's own ghost height", () => {
     const items = ['a', 'b', 'c', 'x'];
     const ghostMiddle = 110 + STUB_ROW_HEIGHT_PX / 2; // a Stub row's ghost, top-aligned to B (top 110)
     expect(dropAnchorFor(dragged('x', ghostMiddle - 6), overRow('b', 110, items, 'stub'))).toEqual({
@@ -459,7 +459,7 @@ describe('dropAnchorFor', () => {
   describe('namedAnchorFor', () => {
     const items = ['s1', 'x', 's3'];
 
-    it('names the row beside the ghost, leaning with the carried copy', () => {
+    it('DRAG-4.8: names the row beside the ghost, leaning with the carried copy', () => {
       // Over its own slot (top 110, middle 160).
       expect(namedAnchorFor(dragged('x', 170), overRow('x', 110, items, 'stub'))).toEqual({
         anchorId: 's3',

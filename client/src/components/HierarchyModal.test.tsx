@@ -135,7 +135,7 @@ describe('the hierarchy modal opened without a drag to place it', () => {
 });
 
 describe('the hierarchy modal opened by a hold during a drag', () => {
-  it('DRAG-7.15: rests the cursor on the row of the ghost’s gap, with the carried item’s branch out of the rows, and reports the gap and depth there', () => {
+  it('DRAG-7.15, DRAG-8.1: rests the cursor on the row of the ghost’s gap, with the carried item’s branch out of the rows, and reports the gap and depth there', () => {
     stubLayout();
     const onPlaced = vi.fn();
     render(modal(sessionOf(), CURSOR, onPlaced));

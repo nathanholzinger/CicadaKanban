@@ -157,7 +157,7 @@ describe('a Card whose section holds the branch of a carried item', () => {
     [...container.querySelectorAll('[data-item-id]')].map(el => el.getAttribute('data-item-id'));
 
   it.each(['stub', 'free'] as const)(
-    'draws none of the branch of a carried %s, and every other row where it was',
+    'DRAG-8.1, DRAG-8.5, DRAG-8.6: draws none of the branch of a carried %s, and every other row where it was',
     kind => {
       const { container } = renderCard({ childCount: 3, getAttachedChildren: childrenOf }, { session: carrying(kind) });
 
@@ -165,7 +165,7 @@ describe('a Card whose section holds the branch of a carried item', () => {
     },
   );
 
-  it('draws none of it in the static rows under the hierarchy modal’s backdrop either', () => {
+  it('DRAG-8.1, DRAG-8.5, DRAG-8.6: draws none of it in the static rows under the hierarchy modal’s backdrop either', () => {
     const { queryByText } = renderCard(
       { childCount: 3, getAttachedChildren: childrenOf },
       { session: carrying('free'), modalCardId: 'p' },
@@ -176,7 +176,7 @@ describe('a Card whose section holds the branch of a carried item', () => {
     expect(queryByText('Item d1a')).toBeNull();
   });
 
-  it('draws it again once the drag is over', () => {
+  it('DRAG-8.1, DRAG-8.5, DRAG-8.6: draws it again once the drag is over', () => {
     const props = { childCount: 3, getAttachedChildren: childrenOf };
     const { container, rerender } = renderCard(props, { session: carrying('free') });
     expect(rowIds(container)).toEqual(['p', 'a', 'd', 'c']);
@@ -195,25 +195,31 @@ describe('the carried copy of an item with a branch', () => {
   const LINE = '+ 2 children, 5 total descendants';
   const overlay = (props: CardProps) => renderCard({ item: CARRIED, isOverlay: true, overlayBranch: BRANCH, ...props });
 
-  it.each(['stub', 'short-card'] as const)('says the branch’s counts in its %s form', form => {
-    const { getByText } = overlay({ overlayForm: form });
+  it.each(['stub', 'short-card'] as const)(
+    'DRAG-3.19, DRAG-3.22, DRAG-8.8, DRAG-8.9: says the branch’s counts in its %s form',
+    form => {
+      const { getByText } = overlay({ overlayForm: form });
 
-    expect(getByText(LINE)).toBeInTheDocument();
-  });
+      expect(getByText(LINE)).toBeInTheDocument();
+    },
+  );
 
-  it.each(['stub', 'short-card'] as const)('says nothing in its %s form without a branch', form => {
-    const { container } = overlay({ overlayForm: form, overlayBranch: null });
+  it.each(['stub', 'short-card'] as const)(
+    'DRAG-3.19, DRAG-3.22, DRAG-8.8, DRAG-8.9: says nothing in its %s form without a branch',
+    form => {
+      const { container } = overlay({ overlayForm: form, overlayBranch: null });
 
-    expect(container.querySelector('[data-carried-branch]')).toBeNull();
-  });
+      expect(container.querySelector('[data-carried-branch]')).toBeNull();
+    },
+  );
 
-  it('says nothing on the in-list row, which is no copy', () => {
+  it('DRAG-3.19, DRAG-3.22, DRAG-8.8, DRAG-8.9: says nothing on the in-list row, which is no copy', () => {
     const { container } = renderCard({ item: CARRIED, overlayBranch: BRANCH });
 
     expect(container.querySelector('[data-carried-branch]')).toBeNull();
   });
 
-  it('keeps its shortCard form’s one height, with the line hung outside its flow and its root unclipped', () => {
+  it('DRAG-3.25, DRAG-8.10: keeps its shortCard form’s one height, with the line hung outside its flow and its root unclipped', () => {
     const { getByText, getByRole } = overlay({ overlayForm: 'short-card' });
 
     const root = getByRole('article', { name: CARRIED.title });
@@ -227,7 +233,7 @@ describe('the carried copy of an item with a branch', () => {
     expect(root).not.toHaveClass('overflow-hidden');
   });
 
-  it('hangs outside the flow of its Stub form’s box, and moves with the box through the depths', () => {
+  it('DRAG-3.25, DRAG-8.10: hangs outside the flow of its Stub form’s box, and moves with the box through the depths', () => {
     const projection: DescendantsProjection = {
       gap: 1,
       depth: 2,

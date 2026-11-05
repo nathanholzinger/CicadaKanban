@@ -258,21 +258,21 @@ describe("the stopped item's flash", () => {
 // The second line a carried copy hangs under its box, on the board and in the sidebar alike.
 describe('the carried copy’s second line', () => {
   describe('carriedBranchLabel', () => {
-    it('says one child as “+ 1 child”, with no total when it is the whole branch', () => {
+    it('DRAG-8.8, TREE-2.9: says one child as “+ 1 child”, with no total when it is the whole branch', () => {
       expect(carriedBranchLabel({ children: 1, descendants: 1 })).toBe('+ 1 child');
     });
 
-    it('says the children alone when every descendant is a child', () => {
+    it('DRAG-8.8, TREE-2.9: says the children alone when every descendant is a child', () => {
       expect(carriedBranchLabel({ children: 3, descendants: 3 })).toBe('+ 3 children');
     });
 
-    it('says both counts when the branch is deeper than its children', () => {
+    it('DRAG-8.8, TREE-2.9: says both counts when the branch is deeper than its children', () => {
       expect(carriedBranchLabel({ children: 2, descendants: 5 })).toBe('+ 2 children, 5 total descendants');
       expect(carriedBranchLabel({ children: 1, descendants: 3 })).toBe('+ 1 child, 3 total descendants');
     });
   });
 
-  it('reads its branch’s wording, takes no pointer, and hangs out of the flow under the box it is in', () => {
+  it('DRAG-3.25, DRAG-8.10: reads its branch’s wording, takes no pointer, and hangs out of the flow under the box it is in', () => {
     render(<CarriedBranchLine branch={{ children: 2, descendants: 5 }} />);
 
     const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;

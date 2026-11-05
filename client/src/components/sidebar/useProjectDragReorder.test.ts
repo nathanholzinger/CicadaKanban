@@ -4,7 +4,7 @@ import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core'
 import type { Project } from '../../types';
 import { makeProject } from '../../test/projectFixture';
 import { DEFAULT_DRAG_TUNING, saveDragTuning } from '../workflow/dragTuning';
-import { carriedBranchLabel, tierVars } from '../dragChrome';
+import { carriedBranchLabel } from '../dragChrome';
 import { withMoveApplied, type PendingMove } from '../../lib/hierarchy';
 import { flattenTree, INDENT_WIDTH } from './projectTreeUtils';
 import { useProjectDragReorder, type ReorderProject } from './useProjectDragReorder';
@@ -510,7 +510,7 @@ describe('the carried project’s branch', () => {
     expect(drag.hook.activeItem?.id).toBe('X');
   });
 
-  it('counts the rows under a collapsed descendant, which were not drawn to begin with', () => {
+  it('TREE-1.16, TREE-2.9: counts the rows under a collapsed descendant, which were not drawn to begin with', () => {
     const drag = sidebarDrag(projects, ['X1']);
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'X1', 'X2', 'Y']);
     drag.pickUp('X');
@@ -519,7 +519,7 @@ describe('the carried project’s branch', () => {
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'Y']);
   });
 
-  it('counts the whole branch of a collapsed project, though none of it was drawn', () => {
+  it('TREE-1.16, TREE-2.9: counts the whole branch of a collapsed project, though none of it was drawn', () => {
     const drag = sidebarDrag(projects, ['X']);
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'Y']);
     drag.pickUp('X');
@@ -527,7 +527,7 @@ describe('the carried project’s branch', () => {
     expect(idsOf(drag.hook.drawnItems)).toEqual(['A', 'X', 'Y']);
   });
 
-  it('is none for a project with no children, and every row stays drawn', () => {
+  it('TREE-1.16, TREE-2.9: is none for a project with no children, and every row stays drawn', () => {
     const drag = sidebarDrag(projects);
     drag.pickUp('Y');
     expect(drag.hook.branch).toBeNull();
@@ -584,7 +584,7 @@ describe('the carried project’s branch', () => {
       return { ...hook, held };
     }
 
-    it('holds the branch it began with: a descendant it moves out stays in the branch, and hidden', () => {
+    it('TREE-1.16, TREE-2.9: holds the branch it began with: a descendant it moves out stays in the branch, and hidden', () => {
       const { result, held } = pickUpThenRespond(list => list.map(p => (p.id === 'X2' ? { ...p, parentId: null } : p)));
 
       expect(result.current.branch).toBe(held);
@@ -592,7 +592,7 @@ describe('the carried project’s branch', () => {
       expect(idsOf(result.current.drawnItems)).toEqual(['A', 'X', 'Y']);
     });
 
-    it('does not take in a project it moves under the carried one: it is drawn where the tree puts it', () => {
+    it('TREE-1.16, TREE-2.9: does not take in a project it moves under the carried one: it is drawn where the tree puts it', () => {
       const { result, held } = pickUpThenRespond(list => [
         ...list,
         makeProject('Late', { parentId: 'X', position: 99, createdAt: 99 }),
@@ -731,8 +731,13 @@ describe('the tier each row is drawn at', () => {
       projectNeitherOpacity: 0.15,
       projectDraggedOpacity: 0.2,
     };
-    const asVars = (t: typeof OWN) =>
-      tierVars({ anchor: t.projectAnchorOpacity, neither: t.projectNeitherOpacity, ghost: t.projectDraggedOpacity });
+    // The three properties the board's classes read, spelled out from the panel's named values: the
+    // expectation does not go through `tierVars`, which the hook calls, so it can't pass by restating it.
+    const asVars = (t: typeof OWN) => ({
+      '--drag-tier-anchor': t.projectAnchorOpacity,
+      '--drag-tier-neither': t.projectNeitherOpacity,
+      '--drag-tier-ghost': t.projectDraggedOpacity,
+    });
 
     it('are the defaults the panel starts at, when nothing is stored', () => {
       const drag = sidebarDrag(projects, [], 12);

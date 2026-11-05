@@ -174,14 +174,14 @@ describe('a move laid over the tree', () => {
       .get(parentId)
       ?.map(n => n.id);
 
-  it('changes the moved node’s parent and nothing else: no position moves', () => {
+  it('TREE-4.12: changes the moved node’s parent and nothing else: no position moves', () => {
     const after = withMoveApplied(nodes, move('p3', 'p1', 'a', null));
     expect(after.find(n => n.id === 'p3')).toEqual({ ...nodes.find(n => n.id === 'p3'), parentId: 'p1' });
     expect(after.map(n => n.position)).toEqual(nodes.map(n => n.position));
     expect(after.filter(n => n.id !== 'p3')).toEqual(nodes.filter(n => n.id !== 'p3'));
   });
 
-  it('puts the node under the parent it names, after the sibling it goes after, whatever its position', () => {
+  it('TREE-4.12: puts the node under the parent it names, after the sibling it goes after, whatever its position', () => {
     const m = move('p3', 'p1', 'a', null);
     expect(childrenAfter('p1', m)).toEqual(['a', 'p3', 'b', 'c']);
     expect(laidOver(m).find(n => n.id === 'p3')?.parentId).toBe('p1');
@@ -246,7 +246,7 @@ describe('a move laid over the tree', () => {
     }
   });
 
-  it('does not change the nodes or the moves it is given, and skips a node that is gone', () => {
+  it('TREE-4.12: does not change the nodes or the moves it is given, and skips a node that is gone', () => {
     const given = nodes.map(n => ({ ...n }));
     const m = move('p3', 'p1', 'a', null);
     sortedChildrenByParent(withMoveApplied(given, m), [m]);

@@ -209,14 +209,14 @@ describe('useBoardDnd: the branch a pickup takes with it', () => {
     startDrag({ items, getAttachedChildren: parentId => getAttachedChildrenFrom(items, parentId) }, id).result.current
       .session;
 
-  it('holds a Stub’s attached descendants and the two counts, a Free child left out', () => {
+  it('DRAG-8.1, DRAG-8.2, DRAG-8.8: holds a Stub’s attached descendants and the two counts, a Free child left out', () => {
     const { branch } = pickup('x')!;
 
     expect([...branch!.ids].sort()).toEqual(['y', 'z']);
     expect([branch!.children, branch!.descendants]).toEqual([1, 2]);
   });
 
-  it('holds a Free Card’s attached descendants the same way, a Free child and what is under it left out', () => {
+  it('DRAG-8.1, DRAG-8.2, DRAG-8.8: holds a Free Card’s attached descendants the same way, a Free child and what is under it left out', () => {
     const { branch } = pickup('p')!;
 
     expect([...branch!.ids].sort()).toEqual(['x', 'y', 'z']);
@@ -224,7 +224,7 @@ describe('useBoardDnd: the branch a pickup takes with it', () => {
     expect(pickup('w')!.branch).toMatchObject({ children: 1, descendants: 1 });
   });
 
-  it('holds none for an item with no attached descendants, a Free child apart', () => {
+  it('DRAG-8.1, DRAG-8.2, DRAG-8.8: holds none for an item with no attached descendants, a Free child apart', () => {
     expect(pickup('v')!.branch).toBeNull();
     expect(pickup('z')!.branch).toBeNull();
     expect(pickup('u')!.branch).toBeNull();

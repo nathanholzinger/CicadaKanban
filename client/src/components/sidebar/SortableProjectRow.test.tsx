@@ -301,7 +301,7 @@ describe('DragGhost, the carried copy', () => {
     for (const cls of classesOf(INVALID_PLACEMENT_CLASS)) expect(ghost().classList).not.toContain(cls);
   });
 
-  it('TREE-2.10: says the branch’s counts on a second line inside the copy, out of its box', () => {
+  it('TREE-2.9, TREE-2.10: says the branch’s counts on a second line inside the copy, out of its box', () => {
     render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 2, descendants: 5 }} />);
 
     const line = screen.getByText('+ 2 children, 5 total descendants').parentElement!;
@@ -314,7 +314,7 @@ describe('DragGhost, the carried copy', () => {
     expect(line.classList).toContain('pointer-events-none');
   });
 
-  it('says one child as “+ 1 child”', () => {
+  it('TREE-2.9: says one child as “+ 1 child”', () => {
     render(<DragGhost name="Q3 plan" depth={0} branch={{ children: 1, descendants: 1 }} />);
 
     expect(screen.getByText('+ 1 child')).toBeInTheDocument();
@@ -328,7 +328,7 @@ describe('DragGhost, the carried copy', () => {
     expect(document.querySelectorAll('[data-carried-branch]')).toHaveLength(1);
   });
 
-  it('has no line without a branch', () => {
+  it('TREE-2.9: has no line without a branch', () => {
     render(<DragGhost name="Q3 plan" depth={0} />);
     expect(document.querySelector('[data-carried-branch]')).toBeNull();
 

@@ -440,19 +440,19 @@ describe('sectionEntries', () => {
         e.kind === 'item' ? `${e.row.item.id}@${e.row.depth}` : `${e.row.id}@${e.row.depth}×${e.row.count}`,
       );
 
-    it('draws none of its rows, and none of the overflow rows they owned', () => {
+    it('DRAG-4.8, DRAG-7.27, DRAG-8.1: draws none of its rows, and none of the overflow rows they owned', () => {
       // Q carries R and T (R1, R2 and R1a under R). R's overflow row went with R.
       expect(branchShape(3, 'Q', ['R', 'T', 'R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'B@0']);
       expect(branchShape(4, 'Q', ['R', 'T', 'R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'B@0']);
     });
 
-    it('draws no overflow row for the carried Stub itself when all its children travel', () => {
+    it('DRAG-4.8, DRAG-7.27, DRAG-8.1: draws no overflow row for the carried Stub itself when all its children travel', () => {
       // R is at the last shown level: without the branch it has an overflow row of 2.
       expect(shape(3, 'R')).toEqual(['A@0', 'Q@1', 'R@2', 'overflow:R@3×2', 'T@2', 'B@0']);
       expect(branchShape(3, 'R', ['R1', 'R2', 'R1a'])).toEqual(['A@0', 'Q@1', 'R@2', 'T@2', 'B@0']);
     });
 
-    it('keeps every other row, and every other overflow row with its count', () => {
+    it('DRAG-4.8, DRAG-7.27, DRAG-8.1: keeps every other row, and every other overflow row with its count', () => {
       // A and B each hold a child with a child; the section shows two levels, so each child's
       // overflow row counts one.
       const two = [
@@ -503,14 +503,14 @@ describe('carriedBranchOf, over the board’s attached children', () => {
       descendantsChildrenOf(parentId => getAttachedChildrenFrom(items, parentId, pending)),
     );
 
-  it('counts the rows past the levels a section shows, as the walk is not cut there', () => {
+  it('DRAG-8.2, DRAG-8.3, DRAG-8.8: counts the rows past the levels a section shows, as the walk is not cut there', () => {
     // From P, S1a1 is at depth 3: the fourth level, which a section of three levels hides.
     const rows = hierarchyRows('P', parentId => getAttachedChildrenFrom(items, parentId));
     expect(rows.find(r => r.id === 'S1a1')?.depth).toBe(3);
     expect(branchOf('S')?.ids.has('S1a1')).toBe(true);
   });
 
-  it('leaves a Free child out, with everything under it', () => {
+  it('DRAG-8.2, DRAG-8.3, DRAG-8.8: leaves a Free child out, with everything under it', () => {
     const branch = branchOf('S')!;
 
     expect(branch.ids.has('F')).toBe(false);
@@ -519,12 +519,12 @@ describe('carriedBranchOf, over the board’s attached children', () => {
     expect([branch.children, branch.descendants]).toEqual([2, 4]);
   });
 
-  it('is null for a Stub with no attached descendants, a Free child apart', () => {
+  it('DRAG-8.2, DRAG-8.3, DRAG-8.8: is null for a Stub with no attached descendants, a Free child apart', () => {
     expect(branchOf('T')).toBeNull();
     expect(branchOf('S2')).toBeNull();
   });
 
-  it('holds a row where the board draws it: a pending attach joins the branch, and a pending detach leaves it', () => {
+  it('DRAG-8.2, DRAG-8.3, DRAG-8.8: holds a row where the board draws it: a pending attach joins the branch, and a pending detach leaves it', () => {
     const branch = branchOf(
       'S',
       placements([

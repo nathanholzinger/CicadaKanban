@@ -57,7 +57,7 @@ test('delete shows red deleting state then removes the project', async ({ page, 
   await expect(projectSidebar.projectName('To Be Deleted')).not.toBeVisible();
 });
 
-test('collapses and expands subprojects via the chevron', async ({ page, projectSidebar, request }) => {
+test('TREE-11.2: collapses and expands subprojects via the chevron', async ({ page, projectSidebar, request }) => {
   await seedProjects(request, [
     ['Collapsible Parent', null],
     ['Hidden Child', 'Collapsible Parent'],

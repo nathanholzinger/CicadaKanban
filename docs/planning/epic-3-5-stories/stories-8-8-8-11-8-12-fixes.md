@@ -325,6 +325,24 @@ Filled in by the Coder.
   - the pickup's read of the branch from the board's own children in `useBoardDnd.ts`: wiki board-drag-interaction §7.2, which states it. §5a only says the copy shows the count, which is the line's rule above.
 - **The gate:** `npm run check` passes (444 server, 849 client, 258 script tests). No E2E: comments and test setup only.
 
+**Amendment 7: Nathan's calls (2026-11-05), and Batch 7 built (Coder).**
+- **Nathan's calls, in answer to the Open questions:** call 1, approve (the App mappings for TREE-4.8, TREE-4.10 and TREE-4.12); call 2, approve (the sidebar's hook and component mappings); call 3, approve (the board's partial mappings); call 4, stamp as written (Batch 8's hook and component tests take their IDs as they are written).
+- **What stamping needed, and what it didn't:**
+  - **The App and sidebar mappings of calls 1 and 2 were already stamped.** `App.pendingMove.test.tsx`, `useProjectDragReorder.test.ts` and `SortableProjectRow.test.tsx` took their IDs at the close (Story 8.12's Amendment 8), so approval needed no title change: TREE-4.8–TREE-4.12, TREE-1.4, TREE-1.17, TREE-1.18, TREE-2.1, TREE-2.4, TREE-2.6–TREE-2.8, TREE-2.10, TREE-2.12, TREE-2.13 and TREE-4.11.
+  - **Call 3's board mappings:** DRAG-2.17, DRAG-2.18, DRAG-3.22, DRAG-7.15 and DRAG-7.21 already had IDs in their titles. The others are the Proposed Stamps rows below.
+- **The stamps,** by the reconciliation's Proposed Stamps table, each row's IDs on each of its titles as the table gives them. 45 titles in 12 files, an ID merged into the title's own where it had some (they sort by number), and no title's wording changed.
+  - **DRAG-4.8 (the standing category):** `dragCollision.test.ts`'s two titles, and `hierarchyPlacement.test.ts`'s worked-gap describe, which holds the DRAG-4.9 and DRAG-4.10 tests.
+  - **TREE-4.12 (the standing category):** `hierarchy.test.ts`'s three titles and `projectTreeUtils.test.ts`'s three.
+  - **DRAG-8.1, DRAG-7.27, DRAG-4.8:** `itemListOps.test.ts`'s three branch-removal titles. **DRAG-8.2, DRAG-8.3, DRAG-8.8:** its four membership and count titles.
+  - **DRAG-8.1, DRAG-8.2, DRAG-8.8:** `useBoardDnd.test.ts`'s three pickup titles.
+  - **DRAG-8.1, DRAG-8.5, DRAG-8.6:** `KanbanCard.test.tsx`'s three drawing titles. **DRAG-8.1** also on `HierarchyModal.test.tsx`'s DRAG-7.15 test.
+  - **DRAG-8.8, TREE-2.9:** `hierarchyPlacement.test.ts`'s four branch titles and `dragChrome.test.tsx`'s three wording titles. **DRAG-8.8, DRAG-8.9, DRAG-3.19, DRAG-3.22:** `KanbanCard.test.tsx`'s three form titles. **DRAG-8.10, DRAG-3.25:** its two box titles, and `dragChrome.test.tsx`'s line title.
+  - **TREE-1.16, TREE-2.9:** `useProjectDragReorder.test.ts`'s five held-branch titles. **TREE-2.9:** `SortableProjectRow.test.tsx`'s two copy titles, and the count-line title that already had TREE-2.10.
+  - **TREE-11.2:** `tests/ui/project-sidebar.spec.ts`'s chevron test, for its one-level part. Batch 8's spec may supersede it.
+- **None of them is a claim of whole coverage.** The IDs go on as the table proposes them, one set for every title of a row; the Reconciler judges what each asserts of each case, and a case stays `Open` until it does. Nothing is stamped on TREE-11.1 and TREE-11.3–TREE-11.8, as the table says, nor on TREE-1.19, DRAG-8.7, DRAG-8.11 or DRAG-8.12, which it found no candidate for.
+- **TREE-2.8's default test:** Test Quality Concern 7's weakness was the expected-value helper, `asVars`, which built the expectation through `tierVars`, the function the hook calls. It spells out the three custom properties from the panel's named values (`projectAnchorOpacity`, `projectNeitherOpacity`, `projectDraggedOpacity`), so the default test, and the two beside it that share the helper, can't pass by restating the code.
+- **The gate:** `npm run check` passes (444 server, 849 client, 258 script tests). The changed E2E title: `project-sidebar.spec.ts` passed, 7.
+
 ## Open questions
 
 - **For Nathan, before Batch 7:** the reconciliation's Proposed Internal Mappings. Approval lets a named internal test count for the part of a case it asserts. It closes nothing that's still missing a clause.

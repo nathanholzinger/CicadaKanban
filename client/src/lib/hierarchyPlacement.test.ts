@@ -77,7 +77,7 @@ describe('flattenHierarchyOf', () => {
 
 // What a carried item takes with it, on the tree above: both counts are read off the one walk.
 describe('carriedBranchOf', () => {
-  it('holds every row under the item at any depth, with its children and the whole branch counted', () => {
+  it('DRAG-8.8, TREE-2.9: holds every row under the item at any depth, with its children and the whole branch counted', () => {
     const branch = carriedBranchOf('P', childrenOf);
 
     expect([...branch!.ids].sort()).toEqual(['S1', 'S1a', 'S1a1', 'S2']);
@@ -85,19 +85,19 @@ describe('carriedBranchOf', () => {
     expect(branch?.descendants).toBe(4);
   });
 
-  it('counts a branch deeper than its children apart from them', () => {
+  it('DRAG-8.8, TREE-2.9: counts a branch deeper than its children apart from them', () => {
     const branch = carriedBranchOf('S1', childrenOf);
 
     expect([...branch!.ids].sort()).toEqual(['S1a', 'S1a1']);
     expect([branch?.children, branch?.descendants]).toEqual([1, 2]);
   });
 
-  it('is null for an item with nothing under it, since nothing is carried', () => {
+  it('DRAG-8.8, TREE-2.9: is null for an item with nothing under it, since nothing is carried', () => {
     expect(carriedBranchOf('S2', childrenOf)).toBeNull();
     expect(carriedBranchOf('S1a1', childrenOf)).toBeNull();
   });
 
-  it('never holds the item itself', () => {
+  it('DRAG-8.8, TREE-2.9: never holds the item itself', () => {
     expect(carriedBranchOf('S1', childrenOf)?.ids.has('S1')).toBe(false);
   });
 
@@ -210,7 +210,7 @@ describe('DRAG-4.8: depthRangeFor', () => {
 });
 
 // DRAG-4.9 / DRAG-4.10 — the relation each depth in the S1a1/S2 gap resolves to.
-describe('DRAG-4.9, DRAG-4.10: resolvePlacement — the worked gap', () => {
+describe('DRAG-4.8, DRAG-4.9, DRAG-4.10: resolvePlacement — the worked gap', () => {
   const rows = flattenHierarchy('P', childrenOf);
   const gap = gapIndexFor(rows, 'S2', 'before'); // between S1a1 (Top) and S2 (Bottom)
 

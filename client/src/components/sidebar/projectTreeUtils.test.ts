@@ -98,11 +98,11 @@ describe('a move out, read by the render list and the real tree', () => {
   const laidOver = projects.map(p => (p.id === 'R' ? { ...p, parentId: 'P' } : p));
   const rowsOf = (items: FlatItem[]) => items.map(i => `${i.id}@${i.depth}`);
 
-  it('draws the project under its new parent, beside the sibling it names, whatever its position', () => {
+  it('TREE-4.12: draws the project under its new parent, beside the sibling it names, whatever its position', () => {
     expect(rowsOf(flattenTree(laidOver, everyProject, [move]))).toEqual(['P@0', 'C1@1', 'R@1', 'C2@1', 'Q@0']);
   });
 
-  it('leaves every project’s position as the server sent it', () => {
+  it('TREE-4.12: leaves every project’s position as the server sent it', () => {
     const items = flattenTree(laidOver, everyProject, [move]);
     expect(items.map(i => i.project.position)).toEqual([10, 10, 30, 20, 20]);
   });
@@ -124,7 +124,7 @@ describe('a move out, read by the render list and the real tree', () => {
     expect(items[0].hasChildren).toBe(false);
   });
 
-  it('reads the same place in the real tree’s children, collapsed or not', () => {
+  it('TREE-4.12: reads the same place in the real tree’s children, collapsed or not', () => {
     expect(fullChildrenOf(laidOver, [move])('P')).toEqual(['C1', 'R', 'C2']);
     expect(fullChildrenOf(laidOver, [move])(null)).toEqual(['P', 'Q']);
     expect(fullChildrenOf(laidOver)('P')).toEqual(['C1', 'C2', 'R']);
