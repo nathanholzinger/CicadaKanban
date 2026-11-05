@@ -491,3 +491,32 @@ describe('a read of the whole tree after a write: applied only when no write has
     expect(tree()).toBe('P -C -D Q');
   });
 });
+
+describe('TREE-1.14, TREE-1.15: a move refused after an earlier edit landed leaves that edit', () => {
+  it('returns X to its top-level place with Y still its child, each at its saved position', async () => {
+    // X, Y and B are top-level. Y's edit under X was answered after X was picked up, and X is then released as
+    // Y's child, which the server refuses: Y is X's descendant now.
+    vi.mocked(fetchProjects).mockResolvedValue(treeOf(['X', null, 1], ['Y', null, 2], ['B', null, 3]));
+    localStorage.setItem('activeProjectId', 'Y');
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await openApp('X Y B');
+    vi.mocked(updateProject).mockResolvedValueOnce(makeProject('Y', { parentId: 'X', position: 1 }));
+    await act(async () => update('Y', { parentId: 'X' }));
+    expect(tree()).toBe('X -Y B');
+
+    // The read after the refusal has the saved tree: the edit is not undone.
+    vi.mocked(moveProject).mockRejectedValueOnce(new Error('refused'));
+    vi.mocked(fetchProjects).mockResolvedValue(treeOf(['X', null, 1], ['Y', 'X', 1], ['B', null, 2]));
+    await act(async () => {
+      await release('X', 'Y', null, null);
+    });
+
+    expect(moveProject).toHaveBeenCalledExactlyOnceWith('X', { parentId: 'Y', prevId: null, nextId: null });
+    expect(tree()).toBe('X -Y B');
+    expect(Object.fromEntries(seen.projects.map(p => [p.id, [p.parentId, p.position]]))).toEqual({
+      X: [null, 1],
+      Y: ['X', 1],
+      B: [null, 2],
+    });
+  });
+});

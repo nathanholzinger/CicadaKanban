@@ -337,3 +337,18 @@ describe('DragGhost, the carried copy', () => {
     expect(document.querySelector('[data-carried-branch]')).toBeNull();
   });
 });
+
+describe('TREE-2.9: the count line includes the real subtree, including descendants hidden by collapse', () => {
+  // The line's wording for each of the case's trees below the carried project: its children, and the whole branch.
+  it.each([
+    [1, 1, '+ 1 child'],
+    [3, 3, '+ 3 children'],
+    [1, 2, '+ 1 child, 2 total descendants'],
+    [2, 5, '+ 2 children, 5 total descendants'],
+  ] as const)('%i children and %i descendants: the copy says %j', (children, descendants, text) => {
+    render(<DragGhost name="Q3 plan" depth={0} branch={{ children, descendants }} />);
+
+    expect(screen.getByText(text).parentElement).toHaveAttribute('data-carried-branch');
+    expect(document.querySelectorAll('[data-carried-branch]')).toHaveLength(1);
+  });
+});

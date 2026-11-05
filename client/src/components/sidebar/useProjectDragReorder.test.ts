@@ -1029,3 +1029,369 @@ describe('before the sidebar has the project cap', () => {
     expect(drag.hook.ghost?.invalid).toBe(false);
   });
 });
+
+// A drag as an earlier write's answer meets it: the sidebar's tree and its moves out change under the
+// hook while a project is carried, as `App.tsx` changes them when an edit or a create lands, or a move is
+// refused. `respond` is that change; the rows drawn are flattened again each time, as the sidebar does.
+function liveDrag(first: Project[], depthCap: number | null = null, firstMoves: readonly PendingMove[] = []) {
+  const onReorderProject = vi.fn<ReorderProject>().mockResolvedValue(undefined);
+  const { result, rerender } = renderHook(
+    ({ list, moves }: { list: Project[]; moves: readonly PendingMove[] }) => {
+      const projects = moves.reduce((tree, move) => withMoveApplied(tree, move), list);
+      const flatItems = flattenTree(projects, new Set(projects.map(p => p.id)), moves);
+      return useProjectDragReorder(projects, flatItems, onReorderProject, vi.fn(), depthCap, moves);
+    },
+    { initialProps: { list: first, moves: firstMoves } },
+  );
+  let seedDepth = 0;
+  let overId = '';
+
+  return {
+    onReorderProject,
+    get hook() {
+      return result.current;
+    },
+    pickUp(id: string) {
+      seedDepth = result.current.drawnItems.find(i => i.id === id)!.depth;
+      act(() => result.current.handleDragStart({ active: { id } } as unknown as DragStartEvent));
+    },
+    // The carried copy nearest the row `over`, with the pointer at the absolute depth `depth`.
+    hover(over: string, depth: number) {
+      overId = over;
+      act(() =>
+        result.current.handleDragMove({
+          delta: { x: (depth - seedDepth) * INDENT_WIDTH, y: 0 },
+          over: { id: over },
+        } as unknown as DragMoveEvent),
+      );
+    },
+    // The two rows the ghost sits between, among the rows without the dragged project; null at either end of the list.
+    slot() {
+      const rows = result.current.drawnItems.filter(i => i.id !== result.current.activeItem?.id).map(i => i.id);
+      const { gap } = result.current;
+      return gap === null ? null : [rows[gap - 1] ?? null, rows[gap] ?? null];
+    },
+    release() {
+      act(() => result.current.handleDragEnd({ over: { id: overId } } as unknown as DragEndEvent));
+    },
+    cancel() {
+      act(() => result.current.handleDragCancel());
+    },
+    respond(list: Project[], moves: readonly PendingMove[] = []) {
+      rerender({ list, moves });
+    },
+  };
+}
+
+const drawnIds = (rows: readonly { id: string }[]) => rows.map(row => row.id);
+
+// A chain `owner`1 under `owner`, `owner`2 under `owner`1, and so on, `levels` deep.
+const chainBelow = (owner: string, levels: number) =>
+  Array.from({ length: levels }, (_, i) => [`${owner}${i + 1}`, i === 0 ? owner : `${owner}${i}`] as const);
+
+describe('TREE-1.14: a project added to the dragged subtree after pickup stays a candidate, and a cyclic release is refused', () => {
+  // Top-level X and B, with room under the cap. Y goes under X after X is picked up, by an edit of its parent
+  // that was out at the pickup or by a create. The answer lands mid-drag.
+  const CAP = 6;
+  const underX = [...tree(['X', null], ['B', null]), makeProject('Y', { parentId: 'X', position: 1, createdAt: 9 })];
+  it.each([
+    ['an edit of Y’s parent to X', tree(['X', null], ['Y', null], ['B', null])],
+    ['a create of Y under X', tree(['X', null], ['B', null])],
+  ] as const)(
+    'after %s, Y is drawn under X and is no part of the held branch, and the next pickup of X holds it, hidden and out of placement',
+    (_, atPickup) => {
+      const drag = liveDrag(atPickup, CAP);
+      drag.pickUp('X');
+      const { branch } = drag.hook;
+      expect(branch).toBeNull();
+
+      drag.respond(underX);
+
+      // The drag continues, with the pickup's branch, and Y shown under X among the rows.
+      expect(drag.hook.branch).toBe(branch);
+      expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'Y', 'B']);
+      drag.cancel();
+
+      // The tree is the one the answer left, and the next pickup of X has Y in its branch, hidden and out of
+      // placement: resting on X's own row is its own gap, and a release writes nothing.
+      drag.pickUp('X');
+      expect(drag.hook.branch?.ids).toEqual(new Set(['Y']));
+      expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B']);
+      drag.hover('X', 0);
+      expect(drag.slot()).toEqual([null, 'B']);
+      drag.release();
+      expect(drag.onReorderProject).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe('TREE-1.15: cap states keep the pickup subtree height when a response grows or shrinks it', () => {
+  // The cap is 4, and T is at depth 3, one under it: X as T's child is at depth 4 when it has no subtree, and
+  // past the cap when it has one level.
+  const CAP = 4;
+  const chain = [
+    ['A1', null],
+    ['A2', 'A1'],
+    ['T', 'A2'],
+  ] as const;
+  const asTChild = 3; // the 0-based depth of T's child, which `hover` takes
+
+  it.each([
+    ['an edit of Y’s parent to X', tree(...chain, ['X', null], ['Y', null])],
+    ['a create of Y under X', tree(...chain, ['X', null])],
+  ] as const)(
+    'after %s, the state making X T’s child is still valid by the pickup height, and sent; the next pickup marks it invalid',
+    (_, atPickup) => {
+      const drag = liveDrag(atPickup, CAP);
+      drag.pickUp('X');
+      drag.hover('X', asTChild);
+      expect(drag.hook.dropInvalid).toBe(false);
+
+      // Y lands under X: the drag continues with the sidebar showing it there, and the state is still valid.
+      drag.respond(tree(...chain, ['X', null], ['Y', 'X']));
+      expect(drawnIds(drag.hook.drawnItems)).toEqual(['A1', 'A2', 'T', 'X', 'Y']);
+      drag.hover('X', asTChild);
+      expect(drag.hook.projectedDepth).toBe(asTChild);
+      expect(drag.hook.dropInvalid).toBe(false);
+      drag.release();
+      // The move is sent. The server refuses it, since the saved subtree has one level and reaches 5.
+      expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'T', null, null);
+
+      // The tree the refusal leaves has Y under X, and the same state is now invalid and writes nothing.
+      drag.pickUp('X');
+      expect(drag.hook.branch?.ids).toEqual(new Set(['Y']));
+      drag.hover('X', asTChild);
+      expect(drag.hook.dropInvalid).toBe(true);
+      drag.release();
+      expect(drag.onReorderProject).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('after Y, X’s only child, is made top-level, the state stays invalid by the pickup height, and the next pickup finds it valid', () => {
+    const drag = liveDrag(tree(...chain, ['X', null], ['Y', 'X']), CAP);
+    drag.pickUp('X');
+    const { branch } = drag.hook;
+    drag.hover('X', asTChild);
+    expect(drag.hook.dropInvalid).toBe(true);
+
+    // Y belongs at the top level now, but it stays in the held branch, and hidden, for this drag.
+    drag.respond(tree(...chain, ['X', null], ['Y', null]));
+    expect(drag.hook.branch).toBe(branch);
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['A1', 'A2', 'T', 'X']);
+    drag.hover('X', asTChild);
+    expect(drag.hook.dropInvalid).toBe(true);
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+
+    // The suppression ends: X and Y are both drawn top-level. X now has height 0, so the same state is valid.
+    expect(drag.hook.branch).toBeNull();
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['A1', 'A2', 'T', 'X', 'Y']);
+    drag.pickUp('X');
+    drag.hover('X', asTChild);
+    expect(drag.hook.dropInvalid).toBe(false);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'T', null, null);
+  });
+});
+
+describe('TREE-1.16: a descendant moved out after pickup stays excluded until the next drag', () => {
+  const CAP = 6;
+
+  it('after an edit puts Y, X’s child, under B, Y stays hidden and out of placement for the drag, then is drawn under B and a candidate at the next pickup', () => {
+    const drag = liveDrag(tree(['X', null], ['Y', 'X'], ['B', null]), CAP);
+    drag.pickUp('X');
+    const { branch } = drag.hook;
+    expect(branch?.ids).toEqual(new Set(['Y']));
+
+    drag.respond(tree(['X', null], ['B', null], ['Y', 'B']));
+
+    // The drag continues. Y is hidden, so no row of it is nearest or names a neighbor, and X's own gap at its
+    // own depth writes nothing.
+    expect(drag.hook.branch).toBe(branch);
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B']);
+    drag.hover('X', 0);
+    expect(drag.slot()).toEqual([null, 'B']);
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+
+    // At the drag's end Y is drawn under B, and a new pickup reads it as outside X's subtree: the gap after Y,
+    // aligned with it, places X under B, after Y.
+    expect(drag.hook.branch).toBeNull();
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B', 'Y']);
+    drag.pickUp('X');
+    expect(drag.hook.branch).toBeNull();
+    drag.hover('Y', 1);
+    expect(drag.slot()).toEqual(['Y', null]);
+    drag.release();
+    expect(drag.onReorderProject).toHaveBeenCalledExactlyOnceWith('X', 'B', 'Y', null);
+  });
+
+  it('after an earlier drag of Y under X is refused, Y’s row stays hidden in the branch until the drag ends, and is drawn under B after', () => {
+    // Y is saved under B. A drag of Y under X is drawn, and its answer is out.
+    const saved = tree(['X', null], ['B', null], ['Y', 'B']);
+    const moveY: PendingMove = { id: 'Y', parentId: 'X', prevId: null, nextId: null };
+    const drag = liveDrag(saved, CAP, [moveY]);
+    drag.pickUp('X');
+    const { branch } = drag.hook;
+    expect(branch?.ids).toEqual(new Set(['Y']));
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B']);
+
+    // The refusal takes the move away, and the read after it has Y under B. Neither makes Y a candidate.
+    drag.respond(saved, []);
+    expect(drag.hook.branch).toBe(branch);
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B']);
+    drag.hover('X', 0);
+    drag.release();
+    expect(drag.onReorderProject).not.toHaveBeenCalled();
+
+    // After the drag, Y is drawn under B, and a new pickup reads that tree.
+    expect(drawnIds(drag.hook.drawnItems)).toEqual(['X', 'B', 'Y']);
+    drag.pickUp('X');
+    expect(drag.hook.branch).toBeNull();
+  });
+});
+
+describe('TREE-2.4: legal parents are Full, the cap boundary is Mid, and deeper rows are Low', () => {
+  afterEach(() => localStorage.clear());
+
+  // The chain P1 to P_CAP, P1 at depth 1, and X with one child X1: X's subtree is one level tall.
+  it.each([4, 5, 7])('at cap %i, P1 to P_(CAP-2) are Full, P_(CAP-1) is Mid, P_CAP is Low, and X1 is absent', cap => {
+    const chain = Array.from({ length: cap }, (_, i) => [`P${i + 1}`, i === 0 ? null : `P${i}`] as const);
+    const drag = sidebarDrag(tree(...chain, ['X', null], ['X1', 'X']), [], cap);
+    drag.pickUp('X');
+    const { tiers, branch, tierVars } = drag.hook;
+
+    for (let level = 1; level <= cap - 2; level++) expect(tiers.get(`P${level}`), `P${level}`).toBe('parent');
+    expect(tiers.get(`P${cap - 1}`)).toBe('anchor');
+    expect(tiers.get(`P${cap}`)).toBe('neither');
+    // X1 is out of the rows as the carried branch, apart from the tiers, and X's ghost has no tier of its own.
+    expect(branch?.ids).toEqual(new Set(['X1']));
+    expect(drawnIds(drag.hook.drawnItems)).toEqual([...chain.map(([id]) => id), 'X']);
+    expect(tiers.has('X')).toBe(false);
+    expect(tierVars).toMatchObject({ '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity });
+  });
+});
+
+describe('TREE-2.5: top-level rows take the root’s legal-parent answer', () => {
+  afterEach(() => localStorage.clear());
+
+  const CAP = 5;
+  const others = [
+    ['A', null],
+    ['B', null],
+    ['B1', 'B'],
+  ] as const;
+
+  it('with X’s subtree one level under the cap, the root takes it: every other top-level row is Mid, and their nested rows Low', () => {
+    const drag = sidebarDrag(tree(...others, ['X', null], ...chainBelow('X', CAP - 1)), [], CAP);
+    drag.pickUp('X');
+    const { tiers } = drag.hook;
+
+    expect(tiers.get('A')).toBe('anchor');
+    expect(tiers.get('B')).toBe('anchor');
+    expect(tiers.get('B1')).toBe('neither');
+    expect(tiers.has('X')).toBe(false);
+  });
+
+  it('with X’s subtree at the cap, no root can take it: every other row is Low, top-level included, and the ghost has no tier', () => {
+    const drag = sidebarDrag(tree(...others, ['X', null], ...chainBelow('X', CAP)), [], CAP);
+    drag.pickUp('X');
+    const { tiers, tierVars } = drag.hook;
+
+    for (const id of ['A', 'B', 'B1']) expect(tiers.get(id), id).toBe('neither');
+    expect(tiers.has('X')).toBe(false);
+    expect(tierVars).toMatchObject({ '--drag-tier-ghost': DEFAULT_DRAG_TUNING.projectDraggedOpacity });
+  });
+});
+
+describe('TREE-2.6: a response landing mid-drag does not redraw the pickup tiers', () => {
+  afterEach(() => localStorage.clear());
+
+  // The cap is 5. R1 > R2 > Q puts Q at depth 3, CAP - 2, with the children Q1 (Mid) and Q2 (Low) below it. X has
+  // one child, so its subtree is one level tall. P is a top-level leaf, Full for X, and its parent edit to Q is out.
+  const CAP = 5;
+  const atPickup = tree(
+    ['R1', null],
+    ['R2', 'R1'],
+    ['Q', 'R2'],
+    ['Q1', 'Q'],
+    ['Q2', 'Q1'],
+    ['P', null],
+    ['X', null],
+    ['X1', 'X'],
+  );
+  const answered = atPickup.map(p => (p.id === 'P' ? { ...p, parentId: 'Q', position: 9 } : p));
+
+  it('keeps P Full through the rest of the drag, and every Mid and Low row as it was, then draws P Mid at the next pickup', () => {
+    const drag = liveDrag(atPickup, CAP);
+    drag.pickUp('X');
+    const { tiers, tierVars } = drag.hook;
+    expect(tiers.get('P')).toBe('parent');
+    expect(tiers.get('Q1')).toBe('anchor');
+    expect(tiers.get('Q2')).toBe('neither');
+
+    // P's saved parent is applied: it is drawn under Q, and the tiers are the pickup's, P among them.
+    drag.respond(answered);
+    expect(drawnIds(drag.hook.drawnItems)).toContain('P');
+    expect(drag.hook.tiers).toBe(tiers);
+    expect(drag.hook.tierVars).toBe(tierVars);
+    expect(drag.hook.tiers.get('P')).toBe('parent');
+    expect(drag.hook.tiers.get('Q1')).toBe('anchor');
+    expect(drag.hook.tiers.get('Q2')).toBe('neither');
+
+    // A cancel clears them, and the next pickup reads the saved tree: P, at depth 4, is Mid, since its parent
+    // Q can take X.
+    drag.cancel();
+    expect(drag.hook.tiers.size).toBe(0);
+    drag.pickUp('X');
+    expect(drag.hook.tiers.get('P')).toBe('anchor');
+  });
+});
+
+describe('TREE-2.9: the count line includes the real subtree, including descendants hidden by collapse', () => {
+  // The branch is the carried copy's line: its wording is the copy's, and none when nothing is carried.
+  const lineOf = (list: Project[], collapsed: readonly string[] = []) => {
+    const drag = sidebarDrag(list, collapsed);
+    drag.pickUp('X');
+    return { drag, line: drag.hook.branch ? carriedBranchLabel(drag.hook.branch) : null };
+  };
+  // A and B under X; A has A1, which has A1a; B has B1.
+  const FIVE = tree(['Q', null], ['X', null], ['A', 'X'], ['A1', 'A'], ['A1a', 'A1'], ['B', 'X'], ['B1', 'B']);
+
+  it.each([
+    ['no children', tree(['Q', null], ['X', null]), null],
+    ['one leaf child', tree(['Q', null], ['X', null], ['K', 'X']), '+ 1 child'],
+    ['three leaf children', tree(['Q', null], ['X', null], ['K1', 'X'], ['K2', 'X'], ['K3', 'X']), '+ 3 children'],
+    [
+      'one child with one child of its own',
+      tree(['Q', null], ['X', null], ['K', 'X'], ['K1', 'K']),
+      '+ 1 child, 2 total descendants',
+    ],
+    ['children A and B, with A1, A1a and B1 below', FIVE, '+ 2 children, 5 total descendants'],
+  ] as const)('%s: the line is %j', (_, list, line) => {
+    expect(lineOf(list as Project[]).line).toBe(line);
+  });
+
+  it.each([['A'], ['X'], ['A', 'X']])(
+    'with %j collapsed, the five descendants still count, and none is left among the rows drawn',
+    (...collapsed) => {
+      const { drag, line } = lineOf(FIVE, collapsed);
+
+      expect(line).toBe('+ 2 children, 5 total descendants');
+      expect(drag.hook.branch?.ids).toEqual(new Set(['A', 'A1', 'A1a', 'B', 'B1']));
+      expect(drawnIds(drag.hook.drawnItems)).toEqual(['Q', 'X']);
+    },
+  );
+
+  it('holds the counts and the membership for the whole drag, and never counts X itself', () => {
+    const { drag, line } = lineOf(FIVE, ['A']);
+    const { branch } = drag.hook;
+
+    drag.hover('Q', 0);
+    drag.hover('X', 0);
+    drag.hover('Q', 0);
+    expect(drag.hook.branch).toBe(branch);
+    expect(carriedBranchLabel(drag.hook.branch!)).toBe(line);
+    expect(drag.hook.branch?.ids.has('X')).toBe(false);
+  });
+});

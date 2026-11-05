@@ -83,6 +83,10 @@ The roadmap entry's items 1–11; item 5 is done (A3). They stay in the roadmap 
 
 **Audit follow-up — #12.** `docs/audits/code-quality-audit-stories-8-8-8-11-8-12.md`, finding 12: `tests/ui/project-tree-drag.spec.ts`'s skipped TREE-2.1 title and reason still claim descendants are drawn/dimmed at opacity 0.3. They are absent during the drag. Replace the obsolete explanation/title and visibility assertions when this story rewrites that exact skipped spec under item 10. The route is accepted here so the audit need not arrange a separate rewrite before the planned rework; it does not count as passing coverage.
 
+**Audit follow-up — TREE-1.14's placement (Nathan, 2026-11-05).** Found writing the sidebar's mid-drag cases in `stories-8-8-8-11-8-12-fixes.md` (its Amendment 8), and deferred here. Wiki project-tree §1 says a project that an earlier create or parent edit puts under the dragged one mid-drag "stays a place to drop", and a release making a cycle is refused by the server. `useProjectDragReorder.ts` doesn't offer it: it builds its placement rows with `toRows(flatItems, exclude)`, which drops every row whose parent was dropped, so `Y`, drawn under the carried `X`, leaves placement with `X`, though it isn't in the held subtree. Hovering `Y` then gives placements against the rows beside it only, and the release that makes `X` `Y`'s child can't be made.
+- **A fix is small:** leave out the rows of the held ids alone, not their children. The decision it needs is the depths a gap beside `Y` offers: the two shallower ones would name `X` itself, which the server refuses.
+- **What exists:** the hook test asserts only that `Y` is drawn under `X`, no part of the held branch, and that the next pickup holds it hidden; the App test asserts the refusal leaves the earlier edit. The surface spec, the release that is sent, and the refusal that follows it are this story's, with the test of the placement (a gap after `Y`, tabbed one level deeper, saves `X` under `Y`). TREE-1.14 is `Open` until then.
+
 ## Approach and phases
 
 ### Decisions
